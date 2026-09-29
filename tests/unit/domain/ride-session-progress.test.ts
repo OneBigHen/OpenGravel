@@ -107,6 +107,29 @@ describe("route progress continuity", () => {
   });
 });
 
+describe("resume after a long pause", () => {
+  // A hairpin: 2 km north, 300 m east, 2 km back south.
+  const route: ProgressRoute = {
+    mode: "guided",
+    geometry: [metres(0, 0), metres(0, 1_000), metres(0, 2_000), metres(300, 2_000), metres(300, 1_000), metres(300, 0)],
+  };
+
+  it("matches where the rider is now, not where the ride was paused", () => {
+    const paused = match(route, fix(0, 100, 0, 0));
+    expect(paused.distanceAlongMeters).toBeCloseTo(100, -1);
+    // Resumed 20 minutes later near the end of the return leg, heading south.
+    const resumed = match(route, fix(300, 150, 1_200, 180), paused);
+    expect(resumed.distanceAlongMeters).toBeGreaterThan(4_000);
+    expect(resumed.distanceFromRouteMeters).toBeLessThan(5);
+  });
+
+  it("still holds continuity across a short gap", () => {
+    const riding = match(route, fix(0, 100, 0, 0));
+    const next = match(route, fix(0, 110, 1, 0), riding);
+    expect(next.distanceAlongMeters).toBeCloseTo(110, -1);
+  });
+});
+
 describe("off-route continuity", () => {
   it("requires sustained deviation, then reports rejoining before on-route", () => {
     const route: ProgressRoute = {

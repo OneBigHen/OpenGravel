@@ -102,6 +102,8 @@ public final class OpenGravelNavigationCoordinator: ObservableObject {
     private var lastOffRoute = false
     private var lastProgressAt = Date.distantPast
     private var endedReported = false
+    /// Voice muted by a step catch-up (not by the rider), restored when it ends.
+    private var catchUpMuted = false
 
     private init() {}
 
@@ -163,6 +165,7 @@ public final class OpenGravelNavigationCoordinator: ObservableObject {
         activePayload = payload
         lastOffRoute = false
         endedReported = false
+        catchUpMuted = false
         lastGuidance = nil
         isMuted = core.spokenInstructionObserver.isMuted
         cancellables.removeAll()
@@ -170,7 +173,8 @@ public final class OpenGravelNavigationCoordinator: ObservableObject {
             self?.observe(state)
         }.store(in: &cancellables)
         core.spokenInstructionObserver.$isMuted.receive(on: DispatchQueue.main).sink { [weak self] muted in
-            self?.isMuted = muted
+            guard let self, !self.catchUpMuted else { return }
+            self.isMuted = muted
         }.store(in: &cancellables)
 
         location.startUpdating()
@@ -238,6 +242,27 @@ public final class OpenGravelNavigationCoordinator: ObservableObject {
                 mapLocation.lastLocation.coordinate.longitude != shown.coordinates.lng ||
                 mapLocation.lastLocation.course != shown.clLocation.course {
                 mapLocation.lastLocation = shown.clLocation
+            }
+            // Resumed or started partway along: advance to the step under the
+            // rider (one hop per state; Ferrostar applies each asynchronously)
+            // before anyone reports "off route" or reroutes back to the start.
+            let hops = OpenGravelStepCatchUp.stepsToAdvance(
+                location: userLocation.coordinates,
+                horizontalAccuracy: userLocation.horizontalAccuracy,
+                remainingSteps: remainingSteps.map(\.geometry)
+            )
+            if hops > 0, let core {
+                // Skipped turns stay silent; the rider's own mute is untouched.
+                if !catchUpMuted, !core.spokenInstructionObserver.isMuted {
+                    catchUpMuted = true
+                    core.spokenInstructionObserver.toggleMute()
+                }
+                core.advanceToNextStep()
+                return
+            }
+            if catchUpMuted {
+                catchUpMuted = false
+                if let observer = core?.spokenInstructionObserver, observer.isMuted { observer.toggleMute() }
             }
             let offRoute: Bool = if case .deviation = deviation { true } else { false }
             if offRoute != lastOffRoute {
