@@ -43,6 +43,7 @@ import { useStore } from "zustand";
 import { buildRideScene } from "@/application/map/build-ride-scene";
 import { computeInsets, toRect, type MapInsets } from "@/application/map/insets";
 import { formatDistance } from "@/application/planner/measurements";
+import { RideOfferCard } from "@/ui/ride/RideOfferCard";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
@@ -168,6 +169,9 @@ export function RideFocus({
   const navigation = useStore(store, (state) => state.navigation);
   const suggestions = useStore(store, (state) => state.suggestions);
   const liveSuggestion = useStore(store, (state) => state.liveSuggestion);
+  const rideOffer = useStore(store, (state) => state.rideOffer);
+  const rideOfferBusy = useStore(store, (state) => state.rideOfferBusy);
+  const rideOffersAvailable = useStore(store, (state) => state.rideOffersAvailable);
   const liveSuggestionDistance = useStore(store, (state) => state.liveSuggestionDistanceMeters);
   const suggestionBusy = useStore(store, (state) => state.suggestionBusy);
   const returnBusy = useStore(store, (state) => state.returnBusy);
@@ -560,7 +564,18 @@ export function RideFocus({
         COPILOT §5: one small card, one action. Doing nothing means no, so
         there is no "Later"; a critical alert outranks an optional road.
       */}
-      {liveSuggestion === null || terminal !== null || alert !== null ? null : (
+      {rideOffer === null || terminal !== null || alert !== null ? null : (
+        <RideOfferCard
+          key={rideOffer.id}
+          summary={rideOffer.summary}
+          shownAt={rideOffer.shownAt}
+          lifetimeMs={rideOffer.lifetimeMs}
+          onTake={(): void => { void store.getState().acceptRideOffer(); }}
+          onSkip={(): void => store.getState().skipRideOffer()}
+        />
+      )}
+
+      {liveSuggestion === null || rideOffer !== null || terminal !== null || alert !== null ? null : (
         <div className="og-ride__suggestion og-ride__floating-card" data-testid="free-ride-suggestion" role="status">
           <p className="og-ride__suggestion-head">
             <strong data-testid="free-ride-suggestion-label">{liveSuggestion.label}</strong>
@@ -801,6 +816,17 @@ export function RideFocus({
                 </p>
               ) : null}
             </div>
+            {suggestions === "on" && rideOffersAvailable ? (
+              <button
+                type="button"
+                className="og-ride__action"
+                data-testid="ride-offer-request"
+                disabled={rideOfferBusy || rideOffer !== null}
+                onClick={(): void => store.getState().requestRideOffer()}
+              >
+                {rideOfferBusy ? "Finding a ride…" : "Offer me a ride"}
+              </button>
+            ) : null}
             <button
               type="button"
               className="og-ride__action og-ride__action--primary"

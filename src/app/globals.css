@@ -11152,3 +11152,126 @@ a.og-secondary {
   }
 }
 /* og-dark:end */
+
+/* ── Free Ride offers (#14): an Uber-style card, read in one glance ───────── */
+.og-ride-offer {
+  --og-offer-dx: 0px;
+  gap: 8px;
+  touch-action: pan-y;
+  cursor: grab;
+  transform: translateX(var(--og-offer-dx)) rotate(calc(var(--og-offer-dx) / 40));
+  transition: transform 180ms ease-out, border-color 120ms ease-out;
+}
+.og-ride-offer[data-dragging="true"] {
+  cursor: grabbing;
+  transition: none;
+}
+.og-ride-offer[data-leaning="take"] {
+  border-color: var(--og-go);
+}
+.og-ride-offer[data-leaning="skip"] {
+  border-color: var(--og-danger);
+}
+.og-ride-offer:focus-visible {
+  outline: 3px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+.og-ride-offer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.og-ride-offer__kicker {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.og-ride-offer__figures {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.og-ride-offer__figures strong {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+}
+.og-ride-offer__dot {
+  padding: 0 6px;
+  color: var(--og-ride-muted);
+}
+.og-ride-offer__title {
+  font-size: var(--og-text-title);
+  font-weight: 700;
+}
+.og-ride-offer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.og-ride-offer__chips li {
+  padding: 4px 10px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-chip);
+  font-size: 13px;
+  font-weight: 600;
+}
+.og-ride-offer__actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+}
+.og-ride-offer__take,
+.og-ride-offer__skip {
+  min-height: 56px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.og-ride-offer__timer {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.og-ride-offer__timer svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.og-ride-offer__timer circle {
+  fill: none;
+  stroke-width: 3;
+}
+.og-ride-offer__timer-track {
+  stroke: var(--og-ride-border);
+}
+.og-ride-offer__timer-fill {
+  stroke: var(--og-go);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  animation: og-offer-drain var(--og-offer-lifetime, 20s) linear forwards;
+}
+@keyframes og-offer-drain {
+  to { stroke-dashoffset: 100; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .og-ride-offer {
+    transform: none;
+    transition: none;
+  }
+  .og-ride-offer__timer-fill {
+    animation: none;
+  }
+}
