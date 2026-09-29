@@ -44,6 +44,7 @@ import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
 import { createHttpPlacesSource } from "@/infrastructure/places/http-places-source";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
+import { createHttpDiscoverSource } from "@/infrastructure/discover/http-discover-source";
 import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
 import { createRideSessionRepository } from "@/infrastructure/storage/ride-session-repository";
 import { createRecordingRepository } from "@/infrastructure/storage/recording-repository";
@@ -122,6 +123,10 @@ export function RideClient({
   );
   const mapLayersSource = useMemo(
     () => createHttpMapLayersSource(assetBasePath === undefined ? {} : { basePath: assetBasePath }),
+    [assetBasePath],
+  );
+  const discoverSource = useMemo(
+    () => createHttpDiscoverSource({ basePath: assetBasePath }),
     [assetBasePath],
   );
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
@@ -372,6 +377,7 @@ export function RideClient({
       basemap={basemap}
       placesSource={placesSource}
       mapLayersSource={mapLayersSource}
+      discoverSource={discoverSource}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
   );

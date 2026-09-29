@@ -55,9 +55,13 @@ import type {
   RideFocusStoreStatus,
 } from "@/ui/stores/ride-focus-store";
 import type { MapLayersSource } from "@/application/map-layers";
+import type { RideInterestDiscoverSource } from "@/application/ride-interest";
 import { LayeredMap } from "@/ui/layers/LayeredMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
+import { RideInterestCard } from "@/ui/ride/RideInterestCard";
+import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
+import { useRideInterest } from "@/ui/ride/useRideInterest";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
@@ -73,6 +77,8 @@ export interface RideFocusProps {
   readonly placesSource?: PlacesSource;
   /** The rider's map layers (phase 8): fuel, incidents and alerts on the ride. */
   readonly mapLayersSource?: MapLayersSource;
+  /** Wikimedia/Wikidata/OSM landmarks along the route (OGV#13), when wired in. */
+  readonly discoverSource?: RideInterestDiscoverSource;
   /** Where "Back to the planner" goes; the surface never decides routing. */
   readonly exitHref?: string;
 }
@@ -160,6 +166,7 @@ export function RideFocus({
   assetBasePath,
   placesSource,
   mapLayersSource,
+  discoverSource,
   exitHref = "/",
 }: RideFocusProps) {
   const status = useStore(store, (state) => state.status);
@@ -193,6 +200,7 @@ export function RideFocus({
   const rerouteBusy = useStore(store, (state) => state.rerouteBusy);
   const rerouteMessage = useStore(store, (state) => state.rerouteMessage);
   const rerouteError = useStore(store, (state) => state.rerouteError);
+  const riderSettings = useStore(store, (state) => state.riderSettings);
   const surfaceReady = status === "ready" && viewModel !== null;
   const rootRef = useRef<HTMLElement | null>(null);
   const mapSlotRef = useRef<HTMLDivElement | null>(null);
@@ -309,11 +317,27 @@ export function RideFocus({
   const metricsCustomizable = viewModel?.metrics.customizable ?? false;
   if (pickerSlot !== null && (!metricsCustomizable || terminal !== null)) setPickerSlot(null);
 
+  const availableRouteLine = routeLineAvailability(routeLineAvailable, routeLine);
+  // OGV#13: only a guided ride's own route is worth prefetching landmarks,
+  // fuel and events along — Free Ride has no fixed line to search a corridor
+  // against, and re-keying on the route id (not the line) is what keeps a
+  // route-line correction from re-triggering the one-shot prefetch.
+  const guidedRouteId = navigation?.activity === "guided" ? navigation.plan.route?.routeId ?? null : null;
+  const rideInterest = useRideInterest({
+    discoverSource,
+    mapLayersSource,
+    placesSource,
+    filter: riderSettings.uiPreferences.rideInterests,
+    routeKey: guidedRouteId,
+    routeLine: availableRouteLine,
+    position: navigation?.position.coordinate ?? null,
+  });
+
   const scene = useMemo(
-    () =>
-      buildRideScene({
+    () => ({
+      ...buildRideScene({
         routeId: navigation?.plan.route?.routeId ?? null,
-        routeLine: routeLineAvailability(routeLineAvailable, routeLine),
+        routeLine: availableRouteLine,
         suggestionPreview: liveSuggestion === null ? null : {
           routeId: liveSuggestion.route.routeId,
           routeLine: suggestionPreviewLine,
@@ -325,12 +349,20 @@ export function RideFocus({
           heading: rideCamera?.camera.bearing ?? null,
         },
       }),
-    [liveSuggestion, navigation, rideCamera, routeLine, routeLineAvailable, suggestionPreviewLine, viewModel],
+      // Optional like the rest of `MapScene`: a ride with nothing to show
+      // along it stays exactly the scene it was before OGV#13.
+      ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
+    }),
+    [availableRouteLine, liveSuggestion, navigation, rideCamera, rideInterest.scenePlaces, suggestionPreviewLine, viewModel],
   );
 
+  const selectRideInterest = rideInterest.select;
   const onMapIntent = useCallback((intent: MapIntent): void => {
     if (intent.type === "camera-changed") store.getState().onCameraChanged();
-  }, [store]);
+    // OGV#13: a ride-interest pin rides the places source but is not a place;
+    // route its tap to the ride's own card instead of the happy-hour one.
+    if (intent.type === "place-click" && intent.placeId.startsWith("ri:")) selectRideInterest(intent.placeId);
+  }, [selectRideInterest, store]);
   const followCamera = useMemo(
     () => (rideCamera === null || !insetsReady ? null : { key: `follow:${rideCamera.token}`, camera: rideCamera.camera }),
     [insetsReady, rideCamera],
@@ -603,6 +635,18 @@ export function RideFocus({
             Take
           </button>
         </div>
+      )}
+
+      {/* OGV#13: a tapped ride-interest pin, wherever the rider tapped it from. */}
+      {rideInterest.selectedPoint === null || terminal !== null ? null : (
+        <RideInterestCard
+          point={rideInterest.selectedPoint}
+          onClose={rideInterest.clear}
+          onAddStop={(point): void => {
+            rideInterest.clear();
+            void store.getState().reroute({ coordinate: point.coordinate, label: point.name });
+          }}
+        />
       )}
 
       {/*
@@ -964,6 +1008,18 @@ export function RideFocus({
             }}
             onTurnAround={(): void => {
               void store.getState().turnAround();
+            }}
+          />
+        )}
+
+        {terminal !== null || navigation?.activity !== "guided" ? null : (
+          <RideInterestPanel
+            filter={riderSettings.uiPreferences.rideInterests}
+            onSetFilter={(filter): void => store.getState().setRideInterestFilter(filter)}
+            chip={rideInterest.chip}
+            onOpenChip={(): void => {
+              const point = rideInterest.chip?.point;
+              if (point !== undefined) rideInterest.select(point.id);
             }}
           />
         )}

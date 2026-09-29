@@ -5941,6 +5941,132 @@ h3,
   min-width: 72px;
 }
 
+/* ---- Ride-along interest (OGV#13): the sheet's filter + coming-up chip ---- */
+.og-ride-interest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.og-ride-interest__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.og-ride-interest__filter {
+  flex: 1 1 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-control);
+  color: var(--og-paper);
+  background: var(--og-ride-surface);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-ride-interest__filter[aria-pressed="true"] {
+  border-color: var(--og-deep-spruce);
+  background: var(--og-deep-spruce);
+}
+
+.og-ride-interest__chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-chip);
+  color: var(--og-paper);
+  background: var(--og-ride-surface);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-ride-interest__chip-glyph {
+  color: var(--og-golden-hour);
+  font-size: 16px;
+}
+
+/* ---- The card behind a tapped pin (OGV#13) ---------------------------- */
+.og-ride-interest-card {
+  z-index: 8;
+  overflow: hidden;
+  padding: 0;
+  max-height: min(60%, 460px);
+}
+
+.og-ride-interest-card__photo {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+}
+
+.og-ride-interest-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.og-ride-interest-card__topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.og-ride-interest-card__title {
+  font-size: 19px;
+  line-height: 1.2;
+}
+
+.og-ride-interest-card__close {
+  min-width: 36px;
+  min-height: 36px;
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--og-ride-muted);
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.og-ride-interest-card__summary {
+  color: var(--og-paper);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.og-ride-interest-card__attribution {
+  color: var(--og-ride-muted);
+  font-size: 12px;
+}
+
+.og-ride-interest-card__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.og-ride-interest-card__actions .og-ride__action {
+  flex: 0 0 auto;
+}
+
 .og-ride__error {
   font-size: 14px;
   color: var(--og-danger-light);

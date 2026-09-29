@@ -14,6 +14,9 @@
  * (OGV-D-267); the field exists so the formatter has one place to ask.
  */
 
+import type { RideInterestFilter } from "@/application/ride-interest/types";
+import { isRideInterestFilter } from "@/application/ride-interest/types";
+
 import {
   RIDE_METRIC_IDS,
   RIDE_METRIC_SLOT_COUNT,
@@ -27,6 +30,9 @@ export const RIDER_SETTINGS_VERSION = 3;
 
 export type UnitSystem = "imperial" | "metric";
 
+/** OGV#13: the ride sheet's along-route interest filter defaults on, Scenic first. */
+const DEFAULT_RIDE_INTEREST_FILTER: RideInterestFilter = "scenic";
+
 export interface RiderSettings {
   readonly version: typeof RIDER_SETTINGS_VERSION;
   readonly units: UnitSystem;
@@ -35,6 +41,8 @@ export interface RiderSettings {
     readonly rideMetrics: RideMetricSlots;
     /** Record, and Free Ride until riders show the two need separate layouts (§5.1). */
     readonly recordingMetrics: RideMetricSlots;
+    /** The ride-along interest sheet filter (OGV#13): Scenic, Food & fuel, Events, or Off. */
+    readonly rideInterests: RideInterestFilter;
   };
 }
 
@@ -55,6 +63,7 @@ export function createRiderSettings(): RiderSettings {
     uiPreferences: {
       rideMetrics: defaultMetricSlots("guided"),
       recordingMetrics: defaultMetricSlots("recording"),
+      rideInterests: DEFAULT_RIDE_INTEREST_FILTER,
     },
   };
 }
@@ -106,12 +115,20 @@ export function parseRiderSettings(value: unknown): RiderSettings {
     uiPreferences: {
       rideMetrics: normalizeMetricSlots(preferences["rideMetrics"], defaults.uiPreferences.rideMetrics),
       recordingMetrics: normalizeMetricSlots(preferences["recordingMetrics"], defaults.uiPreferences.recordingMetrics),
+      rideInterests: isRideInterestFilter(preferences["rideInterests"])
+        ? preferences["rideInterests"]
+        : defaults.uiPreferences.rideInterests,
     },
   };
 }
 
-/** Which of the two stored arrays a ride mode reads and writes. */
-export type RideMetricPreferenceKey = keyof RiderSettings["uiPreferences"];
+/** Persists the rider's ride-sheet interest filter (OGV#13 §3). */
+export function withRideInterestFilter(settings: RiderSettings, filter: RideInterestFilter): RiderSettings {
+  return { ...settings, uiPreferences: { ...settings.uiPreferences, rideInterests: filter } };
+}
+
+/** Which of the two stored metric-slot arrays a ride mode reads and writes. */
+export type RideMetricPreferenceKey = "rideMetrics" | "recordingMetrics";
 
 export function withMetricSlots(
   settings: RiderSettings,
