@@ -28,7 +28,8 @@ import {
 import { createLibraryService } from "@/application/library/library-service";
 import { createBrowserPositionSource } from "@/infrastructure/ride/browser-position-source";
 import { createBrowserSpeech } from "@/infrastructure/ride/browser-speech";
-import { mutableSpeech } from "@/application/ride-session/voice-mute";
+import { isVoiceMuted, mutableSpeech, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
+import { readNavScreen } from "@/ui/navigation/nav-screen";
 import {
   inNativeShell,
   nativeShellPositionSource,
@@ -229,6 +230,8 @@ export function RideClient({
                 pointerState.status === "found" ? pointerState.pointer.routeDurationSeconds : undefined,
               ),
               simulate: fixturePosition,
+              presentation: readNavScreen() === "native" ? "native" : "headless",
+              voiceMute: { read: isVoiceMuted, subscribe: subscribeVoiceMuted },
               // Closing the native screen pauses the ride; Resume reopens it.
               onNativeEnded: (reason) => {
                 if (reason === "exit") void store.getState().pause();

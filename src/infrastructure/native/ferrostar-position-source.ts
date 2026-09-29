@@ -14,6 +14,16 @@ export interface FerrostarPositionSourceOptions {
   readonly payload: NativeNavigationPayloadV1;
   /** Drive a simulated rider (the ride page's fixture mode). */
   readonly simulate?: boolean;
+  /** `headless` keeps OpenGravel's ride screen in front (Settings → Navigation screen). */
+  readonly presentation?: "native" | "headless";
+  /**
+   * The rider's voice mute. Ferrostar speaks on native rides, so the ride
+   * screen's speaker button must reach it.
+   */
+  readonly voiceMute?: {
+    read(): boolean;
+    subscribe(listener: () => void): () => void;
+  };
   /** The native screen ended on its own: the rider closed it, or arrived. */
   readonly onNativeEnded?: (reason: string) => void;
   /**
@@ -73,7 +83,17 @@ export function createFerrostarPositionSource(options: FerrostarPositionSourceOp
           if (event.reason === "exit" || event.reason === "arrived") options.onNativeEnded?.(event.reason);
         }),
       );
-      const start = () => bridge.start({ payload, ...(options.simulate === true ? { simulate: true } : {}) });
+      const start = () => bridge.start({
+        payload,
+        ...(options.simulate === true ? { simulate: true } : {}),
+        ...(options.presentation === undefined ? {} : { presentation: options.presentation }),
+      });
+      const applyMute = () => {
+        if (!stopped && options.voiceMute !== undefined) {
+          void bridge.setMuted({ muted: options.voiceMute.read() }).catch(() => undefined);
+        }
+      };
+      const unsubscribeMute = options.voiceMute?.subscribe(applyMute);
       const pending = pendingStops.get(bridge);
       if (pending !== undefined) {
         clearTimeout(pending);
@@ -88,6 +108,7 @@ export function createFerrostarPositionSource(options: FerrostarPositionSourceOp
       void begin
         .then((result) => {
           if (!result.accepted && !stopped) observer.error({ code: "position-unavailable" });
+          else applyMute();
         })
         .catch(() => {
           if (!stopped) observer.error({ code: "position-unavailable" });
@@ -96,6 +117,7 @@ export function createFerrostarPositionSource(options: FerrostarPositionSourceOp
         stop(): void {
           if (stopped) return;
           stopped = true;
+          unsubscribeMute?.();
           for (const handle of handles) void Promise.resolve(handle).then((resolved) => resolved.remove());
           const existing = pendingStops.get(bridge);
           if (existing !== undefined) clearTimeout(existing);
