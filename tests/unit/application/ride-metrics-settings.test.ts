@@ -106,7 +106,11 @@ describe("presets are derived, not persisted (§2.3)", () => {
   });
 
   it("stores no preset field", () => {
-    expect(Object.keys(createRiderSettings().uiPreferences).sort()).toEqual(["recordingMetrics", "rideMetrics"]);
+    expect(Object.keys(createRiderSettings().uiPreferences).sort()).toEqual([
+      "recordingMetrics",
+      "rideInterests",
+      "rideMetrics",
+    ]);
     expect(JSON.stringify(createRiderSettings())).not.toMatch(/preset/i);
   });
 });

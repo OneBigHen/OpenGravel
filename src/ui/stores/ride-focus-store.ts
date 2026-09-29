@@ -99,11 +99,13 @@ import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-
 import {
   createRiderSettings,
   withMetricSlots,
+  withRideInterestFilter,
   type RiderSettings,
   type RiderSettingsStoragePort,
 } from "@/application/ride-metrics/rider-settings";
 import { RIDE_METRIC_PRESETS, metricAvailable, type RideMetricId, type RideMetricPresetId } from "@/application/ride-metrics/registry";
 import { storedAfterChoice } from "@/application/ride-metrics/strip";
+import type { RideInterestFilter } from "@/application/ride-interest";
 
 /**
  * What the surface is doing right now.
@@ -285,6 +287,8 @@ export interface RideFocusStoreActions {
   setRideMetric(index: number, id: RideMetricId): boolean;
   /** Puts a preset's three metrics in the strip and saves them (§2.3). */
   applyRideMetricPreset(id: RideMetricPresetId): boolean;
+  /** The ride sheet's along-route interest filter (OGV#13 §3): saved per device. */
+  setRideInterestFilter(filter: RideInterestFilter): void;
 }
 
 export type RideFocusStore = RideFocusStoreState & RideFocusStoreActions;
@@ -1511,6 +1515,10 @@ export function createRideFocusStore(
         if (!preset.slots.every((metric) => metricAvailable(metric, strip.mode, strip.sources))) return false;
         saveRiderSettings(withMetricSlots(get().riderSettings, strip.preferenceKey, preset.slots));
         return true;
+      },
+
+      setRideInterestFilter(filter: RideInterestFilter): void {
+        saveRiderSettings(withRideInterestFilter(get().riderSettings, filter));
       },
 
       async start(): Promise<void> {
