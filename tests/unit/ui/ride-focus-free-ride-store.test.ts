@@ -50,6 +50,7 @@ async function makeRide(input: {
   readonly reroutePlanner?: GuidedReroutePlanner;
   readonly announceOpportunity?: (text: string) => void;
   readonly feelOpportunity?: (kind: "opportunity" | "accepted" | "returned") => void;
+  readonly rideOffers?: boolean;
 }) {
   databaseSequence += 1;
   const database = new VNextDatabase(`ogv-free-ride-store-${databaseSequence}`);
@@ -100,6 +101,7 @@ async function makeRide(input: {
     ...(input.reroutePlanner === undefined ? {} : { reroutePlanner: input.reroutePlanner }),
     ...(input.announceOpportunity === undefined ? {} : { announceOpportunity: input.announceOpportunity }),
     ...(input.feelOpportunity === undefined ? {} : { feelOpportunity: input.feelOpportunity }),
+    ...(input.rideOffers === undefined ? {} : { rideOffers: input.rideOffers }),
     now: () => new Date(clock).toISOString(),
     setInterval: (handler) => { tick = handler; return 1; },
     clearInterval: () => undefined,
@@ -659,5 +661,101 @@ describe("Ride Focus reroute", () => {
       ride.store.getState().stop();
       ride.database.close();
     });
+  });
+});
+
+describe("Free Ride ride offers (#14)", () => {
+  function planned(id: string, minutes: number): ReturnPlanResult {
+    return {
+      status: "planned",
+      route: { planningGeneration: 50 + minutes, routeId: asRouteCandidateId(`route_offer_${id}`) },
+      routeGeometryRef: `geo_offer_${id}` as GeometryRef,
+      durationSeconds: minutes * 60,
+      distanceMeters: minutes * 800,
+    };
+  }
+
+  it("plans the best offer, shows it with a summary, and speaks it once", async () => {
+    const plan = vi.fn(async (request: { readonly mode: string; readonly loopMinutes?: number }) =>
+      planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30));
+    const announce = vi.fn();
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan }, announceOpportunity: announce });
+    ride.tick();
+
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
+    expect(ride.store.getState().rideOffer).toMatchObject({ id: "loop:45", summary: { minutes: 45, chips: ["Curvy", "Back here"] } });
+    expect(plan).toHaveBeenCalledWith(expect.objectContaining({ mode: "loop", loopMinutes: 45 }));
+    expect(ride.store.getState().suggestionPreviewLine).toEqual(LINE);
+    expect(announce).toHaveBeenCalledOnce();
+    // Nothing is bound until the rider takes it.
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "free", plan: { route: null } });
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("swipe right binds the offer as a guided ride that hands back to Free Ride", async () => {
+    const plan = vi.fn(async () => planned("take", 45));
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    ride.tick();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
+
+    await ride.store.getState().acceptRideOffer();
+
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "guided", plan: { route: { routeId: "route_offer_take" } } });
+    expect(ride.writes.at(-1)).toMatchObject({ routeGeometryRef: "geo_offer_take", routeDurationSeconds: 2_700 });
+    expect(ride.store.getState()).toMatchObject({ rideOffer: null, freeRideStatusMessage: "Riding your loop. Free Ride picks up back here." });
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("swipe left never brings that offer back, and a moving rider waits for the next", async () => {
+    const plan = vi.fn(async (request: { readonly loopMinutes?: number }) =>
+      planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30));
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    ride.tick();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:45"));
+
+    ride.store.getState().skipRideOffer();
+    expect(ride.store.getState().rideOffer).toBeNull();
+    await ride.moveTo({ lon: -77.199, lat: 40.101 });
+    ride.tick();
+    expect(ride.store.getState().rideOfferBusy).toBe(false);
+    expect(ride.store.getState().rideOffer).toBeNull();
+
+    ride.advance(180_000);
+    await ride.moveTo({ lon: -77.198, lat: 40.102 });
+    ride.tick();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:90"));
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("an ignored offer lapses and counts as a skip", async () => {
+    const plan = vi.fn(async () => planned("lapse", 45));
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    ride.tick();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
+    const lifetime = ride.store.getState().rideOffer?.lifetimeMs ?? 0;
+
+    ride.advance(lifetime);
+    ride.tick();
+
+    expect(ride.store.getState().rideOffer).toBeNull();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("stays off unless the composition root turns offers on", async () => {
+    const plan = vi.fn(async () => planned("off", 45));
+    const ride = await makeRide({ suggestions: "on", returnPlanner: { plan } });
+    ride.tick();
+    await Promise.resolve();
+    expect(plan).not.toHaveBeenCalled();
+    expect(ride.store.getState().rideOffersAvailable).toBe(false);
+    ride.store.getState().stop();
+    ride.database.close();
   });
 });

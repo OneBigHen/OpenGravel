@@ -68,6 +68,17 @@ import type { GuidedReroutePlanner, RerouteDetour } from "@/application/ride-ses
 import { lineAhead, loopRejoinAnchors } from "@/application/ride-session/loop-rejoin";
 import { resolveHeadHomeTarget } from "@/application/free-ride/head-home-target";
 import {
+  EMPTY_OFFER_HISTORY,
+  rankRideOffers,
+  recordOfferSkip,
+  rideOfferTiming,
+  summarizeRideOffer,
+  type OfferCatalogRoute,
+  type RideOfferCandidate,
+  type RideOfferHistory,
+  type RideOfferSummary,
+} from "@/application/free-ride/ride-offers";
+import {
   opportunityProgress,
   showOpportunity,
   spokenOpportunity,
@@ -137,6 +148,21 @@ export interface RideFocusStoreState {
   /** How far the rider is from the opportunity's decision point, kept current as they ride. */
   readonly liveSuggestionDistanceMeters: number | null;
   readonly suggestionBusy: boolean;
+  /**
+   * The Free Ride offer on screen (#14): a whole ride from here, planned, with
+   * its summary and when it lapses. Swipe right takes it, left skips it.
+   */
+  readonly rideOffer: {
+    readonly id: string;
+    readonly kind: RideOfferCandidate["kind"];
+    readonly summary: RideOfferSummary;
+    readonly shownAt: string;
+    readonly lifetimeMs: number;
+  } | null;
+  /** An offer is being planned. */
+  readonly rideOfferBusy: boolean;
+  /** Whether this surface makes Free Ride offers at all. */
+  readonly rideOffersAvailable: boolean;
   readonly returnBusy: boolean;
   readonly freeRideStatusMessage: string | null;
   readonly freeRideError: string | null;
@@ -214,6 +240,12 @@ export interface RideFocusStoreActions {
   /** Binds the offered ahead segment to this RideSession. */
   acceptLiveSuggestion(): Promise<void>;
   dismissLiveSuggestion(): void;
+  /** Swipe right: ride the offer now. */
+  acceptRideOffer(): Promise<void>;
+  /** Swipe left, or it lapsed: never offer this one again this ride. */
+  skipRideOffer(): void;
+  /** "Offer me a ride": the next offer without waiting for the cooldown. */
+  requestRideOffer(): void;
   /** Plans and binds a fresh return to saved Home, or session start as fallback. */
   headHome(): Promise<void>;
   /** Finds a lower-workload legal return without changing the authored ride. */
@@ -284,9 +316,17 @@ export interface RideFocusStoreOptions {
       readonly target: ExplicitReturnTarget;
       readonly mode: ReturnMode;
       readonly signal: AbortSignal;
+      /** `loop` mode: a new loop of this many minutes from here. */
+      readonly loopMinutes?: number;
+      /** `loop` mode: shaping through these points (a loop's rest, a shared route). */
+      readonly rejoin?: readonly Coordinate[];
     }): Promise<ReturnPlanResult>;
   };
   readonly readSavedHome?: () => Coordinate | null;
+  /** Shared routes near a point, for Free Ride offers; absent means loops and home only. */
+  readonly loadOfferCatalog?: (near: Coordinate, signal: AbortSignal) => Promise<readonly OfferCatalogRoute[]>;
+  /** Free Ride puts up whole-ride offers (#14). Off unless the composition root asks. */
+  readonly rideOffers?: boolean;
   /**
    * Says a Free Ride opportunity once, when it appears (COPILOT §6). The
    * adapter owns the voice and honours the rider's mute.
@@ -355,6 +395,8 @@ export function createRideFocusStore(
     evaluateLiveSuggestion: evaluateSuggestion,
     returnPlanner,
     readSavedHome = () => null,
+    loadOfferCatalog,
+    rideOffers = false,
     announceOpportunity,
     feelOpportunity,
     reroutePlanner,
@@ -396,6 +438,19 @@ export function createRideFocusStore(
    */
   let excursion: { readonly sessionId: string; readonly end: Coordinate; armed: boolean } | null = null;
   let pendingReturnAbort: AbortController | null = null;
+  /** Free Ride offers (#14): what the rider said to each, and the planned offer. */
+  let offerHistory: RideOfferHistory = EMPTY_OFFER_HISTORY;
+  let offerCatalog: readonly OfferCatalogRoute[] | null = null;
+  let offerCatalogLoading = false;
+  let offerAbort: AbortController | null = null;
+  let offerEndedAtMs: number | null = null;
+  let offerRequested = false;
+  let offerSession: string | null = null;
+  let shownOffer: {
+    readonly candidate: RideOfferCandidate;
+    readonly plan: Extract<ReturnPlanResult, { readonly status: "planned" }>;
+    readonly line: readonly Coordinate[];
+  } | null = null;
   let rerouteAbort: AbortController | null = null;
   let lastRerouteAt = Number.NEGATIVE_INFINITY;
   /**
@@ -645,6 +700,7 @@ export function createRideFocusStore(
         maybeFinishExcursion(state, navigation);
       }
       if (state !== null && navigation !== null) scheduleSuggestionQuery(state, navigation);
+      if (state !== null && navigation !== null) scheduleRideOffer(state, navigation, instant);
       syncRideActivity(navigation);
       syncTimer(navigation);
     }
@@ -714,6 +770,150 @@ export function createRideFocusStore(
       });
     }
 
+    function clearRideOffer(): void {
+      offerAbort?.abort();
+      offerAbort = null;
+      shownOffer = null;
+      if (get().rideOffer !== null || get().rideOfferBusy) {
+        set({ rideOffer: null, rideOfferBusy: false, suggestionPreviewLine: NO_COORDINATES });
+      }
+    }
+
+    /** A loop is ridden from the point nearest the rider; a line from its start. */
+    function offerRejoin(route: OfferCatalogRoute, here: Coordinate): readonly Coordinate[] {
+      const line = route.line;
+      const first = line[0];
+      const last = line.at(-1);
+      const loop = first !== undefined && last !== undefined && haversine(first, last) < 2_000;
+      let ordered = line;
+      if (loop) {
+        let nearest = 0;
+        line.forEach((vertex, index) => {
+          if (haversine(vertex, here) < haversine(line[nearest] as Coordinate, here)) nearest = index;
+        });
+        ordered = [...line.slice(nearest), ...line.slice(1, nearest + 1)];
+      }
+      return loopRejoinAnchors(ordered, [], 0);
+    }
+
+    /**
+     * Free Ride offers (#14): while the rider roams with suggestions on, plan
+     * the best whole ride from here and put it up as a card, as Uber does for
+     * drivers. One at a time; minutes apart while moving, seconds when stopped.
+     */
+    function scheduleRideOffer(state: RideSessionState, navigation: SessionNavigationState, instant: string): void {
+      const eligible = rideOffers && navigation.activity === "free" && state.suggestions === "on" &&
+        state.recordingId === null && returnPlanner !== undefined;
+      if (offerSession !== state.sessionId) {
+        offerSession = state.sessionId;
+        offerHistory = EMPTY_OFFER_HISTORY;
+        offerEndedAtMs = null;
+      }
+      if (!eligible) {
+        if (shownOffer !== null || get().rideOfferBusy) clearRideOffer();
+        return;
+      }
+      const nowMs = Date.parse(instant);
+      const offer = get().rideOffer;
+      if (offer !== null) {
+        if (nowMs - Date.parse(offer.shownAt) >= offer.lifetimeMs) get().skipRideOffer();
+        return;
+      }
+      if (get().rideOfferBusy || get().returnBusy || get().liveSuggestion !== null) return;
+      const here = navigation.position.quality === "fresh-good" ? navigation.position.coordinate : null;
+      if (here === null) return;
+      const timing = rideOfferTiming({
+        speedMps: navigation.position.speedMps,
+        nowMs,
+        lastOfferEndedAtMs: offerEndedAtMs,
+        requested: offerRequested,
+      });
+      if (!timing.mayOffer) return;
+      if (offerCatalog === null && loadOfferCatalog !== undefined) {
+        if (offerCatalogLoading) return;
+        offerCatalogLoading = true;
+        const catalogAbort = new AbortController();
+        void loadOfferCatalog(here, catalogAbort.signal)
+          .then((routes) => { offerCatalog = routes; })
+          .catch(() => { offerCatalog = []; })
+          .finally(() => { offerCatalogLoading = false; });
+        return;
+      }
+      const candidate = rankRideOffers({
+        position: here,
+        headingDegrees: navigation.position.headingDegrees,
+        catalog: offerCatalog ?? [],
+        home: readSavedHome(),
+        history: offerHistory,
+      })[0];
+      if (candidate === undefined) return;
+      offerRequested = false;
+      void planRideOffer(state, navigation, candidate, here, timing.lifetimeMs);
+    }
+
+    async function planRideOffer(
+      state: RideSessionState,
+      navigation: SessionNavigationState,
+      candidate: RideOfferCandidate,
+      here: Coordinate,
+      lifetimeMs: number,
+    ): Promise<void> {
+      if (returnPlanner === undefined) return;
+      offerAbort?.abort();
+      const abort = new AbortController();
+      offerAbort = abort;
+      set({ rideOfferBusy: true });
+      const backHere: ExplicitReturnTarget = { kind: "session-start", coordinate: here, label: "Back here" };
+      let plan: ReturnPlanResult;
+      try {
+        plan = candidate.kind === "home"
+          ? await returnPlanner.plan({
+              navigation,
+              target: { kind: "saved-home", coordinate: candidate.home, label: "Home" },
+              mode: "head-home",
+              signal: abort.signal,
+            })
+          : candidate.kind === "loop"
+            ? await returnPlanner.plan({ navigation, target: backHere, mode: "loop", loopMinutes: candidate.minutes, signal: abort.signal })
+            : await returnPlanner.plan({
+                navigation,
+                target: backHere,
+                mode: "loop",
+                rejoin: offerRejoin(candidate.route, here),
+                signal: abort.signal,
+              });
+      } catch {
+        plan = { status: "unavailable", reason: "no-route" };
+      }
+      if (!running || offerAbort !== abort) return;
+      offerAbort = null;
+      const current = controller.snapshot();
+      if (current === null || current.sessionId !== state.sessionId || current.activity !== "free") {
+        set({ rideOfferBusy: false });
+        return;
+      }
+      if (plan.status !== "planned") {
+        // An offer that can't be routed is dropped quietly; the next one follows.
+        offerHistory = { ...offerHistory, skippedIds: new Set([...offerHistory.skippedIds, candidate.id]) };
+        set({ rideOfferBusy: false });
+        return;
+      }
+      const line = (await loadRouteLine(plan.routeGeometryRef)) ?? NO_COORDINATES;
+      if (!running || controller.snapshot()?.activity !== "free") {
+        set({ rideOfferBusy: false });
+        return;
+      }
+      const summary = summarizeRideOffer(candidate, plan);
+      shownOffer = { candidate, plan, line };
+      set({
+        rideOfferBusy: false,
+        rideOffer: { id: candidate.id, kind: candidate.kind, summary, shownAt: now(), lifetimeMs },
+        suggestionPreviewLine: line,
+      });
+      feelOpportunity?.("opportunity");
+      announceOpportunity?.(summary.spoken);
+    }
+
     function scheduleSuggestionQuery(
       state: RideSessionState,
       navigation: SessionNavigationState,
@@ -753,6 +953,8 @@ export function createRideFocusStore(
       // A valid opportunity stands until it is taken or passed; a query tick
       // must never replace or erase it (FR-03).
       if (get().liveSuggestion !== null) return;
+      // One card at a time: a ride offer on screen holds the road suggestions.
+      if (get().rideOffer !== null || get().rideOfferBusy) return;
       const positionKey = `${state.sessionId}:${navigation.position.observedAt}`;
       if (positionKey === lastSuggestionPositionKey) return;
       lastSuggestionPositionKey = positionKey;
@@ -1268,10 +1470,13 @@ export function createRideFocusStore(
       liveSuggestionDistanceMeters: null,
       suggestionPreviewLine: NO_COORDINATES,
       suggestionBusy: false,
+      rideOffer: null,
+      rideOfferBusy: false,
       returnBusy: false,
       freeRideStatusMessage: null,
       freeRideError: null,
       rerouteAvailable: reroutePlanner !== undefined,
+      rideOffersAvailable: rideOffers && returnPlanner !== undefined,
       rerouteBusy: false,
       rerouteMessage: null,
       rerouteError: null,
@@ -1358,6 +1563,66 @@ export function createRideFocusStore(
           freeRideStatusMessage: enabled ? "Live suggestions are on." : "Live suggestions are off.",
           freeRideError: null,
         });
+        refresh();
+      },
+
+      async acceptRideOffer(): Promise<void> {
+        const offer = shownOffer;
+        const state = controller.snapshot();
+        if (!running || offer === null || state === null || state.activity !== "free") return;
+        const { candidate, plan, line } = offer;
+        shownOffer = null;
+        offerEndedAtMs = Date.parse(now());
+        set({ rideOffer: null, suggestionPreviewLine: NO_COORDINATES });
+        if (candidate.kind === "home") {
+          await get().headHome();
+          return;
+        }
+        abortPendingReturn();
+        const at = now();
+        const applied = await controller.dispatch(modeChangedEvent("guided", at, plan.route));
+        if (applied.outcome !== "applied" || applied.state === null || applied.persistence !== "durable") {
+          set({ freeRideError: applied.message ?? "That ride could not be started." });
+          return;
+        }
+        pointer.write({
+          sessionId: applied.state.sessionId,
+          rideId: applied.state.plan.rideId,
+          routeGeometryRef: plan.routeGeometryRef,
+          routeDurationSeconds: plan.durationSeconds,
+          ...(plan.instructions === undefined ? {} : { instructions: plan.instructions }),
+          updatedAt: at,
+        });
+        // Every offer so far ends back here: Free Ride picks up when it does.
+        const end = line.at(-1);
+        excursion = end === undefined ? null : { sessionId: applied.state.sessionId, end, armed: false };
+        await syncNavigationEngine(applied.state);
+        feelOpportunity?.("accepted");
+        const title = candidate.kind === "catalog" ? candidate.route.name : "your loop";
+        set({
+          freeRideStatusMessage: `Riding ${title}. Free Ride picks up back here.`,
+          freeRideError: null,
+        });
+        refresh();
+        const bound = controller.navigationState() ?? deriveSessionNavigation(applied.state, { now: now() });
+        requestRideFit(buildRideScene({
+          routeId: bound.plan.route?.routeId ?? null,
+          routeLine: line,
+          position: { coordinate: bound.position.coordinate, quality: bound.position.quality },
+        }), get().follow);
+      },
+
+      skipRideOffer(): void {
+        const offer = shownOffer;
+        if (offer === null) return;
+        offerHistory = recordOfferSkip(offerHistory, offer.candidate);
+        offerEndedAtMs = Date.parse(now());
+        shownOffer = null;
+        set({ rideOffer: null, suggestionPreviewLine: NO_COORDINATES });
+      },
+
+      requestRideOffer(): void {
+        offerRequested = true;
         refresh();
       },
 
@@ -1701,6 +1966,9 @@ export function createRideFocusStore(
         }
         suggestionAbort?.abort();
         suggestionAbort = null;
+        offerAbort?.abort();
+        offerAbort = null;
+        shownOffer = null;
         pendingReturnAbort?.abort();
         pendingReturnAbort = null;
         rerouteAbort?.abort();

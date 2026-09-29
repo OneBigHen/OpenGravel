@@ -21,6 +21,7 @@ import { createGuidedReroutePlanner } from "@/application/ride-session/guided-re
 import { createRideActivitySync } from "@/application/ride-session/ride-activity";
 import { haptic } from "@/infrastructure/native/native-feel";
 import { createClientFreeRideServices } from "@/application/free-ride/client-services";
+import { parseOfferCatalog } from "@/application/free-ride/ride-offers";
 import {
   deriveLiveSuggestionWorkload,
   evaluateLiveSuggestion,
@@ -194,6 +195,15 @@ export function RideClient({
         geometry,
         provider: createClientRouteCandidateProvider(),
       }),
+      // Free Ride offers (#14): shared routes within a ride of here.
+      rideOffers: true,
+      loadOfferCatalog: async (near, signal) => {
+        const response = await fetch(
+          `/api/catalog?near=${near.lat.toFixed(4)},${near.lon.toFixed(4)}&radiusMiles=25`,
+          { signal },
+        );
+        return response.ok ? parseOfferCatalog(await response.json()) : [];
+      },
       readSavedHome: () => {
         const saved = homeLocation.read();
         return saved.status === "found" ? saved.coordinate : null;
