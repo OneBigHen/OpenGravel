@@ -27,10 +27,61 @@
  * (`application/ride-session/free-ride-telemetry`). Moving time, since stop,
  * average and max speed, and elevation gain and loss (`freeRideTelemetry`)
  * read it there.
+ *
+ * Slice C (issue #12: finish the picker, expose the full useful set) audited
+ * every ID slices A and B left `planned` and shipped what was genuinely
+ * computable from data this app already holds:
+ *
+ * - **Shipped: `context.daylightRemaining`.** Today's NOAA sunset at the
+ *   rider's last-known coordinate (`application/long-trip/daylight`, already
+ *   shipped and tested for long-trip planning), minus now. A stale coordinate
+ *   is fine — this does not need a fresh fix — and a genuine `0` once the sun
+ *   is down, never a guessed sunrise.
+ * - **Shipped, `"experimental"`: `motion.lean`.** A new port
+ *   (`application/ride-session/ports/motion-port`, `infrastructure/motion`)
+ *   reads the device's gravity vector; `domain/motion/lean` calibrates a
+ *   reference against whatever the phone's actual mount is (never assumes
+ *   vertical), low-pass filters it and tracks this ride's max each side. It
+ *   is selectable and renders a real, computed value — never fabricated —
+ *   but the reading conflates lean with brake/grade tilt (an accelerometer-
+ *   only limit, documented in `domain/motion/lean`'s file comment) and the
+ *   left/right axis assumes a rotationally-aligned mount. That is exactly
+ *   the issue's own bar for this tier ("clearly beta until a stable device
+ *   reference frame is proven"): the picker tags it Beta, the label already
+ *   carries the "β", and `RideMetricDefinition.availability` now has a third
+ *   value, `"experimental"`, to say so structurally rather than in prose.
+ * - **Blocked by evidence: `terrain.grade`, `terrain.climbRemaining`,
+ *   `road.surfaceAhead`, `road.gravelAhead`, `road.gravelRemaining`,
+ *   `road.curvesAhead`.** All six need "what's ahead of me on the route I'm
+ *   riding" — a position-indexed lookup into the route's elevation profile
+ *   and surface/curvature evidence. That data exists today only at planning
+ *   time (`application/elevation/profile`, `application/roads/engine-road-
+ *   evidence`'s `SurfaceRun`s), fetched for the planner's chart and never
+ *   carried into `SessionRouteBinding` or the ride scene — which deliberately
+ *   draws only a plain line (`application/map/build-ride-scene`'s own
+ *   comment: "no progress marker... until the engine can answer"). Wiring
+ *   this is a live-navigation-engine feature (persist or refetch the
+ *   candidate's evidence and elevation samples with the session, then
+ *   position-index them off `routeProgress`), not a picker change; it is the
+ *   next slice's work, not this one's.
+ * - **Defer: `context.smart`.** "Smart contextual slot" has no definition
+ *   anywhere of what it picks or why — building it now would mean inventing
+ *   the behavior, which is exactly the kind of fabrication this registry
+ *   exists to prevent. Needs a product decision first.
+ * - **Defer: `motion.tilt`, `motion.lateralG`.** `motion.lean` establishes
+ *   the reference-frame and filtering machinery these would need too, but
+ *   neither has a clear product definition distinct from lean/pitch (tilt)
+ *   or a demonstrated-credible signal (lateral G, which the issue itself
+ *   gates on "only if signal quality proves credible") yet. Real device data
+ *   from the lean beta is the fastest way to judge that quality; a follow-up
+ *   once it exists, not invented now.
  */
 
 import { METERS_PER_MILE } from "@/application/planner/measurements";
+import { calculateSunset } from "@/application/long-trip";
 import { speedLimitMph } from "@/domain/route/types";
+import type { Coordinate } from "@/domain/ride/types";
+import type { LeanMetricSnapshot } from "@/domain/motion/lean";
 import type { PositionQuality } from "@/domain/ride-session/types";
 import type { RecordingSummary } from "@/domain/recording/types";
 import { movingAverageSpeedMps, type RecordingTelemetry } from "@/domain/recording/telemetry";
@@ -165,6 +216,13 @@ export interface RideMetricContext {
     /** Device altitude in metres; `null`/absent when the device reports none or the fix is stale. */
     readonly altitudeMeters?: number | null;
     readonly altitudeAccuracyMeters?: number | null;
+    /**
+     * The last-known coordinate; survives staleness like the port's own
+     * projection (`domain/ride-session/navigation`), because "where roughly am
+     * I" does not need a fresh fix the way a live speed does. `null`/absent
+     * before the first fix.
+     */
+    readonly coordinate?: Coordinate | null;
   };
   /** The ride is paused: a paused rider is stopped. */
   readonly paused?: boolean;
@@ -192,6 +250,13 @@ export interface RideMetricContext {
    * source; read only in Free Ride, by metrics marked `freeRideTelemetry`.
    */
   readonly liveTelemetry?: RecordingTelemetry | null;
+  /**
+   * The device-motion beta's own reading, already computed upstream from raw
+   * sensor samples (calibration, low-pass filtering, this ride's max — none
+   * of that belongs in a resolver). Absent/`null` means no motion source is
+   * wired up at all, resolved the same as `"unsupported"`.
+   */
+  readonly motion?: { readonly lean: LeanMetricSnapshot } | null;
 }
 
 export interface RideMetricDefinition {
@@ -202,7 +267,14 @@ export interface RideMetricDefinition {
   readonly shortLabel: string;
   readonly modes: readonly RideMetricMode[];
   readonly category: RideMetricCategory;
-  readonly availability: "live" | "planned";
+  /**
+   * `"live"`: shown with full confidence. `"experimental"`: selectable and
+   * genuinely computed, never fabricated, but from a signal this app cannot
+   * yet fully trust (today: device motion, no calibrated reference frame
+   * proven) — the picker marks it Beta and the label itself says so ("Lean
+   * β"). `"planned"`: not offered; resolves `unsupported`.
+   */
+  readonly availability: "live" | "experimental" | "planned";
   /** Reads the recording's filtered telemetry, so it is shown only on a ride that records. */
   readonly needsRecording?: boolean;
   /** In Free Ride, a `needsRecording` metric that reads the ride's live telemetry instead. */
@@ -448,6 +520,74 @@ function clockReading(base: ReadingBase, seconds: number, spokenSuffix: string):
   return { ...reading, accessibleDetail: `${minutes} ${minutes === 1 ? "minute" : "minutes"} ${spokenSuffix}` };
 }
 
+/**
+ * The UTC calendar date `calculateSunset` should be asked for, so a rider west
+ * of Greenwich riding after roughly 7-8 pm local does not flip the reading
+ * past midnight UTC onto *tomorrow's* sunset (a large, wrong "daylight left").
+ * `calculateSunset` only reads the date part of `departureAt`; shifting `now`
+ * by the coordinate's own longitude (the same approximate local-time offset
+ * the NOAA formula already derives internally as `longitudeHour`) lands well
+ * inside the observer's local day, never near its own UTC-date boundary.
+ */
+function localCalendarDateIso(coordinate: Coordinate, nowMs: number): string {
+  const offsetMs = (coordinate.lon / 15) * 3_600_000;
+  const local = new Date(nowMs + offsetMs);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 12)).toISOString();
+}
+
+/**
+ * Today's sunset at the last-known coordinate, minus now (§ long-trip's own
+ * NOAA calculation, reused rather than duplicated). A stale coordinate is fine
+ * here — daylight does not need a fresh fix the way a live speed does — but no
+ * coordinate at all (before the first fix) waits. Once the sun is down this is
+ * a genuine zero, not a guess at tomorrow's sunrise; polar day/night (the solar
+ * calculation cannot resolve a horizon crossing) is unsupported, not a fake 0.
+ */
+function daylightRemainingReading(base: ReadingBase, context: RideMetricContext): RideMetricReading {
+  const coordinate = context.position.coordinate ?? null;
+  if (coordinate === null) return waiting(base, "waiting for a GPS fix");
+  const fact = calculateSunset(coordinate, localCalendarDateIso(coordinate, context.nowMs));
+  if (fact === null) return unsupported(base, "daylight is not available at this location");
+  const sunsetMs = Date.parse(fact.sunset);
+  if (Number.isNaN(sunsetMs)) return unsupported(base, "daylight is not available at this location");
+  const remainingSeconds = Math.max(0, Math.round((sunsetMs - context.nowMs) / 1000));
+  const reading = ready(base, durationParts(remainingSeconds), remainingSeconds, { quality: "medium" });
+  return remainingSeconds > 0 ? reading : { ...reading, accessibleDetail: "the sun has set" };
+}
+
+/**
+ * `L12`/`R8`/`0`: direction letter (when past a half-degree deadband) plus
+ * magnitude, degrees — a glance-scannable form matching `heading`'s compass
+ * letters. While stopped (or paused) with a nonzero max on either side, the
+ * slot instead shows this ride's peak: `L{max}/R{max}` — a live angle is
+ * meaningless with the bike parked, but the ride's peak lean is exactly what
+ * a rider stopped at a junction wants to see (device-motion §12 follow-up).
+ */
+function leanReading(base: ReadingBase, context: RideMetricContext): RideMetricReading {
+  const lean = context.motion?.lean ?? null;
+  if (lean === null || lean.availability === "unsupported") {
+    return unsupported(base, "this device has no motion sensor");
+  }
+  if (lean.availability === "denied") return unsupported(base, "motion access was not granted");
+  if (lean.availability === "permission-needed") return waiting(base, "pick Lean again to allow motion access");
+  if (lean.availability === "calibrating" || lean.degrees === null) {
+    return waiting(base, "hold the bike upright and level, then calibrate");
+  }
+  const speed = context.position.speedMps;
+  const stopped = context.paused === true || (known(speed) && speed <= MOVING_SPEED_MPS);
+  if (stopped && (lean.maxLeftDegrees > 0 || lean.maxRightDegrees > 0)) {
+    const left = Math.round(lean.maxLeftDegrees);
+    const right = Math.round(lean.maxRightDegrees);
+    const reading = ready(base, { value: `L${left}/R${right}`, unit: "°" }, Math.max(left, right), { quality: "low" });
+    return { ...reading, accessibleDetail: `beta reading, max lean this ride ${left} degrees left, ${right} degrees right` };
+  }
+  const rounded = Math.round(Math.abs(lean.degrees));
+  const direction = lean.degrees > 0.5 ? "R" : lean.degrees < -0.5 ? "L" : "";
+  const reading = ready(base, { value: `${direction}${rounded}`, unit: "°" }, lean.degrees, { quality: "low" });
+  const spokenDirection = direction === "R" ? "right" : direction === "L" ? "left" : "level";
+  return { ...reading, accessibleDetail: `beta reading, leaning ${spokenDirection} about ${rounded} degrees` };
+}
+
 // ---- Definitions ----------------------------------------------------------
 
 const ALL_MODES: readonly RideMetricMode[] = ["guided", "recording", "free-ride"];
@@ -461,11 +601,11 @@ type LiveSpec = Omit<RideMetricDefinition, "availability" | "resolve"> & {
   resolve(base: ReadingBase, context: RideMetricContext): RideMetricReading;
 };
 
-function live(spec: LiveSpec): RideMetricDefinition {
+function live(spec: LiveSpec, availability: "live" | "experimental" = "live"): RideMetricDefinition {
   const { source, resolve, ...definition } = spec;
   return {
     ...definition,
-    availability: "live",
+    availability,
     resolve(context) {
       const base = { id: spec.id, label: spec.label, source };
       if (!spec.modes.includes(context.mode)) return unsupported(base, "not available on this kind of ride");
@@ -767,15 +907,43 @@ const DEFINITIONS: readonly RideMetricDefinition[] = [
           : ready(base, elevationParts(telemetry.elevation.lossMeters, context.units), telemetry.elevation.lossMeters),
       ),
   }),
+  // Blocked by evidence (see the file doc comment): no position-indexed route
+  // evidence reaches the live session today.
   planned("terrain.grade", "Grade", "Grade", "terrain", "route-evidence", GUIDED),
   planned("terrain.climbRemaining", "Climb left", "Climb left", "terrain", "route-evidence", GUIDED),
   planned("road.surfaceAhead", "Surface ahead", "Surface", "route", "route-evidence", GUIDED),
   planned("road.gravelAhead", "Gravel ahead", "Gravel", "route", "route-evidence", GUIDED),
   planned("road.gravelRemaining", "Gravel left", "Gravel left", "route", "route-evidence", GUIDED),
   planned("road.curvesAhead", "Curves ahead", "Curves", "route", "route-evidence", GUIDED),
-  planned("context.daylightRemaining", "Daylight", "Daylight", "context", "astronomy"),
+  live({
+    id: "context.daylightRemaining",
+    label: "Daylight",
+    shortLabel: "Daylight",
+    modes: ALL_MODES,
+    category: "context",
+    source: "astronomy",
+    resolve: (base, context) => daylightRemainingReading(base, context),
+  }),
+  // Defer: undefined product behavior (see the file doc comment).
   planned("context.smart", "Smart", "Smart", "context", "derived"),
-  planned("motion.lean", "Lean β", "Lean β", "motion", "device-motion"),
+  // Experimental (see the file doc comment): a real, calibrated reading, but
+  // conflates lean with brake/grade tilt and assumes a rotationally-aligned
+  // mount — genuinely beta, not "live".
+  live(
+    {
+      id: "motion.lean",
+      label: "Lean β",
+      shortLabel: "Lean β",
+      modes: ALL_MODES,
+      category: "motion",
+      source: "device-motion",
+      resolve: (base, context) => leanReading(base, context),
+    },
+    "experimental",
+  ),
+  // Defer: no clear distinction from lean without a proven device reference
+  // frame (see the file doc comment); a fast follow-up once `motion-port`
+  // has real device data to judge quality against.
   planned("motion.tilt", "Tilt β", "Tilt β", "motion", "device-motion"),
   planned("motion.lateralG", "Lateral G β", "Lat G β", "motion", "device-motion"),
 ];
@@ -798,7 +966,8 @@ function sourcesFor(mode: RideMetricMode, sources?: RideMetricSources): RideMetr
 /** Whether a metric can fill a slot in this mode (and on this ride's sources) today. */
 export function metricAvailable(id: RideMetricId, mode: RideMetricMode, sources?: RideMetricSources): boolean {
   const definition = RIDE_METRIC_REGISTRY[id];
-  if (definition.availability !== "live" || !definition.modes.includes(mode)) return false;
+  const shippable = definition.availability === "live" || definition.availability === "experimental";
+  if (!shippable || !definition.modes.includes(mode)) return false;
   if (definition.needsRecording !== true) return true;
   const available = sourcesFor(mode, sources);
   if (available.recording) return true;

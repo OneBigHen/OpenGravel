@@ -19,6 +19,7 @@
 import type { SessionNavigationState } from "@/domain/ride-session/navigation";
 import type { RecordingSummary } from "@/domain/recording/types";
 import type { RecordingTelemetry } from "@/domain/recording/telemetry";
+import type { LeanMetricSnapshot } from "@/domain/motion/lean";
 import {
   MOVING_SPEED_MPS,
   RIDE_METRIC_IDS,
@@ -76,6 +77,8 @@ export interface RideMetricStripInput {
    * the moving-time metrics are not offered.
    */
   readonly liveTelemetry?: RecordingTelemetry | null;
+  /** The device-motion beta's lean reading, already computed upstream (§ motion.lean). Absent means no motion source is wired up. */
+  readonly lean?: LeanMetricSnapshot | null;
   readonly settings: Pick<RiderSettings, "units" | "uiPreferences">;
   readonly nowMs: number;
   readonly overLimit?: boolean;
@@ -126,6 +129,7 @@ function contextOf(input: RideMetricStripInput, mode: RideMetricMode): RideMetri
       observedAtMs: age === null || !Number.isFinite(age) ? null : input.nowMs - age,
       altitudeMeters: navigation.position.altitudeMeters ?? null,
       altitudeAccuracyMeters: navigation.position.altitudeAccuracyMeters ?? null,
+      coordinate: navigation.position.coordinate,
     },
     paused: navigation.activity === "paused",
     route: navigation.plan.route === null ? null : { answer: input.telemetry },
@@ -134,6 +138,7 @@ function contextOf(input: RideMetricStripInput, mode: RideMetricMode): RideMetri
         ? null
         : { summary: input.recordingSummary, telemetry: input.recordingTelemetry ?? null },
     ...(live === null ? {} : { liveTelemetry: live }),
+    motion: input.lean === undefined || input.lean === null ? null : { lean: input.lean },
   };
 }
 

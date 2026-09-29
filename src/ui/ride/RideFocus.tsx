@@ -1204,6 +1204,10 @@ export function RideFocus({
             closePicker();
           }}
           onClose={closePicker}
+          onCalibrateLean={(): void => {
+            store.getState().calibrateLean();
+            setMetricAnnouncement("Lean calibrated to level.");
+          }}
         />
       )}
       <p className="og-visually-hidden" role="status" data-testid="ride-metric-announcement">{metricAnnouncement}</p>

@@ -106,6 +106,15 @@ import {
 import { RIDE_METRIC_PRESETS, metricAvailable, type RideMetricId, type RideMetricPresetId } from "@/application/ride-metrics/registry";
 import { storedAfterChoice } from "@/application/ride-metrics/strip";
 import type { RideInterestFilter } from "@/application/ride-interest";
+import type { MotionPort } from "@/application/ride-session/ports/motion-port";
+import {
+  INITIAL_LEAN_TELEMETRY_STATE,
+  calibrateLean as calibrateLeanState,
+  sampleLean,
+  type LeanMetricSnapshot,
+  type LeanTelemetryState,
+  type Vector3,
+} from "@/domain/motion/lean";
 
 /**
  * What the surface is doing right now.
@@ -289,6 +298,8 @@ export interface RideFocusStoreActions {
   applyRideMetricPreset(id: RideMetricPresetId): boolean;
   /** The ride sheet's along-route interest filter (OGV#13 §3): saved per device. */
   setRideInterestFilter(filter: RideInterestFilter): void;
+  /** The rider's "calibrate" for the lean-angle beta: re-zeroes from the freshest sample. No-op with no sample yet. */
+  calibrateLean(): void;
 }
 
 export type RideFocusStore = RideFocusStoreState & RideFocusStoreActions;
@@ -373,6 +384,12 @@ export interface RideFocusStoreOptions {
    * hides, and drops it when the ride ends. Absent: Free Ride offers none.
    */
   readonly freeRideTelemetry?: FreeRideTelemetry;
+  /**
+   * Builds the device-motion adapter for the lean-angle beta (issue #12
+   * follow-up). A factory, like `environment`, so `start()`/`stop()` own one
+   * adapter's lifecycle each run. Absent: `motion.lean` reads unsupported.
+   */
+  readonly motion?: () => MotionPort;
 }
 
 const EMPTY_ENVIRONMENT: RideFocusEnvironmentSnapshot = {
@@ -412,6 +429,7 @@ export function createRideFocusStore(
     telemetry,
     riderSettings: riderSettingsStorage,
     freeRideTelemetry,
+    motion: createMotion,
     routeWarnings = (): readonly RouteWarning[] => [],
     setInterval: schedule = (handler, ms): number =>
       globalThis.setInterval(handler, ms) as unknown as number,
@@ -473,6 +491,16 @@ export function createRideFocusStore(
   /** That session's final numbers, for the finish summary. */
   let endedLiveTelemetry: RecordingTelemetry | null = null;
   let detachPageListeners: (() => void) | null = null;
+
+  // ---- Lean-angle beta (issue #12 follow-up) -------------------------------
+  // Mutable across `start()`/`stop()`, like `environment`; the functions that
+  // fold, subscribe and read it live inside the store callback below (they
+  // need `get()`/`refresh()`, which only exist in that scope).
+  let motion: MotionPort | null = null;
+  let unsubscribeMotion: (() => void) | null = null;
+  let leanState: LeanTelemetryState = INITIAL_LEAN_TELEMETRY_STATE;
+  /** The latest raw sample, so `calibrateLean()` can re-zero synchronously rather than waiting on the next event. */
+  let lastGravity: { readonly vector: Vector3; readonly atMs: number } | null = null;
 
   /** Saves the Free Ride telemetry now; it never throws. */
   function flushLiveTelemetry(): void {
@@ -649,8 +677,55 @@ export function createRideFocusStore(
       refresh();
     }
 
+    // ---- Lean-angle beta (issue #12 follow-up) -----------------------------
+
+    function onGravitySample(vector: Vector3, atMs: number): void {
+      lastGravity = { vector, atMs };
+      leanState = sampleLean(leanState, vector, atMs);
+      refresh();
+    }
+
+    /** Lazily subscribes the first time the rider's stored choices actually want Lean, in either layout. */
+    function ensureMotionSubscribed(): void {
+      if (motion === null || unsubscribeMotion !== null) return;
+      const preferences = get().riderSettings.uiPreferences;
+      const wantsLean = preferences.rideMetrics.includes("motion.lean") || preferences.recordingMetrics.includes("motion.lean");
+      if (!wantsLean) return;
+      unsubscribeMotion = motion.subscribe(onGravitySample);
+    }
+
+    /** The strip's own reading, computed from the fold and the port's permission state — never fabricated. */
+    function leanSnapshot(): LeanMetricSnapshot {
+      const shared = {
+        maxLeftDegrees: leanState.maxLeftDegrees,
+        maxRightDegrees: leanState.maxRightDegrees,
+        sampledAtMs: leanState.lastSampleAtMs,
+      };
+      if (motion === null || !motion.supported()) return { availability: "unsupported", degrees: null, ...shared };
+      if (motion.permission() === "denied") return { availability: "denied", degrees: null, ...shared };
+      if (leanState.reference !== null) return { availability: "ready", degrees: leanState.smoothedDegrees, ...shared };
+      return { availability: motion.permission() === "granted" ? "calibrating" : "permission-needed", degrees: null, ...shared };
+    }
+
+    /** The rider's "calibrate" (picked while stopped): re-zeroes from the freshest sample, or waits for one. */
+    function calibrateLean(): void {
+      if (lastGravity === null) return;
+      const next = calibrateLeanState(lastGravity.vector, lastGravity.atMs);
+      if (next === null) return;
+      leanState = next;
+      refresh();
+    }
+
+    /** The rider picked Lean (a slot, or a preset that includes it): ask the platform, from this same gesture. */
+    function primeMotionIfChosen(ids: readonly RideMetricId[]): void {
+      if (!ids.includes("motion.lean") || motion === null) return;
+      ensureMotionSubscribed();
+      void motion.requestPermission().then(() => refresh());
+    }
+
     function refresh(): void {
       if (!running) return;
+      ensureMotionSubscribed();
       const state = controller.snapshot();
       const snapshot = environment?.snapshot() ?? EMPTY_ENVIRONMENT;
       const instant = now();
@@ -671,6 +746,7 @@ export function createRideFocusStore(
               recordingSummary: recordingSnapshot?.summary ?? null,
               recordingTelemetry: recordingSnapshot?.telemetry ?? null,
               liveTelemetry,
+              lean: leanSnapshot(),
               recordingStatus: recordingSnapshot?.status ?? null,
               bufferedRecordingPointCount: recordingSnapshot?.bufferedPointCount ?? 0,
               recordingLibraryCommitted: recordingSnapshot?.libraryCommitted ?? false,
@@ -1505,6 +1581,8 @@ export function createRideFocusStore(
         const current = get().riderSettings;
         const stored = current.uiPreferences[strip.preferenceKey];
         saveRiderSettings(withMetricSlots(current, strip.preferenceKey, storedAfterChoice(stored, strip.shownIds, index, id)));
+        // From this same tap: iOS motion permission requires the gesture's own call stack.
+        primeMotionIfChosen([id]);
         return true;
       },
 
@@ -1514,12 +1592,14 @@ export function createRideFocusStore(
         if (strip === null || preset === null || !strip.customizable) return false;
         if (!preset.slots.every((metric) => metricAvailable(metric, strip.mode, strip.sources))) return false;
         saveRiderSettings(withMetricSlots(get().riderSettings, strip.preferenceKey, preset.slots));
+        primeMotionIfChosen(preset.slots);
         return true;
       },
 
       setRideInterestFilter(filter: RideInterestFilter): void {
         saveRiderSettings(withRideInterestFilter(get().riderSettings, filter));
       },
+      calibrateLean,
 
       async start(): Promise<void> {
         if (running) return;
@@ -1527,6 +1607,7 @@ export function createRideFocusStore(
         rideActive = null;
         environment = createEnvironment();
         unsubscribeEnvironment = environment.subscribe(() => refresh());
+        motion = createMotion?.() ?? null;
         attachPageListeners();
         await recover();
       },
@@ -1966,6 +2047,12 @@ export function createRideFocusStore(
         environment?.setRideActive(false);
         environment?.dispose();
         environment = null;
+        unsubscribeMotion?.();
+        unsubscribeMotion = null;
+        motion?.dispose();
+        motion = null;
+        leanState = INITIAL_LEAN_TELEMETRY_STATE;
+        lastGravity = null;
         rideActive = null;
         if (navigationEngine !== null) {
           void navigationEngine.stop();

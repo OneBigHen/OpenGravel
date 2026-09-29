@@ -29,9 +29,11 @@ export interface RideMetricPickerProps {
   readonly onChoose: (id: RideMetricId) => void;
   readonly onPreset: (id: RideMetricPresetId) => void;
   readonly onClose: () => void;
+  /** Re-zeroes the lean-angle beta from the freshest sample. Shown only while the slot holds it. */
+  readonly onCalibrateLean?: () => void;
 }
 
-export function RideMetricPicker({ model, slotIndex, onChoose, onPreset, onClose }: RideMetricPickerProps) {
+export function RideMetricPicker({ model, slotIndex, onChoose, onPreset, onClose, onCalibrateLean }: RideMetricPickerProps) {
   const rootRef = useRef<HTMLElement | null>(null);
   const current = model.shownIds[slotIndex]!;
   const presets = presetsFor(model.mode, model.sources);
@@ -60,6 +62,16 @@ export function RideMetricPicker({ model, slotIndex, onChoose, onPreset, onClose
           Readout {slotIndex + 1}
           <span className="og-ride-metric-picker__now"> · {RIDE_METRIC_REGISTRY[current].label}</span>
         </h2>
+        {current !== "motion.lean" || onCalibrateLean === undefined ? null : (
+          <button
+            type="button"
+            className="og-ride__action"
+            data-testid="ride-metric-picker-calibrate-lean"
+            onClick={onCalibrateLean}
+          >
+            Calibrate
+          </button>
+        )}
         <button
           type="button"
           className="og-ride__action"
@@ -69,6 +81,11 @@ export function RideMetricPicker({ model, slotIndex, onChoose, onPreset, onClose
           Done
         </button>
       </header>
+      {current !== "motion.lean" ? null : (
+        <p className="og-ride-metric-picker__detail" data-testid="ride-metric-picker-lean-hint">
+          Beta: hold the bike upright and level, then tap Calibrate.
+        </p>
+      )}
 
       {presets.length === 0 ? null : (
         <div className="og-ride-metric-picker__group" role="group" aria-label="Presets">
@@ -100,18 +117,22 @@ export function RideMetricPicker({ model, slotIndex, onChoose, onPreset, onClose
             {group.metrics.map((metric) => {
               const elsewhere = model.shownIds.indexOf(metric.id);
               const swaps = elsewhere !== -1 && elsewhere !== slotIndex;
+              const beta = metric.availability === "experimental";
               return (
                 <button
                   key={metric.id}
                   type="button"
                   className="og-ride-metric-picker__option"
                   data-testid={`ride-metric-option-${metric.id}`}
+                  data-beta={beta ? "true" : undefined}
                   aria-pressed={metric.id === current}
                   onClick={(): void => onChoose(metric.id)}
                 >
                   <span>{metric.label}</span>
                   {swaps ? (
                     <span className="og-ride-metric-picker__detail">Swaps with readout {elsewhere + 1}</span>
+                  ) : beta ? (
+                    <span className="og-ride-metric-picker__detail">Beta</span>
                   ) : null}
                 </button>
               );
