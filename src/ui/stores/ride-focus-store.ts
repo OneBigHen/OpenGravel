@@ -68,7 +68,9 @@ import type { GuidedReroutePlanner, RerouteDetour } from "@/application/ride-ses
 import { lineAhead, loopRejoinAnchors } from "@/application/ride-session/loop-rejoin";
 import { resolveHeadHomeTarget } from "@/application/free-ride/head-home-target";
 import {
+  EMPTY_RIDE_OFFER_ATTENTION,
   EMPTY_OFFER_HISTORY,
+  evaluateRideOfferAttention,
   rankRideOffers,
   recordOfferSkip,
   rideOfferTiming,
@@ -76,6 +78,7 @@ import {
   type OfferCatalogRoute,
   type RideOfferCandidate,
   type RideOfferHistory,
+  type RideOfferAttentionState,
   type RideOfferSummary,
 } from "@/application/free-ride/ride-offers";
 import {
@@ -465,9 +468,12 @@ export function createRideFocusStore(
   let offerCatalog: readonly OfferCatalogRoute[] | null = null;
   let offerCatalogLoading = false;
   let offerAbort: AbortController | null = null;
+  let offerGeneration = 0;
   let offerEndedAtMs: number | null = null;
   let offerRequested = false;
   let offerSession: string | null = null;
+  /** Latest transient movement evidence used only to decide when a card may interrupt. */
+  let offerAttention: RideOfferAttentionState = EMPTY_RIDE_OFFER_ATTENTION;
   let shownOffer: {
     readonly candidate: RideOfferCandidate;
     readonly plan: Extract<ReturnPlanResult, { readonly status: "planned" }>;
@@ -851,10 +857,13 @@ export function createRideFocusStore(
     }
 
     function clearRideOffer(): void {
+      const hadPublicOffer = get().rideOffer !== null || get().rideOfferBusy;
+      const hadPrivateOffer = shownOffer !== null;
+      offerGeneration += 1;
       offerAbort?.abort();
       offerAbort = null;
       shownOffer = null;
-      if (get().rideOffer !== null || get().rideOfferBusy) {
+      if (hadPublicOffer || hadPrivateOffer) {
         set({ rideOffer: null, rideOfferBusy: false, suggestionPreviewLine: NO_COORDINATES });
       }
     }
@@ -876,6 +885,19 @@ export function createRideFocusStore(
       return loopRejoinAnchors(ordered, [], 0);
     }
 
+    function observeRideOfferAttention(navigation: SessionNavigationState, instant: string): boolean {
+      const result = evaluateRideOfferAttention({
+        speedMps: navigation.position.speedMps,
+        headingDegrees: navigation.position.headingDegrees,
+        observedAtMs: navigation.position.observedAt === null ? null : Date.parse(navigation.position.observedAt),
+        nowMs: Date.parse(instant),
+        instructionDistanceMeters: navigation.instruction?.distanceMeters ?? null,
+        state: offerAttention,
+      });
+      offerAttention = result.state;
+      return result.allowed;
+    }
+
     /**
      * Free Ride offers (#14): while the rider roams with suggestions on, plan
      * the best whole ride from here and put it up as a card, as Uber does for
@@ -885,12 +907,16 @@ export function createRideFocusStore(
       const eligible = rideOffers && navigation.activity === "free" && state.suggestions === "on" &&
         state.recordingId === null && returnPlanner !== undefined;
       if (offerSession !== state.sessionId) {
+        clearRideOffer();
         offerSession = state.sessionId;
         offerHistory = EMPTY_OFFER_HISTORY;
         offerEndedAtMs = null;
+        offerAttention = EMPTY_RIDE_OFFER_ATTENTION;
+        offerRequested = false;
       }
       if (!eligible) {
-        if (shownOffer !== null || get().rideOfferBusy) clearRideOffer();
+        if (shownOffer !== null || get().rideOffer !== null || get().rideOfferBusy) clearRideOffer();
+        offerAttention = EMPTY_RIDE_OFFER_ATTENTION;
         return;
       }
       const nowMs = Date.parse(instant);
@@ -899,7 +925,8 @@ export function createRideFocusStore(
         if (nowMs - Date.parse(offer.shownAt) >= offer.lifetimeMs) get().skipRideOffer();
         return;
       }
-      if (get().rideOfferBusy || get().returnBusy || get().liveSuggestion !== null) return;
+      if (!observeRideOfferAttention(navigation, instant)) return;
+      if (get().rideOfferBusy || get().returnBusy || get().liveSuggestion !== null || get().suggestionBusy) return;
       const here = navigation.position.quality === "fresh-good" ? navigation.position.coordinate : null;
       if (here === null) return;
       const timing = rideOfferTiming({
@@ -941,6 +968,7 @@ export function createRideFocusStore(
       if (returnPlanner === undefined) return;
       offerAbort?.abort();
       const abort = new AbortController();
+      const generation = ++offerGeneration;
       offerAbort = abort;
       set({ rideOfferBusy: true });
       const backHere: ExplicitReturnTarget = { kind: "session-start", coordinate: here, label: "Back here" };
@@ -965,10 +993,28 @@ export function createRideFocusStore(
       } catch {
         plan = { status: "unavailable", reason: "no-route" };
       }
-      if (!running || offerAbort !== abort) return;
+      if (!running || offerAbort !== abort || offerGeneration !== generation) return;
       offerAbort = null;
       const current = controller.snapshot();
-      if (current === null || current.sessionId !== state.sessionId || current.activity !== "free") {
+      if (
+        current === null ||
+        current.sessionId !== state.sessionId ||
+        current.activity !== "free" ||
+        current.suggestions !== "on" ||
+        current.recordingId !== null ||
+        get().liveSuggestion !== null ||
+        get().suggestionBusy
+      ) {
+        set({ rideOfferBusy: false });
+        return;
+      }
+      const currentNavigation = controller.navigationState();
+      if (
+        currentNavigation === null ||
+        currentNavigation.sessionId !== state.sessionId ||
+        currentNavigation.activity !== "free" ||
+        !observeRideOfferAttention(currentNavigation, now())
+      ) {
         set({ rideOfferBusy: false });
         return;
       }
@@ -978,8 +1024,29 @@ export function createRideFocusStore(
         set({ rideOfferBusy: false });
         return;
       }
-      const line = (await loadRouteLine(plan.routeGeometryRef)) ?? NO_COORDINATES;
-      if (!running || controller.snapshot()?.activity !== "free") {
+      // An offer is only a preview until accepted; resolving its geometry must
+      // not replace the active guided route underneath the card.
+      const line = await resolveRouteLine(plan.routeGeometryRef);
+      if (!running || offerGeneration !== generation) return;
+      if (line === null || line.length < 2) {
+        offerHistory = { ...offerHistory, skippedIds: new Set([...offerHistory.skippedIds, candidate.id]) };
+        set({ rideOfferBusy: false, suggestionPreviewLine: NO_COORDINATES });
+        return;
+      }
+      const latest = controller.snapshot();
+      const latestNavigation = controller.navigationState();
+      if (
+        latest === null ||
+        latest.sessionId !== state.sessionId ||
+        latest.activity !== "free" ||
+        latest.suggestions !== "on" ||
+        latest.recordingId !== null ||
+        get().liveSuggestion !== null ||
+        get().suggestionBusy ||
+        latestNavigation === null ||
+        latestNavigation.sessionId !== state.sessionId ||
+        !observeRideOfferAttention(latestNavigation, now())
+      ) {
         set({ rideOfferBusy: false });
         return;
       }
@@ -1056,6 +1123,11 @@ export function createRideFocusStore(
         if (result.status === "suggestion") {
           const previewLine = await resolveRouteLine(result.suggestion.routeGeometryRef ?? null);
           if (!running || abort.signal.aborted || generation !== suggestionGeneration) return;
+          if (get().rideOffer !== null || get().rideOfferBusy) {
+            suggestionAbort = null;
+            set({ liveSuggestion: null, suggestionBusy: false });
+            return;
+          }
           if (previewLine === null || previewLine.length < 2) {
             suggestionAbort = null;
             set({
@@ -1098,6 +1170,11 @@ export function createRideFocusStore(
           // never take camera ownership from the heading-up ride camera.
           refresh();
         } else {
+          if (get().rideOffer !== null || get().rideOfferBusy) {
+            suggestionAbort = null;
+            set({ liveSuggestion: null, suggestionBusy: false });
+            return;
+          }
           suggestionAbort = null;
           set({
             liveSuggestion: null,
@@ -2061,9 +2138,9 @@ export function createRideFocusStore(
         }
         suggestionAbort?.abort();
         suggestionAbort = null;
-        offerAbort?.abort();
-        offerAbort = null;
-        shownOffer = null;
+        clearRideOffer();
+        offerRequested = false;
+        offerAttention = EMPTY_RIDE_OFFER_ATTENTION;
         pendingReturnAbort?.abort();
         pendingReturnAbort = null;
         rerouteAbort?.abort();

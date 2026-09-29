@@ -218,6 +218,166 @@ export const OFFER_STOPPED_COOLDOWN_MS = 8_000;
 export const OFFER_MOVING_LIFETIME_MS = 20_000;
 export const OFFER_STOPPED_LIFETIME_MS = 60_000;
 
+/** A rider must be stopped or have a short, current straight-running window. */
+export const OFFER_STRAIGHT_MIN_MS = 3_000;
+export const OFFER_MAX_HEADING_DRIFT_DEGREES = 15;
+export const OFFER_MAX_OBSERVATION_AGE_MS = 5_000;
+/** Close maneuvers suppress a card even when the rider explicitly requested one. */
+export const OFFER_CLOSE_MANEUVER_METERS = 150;
+export const OFFER_CLOSE_MANEUVER_SECONDS = 10;
+
+export interface RideOfferAttentionState {
+  readonly lastObservedAtMs: number | null;
+  readonly lastHeadingDegrees: number | null;
+  readonly straightSinceMs: number | null;
+  readonly straightStartHeadingDegrees: number | null;
+  readonly straightSampleCount: number;
+  /** Remains set until a fresh straight-running interval follows a turn. */
+  readonly turnDetectedAtMs: number | null;
+}
+
+export const EMPTY_RIDE_OFFER_ATTENTION: RideOfferAttentionState = {
+  lastObservedAtMs: null,
+  lastHeadingDegrees: null,
+  straightSinceMs: null,
+  straightStartHeadingDegrees: null,
+  straightSampleCount: 0,
+  turnDetectedAtMs: null,
+};
+
+export interface RideOfferAttentionInput {
+  readonly speedMps: number | null;
+  readonly headingDegrees: number | null;
+  readonly observedAtMs: number | null;
+  readonly nowMs: number;
+  readonly instructionDistanceMeters: number | null;
+  readonly state: RideOfferAttentionState;
+}
+
+export interface RideOfferAttentionResult {
+  readonly allowed: boolean;
+  readonly state: RideOfferAttentionState;
+}
+
+function headingDeltaDegrees(first: number, second: number): number {
+  return Math.abs(((first - second + 540) % 360) - 180);
+}
+
+function finiteHeading(value: number | null): number | null {
+  if (value === null || !Number.isFinite(value)) return null;
+  return ((value % 360) + 360) % 360;
+}
+
+function closeManeuver(input: RideOfferAttentionInput): boolean {
+  const distance = input.instructionDistanceMeters;
+  if (distance === null || !Number.isFinite(distance) || distance < 0) return distance !== null;
+  if (distance <= OFFER_CLOSE_MANEUVER_METERS) return true;
+  const speed = input.speedMps;
+  return speed !== null && Number.isFinite(speed) && speed > 0 && distance / speed <= OFFER_CLOSE_MANEUVER_SECONDS;
+}
+
+/**
+ * Pure presentation evidence for whole-ride offers. It deliberately lives
+ * outside RideSession: the state is only the latest transient observation
+ * needed to avoid interrupting a rider during a turn or stale GPS window.
+ */
+export function evaluateRideOfferAttention(input: RideOfferAttentionInput): RideOfferAttentionResult {
+  const observedAtMs = input.observedAtMs;
+  const ageMs = observedAtMs === null ? Number.POSITIVE_INFINITY : input.nowMs - observedAtMs;
+  const fresh = Number.isFinite(input.nowMs) && observedAtMs !== null && Number.isFinite(observedAtMs) &&
+    ageMs >= 0 && ageMs <= OFFER_MAX_OBSERVATION_AGE_MS;
+  const speed = input.speedMps;
+  const knownSpeed = speed !== null && Number.isFinite(speed) && speed >= 0;
+  const heading = finiteHeading(input.headingDegrees);
+  const previousObservedAtMs = input.state.lastObservedAtMs;
+  const observationGapMs = previousObservedAtMs === null || observedAtMs === null
+    ? null
+    : observedAtMs - previousObservedAtMs;
+  const nonIncreasingTimestamp = fresh && observationGapMs !== null && observationGapMs < 0;
+  const gapRequiresReset = fresh && observationGapMs !== null && observationGapMs > OFFER_MAX_OBSERVATION_AGE_MS;
+  const newObservation = fresh && observedAtMs !== null &&
+    (previousObservedAtMs === null || observationGapMs !== null && observationGapMs > 0);
+  let lastHeadingDegrees = input.state.lastHeadingDegrees;
+  let straightSinceMs = input.state.straightSinceMs;
+  let straightStartHeadingDegrees = input.state.straightStartHeadingDegrees;
+  let straightSampleCount = input.state.straightSampleCount;
+  let turnDetectedAtMs = input.state.turnDetectedAtMs;
+
+  if (nonIncreasingTimestamp) {
+    return {
+      allowed: false,
+      state: {
+        ...input.state,
+        straightSinceMs: null,
+        straightStartHeadingDegrees: null,
+        straightSampleCount: 0,
+      },
+    };
+  }
+
+  if (newObservation) {
+    if (gapRequiresReset) {
+      lastHeadingDegrees = null;
+      straightSinceMs = null;
+      straightStartHeadingDegrees = null;
+      straightSampleCount = 0;
+      turnDetectedAtMs = null;
+    }
+    const changed = lastHeadingDegrees !== null && heading !== null &&
+      headingDeltaDegrees(lastHeadingDegrees, heading) > OFFER_MAX_HEADING_DRIFT_DEGREES;
+    const drifted = straightStartHeadingDegrees !== null && heading !== null &&
+      headingDeltaDegrees(straightStartHeadingDegrees, heading) > OFFER_MAX_HEADING_DRIFT_DEGREES;
+    if (changed || drifted) {
+      turnDetectedAtMs = observedAtMs;
+      straightSinceMs = null;
+      straightStartHeadingDegrees = null;
+      straightSampleCount = 0;
+    } else if (knownSpeed && speed >= OFFER_STOPPED_SPEED_MPS && heading !== null) {
+      if (straightSinceMs === null || straightStartHeadingDegrees === null) {
+        straightSinceMs = observedAtMs;
+        straightStartHeadingDegrees = heading;
+        straightSampleCount = 1;
+      } else {
+        straightSampleCount += 1;
+      }
+    } else if (!knownSpeed || heading === null) {
+      straightSinceMs = null;
+      straightStartHeadingDegrees = null;
+      straightSampleCount = 0;
+    }
+    lastHeadingDegrees = heading;
+  }
+
+  if (!fresh) {
+    straightSinceMs = null;
+    straightStartHeadingDegrees = null;
+    straightSampleCount = 0;
+  }
+
+  const nextState: RideOfferAttentionState = {
+    lastObservedAtMs: newObservation ? observedAtMs : input.state.lastObservedAtMs,
+    lastHeadingDegrees,
+    straightSinceMs,
+    straightStartHeadingDegrees,
+    straightSampleCount,
+    turnDetectedAtMs,
+  };
+  if (!fresh || !knownSpeed || closeManeuver(input)) return { allowed: false, state: nextState };
+
+  const stopped = speed < OFFER_STOPPED_SPEED_MPS;
+  const straightForMs = straightSinceMs === null || observedAtMs === null ? 0 : observedAtMs - straightSinceMs;
+  const straight = speed >= OFFER_STOPPED_SPEED_MPS && heading !== null &&
+    straightSampleCount >= 2 && straightForMs >= OFFER_STRAIGHT_MIN_MS;
+  const recovered = turnDetectedAtMs === null || straight;
+  if (recovered && turnDetectedAtMs !== null && straight) {
+    return {
+      allowed: stopped || straight,
+      state: { ...nextState, turnDetectedAtMs: null },
+    };
+  }
+  return { allowed: stopped || (straight && recovered), state: nextState };
+}
+
 export function rideOfferTiming(input: {
   readonly speedMps: number | null;
   readonly nowMs: number;
@@ -225,7 +385,10 @@ export function rideOfferTiming(input: {
   /** The rider asked for an offer: no cooldown. */
   readonly requested: boolean;
 }): RideOfferTiming {
-  const stopped = input.speedMps === null || input.speedMps < OFFER_STOPPED_SPEED_MPS;
+  if (input.speedMps === null || !Number.isFinite(input.speedMps)) {
+    return { mayOffer: false, lifetimeMs: OFFER_MOVING_LIFETIME_MS };
+  }
+  const stopped = input.speedMps < OFFER_STOPPED_SPEED_MPS;
   const lifetimeMs = stopped ? OFFER_STOPPED_LIFETIME_MS : OFFER_MOVING_LIFETIME_MS;
   if (input.requested || input.lastOfferEndedAtMs === null) return { mayOffer: true, lifetimeMs };
   const cooldown = stopped ? OFFER_STOPPED_COOLDOWN_MS : OFFER_MOVING_COOLDOWN_MS;

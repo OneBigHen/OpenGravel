@@ -449,6 +449,20 @@ describe("dark chrome and honest states", () => {
     expect(hosts.hosts[0]?.lastScene()?.routes[1]?.geometry).toEqual(preview);
   });
 
+  it("closes ride controls when the rider requests a whole-ride offer", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const request = vi.fn();
+    act(() => store.setState({
+      navigation: { ...store.getState().navigation!, activity: "free" },
+      suggestions: "on", rideOffersAvailable: true, requestRideOffer: request,
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    fireEvent.click(screen.getByTestId("ride-offer-request"));
+    expect(request).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+  });
+
   it("passes enabled places into the ride map scene when a source is supplied", async () => {
     const inExtent = vi.fn(async () => ({
       availability: "available" as const,

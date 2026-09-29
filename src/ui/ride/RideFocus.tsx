@@ -870,7 +870,10 @@ export function RideFocus({
                 className="og-ride__action"
                 data-testid="ride-offer-request"
                 disabled={rideOfferBusy || rideOffer !== null}
-                onClick={(): void => store.getState().requestRideOffer()}
+                onClick={(): void => {
+                  store.getState().requestRideOffer();
+                  setSheetOpen(false);
+                }}
               >
                 {rideOfferBusy ? "Finding a ride…" : "Offer me a ride"}
               </button>

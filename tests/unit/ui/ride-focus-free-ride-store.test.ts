@@ -8,7 +8,7 @@ import type { LiveSuggestionResult } from "@/application/free-ride/live-suggesti
 import type { RideFocusPointerPort, RideFocusPointerRead } from "@/application/persistence/ride-focus-pointer";
 import { createRideSessionRepository } from "@/infrastructure/storage/ride-session-repository";
 import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
-import { rideRevisedEvent } from "@/domain/ride-session/create";
+import { rideRevisedEvent, suggestionsChangedEvent } from "@/domain/ride-session/create";
 import { newRideId, type GeometryRef } from "@/domain/ride/ids";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import type { RideFocusEnvironmentPort, RideFocusEnvironmentSnapshot } from "@/application/ride-session/ports/ride-focus-environment";
@@ -39,6 +39,7 @@ async function makeRide(input: {
   readonly suggestions: "on" | "off";
   readonly evaluateLiveSuggestion?: () => Promise<LiveSuggestionResult>;
   readonly readSavedHome?: () => typeof SAVED_HOME | null;
+  readonly readRouteLine?: (ref: GeometryRef) => Promise<readonly { readonly lon: number; readonly lat: number }[] | null>;
   readonly returnPlanner?: {
     plan: (request: {
       readonly navigation: import("@/domain/ride-session/navigation").SessionNavigationState;
@@ -96,7 +97,7 @@ async function makeRide(input: {
     controller,
     environment,
     pointer,
-    readRouteLine: async () => LINE,
+    readRouteLine: input.readRouteLine ?? (async () => LINE),
     ...(evaluate === undefined ? {} : { evaluateLiveSuggestion: evaluate }),
     ...(input.readSavedHome === undefined ? {} : { readSavedHome: input.readSavedHome }),
     ...(input.returnPlanner === undefined ? {} : { returnPlanner: input.returnPlanner }),
@@ -124,6 +125,19 @@ async function makeRide(input: {
     },
   });
   store.getState().setMapReady(true);
+  const moveTo = async (
+    coordinate: { readonly lon: number; readonly lat: number },
+    headingDegrees = 40,
+    speedMps: number | null = 12,
+  ): Promise<void> => {
+    clock += 1_000;
+    const at = new Date(clock).toISOString();
+    await controller.dispatch({
+      type: "position.updated",
+      at,
+      position: { coordinate, observedAt: at, accuracyMeters: 5, headingDegrees, speedMps },
+    });
+  };
   return {
     controller,
     database,
@@ -133,14 +147,17 @@ async function makeRide(input: {
     writes,
     advance: (ms = 1_000) => { clock += ms; },
     /** A fresh fix at `coordinate`, heading `headingDegrees`. */
-    moveTo: async (coordinate: { readonly lon: number; readonly lat: number }, headingDegrees = 40) => {
-      clock += 1_000;
-      const at = new Date(clock).toISOString();
-      await controller.dispatch({
-        type: "position.updated",
-        at,
-        position: { coordinate, observedAt: at, accuracyMeters: 5, headingDegrees, speedMps: 12 },
-      });
+    moveTo,
+    /** Establishes the minimum real straight-running evidence for a new offer. */
+    settleOfferAttention: async () => {
+      await moveTo(SESSION_START);
+      tick?.();
+      await moveTo(SESSION_START);
+      tick?.();
+      await moveTo(SESSION_START);
+      tick?.();
+      await moveTo(SESSION_START);
+      tick?.();
     },
     tick: () => tick?.(),
   };
@@ -682,12 +699,14 @@ describe("Free Ride ride offers (#14)", () => {
       planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30));
     const announce = vi.fn();
     const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan }, announceOpportunity: announce });
-    ride.tick();
+    await ride.settleOfferAttention();
 
     await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
     expect(ride.store.getState().rideOffer).toMatchObject({ id: "loop:45", summary: { minutes: 45, chips: ["Curvy", "Back here"] } });
     expect(plan).toHaveBeenCalledWith(expect.objectContaining({ mode: "loop", loopMinutes: 45 }));
     expect(ride.store.getState().suggestionPreviewLine).toEqual(LINE);
+    expect(ride.store.getState().routeLine).toEqual([]);
+    expect(ride.store.getState().routeLineAvailable).toBe(false);
     expect(announce).toHaveBeenCalledOnce();
     // Nothing is bound until the rider takes it.
     expect(ride.controller.snapshot()).toMatchObject({ activity: "free", plan: { route: null } });
@@ -699,7 +718,7 @@ describe("Free Ride ride offers (#14)", () => {
   it("swipe right binds the offer as a guided ride that hands back to Free Ride", async () => {
     const plan = vi.fn(async () => planned("take", 45));
     const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
-    ride.tick();
+    await ride.settleOfferAttention();
     await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
 
     await ride.store.getState().acceptRideOffer();
@@ -716,7 +735,7 @@ describe("Free Ride ride offers (#14)", () => {
     const plan = vi.fn(async (request: { readonly loopMinutes?: number }) =>
       planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30));
     const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
-    ride.tick();
+    await ride.settleOfferAttention();
     await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:45"));
 
     ride.store.getState().skipRideOffer();
@@ -727,8 +746,7 @@ describe("Free Ride ride offers (#14)", () => {
     expect(ride.store.getState().rideOffer).toBeNull();
 
     ride.advance(180_000);
-    await ride.moveTo({ lon: -77.198, lat: 40.102 });
-    ride.tick();
+    await ride.settleOfferAttention();
     await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:90"));
 
     ride.store.getState().stop();
@@ -738,7 +756,7 @@ describe("Free Ride ride offers (#14)", () => {
   it("an ignored offer lapses and counts as a skip", async () => {
     const plan = vi.fn(async () => planned("lapse", 45));
     const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
-    ride.tick();
+    await ride.settleOfferAttention();
     await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
     const lifetime = ride.store.getState().rideOffer?.lifetimeMs ?? 0;
 
@@ -746,6 +764,133 @@ describe("Free Ride ride offers (#14)", () => {
     ride.tick();
 
     expect(ride.store.getState().rideOffer).toBeNull();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("does not start a whole-ride offer when speed is unknown, even when requested", async () => {
+    const plan = vi.fn(async () => planned("unknown-speed", 45));
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+
+    await ride.moveTo(SESSION_START, 40, null);
+    ride.tick();
+    ride.store.getState().requestRideOffer();
+
+    expect(plan).not.toHaveBeenCalled();
+    expect(ride.store.getState().rideOffer).toBeNull();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("does not publish an offer planned before the rider turns", async () => {
+    let resolvePlan: (result: ReturnPlanResult) => void = () => undefined;
+    const pendingPlan = new Promise<ReturnPlanResult>((resolve) => { resolvePlan = resolve; });
+    const plan = vi.fn(() => pendingPlan);
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(plan).toHaveBeenCalledOnce());
+
+    await ride.moveTo(SESSION_START, 120);
+    ride.tick();
+    resolvePlan(planned("turned", 45));
+    await vi.waitFor(() => expect(ride.store.getState().rideOfferBusy).toBe(false));
+
+    expect(ride.store.getState().rideOffer).toBeNull();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("rechecks suggestion eligibility before publishing a completed plan", async () => {
+    let resolvePlan: (result: ReturnPlanResult) => void = () => undefined;
+    const pendingPlan = new Promise<ReturnPlanResult>((resolve) => { resolvePlan = resolve; });
+    const plan = vi.fn(() => pendingPlan);
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(plan).toHaveBeenCalledOnce());
+
+    ride.advance();
+    const changed = await ride.controller.dispatch(suggestionsChangedEvent("off", new Date(BASE + 11_000).toISOString()));
+    expect(changed.outcome).toBe("applied");
+    resolvePlan(planned("suggestions-off", 45));
+    await vi.waitFor(() => expect(ride.store.getState().rideOfferBusy).toBe(false));
+
+    expect(ride.store.getState().rideOffer).toBeNull();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("skips an offer when its route geometry is unavailable", async () => {
+    const plan = vi.fn(async () => plan.mock.calls.length === 1
+      ? planned("missing-line", 45)
+      : { status: "unavailable" as const, reason: "no-route" as const });
+    const ride = await makeRide({
+      suggestions: "on",
+      rideOffers: true,
+      returnPlanner: { plan },
+      readRouteLine: async () => null,
+    });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOfferBusy).toBe(false));
+
+    expect(plan).toHaveBeenCalledTimes(2);
+    expect(ride.store.getState()).toMatchObject({
+      rideOffer: null,
+      rideOfferBusy: false,
+      suggestionPreviewLine: [],
+    });
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("clears public offer state when the store stops", async () => {
+    const plan = vi.fn(async () => planned("stop", 45));
+    const ride = await makeRide({ suggestions: "on", rideOffers: true, returnPlanner: { plan } });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
+
+    ride.store.getState().stop();
+
+    expect(ride.store.getState()).toMatchObject({
+      rideOffer: null,
+      rideOfferBusy: false,
+      suggestionPreviewLine: [],
+    });
+    ride.database.close();
+  });
+
+  it("does not start a whole-ride planner while a segment suggestion is pending", async () => {
+    const suggestion = {
+      id: "ahead-road",
+      label: "Oak Hollow Road",
+      entry: { lon: -77.19, lat: 40.11 },
+      distanceToDecisionMeters: 600,
+      distanceMeters: 1_200,
+      route: { planningGeneration: 9, routeId: asRouteCandidateId("route_competing") },
+      routeGeometryRef: "geo_competing" as GeometryRef,
+      durationSeconds: 300,
+      headingDeltaDegrees: 15,
+      requiresUTurn: false,
+    };
+    let resolveSuggestion: (result: LiveSuggestionResult) => void = () => undefined;
+    const pendingSuggestion = new Promise<LiveSuggestionResult>((resolve) => { resolveSuggestion = resolve; });
+    const evaluate = vi.fn(() => pendingSuggestion);
+    const plan = vi.fn(async () => planned("competing-offer", 45));
+    const ride = await makeRide({
+      suggestions: "on",
+      evaluateLiveSuggestion: evaluate,
+      rideOffers: true,
+      returnPlanner: { plan },
+    });
+    await vi.waitFor(() => expect(evaluate).toHaveBeenCalledOnce());
+    await ride.settleOfferAttention();
+
+    expect(ride.store.getState().suggestionBusy).toBe(true);
+    expect(plan).not.toHaveBeenCalled();
+    resolveSuggestion({ status: "suggestion", suggestion });
+    await vi.waitFor(() => expect(ride.store.getState().liveSuggestion).toEqual(suggestion));
+
+    expect(plan).not.toHaveBeenCalled();
+    expect(ride.store.getState().suggestionPreviewLine).toEqual(LINE);
     ride.store.getState().stop();
     ride.database.close();
   });
