@@ -45,6 +45,8 @@ async function makeRide(input: {
       readonly target: { readonly kind: "saved-home" | "session-start" | "chosen-destination"; readonly coordinate: { readonly lon: number; readonly lat: number }; readonly label: string | null };
       readonly mode: import("@/application/free-ride/return-routing").ReturnMode;
       readonly signal: AbortSignal;
+      readonly loopMinutes?: number;
+      readonly rejoin?: readonly { readonly lon: number; readonly lat: number }[];
     }) => Promise<ReturnPlanResult>;
   };
   readonly reroutePlanner?: GuidedReroutePlanner;
