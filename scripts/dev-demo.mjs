@@ -10,7 +10,6 @@ const child = spawn(process.execPath, [nextCli, "dev", ...process.argv.slice(2)]
   env: {
     ...process.env,
     OGV_ROUTE_PLAN_FIXTURE: "1",
-    OGV_CATALOG_FIXTURE: "1",
     OGV_WEATHER_FIXTURE: "1",
     OGV_GEOCODE_FIXTURE: "1",
     OGV_PLACES_FIXTURE: "1",

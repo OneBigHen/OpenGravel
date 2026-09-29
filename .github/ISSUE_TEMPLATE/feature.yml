@@ -1,0 +1,15 @@
+name: Feature idea
+description: Something that would make your rides better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: ride
+    attributes:
+      label: The ride problem
+      description: What were you trying to do on or before a ride?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea

@@ -1,0 +1,25 @@
+name: Suggest a route or route library
+description: Share a ride, or a club GPX collection, for the Explore library
+labels: [routes]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Route or collection name
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it's worth riding
+      description: Surface, best season, fuel, gates or closures to know about.
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Permission
+      options:
+        - label: I made this route, or its author agreed to it being included in OpenGravel.
+          required: true
+  - type: markdown
+    attributes:
+      value: Attach the GPX file below. Credit, or a request to remove a route that is already listed, can go here too.
