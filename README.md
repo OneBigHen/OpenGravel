@@ -84,14 +84,11 @@ A built-in library of **112 routes across Pennsylvania and nearby states**, shar
 
 Calimoto, Kurviger and REVER are good apps. They are also closed, account-bound and increasingly paywalled, and your ride history lives on their servers. OpenGravel is the open alternative:
 
-| | OpenGravel |
-|---|---|
-| **Price** | Free. No "Premium" tier. |
-| **Account** | None needed |
-| **Your data** | Stays on your device unless you share it |
-| **Source** | Open, AGPL-3.0 |
-| **Hosting** | Use ours or run your own; every provider is swappable |
-| **Honesty** | Estimates are labelled as estimates. Unknown is shown as unknown, never as a guess. |
+- **Free.** No "Premium" tier, no ride limits.
+- **No account.** Your rides stay on your device unless you share them.
+- **Open source** under AGPL-3.0. Read it, fork it, fix it.
+- **Self-hostable**, and every provider (routing, tiles, search, weather) is swappable.
+- **Honest.** Estimates are labelled as estimates, and unknown is shown as unknown, never as a guess.
 
 ## Run it yourself
 
