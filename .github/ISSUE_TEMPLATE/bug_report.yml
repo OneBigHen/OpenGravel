@@ -1,0 +1,28 @@
+name: Bug report
+description: Something went wrong while planning or riding
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Plan, Ride / navigation, Explore, My rides, Settings, iOS app, Self-hosting]
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: iPhone 16, Safari (installed to Home Screen)
+  - type: textarea
+    id: route
+    attributes:
+      label: Route (optional)
+      description: A share link or a rough start and end. Leave out your home address.
