@@ -436,6 +436,19 @@ describe("dark chrome and honest states", () => {
     expect(scene?.selectedObject).toBeNull();
   });
 
+  it("draws the whole-ride offer preview even without a segment suggestion", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    const preview = [{ lon: -75.4, lat: 40.1 }, { lon: -75.3, lat: 40.2 }];
+    act(() => store.setState({
+      liveSuggestion: null,
+      rideOffer: { id: "loop:45", kind: "loop", shownAt: NOW, lifetimeMs: 30000,
+        summary: { title: "Curvy loop", kicker: "From here", minutes: 45, distanceMeters: 30000, chips: [], spoken: "Curvy loop" } },
+      suggestionPreviewLine: preview,
+    }));
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(2));
+    expect(hosts.hosts[0]?.lastScene()?.routes[1]?.geometry).toEqual(preview);
+  });
+
   it("passes enabled places into the ride map scene when a source is supplied", async () => {
     const inExtent = vi.fn(async () => ({
       availability: "available" as const,
