@@ -130,7 +130,9 @@ export function createRideInterestOverlay(deps: RideInterestOverlayDeps): RideIn
   return {
     routeChanged(routeKey, line) {
       if (routeKey === currentKey) return;
-      currentKey = routeKey;
+      // A route id may arrive before its geometry is loaded from storage.
+      // Only reserve the key once there is a line we can actually query.
+      currentKey = line.length < 2 ? null : routeKey;
       inFlight?.abort();
       inFlight = null;
       if (routeKey === null || line.length < 2) {
