@@ -1,0 +1,77 @@
+/**
+ * Map-layer data as it travels from `/api/map-layers` to the map (UX rework
+ * phase 8). Coordinates are `[lon, lat]` GeoJSON order, because the payload is
+ * drawn as GeoJSON and never becomes ride geometry.
+ */
+
+import type { AlongStopsResult } from "./along";
+import type { MapLayerId } from "./catalog";
+
+export type LngLat = readonly [number, number];
+
+export type InfoGeometry =
+  | { readonly type: "Point"; readonly coordinates: LngLat }
+  | { readonly type: "LineString"; readonly coordinates: readonly LngLat[] }
+  | { readonly type: "Polygon"; readonly coordinates: readonly (readonly LngLat[])[] };
+
+export interface InfoFeature {
+  /** Stable per source, e.g. `osm:node/123` or `tomtom:abc`. */
+  readonly id: string;
+  readonly layerId: MapLayerId;
+  /** What the rider reads first: a venue name, "Road closed", "Flood Watch". */
+  readonly name: string;
+  /** One supporting line: delay, road, rating, opening hours. */
+  readonly detail: string | null;
+  /** A number the map styles by (curvature rating, incident magnitude), if any. */
+  readonly weight: number | null;
+  readonly geometry: InfoGeometry;
+}
+
+/** Which providers could not answer; an empty list with no features is a real "nothing here". */
+export type InfoProvider = "osm" | "tomtom" | "nws" | "roads";
+
+export interface MapLayersResult {
+  readonly features: readonly InfoFeature[];
+  readonly unavailable: readonly InfoProvider[];
+}
+
+export interface MapLayerBounds {
+  readonly west: number;
+  readonly south: number;
+  readonly east: number;
+  readonly north: number;
+}
+
+/** The browser's view of the layers endpoint. */
+export interface MapLayersSource {
+  load(
+    bounds: MapLayerBounds,
+    layers: readonly MapLayerId[],
+    signal?: AbortSignal,
+  ): Promise<MapLayersResult>;
+  /** The URL template for the traffic-flow raster tiles, `{z}/{x}/{y}` style. */
+  readonly trafficTileUrl: string | null;
+  /** Stops of one layer within about a mile of a route, in route order. */
+  along?(
+    line: readonly LngLat[],
+    layerId: MapLayerId,
+    signal?: AbortSignal,
+  ): Promise<AlongStopsResult>;
+}
+
+/** The largest view the endpoint serves, in degrees; larger views are clipped to the centre. */
+export const MAX_LAYER_SPAN_DEGREES = { lon: 1.6, lat: 1.0 } as const;
+
+/** Clips a view to the served span around its centre. */
+export function clampLayerBounds(bounds: MapLayerBounds): MapLayerBounds {
+  const midLon = (bounds.west + bounds.east) / 2;
+  const midLat = (bounds.south + bounds.north) / 2;
+  const halfLon = Math.min((bounds.east - bounds.west) / 2, MAX_LAYER_SPAN_DEGREES.lon / 2);
+  const halfLat = Math.min((bounds.north - bounds.south) / 2, MAX_LAYER_SPAN_DEGREES.lat / 2);
+  return {
+    west: midLon - halfLon,
+    south: midLat - halfLat,
+    east: midLon + halfLon,
+    north: midLat + halfLat,
+  };
+}

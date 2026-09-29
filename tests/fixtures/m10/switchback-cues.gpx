@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OpenGravel" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Redacted cue sample</name>
+    <desc>OpenGravel route · synthetic cues</desc>
+  </metadata>
+  <rte>
+    <name>Redacted cue sample</name>
+    <rtept lat="0.4000" lon="0.4000"><name>Turn left</name><cmt>100 m · cue 1</cmt></rtept>
+    <rtept lat="0.4010" lon="0.4010"><name>Turn right</name><cmt>250 m · cue 2</cmt></rtept>
+  </rte>
+</gpx>

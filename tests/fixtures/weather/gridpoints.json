@@ -1,0 +1,33 @@
+{
+  "type": "Feature",
+  "properties": {
+    "periods": [
+      {
+        "number": 1,
+        "name": "This Afternoon",
+        "startTime": "2026-09-17T16:00:00+00:00",
+        "endTime": "2026-09-17T18:00:00+00:00",
+        "isDaytime": true,
+        "temperature": 72,
+        "temperatureUnit": "F",
+        "windSpeed": "10 mph",
+        "windDirection": "SW",
+        "shortForecast": "Sunny",
+        "probabilityOfPrecipitation": { "unitCode": "wmoUnit:percent", "value": 10 }
+      },
+      {
+        "number": 2,
+        "name": "Tonight",
+        "startTime": "2026-09-17T18:00:00+00:00",
+        "endTime": "2026-09-18T06:00:00+00:00",
+        "isDaytime": false,
+        "temperature": 55,
+        "temperatureUnit": "F",
+        "windSpeed": "5 mph",
+        "windDirection": "W",
+        "shortForecast": "Clear",
+        "probabilityOfPrecipitation": { "unitCode": "wmoUnit:percent", "value": 0 }
+      }
+    ]
+  }
+}

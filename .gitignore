@@ -1,0 +1,63 @@
+# dependencies
+node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# build output
+/build/
+/dist/
+coverage/
+*.tsbuildinfo
+
+# env
+.env*
+!.env.example
+.env.local
+.env.*.local
+
+# Local credentials, certificates and routing data
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+/data/catalog-sources/
+/data/community-routes/
+/data/gpx-library/
+
+# misc
+.DS_Store
+*.log
+.npm/
+
+# pi runtime state (docker-dev worker artifacts)
+.pi/
+.pi-lens-probe-home/
+.atl/
+
+# vitest cache
+.vitest/
+
+# playwright (critical E2E gate)
+test-results/
+playwright-report/
+blob-report/
+
+# generated local QA output
+qa/
+.live-*.mjs
+.qa-*.mjs
+
+# server-side community records
+/data/community.sqlite*
+/data/feedback.sqlite*
+
+
+# Local HD map build inputs/outputs; manifests/config stay tracked.
+infra/maps/data/

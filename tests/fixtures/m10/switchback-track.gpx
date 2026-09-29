@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OpenGravel" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Redacted bare-track sample</name>
+    <desc>OpenGravel route · 2.0 mi | 12 min | synthetic profile</desc>
+  </metadata>
+  <trk>
+    <name>Redacted bare-track sample</name>
+    <type>motorcycle</type>
+    <trkseg>
+      <trkpt lat="0.3000" lon="0.3000"/>
+      <trkpt lat="0.3010" lon="0.3010"/>
+      <trkpt lat="0.3020" lon="0.3000"/>
+    </trkseg>
+  </trk>
+</gpx>

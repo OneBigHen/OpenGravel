@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OpenGravel" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Redacted sample loop</name>
+    <desc>OpenGravel route · sample route profile · 8.0 mi | 35 min | sample profile</desc>
+  </metadata>
+  <wpt lat="0.1000" lon="0.1000"><name>Sample start</name></wpt>
+  <wpt lat="0.1010" lon="0.1010"><name>Named pass</name></wpt>
+  <wpt lat="0.1020" lon="0.1015"><name>Scenic bend</name></wpt>
+  <wpt lat="0.1030" lon="0.1000"><name>Sample finish</name></wpt>
+  <trk>
+    <name>Redacted sample loop</name>
+    <type>motorcycle</type>
+    <trkseg>
+      <trkpt lat="0.1000" lon="0.1000"/>
+      <trkpt lat="0.1010" lon="0.1010"/>
+      <trkpt lat="0.1020" lon="0.1015"/>
+      <trkpt lat="0.1030" lon="0.1000"/>
+    </trkseg>
+  </trk>
+</gpx>

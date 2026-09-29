@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "event": "Flood Advisory",
+        "severity": "Moderate",
+        "onset": null,
+        "ends": null,
+        "areaDesc": "Upper Valley"
+      }
+    }
+  ]
+}

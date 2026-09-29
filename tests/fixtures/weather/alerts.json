@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "event": "Severe Thunderstorm Watch",
+        "severity": "Severe",
+        "onset": "2026-09-17T17:00:00+00:00",
+        "ends": "2026-09-17T20:00:00+00:00",
+        "areaDesc": "Lehigh Valley"
+      }
+    }
+  ]
+}

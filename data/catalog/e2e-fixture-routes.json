@@ -1,0 +1,384 @@
+[
+  {
+    "id": "sample-ridge-loop",
+    "name": "Sample Ridge Loop",
+    "region": "Demo area",
+    "summary": "Synthetic coordinates for trying the OpenGravel interface. Not a riding suggestion.",
+    "distanceKm": 27.5,
+    "estimatedTimeMinutes": 58,
+    "bounds": {
+      "west": -105.12,
+      "south": 39.66,
+      "east": -104.91,
+      "north": 39.82
+    },
+    "geometry": [
+      {
+        "lon": -105.12,
+        "lat": 39.66
+      },
+      {
+        "lon": -105.102765,
+        "lat": 39.670567
+      },
+      {
+        "lon": -105.0905,
+        "lat": 39.680088
+      },
+      {
+        "lon": -105.085265,
+        "lat": 39.6878
+      },
+      {
+        "lon": -105.085,
+        "lat": 39.693422
+      },
+      {
+        "lon": -105.084735,
+        "lat": 39.697233
+      },
+      {
+        "lon": -105.0795,
+        "lat": 39.7
+      },
+      {
+        "lon": -105.067235,
+        "lat": 39.702767
+      },
+      {
+        "lon": -105.05,
+        "lat": 39.706578
+      },
+      {
+        "lon": -105.032765,
+        "lat": 39.7122
+      },
+      {
+        "lon": -105.0205,
+        "lat": 39.719912
+      },
+      {
+        "lon": -105.015265,
+        "lat": 39.729433
+      },
+      {
+        "lon": -105.015,
+        "lat": 39.74
+      },
+      {
+        "lon": -105.014735,
+        "lat": 39.750567
+      },
+      {
+        "lon": -105.0095,
+        "lat": 39.760088
+      },
+      {
+        "lon": -104.997235,
+        "lat": 39.7678
+      },
+      {
+        "lon": -104.98,
+        "lat": 39.773422
+      },
+      {
+        "lon": -104.962765,
+        "lat": 39.777233
+      },
+      {
+        "lon": -104.9505,
+        "lat": 39.78
+      },
+      {
+        "lon": -104.945265,
+        "lat": 39.782767
+      },
+      {
+        "lon": -104.945,
+        "lat": 39.786578
+      },
+      {
+        "lon": -104.944735,
+        "lat": 39.7922
+      },
+      {
+        "lon": -104.9395,
+        "lat": 39.799912
+      },
+      {
+        "lon": -104.927235,
+        "lat": 39.809433
+      },
+      {
+        "lon": -104.91,
+        "lat": 39.82
+      }
+    ],
+    "provenance": "Synthetic demo route — not a real or recommended ride.",
+    "provenanceDetail": "This line is generated test data. It is not aligned to roads and carries no riding or surface evidence.",
+    "catalogGroupId": "fixture:sample-ridge",
+    "trackGroupId": "fixture:sample-ridge-main",
+    "trackLabel": "Main line",
+    "nameIsGenerated": false
+  },
+  {
+    "id": "sample-ridge-loop-export-2",
+    "name": "Sample Ridge Loop",
+    "region": "Demo area",
+    "summary": "Second synthetic export of the sample line.",
+    "distanceKm": 27.5,
+    "estimatedTimeMinutes": 58,
+    "bounds": null,
+    "geometry": [],
+    "provenance": "Synthetic demo route — not a real or recommended ride.",
+    "provenanceDetail": "This line is generated test data. It is not aligned to roads and carries no riding or surface evidence.",
+    "catalogGroupId": "fixture:sample-ridge",
+    "trackGroupId": "fixture:sample-ridge-main",
+    "trackLabel": "Second export",
+    "nameIsGenerated": false
+  },
+  {
+    "id": "sample-creek-road",
+    "name": "Sample Creek Road",
+    "region": "Demo area",
+    "summary": "Synthetic coordinates for trying the OpenGravel interface. Not a riding suggestion.",
+    "distanceKm": 27.5,
+    "estimatedTimeMinutes": 58,
+    "bounds": {
+      "west": -104.96,
+      "south": 39.69,
+      "east": -104.86,
+      "north": 39.84
+    },
+    "geometry": [
+      {
+        "lon": -104.96,
+        "lat": 39.69
+      },
+      {
+        "lon": -104.950176,
+        "lat": 39.69885
+      },
+      {
+        "lon": -104.943667,
+        "lat": 39.707003
+      },
+      {
+        "lon": -104.941843,
+        "lat": 39.71395
+      },
+      {
+        "lon": -104.943333,
+        "lat": 39.719503
+      },
+      {
+        "lon": -104.944824,
+        "lat": 39.72385
+      },
+      {
+        "lon": -104.943,
+        "lat": 39.7275
+      },
+      {
+        "lon": -104.93649,
+        "lat": 39.73115
+      },
+      {
+        "lon": -104.926667,
+        "lat": 39.735497
+      },
+      {
+        "lon": -104.916843,
+        "lat": 39.74105
+      },
+      {
+        "lon": -104.910333,
+        "lat": 39.747997
+      },
+      {
+        "lon": -104.90851,
+        "lat": 39.75615
+      },
+      {
+        "lon": -104.91,
+        "lat": 39.765
+      },
+      {
+        "lon": -104.91149,
+        "lat": 39.77385
+      },
+      {
+        "lon": -104.909667,
+        "lat": 39.782003
+      },
+      {
+        "lon": -104.903157,
+        "lat": 39.78895
+      },
+      {
+        "lon": -104.893333,
+        "lat": 39.794503
+      },
+      {
+        "lon": -104.88351,
+        "lat": 39.79885
+      },
+      {
+        "lon": -104.877,
+        "lat": 39.8025
+      },
+      {
+        "lon": -104.875176,
+        "lat": 39.80615
+      },
+      {
+        "lon": -104.876667,
+        "lat": 39.810497
+      },
+      {
+        "lon": -104.878157,
+        "lat": 39.81605
+      },
+      {
+        "lon": -104.876333,
+        "lat": 39.822997
+      },
+      {
+        "lon": -104.869824,
+        "lat": 39.83115
+      },
+      {
+        "lon": -104.86,
+        "lat": 39.84
+      }
+    ],
+    "provenance": "Synthetic demo route — not a real or recommended ride.",
+    "provenanceDetail": "This line is generated test data. It is not aligned to roads and carries no riding or surface evidence.",
+    "catalogGroupId": "fixture:sample-creek",
+    "trackGroupId": "fixture:sample-creek-main",
+    "trackLabel": "Main line",
+    "nameIsGenerated": false
+  },
+  {
+    "id": "sample-foothills-route",
+    "name": "Sample Foothills Route",
+    "region": "Demo area",
+    "summary": "Synthetic coordinates for trying the OpenGravel interface. Not a riding suggestion.",
+    "distanceKm": 27.5,
+    "estimatedTimeMinutes": 58,
+    "bounds": {
+      "west": -105.15,
+      "south": 39.79,
+      "east": -104.94,
+      "north": 39.86
+    },
+    "geometry": [
+      {
+        "lon": -105.15,
+        "lat": 39.79
+      },
+      {
+        "lon": -105.134179,
+        "lat": 39.796167
+      },
+      {
+        "lon": -105.1225,
+        "lat": 39.801462
+      },
+      {
+        "lon": -105.116679,
+        "lat": 39.80525
+      },
+      {
+        "lon": -105.115,
+        "lat": 39.807296
+      },
+      {
+        "lon": -105.113321,
+        "lat": 39.807833
+      },
+      {
+        "lon": -105.1075,
+        "lat": 39.8075
+      },
+      {
+        "lon": -105.095821,
+        "lat": 39.807167
+      },
+      {
+        "lon": -105.08,
+        "lat": 39.807704
+      },
+      {
+        "lon": -105.064179,
+        "lat": 39.80975
+      },
+      {
+        "lon": -105.0525,
+        "lat": 39.813538
+      },
+      {
+        "lon": -105.046679,
+        "lat": 39.818833
+      },
+      {
+        "lon": -105.045,
+        "lat": 39.825
+      },
+      {
+        "lon": -105.043321,
+        "lat": 39.831167
+      },
+      {
+        "lon": -105.0375,
+        "lat": 39.836462
+      },
+      {
+        "lon": -105.025821,
+        "lat": 39.84025
+      },
+      {
+        "lon": -105.01,
+        "lat": 39.842296
+      },
+      {
+        "lon": -104.994179,
+        "lat": 39.842833
+      },
+      {
+        "lon": -104.9825,
+        "lat": 39.8425
+      },
+      {
+        "lon": -104.976679,
+        "lat": 39.842167
+      },
+      {
+        "lon": -104.975,
+        "lat": 39.842704
+      },
+      {
+        "lon": -104.973321,
+        "lat": 39.84475
+      },
+      {
+        "lon": -104.9675,
+        "lat": 39.848538
+      },
+      {
+        "lon": -104.955821,
+        "lat": 39.853833
+      },
+      {
+        "lon": -104.94,
+        "lat": 39.86
+      }
+    ],
+    "provenance": "Synthetic demo route — not a real or recommended ride.",
+    "provenanceDetail": "This line is generated test data. It is not aligned to roads and carries no riding or surface evidence.",
+    "catalogGroupId": "fixture:sample-foothills",
+    "trackGroupId": "fixture:sample-foothills-main",
+    "trackLabel": "Main line",
+    "nameIsGenerated": false
+  }
+]

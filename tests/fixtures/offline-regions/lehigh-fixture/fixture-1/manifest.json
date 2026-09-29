@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "regionId": "lehigh-fixture",
+  "regionName": "Pennsylvania (clipped fixture)",
+  "version": "fixture-1",
+  "compression": "gzip-json",
+  "buildDate": "2026-07-22T03:09:56.881Z",
+  "sourceDataDate": "2026-07-13T00:00:00Z",
+  "snapshotUrl": "https://download.geofabrik.de/north-america/us/pennsylvania-latest.osm.pbf",
+  "sourceUrl": "https://download.geofabrik.de/north-america/us/pennsylvania.html",
+  "bounds": {
+    "minLon": -75.455,
+    "minLat": 40.125,
+    "maxLon": -75.42,
+    "maxLat": 40.15
+  },
+  "checksums": {
+    "inventorySha256": "041fc41c7dc3e41aa3b3284116a269fec77a289de2c2868de207540720848661"
+  },
+  "attribution": "© OpenStreetMap contributors, ODbL 1.0",
+  "tiles": [
+    {
+      "tileId": "t-lehigh-fixture-0",
+      "bounds": {
+        "minLon": -75.455,
+        "minLat": 40.125,
+        "maxLon": -75.436,
+        "maxLat": 40.15
+      },
+      "bytes": 152080,
+      "sha256": "dbc6e0c23b4b388c81393c0383fba5f3f29a036e52fdaa313f7461137efeb7d9",
+      "nodeCount": 1925,
+      "edgeCount": 3625
+    },
+    {
+      "tileId": "t-lehigh-fixture-1",
+      "bounds": {
+        "minLon": -75.436,
+        "minLat": 40.125,
+        "maxLon": -75.42,
+        "maxLat": 40.15
+      },
+      "bytes": 110635,
+      "sha256": "d38b818146ad46117806c8d59304d1504cf339b7cf250c8468777c68bf6dd8a1",
+      "nodeCount": 1380,
+      "edgeCount": 2550
+    }
+  ],
+  "tileByteTotal": 262715
+}

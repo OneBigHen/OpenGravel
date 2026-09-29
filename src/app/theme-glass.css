@@ -1,0 +1,1972 @@
+/* Map-oriented theme tokens and responsive floating controls. */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces, darkest to lightest. */
+  --og-canvas: #0b100e;
+  --og-paper: #131a17;
+  --og-raised: #1a2320;
+  --og-sandstone: #2b3632;
+  --og-well: #1d2724;
+
+  /* Text. */
+  --og-ink: #ecf1ee;
+  --og-slate: #86938d;
+  --og-slate-text: #a2aea8;
+  --og-moss-text: #a9b9a6;
+  --og-trail-brown: #bfb2a4;
+  --og-trail-moss: #8d9c84;
+  --og-topo-sage: #6f7c66;
+
+  /* Filled "quiet" controls invert to light-on-dark in this theme. */
+  --og-deep-spruce: #cfe3d8;
+  --og-on-fill: #ffffff;
+
+  /* Accents. */
+  --og-go: #22a45d;
+  --og-go-strong: #1a8a4c;
+  --og-go-soft: color-mix(in srgb, #3ddc84 18%, transparent);
+  --og-go-text: #6fe3a3;
+  --og-signal-blue: #5aa9e6;
+  --og-signal-strong: #8cc4f0;
+  --og-ember-text: #f39c7a;
+  --og-golden-text: #e5c07a;
+  --og-danger: #f0937f;
+  --og-success: #6fe3a3;
+
+  --og-hairline: rgb(255 255 255 / 8%);
+  --og-hairline-strong: rgb(255 255 255 / 14%);
+
+  /* Compact type (the old scale read bulky on a 390px phone). */
+  --og-text-eyebrow: 10.5px;
+  --og-text-meta: 12px;
+  --og-text-body: 14px;
+  --og-text-title: 17px;
+  --og-text-page: 26px;
+
+  --og-radius-chip: 999px;
+  --og-radius-control: 14px;
+  --og-radius-object: 16px;
+  --og-radius-panel: 20px;
+  --og-radius-sheet: 24px;
+
+  /* Glass: a light pane for round map controls and the tab bar, a denser pane
+     for sheets (WebKit shows map labels through a thin one). */
+  --og-glass-bg: rgb(16 22 20 / 66%);
+  --og-glass-dense: rgb(14 20 18 / 88%);
+  --og-glass-blur: blur(22px) saturate(160%);
+  --og-glass-edge: rgb(255 255 255 / 10%);
+  --og-glass-shadow:
+    0 10px 30px rgb(0 0 0 / 35%),
+    0 1px 2px rgb(0 0 0 / 30%),
+    inset 0 1px 0 rgb(255 255 255 / 7%);
+
+  --og-shadow-1: 0 1px 1px rgb(0 0 0 / 30%), 0 2px 6px rgb(0 0 0 / 28%);
+  --og-shadow-2: 0 2px 4px rgb(0 0 0 / 32%), 0 10px 24px -8px rgb(0 0 0 / 50%);
+  --og-shadow-3: 0 4px 10px rgb(0 0 0 / 36%), 0 24px 48px -16px rgb(0 0 0 / 60%);
+
+  --og-focus-ring: #8cc4f0;
+
+  /* The phone sheet is opaque: WebKit showed map labels through glass. */
+  --og-sheet-bg: #111815;
+  --og-hover-mix: white;
+}
+
+/* --------------------------------------------------------------------------
+   Day: high-visibility bright display for riding in sunlight (owner
+   2026-09-28). Chosen in Settings (Auto follows the phone); the boot script
+   sets data-theme before first paint (src/ui/appearance/appearance.ts).
+   Near-black ink on white, borders you can see in glare, a deeper green so
+   white-on-green Start stays readable, and glass nearly opaque.
+   -------------------------------------------------------------------------- */
+
+:root[data-theme="day"] {
+  color-scheme: light;
+
+  --og-canvas: #f3f5f2;
+  --og-paper: #ffffff;
+  --og-raised: #ffffff;
+  --og-sandstone: #c9d1cc;
+  --og-well: #e7ebe8;
+
+  --og-ink: #07100c;
+  --og-slate: #4a5550;
+  --og-slate-text: #3a4540;
+  --og-moss-text: #3f5238;
+  --og-trail-brown: #5e4a3b;
+  --og-trail-moss: #4d5c46;
+  --og-topo-sage: #7d8a74;
+
+  --og-deep-spruce: #10291f;
+  --og-on-fill: #ffffff;
+
+  --og-go: #138a43;
+  --og-go-strong: #0c6e34;
+  --og-go-soft: color-mix(in srgb, #138a43 14%, white);
+  --og-go-text: #0a6630;
+  --og-signal-blue: #1463a6;
+  --og-signal-strong: #0d4f87;
+  --og-ember-text: #a33a1c;
+  --og-golden-text: #6d4f12;
+  --og-danger: #b3261e;
+  --og-success: #0a6630;
+
+  --og-hairline: rgb(7 16 12 / 16%);
+  --og-hairline-strong: rgb(7 16 12 / 28%);
+
+  --og-glass-bg: rgb(255 255 255 / 92%);
+  --og-glass-dense: rgb(255 255 255 / 97%);
+  --og-glass-edge: rgb(7 16 12 / 18%);
+  --og-glass-shadow:
+    0 6px 20px rgb(7 16 12 / 18%),
+    0 1px 3px rgb(7 16 12 / 22%);
+
+  --og-shadow-1: 0 1px 2px rgb(7 16 12 / 12%), 0 2px 6px rgb(7 16 12 / 8%);
+  --og-shadow-2: 0 1px 3px rgb(7 16 12 / 14%), 0 8px 24px rgb(7 16 12 / 12%);
+  --og-shadow-3: 0 2px 6px rgb(7 16 12 / 16%), 0 24px 48px rgb(7 16 12 / 20%);
+
+  --og-focus-ring: #1463a6;
+
+  --og-sheet-bg: #ffffff;
+  --og-hover-mix: black;
+}
+
+/* The map keeps the cartography palette it was designed with: the host reads
+   the route, point and label colours from its container (style.ts). */
+.og-map {
+  --og-ink: #161d1c;
+  --og-paper: #fbf9f4;
+  --og-canvas: #f4f0e7;
+  --og-slate: #68716f;
+  --og-topo-sage: #9da98f;
+  --og-signal-blue: #397c96;
+  --og-trail-brown: #776353;
+  --og-deep-spruce: #243a35;
+}
+
+body {
+  background: var(--og-canvas);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  word-spacing: 0.02em;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons and chips
+   -------------------------------------------------------------------------- */
+
+.og-chip,
+.og-primary,
+.og-secondary {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--og-radius-control);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.og-primary,
+a.og-primary {
+  border: 0;
+  background: linear-gradient(180deg, var(--og-go), var(--og-go-strong));
+  color: var(--og-on-fill);
+  box-shadow: 0 6px 18px -6px rgb(34 164 93 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
+}
+
+.og-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.og-primary:disabled {
+  border: 1px solid var(--og-hairline-strong);
+  background: var(--og-raised);
+  color: var(--og-slate);
+  box-shadow: none;
+}
+
+.og-secondary {
+  border: 1px solid var(--og-hairline-strong);
+  background: var(--og-raised);
+  color: var(--og-ink);
+}
+
+.og-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--og-raised) 94%, var(--og-hover-mix));
+}
+
+.og-chip {
+  border: 1px solid var(--og-hairline);
+  background: var(--og-raised);
+  color: var(--og-ink);
+  font-size: 13px;
+}
+
+.og-chip:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--og-raised) 92%, var(--og-hover-mix));
+}
+
+.og-chip[data-armed="true"] {
+  border-color: var(--og-go);
+  background: var(--og-go-soft);
+  box-shadow: none;
+}
+
+input,
+select,
+textarea {
+  color: var(--og-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Phone chrome: tab bar, map controls, sheet
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  :root {
+    --og-tabbar-pill-h: 58px;
+    --og-tabbar-gap: max(8px, calc(var(--og-safe-bottom) - 14px));
+  }
+
+  .og-planner__nav-shell,
+  .og-planner__header .og-planner__nav-shell,
+  .og-library__header > .og-planner__nav-shell {
+    left: calc(10px + var(--og-safe-left));
+    right: calc(10px + var(--og-safe-right));
+    padding: 4px;
+    border-radius: 22px;
+    background: var(--og-glass-dense);
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    gap: 3px;
+    border-radius: 18px;
+    color: var(--og-slate-text);
+    font-size: 10.5px;
+    font-weight: 600;
+  }
+
+  .og-nav__icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    color: var(--og-go-text);
+    background: var(--og-go-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--og-go) 30%, transparent);
+  }
+
+  /* Round map controls: 44px glass discs with light glyphs. */
+  .og-map__layer-toggle,
+  .og-map__whole-ride,
+  .og-map__locate,
+  .og-layers__button {
+    color: var(--og-ink);
+    border: 1px solid var(--og-glass-edge);
+    background: var(--og-glass-bg);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    box-shadow: var(--og-glass-shadow);
+  }
+
+  .og-layers[data-open="true"] .og-layers__button {
+    background: var(--og-go-strong);
+  }
+
+  /* The sheet floats over the map above the tab bar, on a solid surface:
+     WebKit showed map labels through a translucent one (UX rework 2). */
+  .og-planner__dock {
+    left: calc(8px + var(--og-safe-left));
+    right: calc(8px + var(--og-safe-right));
+    bottom: calc(var(--og-tabbar-h) + 6px);
+  }
+
+  .og-planner__sheet {
+    padding: 10px 12px 12px;
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-sheet);
+    background: var(--og-sheet-bg);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    box-shadow: var(--og-glass-shadow);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --og-glass-bg: var(--og-paper);
+    --og-glass-dense: var(--og-paper);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --og-glass-bg: var(--og-paper);
+    --og-glass-dense: var(--og-paper);
+  }
+}
+
+/* The literal light fills that predate the tokens (the old og-dark block,
+   which only ran with the system in dark mode). */
+.og-settings__bike,
+.og-offline-areas__row,
+.og-settings__editor {
+  background: var(--og-paper);
+}
+
+.og-settings__active,
+.og-settings__status {
+  background: var(--og-go-soft);
+  color: var(--og-go-text);
+}
+
+.og-settings input:not([type="checkbox"]),
+.og-settings select {
+  border-color: var(--og-sandstone);
+  background: var(--og-canvas);
+}
+
+.og-settings select:disabled {
+  background: var(--og-paper);
+}
+
+.og-art img,
+.og-first-run__picture img,
+.og-not-found__photo {
+  filter: brightness(0.9);
+}
+
+/* Ride Focus is its own instrument and keeps the palette it was contrast-checked
+   with (the same pin the old og-dark block applied). */
+html .og-ride {
+  --og-ink: #161d1c;
+  --og-deep-spruce: #243a35;
+  --og-trail-moss: #65745d;
+  --og-topo-sage: #9da98f;
+  --og-canvas: #f4f0e7;
+  --og-paper: #fbf9f4;
+  --og-sandstone: #d8c8b7;
+  --og-slate: #68716f;
+  --og-trail-brown: #776353;
+  --og-signal-blue: #397c96;
+  --og-signal-strong: #2a6175;
+  --og-danger: #a83e32;
+  --og-success: #3e6b55;
+  --og-moss-text: #5b6954;
+  --og-slate-text: #5f6766;
+  --og-ember-text: #af4226;
+  --og-golden-text: #7d5c1c;
+  --og-on-fill: #fbf9f4;
+}
+
+/* --------------------------------------------------------------------------
+   Plan, idle (phone): "Where to?" and a row of quick starts, nothing else.
+   The sheet grows back to the full composer the moment the rider picks a
+   destination, a loop, or plans. Everything hidden here is still one tap away.
+   -------------------------------------------------------------------------- */
+
+.og-composer__loop-quick {
+  display: none;
+}
+
+.og-plan-actions__glyph {
+  flex: none;
+}
+
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-planner__sheet[data-idle="true"] {
+    padding: 8px 10px 10px;
+  }
+
+  /* No "Ride choices" handle: there are none yet. "No plan yet" stays
+     announced, but is no longer a row. */
+  .og-planner__sheet[data-idle="true"] .og-sheet__handle {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-sheet__head > .og-planner__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-sheet__head {
+    min-height: 0;
+    padding: 0;
+  }
+
+  /* One flowing row set: composer rows full width, quick starts as pills. */
+  .og-planner__sheet[data-idle="true"] .og-sheet__body {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer, .og-plan-actions, .og-plan-actions__record-row) {
+    display: contents;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-sheet__body > :not(.og-composer, .og-plan-actions),
+  .og-planner__sheet[data-idle="true"] .og-composer > :not(.og-composer__row, .og-composer__loop-quick),
+  .og-planner__sheet[data-idle="true"] .og-plan-actions > :not(.og-plan-actions__record-row, .og-planner__error) {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer__row, .og-planner__error) {
+    flex: 1 1 100%;
+    margin: 0;
+  }
+
+  /* The start is assumed (your location): a quiet "from" line, tap to change. */
+  .og-planner__sheet[data-idle="true"] .og-composer__row:has([data-testid="start-chip"]) {
+    order: -1;
+    min-height: 0;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__row:has([data-testid="start-change"]) :is([data-testid="start-chip"], .og-composer__star, .og-composer__dot) {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] [data-testid="start-change"] {
+    display: flex;
+    justify-content: flex-start;
+    min-height: 28px;
+    padding: 2px 4px;
+    border: 0;
+    background: none;
+    color: var(--og-slate-text);
+    font-size: 12px;
+  }
+
+  .og-planner__sheet[data-idle="true"] [data-testid="start-change"] .og-composer__value-label::before {
+    content: "From ";
+    color: var(--og-slate);
+  }
+
+  .og-planner__sheet[data-idle="true"] [data-testid="start-change"] .og-composer__coordinate {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__row:has([data-testid="finish-chip"]) > .og-composer__dot {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__row--search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 0;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__row--search > .og-chip {
+    order: 2;
+    flex: none;
+    width: 46px;
+    min-height: 46px;
+    padding: 0;
+    border-radius: 14px;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__row--search > :is(.og-place-search, .og-composer__place) {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+  }
+
+  /* A route to clear appears only once there is one; the assumed start isn't. */
+  .og-planner__sheet[data-idle="true"] .og-sheet__clear {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    display: inline-flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid var(--og-hairline-strong);
+    border-radius: 14px;
+    background: var(--og-raised);
+    color: var(--og-ink);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-plan-actions__free-ride {
+    border-color: color-mix(in srgb, var(--og-signal-blue) 45%, transparent);
+    color: var(--og-signal-strong);
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer__loop-quick {
+    border-color: color-mix(in srgb, var(--og-go) 45%, transparent);
+    color: var(--og-go-text);
+  }
+}
+
+/* The composer's search fields and place rows, compact and dark. */
+.og-composer__place {
+  border-color: var(--og-hairline-strong);
+  background: var(--og-canvas);
+}
+
+.og-place-search .og-place-search__input {
+  border-color: var(--og-hairline-strong);
+  text-align: left;
+  background:
+    no-repeat 14px center / 17px 17px
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a2aea8' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='4.75'/%3E%3Cpath d='m10.5 10.5 3.5 3.5'/%3E%3C/svg%3E"),
+    var(--og-canvas);
+  padding-left: 40px;
+}
+
+.og-place-search__list {
+  border-color: var(--og-hairline-strong);
+  background: var(--og-paper);
+  color: var(--og-ink);
+}
+
+@media (max-width: 760px) {
+  .og-place-search .og-place-search__input {
+    min-height: 46px;
+    border-radius: 14px;
+    font-size: 16px; /* 16px stops iOS zooming into the field */
+  }
+
+  .og-composer__place {
+    min-height: 46px;
+    padding: 6px 12px;
+    border-radius: 14px;
+  }
+
+  .og-composer__value-label {
+    font-size: 15px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Expanded sheet: a clean head row and one surface behind the list.
+   -------------------------------------------------------------------------- */
+
+.og-planner__sheet :is(.og-sheet__body, .og-plan-actions, .og-ride-start, .og-route-list, .og-results) {
+  background: transparent;
+}
+
+.og-sheet__head .og-history {
+  display: flex;
+  flex: 0 0 auto;
+  order: 2;
+  gap: 6px;
+  margin: 0;
+}
+
+.og-sheet__head .og-history__button {
+  width: auto;
+  max-width: 120px;
+  min-height: 34px;
+  padding: 4px 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-sheet__clear {
+  background: var(--og-raised);
+}
+
+.og-sheet__handle-label {
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.og-route-card__button {
+  background: var(--og-raised);
+  color: var(--og-ink);
+}
+
+/* --------------------------------------------------------------------------
+   Pages (Explore, My rides, Settings): compact on a phone.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .og-explore,
+  .og-library,
+  .og-settings {
+    padding-inline: 14px;
+    padding-top: calc(12px + var(--og-safe-top));
+  }
+
+  :is(.og-explore__heading, .og-library__header, .og-settings__header) h1 {
+    font-size: var(--og-text-page);
+    line-height: 1.1;
+  }
+
+  /* The intros and eyebrows repeat what the page already shows. */
+  :is(.og-explore__intro, .og-library__intro, .og-explore__heading .og-eyebrow, .og-settings__eyebrow),
+  .og-settings__header > div > p:last-child {
+    display: none;
+  }
+
+  .og-settings__header {
+    margin-bottom: 14px;
+  }
+
+  .og-explore .og-explore__header.og-explore__header {
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 0;
+  }
+
+  .og-explore .og-explore__header .og-explore__lens {
+    gap: 2px;
+    padding: 3px;
+    border-radius: 999px;
+    background: var(--og-raised);
+  }
+
+  .og-explore .og-explore__header .og-explore__lens > [role="tab"] {
+    min-height: 36px;
+    padding: 6px 16px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 13px;
+    box-shadow: none;
+  }
+
+  .og-explore .og-explore__header .og-explore__lens > [role="tab"][aria-selected="false"] {
+    background: transparent;
+    color: var(--og-slate-text);
+  }
+
+  .og-explore .og-explore__header .og-explore__lens > [role="tab"][aria-selected="true"] {
+    background: var(--og-ink);
+    color: var(--og-canvas);
+  }
+
+
+  .og-explore .og-explore__count.og-explore__count {
+    color: var(--og-slate-text);
+    font-size: 12px;
+  }
+
+  /* Route cards: map thumbnail left, the facts right — about 5 per screen. */
+  .og-explore .og-explore-card__link.og-explore-card__link {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0;
+    min-height: 104px;
+    overflow: hidden;
+    border: 1px solid var(--og-hairline);
+    border-radius: var(--og-radius-object);
+    background: var(--og-paper);
+    box-shadow: none;
+  }
+
+  .og-explore .og-explore-card__preview.og-explore-card__preview {
+    width: 104px;
+    height: 100%;
+    min-height: 104px;
+    aspect-ratio: auto;
+    border-radius: 0;
+  }
+
+  .og-explore-card__preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .og-explore .og-explore-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    min-width: 0;
+  }
+
+  .og-explore .og-explore-card__body.og-explore-card__body > strong {
+    overflow: hidden;
+    font-size: 15px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-explore .og-explore-card__topline.og-explore-card__topline {
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  /* "Catalog" is the norm; only a rider's own or shared source earns a tag. */
+  .og-explore .og-explore-card__source.og-explore-card__source {
+    padding: 1px 6px;
+    font-size: 10.5px;
+  }
+
+  .og-explore .og-explore-card__source[data-source="catalog"] {
+    display: none;
+  }
+
+  .og-explore .og-explore-card__facts.og-explore-card__facts {
+    gap: 8px;
+    color: var(--og-slate-text);
+    font-size: 13px;
+  }
+
+  .og-explore .og-explore-card__distance.og-explore-card__distance {
+    color: var(--og-ink);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .og-explore .og-explore-card__chips.og-explore-card__chips {
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  .og-explore .og-explore-card__chip.og-explore-card__chip {
+    padding: 2px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .og-explore .og-explore-card__summary.og-explore-card__summary,
+  .og-explore-card__variants {
+    display: none;
+  }
+
+  /* My rides + Settings: tight cards, small headings. */
+  .og-empty-state,
+  .og-library__state,
+  .og-settings__section {
+    padding: 14px;
+    border: 1px solid var(--og-hairline);
+    border-radius: var(--og-radius-object);
+    background: var(--og-paper);
+    box-shadow: none;
+  }
+
+  .og-empty-state h2,
+  .og-settings__section h2 {
+    font-size: 17px;
+  }
+
+  .og-empty-state p,
+  .og-settings__section-copy,
+  .og-settings__hint {
+    font-size: 13px;
+  }
+
+  .og-settings__layout {
+    gap: 10px;
+  }
+
+  .og-settings__bike {
+    padding: 12px;
+  }
+
+  .og-settings__bike-details {
+    gap: 4px;
+  }
+}
+
+.og-settings__button,
+.og-settings__text-button {
+  border-color: var(--og-hairline-strong);
+  background: var(--og-raised);
+  color: var(--og-ink);
+}
+
+.og-settings__button:not(.og-settings__button--quiet):not(.og-settings__button--danger) {
+  border: 0;
+  background: linear-gradient(180deg, var(--og-go), var(--og-go-strong));
+  color: var(--og-on-fill);
+}
+
+.og-settings__text-button {
+  background: transparent;
+  color: var(--og-signal-strong);
+}
+
+/* My rides on a phone: full-width cards and compact import panels. */
+@media (max-width: 760px) {
+  .og-library.og-library {
+    padding-inline: 0;
+  }
+
+  .og-library.og-library > :not(.og-appbar) {
+    width: calc(100% - 28px);
+  }
+
+  .og-library__imports {
+    gap: 10px;
+  }
+
+  .og-library .og-import.og-import {
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--og-hairline);
+    border-radius: var(--og-radius-object);
+    background: var(--og-paper);
+    box-shadow: none;
+  }
+
+  .og-import .og-eyebrow {
+    display: none;
+  }
+
+  .og-import h2 {
+    font-size: 17px;
+  }
+
+  .og-import p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .og-library .og-import__dropzone {
+    padding: 12px;
+    border-radius: 14px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Settings → Day / Night: a three-way segmented switch.
+   -------------------------------------------------------------------------- */
+
+.og-appearance {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--og-hairline);
+  border-radius: 16px;
+  background: var(--og-well);
+}
+
+.og-appearance__choice {
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--og-slate-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-appearance__choice[aria-checked="true"] {
+  background: var(--og-go);
+  color: var(--og-on-fill);
+  box-shadow: var(--og-shadow-1);
+}
+
+.og-appearance__choice:focus-visible {
+  outline: var(--og-focus-width, 2px) solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Quick wins (2026-09-28 layout pass).
+   -------------------------------------------------------------------------- */
+
+/* "Catalog" is the norm everywhere; only a rider's own or shared source earns
+   a tag. */
+.og-explore-card__source[data-source="catalog"] {
+  display: none;
+}
+
+/* Record / Free Ride: icon and word never touch, at any width. */
+.og-plan-actions__record,
+.og-plan-actions__free-ride {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* The ride-time basis ("at 28 mph") is a footnote under the time, not a wrap. */
+.og-route-detail__basis {
+  display: block;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+}
+
+/* Places on the Plan map: the same glass as the round map controls. */
+.og-places-overlay--planner :is(.og-places-control__toggle, .og-places-control__filters) {
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-bg);
+  color: var(--og-ink);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
+}
+
+.og-places-overlay--planner :is(.og-places-control__toggle[aria-pressed="true"], .og-places-control__filters[aria-expanded="true"]) {
+  background: var(--og-glass-bg);
+  box-shadow: var(--og-glass-shadow), inset 0 0 0 1px color-mix(in srgb, var(--og-golden-hour) 60%, transparent);
+}
+
+.og-places-overlay--planner .og-places-control__panel {
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-shadow);
+}
+
+.og-places-overlay--planner :is(.og-places-control__segments, .og-places-control__kinds) {
+  background: var(--og-well);
+}
+
+@media (max-width: 760px) {
+  .og-explore .og-explore__header.og-explore__header {
+    margin-bottom: 10px;
+  }
+
+  /* Cards: every route in the list shares the region, so it goes; tags wrap
+     instead of running off the card. */
+  .og-explore .og-explore-card__region {
+    display: none;
+  }
+
+  .og-explore .og-explore-card__topline:not(:has(.og-explore-card__source:not([data-source="catalog"]))) {
+    display: none;
+  }
+
+  .og-explore .og-explore-card__chips.og-explore-card__chips {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  /* Route detail: the title leads; the source is one quiet line under it. */
+  .og-route-detail__title > .og-eyebrow {
+    display: none;
+  }
+
+  .og-route-detail__title > .og-route-detail__provenance {
+    margin: 2px 0 0;
+    color: var(--og-slate-text);
+    font-size: var(--og-text-meta);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Ride Focus in Trail Glass (2026-09-28). Ride chrome is written light-on-dark:
+   --og-ink paints its surfaces and --og-paper its text. Night keeps that. Day
+   flips the two inside .og-ride (the map pins its own palette), so every card,
+   the sheet, the strip and the rail turn white with near-black text for
+   sunlight. The turn card is solid Trail Green in both, like the nav apps
+   riders know; the few fixed-colour pieces are pinned below.
+   -------------------------------------------------------------------------- */
+
+:root[data-theme="day"] .og-ride {
+  --og-ink: #ffffff;
+  --og-paper: #07100c;
+  --og-canvas: #ffffff;
+  --og-raised-dark: #ffffff;
+  --og-border-dark: rgb(7 16 12 / 16%);
+  --og-ride-muted: #3a4540;
+  --og-ride-glass: rgb(255 255 255 / 96%);
+  --og-danger-light: #b3261e;
+  --og-deep-spruce: #0c4a2a;
+  --og-ember-text: #a33a1c;
+  --og-slate-text: #3a4540;
+  --og-topo-sage: #3a4540;
+
+  background: #f3f5f2;
+}
+
+:root[data-theme="day"] .og-ride :is(.og-ride__strip, .og-ride__sheet, .og-ride__card, .og-ride__floating-card, .og-ride-metric-picker, .og-ride__rail-button, .og-ride__toast, .og-ride__alert) {
+  box-shadow: 0 6px 20px rgb(7 16 12 / 18%), 0 1px 3px rgb(7 16 12 / 20%);
+}
+
+:root[data-theme="day"] .og-ride .og-ride__strip:has(> .og-ride-metrics) {
+  box-shadow: 0 6px 20px rgb(7 16 12 / 18%), 0 1px 3px rgb(7 16 12 / 20%);
+}
+
+/* The turn: solid green, white type — the one thing a glance is for. */
+.og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
+  --og-paper: #ffffff;
+  background: linear-gradient(180deg, #16874a, #0f6e3a);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: #ffffff;
+}
+
+:root[data-theme="night"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
+  background: linear-gradient(180deg, #13703d, #0c5a30);
+}
+
+/* Fixed colours that must not flip. */
+:root[data-theme="day"] .og-ride__limit {
+  border-color: #07100c;
+  outline-color: #ffffff;
+  background: #ffffff;
+  color: #07100c;
+}
+
+:root[data-theme="day"] .og-ride__speed {
+  border-color: #07100c;
+  background: #ffffff;
+  color: #07100c;
+}
+
+:root[data-theme="day"] .og-ride__speed[data-over="true"] {
+  border-color: #b3261e;
+  background: #b3261e;
+  color: #ffffff;
+}
+
+:root[data-theme="day"] .og-ride__strip-end:not(.og-ride__strip-end--exit) {
+  color: #ffffff;
+}
+
+:root[data-theme="day"] .og-ride__strip-end--exit {
+  border: 1px solid rgb(7 16 12 / 16%);
+  color: #07100c;
+}
+
+:root[data-theme="day"] .og-ride__recenter {
+  background: #ffffff;
+  color: #07100c;
+  box-shadow: 0 6px 20px rgb(7 16 12 / 20%);
+}
+
+:root[data-theme="day"] .og-ride__recenter svg {
+  color: #0f6e3a;
+}
+
+:root[data-theme="day"] .og-ride__rail-button {
+  border: 1px solid rgb(7 16 12 / 12%);
+  background: #ffffff;
+  color: #07100c;
+}
+
+:root[data-theme="day"] .og-ride__gps-badge {
+  color: #8a5a00;
+}
+
+/* Night: the rail and Re-center wear the dark glass instead of cream discs. */
+:root[data-theme="night"] .og-ride__rail-button,
+:root[data-theme="night"] .og-ride__recenter {
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(16 22 20 / 88%);
+  color: #ecf1ee;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+:root[data-theme="night"] .og-ride__recenter svg {
+  color: #6fe3a3;
+}
+
+/* Satellite and layers (sheet open only): round glass beside each other. */
+.og-ride .og-layers {
+  left: calc(max(12px, var(--og-safe-left)) + 54px);
+}
+
+:root[data-theme="day"] .og-ride :is(.og-map__layer-toggle, .og-layers__button) {
+  border-color: rgb(7 16 12 / 14%);
+  background: #ffffff;
+  color: #07100c;
+}
+
+:root[data-theme="day"] .og-ride .og-ride__action--primary {
+  color: #ffffff;
+}
+
+/* The GPS warning on the green turn card: amber on green is lost in glare. */
+.og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) .og-ride__gps-badge {
+  color: #ffd76a;
+}
+
+/* The sheet asks less of the screen: tighter rows, same 56px targets. */
+.og-ride__sheet {
+  gap: 8px;
+  padding: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Explore filters (2026-09-28): search and a Filters button in one row, a row
+   of one-tap chips under it, and on a phone the full filters in a bottom
+   sheet. On wider screens the toolbar is one row of every control.
+   -------------------------------------------------------------------------- */
+
+.og-explore__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.og-explore__search {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.og-explore .og-explore__search input[type="search"] {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px 0 38px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 999px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23889590' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='4.75'/%3E%3Cpath d='m10.5 10.5 3.5 3.5'/%3E%3C/svg%3E")
+      14px 50% / 16px 16px no-repeat,
+    var(--og-paper);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.og-explore__filters-count {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--og-go);
+  color: var(--og-on-fill);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.og-explore__sheet-head,
+.og-explore__sheet-done,
+.og-explore__backdrop,
+.og-explore__quick {
+  display: none;
+}
+
+@media (min-width: 761px) {
+  /* One toolbar row: search then every control, in one floating box. */
+  .og-explore .og-explore__toolbar {
+    flex-wrap: wrap;
+    padding: 10px;
+    border: 1px solid var(--og-hairline);
+    border-radius: 20px;
+    background: var(--og-paper);
+    box-shadow: var(--og-shadow-1);
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls {
+    display: contents;
+  }
+}
+
+@media (max-width: 760px) {
+  .og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
+    display: inline-flex;
+  }
+
+  .og-explore .og-explore__filters-toggle[aria-expanded="true"] {
+    border-color: var(--og-go);
+  }
+
+  /* One-tap chips: a single scrolling row, edge to edge. */
+  .og-explore__quick {
+    display: flex;
+    gap: 6px;
+    margin: 0 -14px 10px;
+    padding: 0 14px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .og-explore__quick::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-explore__quick-chip {
+    flex: none;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--og-hairline-strong);
+    border-radius: 999px;
+    background: var(--og-paper);
+    color: var(--og-ink);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .og-explore__quick-chip[aria-pressed="true"] {
+    border-color: var(--og-go);
+    background: var(--og-go);
+    color: var(--og-on-fill);
+  }
+
+  .og-explore__quick-chip:focus-visible {
+    outline: 2px solid var(--og-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The sheet: closed, it is not there; open, it rises over the tab bar. */
+  .og-explore .og-explore__controls.og-explore__controls[data-open="false"] {
+    display: none;
+  }
+
+  .og-explore .og-explore__controls.og-explore__controls[data-open="true"] {
+    position: fixed;
+    z-index: 70;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    max-height: 82dvh;
+    margin: 0;
+    padding: 8px 16px calc(16px + var(--og-safe-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--og-glass-edge);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--og-sheet-bg);
+    box-shadow: 0 -12px 40px rgb(0 0 0 / 30%);
+    animation: og-sheet-rise 220ms var(--og-ease, ease-out);
+  }
+
+  .og-explore__controls[data-open="true"] > * {
+    min-width: 0;
+  }
+
+  .og-explore__controls[data-open="true"] > :is(.og-explore__sheet-head, .og-explore__sheet-done, .og-explore__near) {
+    grid-column: 1 / -1;
+  }
+
+  .og-explore__controls[data-open="true"] label {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    color: var(--og-slate-text);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .og-explore__controls[data-open="true"] label > span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .og-explore__controls[data-open="true"] :is(select, input:not([type="checkbox"])) {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--og-hairline-strong);
+    border-radius: 14px;
+    background-color: var(--og-canvas);
+    color: var(--og-ink);
+    font: inherit;
+    font-size: 16px;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .og-explore__controls[data-open="true"] .og-explore__check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: end;
+    min-height: 46px;
+    padding: 0 12px;
+    border: 1px solid var(--og-hairline-strong);
+    border-radius: 14px;
+    color: var(--og-ink);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .og-explore__controls[data-open="true"] .og-explore__check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--og-go);
+  }
+
+  .og-explore__sheet-head {
+    position: sticky;
+    top: -8px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 -16px;
+    padding: 14px 16px 10px;
+    background: var(--og-sheet-bg);
+  }
+
+  .og-explore__sheet-head::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: var(--og-hairline-strong);
+  }
+
+  .og-explore__sheet-head h2 {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .og-explore__sheet-reset {
+    min-height: 44px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: var(--og-go-text);
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .og-explore__sheet-reset:disabled {
+    color: var(--og-slate);
+    cursor: default;
+  }
+
+  .og-explore .og-explore__controls .og-explore__sheet-done {
+    min-height: 52px;
+    margin-top: 4px;
+    border-radius: 16px;
+    font-size: 16px;
+  }
+
+  .og-explore .og-explore__controls .og-explore__near {
+    justify-content: center;
+    min-height: 46px;
+    margin: 0;
+    border-radius: 14px;
+  }
+
+  .og-explore__backdrop {
+    position: fixed;
+    z-index: 69;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 45%);
+    animation: og-fade-in 180ms ease-out;
+  }
+}
+
+@keyframes og-sheet-rise {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes og-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-explore .og-explore__controls.og-explore__controls[data-open="true"],
+  .og-explore__backdrop {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .og-explore .og-explore__controls .og-explore__sheet-reset {
+    grid-column: auto;
+    width: auto;
+    margin: 0;
+  }
+
+  /* Nearest-first is the Near me chip and the Sort list; no third copy here. */
+  .og-explore .og-explore__controls[data-open="true"] .og-explore__near {
+    display: none;
+  }
+
+  /* "Show N routes" stays in reach however far the sheet scrolls. */
+  .og-explore .og-explore__controls .og-explore__sheet-done {
+    position: sticky;
+    bottom: 0;
+    box-shadow: 0 -12px 16px var(--og-sheet-bg);
+  }
+}
+
+@media (max-width: 760px) {
+  .og-explore .og-explore__controls .og-explore__sheet-done {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Nearest-first lives in Sort ("Nearest to me") and the phone's Near me chip. */
+.og-explore .og-explore__toolbar .og-explore__near {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Polish pass (2026-09-28): the leftovers that read as unfinished.
+   -------------------------------------------------------------------------- */
+
+/* Undo / Redo pills show the verb; what they undo stays in the name and title. */
+.og-history__what {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The chosen route: its colour is the left rule, not a pink wash on white. */
+:root[data-theme="day"] .og-route-card__button[data-selected="true"] {
+  background: var(--og-well);
+}
+
+/* Section eyebrows ("OPENGRAVEL / BRING A RIDE", "GARAGE") repeat the title. */
+.og-settings__eyebrow,
+.og-library__imports .og-eyebrow,
+.og-settings__header .og-eyebrow {
+  display: none;
+}
+
+/* Offline states: quiet neutral tags; only a real problem gets colour. */
+.og-offline__state[data-state="requires_network"] {
+  background: var(--og-well);
+  color: var(--og-slate-text);
+}
+
+/* Settings: one readable column on a wide screen, not a ragged masonry. */
+@media (min-width: 761px) {
+  .og-settings__layout.og-settings__layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 720px;
+  }
+}
+
+/* A bike's rules are tags, not full-width bars. */
+.og-settings .og-settings__bike-details.og-settings__bike-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.og-settings .og-settings__bike-details span {
+  width: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--og-well);
+  color: var(--og-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* My rides: the type filters are chips on one row; the chosen one is green. */
+.og-library .og-library__chips [aria-pressed="true"] {
+  border-color: var(--og-go);
+  background: var(--og-go);
+  color: var(--og-on-fill);
+}
+
+@media (max-width: 760px) {
+  .og-library .og-library__controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .og-library .og-library__search,
+  .og-library .og-library__search input {
+    width: 100%;
+  }
+
+  .og-library .og-library__controls label > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-library .og-library__search input,
+  .og-library .og-library__sort select {
+    min-height: 44px;
+    border-radius: 999px;
+    padding-inline: 16px;
+    font-size: 16px;
+  }
+
+  .og-library .og-library__chips {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin: 0 -14px;
+    padding: 0 14px 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .og-library .og-library__chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-library .og-library__chips > .og-chip {
+    flex: none;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* Import cards: the title and the drop zone; the fine print is in the zone. */
+  .og-library__imports .og-import__header p {
+    display: none;
+  }
+}
+
+@media (min-width: 761px) {
+  .og-settings .og-settings__header {
+    max-width: 720px;
+    margin-inline: auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Navigation in sunlight (2026-09-28): on a mounted phone in direct sun the
+   Day ride screen reads bigger and bolder. The turn card leads with a 44px
+   distance; the route gets a near-black casing and 25% more weight, and the
+   rider's arrow grows with it (read by the map from these tokens, style.ts).
+   -------------------------------------------------------------------------- */
+
+:root[data-theme="day"] .og-ride .og-map {
+  --og-map-route-casing: #1d0b05;
+  --og-map-emphasis: 1.25;
+}
+
+:root[data-theme="day"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-height: 104px;
+  background: #0b6b35;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-glyph {
+  width: 72px;
+  height: 72px;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-glyph path {
+  stroke-width: 5.5;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-distance {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-action {
+  font-size: 21px;
+  font-weight: 700;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-road {
+  font-weight: 800;
+}
+
+:root[data-theme="day"] .og-ride__maneuver .og-ride__maneuver-suspended {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+/* The strip: black numerals, captions dark enough for glare. */
+:root[data-theme="day"] .og-ride-metrics__value {
+  color: #000000;
+  font-weight: 800;
+}
+
+:root[data-theme="day"] .og-ride-metrics__unit,
+:root[data-theme="day"] .og-ride-metrics__caption {
+  color: #26302c;
+}
+
+:root[data-theme="day"] .og-ride .og-ride__strip:has(> .og-ride-metrics) {
+  border: 1.5px solid rgb(7 16 12 / 28%);
+}
+
+/* No thin grey text on the Day ride screen. */
+:root[data-theme="day"] .og-ride :is(.og-ride__notice, .og-ride__metrics-hint, .og-ride__progress-text, .og-ride__gps) {
+  color: #26302c;
+  font-weight: 600;
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  :root[data-theme="day"] .og-ride__maneuver-distance {
+    font-size: 36px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Route detail (2026-09-28): the route leads. On a phone: a compact back link
+   and title, the map edge to edge, the numbers as one row of chips, "Plan this
+   ride" in a bar at the bottom, then the story, briefing and roads as the same
+   quiet cards. Wide screens keep the two columns.
+   -------------------------------------------------------------------------- */
+
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants) {
+  padding: 16px;
+  border: 1px solid var(--og-hairline);
+  border-top: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+  box-shadow: none;
+}
+
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community) h2 {
+  font-size: 18px;
+}
+
+.og-route-detail .og-preparation .og-eyebrow,
+.og-route-detail .og-route-story .og-eyebrow,
+.og-route-detail__region {
+  display: none;
+}
+
+.og-preparation__offline > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--og-slate-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .og-route-detail.og-route-detail {
+    gap: 14px;
+    padding-top: calc(8px + var(--og-safe-top));
+    padding-bottom: calc(96px + var(--og-safe-bottom));
+  }
+
+  .og-route-detail .og-route-detail__header {
+    gap: 6px;
+  }
+
+  .og-route-detail .og-route-detail__header > .og-secondary {
+    min-height: 36px;
+    padding: 4px 12px 4px 8px;
+    border: 0;
+    background: transparent;
+    color: var(--og-go-text);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .og-route-detail .og-route-detail__header > .og-secondary::before {
+    color: inherit;
+  }
+
+  .og-route-detail .og-route-detail__title h1 {
+    font-size: 26px;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+  }
+
+  .og-route-detail .og-route-detail__provenance-detail summary {
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  /* The map, edge to edge. */
+  .og-route-detail .og-route-detail__map {
+    margin-inline: -12px;
+    width: auto;
+    border-radius: 0;
+    box-shadow: none;
+    border-block: 1px solid var(--og-hairline);
+  }
+
+  .og-route-detail .og-route-detail__map .og-explore-map,
+  .og-route-detail .og-route-detail__map > .og-map-preview-unavailable {
+    height: 44vh;
+    min-height: 260px;
+  }
+
+  /* The numbers: one row of chips, the value is the label. */
+  .og-route-detail .og-route-detail__stats.og-route-detail__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow: visible;
+    background: none;
+    box-shadow: none;
+  }
+
+  .og-route-detail .og-route-detail__stats > div {
+    padding: 6px 12px;
+    border: 1px solid var(--og-hairline);
+    border-radius: 999px;
+    background: var(--og-paper);
+  }
+
+  .og-route-detail .og-route-detail__stats dt {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-route-detail .og-route-detail__stats dd {
+    margin: 0;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .og-route-detail .og-route-detail__stats .og-route-detail__basis {
+    display: none;
+  }
+
+  /* "Plan this ride" lives in a bar along the bottom edge. */
+  .og-route-detail .og-route-detail__actions.og-route-detail__actions {
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 10px 12px calc(10px + var(--og-safe-bottom));
+    border: 0;
+    border-top: 1px solid var(--og-glass-edge);
+    border-radius: 0;
+    background: var(--og-glass-dense);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    box-shadow: 0 -6px 20px rgb(0 0 0 / 14%);
+  }
+
+  .og-route-detail .og-route-detail__actions .og-primary {
+    min-height: 50px;
+    border-radius: 14px;
+    font-size: 16px;
+  }
+
+  .og-route-detail .og-route-detail__actions .og-secondary {
+    min-height: 50px;
+    border-radius: 14px;
+  }
+}
+
+.og-preparation__offline > summary {
+  list-style: none;
+}
+
+.og-preparation__offline > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-preparation__offline > summary::before {
+  content: "▸";
+  margin-right: 8px;
+  font-size: 12px;
+}
+
+.og-preparation__offline[open] > summary::before {
+  content: "▾";
+}
+
+/* --------------------------------------------------------------------------
+   Launch kit (2026-09-28): Share on a route, Install and Feedback in Settings.
+   -------------------------------------------------------------------------- */
+
+.og-route-detail__share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.og-route-detail__share-note {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--og-ink);
+  color: var(--og-canvas);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.og-route-detail__actions {
+  position: relative;
+}
+
+@media (max-width: 760px) {
+  /* Plan this ride leads; Export and Share are compact beside it. */
+  .og-route-detail .og-route-detail__actions .og-route-detail__share {
+    flex: none;
+    width: 50px;
+    padding: 0;
+  }
+
+  .og-route-detail__share-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.og-install__steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.og-feedback {
+  display: grid;
+  gap: 12px;
+}
+
+.og-feedback__field {
+  display: grid;
+  gap: 6px;
+  color: var(--og-slate-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.og-feedback textarea,
+.og-feedback input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 14px;
+  background: var(--og-canvas);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.og-feedback .og-primary {
+  justify-self: start;
+  min-width: 120px;
+}
+
+.og-feedback__status {
+  margin: 0;
+  color: var(--og-go-text);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   The finish summary: the ride in five numbers, big enough to read standing
+   next to the bike.
+   -------------------------------------------------------------------------- */
+
+.og-ride__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1px;
+  margin: 12px 0 0;
+  overflow: hidden;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 16px;
+  background: var(--og-ride-border);
+}
+
+.og-ride__summary-stat {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  background: var(--og-ride-surface);
+}
+
+.og-ride__summary dt {
+  color: var(--og-ride-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.og-ride__summary dd {
+  margin: 0;
+  color: var(--og-paper);
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 24px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.og-ride__summary-unit {
+  color: var(--og-ride-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* "12 mi away": where the ride starts, from the rider (Explore cards). */
+.og-explore-card__away {
+  color: var(--og-go-text);
+  font-weight: 700;
+}

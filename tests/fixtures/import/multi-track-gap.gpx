@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OpenGravel fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Multi Track Gap</name></metadata>
+  <wpt lat="40.0000" lon="-75.0000"><name>Trailhead</name></wpt>
+  <trk>
+    <name>North Track</name>
+    <trkseg>
+      <trkpt lat="40.0000" lon="-75.0000"><time>2026-09-17T12:00:00Z</time></trkpt>
+      <trkpt lat="40.0010" lon="-75.0010"><time>2026-09-17T12:01:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>South Track</name>
+    <trkseg>
+      <trkpt lat="41.0000" lon="-76.0000" />
+      <trkpt lat="41.0010" lon="-76.0010" />
+    </trkseg>
+  </trk>
+</gpx>

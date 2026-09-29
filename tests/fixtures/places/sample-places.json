@@ -1,0 +1,35 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "hh:sample-cafe",
+      "geometry": { "type": "Point", "coordinates": [-75.435, 40.136] },
+      "properties": {
+        "kind": "happy_hour", "status": "now", "name": "Sample Cafe", "category": "Cafe",
+        "label": "Example offer", "city": "Demo town", "address": "1 Example Lane",
+        "specials": ["Example offer"], "schedule": "Every day 4–6 PM", "timezone": "UTC",
+        "rating": 4.2, "popular": false, "dog": true, "patio": true,
+        "url": "https://places.example/happy/sample-cafe", "maps_url": "https://maps.example/?q=sample-cafe",
+        "off_route_mi": 0.2, "route_mile": 1.1
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "event:sample-ride-event",
+      "geometry": { "type": "Point", "coordinates": [-75.433, 40.133] },
+      "properties": {
+        "kind": "event", "status": "upcoming", "name": "Sample Ride Event", "category": "Ride",
+        "label": "Open sample event", "city": "Demo town", "address": "2 Example Lane",
+        "start_utc": "2026-09-25T01:00:00+00:00", "end_utc": "2026-09-25T05:00:00+00:00",
+        "timezone": "UTC", "url": "https://places.example/events/sample-ride-event",
+        "maps_url": "https://maps.example/?q=sample-ride-event", "off_route_mi": 0.3, "route_mile": 1.5
+      }
+    }
+  ],
+  "meta": {
+    "contract": "1.0",
+    "generated_at": "2026-01-01T00:00:00.000Z",
+    "attribution": "Synthetic sample venues"
+  }
+}

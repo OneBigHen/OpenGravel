@@ -1,0 +1,52 @@
+{
+  "name": "opengravel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plan and ride better motorcycle routes with OpenGravel.",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "dev:demo": "node scripts/dev-demo.mjs",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:architecture": "vitest run --project architecture",
+    "test:real-router": "vitest run --config vitest.realrouter.config.mts",
+    "test:e2e:critical": "playwright test --project=critical-chromium",
+    "test:watch": "vitest",
+    "vendor:maplibre": "node scripts/vendor-maplibre-worker.mjs",
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@protomaps/basemaps": "^5.7.2",
+    "@typesafe-ai/sdk": "^0.6.0",
+    "dexie": "^4.4.6",
+    "maplibre-gl": "^6.10.0",
+    "next": "16.3.5",
+    "pmtiles": "^4.5.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.13.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.5",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "30.1.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
+  }
+}

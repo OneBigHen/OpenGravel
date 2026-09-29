@@ -1,0 +1,9 @@
+{
+  "distance_influence": 38,
+  "priority": [
+    { "if": "road_class == MOTORWAY || road_class == TRUNK", "multiply_by": "0.05" },
+    { "if": "road_class == SECONDARY || road_class == TERTIARY", "multiply_by": "1.35" },
+    { "if": "urban_density == RURAL", "multiply_by": "1.3" },
+    { "if": "urban_density == CITY", "multiply_by": "0.45" }
+  ]
+}

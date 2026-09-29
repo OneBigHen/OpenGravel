@@ -1,0 +1,18 @@
+{
+  "type": "Feature",
+  "properties": {
+    "periods": [
+      {
+        "number": 1,
+        "name": "Today",
+        "startTime": "2026-09-17T12:00:00+00:00",
+        "endTime": "2026-09-17T18:00:00+00:00",
+        "temperature": 20,
+        "temperatureUnit": "C",
+        "windSpeed": "16 km/h",
+        "shortForecast": "Partly Cloudy",
+        "probabilityOfPrecipitation": { "value": 25 }
+      }
+    ]
+  }
+}

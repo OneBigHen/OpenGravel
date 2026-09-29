@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  BUILDING_EXTRUSION_LAYER_ID,
+  HILLSHADE_LAYER_ID,
+  TERRAIN_EXAGGERATION,
+  buildingExtrusionLayerSpec,
+  buildingInsertion,
+  hillshadeBeforeId,
+  hillshadeLayerSpec,
+  terrainSourceSpec,
+  type HostedStyleLayer,
+} from "@/infrastructure/map/maplibre/visual-detail";
+
+describe("MapLibre visual detail", () => {
+  it("keeps terrain realistic and on the existing bounded DEM contract", () => {
+    expect(TERRAIN_EXAGGERATION).toBe(1.1);
+    expect(terrainSourceSpec()).toMatchObject({
+      type: "raster-dem",
+      encoding: "terrarium",
+      tileSize: 256,
+      maxzoom: 14,
+    });
+  });
+
+  it("places hillshade below roads when the style exposes transportation", () => {
+    const layers: HostedStyleLayer[] = [
+      { id: "land", type: "fill" },
+      { id: "minor-road", type: "line", source: "openmaptiles", "source-layer": "transportation" },
+      { id: "road-label", type: "symbol" },
+    ];
+
+    expect(hillshadeBeforeId(layers)).toBe("minor-road");
+    expect(hillshadeLayerSpec()).toMatchObject({
+      id: HILLSHADE_LAYER_ID,
+      type: "hillshade",
+    });
+  });
+
+  it("falls back to putting hillshade below labels", () => {
+    expect(
+      hillshadeBeforeId([
+        { id: "land", type: "fill" },
+        { id: "place-label", type: "symbol" },
+      ]),
+    ).toBe("place-label");
+  });
+
+  it("reuses the hosted style building source and keeps labels above extrusion", () => {
+    const layers: HostedStyleLayer[] = [
+      { id: "building-flat", type: "fill", source: "openfreemap", "source-layer": "building" },
+      { id: "road-label", type: "symbol", source: "openfreemap", "source-layer": "transportation_name" },
+    ];
+
+    expect(buildingInsertion(layers)).toEqual({
+      source: "openfreemap",
+      beforeId: "road-label",
+    });
+    expect(buildingExtrusionLayerSpec("openfreemap")).toMatchObject({
+      id: BUILDING_EXTRUSION_LAYER_ID,
+      type: "fill-extrusion",
+      source: "openfreemap",
+      "source-layer": "building",
+      minzoom: 15,
+    });
+  });
+
+  it("does not invent a building source when the basemap has none", () => {
+    expect(buildingInsertion([{ id: "place-label", type: "symbol" }])).toBeNull();
+  });
+});

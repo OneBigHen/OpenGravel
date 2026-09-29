@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OpenGravel</title>
+<style>
+  :root { --bg: #14110f; --fg: #f3ede4; --muted: #b3a89a; --ember: #e2572b; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+  main { min-height: 100%; display: flex; flex-direction: column; justify-content: center;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom)); box-sizing: border-box; }
+  h1 { font-size: 28px; margin: 0 0 8px; }
+  p { color: var(--muted); font-size: 17px; line-height: 1.45; margin: 0 0 24px; }
+  button { font: inherit; font-weight: 600; font-size: 17px; color: #fff; background: var(--ember);
+    border: 0; border-radius: 12px; padding: 16px; min-height: 52px; }
+  button:focus-visible { outline: 3px solid var(--fg); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>No connection</h1>
+  <p>OpenGravel needs a signal to plan and load rides. A ride already in progress keeps recording once you're back online.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>

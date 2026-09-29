@@ -1,0 +1,103 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — not a live router. A canned two-candidate answer for the critical E2E harness (task 2.4b), in the deployment's south-eastern Pennsylvania region: both lines run between the two coordinates the gate places on the map (a start and a destination near Norristown, PA), so the drawn route meets the markers. It is only ever read when OGV_ROUTE_PLAN_FIXTURE=1, and every answer built from it carries the same label in its diagnostics.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_twisty",
+      "geometry": [
+        { "lon": -75.44, "lat": 40.14 },
+        { "lon": -75.4387, "lat": 40.1407 },
+        { "lon": -75.4373, "lat": 40.1412 },
+        { "lon": -75.4361, "lat": 40.1408 },
+        { "lon": -75.4351, "lat": 40.1396 },
+        { "lon": -75.4355, "lat": 40.1382 },
+        { "lon": -75.4365, "lat": 40.1371 },
+        { "lon": -75.4363, "lat": 40.1357 },
+        { "lon": -75.4353, "lat": 40.134 },
+        { "lon": -75.4344, "lat": 40.1327 },
+        { "lon": -75.4333, "lat": 40.1317 },
+        { "lon": -75.4322, "lat": 40.1312 },
+        { "lon": -75.4325, "lat": 40.1308 },
+        { "lon": -75.4328, "lat": 40.131 }
+      ],
+      "distanceMeters": 1711,
+      "durationSeconds": 245,
+      "instructions": [
+        {
+          "text": "Head north-east on Ridge Pike",
+          "distanceMeters": 420,
+          "durationSeconds": 62,
+          "type": "depart"
+        },
+        {
+          "text": "Turn left onto Township Line Road",
+          "distanceMeters": 540,
+          "durationSeconds": 78,
+          "type": "turn",
+          "maneuver": "left",
+          "roadName": "Township Line Road",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Continue on Cross Road",
+          "distanceMeters": 470,
+          "durationSeconds": 66,
+          "type": "continue"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 281,
+          "durationSeconds": 39,
+          "type": "arrive"
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "fixture:se-pa:twisty:v1",
+        "graph": "fixture-se-pa"
+      }
+    },
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_fastest",
+      "geometry": [
+        { "lon": -75.44, "lat": 40.14 },
+        { "lon": -75.4389, "lat": 40.1393 },
+        { "lon": -75.4379, "lat": 40.1385 },
+        { "lon": -75.4371, "lat": 40.1374 },
+        { "lon": -75.4366, "lat": 40.1361 },
+        { "lon": -75.4362, "lat": 40.1348 },
+        { "lon": -75.4357, "lat": 40.1336 },
+        { "lon": -75.4349, "lat": 40.1325 },
+        { "lon": -75.4339, "lat": 40.1317 },
+        { "lon": -75.4328, "lat": 40.131 }
+      ],
+      "distanceMeters": 1209,
+      "durationSeconds": 155,
+      "instructions": [
+        {
+          "text": "Head south-east on Germantown Pike",
+          "distanceMeters": 520,
+          "durationSeconds": 66,
+          "type": "depart"
+        },
+        {
+          "text": "Continue on Ridge Pike",
+          "distanceMeters": 445,
+          "durationSeconds": 57,
+          "type": "continue"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 244,
+          "durationSeconds": 32,
+          "type": "arrive"
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "fixture:se-pa:fastest:v1",
+        "graph": "fixture-se-pa"
+      }
+    }
+  ]
+}
