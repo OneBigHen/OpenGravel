@@ -14,7 +14,13 @@ export type PlaceTone = "live" | "soon" | "quiet";
 
 export interface PlaceScene {
   readonly id: PlaceId;
-  readonly kind: NearbyPlace["kind"];
+  /**
+   * `NearbyPlace["kind"]` for a places-provider pin, or a namespaced string
+   * for anything else drawn through this same pill layer (ride-interest
+   * points, OGV#13). Never read by a MapLibre expression — the map styles a
+   * pin by `tone`, not `kind` — so widening it here cannot change a pixel.
+   */
+  readonly kind: NearbyPlace["kind"] | (string & {});
   readonly coordinate: NearbyPlace["coordinate"];
   /** Short pill text ("$3 · til 10p", "4–7p", "Sat 7p"). */
   readonly pill: string;
