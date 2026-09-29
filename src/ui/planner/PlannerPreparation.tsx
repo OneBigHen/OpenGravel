@@ -175,7 +175,7 @@ function localInputValue(iso: string): string {
 }
 
 /** Matches the CSS: the side-by-side layout, which short landscape also uses. */
-const WIDE_QUERY = "(min-width: 761px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px)";
+const WIDE_QUERY = "(min-width: 1181px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px)";
 
 /** `null` where the platform has no media queries (older engines, jsdom). */
 function wideQuery(): MediaQueryList | null {

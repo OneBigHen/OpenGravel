@@ -228,7 +228,7 @@ textarea {
    Phone chrome: tab bar, map controls, sheet
    -------------------------------------------------------------------------- */
 
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   :root {
     --og-tabbar-pill-h: 58px;
     --og-tabbar-gap: max(8px, calc(var(--og-safe-bottom) - 14px));
@@ -382,7 +382,7 @@ html .og-ride {
   flex: none;
 }
 
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-planner__sheet[data-idle="true"] {
     padding: 8px 10px 10px;
   }
@@ -542,7 +542,7 @@ html .og-ride {
   color: var(--og-ink);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1180px) {
   .og-place-search .og-place-search__input {
     min-height: 46px;
     border-radius: 14px;
@@ -572,20 +572,61 @@ html .og-ride {
   display: flex;
   flex: 0 0 auto;
   order: 2;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
 }
 
-.og-sheet__head .og-history__button {
-  width: auto;
-  max-width: 120px;
-  min-height: 34px;
-  padding: 4px 10px;
+/* Undo / Redo: two round icon buttons (owner 2026-09-28: the arrow-over-word
+   pills were "weird"). 36px discs with a 44px hit area; the words stay in the
+   button, visually hidden, as its accessible name. */
+.og-sheet__head .og-history__button,
+.og-history__button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--og-hairline);
+  border-radius: 50%;
+  background: var(--og-raised);
+  color: var(--og-ink);
+  font-size: 0;
+}
+
+.og-history__button::before,
+.og-history__button[data-testid]::before {
+  content: none;
+}
+
+.og-history__button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.og-history__glyph[data-direction="redo"] {
+  transform: scaleX(-1);
+}
+
+.og-history__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  border-radius: 999px;
-  font-size: 12px;
-  text-overflow: ellipsis;
+  clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+.og-history__button:disabled {
+  opacity: 0.35;
+}
+
+.og-history__button:not(:disabled):active {
+  background: var(--og-go-soft);
 }
 
 .og-sheet__clear {
@@ -1969,4 +2010,87 @@ html .og-ride {
 .og-explore-card__away {
   color: var(--og-go-text);
   font-weight: 700;
+}
+
+/* Phone and tablet: the sheet's head is its grip (swipe up / down), and its
+   one row holds status, handle, Undo, Redo and × — the status gives way. */
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-sheet__head {
+    touch-action: none;
+  }
+
+  .og-sheet__head > .og-planner__status {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* A phone's head row cannot fit "Ride ready." beside Undo, Redo and ×; the
+   status stays announced but is not shown then. */
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-sheet__head:has(.og-history) > .og-planner__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip: rect(0 0 0 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Tablet (iPad, 761–1180 px): the phone's layout, sized for the bigger screen.
+   Owner 2026-09-28: the iPad Plan screen had "a huge bar on the side", was not
+   space friendly and did not move. The map is edge to edge; the sheet is a
+   floating card on the left (Apple Maps on iPad) with the tab bar under it,
+   and it swipes and taps between its detents like the phone's.
+   -------------------------------------------------------------------------- */
+
+@media (min-width: 761px) and (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  :root {
+    --og-tablet-card-w: min(400px, calc(100vw - 32px - var(--og-safe-left) - var(--og-safe-right)));
+  }
+
+  /* Every page: a tab bar that fits its four tabs, not the width of the iPad. */
+  .og-planner__nav-shell,
+  .og-planner__header .og-planner__nav-shell,
+  .og-library__header > .og-planner__nav-shell {
+    left: calc(50% - 210px);
+    right: calc(50% - 210px);
+  }
+
+  /* Plan: the sheet and the tab bar are one column on the left. */
+  .og-planner:has(.og-planner__dock) .og-planner__nav-shell {
+    left: calc(16px + var(--og-safe-left));
+    right: auto;
+    width: var(--og-tablet-card-w);
+  }
+
+  .og-planner__dock {
+    left: calc(16px + var(--og-safe-left));
+    right: auto;
+    width: var(--og-tablet-card-w);
+    bottom: calc(var(--og-tabbar-h) + 10px);
+  }
+
+  .og-planner__sheet {
+    padding: 12px 14px 14px;
+  }
+
+  /* Open, the card may use the height the iPad has; the map stays on the right. */
+  .og-planner__sheet[data-detent="expanded"] {
+    max-height: calc(100dvh - var(--og-tabbar-h) - 36px - var(--og-safe-top));
+  }
+
+  .og-planner__sheet[data-detent="ride"] {
+    max-height: min(46dvh, 460px);
+  }
+
+  /* The host lifts the attribution by the sheet's bottom inset (05 §23); here
+     the sheet is on the left, so the bottom-right corner is always free. The
+     lift is an inline style, hence the !important. */
+  .og-map .maplibregl-ctrl-bottom-right {
+    bottom: 8px !important;
+  }
 }

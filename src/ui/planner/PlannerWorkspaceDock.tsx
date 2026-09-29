@@ -7,7 +7,15 @@
  * lays out status, history, composition, route decisions and refinement.
  */
 
-import { useEffect, useRef, type ComponentProps, type CSSProperties, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  type ComponentProps,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+} from "react";
 
 import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
@@ -60,6 +68,32 @@ function overlapChoiceKey(ref: MapObjectRef, index: number): string {
   }
 }
 
+/** A curved arrow: back for undo, mirrored for redo. */
+function HistoryGlyph({ direction }: { readonly direction: "undo" | "redo" }) {
+  return (
+    <svg
+      className="og-history__glyph"
+      viewBox="0 0 24 24"
+      width="20"
+      height="20"
+      aria-hidden="true"
+      data-direction={direction}
+    >
+      <path
+        d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** How far a finger travels on the sheet's head before it counts as a swipe. */
+const SWIPE_PX = 36;
+
 export function PlannerWorkspaceDock({
   dockRef,
   sheetHeadRef,
@@ -91,6 +125,41 @@ export function PlannerWorkspaceDock({
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
     composer.rideStyle?.view.shape !== "loop";
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  // Swipe the sheet's head up to open it, down to fold it (owner 2026-09-28:
+  // the sheet "doesn't move easily"). A swipe swallows the click it ends in,
+  // so the handle does not toggle a second time.
+  const swipe = useRef<{ y: number; id: number } | null>(null);
+  const swallowClick = useRef(false);
+  const swipeHandlers = {
+    onPointerDown: (event: ReactPointerEvent<HTMLDivElement>): void => {
+      if (event.pointerType === "mouse") return;
+      swipe.current = { y: event.clientY, id: event.pointerId };
+    },
+    onPointerUp: (event: ReactPointerEvent<HTMLDivElement>): void => {
+      const start = swipe.current;
+      swipe.current = null;
+      if (start === null || start.id !== event.pointerId) return;
+      const dy = event.clientY - start.y;
+      if (Math.abs(dy) < SWIPE_PX) return;
+      const expanded = sheetDetent === "expanded";
+      if ((dy < 0 && !expanded) || (dy > 0 && expanded)) {
+        swallowClick.current = true;
+        window.setTimeout(() => {
+          swallowClick.current = false;
+        }, 400);
+        onToggleSheet();
+      }
+    },
+    onPointerCancel: (): void => {
+      swipe.current = null;
+    },
+    onClickCapture: (event: ReactMouseEvent<HTMLDivElement>): void => {
+      if (!swallowClick.current) return;
+      swallowClick.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+  };
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");
@@ -114,7 +183,7 @@ export function PlannerWorkspaceDock({
         aria-label="Ride planning"
         style={{ "--og-sheet-head-height": `${sheetHeadHeight}px` } as CSSProperties}
       >
-        <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef}>
+        <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...(idle ? {} : swipeHandlers)}>
           <PlannerWorkspaceStatus {...status} />
 
           {overlapCandidates.length === 0 ? null : (
@@ -245,6 +314,11 @@ export function PlannerWorkspaceDock({
 
           {viewModel.undoLabel === null && viewModel.redoLabel === null ? null : (
             <div className="og-history" data-testid="history-controls">
+              {/*
+                Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills
+                "are weird"). The text stays in the button for its accessible
+                name; what it undoes is in the title.
+              */}
               <button
                 type="button"
                 className="og-chip og-history__button"
@@ -253,9 +327,11 @@ export function PlannerWorkspaceDock({
                 disabled={viewModel.undoLabel === null}
                 onClick={onUndo}
               >
-                Undo
-                {/* What it undoes is in the title; the pill shows the verb (theme-glass.css). */}
-                {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
+                <HistoryGlyph direction="undo" />
+                <span className="og-history__text">
+                  Undo
+                  {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
+                </span>
               </button>
               <button
                 type="button"
@@ -265,8 +341,11 @@ export function PlannerWorkspaceDock({
                 disabled={viewModel.redoLabel === null}
                 onClick={onRedo}
               >
-                Redo
-                {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
+                <HistoryGlyph direction="redo" />
+                <span className="og-history__text">
+                  Redo
+                  {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
+                </span>
               </button>
             </div>
           )}

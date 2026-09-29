@@ -3662,8 +3662,10 @@ h3,
 }
 
 /* From tablet width up the panel is simply open: there is room, and a rider
-   comparing Curvy with Backroads should not have to open anything first. */
-@media (min-width: 761px) {
+   comparing Curvy with Backroads should not have to open anything first.
+   Tablets (up to 1180 px) take the phone's compact sheet, disclosure included;
+   a phone on its side wider than 760 px keeps the open panel. */
+@media (min-width: 1181px), (min-width: 761px) and (orientation: landscape) and (max-height: 500px) {
   .og-style__toggle {
     display: none;
   }
@@ -4261,7 +4263,7 @@ h3,
    the viewport, a premise no content can guarantee; a map canvas that extends
    below the fold also misplaces its own drag surface, which is how one tall
    disclosure turned every map-authored edit into an untargeted gesture. */
-@media (min-width: 761px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+@media (min-width: 1181px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
   .og-planner {
     height: 100dvh;
     overflow: hidden;
@@ -4373,7 +4375,7 @@ h3,
    sheet with two detents — peek (status + composer) and expanded (the ride
    choices scroll inside it) — with the safe-area inset respected (04 §2, 12 §13).
    The status line lives *inside* the sheet, so the map stays geography. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-planner {
     gap: 0;
     padding: 0;
@@ -6818,7 +6820,7 @@ h3,
    every page, like a native app, instead of a pill floating over the map. The
    planner's sheet and every page's content sit above it. Short landscape keeps
    the header row. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   :root {
     /* Owner 2026-09-26 (OW-03): the tab bar floats as a frosted-glass capsule
        over the map, like iOS's own tab bars. It sits just above the home
@@ -7164,7 +7166,7 @@ h3,
 /* Phone portrait with the tab-bar shell: the Places pill takes the slot under
    the layer toggle, "Show whole ride" and the map hint step down one row, and a
    place card is a sheet above the tab bar, over the planner's own sheet. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-places-overlay--planner .og-places-control {
     top: calc(64px + var(--og-safe-top));
   }
@@ -7525,7 +7527,7 @@ h3,
   filter: brightness(1.06);
 }
 
-@media (min-width: 761px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+@media (min-width: 1181px), (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
   .og-planner__panel,
   .og-planner__inspector-body {
     border-color: transparent;
@@ -7781,44 +7783,6 @@ h3,
 
 }
 
-/* Tablet: the map fills the space beneath the header and the composer floats
-   over its right edge, so the lower half is geography instead of dead canvas. */
-@media (min-width: 761px) and (max-width: 1180px) and (min-height: 600px) {
-  .og-planner__body {
-    position: relative;
-    display: block;
-    min-height: 0;
-  }
-
-  .og-planner__map-slot {
-    position: absolute;
-    inset: 0;
-    min-height: 0;
-  }
-
-  .og-planner__map-slot .og-map-host,
-  .og-planner__map-slot .og-map {
-    min-height: 0;
-  }
-
-  .og-planner__dock {
-    position: absolute;
-    z-index: 3;
-    top: 16px;
-    right: 16px;
-    bottom: 16px;
-    width: min(440px, calc(100% - 32px));
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-  }
-
-  .og-planner__dock .og-planner__panel {
-    box-shadow: var(--og-shadow-3);
-  }
-}
-
 /* Short landscape, map-first (UX rework phase 7, MVP parity row 28). A phone on
    its side is all map on the left, edge to edge and full height; the rail is one
    column on the right with the navigation at its top. The body steps out of the
@@ -7902,7 +7866,7 @@ h3,
   flex: none;
 }
 
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-map__layer-toggle,
   .og-map__whole-ride {
     left: auto;
@@ -8464,7 +8428,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 /* Phone: the Layers button joins the round icon cluster on the right, and the
    panel and the card become sheets above the tab bar. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-layers {
     top: calc(168px + var(--og-safe-top));
     left: auto;
@@ -8531,7 +8495,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
    it rises above the planner's dock only while one of them is showing, and the
    rider sees the map with that sheet until they close it. (PO-01: the place
    card was missing here, so its Details and Add as stop sat behind the dock.) */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-planner__map-slot:has(.og-layers[data-open="true"]),
   .og-planner__map-slot:has(.og-info-card),
   .og-planner__map-slot:has(.og-places-card) {
@@ -8800,7 +8764,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-appbar {
     display: contents;
   }
@@ -9637,7 +9601,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
 /* Phone portrait, compact sheet (OW-02): with a ride chosen, the collapsed sheet
    is the handle row, one line of ride and Start. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-planner__sheet[data-detent="ride"] {
     padding: 14px 12px 10px;
   }
@@ -9821,7 +9785,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   color: var(--og-paper);
 }
 
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-map__locate {
     top: calc(220px + var(--og-safe-top));
     bottom: auto;
@@ -10660,7 +10624,7 @@ a.og-secondary {
 /* -- Map chrome ------------------------------------------------------------ */
 
 /* AX-05: both halves of the Places capsule meet the 44 px target. */
-@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-places-overlay--planner .og-places-control__toggle {
     min-width: 44px;
   }
