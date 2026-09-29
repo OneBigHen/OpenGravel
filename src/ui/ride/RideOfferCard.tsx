@@ -81,6 +81,13 @@ export function RideOfferCard({ summary, shownAt, lifetimeMs, onTake, onSkip }: 
     }
   }
 
+  function onPointerCancel(event: PointerEvent<HTMLDivElement>): void {
+    if (drag.current?.pointerId !== event.pointerId) return;
+    drag.current = null;
+    cardRef.current?.removeAttribute("data-dragging");
+    setOffset(0);
+  }
+
   return (
     <div
       ref={cardRef}
@@ -94,7 +101,7 @@ export function RideOfferCard({ summary, shownAt, lifetimeMs, onTake, onSkip }: 
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      onPointerCancel={onPointerCancel}
     >
       <div className="og-ride-offer__top">
         <p className="og-ride-offer__kicker">{summary.kicker}</p>

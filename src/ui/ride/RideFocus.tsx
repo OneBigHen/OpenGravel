@@ -41,6 +41,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { useStore } from "zustand";
 
 import { buildRideScene } from "@/application/map/build-ride-scene";
+import { asRouteCandidateId } from "@/domain/route/ids";
 import { computeInsets, toRect, type MapInsets } from "@/application/map/insets";
 import { formatDistance } from "@/application/planner/measurements";
 import { RideOfferCard } from "@/ui/ride/RideOfferCard";
@@ -338,7 +339,10 @@ export function RideFocus({
       ...buildRideScene({
         routeId: navigation?.plan.route?.routeId ?? null,
         routeLine: availableRouteLine,
-        suggestionPreview: liveSuggestion === null ? null : {
+        suggestionPreview: rideOffer !== null ? {
+          routeId: asRouteCandidateId(`offer:${rideOffer.id}`),
+          routeLine: suggestionPreviewLine,
+        } : liveSuggestion === null ? null : {
           routeId: liveSuggestion.route.routeId,
           routeLine: suggestionPreviewLine,
         },
@@ -353,7 +357,7 @@ export function RideFocus({
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
     }),
-    [availableRouteLine, liveSuggestion, navigation, rideCamera, rideInterest.scenePlaces, suggestionPreviewLine, viewModel],
+    [availableRouteLine, liveSuggestion, navigation, rideCamera, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
   );
 
   const selectRideInterest = rideInterest.select;
@@ -866,7 +870,10 @@ export function RideFocus({
                 className="og-ride__action"
                 data-testid="ride-offer-request"
                 disabled={rideOfferBusy || rideOffer !== null}
-                onClick={(): void => store.getState().requestRideOffer()}
+                onClick={(): void => {
+                  store.getState().requestRideOffer();
+                  setSheetOpen(false);
+                }}
               >
                 {rideOfferBusy ? "Finding a ride…" : "Offer me a ride"}
               </button>

@@ -436,6 +436,33 @@ describe("dark chrome and honest states", () => {
     expect(scene?.selectedObject).toBeNull();
   });
 
+  it("draws the whole-ride offer preview even without a segment suggestion", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    const preview = [{ lon: -75.4, lat: 40.1 }, { lon: -75.3, lat: 40.2 }];
+    act(() => store.setState({
+      liveSuggestion: null,
+      rideOffer: { id: "loop:45", kind: "loop", shownAt: NOW, lifetimeMs: 30000,
+        summary: { title: "Curvy loop", kicker: "From here", minutes: 45, distanceMeters: 30000, chips: [], spoken: "Curvy loop" } },
+      suggestionPreviewLine: preview,
+    }));
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(2));
+    expect(hosts.hosts[0]?.lastScene()?.routes[1]?.geometry).toEqual(preview);
+  });
+
+  it("closes ride controls when the rider requests a whole-ride offer", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const request = vi.fn();
+    act(() => store.setState({
+      navigation: { ...store.getState().navigation!, activity: "free" },
+      suggestions: "on", rideOffersAvailable: true, requestRideOffer: request,
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    fireEvent.click(screen.getByTestId("ride-offer-request"));
+    expect(request).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+  });
+
   it("passes enabled places into the ride map scene when a source is supplied", async () => {
     const inExtent = vi.fn(async () => ({
       availability: "available" as const,
