@@ -28,6 +28,12 @@ const SPATIAL_CELL_DEGREES = 0.001;
 const SPATIAL_MATCH_RADIUS_CELLS = 2;
 const MAX_INDEX_CELLS_PER_SEGMENT = 256;
 const CONTINUITY_SEGMENT_WINDOW = 160;
+/**
+ * Past this gap the previous frame says nothing about where the rider is now:
+ * a ride paused at the start and resumed halfway round must match where the
+ * rider is, not be pulled back toward where they stopped.
+ */
+const CONTINUITY_MAX_GAP_MS = 120_000;
 
 export type OffRouteState = SessionOffRouteState;
 
@@ -418,7 +424,11 @@ export function matchRouteProgress(
   previous?: ProgressFrame,
   options: MatchProgressOptions = {},
 ): ProgressFrame {
-  const { projection, ambiguous } = bestProjection(model, fix, previous);
+  const gapMs = previous === undefined ? 0 : Date.parse(fix.observedAt) - Date.parse(previous.observedAt);
+  const continuity = previous !== undefined && Number.isFinite(gapMs) && gapMs > CONTINUITY_MAX_GAP_MS
+    ? undefined
+    : previous;
+  const { projection, ambiguous } = bestProjection(model, fix, continuity);
   const total = model.totalDistanceMeters;
   const distanceAlongMeters = Math.max(0, Math.min(total, projection.routeDistanceMeters));
   const accuracy = fix.accuracyMeters ?? 30;
