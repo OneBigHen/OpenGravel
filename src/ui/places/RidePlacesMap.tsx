@@ -52,12 +52,21 @@ export function RidePlacesMap({
     storageKey: RIDE_PLACES_PREFERENCE_KEY,
     enabledByDefault: true,
   });
+  // OGV#13: ride-interest pins arrive already merged into `scene.places` (the
+  // ride surface builds that scene); the happy-hour/events overlay adds its
+  // own on top rather than replacing them.
   const mapScene = useMemo(
-    () => ({ ...scene, places: places.scenePlaces }),
+    () => ({ ...scene, places: [...(scene.places ?? []), ...(places.scenePlaces ?? [])] }),
     [places.scenePlaces, scene],
   );
   const interceptIntent = places.interceptIntent;
   const intercept = useCallback((intent: MapIntent): void => {
+    // A ride-interest pin (OGV#13) is drawn through this same source but owned
+    // by the ride surface, not the places overlay: let it through untouched.
+    if (intent.type === "place-click" && intent.placeId.startsWith("ri:")) {
+      onIntent(intent);
+      return;
+    }
     const forwarded = interceptIntent(intent);
     if (forwarded !== null) onIntent(forwarded);
   }, [interceptIntent, onIntent]);
