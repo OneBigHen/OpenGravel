@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createLibraryService } from "@/application/library/library-service";
 import { SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
 import { createGarage, type Garage } from "@/application/garage/garage-model";
@@ -20,6 +20,7 @@ import { clearAllLocalData } from "@/infrastructure/storage/clear-all-local-data
 import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
+import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
 
 function consentState(read: TelemetryConsentRead): TelemetryConsentState {
   return read.status === "found" ? read.state : { status: "unacknowledged" };
@@ -32,6 +33,8 @@ function readSatellitePreference(): boolean {
     return false;
   }
 }
+
+const noSubscription = (): (() => void) => () => undefined;
 
 export function SettingsClient() {
   const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
@@ -57,6 +60,8 @@ export function SettingsClient() {
   const [homeFeedback, setHomeFeedback] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [offlineRegions, setOfflineRegions] = useState<OfflineRegionsPort | null>(null);
+  // The server render never knows it is inside the app.
+  const inApp = useSyncExternalStore(noSubscription, () => nativeNavigationBridge() !== undefined, () => false);
 
   useEffect(() => {
     if (typeof indexedDB === "undefined") return;
@@ -206,6 +211,7 @@ export function SettingsClient() {
 
   return <SettingsSurface
     garage={garage}
+    showNavScreen={inApp}
     onGarageChange={saveGarage}
     telemetryConsent={consent}
     onTelemetryConsentChange={saveConsent}

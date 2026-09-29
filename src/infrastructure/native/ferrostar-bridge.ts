@@ -45,6 +45,12 @@ export interface NativeNavigationPlugin {
     readonly payload: NativeNavigationPayloadV1;
     /** Drive a simulated rider along the route (simulator and demo only). */
     readonly simulate?: boolean;
+    /**
+     * `headless`: guide without the native screen; OpenGravel's Ride Focus
+     * stays in front. Omitted (and on builds without it) the native screen
+     * is presented.
+     */
+    readonly presentation?: "native" | "headless";
   }): Promise<NativeNavigationStartResult>;
   /**
    * F3: swap a re-planned route into the running native session, so the

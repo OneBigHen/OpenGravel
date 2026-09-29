@@ -18,6 +18,7 @@ import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
 import { AppearanceSection } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
 import { InstallSection } from "@/ui/settings/InstallSection";
+import { NavScreenSection } from "@/ui/settings/NavScreenSection";
 
 type BikeForm = Omit<BikeProfile, "id">;
 const NEW_BIKE: BikeForm = {
@@ -32,6 +33,8 @@ const NEW_BIKE: BikeForm = {
 
 export interface SettingsSurfaceProps {
   readonly garage: Garage;
+  /** In the app: choose OpenGravel's ride screen or the native one. */
+  readonly showNavScreen?: boolean;
   readonly onGarageChange: (garage: Garage) => void;
   readonly telemetryConsent?: TelemetryConsentState;
   readonly onTelemetryConsentChange?: (state: TelemetryConsentState) => void;
@@ -56,6 +59,7 @@ export interface SettingsSurfaceProps {
 
 export function SettingsSurface({
   garage,
+  showNavScreen = false,
   onGarageChange,
   telemetryConsent = { status: "unacknowledged" },
   onTelemetryConsentChange,
@@ -147,6 +151,7 @@ export function SettingsSurface({
 
       <div className="og-settings__layout">
         <AppearanceSection />
+        {showNavScreen ? <NavScreenSection /> : null}
         <InstallSection />
 
         <section className="og-settings__section" aria-labelledby="settings-bikes-title">

@@ -49,13 +49,16 @@ public class OpenGravelNavigationPlugin: CAPPlugin, CAPBridgedPlugin {
             return call.reject("The route can't be navigated natively: \(error)", "invalid-payload")
         }
         let simulate = call.getBool("simulate") ?? false
+        // Headless: Ferrostar guides (GPS, voice, Lock Screen) while the web's
+        // Ride Focus stays in front (Settings → Navigation screen).
+        let headless = call.getString("presentation") == "headless"
         Task { @MainActor in
             do {
                 try OpenGravelNavigationCoordinator.shared.start(payload: payload, simulate: simulate)
             } catch {
                 return call.reject("Native navigation couldn't start: \(error)", "start-failed")
             }
-            if let host = self.bridge?.viewController {
+            if !headless, let host = self.bridge?.viewController {
                 OpenGravelNavigationPresenter.present(over: host) {
                     OpenGravelNavigationCoordinator.shared.stop(reason: "exit")
                 }

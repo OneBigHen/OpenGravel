@@ -51,6 +51,32 @@ describe("Ferrostar position source (F2)", () => {
     });
   });
 
+  it("asks for headless guidance when OpenGravel's ride screen stays in front", async () => {
+    const { fake } = bridge();
+    createFerrostarPositionSource({ bridge: fake, payload, presentation: "headless" })
+      .watch({ position: vi.fn(), error: vi.fn() });
+    await Promise.resolve();
+    expect(fake.start).toHaveBeenCalledWith({ payload, presentation: "headless" });
+  });
+
+  it("carries the rider's voice mute to Ferrostar, now and on every change", async () => {
+    const { fake } = bridge();
+    let muted = true;
+    const listeners = new Set<() => void>();
+    const watch = createFerrostarPositionSource({
+      bridge: fake,
+      payload,
+      handoffMs: 0,
+      voiceMute: { read: () => muted, subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener); } },
+    }).watch({ position: vi.fn(), error: vi.fn() });
+    await vi.waitFor(() => expect(fake.setMuted).toHaveBeenCalledWith({ muted: true }));
+    muted = false;
+    for (const listener of listeners) listener();
+    expect(fake.setMuted).toHaveBeenLastCalledWith({ muted: false });
+    watch.stop();
+    expect(listeners.size).toBe(0);
+  });
+
   it("relays Ferrostar's deviation verdict so native off-route state can trigger rerouting", () => {
     const { fake, emit } = bridge();
     const observer = { position: vi.fn(), error: vi.fn(), routeDeviation: vi.fn() };
