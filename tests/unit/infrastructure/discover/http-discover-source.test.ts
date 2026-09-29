@@ -6,7 +6,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { createHttpDiscoverSource } from "@/infrastructure/discover/http-discover-source";
+import { thinLine, createHttpDiscoverSource } from "@/infrastructure/discover/http-discover-source";
 
 const LINE = [{ lon: -75.3, lat: 40.1 }, { lon: -75.2, lat: 40.2 }];
 
@@ -69,5 +69,16 @@ describe("createHttpDiscoverSource", () => {
     controller.abort();
     const source = createHttpDiscoverSource({ fetch: vi.fn(async () => { throw new Error("aborted"); }) });
     await expect(source.alongRoute(LINE, 2400, controller.signal)).rejects.toThrow("aborted");
+  });
+});
+
+describe("thinLine", () => {
+  it("keeps short lines and thins long ones to the limit, ends kept", () => {
+    const line = Array.from({ length: 9_001 }, (_, index) => ({ lon: index / 1_000, lat: 40 }));
+    const thinned = thinLine(line);
+    expect(thinned).toHaveLength(4_000);
+    expect(thinned[0]).toEqual(line[0]);
+    expect(thinned.at(-1)).toEqual(line.at(-1));
+    expect(thinLine(line.slice(0, 10))).toHaveLength(10);
   });
 });

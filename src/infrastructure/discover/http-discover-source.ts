@@ -20,6 +20,15 @@ export interface HttpDiscoverSourceOptions {
 
 const UNAVAILABLE: RideInterestDiscoverAnswer = { available: false, places: [] };
 
+/** `/api/discover` takes at most 5,000 points; a long ride's line is thinned evenly to fit. */
+export const MAX_DISCOVER_LINE_POINTS = 4_000;
+
+export function thinLine(line: readonly Coordinate[], max = MAX_DISCOVER_LINE_POINTS): readonly Coordinate[] {
+  if (line.length <= max) return line;
+  const step = (line.length - 1) / (max - 1);
+  return Array.from({ length: max }, (_, index) => line[Math.round(index * step)] as Coordinate);
+}
+
 function isPlacesArray(value: unknown): value is readonly InterestingPlace[] {
   return Array.isArray(value) && value.every((entry) =>
     typeof entry === "object" && entry !== null &&
@@ -40,7 +49,7 @@ export function createHttpDiscoverSource(options: HttpDiscoverSourceOptions = {}
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            line: line.map((point) => [point.lon, point.lat]),
+            line: thinLine(line).map((point) => [point.lon, point.lat]),
             bufferMeters,
           }),
           ...(signal === undefined ? {} : { signal }),
