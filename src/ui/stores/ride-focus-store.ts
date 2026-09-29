@@ -1763,9 +1763,18 @@ export function createRideFocusStore(
         const end = line.at(-1);
         excursion = end === undefined ? null : { sessionId: applied.state.sessionId, end, armed: false };
         await syncNavigationEngine(applied.state);
+        const accepted = controller.snapshot();
+        if (
+          !running ||
+          accepted?.sessionId !== applied.state.sessionId ||
+          accepted.activity !== "guided" ||
+          accepted.plan.route?.routeId !== plan.route.routeId
+        ) return;
         feelOpportunity?.("accepted");
         const title = candidate.kind === "catalog" ? candidate.route.name : "your loop";
         set({
+          routeLine: line,
+          routeLineAvailable: true,
           freeRideStatusMessage: `Riding ${title}. Free Ride picks up back here.`,
           freeRideError: null,
         });

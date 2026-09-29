@@ -725,7 +725,12 @@ describe("Free Ride ride offers (#14)", () => {
 
     expect(ride.controller.snapshot()).toMatchObject({ activity: "guided", plan: { route: { routeId: "route_offer_take" } } });
     expect(ride.writes.at(-1)).toMatchObject({ routeGeometryRef: "geo_offer_take", routeDurationSeconds: 2_700 });
-    expect(ride.store.getState()).toMatchObject({ rideOffer: null, freeRideStatusMessage: "Riding your loop. Free Ride picks up back here." });
+    expect(ride.store.getState()).toMatchObject({
+      rideOffer: null,
+      routeLine: LINE,
+      routeLineAvailable: true,
+      freeRideStatusMessage: "Riding your loop. Free Ride picks up back here.",
+    });
 
     ride.store.getState().stop();
     ride.database.close();
