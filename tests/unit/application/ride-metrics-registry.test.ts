@@ -75,9 +75,10 @@ describe("the registry", () => {
     expect(Object.keys(RIDE_METRIC_REGISTRY)).toHaveLength(RIDE_METRIC_IDS.length);
   });
 
-  it("builds only already-credible metrics through slice B (no Smart, route-ahead, grade or motion)", () => {
+  it("builds only already-credible metrics through slice C (no Smart, route-ahead, grade or tilt/lateral-G)", () => {
     const live = RIDE_METRIC_IDS.filter((id) => RIDE_METRIC_REGISTRY[id].availability === "live");
     expect(live.sort()).toEqual([
+      "context.daylightRemaining",
       "distance.recorded",
       "elevation.current",
       "elevation.gain",
@@ -98,8 +99,13 @@ describe("the registry", () => {
     ]);
   });
 
+  it("marks the lean-angle beta experimental, not live: selectable, but never counted as a fully-trusted reading", () => {
+    const experimental = RIDE_METRIC_IDS.filter((id) => RIDE_METRIC_REGISTRY[id].availability === "experimental");
+    expect(experimental).toEqual(["motion.lean"]);
+  });
+
   it("resolves a planned metric as unsupported, shown as a dash", () => {
-    for (const id of ["context.smart", "terrain.grade", "motion.lean", "road.curvesAhead"] as const) {
+    for (const id of ["context.smart", "terrain.grade", "motion.tilt", "road.curvesAhead"] as const) {
       const reading = read(id);
       expect(reading.state).toBe("unsupported");
       expect(reading.displayValue).toBe(NO_VALUE);
@@ -254,20 +260,24 @@ describe("recording metrics", () => {
 });
 
 describe("presets and choices", () => {
-  it("offers only presets whose every metric the mode can show", () => {
-    expect(presetsFor("guided").map((preset) => preset.id)).toEqual(["navigate"]);
-    expect(presetsFor("recording").map((preset) => preset.id)).toEqual(["record"]);
-    expect(presetsFor("free-ride")).toEqual([]);
+  it("offers only presets whose every metric the mode can show (the experimental lean beta counts as showable)", () => {
+    // "instrument" needs Lean, live (experimental) and needing no recording, in every mode.
+    expect(presetsFor("guided").map((preset) => preset.id)).toEqual(["navigate", "instrument"]);
+    // "tour" needs moving time, which a recording ride has by default.
+    expect(presetsFor("recording").map((preset) => preset.id)).toEqual(["tour", "instrument", "record"]);
+    expect(presetsFor("free-ride").map((preset) => preset.id)).toEqual(["instrument"]);
   });
 
-  it("groups the live metrics by category for the mode", () => {
+  it("groups the live and experimental metrics by category for the mode", () => {
     const guided = metricChoices("guided");
-    expect(guided.map((group) => group.category)).toEqual(["Ride", "GPS", "Route", "Terrain"]);
+    expect(guided.map((group) => group.category)).toEqual(["Ride", "GPS", "Route", "Terrain", "Context", "Motion"]);
     expect(metricChoices("free-ride").flatMap((group) => group.metrics.map((metric) => metric.id))).toEqual([
       "speed.current",
       "heading",
       "gps.accuracy",
       "elevation.current",
+      "context.daylightRemaining",
+      "motion.lean",
     ]);
   });
 });
@@ -410,6 +420,130 @@ describe("elevation", () => {
       position: { ...context().position, altitudeMeters: 300, altitudeAccuracyMeters: 40 },
     });
     expect(vague).toMatchObject({ state: "waiting", displayValue: NO_VALUE, accessibleDetail: "altitude is too uncertain" });
+  });
+});
+
+describe("daylight remaining", () => {
+  const coordinate = { lat: 40.6, lon: -75.4 };
+
+  it("reads today's remaining daylight at the last-known coordinate", () => {
+    const reading = read("context.daylightRemaining", { position: { ...context().position, coordinate } });
+    expect(reading).toMatchObject({ displayValue: "9:01", unit: "h", state: "ready", source: "astronomy", rawValue: 32_452 });
+    expect(reading.accessibleDetail).toBe("9 hours 1 minutes");
+  });
+
+  it("waits for a GPS fix, never guessing a location", () => {
+    expect(read("context.daylightRemaining").state).toBe("waiting");
+    expect(read("context.daylightRemaining", { position: { ...context().position, coordinate: null } }).state).toBe("waiting");
+  });
+
+  it("does not need a fresh fix: a stale or held coordinate still reads (unlike GPS-sampled metrics)", () => {
+    const reading = read("context.daylightRemaining", {
+      position: { ...context().position, coordinate, quality: "stale", speedMps: null, observedAtMs: NOW_MS - 60_000 },
+    });
+    expect(reading.state).toBe("ready");
+    expect(reading.displayValue).toBe("9:01");
+  });
+
+  it("is a genuine zero after sunset, not tomorrow's countdown (UTC-date-boundary safe)", () => {
+    // One hour after the fixture's sunset, but already past midnight UTC — the
+    // bug this guards is keying off the UTC calendar date and finding
+    // "tomorrow" (still hours away) instead of recognizing today already ended.
+    const afterSunset = Date.parse("2026-09-22T00:00:51.974Z");
+    const reading = read("context.daylightRemaining", { nowMs: afterSunset, position: { ...context().position, coordinate } });
+    expect(reading).toMatchObject({ displayValue: "0", unit: "min", state: "ready" });
+    expect(reading.accessibleDetail).toBe("the sun has set");
+  });
+
+  it("is unsupported at a latitude the solar calculation cannot resolve (polar day/night), never a fake reading", () => {
+    const reading = read("context.daylightRemaining", {
+      nowMs: Date.parse("2026-06-21T12:00:00.000Z"),
+      position: { ...context().position, coordinate: { lat: 78, lon: 15 } },
+    });
+    expect(reading).toMatchObject({ state: "unsupported", displayValue: NO_VALUE });
+  });
+
+  it("is offered in every mode", () => {
+    for (const mode of ["guided", "recording", "free-ride"] as const) {
+      expect(metricAvailable("context.daylightRemaining", mode)).toBe(true);
+    }
+  });
+});
+
+describe("motion.lean (experimental)", () => {
+  function leanReady(degrees: number, extra: { maxLeftDegrees?: number; maxRightDegrees?: number } = {}): Partial<RideMetricContext> {
+    return {
+      motion: {
+        lean: {
+          availability: "ready",
+          degrees,
+          maxLeftDegrees: extra.maxLeftDegrees ?? 0,
+          maxRightDegrees: extra.maxRightDegrees ?? 0,
+          sampledAtMs: NOW_MS,
+        },
+      },
+    };
+  }
+
+  function leanState(
+    availability: "calibrating" | "permission-needed" | "denied" | "unsupported",
+  ): Partial<RideMetricContext> {
+    return { motion: { lean: { availability, degrees: null, maxLeftDegrees: 0, maxRightDegrees: 0, sampledAtMs: null } } };
+  }
+
+  it("is unsupported with no motion source wired up at all — never a guessed angle", () => {
+    expect(read("motion.lean")).toMatchObject({ state: "unsupported", displayValue: NO_VALUE });
+  });
+
+  it("is unsupported when the device has none, and separately when permission was denied", () => {
+    expect(read("motion.lean", leanState("unsupported"))).toMatchObject({
+      state: "unsupported",
+      displayValue: NO_VALUE,
+      accessibleDetail: "this device has no motion sensor",
+    });
+    expect(read("motion.lean", leanState("denied"))).toMatchObject({
+      state: "unsupported",
+      displayValue: NO_VALUE,
+      accessibleDetail: "motion access was not granted",
+    });
+  });
+
+  it("waits — never a fabricated reading — for permission and for calibration", () => {
+    expect(read("motion.lean", leanState("permission-needed"))).toMatchObject({
+      state: "waiting",
+      displayValue: NO_VALUE,
+      accessibleDetail: "pick Lean again to allow motion access",
+    });
+    expect(read("motion.lean", leanState("calibrating")).state).toBe("waiting");
+  });
+
+  it("shows the current smoothed angle, signed with a direction letter, while moving", () => {
+    expect(read("motion.lean", leanReady(12.4))).toMatchObject({ displayValue: "R12", unit: "°", state: "ready" });
+    expect(read("motion.lean", leanReady(-8.6))).toMatchObject({ displayValue: "L9", unit: "°" });
+    expect(read("motion.lean", leanReady(0.2))).toMatchObject({ displayValue: "0", unit: "°" });
+  });
+
+  it("shows this ride's max left/right instead of the live angle, once stopped with a nonzero max", () => {
+    const withMax = leanReady(3, { maxLeftDegrees: 18, maxRightDegrees: 22 });
+    const stopped = read("motion.lean", { ...withMax, paused: true });
+    expect(stopped).toMatchObject({ displayValue: "L18/R22", unit: "°", state: "ready" });
+    expect(stopped.accessibleDetail).toBe("beta reading, max lean this ride 18 degrees left, 22 degrees right");
+  });
+
+  it("keeps showing the live angle while moving even if a max already exists", () => {
+    const withMax = leanReady(3, { maxLeftDegrees: 18, maxRightDegrees: 22 });
+    expect(read("motion.lean", withMax)).toMatchObject({ displayValue: "R3", unit: "°" });
+  });
+
+  it("shows the live (near-zero) angle, not a fake max, once stopped before any lean is recorded", () => {
+    const stopped = read("motion.lean", { ...leanReady(0.2), paused: true });
+    expect(stopped.displayValue).toBe("0");
+  });
+
+  it("is selectable — experimental counts as available — in every mode, needing no recording", () => {
+    for (const mode of ["guided", "recording", "free-ride"] as const) {
+      expect(metricAvailable("motion.lean", mode)).toBe(true);
+    }
   });
 });
 
@@ -647,13 +781,15 @@ describe("Free Ride live telemetry", () => {
     for (const id of LIVE_METRICS) expect(metricAvailable(id, "free-ride", live)).toBe(true);
     expect(metricAvailable("distance.recorded", "free-ride", live)).toBe(false);
     const choices = metricChoices("free-ride", live);
-    expect(choices.map((group) => group.category)).toEqual(["Ride", "GPS", "Terrain"]);
+    expect(choices.map((group) => group.category)).toEqual(["Ride", "GPS", "Terrain", "Context", "Motion"]);
     expect(choices.flatMap((group) => group.metrics.map((metric) => metric.id)).sort()).toEqual([
+      "context.daylightRemaining",
       "elevation.current",
       "elevation.gain",
       "elevation.loss",
       "gps.accuracy",
       "heading",
+      "motion.lean",
       "speed.average",
       "speed.current",
       "speed.max",

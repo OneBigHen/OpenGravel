@@ -47,6 +47,7 @@ import type {
 } from "@/domain/ride-session/types";
 import type { RecordingSummary } from "@/domain/recording/types";
 import type { RecordingTelemetry } from "@/domain/recording/telemetry";
+import type { LeanMetricSnapshot } from "@/domain/motion/lean";
 import type { RecordingControllerSnapshot } from "./recording-controller";
 import type {
   NavigationPosition,
@@ -259,6 +260,8 @@ export interface RideFocusViewModelInput {
   readonly recordingTelemetry?: RecordingTelemetry | null;
   /** A Free Ride's live telemetry when it is not recording (§6, §11); absent means none. */
   readonly liveTelemetry?: RecordingTelemetry | null;
+  /** The device-motion beta's lean reading (§ motion.lean); absent means no motion source is wired up. */
+  readonly lean?: LeanMetricSnapshot | null;
   readonly recordingStatus?: RecordingControllerSnapshot["status"] | null;
   readonly bufferedRecordingPointCount?: number;
   readonly recordingLibraryCommitted?: boolean;
@@ -850,6 +853,7 @@ export function buildRideFocusViewModel(
       recordingSummary: input.recordingSummary ?? null,
       recordingTelemetry: input.recordingTelemetry ?? null,
       liveTelemetry: input.liveTelemetry ?? null,
+      lean: input.lean ?? null,
       settings: input.riderSettings ?? createRiderSettings(),
       nowMs: Date.parse(now),
       overLimit: speedLimit?.over === true,

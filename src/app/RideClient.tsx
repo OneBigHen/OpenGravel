@@ -39,6 +39,7 @@ import {
   withTurnAlerts,
 } from "@/infrastructure/ride/native-shell";
 import { createBrowserRideEnvironment } from "@/infrastructure/ride/browser-ride-environment";
+import { createBrowserLeanMotion } from "@/infrastructure/motion/browser-lean-motion";
 import { createFixturePositionSource } from "@/infrastructure/ride/fixture-position-source";
 import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -189,6 +190,7 @@ export function RideClient({
       announceOpportunity: (text) => { void opportunityVoice?.speakText?.(text); },
       feelOpportunity: (kind) => haptic(kind === "opportunity" ? "medium" : "success"),
       environment: () => createBrowserRideEnvironment({ nativeLocation: nativeShellPositionSource() !== undefined }),
+      motion: () => createBrowserLeanMotion(),
       pointer,
       riderSettings: createLocalStorageRiderSettings(),
       freeRideTelemetry,
