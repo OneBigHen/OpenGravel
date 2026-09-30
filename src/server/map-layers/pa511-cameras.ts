@@ -12,13 +12,13 @@ import type { InfoFeature, LngLat, MapLayerBounds } from "@/application/map-laye
 
 import type { LayerProvider, ProviderContext } from "./providers";
 
-const PA511_ORIGIN = "https://www.511pa.com";
-const PA511_CCTV_URL = `${PA511_ORIGIN}/cctv`;
+export const PA511_ORIGIN = "https://www.511pa.com";
+export const PA511_CCTV_URL = `${PA511_ORIGIN}/cctv`;
 const PAGE_SIZE = 250;
 const CATALOG_TTL_MS = 5 * 60_000;
-const USER_AGENT = "OpenGravel/0.1 personal route planner (traffic camera layer)";
+export const PA511_USER_AGENT = "OpenGravel/0.1 personal route planner (traffic camera layer)";
 
-interface Pa511Session {
+export interface Pa511Session {
   readonly cookie: string;
   readonly verificationToken: string;
 }
@@ -127,9 +127,9 @@ function getSetCookies(headers: Headers): readonly string[] {
   return combined === null ? [] : [combined];
 }
 
-async function createSession(context: ProviderContext): Promise<Pa511Session> {
+export async function createPa511Session(context: ProviderContext): Promise<Pa511Session> {
   const response = await context.fetch(PA511_CCTV_URL, {
-    headers: { "user-agent": USER_AGENT },
+    headers: { "user-agent": PA511_USER_AGENT },
     signal: context.signal,
   });
   if (!response.ok) throw new Error(`511PA camera page ${response.status}`);
@@ -180,7 +180,7 @@ async function fetchPage(
     headers: {
       accept: "application/json",
       cookie: session.cookie,
-      "user-agent": USER_AGENT,
+      "user-agent": PA511_USER_AGENT,
       "x-requested-with": "XMLHttpRequest",
       "__requestverificationtoken": session.verificationToken,
     },
@@ -190,11 +190,11 @@ async function fetchPage(
   return parsePa511CameraPage(await response.json());
 }
 
-async function loadCatalog(context: ProviderContext): Promise<readonly Pa511Camera[]> {
+export async function loadPa511CameraCatalog(context: ProviderContext): Promise<readonly Pa511Camera[]> {
   const now = Date.now();
   if (catalogCache !== null && catalogCache.expiresAt > now) return catalogCache.cameras;
 
-  const session = await createSession(context);
+  const session = await createPa511Session(context);
   const first = await fetchPage(context, session, 0, PAGE_SIZE);
   const pages: Pa511Camera[][] = [[...first.cameras]];
   for (let start = PAGE_SIZE; start < first.total; start += PAGE_SIZE) {
@@ -223,7 +223,7 @@ export const pa511CameraProvider: LayerProvider = {
   ttlMs: 30_000,
   async load(bounds, _layers, context) {
     if (!enabled(context.env)) throw new Error("PA511 camera layer is disabled");
-    const cameras = await loadCatalog(context);
+    const cameras = await loadPa511CameraCatalog(context);
     return cameras
       .filter((camera) => inside(bounds, camera.coordinates))
       .map((camera): InfoFeature => {
@@ -243,7 +243,12 @@ export const pa511CameraProvider: LayerProvider = {
           geometry: { type: "Point", coordinates: camera.coordinates },
           media: {
             previewUrl: camera.imageUrl,
-            playbackUrl: null,
+            playbackUrl:
+              hasVideo &&
+              context.env["PA511_VIDEO_ENABLED"] === "1" &&
+              (context.env["PA511_VIDEO_PROXY_SECRET"]?.trim().length ?? 0) >= 24
+                ? `/api/traffic-cameras/pa511/${encodeURIComponent(camera.id)}/hls`
+                : null,
             sourceHref: PA511_CCTV_URL,
             refreshSeconds: camera.imageUrl === null ? null : 10,
             videoAvailable: hasVideo,
