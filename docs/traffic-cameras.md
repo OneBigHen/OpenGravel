@@ -10,6 +10,16 @@ The feature is intentionally provider-neutral at the application/UI boundary. Pe
 
 ## Sources evaluated
 
+### PennDOT public GIS camera inventory
+
+PennDOT also exposes a public ArcGIS REST feature layer for statewide traffic-camera assets:
+
+`https://gis.penndot.pa.gov/gis/rest/services/paprojects/paprojects/MapServer/14`
+
+It is queryable as a standard ArcGIS Feature Layer (JSON/GeoJSON/PBF, 2,000-record page limit) and exposes fields including statewide/district IDs, status, location description, county, state route, latitude, longitude, record update time, and URL.
+
+**Direction:** move camera *discovery/location/status* to this layer once its URL/id relationship to the current 511PA media catalogue is verified. That avoids enumerating the interactive 511PA page just to draw markers. Keep 511PA/DIVAS as the selected-camera media resolver until an official feed adapter is available.
+
 ### 511PA public camera site
 
 Current UI: <https://www.511pa.com/cctv>
@@ -72,6 +82,7 @@ The current 511PA implementation uses tokenized HLS. The reference implementatio
 
 ## Follow-up
 
+- Verify the public PennDOT ArcGIS camera layer's URL/ID mapping and make it the primary metadata/discovery adapter.
 - Add the one-camera HLS relay behind `PA511_VIDEO_ENABLED=1`.
 - Add clustering when dense urban views become noisy.
 - Add camera-near-route mode so a planned ride can show only cameras within a corridor.
