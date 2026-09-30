@@ -65,7 +65,9 @@ import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
 import { useRideInterest } from "@/ui/ride/useRideInterest";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
+import { RideSpotifyPlayer } from "@/ui/ride/RideSpotifyPlayer";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
+import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
 import type { StoreApi } from "zustand/vanilla";
 
 export interface RideFocusProps {
@@ -80,6 +82,8 @@ export interface RideFocusProps {
   readonly mapLayersSource?: MapLayersSource;
   /** Wikimedia/Wikidata/OSM landmarks along the route (OGV#13), when wired in. */
   readonly discoverSource?: RideInterestDiscoverSource;
+  /** Optional native Spotify App Remote player; absent in browsers/PWAs. */
+  readonly spotifyPlayer?: SpotifyPlayerPort;
   /** Where "Back to the planner" goes; the surface never decides routing. */
   readonly exitHref?: string;
 }
@@ -168,6 +172,7 @@ export function RideFocus({
   placesSource,
   mapLayersSource,
   discoverSource,
+  spotifyPlayer,
   exitHref = "/",
 }: RideFocusProps) {
   const status = useStore(store, (state) => state.status);
@@ -760,6 +765,8 @@ export function RideFocus({
             )}
           </div>
         )}
+
+        {spotifyPlayer === undefined ? null : <RideSpotifyPlayer player={spotifyPlayer} />}
 
         {/*
           `Stop ride` is two steps (8 §11): Finish / Discard / Keep riding, in

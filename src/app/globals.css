@@ -5682,6 +5682,72 @@ h3,
   border-radius: var(--og-radius-object);
 }
 
+.og-ride__spotify {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+}
+
+.og-ride__spotify-header,
+.og-ride__spotify-actions,
+.og-ride__spotify-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.og-ride__spotify-header {
+  justify-content: space-between;
+}
+
+.og-ride__spotify-title,
+.og-ride__spotify-track strong,
+.og-ride__spotify-track span {
+  display: block;
+}
+
+.og-ride__spotify-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.og-ride__spotify-status {
+  margin: 2px 0 0;
+  color: var(--og-ride-muted);
+  font-size: 13px;
+}
+
+.og-ride__spotify-track {
+  min-width: 0;
+}
+
+.og-ride__spotify-track strong,
+.og-ride__spotify-track span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-ride__spotify-track span {
+  color: var(--og-ride-muted);
+}
+
+.og-ride__spotify-art {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.og-ride__spotify-controls > button,
+.og-ride__spotify-actions > button {
+  flex: 1 1 0;
+}
+
 .og-ride__free-ride-heading {
   display: flex;
   flex-wrap: wrap;

@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import OpenGravelSpotify
 #if DEBUG
 import OpenGravelNavigation
 #endif
@@ -9,6 +10,7 @@ class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(RideActivityPlugin())
         bridge?.registerPluginInstance(OpenGravelNavigationPlugin())
+        bridge?.registerPluginInstance(OpenGravelSpotifyPlugin())
     }
 
     #if DEBUG
