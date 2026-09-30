@@ -48,7 +48,7 @@ const LOAD_DEBOUNCE_MS = 450;
 /** Which provider serves each feature layer, to read `unavailable` per layer. */
 const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   "live-traffic": "tomtom",
-  "traffic-cameras": "pa511",
+  "traffic-cameras": "traffic-cameras",
   weather: "nws",
   closures: "osm",
   "great-roads": "roads",
