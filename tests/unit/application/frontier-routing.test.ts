@@ -67,6 +67,22 @@ describe("frontier routing selection", () => {
     expect(paretoFrontier([measured, sparse])).toHaveLength(2);
   });
 
+  it("does not let a sparse route dominate a route with additional known evidence", () => {
+    const sparse = candidate("sparse", {
+      timeEfficiency: 1,
+      curvature: 0.9,
+      flow: 0.9,
+    });
+    const measured = candidate("measured", {
+      timeEfficiency: 0.9,
+      curvature: 0.8,
+      flow: 0.8,
+      trafficFlow: 0.95,
+    });
+
+    expect(frontierDominates(sparse.quality, measured.quality)).toBe(false);
+  });
+
   it("penalizes missing utility coverage instead of treating unknown as neutral", () => {
     const profile = {
       id: "test",
