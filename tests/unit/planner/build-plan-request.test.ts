@@ -623,7 +623,7 @@ const COPY_ONLY_CASES: readonly IdentityCase[] = [
 ];
 
 describe("intentIdentity — canonical route-affecting identity (02-ARCHITECTURE-CONTRACT §13)", () => {
-  it("is stable across calls and object key order, and shaped as id1:<16 hex>", () => {
+  it("is stable across calls and object key order, and shaped as id2:<16 hex>", () => {
     const intent = fullIntent();
     const reordered = reorderIntent(intent);
     const nestedReorder: RideIntent = {
@@ -655,7 +655,7 @@ describe("intentIdentity — canonical route-affecting identity (02-ARCHITECTURE
     expect(intentIdentity(nestedReorder, VERSIONS)).toBe(
       intentIdentity(intent, VERSIONS),
     );
-    expect(intentIdentity(intent, VERSIONS)).toMatch(/^id1:[0-9a-f]{16}$/);
+    expect(intentIdentity(intent, VERSIONS)).toMatch(/^id2:[0-9a-f]{16}$/);
     expect(intentIdentity(intent, VERSIONS)).toBe(intentIdentity(intent, VERSIONS));
   });
 
