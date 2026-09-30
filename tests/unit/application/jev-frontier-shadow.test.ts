@@ -185,6 +185,25 @@ describe("Jev frontier shadow contract", () => {
     });
   });
 
+  it("rejects score distributions outside the fixed 0-3 rubric", () => {
+    const value = judgment();
+    expect(validateJevFrontierJudgment(state(), {
+      ...value,
+      fitByCandidateId: {
+        ...value.fitByCandidateId,
+        "route-b": {
+          type: "score",
+          score: 4,
+          probabilities: { "0": 0, "1": 0, "2": 0, "4": 1 },
+          confidence: 1,
+        },
+      },
+    })).toEqual({
+      ok: false,
+      reason: "invalid-fit",
+    });
+  });
+
   it("requires one fit score for every candidate and no invented ids", () => {
     const value = judgment();
     expect(validateJevFrontierJudgment(state(), {
@@ -206,6 +225,23 @@ describe("Jev frontier shadow contract", () => {
       choiceConfidence: 0.8,
       chosenProbability: 0.68,
       meaningfulImprovementProbability: 0.74,
+    });
+  });
+
+  it("uses the strongest other option as the runner-up even on ties", () => {
+    expect(jevFrontierCounterfactual(
+      state(),
+      judgment("route-b", {
+        probabilities: {
+          "route-a": 0.3,
+          "route-b": 0.3,
+          "route-c": 0.3,
+          [JEV_FRONTIER_NONE]: 0.1,
+        },
+      }),
+      { ...policy, minimumChoiceMargin: 0 },
+    )).toMatchObject({
+      runnerUpProbability: 0.3,
     });
   });
 
