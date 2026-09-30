@@ -6,7 +6,7 @@ import { infoFeatureCollection, infoLayerSpecs } from "@/infrastructure/map/mapl
 import { MAP_SOURCE_IDS, overlayLayers } from "@/infrastructure/map/maplibre/style";
 import { planSceneSync } from "@/infrastructure/map/maplibre/scene-diff";
 import type { MapScene } from "@/application/map/types";
-import { zoomOf } from "@/ui/layers/useMapLayers";
+import { filterTrafficCamerasToRoute, zoomOf } from "@/ui/layers/useMapLayers";
 
 const EMPTY_SCENE: MapScene = {
   mode: "plan",
@@ -55,5 +55,17 @@ describe("map layers on the renderer (phase 8)", () => {
     // MapLibre's 512 px tiles: one degree across 1024 px is zoom ~9.5.
     expect(zoomOf({ minLon: -76, minLat: 39, maxLon: -75, maxLat: 40 }, 1024)).toBeCloseTo(9.49, 1);
     expect(clampLayerBounds({ west: -80, south: 30, east: -70, north: 50 })).toEqual({ west: -75.8, south: 39.5, east: -74.2, north: 40.5 });
+  });
+
+  it("can keep traffic cameras near the selected route without filtering other layers", () => {
+    const near = { id: "near", layerId: "traffic-cameras", name: "Near", detail: null, weight: 1, geometry: { type: "Point", coordinates: [-75.25, 40.01] } } as const;
+    const far = { id: "far", layerId: "traffic-cameras", name: "Far", detail: null, weight: 1, geometry: { type: "Point", coordinates: [-75.25, 40.1] } } as const;
+    const fuel = { id: "fuel", layerId: "fuel", name: "Fuel", detail: null, weight: null, geometry: { type: "Point", coordinates: [-75.25, 40.2] } } as const;
+    const filtered = filterTrafficCamerasToRoute(
+      [near, far, fuel],
+      [[-75.5, 40], [-75.0, 40]],
+      5_000,
+    );
+    expect(filtered.map((feature) => feature.id)).toEqual(["near", "fuel"]);
   });
 });
