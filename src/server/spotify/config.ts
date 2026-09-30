@@ -1,3 +1,5 @@
+import { keyFromConfig } from "./crypto";
+
 const CLIENT_ID_PATTERN = /^[0-9a-f]{32}$/i;
 
 export const SPOTIFY_SESSION_COOKIE = "ogv_spotify_session";
@@ -20,7 +22,7 @@ export function spotifyClientId(value: string | null | undefined): string | null
 
 export function spotifySessionKey(): string | null {
   const key = process.env.OGV_SPOTIFY_SESSION_KEY?.trim();
-  return key === undefined || key.length === 0 ? null : key;
+  return key === undefined || keyFromConfig(key) === null ? null : key;
 }
 
 function normalizeOrigin(value: string): string | null {
@@ -46,13 +48,41 @@ export function allowedSpotifyOrigins(): readonly string[] {
 }
 
 export function spotifyOriginForRequest(request: Request): string | null {
-  let origin: string;
+  const allowed = allowedSpotifyOrigins();
+  const requestHost = request.headers.get("host")?.trim() || null;
+  const forwardedHost = request.headers.get("x-forwarded-host")?.trim() || null;
+  const host = requestHost ?? forwardedHost;
+  if (requestHost !== null && forwardedHost !== null && !sameHostHeader(requestHost, forwardedHost)) return null;
+  if (host !== null) {
+    if (!isSafeHostHeader(host)) return null;
+    const matching = allowed.find((origin) => {
+      try { return new URL(origin).host === host.toLowerCase(); } catch { return false; }
+    });
+    return matching ?? null;
+  }
+  // Plain Request instances used by unit tests and standalone adapters do not
+  // carry a Host header. A real Next server request always does, so this URL
+  // fallback cannot make an internal production URL appear public.
   try {
-    origin = new URL(request.url).origin;
+    const origin = new URL(request.url).origin;
+    return allowed.includes(origin) ? origin : null;
   } catch {
     return null;
   }
-  return allowedSpotifyOrigins().includes(origin) ? origin : null;
+}
+
+function isSafeHostHeader(value: string): boolean {
+  if (value.length === 0 || value.length > 255 || /[\s,\\/@]/.test(value)) return false;
+  try {
+    const parsed = new URL(`http://${value}`);
+    return parsed.hostname.length > 0 && parsed.pathname === "/" && parsed.search === "" && parsed.hash === "" && parsed.username === "" && parsed.password === "" && parsed.host === value.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+function sameHostHeader(left: string, right: string): boolean {
+  return isSafeHostHeader(left) && isSafeHostHeader(right) && left.toLowerCase() === right.toLowerCase();
 }
 
 export function isSameOriginMutation(request: Request): boolean {

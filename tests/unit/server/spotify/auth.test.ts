@@ -20,6 +20,22 @@ afterEach(() => {
 });
 
 describe("Spotify PKCE auth", () => {
+  it("returns to setup and clears pending authorization if session configuration changes during sign-in", async () => {
+    process.env.OGV_PUBLIC_ORIGIN = "https://ride.example.test";
+    process.env.SPOTIFY_CLIENT_ID = CLIENT_ID;
+    process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
+    const login = createLogin(new Request("https://ride.example.test/api/spotify/login?return_to=%2Fsettings"));
+    const state = new URL(login.redirect).searchParams.get("state")!;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      process.env.OGV_SPOTIFY_SESSION_KEY = "invalid";
+      return Response.json({ access_token: "access", refresh_token: "refresh", expires_in: 3600 });
+    });
+    const response = await callbackGET(new Request(`https://ride.example.test/api/spotify/callback?code=code&state=${state}`, { headers: { cookie: login.cookie.split(";", 1)[0]! } }));
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://ride.example.test/settings?spotify=error");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
+  });
+
   it("creates a PKCE authorization redirect and encrypted state cookie", () => {
     process.env.OGV_PUBLIC_ORIGIN = "https://ride.example.test";
     process.env.SPOTIFY_CLIENT_ID = CLIENT_ID;
@@ -37,6 +53,17 @@ describe("Spotify PKCE auth", () => {
     expect(state?.clientId).toBe(CLIENT_ID);
     expect(state?.returnTo).toBe("/settings");
     expect(result.cookie).toContain("__Host-ogv_spotify_oauth=");
+  });
+
+  it("uses the forwarded public host when Next's URL is internal", () => {
+    process.env.OGV_PUBLIC_ORIGIN = "https://ride.example.test";
+    process.env.SPOTIFY_CLIENT_ID = CLIENT_ID;
+    process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
+    const result = createLogin(new Request("http://0.0.0.0:3200/api/spotify/login?return_to=%2Fride", { headers: { host: "ride.example.test" } }));
+    const redirect = new URL(result.redirect);
+    expect(redirect.searchParams.get("redirect_uri")).toBe("https://ride.example.test/api/spotify/callback");
+    expect(result.cookie).toContain("__Host-ogv_spotify_oauth=");
+    expect(result.cookie).toContain("Secure");
   });
 
   it("exchanges a code without a client secret", async () => {

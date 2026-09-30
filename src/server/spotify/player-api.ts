@@ -121,14 +121,16 @@ async function refreshAccess(request: Request, session: SpotifySession): Promise
     const refreshed = await flight;
     return sessionAccessResult(request, refreshed);
   } catch {
-    return { error: { status: 401, code: "reauthorize" }, setCookie: clearSessionCookie(new URL(request.url).origin) };
+    const origin = spotifyOriginForRequest(request);
+    return { error: { status: 401, code: "reauthorize" }, ...(origin === null ? {} : { setCookie: clearSessionCookie(origin) }) };
   }
 }
 
 function sessionAccessResult(request: Request, session: SpotifySession): AccessResult | { readonly error: SpotifyApiError } {
   const sealed = sealJson(session, spotifySessionKey());
   if (sealed === null) return { error: { status: 503, code: "spotify_unavailable" } };
-  const origin = new URL(request.url).origin;
+  const origin = spotifyOriginForRequest(request);
+  if (origin === null) return { error: { status: 400, code: "spotify_unavailable" } };
   return {
     session,
     setCookie: serializeCookie(spotifySessionCookieName(spotifyCookieSecure(origin)), sealed, {

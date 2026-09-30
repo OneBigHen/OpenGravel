@@ -11,9 +11,9 @@ const original = {
   key: process.env.OGV_SPOTIFY_SESSION_KEY,
 };
 
-function requestWithSession(expiresAt: number, accessToken = "old-access", clientId = CLIENT_ID, refreshToken = "refresh"): Request {
+function requestWithSession(expiresAt: number, accessToken = "old-access", clientId = CLIENT_ID, refreshToken = "refresh", internal = false): Request {
   const sealed = sealJson({ clientId, accessToken, refreshToken, expiresAt }, KEY)!;
-  return new Request(`${ORIGIN}/api/spotify/state`, { headers: { cookie: `__Host-ogv_spotify_session=${encodeURIComponent(sealed)}` } });
+  return new Request(`${internal ? "http://0.0.0.0:3200" : ORIGIN}/api/spotify/state`, { headers: { cookie: `__Host-ogv_spotify_session=${encodeURIComponent(sealed)}`, ...(internal ? { host: "ride.example.test" } : {}) } });
 }
 
 afterEach(() => {
@@ -82,5 +82,17 @@ describe("Spotify player server adapter", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("private upstream detail"); }));
     const result = await readPlayerState(requestWithSession(Date.now() + 60_000, "safe-access", CLIENT_ID, "refresh-network"));
     expect(result).toMatchObject({ ok: false, error: { status: 502, code: "spotify_unavailable" } });
+  });
+
+  it("sets a Secure host-only cookie when refreshing through an internal Next URL", async () => {
+    process.env.OGV_PUBLIC_ORIGIN = ORIGIN;
+    process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: "new-access", refresh_token: "internal-refresh", expires_in: 3600 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ is_playing: false, item: null }), { status: 200 })));
+    const result = await readPlayerState(requestWithSession(Date.now() - 1, "old-access", CLIENT_ID, "internal-refresh-input", true));
+    expect(result.ok).toBe(true);
+    expect(result.setCookie).toContain("__Host-ogv_spotify_session=");
+    expect(result.setCookie).toContain("Secure");
   });
 });
