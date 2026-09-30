@@ -19,6 +19,7 @@ import { AppearanceSection } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
 import { InstallSection } from "@/ui/settings/InstallSection";
 import { NavScreenSection } from "@/ui/settings/NavScreenSection";
+import { DeviceSyncSection } from "@/ui/settings/DeviceSyncSection";
 
 type BikeForm = Omit<BikeProfile, "id">;
 const NEW_BIKE: BikeForm = {
@@ -155,6 +156,7 @@ export function SettingsSurface({
         <AppearanceSection />
         {showNavScreen ? <NavScreenSection /> : null}
         <InstallSection />
+        <DeviceSyncSection />
         {spotifySetup}
 
         <section className="og-settings__section" aria-labelledby="settings-bikes-title">
