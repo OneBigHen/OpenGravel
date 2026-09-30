@@ -63,6 +63,31 @@ This means sophisticated OpenGravel scoring can only choose among paths produced
 
 ## Research findings
 
+### Current motorcycle profile audit: verify "twisty" actually uses curvature
+
+The checked-in profile files reveal a configuration risk that should be resolved before tuning a new algorithm:
+
+- GraphHopper 11's built-in `motorcycle.json` is very close to OpenGravel's `motorcycle-base.json`;
+- GraphHopper's documented curvy behavior comes from composing that motorcycle model with `curvature.json`;
+- OpenGravel's `motorcycle-twisty.json` itself does **not** reference the `curvature` encoded value;
+- it currently biases secondary/tertiary and some smaller road classes and penalizes city roads;
+- `infra/graphhopper/custom-models/prefer-curvature.json` exists and matches GraphHopper's stock curvature rule, but the deployment `config.yml` that would prove it is composed into `motorcycle_twisty` is not versioned here;
+- the real-router smoke test verifies that `motorcycle_twisty` returns a valid PA route, but does not compare bend/curvature output against `motorcycle_fastest`.
+
+Before interpreting current profile results as a quality baseline, add a live differential corpus that verifies:
+
+1. `motorcycle_twisty` produces materially more bend/curvature value than fastest on routes where such an alternative exists;
+2. `motorcycle_scenic` reduces urban/main-road exposure where alternatives exist;
+3. `motorcycle_adventure` increases allowed unpaved affinity only when the ride surface envelope permits it;
+4. the deployed profile composition exactly matches version-controlled intent.
+
+Do not simply assert "twisty must always have more curves": some origin/destination pairs have no meaningful alternative. Use a corpus of known discriminating fixtures and minimum aggregate improvement rather than a brittle single route.
+
+Reference profiles:
+
+- https://github.com/graphhopper/graphhopper/blob/11.0/core/src/main/resources/com/graphhopper/custom_models/motorcycle.json
+- https://github.com/graphhopper/graphhopper/blob/11.0/core/src/main/resources/com/graphhopper/custom_models/curvature.json
+
 ### GraphHopper 11 is a good substrate
 
 GraphHopper's custom weighting is effectively:
