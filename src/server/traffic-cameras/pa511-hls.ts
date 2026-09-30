@@ -44,7 +44,7 @@ function videoEnabled(env: Readonly<Record<string, string | undefined>>): boolea
 }
 
 function proxySecret(env: Readonly<Record<string, string | undefined>>): string | null {
-  const value = env["PA511_VIDEO_PROXY_SECRET"]?.trim() ?? "";
+  const value = (env["PA511_VIDEO_PROXY_SECRET"] ?? env["TRAFFIC_CAMERA_VIDEO_PROXY_SECRET"])?.trim() ?? "";
   return value.length >= MIN_SECRET_LENGTH ? value : null;
 }
 
