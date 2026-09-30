@@ -288,7 +288,8 @@ function exactRepresentativeSet<T>(
   };
 
   visit(0);
-  return best?.candidates ?? [];
+  const winner = best as ExactRepresentativeSet<T> | null;
+  return winner === null ? [] : winner.candidates;
 }
 
 function candidateSetKey<T>(candidates: readonly FrontierCandidate<T>[]): string {
