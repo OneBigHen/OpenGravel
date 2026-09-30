@@ -395,6 +395,7 @@ export async function buildProviderRequest(
     tollPolicy: intent.tollPolicy,
     surfacePreference: intent.surface.preference,
     roadCharacter: intent.roadCharacter,
+    noveltyPreference: intent.noveltyPreference ?? "balanced",
     vehicle: "motorcycle",
   };
 
