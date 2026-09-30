@@ -12,6 +12,7 @@ import type {
   MapLayerBounds,
 } from "@/application/map-layers";
 import { directCameraPlaybackPath } from "@/server/traffic-cameras/direct-hls";
+import { loadStormScopeCameras } from "@/server/traffic-cameras/stormscope";
 import {
   TRAFFIC_CAMERA_ADAPTERS,
   type TrafficCameraAdapter,
@@ -70,7 +71,7 @@ function feature(camera: TrafficCameraRecord, env: ProviderContext["env"]): Info
             ? null
             : directCameraPlaybackPath(camera.state, camera.id, env) ?? camera.playbackUrl,
       sourceHref: camera.sourceHref,
-      refreshSeconds: camera.previewUrl === null ? null : 10,
+      refreshSeconds: camera.previewUrl === null ? null : camera.refreshSeconds ?? 10,
       videoAvailable: camera.videoAvailable,
     },
   };
@@ -82,14 +83,26 @@ export const trafficCamerasProvider: LayerProvider = {
   ttlMs: 60_000,
   async load(bounds, _layers, context) {
     const adapters = relevantTrafficCameraAdapters(bounds, context.env);
-    if (adapters.length === 0) throw new Error("No traffic-camera provider configured for this view");
-
     const answers = await Promise.allSettled(adapters.map((adapter) => adapter.load(context)));
     const successes = answers.flatMap((answer) => answer.status === "fulfilled" ? [[...answer.value]] : []);
-    if (successes.length === 0) throw new Error("All traffic-camera providers failed");
+
+    let cameras = successes.flat();
+    if (cameras.length === 0 && context.env["STORMSCOPE_CAMERAS_ENABLED"] === "1") {
+      try {
+        cameras = [...await loadStormScopeCameras(bounds, context)];
+      } catch {
+        cameras = [];
+      }
+    }
+    if (cameras.length === 0 && adapters.length === 0 && context.env["STORMSCOPE_CAMERAS_ENABLED"] !== "1") {
+      throw new Error("No traffic-camera provider configured for this view");
+    }
+    if (cameras.length === 0 && answers.some((answer) => answer.status === "rejected")) {
+      throw new Error("All traffic-camera providers failed");
+    }
 
     const deduped = new Map<string, TrafficCameraRecord>();
-    for (const camera of successes.flat()) {
+    for (const camera of cameras) {
       if (inside(bounds, camera.coordinates)) deduped.set(`${camera.state}:${camera.id}`, camera);
     }
     return [...deduped.values()].map((camera) => feature(camera, context.env));
