@@ -60,6 +60,7 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
   subscribe(listener: (snapshot: SpotifyPlayerSnapshot) => void): () => void {
     if (this.disposed) return () => undefined;
     this.listeners.add(listener);
+    listener(this.current);
     return () => this.listeners.delete(listener);
   }
 
@@ -134,7 +135,7 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
       this.refreshTimer = window.setInterval(() => {
         if (document.visibilityState === "visible") void this.loadState();
       }, 15_000);
-    } else if (result.code === "rate_limited" && document.visibilityState === "visible") {
+    } else if (["rate_limited", "network", "spotify_unavailable"].includes(result.code ?? "") && document.visibilityState === "visible") {
       this.retryTimer = window.setTimeout(() => {
         this.retryTimer = null;
         if (!this.disposed && document.visibilityState === "visible") void this.loadState();

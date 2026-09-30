@@ -28,6 +28,7 @@ describe("web Spotify player", () => {
     const player = createWebSpotifyPlayer();
     const listener = vi.fn();
     player.subscribe(listener);
+    listener.mockClear();
     player.dispose();
     resolveFetch?.(new Response(JSON.stringify({ connection: "connected", isPlaying: true, track: null }), { status: 200 }));
     await new Promise((resolve) => window.setTimeout(resolve, 0));
@@ -71,6 +72,22 @@ describe("web Spotify player", () => {
     const player = createWebSpotifyPlayer();
     await Promise.resolve();
     await vi.advanceTimersByTimeAsync(1_000);
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(player.snapshot().connection).toBe("connected");
+    player.dispose();
+    vi.useRealTimers();
+  });
+
+  it("keeps transient transport errors recoverable while the page is visible", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new Error("temporary"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ connection: "connected", isPlaying: false, track: null, errorMessage: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const player = createWebSpotifyPlayer();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(15_000);
     await Promise.resolve();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(player.snapshot().connection).toBe("connected");

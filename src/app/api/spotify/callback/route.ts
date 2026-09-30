@@ -10,9 +10,9 @@ export async function GET(request: Request): Promise<Response> {
   if (origin === null) return jsonResponse({ ok: false, code: "origin", message: "This OpenGravel origin is not registered for Spotify." }, 400);
   const url = new URL(request.url);
   const state = readOAuthState(request);
-  if (state === null || state.origin !== origin) return jsonResponse({ ok: false, code: "state", message: "Spotify sign-in could not be verified." }, 400);
   const clearCookie = clearOAuthCookie(origin);
-  if (url.searchParams.get("state") !== state.state) return jsonResponse({ ok: false, code: "state", message: "Spotify sign-in could not be verified." }, 400);
+  if (state === null || state.origin !== origin) return redirectOutcome(request, "/settings", "error", clearCookie);
+  if (url.searchParams.get("state") !== state.state) return redirectOutcome(request, "/settings", "error", clearCookie);
   if (url.searchParams.get("error") !== null) return redirectOutcome(request, state.returnTo, "cancelled", clearCookie);
   const code = url.searchParams.get("code");
   if (code === null || code.length === 0) {

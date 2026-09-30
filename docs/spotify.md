@@ -30,6 +30,9 @@ the device, and choose **Connect Spotify**. The selected ID is bound to that
 browser's encrypted session; it does not change the server's environment or
 another rider's account.
 
+This Settings value applies to the browser/PWA. The native iPhone shell uses
+its own app registration.
+
 The server must list every public hostname in `OGV_SPOTIFY_ALLOWED_ORIGINS`.
 Unknown `Host` values are rejected, so a forwarded or attacker-controlled host
 cannot create an OAuth redirect.

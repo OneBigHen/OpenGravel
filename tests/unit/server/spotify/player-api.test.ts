@@ -68,7 +68,7 @@ describe("Spotify player server adapter", () => {
     process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
     const authHeaders: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-      authHeaders.push((init?.headers as Record<string, string>).authorization);
+      authHeaders.push((init?.headers as Record<string, string>).authorization ?? "");
       return new Response(JSON.stringify({ is_playing: false, item: null }), { status: 200 });
     }));
     await readPlayerState(requestWithSession(Date.now() + 60_000, "access-one", "a".repeat(32)));

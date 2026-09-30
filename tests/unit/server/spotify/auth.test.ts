@@ -67,6 +67,7 @@ describe("Spotify PKCE auth", () => {
     const login = createLogin(new Request("https://ride.example.test/api/spotify/login?return_to=%2Fride"));
     const cookie = login.cookie.split(";", 1)[0]!;
     const response = await callbackGET(new Request("https://ride.example.test/api/spotify/callback?error=access_denied&state=attacker", { headers: { cookie } }));
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("/settings?spotify=error");
   });
 });
