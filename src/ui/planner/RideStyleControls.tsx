@@ -18,7 +18,7 @@
 import { useId, useState } from "react";
 
 import type { ArrivalTarget } from "@/application/planner/arrive-by";
-import type { BikeConstraintSnapshot, DepartureIntent, RideIntent, RoadCharacterIntent, SurfaceIntent } from "@/domain/ride/types";
+import type { BikeConstraintSnapshot, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent } from "@/domain/ride/types";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -29,6 +29,7 @@ export interface RideStyleView {
   /** The loop's ride time in minutes (the default when none was chosen). */
   readonly loopMinutes: number;
   readonly roadCharacter: RoadCharacterIntent;
+  readonly noveltyPreference: NoveltyPreference;
   readonly surface: SurfaceChoice;
   readonly avoidHighways: boolean;
   readonly avoidTolls: boolean;
@@ -39,6 +40,7 @@ export interface RideStyleActions {
   readonly setShape: (shape: RideShapeChoice) => void;
   readonly setLoopMinutes: (minutes: number) => void;
   readonly setRoadCharacter: (character: RoadCharacterIntent) => void;
+  readonly setNoveltyPreference: (preference: NoveltyPreference) => void;
   readonly setSurface: (surface: SurfaceChoice) => void;
   readonly setAvoidHighways: (avoid: boolean) => void;
   readonly setAvoidTolls: (avoid: boolean) => void;
@@ -55,8 +57,8 @@ export interface RideStyleControlsModel {
   readonly actions: RideStyleActions;
 }
 
-/** The loop ride times the composer offers (plan M2: 1–6 h). */
-export const LOOP_MINUTE_CHOICES: readonly number[] = [60, 120, 180, 240, 360];
+/** Short escapes first, with longer loops still available. */
+export const LOOP_MINUTE_CHOICES: readonly number[] = [45, 60, 90, 120, 180, 240, 360];
 
 export const ROAD_CHARACTER_LABELS: Readonly<Record<RoadCharacterIntent, string>> = {
   efficient: "Fast",
@@ -72,7 +74,14 @@ export const SURFACE_LABELS: Readonly<Record<SurfaceChoice, string>> = {
   "dirt-preferred": "Dirt OK",
 };
 
+export const NOVELTY_LABELS: Readonly<Record<NoveltyPreference, string>> = {
+  "prefer-new-to-me": "New to me",
+  balanced: "Balanced",
+  "prefer-familiar": "Familiar",
+};
+
 const ROAD_CHARACTERS: readonly RoadCharacterIntent[] = ["efficient", "balanced", "curvy", "backroads"];
+const NOVELTY_PREFERENCES: readonly NoveltyPreference[] = ["prefer-new-to-me", "balanced", "prefer-familiar"];
 const SURFACES: readonly SurfaceChoice[] = ["pavement", "mostly-pavement", "mixed", "dirt-preferred"];
 
 /** `2 h`, `1 h 30 min` — ride times are whole hours today, but never lie if not. */
@@ -87,6 +96,7 @@ export function formatRideTime(minutes: number): string {
 export function rideStyleSummary(view: RideStyleView): string {
   return [
     ROAD_CHARACTER_LABELS[view.roadCharacter],
+    ...(view.noveltyPreference === "balanced" ? [] : [NOVELTY_LABELS[view.noveltyPreference]]),
     SURFACE_LABELS[view.surface],
     ...(view.avoidHighways ? ["No highways"] : []),
     ...(view.avoidTolls ? ["No tolls"] : []),
@@ -191,6 +201,7 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const characterName = useId();
+  const noveltyName = useId();
   const surfaceName = useId();
   const { view, actions } = model;
   return (
@@ -225,6 +236,15 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
           labelFor={(character) => ROAD_CHARACTER_LABELS[character]}
           onChange={actions.setRoadCharacter}
           testId="road-character"
+        />
+        <ChipGroup<NoveltyPreference>
+          name={noveltyName}
+          legend="Road familiarity"
+          options={NOVELTY_PREFERENCES}
+          value={view.noveltyPreference}
+          labelFor={(preference) => NOVELTY_LABELS[preference]}
+          onChange={actions.setNoveltyPreference}
+          testId="novelty-preference"
         />
         <ChipGroup<SurfaceChoice>
           name={surfaceName}

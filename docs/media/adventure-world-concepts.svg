@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="980" viewBox="0 0 1200 980">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#101815"/><stop offset="1" stop-color="#1e2d26"/></linearGradient>
+  <linearGradient id="terrain" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#73826b"/><stop offset=".5" stop-color="#344a3d"/><stop offset="1" stop-color="#16231f"/></linearGradient>
+  <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity=".28"/></filter>
+  <style>
+    .t{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#f5f3ec}.s{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;fill:#b8c0ba}
+    .amber{stroke:#f0a043}.blue{stroke:#67aef7}.green{stroke:#81ba75}.road{fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .card{fill:#111715;fill-opacity:.94;stroke:#415049;stroke-width:1}.phone{fill:#060808;stroke:#59625e;stroke-width:2}
+    .tiny{font-size:11px}.small{font-size:14px}.med{font-size:18px}.big{font-size:25px;font-weight:700}
+  </style>
+</defs>
+<rect width="1200" height="980" fill="url(#bg)"/>
+<text x="60" y="54" class="t big">OpenGravel Adventure World — design reference board</text>
+<text x="60" y="80" class="s small">Generated concepts distilled into six implementation directions. The product should borrow selectively, not ship all six as separate modes.</text>
+
+<!-- A -->
+<g transform="translate(55 115)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="url(#terrain)"/>
+<text x="30" y="44" class="t med" font-weight="700">A · Planner</text>
+<path d="M45 160 C95 105 120 220 170 145 S250 105 286 70" class="road blue" stroke-width="8"/>
+<path d="M60 245 C110 185 145 260 205 220 S270 210 294 165" class="road amber" stroke-width="9"/>
+<ellipse cx="225" cy="120" rx="65" ry="37" fill="#f0a043" opacity=".15" stroke="#f0a043" stroke-dasharray="7 6"/>
+<text x="192" y="124" class="t tiny">ADVENTURE</text>
+<rect x="30" y="268" width="270" height="68" rx="18" class="card"/>
+<text x="44" y="293" class="t small">92 mi · 90 min target</text>
+<text x="44" y="317" class="s tiny">31 mi new · 14 mi gravel · back by 6:15</text>
+</g>
+
+<!-- B -->
+<g transform="translate(435 115)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="url(#terrain)"/>
+<text x="30" y="44" class="t med" font-weight="700">B · Ride Focus</text>
+<rect x="30" y="58" width="270" height="70" rx="16" class="card"/>
+<text x="45" y="86" class="t big">↱ 2.4 mi</text><text x="45" y="111" class="s small">Forest Rd 52</text>
+<path d="M165 335 C130 275 205 245 150 195 S180 140 208 125" class="road amber" stroke-width="10"/>
+<circle cx="165" cy="335" r="14" fill="#67aef7" stroke="#fff" stroke-width="3"/>
+<rect x="30" y="280" width="270" height="58" rx="14" class="card"/>
+<text x="44" y="303" class="t small">42 mph   ·   43 min left</text>
+<text x="44" y="325" class="s tiny">New good road in 0.8 mi</text>
+</g>
+
+<!-- C -->
+<g transform="translate(815 115)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="url(#terrain)"/>
+<text x="30" y="44" class="t med" font-weight="700">C · Free Ride</text>
+<path d="M170 340 C120 285 205 255 155 208 S210 145 272 92" class="road amber" stroke-width="10"/>
+<path d="M70 185 C105 150 125 170 155 150" class="road blue" stroke-width="6" stroke-dasharray="7 6"/>
+<rect x="35" y="245" width="260" height="85" rx="18" class="card"/>
+<text x="50" y="273" class="t small" font-weight="700">New twisty road ahead</text>
+<text x="50" y="295" class="s tiny">2.3 mi · +7 min · still home on time</text>
+<rect x="165" y="304" width="110" height="18" rx="9" fill="#f0a043"/><text x="190" y="317" class="t tiny">TAKE</text>
+</g>
+
+<!-- D -->
+<g transform="translate(55 540)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="#111715"/>
+<text x="30" y="44" class="t med" font-weight="700">D · Progress</text>
+<rect x="30" y="62" width="270" height="110" rx="16" fill="url(#terrain)"/>
+<path d="M45 140 C90 95 140 155 205 105 S265 125 290 85" class="road amber" stroke-width="7"/>
+<text x="35" y="205" class="t big">386 mi</text><text x="132" y="204" class="s tiny">good roads explored</text>
+<text x="35" y="238" class="t small">84 mi gravel   ·   27 discoveries</text>
+<rect x="30" y="262" width="125" height="66" rx="14" class="card"/><text x="43" y="287" class="t small">Covered Bridges</text><text x="43" y="312" class="s tiny">6 / 12</text>
+<rect x="170" y="262" width="130" height="66" rx="14" class="card"/><text x="183" y="287" class="t small">Forest Roads</text><text x="183" y="312" class="s tiny">32 mi</text>
+</g>
+
+<!-- E -->
+<g transform="translate(435 540)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="url(#terrain)"/>
+<text x="30" y="44" class="t med" font-weight="700">E · Quick Escape</text>
+<path d="M55 150 C120 90 150 170 220 110 S275 125 290 85" class="road amber" stroke-width="8"/>
+<rect x="28" y="205" width="274" height="128" rx="18" class="card"/>
+<text x="43" y="235" class="t big">I have 90 minutes</text>
+<text x="43" y="261" class="s small">◉ Curves   ◉ New roads   ○ Gravel</text>
+<text x="43" y="286" class="s tiny">Return reserve 12 min · avoid boring arterials</text>
+<rect x="43" y="302" width="130" height="20" rx="10" fill="#81ba75"/><text x="65" y="316" class="t tiny">BUILD MY LOOP</text>
+</g>
+
+<!-- F -->
+<g transform="translate(815 540)" filter="url(#shadow)">
+<rect class="phone" rx="34" width="330" height="370"/>
+<rect x="14" y="14" rx="25" width="302" height="342" fill="url(#terrain)"/>
+<text x="30" y="44" class="t med" font-weight="700">F · Immersive Map</text>
+<path d="M95 330 C75 250 160 245 125 190 S170 110 255 75" class="road amber" stroke-width="9"/>
+<path d="M52 250 C95 220 115 225 145 210" class="road" stroke="#d9ddd9" stroke-width="5" stroke-dasharray="8 7"/>
+<g transform="translate(215 110)"><rect x="-13" y="-26" width="26" height="22" fill="#c08c59"/><path d="M-18 -4 L0 -25 L18 -4 Z" fill="#855c3f"/><line x1="-10" y1="-26" x2="-10" y2="-43" stroke="#ddd" stroke-width="3"/><line x1="10" y1="-26" x2="10" y2="-43" stroke="#ddd" stroke-width="3"/></g>
+<text x="235" y="102" class="t tiny">fire tower</text>
+<g transform="translate(126 212)"><rect x="-26" y="-12" width="52" height="24" rx="4" fill="#8b4c37"/><path d="M-28 -12 L0 -30 L28 -12 Z" fill="#5f382d"/></g>
+<text x="155" y="218" class="t tiny">covered bridge</text>
+<rect x="30" y="290" width="140" height="48" rx="14" class="card"/><text x="42" y="310" class="t tiny">AMBER · new good road</text><text x="42" y="329" class="s tiny">GRAY · ridden road</text>
+</g>
+</svg>

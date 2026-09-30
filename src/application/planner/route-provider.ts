@@ -61,6 +61,11 @@ export interface ProviderRouteOptions {
    * and backroads the way the rider asked (OGV-D-263). Optional, like surface.
    */
   readonly roadCharacter?: "efficient" | "balanced" | "curvy" | "backroads";
+  /**
+   * Personal road-familiarity preference. Optional for older clients; absent
+   * means balanced. This is scoring context, never provider-supplied evidence.
+   */
+  readonly noveltyPreference?: "prefer-new-to-me" | "balanced" | "prefer-familiar";
   /** VNext plans motorcycle rides; a provider must never guess otherwise. */
   readonly vehicle: "motorcycle";
 }

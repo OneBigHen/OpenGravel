@@ -40,6 +40,7 @@ function draft(overrides: Partial<AdvisorDraft> = {}): AdvisorDraft {
       rideTimeDate: null,
       rideTimeLocalTime: null,
       roadCharacter: "backroads",
+      noveltyPreference: null,
       surfacePreference: "mostly-pavement",
       terrainLevel: null,
       avoidHighways: true,
@@ -114,6 +115,36 @@ describe("advisor proposal commands", () => {
     expect(applied.document.intent.bike).toEqual(before.bike);
     expect(applied.document.intent.roadSpans).toEqual(before.roadSpans);
     expect(applied.document.intent.avoidAreas).toEqual(before.avoidAreas);
+  });
+
+  it("applies a new-to-me road preference through the same reviewed proposal path", () => {
+    const document = createRideDocument({ rideId: RIDE_ID, now: NOW });
+    const result = buildAdvisorProposal(
+      document,
+      draft({
+        fields: {
+          ...draft().fields,
+          shape: null,
+          startPlace: null,
+          rideTimeKind: "unchanged",
+          rideTimeMinutes: null,
+          roadCharacter: null,
+          noveltyPreference: "prefer-new-to-me",
+          surfacePreference: null,
+          avoidHighways: null,
+          departureKind: "unchanged",
+        },
+        resolvedPlaces: { start: null, finish: null, stop: null },
+      }),
+      { now: NOW },
+    );
+    expect(result.status).toBe("ready");
+    if (result.status !== "ready") throw new Error("expected a proposal");
+    expect(result.changes).toContainEqual({ field: "novelty", before: "balanced", after: "prefer-new-to-me" });
+    const applied = applyRideCommand(document, result.command, { now: NOW });
+    expect(applied.outcome).toBe("applied");
+    if (applied.outcome !== "applied") throw new Error("expected an applied proposal");
+    expect(applied.document.intent.noveltyPreference).toBe("prefer-new-to-me");
   });
 
   it("refuses stale and ungrounded proposals without issuing commands", () => {

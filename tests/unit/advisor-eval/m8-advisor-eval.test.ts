@@ -58,6 +58,7 @@ const unchanged: AdvisorModelFields = {
   rideTimeDate: null,
   rideTimeLocalTime: null,
   roadCharacter: null,
+  noveltyPreference: null,
   surfacePreference: null,
   terrainLevel: null,
   avoidHighways: null,

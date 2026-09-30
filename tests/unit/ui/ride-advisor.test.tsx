@@ -19,7 +19,7 @@ function jimThorpeLoop(document: RideDocument): AdvisorDraft {
     fields: {
       shape: "loop", startPlace: "Jim Thorpe", finishPlace: null, stopPlace: null, stopArrivalIntent: null,
       rideTimeKind: "budget", rideTimeMinutes: 120, rideTimeDate: null, rideTimeLocalTime: null,
-      roadCharacter: "backroads", surfacePreference: null, terrainLevel: null, avoidHighways: true, tollPolicy: null,
+      roadCharacter: "backroads", noveltyPreference: null, surfacePreference: null, terrainLevel: null, avoidHighways: true, tollPolicy: null,
       departureKind: "unchanged", departureLocalDate: null, departureLocalTime: null,
     },
     resolvedPlaces: {

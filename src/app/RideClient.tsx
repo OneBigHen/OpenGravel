@@ -26,6 +26,7 @@ import {
   deriveLiveSuggestionWorkload,
   evaluateLiveSuggestion,
 } from "@/application/free-ride/live-suggestions";
+import { personalRideHistory } from "@/application/roads/personal-road-history";
 import { createLibraryService } from "@/application/library/library-service";
 import { createBrowserPositionSource } from "@/infrastructure/ride/browser-position-source";
 import { createBrowserSpeech } from "@/infrastructure/ride/browser-speech";
@@ -182,6 +183,10 @@ export function RideClient({
       rides,
       geometry,
       providerFactory: createClientRouteCandidateProvider,
+      rideHistory: async () => {
+        const entries = await library.listExploreRides?.() ?? [];
+        return personalRideHistory(entries);
+      },
     });
     const evaluateSuggestion = (
       navigation: NonNullable<ReturnType<typeof sessions.navigationState>>,

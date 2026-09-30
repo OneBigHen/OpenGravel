@@ -26,6 +26,7 @@ import {
   loopTimeCommand,
   rideShapeCommand,
   roadCharacterCommand,
+  noveltyPreferenceCommand,
   surfacePreferenceCommand,
   tollPolicyCommand,
 } from "@/ui/stores/ride-document-store";
@@ -36,6 +37,7 @@ const VIEW: RideStyleView = {
   shape: "destination",
   loopMinutes: 120,
   roadCharacter: "balanced",
+  noveltyPreference: "balanced",
   surface: "mixed",
   avoidHighways: false,
   avoidTolls: false,
@@ -47,6 +49,7 @@ function actions() {
     setShape: vi.fn<RideStyleActions["setShape"]>(),
     setLoopMinutes: vi.fn<RideStyleActions["setLoopMinutes"]>(),
     setRoadCharacter: vi.fn<RideStyleActions["setRoadCharacter"]>(),
+    setNoveltyPreference: vi.fn<RideStyleActions["setNoveltyPreference"]>(),
     setSurface: vi.fn<RideStyleActions["setSurface"]>(),
     setAvoidHighways: vi.fn<RideStyleActions["setAvoidHighways"]>(),
     setAvoidTolls: vi.fn<RideStyleActions["setAvoidTolls"]>(),
@@ -69,6 +72,8 @@ describe("ride style commands", () => {
     expect(document.intent.time).toEqual({ kind: "budget", targetMinutes: 180, toleranceMinutes: 27 });
     document = applied(document, roadCharacterCommand(document, "curvy"));
     expect(document.intent.roadCharacter).toBe("curvy");
+    document = applied(document, noveltyPreferenceCommand(document, "prefer-new-to-me"));
+    expect(document.intent.noveltyPreference).toBe("prefer-new-to-me");
     document = applied(document, surfacePreferenceCommand(document, "pavement"));
     expect(document.intent.surface.preference).toBe("pavement");
     document = applied(document, highwayPolicyCommand(document, true));
@@ -92,6 +97,8 @@ describe("ride style controls", () => {
     const spy = actions();
     render(<LoopTimeRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
     expect(screen.getByTestId("loop-time-120")).toBeChecked();
+    expect(screen.getByText("45 min")).toBeInTheDocument();
+    expect(screen.getByText("1 h 30 min")).toBeInTheDocument();
     expect(screen.getByText("3 h")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("loop-time-240"));
     expect(spy.setLoopMinutes).toHaveBeenCalledWith(240);
@@ -102,6 +109,8 @@ describe("ride style controls", () => {
     render(<RideStylePanel model={{ view: VIEW, actions: spy }} />);
     fireEvent.click(screen.getByTestId("road-character-curvy"));
     expect(spy.setRoadCharacter).toHaveBeenCalledWith("curvy");
+    fireEvent.click(screen.getByTestId("novelty-preference-prefer-new-to-me"));
+    expect(spy.setNoveltyPreference).toHaveBeenCalledWith("prefer-new-to-me");
     fireEvent.click(screen.getByTestId("surface-preference-pavement"));
     expect(spy.setSurface).toHaveBeenCalledWith("pavement");
     fireEvent.click(screen.getByTestId("avoid-highways"));
@@ -114,11 +123,11 @@ describe("ride style controls", () => {
   it("the compact toggle discloses the panel and summarizes the choices", () => {
     render(
       <RideStylePanel
-        model={{ view: { ...VIEW, roadCharacter: "curvy", surface: "pavement", avoidTolls: true }, actions: actions() }}
+        model={{ view: { ...VIEW, roadCharacter: "curvy", noveltyPreference: "prefer-new-to-me", surface: "pavement", avoidTolls: true }, actions: actions() }}
       />,
     );
     const toggle = screen.getByTestId("ride-style-toggle");
-    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · Paved · No tolls");
+    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · New to me · Paved · No tolls");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");

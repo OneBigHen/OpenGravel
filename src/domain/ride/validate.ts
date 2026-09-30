@@ -56,6 +56,12 @@ const ROAD_CHARACTERS: readonly RideIntent["roadCharacter"][] = [
   "backroads",
 ];
 
+const NOVELTY_PREFERENCES = [
+  "prefer-new-to-me",
+  "balanced",
+  "prefer-familiar",
+] as const;
+
 const TERRAIN_LEVELS: readonly RideIntent["terrain"]["level"][] = [
   "known-easy-only",
   "moderate",
@@ -399,6 +405,9 @@ export function validateRideIntent(intent: RideIntent): string[] {
   const discriminants: readonly (readonly [string, string, readonly string[]])[] = [
     ["shape", intent.shape, RIDE_SHAPES],
     ["roadCharacter", intent.roadCharacter, ROAD_CHARACTERS],
+    ...(intent.noveltyPreference === undefined
+      ? []
+      : [["noveltyPreference", intent.noveltyPreference, NOVELTY_PREFERENCES] as const]),
     ["terrain.level", intent.terrain.level, TERRAIN_LEVELS],
     ["traffic", intent.traffic, TRAFFIC_PREFERENCES],
     ["tollPolicy", intent.tollPolicy, TOLL_POLICIES],

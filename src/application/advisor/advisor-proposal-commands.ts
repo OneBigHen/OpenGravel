@@ -21,6 +21,7 @@ export type AdvisorProposalField =
   | "time"
   | "departure"
   | "roadCharacter"
+  | "novelty"
   | "surface"
   | "terrain"
   | "highways"
@@ -184,6 +185,7 @@ function changesFor(before: RideIntent, after: RideIntent, timeZone: string): Ad
   add("time", timeLabel(before.time), timeLabel(after.time));
   add("departure", departureLabel(before.departure, timeZone), departureLabel(after.departure, timeZone));
   add("roadCharacter", before.roadCharacter, after.roadCharacter);
+  add("novelty", before.noveltyPreference ?? "balanced", after.noveltyPreference ?? "balanced");
   add("surface", before.surface.preference, after.surface.preference);
   add("terrain", before.terrain.level, after.terrain.level);
   add("highways", before.avoidHighways ? "Avoid" : "Allowed", after.avoidHighways ? "Avoid" : "Allowed");
@@ -310,6 +312,13 @@ export function buildAdvisorProposal(
   if (fields.roadCharacter !== null) {
     operations.push({ ...base(document, "Set road character"), type: "roadCharacter.set", roadCharacter: fields.roadCharacter });
   }
+  if (fields.noveltyPreference !== null) {
+    operations.push({
+      ...base(document, "Set road familiarity"),
+      type: "noveltyPreference.set",
+      noveltyPreference: fields.noveltyPreference,
+    });
+  }
   if (fields.surfacePreference !== null) {
     operations.push({
       ...base(document, "Set surface preference"),
@@ -353,6 +362,7 @@ export function buildAdvisorProposal(
     "time.set": "time",
     "departure.set": "departure",
     "roadCharacter.set": "roadCharacter",
+    "noveltyPreference.set": "novelty",
     "surface.set": "surface",
     "terrain.set": "terrain",
     "highwayPolicy.set": "highways",

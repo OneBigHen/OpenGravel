@@ -136,6 +136,8 @@ export interface LibraryExploreRide {
   readonly document: RideDocument;
   /** A single contiguous imported track, or empty when no route geometry is retained. */
   readonly geometry: readonly Coordinate[];
+  /** Last observed fix for an actual recording, never an import or save time. */
+  readonly riddenAt?: string;
 }
 
 export interface CreateDerivativeOptions {
@@ -426,6 +428,7 @@ export class LibraryService implements LibraryServicePort {
       summary: summary(record),
       document: record.document,
       geometry: await this.exploreGeometry(record),
+      ...(record.recordedTrack === undefined ? {} : { riddenAt: record.recordedTrack.timestamps.at(-1) }),
     })));
   }
 
@@ -497,10 +500,19 @@ export class LibraryService implements LibraryServicePort {
   }
 
   private async exploreGeometry(record: RideRecord): Promise<readonly Coordinate[]> {
+    if (this.geometryStore === undefined) return [];
+
+    // A recorded ride is the rider's strongest local history signal. Prefer its
+    // full trace over any import-derived geometry on the same library record.
+    if (record.recordedTrack !== undefined) {
+      const stored = await this.geometryStore.get(record.recordedTrack.geometryRef);
+      if (stored !== null && stored.payload.kind === "line") return stored.payload.coordinates;
+    }
+
     const importData = record.importData;
     const firstTrack = importData?.tracks.length === 1 ? importData.tracks[0] : undefined;
     const segment = firstTrack?.segments.length === 1 ? firstTrack.segments[0] : undefined;
-    if (segment === undefined || this.geometryStore === undefined) return [];
+    if (segment === undefined) return [];
     const stored = await this.geometryStore.get(segment.geometryRef);
     return stored?.payload.kind === "line" ? stored.payload.coordinates : [];
   }

@@ -33,6 +33,7 @@ test("a ride typed into Where to? becomes a proposal, planned in one tap and one
             rideTimeDate: null,
             rideTimeLocalTime: null,
             roadCharacter: "backroads",
+            noveltyPreference: "prefer-new-to-me",
             surfacePreference: null,
             terrainLevel: null,
             avoidHighways: true,
@@ -65,7 +66,7 @@ test("a ride typed into Where to? becomes a proposal, planned in one tap and one
   // One box: the "Where to?" search is also where a ride is described.
   const box = page.getByTestId("finish-search");
   await expect(box).toHaveAttribute("placeholder", "Where to, or a ride idea");
-  await box.fill("Two hours of twisty backroads from Jim Thorpe, avoid highways");
+  await box.fill("Two hours of new-to-me twisty backroads from Jim Thorpe, avoid highways");
   await expect(page.getByTestId("place-option-describe")).toBeVisible();
   await box.press("Enter");
 
@@ -77,10 +78,12 @@ test("a ride typed into Where to? becomes a proposal, planned in one tap and one
   await page.getByRole("button", { name: "Plan it" }).click();
 
   await expect(page.getByTestId("ride-shape-loop")).toBeChecked();
+  await expect(page.getByRole("group", { name: "Road familiarity" }).getByRole("radio", { name: "New to me", exact: true })).toBeChecked();
   await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
   await expect(page.getByTestId("undo")).toHaveText("Undo · Apply ride description");
   await page.getByTestId("undo").click();
   await expect(page.getByTestId("ride-shape-destination")).toBeChecked();
+  await expect(page.getByRole("group", { name: "Road familiarity" }).getByRole("radio", { name: "Balanced", exact: true })).toBeChecked();
   await expect(page.getByTestId("redo")).toHaveText("Redo · Apply ride description");
   expect(pageErrors).toEqual([]);
 });

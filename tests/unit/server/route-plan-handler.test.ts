@@ -40,6 +40,7 @@ function validBody(): Record<string, unknown> {
         includeAlternatives: true,
         avoidHighways: false,
         tollPolicy: "avoid",
+        noveltyPreference: "prefer-new-to-me",
         vehicle: "motorcycle",
       },
     },
@@ -109,6 +110,19 @@ describe("handleRoutePlanRequest — validation before provider work", () => {
     expect(result.body.error.details?.["issues"]).toBeDefined();
   });
 
+  it("rejects an invalid novelty preference before planning", async () => {
+    const plan = deps(successResult());
+    const body = validBody();
+    const request = body["request"] as Record<string, unknown>;
+    const options = request["options"] as Record<string, unknown>;
+    options["noveltyPreference"] = "collect-every-road";
+
+    const result = await handleRoutePlanRequest(body, plan);
+
+    expect(result.status).toBe(400);
+    expect(plan.calls).toBe(0);
+  });
+
   it("rejects a non-object body", async () => {
     const plan = deps(successResult());
 
@@ -142,6 +156,7 @@ describe("handleRoutePlanRequest — success path", () => {
       planningGeneration: 3,
     });
     expect(plan.lastInput?.request.profile).toBe("motorcycle_fastest");
+    expect(plan.lastInput?.request.options.noveltyPreference).toBe("prefer-new-to-me");
     if (!("identity" in result.body)) throw new Error("expected a success body");
     expect(result.body.identity.rideId).toBe("ride_test");
   });

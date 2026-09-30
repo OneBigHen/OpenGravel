@@ -265,6 +265,7 @@ describe("buildProviderRequest — mapping (06-ROUTING-AND-DECISION-ENGINE §6)"
       tollPolicy: "avoid",
       surfacePreference: "mixed",
       roadCharacter: "curvy",
+      noveltyPreference: "balanced",
       vehicle: "motorcycle",
     });
     expect(result.request.avoidPolygons).toEqual(AVOID_RINGS);
@@ -575,6 +576,7 @@ const ROUTE_AFFECTING_CASES: readonly IdentityCase[] = [
   { name: "departure instant", mutate: (i) => ({ ...i, departure: { kind: "future", at: "2026-04-01T14:00:00.000Z" } }) },
   { name: "departure kind", mutate: (i) => ({ ...i, departure: { kind: "now" } }) },
   { name: "road character", mutate: (i) => ({ ...i, roadCharacter: "backroads" }) },
+  { name: "novelty preference", mutate: (i) => ({ ...i, noveltyPreference: "prefer-new-to-me" }) },
   { name: "surface preference", mutate: (i) => ({ ...i, surface: { ...i.surface, preference: "dirt-preferred" } }) },
   { name: "surface unpaved target", mutate: (i) => ({ ...i, surface: { ...i.surface, targetUnpavedShare: { min: 0.2, target: 0.4, max: 0.5 } } }) },
   { name: "surface unknown policy", mutate: (i) => ({ ...i, surface: { ...i.surface, unknownSurfacePolicy: "avoid-when-possible" } }) },
@@ -621,7 +623,7 @@ const COPY_ONLY_CASES: readonly IdentityCase[] = [
 ];
 
 describe("intentIdentity — canonical route-affecting identity (02-ARCHITECTURE-CONTRACT §13)", () => {
-  it("is stable across calls and object key order, and shaped as id1:<16 hex>", () => {
+  it("is stable across calls and object key order, and shaped as id2:<16 hex>", () => {
     const intent = fullIntent();
     const reordered = reorderIntent(intent);
     const nestedReorder: RideIntent = {
@@ -653,7 +655,7 @@ describe("intentIdentity — canonical route-affecting identity (02-ARCHITECTURE
     expect(intentIdentity(nestedReorder, VERSIONS)).toBe(
       intentIdentity(intent, VERSIONS),
     );
-    expect(intentIdentity(intent, VERSIONS)).toMatch(/^id1:[0-9a-f]{16}$/);
+    expect(intentIdentity(intent, VERSIONS)).toMatch(/^id2:[0-9a-f]{16}$/);
     expect(intentIdentity(intent, VERSIONS)).toBe(intentIdentity(intent, VERSIONS));
   });
 
@@ -760,6 +762,7 @@ function reorderIntent(intent: RideIntent): RideIntent {
     traffic: intent.traffic,
     terrain: intent.terrain,
     surface: intent.surface,
+    noveltyPreference: intent.noveltyPreference,
     roadCharacter: intent.roadCharacter,
     departure: intent.departure,
     time: intent.time,
