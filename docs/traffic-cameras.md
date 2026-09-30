@@ -28,7 +28,7 @@ TRAFFIC_CAMERAS_ENABLED=1
 TRAFFIC_CAMERAS_STATES=PA,NJ,NY,DE,MD,VA,WV,OH
 OHGO_API_KEY=
 
-# Recommended for same-origin playback of NJ/DE/MD/VA/WV and can also be
+# Recommended for same-origin playback of NJ/NY/DE/MD/VA/WV and can also be
 # reused by PA unless PA511_VIDEO_PROXY_SECRET overrides it.
 TRAFFIC_CAMERA_VIDEO_PROXY_SECRET=<private random value, at least 24 chars>
 ```
@@ -55,7 +55,7 @@ When **Traffic cameras** is enabled and a route is selected, the Layers sheet ex
 
 ### Same-origin direct-HLS relay
 
-NJ, DE, MD, VA, and WV publish or expose an HLS URL directly from their camera metadata. When `TRAFFIC_CAMERA_VIDEO_PROXY_SECRET` is configured, OpenGravel replaces that external playback URL with a same-origin relay URL only for the selected camera. The relay:
+NJ, NY, DE, MD, VA, and WV publish or expose a directly playable video/HLS URL from their camera metadata. When `TRAFFIC_CAMERA_VIDEO_PROXY_SECRET` is configured, OpenGravel replaces that external playback URL with a same-origin relay URL only for the selected camera. The relay:
 
 1. reloads/validates the selected state camera by ID;
 2. fetches the upstream playlist using the state site's Origin/Referer;
