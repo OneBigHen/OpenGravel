@@ -33,6 +33,7 @@ import type {
   DepartureIntent,
   LocationProvenance,
   LongTripIntent,
+  NoveltyPreference,
   RideDocument,
   RideIntent,
   RoadCharacterIntent,
@@ -129,6 +130,9 @@ export type RideCommand =
   | (RideCommandBase<"roadCharacter.set"> & {
       readonly roadCharacter: RoadCharacterIntent;
     })
+  | (RideCommandBase<"noveltyPreference.set"> & {
+      readonly noveltyPreference: NoveltyPreference;
+    })
   | (RideCommandBase<"surface.set"> & { readonly surface: SurfaceIntent })
   | (RideCommandBase<"terrain.set"> & { readonly terrain: TerrainIntent })
   | (RideCommandBase<"trafficPreference.set"> & {
@@ -206,6 +210,7 @@ export const RIDE_COMMAND_TYPES = {
   "time.set": true,
   "departure.set": true,
   "roadCharacter.set": true,
+  "noveltyPreference.set": true,
   "surface.set": true,
   "terrain.set": true,
   "trafficPreference.set": true,
