@@ -44,8 +44,8 @@ test("a loop from the start with a ride time plans without a destination", async
   await expect(page.getByTestId("finish-search")).toHaveCount(0);
   await expect(page.getByTestId("loop-time-120")).toBeChecked();
 
-  await page.getByTestId("loop-time-180").check();
-  await expect(page.getByTestId("loop-time-180")).toBeChecked();
+  await page.getByTestId("loop-time-90").check();
+  await expect(page.getByTestId("loop-time-90")).toBeChecked();
 
   await page.getByTestId("compose-create").click();
   await expect(routeCards(page).first()).toBeVisible();
@@ -65,13 +65,15 @@ test("road character, surface and tolls are one tap each and replan", async ({ p
   await openStyle(page);
   await page.getByTestId("road-character-curvy").check();
   await expect(page.getByTestId("road-character-curvy")).toBeChecked();
+  await page.getByTestId("novelty-preference-prefer-new-to-me").check();
+  await expect(page.getByTestId("novelty-preference-prefer-new-to-me")).toBeChecked();
   await page.getByTestId("surface-preference-pavement").check();
   await expect(page.getByTestId("surface-preference-pavement")).toBeChecked();
   // Tolls are avoided by default; one tap lets them back in.
   await expect(page.getByTestId("avoid-tolls")).toBeChecked();
   await page.getByTestId("avoid-tolls").uncheck();
   await expect(page.getByTestId("avoid-tolls")).not.toBeChecked();
-  await expect(page.getByTestId("ride-style-summary")).toHaveText("Curvy · Paved");
+  await expect(page.getByTestId("ride-style-summary")).toHaveText("Curvy · New to me · Paved");
 
   // The replan the style change started still answers.
   await expect(routeCards(page).first()).toBeVisible();
