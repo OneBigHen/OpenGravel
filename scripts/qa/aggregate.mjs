@@ -48,7 +48,7 @@
  * Run from the repo root.
  */
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 const REPO = resolve(process.argv[1], "..", "..", "..");
 const MANIFEST_DIR = join(REPO, "acceptance", "manifests");
@@ -149,16 +149,15 @@ function loadManifests() {
 function collectPlaywrightSpecs(suites, out) {
   for (const suite of suites ?? []) {
     for (const spec of suite.specs ?? []) {
-      const ok = spec.ok === true;
-      const evidence = [];
-      for (const t of spec.tests ?? []) {
-        for (const r of t.results ?? []) {
-          for (const a of r.attachments ?? []) {
-            if (a.path) evidence.push(a.path);
-          }
-        }
+      for (const test of spec.tests ?? []) {
+        const results = test.results ?? [];
+        const evidence = results.flatMap((r) => (r.attachments ?? []).flatMap((a) => a.path ? [a.path] : []));
+        // Skips and expected failures cannot prove that a mission succeeded.
+        const status = test.status === "unexpected" || results.some((r) => ["failed", "timedOut", "interrupted"].includes(r.status) || (r.status === "passed" && test.expectedStatus !== "passed"))
+          ? "fail" : results.length > 0 && results.every((r) => r.status === "passed")
+            ? "pass" : "not_run";
+        out.push({ file: spec.file, project: test.projectName, status, evidence });
       }
-      out.push({ file: spec.file, ok, evidence });
     }
     collectPlaywrightSpecs(suite.suites, out);
   }
@@ -166,15 +165,12 @@ function collectPlaywrightSpecs(suites, out) {
 }
 
 function readPlaywrightReports(paths) {
-  // lane per report -> project name inside the JSON ("critical-chromium"/"critical-webkit")
   const byProject = { "critical-chromium": [], "critical-webkit": [] };
   for (const p of paths) {
     if (!existsSync(p)) throw new Error(`playwright report not found: ${p}`);
     const json = JSON.parse(readFileSync(p, "utf8"));
     for (const spec of collectPlaywrightSpecs(json.suites, [])) {
-      const project = json?.config?.projects?.[0]?.name; // reporter JSON carries config
-      const lane = project === "critical-webkit" ? "critical-webkit" : "critical-chromium";
-      byProject[lane].push(spec);
+      if (Object.hasOwn(byProject, spec.project)) byProject[spec.project].push({ ...spec, report: p });
     }
   }
   return byProject;
@@ -194,7 +190,7 @@ function readJUnit(path) {
     const classname = /classname="([^"]*)"/.exec(attrs)?.[1] ?? "";
     const failed = /<(failure|error)\b/.test(body);
     const skipped = /<skipped\b/.test(body);
-    cases.push({ name, classname, failed, skipped });
+    cases.push({ name, classname, failed, skipped, missionId: /<property\b[^>]*name="missionId"[^>]*value="(M\d{2})"/.exec(body)?.[1] });
   }
   return cases;
 }
@@ -202,6 +198,7 @@ function readJUnit(path) {
 function missionIdFromMaestroCase(c) {
   // Real Maestro JUnit carries flow header properties as
   // <property name="missionId" value="M11"/> on the <testcase>.
+  if (c.missionId) return c.missionId;
   const hay = c.classname + " " + c.name;
   const prop = /missionId.{0,20}?(M\d{2})/.exec(hay);
   if (prop) return prop[1];
@@ -217,7 +214,7 @@ function usage() {
   node scripts/qa/aggregate.mjs --validate
   node scripts/qa/aggregate.mjs [--playwright <json> ...] [--maestro <xml>]
       [--maestro-ipad <xml>] [--appium <json>] [--hercules <xml>]
-      [--sha <git-sha>] [--out <dir>]`);
+      [--sha <git-sha>] [--preflight <json>] [--out <dir>]`);
 }
 
 function main() {
@@ -253,8 +250,20 @@ function main() {
     const i = args.indexOf(flag);
     return i !== -1 && args[i + 1] ? args[i + 1] : dflt;
   };
+  if (problems.length > 0) throw new Error(problems.join("\n"));
+  const preflightPath = getOne("--preflight", null);
+  const attestations = preflightPath === null ? {} : JSON.parse(readFileSync(preflightPath, "utf8")).reports ?? {};
   const outDir = resolve(getOne("--out", "qa-out"));
   const sha = getOne("--sha", process.env.GITHUB_SHA ?? "unknown");
+  const attest = (report, lane, result) => {
+    if (result.status !== "pass") return result;
+    const proof = attestations[report] ?? attestations[resolve(report)];
+    const matches = /^[a-f0-9]{40}$/.test(sha) && proof?.sha === sha;
+    const mobile = lane === "iphone" || lane === "ipad";
+    const deviceMatches = !mobile || (proof?.executor === lane &&
+      proof?.session?.kind === "physical" && typeof proof?.session?.id === "string" && proof.session.id.trim() !== "");
+    return matches && deviceMatches ? result : { ...result, status: "blocked", reason: "Matching SHA and required physical-device session evidence missing." };
+  };
   mkdirSync(outDir, { recursive: true });
 
   // Seed every lane per manifest: real result, or honest "planned"/"not_run".
@@ -287,9 +296,10 @@ function main() {
         if (typeof want !== "string" || want === "planned") continue;
         const hits = specs.filter((s) => typeof s.file === "string" && (s.file === want || s.file.endsWith("/" + want) || s.file.endsWith(want)));
         if (hits.length === 0) continue;
-        const ok = hits.every((h) => h.ok);
+        const verified = hits.map((hit) => attest(hit.report, lane, hit));
+        const status = ["fail", "blocked", "not_run"].find((st) => verified.some((hit) => hit.status === st)) ?? "pass";
         perMission[m.id].executors[lane] = {
-          status: ok ? "pass" : "fail",
+          status,
           evidence: [...new Set(hits.flatMap((h) => h.evidence))],
         };
       }
@@ -297,31 +307,23 @@ function main() {
   }
 
   // Maestro lane (JUnit). iPad lane only when a separate iPad report is given.
-  const maestroPath = getOne("--maestro", null);
-  if (maestroPath) {
-    const seen = new Set();
-    for (const c of readJUnit(maestroPath)) {
+  function applyMaestro(path, lane) {
+    if (!path) return;
+    const casesByMission = new Map();
+    for (const c of readJUnit(path)) {
       const id = missionIdFromMaestroCase(c);
-      if (!id || !perMission[id] || seen.has(id)) continue;
-      seen.add(id);
-      const flow = perMission[id];
-      const st = c.failed ? "fail" : c.skipped ? "not_run" : "pass";
-      if (flow.executors.iphone.status !== "planned") {
-        flow.executors.iphone = { status: st, evidence: [`maestro:${c.name}`] };
-      }
+      if (!id || !perMission[id] || perMission[id].executors[lane].status === "planned") continue;
+      const cases = casesByMission.get(id) ?? [];
+      cases.push(c);
+      casesByMission.set(id, cases);
+    }
+    for (const [id, cases] of casesByMission) {
+      const status = cases.some((c) => c.failed) ? "fail" : cases.some((c) => c.skipped) ? "not_run" : "pass";
+      perMission[id].executors[lane] = attest(path, lane, { status, evidence: cases.map((c) => `${path}:${c.name}`) });
     }
   }
-  const ipadPath = getOne("--maestro-ipad", null);
-  if (ipadPath) {
-    for (const c of readJUnit(ipadPath)) {
-      const id = missionIdFromMaestroCase(c);
-      if (!id || !perMission[id]) continue;
-      const st = c.failed ? "fail" : c.skipped ? "not_run" : "pass";
-      if (perMission[id].executors.ipad.status !== "planned") {
-        perMission[id].executors.ipad = { status: st, evidence: [`maestro-ipad:${c.name}`] };
-      }
-    }
-  }
+  applyMaestro(getOne("--maestro", null), "iphone");
+  applyMaestro(getOne("--maestro-ipad", null), "ipad");
 
   // Appium special-case lane (optional).
   const appiumPath = getOne("--appium", null);
@@ -331,8 +333,13 @@ function main() {
     for (const r of json.results ?? []) {
       const flow = perMission[r.mission];
       if (!flow || !["pass", "fail", "blocked"].includes(r.status)) continue;
-      const lane = r.executor === "ipad" ? "ipad" : "iphone";
-      flow.executors[lane] = { status: r.status, evidence: r.evidence ?? [] };
+      if (!["iphone", "ipad"].includes(r.executor)) continue;
+      const lane = r.executor;
+      if (flow.executors[lane].status === "planned") continue;
+      const previous = flow.executors[lane];
+      const next = attest(appiumPath, lane, { status: r.status, evidence: r.evidence ?? [] });
+      const status = ["fail", "blocked"].find((st) => previous.status === st || next.status === st) ?? next.status;
+      flow.executors[lane] = { ...next, status, evidence: [...new Set([...previous.evidence, ...next.evidence])] };
     }
   }
 

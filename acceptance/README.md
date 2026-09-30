@@ -37,7 +37,7 @@ Playwright Maestro   Appium       finds weird behavior
 | `acceptance/manifests/M01.yaml` … `M25.yaml` | Per-mission manifest: priority, executors, preflight, evidence, exploratory policy. |
 | `.maestro/M11-*.yaml`, `M12`, `M13`, `M14`, `M16` | Deterministic iOS flows for the ride-critical missions. |
 | `scripts/qa/aggregate.mjs` | `--validate` checks every manifest; otherwise rolls lane outputs into per-mission `result.json` + `QA_CAMPAIGN.json`. Dependency-free Node. |
-| `.github/workflows/acceptance.yml` | Nightly cron + manual dispatch: web gate, iOS Maestro job, aggregation. |
+| Nightly acceptance workflow | Planned; not included or running yet. |
 | `acceptance/exploratory/` | Hercules lane scaffolding (exploratory, cheap model, JUnit out). |
 
 ## Cost-tier policy
@@ -84,8 +84,7 @@ exploratory:
 ```
 
 A lane with no executable target says `planned`, never green. A lane that did
-not run says `not_run`, never green. `aggregate.mjs --validate` enforces all
-of this in CI before any lane starts.
+not run says `not_run`, never green. `aggregate.mjs --validate` checks manifest rules and file references. Aggregation requires report-specific preflight attestations before a passing result can count.
 
 ## Mission ↔ spec map
 
@@ -129,10 +128,10 @@ from the QA proposal; its web implementation is future work.
 
 | Lane | This Linux host | CI |
 |---|---|---|
-| Playwright Chromium/WebKit | ✅ runs | ✅ ubuntu job |
-| `aggregate.mjs --validate` | ✅ runs | ✅ every run |
-| Gherkin parse check | ✅ runs (`npx -p @cucumber/gherkin` in scratch) | ✅ via validate |
-| Maestro iOS flows | ❌ cannot run — Maestro iOS needs macOS + Xcode + iOS simulator | ✅ macos-14 job |
+| Playwright Chromium/WebKit | ✅ runs | Existing web gate; campaign wiring planned |
+| `aggregate.mjs --validate` | ✅ runs | Campaign wiring planned |
+| Gherkin parse check | ✅ runs (`npx -p @cucumber/gherkin` in scratch) | Not automated; `--validate` only checks references |
+| Maestro iOS flows | ❌ cannot run — Maestro iOS needs macOS + Xcode + iOS simulator | Planned macOS job; not running |
 | Appium / XCUITest | ❌ cannot run — needs macOS/Xcode | macOS lane, reserved for special cases Maestro cannot exercise |
 | Hercules exploratory | lane scaffold only, not wired to a model | future |
 
@@ -170,5 +169,30 @@ maestro test .maestro/ --format junit --output maestro-report.xml
 node scripts/qa/aggregate.mjs \
   --playwright playwright-chromium.json --playwright playwright-webkit.json \
   --maestro maestro-report.xml \
-  --sha "$(git rev-parse HEAD)" --out qa-out/
+  --sha "$(git rev-parse HEAD)" --preflight preflight.json --out qa-out/
 ```
+
+## Report preflight attestations
+
+The runner must record the actual tested revision for each report, after checking
+its deployment/build identity. The campaign `--sha` is compared with that
+attestation; it cannot certify an arbitrary report by itself. Keys are report
+paths as passed to the CLI, or their absolute paths:
+
+```json
+{
+  "reports": {
+    "playwright-chromium.json": { "sha": "<40-character tested SHA>" },
+    "maestro-report.xml": {
+      "sha": "<40-character tested SHA>",
+      "executor": "iphone",
+      "session": { "kind": "physical", "id": "<device run evidence reference>" }
+    }
+  }
+}
+```
+
+Missing or mismatched SHA evidence makes a would-be pass `blocked`. A simulator
+run can help development, but cannot pass the physical iPhone/iPad requirement.
+The iOS runner must supply both the exact executor and a physical-device session
+reference. These are runner attestations, not cryptographic proof.

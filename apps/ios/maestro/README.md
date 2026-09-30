@@ -10,8 +10,7 @@ M13 record, M14 resume-ride, M16 offline ride). The old
 The flows require a booted iOS simulator and a built OpenGravel app. Set
 `CAPACITOR_SERVER_URL` during `npm run sync` so the shell loads a reachable
 OpenGravel deployment. iOS flows only run on macOS (Xcode + simulator);
-see [`.github/workflows/acceptance.yml`](../../../.github/workflows/acceptance.yml)
-and [`acceptance/README.md`](../../../acceptance/README.md).
+the nightly acceptance workflow is planned and is not running yet. See [`acceptance/README.md`](../../../acceptance/README.md).
 
 Run the suite with:
 
