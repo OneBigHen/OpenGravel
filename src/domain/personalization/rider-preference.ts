@@ -350,10 +350,12 @@ export function isRiderPreferenceModel(value: unknown): value is RiderPreference
   const candidate = value as Partial<RiderPreferenceModel>;
   if (candidate.version !== 1) return false;
   if (
+    typeof candidate.explicitComparisons !== "number" ||
     !Number.isInteger(candidate.explicitComparisons) ||
-    (candidate.explicitComparisons ?? -1) < 0 ||
+    candidate.explicitComparisons < 0 ||
+    typeof candidate.implicitComparisons !== "number" ||
     !Number.isInteger(candidate.implicitComparisons) ||
-    (candidate.implicitComparisons ?? -1) < 0
+    candidate.implicitComparisons < 0
   ) return false;
   for (const record of [candidate.mean, candidate.precision, candidate.evidence]) {
     if (typeof record !== "object" || record === null) return false;
