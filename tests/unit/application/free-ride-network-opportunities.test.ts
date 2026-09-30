@@ -75,6 +75,7 @@ describe("Free Ride directed network opportunities", () => {
           {
             ...broken.corridors[0]!,
             segmentIds: ["good-a", "rejoin"],
+            exitNodeId: "n4",
           },
         ],
       }),
