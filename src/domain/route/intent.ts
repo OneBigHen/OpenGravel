@@ -15,16 +15,13 @@
  */
 
 import type {
+  NoveltyPreference,
   RoadCharacterIntent,
   RideIntent,
   SurfaceIntent,
 } from "../ride/types";
 
-/** How strongly discovery should value personally unridden roads. */
-export type NoveltyPreference =
-  | "prefer-new-to-me"
-  | "balanced"
-  | "prefer-familiar";
+export type { NoveltyPreference } from "../ride/types";
 
 /** Optional weather policy for discovery; it is inert without usable evidence. */
 export type WeatherPreference = "avoid-adverse" | "no-preference";
