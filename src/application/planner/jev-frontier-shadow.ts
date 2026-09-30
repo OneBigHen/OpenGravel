@@ -96,6 +96,18 @@ export interface JevFrontierJudgment {
   readonly meaningfulImprovement: JevNoulAnswer;
 }
 
+/**
+ * Application-owned port. Infrastructure may implement this with TypeSafe's
+ * SDK, OpenRouter's Decisions API, or a replay fixture without changing the
+ * routing domain.
+ */
+export interface JevFrontierJudge {
+  judge(
+    state: JevFrontierState,
+    signal: AbortSignal,
+  ): Promise<JevFrontierJudgment | null>;
+}
+
 export type JevFrontierValidationFailure =
   | "candidate-count"
   | "duplicate-candidate"
@@ -224,7 +236,7 @@ function validDistribution(
   allowed: ReadonlySet<string>,
 ): boolean {
   const entries = Object.entries(probabilities);
-  if (entries.length === 0) return false;
+  if (entries.length !== allowed.size) return false;
   let total = 0;
   for (const [key, value] of entries) {
     if (!allowed.has(key) || !unit(value)) return false;
@@ -234,15 +246,16 @@ function validDistribution(
   return Math.abs(total - 1) <= 0.02;
 }
 
+const JEV_FIT_LEVELS = new Set(["0", "1", "2", "3"]);
+
 function validFit(answer: JevScoreAnswer): boolean {
   return (
     answer.type === "score" &&
     Number.isFinite(answer.score) &&
+    answer.score >= 0 &&
+    answer.score <= 3 &&
     unit(answer.confidence) &&
-    validDistribution(
-      answer.probabilities,
-      new Set(Object.keys(answer.probabilities)),
-    )
+    validDistribution(answer.probabilities, JEV_FIT_LEVELS)
   );
 }
 
@@ -317,12 +330,13 @@ export function jevFrontierCounterfactual(
   if (!validation.ok) return null;
 
   const chosen = judgment.choice.choice;
-  const sorted = Object.values(judgment.choice.probabilities)
-    .slice()
-    .sort((left, right) => right - left);
   const chosenProbability = judgment.choice.probabilities[chosen] ?? 0;
-  const runnerUpProbability = sorted.find((value) => value < chosenProbability) ??
-    (sorted[1] ?? 0);
+  const runnerUpProbability = Math.max(
+    0,
+    ...Object.entries(judgment.choice.probabilities)
+      .filter(([id]) => id !== chosen)
+      .map(([, probability]) => probability),
+  );
   const base = {
     choiceConfidence: judgment.choice.confidence,
     chosenProbability,
