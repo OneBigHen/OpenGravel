@@ -11,6 +11,9 @@ describe("readQuery: a ride or a place?", () => {
     "loop from here back by 5",
     "somewhere nice for lunch about an hour away",
     "60 miles of gravel",
+    "roads I haven't ridden",
+    "use familiar roads today",
+    "find never ridden backroads",
   ])("reads %j as a ride", (text) => {
     expect(readQuery(text)).toBe("ride");
   });
@@ -24,6 +27,7 @@ describe("readQuery: a ride or a place?", () => {
 
   it("offers the advisor after places when it could be either", () => {
     expect(readQuery("twisty loop")).toBe("maybe");
+    expect(readQuery("new roads")).toBe("maybe");
     expect(readQuery("Loop Road")).toBe("maybe");
     expect(readQuery("Jim")).toBe("place");
   });
