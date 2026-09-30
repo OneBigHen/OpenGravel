@@ -298,6 +298,7 @@ describe("defaultRideIntent (03-DOMAIN-MODEL §3)", () => {
       time: { kind: "none" },
       departure: { kind: "now" },
       roadCharacter: "balanced",
+      noveltyPreference: "balanced",
       surface: { preference: "mixed", unknownSurfacePolicy: "allow-with-warning" },
       terrain: { level: "moderate" },
       traffic: "protect-ride",
