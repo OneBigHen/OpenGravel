@@ -113,6 +113,12 @@ export type RoadCharacterIntent =
   | "curvy"
   | "backroads";
 
+/** How strongly route selection should value roads this rider has not ridden. */
+export type NoveltyPreference =
+  | "prefer-new-to-me"
+  | "balanced"
+  | "prefer-familiar";
+
 /** Surface preference (§8). A target is an envelope, not a promise. */
 export interface SurfaceIntent {
   readonly preference: "pavement" | "mostly-pavement" | "mixed" | "dirt-preferred";
@@ -308,6 +314,11 @@ export interface RideIntent {
   readonly time: TimeIntent;
   readonly departure: DepartureIntent;
   readonly roadCharacter: RoadCharacterIntent;
+  /**
+   * Personal familiarity preference. Optional only for backward-compatible
+   * persisted v1 rides; absence has the same meaning as "balanced".
+   */
+  readonly noveltyPreference?: NoveltyPreference;
   readonly surface: SurfaceIntent;
   readonly terrain: TerrainIntent;
   readonly traffic: TrafficPreference;
