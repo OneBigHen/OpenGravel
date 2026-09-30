@@ -22,6 +22,23 @@ Each phase has a different job.
 
 This is not a new rider-facing mode. It enriches the modules OpenGravel already has.
 
+## Award-caliber product lens
+
+Apple's 2026 Design Awards recognize six categories: Delight and Fun, Inclusivity, Innovation, Interaction, Social Impact, and Visuals and Graphics.
+
+OpenGravel should not chase an award checklist, but those categories expose the bar for an exceptional native product.
+
+The strongest fit is:
+
+- **Interaction**: the app should require less attention than competing navigation products. One-tap Quick Ride, strong defaults, glove-friendly controls, audio-forward Ride Focus and native CarPlay are core product behavior rather than a skin.
+- **Innovation**: Ride Arc routing, personal corridor memory, bounded route-space exploration and rapid local preference learning create a genuinely different motorcycle-routing system rather than another map frontend.
+- **Delight and Fun**: the delight is the road OpenGravel found. The UI should make discovery feel effortless and then disappear.
+- **Visuals and Graphics**: terrain, aerials and 3D context matter most during planning and stopped exploration; moving navigation should be visually restrained.
+- **Inclusivity**: Dynamic Type, contrast, color-independent route/surface states, VoiceOver while stopped, and strong spoken guidance should be designed in rather than retrofitted.
+- **Social Impact**: safer low-attention navigation and honest access/closure/surface confidence are more meaningful than engagement mechanics.
+
+The design target is therefore not "more features." It is a technically ambitious routing system presented through an unusually calm interaction model.
+
 ## Why this is the differentiator
 
 Current motorcycle products prove demand for:
@@ -152,6 +169,17 @@ Useful ideas:
 - snap-to-trail planning.
 
 Lesson: for dual-sport/adventure riders, confidence that a road is legal/open can matter more than another few percent of "fun score."
+
+## What SwitchBack already proved
+
+The legacy SwitchBack repository contains two route-shape guards worth retaining:
+
+- `backtrackingShare()`: measures immediate reversal relative to the route direction roughly 1.5 km earlier; SwitchBack rejected routes above 15%.
+- `selfOverlapShare()`: samples the route and measures corridor revisits; SwitchBack rejected routes above 20%.
+
+SwitchBack also explicitly rewarded contiguous quality and penalized fragmentation rather than treating the route as an unordered average of good road segments.
+
+Those ideas align with the current research and should be carried forward instead of rediscovered. The new OpenGravel coherence module ports the two geometry diagnostics, but keeps the old thresholds as shadow flags until the current replay corpus validates them against the new routing stack.
 
 ## The core routing model
 
