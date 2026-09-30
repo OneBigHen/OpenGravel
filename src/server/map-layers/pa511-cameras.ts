@@ -218,7 +218,7 @@ function enabled(env: ProviderContext["env"]): boolean {
 }
 
 export const pa511CameraProvider: LayerProvider = {
-  id: "pa511",
+  id: "traffic-cameras",
   layers: ["traffic-cameras"],
   ttlMs: 30_000,
   async load(bounds, _layers, context) {
