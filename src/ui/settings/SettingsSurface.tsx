@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AppBar } from "@/ui/nav/AppBar";
 import {
   addBike,
@@ -32,6 +32,7 @@ const NEW_BIKE: BikeForm = {
 };
 
 export interface SettingsSurfaceProps {
+  readonly spotifySetup?: ReactNode;
   readonly garage: Garage;
   /** In the app: choose OpenGravel's ride screen or the native one. */
   readonly showNavScreen?: boolean;
@@ -58,6 +59,7 @@ export interface SettingsSurfaceProps {
 }
 
 export function SettingsSurface({
+  spotifySetup,
   garage,
   showNavScreen = false,
   onGarageChange,
@@ -153,6 +155,7 @@ export function SettingsSurface({
         <AppearanceSection />
         {showNavScreen ? <NavScreenSection /> : null}
         <InstallSection />
+        {spotifySetup}
 
         <section className="og-settings__section" aria-labelledby="settings-bikes-title">
           <div className="og-settings__section-heading">

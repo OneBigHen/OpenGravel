@@ -21,6 +21,9 @@ import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
+import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
+import { SpotifySetupSection } from "@/ui/settings/SpotifySetupSection";
+import { clearSpotifyClientId, readSpotifyClientId, saveSpotifyClientId } from "@/infrastructure/spotify/client-id-storage";
 
 function consentState(read: TelemetryConsentRead): TelemetryConsentState {
   return read.status === "found" ? read.state : { status: "unacknowledged" };
@@ -37,6 +40,15 @@ function readSatellitePreference(): boolean {
 const noSubscription = (): (() => void) => () => undefined;
 
 export function SettingsClient() {
+  const [spotifyPlayer, setSpotifyPlayer] = useState<ReturnType<typeof nativeSpotifyPlayer>>();
+  useEffect(() => {
+    let player: ReturnType<typeof nativeSpotifyPlayer>;
+    const frame = window.requestAnimationFrame(() => {
+      player = nativeSpotifyPlayer();
+      setSpotifyPlayer(player);
+    });
+    return () => { window.cancelAnimationFrame(frame); player?.dispose(); };
+  }, []);
   const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
   const homeStorage = useMemo(() => createHomeLocationStorage(), []);
   const currentLocation = useMemo(() => createBrowserCurrentLocationSource(), []);
@@ -210,6 +222,7 @@ export function SettingsClient() {
   }
 
   return <SettingsSurface
+    spotifySetup={<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} nativePlayer={spotifyPlayer} />}
     garage={garage}
     showNavScreen={inApp}
     onGarageChange={saveGarage}

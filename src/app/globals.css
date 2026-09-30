@@ -275,6 +275,7 @@ h3,
 .og-settings__section h2 { font-size: 21px; }
 .og-settings__section h3 { font-size: 16px; }
 .og-settings__section-copy { margin-top: 8px; color: var(--og-slate-text); font-size: 13px; }
+.og-settings__spotify-callback { overflow-wrap: anywhere; margin-top: 8px; }
 .og-settings__section-heading { align-items: flex-start; margin-bottom: 14px; }
 .og-settings__home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .og-settings__bike-list { display: grid; gap: 10px; margin-top: 18px; list-style: none; }
@@ -5744,7 +5745,8 @@ h3,
 }
 
 .og-ride__spotify-controls > button,
-.og-ride__spotify-actions > button {
+.og-ride__spotify-actions > button,
+.og-ride__spotify-actions > a {
   flex: 1 1 0;
 }
 
