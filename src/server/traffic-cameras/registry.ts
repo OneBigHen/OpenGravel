@@ -448,7 +448,7 @@ function paRecords(context: ProviderContext): Promise<readonly TrafficCameraReco
     const relayEnabled =
       hasVideo &&
       context.env["PA511_VIDEO_ENABLED"] === "1" &&
-      (context.env["PA511_VIDEO_PROXY_SECRET"]?.trim().length ?? 0) >= 24;
+      ((context.env["PA511_VIDEO_PROXY_SECRET"] ?? context.env["TRAFFIC_CAMERA_VIDEO_PROXY_SECRET"])?.trim().length ?? 0) >= 24;
     return {
       id: camera.id,
       state: "PA",
