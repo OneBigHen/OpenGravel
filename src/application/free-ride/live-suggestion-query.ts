@@ -6,7 +6,11 @@ import { newRouteCandidateId } from "@/domain/route/ids";
 import type { SessionNavigationState } from "@/domain/ride-session/navigation";
 import type { LiveSuggestionCandidate } from "./live-suggestions";
 import { buildLiveSuggestionIntent } from "./suggestion-request";
-import { unknownEvidence, type EvidenceValue } from "@/domain/evidence/types";
+import { isUsableEvidence, unknownEvidence, type EvidenceValue } from "@/domain/evidence/types";
+import {
+  personalNoveltyEvidence,
+  type PersonalRideTrace,
+} from "@/application/roads/personal-road-history";
 import { haversine } from "@/domain/geometry/analysis";
 import type { RouteInstruction } from "@/domain/route/types";
 import type { Coordinate } from "@/domain/ride/types";
@@ -72,6 +76,8 @@ export function createLiveSuggestionQuery(deps: {
   readonly geometry: GeometryStore;
   readonly provider: LiveSuggestionRouteProvider;
   readonly dislikedSuggestionIds?: () => readonly string[];
+  /** Local-only ride history. Nothing returned here crosses the route API. */
+  readonly rideHistory?: () => Promise<readonly PersonalRideTrace[]>;
   readonly now?: () => string;
 }) {
   let generation = Math.max(1, Date.now());
@@ -111,6 +117,10 @@ export function createLiveSuggestionQuery(deps: {
       if (signal.aborted) throw signal.reason;
       const result: LiveSuggestionCandidate[] = [];
       const disliked = new Set(deps.dislikedSuggestionIds?.() ?? []);
+      const rideHistory = deps.rideHistory === undefined
+        ? null
+        : await deps.rideHistory().catch(() => null);
+      if (signal.aborted) throw signal.reason;
       for (const candidate of answer.candidates) {
         if (
           candidate.geometry.length < 2 ||
@@ -138,6 +148,13 @@ export function createLiveSuggestionQuery(deps: {
         );
         const decisionHeading = bearingDegrees(entry, afterDecision);
         const delta = headingDelta(decisionHeading, navigation.position.headingDegrees);
+        const serverNovelty = numericEvidence(
+          candidate.assessment?.evidence.novelty,
+          "Ride history is unknown.",
+        );
+        const localNovelty = rideHistory === null
+          ? null
+          : personalNoveltyEvidence(candidate.geometry, rideHistory, { now: now() });
         result.push({
           id: suggestionId,
           label: roadName ?? "Suggested road",
@@ -153,7 +170,9 @@ export function createLiveSuggestionQuery(deps: {
           evidence: {
             roadCharacterFit: numericEvidence(candidate.assessment?.evidence.roadClassMix, "Road character is unknown."),
             surfaceFit: numericEvidence(candidate.assessment?.evidence.surfaceMix, "Surface evidence is unknown."),
-            novelty: numericEvidence(candidate.assessment?.evidence.novelty, "Ride history is unknown."),
+            novelty: localNovelty !== null && isUsableEvidence(localNovelty)
+              ? localNovelty
+              : serverNovelty,
           },
         });
       }
