@@ -44,5 +44,8 @@ export function InfoFeatureMedia({ media, name }: InfoFeatureMediaProps) {
   }
 
   if (preview === null) return null;
+  // Camera URLs are arbitrary provider endpoints and refresh in place; Next/Image
+  // would require a maintained remote-host allowlist and optimization proxy.
+  // eslint-disable-next-line @next/next/no-img-element
   return <img className="og-info-card__media" src={preview} alt={`Traffic camera view: ${name}`} />;
 }
