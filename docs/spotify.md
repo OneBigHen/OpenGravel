@@ -25,8 +25,12 @@ To use a rider-owned app, create an app in the [Spotify Developer Dashboard](htt
 https://your-open-gravel-host.example/api/spotify/callback
 ```
 
-If Spotify requires user management for the app, add the account that will use
-it. Enter only that app's 32-character public client ID in Settings, save it on
+Spotify Development Mode requires the app owner to have Premium and permits
+up to five allowlisted users, with exceptions for grandfathered apps. If the
+shared app is in Development Mode, ask its owner for tester access. For your
+own app, add the account you intend to use under Users Management.
+[Spotify explains these access limits](https://developer.spotify.com/documentation/web-api/concepts/quota-modes).
+Enter only that app's 32-character public client ID in Settings, save it on
 the device, and choose **Connect Spotify**. The selected ID is bound to that
 browser's encrypted session; it does not change the server's environment or
 another rider's account.

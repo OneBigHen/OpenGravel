@@ -1,4 +1,4 @@
-import { clearOAuthCookie, exchangeCode, readOAuthState, storeSession, SpotifyAuthError } from "@/server/spotify/auth";
+import { clearOAuthCookie, exchangeCode, readOAuthState, storeSession } from "@/server/spotify/auth";
 import { spotifyOriginForRequest } from "@/server/spotify/config";
 import { jsonResponse, redirectOutcome } from "@/server/spotify/http";
 
@@ -24,8 +24,7 @@ export async function GET(request: Request): Promise<Response> {
     const response = redirectOutcome(request, state.returnTo, "connected", clearCookie);
     response.headers.append("set-cookie", sessionCookie);
     return response;
-  } catch (error) {
-    if (error instanceof SpotifyAuthError && error.publicCode === "configuration") return jsonResponse({ ok: false, code: "configuration", message: error.message }, 503);
+  } catch {
     return redirectOutcome(request, state.returnTo, "error", clearCookie);
   }
 }

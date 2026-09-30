@@ -28,11 +28,11 @@ export function RideSpotifyPlayer({ player }: RideSpotifyPlayerProps) {
           <h2 className="og-ride__spotify-title">Spotify</h2>
           <p className="og-ride__spotify-status" data-testid="ride-spotify-status" role="status">
             {unavailable
-              ? "Spotify is unavailable in this build."
+              ? snapshot.errorMessage ?? "Spotify is unavailable in this build."
               : snapshot.connection === "connecting"
                 ? "Connecting…"
                 : connected
-                  ? "Connected"
+                  ? snapshot.errorMessage ?? "Connected"
                   : snapshot.errorMessage ?? "Disconnected"}
           </p>
         </div>
@@ -47,33 +47,34 @@ export function RideSpotifyPlayer({ player }: RideSpotifyPlayerProps) {
         {track === null ? null : <span>{track.artist}</span>}
       </div>
       <div className="og-ride__spotify-controls" role="group" aria-label="Spotify playback controls">
-        <button type="button" className="og-ride__action" data-testid="spotify-previous" disabled={!connected} onClick={() => run(player.skipToPrevious)}>
+        <button type="button" className="og-ride__action" data-testid="spotify-previous" disabled={!connected} onClick={() => run(() => player.skipToPrevious())}>
           Previous
         </button>
-        <button type="button" className="og-ride__action og-ride__action--primary" data-testid="spotify-play-pause" disabled={!connected} onClick={() => run(player.togglePlayPause)}>
+        <button type="button" className="og-ride__action og-ride__action--primary" data-testid="spotify-play-pause" disabled={!connected} onClick={() => run(() => player.togglePlayPause())}>
           {snapshot.isPlaying ? "Pause" : "Play"}
         </button>
-        <button type="button" className="og-ride__action" data-testid="spotify-next" disabled={!connected} onClick={() => run(player.skipToNext)}>
+        <button type="button" className="og-ride__action" data-testid="spotify-next" disabled={!connected} onClick={() => run(() => player.skipToNext())}>
           Next
         </button>
       </div>
       <div className="og-ride__spotify-actions">
         {connected ? (
-          <button type="button" className="og-ride__action" data-testid="spotify-disconnect" onClick={() => run(player.disconnect)}>
+          <button type="button" className="og-ride__action" data-testid="spotify-disconnect" onClick={() => run(() => player.disconnect())}>
             Disconnect
           </button>
         ) : snapshot.connection === "connecting" ? (
-          <button type="button" className="og-ride__action" data-testid="spotify-disconnect" onClick={() => run(player.disconnect)}>
+          <button type="button" className="og-ride__action" data-testid="spotify-disconnect" onClick={() => run(() => player.disconnect())}>
             Cancel
           </button>
         ) : (
-          <button type="button" className="og-ride__action og-ride__action--primary" data-testid="spotify-connect" disabled={unavailable} onClick={() => run(player.connect)}>
+          <button type="button" className="og-ride__action og-ride__action--primary" data-testid="spotify-connect" disabled={unavailable} onClick={() => run(() => player.connect())}>
             Connect Spotify
           </button>
         )}
-        <button type="button" className="og-ride__action" data-testid="spotify-open" onClick={() => run(player.openSpotify)}>
+        <button type="button" className="og-ride__action" data-testid="spotify-open" onClick={() => run(() => player.openSpotify())}>
           Open Spotify
         </button>
+        <a href="/settings#spotify" className="og-ride__action">Spotify setup</a>
       </div>
     </section>
   );

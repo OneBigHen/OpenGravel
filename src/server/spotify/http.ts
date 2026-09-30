@@ -1,5 +1,4 @@
 import { spotifyOriginForRequest } from "./config";
-import { serializeCookie } from "./cookies";
 import type { SpotifyApiError } from "./types";
 
 export function jsonResponse(body: unknown, status = 200, cookies: readonly string[] = []): Response {
@@ -44,9 +43,4 @@ export function redirectOutcome(request: Request, returnTo: string, outcome: "co
   if (cookie !== undefined) response.headers.append("set-cookie", cookie);
   response.headers.set("cache-control", "no-store");
   return response;
-}
-
-export function sessionCookieWithOrigin(cookie: string, request: Request): string {
-  const origin = spotifyOriginForRequest(request);
-  return origin === null ? cookie : serializeCookie("ogv_spotify_session", cookie, { secure: origin.startsWith("https://") });
 }
