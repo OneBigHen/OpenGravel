@@ -265,6 +265,7 @@ describe("buildProviderRequest — mapping (06-ROUTING-AND-DECISION-ENGINE §6)"
       tollPolicy: "avoid",
       surfacePreference: "mixed",
       roadCharacter: "curvy",
+      noveltyPreference: "balanced",
       vehicle: "motorcycle",
     });
     expect(result.request.avoidPolygons).toEqual(AVOID_RINGS);
