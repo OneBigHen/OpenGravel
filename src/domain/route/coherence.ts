@@ -3,9 +3,13 @@
  *
  * "Curvy" and "good to ride" are not synonyms. A route can manufacture a high
  * bend/turn count by leaving a good road for tiny side-street doglegs, repeated
- * junctions, or reversals. This module measures those pathologies separately
- * from ride quality so routing experiments can reject bad geometry without
- * pretending a geometry heuristic proves road quality, access, or safety.
+ * junctions, reversals, backtracking, or repeated corridor overlap.
+ *
+ * This deliberately restores two useful SwitchBack measurements that did not
+ * survive the VNext split: immediate backtracking share and self-overlap share.
+ * SwitchBack used 15% / 20% as hard gates. OpenGravel records those thresholds
+ * as shadow flags first so the new PA/NJ replay corpus can establish false
+ * positives before canonical policy starts rejecting routes.
  *
  * The output is diagnostic evidence only. It is intentionally not a new route
  * score and does not change canonical RoutePolicy.
@@ -26,11 +30,21 @@ const MANEUVER_SPAM_PER_10_MILES = 14;
 const MIN_ROUTE_METERS_FOR_DENSITY_FLAG = 4_000;
 const METERS_PER_MILE = 1_609.344;
 
+const BACKTRACK_LOOKBACK_METERS = 1_500;
+const BACKTRACK_DEVIATION_DEGREES = 120;
+const LEGACY_BACKTRACKING_FLAG_SHARE = 0.15;
+
+const SELF_OVERLAP_SAMPLE_METERS = 150;
+const SELF_OVERLAP_NEAR_METERS = 100;
+const LEGACY_SELF_OVERLAP_FLAG_SHARE = 0.2;
+
 export type RouteCoherenceFlag =
   | "explicit-uturn"
   | "geometry-reversal"
   | "maneuver-spam"
-  | "alternating-short-turns";
+  | "alternating-short-turns"
+  | "excessive-backtracking"
+  | "excessive-self-overlap";
 
 export interface RouteCoherenceMetrics {
   readonly routeMeters: number;
@@ -57,6 +71,18 @@ export interface RouteCoherenceMetrics {
    * Provider instructions are not required for this detector.
    */
   readonly geometryReversalCount: number;
+
+  /**
+   * Share of traveled geometry that heads substantially back toward the
+   * direction the route was taking roughly 1.5 km earlier.
+   */
+  readonly backtrackingShare: number;
+
+  /**
+   * Share of ~150 m route samples that revisit a corridor within ~100 m of a
+   * prior sample.
+   */
+  readonly selfOverlapShare: number;
 
   readonly flags: readonly RouteCoherenceFlag[];
 }
@@ -141,6 +167,135 @@ function geometryReversals(geometry: readonly Coordinate[]): number {
   return reversals;
 }
 
+/**
+ * Port of SwitchBack's immediate-backtracking detector
+ * (src/lib/routing/route-geometry-quality.ts), using VNext Coordinate objects.
+ */
+export function routeBacktrackingShare(
+  geometry: readonly Coordinate[],
+): number {
+  if (!validLine(geometry) || geometry.length < 5) return 0;
+
+  const cumulative: number[] = [0];
+  for (let index = 0; index + 1 < geometry.length; index += 1) {
+    const from = geometry[index];
+    const to = geometry[index + 1];
+    if (from === undefined || to === undefined) continue;
+    cumulative.push((cumulative[index] ?? 0) + haversine(from, to));
+  }
+  const total = cumulative.at(-1) ?? 0;
+  if (!(total > 0)) return 0;
+
+  let backtrackingMeters = 0;
+  for (let index = 1; index + 1 < geometry.length; index += 1) {
+    const current = geometry[index];
+    const next = geometry[index + 1];
+    if (current === undefined || next === undefined) continue;
+
+    const traveledBefore = cumulative[index] ?? 0;
+    const lookbackTarget = traveledBefore - BACKTRACK_LOOKBACK_METERS;
+    let earlier = 0;
+    while (
+      earlier + 1 < cumulative.length &&
+      (cumulative[earlier + 1] ?? Number.POSITIVE_INFINITY) <= lookbackTarget
+    ) {
+      earlier += 1;
+    }
+    if (earlier >= index) continue;
+
+    const earlierFrom = geometry[earlier];
+    const earlierTo = geometry[earlier + 1];
+    if (earlierFrom === undefined || earlierTo === undefined) continue;
+
+    const deviation = Math.abs(
+      signedTurnDegrees(
+        bearingDegrees(earlierFrom, earlierTo),
+        bearingDegrees(current, next),
+      ),
+    );
+    if (deviation > BACKTRACK_DEVIATION_DEGREES) {
+      backtrackingMeters += haversine(current, next);
+    }
+  }
+
+  return backtrackingMeters / total;
+}
+
+function sampleRoute(
+  geometry: readonly Coordinate[],
+  spacingMeters = SELF_OVERLAP_SAMPLE_METERS,
+): readonly Coordinate[] {
+  const first = geometry[0];
+  const last = geometry.at(-1);
+  if (first === undefined || last === undefined) return [];
+  if (geometry.length < 2) return [first];
+
+  const samples: Coordinate[] = [{ ...first }];
+  let carry = 0;
+
+  for (let index = 0; index + 1 < geometry.length; index += 1) {
+    const from = geometry[index];
+    const to = geometry[index + 1];
+    if (from === undefined || to === undefined) continue;
+
+    const segmentMeters = haversine(from, to);
+    if (!(segmentMeters > 0)) continue;
+
+    let position = spacingMeters - carry;
+    while (position < segmentMeters) {
+      const share = position / segmentMeters;
+      samples.push({
+        lon: from.lon + (to.lon - from.lon) * share,
+        lat: from.lat + (to.lat - from.lat) * share,
+      });
+      position += spacingMeters;
+    }
+    carry = Math.max(0, segmentMeters - (position - spacingMeters));
+  }
+
+  if (
+    samples.at(-1)?.lon !== last.lon ||
+    samples.at(-1)?.lat !== last.lat
+  ) {
+    samples.push({ ...last });
+  }
+  return samples;
+}
+
+/**
+ * Port of SwitchBack's self-overlap detector. Crossings contribute only a small
+ * number of samples; sustained return along the same corridor contributes many.
+ */
+export function routeSelfOverlapShare(
+  geometry: readonly Coordinate[],
+): number {
+  if (!validLine(geometry) || geometry.length < 3) return 0;
+
+  const samples = sampleRoute(geometry);
+  if (samples.length <= 1) return 0;
+
+  let overlapping = 0;
+  for (let index = 1; index < samples.length; index += 1) {
+    const point = samples[index];
+    if (point === undefined) continue;
+
+    let nearPrior = false;
+    for (let prior = 0; prior < index; prior += 1) {
+      const earlier = samples[prior];
+      if (
+        earlier !== undefined &&
+        haversine(earlier, point) < SELF_OVERLAP_NEAR_METERS
+      ) {
+        nearPrior = true;
+        break;
+      }
+    }
+    if (nearPrior) overlapping += 1;
+  }
+
+  return overlapping / (samples.length - 1);
+}
+
 type TurnSide = "left" | "right";
 
 function turnSide(
@@ -204,7 +359,7 @@ function alternatingShortTurns(
  * Measures path coherence from returned geometry and provider instructions.
  *
  * Returns null for malformed route geometry. Missing instructions are valid:
- * geometry reversal diagnostics still work and instruction-derived counts stay
+ * geometry-derived diagnostics still work and instruction-derived counts stay
  * zero rather than becoming invented estimates.
  */
 export function analyzeRouteCoherence(input: {
@@ -239,6 +394,8 @@ export function analyzeRouteCoherence(input: {
   ).length;
   const alternatingShortTurnPairs = alternatingShortTurns(maneuvers);
   const geometryReversalCount = geometryReversals(input.geometry);
+  const backtrackingShare = routeBacktrackingShare(input.geometry);
+  const selfOverlapShare = routeSelfOverlapShare(input.geometry);
 
   const flags: RouteCoherenceFlag[] = [];
   if (explicitUTurnCount > 0) flags.push("explicit-uturn");
@@ -252,6 +409,12 @@ export function analyzeRouteCoherence(input: {
   if (alternatingShortTurnPairs >= 2) {
     flags.push("alternating-short-turns");
   }
+  if (backtrackingShare > LEGACY_BACKTRACKING_FLAG_SHARE) {
+    flags.push("excessive-backtracking");
+  }
+  if (selfOverlapShare > LEGACY_SELF_OVERLAP_FLAG_SHARE) {
+    flags.push("excessive-self-overlap");
+  }
 
   return {
     routeMeters,
@@ -264,6 +427,8 @@ export function analyzeRouteCoherence(input: {
     alternatingShortTurnPairs,
     roadNameChangeCount: roadNameChanges(maneuvers),
     geometryReversalCount,
+    backtrackingShare: Number(backtrackingShare.toFixed(4)),
+    selfOverlapShare: Number(selfOverlapShare.toFixed(4)),
     flags,
   };
 }
