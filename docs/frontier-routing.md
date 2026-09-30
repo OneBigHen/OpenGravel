@@ -203,6 +203,35 @@ Source:
 
 - https://arxiv.org/abs/1609.08484
 
+### Valhalla is a strong benchmark, but not the best primary fit
+
+Valhalla currently exposes a beta `motorcycle` costing model with rider-facing knobs such as `use_highway` and `use_trails`. Its dynamic runtime costing makes it worth benchmarking against OpenGravel's generated routes.
+
+However, Valhalla does not expose GraphHopper-style arbitrary request custom models. Adding a new costing model or new tile attributes generally requires C++/tile-schema work. That is a much larger ownership surface for the experiment OpenGravel needs right now.
+
+Use Valhalla as:
+
+- an external quality benchmark;
+- a source of ideas for motorcycle-specific costing;
+- a possible future provider behind the existing provider port.
+
+Do not migrate the primary stack merely to gain two motorcycle knobs.
+
+References:
+
+- https://github.com/valhalla/valhalla-docs/blob/master/turn-by-turn/api-reference.md
+- https://github.com/valhalla/valhalla/issues/2134
+
+### OSRM is optimized for a different trade-off
+
+OSRM's Lua profiles are powerful at extraction/customization time, but profile behavior is fundamentally tied to graph preprocessing. That is excellent for a few stable routing modes and less suitable for OpenGravel's proposed per-request frontier probes.
+
+OSRM remains useful as a performance/route-shape benchmark, but it is not a better experimentation substrate than the GraphHopper custom-model stack already deployed.
+
+Reference:
+
+- https://github.com/Project-OSRM/osrm-backend/blob/master/docs/profiles.md
+
 ### BRouter is useful research, not a migration target
 
 BRouter is attractive because its profiles are highly configurable and there are open motorcycle experiments. Existing motorcycle-oriented BRouter projects tend to use explicit penalties for urban/service roads and tune turn costs to avoid fake "curvy" routes created by zig-zagging through towns.
