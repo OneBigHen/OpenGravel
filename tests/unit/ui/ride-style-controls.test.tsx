@@ -97,6 +97,8 @@ describe("ride style controls", () => {
     const spy = actions();
     render(<LoopTimeRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
     expect(screen.getByTestId("loop-time-120")).toBeChecked();
+    expect(screen.getByText("45 min")).toBeInTheDocument();
+    expect(screen.getByText("1 h 30 min")).toBeInTheDocument();
     expect(screen.getByText("3 h")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("loop-time-240"));
     expect(spy.setLoopMinutes).toHaveBeenCalledWith(240);
