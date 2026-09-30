@@ -174,10 +174,11 @@ export async function handleDirectCameraHls(
 }
 
 export function directCameraPlaybackPath(
-  state: TrafficCameraState,
+  rawState: string,
   cameraId: string,
   env: Readonly<Record<string, string | undefined>>,
 ): string | null {
-  if (!SUPPORTED_DIRECT_STATES.has(state)) return null;
+  const state = stateOf(rawState);
+  if (state === null) return null;
   return secret(env) === null ? null : relayPath(state, cameraId);
 }
