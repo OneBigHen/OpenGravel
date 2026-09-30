@@ -61,6 +61,7 @@ import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
 import type { RideId } from "@/domain/ride/ids";
 import { RideFocus } from "@/ui/ride/RideFocus";
 import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
+import { createWebSpotifyPlayer } from "@/infrastructure/spotify/web-spotify-player";
 
 /**
  * The Ride Focus composition root (02-ARCHITECTURE-CONTRACT §7, §17;
@@ -142,7 +143,7 @@ export function RideClient({
       // Let hydration finish before discovering the native Capacitor global.
       await Promise.resolve();
       if (cancelled) return;
-      player = nativeSpotifyPlayer();
+      player = nativeSpotifyPlayer() ?? createWebSpotifyPlayer();
       if (cancelled) {
         player?.dispose();
         return;

@@ -21,6 +21,8 @@ import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
+import { SpotifySetupSection } from "@/ui/settings/SpotifySetupSection";
+import { clearSpotifyClientId, readSpotifyClientId, saveSpotifyClientId } from "@/infrastructure/spotify/client-id-storage";
 
 function consentState(read: TelemetryConsentRead): TelemetryConsentState {
   return read.status === "found" ? read.state : { status: "unacknowledged" };
@@ -210,6 +212,7 @@ export function SettingsClient() {
   }
 
   return <SettingsSurface
+    spotifySetup={<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} />}
     garage={garage}
     showNavScreen={inApp}
     onGarageChange={saveGarage}
