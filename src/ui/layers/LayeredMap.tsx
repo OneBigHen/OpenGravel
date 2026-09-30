@@ -35,7 +35,12 @@ export function LayeredMap({
 }
 
 function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readonly layers: MapLayersProps }) {
-  const view = useMapLayers(layers.source);
+  const cameraRoute = useMemo(() => {
+    const route = map.scene.routes.find((candidate) => candidate.id === map.scene.selectedRouteId);
+    if (route === undefined || route.geometry.length < 2) return null;
+    return route.geometry.map((coordinate) => [coordinate.lon, coordinate.lat] as const);
+  }, [map.scene.routes, map.scene.selectedRouteId]);
+  const view = useMapLayers(layers.source, cameraRoute);
   const scene = useMemo(
     () => (view.scene === undefined ? map.scene : { ...map.scene, infoLayers: view.scene }),
     [map.scene, view.scene],
@@ -84,6 +89,9 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
           enabled={view.enabled}
           status={view.status}
           counts={view.counts}
+          cameraRouteOnly={view.cameraRouteOnly}
+          cameraRouteAvailable={view.cameraRouteAvailable}
+          onToggleCameraRouteOnly={view.toggleCameraRouteOnly}
           onToggle={view.toggle}
           onClearAll={view.clearAll}
         />
