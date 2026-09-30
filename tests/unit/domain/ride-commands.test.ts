@@ -67,6 +67,7 @@ const DOCUMENTED_COMMAND_TYPES: readonly string[] = [
   "time.set",
   "departure.set",
   "roadCharacter.set",
+  "noveltyPreference.set",
   "surface.set",
   "terrain.set",
   "trafficPreference.set",
@@ -246,7 +247,7 @@ describe("RideCommand union (03-DOMAIN-MODEL §26, 02-ARCHITECTURE-CONTRACT §5)
     expect(Object.keys(RIDE_COMMAND_TYPES).sort()).toEqual(
       [...DOCUMENTED_COMMAND_TYPES].sort(),
     );
-    expect(Object.keys(RIDE_COMMAND_TYPES)).toHaveLength(36);
+    expect(Object.keys(RIDE_COMMAND_TYPES)).toHaveLength(37);
   });
 
   it("exposes no generic patch or setState mutation member", () => {
