@@ -57,8 +57,8 @@ export interface RideStyleControlsModel {
   readonly actions: RideStyleActions;
 }
 
-/** The loop ride times the composer offers (plan M2: 1–6 h). */
-export const LOOP_MINUTE_CHOICES: readonly number[] = [60, 120, 180, 240, 360];
+/** Short escapes first, with longer loops still available. */
+export const LOOP_MINUTE_CHOICES: readonly number[] = [45, 60, 90, 120, 180, 240, 360];
 
 export const ROAD_CHARACTER_LABELS: Readonly<Record<RoadCharacterIntent, string>> = {
   efficient: "Fast",
