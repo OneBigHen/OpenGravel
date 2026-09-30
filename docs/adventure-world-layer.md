@@ -1,1012 +1,777 @@
 # OpenGravel Adventure World
 
-Status: design / implementation work order  
-Target branch: `feat/gaia-goat-layer-parity`  
-Depends on: map-layer parity, Discover, ride-interest corridor, Ride Focus  
-Rider-facing working name: **Adventure** or **World**  
-Internal model name: **WorldLayer**
+Status: product/architecture work order  
+Target: OpenGravel mainline after map-layer foundation  
+Working branch: `feat/gaia-goat-layer-parity`  
+Core rule: **Ride first. World second. Game third.**
 
-## Why this exists
+![Adventure World concept screens](media/adventure-world-concepts.svg)
 
-OpenGravel already has the beginnings of something more interesting than a conventional motorcycle GPS:
+## Hard reset after design review
 
-- a terrain-aware map stack
-- Great Roads and Gravel Atlas
-- Discover/Wikimedia places
-- ride-along interest points
-- a Free Ride copilot
-- route recording
-- surface, curvature, access and elevation evidence
-- an offline-first architecture
+The first Adventure draft drifted too far toward spatial demos, AR, Niantic, splats, and destination "3D postcards."
 
-The next step should not be "more pins." It should make riding through the map feel like uncovering a real world.
+That is not the product.
 
-The reference feeling is the best part of location games such as Pokémon GO: the physical world has state, nearby things reveal themselves, visiting somewhere changes the map, and the rider builds a personal history of places and roads.
+The compelling product is much simpler:
 
-The product must still feel like motorcycle software, not a cartoon game.
+> **I have 60–120 minutes. Give me a ride worth taking, get me home when I said I would be home, and keep making my local map more interesting the more I ride.**
 
-## Product rule
+For the default experience:
 
-> Ride first. World second. Game third.
+- no Niantic dependency
+- no paid spatial API
+- no AR requirement
+- no separate 3D viewer
+- no Unity dependency
+- no cloud account requirement
+- no requirement to stop at a POI
+- no requirement to touch the screen while moving
 
-The map is safety-critical while moving. Gamification may motivate where a rider goes, but it must never reward speed, risky riding, staring at the screen, unsafe check-ins, illegal access, or riding farther than the rider intended.
+The visual ambition stays. The expensive architecture does not.
 
-That implies:
+## Target rider
 
-- no speed leaderboards
-- no timed "race to this point" objectives
-- no interaction requirement to earn a discovery while moving
-- no celebratory full-screen takeover during navigation
-- no XP spam over maneuver guidance
-- no territorial ownership mechanic that encourages repeated riding of the same place
-- no rewards for entering roads whose legality/access is unknown
-- no default public sharing of exact ride history or home location
+The main design target is not an all-day ADV expedition.
 
-## Core concept: the world has state
+It is a rider who:
 
-Normal map applications render a database.
+- has a bike already in the garage
+- has 45, 60, 90, or 120 minutes
+- may be leaving from a suburban area
+- knows the obvious local roads already
+- wants a reason to take the bike out
+- wants curves, backroads, occasional gravel, scenery, or simply somewhere new
+- needs to be home at a predictable time
+- does not want 10 minutes of route planning
+- will mostly glance at a mounted phone and listen to prompts
 
-Adventure renders a **world state** on top of the same database.
+If this rider cannot get a useful loop from app-open to ignition in roughly 20 seconds, Adventure is too complicated.
 
-A road can be:
+## Product promise
 
-- not yet ridden
-- ridden
-- ridden recently
-- ridden in another season
-- verified by the rider
-- part of a completed collection
+**Give OpenGravel a time budget, not a destination.**
 
-A place can be:
-
-- unknown to this rider
-- visible but undiscovered
-- discovered automatically by proximity
-- visited while stopped
-- saved
-- verified
-- part of a collection
-- spatially mapped for a richer 3D/AR experience
-
-The state belongs to the rider. The underlying feature remains provider-neutral and attributable.
-
-## Do not make every POI a collectible
-
-The biggest failure mode is turning OSM into thousands of glowing dots.
-
-Create a derived object called a **World Node**. Only features that earn attention become nodes.
-
-Candidate sources:
-
-- OpenGravel Discover
-- Wikidata / Wikipedia / Wikimedia
-- OSM
-- viewpoints
-- historic sites
-- unusual roadside features
-- waterfalls
-- covered bridges
-- ferries
-- mountain passes
-- fire towers
-- trailheads / forest entrances
-- scenic pull-offs
-- iconic diners and rider stops
-- Great Roads
-- Gravel Atlas
-- public-land entrances
-- selected events
-- community-submitted discoveries later
-
-Do not promote ordinary businesses or every tagged feature.
-
-## World object model
-
-Keep provider models unchanged. The world layer is a derived application model.
-
-```ts
-type WorldNodeKind =
-  | "viewpoint"
-  | "waterfall"
-  | "bridge"
-  | "historic"
-  | "quirky"
-  | "pass"
-  | "summit"
-  | "fire-tower"
-  | "forest-gate"
-  | "ferry"
-  | "roadside"
-  | "camp"
-  | "rider-stop"
-  | "event";
-
-interface WorldNode {
-  id: string;
-  kind: WorldNodeKind;
-  name: string;
-  coordinate: Coordinate;
-
-  // Why OpenGravel believes this deserves space on the map.
-  adventureScore: number;       // 0..1
-  confidence: number;           // 0..1
-  rarity: "common" | "notable" | "rare" | "iconic";
-
-  // Routing / riding context.
-  roadId?: string;
-  routeable: boolean;
-  accessStatus: "known-open" | "known-restricted" | "unknown";
-  detourMinutes?: number;
-
-  // Rendering.
-  visualTier: 1 | 2 | 3;
-  minZoom: number;
-  modelRef?: string;
-  splatRef?: string;
-  spatialSiteRef?: string;
-
-  // Provenance remains mandatory.
-  sourceIds: readonly string[];
-}
-```
-
-Roads need their own world state rather than pretending they are points:
-
-```ts
-interface WorldSegment {
-  id: string;
-  roadId: string;
-  geometry: LineString;
-
-  surface: SurfaceEvidence;
-  funScore?: number;
-  curvatureScore?: number;
-  gradeClass?: string;
-  legalAccess: "known-open" | "known-restricted" | "unknown";
-
-  regionIds: readonly string[];
-  collectionIds: readonly string[];
-}
-```
-
-Rider progress is separate:
-
-```ts
-interface RiderWorldState {
-  nodeProgress: Record<string, NodeProgress>;
-  segmentProgress: Record<string, SegmentProgress>;
-  collectionProgress: Record<string, CollectionProgress>;
-  patches: readonly EarnedPatch[];
-}
-```
-
-That separation is important. A user's progression must never contaminate route authority, legal-access evidence, or the canonical map data.
-
-## Adventure Score
-
-A World Node should be selected because it is worth seeing, not because an API returned it.
-
-Suggested first-pass score:
+Primary entry:
 
 ```text
-adventureScore =
-    0.22 * sourceNotability
-  + 0.18 * riderRelevance
-  + 0.15 * visualInterest
-  + 0.15 * roadQualityNearby
-  + 0.10 * rarity
-  + 0.10 * sourceConfidence
-  + 0.10 * routeFit
-  - detourPenalty
-  - duplicatePenalty
-  - accessUncertaintyPenalty
+How much time do you have?
+
+[ 45 min ] [ 60 min ] [ 90 min ] [ 2 hr ]
+
+or
+
+Back by [ 6:15 PM ]
 ```
 
-This is deterministic evidence scoring, not an AI-generated truth.
+Then one flavor:
 
-The scoring weights can change later; the important contract is explainability.
+```text
+What sounds good?
 
-Example explanation:
+[ Curves ] [ New roads ] [ Gravel ] [ Scenic ] [ Surprise me ]
+```
 
-> Covered bridge · 0.4 mi off route  
-> Rare locally · on a Great Road · Wikimedia photo · access known
+Optional details stay behind one secondary control.
 
-## Discovery mechanics
+The default action is:
 
-### Automatic discovery
+> **Build my loop**
 
-A rider should not tap anything while moving.
+Not "create expedition", "start quest", or "select collection."
 
-A node is discovered automatically when all applicable conditions are met:
+## The 20-second loop
 
-- GPS accuracy is acceptable
-- rider comes within the node's radius
-- location is not obviously map-matched to a distant parallel road
-- optional minimum dwell only for features that require being stopped
-- node is not access-restricted
+1. Open OpenGravel.
+2. Tap `90 min`.
+3. Tap `Curves` or leave the remembered preference.
+4. OpenGravel produces three loops.
+5. Pick one.
+6. Ride.
+7. OpenGravel quietly records new worthwhile roads.
+8. After the ride, show what changed on the rider's map.
 
-Suggested radii:
+The game exists mostly before and after the ride.
 
-- roadside object: 50–100 m
-- overlook / bridge: 100–200 m
-- large landmark: 200–400 m
-- road / pass: crossing the segment geometry
+During the ride, it is navigation.
 
-The exact radii belong in data/config, not UI code.
+## Time budget is a hard constraint
 
-### Passive feedback
+A short-session rider cares more about getting home on time than squeezing in one more discovery.
 
-While moving:
+Define:
 
-- one subtle haptic
-- optional short audio cue
-- one transient compact chip
-- no modal
-- no required acknowledgement
+```ts
+interface RideTimeBudget {
+  hardBudgetMinutes: number;
+  reserveMinutes: number;
+  targetRideMinutes: number;
+  backBy?: string;
+}
+```
 
-Example:
+Initial policy:
 
-> Covered bridge discovered
-
-The existing one-at-a-time ride-interest chip is the correct UX primitive. Extend it rather than stacking notifications.
-
-### Parked/stopped reveal
-
-When the rider is stopped, the app can expose richer content:
-
-- photo
-- history
-- why it is interesting
-- source attribution
-- nearby good road
-- add to ride
-- "I've been here"
-- field verification
-- 3D / AR button when available
-
-## Roads are the real game board
-
-The strongest mechanic for a motorcycle app is not collecting POIs. It is **discovering roads**.
-
-Every traversable segment can carry local rider state:
-
-- first ridden date
-- times ridden
-- last ridden
-- direction(s) ridden
-- season(s)
-- surface experienced
-- rider verification
-- whether it was part of a saved ride
-
-The map can then show a restrained "explored" treatment.
-
-Do not black out unexplored roads. That is unsafe and destroys navigation usefulness.
-
-Instead:
-
-- unexplored: normal cartography
-- previously ridden: a faint secondary halo or texture at planning zoom
-- newly ridden this ride: slightly warmer accent
-- favorite: explicit rider-controlled mark
-
-During active navigation, exploration styling yields to route clarity.
-
-## Progress that feels like motorcycling
-
-Avoid coins, stars, gems, energy, loot boxes, cartoon characters and daily-login mechanics.
-
-Prefer motorcycle/outdoor language:
-
-### Collections
+```text
+reserveMinutes = max(8 minutes, 10% of hard budget)
+targetRideMinutes = hard budget - reserve
+```
 
 Examples:
 
-- Covered Bridges of Bucks County
-- PA Fire Towers
-- Delaware River Crossings
-- Allegheny Mountain Passes
-- PA State Forests
-- Historic Turnpikes
-- Dirt Roads of Michaux
-- Pine Barrens
-- Catskills Passes
-- Appalachian Overlooks
+- 45-minute request → target about 37 minutes
+- 60-minute request → target about 52 minutes
+- 90-minute request → target about 81 minutes
+- 120-minute request → target about 108 minutes
 
-A collection is mostly a reason to ride somewhere new.
+This is deliberately conservative.
 
-### Patches
+The UI can expose the unused margin:
 
-Completion earns a small visual patch in the rider's profile / garage.
+> **Home 6:03 PM · 12 min buffer**
 
-Think jacket patch, rally stamp or passport mark.
+If live traffic or rerouting eats the buffer, Adventure suggestions stop.
 
-Examples:
+### Back-by confidence
 
-- Ridge Runner
-- Forest Roads
-- Covered Bridges
-- River Crossings
-- First 100 Gravel Miles
-- Five State Forests
+Eventually calculate a bounded return confidence from:
 
-Do not use skill/status language that implies the rider is safer or more capable than they are.
+- live traffic where available
+- route class
+- known construction/closure evidence
+- urban intersection density
+- expected lower speeds on gravel
+- time-of-day variance
+- weather context
 
-### Expeditions
+Do not pretend an ETA is exact.
 
-A collection can generate a ride:
+The useful statement is:
 
-> Build me a 3-hour loop that gets 3 new covered bridges.
+> **Expected home 6:03 · planned buffer 12 min**
 
-> Give me a ride with 30+ miles of roads I haven't ridden.
+not:
 
-> Take me to one rare discovery and maximize twisty roads.
+> **Home 6:03 guaranteed**
 
-This is where gamification improves the core routing product instead of becoming a side quest.
+## Do not gamify every road
 
-### Completion map
+This is the most important product correction.
 
-Post-ride, show:
+A rider should not feel compelled to clear every cul-de-sac and residential grid.
 
-- new road miles
-- new gravel miles
-- new World Nodes
-- collections advanced
-- regions explored
-- field notes contributed
+Only **explorable roads** count toward the Adventure map.
 
-No speed-based achievement should be displayed.
-
-## Post-ride is where the game can breathe
-
-While moving: almost nothing.
-
-After stopping: make it satisfying.
-
-Suggested post-ride card:
+Suggested eligibility:
 
 ```text
-TODAY'S RIDE
-
-82.4 mi
-26.1 mi new roads
-8.7 mi new gravel
-
-3 discoveries
-  ✓ Sheard's Mill Covered Bridge
-  ✓ Haycock Mountain overlook
-  ✓ Forest Road 157
-
-Covered Bridges of Bucks County
-6 / 12
-
-+ 2 road-condition verifications
+road is legal/allowed
+AND routeable for the current motorcycle profile
+AND length >= useful minimum
+AND NOT ordinary service/parking road
+AND (
+  curvature >= threshold
+  OR gravel/surface interest
+  OR elevation/terrain interest
+  OR scenic/public-land context
+  OR low-traffic backroad character
+  OR belongs to a known riding corridor
+  OR acts as a necessary connector between good segments
+)
 ```
 
-Then render the newly explored road segments animating onto the map.
+Residential roads can still route normally. They simply do not become collectibles.
 
-This is a much better place for richer graphics than the navigation screen.
+This keeps the explored map meaningful.
 
-## Community contribution as progression
+## Roads are the progression system
 
-OpenGravel can reward useful evidence rather than popularity.
+For an explorable road segment, store local-first progress:
 
-After a rider has stopped or ended a ride, ask optional one-tap questions:
+```ts
+interface RoadProgress {
+  segmentId: string;
+  firstRiddenAt: string;
+  lastRiddenAt: string;
+  rides: number;
+  directions: readonly ("forward" | "reverse")[];
+  surfaceObserved?: string;
+}
+```
 
-- Still gravel?
-- Gate open/closed?
-- Paved now?
-- Construction?
-- Water crossing passable?
-- Road sign says public/private?
-- Photo worth adding?
+Rider-facing states:
 
-A verification should record source, time and confidence and feed the evidence system.
+- **not ridden** — normal cartography
+- **ridden** — subtle cool/slate trace in planning/explore views
+- **new this ride** — temporary warm trace
+- **favorite** — explicit rider mark
+- **needs verification** — optional post-ride field note
 
-Potential rider-facing metric:
+No XP is necessary.
 
-**Field Notes** or **Verified Roads**, not "karma."
+The reward is watching a map of good roads become yours.
 
-Never treat one report as legal authority.
+## Novelty must never overpower fun
 
-## World layer rendering
+A naive unexplored-road algorithm will route riders onto mediocre roads simply because they are new.
 
-There should be three progressively richer render modes sharing one world model.
+Novelty is a capped ingredient.
 
-### 1. Standard map
-
-Renderer:
-- current MapLibre GL JS on web/PWA
-- MapLibre Native in native ride surfaces
-
-Use:
-- vector/raster layers
-- symbols
-- lines
-- fill extrusions
-- hillshade
-- terrain
-- route / road state
-- World Nodes
-
-This is the default and must work offline.
-
-### 2. Immersive terrain
-
-Still MapLibre-based.
-
-This is the key recommendation.
-
-Use the native Metal backend for iOS and custom Metal style layers where standard style layers are insufficient.
-
-Ideas:
-
-- high-quality 3D terrain
-- subtle atmospheric horizon
-- stronger terrain lighting at useful pitch
-- buildings only where they help orientation
-- route ribbon draped over terrain
-- road-surface treatment on route segments
-- grade/curvature visualization available during planning
-- selected World Nodes as restrained vertical beacons
-- terrain-aware shadows/relief
-- richer selected-place geometry
-- animated but low-motion "newly discovered" ring
-- custom destination landmark meshes where available
-
-The current OpenGravel architecture already keeps the renderer behind `MapHost`; preserve that boundary.
-
-### 3. Spatial scene
-
-Optional. Only entered intentionally or while stopped.
-
-Possible implementations:
-- Niantic NSDK / VPS
-- Scaniverse mesh
-- Scaniverse Gaussian splat
-- native AR
-- Unity prototype
-- web 3D viewer for splats/meshes
-
-Use it for:
-
-- a scanned covered bridge
-- an overlook
-- a famous road landmark
-- trailhead / forest entrance orientation
-- historic structure
-- rally / event destination
-
-Do not make this the route renderer.
-
-## Speed-adaptive visualization
-
-The map should become simpler as speed rises.
-
-Suggested state machine, tuned later with real testing:
-
-### Parked / walking
-- full World Node labels
-- photos/cards available
-- discovery interactions
-- 3D landmarks
-- field verification
-- collection progress
-
-### Low speed
-- route
-- road character
-- selected nearby nodes
-- access warnings
-- richer terrain
-
-### Riding speed
-- route
-- maneuver
-- terrain silhouette
-- one upcoming discovery
-- critical closures/access/weather
-- minimal labels
-
-No arbitrary hard-coded mph thresholds should ship without ride testing. The application can derive a bounded presentation state from motion and navigation state.
-
-## The "route ribbon"
-
-This is a high-value visual and does not require Unity.
-
-Instead of a flat navigation polyline, render a route ribbon that can encode information without adding widgets.
-
-Potential channels:
-
-- width: route emphasis only, not data
-- casing: selected route / reroute
-- dash/texture: surface evidence
-- small edge marks: upcoming gravel transition
-- subtle height/lighting in immersive terrain
-- local pulse: next maneuver / route reacquisition
-
-Do not encode more than two data dimensions simultaneously while riding.
-
-Planning mode can be richer.
-
-## "Adventure vision" layer
-
-A toggle can make the map answer:
-
-> Where is the good stuff?
-
-At regional zoom, do not draw individual points.
-
-Render a derived field / heat layer based on:
-
-- Great Road density
-- gravel density
-- topographic relief
-- public-land access
-- scenic nodes
-- low junction density
-- low major-road density
-- rider's unexplored roads
-
-The result should look like regions of opportunity, not a precise claim that every highlighted road is good.
-
-Zooming in resolves the field into actual roads/nodes with evidence.
-
-This becomes an excellent planner affordance:
-
-> Drag the destination into the brighter adventure area.
-
-## "Unexplored" routing preference
-
-Add an optional planning modifier:
+First-pass route utility:
 
 ```text
-Explore:
-[ Off ] [ Some new roads ] [ Prefer new roads ]
+route utility =
+    0.28 road fun / curvature
+  + 0.18 novelty
+  + 0.14 continuity / flow
+  + 0.12 surface match
+  + 0.10 scenic / terrain context
+  + 0.08 low urban friction
+  + 0.05 useful discoveries
+  + 0.05 return-time confidence
+  - major-road penalty
+  - stoplight/junction penalty
+  - access uncertainty penalty
+  - excessive out-and-back penalty
+  - boring connector penalty
 ```
 
-It must remain subordinate to:
+Novelty should saturate.
 
-1. legality/access
-2. surface constraints
-3. route feasibility
-4. rider-selected road style
+A route that is 30% new and excellent should usually beat a route that is 80% new and mediocre.
 
-Do not allow "unexplored" to force obviously worse or uncertain roads without showing the tradeoff.
+## Escape the suburb quickly
+
+For a rider starting near Philadelphia suburbs, the first problem is often not "find a mountain." It is "stop wasting my limited ride time on traffic lights."
+
+Create an **escape cost** for the first and final legs.
+
+Penalize:
+
+- dense traffic signals
+- high junction density
+- multilane commercial arterials
+- repeated stop signs
+- unnecessary urban zig-zags
+- school/retail corridors when good alternatives exist
+
+Allow unavoidable boring distance, but minimize it.
 
 The route explanation can say:
 
-> +18 minutes · 24 mi of roads you haven't ridden · 2 new discoveries
+> **11 min to the good roads · 54 min backroads · 13 min home**
 
-## Free Ride integration
+That is more useful than a generic "scenic score 87."
 
-Free Ride is the ideal surface for Adventure.
+## Three candidate loops, not twenty
 
-The copilot can occasionally offer one high-value opportunity:
+For a short-session request, generate only three meaningfully different answers.
 
-> FIRE TOWER  
-> 4.2 mi · +11 min  
-> New to you  
-> TAKE
+Example for 90 minutes:
 
-or:
+### More curves
+- 78 min planned
+- 32 curvy miles
+- 11 mi new
+- paved
 
-> GREAT ROAD  
-> 6.8 mi ahead  
-> 8 mi of curves · new to you  
-> TAKE
+### More new roads
+- 80 min planned
+- 24 curvy miles
+- 23 mi new
+- 3 mi gravel
 
-The existing single-offer model should remain. Do not create a scrolling quest feed.
+### More dirt
+- 76 min planned
+- 18 curvy miles
+- 14 mi new
+- 16 mi gravel
 
-## Offline contract
+The user should be able to pick from that screen without opening route details.
 
-The feature should still feel complete with no signal.
+## Free Ride: "one more road" only when it actually fits
 
-Region packs should eventually contain:
+Free Ride should know the rider's time constraint.
 
-- base vector map
-- terrain
-- contours/hillshade
-- road intelligence
-- static World Nodes
-- collection definitions
-- public-land/access context
-- local rider progress
+A dynamic offer can appear only if accepting it still preserves the return buffer.
 
-Dynamic content can degrade:
-
-- live event disappears/stales
-- weather/traffic stale
-- image may be unavailable unless cached
-- spatial asset only appears when downloaded
-
-World Nodes should compile into PMTiles or another region-bounded static artifact rather than requiring API calls while riding.
-
-## Privacy model
-
-Adventure should be local-first.
-
-By default, store:
-
-- discovered node ids
-- ridden segment ids
-- completion state
-- personal collections
-- visit timestamps if required for the feature
-
-locally with the rider's existing ride data.
-
-If community sync arrives later:
-
-- exact home-adjacent history is private by default
-- social sharing is opt-in
-- aggregate exploration statistics are coarse
-- do not expose another rider's live location
-- do not create public exact "last visited by" feeds
-
-## Renderer decision: MapLibre first
-
-OpenGravel currently uses MapLibre GL JS and already has a renderer boundary.
-
-That is an asset, not a limitation.
-
-For the actual riding UI, MapLibre Native can supply:
-
-- vector tiles
-- raster imagery
-- DEM / hillshade
-- fill extrusion
-- offline regions / PMTiles
-- Metal rendering on iOS
-- custom Metal style layers for specialized geometry/effects
-
-That is sufficient for a significantly more "game-world" feeling map without turning the whole app into a game engine.
-
-## Where Unity fits
-
-Unity is useful, but it should be an **optional lab / spatial scene**, not the default navigation renderer.
-
-Reasons:
-
-- Unity-as-a-Library on iOS is full-screen rather than an arbitrary embedded partial view.
-- it adds another runtime and rendering lifecycle
-- unloading retains substantial runtime memory
-- only one Unity runtime can be loaded
-- native/WebView ↔ Unity state synchronization becomes another product-critical path
-- offline map packaging would need a parallel implementation
-- CarPlay still needs a native map/navigation path
-
-A Unity prototype is still worth doing if the goal is to answer:
-
-> Is a fully 3D real-world motorcycle map materially better than our MapLibre/Metal terrain view?
-
-If we run that experiment, isolate it under `tools/maplab-unity/` or a separate prototype app.
-
-Do not introduce it into production navigation before that comparison wins.
-
-## Unity geospatial options
-
-### Do not use the old Niantic Maps SDK
-
-Niantic's Maps SDK for Unity was sunset and its endpoints were shut down in October 2025.
-
-Current Niantic Spatial products are useful for VPS/localization and spatial assets, not as OpenGravel's base cartography stack.
-
-### Mapbox Unity
-
-Mapbox's published Unity SDK v2.1.1 is currently not actively developed and Mapbox says v3 is still in development.
-
-Do not make OpenGravel depend on v2.
-
-Re-evaluate v3 when it is released and stable.
-
-### Cesium for Unity
-
-If a 3D world prototype is desired now, Cesium for Unity is a much stronger research candidate than old Niantic Maps or Mapbox Unity v2:
-
-- WGS84 globe
-- terrain
-- imagery
-- buildings / photogrammetry
-- 3D Tiles
-- custom geospatial content
-- open-source plugin
-
-Use it for the prototype only until mobile thermal, memory, offline, licensing and integration costs are measured.
-
-## Where Niantic Spatial fits
-
-Niantic Spatial should be treated as a **spatial landmark provider / localization system**.
-
-Current useful pieces:
-
-- Scaniverse site capture
-- VPS maps
-- meshes
-- Gaussian splats
-- VPS 2 localization
-- NSDK support for Unity and native platforms
-
-That suggests:
+Good:
 
 ```text
-OpenGravel world node
-        |
-        +-- ordinary node ----------> MapLibre symbol / geometry
-        |
-        +-- 3D asset ---------------> mesh / splat viewer
-        |
-        +-- spatial site -----------> Niantic VPS / AR experience
+NEW TWISTY ROAD
+2.3 mi ahead
++7 min
+Still home by 6:10
+
+[ TAKE ]
 ```
 
-The entire Adventure system must work if `spatialSiteRef` is null.
+Bad:
 
-### Good Niantic examples
+```text
+RARE DISCOVERY!
+Detour now!
+```
 
-- scan a famous covered bridge
-- scan a fire tower / overlook
-- scan an event venue
-- anchor historical annotations to a structure
-- let a stopped rider view a persistent AR marker
-- use VPS to improve orientation at a complex landmark
+If the reserve is gone, the copilot becomes quiet except for navigation/safety information.
 
-### Bad Niantic examples
+## Discoveries support the ride; they are not the game
 
-- every gas station
-- base road rendering
-- turn-by-turn route line
-- terrain for the whole country
-- anything required for navigation
+World Nodes remain useful, but subordinate.
 
-## Gaussian splats are especially interesting
+Good nodes:
 
-Scaniverse can produce Gaussian splats and meshes.
+- covered bridge
+- fire tower
+- overlook
+- waterfall visible from/near road
+- historic road structure
+- ferry
+- unusual roadside object
+- useful rider stop
+- forest entrance
+- dam / reservoir overlook
 
-Niantic's SPZ format is open and is becoming more practical for web/mobile delivery.
+A node can improve a route and make the map richer.
 
-OpenGravel could use a splat as a **3D postcard**:
+It should not force a check-in.
 
-1. rider opens a discovered landmark while stopped
-2. tap "View in 3D"
-3. stream or load the site's optimized splat
-4. orbit the actual location
-5. optionally enter AR/VPS mode
+Passing it can mark it discovered automatically.
 
-That gives us some of the visual magic the user is after without requiring Unity to own navigation.
+Collections remain optional background motivation:
 
-A later offline region pack could optionally contain a tiny set of high-value landmark assets.
+- Covered Bridges
+- Fire Towers
+- River Crossings
+- State Forests
+- Scenic Overlooks
+- Historic Roads
 
-## CarPlay
+No daily streaks. No energy. No coins. No public speed ranking.
 
-Gamification on CarPlay should be far more conservative than on the phone.
+## Map-integrated 3D, not 3D postcards
 
-Use the custom map for:
+The generated concepts exposed the right visual direction: **small 3D objects should live directly in the map**.
 
-- route
-- terrain/cartography
-- critical access/closure state
-- at most one relevant upcoming discovery
+A rider looking at a pitched map should be able to recognize:
 
-Do not draw custom interactive game UI over the CarPlay base map.
+- a covered bridge standing over the stream
+- a fire tower on the ridge
+- a dam across a reservoir
+- a water tower
+- a tunnel portal
+- a ferry crossing
+- a prominent lookout structure
 
-CarPlay's framework owns interaction through its templates. The game/progression detail belongs on the phone or post-ride.
+These are map landmarks, not separate experiences.
 
-## Architecture seam
+### Free/open implementation
 
-Do not add "gamification" conditions throughout React.
+Use reusable low-poly archetypes rather than scanned photoreal landmarks.
 
-Add an application module:
+Potential asset types:
+
+```text
+covered_bridge.glb
+fire_tower.glb
+lookout.glb
+dam.glb
+water_tower.glb
+tunnel_portal.glb
+ferry.glb
+wind_turbine.glb
+camp.glb
+historic_mill.glb
+```
+
+One model can be instanced hundreds of times.
+
+Source placement/orientation from OSM/Wikidata/OpenGravel data.
+
+This gives the "tiny real world" feeling from the concepts for almost no network cost.
+
+### Web renderer
+
+MapLibre GL JS supports 3D custom layers; its official examples show georeferenced glTF models rendered through Three.js.
+
+Implementation experiment:
+
+```text
+MapLibre GL JS
+  + terrain
+  + custom 3D layer
+  + Three.js
+  + GLB archetype pack
+```
+
+This is optional enhancement. A plain symbol always exists as fallback.
+
+### Native iOS renderer
+
+MapLibre Native's iOS Metal backend is production-supported and exposes custom Metal style layers.
+
+Use that path for a future native landmark layer rather than embedding Unity.
+
+### LOD policy
+
+Do not render a miniature city.
+
+Example:
+
+- regional zoom: no 3D landmarks
+- planning zoom: only iconic/high-score landmarks
+- close planning: selected and nearby landmarks
+- riding speed: at most a tiny number ahead/on-route
+- maneuver-heavy state: suppress decorative models
+
+Target an instance budget, not an object-count free-for-all.
+
+## Adventure Vision should be subtle
+
+Adventure Vision answers:
+
+> **Where are the roads I am likely to enjoy?**
+
+It can combine:
+
+- Great Roads curvature
+- gravel evidence
+- terrain relief
+- public-land/forest context
+- low junction density
+- scenic nodes
+- roads not yet ridden
+
+At low zoom it is a soft field.
+
+At higher zoom it resolves to actual road segments.
+
+Never show a giant heatmap during active navigation.
+
+## Progress screen: keep only what motivates another ride
+
+Useful:
+
+- worthwhile road miles explored
+- gravel miles explored
+- new roads this month
+- a map showing where the rider has expanded
+- collections that are naturally geographic
+- favorite roads
+- "areas you haven't ridden yet"
+
+Questionable:
+
+- generic level
+- XP total
+- badges for app usage
+- ride streak
+- arbitrary region percentage
+- leaderboard
+
+The best call to action from Progress is:
+
+> **Find me 60 minutes of new roads**
+
+## Post-ride payoff
+
+The ride summary should answer "was that worth leaving the house for?"
+
+Example:
+
+```text
+87 minutes
+61 miles
+
+18.4 mi new good roads
+6.2 mi new gravel
+1 new favorite corridor
+
+2 discoveries
+Covered bridge
+Reservoir overlook
+
+Your explored map expanded northwest.
+```
+
+Then animate only the newly ridden worthwhile segments onto the map.
+
+Offer field verification after the bike is stopped:
+
+- Still gravel?
+- Gate open?
+- Road paved now?
+- Construction?
+- Surface rougher than mapped?
+
+## PA pilot
+
+Pennsylvania is a good stress test because the product has to work in both suburban short-loop riding and serious state-forest riding.
+
+### Pilot A — Southeast PA short sessions
+
+Goal:
+
+> prove a 60–120 minute loop can feel worthwhile from a suburban start.
+
+Stress:
+
+- urban escape cost
+- traffic signals
+- short backroad fragments
+- Delaware River / Upper Bucks scenery
+- covered bridges / historic structures
+- limited gravel compared with central PA
+- hard return-time constraint
+
+This is the product test that prevents Adventure from becoming useful only to someone already parked next to a national forest.
+
+### Pilot B — Bald Eagle / central PA dual-sport
+
+Use official access data as a truth source.
+
+DCNR states that roads and drivable trails shown on the Bald Eagle State Forest Public Use Map are open to licensed motorcycles year-round, while some purple-marked trails/gated roads have seasonal conditions.
+
+This is exactly why Adventure must separate:
+
+- fun
+- surface
+- legal access
+- seasonal access
+- rider progress
+
+Do not derive access from "someone rode here before."
+
+### PA seed layers
+
+Useful official context:
+
+- PennDOT PA Byways program
+- DCNR public-use maps
+- DCNR forest advisories/access
+- existing OpenGravel USFS MVUM authority where applicable
+- PennDOT traffic/closure/camera work already in OpenGravel
+- NWS weather
+- USGS 3DEP terrain
+
+PennDOT currently lists 21 designated PA Byways, one Forestry Byway, and four National Scenic Byways. They are not automatically "best motorcycle roads", but they are useful seed corridors and scenic evidence.
+
+## Free-first stack
+
+P0 must work with free/open sources:
+
+```text
+MapLibre GL JS / MapLibre Native
+OpenStreetMap / OpenFreeMap / self-hosted vector tiles
+OpenGravel PMTiles
+USGS 3DEP
+Wikidata / Wikipedia / Wikimedia
+PAD-US
+NWS
+public state/federal GIS
+OpenGravel-derived road evidence
+local IndexedDB / native storage
+```
+
+Optional providers may improve quality, but no Adventure feature may require a paid provider to function.
+
+Niantic is out of the core plan.
+
+Unity is out of the core plan.
+
+A future R&D branch can revisit either if they solve a concrete problem better than the free stack.
+
+## Design reference: what to keep from the six screens
+
+### A — Adventure Vision planner
+
+Keep:
+- topographic depth
+- route vs unexplored-road distinction
+- simple summary of new roads/gravel
+- Adventure zones as a planning hint
+
+Reject:
+- too many glowing layers simultaneously
+- route line competing with heatmap
+
+### B — Ride Focus
+
+Keep:
+- large maneuver
+- terrain visible ahead
+- one "new road" metric
+- one upcoming discovery
+
+Reject:
+- four continuously changing metrics if they reduce glanceability
+- big discovery photo while moving
+
+### C — Free Ride copilot
+
+Keep:
+- one high-value suggestion
+- visible `+ minutes`
+- "still home on time"
+
+Reject:
+- full-width promotional card while at speed
+- multiple map callouts
+
+### D — Progress
+
+Keep:
+- map as hero
+- road history
+- a few geographic collections
+
+Reject:
+- gamification becoming the home screen
+- fake completion percentages for arbitrary areas
+
+### E — Quick Escape builder
+
+This is the strongest product direction.
+
+Keep:
+- time first
+- new roads / gravel / scenic as simple objectives
+- back-by constraint
+- immediate generated loop
+
+Change:
+- "Find 3 new roads" to a softer novelty preference
+- avoid exact collectible counts as the primary planning input
+
+### F — Immersive map
+
+Keep:
+- terrain diorama feeling
+- integrated miniature landmarks
+- explored/new road styling
+- minimal chrome
+
+Reject:
+- photo-real scenery as a requirement
+- decorative 3D if it hurts frame rate/readability
+
+## Proposed home action
+
+A single persistent action should expose the whole feature:
+
+```text
+QUICK RIDE
+
+I have [ 90 min ▾ ]
+
+Mood
+[ Curves ] [ New ] [ Gravel ] [ Scenic ]
+
+[ BUILD MY LOOP ]
+```
+
+Remember the rider's usual choices.
+
+A repeat user can be riding in three taps.
+
+## Architecture
+
+Do not scatter game checks throughout the UI.
 
 ```text
 src/application/world/
   types.ts
-  score.ts
-  discovery.ts
+  explorable-road.ts
   progress.ts
+  novelty.ts
   collections.ts
   scene.ts
-  events.ts
-```
 
-Infrastructure:
+src/application/quick-ride/
+  time-budget.ts
+  candidate-score.ts
+  escape-cost.ts
+  build-loop.ts
+  explain.ts
 
-```text
 src/infrastructure/world/
-  compiled-world-source.ts
   rider-world-repository.ts
+  compiled-world-source.ts
+
+src/infrastructure/map/maplibre/
+  adventure-scene.ts
+  landmark-model-layer.ts   // web experiment
 ```
 
-Later native bridge:
+Persist progress locally.
 
-```text
-apps/ios/OpenGravelNavigation/
-  World/
-  Spatial/
-```
+Provider/source data remains separate from rider progress.
 
-Possible persisted events:
+## P0 build slice
 
-```ts
-type WorldEvent =
-  | { type: "node-discovered"; nodeId: string; at: string }
-  | { type: "node-visited"; nodeId: string; at: string }
-  | { type: "segment-first-ridden"; segmentId: string; at: string }
-  | { type: "segment-ridden"; segmentId: string; at: string }
-  | { type: "field-note"; segmentId: string; note: FieldNote; at: string }
-  | { type: "collection-completed"; collectionId: string; at: string };
-```
+Do not start with 3D.
 
-Events make progress reconstructable and keep it separate from provider data.
+Ship the fun loop first.
 
-## Reuse the existing ride-interest system
+1. Define `ExplorableRoad`.
+2. Record ridden explorable segments from ride traces.
+3. Add 45/60/90/120-minute Quick Ride entry.
+4. Add novelty as a capped route-scoring term.
+5. Add urban escape cost.
+6. Produce exactly three candidate loops.
+7. Show new-road miles before ride.
+8. Show new-road miles after ride.
+9. Add Free Ride offer budget guard.
+10. Test in Southeast PA with 60/90/120-minute sessions.
 
-Do not replace `src/application/ride-interest`.
+Acceptance:
 
-Instead:
+> Someone can leave home for 90 minutes, get a route in seconds, ride mostly worthwhile roads, discover some roads they have not ridden, and return with the planned buffer still intact.
 
-```text
-Discover + map layers + places
-          |
-          v
-   canonical World Nodes
-          |
-          +---- planning scene
-          |
-          +---- ride-interest corridor
-          |
-          +---- world progression
-          |
-          +---- post-ride summary
-```
+## P1 visual slice
 
-The ride-interest corridor already solves the hard "what matters ahead of me?" problem.
+After P0 is fun without 3D:
 
-World adds persistence and significance.
+1. explored-road map treatment
+2. Adventure Vision low-zoom field
+3. stronger terrain styling
+4. route ribbon polish
+5. 5–10 reusable GLB landmark archetypes
+6. web Three.js custom-layer proof
+7. native Metal landmark-layer proof
+8. strict LOD / thermal / FPS budgets
 
-## P0 experiment
+The 3D layer has to earn its battery cost.
 
-Before building social systems, badges or Unity:
+## P2 PA data quality
 
-1. compile a PA/NJ World Node set from existing Discover + map sources
-2. rank it and cap density
-3. create local rider progress storage
-4. auto-discover nodes and ridden road segments
-5. add an "Unexplored" planning visualization
-6. show a post-ride new-road/new-place summary
-7. add one understated discovery cue to Ride Focus
-8. verify everything works offline with a PA/NJ pack
+1. authority-aware state-forest/public-use roads
+2. seasonal access
+3. PennDOT/511 incidents and closures
+4. road surface confidence
+5. signal/junction-density escape cost
+6. field verification
+7. regional offline compilation
 
-Success criterion:
+## Explicitly out of scope for core Adventure
 
-> A normal ride through familiar roads should feel calm. A ride into a new area should visibly and audibly reveal that the rider is exploring without requiring screen interaction.
+- Niantic
+- Gaussian splat pipeline
+- AR
+- Pokémon GO data
+- Unity navigation
+- speed leaderboards
+- ride streaks
+- loot/coins/XP
+- tapping to collect while moving
+- "complete every road"
+- social live location
+- cloud-required progression
 
-## P1 immersive map
+## Product test
 
-After P0 works:
+Every proposed feature has to pass this question:
 
-- native MapLibre/Metal prototype
-- richer 3D terrain
-- route ribbon
-- speed-adaptive world-node LOD
-- explored-road visualization
-- one high-quality selected landmark mesh
-- measure FPS, thermals, memory and battery on a real iPhone
+> **Would this make a rider more likely to use a spare 60–120 minutes to go ride?**
 
-Gate:
-
-The immersive view must remain readable in sunlight and cannot compromise navigation or thermal stability.
-
-## P2 spatial landmark prototype
-
-Pick 3–5 locations in the PA/NJ test region.
-
-For each:
-
-- Scaniverse scan
-- generate mesh / splat / VPS map
-- attach spatial asset metadata to World Node
-- provide "View in 3D"
-- test native NSDK/VPS when parked
-
-This proves whether spatial capture produces enough rider value before any broad content program.
-
-## P3 Unity / Cesium research spike
-
-Only after MapLibre/Metal P1 exists.
-
-Build the same 5–10 mile sample area in Unity + Cesium and compare against the native immersive map.
-
-Compare:
-
-- terrain quality
-- building quality
-- route readability
-- World Node presentation
-- cold launch
-- memory
-- thermal behavior
-- battery
-- offline feasibility
-- iOS integration complexity
-- visual quality at motorcycle glance durations
-
-Unity only graduates into the app if it clearly wins a use case that MapLibre/Metal cannot deliver.
-
-## Things to actively reject
-
-- a second independent POI provider framework
-- duplicate map authority for MVUM/access
-- scraping Pokémon GO / Ingress map databases
-- game mechanics that encourage speeding
-- giant floating pins everywhere
-- route-critical information hidden behind a game state
-- rendering every discovery as 3D
-- always-on AR while riding
-- Unity as the only map renderer
-- cloud-only progression
-- gamification that breaks self-hosting
-- AI-generated fake landmarks or fake road conditions
-- a public leaderboard of "fastest roads"
-
-## First code slices
-
-### Slice A — world model
-
-- `WorldNode`
-- `WorldSegment`
-- deterministic adventure score
-- provider provenance
-- density / zoom tier
-- tests
-
-### Slice B — progress
-
-- local IndexedDB repository
-- discovery event reducer
-- segment-first-ridden reducer
-- collection reducer
-- import/export with other local rider data
-
-### Slice C — scene
-
-- world-node scene builder
-- explored-road scene builder
-- speed/motion presentation state
-- max density budgets
-- ride-interest adapter
-
-### Slice D — post-ride
-
-- compute newly ridden roads
-- compute discoveries
-- compute collection changes
-- post-ride summary panel
-
-### Slice E — routing
-
-- optional unexplored-road objective
-- optional World Node objective
-- explicit tradeoff in route explanation
-- no impact on legality/access authority
-
-### Slice F — immersive
-
-- native MapLibre/Metal lab
-- route ribbon
-- terrain lighting
-- high-value node beacon
-- one landmark model/splat
-
-## Acceptance principles
-
-A build is going in the right direction when:
-
-- navigation remains instantly legible
-- unexplored areas make the rider curious
-- revisiting an area shows personal history without visual noise
-- post-ride feels rewarding
-- the rider can understand why a thing is highlighted
-- all authority/provenance remains inspectable
-- static world state is usable offline
-- the feature still works without Niantic, Unity, Mapbox or any proprietary provider
-- optional spatial assets make a few locations special instead of making the whole app dependent on them
+If the answer is "it makes the app more impressive" rather than "it makes the ride easier to start or more fun to take," cut it.
