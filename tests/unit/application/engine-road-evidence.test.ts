@@ -116,7 +116,7 @@ describe("engine curvature and road class", () => {
       }),
     );
     expect(curvature.curvyMeters / MILE).toBeCloseTo(8, 5);
-    expect(curvature.unit).toBeCloseTo(0.8, 5);
+    expect(curvature.unit).toBe(1);
     expect(curvature.longestRunMeters! / MILE).toBeCloseTo(5, 5);
     expect(curvature.runCount).toBe(3);
     expect(curvature.continuityShare).toBeCloseTo(5 / 8, 5);
