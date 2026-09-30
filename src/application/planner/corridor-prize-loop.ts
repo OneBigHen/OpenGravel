@@ -433,7 +433,7 @@ export function searchCorridorPrizeLoops(input: {
     }
 
     if (expanded.length === 0) break;
-    beam = dedupePartials(expanded)
+    beam = [...dedupePartials(expanded)]
       .sort(partialRank)
       .slice(0, options.beamWidth);
   }
