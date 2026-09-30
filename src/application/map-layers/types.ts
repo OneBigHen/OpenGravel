@@ -43,7 +43,7 @@ export interface InfoFeature {
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "pa511";
+export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "traffic-cameras";
 
 export interface MapLayersResult {
   readonly features: readonly InfoFeature[];
