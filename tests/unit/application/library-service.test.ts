@@ -156,6 +156,7 @@ describe("LibraryService", () => {
     const second = await service.saveRecorded(input);
     const rows = await repository.listRideRecords();
     const listed = await service.listRides({ type: "recorded" });
+    const explored = await service.listExploreRides?.();
     const exported = await service.loadExportSource?.(first.rideId);
 
     expect(second).toEqual(first);
@@ -163,6 +164,7 @@ describe("LibraryService", () => {
     expect(rows[0]?.document.provenance).toEqual({ type: "recorded", sourceId: input.recordingId });
     expect(rows[0]?.recordedTrack?.timestamps).toEqual(input.timestamps);
     expect(listed[0]?.recordedTrack?.previewGeometry).toEqual(input.coordinates);
+    expect(explored?.[0]?.geometry).toEqual(input.coordinates);
     expect(exported?.recordedTrack).toEqual({
       coordinates: input.coordinates,
       timestamps: input.timestamps,
