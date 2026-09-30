@@ -61,6 +61,8 @@ describe("summarizeRoadDetails", () => {
     expect(result?.surfaceByRoadClassMeters["asphalt|tertiary"]).toBeCloseTo(step * 2, 3);
     expect(result?.surfaceByRoadClassMeters["gravel|tertiary"]).toBeCloseTo(step, 3);
     expect(result?.curvatureMeters["0.85"]).toBeCloseTo(step * 2, 3);
+    expect(result?.longestBendRunMeters).toBeGreaterThanOrEqual(0);
+    expect(result?.bendRunCount).toBeGreaterThanOrEqual(0);
     // Consecutive steps on the same surface merge into one run, in travel order.
     expect(result?.surfaceRuns?.map(([, key]) => key)).toEqual(["asphalt|tertiary", "gravel|tertiary"]);
     expect(result?.surfaceRuns?.[0]?.[0]).toBeCloseTo(step * 2, 3);
@@ -103,6 +105,21 @@ describe("engine curvature and road class", () => {
     const curvature = engineCurvature(summary());
     expect(curvature.curvyMeters / MILE).toBeCloseTo(4, 5);
     expect(curvature.unit).toBeCloseTo(0.4, 5);
+  });
+
+  it("carries sustained bend diagnostics without changing the aggregate curvature unit", () => {
+    const curvature = engineCurvature(
+      summary({
+        bendMeters: 8 * MILE,
+        longestBendRunMeters: 5 * MILE,
+        bendRunCount: 3,
+      }),
+    );
+    expect(curvature.curvyMeters / MILE).toBeCloseTo(8, 5);
+    expect(curvature.unit).toBeCloseTo(0.8, 5);
+    expect(curvature.longestRunMeters! / MILE).toBeCloseTo(5, 5);
+    expect(curvature.runCount).toBe(3);
+    expect(curvature.continuityShare).toBeCloseTo(5 / 8, 5);
   });
 
   it("measures the backroad share off the arterial network", () => {
