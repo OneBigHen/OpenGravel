@@ -8579,6 +8579,17 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   color: var(--og-ink);
 }
 
+.og-info-card__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 4px;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--og-sandstone) 70%, transparent);
+  border-radius: 12px;
+  background: var(--og-canvas);
+}
+
 .og-info-card__source {
   font-size: 12px;
   line-height: 1.4;
