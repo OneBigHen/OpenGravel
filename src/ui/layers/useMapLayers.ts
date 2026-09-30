@@ -20,7 +20,9 @@ import {
   featureLayerIds,
   isMapLayerId,
   mapLayer,
+  projectAlong,
   type InfoFeature,
+  type LngLat,
   type InfoProvider,
   type MapLayerId,
   type MapLayersSource,
@@ -34,6 +36,9 @@ export interface MapLayersView {
   readonly counts: Readonly<Record<MapLayerId, number>>;
   readonly scene: InfoLayersScene | undefined;
   readonly selected: InfoFeature | null;
+  readonly cameraRouteOnly: boolean;
+  readonly cameraRouteAvailable: boolean;
+  readonly toggleCameraRouteOnly: () => void;
   readonly toggle: (id: MapLayerId) => void;
   readonly clearAll: () => void;
   readonly select: (id: string | null) => void;
@@ -43,11 +48,14 @@ export interface MapLayersView {
 }
 
 const STORAGE_KEY = "ogv.map-layers.v1";
+const CAMERA_ROUTE_ONLY_KEY = "ogv.camera-route-only.v1";
+const CAMERA_ROUTE_CORRIDOR_METERS = 5_000;
 const LOAD_DEBOUNCE_MS = 450;
 
 /** Which provider serves each feature layer, to read `unavailable` per layer. */
 const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   "live-traffic": "tomtom",
+  "traffic-cameras": "traffic-cameras",
   weather: "nws",
   closures: "osm",
   "great-roads": "roads",
@@ -67,6 +75,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
 /** The enabled-layer choice as an external store, so SSR and hydration agree. */
 const enabledListeners = new Set<() => void>();
 let enabledSnapshot: readonly MapLayerId[] | null = null;
+const cameraRouteListeners = new Set<() => void>();
+let cameraRouteSnapshot: boolean | null = null;
 const NONE: readonly MapLayerId[] = [];
 
 function subscribeEnabled(listener: () => void): () => void {
@@ -104,6 +114,51 @@ function writeEnabled(ids: readonly MapLayerId[]): void {
   }
 }
 
+function subscribeCameraRouteOnly(listener: () => void): () => void {
+  cameraRouteListeners.add(listener);
+  return () => cameraRouteListeners.delete(listener);
+}
+
+function readCameraRouteOnly(): boolean {
+  try {
+    return window.localStorage.getItem(CAMERA_ROUTE_ONLY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function cameraRouteOnlyNow(): boolean {
+  if (cameraRouteSnapshot === null) cameraRouteSnapshot = readCameraRouteOnly();
+  return cameraRouteSnapshot;
+}
+
+function setCameraRouteOnlyNow(next: boolean): void {
+  cameraRouteSnapshot = next;
+  try {
+    window.localStorage.setItem(CAMERA_ROUTE_ONLY_KEY, next ? "1" : "0");
+  } catch {
+    // A per-device convenience only.
+  }
+  for (const listener of cameraRouteListeners) listener();
+}
+
+/**
+ * Keeps camera markers close enough to be useful for a planned ride while
+ * leaving every other enabled information layer untouched.
+ */
+export function filterTrafficCamerasToRoute(
+  features: readonly InfoFeature[],
+  route: readonly LngLat[],
+  maxOffMeters = CAMERA_ROUTE_CORRIDOR_METERS,
+): readonly InfoFeature[] {
+  if (route.length < 2) return features;
+  return features.filter((feature) => {
+    if (feature.layerId !== "traffic-cameras") return true;
+    if (feature.geometry.type !== "Point") return false;
+    return projectAlong(route, feature.geometry.coordinates).offMeters <= maxOffMeters;
+  });
+}
+
 /** The web-mercator zoom a view of this width shows, from its longitude span. */
 export function zoomOf(extent: MapExtent, widthPx: number): number {
   const span = Math.max(1e-6, extent.maxLon - extent.minLon);
@@ -114,7 +169,10 @@ function emptyRecord<T>(value: T): Record<MapLayerId, T> {
   return Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, value])) as Record<MapLayerId, T>;
 }
 
-export function useMapLayers(source: MapLayersSource | undefined): MapLayersView {
+export function useMapLayers(
+  source: MapLayersSource | undefined,
+  cameraRoute: readonly LngLat[] | null = null,
+): MapLayersView {
   const enabled = useSyncExternalStore(subscribeEnabled, enabledNow, () => NONE);
   const [extent, setExtent] = useState<MapExtent | null>(null);
   const [result, setResult] = useState<{
@@ -123,6 +181,16 @@ export function useMapLayers(source: MapLayersSource | undefined): MapLayersView
     readonly unavailable: ReadonlySet<InfoProvider>;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const cameraRouteOnly = useSyncExternalStore(
+    subscribeCameraRouteOnly,
+    cameraRouteOnlyNow,
+    () => false,
+  );
+
+  const cameraRouteAvailable = cameraRoute !== null && cameraRoute.length >= 2;
+  const toggleCameraRouteOnly = useCallback((): void => {
+    setCameraRouteOnlyNow(!cameraRouteOnlyNow());
+  }, []);
 
   const toggle = useCallback((id: MapLayerId): void => {
     const current = enabledNow();
@@ -180,9 +248,16 @@ export function useMapLayers(source: MapLayersSource | undefined): MapLayersView
 
   // The last answer stays on screen while the next view loads, trimmed to the
   // layers that are still on and loadable.
-  const features = useMemo(
+  const rawFeatures = useMemo(
     () => (result === null ? [] : result.features.filter((feature) => loadable.includes(feature.layerId))),
     [loadable, result],
+  );
+  const features = useMemo(
+    () =>
+      cameraRouteOnly && cameraRouteAvailable && cameraRoute !== null
+        ? filterTrafficCamerasToRoute(rawFeatures, cameraRoute)
+        : rawFeatures,
+    [cameraRoute, cameraRouteAvailable, cameraRouteOnly, rawFeatures],
   );
   const pending = loadable.length > 0 && result?.key !== loadKey;
   const unavailable = useMemo(() => result?.unavailable ?? new Set<InfoProvider>(), [result]);
@@ -241,5 +316,19 @@ export function useMapLayers(source: MapLayersSource | undefined): MapLayersView
     return intent;
   }, []);
 
-  return { enabled, status, counts, scene, selected, toggle, clearAll, select: setSelectedId, onViewport, interceptIntent };
+  return {
+    enabled,
+    status,
+    counts,
+    scene,
+    selected,
+    cameraRouteOnly,
+    cameraRouteAvailable,
+    toggleCameraRouteOnly,
+    toggle,
+    clearAll,
+    select: setSelectedId,
+    onViewport,
+    interceptIntent,
+  };
 }

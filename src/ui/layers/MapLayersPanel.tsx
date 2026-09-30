@@ -8,7 +8,7 @@
  * one tap away, because community-mapped data must never pass for authority.
  */
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   MAP_LAYER_CATEGORIES,
@@ -23,6 +23,9 @@ export interface MapLayersPanelProps {
   readonly enabled: readonly MapLayerId[];
   readonly status: Readonly<Record<MapLayerId, MapLayerStatus>>;
   readonly counts: Readonly<Record<MapLayerId, number>>;
+  readonly cameraRouteOnly: boolean;
+  readonly cameraRouteAvailable: boolean;
+  readonly onToggleCameraRouteOnly: () => void;
   readonly onToggle: (id: MapLayerId) => void;
   readonly onClearAll: () => void;
 }
@@ -48,12 +51,14 @@ function LayerRow({
   status,
   count,
   onToggle,
+  extra,
 }: {
   readonly layer: MapLayerDefinition;
   readonly on: boolean;
   readonly status: MapLayerStatus;
   readonly count: number;
   readonly onToggle: () => void;
+  readonly extra?: ReactNode;
 }) {
   const [about, setAbout] = useState(false);
   const label = statusText(layer, status, count);
@@ -95,11 +100,21 @@ function LayerRow({
           <strong>{layer.source}.</strong> {layer.caveat}
         </p>
       ) : null}
+      {extra}
     </li>
   );
 }
 
-export function MapLayersPanel({ enabled, status, counts, onToggle, onClearAll }: MapLayersPanelProps) {
+export function MapLayersPanel({
+  enabled,
+  status,
+  counts,
+  cameraRouteOnly,
+  cameraRouteAvailable,
+  onToggleCameraRouteOnly,
+  onToggle,
+  onClearAll,
+}: MapLayersPanelProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -160,6 +175,27 @@ export function MapLayersPanel({ enabled, status, counts, onToggle, onClearAll }
                       status={status[layer.id]}
                       count={counts[layer.id]}
                       onToggle={() => onToggle(layer.id)}
+                      extra={
+                        layer.id === "traffic-cameras" && enabled.includes("traffic-cameras") ? (
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={cameraRouteOnly}
+                            disabled={!cameraRouteAvailable}
+                            className="og-layers__subswitch"
+                            data-on={cameraRouteOnly ? "true" : "false"}
+                            onClick={onToggleCameraRouteOnly}
+                          >
+                            <span>
+                              <strong>Along route only</strong>
+                              <small>
+                                {cameraRouteAvailable ? "Within about 3 mi of the selected route" : "Select a route first"}
+                              </small>
+                            </span>
+                            <span className="og-layers__toggle" aria-hidden="true" />
+                          </button>
+                        ) : null
+                      }
                     />
                   ))}
                 </ul>

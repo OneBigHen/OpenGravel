@@ -20,7 +20,14 @@ import {
   type MapLayersResult,
 } from "@/application/map-layers";
 import { knownRoadsFromEnv } from "@/server/roads/known-roads-db";
+import {
+  cameraFetchTarget,
+  createExactOriginPolicy,
+  DEFAULT_CAMERA_METADATA_ORIGINS,
+  fetchPinnedCameraUrl,
+} from "@/server/traffic-cameras/url-security";
 
+import { trafficCamerasProvider } from "./traffic-cameras";
 import {
   knownRoadsProvider,
   nwsAlertsProvider,
@@ -114,6 +121,7 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
   return [
     tomtomStopsProvider,
     tomtomIncidentsProvider,
+    trafficCamerasProvider,
     nwsAlertsProvider,
     knownRoadsProvider(knownRoadsFromEnv(env)),
     overpassProvider,
@@ -146,7 +154,16 @@ export async function handleMapLayersRequest(
     const cached = cache.get(key);
     if (cached !== undefined && cached.expiresAt > now()) return cached.features;
     try {
-      const features = await provider.load(view, wanted, context);
+      // Camera catalogues and session exchanges share a fixed metadata trust
+      // boundary. A dependency-injected transport remains available to tests.
+      const cameraPolicy = provider.id === "traffic-cameras" && deps.fetch === undefined
+        ? createExactOriginPolicy([...Object.values(DEFAULT_CAMERA_METADATA_ORIGINS).flat(), "https://publicapi.ohgo.com"])
+        : null;
+      const providerContext = cameraPolicy === null ? context : {
+        ...context,
+        fetch: ((input, init) => fetchPinnedCameraUrl(cameraPolicy, cameraFetchTarget(input), init)) as typeof fetch,
+      };
+      const features = await provider.load(view, wanted, providerContext);
       remember(key, features, now() + provider.ttlMs);
       return features;
     } catch {

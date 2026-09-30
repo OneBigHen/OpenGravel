@@ -14,6 +14,7 @@ export type MapLayerId =
   | "terrain-3d"
   | "traffic-flow"
   | "live-traffic"
+  | "traffic-cameras"
   | "weather"
   | "closures"
   | "great-roads"
@@ -97,6 +98,18 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     minZoom: 8,
     color: "#a83e32",
     glyph: "!",
+  },
+  {
+    id: "traffic-cameras",
+    name: "Traffic cameras",
+    category: "conditions",
+    kind: "features",
+    legend: "Tap a roadside camera to check conditions now",
+    source: "State DOT and 511 camera feeds",
+    caveat: "Coverage and playback differ by state. Cameras load only for the visible region; video opens only on demand.",
+    minZoom: 8,
+    color: "#6b4f8a",
+    glyph: "◉",
   },
   {
     id: "weather",
