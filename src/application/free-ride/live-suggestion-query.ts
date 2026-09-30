@@ -29,7 +29,6 @@ import {
   findFreeRideNetworkOpportunities,
   freeRideFragmentTraversalRatio,
   type FreeRideNetworkIndex,
-  type FreeRideNetworkOpportunity,
 } from "./network-opportunities";
 
 export interface LiveSuggestionRouteProvider {
