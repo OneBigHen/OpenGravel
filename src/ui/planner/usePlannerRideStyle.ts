@@ -20,6 +20,7 @@ import {
   loopTimeCommand,
   rideShapeCommand,
   roadCharacterCommand,
+  noveltyPreferenceCommand,
   surfacePreferenceCommand,
   tollPolicyCommand,
   type RideDocumentStore,
@@ -34,7 +35,7 @@ export function usePlannerRideStyle(input: {
   readonly rideDocumentStore: RideDocumentStore;
 }): RideStyleControlsModel {
   const { document, rideDocumentStore } = input;
-  const { shape, time, roadCharacter, surface, avoidHighways, tollPolicy } = document.intent;
+  const { shape, time, roadCharacter, noveltyPreference, surface, avoidHighways, tollPolicy } = document.intent;
 
   const actions = useMemo(() => {
     const dispatch = (build: (current: RideDocument) => RideCommand): void => {
@@ -52,6 +53,8 @@ export function usePlannerRideStyle(input: {
         ),
       setRoadCharacter: (next: RideDocument["intent"]["roadCharacter"]): void =>
         dispatch((current) => roadCharacterCommand(current, next)),
+      setNoveltyPreference: (next: NonNullable<RideDocument["intent"]["noveltyPreference"]>): void =>
+        dispatch((current) => noveltyPreferenceCommand(current, next)),
       setSurface: (next: RideDocument["intent"]["surface"]["preference"]): void =>
         dispatch((current) => surfacePreferenceCommand(current, next)),
       setAvoidHighways: (avoid: boolean): void =>
@@ -74,11 +77,12 @@ export function usePlannerRideStyle(input: {
       shape: shapeChoice(shape),
       loopMinutes: time.kind === "budget" ? time.targetMinutes : DEFAULT_LOOP_MINUTES,
       roadCharacter,
+      noveltyPreference: noveltyPreference ?? "balanced",
       surface: surface.preference,
       avoidHighways,
       avoidTolls: tollPolicy === "avoid",
     }),
-    [shape, time, roadCharacter, surface.preference, avoidHighways, tollPolicy],
+    [shape, time, roadCharacter, noveltyPreference, surface.preference, avoidHighways, tollPolicy],
   );
 
   return useMemo(() => ({ view, actions }), [view, actions]);
