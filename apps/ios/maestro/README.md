@@ -1,9 +1,20 @@
-# iOS smoke flow
+# iOS Maestro flows
 
-The Maestro flow requires a booted iOS simulator and a built OpenGravel app. Set `CAPACITOR_SERVER_URL` during `npm run sync` so the shell loads a reachable OpenGravel deployment.
+The deterministic iOS flows live at the repo root in [`.maestro/`](../../../.maestro/),
+one per ride-critical acceptance mission (M11 plan-and-start, M12 free ride,
+M13 record, M14 resume-ride, M16 offline ride). The old
+`apps/ios/maestro/plan-and-start.yaml` was moved to
+`.maestro/M11-plan-and-start.yaml`; the full per-mission manifests are in
+[`acceptance/manifests/`](../../../acceptance/manifests/).
 
-Run the flow with:
+The flows require a booted iOS simulator and a built OpenGravel app. Set
+`CAPACITOR_SERVER_URL` during `npm run sync` so the shell loads a reachable
+OpenGravel deployment. iOS flows only run on macOS (Xcode + simulator);
+see [`.github/workflows/acceptance.yml`](../../../.github/workflows/acceptance.yml)
+and [`acceptance/README.md`](../../../acceptance/README.md).
+
+Run the suite with:
 
 ```sh
-maestro test plan-and-start.yaml
+maestro test .maestro/ --format junit --output maestro-report.xml
 ```
