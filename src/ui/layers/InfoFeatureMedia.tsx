@@ -58,12 +58,10 @@ function LiveCamera({ url, preview, name, sourceHref }: {
     const unavailable = () => {
       if (!closed) setError("Live camera is unavailable. Try the provider camera.");
     };
-    video.addEventListener("error", unavailable);
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = url;
-      // Browser gesture rules may require a second tap on the native controls.
-      void video.play().catch(() => undefined);
-    } else {
+    let mseStarted = false;
+    const startMse = () => {
+      if (closed || mseStarted) return;
+      mseStarted = true;
       void import("hls.js").then(({ default: Hls }) => {
         if (closed) return;
         if (!Hls.isSupported()) {
@@ -81,10 +79,28 @@ function LiveCamera({ url, preview, name, sourceHref }: {
         hls.attachMedia(video);
         hls.loadSource(url);
       }).catch(unavailable);
+    };
+    const mediaError = () => {
+      if (closed) return;
+      if (mseStarted) { unavailable(); return; }
+      // Some browsers advertise native HLS but cannot decode a provider stream.
+      // Release that source before trying MSE, once, after the explicit request.
+      video.pause();
+      video.removeAttribute("src");
+      startMse();
+      video.load();
+    };
+    video.addEventListener("error", mediaError);
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = url;
+      // Browser gesture rules may require a second tap on the native controls.
+      void video.play().catch(() => undefined);
+    } else {
+      startMse();
     }
     return () => {
       closed = true;
-      video.removeEventListener("error", unavailable);
+      video.removeEventListener("error", mediaError);
       player?.destroy();
       video.pause();
       video.removeAttribute("src");
