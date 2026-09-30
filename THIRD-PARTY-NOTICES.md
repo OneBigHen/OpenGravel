@@ -18,3 +18,17 @@ Ride at your own judgement. Some roads close seasonally, and gates, closures and
 `tests/fixtures/offline-regions/lehigh-fixture/` and `tests/fixtures/basemap/lehigh-fixture.pmtiles` contain a small clipped Pennsylvania road and basemap fixture derived from OpenStreetMap data supplied by [Geofabrik](https://download.geofabrik.de/north-america/us/pennsylvania.html). The source snapshot date and coverage are recorded in the region manifest.
 
 Attribution: **© OpenStreetMap contributors**. The fixture data is available under the [Open Database License 1.0 (ODbL)](https://opendatacommons.org/licenses/odbl/1-0/). It is included for automated tests; it is not a ride catalog or navigation recommendation. This data has its own license and is not relicensed under the project's AGPL.
+
+## StormScope camera registry
+
+When `STORMSCOPE_CAMERAS_ENABLED=1`, OpenGravel can read the geographically
+sharded camera index published by [StormScope](https://github.com/SysAdminDoc/StormScope)
+as a nationwide fallback when a dedicated state adapter is unavailable. OpenGravel
+filters that corpus to DOT traffic-camera records in the current map view and
+does not vendor the full dataset into this repository.
+
+StormScope is Copyright © 2026 SysAdminDoc and is available under the
+[MIT License](https://github.com/SysAdminDoc/StormScope/blob/master/LICENSE).
+The camera feeds themselves remain subject to their originating providers'
+terms and attribution; StormScope's normalized metadata does not relicense
+upstream camera imagery or video.
