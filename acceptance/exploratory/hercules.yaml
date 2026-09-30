@@ -1,0 +1,37 @@
+# Hercules exploratory lane — SKETCH, not a working config.
+# See acceptance/exploratory/README.md. Hercules is not vendored here;
+# wire this up when the exploratory lane is funded with a cheap model.
+version: 1
+
+# The charter: the same Gherkin the deterministic lanes implement.
+missions:
+  glob: "acceptance/features/M*.feature"
+  # Behavior-level charters, never click scripts.
+
+model:
+  tier: cheap
+  # Dirt-cheap model only. The expensive model is reserved for
+  # novel/reproducible bugs the deterministic lanes cannot explain.
+
+target:
+  # Exploratory needs the REAL app, not the fixture-mode gate.
+  base_url: "${OGV_DEPLOYMENT_URL}"
+  # Never point this at the Playwright fixture server: findings against
+  # canned answers are findings about the fixtures.
+
+exploration:
+  modes: [ui, api, accessibility, visual]
+  max_steps_per_mission: 60
+  # Do NOT re-execute deterministic missions; fuzz around them.
+  forbid_deterministic_rerun: true
+
+reporting:
+  format: junit
+  output: "qa-out/hercules-report.xml"
+  # aggregate.mjs --hercules folds this into QA_CAMPAIGN.json
+  # under mission.exploratory (findings only, never status).
+
+triage:
+  # Anything Hercules discovers becomes a CANDIDATE deterministic
+  # Playwright/Maestro regression test, filed for human review.
+  auto_file_candidates: false
