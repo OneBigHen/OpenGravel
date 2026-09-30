@@ -11,7 +11,7 @@
 
 /** Words that describe riding, not a destination. */
 const RIDE_WORDS =
-  /\b(loop|round ?trip|twist(y|ies)|curv(y|es)|windy|backroads?|back roads?|gravel|dirt|unpaved|paved|scenic|highways?|interstates?|tolls?|avoid|hours?|hrs?|minutes?|mins?|miles?|mi|km|ride|riding|cruise|rip|spirited|dual ?sport|adv|return(ing)?|home by|back by|lunch|coffee|breakfast)\b/i;
+  /\b(loop|round ?trip|twist(y|ies)|curv(y|es)|windy|backroads?|back roads?|gravel|dirt|unpaved|paved|scenic|highways?|interstates?|tolls?|avoid|hours?|hrs?|minutes?|mins?|miles?|mi|km|ride|riding|cruise|rip|spirited|dual ?sport|adv|new roads?|unridden|familiar|haven'?t ridden|never ridden|not ridden|return(ing)?|home by|back by|lunch|coffee|breakfast)\b/i;
 
 /** "2h", "90 min", "1.5 hours", "60mi": a duration or a distance. */
 const AMOUNT = /\b\d+(\.\d+)?\s?(h|hr|hrs|hours?|m|min|mins|minutes?|mi|miles?|km)\b/i;
