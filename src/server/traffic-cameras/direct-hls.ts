@@ -8,7 +8,6 @@
 
 import {
   decryptPa511RelayToken,
-  encryptPa511RelayToken,
   rewritePa511Manifest,
 } from "@/server/traffic-cameras/pa511-hls";
 import {
@@ -17,7 +16,6 @@ import {
 } from "@/server/traffic-cameras/registry";
 import type { ProviderContext } from "@/server/map-layers/providers";
 
-const TOKEN_TTL_MS = 10 * 60_000;
 const SUPPORTED_DIRECT_STATES = new Set<TrafficCameraState>(["NJ", "DE", "MD", "VA", "WV"]);
 
 export interface DirectCameraHlsDeps {
