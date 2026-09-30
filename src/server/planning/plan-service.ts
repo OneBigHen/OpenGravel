@@ -257,11 +257,8 @@ function pipelineIntentFromRequest(request: ProviderRouteRequest): PipelineInten
     haversine(request.origin, request.destination) <= LOOP_ENDPOINT_TOLERANCE_METERS;
   return {
     shape: closesLoop ? "loop" : "destination",
-    // `roadCharacter` is deliberately absent: the request carries the engine
-    // profile and two road characters map to `motorcycle_fastest` (OGV-D-153),
-    // so the server cannot recover the authored character and the policy's
-    // neutral character applies. The client controller passes the real intent.
-    //
+    // The request carries rider-facing scoring context because provider profiles
+    // cannot reconstruct road character or personal familiarity.
     // `surface` is inferable in exactly one direction: the adventure profile is
     // reachable only through the surface override, so seeing it proves the rider
     // prefers non-paved and the surface-targeted lane is offered (OGV-D-209).
@@ -271,6 +268,7 @@ function pipelineIntentFromRequest(request: ProviderRouteRequest): PipelineInten
     ...(request.options.roadCharacter !== undefined
       ? { roadCharacter: request.options.roadCharacter }
       : {}),
+    noveltyPreference: request.options.noveltyPreference ?? "balanced",
     ...(request.options.surfacePreference !== undefined
       ? { surface: { preference: request.options.surfacePreference } }
       : profileImpliesNonPavedSurface(request.profile)
