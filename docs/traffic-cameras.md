@@ -6,7 +6,47 @@ This is the implementation note for the **Traffic cameras** map layer.
 
 OpenGravel should show the cameras that matter to the rider, not build a camera wall. When the layer is enabled, the server enumerates the Pennsylvania camera catalogue, keeps a short-lived cache, and sends only cameras inside the current bounded map view to the browser. Tapping a marker opens the normal map-layer card with the current image.
 
-The feature is intentionally provider-neutral at the application/UI boundary. Pennsylvania is the first adapter; New Jersey, Maryland, Virginia and other 511 feeds can later emit the same `InfoFeature.media` contract.
+The feature is provider-neutral at the application/UI boundary. The current regional implementation supports Pennsylvania, New Jersey, New York, Delaware, Maryland, Virginia, West Virginia, and Ohio through the same `InfoFeature.media` contract. The aggregate provider only contacts states whose coarse state bounds intersect the current map view.
+
+## Current regional support
+
+| State | Discovery source | Media | Auth/config |
+| --- | --- | --- | --- |
+| PA | 511PA catalogue; migrate discovery to PennDOT public ArcGIS | still + tokenized HLS | no key for catalogue; video opt-in |
+| NJ | 511NJ public account flow | direct HLS | public-login flow; no user credentials |
+| NY | 511NY public CCTV list | still + provider video URL | no user credentials |
+| DE | DelDOT TMC camera JSON | direct HLS | no key |
+| MD | Maryland CHART camera JSON | direct/public video | no key |
+| VA | VDOT 511 camera GeoJSON | direct stream URL | no key |
+| WV | WV511 camera GeoJSON | direct HLS | no key |
+| OH | documented OHGO Camera API | refreshed still images | `OHGO_API_KEY` required |
+
+Configuration:
+
+```env
+TRAFFIC_CAMERAS_ENABLED=1
+TRAFFIC_CAMERAS_STATES=PA,NJ,NY,DE,MD,VA,WV,OH
+OHGO_API_KEY=
+
+# Recommended for same-origin playback of NJ/DE/MD/VA/WV and can also be
+# reused by PA unless PA511_VIDEO_PROXY_SECRET overrides it.
+TRAFFIC_CAMERA_VIDEO_PROXY_SECRET=<private random value, at least 24 chars>
+```
+
+`PA511_CAMERAS_ENABLED=1` remains supported as a backwards-compatible PA-only switch.
+
+### Same-origin direct-HLS relay
+
+NJ, DE, MD, VA, and WV publish or expose an HLS URL directly from their camera metadata. When `TRAFFIC_CAMERA_VIDEO_PROXY_SECRET` is configured, OpenGravel replaces that external playback URL with a same-origin relay URL only for the selected camera. The relay:
+
+1. reloads/validates the selected state camera by ID;
+2. fetches the upstream playlist using the state site's Origin/Referer;
+3. rewrites child playlists, keys, init fragments, and media segments through OpenGravel;
+4. encrypts/authenticates short-lived upstream resource URLs using AES-256-GCM;
+5. forwards range requests and media content types;
+6. never preloads or autoplays a wall of streams.
+
+Without the relay secret, the camera card can fall back to the state's direct playback URL where the browser supports it.
 
 ## Sources evaluated
 
@@ -32,14 +72,15 @@ This adapter is opt-in with:
 PA511_CAMERAS_ENABLED=1
 ```
 
-Experimental in-card video is separately opt-in:
+PA's DIVAS-backed in-card video is separately opt-in:
 
 ```env
 PA511_VIDEO_ENABLED=1
-PA511_VIDEO_PROXY_SECRET=<private random value, at least 24 characters>
+# Optional override. If omitted, TRAFFIC_CAMERA_VIDEO_PROXY_SECRET is used.
+PA511_VIDEO_PROXY_SECRET=
 ```
 
-The relay resolves only the selected camera, fetches the 511PA/DIVAS HLS playlist on the server, rewrites child playlists/segments back through the same-origin OpenGravel endpoint, and encrypts the short-lived upstream resource URLs with AES-GCM before they appear in browser requests. It does not expose the 511PA session cookie or anti-CSRF token.
+The PA relay resolves only the selected camera, fetches the 511PA/DIVAS HLS playlist on the server, rewrites child playlists/segments back through the same-origin OpenGravel endpoint, and encrypts the short-lived upstream resource URLs with AES-GCM before they appear in browser requests. It does not expose the 511PA session cookie or anti-CSRF token.
 
 The public OpenGravel demo should leave this unset. A five-minute process cache prevents every map pan from re-enumerating Pennsylvania.
 
@@ -98,5 +139,7 @@ The current 511PA implementation uses tokenized HLS. The reference implementatio
 - Add clustering when dense urban views become noisy.
 - Add camera-near-route mode so a planned ride can show only cameras within a corridor.
 - Add provider health metrics and stale-image detection.
-- Add NJ 511 and neighboring states using the same media contract.
+- Live-test each regional adapter and promote only stable sources to default-on in shared deployments.
+- Add camera-source health diagnostics per state so one broken feed does not look like an empty map.
+- Expand beyond the Mid-Atlantic using the same adapter registry, prioritizing documented public APIs and stable GeoJSON feeds.
 - Prefer the official PennDOT feed adapter when credentials/license approval are available.
