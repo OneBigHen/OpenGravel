@@ -554,6 +554,7 @@ function canonicalIntentStructure(
     time: canonicalTime(intent.time),
     departure: canonicalDeparture(intent.departure),
     roadCharacter: intent.roadCharacter,
+    noveltyPreference: intent.noveltyPreference ?? "balanced",
     surface: canonicalSurface(intent.surface),
     terrain: intent.terrain.level,
     traffic: intent.traffic,
