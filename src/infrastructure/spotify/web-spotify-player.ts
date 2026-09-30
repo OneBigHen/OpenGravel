@@ -40,13 +40,14 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
   private stateFlight: Promise<void> | null = null;
   private readonly visibilityListener = (): void => {
     if (document.visibilityState === "visible") {
-      this.stopRetry();
-      void this.loadState();
+      if (this.retryAt !== null) this.scheduleRetryTimer();
+      else void this.loadState();
     }
     else this.stopRefresh();
   };
   private refreshTimer: number | null = null;
   private retryTimer: number | null = null;
+  private retryAt: number | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -130,16 +131,18 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
     const result = await this.request("/api/spotify/state");
     if (this.disposed || result === null || generation !== this.sequence) return;
     this.publish(mapResponse(result, this.current));
+    this.stopRetry();
     this.stopRefresh();
     if (this.current.connection === "connected" && document.visibilityState === "visible") {
       this.refreshTimer = window.setInterval(() => {
         if (document.visibilityState === "visible") void this.loadState();
       }, 15_000);
-    } else if (["rate_limited", "network", "spotify_unavailable"].includes(result.code ?? "") && document.visibilityState === "visible") {
-      this.retryTimer = window.setTimeout(() => {
-        this.retryTimer = null;
-        if (!this.disposed && document.visibilityState === "visible") void this.loadState();
-      }, Math.min(60_000, Math.max(1_000, (result.retryAfterSeconds ?? 15) * 1_000)));
+    } else if (["rate_limited", "network", "spotify_unavailable"].includes(result.code ?? "")) {
+      const retryAfterSeconds = Number.isFinite(result.retryAfterSeconds)
+        ? Math.max(1, result.retryAfterSeconds ?? 15)
+        : 15;
+      this.retryAt = Date.now() + retryAfterSeconds * 1_000;
+      this.scheduleRetryTimer();
     }
   }
 
@@ -150,9 +153,26 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
   }
 
   private stopRetry(): void {
-    if (this.retryTimer === null) return;
-    window.clearTimeout(this.retryTimer);
+    if (this.retryTimer !== null) window.clearTimeout(this.retryTimer);
     this.retryTimer = null;
+    this.retryAt = null;
+  }
+
+  private scheduleRetryTimer(): void {
+    if (this.retryAt === null || this.disposed) return;
+    if (this.retryTimer !== null) window.clearTimeout(this.retryTimer);
+    const remaining = Math.max(0, this.retryAt - Date.now());
+    this.retryTimer = window.setTimeout(() => {
+      this.retryTimer = null;
+      if (this.retryAt === null || this.disposed) return;
+      if (Date.now() < this.retryAt) {
+        this.scheduleRetryTimer();
+        return;
+      }
+      if (document.visibilityState !== "visible") return;
+      this.retryAt = null;
+      void this.loadState();
+    }, remaining);
   }
 
   private async queueCommand(command: "play" | "pause" | "next" | "previous"): Promise<void> {

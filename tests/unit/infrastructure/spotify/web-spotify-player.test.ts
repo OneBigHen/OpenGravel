@@ -79,6 +79,38 @@ describe("web Spotify player", () => {
     vi.useRealTimers();
   });
 
+  it("preserves a long Retry-After across hidden and visible transitions", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: "rate_limited", retryAfterSeconds: 120 }), { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ connection: "connected", isPlaying: false, track: null, errorMessage: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const player = createWebSpotifyPlayer();
+    const setVisibility = (visibilityState: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value: visibilityState });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+
+    try {
+      await Promise.resolve();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(60_000);
+      setVisibility("hidden");
+      setVisibility("visible");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(59_999);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      await Promise.resolve();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(player.snapshot().connection).toBe("connected");
+    } finally {
+      setVisibility("visible");
+      player.dispose();
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps transient transport errors recoverable while the page is visible", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn()
