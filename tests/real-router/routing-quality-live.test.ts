@@ -135,25 +135,25 @@ function candidateReport(
     curvatureUnit: curvature === null ? null : round(curvature.unit, 4),
     backroadShare: backroads === null ? null : round(backroads, 4),
     pavedShare:
-      surface === null || surface.totalMeters <= 0
+      surface === null || summary === undefined || summary.totalMeters <= 0
         ? null
-        : round(
-            (surface.pavedMeters + surface.inferredPavedMeters) /
-              surface.totalMeters,
-            4,
-          ),
+        : round(surface.pavedMeters / summary.totalMeters, 4),
+    inferredPavedShare:
+      surface === null || summary === undefined || summary.totalMeters <= 0
+        ? null
+        : round(surface.inferredPavedMeters / summary.totalMeters, 4),
     unpavedShare:
-      surface === null || surface.totalMeters <= 0
+      surface === null || summary === undefined || summary.totalMeters <= 0
         ? null
         : round(
             (surface.gravelMeters + surface.dirtMeters) /
-              surface.totalMeters,
+              summary.totalMeters,
             4,
           ),
     unknownSurfaceShare:
-      surface === null || surface.totalMeters <= 0
+      surface === null || summary === undefined || summary.totalMeters <= 0
         ? null
-        : round(surface.unknownMeters / surface.totalMeters, 4),
+        : round(surface.unknownMeters / summary.totalMeters, 4),
     maneuvers: routeManeuverCount(candidate),
     shortManeuvers: shortManeuverCount(candidate),
   };
