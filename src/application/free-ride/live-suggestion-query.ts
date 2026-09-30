@@ -44,7 +44,88 @@ export interface LiveSuggestionRouteProvider {
 }
 
 const NETWORK_MINIMUM_TRAVERSAL_RATIO = 0.6;
+const NETWORK_MINIMUM_CATALOG_UTILITY = 0.6;
+const NETWORK_MINIMUM_CATALOG_CONFIDENCE = 0.65;
+const NETWORK_PROBE_DEADLINE_MS = 2_500;
 const MPS_TO_MPH = 2.2369362921;
+
+export interface LiveSuggestionNetworkPolicy {
+  readonly minimumExpectedUtility?: number;
+  readonly minimumConfidence?: number;
+  readonly probeDeadlineMs?: number;
+}
+
+interface ResolvedLiveSuggestionNetworkPolicy {
+  readonly minimumExpectedUtility: number;
+  readonly minimumConfidence: number;
+  readonly probeDeadlineMs: number;
+}
+
+function resolvedNetworkPolicy(
+  policy: LiveSuggestionNetworkPolicy | undefined,
+): ResolvedLiveSuggestionNetworkPolicy {
+  const minimumExpectedUtility =
+    policy?.minimumExpectedUtility ?? NETWORK_MINIMUM_CATALOG_UTILITY;
+  const minimumConfidence =
+    policy?.minimumConfidence ?? NETWORK_MINIMUM_CATALOG_CONFIDENCE;
+  const probeDeadlineMs =
+    policy?.probeDeadlineMs ?? NETWORK_PROBE_DEADLINE_MS;
+
+  return {
+    minimumExpectedUtility:
+      Number.isFinite(minimumExpectedUtility) &&
+      minimumExpectedUtility >= 0 &&
+      minimumExpectedUtility <= 1
+        ? minimumExpectedUtility
+        : NETWORK_MINIMUM_CATALOG_UTILITY,
+    minimumConfidence:
+      Number.isFinite(minimumConfidence) &&
+      minimumConfidence >= 0 &&
+      minimumConfidence <= 1
+        ? minimumConfidence
+        : NETWORK_MINIMUM_CATALOG_CONFIDENCE,
+    probeDeadlineMs:
+      Number.isFinite(probeDeadlineMs) &&
+      probeDeadlineMs > 0 &&
+      probeDeadlineMs <= 10_000
+        ? probeDeadlineMs
+        : NETWORK_PROBE_DEADLINE_MS,
+  };
+}
+
+async function optionalNetworkProbe(
+  provider: LiveSuggestionRouteProvider,
+  request: ProviderRouteRequest,
+  callerSignal: AbortSignal,
+  deadlineMs: number,
+): Promise<ProviderCandidateSet | null> {
+  if (callerSignal.aborted) throw callerSignal.reason;
+
+  const deadline = new AbortController();
+  const combined = AbortSignal.any([callerSignal, deadline.signal]);
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const answer = provider
+    .candidates(request, combined)
+    .then(
+      (value) => ({ kind: "answer" as const, value }),
+      (error) => ({ kind: "error" as const, error }),
+    );
+  const timeout = new Promise<{ readonly kind: "timeout" }>((resolve) => {
+    timer = setTimeout(() => {
+      deadline.abort(new Error("optional network probe deadline exceeded"));
+      resolve({ kind: "timeout" });
+    }, deadlineMs);
+  });
+
+  try {
+    const result = await Promise.race([answer, timeout]);
+    if (callerSignal.aborted) throw callerSignal.reason;
+    return result.kind === "answer" ? result.value : null;
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+  }
+}
 
 function bearingDegrees(
   from: { lon: number; lat: number },
@@ -272,10 +353,17 @@ export function createLiveSuggestionQuery(deps: {
     | null
     | Promise<FreeRideNetworkIndex | null>;
   readonly recentNetworkSegmentIds?: () => readonly string[];
+  /**
+   * In-motion interruption threshold. This is deliberately stricter than the
+   * network catalogue itself: a weak/uncertain hint should remain quiet rather
+   * than consume rider attention.
+   */
+  readonly networkPolicy?: LiveSuggestionNetworkPolicy;
   readonly now?: () => string;
 }) {
   let generation = Math.max(1, Date.now());
   const now = deps.now ?? (() => new Date().toISOString());
+  const networkPolicy = resolvedNetworkPolicy(deps.networkPolicy);
 
   return {
     async propose(
@@ -329,7 +417,12 @@ export function createLiveSuggestionQuery(deps: {
             new Set(deps.recentNetworkSegmentIds?.() ?? []),
           );
           const opportunity = opportunities.find(
-            (candidate) => !disliked.has(candidate.id),
+            (candidate) =>
+              !disliked.has(candidate.id) &&
+              candidate.expectedUtility >=
+                networkPolicy.minimumExpectedUtility &&
+              candidate.confidence >=
+                networkPolicy.minimumConfidence,
           );
 
           if (opportunity !== undefined) {
@@ -357,15 +450,12 @@ export function createLiveSuggestionQuery(deps: {
               planningGeneration,
             });
 
-            let answer: ProviderCandidateSet | null = null;
-            try {
-              answer = await deps.provider.candidates(planned.request, signal);
-            } catch (error) {
-              if (signal.aborted) throw signal.reason;
-              // A corridor probe is optional search. Provider rejection for it
-              // falls back to the proven projected-ahead query below.
-              void error;
-            }
+            const answer = await optionalNetworkProbe(
+              deps.provider,
+              planned.request,
+              signal,
+              networkPolicy.probeDeadlineMs,
+            );
             if (signal.aborted) throw signal.reason;
 
             const candidate = answer?.candidates.find(validCandidate);
