@@ -13,7 +13,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 import {
-  PA511_CCTV_URL,
   PA511_ORIGIN,
   PA511_USER_AGENT,
   createPa511Session,
