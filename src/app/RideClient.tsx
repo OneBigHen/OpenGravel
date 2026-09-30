@@ -181,6 +181,15 @@ export function RideClient({
       rides,
       geometry,
       providerFactory: createClientRouteCandidateProvider,
+      rideHistory: async () => {
+        const entries = await library.listExploreRides?.() ?? [];
+        return entries
+          .filter((entry) => entry.geometry.length >= 2)
+          .map((entry) => ({
+            geometry: entry.geometry,
+            riddenAt: entry.summary.savedAt,
+          }));
+      },
     });
     const evaluateSuggestion = (
       navigation: NonNullable<ReturnType<typeof sessions.navigationState>>,
