@@ -36,6 +36,28 @@ it('loads an MSE player on demand and destroys it when the card closes',async()=
  await waitFor(()=>expect(hls.load).toHaveBeenCalledWith(media.playbackUrl));
  expect(hls.attach).toHaveBeenCalled();unmount();expect(hls.destroy).toHaveBeenCalled();
 });
+it('falls back once when advertised native HLS fails to decode the camera',async()=>{
+ vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('probably');
+ const play=vi.spyOn(HTMLMediaElement.prototype,'play').mockResolvedValue();
+ vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+ vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
+ const {container,unmount}=render(<InfoFeatureMedia media={media} name="River road"/>);
+ const video=container.querySelector('video')!;
+ fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
+ expect(hls.load).not.toHaveBeenCalled();
+ fireEvent.error(video);
+ await waitFor(()=>expect(hls.load).toHaveBeenCalledWith(media.playbackUrl));
+ expect(video.getAttribute('src')).toBeNull();
+ expect(screen.queryByRole('status')).toBeNull();
+ const parsed=hls.on.mock.calls.find(call=>call[0]==='parsed')![1];
+ parsed();
+ expect(play).toHaveBeenCalledTimes(2);
+ fireEvent.error(video);
+ expect(hls.load).toHaveBeenCalledTimes(1);
+ expect(screen.getByRole('status')).toHaveTextContent('Live camera is unavailable.');
+ unmount();
+ expect(hls.destroy).toHaveBeenCalledTimes(1);
+});
 it('explains unsupported video without claiming playback works',async()=>{
  hls.supported=false;
  vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('');
@@ -45,6 +67,43 @@ it('explains unsupported video without claiming playback works',async()=>{
  fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
  expect(await screen.findByRole('status')).toHaveTextContent('Live video is unavailable in this browser.');
  expect(screen.getByRole('link',{name:'Open provider camera'})).toHaveAttribute('href',media.sourceHref);
+});
+it('reports unsupported fallback after native playback fails',async()=>{
+ hls.supported=false;
+ vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('probably');
+ vi.spyOn(HTMLMediaElement.prototype,'play').mockResolvedValue();
+ vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+ vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
+ const {container}=render(<InfoFeatureMedia media={media} name="River road"/>);
+ fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
+ fireEvent.error(container.querySelector('video')!);
+ expect(await screen.findByRole('status')).toHaveTextContent('Live video is unavailable in this browser.');
+ expect(hls.load).not.toHaveBeenCalled();
+});
+it('does not attach a pending fallback after the camera card closes',async()=>{
+ vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('probably');
+ vi.spyOn(HTMLMediaElement.prototype,'play').mockResolvedValue();
+ vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+ vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
+ const {container,unmount}=render(<InfoFeatureMedia media={media} name="River road"/>);
+ fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
+ fireEvent.error(container.querySelector('video')!);
+ unmount();
+ const {act}=await import('@testing-library/react');
+ await act(async()=>{await import('hls.js');});
+ expect(hls.attach).not.toHaveBeenCalled();
+ expect(hls.load).not.toHaveBeenCalled();
+});
+it('does not switch players when browser gesture rules reject play',async()=>{
+ vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('probably');
+ vi.spyOn(HTMLMediaElement.prototype,'play').mockRejectedValue(new Error('Gesture required'));
+ vi.spyOn(HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});
+ vi.spyOn(HTMLMediaElement.prototype,'load').mockImplementation(()=>{});
+ const {container}=render(<InfoFeatureMedia media={media} name="River road"/>);
+ fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
+ await waitFor(()=>expect(container.querySelector('video')?.getAttribute('src')).toBe(media.playbackUrl));
+ expect(hls.load).not.toHaveBeenCalled();
+ expect(screen.queryByRole('status')).toBeNull();
 });
 it('shows a playback error and stops the failed stream',async()=>{
  vi.spyOn(HTMLMediaElement.prototype,'canPlayType').mockReturnValue('');
