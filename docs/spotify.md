@@ -4,7 +4,8 @@ OpenGravel's web ride screen can control playback on a Spotify device through
 Spotify's Web API. It does not stream or play audio in the browser. Spotify
 playback control requires a Premium account and an active Spotify device.
 
-The server needs a public app client ID and a private cookie encryption key:
+The server needs a private cookie encryption key. It may also provide a shared
+public app client ID; riders can instead enter their own public ID in Settings:
 
 ```dotenv
 SPOTIFY_CLIENT_ID=your-32-character-public-client-id
