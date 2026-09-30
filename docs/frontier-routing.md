@@ -168,6 +168,29 @@ Source:
 
 - https://github.com/graphhopper/graphhopper/blob/master/docs/web/api-doc.md
 
+### Probe scalarization is deliberately approximate
+
+Running several GraphHopper cost functions is a practical way to sample route-space, but it is not an exact multi-objective shortest-path algorithm. Linear/weighted scalarizations can miss non-supported Pareto solutions on a non-convex discrete frontier — including balanced routes that are not optimal for any single set of linear weights.
+
+OpenGravel should accept that limitation initially rather than import a full multi-objective label-setting search into the routing engine.
+
+Compensate with **bounded structural perturbations**:
+
+- several semantically distinct penalty probes;
+- GraphHopper's alternative-route search where it adds genuine diversity;
+- via/anchor perturbations for loops and discovery;
+- later, targeted epsilon-style constraints when a product requirement has a natural bound (for example, "no more than 20% slower" while maximizing ride quality).
+
+This gives us multiple mechanisms for discovering middle-of-frontier routes without owning a new continental-scale pathfinding implementation.
+
+If the PA/NJ corpus demonstrates repeatable missing balanced routes, the next escalation is an epsilon-constraint or multi-objective provider experiment — not immediately a GraphHopper fork.
+
+References:
+
+- https://www.sciencedirect.com/science/article/abs/pii/S0377221716303472
+- https://www.sciencedirect.com/science/article/pii/S0377221720306160
+- https://doi.org/10.4230/OASIcs.ATMOS.2013.94
+
 ### Multi-criteria routing supports a small representative frontier
 
 Multi-objective route planning naturally creates Pareto sets: a path may be slower but twistier, calmer, less urban, or more compatible with the requested surface. Pareto sets can become very large.
