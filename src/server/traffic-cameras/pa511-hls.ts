@@ -251,7 +251,9 @@ export async function handlePa511HlsRequest(
   deps: Pa511HlsDeps = {},
 ): Promise<Response> {
   const env = deps.env ?? process.env;
-  if (!videoEnabled(env)) return new Response("Traffic camera video is disabled.", { status: 404 });
+  if (env["PA511_CAMERAS_ENABLED"] !== "1" || !videoEnabled(env)) {
+    return new Response("Traffic camera video is disabled.", { status: 404 });
+  }
   const secret = proxySecret(env);
   if (secret === null) return new Response("Traffic camera video proxy is not configured.", { status: 503 });
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(cameraId)) return new Response("Invalid camera.", { status: 400 });
