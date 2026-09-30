@@ -16,7 +16,7 @@ import {
 } from "@/server/traffic-cameras/registry";
 import type { ProviderContext } from "@/server/map-layers/providers";
 
-const SUPPORTED_DIRECT_STATES = new Set<TrafficCameraState>(["NJ", "DE", "MD", "VA", "WV"]);
+const SUPPORTED_DIRECT_STATES = new Set<TrafficCameraState>(["NJ", "NY", "DE", "MD", "VA", "WV"]);
 
 export interface DirectCameraHlsDeps {
   readonly env?: Readonly<Record<string, string | undefined>>;
