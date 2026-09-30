@@ -26,6 +26,8 @@
 		BDC4E11924AD432B112D27B5 /* RideActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DDA3085971D356C64B68B08 /* RideActivityAttributes.swift */; };
 		0F5A7A1E2F0C4B1A00C0FE02 /* OpenGravelNavigationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5A7A1E2F0C4B1A00C0FE01 /* OpenGravelNavigationPlugin.swift */; };
 		0F5A7A1E2F0C4B1A00C0FE05 /* OpenGravelNavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 0F5A7A1E2F0C4B1A00C0FE04 /* OpenGravelNavigation */; };
+		9DA5F21A0DABE04FDB635507 /* OpenGravelSpotifyPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42524A51791FB6811A3D93C2 /* OpenGravelSpotifyPlugin.swift */; };
+		0634BD9027BEC96B441F9454 /* OpenGravelSpotify in Frameworks */ = {isa = PBXBuildFile; productRef = 04C344CADD51A465134F8122 /* OpenGravelSpotify */; };
 		DEC1DFEE4B6C3639639050D7 /* RideActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F91A6CC959D4A607739B2E /* RideActivityPlugin.swift */; };
 		DEF13A4EF10F0CDE75A01B25 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE11F01C1B73C08270EA5F1 /* MainViewController.swift */; };
 /* End PBXBuildFile section */
@@ -73,6 +75,7 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		5EA6FC999DFEC8DFEBA8CBAE /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		0F5A7A1E2F0C4B1A00C0FE01 /* OpenGravelNavigationPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenGravelNavigationPlugin.swift; sourceTree = "<group>"; };
+		42524A51791FB6811A3D93C2 /* OpenGravelSpotifyPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OpenGravelSpotifyPlugin.swift; sourceTree = "<group>"; };
 		79F91A6CC959D4A607739B2E /* RideActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RideActivityPlugin.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -96,6 +99,7 @@
 			files = (
 				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
 				0F5A7A1E2F0C4B1A00C0FE05 /* OpenGravelNavigation in Frameworks */,
+				0634BD9027BEC96B441F9454 /* OpenGravelSpotify in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,6 +149,7 @@
 				3DDA3085971D356C64B68B08 /* RideActivityAttributes.swift */,
 				79F91A6CC959D4A607739B2E /* RideActivityPlugin.swift */,
 				0F5A7A1E2F0C4B1A00C0FE01 /* OpenGravelNavigationPlugin.swift */,
+				42524A51791FB6811A3D93C2 /* OpenGravelSpotifyPlugin.swift */,
 				0DE11F01C1B73C08270EA5F1 /* MainViewController.swift */,
 			);
 			path = App;
@@ -209,6 +214,7 @@
 			packageProductDependencies = (
 				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
 				0F5A7A1E2F0C4B1A00C0FE04 /* OpenGravelNavigation */,
+				04C344CADD51A465134F8122 /* OpenGravelSpotify */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
@@ -242,6 +248,7 @@
 			packageReferences = (
 				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
 				0F5A7A1E2F0C4B1A00C0FE03 /* XCLocalSwiftPackageReference "../../OpenGravelNavigation" */,
+				F583588295530FD41C2142EF /* XCLocalSwiftPackageReference "../../OpenGravelSpotify" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -286,6 +293,7 @@
 				04D83AA21B4B2AC13BA83906 /* RideActivityAttributes.swift in Sources */,
 				DEC1DFEE4B6C3639639050D7 /* RideActivityPlugin.swift in Sources */,
 				0F5A7A1E2F0C4B1A00C0FE02 /* OpenGravelNavigationPlugin.swift in Sources */,
+				9DA5F21A0DABE04FDB635507 /* OpenGravelSpotifyPlugin.swift in Sources */,
 				DEF13A4EF10F0CDE75A01B25 /* MainViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -457,6 +465,8 @@
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = org.onebighen.opengravel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SPOTIFY_REDIRECT_SCHEME = opengravel;
+				SPOTIFY_REDIRECT_URI = "opengravel://spotify-callback";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -478,6 +488,8 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = org.onebighen.opengravel;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SPOTIFY_REDIRECT_SCHEME = opengravel;
+				SPOTIFY_REDIRECT_URI = "opengravel://spotify-callback";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -576,6 +588,10 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../../OpenGravelNavigation;
 		};
+		F583588295530FD41C2142EF /* XCLocalSwiftPackageReference "../../OpenGravelSpotify" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../OpenGravelSpotify;
+		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -588,6 +604,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0F5A7A1E2F0C4B1A00C0FE03 /* XCLocalSwiftPackageReference "../../OpenGravelNavigation" */;
 			productName = OpenGravelNavigation;
+		};
+		04C344CADD51A465134F8122 /* OpenGravelSpotify */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F583588295530FD41C2142EF /* XCLocalSwiftPackageReference "../../OpenGravelSpotify" */;
+			productName = OpenGravelSpotify;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

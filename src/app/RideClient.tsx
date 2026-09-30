@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 // The renderer's own stylesheet, imported at the composition root exactly as the
 // planner does: the UI layer may not know which renderer it draws with
 // (02-ARCHITECTURE-CONTRACT §7, 4.0 review finding 8).
@@ -60,6 +60,7 @@ import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-poin
 import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
 import type { RideId } from "@/domain/ride/ids";
 import { RideFocus } from "@/ui/ride/RideFocus";
+import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
 
 /**
  * The Ride Focus composition root (02-ARCHITECTURE-CONTRACT §7, §17;
@@ -130,6 +131,30 @@ export function RideClient({
     () => createHttpDiscoverSource({ basePath: assetBasePath }),
     [assetBasePath],
   );
+  // Native plugins are intentionally discovered after hydration. A native
+  // Capacitor global exists in the client shell but not in the server render;
+  // creating the player during render would make the first trees differ.
+  const [spotifyPlayer, setSpotifyPlayer] = useState<ReturnType<typeof nativeSpotifyPlayer>>();
+  useEffect(() => {
+    let cancelled = false;
+    let player: ReturnType<typeof nativeSpotifyPlayer>;
+    const initialize = async (): Promise<void> => {
+      // Let hydration finish before discovering the native Capacitor global.
+      await Promise.resolve();
+      if (cancelled) return;
+      player = nativeSpotifyPlayer();
+      if (cancelled) {
+        player?.dispose();
+        return;
+      }
+      setSpotifyPlayer(player);
+    };
+    void initialize();
+    return () => {
+      cancelled = true;
+      player?.dispose();
+    };
+  }, []);
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
   const { store, rides, activitySync } = useMemo(() => {
@@ -380,6 +405,7 @@ export function RideClient({
       placesSource={placesSource}
       mapLayersSource={mapLayersSource}
       discoverSource={discoverSource}
+      spotifyPlayer={spotifyPlayer}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
   );
