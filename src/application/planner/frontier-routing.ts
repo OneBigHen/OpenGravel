@@ -8,8 +8,9 @@
  * Important semantics:
  * - every quality is 0..1, where larger is better;
  * - unavailable evidence is null, never 0.5;
- * - Pareto dominance compares only mutually known dimensions and requires a
- *   minimum amount of comparable evidence;
+ * - Pareto dominance is evidence-conservative: the dominating candidate must
+ *   know every dimension known by the dominated candidate, and enough evidence
+ *   must be comparable;
  * - representative selection is deterministic and intentionally small.
  *
  * This module is not wired into the live planner yet. It is the pure selection
@@ -79,7 +80,11 @@ export function frontierDominates(
   for (const key of FRONTIER_QUALITY_KEYS) {
     const leftValue = quality(left[key]);
     const rightValue = quality(right[key]);
-    if (leftValue === null || rightValue === null) continue;
+    if (rightValue === null) continue;
+    // Unknown cannot dominate known. Without this asymmetry a sparse route can
+    // look artificially strong simply because inconvenient dimensions vanish
+    // from the comparison.
+    if (leftValue === null) return false;
 
     comparable += 1;
     if (leftValue + EPSILON < rightValue) return false;
