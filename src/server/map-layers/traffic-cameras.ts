@@ -65,7 +65,7 @@ function feature(camera: TrafficCameraRecord, env: ProviderContext["env"]): Info
     media: {
       previewUrl: camera.previewUrl,
       playbackUrl:
-        camera.state === "PA"
+        camera.state === "PA" || camera.id.startsWith("stormscope-")
           ? camera.playbackUrl
           : camera.playbackUrl === null
             ? null
