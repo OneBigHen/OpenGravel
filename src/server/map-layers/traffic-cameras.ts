@@ -87,17 +87,23 @@ export const trafficCamerasProvider: LayerProvider = {
     const successes = answers.flatMap((answer) => answer.status === "fulfilled" ? [[...answer.value]] : []);
 
     let cameras = successes.flat();
-    if (cameras.length === 0 && context.env["STORMSCOPE_CAMERAS_ENABLED"] === "1") {
+    const fallbackEnabled = context.env["STORMSCOPE_CAMERAS_ENABLED"] === "1";
+    let fallbackFailed = false;
+    if (cameras.length === 0 && fallbackEnabled) {
       try {
         cameras = [...await loadStormScopeCameras(bounds, context)];
       } catch {
+        fallbackFailed = true;
         cameras = [];
       }
     }
-    if (cameras.length === 0 && adapters.length === 0 && context.env["STORMSCOPE_CAMERAS_ENABLED"] !== "1") {
+    if (cameras.length === 0 && adapters.length === 0 && !fallbackEnabled) {
       throw new Error("No traffic-camera provider configured for this view");
     }
-    if (cameras.length === 0 && answers.some((answer) => answer.status === "rejected")) {
+    if (
+      cameras.length === 0 &&
+      (answers.some((answer) => answer.status === "rejected") || (adapters.length === 0 && fallbackFailed))
+    ) {
       throw new Error("All traffic-camera providers failed");
     }
 
