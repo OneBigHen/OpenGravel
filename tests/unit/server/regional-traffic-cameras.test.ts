@@ -102,7 +102,7 @@ describe("regional traffic camera adapters", () => {
   });
 
   it("contacts only states intersecting the current view and honors OHGO key requirements", () => {
-    const paNjView = { west: -75.5, south: 39.8, east: -74.9, north: 40.3 };
+    const paNjView = { west: -75.5, south: 39.85, east: -74.9, north: 40.3 };
     expect(relevantTrafficCameraAdapters(paNjView, { TRAFFIC_CAMERAS_ENABLED: "1" }).map((adapter) => adapter.state))
       .toEqual(["PA", "NJ"]);
     const ohioView = { west: -83.2, south: 39.5, east: -82.2, north: 40.5 };
