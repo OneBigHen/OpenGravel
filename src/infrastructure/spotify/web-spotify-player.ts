@@ -37,6 +37,7 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
   private disconnecting = false;
   private sequence = 0;
   private commandTail: Promise<void> = Promise.resolve();
+  private stateFlight: Promise<void> | null = null;
   private readonly visibilityListener = (): void => {
     if (document.visibilityState === "visible") {
       this.stopRetry();
@@ -75,6 +76,9 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
 
   async connect(): Promise<void> {
     if (this.disposed || typeof window === "undefined") return;
+    this.disconnecting = false;
+    this.sequence += 1;
+    for (const request of this.requests) request.abort();
     this.publish({ ...this.current, connection: "connecting", errorMessage: null });
     const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     const url = new URL("/api/spotify/login", window.location.origin);
@@ -94,6 +98,7 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
       if (result === null || result.code !== undefined) throw new Error("logout failed");
       this.publish(DISCONNECTED);
     } catch {
+      this.disconnecting = false;
       this.publish({ ...this.current, connection: "error", errorMessage: "Spotify could not be disconnected." });
     }
   }
@@ -110,9 +115,19 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
     if (typeof window !== "undefined") window.open("https://open.spotify.com", "_blank", "noopener,noreferrer");
   }
 
-  private async loadState(): Promise<void> {
+  private loadState(): Promise<void> {
+    if (this.stateFlight !== null) return this.stateFlight;
+    const generation = this.sequence;
+    const flight = this.performLoadState(generation).finally(() => {
+      if (this.stateFlight === flight) this.stateFlight = null;
+    });
+    this.stateFlight = flight;
+    return flight;
+  }
+
+  private async performLoadState(generation: number): Promise<void> {
     const result = await this.request("/api/spotify/state");
-    if (this.disposed || result === null) return;
+    if (this.disposed || result === null || generation !== this.sequence) return;
     this.publish(mapResponse(result, this.current));
     this.stopRefresh();
     if (this.current.connection === "connected" && document.visibilityState === "visible") {
