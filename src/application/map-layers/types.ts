@@ -14,6 +14,19 @@ export type InfoGeometry =
   | { readonly type: "LineString"; readonly coordinates: readonly LngLat[] }
   | { readonly type: "Polygon"; readonly coordinates: readonly (readonly LngLat[])[] };
 
+export interface InfoMedia {
+  /** Current still image, if the provider exposes one without a playback session. */
+  readonly previewUrl: string | null;
+  /** Same-origin or directly playable media URL. Null until a provider resolves playback safely. */
+  readonly playbackUrl: string | null;
+  /** Official/source page for the camera or media item. */
+  readonly sourceHref: string | null;
+  /** Refresh cadence for a still image. Null means do not poll. */
+  readonly refreshSeconds: number | null;
+  /** Provider says a live stream exists even when playbackUrl is not resolved yet. */
+  readonly videoAvailable: boolean;
+}
+
 export interface InfoFeature {
   /** Stable per source, e.g. `osm:node/123` or `tomtom:abc`. */
   readonly id: string;
@@ -24,11 +37,13 @@ export interface InfoFeature {
   readonly detail: string | null;
   /** A number the map styles by (curvature rating, incident magnitude), if any. */
   readonly weight: number | null;
+  /** Optional media shown in the feature card (traffic camera still/video today). */
+  readonly media?: InfoMedia | null;
   readonly geometry: InfoGeometry;
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "tomtom" | "nws" | "roads";
+export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "pa511";
 
 export interface MapLayersResult {
   readonly features: readonly InfoFeature[];
