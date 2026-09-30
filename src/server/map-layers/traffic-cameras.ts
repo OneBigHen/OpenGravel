@@ -11,6 +11,7 @@ import type {
   LngLat,
   MapLayerBounds,
 } from "@/application/map-layers";
+import { directCameraPlaybackPath } from "@/server/traffic-cameras/direct-hls";
 import {
   TRAFFIC_CAMERA_ADAPTERS,
   type TrafficCameraAdapter,
@@ -52,7 +53,7 @@ export function relevantTrafficCameraAdapters(
     (adapter.requiresKey === undefined || (env[adapter.requiresKey]?.trim() ?? "") !== ""));
 }
 
-function feature(camera: TrafficCameraRecord): InfoFeature {
+function feature(camera: TrafficCameraRecord, env: ProviderContext["env"]): InfoFeature {
   return {
     id: `traffic-camera:${camera.state}:${camera.id}`,
     layerId: "traffic-cameras",
@@ -62,7 +63,12 @@ function feature(camera: TrafficCameraRecord): InfoFeature {
     geometry: { type: "Point", coordinates: camera.coordinates },
     media: {
       previewUrl: camera.previewUrl,
-      playbackUrl: camera.playbackUrl,
+      playbackUrl:
+        camera.state === "PA"
+          ? camera.playbackUrl
+          : camera.playbackUrl === null
+            ? null
+            : directCameraPlaybackPath(camera.state, camera.id, env) ?? camera.playbackUrl,
       sourceHref: camera.sourceHref,
       refreshSeconds: camera.previewUrl === null ? null : 10,
       videoAvailable: camera.videoAvailable,
@@ -86,6 +92,6 @@ export const trafficCamerasProvider: LayerProvider = {
     for (const camera of successes.flat()) {
       if (inside(bounds, camera.coordinates)) deduped.set(`${camera.state}:${camera.id}`, camera);
     }
-    return [...deduped.values()].map(feature);
+    return [...deduped.values()].map((camera) => feature(camera, context.env));
   },
 };
