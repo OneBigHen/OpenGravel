@@ -653,9 +653,20 @@ function requestOptionsIssues(value: unknown, issues: ValidationIssue[]): void {
       ),
     );
   }
+  const noveltyPreference = value["noveltyPreference"];
+  if (noveltyPreference !== undefined && !NOVELTY_PREFERENCES.has(String(noveltyPreference))) {
+    issues.push(
+      issue(
+        "invalid-value",
+        "request.options.noveltyPreference",
+        'must be "prefer-new-to-me", "balanced" or "prefer-familiar"',
+      ),
+    );
+  }
 }
 
 const ROAD_CHARACTERS: ReadonlySet<string> = new Set(["efficient", "balanced", "curvy", "backroads"]);
+const NOVELTY_PREFERENCES: ReadonlySet<string> = new Set(["prefer-new-to-me", "balanced", "prefer-familiar"]);
 
 const SURFACE_PREFERENCES: ReadonlySet<string> = new Set([
   "pavement",
@@ -834,6 +845,13 @@ export function parseRoutePlanRequestBody(
             roadCharacter: optionsSource[
               "roadCharacter"
             ] as NonNullable<ProviderRouteRequest["options"]["roadCharacter"]>,
+          }),
+      ...(optionsSource["noveltyPreference"] === undefined
+        ? {}
+        : {
+            noveltyPreference: optionsSource[
+              "noveltyPreference"
+            ] as NonNullable<ProviderRouteRequest["options"]["noveltyPreference"]>,
           }),
       vehicle: "motorcycle",
     },
