@@ -343,6 +343,122 @@ export function selectPreferenceQuestion<T>(
       };
 }
 
+export interface PreferenceTeachingPolicy {
+  /** Ask at least this many explicit comparisons unless no useful pair exists. */
+  readonly minimumQuestions?: number;
+  /** Hard cap: preference setup is not an endless swipe feed. */
+  readonly maximumQuestions?: number;
+  /**
+   * After the minimum question count, stop when the best remaining pair falls
+   * below this information value.
+   */
+  readonly minimumInformationValue?: number;
+}
+
+export type PreferenceTeachingStep<T> =
+  | {
+      readonly status: "ask";
+      readonly question: PreferenceQuestion<T>;
+      readonly questionNumber: number;
+      readonly remainingBudget: number;
+    }
+  | {
+      readonly status: "stop";
+      readonly reason:
+        | "question-budget"
+        | "no-informative-pair"
+        | "diminishing-information";
+    };
+
+const DEFAULT_TEACHING_MINIMUM_QUESTIONS = 4;
+const DEFAULT_TEACHING_MAXIMUM_QUESTIONS = 8;
+const DEFAULT_TEACHING_MINIMUM_INFORMATION_VALUE = 0.35;
+
+function teachingPolicy(
+  policy: PreferenceTeachingPolicy,
+): {
+  readonly minimumQuestions: number;
+  readonly maximumQuestions: number;
+  readonly minimumInformationValue: number;
+} | null {
+  const minimumQuestions =
+    policy.minimumQuestions ?? DEFAULT_TEACHING_MINIMUM_QUESTIONS;
+  const maximumQuestions =
+    policy.maximumQuestions ?? DEFAULT_TEACHING_MAXIMUM_QUESTIONS;
+  const minimumInformationValue =
+    policy.minimumInformationValue ??
+    DEFAULT_TEACHING_MINIMUM_INFORMATION_VALUE;
+
+  if (
+    !Number.isSafeInteger(minimumQuestions) ||
+    minimumQuestions < 0 ||
+    !Number.isSafeInteger(maximumQuestions) ||
+    maximumQuestions < 1 ||
+    maximumQuestions < minimumQuestions ||
+    maximumQuestions > 32 ||
+    !Number.isFinite(minimumInformationValue) ||
+    minimumInformationValue < 0
+  ) {
+    return null;
+  }
+
+  return {
+    minimumQuestions,
+    maximumQuestions,
+    minimumInformationValue,
+  };
+}
+
+/**
+ * Decides whether Teach OpenGravel should ask another A/B question.
+ *
+ * The active learner still chooses the pair. This function owns the rider-time
+ * budget around it:
+ *
+ * - never exceed a small hard cap;
+ * - ask a short minimum set while cold-start information is available;
+ * - after that, stop early when even the best remaining comparison has weak
+ *   expected information value.
+ *
+ * The stop rule depends on explicit comparisons only. Weak behavioral signals
+ * can refine the posterior, but accepting routes in normal use never "uses up"
+ * the deliberate teaching budget.
+ */
+export function selectPreferenceTeachingStep<T>(
+  model: RiderPreferenceModel,
+  candidates: readonly PreferenceCandidate<T>[],
+  policy: PreferenceTeachingPolicy = {},
+): PreferenceTeachingStep<T> {
+  const resolved = teachingPolicy(policy);
+  if (resolved === null) {
+    return { status: "stop", reason: "question-budget" };
+  }
+
+  if (model.explicitComparisons >= resolved.maximumQuestions) {
+    return { status: "stop", reason: "question-budget" };
+  }
+
+  const question = selectPreferenceQuestion(model, candidates);
+  if (question === null) {
+    return { status: "stop", reason: "no-informative-pair" };
+  }
+
+  if (
+    model.explicitComparisons >= resolved.minimumQuestions &&
+    question.informationValue < resolved.minimumInformationValue
+  ) {
+    return { status: "stop", reason: "diminishing-information" };
+  }
+
+  return {
+    status: "ask",
+    question,
+    questionNumber: model.explicitComparisons + 1,
+    remainingBudget:
+      resolved.maximumQuestions - model.explicitComparisons - 1,
+  };
+}
+
 export function isRiderPreferenceModel(value: unknown): value is RiderPreferenceModel {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<RiderPreferenceModel>;
