@@ -330,4 +330,191 @@ describe("createLiveSuggestionQuery", () => {
     });
     expect(await query.propose(navigation, new AbortController().signal)).toEqual([]);
   });
+
+  it("keeps a low-confidence network hint quiet and uses the proven fallback", async () => {
+    const geometry = createMemoryGeometryStore();
+    const network = buildFreeRideNetwork({
+      schemaVersion: 1,
+      sourceBuild: "low-confidence-v1",
+      graphVersion: "unit-graph-v1",
+      segments: [
+        {
+          id: "approach",
+          fromNodeId: "n0",
+          toNodeId: "n1",
+          geometry: [{ lon: -77, lat: 40 }, { lon: -76.99, lat: 40 }],
+          lengthMeters: 900,
+        },
+        {
+          id: "maybe-road",
+          fromNodeId: "n1",
+          toNodeId: "n2",
+          geometry: [{ lon: -76.99, lat: 40 }, { lon: -76.98, lat: 40 }],
+          lengthMeters: 900,
+        },
+        {
+          id: "rejoin",
+          fromNodeId: "n2",
+          toNodeId: "n3",
+          geometry: [{ lon: -76.98, lat: 40 }, { lon: -76.97, lat: 40 }],
+          lengthMeters: 900,
+        },
+      ],
+      corridors: [{
+        id: "maybe-corridor",
+        segmentIds: ["maybe-road"],
+        entryNodeId: "n1",
+        exitNodeId: "n2",
+        expectedUtility: 0.95,
+        confidence: 0.2,
+      }],
+    });
+    const requests: ProviderRouteRequest[] = [];
+    const provider = {
+      id: "api",
+      capabilities: () => ({
+        profiles: [],
+        supportsAlternatives: true,
+        supportsAvoidPolygons: true,
+      }),
+      beginAttempt: vi.fn(),
+      candidates: vi.fn(async (next: ProviderRouteRequest) => {
+        requests.push(next);
+        return { candidates: [{
+          providerId: "api",
+          profile: "motorcycle",
+          geometry: [
+            { lon: -77, lat: 40 },
+            { lon: -76.999, lat: 40 },
+            { lon: -76.99, lat: 40 },
+          ],
+          distanceMeters: 900,
+          durationSeconds: 240,
+          instructions: [{
+            text: "Turn onto Old Mill Road",
+            type: "turn",
+            maneuver: "right" as const,
+            geometryIndex: 1,
+            distanceMeters: 815,
+            durationSeconds: 220,
+            roadName: "Old Mill Road",
+          }],
+        }] };
+      }),
+    };
+    const query = createLiveSuggestionQuery({
+      rides: {
+        loadRide: vi.fn(async () => ({ ok: true as const, document })),
+      } as never,
+      geometry,
+      provider,
+      network: () => network,
+    });
+
+    const candidates = await query.propose(
+      navigation,
+      new AbortController().signal,
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.shaping).toEqual([]);
+    expect(requests[0]?.options.includeAlternatives).toBe(true);
+    expect(candidates[0]?.label).toBe("Old Mill Road");
+  });
+
+  it("abandons a slow optional network probe quickly and falls back", async () => {
+    const geometry = createMemoryGeometryStore();
+    const network = buildFreeRideNetwork({
+      schemaVersion: 1,
+      sourceBuild: "slow-network-v1",
+      graphVersion: "unit-graph-v1",
+      segments: [
+        {
+          id: "approach",
+          fromNodeId: "n0",
+          toNodeId: "n1",
+          geometry: [{ lon: -77, lat: 40 }, { lon: -76.99, lat: 40 }],
+          lengthMeters: 900,
+        },
+        {
+          id: "good-road",
+          fromNodeId: "n1",
+          toNodeId: "n2",
+          geometry: [{ lon: -76.99, lat: 40 }, { lon: -76.98, lat: 40 }],
+          lengthMeters: 900,
+        },
+        {
+          id: "rejoin",
+          fromNodeId: "n2",
+          toNodeId: "n3",
+          geometry: [{ lon: -76.98, lat: 40 }, { lon: -76.97, lat: 40 }],
+          lengthMeters: 900,
+        },
+      ],
+      corridors: [{
+        id: "good-corridor",
+        segmentIds: ["good-road"],
+        entryNodeId: "n1",
+        exitNodeId: "n2",
+        expectedUtility: 0.9,
+        confidence: 0.9,
+      }],
+    });
+    const requests: ProviderRouteRequest[] = [];
+    const provider = {
+      id: "api",
+      capabilities: () => ({
+        profiles: [],
+        supportsAlternatives: true,
+        supportsAvoidPolygons: true,
+      }),
+      beginAttempt: vi.fn(),
+      candidates: vi.fn((next: ProviderRouteRequest) => {
+        requests.push(next);
+        if (next.shaping.length > 0) {
+          return new Promise<never>(() => {});
+        }
+        return Promise.resolve({ candidates: [{
+          providerId: "api",
+          profile: "motorcycle",
+          geometry: [
+            { lon: -77, lat: 40 },
+            { lon: -76.999, lat: 40 },
+            { lon: -76.99, lat: 40 },
+          ],
+          distanceMeters: 900,
+          durationSeconds: 240,
+          instructions: [{
+            text: "Turn onto Fallback Road",
+            type: "turn",
+            maneuver: "right" as const,
+            geometryIndex: 1,
+            distanceMeters: 815,
+            durationSeconds: 220,
+            roadName: "Fallback Road",
+          }],
+        }] });
+      }),
+    };
+    const query = createLiveSuggestionQuery({
+      rides: {
+        loadRide: vi.fn(async () => ({ ok: true as const, document })),
+      } as never,
+      geometry,
+      provider,
+      network: () => network,
+      networkPolicy: { probeDeadlineMs: 5 },
+    });
+
+    const candidates = await query.propose(
+      navigation,
+      new AbortController().signal,
+    );
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.shaping.length).toBeGreaterThan(0);
+    expect(requests[1]?.shaping).toEqual([]);
+    expect(candidates[0]?.label).toBe("Fallback Road");
+  });
+
 });
