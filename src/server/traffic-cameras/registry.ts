@@ -20,7 +20,7 @@ export type TrafficCameraState = "PA" | "NJ" | "NY" | "DE" | "MD" | "VA" | "WV" 
 
 export interface TrafficCameraRecord {
   readonly id: string;
-  readonly state: TrafficCameraState;
+  readonly state: string;
   readonly provider: string;
   readonly name: string;
   readonly detail: string | null;
@@ -29,6 +29,8 @@ export interface TrafficCameraRecord {
   readonly playbackUrl: string | null;
   readonly sourceHref: string;
   readonly videoAvailable: boolean;
+  /** Provider cadence for still/MJPEG media when known. */
+  readonly refreshSeconds?: number | null;
 }
 
 export interface TrafficCameraAdapter {
