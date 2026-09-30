@@ -14,6 +14,7 @@ import type { Coordinate } from "@/domain/ride/types";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import {
   piecewiseDetourPenalty,
+  replaceNoveltyScore,
   scoreCandidate,
   uncertaintyPenalty,
 } from "@/domain/route/scoring";
@@ -217,5 +218,40 @@ describe("scoreCandidate", () => {
     });
     expect(scored.components.traffic.input).toBeNull();
     expect(scored.components.traffic.evidenceStatus).toBe("unknown");
+  });
+
+  it("replaces only novelty on a stored score", () => {
+    const source = { id: "test", label: "test", category: "rider" } as const;
+    const stored = scoreCandidate({
+      candidate: candidate({ durationSeconds: 900 }),
+      intent: { noveltyPreference: "prefer-new-to-me" },
+      policy: POLICY,
+      baselineDurationSeconds: 600,
+      evidence: {
+        traffic: knownEvidence(0.25, source),
+        novelty: knownEvidence(0.9, source),
+      },
+    });
+    const replaced = replaceNoveltyScore({
+      score: stored,
+      intent: { noveltyPreference: "prefer-new-to-me" },
+      policy: POLICY,
+      evidence: {
+        traffic: knownEvidence(0.25, source),
+        novelty: knownEvidence(0.1, source),
+      },
+    });
+
+    for (const key of Object.keys(stored.components) as Array<keyof typeof stored.components>) {
+      if (key === "novelty") continue;
+      expect(replaced.components[key]).toBe(stored.components[key]);
+    }
+    expect(replaced.components.novelty.input).toBe(0.1);
+    expect(replaced.components.timeCost).toBe(stored.components.timeCost);
+    expect(replaced.components.traffic).toBe(stored.components.traffic);
+    expect(replaced.policyVersion).toBe(stored.policyVersion);
+    expect(replaced.total).toBe(
+      Number((stored.total - stored.components.novelty.contribution + replaced.components.novelty.contribution).toFixed(1)),
+    );
   });
 });

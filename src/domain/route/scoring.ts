@@ -190,6 +190,52 @@ interface ComponentSpec {
   readonly costAxis: boolean;
 }
 
+/**
+ * Scores only the novelty component with the active policy math. This is kept
+ * separate from `scoreCandidate` so a later local evidence source can update
+ * novelty on a server-scored candidate without rebuilding its baseline,
+ * traffic, time-cost, eligibility, or any other stored component.
+ */
+export function scoreNoveltyComponent(input: {
+  readonly intent: Pick<PipelineIntent, "roadCharacter" | "noveltyPreference">;
+  readonly policy: RoutePolicy;
+  readonly evidence: RouteEvidence;
+}): ScoreComponent {
+  const weights = weightsFor(input.intent, input.policy);
+  return input.intent.noveltyPreference === "prefer-familiar"
+    ? costComponent("novelty", input.evidence, "novelty", weights)
+    : qualityComponent("novelty", input.evidence, "novelty", weights);
+}
+
+/**
+ * Applies a new novelty measurement to an already-scored candidate. Every
+ * unrelated component is retained by identity, and the policy version remains
+ * the version that produced the original score.
+ */
+export function replaceNoveltyScore(input: {
+  readonly score: RouteScore;
+  readonly evidence: RouteEvidence;
+  readonly intent: Pick<PipelineIntent, "roadCharacter" | "noveltyPreference">;
+  readonly policy: RoutePolicy;
+}): RouteScore {
+  if (input.score.policyVersion !== input.policy.version) return input.score;
+  const novelty = scoreNoveltyComponent({
+    intent: input.intent,
+    policy: input.policy,
+    evidence: input.evidence,
+  });
+  return {
+    ...input.score,
+    total: round1(
+      input.score.total - input.score.components.novelty.contribution + novelty.contribution,
+    ),
+    components: {
+      ...input.score.components,
+      novelty,
+    },
+  };
+}
+
 function component(spec: ComponentSpec): ScoreComponent {
   const contribution =
     spec.input === null
@@ -332,9 +378,11 @@ export function scoreCandidate(input: CandidateScoringInput): RouteScore {
     explanationKey: "score.timeCost.detour-penalty",
     costAxis: true,
   });
-  const novelty = input.intent.noveltyPreference === "prefer-familiar"
-    ? costComponent("novelty", evidence, "novelty", weights)
-    : qualityComponent("novelty", evidence, "novelty", weights);
+  const novelty = scoreNoveltyComponent({
+    intent: input.intent,
+    policy,
+    evidence,
+  });
 
   const components = {
     curvature,

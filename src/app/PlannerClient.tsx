@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
+import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { RideDocument } from "@/domain/ride/types";
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
 import { createPlaceNameCache } from "@/application/geocoding/place-names";
@@ -90,6 +91,18 @@ export interface PlannerClientProps {
   readonly mapboxToken?: string;
 }
 
+/**
+ * The planner's local history and candidate geometry must share one store. The
+ * small helper keeps that requirement at the composition boundary, where it can
+ * be tested with a real recorded-library round trip.
+ */
+export function createPlannerLibraryService(
+  repository: Parameters<typeof createLibraryService>[0],
+  geometryStore: GeometryStore,
+) {
+  return createLibraryService(repository, { geometryStore });
+}
+
 export function PlannerClient({
   basemap,
   advisorEnabled = false,
@@ -128,7 +141,11 @@ export function PlannerClient({
     }),
     [bootstrapPointer, rideFocusPointer],
   );
-  const libraryService = useMemo(() => createLibraryService(repository), [repository]);
+  const geometryStore = useMemo(() => createIndexedDbGeometryStore(), []);
+  const libraryService = useMemo(
+    () => createPlannerLibraryService(repository, geometryStore),
+    [repository, geometryStore],
+  );
   /**
    * The share service (11.1): one bound repository and the origin the opaque
    * links are minted under, read once here — the UI never assembles either.
@@ -141,7 +158,6 @@ export function PlannerClient({
       }),
     [],
   );
-  const geometryStore = useMemo(() => createIndexedDbGeometryStore(), []);
   /**
    * Place search, dropped-pin names and "Current location" (M1). The HTTP client
    * talks to OpenGravel's own `/api/geocode`; which upstream answers is a server
@@ -174,8 +190,13 @@ export function PlannerClient({
     };
   }, []);
   const planningSessionStore = useMemo(
-    () => createPlanningSessionStore({ service: createClientPlanningService({ geometryStore }) }),
-    [geometryStore],
+    () => createPlanningSessionStore({
+      service: createClientPlanningService({
+        geometryStore,
+        localHistoryReader: () => libraryService.listExploreRides(),
+      }),
+    }),
+    [geometryStore, libraryService],
   );
   const rideDocumentStore = useMemo(
     () =>
