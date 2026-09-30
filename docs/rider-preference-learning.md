@@ -212,6 +212,8 @@ Never ask while the rider is moving. Good surfaces:
 
 ### Phase E — richer road-level features
 
+Only known or estimated measurements enter the model. Unpaved share requires complete surface accounting; partial coverage, missing unknown-distance accounting, and stale evidence remain unknown. Stored models are validated on load and save, and clearing preferences removes the local profile.
+
 The current projection uses route-level score components where they are intrinsic enough, and measured surface evidence for unpaved share. It deliberately does not learn the current ride's surface-fit score because that already contains the rider's authored preference. Once road intelligence exposes stable intrinsic segment features, evolve the vector without breaking the model version:
 
 - actual unpaved/gravel share rather than only surface-fit

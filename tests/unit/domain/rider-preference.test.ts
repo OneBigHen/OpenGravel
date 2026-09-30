@@ -5,12 +5,13 @@ import {
   emptyPreferenceVector,
   observePairwisePreference,
   predictPairPreference,
+  riderPreferenceUtility,
   selectPreferenceQuestion,
   type RiderPreferenceVector,
 } from "@/domain/personalization/rider-preference";
 
 function vector(
-  values: Partial<Record<keyof RiderPreferenceVector, number>>,
+  values: Partial<Record<keyof RiderPreferenceVector, number | null>>,
 ): RiderPreferenceVector {
   return { ...emptyPreferenceVector(), ...values };
 }
@@ -97,5 +98,32 @@ describe("rider preference learning", () => {
     expect(prediction.leftProbability).toBeCloseTo(0.5, 6);
     expect(prediction.confidence).toBeCloseTo(0, 6);
     expect(prediction.uncertainty).toBeGreaterThan(0);
+  });
+
+  it("returns the actual weighted sum of known terms without coverage normalization", () => {
+    const model = createRiderPreferenceModel({
+      curvature: { mean: 2 },
+      backroad: { mean: -1 },
+    });
+
+    expect(riderPreferenceUtility(model, vector({ curvature: 1 }))).toBeCloseTo(2);
+    expect(riderPreferenceUtility(model, vector({ curvature: 1, backroad: 0.5 }))).toBeCloseTo(1.5);
+  });
+
+  it("returns zero for an entirely unknown vector", () => {
+    expect(riderPreferenceUtility(createRiderPreferenceModel(), emptyPreferenceVector())).toBe(0);
+  });
+
+  it("predicts from the common observed axes only", () => {
+    const model = createRiderPreferenceModel({ curvature: { mean: 2 } });
+
+    const prediction = predictPairPreference(
+      model,
+      vector({ curvature: 1, backroad: 1 }),
+      vector({ curvature: 0, backroad: null }),
+    );
+
+    expect(prediction.dimensions).toBe(1);
+    expect(prediction.leftProbability).toBeGreaterThan(0.5);
   });
 });

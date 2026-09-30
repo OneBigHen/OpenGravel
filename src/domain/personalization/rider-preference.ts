@@ -279,14 +279,12 @@ export function riderPreferenceUtility(
   vector: RiderPreferenceVector,
 ): number {
   let total = 0;
-  let known = 0;
   for (const feature of RIDER_PREFERENCE_FEATURES) {
     const value = finiteUnit(vector[feature]);
     if (value === null) continue;
     total += model.mean[feature] * value;
-    known += 1;
   }
-  return known === 0 ? 0 : total / Math.sqrt(known);
+  return total;
 }
 
 /**
