@@ -109,6 +109,26 @@ Therefore OpenGravel's dynamic probe system should be designed primarily as **pe
 
 This is a feature, not a drawback: "the preferred road remains 1.0; less desirable roads are penalized" is easier to reason about and reduces pathological weighting.
 
+### GraphHopper 12 is strategically interesting, but not a current dependency
+
+GraphHopper's current `master` / unreleased 12.0 changelog introduces a server-side custom-model `parameters` section. A profile can define bounded named numbers/booleans, and a request can override their values without repeating the model statements or recompiling the custom model class.
+
+That is very close to the long-term OpenGravel probe shape: one prepared motorcycle frontier model with bounded knobs such as curve penalty, urban penalty, highway penalty, or surface tolerance.
+
+However:
+
+- OpenGravel is currently on GraphHopper 11;
+- the 11.0 custom-model documentation does not include `parameters`;
+- 12.0 is explicitly not released yet;
+- LM/hybrid monotonic-weight restrictions still matter even with parameters.
+
+Therefore R1 must work on GraphHopper 11 using existing request custom models. When GraphHopper 12 is released and stable, benchmark an upgrade before inventing an OpenGravel-specific dynamic-profile protocol.
+
+References:
+
+- https://github.com/graphhopper/graphhopper/blob/master/CHANGELOG.md
+- https://github.com/graphhopper/graphhopper/blob/master/docs/core/custom-models.md
+
 ### Alternative-route alone is not frontier routing
 
 GraphHopper's alternative-route parameters control:
