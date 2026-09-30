@@ -4,6 +4,8 @@ Status: implementation-ready product spec
 Parent: `docs/adventure-world-layer.md`  
 Initial geography: Southeast Pennsylvania, then central-PA dual-sport
 
+> **Architecture note:** this pilot does not introduce a `QuickRideRequest`, separate candidate scorer, or Quick Ride subsystem. The existing `RideIntent`, candidate pipeline, RoutePolicy, Free Ride loop discovery, and return planner own those concerns. Metrics below are test/diagnostic measures unless they already map to a canonical score component. See `docs/adventure-existing-module-integration.md`.
+
 ## Goal
 
 Quick Ride should solve one job extremely well:
@@ -74,39 +76,13 @@ interface QuickRideMetrics {
 
 ## Time-budget contract
 
-Input:
+Use the existing authored `TimeIntent`:
 
-```ts
-interface QuickRideRequest {
-  origin: Coordinate;
-  hardBudgetMinutes: 45 | 60 | 90 | 120 | number;
-  backBy?: string;
+- `budget` for 45/60/90/120-minute loop requests
+- `returnBy` for "back by" requests
+- existing loop tolerance for route discovery
 
-  mood: "curves" | "new" | "gravel" | "scenic" | "surprise";
-  surface: "paved" | "mostly-paved" | "mixed" | "dirt-ok";
-
-  avoidHighways: boolean;
-  stopBudgetMinutes: number;
-}
-```
-
-Default reserve:
-
-```text
-reserve = max(8 min, ceil(hardBudget * 0.10))
-target = hardBudget - reserve
-```
-
-Never use the reserve to make the planned route look better.
-
-It exists for:
-
-- a missed turn
-- slow traffic
-- getting geared up / leaving a parking lot
-- an unexpected train crossing
-- a brief stop
-- route-estimation error
+A separate reserve/buffer model should not become authored state in P0. During Free Ride, remaining margin may be derived from the current time intent plus a current return estimate and used to suppress optional detours. That derived guard belongs in the existing Free Ride application/store path.
 
 ## Candidate generation
 
@@ -138,29 +114,11 @@ Do not manufacture a bad third option.
 
 ## Route utility
 
-First-pass candidate score:
+Do not add another weighted route utility formula.
 
-```text
-utility =
-    0.26 * funMinuteRatio
-  + 0.15 * flowScore
-  + 0.14 * noveltyScore
-  + 0.10 * surfaceMatch
-  + 0.09 * scenicContext
-  + 0.08 * returnConfidence
-  + 0.07 * notRecentlyRiddenScore
-  + 0.06 * explorationCoherence
-  + 0.05 * discoveryValue
+The existing versioned RoutePolicy is the ranking authority and already scores the useful dimensions for this pilot: curvature, backroad character, surface fit, elevation, traffic, junction friction, novelty, closure risk, time cost and confidence. Improve the evidence feeding those components, then create a new RoutePolicy version only if real ride testing justifies weight changes.
 
-  - urbanFrictionPenalty
-  - accessPenalty
-  - backtrackPenalty
-  - maneuverSpamPenalty
-  - majorArterialPenalty
-  - timeOverrunPenalty
-```
-
-Weights are tuning knobs, not product truth.
+`funMinuteRatio`, maneuver density, signal estimates and boring-minute measurements remain diagnostics until they have a deliberate mapping into existing evidence components.
 
 ## Novelty score
 
