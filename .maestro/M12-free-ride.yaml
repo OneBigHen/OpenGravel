@@ -1,0 +1,30 @@
+# M12 — free ride (iOS).
+# Starts a route-free ride from the planner's Free Ride action and verifies the
+# ride surface acquires a GPS fix and offers ride controls.
+#
+# SIMULATOR GPS: Maestro cannot set an iOS simulator's location. Set it before
+# (or during) the run, e.g.:
+#   xcrun simctl location booted set 40.14 -75.44
+# Without a location the ride surface stays in its no-fix state and the
+# "Good GPS fix" wait below times out by design — that is a rig failure, not an
+# app failure (see preflight.require_real_device_session in the mission manifest).
+appId: org.onebighen.opengravel
+name: M12 free ride
+properties:
+  missionId: "M12"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Where to, or describe a ride"
+    timeout: 45000
+- takeScreenshot: 01-first-screen
+- tapOn: "Free Ride"
+- extendedWaitUntil:
+    visible: "Good GPS fix"
+    timeout: 60000
+- takeScreenshot: 02-free-ride-started
+- extendedWaitUntil:
+    visible: "Pause"
+    timeout: 30000
+- takeScreenshot: 03-ride-controls

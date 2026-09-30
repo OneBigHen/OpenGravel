@@ -1,0 +1,33 @@
+# M16 — offline ride (iOS).
+# Verifies a ride starts and the ride surface functions when the device has no
+# network. This flow runs against a deployment the simulator can reach during
+# app sync, then with the network dropped.
+#
+# HONEST LIMITATION: Maestro has no command to toggle airplane mode on an iOS
+# simulator. The CI job (see .github/workflows/acceptance.yml) drops the
+# simulator's network before this flow runs; run locally, toggle airplane mode
+# in the simulator (or unplug) between the launchApp below and the ride start.
+# The deterministic no-network routing assertions live in the Playwright
+# offline suite (tests/e2e/critical/offline.spec.ts); this flow covers the
+# native shell boundary: the Capacitor app must keep the ride surface alive
+# with no network at all.
+appId: org.onebighen.opengravel
+name: M16 offline ride
+properties:
+  missionId: "M16"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Where to, or describe a ride"
+    timeout: 45000
+- takeScreenshot: 01-first-screen
+- tapOn: "Free Ride"
+- extendedWaitUntil:
+    visible: ".*GPS.*"
+    timeout: 60000
+- takeScreenshot: 02-offline-riding
+- extendedWaitUntil:
+    visible: "Pause"
+    timeout: 30000
+- takeScreenshot: 03-ride-controls-offline
