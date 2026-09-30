@@ -105,7 +105,7 @@ describe("regional traffic camera adapters", () => {
     const paNjView = { west: -75.5, south: 39.85, east: -74.9, north: 40.3 };
     expect(relevantTrafficCameraAdapters(paNjView, { TRAFFIC_CAMERAS_ENABLED: "1" }).map((adapter) => adapter.state))
       .toEqual(["PA", "NJ"]);
-    const ohioView = { west: -83.2, south: 39.5, east: -82.2, north: 40.5 };
+    const ohioView = { west: -84.5, south: 39.5, east: -83.0, north: 40.5 };
     expect(relevantTrafficCameraAdapters(ohioView, { TRAFFIC_CAMERAS_ENABLED: "1" })).toHaveLength(0);
     expect(relevantTrafficCameraAdapters(ohioView, { TRAFFIC_CAMERAS_ENABLED: "1", OHGO_API_KEY: "k" }).map((adapter) => adapter.state))
       .toEqual(["OH"]);
