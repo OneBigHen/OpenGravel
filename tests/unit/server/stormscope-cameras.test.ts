@@ -41,8 +41,8 @@ describe("StormScope nationwide camera fallback", () => {
       id: "stormscope-17001",
       state: "PA",
       provider: "Example DOT",
-      playbackUrl: "https://video.example.test/live.m3u8",
-      videoAvailable: true,
+      playbackUrl: null,
+      videoAvailable: false,
     });
   });
 
@@ -91,4 +91,16 @@ describe("StormScope nationwide camera fallback", () => {
       source_url: "https://511.example.test/",
     })).toBeNull();
   });
+});
+
+describe('StormScope trust boundary',()=>{
+ it.each(['https://127.0.0.1/internal','http://other.example/camera.json','//other.example/camera.json','../private.json','camera-shards/../../private.json','camera-shards/%2e%2e/private.json'])('rejects a registry shard that escapes the data directory: %s',(path)=>{
+  expect(()=>parseStormScopeIndex({camera_schema_version:2,shards:[{id:'1',path,bbox:[-76,39,-75,40]}]})).toThrow();
+ });
+ it('never exposes unqualified registry HLS for automatic client loading',()=>{
+  const camera=parseStormScopeCamera({id:42,lat:40,lon:-75,url:'https://video.example.test/live.m3u8',type:'hls',source:'dot',source_url:'https://511.example.test/camera/42',health:'healthy',state:'PA'});
+  expect(camera?.playbackUrl).toBeNull();
+  expect(camera?.videoAvailable).toBe(false);
+  expect(camera?.sourceHref).toBe('https://511.example.test/camera/42');
+ });
 });

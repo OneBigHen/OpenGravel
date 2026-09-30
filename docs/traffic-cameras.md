@@ -64,7 +64,7 @@ NJ, NY, DE, MD, VA, and WV publish or expose a directly playable video/HLS URL f
 5. forwards range requests and media content types;
 6. never preloads or autoplays a wall of streams.
 
-Without the relay secret, the camera card can fall back to the state's direct playback URL where the browser supports it.
+Without the relay secret, regional cards show available snapshots and the official provider link. They do not expose unqualified upstream HLS playback. Virginia also requires an explicitly reviewed media origin before its relay is offered.
 
 ## Sources evaluated
 
@@ -120,13 +120,13 @@ Do not use the old District 6 dump as a live source.
 
 ## Playback design
 
-Phase 1 now includes **current-image playback** plus an **experimental, opt-in HLS relay for native-HLS clients (iPhone/iPad/Safari)**. The selected camera image refreshes in the card when video is disabled; when video is enabled, the same card exposes native video controls while retaining the image as its poster. Other browsers can still use **Open live camera** until the hls.js fallback lands.
+The selected camera image refreshes in the card when video is disabled. With the relay enabled, **Play live camera** starts native HLS where supported or a lazily loaded hls.js player. Selecting a marker alone does not request a stream. Closing or switching the card stops playback. The official provider link remains available if playback fails; physical iPhone/iPad acceptance still requires device testing.
 
 511PA's current camera page warns that users may view up to eight streams simultaneously and that exceeding that limit causes a one-hour video suspension. OpenGravel should be much stricter: **one active selected camera per client, no background preloading, no camera-wall autoplay.**
 
 For in-card video:
 
-1. Resolve video only after a marker is tapped.
+1. Resolve video only after the selected card's Play button is tapped.
 2. Keep 511PA session material and stream tokens server-side.
 3. Never resolve streams for every marker in the viewport.
 4. Allow at most one active playback session per browser/client.
@@ -163,3 +163,29 @@ The current 511PA implementation uses tokenized HLS. The reference implementatio
 - Add server-side route-corridor queries where a provider can support them efficiently, reducing payload further on long rides.
 - Expand direct HLS support only where the originating provider permits stable browser/server consumption.
 - Prefer the official PennDOT feed adapter when credentials/license approval are available.
+
+## Relay security and playback
+
+Media relays use exact state-specific HTTPS origins. URL credentials, nonstandard
+ports outside exact approved origins, local/private DNS answers and redirects are rejected. PA's observed DIVAS origins include port 8200; other ports require explicit exact-origin review. Requests pin the
+validated DNS address for the socket, preserving TLS hostname verification.
+Metadata/authentication endpoints use a separate fixed-origin policy. Playlist
+segments, keys and variant URLs are validated before relay tokens are signed.
+Deployments can add exact reviewed media origins with
+`TRAFFIC_CAMERA_ALLOWED_ORIGINS_<STATE>`; this never disables address checks.
+VA has no default media origin until its current feed is qualified.
+
+Opening a camera card loads its still preview, but no live manifest or segment.
+The rider explicitly chooses **Play live camera**. Native HLS is used when
+available; other supported browsers load HLS.js on demand. Closing or switching
+the card destroys playback and stops requests. Playback failures are visible
+and the official provider page remains available. Camera availability varies
+by source and time; catalogue discovery does not prove each video stream works.
+
+Browser tests do not replace physical iPhone/iPad playback checks.
+
+The optional StormScope index and shards remain inside one reviewed HTTPS data
+directory and use the same DNS-pinned, redirect-rejecting transport. Remote
+shard paths cannot escape that directory. Unqualified registry HLS stays an
+explicit provider-page link; it is not attached to an automatic client player.
+Regional first-party relays remain preferred for in-card playback.

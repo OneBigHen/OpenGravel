@@ -8,9 +8,21 @@ import {
   parseVirginiaCameras,
   parseWestVirginiaCameras,
 } from "@/server/traffic-cameras/registry";
-import { relevantTrafficCameraAdapters } from "@/server/map-layers/traffic-cameras";
+import { clearTrafficCameraCatalogCache, relevantTrafficCameraAdapters, trafficCamerasProvider } from "@/server/map-layers/traffic-cameras";
 
 describe("regional traffic camera adapters", () => {
+  it.each([{}, { TRAFFIC_CAMERA_VIDEO_PROXY_SECRET: "a-secure-test-secret-of-at-least-24-characters" }])("does not advertise unqualified Virginia video with env %o", async (videoEnv) => {
+    clearTrafficCameraCatalogCache();
+    const features = await trafficCamerasProvider.load(
+      { west: -80, south: 37, east: -79, north: 38 }, ["traffic-cameras"],
+      {
+        env: { TRAFFIC_CAMERAS_ENABLED: "1", TRAFFIC_CAMERAS_STATES: "VA", ...videoEnv },
+        fetch: async () => Response.json({ features: [{ properties: { id: "va-camera", active: true, problem_stream: false, https_url: "https://unqualified.example.test/va.m3u8" }, geometry: { coordinates: [-79.9, 37.3] } }] }),
+      },
+    );
+    expect(features).toHaveLength(1);
+    expect(features[0]?.media).toMatchObject({ playbackUrl: null, videoAvailable: false, sourceHref: "https://511.vdot.virginia.gov/" });
+  });
   it("parses active Delaware HLS cameras", () => {
     const result = parseDelawareCameras({
       videoCameras: [{

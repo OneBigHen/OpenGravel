@@ -20,6 +20,17 @@ import {
   type Pa511Camera,
 } from "@/server/map-layers/pa511-cameras";
 import type { ProviderContext } from "@/server/map-layers/providers";
+import {
+  CameraUrlSecurityError,
+  cameraFetchTarget,
+  createCameraMetadataPolicy,
+  createCameraUrlPolicy,
+  fetchPinnedCameraUrl,
+  readCappedResponseText,
+  MAX_CAMERA_MANIFEST_BYTES,
+  type CameraDnsLookup,
+  type CameraUrlPolicy,
+} from "@/server/traffic-cameras/url-security";
 
 const PA_AUTH_URL = "https://pa.arcadis-ivds.com/api/SecureTokenUri/GetSecureTokenUriBySourceId";
 const RELAY_TOKEN_TTL_MS = 10 * 60_000;
@@ -35,6 +46,7 @@ interface RelayTokenPayload {
 export interface Pa511HlsDeps {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly fetch?: typeof fetch;
+  readonly lookup?: CameraDnsLookup;
   readonly now?: () => number;
 }
 
@@ -180,9 +192,11 @@ function rewriteUri(
   secret: string,
   relayPath: string,
   now: number,
+  validateUri?: (url: URL) => void,
 ): string {
   const upstream = resourceUrl(uri, base);
   if (upstream.protocol !== "https:") throw new Error("Refusing non-HTTPS HLS resource");
+  validateUri?.(upstream);
   const token = encryptPa511RelayToken({
     version: 1,
     cameraId,
@@ -199,6 +213,7 @@ export function rewritePa511Manifest(
   secret: string,
   relayPath: string,
   now = Date.now(),
+  validateUri?: (url: URL) => void,
 ): string {
   return manifest
     .split(/\r?\n/)
@@ -206,13 +221,41 @@ export function rewritePa511Manifest(
       const trimmed = line.trim();
       if (trimmed === "") return line;
       if (!trimmed.startsWith("#")) {
-        return rewriteUri(trimmed, base, cameraId, secret, relayPath, now);
+        return rewriteUri(trimmed, base, cameraId, secret, relayPath, now, validateUri);
       }
       if (!line.includes("URI=\"")) return line;
       return line.replace(/URI="([^"]+)"/g, (_whole, uri: string) =>
-        `URI="${rewriteUri(uri, base, cameraId, secret, relayPath, now)}"`);
+        `URI="${rewriteUri(uri, base, cameraId, secret, relayPath, now, validateUri)}"`);
     })
     .join("\n");
+}
+
+function manifestResourceUrls(manifest: string, base: URL): readonly URL[] {
+  if (manifest.length > MAX_CAMERA_MANIFEST_BYTES) throw new CameraUrlSecurityError("invalid-url", "Camera playlist is too large");
+  const urls: URL[] = [];
+  for (const line of manifest.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed !== "" && !trimmed.startsWith("#")) urls.push(resourceUrl(trimmed, base));
+    if (line.includes("URI=") && !/URI="[^"]*"/.test(line)) {
+      throw new CameraUrlSecurityError("invalid-url", "Camera playlist URI attribute is malformed");
+    }
+    if (line.includes("URI=\"")) {
+      for (const match of line.matchAll(/URI="([^"]+)"/g)) {
+        const uri = match[1];
+        if (uri !== undefined) urls.push(resourceUrl(uri, base));
+      }
+    }
+    if (urls.length > 512) throw new CameraUrlSecurityError("invalid-url", "Camera playlist has too many resources");
+  }
+  return urls;
+}
+
+export async function validatePa511Manifest(
+  manifest: string,
+  base: URL,
+  validateUrl: (url: URL) => Promise<URL>,
+): Promise<void> {
+  for (const url of manifestResourceUrls(manifest, base)) await validateUrl(url);
 }
 
 function looksLikePlaylist(url: URL, contentType: string | null): boolean {
@@ -258,7 +301,18 @@ export async function handlePa511HlsRequest(
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(cameraId)) return new Response("Invalid camera.", { status: 400 });
 
   const now = deps.now ?? Date.now;
-  const fetcher = deps.fetch ?? fetch;
+  let policy: CameraUrlPolicy;
+  let metadataPolicy: CameraUrlPolicy;
+  try {
+    policy = createCameraUrlPolicy("PA", env, { lookup: deps.lookup });
+    metadataPolicy = createCameraMetadataPolicy("PA", env, { lookup: deps.lookup });
+  } catch {
+    return new Response("Traffic camera video is not configured.", { status: 503 });
+  }
+  const fetcher: typeof fetch = deps.fetch ?? ((input, init) =>
+    fetchPinnedCameraUrl(metadataPolicy, cameraFetchTarget(input), init));
+  const playbackFetcher: typeof fetch = deps.fetch ?? ((input, init) =>
+    fetchPinnedCameraUrl(policy, cameraFetchTarget(input), init));
   const url = new URL(request.url);
   const relayPath = url.pathname;
   const token = url.searchParams.get("r");
@@ -267,6 +321,7 @@ export async function handlePa511HlsRequest(
   if (token === null) {
     try {
       upstreamUrl = await resolvePa511VideoUrl(cameraId, { fetch: fetcher, env, signal: request.signal });
+      upstreamUrl = await policy.validate(upstreamUrl);
     } catch {
       return new Response("Live camera is unavailable.", { status: 502 });
     }
@@ -276,8 +331,7 @@ export async function handlePa511HlsRequest(
       if (payload.cameraId !== cameraId || payload.expiresAt <= now()) {
         return new Response("Live camera relay token expired.", { status: 410 });
       }
-      upstreamUrl = new URL(payload.upstreamUrl);
-      if (upstreamUrl.protocol !== "https:") throw new Error("non-HTTPS resource");
+      upstreamUrl = await policy.validate(payload.upstreamUrl);
     } catch {
       return new Response("Invalid live camera relay token.", { status: 400 });
     }
@@ -285,24 +339,42 @@ export async function handlePa511HlsRequest(
 
   let upstream: Response;
   try {
-    upstream = await fetcher(upstreamUrl, {
+    upstream = await playbackFetcher(upstreamUrl, {
       headers: upstreamHeaders(request),
       signal: withTimeout(request.signal, 15_000),
-      redirect: "follow",
+      redirect: "manual",
     });
   } catch {
     return new Response("Live camera upstream failed.", { status: 502 });
   }
-  if (!upstream.ok && upstream.status !== 206) {
+  if ((upstream.status >= 300 && upstream.status <= 399) || (!upstream.ok && upstream.status !== 206)) {
     return new Response("Live camera upstream rejected the request.", { status: 502 });
   }
 
   if (looksLikePlaylist(upstreamUrl, upstream.headers.get("content-type"))) {
-    const manifest = await upstream.text();
+    let manifest: string;
+    try {
+      manifest = await readCappedResponseText(upstream);
+    } catch {
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
     if (!manifest.trimStart().startsWith("#EXTM3U")) {
       return new Response("Live camera returned an invalid playlist.", { status: 502 });
     }
-    const rewritten = rewritePa511Manifest(manifest, upstreamUrl, cameraId, secret, relayPath, now());
+    try {
+      await validatePa511Manifest(manifest, upstreamUrl, policy.validate);
+    } catch (error) {
+      if (error instanceof CameraUrlSecurityError && error.code !== "invalid-url") {
+        return new Response("Live camera returned an unsafe playlist.", { status: 502 });
+      }
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
+    let rewritten: string;
+    try {
+      rewritten = rewritePa511Manifest(manifest, upstreamUrl, cameraId, secret, relayPath, now());
+    } catch {
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
     return new Response(rewritten, {
       status: 200,
       headers: {

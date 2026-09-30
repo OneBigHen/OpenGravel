@@ -9,18 +9,31 @@
 import {
   decryptPa511RelayToken,
   rewritePa511Manifest,
+  validatePa511Manifest,
 } from "@/server/traffic-cameras/pa511-hls";
 import {
   TRAFFIC_CAMERA_ADAPTERS,
   type TrafficCameraState,
 } from "@/server/traffic-cameras/registry";
 import type { ProviderContext } from "@/server/map-layers/providers";
+import {
+  CameraUrlSecurityError,
+  cameraFetchTarget,
+  createCameraMetadataPolicy,
+  createCameraUrlPolicy,
+  fetchPinnedCameraUrl,
+  readCappedResponseText,
+  type CameraDnsLookup,
+  type CameraSecurityState,
+  type CameraUrlPolicy,
+} from "@/server/traffic-cameras/url-security";
 
-const SUPPORTED_DIRECT_STATES = new Set<TrafficCameraState>(["NJ", "NY", "DE", "MD", "VA", "WV"]);
+const SUPPORTED_DIRECT_STATES = new Set<CameraSecurityState>(["NJ", "NY", "DE", "MD", "VA", "WV"]);
 
 export interface DirectCameraHlsDeps {
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly fetch?: typeof fetch;
+  readonly lookup?: CameraDnsLookup;
   readonly now?: () => number;
 }
 
@@ -29,8 +42,8 @@ function secret(env: Readonly<Record<string, string | undefined>>): string | nul
   return value.length >= 24 ? value : null;
 }
 
-function stateOf(raw: string): TrafficCameraState | null {
-  const value = raw.toUpperCase() as TrafficCameraState;
+function stateOf(raw: string): CameraSecurityState | null {
+  const value = raw.toUpperCase() as CameraSecurityState;
   return SUPPORTED_DIRECT_STATES.has(value) ? value : null;
 }
 
@@ -100,7 +113,18 @@ export async function handleDirectCameraHls(
   const relaySecret = secret(env);
   if (relaySecret === null) return new Response("Traffic camera video proxy is not configured.", { status: 503 });
 
-  const fetcher = deps.fetch ?? fetch;
+  let policy: CameraUrlPolicy;
+  let metadataPolicy: CameraUrlPolicy;
+  try {
+    policy = createCameraUrlPolicy(state, env, { lookup: deps.lookup });
+    metadataPolicy = createCameraMetadataPolicy(state, env, { lookup: deps.lookup });
+  } catch {
+    return new Response("Traffic camera video is not configured.", { status: 503 });
+  }
+  const fetcher: typeof fetch = deps.fetch ?? ((input, init) =>
+    fetchPinnedCameraUrl(metadataPolicy, cameraFetchTarget(input), init));
+  const playbackFetcher: typeof fetch = deps.fetch ?? ((input, init) =>
+    fetchPinnedCameraUrl(policy, cameraFetchTarget(input), init));
   const now = deps.now ?? Date.now;
   const requestUrl = new URL(request.url);
   const token = requestUrl.searchParams.get("r");
@@ -110,6 +134,7 @@ export async function handleDirectCameraHls(
   if (token === null) {
     try {
       upstreamUrl = await resolveCameraUrl(state, cameraId, { fetch: fetcher, env, signal: request.signal });
+      upstreamUrl = await policy.validate(upstreamUrl);
     } catch {
       return new Response("Live camera is unavailable.", { status: 502 });
     }
@@ -119,8 +144,7 @@ export async function handleDirectCameraHls(
       if (payload.cameraId !== relayIdentity || payload.expiresAt <= now()) {
         return new Response("Live camera relay token expired.", { status: 410 });
       }
-      upstreamUrl = new URL(payload.upstreamUrl);
-      if (upstreamUrl.protocol !== "https:") throw new Error("non-HTTPS resource");
+      upstreamUrl = await policy.validate(payload.upstreamUrl);
     } catch {
       return new Response("Invalid live camera relay token.", { status: 400 });
     }
@@ -138,27 +162,47 @@ export async function handleDirectCameraHls(
 
   let upstream: Response;
   try {
-    upstream = await fetcher(upstreamUrl, {
+    upstream = await playbackFetcher(upstreamUrl, {
       headers,
-      redirect: "follow",
+      redirect: "manual",
       signal: withTimeout(request.signal, 15_000),
     });
   } catch {
     return new Response("Live camera upstream failed.", { status: 502 });
   }
-  if (!upstream.ok && upstream.status !== 206) return new Response("Live camera upstream rejected the request.", { status: 502 });
+  if ((upstream.status >= 300 && upstream.status <= 399) || (!upstream.ok && upstream.status !== 206)) {
+    return new Response("Live camera upstream rejected the request.", { status: 502 });
+  }
 
   if (isPlaylist(upstreamUrl, upstream.headers.get("content-type"))) {
-    const manifest = await upstream.text();
+    let manifest: string;
+    try {
+      manifest = await readCappedResponseText(upstream);
+    } catch {
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
     if (!manifest.trimStart().startsWith("#EXTM3U")) return new Response("Live camera returned an invalid playlist.", { status: 502 });
-    const rewritten = rewritePa511Manifest(
-      manifest,
-      upstreamUrl,
-      relayIdentity,
-      relaySecret,
-      relayPath(state, cameraId),
-      now(),
-    );
+    try {
+      await validatePa511Manifest(manifest, upstreamUrl, policy.validate);
+    } catch (error) {
+      if (error instanceof CameraUrlSecurityError && error.code !== "invalid-url") {
+        return new Response("Live camera returned an unsafe playlist.", { status: 502 });
+      }
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
+    let rewritten: string;
+    try {
+      rewritten = rewritePa511Manifest(
+        manifest,
+        upstreamUrl,
+        relayIdentity,
+        relaySecret,
+        relayPath(state, cameraId),
+        now(),
+      );
+    } catch {
+      return new Response("Live camera returned an invalid playlist.", { status: 502 });
+    }
     return new Response(rewritten, {
       headers: {
         "cache-control": "private, no-store",
@@ -178,5 +222,11 @@ export function directCameraPlaybackPath(
 ): string | null {
   const state = stateOf(rawState);
   if (state === null) return null;
-  return secret(env) === null ? null : relayPath(state, cameraId);
+  if (secret(env) === null) return null;
+  try {
+    if (createCameraUrlPolicy(state, env).origins.size === 0) return null;
+  } catch {
+    return null;
+  }
+  return relayPath(state, cameraId);
 }

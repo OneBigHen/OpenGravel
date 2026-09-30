@@ -7,6 +7,7 @@
 
 import type { LngLat, MapLayerBounds } from "@/application/map-layers";
 import type { ProviderContext } from "@/server/map-layers/providers";
+import { createExactOriginPolicy, fetchPinnedCameraUrl } from "@/server/traffic-cameras/url-security";
 import type { TrafficCameraRecord } from "@/server/traffic-cameras/registry";
 
 const DEFAULT_BASE =
@@ -34,7 +35,7 @@ interface StormScopeIndex {
   readonly shards: readonly StormScopeShard[];
 }
 
-let indexCache: { readonly expiresAt: number; readonly value: StormScopeIndex } | null = null;
+let indexCache: { readonly base: string; readonly expiresAt: number; readonly value: StormScopeIndex } | null = null;
 const shardCache = new Map<string, { readonly expiresAt: number; readonly value: readonly unknown[] }>();
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -77,22 +78,32 @@ function inside(view: MapLayerBounds, point: LngLat): boolean {
   return point[0] >= view.west && point[0] <= view.east && point[1] >= view.south && point[1] <= view.north;
 }
 
-function baseUrl(env: ProviderContext["env"]): string {
+export function stormScopeBaseUrl(env: ProviderContext["env"]): URL {
   const configured = env["STORMSCOPE_CAMERA_BASE_URL"]?.trim();
-  return configured === undefined || configured === ""
-    ? DEFAULT_BASE
-    : configured.endsWith("/") ? configured : `${configured}/`;
+  const base = new URL(configured || DEFAULT_BASE);
+  if (base.protocol !== "https:" || base.username !== "" || base.password !== "" || base.port !== "" || base.search !== "" || base.hash !== "") {
+    throw new Error("StormScope requires an exact HTTPS data directory");
+  }
+  // Apply the same configuration validation as media relays; address validation
+  // and pinning are performed for every actual registry request below.
+  createExactOriginPolicy([base.origin]);
+  if (!base.pathname.endsWith("/")) base.pathname += "/";
+  return base;
 }
 
-async function fetchJson(context: ProviderContext, url: string): Promise<unknown> {
-  const response = await context.fetch(url, {
+async function fetchJson(context: ProviderContext, url: URL): Promise<unknown> {
+  const base = stormScopeBaseUrl(context.env);
+  if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) {
+    throw new Error("StormScope registry resource escaped its data directory");
+  }
+  const response = await fetchPinnedCameraUrl(createExactOriginPolicy([base.origin]), url, {
     headers: {
       accept: "application/json",
       "user-agent": "OpenGravel/0.1 personal route planner (traffic camera fallback)",
     },
     signal: context.signal,
   });
-  if (!response.ok) throw new Error(`StormScope camera registry ${response.status}`);
+  if (!response.ok) { await response.body?.cancel(); throw new Error(`StormScope camera registry ${response.status}`); }
   return response.json();
 }
 
@@ -113,6 +124,9 @@ export function parseStormScopeIndex(payload: unknown): StormScopeIndex {
     const path = text(item?.["path"]);
     const bounds = bbox(item?.["bbox"]);
     if (id === null || path === null || bounds === null) return [];
+    if (!/^camera-shards\/[A-Za-z0-9_-]+\.json(?:\?[A-Za-z0-9._~%=&-]*)?$/.test(path)) {
+      throw new Error("StormScope shard path must stay in camera-shards");
+    }
     return [{ id, path, bbox: bounds }];
   });
   if (shards.length === 0) throw new Error("StormScope camera index has no shards");
@@ -126,9 +140,10 @@ export function parseStormScopeIndex(payload: unknown): StormScopeIndex {
 
 async function loadIndex(context: ProviderContext): Promise<StormScopeIndex> {
   const now = Date.now();
-  if (indexCache !== null && indexCache.expiresAt > now) return indexCache.value;
-  const value = parseStormScopeIndex(await fetchJson(context, new URL("cameras.index.json", baseUrl(context.env)).toString()));
-  indexCache = { expiresAt: now + INDEX_TTL_MS, value };
+  const base = stormScopeBaseUrl(context.env).toString();
+  if (indexCache !== null && indexCache.base === base && indexCache.expiresAt > now) return indexCache.value;
+  const value = parseStormScopeIndex(await fetchJson(context, new URL("cameras.index.json", base)));
+  indexCache = { base, expiresAt: now + INDEX_TTL_MS, value };
   return value;
 }
 
@@ -136,11 +151,11 @@ async function loadShard(
   context: ProviderContext,
   shard: StormScopeShard,
 ): Promise<readonly unknown[]> {
-  const url = new URL(shard.path, baseUrl(context.env)).toString();
+  const url = new URL(shard.path, stormScopeBaseUrl(context.env)).toString();
   const now = Date.now();
   const cached = shardCache.get(url);
   if (cached !== undefined && cached.expiresAt > now) return cached.value;
-  const payload = await fetchJson(context, url);
+  const payload = await fetchJson(context, new URL(url));
   if (!Array.isArray(payload)) throw new Error("StormScope camera shard malformed");
   if (shardCache.size >= MAX_SHARD_CACHE) {
     const oldest = shardCache.keys().next().value;
@@ -171,7 +186,9 @@ export function parseStormScopeCamera(entry: unknown): TrafficCameraRecord | nul
   const cadence = finite(item["refresh_cadence_seconds"]);
 
   const previewUrl = type === "image" || type === "mjpeg" ? media : null;
-  const playbackUrl = type === "hls" ? media : null;
+  // A registry row is discovery metadata, not a trusted live-media origin.
+  // Keep the official camera link until its provider has a qualified relay.
+  const playbackUrl = null;
   if (previewUrl === null && playbackUrl === null && sourceHref === STORMSCOPE_SOURCE) return null;
 
   return {

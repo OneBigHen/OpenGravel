@@ -66,7 +66,7 @@ export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCard
               Hours and reviews
             </a>
           )}
-          {sourceHref === null ? null : (
+          {sourceHref === null || feature.media?.playbackUrl != null ? null : (
             <a className="og-info-card__link" href={sourceHref} target="_blank" rel="noreferrer">
               {feature.media?.videoAvailable === true ? "Open live camera" : "Open source"}
             </a>

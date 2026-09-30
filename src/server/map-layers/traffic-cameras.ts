@@ -75,24 +75,23 @@ export function relevantTrafficCameraAdapters(
 }
 
 function feature(camera: TrafficCameraRecord, env: ProviderContext["env"]): InfoFeature {
+  const playbackUrl = camera.state === "PA" || camera.id.startsWith("stormscope-")
+    ? camera.playbackUrl
+    : camera.playbackUrl === null ? null : directCameraPlaybackPath(camera.state, camera.id, env);
+  const videoAvailable = playbackUrl !== null && camera.videoAvailable;
   return {
     id: `traffic-camera:${camera.state}:${camera.id}`,
     layerId: "traffic-cameras",
     name: camera.name,
     detail: camera.detail === null ? camera.provider : `${camera.detail} · ${camera.state}`,
-    weight: camera.videoAvailable ? 1 : 0,
+    weight: videoAvailable ? 1 : 0,
     geometry: { type: "Point", coordinates: camera.coordinates },
     media: {
       previewUrl: camera.previewUrl,
-      playbackUrl:
-        camera.state === "PA" || camera.id.startsWith("stormscope-")
-          ? camera.playbackUrl
-          : camera.playbackUrl === null
-            ? null
-            : directCameraPlaybackPath(camera.state, camera.id, env) ?? camera.playbackUrl,
+      playbackUrl,
       sourceHref: camera.sourceHref,
       refreshSeconds: camera.previewUrl === null ? null : camera.refreshSeconds ?? 10,
-      videoAvailable: camera.videoAvailable,
+      videoAvailable,
     },
   };
 }
