@@ -192,8 +192,8 @@ function validCandidate(candidate: JevFrontierCandidateState): boolean {
 export function validateJevFrontierState(
   state: JevFrontierState,
 ): JevFrontierValidationFailure | null {
+  if (state.schemaVersion !== 1) return "invalid-state";
   if (
-    state.schemaVersion !== 1 ||
     state.candidates.length < 2 ||
     state.candidates.length > JEV_FRONTIER_MAX_CANDIDATES
   ) return "candidate-count";
