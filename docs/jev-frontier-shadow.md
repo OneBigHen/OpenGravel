@@ -262,14 +262,19 @@ scoring during P0.
 
 Proposition:
 
-> Compared with the deterministic baseline candidate identified in state, the
-> chosen non-NONE candidate is meaningfully better matched to this rider's
-> explicit current intent and supplied rider-preference summary.
+> At least one supplied non-baseline candidate is meaningfully better matched
+> than the deterministic baseline to this rider's explicit current intent and
+> supplied rider-preference summary.
 
-Capture `noul` directly as the probability the proposition is true.
+This question is intentionally independent of the Choice answer because Jev
+evaluates the typed questions against the same state rather than chaining one
+answer into the next.
+
+Capture `noul` directly as the probability the proposition is true. The
+counterfactual helper combines it with the Choice distribution afterward.
 
 If the selected candidate is the deterministic baseline or NONE, the answer is
-still useful telemetry but cannot cause a route change.
+still useful telemetry but cannot imply a route change.
 
 ## Typed output semantics
 
