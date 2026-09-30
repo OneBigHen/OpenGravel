@@ -14,7 +14,7 @@
 export const RIDER_PREFERENCE_FEATURES = [
   "curvature",
   "backroad",
-  "surfaceFit",
+  "unpaved",
   "elevation",
   "trafficCalm",
   "junctionFlow",
