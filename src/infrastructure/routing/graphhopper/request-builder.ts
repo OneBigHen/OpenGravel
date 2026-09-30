@@ -133,6 +133,8 @@ export interface GraphHopperCustomModelRule {
   readonly multiply_by?: string;
   readonly to?: string;
   readonly limit_to?: string;
+  /** GraphHopper 11 turn-penalty increment; unused by current live routing. */
+  readonly add?: string;
 }
 
 /** One polygon feature usable by an `in_<id>` custom-model condition. */
@@ -160,6 +162,17 @@ export interface GraphHopperAreaCollection {
 export interface GraphHopperCustomModel {
   readonly priority?: readonly GraphHopperCustomModelRule[];
   readonly speed?: readonly GraphHopperCustomModelRule[];
+  /**
+   * Query-time distance trade-off supported by GraphHopper custom weighting.
+   * Frontier routing will use this only after deployment-mode constraints have
+   * been verified; current requests leave it unset.
+   */
+  readonly distance_influence?: number;
+  /**
+   * GraphHopper 11 flexible turn costs. The active deployment must explicitly
+   * allow request turn penalties before frontier probes may populate this.
+   */
+  readonly turn_penalty?: readonly GraphHopperCustomModelRule[];
   readonly areas?: GraphHopperAreaCollection;
 }
 
