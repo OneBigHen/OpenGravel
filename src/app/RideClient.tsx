@@ -26,6 +26,7 @@ import {
   deriveLiveSuggestionWorkload,
   evaluateLiveSuggestion,
 } from "@/application/free-ride/live-suggestions";
+import { personalRideHistory } from "@/application/roads/personal-road-history";
 import { createLibraryService } from "@/application/library/library-service";
 import { createBrowserPositionSource } from "@/infrastructure/ride/browser-position-source";
 import { createBrowserSpeech } from "@/infrastructure/ride/browser-speech";
@@ -183,12 +184,7 @@ export function RideClient({
       providerFactory: createClientRouteCandidateProvider,
       rideHistory: async () => {
         const entries = await library.listExploreRides?.() ?? [];
-        return entries
-          .filter((entry) => entry.geometry.length >= 2)
-          .map((entry) => ({
-            geometry: entry.geometry,
-            riddenAt: entry.summary.savedAt,
-          }));
+        return personalRideHistory(entries);
       },
     });
     const evaluateSuggestion = (

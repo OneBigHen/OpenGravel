@@ -11,6 +11,7 @@
 import { unknownEvidence, type EvidenceSource, type EvidenceValue } from "@/domain/evidence/types";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
+import type { LibraryExploreRide } from "@/application/library/library-service";
 import { indexRoute, type RouteIndex } from "./route-overlap";
 
 export const PERSONAL_HISTORY_MATCH_TOLERANCE_METERS = 35;
@@ -27,6 +28,13 @@ export interface PersonalRideTrace {
   readonly geometry: readonly Coordinate[];
   /** End/save time of this trace when known. Invalid/absent stays non-recent. */
   readonly riddenAt?: string;
+}
+
+/** Only observed recordings can establish personal riding history. */
+export function personalRideHistory(entries: readonly Pick<LibraryExploreRide, "geometry" | "riddenAt">[]): readonly PersonalRideTrace[] {
+  return entries
+    .filter((entry) => entry.riddenAt !== undefined && Number.isFinite(Date.parse(entry.riddenAt)) && validLine(entry.geometry))
+    .map((entry) => ({ geometry: entry.geometry, ...(entry.riddenAt === undefined ? {} : { riddenAt: entry.riddenAt }) }));
 }
 
 export interface PersonalRoadHistoryAssessment {

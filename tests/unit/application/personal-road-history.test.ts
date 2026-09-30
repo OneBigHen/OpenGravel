@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assessPersonalRoadHistory,
+  personalRideHistory,
   personalNoveltyEvidence,
 } from "@/application/roads/personal-road-history";
 import type { Coordinate } from "@/domain/ride/types";
@@ -15,6 +16,14 @@ function line(...points: readonly [number, number][]): readonly Coordinate[] {
 }
 
 describe("personal road history", () => {
+  it("uses recorded traces rather than un-ridden imported routes and uses the ride end time", () => {
+    const geometry = line([-75.30, 40.20], [-75.29, 40.20]);
+    const entries = [
+      { geometry, summary: { savedAt: RECENT, recordedTrack: undefined } },
+      { geometry, riddenAt: OLD, summary: { savedAt: RECENT, recordedTrack: { summary: {} } } },
+    ];
+    expect(personalRideHistory(entries)).toEqual([{ geometry, riddenAt: OLD }]);
+  });
   it("treats overlap with a saved ride as familiar without counting a crossing", () => {
     const ridden = line(
       [-75.30, 40.20],

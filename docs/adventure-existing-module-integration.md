@@ -4,6 +4,21 @@ Status: architecture correction / implementation map
 Parent PR: #25  
 Authority for integration: this document overrides any earlier suggestion to add a standalone `application/world` or `application/quick-ride` subsystem.
 
+## Current implementation slice
+
+PR #25 ships the canonical novelty preference, short-loop controls, Advisor and
+route-request wiring, and local familiarity estimates from actual saved
+recordings. Imports and saved plans are not evidence of roads the rider rode;
+recording recency comes from the last observed fix rather than the save time.
+
+The implementation estimates geometric overlap against recorded traces. It
+emits all-time new-road share to the existing suggestion scorer; recent overlap
+is measured separately but recency decay in ranking is **not implemented**.
+`ExplorableRoad` eligibility, worthwhile-road-only progress, standard Planner
+personalization, return-budget suppression and richer map presentation remain
+future slices. This PR does not certify those features or the complete map-layer
+parity/Adventure roadmap below.
+
 ## Product rule
 
 Adventure is **not a new mode, tab, planner, scoring engine, or AI agent**.

@@ -165,6 +165,7 @@ describe("LibraryService", () => {
     expect(rows[0]?.recordedTrack?.timestamps).toEqual(input.timestamps);
     expect(listed[0]?.recordedTrack?.previewGeometry).toEqual(input.coordinates);
     expect(explored?.[0]?.geometry).toEqual(input.coordinates);
+    expect(explored?.[0]?.riddenAt).toBe(input.timestamps.at(-1));
     expect(exported?.recordedTrack).toEqual({
       coordinates: input.coordinates,
       timestamps: input.timestamps,

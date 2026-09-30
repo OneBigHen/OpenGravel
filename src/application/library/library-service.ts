@@ -136,6 +136,8 @@ export interface LibraryExploreRide {
   readonly document: RideDocument;
   /** A single contiguous imported track, or empty when no route geometry is retained. */
   readonly geometry: readonly Coordinate[];
+  /** Last observed fix for an actual recording, never an import or save time. */
+  readonly riddenAt?: string;
 }
 
 export interface CreateDerivativeOptions {
@@ -426,6 +428,7 @@ export class LibraryService implements LibraryServicePort {
       summary: summary(record),
       document: record.document,
       geometry: await this.exploreGeometry(record),
+      ...(record.recordedTrack === undefined ? {} : { riddenAt: record.recordedTrack.timestamps.at(-1) }),
     })));
   }
 
