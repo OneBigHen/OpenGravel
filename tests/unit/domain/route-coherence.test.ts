@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   analyzeRouteCoherence,
+  routeBacktrackingShare,
+  routeSelfOverlapShare,
 } from "@/domain/route/coherence";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteInstruction } from "@/domain/route/types";
@@ -122,6 +124,62 @@ describe("route coherence", () => {
     expect(result).not.toBeNull();
     expect(result!.alternatingShortTurnPairs).toBe(0);
     expect(result!.flags).not.toContain("alternating-short-turns");
+  });
+
+  it("restores SwitchBack-style backtracking detection", () => {
+    const geometry = [
+      at(-75.5, 40),
+      at(-75.48, 40),
+      at(-75.46, 40),
+      at(-75.44, 40),
+      at(-75.46, 40),
+      at(-75.48, 40),
+      at(-75.5, 40),
+    ];
+
+    const share = routeBacktrackingShare(geometry);
+    const result = analyzeRouteCoherence({ geometry });
+
+    expect(share).toBeGreaterThan(0.15);
+    expect(result).not.toBeNull();
+    expect(result!.backtrackingShare).toBeGreaterThan(0.15);
+    expect(result!.flags).toContain("excessive-backtracking");
+  });
+
+  it("restores SwitchBack-style self-overlap detection", () => {
+    const outbound = Array.from({ length: 21 }, (_, index) =>
+      at(-75.5 + index * 0.005, 40),
+    );
+    const geometry = [
+      ...outbound,
+      ...outbound.slice(0, -1).reverse(),
+    ];
+
+    const share = routeSelfOverlapShare(geometry);
+    const result = analyzeRouteCoherence({ geometry });
+
+    expect(share).toBeGreaterThan(0.2);
+    expect(result).not.toBeNull();
+    expect(result!.selfOverlapShare).toBeGreaterThan(0.2);
+    expect(result!.flags).toContain("excessive-self-overlap");
+  });
+
+  it("keeps a simple non-repeating route below legacy repetition flags", () => {
+    const geometry = [
+      at(-75.5, 40),
+      at(-75.45, 40.01),
+      at(-75.4, 40.02),
+      at(-75.35, 40.03),
+      at(-75.3, 40.04),
+    ];
+
+    const result = analyzeRouteCoherence({ geometry });
+
+    expect(result).not.toBeNull();
+    expect(result!.backtrackingShare).toBeLessThanOrEqual(0.15);
+    expect(result!.selfOverlapShare).toBeLessThanOrEqual(0.2);
+    expect(result!.flags).not.toContain("excessive-backtracking");
+    expect(result!.flags).not.toContain("excessive-self-overlap");
   });
 
   it("rejects malformed geometry instead of fabricating diagnostics", () => {
