@@ -1093,6 +1093,17 @@ export function roadCharacterCommand(
   };
 }
 
+export function noveltyPreferenceCommand(
+  document: RideDocument,
+  noveltyPreference: NonNullable<RideDocument["intent"]["noveltyPreference"]>,
+): Extract<RideCommand, { type: "noveltyPreference.set" }> {
+  return {
+    ...commandBase(document, "rider", "Set road familiarity"),
+    type: "noveltyPreference.set",
+    noveltyPreference,
+  };
+}
+
 /** Changes only the preference; the rest of the surface envelope is kept. */
 export function surfacePreferenceCommand(
   document: RideDocument,
