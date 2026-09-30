@@ -32,6 +32,15 @@ This adapter is opt-in with:
 PA511_CAMERAS_ENABLED=1
 ```
 
+Experimental in-card video is separately opt-in:
+
+```env
+PA511_VIDEO_ENABLED=1
+PA511_VIDEO_PROXY_SECRET=<private random value, at least 24 characters>
+```
+
+The relay resolves only the selected camera, fetches the 511PA/DIVAS HLS playlist on the server, rewrites child playlists/segments back through the same-origin OpenGravel endpoint, and encrypts the short-lived upstream resource URLs with AES-GCM before they appear in browser requests. It does not expose the 511PA session cookie or anti-CSRF token.
+
 The public OpenGravel demo should leave this unset. A five-minute process cache prevents every map pan from re-enumerating Pennsylvania.
 
 ### PennDOT data feeds
@@ -52,7 +61,7 @@ Do not use the old District 6 dump as a live source.
 
 ## Playback design
 
-Phase 1 in this PR stops at **current-image playback**: the selected camera image refreshes in the card, and video-capable cameras link to the official 511PA camera page. The media contract already contains `playbackUrl` so video can be added without changing MapLibre or map-layer state.
+Phase 1 now includes **current-image playback** plus an **experimental, opt-in HLS relay for native-HLS clients (iPhone/iPad/Safari)**. The selected camera image refreshes in the card when video is disabled; when video is enabled, the same card exposes native video controls while retaining the image as its poster. Other browsers can still use **Open live camera** until the hls.js fallback lands.
 
 511PA's current camera page warns that users may view up to eight streams simultaneously and that exceeding that limit causes a one-hour video suspension. OpenGravel should be much stricter: **one active selected camera per client, no background preloading, no camera-wall autoplay.**
 
@@ -76,14 +85,16 @@ The current 511PA implementation uses tokenized HLS. The reference implementatio
 - Marker weight distinguishes video-capable vs still-only cameras for future styling.
 - Tap opens the existing `InfoFeatureCard`.
 - Current image refreshes every 10 seconds while the card is open.
-- Video-capable cameras show **Open live camera** to 511PA until in-card HLS relay is complete.
+- With video relay disabled, video-capable cameras show **Open live camera** to 511PA.
+- With video relay enabled, native-HLS browsers get in-card controls; no autoplay and `preload="none"`.
 - No camera requests are made while the layer is off.
 - No video requests are made until the user explicitly opens a camera.
 
 ## Follow-up
 
 - Verify the public PennDOT ArcGIS camera layer's URL/ID mapping and make it the primary metadata/discovery adapter.
-- Add the one-camera HLS relay behind `PA511_VIDEO_ENABLED=1`.
+- Live-test the one-camera HLS relay against current 511PA streams and harden any provider-specific playlist edge cases.
+- Add hls.js only if desktop Chromium/Firefox playback is worth the bundle/runtime cost.
 - Add clustering when dense urban views become noisy.
 - Add camera-near-route mode so a planned ride can show only cameras within a corridor.
 - Add provider health metrics and stale-image detection.
