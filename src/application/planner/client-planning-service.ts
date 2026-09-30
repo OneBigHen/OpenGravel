@@ -33,8 +33,16 @@
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { PlanRequestVersions } from "@/application/planner/build-plan-request";
-import { createPlanningController } from "@/application/planner/planning-controller";
+import {
+  createPlanningController,
+  createStubCandidatePipeline,
+  type CandidatePipelineInput,
+  type CandidatePipelineRoleInput,
+} from "@/application/planner/planning-controller";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
+import type { LibraryExploreRide } from "@/application/library/library-service";
+import { personalNoveltyEvidence, personalRideHistory, type PersonalRideTrace } from "@/application/roads/personal-road-history";
+import { isUsableEvidence } from "@/domain/evidence/types";
 import { withOfflineFallback, type OfflineRouteEngine } from "@/application/offline/offline-route-fallback";
 import { createOfflineRouteEngine } from "@/infrastructure/offline/offline-route-engine";
 import { RegionDownloadStore } from "@/infrastructure/offline/region-download-store";
@@ -44,6 +52,12 @@ import type { GeometryPayload } from "@/domain/geometry/types";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideIntent } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
+import type { ProviderCandidate } from "@/application/planner/route-provider";
+import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
+import { assignRoles } from "@/domain/route/roles";
+import { replaceNoveltyScore } from "@/domain/route/scoring";
+import type { RouteCandidate, RouteRoles } from "@/domain/route/types";
+import { timeboxPreferredIndexes } from "./pipeline";
 
 /** Marks a policy/score/role answer that no policy produced yet. */
 export const STUB_POLICY_VERSION = "VNEXT_STUB_0";
@@ -96,6 +110,8 @@ export interface ClientPlanningServiceOptions {
    * The browser's worker-backed engine by default; `null` turns it off.
    */
   readonly offlineEngine?: OfflineRouteEngine | null;
+  /** Local-only recorded ride history; never sent to a provider. */
+  readonly localHistoryReader?: () => Promise<readonly Pick<LibraryExploreRide, "geometry" | "riddenAt">[]>;
 }
 
 function defaultOfflineEngine(): OfflineRouteEngine | null {
@@ -115,6 +131,103 @@ export function createClientRouteCandidateProvider() {
   return createApiRouteProvider();
 }
 
+const LOCAL_HISTORY_CACHE_LIMIT = 8;
+
+function attemptKey(input: { readonly rideId: RideId | null; readonly rideRevision: number; readonly planningGeneration: number }): string {
+  return `${input.rideId}:${input.rideRevision}:${input.planningGeneration}`;
+}
+
+interface LocalHistoryPipeline {
+  readonly candidateTransform: (
+    input: CandidatePipelineInput,
+    providerCandidate: ProviderCandidate,
+    candidate: RouteCandidate,
+  ) => Promise<RouteCandidate>;
+  readonly roleAssigner: (input: CandidatePipelineRoleInput) => RouteRoles | null;
+}
+
+function createLocalHistoryPipeline(
+  options: Pick<ClientPlanningServiceOptions, "localHistoryReader" | "now">,
+): LocalHistoryPipeline {
+  const historyPromises = new Map<string, Promise<readonly PersonalRideTrace[]>>();
+  const usableHistory = new Set<string>();
+  const now = options.now ?? ((): string => new Date().toISOString());
+  const policy = PA_NJ_ROUTE_POLICY_VNEXT_1;
+
+  const historyFor = (input: CandidatePipelineInput): Promise<readonly PersonalRideTrace[]> => {
+    const key = attemptKey(input.identity);
+    const existing = historyPromises.get(key);
+    if (existing !== undefined) return existing;
+    const promise = options.localHistoryReader === undefined
+      ? Promise.resolve<readonly PersonalRideTrace[]>([])
+      : Promise.resolve()
+          .then(() => options.localHistoryReader!())
+          .then((entries) => personalRideHistory(entries))
+          .catch(() => [] as readonly PersonalRideTrace[]);
+    historyPromises.set(key, promise);
+    while (historyPromises.size > LOCAL_HISTORY_CACHE_LIMIT) {
+      const oldest = historyPromises.keys().next().value;
+      if (oldest === undefined) break;
+      historyPromises.delete(oldest);
+      usableHistory.delete(oldest);
+    }
+    return promise;
+  };
+
+  const candidateTransform = async (
+    input: CandidatePipelineInput,
+    providerCandidate: ProviderCandidate,
+    candidate: RouteCandidate,
+  ): Promise<RouteCandidate> => {
+    const history = await historyFor(input);
+    const key = attemptKey(input.identity);
+    if (history.length === 0 || candidate.score.policyVersion !== policy.version) return candidate;
+    const novelty = personalNoveltyEvidence(providerCandidate.geometry, history, { now: now() });
+    if (!isUsableEvidence(novelty)) return candidate;
+    usableHistory.add(key);
+    const evidence = { ...candidate.evidence, novelty };
+    const score = replaceNoveltyScore({
+      score: candidate.score,
+      evidence,
+      intent: {
+        roadCharacter: input.request.options.roadCharacter,
+        noveltyPreference: input.request.options.noveltyPreference,
+      },
+      policy,
+    });
+    return {
+      ...candidate,
+      evidence,
+      score,
+    };
+  };
+
+  const roleAssigner = (input: CandidatePipelineRoleInput): RouteRoles | null => {
+    if (!usableHistory.has(attemptKey(input.identity))) return null;
+    const candidates = input.candidates.filter((candidate) => candidate.eligibility.eligible);
+    const preferred = timeboxPreferredIndexes(candidates, input.discoveryTimebox);
+    const canBeBestRide = preferred === null
+      ? undefined
+      : (candidate: { readonly id: string | number }): boolean => {
+          const index = candidates.findIndex((entry) => entry.id === candidate.id);
+          return index >= 0 && preferred.has(index);
+        };
+    return assignRoles(
+      candidates.map((candidate) => ({
+        id: candidate.id,
+        durationSeconds: candidate.durationSeconds,
+        distanceMeters: candidate.distanceMeters,
+        score: candidate.score,
+      })),
+      policy,
+      undefined,
+      canBeBestRide,
+    );
+  };
+
+  return { candidateTransform, roleAssigner };
+}
+
 /** Creates one client planning service (one `PlanningSession`). */
 export function createClientPlanningService(
   options: ClientPlanningServiceOptions = {},
@@ -126,6 +239,10 @@ export function createClientPlanningService(
   });
   const listeners = new Set<() => void>();
   const offlineEngine = options.offlineEngine === undefined ? defaultOfflineEngine() : options.offlineEngine;
+  const localHistoryPipeline = createLocalHistoryPipeline({
+    ...(options.localHistoryReader === undefined ? {} : { localHistoryReader: options.localHistoryReader }),
+    ...(options.now === undefined ? {} : { now: options.now }),
+  });
 
   const controller = createPlanningController({
     providers: [offlineEngine === null ? apiProvider : withOfflineFallback(apiProvider, offlineEngine)],
@@ -138,6 +255,12 @@ export function createClientPlanningService(
       includeAlternatives: options.includeAlternatives ?? true,
     },
     geometryStore,
+    pipeline: createStubCandidatePipeline({
+      geometryStore,
+      ...(options.now === undefined ? {} : { now: options.now }),
+      candidateTransform: localHistoryPipeline.candidateTransform,
+      roleAssigner: localHistoryPipeline.roleAssigner,
+    }),
     ...(options.now === undefined ? {} : { now: options.now }),
     onUpdate: (): void => {
       for (const listener of [...listeners]) listener();

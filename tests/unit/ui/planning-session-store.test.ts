@@ -18,6 +18,9 @@ import { defaultRideIntent } from "@/domain/ride/create";
 import { asGeometryRef, newRideId, type PointId, type RideId } from "@/domain/ride/ids";
 import { SCHEMA_VERSION, type Coordinate, type RideDocument, type RideIntent, type RidePoint } from "@/domain/ride/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
+import { knownEvidence } from "@/domain/evidence/types";
+import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
+import { scoreCandidate } from "@/domain/route/scoring";
 import type { RouteScoreComponents } from "@/domain/route/types";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import { createPlanningSessionStore } from "@/ui/stores/planning-session-store";
@@ -106,6 +109,52 @@ function successBody(identity: RoutePlanIdentityWire) {
         "lower-workload": null,
       },
       selectedRouteId: BEST_ID,
+    },
+    diagnostics: { optionalProvidersUnavailable: [] },
+  };
+}
+
+function personalizedSuccessBody(identity: RoutePlanIdentityWire) {
+  const routeA = [ORIGIN, MIDPOINT, DESTINATION];
+  const routeB = [ORIGIN, { lon: -75.10, lat: 40.12 }, DESTINATION];
+  const source = { id: "server", label: "server", category: "derived" } as const;
+  const score = (geometry: readonly Coordinate[], durationSeconds: number, novelty: number) =>
+    scoreCandidate({
+      candidate: { geometry, distanceMeters: 120_000, durationSeconds },
+      intent: { roadCharacter: "balanced", noveltyPreference: "prefer-new-to-me" },
+      policy: PA_NJ_ROUTE_POLICY_VNEXT_1,
+      baselineDurationSeconds: 600,
+      evidence: { novelty: knownEvidence(novelty, source) },
+    });
+  return {
+    identity,
+    bundle: {
+      policyVersion: PA_NJ_ROUTE_POLICY_VNEXT_1.version,
+      graphVersion: "gh-nj-2026-04",
+      evidenceVersion: "road-intel-3",
+      candidates: [
+        {
+          ...wireCandidate(asRouteCandidateId("server_a"), 600, "fp_a"),
+          geometry: routeA,
+          evidence: { novelty: knownEvidence(0.1, source) },
+          score: score(routeA, 600, 0.1),
+        },
+        {
+          ...wireCandidate(asRouteCandidateId("server_b"), 900, "fp_b"),
+          geometry: routeB,
+          evidence: { novelty: knownEvidence(0.2, source) },
+          score: score(routeB, 900, 0.2),
+        },
+      ],
+      roles: {
+        "best-ride": asRouteCandidateId("server_a"),
+        fastest: asRouteCandidateId("server_a"),
+        "fast-and-fun": null,
+        "more-twisties": null,
+        "more-dirt": null,
+        "lower-workload": null,
+      },
+      selectedRouteId: asRouteCandidateId("server_a"),
     },
     diagnostics: { optionalProvidersUnavailable: [] },
   };
@@ -222,6 +271,58 @@ describe("createPlanningSessionStore — one attempt through the real client pat
     const payload: GeometryPayload | undefined = geometry[refs[0] ?? ""];
     expect(payload?.kind).toBe("line");
     expect(payload?.kind === "line" ? payload.coordinates : []).toHaveLength(3);
+  });
+
+  it("uses local recorded history for novelty while retaining stored components and provider wire shape", async () => {
+    const { posts } = successFetcher();
+    let historyReads = 0;
+    const service = createClientPlanningService({
+      now,
+      fetcher: (async (
+        input: RequestInfo | URL,
+        init?: RequestInit,
+      ): Promise<Response> => {
+        const body = JSON.parse(String(init?.body)) as Post["body"];
+        posts.push({ url: String(input), body });
+        return jsonResponse(true, 200, personalizedSuccessBody(body.identity));
+      }) as typeof fetch,
+      localHistoryReader: async () => {
+        historyReads += 1;
+        return [{ geometry: [ORIGIN, MIDPOINT, DESTINATION], riddenAt: "2026-07-01T12:00:00.000Z" }];
+      },
+    });
+
+    await service.begin({
+      rideId: RIDE_ID,
+      rideRevision: 5,
+      intent: { ...plannedIntent(), noveltyPreference: "prefer-new-to-me" },
+    });
+
+    expect(historyReads).toBe(1);
+    expect(posts[0]?.body.request).not.toHaveProperty("history");
+    const snapshot = service.snapshot();
+    const bundle = snapshot.committedBundle;
+    expect(bundle).not.toBeNull();
+    const routeA = bundle?.candidates.find((candidate) => candidate.fingerprint === "fp_a");
+    const routeB = bundle?.candidates.find((candidate) => candidate.fingerprint === "fp_b");
+    const candidateA = routeA;
+    const candidateB = routeB;
+    if (candidateA === undefined || candidateB === undefined) {
+      throw new Error("the test expected both personalized candidates");
+    }
+    expect(candidateA.evidence.novelty?.status).toBe("estimated");
+    expect(candidateB.evidence.novelty?.status).toBe("estimated");
+    expect(candidateA.score.components.novelty.input).toBe(0);
+    expect(candidateB.score.components.novelty.input).toBe(1);
+    expect(candidateA.score.components.timeCost).toEqual(
+      personalizedSuccessBody({} as RoutePlanIdentityWire).bundle.candidates[0]?.score.components.timeCost,
+    );
+    expect(candidateA.score.components.traffic).toEqual(
+      personalizedSuccessBody({} as RoutePlanIdentityWire).bundle.candidates[0]?.score.components.traffic,
+    );
+    expect(bundle?.roles["best-ride"]).toBe(candidateB.id);
+    expect(bundle?.roles.fastest).toBe(candidateA.id);
+    expect(bundle?.selectedRouteId).toBe(candidateB.id);
   });
 
   it("locks a rider selection inside one generation", async () => {

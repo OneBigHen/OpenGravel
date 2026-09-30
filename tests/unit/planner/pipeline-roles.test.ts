@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { runCandidatePipeline } from "@/application/planner/pipeline";
+import { runCandidatePipeline, timeboxPreferredIndexes } from "@/application/planner/pipeline";
 import type { ProviderCandidate } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
@@ -154,6 +154,20 @@ describe("runCandidatePipeline — diversity", () => {
 });
 
 describe("runCandidatePipeline — roles", () => {
+  it("shares the discovery timebox reference rule with role consumers", () => {
+    const preferred = timeboxPreferredIndexes(
+      [{ durationSeconds: 3_600 }, { durationSeconds: 5_400 }, { durationSeconds: 7_200 }],
+      { targetMinutes: 90, toleranceMinutes: 10 },
+    );
+    expect(preferred).toEqual(new Set([1]));
+
+    const closest = timeboxPreferredIndexes(
+      [{ durationSeconds: 3_000 }, { durationSeconds: 7_200 }],
+      { targetMinutes: 90, toleranceMinutes: 5 },
+    );
+    expect(closest).toEqual(new Set([1]));
+  });
+
   it("assigns roles only to surviving candidates and selects the best ride", () => {
     const result = run([CURVY, FAST, DUPLICATE, OTHER_CORRIDOR]);
     const kept = result.candidates.length;
