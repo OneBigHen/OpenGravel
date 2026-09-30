@@ -1,9 +1,16 @@
+import "fake-indexeddb/auto";
+
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { PlannerClient } from "@/app/PlannerClient";
+import { createPlannerLibraryService, PlannerClient } from "@/app/PlannerClient";
 import { assetBasePathFromEnv } from "@/app/asset-base-path";
+import { createLibraryService } from "@/application/library/library-service";
 import Home from "@/app/page";
+import { asRecordingId } from "@/domain/recording/ids";
+import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
+import { createRideRepository } from "@/infrastructure/storage/ride-repository";
+import { VNextDatabase } from "@/infrastructure/storage/db";
 
 import { createStubMapHostFactory } from "./support/stub-map-host";
 
@@ -47,6 +54,34 @@ describe("application shell", () => {
  * UI side at all (the architecture scanner enforces the second half).
  */
 describe("browser composition root", () => {
+  it("binds planner library history to the planner geometry store", async () => {
+    const databaseName = `opengravel-planner-composition-${crypto.randomUUID()}`;
+    const repository = createRideRepository({ database: new VNextDatabase(databaseName) });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName });
+    const writer = createLibraryService(repository, { geometryStore });
+    const library = createPlannerLibraryService(repository, geometryStore);
+    const coordinates = [
+      { lon: -75.5, lat: 40 },
+      { lon: -75.4, lat: 40.1 },
+      { lon: -75.3, lat: 40.2 },
+    ] as const;
+
+    await writer.saveRecorded({
+      recordingId: asRecordingId("rec_planner-composition"),
+      coordinates,
+      timestamps: [
+        "2026-09-17T12:00:00.000Z",
+        "2026-09-17T12:10:00.000Z",
+        "2026-09-17T12:20:00.000Z",
+      ],
+      summary: { distanceMeters: 20_000, elapsedSeconds: 1_200, movingSeconds: 1_000, pointCount: 3 },
+    });
+
+    const explored = await library.listExploreRides();
+    expect(explored[0]?.geometry).toEqual(coordinates);
+    expect(explored[0]?.riddenAt).toBe("2026-09-17T12:20:00.000Z");
+  });
+
   it("normalizes the deployment prefix from the environment", () => {
     expect(assetBasePathFromEnv({})).toBe("");
     expect(assetBasePathFromEnv({ NEXT_PUBLIC_BASE_PATH: "ogv" })).toBe("/ogv");

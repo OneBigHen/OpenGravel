@@ -117,6 +117,20 @@ export interface CandidatePipelineInput {
 }
 
 /**
+ * The optional role seam runs after candidate identity and stored assessment
+ * have been bound. A null result deliberately means "no local authority" and
+ * preserves the provider's already-assessed roles.
+ */
+export interface CandidatePipelineRoleInput {
+  readonly identity: PlanningIdentity;
+  readonly candidates: readonly RouteCandidate[];
+  readonly discoveryTimebox?: {
+    readonly targetMinutes: number;
+    readonly toleranceMinutes: number;
+  };
+}
+
+/**
  * The pipeline seam. Implementations are pure with respect to the session:
  * they receive the provider's own candidates and return bundle candidates that
  * own everything the session stores (ids, geometry handles, eligibility, score,
@@ -130,6 +144,8 @@ export interface CandidatePipeline {
   normalize(
     input: CandidatePipelineInput,
   ): Promise<readonly RouteCandidate[]> | readonly RouteCandidate[];
+  /** Canonical role assignment for a pipeline-owned evidence source. */
+  readonly assignRoles?: (input: CandidatePipelineRoleInput) => RouteRoles | null;
 }
 
 /** One request to answer one revision. */
@@ -200,6 +216,14 @@ export interface StubCandidatePipelineOptions {
   /** Where candidate geometry is written; the handle is what a bundle holds. */
   readonly geometryStore: GeometryStore;
   readonly now?: () => string;
+  /** Optional application-owned enrichment after the stored candidate exists. */
+  readonly candidateTransform?: (
+    input: CandidatePipelineInput,
+    providerCandidate: ProviderCandidate,
+    candidate: RouteCandidate,
+  ) => RouteCandidate | Promise<RouteCandidate>;
+  /** Optional role authority; null preserves provider-assessed roles. */
+  readonly roleAssigner?: (input: CandidatePipelineRoleInput) => RouteRoles | null;
 }
 
 /** Marks a score that no scoring policy produced (Task 3.1 replaces it). */
@@ -327,17 +351,26 @@ export function createStubCandidatePipeline(
   const now = options.now ?? ((): string => new Date().toISOString());
   return {
     async normalize(input: CandidatePipelineInput): Promise<readonly RouteCandidate[]> {
-      return Promise.all(
+      const normalized = await Promise.all(
         input.candidates.map((candidate, index) =>
           stubCandidate(candidate, index, options.geometryStore, now),
         ),
       );
+      if (options.candidateTransform === undefined) return normalized;
+      return Promise.all(
+        normalized.map((candidate, index) => {
+          const providerCandidate = input.candidates[index];
+          if (providerCandidate === undefined) return candidate;
+          return options.candidateTransform!(input, providerCandidate, candidate);
+        }),
+      );
     },
+    ...(options.roleAssigner === undefined ? {} : { assignRoles: options.roleAssigner }),
   };
 }
 
 /** The roles a run's candidates earned (06 §15); every other role stays null. */
-function rolesFor(run: Run): RouteRoles {
+function providerRolesFor(run: Run): RouteRoles {
   const eligible = run.candidates.filter((candidate) => candidate.eligibility.eligible);
   const hinted = (key: "bestRide" | "lowerWorkload"): RouteCandidateId | null =>
     eligible.find((candidate) => run.roleHints.get(candidate.fingerprint)?.[key] === true)?.id ??
@@ -378,6 +411,10 @@ interface Run {
   readonly rideRevision: number;
   readonly versions: PlanRequestVersions;
   readonly controller: AbortController;
+  discoveryTimebox?: {
+    readonly targetMinutes: number;
+    readonly toleranceMinutes: number;
+  };
   readonly pending: Set<string>;
   /** Providers that answered (resolved), even if the pipeline then refused. */
   readonly answered: Set<string>;
@@ -685,6 +722,19 @@ class PlanningSessionController implements PlanningController {
     this.emit();
   }
 
+  private rolesFor(run: Run): RouteRoles {
+    const assigned = this.pipeline.assignRoles?.({
+      identity: {
+        rideId: run.rideId,
+        rideRevision: run.rideRevision,
+        planningGeneration: run.generation,
+      },
+      candidates: run.candidates.filter((candidate) => candidate.eligibility.eligible),
+      ...(run.discoveryTimebox === undefined ? {} : { discoveryTimebox: run.discoveryTimebox }),
+    });
+    return assigned ?? providerRolesFor(run);
+  }
+
   /* ---------------------------------------------------------------------
    * Launching
    * ------------------------------------------------------------------ */
@@ -720,6 +770,7 @@ class PlanningSessionController implements PlanningController {
       });
       return;
     }
+    run.discoveryTimebox = built.request.discovery;
     const notes: readonly string[] =
       built.unresolvedRefs.length > 0 ? [NOTE_UNRESOLVED_AVOID_AREAS] : [];
     this.setPhase(run, "routing-primary");
@@ -905,9 +956,9 @@ class PlanningSessionController implements PlanningController {
       candidates: [...run.candidates],
       selectedRouteId: selection.id,
       selectionSource: selection.source,
-      // 06 §15 roles: the provider's own best-ride / lower-workload hints, and
-      // the fastest eligible candidate. Unearned roles stay null.
-      roles: rolesFor(run),
+      // 06 §15 roles: a pipeline-owned assignment wins when available; the
+      // provider's stored hints are only the no-local-authority fallback.
+      roles: this.rolesFor(run),
       createdAt: this.now(),
     });
   }
@@ -928,8 +979,9 @@ class PlanningSessionController implements PlanningController {
       // The rider's route is not part of this revision: a bundle must select a
       // route it contains, so the automatic rule decides and says so.
     }
-    // VNX-006: the automatic selection is the best ride when a provider named one.
-    const bestRide = rolesFor(run)["best-ride"];
+    // VNX-006: the automatic selection is the pipeline's best ride, with the
+    // provider hint retained only when no pipeline role authority exists.
+    const bestRide = this.rolesFor(run)["best-ride"];
     if (bestRide !== null) return { id: bestRide, source: "automatic" };
     for (const provider of this.providers) {
       const candidate = run.candidates.find(

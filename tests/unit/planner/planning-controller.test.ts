@@ -33,6 +33,7 @@ import type {
 import type {
   CandidatePipeline,
   CandidatePipelineInput,
+  CandidatePipelineRoleInput,
   PlanningController,
 } from "@/application/planner/planning-controller";
 import { createPlanningController } from "@/application/planner/planning-controller";
@@ -62,6 +63,7 @@ import { asRouteCandidateId } from "@/domain/route/ids";
 import type {
   RouteCandidate,
   RouteEvidence,
+  RouteRoles,
   RouteScore,
   RouteScoreComponents,
 } from "@/domain/route/types";
@@ -1417,6 +1419,50 @@ describe("timing", () => {
  * ---------------------------------------------------------------------- */
 
 describe("stub pipeline", () => {
+  it("lets a typed pipeline role seam override provider hints", async () => {
+    const alpha = fakeProvider("alpha");
+    let roleInput: CandidatePipelineRoleInput | null = null;
+    const pipeline: CandidatePipeline = {
+      normalize({ providerId, candidates }) {
+        return candidates.map((_candidate, index) => routeCandidate(`${providerId}-${index}`, providerId));
+      },
+      assignRoles(input): RouteRoles {
+        roleInput = input;
+        const first = required(input.candidates[0]).id;
+        const second = required(input.candidates[1]).id;
+        return {
+          "best-ride": second,
+          fastest: first,
+          "fast-and-fun": null,
+          "more-twisties": null,
+          "more-dirt": null,
+          "lower-workload": null,
+        };
+      },
+    };
+    const controller = buildController({
+      providers: [alpha.provider],
+      pipeline,
+      now: FIXED_CLOCK,
+    });
+
+    void begin(controller, 1);
+    await flush();
+    alpha.settle(0, [
+      rawCandidate("alpha", { providerMetadata: { bestRide: true } }),
+      rawCandidate("alpha", { providerMetadata: { fingerprint: "fp-second" } }),
+    ]);
+    await flush();
+
+    const bundle = controller.snapshot().committedBundle;
+    if (bundle === null) throw new Error("the test expected a committed bundle");
+    if (roleInput === null) throw new Error("the test expected a role assignment");
+    const seenRoleInput = roleInput as CandidatePipelineRoleInput;
+    expect(bundle.roles["best-ride"]).toBe(bundle.candidates[1]?.id);
+    expect(bundle.selectedRouteId).toBe(bundle.candidates[1]?.id);
+    expect(seenRoleInput.identity.planningGeneration).toBe(1);
+  });
+
   it("stores candidate geometry and marks eligibility and score as placeholders", async () => {
     const alpha = fakeProvider("alpha");
     const store = createMemoryGeometryStore();

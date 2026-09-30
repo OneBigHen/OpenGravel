@@ -78,6 +78,11 @@ export type PipelineDiagnosticCode =
   | "near-duplicate"
   | "over-limit";
 
+export interface DiscoveryTimebox {
+  readonly targetMinutes: number;
+  readonly toleranceMinutes: number;
+}
+
 /**
  * One reason a candidate did not survive. `message` is server diagnostics, not
  * rider copy; `candidateIndex` is the provider's own order, so a log can name
@@ -177,10 +182,7 @@ export interface CandidatePipelineInput {
    * Discovery-only selection constraint. Kept outside `PipelineIntent` so a
    * normal RideIntent time budget cannot silently change standard planning.
    */
-  readonly discoveryTimebox?: {
-    readonly targetMinutes: number;
-    readonly toleranceMinutes: number;
-  };
+  readonly discoveryTimebox?: DiscoveryTimebox;
 }
 
 export interface PipelineFunShadowAssessment {
@@ -778,9 +780,9 @@ function selectTimeboxedCandidate(
  * Indexes that satisfy a budget, or the closest-duration indexes if none do.
  * `null` means ordinary non-timeboxed planning.
  */
-function timeboxPreferredIndexes(
-  candidates: readonly PipelineCandidate[],
-  timebox: CandidatePipelineInput["discoveryTimebox"],
+export function timeboxPreferredIndexes(
+  candidates: readonly { readonly durationSeconds: number }[],
+  timebox: DiscoveryTimebox | undefined,
 ): ReadonlySet<number> | null {
   if (timebox === undefined) return null;
   const targetSeconds = timebox.targetMinutes * 60;

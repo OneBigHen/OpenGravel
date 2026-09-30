@@ -14,9 +14,16 @@ recording recency comes from the last observed fix rather than the save time.
 The implementation estimates geometric overlap against recorded traces. It
 emits all-time new-road share to the existing suggestion scorer; recent overlap
 is measured separately but recency decay in ranking is **not implemented**.
-`ExplorableRoad` eligibility, worthwhile-road-only progress, standard Planner
-personalization, return-budget suppression and richer map presentation remain
-future slices. This PR does not certify those features or the complete map-layer
+The standard Planner also reads these local recordings once per planning
+attempt. It updates only the existing novelty evidence and score term on
+candidates scored by the current canonical policy, preserving other score
+components, eligibility and warnings. Canonical role assignment consumes the
+updated scores, while rider-locked selection remains intact. Missing or unreadable
+history preserves the existing provider roles. No recorded trace enters the
+provider request.
+
+`ExplorableRoad` eligibility, worthwhile-road-only progress, return-budget
+suppression and richer map presentation remain future slices. This PR does not certify those features or the complete map-layer
 parity/Adventure roadmap below.
 
 ## Product rule
