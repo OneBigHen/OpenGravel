@@ -1,0 +1,37 @@
+# M13 — record a ride (iOS).
+# Records a route-free ride, pauses, resumes, finishes it, and verifies the
+# recorded ride is saved. Same simulator-GPS precondition as M12.
+appId: org.onebighen.opengravel
+name: M13 record a ride
+properties:
+  missionId: "M13"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Where to, or describe a ride"
+    timeout: 45000
+- tapOn: "Record"
+- extendedWaitUntil:
+    visible: "Recording"
+    timeout: 30000
+- takeScreenshot: 01-recording
+- tapOn: "Pause"
+- extendedWaitUntil:
+    visible: "Paused"
+    timeout: 15000
+- takeScreenshot: 02-paused
+- tapOn: "Resume"
+- extendedWaitUntil:
+    visible: "Recording"
+    timeout: 15000
+- takeScreenshot: 03-resumed
+- tapOn: "Exit"
+- extendedWaitUntil:
+    visible: "End this ride?"
+    timeout: 15000
+- tapOn: "Finish ride"
+- extendedWaitUntil:
+    visible: "Recorded ride saved"
+    timeout: 30000
+- takeScreenshot: 04-saved

@@ -1,0 +1,29 @@
+id: M22
+feature: M22-switchback-import.feature
+priority: P2
+executors:
+  chromium:
+    kind: playwright
+    spec: "tests/e2e/critical/switchback-import.spec.ts"
+  webkit:
+    kind: playwright
+    spec: "tests/e2e/critical/switchback-import.spec.ts"
+  iphone:
+    kind: maestro
+    flow: planned
+  ipad:
+    kind: maestro
+    flow: planned
+preflight:
+  require_matching_sha: true
+  require_real_device_session: true
+  prohibit_desktop_fallback: true
+evidence:
+  screenshot: on_failure
+  video: on_failure
+  trace: on_failure
+  console: always
+  network_errors: always
+exploratory:
+  enabled: false
+  model_tier: cheap

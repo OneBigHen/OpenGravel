@@ -1,0 +1,32 @@
+# M11 — plan a ride and start it (iOS).
+# Moved from apps/ios/maestro/plan-and-start.yaml; see apps/ios/maestro/README.md.
+# Requires a booted iOS simulator and a built OpenGravel app whose
+# CAPACITOR_SERVER_URL points at a reachable deployment.
+appId: org.onebighen.opengravel
+name: M11 plan a ride and start it
+properties:
+  missionId: "M11"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Where to, or describe a ride"
+    timeout: 45000
+- takeScreenshot: 01-first-screen
+- tapOn: "Where to, or describe a ride"
+- inputText: "Phoenixville"
+- extendedWaitUntil:
+    visible: "Phoenixville.*"
+    timeout: 20000
+- takeScreenshot: 02-search
+- pressKey: Enter
+- tapOn: "Create ride"
+- extendedWaitUntil:
+    visible: "Ride ready.*"
+    timeout: 60000
+- takeScreenshot: 03-ride-ready
+- tapOn: "Start ride"
+- extendedWaitUntil:
+    visible: ".*GPS.*"
+    timeout: 30000
+- takeScreenshot: 04-riding

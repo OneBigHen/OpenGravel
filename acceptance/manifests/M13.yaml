@@ -1,0 +1,29 @@
+id: M13
+feature: M13-record.feature
+priority: P0
+executors:
+  chromium:
+    kind: playwright
+    spec: "tests/e2e/critical/record.spec.ts"
+  webkit:
+    kind: playwright
+    spec: "tests/e2e/critical/record.spec.ts"
+  iphone:
+    kind: maestro
+    flow: ".maestro/M13-record.yaml"
+  ipad:
+    kind: maestro
+    flow: ".maestro/M13-record.yaml"
+preflight:
+  require_matching_sha: true
+  require_real_device_session: true
+  prohibit_desktop_fallback: true
+evidence:
+  screenshot: on_failure
+  video: on_failure
+  trace: on_failure
+  console: always
+  network_errors: always
+exploratory:
+  enabled: true
+  model_tier: cheap
