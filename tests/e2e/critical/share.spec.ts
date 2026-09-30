@@ -63,7 +63,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("share exposes only a privacy-trimmed snapshot and the link dies on revoke", async ({
-  page,
+  page, request,
 }) => {
   await selectFixtureRoute(page);
   await openShareSheet(page);
@@ -100,11 +100,14 @@ test("share exposes only a privacy-trimmed snapshot and the link dies on revoke"
   await expect(linkInput).toBeVisible();
   const firstLink = await linkInput.inputValue();
   expect(firstLink).toMatch(/\/share\/[0-9a-f]{64}$/);
+  const token = firstLink.split("/").pop()!;
+  expect(await (await request.get(new URL(`/api/shares/resolve/${token}`, firstLink).href)).text()).toBe(previewedBytes);
 
   // 4. Revocation is an honest state — and the revoked sheet carries no link.
   await page.getByTestId("share-revoke").click();
   await expect(page.getByTestId("share-revoked")).toBeVisible();
   await expect(page.getByTestId("share-link")).toHaveCount(0);
+  expect((await request.get(new URL(`/api/shares/resolve/${token}`, firstLink).href)).status()).toBe(410);
 
   // 5. Re-issue is the only way back: a new, different link (the old one stays
   //    dead — proven at the service boundary by the unit suite).
@@ -113,6 +116,7 @@ test("share exposes only a privacy-trimmed snapshot and the link dies on revoke"
   const secondLink = await linkInput.inputValue();
   expect(secondLink).not.toBe(firstLink);
   expect(secondLink).toMatch(/\/share\/[0-9a-f]{64}$/);
+  expect(await (await request.get(new URL(`/api/shares/resolve/${secondLink.split("/").pop()!}`, secondLink).href)).text()).toBe(previewedBytes);
   // The bytes behind the new link are still the previewed bytes.
   expect(previewedBytes.startsWith('{"version":1,')).toBe(true);
 });

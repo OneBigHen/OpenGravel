@@ -74,6 +74,19 @@ function tokenOf(link: string): ShareToken {
 afterEach(cleanup);
 
 describe("ShareSheet — privacy preview", () => {
+  it("reports a failed publication without claiming that a link exists", async () => {
+    const svc = service();
+    const dispatch = svc.dispatch.bind(svc);
+    svc.dispatch = command => command.type === "share.publish"
+      ? Promise.reject(new Error("Sharing is unavailable. Try again when online."))
+      : dispatch(command);
+    render(<ShareSheet service={svc} source={source()} onClose={() => {}} />);
+    await previewText();
+    fireEvent.click(screen.getByTestId("share-publish"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Try again when online"));
+    expect(screen.queryByTestId("share-link")).toBeNull();
+    expect((screen.getByTestId("share-publish") as HTMLButtonElement).disabled).toBe(false);
+  });
   it("renders the preview payload as the exact bytes the link exposes", async () => {
     const svc = service();
     render(<ShareSheet service={svc} source={source()} onClose={() => {}} />);

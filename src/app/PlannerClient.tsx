@@ -42,6 +42,7 @@ import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-poin
 import { createLibraryService } from "@/application/library/library-service";
 import { createShareService } from "@/application/sharing/share-commands";
 import { createShareRepository } from "@/infrastructure/storage/share-repository";
+import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
 import { createAdvisorApiClient } from "@/infrastructure/advisor/advisor-api-client";
 import { PlannerWorkspace } from "@/ui/planner/PlannerWorkspace";
 import { RideAdvisorProvider, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
@@ -135,7 +136,7 @@ export function PlannerClient({
   const shareService = useMemo(
     () =>
       createShareService({
-        repository: createShareRepository(),
+        repository: createPublishedShareRepository(createShareRepository()),
         linkBase: typeof window === "undefined" ? "" : window.location.origin,
       }),
     [],

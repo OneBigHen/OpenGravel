@@ -155,6 +155,8 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
       } else if (!result.ok) {
         setCommandError(result.message);
       }
+    } catch (error: unknown) {
+      setCommandError(error instanceof Error ? error.message : "The link could not be published. Try again when online.");
     } finally {
       setBusy(false);
     }
@@ -195,6 +197,8 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
       } else if (!result.ok) {
         setCommandError(result.message);
       }
+    } catch (error: unknown) {
+      setCommandError(error instanceof Error ? error.message : "The link could not be revoked. Try again when online.");
     } finally {
       setBusy(false);
     }
@@ -386,6 +390,7 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
           </section>
         ) : published !== null ? (
           <section className="og-share-sheet__link" aria-label="Share link">
+            <p>Keep this link and this browser’s data to revoke it later from the shared page.</p>
             <label htmlFor="share-link">Share link</label>
             <input
               id="share-link"

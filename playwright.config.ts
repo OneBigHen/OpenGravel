@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 /**
  * The critical-path browser gate (16-TEST-AND-RELEASE-GATES §2, §6, §7).
@@ -104,6 +107,7 @@ export default defineConfig({
       OGV_ROUTE_PLAN_FIXTURE: "1",
       OGV_CATALOG_FIXTURE: "1",
       COMMUNITY_DB_PATH: ":memory:",
+      OGV_SHARE_DB_PATH: join(mkdtempSync(join(tmpdir(), "og-share-e2e-")), "shares.sqlite"),
       OGV_ROUTE_PLAN_FIXTURE_DELAY_MS: FIXTURE_DELAY_MS,
       // This flag only turns on the optional surface. The M8 critical spec
       // intercepts `/api/advisor` with a deterministic response.
