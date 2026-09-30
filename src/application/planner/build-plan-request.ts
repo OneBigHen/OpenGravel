@@ -432,7 +432,7 @@ export async function buildProviderRequest(
  * ---------------------------------------------------------------------- */
 
 /** Prefix of every planning identity; a new canonical form bumps the number. */
-export const IDENTITY_PREFIX = "id1:";
+export const IDENTITY_PREFIX = "id2:";
 
 /** Coordinate resolution: 7 decimals is ~1 cm, below any meaningful routing. */
 const COORDINATE_DECIMALS = 7;
@@ -546,7 +546,7 @@ function canonicalIntentStructure(
   versions: PlanRequestVersions,
 ): Readonly<Record<string, unknown>> {
   return {
-    identityVersion: 1,
+    identityVersion: 2,
     shape: intent.shape,
     start: canonicalPoint(intent.start),
     finish: canonicalPoint(intent.finish),
