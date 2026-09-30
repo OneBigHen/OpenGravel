@@ -11,7 +11,7 @@ The first model is an 8-dimensional Bayesian-style pairwise preference learner:
 
 - curvature
 - backroad character
-- surface fit
+- unpaved share
 - elevation
 - calm traffic
 - junction flow
@@ -212,7 +212,7 @@ Never ask while the rider is moving. Good surfaces:
 
 ### Phase E — richer road-level features
 
-The current projection uses route-level score components because they exist today. Once road intelligence exposes stable intrinsic segment features, evolve the vector without breaking the model version:
+The current projection uses route-level score components where they are intrinsic enough, and measured surface evidence for unpaved share. It deliberately does not learn the current ride's surface-fit score because that already contains the rider's authored preference. Once road intelligence exposes stable intrinsic segment features, evolve the vector without breaking the model version:
 
 - actual unpaved/gravel share rather than only surface-fit
 - bend density / sustained curve length
