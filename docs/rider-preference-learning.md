@@ -40,6 +40,8 @@ The answer gives a direct relative observation and maps naturally onto route ran
 
 References:
 
+- Bose et al., *Cold-Start Personalization via Bayesian Adaptive Questioning* (ICML 2026): https://proceedings.mlr.press/v306/bose26a.html
+- De Pessemier et al., *Active learning algorithm for alleviating the user cold start problem of recommender systems* (Scientific Reports 2025): https://www.nature.com/articles/s41598-025-09708-2
 - Bengs et al., *Preference-based Online Learning with Dueling Bandits: A Survey*: https://arxiv.org/abs/1807.11398
 - Gharahighehi et al., *Pairwise and Attribute-Aware Decision Tree-Based Preference Elicitation for Cold-Start Recommendation*: https://arxiv.org/abs/2510.27342
 - Cantürk & Aydoğan, *Explainable Active Learning for Preference Elicitation*: https://arxiv.org/abs/2309.00356
@@ -86,6 +88,16 @@ A practical launch flow:
 5. Ask up to **4 adaptive comparisons** only while expected information value remains high.
 6. Immediately use the posterior as a secondary personalization signal.
 7. Stop asking. Let real route choices and explicit post-ride feedback refine it.
+
+`selectPreferenceTeachingStep()` now makes that stop rule explicit in the domain layer:
+
+- default minimum deliberate questions: 4;
+- default maximum deliberate questions: 8;
+- after the minimum, stop when the best remaining active-learning pair has weak information value;
+- implicit route behavior never consumes the deliberate teaching budget;
+- if the candidate pool has no informative known-feature contrast, stop instead of manufacturing a question.
+
+This is a rider-time budget, not just an ML optimization. A preference setup that keeps asking questions after the useful information is gone is a product failure.
 
 There is no "1000 miles before recommendations get good" requirement. With only eight broad axes and active pair selection, the model can become directionally useful after a handful of informative choices. It should still expose uncertainty and never pretend those first choices fully define the rider.
 
