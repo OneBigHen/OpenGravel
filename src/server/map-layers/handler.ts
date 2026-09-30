@@ -21,7 +21,7 @@ import {
 } from "@/application/map-layers";
 import { knownRoadsFromEnv } from "@/server/roads/known-roads-db";
 
-import { pa511CameraProvider } from "./pa511-cameras";
+import { trafficCamerasProvider } from "./traffic-cameras";
 import {
   knownRoadsProvider,
   nwsAlertsProvider,
@@ -115,7 +115,7 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
   return [
     tomtomStopsProvider,
     tomtomIncidentsProvider,
-    pa511CameraProvider,
+    trafficCamerasProvider,
     nwsAlertsProvider,
     knownRoadsProvider(knownRoadsFromEnv(env)),
     overpassProvider,
