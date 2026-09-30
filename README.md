@@ -112,6 +112,8 @@ npm run dev
 
 Everything else is optional and set in `.env.local`: a Mapbox public token for terrain and satellite (OpenFreeMap is the free default), a self-hosted Photon geocoder, a places feed, and an OpenAI-compatible endpoint for "Describe a ride". See [`.env.example`](.env.example).
 
+Optional browser/PWA Spotify controls use PKCE and never stream audio in the browser. See the [Spotify setup guide](docs/spotify.md) for the private session key, callback allowlist and rider-owned app setup.
+
 ## How it works
 
 ```mermaid
