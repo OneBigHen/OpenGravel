@@ -83,6 +83,43 @@ describe("frontier routing selection", () => {
     expect(frontierDominates(sparse.quality, measured.quality)).toBe(false);
   });
 
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "fails closed for invalid dominance thresholds (%s)",
+    (minimumComparableDimensions) => {
+      const strong = candidate("strong", {
+        timeEfficiency: 0.9,
+        curvature: 0.8,
+        flow: 0.8,
+      });
+      const weak = candidate("weak", {
+        timeEfficiency: 0.8,
+        curvature: 0.7,
+        flow: 0.7,
+      });
+
+      expect(
+        frontierDominates(strong.quality, weak.quality, minimumComparableDimensions),
+      ).toBe(false);
+      expect(
+        paretoFrontier([weak, strong], { minimumComparableDimensions }),
+      ).toEqual([weak, strong]);
+    },
+  );
+
+  it("keeps a valid positive integer dominance threshold configurable", () => {
+    const strong = candidate("strong", {
+      timeEfficiency: 0.9,
+      curvature: 0.8,
+    });
+    const weak = candidate("weak", {
+      timeEfficiency: 0.8,
+      curvature: 0.7,
+    });
+
+    expect(frontierDominates(strong.quality, weak.quality, 2)).toBe(true);
+    expect(paretoFrontier([weak, strong], { minimumComparableDimensions: 2 })).toEqual([strong]);
+  });
+
   it("penalizes missing utility coverage instead of treating unknown as neutral", () => {
     const profile = {
       id: "test",
@@ -101,6 +138,64 @@ describe("frontier routing selection", () => {
         profile,
       ),
     ).toBeCloseTo(0.8, 6);
+  });
+
+  it.each([
+    -0.01,
+    1.01,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])("returns no utility for invalid coverage thresholds (%s)", (minimumCoverage) => {
+    const profile = {
+      id: "complete",
+      weights: { timeEfficiency: 0.5, flow: 0.5 },
+    } as const;
+
+    expect(
+      frontierUtility(
+        candidate("complete", { timeEfficiency: 0.8, flow: 0.8 }),
+        profile,
+        minimumCoverage,
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps valid zero and complete coverage thresholds configurable", () => {
+    const profile = {
+      id: "complete",
+      weights: { timeEfficiency: 0.5, flow: 0.5 },
+    } as const;
+    const complete = candidate("complete", { timeEfficiency: 0.8, flow: 0.8 });
+
+    expect(frontierUtility(complete, profile, 0)).toBeCloseTo(0.8, 6);
+    expect(frontierUtility(complete, profile, 1)).toBeCloseTo(0.8, 6);
+  });
+
+  it("returns no representatives when a supplied dominance threshold is invalid", () => {
+    const items = [
+      candidate("a", { timeEfficiency: 0.95, curvature: 0.3, flow: 0.7 }),
+      candidate("b", { timeEfficiency: 0.7, curvature: 0.95, flow: 0.75 }),
+    ];
+
+    expect(
+      selectLowRegretRepresentatives(items, DEFAULT_FRONTIER_PREFERENCE_PROFILES, 2, {
+        minimumComparableDimensions: 1.5,
+      }),
+    ).toEqual([]);
+  });
+
+  it("returns no representatives when a supplied coverage threshold is invalid", () => {
+    const items = [
+      candidate("a", { timeEfficiency: 0.95, curvature: 0.3, flow: 0.7 }),
+      candidate("b", { timeEfficiency: 0.7, curvature: 0.95, flow: 0.75 }),
+    ];
+
+    expect(
+      selectLowRegretRepresentatives(items, DEFAULT_FRONTIER_PREFERENCE_PROFILES, 2, {
+        minimumUtilityCoverage: Number.NaN,
+      }),
+    ).toEqual([]);
   });
 
   it("keeps efficient and twisty extremes in a two-route low-regret set", () => {
@@ -146,8 +241,17 @@ describe("frontier routing selection", () => {
       profiles,
       2,
     );
+    const reversed = selectLowRegretRepresentatives(
+      [direct, twisty, middle],
+      profiles,
+      2,
+    );
 
     expect(selected.map((item) => item.id).sort()).toEqual([
+      "direct",
+      "twisty",
+    ]);
+    expect(reversed.map((item) => item.id).sort()).toEqual([
       "direct",
       "twisty",
     ]);

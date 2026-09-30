@@ -394,7 +394,7 @@ From the Pareto survivors, choose at most three candidates that cover a bounded 
 - adventure;
 - explore/new-to-me.
 
-The implementation scaffold uses a deterministic greedy k-regret approximation. It is intentionally application-layer code and provider-neutral.
+The implementation scaffold uses a deterministic greedy k-regret approximation followed by one bounded best-improving candidate exchange. The exchange can recover a lower-regret set when the greedy seed chose a compromise; it does not claim global optimality. It is intentionally application-layer code and provider-neutral. Numeric evidence controls reject invalid values without weakening the comparison or coverage thresholds.
 
 After PR #29 lands, a sufficiently confident rider posterior can be added as one more utility profile. Explicit current-ride intent remains stronger than learned history.
 

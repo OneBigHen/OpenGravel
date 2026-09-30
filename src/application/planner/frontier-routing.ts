@@ -65,6 +65,23 @@ function quality(value: number | null): number | null {
     : null;
 }
 
+function isValidMinimumComparableDimensions(value: number): boolean {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function isValidMinimumUtilityCoverage(value: number): boolean {
+  return Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+function hasInvalidSelectionOption(options: FrontierSelectionOptions): boolean {
+  return (
+    (options.minimumComparableDimensions !== undefined &&
+      !isValidMinimumComparableDimensions(options.minimumComparableDimensions)) ||
+    (options.minimumUtilityCoverage !== undefined &&
+      !isValidMinimumUtilityCoverage(options.minimumUtilityCoverage))
+  );
+}
+
 /**
  * True only when `left` is no worse than `right` on every mutually-known
  * axis, strictly better on at least one, and enough evidence is comparable.
@@ -74,6 +91,8 @@ export function frontierDominates(
   right: FrontierQualityVector,
   minimumComparableDimensions = DEFAULT_MINIMUM_COMPARABLE_DIMENSIONS,
 ): boolean {
+  if (!isValidMinimumComparableDimensions(minimumComparableDimensions)) return false;
+
   let comparable = 0;
   let strictlyBetter = false;
 
@@ -133,6 +152,8 @@ export function frontierUtility(
   profile: FrontierPreferenceProfile,
   minimumCoverage = DEFAULT_MINIMUM_UTILITY_COVERAGE,
 ): number | null {
+  if (!isValidMinimumUtilityCoverage(minimumCoverage)) return null;
+
   let totalWeight = 0;
   let knownWeight = 0;
   let weightedQuality = 0;
@@ -209,13 +230,83 @@ function betterRegret(
   return left.mean + EPSILON < right.mean;
 }
 
+interface RepresentativeExchange<T> {
+  readonly candidates: readonly FrontierCandidate<T>[];
+  readonly score: RegretScore;
+  readonly selectedIndex: number;
+  readonly candidateId: string;
+}
+
+function candidateSetKey<T>(candidates: readonly FrontierCandidate<T>[]): string {
+  return candidates
+    .map((candidate) => candidate.id)
+    .sort((left, right) => left.localeCompare(right))
+    .join("\u0000");
+}
+
+function refineRepresentativeSet<T>(
+  selected: readonly FrontierCandidate<T>[],
+  frontier: readonly FrontierCandidate<T>[],
+  profiles: readonly FrontierPreferenceProfile[],
+  minimumCoverage: number,
+): readonly FrontierCandidate<T>[] {
+  if (selected.length === 0 || selected.length === frontier.length) return selected;
+
+  const currentScore = regretScore(selected, frontier, profiles, minimumCoverage);
+  const selectedIds = new Set(selected.map((candidate) => candidate.id));
+  let bestExchange: RepresentativeExchange<T> | null = null;
+
+  for (let selectedIndex = 0; selectedIndex < selected.length; selectedIndex += 1) {
+    for (const candidate of frontier) {
+      if (selectedIds.has(candidate.id)) continue;
+
+      const replacement = [...selected];
+      replacement[selectedIndex] = candidate;
+      const score = regretScore(replacement, frontier, profiles, minimumCoverage);
+      if (!betterRegret(score, currentScore)) continue;
+
+      if (
+        bestExchange === null ||
+        betterRegret(score, bestExchange.score) ||
+        (
+          !betterRegret(bestExchange.score, score) &&
+          (
+            candidateSetKey(replacement) < candidateSetKey(bestExchange.candidates) ||
+            (
+              candidateSetKey(replacement) === candidateSetKey(bestExchange.candidates) &&
+              (
+                selectedIndex < bestExchange.selectedIndex ||
+                (
+                  selectedIndex === bestExchange.selectedIndex &&
+                  candidate.id.localeCompare(bestExchange.candidateId) < 0
+                )
+              )
+            )
+          )
+        )
+      ) {
+        bestExchange = {
+          candidates: replacement,
+          score,
+          selectedIndex,
+          candidateId: candidate.id,
+        };
+      }
+    }
+  }
+
+  return bestExchange?.candidates ?? selected;
+}
+
 /**
  * Chooses at most `maxResults` Pareto-surviving routes using a deterministic
  * greedy k-regret approximation.
  *
  * The exact ATMOS 2025 algorithm is deliberately not reproduced here. This
  * small implementation gives OpenGravel an experimentable seam: it asks which
- * candidate most reduces the worst preference-profile regret at each step.
+ * candidate most reduces the worst preference-profile regret at each step,
+ * then permits one bounded best-improving exchange to recover a lower-regret
+ * profile-extreme set when the greedy seed was a compromise.
  */
 export function selectLowRegretRepresentatives<T>(
   candidates: readonly FrontierCandidate<T>[],
@@ -223,6 +314,7 @@ export function selectLowRegretRepresentatives<T>(
   maxResults: number,
   options: FrontierSelectionOptions = {},
 ): readonly FrontierCandidate<T>[] {
+  if (hasInvalidSelectionOption(options)) return [];
   if (!Number.isInteger(maxResults) || maxResults <= 0 || candidates.length === 0) {
     return [];
   }
@@ -271,7 +363,7 @@ export function selectLowRegretRepresentatives<T>(
     selectedIds.add(bestCandidate.id);
   }
 
-  return selected;
+  return refineRepresentativeSet(selected, frontier, profiles, minimumCoverage);
 }
 
 /**
