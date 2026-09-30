@@ -14,7 +14,11 @@ const DEFAULT_BASE =
 const INDEX_TTL_MS = 15 * 60_000;
 const SHARD_TTL_MS = 60 * 60_000;
 const MAX_SHARD_CACHE = 32;
-const MAX_SHARDS_PER_VIEW = 12;
+// Shards are ID-ordered rather than spatially partitioned, so their bounding
+// boxes overlap. A normal 1.6° × 1.0° OpenGravel view can legitimately touch
+// ~15 shards in the Northeast; this cap still prevents an accidental full-corpus
+// fanout while allowing bounded viewport fallback to work.
+const MAX_SHARDS_PER_VIEW = 24;
 const STORMSCOPE_SOURCE = "https://github.com/SysAdminDoc/StormScope";
 
 interface StormScopeShard {
