@@ -5,6 +5,8 @@ Target: OpenGravel mainline after map-layer foundation
 Working branch: `feat/gaia-goat-layer-parity`  
 Core rule: **Ride first. World second. Game third.**
 
+> **Integration authority:** [adventure-existing-module-integration.md](adventure-existing-module-integration.md) defines how this product work lands in the current codebase. Adventure is not a new app/module family: Planner, RideAdvisor, RoutePolicy, Free Ride, Ride Focus, Discover, map layers, and My Rides own the behavior. Any older structural sketch in this document that suggests a parallel `application/world`, `application/quick-ride`, second scorer, or separate Progress surface is superseded by that integration document.
+
 ![Adventure World concept screens](media/adventure-world-concepts.svg)
 
 ## Hard reset after design review
@@ -676,36 +678,17 @@ A repeat user can be riding in three taps.
 
 ## Architecture
 
-Do not scatter game checks throughout the UI.
+Adventure uses the existing architecture. Do not create a parallel product namespace.
 
-```text
-src/application/world/
-  types.ts
-  explorable-road.ts
-  progress.ts
-  novelty.ts
-  collections.ts
-  scene.ts
+- Planner / RideAdvisor author normal `RideIntent` changes.
+- Candidate pipeline / versioned `RoutePolicy` remain the only ranking authority.
+- Free Ride owns live exploration: live suggestions, opportunities, ride offers and return planning.
+- Ride-interest / Discover remain the POI path.
+- MapLibre/map layers own explored-road and optional landmark rendering.
+- My Rides owns post-ride progression/history.
+- The one planned domain extension is canonical novelty preference, because novelty already exists in the route pipeline and Free Ride but is not currently part of `RideIntent`.
 
-src/application/quick-ride/
-  time-budget.ts
-  candidate-score.ts
-  escape-cost.ts
-  build-loop.ts
-  explain.ts
-
-src/infrastructure/world/
-  rider-world-repository.ts
-  compiled-world-source.ts
-
-src/infrastructure/map/maplibre/
-  adventure-scene.ts
-  landmark-model-layer.ts   // web experiment
-```
-
-Persist progress locally.
-
-Provider/source data remains separate from rider progress.
+See `docs/adventure-existing-module-integration.md` for the file-by-file integration contract.
 
 ## P0 build slice
 
