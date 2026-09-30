@@ -1,0 +1,6 @@
+.page { max-width: 52rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--og-ink); }
+.page a { color: var(--og-go-text); }
+.page h1 { font-size: clamp(1.8rem, 5vw, 3rem); overflow-wrap: anywhere; }
+.page p { line-height: 1.6; }
+.route { width: 100%; height: auto; background: var(--og-sheet-bg); border-radius: .75rem; color: var(--og-go-text); }
+.page pre { overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .8rem; }
