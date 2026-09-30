@@ -112,10 +112,10 @@ export interface EngineCurvature {
    * Sustained-bend diagnostics from the returned geometry. Null means an older
    * provider answer did not carry the continuity measurement.
    */
-  readonly longestRunMeters: number | null;
-  readonly runCount: number | null;
-  /** Longest run / all bend metres, 0..1; null when continuity is unavailable. */
-  readonly continuityShare: number | null;
+  readonly longestRunMeters?: number;
+  readonly runCount?: number;
+  /** Longest run / all bend metres, 0..1; absent when continuity is unavailable. */
+  readonly continuityShare?: number;
 }
 
 function clamp01(value: number): number {
@@ -219,12 +219,11 @@ export function engineCurvature(summary: ProviderRoadSummary): EngineCurvature {
       curvyMeters: bends,
       totalMeters: summary.totalMeters,
       unit: clamp01(bends / summary.totalMeters / FULLY_BENDY_SHARE),
-      longestRunMeters,
-      runCount,
-      continuityShare:
-        longestRunMeters === null || !(bends > 0)
-          ? null
-          : clamp01(longestRunMeters / bends),
+      ...(longestRunMeters === null ? {} : { longestRunMeters }),
+      ...(runCount === null ? {} : { runCount }),
+      ...(longestRunMeters === null || !(bends > 0)
+        ? {}
+        : { continuityShare: clamp01(longestRunMeters / bends) }),
     };
   }
   let curvyMeters = 0;
@@ -239,9 +238,6 @@ export function engineCurvature(summary: ProviderRoadSummary): EngineCurvature {
     curvyMeters,
     totalMeters: measured,
     unit: measured > 0 ? clamp01(curvyMeters / measured / FULLY_CURVY_SHARE) : 0,
-    longestRunMeters: null,
-    runCount: null,
-    continuityShare: null,
   };
 }
 
