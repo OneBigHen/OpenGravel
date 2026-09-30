@@ -59,6 +59,7 @@ import type {
   AvoidArea,
   LocationProvenance,
   LongTripIntent,
+  NoveltyPreference,
   RideDocument,
   RideIntent,
   RidePoint,
@@ -79,6 +80,11 @@ const ROAD_CHARACTERS: readonly RoadCharacterIntent[] = [
   "balanced",
   "curvy",
   "backroads",
+];
+const NOVELTY_PREFERENCES: readonly NoveltyPreference[] = [
+  "prefer-new-to-me",
+  "balanced",
+  "prefer-familiar",
 ];
 const TERRAIN_LEVELS: readonly TerrainIntent["level"][] = [
   "known-easy-only",
@@ -587,6 +593,16 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
         );
       }
       return applyChange({ ...intent, roadCharacter: command.roadCharacter }, true);
+    }
+
+    case "noveltyPreference.set": {
+      if (!NOVELTY_PREFERENCES.includes(command.noveltyPreference)) {
+        return fail(
+          "invalid-novelty-preference",
+          `novelty preference "${command.noveltyPreference}" is not known`,
+        );
+      }
+      return applyChange({ ...intent, noveltyPreference: command.noveltyPreference }, true);
     }
 
     case "surface.set": {
