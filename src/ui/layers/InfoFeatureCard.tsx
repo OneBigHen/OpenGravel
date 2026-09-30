@@ -9,6 +9,8 @@
 import { mapLayer, type InfoFeature } from "@/application/map-layers";
 import type { Coordinate } from "@/domain/ride/types";
 
+import { InfoFeatureMedia } from "./InfoFeatureMedia";
+
 export interface InfoFeatureCardProps {
   readonly feature: InfoFeature;
   readonly onClose: () => void;
@@ -19,9 +21,10 @@ export interface InfoFeatureCardProps {
 export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCardProps) {
   const layer = mapLayer(feature.layerId);
   const point = feature.geometry.type === "Point" ? feature.geometry.coordinates : null;
-  const searchHref = point === null
+  const searchHref = point === null || layer.category !== "stops"
     ? null
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${feature.name} ${point[1]},${point[0]}`)}`;
+  const sourceHref = feature.media?.sourceHref ?? null;
   return (
     <section
       className="og-info-card"
@@ -40,12 +43,15 @@ export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCard
       </div>
       <h2 className="og-info-card__title">{feature.name}</h2>
       {feature.detail === null ? null : <p className="og-info-card__detail">{feature.detail}</p>}
+      {feature.media === undefined || feature.media === null ? null : (
+        <InfoFeatureMedia media={feature.media} name={feature.name} />
+      )}
       <p className="og-info-card__source">
         {layer.source}. {layer.caveat}
       </p>
       {point === null ? null : (
         <div className="og-info-card__actions">
-          {onAddStop === undefined ? null : (
+          {onAddStop === undefined || layer.category !== "stops" ? null : (
             <button
               type="button"
               className="og-info-card__add"
@@ -58,6 +64,11 @@ export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCard
           {searchHref === null ? null : (
             <a className="og-info-card__link" href={searchHref} target="_blank" rel="noreferrer">
               Hours and reviews
+            </a>
+          )}
+          {sourceHref === null ? null : (
+            <a className="og-info-card__link" href={sourceHref} target="_blank" rel="noreferrer">
+              {feature.media?.videoAvailable === true ? "Open live camera" : "Open source"}
             </a>
           )}
         </div>
