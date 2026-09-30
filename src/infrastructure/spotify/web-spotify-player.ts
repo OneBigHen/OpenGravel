@@ -38,10 +38,14 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
   private sequence = 0;
   private commandTail: Promise<void> = Promise.resolve();
   private readonly visibilityListener = (): void => {
-    if (document.visibilityState === "visible") void this.loadState();
+    if (document.visibilityState === "visible") {
+      this.stopRetry();
+      void this.loadState();
+    }
     else this.stopRefresh();
   };
   private refreshTimer: number | null = null;
+  private retryTimer: number | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -64,6 +68,7 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
     for (const request of this.requests) request.abort();
     this.requests.clear();
     if (this.refreshTimer !== null) window.clearInterval(this.refreshTimer);
+    this.stopRetry();
     if (typeof document !== "undefined") document.removeEventListener("visibilitychange", this.visibilityListener);
     this.listeners.clear();
   }
@@ -114,6 +119,11 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
       this.refreshTimer = window.setInterval(() => {
         if (document.visibilityState === "visible") void this.loadState();
       }, 15_000);
+    } else if (result.code === "rate_limited" && document.visibilityState === "visible") {
+      this.retryTimer = window.setTimeout(() => {
+        this.retryTimer = null;
+        if (!this.disposed && document.visibilityState === "visible") void this.loadState();
+      }, Math.min(60_000, Math.max(1_000, (result.retryAfterSeconds ?? 15) * 1_000)));
     }
   }
 
@@ -121,6 +131,12 @@ class WebSpotifyPlayer implements SpotifyPlayerPort {
     if (this.refreshTimer === null) return;
     window.clearInterval(this.refreshTimer);
     this.refreshTimer = null;
+  }
+
+  private stopRetry(): void {
+    if (this.retryTimer === null) return;
+    window.clearTimeout(this.retryTimer);
+    this.retryTimer = null;
   }
 
   private async queueCommand(command: "play" | "pause" | "next" | "previous"): Promise<void> {

@@ -61,4 +61,20 @@ describe("web Spotify player", () => {
     expect(player.snapshot().track?.title).toBe("New");
     player.dispose();
   });
+
+  it("retries a foreground rate-limited state after Retry-After", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ code: "rate_limited", retryAfterSeconds: 1 }), { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ connection: "connected", isPlaying: false, track: null, errorMessage: null }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const player = createWebSpotifyPlayer();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(player.snapshot().connection).toBe("connected");
+    player.dispose();
+    vi.useRealTimers();
+  });
 });
