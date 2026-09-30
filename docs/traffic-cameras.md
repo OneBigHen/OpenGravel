@@ -35,6 +35,24 @@ TRAFFIC_CAMERA_VIDEO_PROXY_SECRET=<private random value, at least 24 chars>
 
 `PA511_CAMERAS_ENABLED=1` remains supported as a backwards-compatible PA-only switch.
 
+### Nationwide fallback
+
+OpenGravel can optionally use the MIT-licensed StormScope camera corpus as a nationwide fallback:
+
+```env
+STORMSCOPE_CAMERAS_ENABLED=1
+# Optional mirror/self-hosted dataset root:
+STORMSCOPE_CAMERA_BASE_URL=
+```
+
+StormScope publishes a small versioned index plus geographically bounded camera shards. OpenGravel downloads the index, selects only shards whose bounding boxes intersect the current map view, filters those rows down to DOT traffic cameras, and ignores rows marked offline. Dedicated state adapters remain preferred; this fallback is used only when a view has no dedicated adapter or all relevant dedicated adapters fail.
+
+The full StormScope corpus is not vendored into OpenGravel. This keeps the initial request small and lets a self-hosted deployment mirror the data without changing the application contract.
+
+### Rider-focused route corridor
+
+When **Traffic cameras** is enabled and a route is selected, the Layers sheet exposes **Along route only**. It keeps traffic cameras within about 5 km / 3 mi of the selected route while leaving every other map layer unchanged. This is a client-side presentation filter over the bounded camera result, so toggling it does not trigger another state-provider crawl.
+
 ### Same-origin direct-HLS relay
 
 NJ, DE, MD, VA, and WV publish or expose an HLS URL directly from their camera metadata. When `TRAFFIC_CAMERA_VIDEO_PROXY_SECRET` is configured, OpenGravel replaces that external playback URL with a same-origin relay URL only for the selected camera. The relay:
@@ -141,5 +159,7 @@ The current 511PA implementation uses tokenized HLS. The reference implementatio
 - Add provider health metrics and stale-image detection.
 - Live-test each regional adapter and promote only stable sources to default-on in shared deployments.
 - Add camera-source health diagnostics per state so one broken feed does not look like an empty map.
-- Expand beyond the Mid-Atlantic using the same adapter registry, prioritizing documented public APIs and stable GeoJSON feeds.
+- Prefer dedicated official adapters for high-use states while retaining StormScope as broad fallback coverage.
+- Add server-side route-corridor queries where a provider can support them efficiently, reducing payload further on long rides.
+- Expand direct HLS support only where the originating provider permits stable browser/server consumption.
 - Prefer the official PennDOT feed adapter when credentials/license approval are available.
