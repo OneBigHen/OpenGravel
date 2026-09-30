@@ -11,6 +11,7 @@ describe("direct state-camera HLS relay", () => {
   it("builds same-origin playback only for proxied HLS states", () => {
     const env = { TRAFFIC_CAMERA_VIDEO_PROXY_SECRET: SECRET };
     expect(directCameraPlaybackPath("DE", "123", env)).toBe("/api/traffic-cameras/direct/DE/123/hls");
+    expect(directCameraPlaybackPath("NY", "123", env)).toBe("/api/traffic-cameras/direct/NY/123/hls");
     expect(directCameraPlaybackPath("OH", "123", env)).toBeNull();
     expect(directCameraPlaybackPath("DE", "123", {})).toBeNull();
   });
