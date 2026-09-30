@@ -63,7 +63,21 @@ describe("StormScope nationwide camera fallback", () => {
       status: "Unknown",
     });
     expect(image).toMatchObject({ previewUrl: "https://images.example.test/cam.jpg", refreshSeconds: 5 });
-    expect(parseStormScopeCamera({ ...image, source: "nps" })).toBeNull();
+    expect(parseStormScopeCamera({
+      id: 81,
+      name: "Park camera",
+      lat: 39.9,
+      lon: -75.1,
+      url: "https://images.example.test/park.jpg",
+      type: "image",
+      source: "nps",
+      source_url: "https://nps.example.test/",
+      health: "healthy",
+      status: "Active",
+      last_verified: "2026-09-01T00:00:00Z",
+      failure_class: null,
+      refresh_cadence_seconds: 10,
+    })).toBeNull();
     expect(parseStormScopeCamera({
       id: 9,
       name: "dead",
