@@ -75,6 +75,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
 /** The enabled-layer choice as an external store, so SSR and hydration agree. */
 const enabledListeners = new Set<() => void>();
 let enabledSnapshot: readonly MapLayerId[] | null = null;
+const cameraRouteListeners = new Set<() => void>();
+let cameraRouteSnapshot: boolean | null = null;
 const NONE: readonly MapLayerId[] = [];
 
 function subscribeEnabled(listener: () => void): () => void {
@@ -110,6 +112,34 @@ function writeEnabled(ids: readonly MapLayerId[]): void {
   } catch {
     // A per-device convenience: private mode just forgets the choice.
   }
+}
+
+function subscribeCameraRouteOnly(listener: () => void): () => void {
+  cameraRouteListeners.add(listener);
+  return () => cameraRouteListeners.delete(listener);
+}
+
+function readCameraRouteOnly(): boolean {
+  try {
+    return window.localStorage.getItem(CAMERA_ROUTE_ONLY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function cameraRouteOnlyNow(): boolean {
+  if (cameraRouteSnapshot === null) cameraRouteSnapshot = readCameraRouteOnly();
+  return cameraRouteSnapshot;
+}
+
+function setCameraRouteOnlyNow(next: boolean): void {
+  cameraRouteSnapshot = next;
+  try {
+    window.localStorage.setItem(CAMERA_ROUTE_ONLY_KEY, next ? "1" : "0");
+  } catch {
+    // A per-device convenience only.
+  }
+  for (const listener of cameraRouteListeners) listener();
 }
 
 /**
@@ -151,27 +181,15 @@ export function useMapLayers(
     readonly unavailable: ReadonlySet<InfoProvider>;
   } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [cameraRouteOnly, setCameraRouteOnly] = useState(false);
-
-  useEffect(() => {
-    try {
-      setCameraRouteOnly(window.localStorage.getItem(CAMERA_ROUTE_ONLY_KEY) === "1");
-    } catch {
-      // Private mode can forget this presentation preference.
-    }
-  }, []);
+  const cameraRouteOnly = useSyncExternalStore(
+    subscribeCameraRouteOnly,
+    cameraRouteOnlyNow,
+    () => false,
+  );
 
   const cameraRouteAvailable = cameraRoute !== null && cameraRoute.length >= 2;
   const toggleCameraRouteOnly = useCallback((): void => {
-    setCameraRouteOnly((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(CAMERA_ROUTE_ONLY_KEY, next ? "1" : "0");
-      } catch {
-        // A per-device convenience only.
-      }
-      return next;
-    });
+    setCameraRouteOnlyNow(!cameraRouteOnlyNow());
   }, []);
 
   const toggle = useCallback((id: MapLayerId): void => {
