@@ -36,9 +36,10 @@ export function InfoFeatureMedia({ media, name }: InfoFeatureMediaProps) {
         playsInline
         preload="none"
         poster={preview ?? undefined}
-        src={media.playbackUrl}
         aria-label={`Live traffic camera: ${name}`}
-      />
+      >
+        <source src={media.playbackUrl} type="application/vnd.apple.mpegurl" />
+      </video>
     );
   }
 
