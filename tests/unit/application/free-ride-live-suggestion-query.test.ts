@@ -57,6 +57,10 @@ describe("createLiveSuggestionQuery", () => {
       rides: { loadRide: vi.fn(async () => ({ ok: true as const, document })) } as never,
       geometry,
       provider,
+      rideHistory: async () => [{
+        geometry: [{ lon: -77, lat: 40 }, { lon: -76.999, lat: 40 }],
+        riddenAt: "2026-08-01T12:00:00.000Z",
+      }],
       now: () => "2026-09-22T12:00:01.000Z",
     });
 
@@ -81,6 +85,8 @@ describe("createLiveSuggestionQuery", () => {
       durationSeconds: 240,
       requiresUTurn: false,
     });
+    expect(candidates[0]!.evidence?.novelty.status).toBe("estimated");
+    expect(candidates[0]!.evidence?.novelty.value).toBeGreaterThan(0.8);
     expect(await geometry.get(candidates[0]!.routeGeometryRef!)).toMatchObject({
       payload: { kind: "line", coordinates: expect.arrayContaining([{ lon: -76.99, lat: 40 }]) },
     });
