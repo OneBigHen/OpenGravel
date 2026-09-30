@@ -474,6 +474,7 @@ export function findFreeRideNetworkOpportunities(
     if (corridor.segmentIds.some((id) => recentSegmentIds.has(id))) continue;
 
     const entryId = corridor.segmentIds[0];
+    if (entryId === undefined) continue;
     const entryDistance = reachable.get(entryId);
     if (
       entryDistance === undefined ||
