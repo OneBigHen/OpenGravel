@@ -159,7 +159,7 @@ Preserve the returned `noul` probability directly.
 
 ## State rules
 
-Use `JevFrontierState` exactly.
+Use `JevFrontierState` as the internal experiment record, but never send it wholesale. Call `projectJevFrontierTransportState()` for the selected A/B/C ablation + permutation and send only that projected transport state.
 
 No raw GPX.
 No raw GPS history.
