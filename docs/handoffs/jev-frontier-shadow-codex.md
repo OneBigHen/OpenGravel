@@ -6,6 +6,10 @@ Pull request: `#51 Experiment: bounded Jev frontier shadow judge`
 
 Branch: `feat/jev-frontier-shadow`
 
+Before editing, sync this branch with current `main` and resolve any
+planner/frontier conflicts conservatively. PR #51 is behind its original merge
+base; do not implement runtime wiring against a stale planner seam.
+
 ## Goal
 
 Finish the first executable Jev 1.13 experiment without giving Jev routing
