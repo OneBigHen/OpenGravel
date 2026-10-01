@@ -706,7 +706,9 @@ export function auditJevFrontierOrder(
     if (Math.abs(candidateTotal + outcome.noneProbability - 1) > PROBABILITY_SUM_TOLERANCE) {
       return null;
     }
-    for (const id of candidateIds) sums[id] += outcome.probabilitiesByCandidateId[id] ?? 0;
+    for (const id of candidateIds) {
+      sums[id] = (sums[id] ?? 0) + (outcome.probabilitiesByCandidateId[id] ?? 0);
+    }
     noneSum += outcome.noneProbability;
   }
 
