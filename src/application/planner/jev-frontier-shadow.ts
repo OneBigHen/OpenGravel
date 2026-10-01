@@ -102,9 +102,53 @@ export interface JevFrontierState {
   readonly schemaVersion: 1;
   readonly intent: JevFrontierIntentState;
   readonly rider: JevFrontierRiderState | null;
+  /** Internal experiment fact. Never copy this field into shared Jev state. */
   readonly deterministicBaselineId: string;
   readonly candidates: readonly JevFrontierCandidateState[];
 }
+
+export type JevFrontierAblationVariant = "A" | "B" | "C";
+
+export interface JevFrontierTransportCandidateBase {
+  readonly slot: JevFrontierSlot;
+  readonly frontier: FrontierQualityVector;
+  readonly distanceMeters: number;
+  readonly durationSeconds: number;
+  readonly evidenceCoverage: number;
+  readonly coherence: JevFrontierCandidateState["coherence"];
+}
+
+export type JevFrontierTransportState =
+  | {
+      readonly schemaVersion: 1;
+      readonly variant: "A";
+      readonly intent: JevFrontierIntentState;
+      readonly candidates: readonly JevFrontierTransportCandidateBase[];
+    }
+  | {
+      readonly schemaVersion: 1;
+      readonly variant: "B";
+      readonly intent: JevFrontierIntentState;
+      readonly rider: JevFrontierRiderState | null;
+      readonly candidates: readonly (
+        JevFrontierTransportCandidateBase & {
+          readonly riderPreferenceUtility: number | null;
+        }
+      )[];
+    }
+  | {
+      readonly schemaVersion: 1;
+      readonly variant: "C";
+      readonly intent: JevFrontierIntentState;
+      readonly rider: JevFrontierRiderState | null;
+      readonly candidates: readonly (
+        JevFrontierTransportCandidateBase & {
+          readonly riderPreferenceUtility: number | null;
+          readonly canonicalScore: number;
+          readonly canonicalRank: number;
+        }
+      )[];
+    };
 
 export interface JevChoiceAnswer {
   readonly type: "choice";
@@ -179,9 +223,15 @@ export type JevFrontierJudgeResult =
  * or domain code. Failure is structured because experiment telemetry must
  * distinguish disabled, timeout, transport failure and malformed output.
  */
+export interface JevFrontierJudgeInput {
+  readonly state: JevFrontierState;
+  readonly permutation: JevFrontierPermutation;
+  readonly variant: JevFrontierAblationVariant;
+}
+
 export interface JevFrontierJudge {
   judge(
-    state: JevFrontierState,
+    input: JevFrontierJudgeInput,
     signal: AbortSignal,
   ): Promise<JevFrontierJudgeResult>;
 }
@@ -630,6 +680,102 @@ export function jevFrontierCounterfactual(
     ...base,
     status: passes ? "alternative" : "below-threshold",
     candidateId: chosen,
+  };
+}
+
+
+function validPermutation(
+  state: JevFrontierState,
+  permutation: JevFrontierPermutation,
+): boolean {
+  if (permutation.id.length === 0 || permutation.slots.length !== state.candidates.length) {
+    return false;
+  }
+  const expectedIds = new Set(state.candidates.map((candidate) => candidate.id));
+  const seenIds = new Set<string>();
+  const seenSlots = new Set<JevFrontierSlot>();
+  for (const assignment of permutation.slots) {
+    if (
+      !JEV_FRONTIER_SLOTS.includes(assignment.slot) ||
+      !expectedIds.has(assignment.candidateId) ||
+      seenIds.has(assignment.candidateId) ||
+      seenSlots.has(assignment.slot)
+    ) return false;
+    seenIds.add(assignment.candidateId);
+    seenSlots.add(assignment.slot);
+  }
+  return seenIds.size === expectedIds.size;
+}
+
+/**
+ * Projects internal experiment state into the exact state Jev is allowed to
+ * read for one ablation/permutation.
+ *
+ * Stable candidate ids and deterministicBaselineId are deliberately absent.
+ * The adapter keeps the permutation mapping locally and may mention the
+ * baseline slot only inside the independent Noul question instructions.
+ */
+export function projectJevFrontierTransportState(
+  state: JevFrontierState,
+  permutation: JevFrontierPermutation,
+  variant: JevFrontierAblationVariant,
+): JevFrontierTransportState | null {
+  if (
+    validateJevFrontierState(state) !== null ||
+    !validPermutation(state, permutation) ||
+    !["A", "B", "C"].includes(variant)
+  ) return null;
+
+  const byId = new Map(state.candidates.map((candidate) => [candidate.id, candidate]));
+  const bases = permutation.slots.map(({ slot, candidateId }) => {
+    const candidate = byId.get(candidateId)!;
+    return {
+      slot,
+      frontier: candidate.frontier,
+      distanceMeters: candidate.distanceMeters,
+      durationSeconds: candidate.durationSeconds,
+      evidenceCoverage: candidate.evidenceCoverage,
+      coherence: candidate.coherence,
+    } satisfies JevFrontierTransportCandidateBase;
+  });
+
+  if (variant === "A") {
+    return {
+      schemaVersion: 1,
+      variant,
+      intent: state.intent,
+      candidates: bases,
+    };
+  }
+
+  const personalized = permutation.slots.map((assignment, index) => ({
+    ...bases[index]!,
+    riderPreferenceUtility: byId.get(assignment.candidateId)!.riderPreferenceUtility,
+  }));
+
+  if (variant === "B") {
+    return {
+      schemaVersion: 1,
+      variant,
+      intent: state.intent,
+      rider: state.rider,
+      candidates: personalized,
+    };
+  }
+
+  return {
+    schemaVersion: 1,
+    variant,
+    intent: state.intent,
+    rider: state.rider,
+    candidates: permutation.slots.map((assignment, index) => {
+      const candidate = byId.get(assignment.candidateId)!;
+      return {
+        ...personalized[index]!,
+        canonicalScore: candidate.canonicalScore,
+        canonicalRank: candidate.canonicalRank,
+      };
+    }),
   };
 }
 
