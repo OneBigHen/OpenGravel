@@ -5,6 +5,7 @@ import {
   auditJevFrontierOrder,
   buildBalancedJevFrontierPermutations,
   jevFrontierCounterfactual,
+  projectJevFrontierTransportState,
   validateJevFrontierJudgment,
   validateJevFrontierState,
   type JevFrontierCandidateState,
@@ -421,6 +422,30 @@ describe("Jev frontier shadow contract", () => {
       ...policy,
       minimumChoiceConfidence: 2,
     })).toBeNull();
+  });
+
+
+  it("projects ablations without leaking stable ids or baseline identity", () => {
+    const value = state();
+    const permutation = buildBalancedJevFrontierPermutations(value, "case-17")[0]!;
+    const a = projectJevFrontierTransportState(value, permutation, "A");
+    const b = projectJevFrontierTransportState(value, permutation, "B");
+    const c = projectJevFrontierTransportState(value, permutation, "C");
+
+    expect(a).not.toBeNull();
+    expect(JSON.stringify(a)).not.toContain("deterministicBaselineId");
+    expect(JSON.stringify(a)).not.toContain("route-a");
+    expect(JSON.stringify(a)).not.toContain("canonicalScore");
+    expect(JSON.stringify(a)).not.toContain("riderPreferenceUtility");
+
+    expect(b).not.toBeNull();
+    expect(JSON.stringify(b)).not.toContain("canonicalScore");
+    expect(JSON.stringify(b)).toContain("precision");
+    expect(JSON.stringify(b)).toContain("riderPreferenceUtility");
+
+    expect(c).not.toBeNull();
+    expect(JSON.stringify(c)).toContain("canonicalScore");
+    expect(JSON.stringify(c)).toContain("canonicalRank");
   });
 
   it("builds balanced seeded permutations for the order-bias audit", () => {
