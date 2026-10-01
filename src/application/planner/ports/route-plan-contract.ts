@@ -31,6 +31,7 @@ import type {
   RouteSelectionSource,
 } from "@/domain/route/types";
 import type { ProviderRouteRequest } from "../route-provider";
+import { isFrozenJevModelIdentity } from "./jev-model-identity";
 
 /** The one route-plan endpoint the browser talks to (02 §11). */
 export const ROUTE_PLAN_PATH = "/api/route-plan";
@@ -114,6 +115,18 @@ export interface RoutePlanFunCharacterWire {
   readonly confidence: number;
   readonly model: string;
   readonly policyVersion: string;
+}
+
+/** Bounded advisory data only; malformed readings never invalidate a route. */
+export function parseRoutePlanFunCharacter(value: unknown): RoutePlanFunCharacterWire | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const { fingerprint, label, confidence, model, policyVersion } = source;
+  if (typeof fingerprint !== "string" || fingerprint.length === 0 || fingerprint.length > 128 ||
+    typeof policyVersion !== "string" || policyVersion.length === 0 || policyVersion.length > 128 ||
+    typeof label !== "string" || !["FLOWING", "TWISTY", "BACKROAD", "DIRT_FOCUSED", "UNKNOWN"].includes(label) ||
+    typeof confidence !== "number" || !Number.isFinite(confidence) || confidence < 0 || confidence > 1 || !isFrozenJevModelIdentity(model)) return null;
+  return { fingerprint, label: label as RoutePlanFunCharacterWire["label"], confidence, model, policyVersion };
 }
 
 /** Server-side diagnostics for one attempt (23 §2, §16). */

@@ -29,6 +29,42 @@ const IDENTITY = {
   planningGeneration: 8,
 } as const;
 
+describe("route character diagnostics transport", () => {
+  it.each([{ rideId: "ride_other" }, { rideRevision: 13 }, { planningGeneration: 9 }])("rejects responses from a different attempt even with a matching assessed fingerprint: %j", async (different) => {
+    const body = successBody();
+    const reading = { fingerprint: body.bundle.candidates[0]!.fingerprint, label: "TWISTY", confidence: 0.91, model: "jev-1.13.0", policyVersion: "test" };
+    const { fetcher } = recordingFetcher(response(true, 200, { ...body, identity: { ...IDENTITY, ...different }, diagnostics: { ...body.diagnostics, funCharacter: reading } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    await expect(provider.candidates(REQUEST, new AbortController().signal)).rejects.toMatchObject({ code: "provider-unavailable", recoverable: true });
+  });
+
+  it("carries a validated reading separately from route assessments", async () => {
+    const body = successBody();
+    const reading = { fingerprint: body.bundle.candidates[0]!.fingerprint, label: "TWISTY" as const, confidence: 0.91, model: "jev-1.13.0", policyVersion: "test" };
+    const { fetcher } = recordingFetcher(response(true, 200, { ...body, diagnostics: { ...body.diagnostics, funCharacter: reading } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    const result = await provider.candidates(REQUEST, new AbortController().signal);
+    expect(result.funCharacter).toEqual(reading);
+    expect(result.candidates[0]?.assessment).toEqual({ evidence: body.bundle.candidates[0]?.evidence, score: body.bundle.candidates[0]?.score, warnings: body.bundle.candidates[0]?.warnings });
+  });
+
+  it.each([
+    { confidence: 2 }, { confidence: NaN }, { label: "APPROVED_SAFE" }, { model: "jev-latest" },
+    { fingerprint: "unrelated" }, { policyVersion: "x".repeat(200) },
+  ])("drops malformed advisory data without failing routing: %j", async (override) => {
+    const body = successBody();
+    const reading = { fingerprint: body.bundle.candidates[0]!.fingerprint, label: "TWISTY", confidence: 0.91, model: "jev-1.13.0", policyVersion: "test", ...override };
+    const { fetcher } = recordingFetcher(response(true, 200, { ...body, diagnostics: { ...body.diagnostics, funCharacter: reading } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    const result = await provider.candidates(REQUEST, new AbortController().signal);
+    expect(result.funCharacter).toBeUndefined();
+    expect(result.candidates).toHaveLength(body.bundle.candidates.length);
+  });
+});
+
 const REQUEST: ProviderRouteRequest = {
   requestId: "req_test",
   origin: { lon: -75.16, lat: 39.95 },
@@ -191,7 +227,7 @@ describe("createApiRouteProvider — the request it sends", () => {
   });
 
   it("is scoped to the attempt the composition root installed last", async () => {
-    const { fetcher, probe } = recordingFetcher(response(true, 200, successBody()));
+    const { fetcher, probe } = recordingFetcher(response(true, 200, { ...successBody(), identity: { rideId: "ride_next", rideRevision: 13, planningGeneration: 9 } }));
     const provider = createApiRouteProvider({ fetcher });
     provider.beginAttempt(IDENTITY);
     provider.beginAttempt({ rideId: "ride_next", rideRevision: 13, planningGeneration: 9 });

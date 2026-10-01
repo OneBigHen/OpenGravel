@@ -127,7 +127,7 @@ describe("planRide — success path", () => {
       funCharacterClassifier: {
         classify: async (assessment) => {
           observedFeatures = assessment.features;
-          return { label: "TWISTY", confidence: 0.91, model: "jev-latest" };
+          return { label: "TWISTY", confidence: 0.91, model: "jev-1.13.0" };
         },
       },
     });
@@ -144,8 +144,34 @@ describe("planRide — success path", () => {
       fingerprint: enriched.bundle.candidates[0]?.fingerprint,
       label: "TWISTY",
       confidence: 0.91,
-      model: "jev-latest",
+      model: "jev-1.13.0",
     });
+  });
+
+  it.each([
+    { model: "jev-latest", confidence: 0.91 },
+    { model: "unexpected-model", confidence: 0.91 },
+    { model: "jev-1.13.0", confidence: Number.NaN },
+    { model: "jev-1.13.0", confidence: 2 },
+  ])("drops malformed classifier diagnostics without changing a valid plan: %j", async (reading) => {
+    const provider = stubProvider({ candidates: [candidate({ roadSummary: {
+      totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|secondary": 120_000 },
+      curvatureMeters: { "0.72": 120_000 }, tollMeters: 0,
+    } })] });
+    const baseline = await planRide(input(), { provider, env: {}, funCharacterClassifier: null });
+    const result = await planRide(input(), {
+      provider, env: {}, funCharacterClassifier: { classify: async () => ({ label: "TWISTY", ...reading }) },
+    });
+    expect(baseline.ok).toBe(true);
+    expect(result.ok).toBe(true);
+    if (!baseline.ok || !result.ok) throw new Error("Expected valid routes with optional diagnostics");
+    expect(result.diagnostics.funCharacter).toBeUndefined();
+    expect(result.bundle.candidates.map(({ fingerprint, score }) => ({ fingerprint, score }))).toEqual(
+      baseline.bundle.candidates.map(({ fingerprint, score }) => ({ fingerprint, score })),
+    );
+    expect(result.bundle.candidates.find(({ id }) => id === result.bundle.selectedRouteId)?.fingerprint).toBe(
+      baseline.bundle.candidates.find(({ id }) => id === baseline.bundle.selectedRouteId)?.fingerprint,
+    );
   });
 
   it("keeps a valid plan when the optional character model fails", async () => {

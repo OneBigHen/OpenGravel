@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import "./theme-glass.css";
+import "@/ui/planner/routing-method-comparison.css";
 import { NativeShell } from "./NativeShell";
 import { OfflineNavGuard } from "@/ui/nav/OfflineNavGuard";
 import { SkipLink } from "@/ui/nav/SkipLink";

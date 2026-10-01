@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { haversine } from "@/domain/geometry/analysis";
-import { bendMeters } from "@/domain/geometry/bends";
+import { analyzeBends, bendMeters } from "@/domain/geometry/bends";
 import type { Coordinate } from "@/domain/ride/types";
 
 const ORIGIN = { lon: -75.2, lat: 40.5 };
@@ -27,6 +27,21 @@ function arc(radius: number, degrees: number, step: number): Coordinate[] {
 }
 
 describe("bendMeters", () => {
+  it.each([0, 0.4])("preserves aggregate curvature across %s-metre duplicate noise without claiming continuous bends", (offset) => {
+    const points = arc(150, 180, 60);
+    const duplicate = { ...points[2]!, lon: points[2]!.lon + offset / METERS_PER_DEG_LON };
+    const line = [...points.slice(0, 3), duplicate, ...points.slice(3)];
+    // Historical aggregate semantics skip the two tiny adjacent legs. The six
+    // remaining qualified vertices still contribute even across the noise.
+    const expected = [1, 4, 5, 6, 7, 8].reduce((sum, index) =>
+      sum + (haversine(line[index - 1]!, line[index]!) + haversine(line[index]!, line[index + 1]!)) / 2, 0,
+    );
+    const analysis = analyzeBends(line);
+    expect(analysis.bendMeters).toBeCloseTo(expected, 8);
+    expect(analysis.longestRunMeters).toBeLessThan(analysis.bendMeters);
+    expect(analysis.runCount).toBe(1);
+  });
+
   it("finds no bends on a straight road", () => {
     const line = Array.from({ length: 30 }, (_, index) => at(index * 60, 0));
     expect(bendMeters(line)).toBe(0);
@@ -35,6 +50,44 @@ describe("bendMeters", () => {
   it("counts a winding stretch drawn at the engine's ~60 m vertex spacing", () => {
     const line = arc(150, 180, 60);
     expect(bendMeters(line)).toBeGreaterThan(length(line) * 0.6);
+  });
+
+  it("retains bend continuity instead of only the aggregate metres", () => {
+    const first = arc(150, 120, 60);
+    const straightStart = first.at(-1) as Coordinate;
+    const straight = Array.from({ length: 5 }, (_, index) =>
+      at(
+        (straightStart.lon - ORIGIN.lon) * METERS_PER_DEG_LON + (index + 1) * 100,
+        (straightStart.lat - ORIGIN.lat) * METERS_PER_DEG_LAT,
+      ),
+    );
+    const analysis = analyzeBends([...first, ...straight]);
+
+    expect(analysis.bendMeters).toBeGreaterThan(0);
+    expect(analysis.longestRunMeters).toBeGreaterThan(0);
+    expect(analysis.longestRunMeters).toBeLessThanOrEqual(analysis.bendMeters);
+    expect(analysis.runCount).toBe(1);
+  });
+
+  it("counts separated bend stretches as separate runs", () => {
+    const first = arc(150, 120, 60);
+    const shift = 2_000;
+    const second = arc(150, 120, 60).map((point) =>
+      at(
+        (point.lon - ORIGIN.lon) * METERS_PER_DEG_LON + shift,
+        (point.lat - ORIGIN.lat) * METERS_PER_DEG_LAT,
+      ),
+    );
+    const between = [
+      first.at(-1) as Coordinate,
+      at(1_000, 1_000),
+      at(1_500, 1_000),
+      second[0] as Coordinate,
+    ];
+    const analysis = analyzeBends([...first, ...between.slice(1), ...second.slice(1)]);
+
+    expect(analysis.runCount).toBeGreaterThanOrEqual(2);
+    expect(analysis.bendMeters).toBeGreaterThan(analysis.longestRunMeters);
   });
 
   it("ignores gentle sweepers a rider would not call a bend", () => {

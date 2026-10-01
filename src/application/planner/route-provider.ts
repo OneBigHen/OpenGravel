@@ -278,6 +278,13 @@ export interface ProviderRoadSummary {
    */
   readonly bendMeters?: number;
   /**
+   * Longest uninterrupted multi-vertex bend run on the returned line. This is
+   * deliberately geometry-derived, not GraphHopper's per-edge curvature ratio.
+   */
+  readonly longestBendRunMeters?: number;
+  /** Number of separate qualifying bend runs on the returned line. */
+  readonly bendRunCount?: number;
+  /**
    * The same `${surface}|${roadClass}` keys in travel order, as `[metres, key]`
    * runs with consecutive equal keys merged: where along the line each surface
    * is, for the surface strip under the elevation profile (UX rework phase 9).
@@ -288,6 +295,8 @@ export interface ProviderRoadSummary {
 /** What one provider call returned. An empty set is a valid answer. */
 export interface ProviderCandidateSet {
   readonly candidates: readonly ProviderCandidate[];
+  /** Reading of an already-scored route, carried separately from road facts. */
+  readonly funCharacter?: import("./ports/route-plan-contract").RoutePlanFunCharacterWire;
 }
 
 /**

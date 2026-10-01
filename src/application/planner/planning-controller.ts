@@ -868,6 +868,7 @@ class PlanningSessionController implements PlanningController {
       outcome: "ok",
       candidateCount: normalized.length,
       ...(notes.length === 0 ? {} : { note: notes.join("; ") }),
+      ...(set.funCharacter === undefined ? {} : { funCharacter: set.funCharacter }),
     });
     for (const candidate of set.candidates) {
       const fingerprint: unknown = candidate.providerMetadata?.["fingerprint"];

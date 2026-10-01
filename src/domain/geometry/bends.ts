@@ -15,6 +15,10 @@
  * - a bend spans at least two consecutive vertices; a single kink is a lane
  *   shift or a corner cut by the line's simplification.
  *
+ * The analysis retains **run continuity** as well as aggregate bend metres.
+ * This lets higher layers distinguish one sustained winding section from the
+ * same number of bend metres scattered across many tiny fragments.
+ *
  * PA/NJ reference shares (the engine's own lines, 2026-09-26): I-76 1.9%,
  * suburban arterials 4–5%, Hawk Mountain climb 9%, River Road 13%, PA-611
  * through the Water Gap 13%, Old Mine Road 19%.
@@ -28,6 +32,14 @@ export const BEND_RADIUS_METERS = 300;
 /** A single-vertex turn sharper than this is a junction corner. */
 export const JUNCTION_TURN_DEGREES = 70;
 
+export interface BendAnalysis {
+  readonly bendMeters: number;
+  /** Longest uninterrupted qualifying bend run. */
+  readonly longestRunMeters: number;
+  /** Number of qualifying multi-vertex bend runs. */
+  readonly runCount: number;
+}
+
 function bearing(from: Coordinate, to: Coordinate): number {
   const lat1 = (from.lat * Math.PI) / 180;
   const lat2 = (to.lat * Math.PI) / 180;
@@ -37,21 +49,45 @@ function bearing(from: Coordinate, to: Coordinate): number {
   return (Math.atan2(y, x) * 180) / Math.PI;
 }
 
-/** Metres of the line ridden through bends (see the module note). */
-export function bendMeters(line: readonly Coordinate[]): number {
+/**
+ * Aggregate and continuity metrics for bends on the line.
+ *
+ * A qualifying run requires two consecutive bend vertices, preserving the
+ * original anti-kink semantics.
+ */
+export function analyzeBends(line: readonly Coordinate[]): BendAnalysis {
   let bends = 0;
+  let longestRunMeters = 0;
+  let runCount = 0;
   let run: number[] = [];
-  const flush = (): void => {
-    if (run.length >= 2) for (const meters of run) bends += meters;
+  let aggregateRun: number[] = [];
+
+  const flushContinuity = (): void => {
+    if (run.length >= 2) {
+      const runMeters = run.reduce((sum, meters) => sum + meters, 0);
+      longestRunMeters = Math.max(longestRunMeters, runMeters);
+      runCount += 1;
+    }
     run = [];
   };
+  const flush = (): void => {
+    // Preserve the existing aggregate and addition order used by curvature
+    // scoring. Tiny duplicate legs interrupt only the new continuity reading.
+    if (aggregateRun.length >= 2) for (const meters of aggregateRun) bends += meters;
+    aggregateRun = [];
+    flushContinuity();
+  };
+
   for (let index = 1; index < line.length - 1; index += 1) {
     const previous = line[index - 1] as Coordinate;
     const vertex = line[index] as Coordinate;
     const next = line[index + 1] as Coordinate;
     const before = haversine(previous, vertex);
     const after = haversine(vertex, next);
-    if (!(before >= 1) || !(after >= 1)) continue;
+    if (!(before >= 1) || !(after >= 1)) {
+      flushContinuity();
+      continue;
+    }
     const turn = Math.abs(((bearing(vertex, next) - bearing(previous, vertex) + 540) % 360) - 180);
     if (turn > JUNCTION_TURN_DEGREES) {
       flush();
@@ -59,9 +95,22 @@ export function bendMeters(line: readonly Coordinate[]): number {
     }
     const share = (before + after) / 2;
     const radius = turn === 0 ? Number.POSITIVE_INFINITY : share / ((turn * Math.PI) / 180);
-    if (radius < BEND_RADIUS_METERS) run.push(share);
+    if (radius < BEND_RADIUS_METERS) {
+      run.push(share);
+      aggregateRun.push(share);
+    }
     else flush();
   }
   flush();
-  return bends;
+
+  return {
+    bendMeters: bends,
+    longestRunMeters,
+    runCount,
+  };
+}
+
+/** Metres of the line ridden through bends (see the module note). */
+export function bendMeters(line: readonly Coordinate[]): number {
+  return analyzeBends(line).bendMeters;
 }

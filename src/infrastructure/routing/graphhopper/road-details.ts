@@ -10,7 +10,7 @@
 
 import type { ProviderRoadSummary } from "@/application/planner/route-provider";
 import { haversine } from "@/domain/geometry/analysis";
-import { bendMeters } from "@/domain/geometry/bends";
+import { analyzeBends } from "@/domain/geometry/bends";
 import type { Coordinate } from "@/domain/ride/types";
 import { MAX_SPEED_LIMIT_SPANS, type SpeedLimitSpan } from "@/domain/route/types";
 
@@ -81,13 +81,16 @@ export function summarizeRoadDetails(
     const tollValue = label(toll[step] ?? null);
     if (tollValue !== "no" && tollValue !== MISSING) tollMeters += meters;
   }
+  const bends = analyzeBends(geometry);
   return {
     totalMeters,
     surfaceByRoadClassMeters,
     curvatureMeters,
     tollMeters,
     surfaceRuns,
-    bendMeters: bendMeters(geometry),
+    bendMeters: bends.bendMeters,
+    longestBendRunMeters: bends.longestRunMeters,
+    bendRunCount: bends.runCount,
   };
 }
 

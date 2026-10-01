@@ -229,7 +229,6 @@ export function PlannerWorkspace({
   const reloadLatest = useStore(rideDocumentStore, (state) => state.reloadLatest);
   const keepMyCopy = useStore(rideDocumentStore, (state) => state.keepMyCopy);
   const retrySave = useStore(rideDocumentStore, (state) => state.retrySave);
-  /** The `Start ride` action's own state: idle, in flight, or a refusal. */
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [rideStart, setRideStart] = useState<{
     readonly state: "idle" | "starting";
@@ -865,6 +864,7 @@ export function PlannerWorkspace({
               cards: viewModel.routeCards,
               explanation: routeExplanation,
               onSelect: handleSelectRoute,
+              comparisons: viewModel.routingComparisons,
             },
             actions: {
               document,

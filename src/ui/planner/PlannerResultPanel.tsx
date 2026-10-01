@@ -4,12 +4,14 @@ import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
+import type { RoutingComparisonVm } from "@/application/planner/routing-method-comparison";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
 import { PlannerRouteBriefing, type PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
 import { useElevationProfile } from "@/ui/planner/useElevationProfile";
+import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
 
 /**
  * The wide tier (MVP parity row 27): once there is a ride, its result — the
@@ -51,6 +53,7 @@ export interface PlannerResultPanelProps {
     readonly cards: readonly RouteCardVm[];
     readonly explanation: RouteExplanation | null;
     readonly onSelect: (routeId: RouteCandidateId) => void;
+    readonly comparisons?: RoutingComparisonVm;
   };
   readonly actions: RideActionsProps;
   readonly briefing: PlannerRouteBriefingProps;
@@ -79,6 +82,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing }: Pl
           ))}
         </RouteChoices>
       )}
+      {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {elevation === null || choices.cards.length === 0 ? null : (
         <div className="og-elevation-slot" data-tint={tint}>
           <ElevationProfileChart state={elevation} surface={selectedCard?.surfaceRuns} />

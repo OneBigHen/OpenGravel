@@ -13,9 +13,9 @@
  *   must be comparable;
  * - representative selection is deterministic and intentionally small.
  *
- * This module is not wired into the live planner yet. It is the pure selection
- * substrate for the frontier-routing experiment documented in
- * docs/frontier-routing.md.
+ * Its bounded selector is used by the opt-in routing-method comparison over
+ * existing canonical routes. Candidate generation and automatic selection
+ * remain research, documented in docs/frontier-routing.md.
  */
 
 export const FRONTIER_QUALITY_KEYS = [

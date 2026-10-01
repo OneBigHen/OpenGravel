@@ -23,6 +23,7 @@ import type {
 import {
   ROUTE_PLAN_PATH,
   isRoutePlanErrorBody,
+  parseRoutePlanFunCharacter,
 } from "@/application/planner/ports/route-plan-contract";
 import type {
   ProviderCandidate,
@@ -228,6 +229,9 @@ export function createApiRouteProvider(
       }
       const success = body as RoutePlanSuccessBody;
       if (
+        success.identity?.rideId !== identity.rideId ||
+        success.identity?.rideRevision !== identity.rideRevision ||
+        success.identity?.planningGeneration !== identity.planningGeneration ||
         !Array.isArray(success.bundle?.candidates) ||
         success.bundle.candidates.some((candidate) =>
           candidate.instructions !== undefined &&
@@ -245,7 +249,12 @@ export function createApiRouteProvider(
           httpStatus: response.status,
         });
       }
-      return { candidates: success.bundle.candidates.map((candidate) => toProviderCandidate(candidate, success.bundle.roles)) };
+      const reading = parseRoutePlanFunCharacter(success.diagnostics?.funCharacter);
+      const matching = reading !== null && success.bundle.candidates.some((candidate) => candidate.fingerprint === reading.fingerprint);
+      return {
+        candidates: success.bundle.candidates.map((candidate) => toProviderCandidate(candidate, success.bundle.roles)),
+        ...(matching ? { funCharacter: reading } : {}),
+      };
     },
   };
 }

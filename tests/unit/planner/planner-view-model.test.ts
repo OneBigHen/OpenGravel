@@ -142,6 +142,27 @@ const FAST = candidate(FAST_ID, {
   durationSeconds: 5_760,
 });
 
+describe("routing method comparison ownership", () => {
+  it.each(["primary-ready", "alternatives-loading"] as const)("keeps the current primary usable during %s", (phase) => {
+    const routes = bundle([BEST, FAST], BEST_ID, { "best-ride": BEST_ID, fastest: FAST_ID });
+    const vm = buildPlannerViewModel({ document: READY_DOCUMENT, session: session(phase, { committedBundle: routes, selectedRouteId: BEST_ID }) });
+    expect(vm.routingComparisons.stale).toBe(false);
+    expect(vm.routingComparisons.methods[0]?.routeId).toBe(BEST_ID);
+  });
+
+  it("projects the selected route and only the current attempt's Jev reading", () => {
+    const routes = bundle([BEST, FAST], BEST_ID, { "best-ride": BEST_ID, fastest: FAST_ID });
+    const reading = { fingerprint: BEST.fingerprint, label: "TWISTY" as const, confidence: 0.9, model: "jev-1.13.0", policyVersion: "test" };
+    const ready = session("ready", { committedBundle: routes, selectedRouteId: BEST_ID, diagnostics: [{ providerId: "api", outcome: "ok", candidateCount: 2, funCharacter: reading }] });
+    const vm = buildPlannerViewModel({ document: READY_DOCUMENT, session: ready });
+    expect(vm.routingComparisons.selectedRouteId).toBe(BEST_ID);
+    expect(vm.routingComparisons.jev.routeId).toBe(BEST_ID);
+    const stale = buildPlannerViewModel({ document: READY_DOCUMENT, session: { ...ready, identity: { ...ready.identity, planningGeneration: 2 }, committedBundle: null, lastGoodBundle: routes, phase: "failed" } });
+    expect(stale.routingComparisons.stale).toBe(true);
+    expect(stale.routingComparisons.jev.state).toBe("unavailable");
+  });
+});
+
 function bundle(
   candidates: readonly RouteCandidate[],
   selectedRouteId: RouteCandidateId,

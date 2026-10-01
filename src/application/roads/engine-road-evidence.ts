@@ -108,6 +108,14 @@ export interface EngineCurvature {
   readonly curvyMeters: number;
   readonly totalMeters: number;
   readonly unit: number;
+  /**
+   * Sustained-bend diagnostics from the returned geometry. Null means an older
+   * provider answer did not carry the continuity measurement.
+   */
+  readonly longestRunMeters?: number;
+  readonly runCount?: number;
+  /** Longest run / all bend metres, 0..1; absent when continuity is unavailable. */
+  readonly continuityShare?: number;
 }
 
 function clamp01(value: number): number {
@@ -196,10 +204,26 @@ export function engineSurfaceMix(
 export function engineCurvature(summary: ProviderRoadSummary): EngineCurvature {
   if (summary.bendMeters !== undefined && Number.isFinite(summary.bendMeters) && summary.totalMeters > 0) {
     const bends = Math.max(0, summary.bendMeters);
+    const longestRunMeters =
+      summary.longestBendRunMeters !== undefined &&
+      Number.isFinite(summary.longestBendRunMeters)
+        ? Math.max(0, summary.longestBendRunMeters)
+        : null;
+    const runCount =
+      summary.bendRunCount !== undefined &&
+      Number.isSafeInteger(summary.bendRunCount) &&
+      summary.bendRunCount >= 0
+        ? summary.bendRunCount
+        : null;
     return {
       curvyMeters: bends,
       totalMeters: summary.totalMeters,
       unit: clamp01(bends / summary.totalMeters / FULLY_BENDY_SHARE),
+      ...(longestRunMeters === null ? {} : { longestRunMeters }),
+      ...(runCount === null ? {} : { runCount }),
+      ...(longestRunMeters === null || !(bends > 0)
+        ? {}
+        : { continuityShare: clamp01(longestRunMeters / bends) }),
     };
   }
   let curvyMeters = 0;

@@ -83,6 +83,7 @@ export interface ProviderDiagnostic {
   readonly outcome: ProviderDiagnosticOutcome;
   readonly candidateCount: number;
   readonly note?: string;
+  readonly funCharacter?: import("./ports/route-plan-contract").RoutePlanFunCharacterWire;
 }
 
 /**
