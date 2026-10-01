@@ -13,6 +13,11 @@ const MINIMUM_CONFIDENCE = 0.65;
  */
 export const JEV_CHARACTER_MODEL = "jev-1.13";
 
+function isPinnedCharacterModel(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^(?:typesafe\/)?jev-1\.13(?:-\d{8})?$/.test(value);
+}
+
 const CHARACTER_CHOICES = {
   FLOWING: "Sustained curves and few interruptions, with a smooth riding rhythm.",
   TWISTY: "Frequent meaningful curves are the dominant riding character.",
@@ -79,7 +84,7 @@ export function jevCharacterClassifierFromEnv(
         !Object.hasOwn(CHARACTER_CHOICES, answer.choice) ||
         !Number.isFinite(answer.confidence) ||
         answer.confidence < 0 || answer.confidence > 1 ||
-        typeof result.model !== "string" || result.model.trim() === ""
+        !isPinnedCharacterModel(result.model)
       ) return null;
 
       return {
