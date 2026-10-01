@@ -692,7 +692,11 @@ export function auditJevFrontierOrder(
       outcome.permutationId.length === 0 ||
       seenPermutations.has(outcome.permutationId) ||
       (outcome.choiceCandidateId !== null && !allowedIds.has(outcome.choiceCandidateId)) ||
-      !validDistribution(outcome.probabilitiesByCandidateId, allowedIds) ||
+      !isRecord(outcome.probabilitiesByCandidateId) ||
+      Object.keys(outcome.probabilitiesByCandidateId).length !== allowedIds.size ||
+      Object.entries(outcome.probabilitiesByCandidateId).some(
+        ([id, probability]) => !allowedIds.has(id) || !unit(probability),
+      ) ||
       !unit(outcome.noneProbability)
     ) return null;
     seenPermutations.add(outcome.permutationId);
