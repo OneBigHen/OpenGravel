@@ -560,16 +560,16 @@ describe("Jev frontier shadow contract", () => {
       }),
     );
 
-    expect(auditJevFrontierOrder(state(), outcomes)).toMatchObject({
+    const audit = auditJevFrontierOrder(state(), outcomes);
+    expect(audit).not.toBeNull();
+    expect(audit).toMatchObject({
       flipRate: 0,
       orderDependent: false,
       stableChoiceCandidateId: "route-b",
-      meanProbabilityByCandidateId: {
-        "route-a": 0.2,
-        "route-b": 0.6,
-        "route-c": 0.1,
-      },
-      meanNoneProbability: 0.1,
     });
+    expect(audit?.meanProbabilityByCandidateId["route-a"]).toBeCloseTo(0.2);
+    expect(audit?.meanProbabilityByCandidateId["route-b"]).toBeCloseTo(0.6);
+    expect(audit?.meanProbabilityByCandidateId["route-c"]).toBeCloseTo(0.1);
+    expect(audit?.meanNoneProbability).toBeCloseTo(0.1);
   });
 });
