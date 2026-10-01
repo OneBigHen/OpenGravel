@@ -177,7 +177,9 @@ Do not ask Jev to calculate a return time or compare dates.
 
 When available, send:
 
-- posterior mean/weights on known rider-preference axes;
+- posterior mean on known rider-preference axes;
+- posterior precision on those axes, so equal means with different uncertainty
+  do not look equivalent;
 - evidence amount on those axes;
 - explicit/implicit comparison counts;
 - already-computed candidate rider-preference utility.
@@ -217,10 +219,15 @@ same state.
 
 ### Choice: route fit
 
-Options:
+Options inside each Jev call are presentation slots, not route identities:
 
-- one option per candidate id;
+- `A`;
+- `B`;
+- `C` when three candidates are present;
 - `NONE`.
+
+The adapter owns the slot -> stable candidate-id mapping. Telemetry and
+evaluation must use stable candidate ids, never letters.
 
 Instruction concept:
 
@@ -235,9 +242,57 @@ The question id itself must not carry semantic meaning.
 
 Capture:
 
-- selected option;
-- probability for every route + NONE;
-- choice confidence.
+- selected slot;
+- slot -> stable candidate-id mapping;
+- probability for every slot + NONE;
+- choice confidence;
+- remapped stable candidate-id verdict.
+
+The runtime validator requires the named Choice to be the unique probability
+argmax. Exact ties are not broken arbitrarily; they are invalid/abstaining
+measurements.
+
+
+## Candidate-order bias audit
+
+Position bias is a first-class P0 failure mode, not a later cleanup.
+
+The shortlisted candidates are intentionally close: they have already survived
+eligibility, Pareto filtering and regret reduction. That is exactly where a
+semantic judge is most likely to be sensitive to option ordering.
+
+For every stable candidate set:
+
+1. derive a reproducible seeded starting assignment;
+2. with two candidates, run both `AB` and `BA`;
+3. with three candidates, run three cyclic assignments so each stable candidate
+   appears once in A, once in B and once in C;
+4. keep `NONE` fixed;
+5. remap every returned slot back to the stable candidate id before logging;
+6. compute the pairwise verdict flip rate across permutations.
+
+The application contract exposes
+`buildBalancedJevFrontierPermutations()` and
+`auditJevFrontierOrder()` for this.
+
+Any non-zero Choice flip rate means the verdict is order-dependent. P0 must
+treat that candidate-set decision as an abstention for promotion/counterfactual
+purposes, while still retaining the raw runs for bias analysis.
+
+Do not average conflicting winners into a synthetic winner.
+
+Log:
+
+- experiment/corpus seed;
+- permutation id;
+- A/B/C -> stable id mapping;
+- per-run stable winner or NONE;
+- per-run probability distribution;
+- aggregate mean probabilities;
+- flip rate;
+- whether the verdict was order-dependent.
+
+This makes order sensitivity measurable rather than hidden noise.
 
 ### Score: semantic rider fit
 
@@ -257,6 +312,10 @@ This score is named **semantic fit**, never `RouteScore`.
 
 Store the score distribution and confidence. Do not add it into canonical route
 scoring during P0.
+
+The top-level score is redundant provider output. OpenGravel validates that it
+matches the expected value of the returned 0-3 probability distribution within
+a small rounding tolerance; otherwise the entire judgment is invalid.
 
 ### Noul: meaningful improvement
 
@@ -355,6 +414,10 @@ The existing `@typesafe-ai/sdk` path can be evaluated first, but the adapter
 must implement an OpenGravel-owned port so switching to OpenRouter's direct
 Decisions API or SDK does not change application/domain code.
 
+The existing route-character classifier is also pinned to `jev-1.13` in this
+PR. Changing either judge model requires an explicit replay/calibration event;
+do not silently collect longitudinal data through `jev-latest`.
+
 ## Experiment telemetry
 
 One stable record per candidate set should contain:
@@ -366,9 +429,12 @@ One stable record per candidate set should contain:
 - candidate canonical ranks;
 - rider-preference predicted utilities/probabilities when available;
 - Jev exact model snapshot;
-- choice;
+- per-permutation A/B/C -> stable candidate mapping;
+- per-permutation choice;
 - per-option probabilities;
 - choice confidence;
+- Choice flip rate and order-dependence flag;
+- aggregate mean candidate/NONE probabilities;
 - per-candidate fit score/distribution/confidence;
 - meaningful-improvement probability;
 - latency;
@@ -388,18 +454,37 @@ Never log API keys or raw GPS traces.
 Run against the permanent PA/NJ routing quality corpus and replayable candidate
 sets before physical riding conclusions.
 
-Measure at least:
+Agreement with the deterministic winner is a diagnostic only. It is not a
+success metric: a judge that merely reconstructs canonical rank can achieve
+high agreement while adding zero rider value.
 
-1. agreement with deterministic winner;
-2. disagreement rate;
-3. abstention/NONE rate;
-4. calibration of choice probability/confidence;
-5. frequency of strong counterfactual alternatives;
-6. blinded rider preference when available;
-7. incremental accuracy beyond the rider-preference model alone;
-8. latency p50/p95;
-9. failure/invalid-output rate;
-10. cost per stable candidate set.
+Primary evaluation should use held-out blinded rider labels:
+
+1. top-choice accuracy against held-out rider preference;
+2. multiclass log loss;
+3. Brier score;
+4. reliability/calibration curves for chosen probability and Noul probability;
+5. expected calibration error;
+6. abstention coverage and selective accuracy;
+7. Choice order flip rate;
+8. repeated-identical-request stability;
+9. incremental performance beyond deterministic frontier + local rider model;
+10. latency p50/p95;
+11. failure/invalid-output rate;
+12. cost per stable candidate set.
+
+Split by corridor and ride session, not individual candidate set, so
+near-duplicate routes do not leak across calibration/test partitions.
+
+Collect pre-ride map preference separately from post-ride preference. Pairwise
+blinded labels are preferred to asking a rider to globally rank three map
+screens. Structured reason tags should include at least boring egress,
+sustained-flow quality, stressful junctions, surface mismatch, manufactured
+"fake twisties", and timebox failure.
+
+Do not make rider-visible claims from one rider or eight corridors alone.
+The current corpus is measurement infrastructure; it is not a labeled
+ground-truth dataset.
 
 The key question is not "Does Jev produce plausible choices?"
 
@@ -411,6 +496,32 @@ It is:
 If it only restates those inputs, remove it from route selection and retain it
 for classification/Advisor routing where it provides clearer value.
 
+
+## Leakage / ablation design
+
+The full state intentionally contains several correlated deterministic summaries:
+frontier axes, canonical score/rank, coherence and rider utility. Sending all of
+them in every run makes it easy for Jev to reconstruct OpenGravel's baseline
+rather than demonstrate incremental semantic value.
+
+Replay the same frozen candidate sets through four blinded input variants:
+
+| Variant | Jev input | Purpose |
+| --- | --- | --- |
+| A | explicit intent + intrinsic normalized measurements | Tests semantic composition from facts |
+| B | A + rider posterior mean/precision/evidence + candidate rider utility | Tests incremental personalization |
+| C | B + canonical score/rank | Measures deterministic-baseline leakage/reconstruction |
+| D | no Jev; deterministic frontier + rider model | Required control |
+
+Where the same signal exists both as an intrinsic measurement and a derived
+aggregate, prefer the intrinsic measurement in A/B. Do not send a raw
+coherence measurement and a second aggregate coherence score in the same
+variant.
+
+If C mainly raises agreement with the deterministic winner but does not improve
+held-out Brier/log-loss/top-choice metrics over B or D, treat it as leakage, not
+a Jev win.
+
 ## P0 acceptance gate
 
 The first implementation is complete when:
@@ -418,7 +529,9 @@ The first implementation is complete when:
 - the pure application state/output contract is covered by unit tests;
 - a server-only provider adapter is feature-gated;
 - the model is pinned;
-- one stable final candidate set causes at most one Jev request;
+- each stable final candidate set uses the fixed balanced order audit: two Jev
+  requests for two candidates or three Jev requests for three candidates, with
+  all Choice/Score/Noul questions batched inside each permutation request;
 - the existing plan bundle is byte-for-byte equivalent with Jev enabled,
   disabled, failed and timed out;
 - telemetry captures valid and invalid judgments;
@@ -426,6 +539,57 @@ The first implementation is complete when:
 - no browser bundle contains an API key;
 - corpus replay can emit comparable JSON records;
 - CI passes lint, typecheck, unit, architecture and build.
+
+
+## Routing-method implications outside PR #51
+
+### Exact regret before Jev evaluation
+
+PR #34 fixes a known weakness in the representative selector using exact bounded
+enumeration at OpenGravel's current candidate scale. Jev evaluation must not be
+interpreted until #34 is merged/rebased and the frozen shortlist is produced by
+that exact selector. Otherwise downstream judge measurements are confounded by
+a shortlist algorithm already known to be avoidably suboptimal.
+
+### Regret should eventually influence probe spending
+
+The ATMOS 2025 work explicitly supports regret filtering during or after
+multi-criteria search. OpenGravel currently applies the idea after provider
+candidate generation, while PR #30 already identifies candidate generation as
+the quality ceiling.
+
+A later routing PR should therefore test a budgeted probe scheduler:
+
+- keep one efficient/control probe;
+- keep one explicit-intent extreme;
+- spend the remaining exploration call on the probe with the highest expected
+  marginal frontier/regret contribution from corpus history.
+
+For every probe, log whether it:
+
+- returned a valid route;
+- survived eligibility;
+- expanded the Pareto frontier;
+- entered the exact representative subset;
+- improved worst/mean regret;
+- won held-out rider preference.
+
+Do not implement this inside PR #51. It changes route-space exploration and
+deserves its own equal-provider-call-budget experiment.
+
+### Curvature verification remains mandatory
+
+Current GraphHopper documentation still defines `curvature` as an encoded
+0..1 road attribute and ships `curvature.json` as a custom-model component
+that can be composed with motorcycle profiles. That supports the existing
+OpenGravel concern that merely having a "twisty" profile name is not evidence
+that the deployed profile actually uses curvature.
+
+Before treating `motorcycle_twisty` as a control, run the permanent
+differential corpus against `motorcycle_fastest` and record material route
+differences. Sustained bend continuity remains a separate route-level
+measurement because a per-edge curvature attribute does not measure continuity
+across a sequence of bends.
 
 ## Later, only after P0 evidence
 
