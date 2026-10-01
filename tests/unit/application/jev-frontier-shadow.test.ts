@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   JEV_FRONTIER_NONE,
+  auditJevFrontierOrder,
+  buildBalancedJevFrontierPermutations,
   jevFrontierCounterfactual,
   validateJevFrontierJudgment,
   validateJevFrontierState,
   type JevFrontierCandidateState,
   type JevFrontierJudgment,
+  type JevFrontierOrderOutcome,
   type JevFrontierState,
 } from "@/application/planner/jev-frontier-shadow";
 import type { FrontierQualityVector } from "@/application/planner/frontier-routing";
@@ -66,7 +69,8 @@ function state(): JevFrontierState {
       timeboxSatisfied: true,
     },
     rider: {
-      weights: { curvature: 1.2, novelty: 0.7, timeEfficiency: -0.1 },
+      mean: { curvature: 1.2, novelty: 0.7, timeEfficiency: -0.1 },
+      precision: { curvature: 2.3, novelty: 1.4, timeEfficiency: 3.1 },
       evidence: { curvature: 3.1, novelty: 1.8, timeEfficiency: 2.2 },
       explicitComparisons: 6,
       implicitComparisons: 3,
@@ -88,15 +92,24 @@ function score(
   value: number,
   confidence = 0.8,
 ): JevFrontierJudgment["fitByCandidateId"][string] {
+  const probabilities: Record<string, number> = {
+    "0": 0,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+  };
+  const lower = Math.floor(value);
+  const upper = Math.ceil(value);
+  if (lower === upper) {
+    probabilities[String(lower)] = 1;
+  } else {
+    probabilities[String(lower)] = upper - value;
+    probabilities[String(upper)] = value - lower;
+  }
   return {
     type: "score",
     score: value,
-    probabilities: {
-      "0": 0.05,
-      "1": 0.1,
-      "2": 0.25,
-      "3": 0.6,
-    },
+    probabilities,
     confidence,
   };
 }
@@ -104,13 +117,14 @@ function score(
 function judgment(
   choice = "route-b",
   options: {
+    readonly model?: string;
     readonly choiceConfidence?: number;
     readonly probabilities?: Readonly<Record<string, number>>;
     readonly improvement?: number;
   } = {},
 ): JevFrontierJudgment {
   return {
-    model: "typesafe/jev-1.13-20260917",
+    model: options.model ?? "typesafe/jev-1.13-20260917",
     choice: {
       type: "choice",
       choice,
@@ -146,12 +160,68 @@ describe("Jev frontier shadow contract", () => {
     expect(validateJevFrontierState(state())).toBeNull();
   });
 
+  it("treats malformed runtime JSON as invalid instead of throwing", () => {
+    expect(() => validateJevFrontierState({
+      schemaVersion: 1,
+      intent: null,
+      rider: null,
+      deterministicBaselineId: "route-a",
+      candidates: [{ id: 7 }, null],
+    })).not.toThrow();
+    expect(validateJevFrontierState({
+      schemaVersion: 1,
+      intent: null,
+      rider: null,
+      deterministicBaselineId: "route-a",
+      candidates: [{ id: 7 }, null],
+    })).toBe("invalid-state");
+  });
+
   it("rejects a candidate set that exceeds the bounded experiment", () => {
     const value = state();
     expect(validateJevFrontierState({
       ...value,
       candidates: [...value.candidates, candidate("route-d", 4)],
     })).toBe("candidate-count");
+  });
+
+  it("rejects dangerous record-key candidate ids", () => {
+    const value = state();
+    expect(validateJevFrontierState({
+      ...value,
+      deterministicBaselineId: "__proto__",
+      candidates: [
+        candidate("__proto__", 1),
+        candidate("route-b", 2),
+      ],
+    })).toBe("unsafe-candidate-id");
+  });
+
+  it("requires shortlist ranks to be unique and contiguous", () => {
+    const value = state();
+    expect(validateJevFrontierState({
+      ...value,
+      candidates: [
+        candidate("route-a", 1),
+        candidate("route-b", 3),
+        candidate("route-c", 3),
+      ],
+    })).toBe("invalid-state");
+  });
+
+  it("validates canonical intent values at runtime", () => {
+    const value = state();
+    expect(validateJevFrontierState({
+      ...value,
+      intent: { ...value.intent, roadCharacter: "magic" },
+    })).toBe("invalid-state");
+  });
+
+  it("requires posterior precision so uncertainty is preserved", () => {
+    const value = state() as unknown as Record<string, unknown>;
+    const rider = { ...(value["rider"] as Record<string, unknown>) };
+    delete rider["precision"];
+    expect(validateJevFrontierState({ ...value, rider })).toBe("invalid-state");
   });
 
   it("requires the deterministic baseline to be present", () => {
@@ -185,6 +255,48 @@ describe("Jev frontier shadow contract", () => {
     });
   });
 
+  it("requires the named Choice to be the unique probability argmax", () => {
+    expect(validateJevFrontierJudgment(
+      state(),
+      judgment("route-b", {
+        probabilities: {
+          "route-a": 0.7,
+          "route-b": 0.15,
+          "route-c": 0.1,
+          [JEV_FRONTIER_NONE]: 0.05,
+        },
+      }),
+    )).toEqual({
+      ok: false,
+      reason: "invalid-choice",
+    });
+
+    expect(validateJevFrontierJudgment(
+      state(),
+      judgment("route-b", {
+        probabilities: {
+          "route-a": 0.4,
+          "route-b": 0.4,
+          "route-c": 0.1,
+          [JEV_FRONTIER_NONE]: 0.1,
+        },
+      }),
+    )).toEqual({
+      ok: false,
+      reason: "invalid-choice",
+    });
+  });
+
+  it("rejects moving aliases or unrelated model ids", () => {
+    expect(validateJevFrontierJudgment(
+      state(),
+      judgment("route-b", { model: "jev-latest" }),
+    )).toEqual({
+      ok: false,
+      reason: "invalid-model",
+    });
+  });
+
   it("rejects score distributions outside the fixed 0-3 rubric", () => {
     const value = judgment();
     expect(validateJevFrontierJudgment(state(), {
@@ -195,6 +307,25 @@ describe("Jev frontier shadow contract", () => {
           type: "score",
           score: 4,
           probabilities: { "0": 0, "1": 0, "2": 0, "4": 1 },
+          confidence: 1,
+        },
+      },
+    })).toEqual({
+      ok: false,
+      reason: "invalid-fit",
+    });
+  });
+
+  it("rejects a score that disagrees with its probability distribution", () => {
+    const value = judgment();
+    expect(validateJevFrontierJudgment(state(), {
+      ...value,
+      fitByCandidateId: {
+        ...value.fitByCandidateId,
+        "route-b": {
+          type: "score",
+          score: 3,
+          probabilities: { "0": 1, "1": 0, "2": 0, "3": 0 },
           confidence: 1,
         },
       },
@@ -224,24 +355,8 @@ describe("Jev frontier shadow contract", () => {
       candidateId: "route-b",
       choiceConfidence: 0.8,
       chosenProbability: 0.68,
+      runnerUpProbability: 0.18,
       meaningfulImprovementProbability: 0.74,
-    });
-  });
-
-  it("uses the strongest other option as the runner-up even on ties", () => {
-    expect(jevFrontierCounterfactual(
-      state(),
-      judgment("route-b", {
-        probabilities: {
-          "route-a": 0.3,
-          "route-b": 0.3,
-          "route-c": 0.3,
-          [JEV_FRONTIER_NONE]: 0.1,
-        },
-      }),
-      { ...policy, minimumChoiceMargin: 0 },
-    )).toMatchObject({
-      runnerUpProbability: 0.3,
     });
   });
 
@@ -306,5 +421,89 @@ describe("Jev frontier shadow contract", () => {
       ...policy,
       minimumChoiceConfidence: 2,
     })).toBeNull();
+  });
+
+  it("builds balanced seeded permutations for the order-bias audit", () => {
+    const permutations = buildBalancedJevFrontierPermutations(state(), "case-17");
+    expect(permutations).toHaveLength(3);
+    expect(new Set(permutations.flatMap((item) =>
+      item.slots.filter((slot) => slot.slot === "A").map((slot) => slot.candidateId),
+    ))).toEqual(new Set(["route-a", "route-b", "route-c"]));
+    expect(new Set(permutations.flatMap((item) =>
+      item.slots.filter((slot) => slot.slot === "B").map((slot) => slot.candidateId),
+    ))).toEqual(new Set(["route-a", "route-b", "route-c"]));
+    expect(new Set(permutations.flatMap((item) =>
+      item.slots.filter((slot) => slot.slot === "C").map((slot) => slot.candidateId),
+    ))).toEqual(new Set(["route-a", "route-b", "route-c"]));
+    expect(buildBalancedJevFrontierPermutations(state(), "case-17")).toEqual(permutations);
+  });
+
+  it("measures order-dependent verdict flips and withholds a stable choice", () => {
+    const outcomes: JevFrontierOrderOutcome[] = [
+      {
+        permutationId: "p0",
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.2,
+          "route-b": 0.6,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      },
+      {
+        permutationId: "p1",
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.18,
+          "route-b": 0.62,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      },
+      {
+        permutationId: "p2",
+        choiceCandidateId: "route-c",
+        probabilitiesByCandidateId: {
+          "route-a": 0.2,
+          "route-b": 0.3,
+          "route-c": 0.4,
+        },
+        noneProbability: 0.1,
+      },
+    ];
+
+    expect(auditJevFrontierOrder(state(), outcomes)).toMatchObject({
+      runs: 3,
+      flipRate: 2 / 3,
+      orderDependent: true,
+      stableChoiceCandidateId: null,
+    });
+  });
+
+  it("retains a stable choice only when every permutation agrees", () => {
+    const outcomes: JevFrontierOrderOutcome[] = ["p0", "p1", "p2"].map(
+      (permutationId) => ({
+        permutationId,
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.2,
+          "route-b": 0.6,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      }),
+    );
+
+    expect(auditJevFrontierOrder(state(), outcomes)).toMatchObject({
+      flipRate: 0,
+      orderDependent: false,
+      stableChoiceCandidateId: "route-b",
+      meanProbabilityByCandidateId: {
+        "route-a": 0.2,
+        "route-b": 0.6,
+        "route-c": 0.1,
+      },
+      meanNoneProbability: 0.1,
+    });
   });
 });
