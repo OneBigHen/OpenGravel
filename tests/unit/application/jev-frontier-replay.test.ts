@@ -16,7 +16,7 @@ function judgeFor(choice = "route-2", confidence = 0.9): JevFrontierJudge {
         status: "ok",
         latencyMs: 1,
         judgment: {
-          model: "jev-1.13",
+          model: "typesafe/jev-1.13",
           choice: {
             type: "choice",
             choice,
@@ -67,9 +67,10 @@ describe("shadow replay", () => {
         },
         new AbortController().signal,
       );
-      expect(calls).toHaveLength(3 * count * 2);
+      expect(calls).toHaveLength(count === 3 ? 36 : 12);
+      expect(record).toHaveProperty("orderDesign", "complete-factorial-v1");
       for (const variant of ["A", "B", "C"] as const) {
-        expect(record.variants[variant].runs).toHaveLength(count * 2);
+        expect(record.variants[variant].runs).toHaveLength(count === 3 ? 12 : 4);
         expect(record.variants[variant]).toMatchObject({
           verdict: "alternative",
           repeatedRequestStability: 1,
@@ -97,11 +98,55 @@ describe("shadow replay", () => {
     );
     expect(record.variants.A).toMatchObject({
       verdict: "abstain",
-      orderFlipRate: 1,
+      orderFlipRate: 0.8,
       choiceCandidateId: null,
       repeatedRequestStability: null,
     });
-    expect(record.variants.A.runs).toHaveLength(3);
+    expect(record.variants.A.runs).toHaveLength(6);
+  });
+  it("freezes the exact complete-order mappings before any injected judge can mutate them", async () => {
+    const mutations: boolean[] = [];
+    const stableJudge = judgeFor();
+    const record = await runJevFrontierReplay(replayCase(), {
+      seed: "frozen-orders",
+      repeats: 1,
+      policy,
+      judge: {
+        judge(input, signal) {
+          mutations.push(Reflect.set(input.permutation.slots[0]!, "candidateId", input.permutation.slots[1]!.candidateId));
+          mutations.push(Reflect.set(input.permutation, "id", "invented"));
+          return stableJudge.judge(input, signal);
+        },
+      },
+    }, new AbortController().signal);
+    expect(mutations).toHaveLength(36);
+    expect(mutations.every((changed) => !changed)).toBe(true);
+    const expected = buildBalancedJevFrontierPermutations(replayCase().state, "frozen-orders:synthetic-case");
+    for (const variant of ["A", "B", "C"] as const) {
+      expect(record.variants[variant].runs.map((run) => run.permutation)).toEqual(expected);
+      expect(record.variants[variant].verdict).toBe("alternative");
+    }
+  });
+  it("abstains when reversing candidate order flips a cyclically stable winner", async () => {
+    const forwardOrders = new Set([
+      "route-1,route-2,route-3",
+      "route-2,route-3,route-1",
+      "route-3,route-1,route-2",
+    ]);
+    const judge: JevFrontierJudge = {
+      judge: (input, signal) => {
+        const order = input.permutation.slots.map((slot) => slot.candidateId).join(",");
+        return judgeFor(forwardOrders.has(order) ? "route-2" : "route-3").judge(input, signal);
+      },
+    };
+    const record = await runJevFrontierReplay(
+      replayCase(),
+      { judge, seed: "e", repeats: 1, policy },
+      new AbortController().signal,
+    );
+    expect(record.variants.A.verdict).toBe("abstain");
+    expect(record.variants.A.orderFlipRate).toBeCloseTo(0.6);
+    expect(record.variants.A.runs).toHaveLength(6);
   });
   it.each([
     "absent",
@@ -166,7 +211,7 @@ describe("shadow replay", () => {
     const judge: JevFrontierJudge = {
       judge: (input, s) =>
         judgeFor(
-          Math.floor(calls++ / 3) % 2 === 0 ? "route-1" : "route-2",
+          Math.floor(calls++ / 6) % 2 === 0 ? "route-1" : "route-2",
         ).judge(input, s),
     };
     const record = await runJevFrontierReplay(

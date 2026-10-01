@@ -4,7 +4,6 @@ import type { FunAssessment } from "@/domain/route/fun";
 import {
   budgetedCharacterClassifier,
   jevCharacterClassifierFromEnv,
-  JEV_CHARACTER_MODEL,
   type JevCharacterClassifier,
   type JevCharacterReading,
 } from "@/infrastructure/routing/jev-fun-character";
@@ -33,7 +32,7 @@ const ASSESSMENT: FunAssessment = {
 function apiAnswer(
   choice: string,
   confidence: number,
-  model = "typesafe/jev-1.13-20260917",
+  model = "jev-1.13.0",
 ): Response {
   return Response.json({
     answers: {
@@ -90,7 +89,7 @@ describe("Jev fun-character adapter", () => {
 
     expect(requestUrl).toBe("https://api.typesafe.ai/v1/systemone");
     expect(requestBody).toMatchObject({
-      model: JEV_CHARACTER_MODEL,
+      model: "jev-1.13.0",
       state: {
         policyVersion: ASSESSMENT.policyVersion,
         features: { curvature: 0.9, mappedGravelAffinity: 0.4 },
@@ -101,7 +100,7 @@ describe("Jev fun-character adapter", () => {
     expect(result).toEqual({
       label: "TWISTY",
       confidence: 0.91,
-      model: "typesafe/jev-1.13-20260917",
+      model: "jev-1.13.0",
     });
   });
 

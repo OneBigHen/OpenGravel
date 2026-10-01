@@ -34,7 +34,7 @@ async function record() {
             status: "ok",
             latencyMs: 1,
             judgment: {
-              model: "jev-1.13",
+              model: "typesafe/jev-1.13",
               choice: {
                 type: "choice",
                 choice: "route-2",

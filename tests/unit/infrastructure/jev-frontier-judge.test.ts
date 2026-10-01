@@ -45,9 +45,9 @@ describe("server-only frontier adapter", () => {
         expect(new Headers(init?.headers).get("authorization")).toBe(
           "Bearer direct-test-key",
         );
-        expect(JSON.parse(String(init?.body)).model).toBe("jev-1.13");
+        expect(JSON.parse(String(init?.body)).model).toBe("jev-1.13.0");
         return Response.json(
-          remoteAnswer(i.permutation.slots.map((s) => s.slot)),
+          { ...remoteAnswer(i.permutation.slots.map((s) => s.slot)), model: "jev-1.13.0" },
         );
       },
     );
@@ -87,6 +87,27 @@ describe("server-only frontier adapter", () => {
       ).toMatchObject({ status: "skipped", reason: "disabled" });
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it.each(["jev-latest", "jev-preview", "jev-1.13.1", "typesafe/jev-1.13-20260917"])(
+    "rejects a direct response outside the exact pinned release (%s)",
+    async (model) => {
+      const i = input(2);
+      const result = await jevFrontierJudgeFromEnv(
+        { OGV_JEV_FRONTIER_SHADOW: "1", OGV_JEV_FRONTIER_PROVIDER: "typesafe", JEV_API_KEY: "test" },
+        { fetcher: async () => Response.json({ ...remoteAnswer(i.permutation.slots.map((s) => s.slot)), model }) },
+      ).judge(i, signal());
+      expect(result).toMatchObject({ status: "invalid", reason: "invalid-model" });
+    },
+  );
+  it.each(["jev-1.13", "jev-1.13-20260917"])(
+    "rejects an unqualified OpenRouter response (%s)",
+    async (model) => {
+      const i = input(2);
+      const result = await jevFrontierJudgeFromEnv(env, {
+        fetcher: async () => Response.json({ ...remoteAnswer(i.permutation.slots.map((s) => s.slot)), model }),
+      }).judge(i, signal());
+      expect(result).toMatchObject({ status: "invalid", reason: "invalid-model" });
+    },
+  );
   it.each([2, 3])(
     "batches all questions for %s candidates and maps slots locally",
     async (count) => {
@@ -105,7 +126,7 @@ describe("server-only frontier adapter", () => {
         signal(),
       );
       expect(url).toBe("https://openrouter.ai/api/v1/systemone");
-      expect(body.model).toBe("jev-1.13");
+      expect(body.model).toBe("typesafe/jev-1.13");
       expect(JSON.stringify(body.state)).not.toMatch(
         /route-|deterministicBaselineId|canonicalScore|"geometry"|history|test-never/,
       );

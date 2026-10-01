@@ -19,10 +19,11 @@ import {
   RIDER_PREFERENCE_FEATURES,
   type RiderPreferenceFeature,
 } from "@/domain/personalization/rider-preference";
+import { isFrozenJevModelIdentity } from "./ports/jev-model-identity";
+export { JEV_FRONTIER_PINNED_MODEL } from "./ports/jev-model-identity";
 
 export const JEV_FRONTIER_MAX_CANDIDATES = 3;
 export const JEV_FRONTIER_NONE = "NONE";
-export const JEV_FRONTIER_PINNED_MODEL = "typesafe/jev-1.13";
 export const JEV_FRONTIER_SLOTS = ["A", "B", "C"] as const;
 
 export type JevFrontierSlot = (typeof JEV_FRONTIER_SLOTS)[number];
@@ -544,11 +545,6 @@ function validFit(value: unknown): value is JevScoreAnswer {
   return Math.abs(value["score"] - expectedScore(probabilities)) <= SCORE_TOLERANCE;
 }
 
-function validPinnedModel(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-  return /^(?:typesafe\/)?jev-1\.13(?:-\d{8})?$/.test(value);
-}
-
 function uniqueArgmax(
   probabilities: Readonly<Record<string, number>>,
 ): string | null {
@@ -582,7 +578,7 @@ export function validateJevFrontierJudgment(
     "fitByCandidateId",
     "meaningfulImprovement",
   ]))) return { ok: false, reason: "invalid-state" };
-  if (!validPinnedModel(judgment["model"])) {
+  if (!isFrozenJevModelIdentity(judgment["model"])) {
     return { ok: false, reason: "invalid-model" };
   }
 
@@ -811,11 +807,17 @@ function hash32(value: string): number {
   return hash >>> 0;
 }
 
+function expectedJevFrontierPermutationIds(candidateCount: number): readonly string[] {
+  return Array.from({ length: candidateCount === 3 ? 6 : 2 },
+    (_, index) => `balanced-${candidateCount}-${index}`);
+}
+
 /**
  * Builds a reproducible balanced order audit.
  *
- * Two candidates produce AB and BA. Three candidates produce three cyclic
- * permutations so every stable candidate occupies A, B and C exactly once.
+ * Two candidates produce AB and BA. Three candidates produce all six orders,
+ * so every stable candidate occupies A, B and C twice. Cyclic rotations alone
+ * cannot detect a winner that flips only when the relative order is reversed.
  * The seed should include a stable experiment/corpus id; changing it changes
  * the starting assignment without destroying replayability.
  */
@@ -831,13 +833,27 @@ export function buildBalancedJevFrontierPermutations(
       return delta !== 0 ? delta : left.localeCompare(right);
     });
 
-  return ordered.map((_, shift) => ({
-    id: `balanced-${ordered.length}-${shift}`,
-    slots: ordered.map((candidateId, index) => ({
+  const cycles = ordered.length === 3
+    ? [ordered, [ordered[0]!, ordered[2]!, ordered[1]!]]
+    : [ordered];
+  const permutationIds = expectedJevFrontierPermutationIds(ordered.length);
+  return cycles.flatMap((cycle, cycleIndex) => cycle.map((_, shift) => ({
+    id: permutationIds[cycleIndex * ordered.length + shift]!,
+    slots: cycle.map((_, index) => ({
       slot: JEV_FRONTIER_SLOTS[index]!,
-      candidateId: ordered[(index + shift) % ordered.length]!,
+      candidateId: cycle[(index + shift) % cycle.length]!,
     })),
-  }));
+  })));
+}
+
+/** Check runtime shape before the audit reads any outcome properties. */
+function validOrderOutcome(value: unknown): value is JevFrontierOrderOutcome {
+  return isRecord(value) &&
+    typeof value.permutationId === "string" &&
+    (value.choiceCandidateId === null || typeof value.choiceCandidateId === "string") &&
+    isRecord(value.probabilitiesByCandidateId) &&
+    Object.values(value.probabilitiesByCandidateId).every(unit) &&
+    unit(value.noneProbability);
 }
 
 /**
@@ -849,9 +865,10 @@ export function auditJevFrontierOrder(
   state: JevFrontierState,
   outcomes: readonly JevFrontierOrderOutcome[],
 ): JevFrontierOrderAudit | null {
+  if (validateJevFrontierState(state) !== null || !Array.isArray(outcomes)) return null;
+  const expectedPermutations = new Set(expectedJevFrontierPermutationIds(state.candidates.length));
   if (
-    validateJevFrontierState(state) !== null ||
-    outcomes.length !== state.candidates.length
+    outcomes.length !== expectedPermutations.size
   ) return null;
   const candidateIds = state.candidates.map((candidate) => candidate.id);
   const allowedIds = new Set(candidateIds);
@@ -861,15 +878,14 @@ export function auditJevFrontierOrder(
 
   for (const outcome of outcomes) {
     if (
-      outcome.permutationId.length === 0 ||
+      !validOrderOutcome(outcome) ||
+      !expectedPermutations.has(outcome.permutationId) ||
       seenPermutations.has(outcome.permutationId) ||
       (outcome.choiceCandidateId !== null && !allowedIds.has(outcome.choiceCandidateId)) ||
-      !isRecord(outcome.probabilitiesByCandidateId) ||
       Object.keys(outcome.probabilitiesByCandidateId).length !== allowedIds.size ||
       Object.entries(outcome.probabilitiesByCandidateId).some(
-        ([id, probability]) => !allowedIds.has(id) || !unit(probability),
-      ) ||
-      !unit(outcome.noneProbability)
+        ([id]) => !allowedIds.has(id),
+      )
     ) return null;
     seenPermutations.add(outcome.permutationId);
 

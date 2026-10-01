@@ -78,15 +78,15 @@ For the OpenRouter experiment configure:
 new TypeSafeClient({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: "https://openrouter.ai/api",
-  defaultModel: "jev-1.13",
+  defaultModel: "typesafe/jev-1.13",
   timeout: 1500,
   retry: { maxRetries: 0 },
   logLevel: "off",
 });
 ```
 
-The TypeSafe SDK appends `/v1/systemone` to that base URL. OpenRouter maps
-`jev-1.13` to `typesafe/jev-1.13`.
+The TypeSafe SDK appends `/v1/systemone` to that base URL. Use the explicit
+OpenRouter ID `typesafe/jev-1.13`; direct TypeSafe uses `jev-1.13.0`.
 
 Pin 1.13 for P0. Do not use `jev-latest`.
 
@@ -113,8 +113,8 @@ Use the application helpers already on the branch:
 
 For two candidates, run both AB and BA.
 
-For three candidates, run three cyclic permutations so every stable candidate
-appears exactly once in A, B and C.
+For three candidates, run all six permutations so every stable candidate
+appears exactly twice in A, B and C, including the reverse cycle.
 
 Use a reproducible seed containing the corpus/experiment case id. Log the seed
 and permutation mapping.
@@ -421,7 +421,14 @@ base/donor identity, changed responsibilities, actual GraphHopper measurements,
 validation results, and remaining limitations. The final pushed head is recorded
 in PR #51.
 
-The adapter pins `jev-1.13`, makes zero retries, and enforces a 1,500 ms deadline.
+The adapter pins the provider-specific Jev 1.13 ID, makes zero retries, and
+enforces a 1,500 ms deadline. The 2026-10-01 follow-up uses `jev-1.13.0` for
+direct TypeSafe and `typesafe/jev-1.13` for OpenRouter; it records
+`complete-factorial-v1` order audits. Three-candidate A/B/C replay now costs
+`18 * repeats` model requests. See
+`docs/research/2026-10-01-jev-pins-and-order.md` for the failure reproductions
+and the distinction between the earlier misspelled-ID pilot and the successful
+one-request corrected-pin smoke check. Held-out rider quality remains unmeasured.
 It serializes only `projectJevFrontierTransportState()` output. Stable IDs remain
 local; only independent Noul names the baseline presentation slot. Duration-derived
 `timeEfficiency` is excluded from remote state. Any Choice order flip or unstable

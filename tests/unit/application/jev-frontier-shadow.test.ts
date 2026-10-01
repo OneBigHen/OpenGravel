@@ -450,7 +450,15 @@ describe("Jev frontier shadow contract", () => {
 
   it("builds balanced seeded permutations for the order-bias audit", () => {
     const permutations = buildBalancedJevFrontierPermutations(state(), "case-17");
-    expect(permutations).toHaveLength(3);
+    expect(permutations).toHaveLength(6);
+    expect(new Set(permutations.map((item) => item.slots.map((slot) => slot.candidateId).join(",")))).toEqual(new Set([
+      "route-a,route-b,route-c", "route-a,route-c,route-b",
+      "route-b,route-a,route-c", "route-b,route-c,route-a",
+      "route-c,route-a,route-b", "route-c,route-b,route-a",
+    ]));
+    for (const slot of ["A", "B", "C"])
+      for (const id of ["route-a", "route-b", "route-c"])
+        expect(permutations.filter((item) => item.slots.some((assignment) => assignment.slot === slot && assignment.candidateId === id))).toHaveLength(2);
     expect(new Set(permutations.flatMap((item) =>
       item.slots.filter((slot) => slot.slot === "A").map((slot) => slot.candidateId),
     ))).toEqual(new Set(["route-a", "route-b", "route-c"]));
@@ -466,7 +474,7 @@ describe("Jev frontier shadow contract", () => {
   it("measures order-dependent verdict flips and withholds a stable choice", () => {
     const outcomes: JevFrontierOrderOutcome[] = [
       {
-        permutationId: "p0",
+        permutationId: "balanced-3-0",
         choiceCandidateId: "route-b",
         probabilitiesByCandidateId: {
           "route-a": 0.2,
@@ -476,7 +484,7 @@ describe("Jev frontier shadow contract", () => {
         noneProbability: 0.1,
       },
       {
-        permutationId: "p1",
+        permutationId: "balanced-3-1",
         choiceCandidateId: "route-b",
         probabilitiesByCandidateId: {
           "route-a": 0.18,
@@ -486,7 +494,7 @@ describe("Jev frontier shadow contract", () => {
         noneProbability: 0.1,
       },
       {
-        permutationId: "p2",
+        permutationId: "balanced-3-2",
         choiceCandidateId: "route-c",
         probabilitiesByCandidateId: {
           "route-a": 0.2,
@@ -497,9 +505,10 @@ describe("Jev frontier shadow contract", () => {
       },
     ];
 
+    outcomes.push(...outcomes.map((outcome, i) => ({ ...outcome, permutationId: `balanced-3-${i + 3}` })));
     expect(auditJevFrontierOrder(state(), outcomes)).toMatchObject({
-      runs: 3,
-      flipRate: 2 / 3,
+      runs: 6,
+      flipRate: 8 / 15,
       orderDependent: true,
       stableChoiceCandidateId: null,
     });
@@ -531,7 +540,7 @@ describe("Jev frontier shadow contract", () => {
     ];
     expect(auditJevFrontierOrder(state(), incomplete)).toBeNull();
 
-    const inconsistent: JevFrontierOrderOutcome[] = ["p0", "p1", "p2"].map(
+    const inconsistent: JevFrontierOrderOutcome[] = ["balanced-3-0", "balanced-3-1", "balanced-3-2", "balanced-3-3", "balanced-3-4", "balanced-3-5"].map(
       (permutationId) => ({
         permutationId,
         choiceCandidateId: "route-b",
@@ -547,7 +556,7 @@ describe("Jev frontier shadow contract", () => {
   });
 
   it("retains a stable choice only when every permutation agrees", () => {
-    const outcomes: JevFrontierOrderOutcome[] = ["p0", "p1", "p2"].map(
+    const outcomes: JevFrontierOrderOutcome[] = ["balanced-3-0", "balanced-3-1", "balanced-3-2", "balanced-3-3", "balanced-3-4", "balanced-3-5"].map(
       (permutationId) => ({
         permutationId,
         choiceCandidateId: "route-b",
@@ -572,4 +581,31 @@ describe("Jev frontier shadow contract", () => {
     expect(audit?.meanProbabilityByCandidateId["route-c"]).toBeCloseTo(0.1);
     expect(audit?.meanNoneProbability).toBeCloseTo(0.1);
   });
+  it("rejects six fabricated audit ids even when their winners agree", () => {
+    const outcomes = Array.from({ length: 6 }, (_, index) => ({
+      permutationId: `invented-${index}`,
+      choiceCandidateId: "route-b",
+      probabilitiesByCandidateId: { "route-a": 0.2, "route-b": 0.6, "route-c": 0.1 },
+      noneProbability: 0.1,
+    }));
+    expect(auditJevFrontierOrder(state(), outcomes)).toBeNull();
+  });
+  it.each([null, undefined, {}, "not-an-array"])(
+    "rejects a malformed audit collection %j without throwing",
+    (outcomes) => {
+      expect(auditJevFrontierOrder(state(), outcomes as never)).toBeNull();
+    },
+  );
+  it("rejects a null audit entry without throwing", () => {
+    expect(auditJevFrontierOrder(state(), Array(6).fill(null))).toBeNull();
+  });
+  it.each(["jev-1.13", "jev-1.13-20260917"])(
+    "rejects an unqualified model identity (%s)",
+    (model) => {
+      expect(validateJevFrontierJudgment(state(), judgment("route-b", { model }))).toMatchObject({
+        ok: false,
+        reason: "invalid-model",
+      });
+    },
+  );
 });

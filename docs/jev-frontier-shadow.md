@@ -276,8 +276,8 @@ For every stable candidate set:
 
 1. derive a reproducible seeded starting assignment;
 2. with two candidates, run both `AB` and `BA`;
-3. with three candidates, run three cyclic assignments so each stable candidate
-   appears once in A, once in B and once in C;
+3. with three candidates, run all six assignments so each stable candidate
+   appears twice in A, twice in B and twice in C, including the reverse cycle;
 4. keep `NONE` fixed;
 5. remap every returned slot back to the stable candidate id before logging;
 6. compute the pairwise verdict flip rate across permutations.
@@ -425,8 +425,9 @@ The existing `@typesafe-ai/sdk` path can be evaluated first, but the adapter
 must implement an OpenGravel-owned port so switching to OpenRouter's direct
 Decisions API or SDK does not change application/domain code.
 
-The existing route-character classifier is also pinned to `jev-1.13` in this
-PR. Changing either judge model requires an explicit replay/calibration event;
+Direct TypeSafe uses the provider-specific pin `jev-1.13.0`; OpenRouter uses
+`typesafe/jev-1.13`. The route-character classifier uses the direct pin.
+Changing either judge release requires an explicit replay/calibration event;
 do not silently collect longitudinal data through `jev-latest`.
 
 ## Experiment telemetry
@@ -541,7 +542,7 @@ The first implementation is complete when:
 - a server-only provider adapter is feature-gated;
 - the model is pinned;
 - each stable final candidate set uses the fixed balanced order audit: two Jev
-  requests for two candidates or three Jev requests for three candidates, with
+  requests for two candidates or six Jev requests for three candidates, with
   all Choice/Score/Noul questions batched inside each permutation request;
 - the existing plan bundle is byte-for-byte equivalent with Jev enabled,
   disabled, failed and timed out;
@@ -676,7 +677,8 @@ The long-term architecture remains:
 
 `src/infrastructure/routing/jev-frontier-judge.ts` implements the application
 port with `@typesafe-ai/sdk` 0.6.0. It imports `server-only`, requires
-`OGV_JEV_FRONTIER_SHADOW=1` **and** the selected provider's key, pins `jev-1.13`,
+`OGV_JEV_FRONTIER_SHADOW=1` **and** the selected provider's key, pins the
+provider-specific Jev 1.13 release,
 and overrides the SDK defaults with zero retries, a 1,500 ms provider timeout,
 and logging off. An outer deadline bounds even a fetch implementation that
 ignores cancellation. Each request and its response mapping use a frozen input;
@@ -720,7 +722,11 @@ cross-provider key fallback, and unknown providers fail closed.
 `--labels /private/blinded-labels.json` supplies a separate label artifact.
 `--repeats` is an explicit measurement budget (1–10), never a retry policy;
 two candidates cost `6 * repeats` requests per case and three cost
-`9 * repeats`. D spends zero model calls.
+`18 * repeats`. D spends zero model calls. Three-candidate replay now costs
+twice the former cyclic smoke check; set the explicit measurement budget for
+that complete audit before enabling live calls. Records identify this design
+as `orderDesign: "complete-factorial-v1"`; historical cyclic records are not
+complete-order evidence.
 
 The smoke policy is deliberately uncalibrated, supplied through a file and
 recorded in each result. It is not product policy or promotion evidence.
@@ -827,9 +833,13 @@ catalog, failed pilot and availability metadata are preserved beside the origina
 GraphHopper evidence. These outcomes prove the credential/transport boundary was
 exercised; they do not measure Jev quality, order bias, stability, or held-out value.
 
-The direct service must expose pinned 1.13, or an independently authorized
-exploratory alias experiment must be kept distinct from this pinned P0. The current
-PR never silently substitutes `jev-latest` or lowers validity/calibration gates.
+The corrected provider-specific pin is `jev-1.13.0`. A subsequent isolated
+two-candidate synthetic request returned that exact model and passed answer
+validation in about 288 ms using one HTTP attempt. See the
+[aggregate transport check](experiments/2026-10-01-jev-pinned-transport.json).
+The earlier misspelled-ID failures remain historical evidence. This smoke check
+establishes reachability, not order stability, calibration or rider preference.
+No moving alias was substituted and validity/calibration gates were retained.
 
 PR #33's regret-aware probe-allocation note was reviewed. Its control and
 explicit-intent lanes, leave-one-corridor-out estimates, and equal provider-call

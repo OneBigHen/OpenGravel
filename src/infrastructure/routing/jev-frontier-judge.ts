@@ -19,6 +19,7 @@ import {
   type JevFrontierJudgeInput,
   type JevFrontierJudgeResult,
 } from "@/application/planner/ports/jev-frontier-judge";
+import { isPinnedJevProviderModel, JEV_DIRECT_MODEL, JEV_OPENROUTER_MODEL, type JevProvider } from "./jev-models";
 
 export const JEV_FRONTIER_TIMEOUT_MS = 1500;
 const FIT_INSTRUCTIONS =
@@ -33,8 +34,9 @@ const FIT_RUBRIC = [
 /** A new allowlisted request per variant and permutation; never serialize internal state. */
 export function buildJevFrontierRequest(
   input: JevFrontierJudgeInput,
+  provider: JevProvider = "openrouter",
 ): SystemOneRequest | null {
-  if (!record(input)) return null;
+  if (!record(input) || !["openrouter", "typesafe"].includes(provider)) return null;
   const projected = projectJevFrontierTransportState(
     input.state,
     input.permutation,
@@ -70,7 +72,7 @@ export function buildJevFrontierRequest(
   );
   // JSON cloning severs aliases to caller-owned objects before any asynchronous work.
   return {
-    model: "jev-1.13",
+    model: provider === "typesafe" ? JEV_DIRECT_MODEL : JEV_OPENROUTER_MODEL,
     state: JSON.parse(JSON.stringify(projected)),
     questions,
   };
@@ -89,9 +91,12 @@ function decode(
   input: JevFrontierJudgeInput,
   raw: unknown,
   latencyMs: number,
+  provider: JevProvider,
 ): JevFrontierJudgeResult {
   if (!record(raw) || !record(raw.answers))
     return { status: "invalid", reason: "malformed-response", latencyMs };
+  if (!isPinnedJevProviderModel(raw.model, provider))
+    return { status: "invalid", reason: "invalid-model", latencyMs };
   const answers = raw.answers;
   const expectedKeys = [
     "choose",
@@ -200,7 +205,7 @@ export function jevFrontierJudgeFromEnv(
           provider === "typesafe"
             ? "https://api.typesafe.ai"
             : "https://openrouter.ai/api",
-        defaultModel: "jev-1.13",
+        defaultModel: provider === "typesafe" ? JEV_DIRECT_MODEL : JEV_OPENROUTER_MODEL,
         timeout: JEV_FRONTIER_TIMEOUT_MS,
         retry: { maxRetries: 0 },
         logLevel: "off",
@@ -215,7 +220,8 @@ export function jevFrontierJudgeFromEnv(
         return { status: "skipped", reason: "cancelled", latencyMs: latency() };
       if (client === null)
         return { status: "skipped", reason: "disabled", latencyMs: latency() };
-      const request = buildJevFrontierRequest(input);
+      const selectedProvider: JevProvider = provider === "typesafe" ? "typesafe" : "openrouter";
+      const request = buildJevFrontierRequest(input, selectedProvider);
       if (request === null)
         return {
           status: "skipped",
@@ -254,7 +260,7 @@ export function jevFrontierJudgeFromEnv(
             retry: { maxRetries: 0 },
           }),
         ).then(
-          (raw: unknown) => decode(snapshot, raw, latency()),
+          (raw: unknown) => decode(snapshot, raw, latency(), selectedProvider),
           (error: unknown): JevFrontierJudgeResult => ({
             status: "failed",
             reason:

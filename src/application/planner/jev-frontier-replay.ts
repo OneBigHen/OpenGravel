@@ -56,6 +56,7 @@ export interface JevReplayVariant {
 }
 export interface JevReplayRecord {
   readonly schemaVersion: 1;
+  readonly orderDesign: "complete-factorial-v1";
   readonly caseId: string;
   readonly corridorKey: string;
   readonly rideSessionKey: string;
@@ -405,10 +406,10 @@ export async function runJevFrontierReplay(
     throw Error("Invalid replay configuration");
   const snapshot: JevReplayCase = deepFreeze(JSON.parse(JSON.stringify(entry)));
   const seed = `${options.seed}:${snapshot.caseId}`;
-  const permutations = buildBalancedJevFrontierPermutations(
+  const permutations = deepFreeze(buildBalancedJevFrontierPermutations(
     snapshot.state,
     seed,
-  );
+  ));
   const variants = {} as Record<JevFrontierAblationVariant, JevReplayVariant>;
   for (const variant of ["A", "B", "C"] as const) {
     const runs: JevReplayRun[] = [];
@@ -448,6 +449,7 @@ export async function runJevFrontierReplay(
   }
   return deepFreeze({
     schemaVersion: 1,
+    orderDesign: "complete-factorial-v1",
     caseId: snapshot.caseId,
     corridorKey: snapshot.corridorKey,
     rideSessionKey: snapshot.rideSessionKey,
