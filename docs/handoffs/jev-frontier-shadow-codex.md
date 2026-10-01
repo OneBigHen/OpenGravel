@@ -400,3 +400,29 @@ Review the final diff adversarially for:
 
 Then push to `feat/jev-frontier-shadow` and update PR #51 with what is actually
 implemented, tests run, and any blocked live validation.
+
+## Implementation handoff: 2026-10-01
+
+PR #51 has been rebased onto `main@1a04c4661575fded6cde019731a64e75f128f139`
+(PR #34 exact bounded regret). The server-only OpenRouter adapter, balanced A/B/C
+replay with deterministic D, fingerprint/split-guarded evaluator, and exact-selector
+corpus freezer are now implemented. No production post-frontier hook exists or was
+added. See [the experiment contract](../jev-frontier-shadow.md) for the executable
+CLI and [preserved evidence](../vnext/evidence/2026-10-01-jev-frontier/README.md) for
+base/donor identity, changed responsibilities, actual GraphHopper measurements,
+validation results, and remaining limitations. The final pushed head is recorded
+in PR #51.
+
+The adapter pins `jev-1.13`, makes zero retries, and enforces a 1,500 ms deadline.
+It serializes only `projectJevFrontierTransportState()` output. Stable IDs remain
+local; only independent Noul names the baseline presentation slot. Duration-derived
+`timeEfficiency` is excluded from remote state. Any Choice order flip or unstable
+repeated verdict abstains. D requires a caller-frozen posterior forecast whenever
+rider evidence is supplied; the no-rider corpus explicitly uses a one-hot baseline
+fallback. No raw rider history is accepted or uploaded.
+
+Live GraphHopper produced eight measured cases and seven frozen two-candidate
+shortlists. Live Jev was unavailable without an OpenRouter credential. The disabled
+replay records 84 structured skips, zero labels, and no held-out value claim. PR #33's
+probe-allocation change was reviewed and remains outside this implementation.
+Promotion remains a separate PR requiring calibrated multi-rider held-out evidence.

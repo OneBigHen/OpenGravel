@@ -1,6 +1,6 @@
 # Jev frontier shadow experiment
 
-Status: **draft / shadow only**
+Status: **executable adapter + offline replay / shadow only**
 
 This experiment evaluates whether TypeSafe Jev adds useful semantic judgment after
 OpenGravel's deterministic routing stack has already established what routes are
@@ -671,3 +671,143 @@ The long-term architecture remains:
   https://github.com/graphhopper/graphhopper/blob/master/docs/core/profiles.md
 - GraphHopper current custom-model documentation (`curvature` semantics):
   https://github.com/graphhopper/graphhopper/blob/master/docs/core/custom-models.md
+
+## Executable slice (2026-10-01)
+
+`src/infrastructure/routing/jev-frontier-judge.ts` implements the application
+port with `@typesafe-ai/sdk` 0.6.0. It imports `server-only`, requires
+`OGV_JEV_FRONTIER_SHADOW=1` **and** `OPENROUTER_API_KEY`, pins `jev-1.13`,
+and overrides the SDK defaults with zero retries, a 1,500 ms provider timeout,
+and logging off. An outer deadline bounds even a fetch implementation that
+ignores cancellation. Each request and its response mapping use a frozen input;
+a caller cannot change the slot mapping during an in-flight measurement.
+
+The infrastructure-facing port is `application/planner/ports/jev-frontier-judge.ts`.
+It exposes only the projection/validation contract. Counterfactual policy,
+permutation orchestration, corpus reduction, and calibration stay in application
+modules. Production `plan-service.ts`, `pipeline.ts`, Free Ride, scoring,
+eligibility and route-selection behavior are unchanged.
+
+There is **no legitimate live post-frontier insertion seam** on this base.
+The production pipeline still uses deterministic MMR diversity and roles; the
+experimental exact frontier selector is not its selection path. A future
+insertion point must follow an actually integrated exact shortlist, final
+geometry diversity and rider projection, then write diagnostics independently
+of the already-frozen deterministic bundle. This PR adds no hook or environment
+read to `planRide`.
+
+### Replay command
+
+Use Node 24+, `npm ci`, then:
+
+```sh
+npm run experiment:jev-frontier -- \
+  --input docs/vnext/evidence/2026-10-01-jev-frontier/frozen-cases.json \
+  --output /tmp/jev-replay.json \
+  --seed corpus-20261001 \
+  --policy docs/vnext/evidence/2026-10-01-jev-frontier/smoke-policy.json \
+  --repeats 2
+```
+
+This defaults to disabled, makes **zero model calls**, and exercises case
+validation, seeded permutations, structured skips, D control and output.
+Live calls additionally require `--live`, the opt-in flag and an OpenRouter key
+in the server process environment. There is no direct-TypeSafe key fallback.
+`--labels /private/blinded-labels.json` supplies a separate label artifact.
+`--repeats` is an explicit measurement budget (1–10), never a retry policy;
+two candidates cost `6 * repeats` requests per case and three cost
+`9 * repeats`. D spends zero model calls.
+
+The smoke policy is deliberately uncalibrated, supplied through a file and
+recorded in each result. It is not product policy or promotion evidence.
+
+### Input and labeling contract
+
+`JevReplayCase` is a runtime-validated, compact frozen artifact, with:
+`schemaVersion`, `caseId`, `corridorKey`, `rideSessionKey`, `selector`,
+`fingerprints`, `state`, and `control`. Unknown fields are rejected. Stable
+ids, fingerprints and baseline identity remain local telemetry; only the
+A/B/C transport projection reaches Jev. When trusted coherence measurements
+are absent, **including reversal/U-turn counts**, they stay `null`.
+
+D accepts a frozen independently computed `rider-posterior` probability
+forecast over the exact shortlist, with a unique argmax or explicit tied
+abstention. A case with a rider summary must supply a `rider-posterior` D forecast; both
+the freezer and replay validator reject silent baseline-only substitution.
+When no rider posterior is available it uses a declared
+`deterministic-baseline` point mass, without inventing a posterior or smoothing
+it. Log loss clips at `1e-15` for numerical scoring and reports the clip.
+A zero-probability label therefore yields a large loss, not a fabricated
+calibrated control. The seven live corpus cases currently use this no-rider
+fallback; personalized incremental value remains unmeasured.
+
+Each optional blinded label has only:
+
+```json
+{
+  "caseId": "case-id",
+  "corridorKey": "corridor-id",
+  "rideSessionKey": "session-id",
+  "riderKey": "pseudonymous-rider-id",
+  "phase": "pre-ride",
+  "partition": "test",
+  "fingerprints": {"candidate-1": "frozen-fingerprint-1", "candidate-2": "frozen-fingerprint-2"},
+  "preferredCandidateId": null,
+  "pair": {"leftId": "candidate-1", "rightId": "candidate-2", "preferredId": "candidate-2"},
+  "meaningfulImprovement": null
+}
+```
+
+For a multiclass outcome set `pair: null` and supply `preferredCandidateId`.
+`meaningfulImprovement` is an independently collected proposition label, never
+derived from the Choice label. For a pairwise outcome, probabilities are
+conditioned on that pair; an excluded candidate or NONE cannot certify a
+selection. A pair with zero predicted total mass has unavailable probabilistic
+metrics rather than an invented 50/50 prediction.
+
+Labels must match **all** frozen fingerprints. Duplicate observations, unknown
+case ids, raw identity fields and shared corridor/session groups across
+calibration and test are rejected. Pre-ride and post-ride results are separate;
+pooled and per-rider results are reported. External corpus curation must assign
+near-duplicate corridors the same corridor key. Freeze posterior forecasts and
+calibrate thresholds before unlocking test labels; this runner does not train
+a rider model or attest provenance of an externally supplied posterior.
+
+Log loss, multiclass/pairwise Brier, ECE/reliability, Noul calibration, coverage,
+selective accuracy and top Choice accuracy include explicit scored denominators.
+Unavailable model forecasts remain null. Incremental A/B/C versus D uses the
+same paired labeled cases, with paired counts. C's baseline agreement is only
+diagnostic; when it rises without a paired held-out accuracy/log-loss/Brier
+gain over both B and D, the output flags `baseline-leakage`.
+
+Every raw permutation retains mapped Choice probabilities/confidence, Score
+PMFs/confidence, independent Noul, returned model, latency and validated usage.
+A nonzero flip rate, incomplete cycle, repeated winner instability or NONE
+withholds the counterfactual. Low-confidence alternatives and baseline choices
+also fail the caller's threshold policy. Averaged conflicting probabilities
+are retained for log-loss/Brier diagnostics but never produce a synthetic
+winner. Repeated-identical requests additionally report probability total
+variation; one repeat reports stability as unavailable.
+
+### Corpus integration and evidence
+
+The two PR #39 corpus files were narrowly reused from
+`46d9a69e3eee21ebb824ecfd6d428b071d25c943`; no other PR #39 changes were merged.
+The actual GraphHopper measurements and frozen artifacts are under
+`docs/vnext/evidence/2026-10-01-jev-frontier/`.
+
+The corpus still spends exactly three provider calls per case. The additional
+freeze helper consumes the existing canonical pipeline's eligible, diverse
+measured candidates, then the **current exact bounded-regret selector** reduces
+that pool to two. It does not claim to replace the live pipeline ordering or
+expose a new production shortlist seam. One-route frontiers are skipped.
+The transport removes `timeEfficiency` (a duration-derived ratio) from all
+variants while retaining intrinsic duration. Choice criteria identify the
+slot-specific state and explain field meaning without repeating numeric facts.
+No aggregate fun/coherence score duplicates intrinsic axes in this projection;
+unavailable flow/coherence/personalization axes remain null.
+
+PR #33's regret-aware probe-allocation note was reviewed. Its control and
+explicit-intent lanes, leave-one-corridor-out estimates, and equal provider-call
+budget remain a separate candidate-generation experiment. This PR changes no
+search policy.

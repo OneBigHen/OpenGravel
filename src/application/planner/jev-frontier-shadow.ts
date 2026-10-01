@@ -90,8 +90,8 @@ export interface JevFrontierCandidateState {
   readonly evidenceCoverage: number;
   readonly riderPreferenceUtility: number | null;
   readonly coherence: {
-    readonly explicitUTurns: number;
-    readonly geometryReversals: number;
+    readonly explicitUTurns: number | null;
+    readonly geometryReversals: number | null;
     readonly maneuverDensityPer10Miles: number | null;
     readonly immediateBacktrackingShare: number | null;
     readonly selfOverlapShare: number | null;
@@ -111,7 +111,8 @@ export type JevFrontierAblationVariant = "A" | "B" | "C";
 
 export interface JevFrontierTransportCandidateBase {
   readonly slot: JevFrontierSlot;
-  readonly frontier: FrontierQualityVector;
+  /** Duration is intrinsic below; its derived efficiency ratio stays local. */
+  readonly frontier: Omit<FrontierQualityVector, "timeEfficiency">;
   readonly distanceMeters: number;
   readonly durationSeconds: number;
   readonly evidenceCoverage: number;
@@ -200,6 +201,12 @@ export type JevFrontierJudgeResult =
       readonly status: "ok";
       readonly judgment: JevFrontierJudgment;
       readonly latencyMs: number;
+      /** Optional, validated provider telemetry. Missing cost stays null. */
+      readonly usage?: {
+        readonly inputTokens: number | null;
+        readonly outputTokens: number | null;
+        readonly cost: number | null;
+      };
     }
   | {
       readonly status: "skipped";
@@ -402,10 +409,10 @@ function validCoherence(
   ]))) return false;
 
   return (
-    Number.isSafeInteger(value["explicitUTurns"]) &&
-    Number(value["explicitUTurns"]) >= 0 &&
-    Number.isSafeInteger(value["geometryReversals"]) &&
-    Number(value["geometryReversals"]) >= 0 &&
+    (value["explicitUTurns"] === null ||
+      (Number.isSafeInteger(value["explicitUTurns"]) && Number(value["explicitUTurns"]) >= 0)) &&
+    (value["geometryReversals"] === null ||
+      (Number.isSafeInteger(value["geometryReversals"]) && Number(value["geometryReversals"]) >= 0)) &&
     (value["maneuverDensityPer10Miles"] === null ||
       finiteNonNegative(value["maneuverDensityPer10Miles"])) &&
     (value["immediateBacktrackingShare"] === null ||
@@ -414,7 +421,7 @@ function validCoherence(
   );
 }
 
-function validCandidate(value: unknown): value is JevFrontierCandidateState {
+export function isJevFrontierCandidateState(value: unknown): value is JevFrontierCandidateState {
   if (!isRecord(value)) return false;
   if (!hasExactKeys(value, new Set([
     "id",
@@ -473,7 +480,7 @@ export function validateJevFrontierState(
   ) return "candidate-count";
   if (!validIntent(state["intent"])) return "invalid-state";
   if (state["rider"] !== null && !validRider(state["rider"])) return "invalid-state";
-  if (!state["candidates"].every(validCandidate)) {
+  if (!state["candidates"].every(isJevFrontierCandidateState)) {
     const ids = state["candidates"]
       .filter(isRecord)
       .map((candidate) => candidate["id"]);
@@ -686,9 +693,11 @@ export function jevFrontierCounterfactual(
 
 function validPermutation(
   state: JevFrontierState,
-  permutation: JevFrontierPermutation,
-): boolean {
-  if (permutation.id.length === 0 || permutation.slots.length !== state.candidates.length) {
+  permutation: unknown,
+): permutation is JevFrontierPermutation {
+  if (!isRecord(permutation) || typeof permutation.id !== "string" ||
+      permutation.id.length === 0 || !Array.isArray(permutation.slots) ||
+      permutation.slots.length !== state.candidates.length) {
     return false;
   }
   const expectedIds = new Set(state.candidates.map((candidate) => candidate.id));
@@ -696,13 +705,15 @@ function validPermutation(
   const seenSlots = new Set<JevFrontierSlot>();
   for (const assignment of permutation.slots) {
     if (
-      !JEV_FRONTIER_SLOTS.includes(assignment.slot) ||
+      !isRecord(assignment) ||
+      !JEV_FRONTIER_SLOTS.slice(0, state.candidates.length).includes(assignment.slot as JevFrontierSlot) ||
+      typeof assignment.candidateId !== "string" ||
       !expectedIds.has(assignment.candidateId) ||
       seenIds.has(assignment.candidateId) ||
-      seenSlots.has(assignment.slot)
+      seenSlots.has(assignment.slot as JevFrontierSlot)
     ) return false;
     seenIds.add(assignment.candidateId);
-    seenSlots.add(assignment.slot);
+    seenSlots.add(assignment.slot as JevFrontierSlot);
   }
   return seenIds.size === expectedIds.size;
 }
@@ -729,9 +740,19 @@ export function projectJevFrontierTransportState(
   const byId = new Map(state.candidates.map((candidate) => [candidate.id, candidate]));
   const bases = permutation.slots.map(({ slot, candidateId }) => {
     const candidate = byId.get(candidateId)!;
+    const intrinsicFrontier = {
+      curvature: candidate.frontier.curvature,
+      flow: candidate.frontier.flow,
+      backroad: candidate.frontier.backroad,
+      surfaceFit: candidate.frontier.surfaceFit,
+      gravelAffinity: candidate.frontier.gravelAffinity,
+      trafficFlow: candidate.frontier.trafficFlow,
+      junctionFlow: candidate.frontier.junctionFlow,
+      novelty: candidate.frontier.novelty,
+    };
     return {
       slot,
-      frontier: candidate.frontier,
+      frontier: intrinsicFrontier,
       distanceMeters: candidate.distanceMeters,
       durationSeconds: candidate.durationSeconds,
       evidenceCoverage: candidate.evidenceCoverage,

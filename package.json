@@ -21,7 +21,8 @@
     "test:e2e:critical": "playwright test --project=critical-chromium",
     "test:watch": "vitest",
     "vendor:maplibre": "node scripts/vendor-maplibre-worker.mjs",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm test && npm run build",
+    "experiment:jev-frontier": "node --conditions=react-server --import tsx scripts/jev-frontier-replay.ts"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
@@ -33,6 +34,7 @@
     "pmtiles": "^4.5.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "server-only": "0.0.1",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -47,6 +49,7 @@
     "eslint-config-next": "16.3.5",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "30.1.0",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vitest": "5.0.1"
   }
