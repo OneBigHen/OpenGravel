@@ -505,6 +505,47 @@ describe("Jev frontier shadow contract", () => {
     });
   });
 
+
+  it("rejects incomplete or internally inconsistent order-audit runs", () => {
+    const incomplete: JevFrontierOrderOutcome[] = [
+      {
+        permutationId: "p0",
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.2,
+          "route-b": 0.6,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      },
+      {
+        permutationId: "p1",
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.2,
+          "route-b": 0.6,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      },
+    ];
+    expect(auditJevFrontierOrder(state(), incomplete)).toBeNull();
+
+    const inconsistent: JevFrontierOrderOutcome[] = ["p0", "p1", "p2"].map(
+      (permutationId) => ({
+        permutationId,
+        choiceCandidateId: "route-b",
+        probabilitiesByCandidateId: {
+          "route-a": 0.65,
+          "route-b": 0.15,
+          "route-c": 0.1,
+        },
+        noneProbability: 0.1,
+      }),
+    );
+    expect(auditJevFrontierOrder(state(), inconsistent)).toBeNull();
+  });
+
   it("retains a stable choice only when every permutation agrees", () => {
     const outcomes: JevFrontierOrderOutcome[] = ["p0", "p1", "p2"].map(
       (permutationId) => ({
