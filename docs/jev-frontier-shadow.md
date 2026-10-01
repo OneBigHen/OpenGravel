@@ -636,3 +636,27 @@ The long-term architecture remains:
 
 > GraphHopper proposes paths. OpenGravel establishes truth. Personalization
 > describes the rider. Jev may make bounded semantic judgments.
+
+
+## Research references
+
+- OpenRouter, **What Is Jev? TypeSafe's Decision Model Explained for Developers**
+  (Jev 1.13, model pinning, calibrated probabilities, Score expected-value
+  semantics):
+  https://openrouter.ai/blog/insights/what-is-jev/
+- OpenRouter, **How to Use Jev** (Choice/Noul/Score response semantics):
+  https://openrouter.ai/blog/tutorials/how-to-use-jev/
+- Shi et al., **Judging the Judges: A Systematic Study of Position Bias in
+  LLM-as-a-Judge**, IJCNLP-AACL 2025:
+  https://aclanthology.org/2025.ijcnlp-long.18/
+- Xu et al., **Am I More Pointwise or Pairwise? Revealing Position Bias in
+  Rubric-Based LLM-as-a-Judge**, 2026:
+  https://arxiv.org/abs/2602.02219
+- Truschel & Storandt, **Multi-Criteria Route Planning with Little Regret**,
+  ATMOS 2025:
+  https://drops.dagstuhl.de/entities/document/10.4230/OASIcs.ATMOS.2025.13
+- GraphHopper current profile documentation (custom-model composition and
+  `curvature.json`):
+  https://github.com/graphhopper/graphhopper/blob/master/docs/core/profiles.md
+- GraphHopper current custom-model documentation (`curvature` semantics):
+  https://github.com/graphhopper/graphhopper/blob/master/docs/core/custom-models.md
