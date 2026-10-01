@@ -6,10 +6,10 @@ import { asGeometryRef, newRideId } from "@/domain/ride/ids";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import type { RouteBundle, RouteCandidate, RouteScoreComponents } from "@/domain/route/types";
 
-function route(id: string, minutes: number, curvature: number | null, longest: number | null): RouteCandidate {
+function route(id: string, minutes: number, curvature: number | null, longest: number | null, backroad = 0.8): RouteCandidate {
   const component = (input: number | null) => ({ input, weight: 1, contribution: input ?? 0, explanationKey: "test", evidenceStatus: input === null ? "unknown" as const : "estimated" as const });
   const components: RouteScoreComponents = {
-    curvature: component(curvature), backroad: component(0.8), surfaceFit: component(0.9),
+    curvature: component(curvature), backroad: component(backroad), surfaceFit: component(0.9),
     elevation: component(null), traffic: component(null), junctionFriction: component(null),
     novelty: component(null), closureRisk: component(null), timeCost: component(0), confidence: component(0.8),
   };
@@ -41,6 +41,70 @@ function compare(routes = bundle(), overrides: Partial<Parameters<typeof buildRo
 }
 
 describe("routing method comparisons", () => {
+  it("honors an efficient Roads choice when comparing the same eligible bundle", () => {
+    const routes = bundle();
+    const before = JSON.stringify(routes);
+    const vm = compare(routes, { intent: { ...defaultRideIntent(), roadCharacter: "efficient" } });
+    expect(vm.methods[1]?.routeId).toBe(fast.id);
+    expect(vm.methods[0]?.routeId).toBe(chopped.id);
+    expect(vm.selectedRouteId).toBe(chopped.id);
+    expect(JSON.stringify(routes)).toBe(before);
+  });
+
+  it("centers a curvy Roads choice on curves instead of an unrelated backroad preference", () => {
+    const curves = route("curves", 79, 0.95, 1_000, 0.2);
+    const compromise = route("compromise", 68, 0.5, 1_000, 0.9);
+    const routes = { ...bundle([fast, curves, compromise]), selectedRouteId: compromise.id };
+    const vm = compare(routes, { intent: { ...defaultRideIntent(), roadCharacter: "curvy" } });
+    expect(vm.methods[1]?.routeId).toBe(curves.id);
+    expect(vm.selectedRouteId).toBe(compromise.id);
+  });
+
+  it("values a sustained bend section over slightly more fragmented curvature for a curvy ride", () => {
+    const fragmented = route("fragmented", 60, 0.86, 100);
+    const sustained = route("sustained", 62, 0.84, 2_500);
+    const routes = { ...bundle([fragmented, sustained]), selectedRouteId: fragmented.id };
+    const before = JSON.stringify(routes);
+    const vm = compare(routes, { intent: { ...defaultRideIntent(), roadCharacter: "curvy" } });
+    expect(vm.methods[1]?.routeId).toBe(sustained.id);
+    expect(vm.selectedRouteId).toBe(fragmented.id);
+    expect(JSON.stringify(routes)).toBe(before);
+  });
+
+  it("honors a backroads Roads choice instead of balancing against an unrelated curvy extreme", () => {
+    const curves = route("curves", 68, 0.9, 1_000, 0.3);
+    const backroads = route("backroads", 79, 0.2, 1_000, 1);
+    const routes = { ...bundle([fast, curves, backroads]), selectedRouteId: curves.id };
+    const vm = compare(routes, { intent: { ...defaultRideIntent(), roadCharacter: "backroads" } });
+    expect(vm.methods[1]?.routeId).toBe(backroads.id);
+    expect(vm.selectedRouteId).toBe(curves.id);
+  });
+
+  it("does not give one short isolated bend a perfect sustained-curve quality", () => {
+    const isolated = route("isolated", 60, 0.8, 40);
+    Object.assign(isolated.evidence.curvature!.value as object, { curvyMeters: 40, continuityShare: 1 });
+    const sustained = route("sustained", 60, 0.8, 1_400);
+    const vm = compare(bundle([isolated, sustained]), { intent: { ...defaultRideIntent(), roadCharacter: "curvy" } });
+    expect(vm.methods[1]?.routeId).toBe(sustained.id);
+  });
+
+  it("leaves missing bend evidence out of the common comparison instead of treating it as a measured zero", () => {
+    const missing = route("missing", 60, 0.82, null);
+    const measuredZero = route("zero", 60, 0.82, 0);
+    const sustained = route("sustained", 60, 0.8, 5_000);
+    const intent = { ...defaultRideIntent(), roadCharacter: "curvy" as const };
+    expect(compare(bundle([missing, sustained]), { intent }).methods[1]?.routeId).toBe(missing.id);
+    expect(compare(bundle([measuredZero, sustained]), { intent }).methods[1]?.routeId).toBe(sustained.id);
+  });
+
+  it("explains which Roads choice Frontier uses and why missing continuity is left out", () => {
+    const missing = route("missing", 60, 0.82, null);
+    const vm = compare(bundle([missing, flow]), { intent: { ...defaultRideIntent(), roadCharacter: "curvy" } });
+    expect(vm.methods[1]?.detail).toContain("Curvy");
+    expect(vm.methods[1]?.detail).toContain("mapped");
+    expect(vm.methods[1]?.caveat).toMatch(/continuity.*not comparable.*left out/i);
+  });
+
   it("compares loop added time against the timeboxed choices, excluding a short out-of-range route", () => {
     const outside = route("short", 30, 0.8, 50);
     const within = route("within", 75, 0.8, 200);
@@ -76,9 +140,10 @@ describe("routing method comparisons", () => {
     expect(JSON.stringify(routes)).toBe(before);
   });
 
-  it("keeps frontier recommendations invariant under candidate order", () => {
-    const left = compare(bundle());
-    const right = compare(bundle([flow, fast, chopped]));
+  it.each(["efficient", "balanced", "curvy", "backroads"] as const)("keeps %s frontier recommendations invariant under candidate order", (roadCharacter) => {
+    const intent = { ...defaultRideIntent(), roadCharacter };
+    const left = compare(bundle(), { intent });
+    const right = compare(bundle([flow, fast, chopped]), { intent });
     expect(left.methods[1]?.routeId).not.toBeNull();
     expect(right.methods[1]?.routeId).toBe(left.methods[1]?.routeId);
   });

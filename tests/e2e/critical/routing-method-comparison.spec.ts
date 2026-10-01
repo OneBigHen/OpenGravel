@@ -4,7 +4,7 @@ import { plannerMap, settledExtent } from "./map-helpers";
 
 /** UI fixtures supplement the labeled planning fixture with synthetic aggregate
  * evidence. Live road geometry/evidence is verified by the real-router gate. */
-async function planComparison(page: Page) {
+async function planComparison(page: Page, roadCharacter?: "curvy") {
   await page.route("**/api/route-plan", async (route) => {
     const response = await route.fetch();
     const body = await response.json() as RoutePlanSuccessBody;
@@ -37,6 +37,14 @@ async function planComparison(page: Page) {
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  if (roadCharacter !== undefined) {
+    const handle = page.getByTestId("sheet-handle");
+    if (await handle.isVisible() && await page.getByTestId("planner-sheet").getAttribute("data-detent") === "peek") await handle.click();
+    const style = page.getByTestId("ride-style-toggle");
+    if (await style.isVisible() && await style.getAttribute("aria-expanded") !== "true") await style.click();
+    await page.getByTestId(`road-character-${roadCharacter}`).check();
+    if (await style.isVisible() && await style.getAttribute("aria-expanded") === "true") await style.click();
+  }
   await page.getByTestId("compose-create").click();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   const sheet = page.locator(".og-planner__sheet");
@@ -52,6 +60,20 @@ async function planComparison(page: Page) {
   await comparison.locator("summary").first().click();
   return comparison;
 }
+
+test("phone Frontier explains the authored Curvy choice and waits for manual application", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await planComparison(page, "curvy");
+  const selected = page.locator('[data-testid^="route-card-"][aria-pressed="true"]');
+  const before = await selected.getAttribute("data-testid");
+  const frontier = page.getByTestId("routing-method-frontier");
+  await frontier.getByRole("radio").check();
+  await expect(frontier).toContainText("your Curvy Roads choice");
+  await expect(frontier).toContainText("sustained sections on the mapped route");
+  await expect(selected).toHaveAttribute("data-testid", before!);
+  await frontier.getByRole("button", { name: "Show this route", exact: true }).click();
+  await expect(frontier.getByRole("button", { name: "Already selected" })).toBeDisabled();
+});
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
   test(`method comparison stays manual and readable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
