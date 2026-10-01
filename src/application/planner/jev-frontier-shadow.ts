@@ -826,7 +826,10 @@ export function auditJevFrontierOrder(
   state: JevFrontierState,
   outcomes: readonly JevFrontierOrderOutcome[],
 ): JevFrontierOrderAudit | null {
-  if (validateJevFrontierState(state) !== null || outcomes.length < 2) return null;
+  if (
+    validateJevFrontierState(state) !== null ||
+    outcomes.length !== state.candidates.length
+  ) return null;
   const candidateIds = state.candidates.map((candidate) => candidate.id);
   const allowedIds = new Set(candidateIds);
   const seenPermutations = new Set<string>();
@@ -852,6 +855,12 @@ export function auditJevFrontierOrder(
     if (Math.abs(candidateTotal + outcome.noneProbability - 1) > PROBABILITY_SUM_TOLERANCE) {
       return null;
     }
+    const remappedDistribution = {
+      ...outcome.probabilitiesByCandidateId,
+      [JEV_FRONTIER_NONE]: outcome.noneProbability,
+    };
+    const expectedChoice = outcome.choiceCandidateId ?? JEV_FRONTIER_NONE;
+    if (uniqueArgmax(remappedDistribution) !== expectedChoice) return null;
     for (const id of candidateIds) {
       sums[id] = (sums[id] ?? 0) + (outcome.probabilitiesByCandidateId[id] ?? 0);
     }
