@@ -29,7 +29,11 @@ const ASSESSMENT: FunAssessment = {
   reasons: [{ key: "fun.curvature", impact: "positive", magnitude: 0.27 }],
 };
 
-function apiAnswer(choice: string, confidence: number): Response {
+function apiAnswer(
+  choice: string,
+  confidence: number,
+  model = "jev-1.13.0",
+): Response {
   return Response.json({
     answers: {
       character: {
@@ -39,7 +43,7 @@ function apiAnswer(choice: string, confidence: number): Response {
         probabilities: { TWISTY: confidence, UNKNOWN: 1 - confidence },
       },
     },
-    model: "jev-latest",
+    model,
     usage: { input_tokens: 40, output_tokens: 8 },
   });
 }
@@ -85,7 +89,7 @@ describe("Jev fun-character adapter", () => {
 
     expect(requestUrl).toBe("https://api.typesafe.ai/v1/systemone");
     expect(requestBody).toMatchObject({
-      model: "jev-latest",
+      model: "jev-1.13.0",
       state: {
         policyVersion: ASSESSMENT.policyVersion,
         features: { curvature: 0.9, mappedGravelAffinity: 0.4 },
@@ -93,7 +97,11 @@ describe("Jev fun-character adapter", () => {
       questions: { character: { type: "choice" } },
     });
     expect(JSON.stringify(requestBody)).not.toMatch(/coordinates|geometry|fingerprint|apikey_test/);
-    expect(result).toEqual({ label: "TWISTY", confidence: 0.91, model: "jev-latest" });
+    expect(result).toEqual({
+      label: "TWISTY",
+      confidence: 0.91,
+      model: "jev-1.13.0",
+    });
   });
 
   it("withholds low-confidence or invalid model labels", async () => {
@@ -108,11 +116,21 @@ describe("Jev fun-character adapter", () => {
     );
     expect((await low?.classify(ASSESSMENT, new AbortController().signal))?.label).toBe("UNKNOWN");
     expect(await invalid?.classify(ASSESSMENT, new AbortController().signal)).toBeNull();
+
+    const drifted = jevCharacterClassifierFromEnv(
+      { JEV_API_KEY: "apikey_test" },
+      { fetcher: async () => apiAnswer("TWISTY", 0.99, "jev-latest") },
+    );
+    expect(await drifted?.classify(ASSESSMENT, new AbortController().signal)).toBeNull();
   });
 });
 
 describe("budgetedCharacterClassifier", () => {
-  const READING: JevCharacterReading = { label: "TWISTY", confidence: 0.9, model: "jev-latest" };
+  const READING: JevCharacterReading = {
+    label: "TWISTY",
+    confidence: 0.9,
+    model: "typesafe/jev-1.13-20260917",
+  };
 
   function deferredClassifier(): { classifier: JevCharacterClassifier; calls: () => number; resolve: (r: JevCharacterReading | null) => void; reject: (e: Error) => void } {
     let calls = 0;

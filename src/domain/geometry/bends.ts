@@ -60,15 +60,22 @@ export function analyzeBends(line: readonly Coordinate[]): BendAnalysis {
   let longestRunMeters = 0;
   let runCount = 0;
   let run: number[] = [];
+  let aggregateRun: number[] = [];
 
-  const flush = (): void => {
+  const flushContinuity = (): void => {
     if (run.length >= 2) {
       const runMeters = run.reduce((sum, meters) => sum + meters, 0);
-      bends += runMeters;
       longestRunMeters = Math.max(longestRunMeters, runMeters);
       runCount += 1;
     }
     run = [];
+  };
+  const flush = (): void => {
+    // Preserve the existing aggregate and addition order used by curvature
+    // scoring. Tiny duplicate legs interrupt only the new continuity reading.
+    if (aggregateRun.length >= 2) for (const meters of aggregateRun) bends += meters;
+    aggregateRun = [];
+    flushContinuity();
   };
 
   for (let index = 1; index < line.length - 1; index += 1) {
@@ -78,7 +85,7 @@ export function analyzeBends(line: readonly Coordinate[]): BendAnalysis {
     const before = haversine(previous, vertex);
     const after = haversine(vertex, next);
     if (!(before >= 1) || !(after >= 1)) {
-      flush();
+      flushContinuity();
       continue;
     }
     const turn = Math.abs(((bearing(vertex, next) - bearing(previous, vertex) + 540) % 360) - 180);
@@ -88,7 +95,10 @@ export function analyzeBends(line: readonly Coordinate[]): BendAnalysis {
     }
     const share = (before + after) / 2;
     const radius = turn === 0 ? Number.POSITIVE_INFINITY : share / ((turn * Math.PI) / 180);
-    if (radius < BEND_RADIUS_METERS) run.push(share);
+    if (radius < BEND_RADIUS_METERS) {
+      run.push(share);
+      aggregateRun.push(share);
+    }
     else flush();
   }
   flush();

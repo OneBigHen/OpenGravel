@@ -295,6 +295,8 @@ export interface ProviderRoadSummary {
 /** What one provider call returned. An empty set is a valid answer. */
 export interface ProviderCandidateSet {
   readonly candidates: readonly ProviderCandidate[];
+  /** Reading of an already-scored route, carried separately from road facts. */
+  readonly funCharacter?: import("./ports/route-plan-contract").RoutePlanFunCharacterWire;
 }
 
 /**

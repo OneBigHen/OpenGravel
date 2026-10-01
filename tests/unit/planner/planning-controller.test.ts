@@ -149,7 +149,7 @@ interface ProviderCall {
 interface FakeProvider {
   readonly provider: RouteCandidateProvider;
   readonly calls: ProviderCall[];
-  settle(index: number, candidates: readonly ProviderCandidate[]): void;
+  settle(index: number, candidates: readonly ProviderCandidate[], funCharacter?: import("@/application/planner/ports/route-plan-contract").RoutePlanFunCharacterWire): void;
   fail(index: number, error: unknown): void;
 }
 
@@ -184,8 +184,8 @@ function fakeProvider(
   return {
     provider,
     calls,
-    settle(index, candidates) {
-      required(pending[index]).resolve({ candidates: [...candidates] });
+    settle(index, candidates, funCharacter) {
+      required(pending[index]).resolve({ candidates: [...candidates], ...(funCharacter === undefined ? {} : { funCharacter }) });
     },
     fail(index, error) {
       required(pending[index]).reject(error);
@@ -401,6 +401,21 @@ describe("PlanningSession snapshot", () => {
  * ---------------------------------------------------------------------- */
 
 describe("generation ownership", () => {
+  it("owns advisory readings with their generation and drops a superseded reading", async () => {
+    const alpha = fakeProvider("alpha");
+    const controller = buildController({ providers: [alpha.provider], now: FIXED_CLOCK });
+    const reading = { fingerprint: "fp-new", label: "TWISTY" as const, confidence: 0.9, model: "jev-1.13.0", policyVersion: "test" };
+    void begin(controller, 1);
+    await flush();
+    void begin(controller, 2);
+    await flush();
+    alpha.settle(1, [rawCandidate("alpha")], reading);
+    await flush();
+    expect(diagnosticFor(controller.snapshot(), "alpha").funCharacter).toEqual(reading);
+    alpha.settle(0, [rawCandidate("alpha")], { ...reading, fingerprint: "fp-old" });
+    await flush();
+    expect(diagnosticFor(controller.snapshot(), "alpha").funCharacter?.fingerprint).toBe("fp-new");
+  });
   it("takes the new generation before aborting the previous attempt", async () => {
     const log: string[] = [];
     const alpha = fakeProvider("alpha", { onCall: () => log.push("provider-call") });

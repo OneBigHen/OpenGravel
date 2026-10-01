@@ -27,6 +27,21 @@ function arc(radius: number, degrees: number, step: number): Coordinate[] {
 }
 
 describe("bendMeters", () => {
+  it.each([0, 0.4])("preserves aggregate curvature across %s-metre duplicate noise without claiming continuous bends", (offset) => {
+    const points = arc(150, 180, 60);
+    const duplicate = { ...points[2]!, lon: points[2]!.lon + offset / METERS_PER_DEG_LON };
+    const line = [...points.slice(0, 3), duplicate, ...points.slice(3)];
+    // Historical aggregate semantics skip the two tiny adjacent legs. The six
+    // remaining qualified vertices still contribute even across the noise.
+    const expected = [1, 4, 5, 6, 7, 8].reduce((sum, index) =>
+      sum + (haversine(line[index - 1]!, line[index]!) + haversine(line[index]!, line[index + 1]!)) / 2, 0,
+    );
+    const analysis = analyzeBends(line);
+    expect(analysis.bendMeters).toBeCloseTo(expected, 8);
+    expect(analysis.longestRunMeters).toBeLessThan(analysis.bendMeters);
+    expect(analysis.runCount).toBe(1);
+  });
+
   it("finds no bends on a straight road", () => {
     const line = Array.from({ length: 30 }, (_, index) => at(index * 60, 0));
     expect(bendMeters(line)).toBe(0);

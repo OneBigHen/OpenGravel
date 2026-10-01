@@ -1,0 +1,237 @@
+.og-routing-methods {
+  margin-top: 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-1);
+}
+
+.og-routing-methods__summary-toggle,
+.og-routing-methods__how > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+  color: var(--og-ink);
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+
+.og-routing-methods__summary-toggle::-webkit-details-marker,
+.og-routing-methods__how > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-routing-methods__summary-toggle::before,
+.og-routing-methods__how > summary::before {
+  content: "▸";
+  color: var(--og-signal-strong);
+  font-size: 12px;
+}
+
+.og-routing-methods[open] > .og-routing-methods__summary-toggle::before,
+.og-routing-methods__how[open] > summary::before {
+  content: "▾";
+}
+
+.og-routing-methods__experimental {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: var(--og-go-soft);
+  color: var(--og-go-text);
+  font-size: var(--og-text-eyebrow);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-routing-methods__summary-toggle:focus-visible,
+.og-routing-methods__how > summary:focus-visible,
+.og-routing-methods__choice:focus-within,
+.og-routing-methods__action:focus-visible {
+  outline: var(--og-focus-width, 2px) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset, 2px);
+}
+
+.og-routing-methods__body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.og-routing-methods__guidance,
+.og-routing-methods__stale,
+.og-routing-methods__boundary,
+.og-routing-methods__how-copy,
+.og-routing-methods__jev {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+}
+
+.og-routing-methods__stale {
+  border-left: 3px solid var(--og-golden-hour);
+  padding-left: 10px;
+  color: var(--og-golden-text);
+}
+
+.og-routing-methods__list {
+  display: grid;
+  gap: 8px;
+  border: 0;
+}
+
+.og-routing-methods__option {
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-control);
+  background: var(--og-canvas);
+  overflow: hidden;
+}
+
+.og-routing-methods__option[data-active="true"] {
+  border-color: color-mix(in srgb, var(--og-signal-blue) 45%, var(--og-hairline-strong));
+  background: color-mix(in srgb, var(--og-signal-blue) 6%, var(--og-canvas));
+}
+
+.og-routing-methods__choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 52px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.og-routing-methods__choice input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--og-signal-blue);
+}
+
+.og-routing-methods__choice-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.og-routing-methods__label {
+  font-weight: 700;
+}
+
+.og-routing-methods__summary {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+}
+
+.og-routing-methods__detail {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 12px 40px;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+}
+
+.og-routing-methods__delta,
+.og-routing-methods__route-label {
+  color: var(--og-ink);
+  font-weight: 600;
+}
+
+.og-routing-methods__caveat {
+  color: var(--og-golden-text);
+}
+
+.og-routing-methods__action {
+  justify-self: start;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-raised, var(--og-paper));
+  color: var(--og-signal-strong);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-routing-methods__action:hover:not(:disabled) {
+  background: var(--og-go-soft);
+}
+
+.og-routing-methods__action:disabled {
+  color: var(--og-slate-text);
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.og-routing-methods__jev {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-top: 1px solid var(--og-hairline);
+  border-bottom: 1px solid var(--og-hairline);
+}
+
+.og-routing-methods__jev h3 {
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+}
+
+.og-routing-methods__advisory {
+  color: var(--og-golden-text);
+  font-weight: 700;
+}
+
+.og-routing-methods__confidence,
+.og-routing-methods__model {
+  font-size: var(--og-text-eyebrow);
+  letter-spacing: 0.03em;
+}
+
+.og-routing-methods__boundary {
+  font-style: italic;
+}
+
+.og-routing-methods__how {
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-routing-methods__how-copy {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 4px 34px;
+}
+
+@media (max-width: 520px) {
+  .og-routing-methods {
+    margin-top: 8px;
+  }
+
+  .og-routing-methods__body {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .og-routing-methods__detail {
+    padding-left: 40px;
+  }
+}
+
+/* Match the planner's sheet tier: method comparisons join the full choices,
+   while the ride glance keeps the selected card and Start ride in view. */
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-planner__sheet:is([data-detent="peek"], [data-detent="ride"]) .og-routing-methods {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-routing-methods * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

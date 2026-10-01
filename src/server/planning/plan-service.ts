@@ -58,6 +58,7 @@ import type {
   RoutePlanIdentityWire,
   RoutePlanOptionsWire,
 } from "@/application/planner/ports/route-plan-contract";
+import { parseRoutePlanFunCharacter } from "@/application/planner/ports/route-plan-contract";
 import {
   isLaneUnavailable,
   resolveLanes,
@@ -840,13 +841,13 @@ export async function planRide(
         : deps.funCharacterClassifier;
       const reading = await classifier?.classify(shadow.assessment, signal);
       if (reading !== undefined && reading !== null) {
-        funCharacter = {
+        funCharacter = parseRoutePlanFunCharacter({
           fingerprint: shadow.fingerprint,
           label: reading.label,
           confidence: reading.confidence,
           model: reading.model,
           policyVersion: shadow.assessment.policyVersion,
-        };
+        }) ?? undefined;
       }
     } catch {
       // Advisory failure is deliberately absent from the answer.
