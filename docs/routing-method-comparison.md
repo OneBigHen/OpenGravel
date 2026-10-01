@@ -12,7 +12,7 @@ can agree, particularly when the available road network offers few alternatives.
 | Option | What it does | Limits |
 | --- | --- | --- |
 | Classic | Shows the normal application recommendation. | Uses the existing score, roles and rider preferences. |
-| Frontier | Uses the exact bounded regret selector to find a compromise across efficient, curvy and backroad preferences. | Requires measured curvature and backroad values. Missing traffic/junction qualities remain unknown. |
+| Frontier | Uses the exact bounded regret selector around your Roads choice: Fast, Balanced, Curvy or Backroads. Curvy also weighs sustained bend sections when every compared route has measured run lengths. | Requires measured curvature and backroad values. Missing continuity is left out of the common comparison; traffic/junction qualities remain unknown. |
 | Sustained curves | Suggests the eligible choice with the longest measured run of bends. | Geometry estimate; does not prove uninterrupted traffic, road condition or safety. Zero measured bends differs from missing continuity. |
 | Jev's read | Names the character of one already-scored route using aggregate features. | Advisory only; confidence is uncalibrated, and unavailable readings do not affect planning. It neither creates nor automatically selects a route. |
 
@@ -46,10 +46,17 @@ alias is accepted. Requests retain aggregate-only input, the existing 1.5-second
 deadline, zero retries and existing cache/call budget. This is the character
 classifier; the separate Jev frontier order/replay audit remains research.
 
-The experimental comparison profiles are explicitly defined in the projection.
+The experimental comparison profiles are defined in `frontier-comparison-policy.ts`.
 They do not replace RoutePolicy or automatic planning. Bend-run metrics are
 measured from returned geometry and propagated as estimated diagnostic evidence;
 the existing curvature score normalization stays unchanged.
+
+Curvy's continuity quality combines the longest run's share of bend metres and
+its share of the measured route. One short isolated bend cannot earn a perfect
+continuity score just because it is the route's only bend. Missing run lengths
+remain unknown; if any comparable choice lacks them, continuity is left out for
+all choices. The weights and geometry proxy are comparison heuristics, not
+calibrated rider preferences. See [the research and evaluation note](frontier-routing-quality.md).
 
 ## Research that is not runnable here yet
 
