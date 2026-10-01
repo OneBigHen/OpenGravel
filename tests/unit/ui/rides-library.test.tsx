@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RidesLibrary } from "@/ui/rides/RidesLibrary";
 import type { LibraryServicePort, RideSummary } from "@/application/library/library-service";
+import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -70,6 +71,192 @@ describe("RidesLibrary", () => {
     expect(screen.getByTestId("recorded-ride-summary")).toHaveTextContent("Distance: 12 mi · 1:42 moving · 2:05 total");
     fireEvent.click(screen.getByRole("button", { name: "Export Recorded ride" }));
     expect(screen.getByRole("menuitem", { name: "Recorded ride GPX" })).toBeEnabled();
+  });
+
+  it("reads road progress only when recorded details are expanded", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_2" as RideSummary["rideId"],
+      title: "Recorded ride",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    };
+    const reader: RoadProgressReader = {
+      read: vi.fn().mockResolvedValue({
+        rideId: recorded.rideId,
+        qualifiedMeters: 8_000,
+        newToYouMeters: 4_000,
+        coverage: "partial",
+        historyAvailable: true,
+        matchedFeatures: [],
+      }),
+    };
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} roadProgressReader={reader} />);
+
+    await screen.findByRole("button", { name: "View details for Recorded ride" });
+    expect(reader.read).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 2.5 mi estimated"));
+    expect(reader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal));
+  });
+
+  it("aborts and discards a late result after recorded details collapse", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_3" as RideSummary["rideId"],
+      title: "Recorded ride",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    };
+    let resolveFirst: ((value: Awaited<ReturnType<RoadProgressReader["read"]>>) => void) | undefined;
+    const pending = new Promise<Awaited<ReturnType<RoadProgressReader["read"]>>>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const reader: RoadProgressReader = {
+      read: vi.fn()
+        .mockReturnValueOnce(pending)
+        .mockResolvedValueOnce({
+          rideId: recorded.rideId,
+          qualifiedMeters: 8_000,
+          newToYouMeters: 4_000,
+          coverage: "partial",
+          historyAvailable: true,
+          matchedFeatures: [],
+        }),
+    };
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} roadProgressReader={reader} />);
+
+    const details = await screen.findByRole("button", { name: "View details for Recorded ride" });
+    fireEvent.click(details);
+    await waitFor(() => expect(reader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal)));
+    const signal = vi.mocked(reader.read).mock.calls[0]?.[1];
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    expect(signal?.aborted).toBe(true);
+    resolveFirst?.({
+      rideId: recorded.rideId,
+      qualifiedMeters: 8_000,
+      newToYouMeters: 4_000,
+      coverage: "partial",
+      historyAvailable: true,
+      matchedFeatures: [],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(reader.read).toHaveBeenCalledTimes(2));
+    expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 2.5 mi estimated");
+  });
+
+  it("hides completed progress when the reader identity changes", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_5" as RideSummary["rideId"],
+      title: "Recorded ride",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    };
+    const projection = (newToYouMeters: number) => ({
+      rideId: recorded.rideId,
+      qualifiedMeters: 8_000,
+      newToYouMeters,
+      coverage: "partial" as const,
+      historyAvailable: true,
+      matchedFeatures: [],
+    });
+    const firstReader: RoadProgressReader = { read: vi.fn().mockResolvedValue(projection(4_000)) };
+    const secondReader: RoadProgressReader = { read: vi.fn().mockResolvedValue(projection(800)) };
+    const library = service({ listRides: vi.fn().mockResolvedValue([recorded]) });
+    const view = render(<RidesLibrary service={library} roadProgressReader={firstReader} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 2.5 mi estimated"));
+    view.rerender(<RidesLibrary service={library} roadProgressReader={secondReader} />);
+    expect(screen.queryByText("New-to-you: 2.5 mi estimated")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 0.5 mi estimated"));
+    expect(secondReader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal));
+  });
+
+  it("cannot let an old reader overwrite the replacement reader", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_6" as RideSummary["rideId"],
+      title: "Recorded ride",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    };
+    let resolveOld: ((value: Awaited<ReturnType<RoadProgressReader["read"]>>) => void) | undefined;
+    const oldPending = new Promise<Awaited<ReturnType<RoadProgressReader["read"]>>>((resolve) => {
+      resolveOld = resolve;
+    });
+    const oldReader: RoadProgressReader = { read: vi.fn().mockReturnValue(oldPending) };
+    const newReader: RoadProgressReader = {
+      read: vi.fn().mockResolvedValue({
+        rideId: recorded.rideId,
+        qualifiedMeters: 8_000,
+        newToYouMeters: 800,
+        coverage: "partial",
+        historyAvailable: true,
+        matchedFeatures: [],
+      }),
+    };
+    const library = service({ listRides: vi.fn().mockResolvedValue([recorded]) });
+    const view = render(<RidesLibrary service={library} roadProgressReader={oldReader} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(oldReader.read).toHaveBeenCalledOnce());
+    view.rerender(<RidesLibrary service={library} roadProgressReader={newReader} />);
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 0.5 mi estimated"));
+
+    resolveOld?.({
+      rideId: recorded.rideId,
+      qualifiedMeters: 8_000,
+      newToYouMeters: 4_000,
+      coverage: "partial",
+      historyAvailable: true,
+      matchedFeatures: [],
+    });
+    await Promise.resolve();
+    expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 0.5 mi estimated");
+  });
+
+  it("aborts pending road progress when the library unmounts", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_4" as RideSummary["rideId"],
+      title: "Recorded ride",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    };
+    const reader: RoadProgressReader = { read: vi.fn().mockReturnValue(new Promise(() => undefined)) };
+    const view = render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} roadProgressReader={reader} />);
+    fireEvent.click(await screen.findByRole("button", { name: "View details for Recorded ride" }));
+    await waitFor(() => expect(reader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal)));
+    const signal = vi.mocked(reader.read).mock.calls[0]?.[1];
+    view.unmount();
+    expect(signal?.aborted).toBe(true);
   });
 
   it("uses the shared primary nav with My rides as the current page", () => {

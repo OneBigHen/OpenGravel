@@ -2759,6 +2759,27 @@ h3,
   font-size: 13px;
 }
 
+.og-library__progress {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-sandstone);
+  border-radius: var(--og-radius-control);
+  background: var(--og-canvas);
+  color: var(--og-trail-brown);
+  font-size: 13px;
+}
+
+.og-library__progress strong {
+  color: var(--og-ink);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.og-library__progress p {
+  margin: 4px 0 0;
+}
+
 .og-library__track-thumbnail {
   display: block;
   width: min(100%, 240px);

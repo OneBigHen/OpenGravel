@@ -68,6 +68,25 @@ test.describe("recorded rides", () => {
     await page.getByTestId("ride-finish").click();
     await expect(page.getByTestId("ride-terminal")).toContainText("Recorded ride saved");
 
+    const catalogueRequests: URL[] = [];
+    await page.route("**/api/map-layers?**", async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      catalogueRequests.push(url);
+      expect(request.method()).toBe("GET");
+      expect(request.postData()).toBeNull();
+      await route.fulfill({ json: {
+        features: [{
+          id: "curvy:recording-fixture",
+          layerId: "great-roads",
+          name: "Mapped recording test road",
+          detail: null,
+          weight: 800,
+          geometry: { type: "LineString", coordinates: Array.from({ length: 24 }, (_, index) => [-75.44 + index * 0.0015, 40.14]) },
+        }],
+        unavailable: [],
+      } });
+    });
     await page.goto("/rides");
     const row = page.locator(".og-library__row").filter({ has: page.getByTestId("recorded-ride-summary") });
     await expect(row).toHaveCount(1);
@@ -75,6 +94,19 @@ test.describe("recorded rides", () => {
     await expect(row.getByTestId("recorded-track-thumbnail")).toBeVisible();
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("moving");
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("total");
+
+    const recordedSummary = await row.getByTestId("recorded-ride-summary").innerText();
+    expect(catalogueRequests).toHaveLength(0);
+    await row.getByRole("button", { name: "View details for Recorded ride" }).click();
+    const progress = row.getByTestId("recorded-road-progress");
+    await expect(progress).toContainText("Ridden on mapped good roads:");
+    await expect(progress).toContainText("New-to-you: Unknown");
+    await expect(progress).toContainText("Partial catalogue coverage");
+    expect(catalogueRequests).toHaveLength(1);
+    const query = catalogueRequests[0]!.searchParams;
+    expect([...query.keys()].sort()).toEqual(["bbox", "layers"]);
+    expect(query.get("layers")).toBe("great-roads,gravel");
+    await expect(row.getByTestId("recorded-ride-summary")).toHaveText(recordedSummary);
 
     await row.getByRole("button", { name: "Export Recorded ride" }).click();
     const downloadPromise = page.waitForEvent("download");

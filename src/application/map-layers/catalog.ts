@@ -19,6 +19,7 @@ export type MapLayerId =
   | "closures"
   | "great-roads"
   | "gravel"
+  | "road-history"
   | "fuel"
   | "food"
   | "coffee"
@@ -158,6 +159,18 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     minZoom: 8,
     color: "#776353",
     glyph: "⋯",
+  },
+  {
+    id: "road-history",
+    name: "Your ridden good roads",
+    category: "roads",
+    kind: "features",
+    legend: "Cool lines = mapped good roads you have ridden",
+    source: "Your saved rides + OpenGravel road catalogues",
+    caveat: "Estimated from local recordings and partial mapped-road coverage; it is not a complete riding history.",
+    minZoom: 8,
+    color: "#3d8495",
+    glyph: "↗",
   },
   {
     id: "fuel",
