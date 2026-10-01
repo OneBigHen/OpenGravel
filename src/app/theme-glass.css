@@ -1578,6 +1578,33 @@ html .og-ride {
     font-size: 16px;
   }
 
+  /* WebKit's native select text can paint outside its box at larger text
+     sizes. Keep that control bounded; its popup still exposes every option. */
+  .og-library .og-library__sort select {
+    appearance: none;
+    width: 100%;
+    min-width: 0;
+    padding-right: 40px;
+    overflow: hidden;
+  }
+
+  .og-library .og-library__sort {
+    position: relative;
+  }
+
+  .og-library .og-library__sort::after {
+    content: "";
+    position: absolute;
+    top: calc(50% - 6px);
+    right: 16px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--og-slate-text);
+    border-bottom: 2px solid var(--og-slate-text);
+    transform: rotate(45deg);
+    pointer-events: none;
+  }
+
   .og-library .og-library__chips {
     display: flex;
     flex-wrap: nowrap;

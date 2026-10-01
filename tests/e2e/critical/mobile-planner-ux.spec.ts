@@ -10,6 +10,17 @@ async function chooseEndpoints(page: Page) {
   await page.getByTestId("finish-search-results").getByTestId("place-option").click();
 }
 
+async function doubleTextSize(page: Page) {
+  // Snapshot sizes before changing them so nested text is doubled only once.
+  await page.evaluate(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>(
+      "p, span, button, a, label, legend, h1, h2, h3, input, select, summary, .og-planner__nav-shell",
+    )).filter((element) => !element.closest("svg") && element.textContent?.trim());
+    const sizes = elements.map((element) => ({ element, size: parseFloat(getComputedStyle(element).fontSize) }));
+    for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
@@ -52,13 +63,21 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await page.getByTestId("sheet-handle").click();
   const head = page.getByTestId("sheet-head");
-  const handle = await page.getByTestId("sheet-handle").boundingBox();
-  const clear = await page.getByTestId("clear-ride").boundingBox();
-  if (handle === null || clear === null) throw new Error("sheet controls must be measurable");
+  // Measure together: separate protocol calls can sample different frames
+  // while the expanding sheet's max-height transition moves the whole head.
+  const boxes = await head.evaluate((element) => {
+    const box = (id: string) => {
+      const control = element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+      if (control === null) throw new Error(`${id} must be measurable`);
+      const { y, width, height } = control.getBoundingClientRect();
+      return { id, y, width, height };
+    };
+    return ["undo", "redo", "clear-ride", "sheet-handle"].map(box);
+  });
+  const handle = boxes.find((box) => box.id === "sheet-handle")!;
+  const clear = boxes.find((box) => box.id === "clear-ride")!;
   expect.soft(Math.abs(handle.y + handle.height / 2 - clear.y - clear.height / 2)).toBeLessThanOrEqual(2);
-  for (const id of ["undo", "redo", "clear-ride", "sheet-handle"]) {
-    const box = await head.getByTestId(id).boundingBox();
-    if (box === null) throw new Error(`${id} must be measurable`);
+  for (const { id, ...box } of boxes) {
     expect.soft(box.height, `${id} touch height`).toBeGreaterThanOrEqual(44);
     expect.soft(box.width, `${id} touch width`).toBeGreaterThanOrEqual(44);
   }
@@ -77,14 +96,7 @@ test("200 percent text keeps navigation labels and the planner sheet separate", 
   await page.getByTestId("compose-create").click();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await page.getByTestId("sheet-handle").click();
-  // Snapshot sizes before changing them so nested text is doubled only once.
-  await page.evaluate(() => {
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(
-      "p, span, button, a, label, legend, h1, h2, h3, input, select, summary, .og-planner__nav-shell",
-    )).filter((element) => !element.closest("svg") && element.textContent?.trim());
-    const sizes = elements.map((element) => ({ element, size: parseFloat(getComputedStyle(element).fontSize) }));
-    for (const { element, size } of sizes) element.style.fontSize = `${size * 2}px`;
-  });
+  await doubleTextSize(page);
   const nav = page.getByTestId("primary-nav");
   const labelsFit = () => nav.locator("a").evaluateAll((links) => links.every((link) => {
     const label = link.querySelector(".og-nav__label");
@@ -118,4 +130,19 @@ test("200 percent text keeps navigation labels and the planner sheet separate", 
   expect.soft(fade.tops[0]).toBeGreaterThanOrEqual(fade.headBottom - 1);
   expect(fade.tops[0]).toBeLessThanOrEqual(body.y + 1);
   for (const link of await nav.locator("a").all()) await expect(link).toBeInViewport({ ratio: 1 });
+});
+
+test("320px library sort remains usable with 200 percent text", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/rides");
+  await expect(page.getByRole("heading", { name: "Your library is ready for its first ride." })).toBeVisible();
+  await doubleTextSize(page);
+  const sort = page.locator(".og-library__sort select");
+  await sort.scrollIntoViewIfNeeded();
+  const width = await page.evaluate(() => ({ viewport: innerWidth, page: document.documentElement.scrollWidth }));
+  expect(width.page).toBeLessThanOrEqual(width.viewport + 1);
+  await sort.selectOption("updated-asc");
+  await expect(sort).toHaveValue("updated-asc");
+  await sort.selectOption("updated-desc");
+  await expect(sort).toHaveValue("updated-desc");
 });
