@@ -90,13 +90,31 @@ Do not expose the key to browser code.
 
 No configured OpenRouter key => return no judge / no call.
 
-## One request per stable candidate set
+## Balanced permutation requests per stable candidate set
 
-One Jev request should answer all questions against the same compact state.
+Order bias is now a required part of P0.
+
+Use the application helpers already on the branch:
+
+- `buildBalancedJevFrontierPermutations()`
+- `auditJevFrontierOrder()`
+
+For two candidates, run both AB and BA.
+
+For three candidates, run three cyclic permutations so every stable candidate
+appears exactly once in A, B and C.
+
+Use a reproducible seed containing the corpus/experiment case id. Log the seed
+and permutation mapping.
+
+Each permutation is one Jev request containing all Choice + Score + Noul
+questions against the same compact facts.
 
 ### Choice
 
-Options are each supplied candidate id plus `NONE`.
+Options are presentation slots `A`, `B`, optional `C`, plus `NONE`.
+The adapter must map slots back to stable candidate ids before returning/logging
+the experiment result.
 
 Instructions must say, in substance:
 
@@ -156,7 +174,7 @@ Jev may receive:
 - canonical score/rank;
 - distance/duration;
 - evidence coverage;
-- compact rider posterior weights/evidence counts;
+- compact rider posterior mean, precision and evidence counts;
 - precomputed rider preference utility;
 - deterministic coherence metrics.
 
@@ -170,12 +188,15 @@ The experiment must be incapable of breaking planning.
 - zero retries;
 - strict timeout;
 - caller abort respected;
-- transport failure => null/no judgment;
-- invalid state => no call;
-- malformed answer => null/no judgment;
-- invented candidate id => null/no judgment;
-- malformed probability map => null/no judgment;
-- missing score => null/no judgment;
+- transport failure => structured `failed/transport-error`;
+- timeout => structured `failed/timeout`;
+- abort => structured `failed/aborted`;
+- invalid state => structured `skipped/invalid-state`, no call;
+- disabled/no key => structured `skipped/disabled`;
+- malformed answer => structured `invalid/malformed-response`;
+- invented candidate id => structured validation failure;
+- malformed probability map => structured validation failure;
+- missing or inconsistent score => structured validation failure;
 - low confidence => retain telemetry, no production behavior change.
 
 Do not copy Jev Router's fail-the-request semantics into OpenGravel routing.
@@ -203,7 +224,10 @@ Emit stable machine-readable JSON for each candidate set containing:
 - canonical ranks;
 - rider preference utilities/probabilities if available;
 - exact Jev model snapshot returned;
-- Choice + all option probabilities + confidence;
+- permutation seed/id and A/B/C -> stable id mapping;
+- Choice + all option probabilities + confidence per permutation;
+- aggregate stable-id probabilities;
+- Choice flip rate / order-dependent flag;
 - every candidate Score + distribution + confidence;
 - Noul probability;
 - latency;
@@ -212,6 +236,50 @@ Emit stable machine-readable JSON for each candidate set containing:
 - telemetry-only counterfactual status.
 
 Never log keys or raw GPS.
+
+
+## Mandatory leakage ablations
+
+Do not evaluate only the full state. The point is to measure incremental value,
+not whether Jev can reconstruct OpenGravel's rank.
+
+Replay the same frozen candidate sets through:
+
+- **A:** explicit intent + intrinsic normalized measurements;
+- **B:** A + rider posterior mean/precision/evidence + rider utility;
+- **C:** B + canonical score/rank;
+- **D:** deterministic frontier + rider model, no Jev.
+
+Treat D as the control.
+
+If C improves deterministic-baseline agreement but not held-out rider Brier
+score/log loss/top-choice accuracy over B or D, report baseline leakage rather
+than a Jev improvement.
+
+Avoid duplicate derived signals inside a variant. Prefer intrinsic measurements
+to both the measurement and a second aggregate derived from it.
+
+## Calibration metrics
+
+Agreement with the deterministic baseline is diagnostic only.
+
+For held-out blinded labels compute:
+
+- top-choice accuracy;
+- multiclass log loss;
+- Brier score;
+- reliability curves;
+- expected calibration error;
+- abstention coverage;
+- selective accuracy;
+- order flip rate;
+- repeated-identical-request stability.
+
+Split calibration/test data by corridor and ride session, not individual
+candidate set.
+
+Do not claim promotion readiness from a single rider or the current eight-case
+unlabeled corpus.
 
 ## Invariance tests
 
@@ -255,6 +323,23 @@ No `RouteScore` field is overwritten from Jev output.
 No candidate is added or made eligible based on Jev.
 
 The adapter should depend inward on the application port, never the reverse.
+
+
+## Required dependency before interpreting results
+
+PR #34 contains the exact bounded-regret correction for the current small
+candidate pool. It is still open/draft as of this handoff.
+
+Do not interpret Jev benchmark results against the known-approximate shortlist.
+Either:
+
+1. rebase/stack the experiment onto #34 after it is validated, or
+2. wait for #34 to merge and then replay the same frozen corpus.
+
+Do not merge #34 from this task unless its own CI/review gate is satisfied.
+
+PR #51 may continue implementing the adapter/harness while #34 is pending, but
+its results are provisional until the exact selector is used.
 
 ## Do not do these in PR #51
 
@@ -306,7 +391,12 @@ Review the final diff adversarially for:
 
 - hidden routing authority creep;
 - accidental raw rider-data upload;
-- model alias drift;
+- model alias drift (both frontier and route-character Jev must remain pinned to 1.13);
+- candidate-order / A-B-C bias;
+- score value that disagrees with its probability distribution;
+- Choice label that is not the unique probability argmax;
+- unsafe object-key candidate ids;
+- remote JSON assumptions without runtime guards;
 - retries/latency on the ride path;
 - threshold constants masquerading as product policy;
 - confusing Jev confidence with option probability;
