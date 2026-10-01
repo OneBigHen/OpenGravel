@@ -88,6 +88,17 @@ describe("routing method comparisons", () => {
     expect(vm.methods[1]?.routeId).toBe(sustained.id);
   });
 
+  it.each(["measured", "one-missing", "all-missing"] as const)("preserves Balanced's baseline comparison with %s continuity and changed route order", (coverage) => {
+    const isolated = route("a-isolated", 60, 0.8, coverage === "all-missing" ? null : 40);
+    if (isolated.evidence.curvature !== undefined) Object.assign(isolated.evidence.curvature.value as object, { curvyMeters: 40, continuityShare: 1 });
+    const sustained = route("z-sustained", 60, 0.8, coverage === "measured" ? 1_400 : null);
+    const intent = { ...defaultRideIntent(), roadCharacter: "balanced" as const };
+    for (const candidates of [[isolated, sustained], [sustained, isolated]]) {
+      const vm = compare(bundle(candidates), { intent });
+      expect(vm.methods[1]?.routeId).toBe(isolated.id);
+    }
+  });
+
   it("leaves missing bend evidence out of the common comparison instead of treating it as a measured zero", () => {
     const missing = route("missing", 60, 0.82, null);
     const measuredZero = route("zero", 60, 0.82, 0);

@@ -1,6 +1,6 @@
 # Frontier routing quality slice
 
-Status: **implemented comparison slice; release verification in progress**
+Status: **implemented opt-in comparison; rider/on-road calibration unverified**
 
 The baseline for this note is the public release at `9e970f8`. The
 intent-centered profile slice described below is the follow-up implementation
@@ -33,7 +33,8 @@ and an exact bounded subset case
 In the public baseline, the live comparison used one fixed
 `efficient`/`curvy`/`backroads` profile set for every ride. It computed a
 continuity value but did not include the vector's `flow` axis in those fixed
-profiles, so continuity could not affect Frontier selection
+profiles, so continuity did not contribute to profile utility. It still
+participated in Pareto dominance and could therefore affect selection
 ([baseline comparison](https://github.com/OneBigHen/OpenGravel/blob/9e970f8769de9e6f4aaeaed4cb0c308e17b22e2b/src/application/planner/routing-method-comparison.ts#L49-L54)).
 The baseline's stored continuity ratio was `longestRunMeters / curvyMeters`;
 when a route has a small amount of curved geometry, that ratio can be one even
@@ -62,7 +63,7 @@ existing `selectLowRegretRepresentatives` call. The actual neighborhoods are:
 
 | Intent / evidence | Current profiles |
 | --- | --- |
-| `balanced` | `efficient`, `curvy`, `backroads` using the baseline weights |
+| `balanced` | `efficient`, `curvy`, `backroads` using the baseline weights and full legacy dominance vector |
 | `efficient` | `efficient`, `efficient-flexible`, `efficient-direct` with time-efficiency weights `0.85`, `0.75`, and `0.90` |
 | `curvy`, continuity unavailable | `curvy`, `curvy-flexible`, `curvy-focused` with curvature weights `0.75`, `0.65`, and `0.80` |
 | `curvy`, common continuity measured | the same three IDs, with `flow` weights `0.25`, `0.20`, and `0.25` and lower curvature weights `0.50`, `0.45`, and `0.55` |
@@ -78,6 +79,12 @@ candidate has a validated run length. Otherwise the profile keeps `flow` out of
 its weights and the comparison vector omits that axis for every candidate;
 the underlying measured evidence and missing values remain unchanged. This is a
 common-support gate, not an imputation rule.
+
+Only Curvy opts into the new run-quality and common-support projection.
+Balanced retains the baseline's stored continuity ratio and partial-evidence
+dominance behavior as well as its weights; an unused utility axis can still
+affect Pareto pruning. Regression fixtures cover measured and missing continuity
+and candidate order so corpus agreement is not the only equivalence check.
 
 The `curvy` profiles use both total curve density and a separate continuity
 axis. A route's total curve value remains the existing normalized curvature
@@ -180,8 +187,8 @@ The release work should run a private before/after real-router corpus of roughly
 8–12 named PA/NJ area pairs covering a direct corridor, a rural corridor, a
 bend-rich corridor, a mostly straight corridor, and a loop budget. The harness
 should generate routes and discard geometry after computing aggregate records.
-The final gate report belongs in the release handoff; this note records only the
-benchmark shape. Track only:
+The final gate report belongs in the release handoff; this note records the
+benchmark shape and aggregate observations below. Track only:
 
 - eligible-candidate and profile-coverage rates;
 - selected profile ID and route fingerprint, with fingerprints salted or

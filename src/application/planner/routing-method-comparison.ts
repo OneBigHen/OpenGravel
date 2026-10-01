@@ -1,6 +1,6 @@
 /** Read-only comparisons over one canonically eligible PlanningSession bundle. */
 import { isUsableEvidence } from "@/domain/evidence/types";
-import type { RideIntent } from "@/domain/ride/types";
+import type { RideIntent, RoadCharacterIntent } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import { funFeaturesFromRouteScore, mappedGravelAffinityFromEvidence } from "@/domain/route/fun";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
@@ -52,7 +52,7 @@ function validRoute(candidate: RouteCandidate): boolean {
     Number.isFinite(candidate.distanceMeters) && candidate.distanceMeters > 0;
 }
 
-function measuredBendRun(candidate: RouteCandidate): { readonly longest: number; readonly sustainedQuality: number } | null {
+function measuredBendRun(candidate: RouteCandidate): { readonly longest: number; readonly sustainedQuality: number; readonly legacyContinuity: number | null } | null {
   const evidence = candidate.evidence.curvature;
   if (evidence === undefined || !isUsableEvidence(evidence) || typeof evidence.value !== "object" || evidence.value === null) return null;
   const value = evidence.value as Record<string, unknown>;
@@ -65,10 +65,14 @@ function measuredBendRun(candidate: RouteCandidate): { readonly longest: number;
   // A tiny isolated bend can have longest/bends = 1. Scale that continuity by
   // the measured route share, without a fitted distance threshold or traffic
   // claim. Recompute from validated lengths instead of trusting a stored ratio.
-  return { longest, sustainedQuality: bends === 0 ? 0 : Math.sqrt((longest / bends) * (longest / total)) };
+  const legacy = value["continuityShare"];
+  return {
+    longest, sustainedQuality: bends === 0 ? 0 : Math.sqrt((longest / bends) * (longest / total)),
+    legacyContinuity: typeof legacy === "number" && Number.isFinite(legacy) && legacy >= 0 && legacy <= 1 ? legacy : null,
+  };
 }
 
-function frontierCandidate(candidate: RouteCandidate, fastestSeconds: number): FrontierCandidate<RouteCandidate> {
+function frontierCandidate(candidate: RouteCandidate, fastestSeconds: number, roadCharacter: RoadCharacterIntent): FrontierCandidate<RouteCandidate> {
   // Finite inputs with unknown, stale or unavailable provenance stay unknown.
   const measuredScore = { ...candidate.score, components: Object.fromEntries(
     Object.entries(candidate.score.components).map(([key, component]) => [key,
@@ -83,7 +87,7 @@ function frontierCandidate(candidate: RouteCandidate, fastestSeconds: number): F
     quality: {
       timeEfficiency: fastestSeconds / candidate.durationSeconds,
       curvature: features.curvature,
-      flow: bendRun?.sustainedQuality ?? null,
+      flow: roadCharacter === "curvy" ? bendRun?.sustainedQuality ?? null : bendRun?.legacyContinuity ?? null,
       backroad: features.backroad,
       surfaceFit: features.surfaceFit,
       gravelAffinity: mappedGravelAffinityFromEvidence(candidate.evidence, candidate.distanceMeters),
@@ -110,11 +114,13 @@ export function buildRoutingMethodComparison(input: ComparisonInput): RoutingCom
     ? route.durationSeconds <= fastestShownSeconds * (1 + PA_NJ_ROUTE_POLICY_VNEXT_1.roleDetourEnvelopes["best-ride"].maximumPct)
     : timebox.has(index));
   const fastestSeconds = Math.min(...comparable.map((route) => route.durationSeconds));
-  const quality = comparable.map((route) => frontierCandidate(route, fastestSeconds));
+  const quality = comparable.map((route) => frontierCandidate(route, fastestSeconds, input.intent.roadCharacter));
   // Enough common evidence must exist; time alone cannot earn a comparison.
   const enoughEvidence = quality.filter((candidate) => candidate.quality.curvature !== null && candidate.quality.backroad !== null);
   const commonContinuity = enoughEvidence.length > 0 && enoughEvidence.every((candidate) => candidate.quality.flow !== null);
-  const comparisonQuality = commonContinuity ? enoughEvidence : enoughEvidence.map((candidate) => ({ ...candidate, quality: { ...candidate.quality, flow: null } }));
+  // Only Curvy opts into the new metric and common-support projection. Balanced
+  // keeps its complete baseline dominance vector, including partial evidence.
+  const comparisonQuality = input.intent.roadCharacter !== "curvy" || commonContinuity ? enoughEvidence : enoughEvidence.map((candidate) => ({ ...candidate, quality: { ...candidate.quality, flow: null } }));
   const frontier = enoughEvidence.length === 0 ? null : selectLowRegretRepresentatives(comparisonQuality, frontierComparisonProfiles(input.intent.roadCharacter, commonContinuity), 1, { minimumUtilityCoverage: 0.8 })[0]?.payload ?? null;
   const sustained = comparable.filter((route) => (measuredBendRun(route)?.longest ?? 0) > 0).sort((left, right) =>
     measuredBendRun(right)!.longest - measuredBendRun(left)!.longest || left.durationSeconds - right.durationSeconds || left.fingerprint.localeCompare(right.fingerprint),

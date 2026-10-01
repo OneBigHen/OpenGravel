@@ -53,7 +53,7 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
     await expect(page.getByTestId("routing-method-comparison")).not.toBeVisible();
     await handle.click();
   }
-  // The fixture's classic recommendation is also fastest. Start by manually
+  // The balanced fixture's classic recommendation is also fastest. Start by manually
   // choosing its other valid route so the comparison exercises a real switch.
   await page.locator('[data-testid^="route-card-"][aria-pressed="false"]').first().click();
   const comparison = page.getByTestId("routing-method-comparison");
@@ -64,6 +64,9 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
 test("phone Frontier explains the authored Curvy choice and waits for manual application", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await planComparison(page, "curvy");
+  // Curvy's canonical Best Ride differs from Fastest in this fixture. Choose
+  // that card before inspecting Frontier so the manual action switches routes.
+  await page.locator('[data-testid^="route-card-"]').filter({ hasText: "Best Ride" }).click();
   const selected = page.locator('[data-testid^="route-card-"][aria-pressed="true"]');
   const before = await selected.getAttribute("data-testid");
   const frontier = page.getByTestId("routing-method-frontier");
