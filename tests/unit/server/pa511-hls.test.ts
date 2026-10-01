@@ -62,15 +62,23 @@ describe("PA 511 HLS relay", () => {
     }
   });
 
-  it("rejects tampered relay tokens", () => {
+  it.each([
+    ["IV", 0],
+    ["authentication tag", 12],
+    ["ciphertext", 28],
+  ])("rejects a tampered %s in relay tokens", (_part, byteOffset) => {
     const token = encryptPa511RelayToken({
       version: 1,
       cameraId: "123",
       upstreamUrl: "https://video.example.test/live/segment.ts",
       expiresAt: 2_000,
     }, SECRET);
-    const replacement = token.endsWith("A") ? "B" : "A";
-    expect(() => decryptPa511RelayToken(`${token.slice(0, -1)}${replacement}`, SECRET)).toThrow();
+    // Changing the last base64url character can change only unused padding
+    // bits, leaving the authenticated bytes intact. Corrupt an actual byte.
+    const packed = Buffer.from(token, "base64url");
+    packed[byteOffset] = packed[byteOffset]! ^ 1;
+    expect(packed.equals(Buffer.from(token, "base64url"))).toBe(false);
+    expect(() => decryptPa511RelayToken(packed.toString("base64url"), SECRET)).toThrow();
   });
 
   it("rejects malformed tokens without contacting an upstream", async () => {
