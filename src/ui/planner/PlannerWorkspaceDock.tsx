@@ -264,14 +264,14 @@ export function PlannerWorkspaceDock({
             data-detent={sheetDetent}
             aria-expanded={sheetDetent === "expanded"}
             aria-controls="og-sheet-body"
-            aria-label={`${sheetDetent === "expanded" ? "Hide" : "Show"} ride choices${
+            aria-label={`${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
               viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
             }`}
             onClick={onToggleSheet}
           >
             <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
               {/* Collapsed with alternatives behind it, the label says what a tap does (FT-02). */}
-              {sheetDetent !== "expanded" && viewModel.routeCards.length > 1 ? "Compare rides" : "Ride choices"}
+              {hasChoices ? (sheetDetent !== "expanded" && viewModel.routeCards.length > 1 ? "Compare rides" : "Ride choices") : "Ride style"}
             </span>
             {viewModel.routeCards.length === 0 ? null : (
               <span className="og-sheet__handle-count" data-testid="ride-choices-count">
@@ -364,17 +364,7 @@ export function PlannerWorkspaceDock({
             the wide tier the result portals to the inspector either way.
           */}
           {hasChoices ? <PlannerResultPanel {...results} /> : null}
-          <IntentComposer {...composer} />
-          {planning ? (
-            <button
-              type="button"
-              className="og-secondary"
-              data-testid="cancel-planning"
-              onClick={onCancelPlanning}
-            >
-              Cancel
-            </button>
-          ) : null}
+          <IntentComposer {...composer} {...(planning ? { onCancelPlanning } : {})} />
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           <PlannerRefineWorkspace {...refine} />
         </div>

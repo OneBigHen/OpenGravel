@@ -213,6 +213,28 @@ describe("PlaceSearchField", () => {
     expect(onPick).toHaveBeenCalledWith(JIM_THORPE, "jim");
   });
 
+  it("Enter as an answer arrives still picks once before React commits the result list", async () => {
+    vi.useFakeTimers();
+    const onPick = vi.fn();
+    let resolveSearch!: (answer: Awaited<ReturnType<PlaceSearchPort["search"]>>) => void;
+    const response = new Promise<Awaited<ReturnType<PlaceSearchPort["search"]>>>((resolve) => { resolveSearch = resolve; });
+    const port: PlaceSearchPort = { search: () => response, reverse: async () => null };
+    render(<PlaceSearchField slot="finish" search={port} onPick={onPick} />);
+    const input = screen.getByRole("combobox");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "hawk" } });
+    await act(async () => { vi.advanceTimersByTime(PLACE_SEARCH_DEBOUNCE_MS); });
+
+    await act(async () => {
+      resolveSearch({ status: "ok", places: [HAWK] });
+      await response;
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+
+    expect(onPick).toHaveBeenCalledExactlyOnceWith(HAWK, "hawk");
+    expect(input).toHaveValue("");
+  });
+
   it("says so when nothing matches, and when search is down", async () => {
     vi.useFakeTimers();
     const { unmount } = render(<PlaceSearchField slot="start" search={fakePort([])} onPick={vi.fn()} />);

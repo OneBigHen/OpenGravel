@@ -674,9 +674,9 @@ describe("the expanded sheet's scroll affordance", () => {
     // …and the fade that makes a clipped row read as scrolled: it hangs exactly
     // where the scroller begins.
     expect(css).toMatch(
-      /\.og-planner__sheet\[data-detent="expanded"\]::after\s*\{[^}]*top:\s*var\(--og-sheet-head-height/,
+      /\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__head::after\s*\{[^}]*top:\s*calc\(100% \+ 8px\)/,
     );
-    expect(css).toMatch(/\.og-planner__sheet\[data-detent="expanded"\]::after\s*\{[^}]*linear-gradient/);
+    expect(css).toMatch(/\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__head::after\s*\{[^}]*linear-gradient/);
   });
 
   it("never pads the scroll container by the header height, which would leave a permanent band", () => {

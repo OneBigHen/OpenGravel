@@ -138,7 +138,13 @@ export function buildRoutingMethodComparison(input: ComparisonInput): RoutingCom
     "Uses your loop time range, or the closest valid route if none fits. Check the route time before riding.";
   const continuityCaveat = input.intent.roadCharacter === "curvy" && !commonContinuity
     ? " Mapped bend continuity is not comparable across every choice, so it is left out." : "";
-  const frontierDetail = `Uses your ${ROADS_LABELS[input.intent.roadCharacter]} Roads choice to weigh time, curves and backroads. Chooses the smallest worst tradeoff across small variations of that preference.${input.intent.roadCharacter === "curvy" ? " When every choice has measured bend lengths, Curvy also values sustained sections on the mapped route. This estimates road shape, not traffic flow or safety." : ""} Compares existing routes from this search.`;
+  const frontierDetail = [
+    `Uses your ${ROADS_LABELS[input.intent.roadCharacter]} Roads choice to balance time, curves and backroads. Prefers a route that holds up across small changes to those priorities.`,
+    ...(input.intent.roadCharacter === "curvy" ? [
+      "When every choice has measured bend lengths, Curvy also values sustained sections on the mapped route. This estimates road shape, not traffic flow or safety.",
+    ] : []),
+    "Compares the routes already found for this ride. Change Ride style and replan to search different roads.",
+  ].join("\n\n");
   const reading = input.reading;
   const assessed = reading === undefined ? undefined : routes.find((route) => route.fingerprint === reading.fingerprint);
   const jevAvailable = assessed !== undefined && reading !== undefined && !input.stale && reading.label !== "UNKNOWN" &&
@@ -149,7 +155,7 @@ export function buildRoutingMethodComparison(input: ComparisonInput): RoutingCom
       method("classic", "Classic", "The usual recommendation for your ride.", "Uses the route score, your ride preferences, and the normal role and detour policy.", classic, null),
       method("frontier", "Frontier", "Follows your Roads choice while balancing measured tradeoffs.", frontierDetail, frontier,
         frontier === null ? "Not enough comparable evidence for a frontier recommendation." : `${budgetCaveat}${continuityCaveat}${unknown ? " Traffic or junction quality is unknown and is not guessed." : ""}`),
-      method("sustained-curves", "Sustained curves", "Looks for a longer uninterrupted run of bends.", "Compares the longest bend run measured on the mapped route geometry, rather than counting every turn. This estimates road shape, not traffic flow, pavement condition or safety.", sustained,
+      method("sustained-curves", "Sustained curves", "Looks for a longer uninterrupted run of bends.", "Compares the longest bend run measured on the mapped route geometry, rather than counting every turn.\n\nThis estimates road shape, not traffic flow, pavement condition or safety.", sustained,
         sustained === null ? comparable.some((route) => measuredBendRun(route) !== null)
           ? "No sustained bend run was measured in the valid choices within the time limit."
           : "Sustained curve continuity is unavailable for these routes." : budgetCaveat),

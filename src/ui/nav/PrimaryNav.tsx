@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import Link from "next/link";
 
 /**
@@ -91,8 +91,37 @@ function NavIcon({ href }: { readonly href: string }) {
 }
 
 export function PrimaryNav({ current, items = PRIMARY_NAV_ITEMS }: PrimaryNavProps) {
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (shell === null) return;
+    const root = document.documentElement.style;
+    const property = "--og-tabbar-measured-pill-h";
+    const previous = root.getPropertyValue(property);
+    let ownedValue = previous;
+    // Reserve the rendered bar, including text reflow, for every page's
+    // bottom padding and the planner dock. This is only a layout measurement.
+    const measure = (): void => {
+      const height = shell.getBoundingClientRect().height;
+      ownedValue = getComputedStyle(shell).position === "fixed" && height > 0 ? `${height}px` : "";
+      if (root.getPropertyValue(property) === ownedValue) return;
+      if (ownedValue === "") root.removeProperty(property);
+      else root.setProperty(property, ownedValue);
+    };
+    measure();
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
+    observer?.observe(shell);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+      if (root.getPropertyValue(property) !== ownedValue) return;
+      if (previous === "") root.removeProperty(property);
+      else root.setProperty(property, previous);
+    };
+  }, []);
   return (
-    <div className="og-planner__nav-shell" data-testid="primary-nav">
+    <div className="og-planner__nav-shell" data-testid="primary-nav" ref={shellRef}>
       <nav className="og-planner__nav" aria-label="Primary">
         {items.map((item, index) => (
           <Fragment key={item.href}>
