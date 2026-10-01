@@ -141,6 +141,17 @@ The bracketed step writes diagnostics/experiment telemetry only.
 The existing deterministic bundle is constructed exactly as if Jev did not
 exist.
 
+### Baseline identity must not leak into Choice
+
+`deterministicBaselineId` is an internal experiment fact used for comparison
+and Noul construction. It must never be copied into the shared Jev state.
+
+The transport projection exposes candidates only as A/B/C slots. For the
+independent Noul question, the adapter may identify the baseline slot inside
+that Noul question's own instructions. OpenRouter documents that Jev evaluates
+questions independently against the same state, so this keeps the Choice/Score
+state blind to which candidate OpenGravel selected.
+
 ### Candidate budget
 
 Send **2 or 3 candidates only**.
@@ -157,7 +168,7 @@ presentation, not a second hidden candidate universe.
 
 ### State sent to Jev
 
-Use the versioned `JevFrontierState` application contract.
+Build the internal versioned `JevFrontierState`, then project it with `projectJevFrontierTransportState()` for the specific A/B/C ablation and candidate permutation. Never serialize the internal state wholesale.
 
 #### Explicit intent
 
