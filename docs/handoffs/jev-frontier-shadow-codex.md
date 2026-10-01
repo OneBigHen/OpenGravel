@@ -331,19 +331,11 @@ The adapter should depend inward on the application port, never the reverse.
 
 ## Required dependency before interpreting results
 
-PR #34 contains the exact bounded-regret correction for the current small
-candidate pool. It is still open/draft as of this handoff.
+PR #34's exact bounded-regret correction is now merged into `main`.
 
-Do not interpret Jev benchmark results against the known-approximate shortlist.
-Either:
-
-1. rebase/stack the experiment onto #34 after it is validated, or
-2. wait for #34 to merge and then replay the same frozen corpus.
-
-Do not merge #34 from this task unless its own CI/review gate is satisfied.
-
-PR #51 may continue implementing the adapter/harness while #34 is pending, but
-its results are provisional until the exact selector is used.
+Before any Jev corpus run, sync/rebase PR #51 onto current `main` and confirm
+the frozen shortlist is produced by the exact selector. Do not interpret results
+from the older greedy/local-exchange implementation.
 
 ## Do not do these in PR #51
 
