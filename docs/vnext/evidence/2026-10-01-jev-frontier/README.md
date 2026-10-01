@@ -1,6 +1,7 @@
 # PR #51: server adapter, replay, and real-router evidence
 
-This is a shadow-only experiment. GraphHopper was exercised live; Jev was not.
+This is a shadow-only experiment. GraphHopper was exercised live. Direct TypeSafe
+transport was subsequently exercised, but pinned Jev inference is unavailable.
 There are no blinded rider labels and no evidence of incremental held-out value.
 No rider-visible route, eligibility, score, geometry, rerouting, or Free Ride path
 imports the new adapter or replay harness.
@@ -35,6 +36,9 @@ selection/scoring retain their existing boundaries. PlannerWorkspace is unchange
 | `smoke-policy.json` | Explicit, uncalibrated caller thresholds for the disabled smoke run; not product policy. |
 | `replay-disabled.json` | Seven cases × three ablations × two permutations × two repeats = 84 structured disabled skips; D requires no model calls. |
 | `run-metadata.json` | Service version, profiles, base/donor identity, and availability limits. |
+| `typesafe-model-catalog.json` | Authenticated direct catalog: latest/preview only, no pinned 1.13 entry. |
+| `typesafe-pinned-pilot.json` | Six direct A/B/C × AB/BA requests, all structured HTTP 400 failures/abstentions. |
+| `typesafe-live-status.json` | Direct transport identity, request budget, model-availability failure, and no-inference limitations. |
 
 Inputs use public-place scenarios, ephemeral candidate IDs, and aggregate evidence.
 They contain no rider history or route geometry. Unknown coherence measurements and
@@ -81,14 +85,17 @@ npm run experiment:jev-frontier -- \
 The live suite emits `ROUTING_QUALITY_JSON` and `JEV_FRONTIER_FROZEN_JSON` records.
 The CLI defaults to zero remote calls. Live requests additionally require `--live`,
 `OGV_JEV_FRONTIER_SHADOW=1`, and a server-only `OPENROUTER_API_KEY`. No OpenRouter
-credential was available in the checked process/service environments. The existing
-direct TypeSafe `JEV_API_KEY` is not used as an OpenRouter fallback.
+credential was available in the original checked process/service environments.
+After the owner supplied a direct TypeSafe key, the explicit direct transport was
+tested. Add `--provider typesafe --live` with `JEV_API_KEY` and the opt-in flag for
+direct requests. No credential is used as a cross-provider fallback.
 
 ## Remaining limitations
 
-- No live Jev request, model-resolution proof, empirical stability/order-bias
-  measurement, or Jev cost measurement was possible. Injected SDK fetch tests
-  verify transport and decoding, not the remote service.
+- No pinned Jev inference, model-resolution proof, empirical stability/order-bias
+  measurement, or Jev cost measurement was possible. Direct TypeSafe rejected
+  `jev-1.13` with HTTP 400; its authenticated catalog lists only latest/preview.
+  Live failed-request evidence is preserved, and no moving alias was substituted.
 - No blinded pre/post-ride multi-rider labels exist. Log loss, Brier, calibration,
   selective accuracy, and incremental value remain unavailable for this corpus.
   Synthetic tests verify metric arithmetic and split/fingerprint safeguards.

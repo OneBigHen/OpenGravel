@@ -234,3 +234,37 @@ it("does not copy arbitrary failure messages from a replay judge", async () => {
     reason: "malformed-response",
   });
 });
+
+it.each([400, 999])(
+  "retains only valid numeric HTTP failure metadata (%s)",
+  async (httpStatus) => {
+    const record = await runJevFrontierReplay(
+      replayCase(),
+      {
+        judge: {
+          async judge() {
+            return {
+              status: "failed",
+              reason: "transport-error",
+              latencyMs: 1,
+              httpStatus,
+              message: "raw-private-history",
+            } as never;
+          },
+        },
+        seed: "e",
+        repeats: 1,
+        policy,
+      },
+      new AbortController().signal,
+    );
+    const result = record.variants.A.runs[0]!.result;
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "transport-error",
+    });
+    if (httpStatus === 400) expect(result).toHaveProperty("httpStatus", 400);
+    else expect(result).not.toHaveProperty("httpStatus");
+    expect(JSON.stringify(record)).not.toContain("raw-private-history");
+  },
+);

@@ -676,7 +676,7 @@ The long-term architecture remains:
 
 `src/infrastructure/routing/jev-frontier-judge.ts` implements the application
 port with `@typesafe-ai/sdk` 0.6.0. It imports `server-only`, requires
-`OGV_JEV_FRONTIER_SHADOW=1` **and** `OPENROUTER_API_KEY`, pins `jev-1.13`,
+`OGV_JEV_FRONTIER_SHADOW=1` **and** the selected provider's key, pins `jev-1.13`,
 and overrides the SDK defaults with zero retries, a 1,500 ms provider timeout,
 and logging off. An outer deadline bounds even a fetch implementation that
 ignores cancellation. Each request and its response mapping use a frozen input;
@@ -711,8 +711,12 @@ npm run experiment:jev-frontier -- \
 
 This defaults to disabled, makes **zero model calls**, and exercises case
 validation, seeded permutations, structured skips, D control and output.
-Live calls additionally require `--live`, the opt-in flag and an OpenRouter key
-in the server process environment. There is no direct-TypeSafe key fallback.
+Live calls additionally require `--live`, the opt-in flag and the selected provider's key
+in the server process environment. OpenRouter remains the default. Direct TypeSafe
+requires explicit `--provider typesafe` with server-only `JEV_API_KEY`; infrastructure
+callers explicitly set `OGV_JEV_FRONTIER_PROVIDER=typesafe`. URLs are fixed to the
+selected service, so `TYPESAFE_BASE_URL` cannot redirect a credential. There is no
+cross-provider key fallback, and unknown providers fail closed.
 `--labels /private/blinded-labels.json` supplies a separate label artifact.
 `--repeats` is an explicit measurement budget (1–10), never a retry policy;
 two candidates cost `6 * repeats` requests per case and three cost
@@ -806,6 +810,26 @@ variants while retaining intrinsic duration. Choice criteria identify the
 slot-specific state and explain field meaning without repeating numeric facts.
 No aggregate fun/coherence score duplicates intrinsic axes in this projection;
 unavailable flow/coherence/personalization axes remain null.
+
+### Direct TypeSafe follow-up
+
+The owner authorized direct TypeSafe credentials after the original OpenRouter
+run was unavailable. The CLI now accepts `--provider typesafe`; the same projection,
+model pin, retry/deadline, validation and routing-isolation rules apply.
+
+An authenticated direct catalog request succeeded and exposed only `jev-latest`
+and `jev-preview`. A six-request A/B/C × AB/BA pilot requesting `jev-1.13` returned
+HTTP 400 for every request. A bounded diagnostic request confirmed the provider
+error `Unknown model: jev-1.13`. No alias fallback was made, and no valid semantic
+judgment or resolved model was obtained. HTTP failure telemetry now retains only a
+validated numeric `httpStatus`, never raw provider bodies/messages. The curated
+catalog, failed pilot and availability metadata are preserved beside the original
+GraphHopper evidence. These outcomes prove the credential/transport boundary was
+exercised; they do not measure Jev quality, order bias, stability, or held-out value.
+
+The direct service must expose pinned 1.13, or an independently authorized
+exploratory alias experiment must be kept distinct from this pinned P0. The current
+PR never silently substitutes `jev-latest` or lowers validity/calibration gates.
 
 PR #33's regret-aware probe-allocation note was reviewed. Its control and
 explicit-intent lanes, leave-one-corridor-out estimates, and equal provider-call

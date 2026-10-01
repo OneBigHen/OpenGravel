@@ -37,6 +37,56 @@ describe("server-only frontier adapter", () => {
     }
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it("uses a direct TypeSafe key only with explicit provider selection", async () => {
+    const i = input(2);
+    const fetcher = vi.fn(
+      async (url: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(url)).toBe("https://api.typesafe.ai/v1/systemone");
+        expect(new Headers(init?.headers).get("authorization")).toBe(
+          "Bearer direct-test-key",
+        );
+        expect(JSON.parse(String(init?.body)).model).toBe("jev-1.13");
+        return Response.json(
+          remoteAnswer(i.permutation.slots.map((s) => s.slot)),
+        );
+      },
+    );
+    const direct = {
+      OGV_JEV_FRONTIER_SHADOW: "1",
+      JEV_API_KEY: "direct-test-key",
+    };
+    expect(
+      await jevFrontierJudgeFromEnv(direct, { fetcher }).judge(i, signal()),
+    ).toMatchObject({ status: "skipped", reason: "disabled" });
+    expect(
+      await jevFrontierJudgeFromEnv(
+        {
+          ...direct,
+          OGV_JEV_FRONTIER_PROVIDER: "typesafe",
+          OPENROUTER_API_KEY: "wrong-provider-key",
+          TYPESAFE_BASE_URL: "https://untrusted.invalid",
+        },
+        { fetcher },
+      ).judge(i, signal()),
+    ).toMatchObject({ status: "ok" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+  it("does not fall back across credential providers or accept an unknown provider", async () => {
+    const fetcher = vi.fn();
+    for (const e of [
+      { ...env, OGV_JEV_FRONTIER_PROVIDER: "typesafe" },
+      { ...env, OGV_JEV_FRONTIER_PROVIDER: "unknown", JEV_API_KEY: "test" },
+      {
+        OGV_JEV_FRONTIER_SHADOW: "1",
+        OGV_JEV_FRONTIER_PROVIDER: "openrouter",
+        JEV_API_KEY: "test",
+      },
+    ])
+      expect(
+        await jevFrontierJudgeFromEnv(e, { fetcher }).judge(input(), signal()),
+      ).toMatchObject({ status: "skipped", reason: "disabled" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it.each([2, 3])(
     "batches all questions for %s candidates and maps slots locally",
     async (count) => {
@@ -72,9 +122,15 @@ describe("server-only frontier adapter", () => {
       const first = i.state.candidates.find(
         (c) => c.id === i.permutation.slots[0]!.candidateId,
       )!;
-      expect(JSON.stringify(questions.choose!.criteria)).toContain("candidates[slot=A]");
-      expect(JSON.stringify(questions.choose!.criteria)).toContain("durationSeconds");
-      expect(JSON.stringify(questions.choose!.criteria)).not.toContain(String(first.durationSeconds));
+      expect(JSON.stringify(questions.choose!.criteria)).toContain(
+        "candidates[slot=A]",
+      );
+      expect(JSON.stringify(questions.choose!.criteria)).toContain(
+        "durationSeconds",
+      );
+      expect(JSON.stringify(questions.choose!.criteria)).not.toContain(
+        String(first.durationSeconds),
+      );
       expect(result).toMatchObject({
         status: "ok",
         judgment: {
@@ -136,21 +192,25 @@ describe("server-only frontier adapter", () => {
       ).toBe("invalid");
     },
   );
-  it.each([429, 500, 503])("never retries HTTP %s", async (status) => {
-    const fetcher = vi.fn(async () =>
-      Response.json({ error: "private provider error" }, { status }),
-    );
-    const result = await jevFrontierJudgeFromEnv(env, { fetcher }).judge(
-      input(),
-      signal(),
-    );
-    expect(result).toMatchObject({
-      status: "failed",
-      reason: "transport-error",
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(result)).not.toContain("private provider");
-  });
+  it.each([400, 401, 429, 500, 503])(
+    "never retries HTTP %s",
+    async (status) => {
+      const fetcher = vi.fn(async () =>
+        Response.json({ error: "private provider error" }, { status }),
+      );
+      const result = await jevFrontierJudgeFromEnv(env, { fetcher }).judge(
+        input(),
+        signal(),
+      );
+      expect(result).toMatchObject({
+        status: "failed",
+        reason: "transport-error",
+        httpStatus: status,
+      });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(JSON.stringify(result)).not.toContain("private provider");
+    },
+  );
   it("bounds a fetch that ignores AbortSignal", async () => {
     vi.useFakeTimers();
     const fetcher = vi.fn(() => new Promise<Response>(() => {}));

@@ -217,6 +217,8 @@ export type JevFrontierJudgeResult =
       readonly status: "failed";
       readonly reason: "timeout" | "transport-error" | "aborted";
       readonly latencyMs: number;
+      /** Sanitized numeric status only; provider bodies/messages never enter telemetry. */
+      readonly httpStatus?: number;
     }
   | {
       readonly status: "invalid";

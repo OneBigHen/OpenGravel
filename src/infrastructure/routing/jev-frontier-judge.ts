@@ -1,6 +1,7 @@
 /** Server-only transport for the application-owned shadow judge; no planner hook. */
 import "server-only";
 import {
+  APIError,
   APITimeoutError,
   APIUserAbortError,
   choice,
@@ -179,17 +180,26 @@ function decode(
   };
 }
 
-/** Both flag and key are required. Disabled experiments retain the port's taxonomy. */
+/** Explicit provider selection; no cross-provider credential fallback or environment URL override. */
 export function jevFrontierJudgeFromEnv(
   env: Readonly<Record<string, string | undefined>> = process.env,
   options: { readonly fetcher?: typeof fetch } = {},
 ): JevFrontierJudge {
-  const apiKey = env.OPENROUTER_API_KEY?.trim();
+  const provider = env.OGV_JEV_FRONTIER_PROVIDER ?? "openrouter";
+  const apiKey =
+    provider === "typesafe"
+      ? env.JEV_API_KEY?.trim()
+      : provider === "openrouter"
+        ? env.OPENROUTER_API_KEY?.trim()
+        : undefined;
   const enabled = env.OGV_JEV_FRONTIER_SHADOW === "1" && !!apiKey;
   const client = enabled
     ? new TypeSafeClient({
         apiKey,
-        baseURL: "https://openrouter.ai/api",
+        baseURL:
+          provider === "typesafe"
+            ? "https://api.typesafe.ai"
+            : "https://openrouter.ai/api",
         defaultModel: "jev-1.13",
         timeout: JEV_FRONTIER_TIMEOUT_MS,
         retry: { maxRetries: 0 },
@@ -255,6 +265,12 @@ export function jevFrontierJudgeFromEnv(
                   ? "timeout"
                   : "transport-error",
             latencyMs: latency(),
+            ...(error instanceof APIError &&
+            Number.isInteger(error.status) &&
+            error.status >= 100 &&
+            error.status <= 599
+              ? { httpStatus: error.status }
+              : {}),
           }),
         );
         return await Promise.race([response, deadline]);

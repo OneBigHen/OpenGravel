@@ -230,6 +230,13 @@ function sanitizeResult(
       status: result.status,
       reason: result.reason,
       latencyMs: result.latencyMs,
+      ...(result.status === "failed" &&
+      typeof result.httpStatus === "number" &&
+      Number.isInteger(result.httpStatus) &&
+      result.httpStatus >= 100 &&
+      result.httpStatus <= 599
+        ? { httpStatus: result.httpStatus }
+        : {}),
     } as JevFrontierJudgeResult;
   }
   return {

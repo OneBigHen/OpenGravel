@@ -84,7 +84,56 @@ route features, PlannerWorkspace, and Free Ride are unchanged by this implementa
 slice. The exact selector is used offline on canonical eligible/diverse corpus
 candidates; this does not constitute a new live post-frontier seam.
 
-Remaining blockers: OpenRouter credentials/live model evidence; blinded multi-rider
+Remaining blockers: pinned-model availability/live inference evidence; blinded multi-rider
 pre/post labels; calibrated caller policy and posterior forecasts; a separately
 designed legitimate frozen-frontier live seam and promotion PR. PR #39 remains a
 draft donor; PR #33's equal-budget regret-aware probe scheduler remains separate.
+
+## Direct TypeSafe follow-up
+
+Implementation base: `dafe596eaf1b60410f91e308be977cb042458881`; current main
+remains `1a04c4661575fded6cde019731a64e75f128f139`. The owner supplied a direct
+TypeSafe credential and authorized its use. The credential is never committed,
+printed, included in public evidence, or persisted in production configuration.
+
+The adapter now explicitly selects TypeSafe or OpenRouter with separate key gates
+and fixed service URLs. The CLI exposes `--provider typesafe`; OpenRouter is still
+the default. A/B/C projection, model 1.13, zero retries, 1,500 ms deadline, failure
+taxonomy, abstention, and production routing isolation remain unchanged. Failure
+telemetry gains validated numeric HTTP status only; arbitrary response bodies and
+messages remain excluded. Source tests verify no URL override, unknown provider,
+credential fallback, retries, or raw failure-data propagation.
+
+Direct catalog access succeeded, exposing only `jev-latest` and `jev-preview`.
+The preserved six-request pilot returned HTTP 400 for every requested `jev-1.13`
+judgment; a diagnostic request confirmed `Unknown model: jev-1.13`. Including the
+initial pilot and one diagnostic, 13 SystemOne requests and one catalog request
+were made. There are zero valid judgments, resolved models, alias requests, or
+blinded labels. These failed live requests are not semantic model evaluation.
+
+Focused Jev tests passed 82/82. A first concurrent architecture run timed out in
+the unchanged stylesheet balance test (7,331 ms against its existing 5,000 ms
+limit). No stylesheet, test, assertion, or timeout was edited. Isolated reproduction
+passed in 2.14 seconds; the final sequential architecture run passed in 2.45 seconds.
+No definitive environmental root cause is claimed from those successful reruns.
+
+| Follow-up command | Actual result |
+| --- | --- |
+| `npm run lint` | Exit 0; the same existing RidesLibrary cleanup warning, no new warnings. |
+| `npm run typecheck` | Exit 0. |
+| `npm run test:unit -- --maxWorkers=2` | Exit 0; 3,704 passed / 3 skipped, 324 files passed / 1 skipped. |
+| `npm run test:architecture` | Final sequential run exit 0; 142 tests / 8 files passed. |
+| `npm test -- --maxWorkers=2` | Exit 0; 3,846 passed / 3 skipped, 332 files passed / 1 skipped. |
+| `npm run build` | Exit 0; optimized Next.js build, TypeScript and page generation completed; existing outside-repository lockfile warning. |
+| `npm run test:real-router` | Exit 0; 17 passed / 8 skipped, 3 files passed / 3 skipped against actual GraphHopper. |
+
+Manual CLI controls also passed: configured direct key without `--live` produced
+only disabled skips (exit 0); missing direct key and unknown provider both failed
+before requests/output (exit 1). The opt-in/key/provider requirements stay explicit.
+
+Standards and Spec follow-up reviews found no remaining material blockers. The
+Standards review noted a nonblocking duplicated provider dispatch between CLI and
+adapter; both boundaries are currently tested and reject fallback/unknown providers.
+Semantic-quality improvement, repeat stability, and order-flip measurement remain
+unavailable until an explicitly approved model is actually callable. No alias was
+substituted or calibrated policy changed to manufacture a result.

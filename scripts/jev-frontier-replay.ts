@@ -21,6 +21,7 @@ async function main() {
       repeats: { type: "string" },
       policy: { type: "string" },
       live: { type: "boolean", default: false },
+      provider: { type: "string", default: "openrouter" },
     },
     strict: true,
   });
@@ -39,16 +40,26 @@ async function main() {
     !validateJevReplayLabels(labels)
   )
     throw Error("Invalid frozen cases or labels");
+  if (!["openrouter", "typesafe"].includes(values.provider!))
+    throw Error("Invalid Jev provider");
+  const key =
+    values.provider === "typesafe"
+      ? process.env.JEV_API_KEY
+      : process.env.OPENROUTER_API_KEY;
   if (
     values.live &&
-    (!process.env.OPENROUTER_API_KEY?.trim() ||
-      process.env.OGV_JEV_FRONTIER_SHADOW !== "1")
+    (!key?.trim() || process.env.OGV_JEV_FRONTIER_SHADOW !== "1")
   )
     throw Error(
-      "Live Jev unavailable: requires OPENROUTER_API_KEY and OGV_JEV_FRONTIER_SHADOW=1",
+      "Live Jev unavailable: requires the selected provider's key and OGV_JEV_FRONTIER_SHADOW=1",
     );
   // Explicit --live is an additional CLI gate; loading an environment file cannot enable calls.
-  const judge = values.live ? jevFrontierJudgeFromEnv() : null;
+  const judge = values.live
+    ? jevFrontierJudgeFromEnv({
+        ...process.env,
+        OGV_JEV_FRONTIER_PROVIDER: values.provider,
+      })
+    : null;
   const controller = new AbortController();
   const onSignal = () => controller.abort();
   process.once("SIGINT", onSignal);
@@ -71,6 +82,7 @@ async function main() {
     const output = {
       schemaVersion: 1,
       mode: values.live ? "live" : "disabled",
+      provider: values.provider,
       records,
       evaluation: evaluateJevFrontierReplay(records, labels),
     };

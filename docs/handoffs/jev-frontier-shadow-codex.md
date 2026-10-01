@@ -92,7 +92,15 @@ Pin 1.13 for P0. Do not use `jev-latest`.
 
 Do not expose the key to browser code.
 
-No configured OpenRouter key => return no judge / no call.
+No configured OpenRouter key => return no judge / no call for the default transport.
+
+Owner-authorized follow-up: direct TypeSafe is now supported only with explicit
+`OGV_JEV_FRONTIER_PROVIDER=typesafe` and `JEV_API_KEY` (CLI: `--provider typesafe`).
+There is no automatic key/service fallback or environment URL override. Pin 1.13,
+zero retries and the same strict deadline remain required. Actual authenticated
+catalog access succeeded, but direct pinned-model pilot requests returned HTTP 400
+`Unknown model: jev-1.13`; the catalog exposes only latest/preview. No alias was
+called. See the preserved `typesafe-*` evidence and follow-up validation for limits.
 
 ## Balanced permutation requests per stable candidate set
 
@@ -422,7 +430,7 @@ rider evidence is supplied; the no-rider corpus explicitly uses a one-hot baseli
 fallback. No raw rider history is accepted or uploaded.
 
 Live GraphHopper produced eight measured cases and seven frozen two-candidate
-shortlists. Live Jev was unavailable without an OpenRouter credential. The disabled
+shortlists. The original OpenRouter run was unavailable without its credential. The disabled
 replay records 84 structured skips, zero labels, and no held-out value claim. PR #33's
 probe-allocation change was reviewed and remains outside this implementation.
 Promotion remains a separate PR requiring calibrated multi-rider held-out evidence.
