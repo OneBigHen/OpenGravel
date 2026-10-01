@@ -237,6 +237,61 @@ interface RepresentativeExchange<T> {
   readonly candidateId: string;
 }
 
+const MAX_EXACT_REPRESENTATIVE_FRONTIER = 12;
+
+interface ExactRepresentativeSet<T> {
+  readonly candidates: readonly FrontierCandidate<T>[];
+  readonly score: RegretScore;
+  readonly key: string;
+}
+
+function exactRepresentativeSet<T>(
+  frontier: readonly FrontierCandidate<T>[],
+  profiles: readonly FrontierPreferenceProfile[],
+  maxResults: number,
+  minimumCoverage: number,
+): readonly FrontierCandidate<T>[] | null {
+  if (frontier.length > MAX_EXACT_REPRESENTATIVE_FRONTIER) return null;
+
+  const targetSize = Math.min(maxResults, frontier.length);
+  let best: ExactRepresentativeSet<T> | null = null;
+  const current: FrontierCandidate<T>[] = [];
+
+  const visit = (startIndex: number): void => {
+    if (current.length === targetSize) {
+      const candidates = [...current];
+      const score = regretScore(candidates, frontier, profiles, minimumCoverage);
+      const key = candidateSetKey(candidates);
+      if (
+        best === null ||
+        betterRegret(score, best.score) ||
+        (
+          !betterRegret(best.score, score) &&
+          !betterRegret(score, best.score) &&
+          key < best.key
+        )
+      ) {
+        best = { candidates, score, key };
+      }
+      return;
+    }
+
+    const needed = targetSize - current.length;
+    const lastStart = frontier.length - needed;
+    for (let index = startIndex; index <= lastStart; index += 1) {
+      const candidate = frontier[index];
+      if (candidate === undefined) continue;
+      current.push(candidate);
+      visit(index + 1);
+      current.pop();
+    }
+  };
+
+  visit(0);
+  const winner = best as ExactRepresentativeSet<T> | null;
+  return winner === null ? [] : winner.candidates;
+}
+
 function candidateSetKey<T>(candidates: readonly FrontierCandidate<T>[]): string {
   return candidates
     .map((candidate) => candidate.id)
@@ -299,14 +354,16 @@ function refineRepresentativeSet<T>(
 }
 
 /**
- * Chooses at most `maxResults` Pareto-surviving routes using a deterministic
- * greedy k-regret approximation.
+ * Chooses at most `maxResults` Pareto-surviving routes using deterministic
+ * regret minimization.
  *
- * The exact ATMOS 2025 algorithm is deliberately not reproduced here. This
- * small implementation gives OpenGravel an experimentable seam: it asks which
- * candidate most reduces the worst preference-profile regret at each step,
- * then permits one bounded best-improving exchange to recover a lower-regret
- * profile-extreme set when the greedy seed was a compromise.
+ * OpenGravel currently caps the raw candidate pool at six routes. At that
+ * scale, exact subset enumeration is cheaper and more reliable than accepting
+ * a known greedy/local-exchange miss: six candidates and three visible results
+ * means only 20 size-three subsets. Exact enumeration is therefore used for
+ * bounded frontiers up to {@link MAX_EXACT_REPRESENTATIVE_FRONTIER}; the
+ * existing deterministic greedy + one-exchange approximation remains only as
+ * a safety fallback if a future caller bypasses today's small candidate cap.
  */
 export function selectLowRegretRepresentatives<T>(
   candidates: readonly FrontierCandidate<T>[],
@@ -326,6 +383,14 @@ export function selectLowRegretRepresentatives<T>(
   );
   if (frontier.length <= maxResults) return frontier;
   if (profiles.length === 0) return frontier.slice(0, maxResults);
+
+  const exact = exactRepresentativeSet(
+    frontier,
+    profiles,
+    maxResults,
+    minimumCoverage,
+  );
+  if (exact !== null) return exact;
 
   const selected: FrontierCandidate<T>[] = [];
   const selectedIds = new Set<string>();

@@ -296,4 +296,62 @@ describe("frontier routing selection", () => {
       reverse.map((item) => item.id),
     );
   });
+
+  it("finds the exact three-route low-regret subset instead of a local exchange optimum", () => {
+    const items = [
+      candidate("a", {
+        timeEfficiency: 0.17,
+        curvature: 0.54,
+        flow: 0.57,
+        backroad: 0.49,
+        surfaceFit: 0.68,
+      }),
+      candidate("b", {
+        timeEfficiency: 0.12,
+        curvature: 0.33,
+        flow: 0.9,
+        backroad: 0.6,
+        surfaceFit: 0.73,
+      }),
+      candidate("c", {
+        timeEfficiency: 0.59,
+        curvature: 0.3,
+        flow: 0.2,
+        backroad: 0.97,
+        surfaceFit: 0.96,
+      }),
+      candidate("d", {
+        timeEfficiency: 0.7,
+        curvature: 0.65,
+        flow: 0.45,
+        backroad: 0.41,
+        surfaceFit: 0.85,
+      }),
+      candidate("e", {
+        timeEfficiency: 0.26,
+        curvature: 0.94,
+        flow: 0.25,
+        backroad: 0.15,
+        surfaceFit: 0.74,
+      }),
+      candidate("f", {
+        timeEfficiency: 0.32,
+        curvature: 0.62,
+        flow: 0.83,
+        backroad: 0.87,
+        surfaceFit: 0.34,
+      }),
+    ];
+    const profiles = [
+      { id: "time", weights: { timeEfficiency: 1 } },
+      { id: "curves", weights: { curvature: 1 } },
+      { id: "flow", weights: { flow: 1 } },
+      { id: "backroad", weights: { backroad: 1 } },
+      { id: "surface", weights: { surfaceFit: 1 } },
+    ] as const;
+
+    const selected = selectLowRegretRepresentatives(items, profiles, 3);
+
+    expect(selected.map((item) => item.id)).toEqual(["b", "c", "e"]);
+  });
 });
