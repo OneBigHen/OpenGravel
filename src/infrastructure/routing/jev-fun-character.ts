@@ -7,6 +7,11 @@ import type { RoutePlanFunCharacterWire } from "@/application/planner/ports/rout
 
 const TIMEOUT_MS = 1_500;
 const MINIMUM_CONFIDENCE = 0.65;
+/**
+ * Pinned for reproducible diagnostics. Changing this requires an explicit
+ * calibration/replay decision; do not silently switch back to jev-latest.
+ */
+export const JEV_CHARACTER_MODEL = "jev-1.13";
 
 const CHARACTER_CHOICES = {
   FLOWING: "Sustained curves and few interruptions, with a smooth riding rhythm.",
@@ -39,7 +44,7 @@ export function jevCharacterClassifierFromEnv(
   try {
     client = new TypeSafeClient({
       apiKey,
-      defaultModel: "jev-latest",
+      defaultModel: JEV_CHARACTER_MODEL,
       timeout: TIMEOUT_MS,
       retry: { maxRetries: 0 },
       logLevel: "off",
