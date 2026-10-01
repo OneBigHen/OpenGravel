@@ -46,6 +46,7 @@ import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
 import { createHttpPlacesSource } from "@/infrastructure/places/http-places-source";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
+import { createRoadHistoryMapLayersSource } from "@/application/map-layers/road-history";
 import { createHttpDiscoverSource } from "@/infrastructure/discover/http-discover-source";
 import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
 import { createRideSessionRepository } from "@/infrastructure/storage/ride-session-repository";
@@ -125,10 +126,6 @@ export function RideClient({
     () => createHttpPlacesSource({ basePath: assetBasePath }),
     [assetBasePath],
   );
-  const mapLayersSource = useMemo(
-    () => createHttpMapLayersSource(assetBasePath === undefined ? {} : { basePath: assetBasePath }),
-    [assetBasePath],
-  );
   const discoverSource = useMemo(
     () => createHttpDiscoverSource({ basePath: assetBasePath }),
     [assetBasePath],
@@ -159,7 +156,7 @@ export function RideClient({
   }, []);
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
-  const { store, rides, activitySync } = useMemo(() => {
+  const { store, rides, library, activitySync } = useMemo(() => {
     // The ride on the Lock Screen and Dynamic Island, inside the iOS app only.
     const rideActivity = nativeShellRideActivity();
     const activitySync = rideActivity === undefined ? null : createRideActivitySync(rideActivity);
@@ -345,8 +342,16 @@ export function RideClient({
         };
       },
     });
-    return { rides, store, activitySync };
+    return { rides, store, library, activitySync };
   }, [fixturePosition, homeLocation, pointer]);
+
+  const mapLayersSource = useMemo(
+    () => createRoadHistoryMapLayersSource(
+      createHttpMapLayersSource(assetBasePath === undefined ? {} : { basePath: assetBasePath }),
+      { historyReader: () => library.listExploreRides() },
+    ),
+    [assetBasePath, library],
+  );
 
   useEffect(() => {
     if (activitySync === null) return;

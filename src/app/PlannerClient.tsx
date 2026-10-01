@@ -129,8 +129,6 @@ export function PlannerClient({
   );
   const bootstrapPointer = useMemo(() => createLocalStorageBootstrapPointer(), []);
   const rideFocusPointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
-  // Weather (NWS) and live traffic for the route briefing (M4, OGV-D-266).
-  const preparationProviders = useMemo(() => createAppPreparationProviders(assetBasePath), [assetBasePath]);
   const advisorClient = useMemo(() => createAdvisorApiClient(), []);
   // The repository owns the hint cache too, so deleting a ride drops a hint that
   // names it and a deleted ride cannot be recovered on the next boot.
@@ -145,6 +143,13 @@ export function PlannerClient({
   const libraryService = useMemo(
     () => createPlannerLibraryService(repository, geometryStore),
     [repository, geometryStore],
+  );
+  // Weather (NWS), live traffic and local recorded-road layers for the route briefing.
+  const preparationProviders = useMemo(
+    () => createAppPreparationProviders(assetBasePath, {
+      roadHistory: { historyReader: () => libraryService.listExploreRides() },
+    }),
+    [assetBasePath, libraryService],
   );
   /**
    * The share service (11.1): one bound repository and the origin the opaque

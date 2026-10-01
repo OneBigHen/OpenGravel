@@ -29,6 +29,8 @@ import { libraryTypeLabel, type LibraryRideType } from "@/application/library/pr
 import { formatDistance } from "@/application/planner/measurements";
 import { RecordedTrackThumbnail } from "./RecordedTrackThumbnail";
 import { staticPointsMapUrl, staticRouteMapUrl } from "@/application/map/static-map";
+import type { RoadProgressReader } from "@/application/roads/explorable-roads";
+import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
 
 const TYPE_FILTERS: readonly { readonly value: LibraryRideType | null; readonly label: string }[] = [
   { value: null, label: "All" },
@@ -45,6 +47,13 @@ export interface RidesLibraryProps {
   readonly importService?: ImportServicePort;
   /** A public Mapbox token: each ride is then shown on a real map image. */
   readonly mapboxToken?: string;
+  /** Local-only reader, invoked when a recorded ride's details are expanded. */
+  readonly roadProgressReader?: RoadProgressReader;
+}
+
+interface RoadProgressCache {
+  readonly reader: RoadProgressReader | undefined;
+  readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
 }
 
 /** How long a deleted ride can be brought back before it is gone. */
@@ -134,7 +143,7 @@ function rideMapUrl(ride: RideSummary, token: string | undefined): string | null
     : staticPointsMapUrl(ride.mapPreview.pins, size);
 }
 
-export function RidesLibrary({ service: library, onOpen, importService, mapboxToken }: RidesLibraryProps) {
+export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader }: RidesLibraryProps) {
   const router = useRouter();
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
   const [search, setSearch] = useState("");
@@ -144,6 +153,11 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   const [error, setError] = useState<string | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [roadProgressCache, setRoadProgressCache] = useState<RoadProgressCache>(() => ({
+    reader: roadProgressReader,
+    entries: {},
+  }));
+  const roadProgress = roadProgressCache.reader === roadProgressReader ? roadProgressCache.entries : {};
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [pendingOpen, setPendingOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -151,10 +165,72 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   // list at once and is removed from the library when the undo window closes.
   const [removed, setRemoved] = useState<RideSummary | null>(null);
   const removal = useRef<{ ride: RideSummary; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const expandedRef = useRef<ReadonlySet<string>>(new Set());
+  const roadProgressRequests = useRef(new Map<string, { readonly controller: AbortController }>());
   // Decided by the first load and then kept, so nothing jumps mid-import: a
   // rider with no rides yet starts by bringing some in; everyone else sees
   // their rides first (UX rework phase 5).
   const [importsFirst, setImportsFirst] = useState<boolean | null>(null);
+
+  function cancelRoadProgress(rideId: RideSummary["rideId"]): void {
+    roadProgressRequests.current.get(rideId)?.controller.abort();
+    roadProgressRequests.current.delete(rideId);
+    setRoadProgressCache((current) => {
+      if (current.reader !== roadProgressReader || current.entries[rideId] === undefined) return current;
+      const entries = { ...current.entries };
+      delete entries[rideId];
+      return { reader: current.reader, entries };
+    });
+  }
+
+  async function readRoadProgress(rideId: RideSummary["rideId"]): Promise<void> {
+    const reader = roadProgressReader;
+    if (reader === undefined) return;
+    const controller = new AbortController();
+    const request = { controller };
+    roadProgressRequests.current.set(rideId, request);
+    setRoadProgressCache((current) => ({
+      reader,
+      entries: {
+        ...(current.reader === reader ? current.entries : {}),
+        [rideId]: { status: "loading" },
+      },
+    }));
+    try {
+      const projection = await reader.read(rideId, controller.signal);
+      if (roadProgressRequests.current.get(rideId) !== request || !expandedRef.current.has(rideId)) return;
+      roadProgressRequests.current.delete(rideId);
+      setRoadProgressCache((current) => current.reader === reader
+        ? { reader, entries: { ...current.entries, [rideId]: { status: "ready", projection } } }
+        : current);
+    } catch {
+      if (roadProgressRequests.current.get(rideId) !== request || controller.signal.aborted || !expandedRef.current.has(rideId)) return;
+      roadProgressRequests.current.delete(rideId);
+      setRoadProgressCache((current) => current.reader === reader
+        ? { reader, entries: { ...current.entries, [rideId]: { status: "error", message: "unavailable" } } }
+        : current);
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const request of roadProgressRequests.current.values()) request.controller.abort();
+      roadProgressRequests.current.clear();
+    };
+  }, [roadProgressReader]);
+
+  function toggleDetails(ride: RideSummary): void {
+    const opening = !expandedRef.current.has(ride.rideId);
+    const next = new Set(expandedRef.current);
+    if (opening) next.add(ride.rideId);
+    else next.delete(ride.rideId);
+    expandedRef.current = next;
+    setExpanded(next);
+    if (!opening) cancelRoadProgress(ride.rideId);
+    if (opening && ride.recordedTrack !== undefined && roadProgressReader !== undefined && roadProgress[ride.rideId] === undefined) {
+      void readRoadProgress(ride.rideId);
+    }
+  }
 
   async function exportRide(ride: RideSummary, mode: ExportMode): Promise<void> {
     if (library.loadExportSource === undefined) throw new Error("Export is not available for this ride.");
@@ -256,6 +332,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     if (current === null) return;
     removal.current = null;
     clearTimeout(current.timer);
+    cancelRoadProgress(current.ride.rideId);
     setRemoved(null);
     try {
       await library.deleteRide(current.ride.rideId);
@@ -267,6 +344,11 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
   async function deleteRide(ride: RideSummary): Promise<void> {
     await commitRemoval();
+    const nextExpanded = new Set(expandedRef.current);
+    nextExpanded.delete(ride.rideId);
+    expandedRef.current = nextExpanded;
+    setExpanded(nextExpanded);
+    cancelRoadProgress(ride.rideId);
     setPendingDelete(null);
     removal.current = { ride, timer: setTimeout(() => void commitRemoval(), UNDO_DELETE_MS) };
     setRemoved(ride);
@@ -494,6 +576,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   {isExpanded ? (
                     <div className="og-library__details">
                       <p>{sourceText(ride)}</p>
+                      {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
+                        ? null
+                        : <RecordedRoadProgress state={roadProgress[ride.rideId]!} />}
                       {(ride.importNotes ?? []).length === 0 ? null : (
                         <ul aria-label={`Import notes for ${ride.title}`}>
                           {(ride.importNotes ?? []).map((note) => <li key={note}>{note}</li>)}
@@ -534,14 +619,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                     className="og-secondary"
                     aria-label={`View details for ${ride.title}`}
                     aria-expanded={isExpanded}
-                    onClick={() =>
-                      setExpanded((current) => {
-                        const next = new Set(current);
-                        if (next.has(ride.rideId)) next.delete(ride.rideId);
-                        else next.add(ride.rideId);
-                        return next;
-                      })
-                    }
+                    onClick={() => toggleDetails(ride)}
                   >
                     {isExpanded ? "Hide details" : "View details"}
                   </button>

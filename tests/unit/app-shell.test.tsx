@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createPlannerLibraryService, PlannerClient } from "@/app/PlannerClient";
@@ -13,6 +13,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { VNextDatabase } from "@/infrastructure/storage/db";
 
 import { createStubMapHostFactory } from "./support/stub-map-host";
+import * as preparationProviders from "@/app/preparation-providers";
 
 /**
  * The composition root navigates to `/ride` when a ride starts (04 §28), so it
@@ -102,6 +103,19 @@ describe("browser composition root", () => {
     await Promise.resolve();
 
     expect(factory.options[0]?.assetBasePath).toBe("/ogv");
+  });
+
+  it("injects the local recorded-history reader into planner preparation", async () => {
+    const createProviders = vi.spyOn(preparationProviders, "createAppPreparationProviders");
+    const factory = createStubMapHostFactory();
+    render(<PlannerClient basemap="empty" mapHostFactory={factory.factory} />);
+
+    await waitFor(() => expect(createProviders).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({
+        roadHistory: expect.objectContaining({ historyReader: expect.any(Function) }),
+      }),
+    ));
   });
 });
 

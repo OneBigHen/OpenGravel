@@ -21,7 +21,7 @@ import type {
   MapLayerBounds,
   MapLayerId,
 } from "@/application/map-layers";
-import type { KnownRoadsPort } from "@/application/roads/known-roads";
+import { MIN_GREAT_ROAD_RATING, type KnownRoadsPort } from "@/application/roads/known-roads";
 
 export interface ProviderContext {
   readonly fetch: typeof fetch;
@@ -340,9 +340,6 @@ export const nwsAlertsProvider: LayerProvider = {
 // --- Local road catalogues ---------------------------------------------------
 
 const MAX_ROAD_FEATURES = 700;
-
-/** Catalogue ratings run 300–1500; below this a road is merely not straight. */
-export const MIN_GREAT_ROAD_RATING = 600;
 
 function curvinessWords(rating: number): string {
   return rating >= 1200 ? "Very twisty" : rating >= 900 ? "Twisty" : "Some good bends";

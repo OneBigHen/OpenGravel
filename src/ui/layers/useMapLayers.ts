@@ -60,6 +60,7 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   closures: "osm",
   "great-roads": "roads",
   gravel: "roads",
+  "road-history": "road-history",
   fuel: "tomtom",
   food: "tomtom",
   coffee: "tomtom",

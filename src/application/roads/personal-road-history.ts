@@ -52,6 +52,22 @@ interface IndexedTrace {
   readonly recent: boolean;
 }
 
+export interface PersonalRoadHistoryMatchOptions {
+  readonly now?: string;
+  readonly toleranceMeters?: number;
+  readonly recentDays?: number;
+}
+
+/**
+ * Read-only, prepared local-history evidence. Callers can reuse this matcher
+ * for several candidate edges without rebuilding a spatial index per edge.
+ */
+export interface PreparedPersonalRoadHistory {
+  readonly available: boolean;
+  readonly edgeSeen: (from: Coordinate, to: Coordinate) => boolean;
+  readonly recentEdgeSeen: (from: Coordinate, to: Coordinate) => boolean;
+}
+
 function validLine(line: readonly Coordinate[]): boolean {
   return line.length >= 2 && line.every((point) =>
     Number.isFinite(point.lon) && Math.abs(point.lon) <= 180 &&
@@ -71,6 +87,7 @@ function segmentSeen(
   to: Coordinate,
   traces: readonly IndexedTrace[],
   toleranceMeters: number,
+  recentOnly = false,
 ): { readonly familiar: boolean; readonly recent: boolean } {
   let familiar = false;
   let recently = false;
@@ -83,7 +100,39 @@ function segmentSeen(
       if (recently) break;
     }
   }
-  return { familiar, recent: recently };
+  return {
+    familiar: recentOnly ? recently : familiar,
+    recent: recently,
+  };
+}
+
+/** Builds one reusable spatial matcher for local recorded-road evidence. */
+export function preparePersonalRoadHistory(
+  history: readonly PersonalRideTrace[],
+  options: PersonalRoadHistoryMatchOptions = {},
+): PreparedPersonalRoadHistory | null {
+  const nowMs = Date.parse(options.now ?? new Date().toISOString());
+  const toleranceMeters = options.toleranceMeters ?? PERSONAL_HISTORY_MATCH_TOLERANCE_METERS;
+  const recentDays = options.recentDays ?? PERSONAL_HISTORY_RECENT_DAYS;
+  if (!Number.isFinite(nowMs) || !Number.isFinite(toleranceMeters) || toleranceMeters <= 0 || !Number.isFinite(recentDays) || recentDays < 0) {
+    return null;
+  }
+
+  const traces: IndexedTrace[] = history
+    .filter((trace) => validLine(trace.geometry))
+    .map((trace) => ({
+      index: indexRoute(trace.geometry),
+      recent: recent(trace.riddenAt, nowMs, recentDays),
+    }));
+  return {
+    available: traces.length > 0,
+    edgeSeen(from, to) {
+      return segmentSeen(from, to, traces, toleranceMeters).familiar;
+    },
+    recentEdgeSeen(from, to) {
+      return segmentSeen(from, to, traces, toleranceMeters, true).recent;
+    },
+  };
 }
 
 /**
@@ -96,28 +145,11 @@ function segmentSeen(
 export function assessPersonalRoadHistory(
   route: readonly Coordinate[],
   history: readonly PersonalRideTrace[],
-  options: {
-    readonly now?: string;
-    readonly toleranceMeters?: number;
-    readonly recentDays?: number;
-  } = {},
+  options: PersonalRoadHistoryMatchOptions = {},
 ): PersonalRoadHistoryAssessment | null {
   if (!validLine(route)) return null;
-  const usable = history.filter((trace) => validLine(trace.geometry));
-  if (usable.length === 0) return null;
-
-  const nowMs = Date.parse(options.now ?? new Date().toISOString());
-  if (!Number.isFinite(nowMs)) return null;
-  const toleranceMeters = options.toleranceMeters ?? PERSONAL_HISTORY_MATCH_TOLERANCE_METERS;
-  const recentDays = options.recentDays ?? PERSONAL_HISTORY_RECENT_DAYS;
-  if (!Number.isFinite(toleranceMeters) || toleranceMeters <= 0 || !Number.isFinite(recentDays) || recentDays < 0) {
-    return null;
-  }
-
-  const traces: IndexedTrace[] = usable.map((trace) => ({
-    index: indexRoute(trace.geometry),
-    recent: recent(trace.riddenAt, nowMs, recentDays),
-  }));
+  const prepared = preparePersonalRoadHistory(history, options);
+  if (prepared === null || !prepared.available) return null;
 
   let totalMeters = 0;
   let familiarMeters = 0;
@@ -129,9 +161,8 @@ export function assessPersonalRoadHistory(
     const meters = haversine(from, to);
     if (!Number.isFinite(meters) || meters <= 0) continue;
     totalMeters += meters;
-    const seen = segmentSeen(from, to, traces, toleranceMeters);
-    if (seen.familiar) familiarMeters += meters;
-    if (seen.recent) recentMeters += meters;
+    if (prepared.edgeSeen(from, to)) familiarMeters += meters;
+    if (prepared.recentEdgeSeen(from, to)) recentMeters += meters;
   }
   if (!(totalMeters > 0)) return null;
 

@@ -22,9 +22,22 @@ updated scores, while rider-locked selection remains intact. Missing or unreadab
 history preserves the existing provider roles. No recorded trace enters the
 provider request.
 
-`ExplorableRoad` eligibility, worthwhile-road-only progress, return-budget
-suppression and richer map presentation remain future slices. This PR does not certify those features or the complete map-layer
-parity/Adventure roadmap below.
+Recorded-ride details also project estimated progress on the existing mapped
+good-road catalogue: qualifying great roads and verified routable gravel.
+Observed recording edges are counted once even when catalogue lines overlap.
+New-to-you distance compares only recordings observed before the selected ride;
+without usable earlier history it remains unknown. Catalogue coverage is partial,
+and this projection does not classify unmapped roads or establish legal access.
+Authoritative ride distance and time remain unchanged.
+
+The optional Road history map layer uses the same prepared local-history matcher
+to render only matched portions of qualified catalogue roads as a quiet cool
+underlay. Local recorded traces stay on the device. Map requests carry the bounded
+viewport and existing catalogue layer choices, without recorded history or the
+local layer identifier.
+
+Return-budget suppression and the broader map-layer parity roadmap below remain
+future slices.
 
 ## Product rule
 

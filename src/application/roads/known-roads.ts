@@ -42,6 +42,9 @@ export interface KnownRoadsPort {
   readonly gravelCorridorsNear: (bounds: Bounds) => readonly KnownGravelCorridor[];
 }
 
+/** Catalogue ratings run 300–1500; below this a road is merely not straight. */
+export const MIN_GREAT_ROAD_RATING = 600;
+
 export interface RiddenCurvyRoad {
   readonly name: string;
   readonly rating: number;
