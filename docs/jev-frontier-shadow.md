@@ -556,11 +556,11 @@ The first implementation is complete when:
 
 ### Exact regret before Jev evaluation
 
-PR #34 fixes a known weakness in the representative selector using exact bounded
-enumeration at OpenGravel's current candidate scale. Jev evaluation must not be
-interpreted until #34 is merged/rebased and the frozen shortlist is produced by
-that exact selector. Otherwise downstream judge measurements are confounded by
-a shortlist algorithm already known to be avoidably suboptimal.
+PR #34 fixed a known weakness in the representative selector using exact
+bounded enumeration at OpenGravel's current candidate scale and is now merged
+into `main`. Jev evaluation must run only after PR #51 is synced/rebased onto
+that mainline selector. Otherwise downstream judge measurements are confounded
+by the older shortlist algorithm already known to be avoidably suboptimal.
 
 ### Regret should eventually influence probe spending
 
