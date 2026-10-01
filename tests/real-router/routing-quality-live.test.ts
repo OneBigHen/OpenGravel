@@ -159,6 +159,66 @@ function candidateReport(
   };
 }
 
+
+function profileDifferential(
+  candidates: readonly ProviderCandidate[],
+): Readonly<Record<string, unknown>> | null {
+  const fastest = candidates.find(
+    (candidate) => candidate.profile === "motorcycle_fastest",
+  );
+  const twisty = candidates.find(
+    (candidate) => candidate.profile === "motorcycle_twisty",
+  );
+  if (fastest === undefined || twisty === undefined) return null;
+
+  const bendShare = (candidate: ProviderCandidate): number | null => {
+    if (!Number.isFinite(candidate.distanceMeters) || candidate.distanceMeters <= 0) {
+      return null;
+    }
+    const summary = candidate.roadSummary;
+    const bends =
+      summary?.bendMeters !== undefined && Number.isFinite(summary.bendMeters)
+        ? Math.max(0, summary.bendMeters)
+        : bendMeters(candidate.geometry);
+    return bends / candidate.distanceMeters;
+  };
+  const curvature = (candidate: ProviderCandidate): number | null => {
+    const summary = candidate.roadSummary;
+    if (summary === undefined) return null;
+    return engineCurvature(summary).unit;
+  };
+  const backroads = (candidate: ProviderCandidate): number | null => {
+    const summary = candidate.roadSummary;
+    return summary === undefined ? null : backroadShare(summary);
+  };
+  const delta = (left: number | null, right: number | null, digits = 4): number | null =>
+    left === null || right === null ? null : round(left - right, digits);
+  const percentDelta = (left: number, right: number): number | null =>
+    right > 0 ? round((left - right) / right, 4) : null;
+
+  return {
+    comparison: "motorcycle_twisty-vs-motorcycle_fastest",
+    geometryOverlap: round(
+      calculateGeometryOverlap(twisty.geometry, fastest.geometry) / 100,
+      4,
+    ),
+    sameFingerprint:
+      (twisty.providerMetadata?.["fingerprint"] ?? null) ===
+      (fastest.providerMetadata?.["fingerprint"] ?? null),
+    distanceDeltaRatio: percentDelta(
+      twisty.distanceMeters,
+      fastest.distanceMeters,
+    ),
+    durationDeltaRatio: percentDelta(
+      twisty.durationSeconds,
+      fastest.durationSeconds,
+    ),
+    bendShareDelta: delta(bendShare(twisty), bendShare(fastest)),
+    curvatureUnitDelta: delta(curvature(twisty), curvature(fastest)),
+    backroadShareDelta: delta(backroads(twisty), backroads(fastest)),
+  };
+}
+
 function pairwiseOverlap(
   candidates: readonly ProviderCandidate[],
 ): readonly Readonly<Record<string, unknown>>[] {
@@ -219,6 +279,7 @@ live(`routing quality corpus (${BASE_URL})`, () => {
           candidateReport(candidate, request.options.surfacePreference),
         ),
         pairwiseOverlap: pairwiseOverlap(candidates),
+        twistyVsFastest: profileDifferential(candidates),
       };
 
       console.log(`ROUTING_QUALITY_JSON ${JSON.stringify(report)}`);
