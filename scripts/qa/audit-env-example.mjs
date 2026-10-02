@@ -6,33 +6,10 @@ const scanRoots = ["src", "apps", "scripts", "infra"];
 const extensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 const ignoredDirectories = new Set(["node_modules", ".next", "dist", "build", "coverage", "public", "fixtures"]);
 
-const prefixes = [
-  "OGV_",
-  "NEXT_PUBLIC_",
-  "GRAPHHOPPER_",
-  "PHOTON_",
-  "TOMTOM_",
-  "NWS_",
-  "WIKIMEDIA_",
-  "CURVATURE_",
-  "GRAVEL_",
-  "PTC_",
-  "ADVISOR_",
-  "OPENROUTER_",
-  "JEV_",
-  "SPOTIFY_",
-  "COMMUNITY_",
-  "TRAFFIC_CAMERA_",
-  "TRAFFIC_CAMERAS_",
-  "PA511_",
-  "OHGO_",
-  "STORMSCOPE_",
-];
-
 const builtIns = new Set(["NODE_ENV", "CI"]);
 
 function looksLikeDeploymentKey(value) {
-  return builtIns.has(value) || prefixes.some((prefix) => value.startsWith(prefix));
+  return /^[A-Z][A-Z0-9_]{1,}$/.test(value);
 }
 
 async function filesUnder(directory) {
