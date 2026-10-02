@@ -13,7 +13,7 @@ export interface GraphHopperEnv {
 }
 
 export function graphHopperUrlFromEnv(
-  env: GraphHopperEnv = process.env,
+  env: GraphHopperEnv = { GRAPHHOPPER_URL: process.env["GRAPHHOPPER_URL"] },
 ): string {
   const configured = env["GRAPHHOPPER_URL"]?.trim();
   return configured === undefined || configured === ""
