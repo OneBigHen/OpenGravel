@@ -37,6 +37,32 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     if (input === null || pin === null) throw new Error("search controls must be measurable");
     expect(Math.abs(pin.y - input.y)).toBeLessThanOrEqual(2);
   });
+
+  test(`endpoint controls have separate targets at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await chooseEndpoints(page);
+    await page.getByTestId("sheet-handle").click();
+    const controls = await page.locator(".og-composer").evaluate((composer) => {
+      const ids = ["start-chip", "finish-chip", "start-change", "finish-change", "swap-endpoints"];
+      return ids.map((id) => {
+        const control = composer.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+        if (control === null) throw new Error(`${id} must be measurable`);
+        const { left, right, top, bottom, width, height } = control.getBoundingClientRect();
+        return { id, left, right, top, bottom, width, height };
+      });
+    });
+    for (const control of controls) {
+      expect(control.width, `${control.id} width`).toBeGreaterThanOrEqual(44);
+      expect(control.height, `${control.id} height`).toBeGreaterThanOrEqual(44);
+    }
+    for (const [index, first] of controls.entries()) {
+      for (const second of controls.slice(index + 1)) {
+        const intersects = first.left < second.right && second.left < first.right
+          && first.top < second.bottom && second.top < first.bottom;
+        expect(intersects, `${first.id} overlaps ${second.id}`).toBe(false);
+      }
+    }
+  });
 }
 
 test("small-phone ride style has a named entry and planning stays visible while editing", async ({ page }) => {

@@ -9285,16 +9285,28 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 2px;
 }
 
-/* Swap start and destination (PQ-04): a round button tucked between the rows. */
+/* Keep direction controls together, with a separate target for swapping. */
+.og-composer__shape-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.og-composer__shape-row > .og-style__group {
+  flex: 1;
+  min-width: 0;
+}
+
 .og-composer__swap {
-  position: relative;
-  z-index: 1;
-  align-self: flex-end;
   display: grid;
   place-items: center;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  margin: -22px 4px;
+  min-height: 44px;
+  margin: 0;
   border: 1px solid var(--og-sandstone);
   border-radius: 50%;
   background: var(--og-paper);

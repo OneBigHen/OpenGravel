@@ -312,7 +312,25 @@ export function IntentComposer({
         };
   return (
     <section className="og-composer" aria-label="Ride intent" data-skip-target="">
-      {shapeModel === undefined ? null : <RideShapeSwitch model={shapeModel} />}
+      {shapeModel === undefined && (loop || !hasStart || !hasFinish || reverseRide === undefined) ? null : (
+        <div className="og-composer__shape-row">
+          {shapeModel === undefined ? null : <RideShapeSwitch model={shapeModel} />}
+          {!loop && hasStart && hasFinish && reverseRide !== undefined ? (
+            <button
+              type="button"
+              className="og-composer__swap"
+              data-testid="swap-endpoints"
+              aria-label="Swap start and destination"
+              title="Swap start and destination"
+              onClick={reverseRide}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
+      )}
       <div className={rowClass}>
         <span className="og-composer__dot og-composer__dot--start" aria-hidden="true" />
         <span className={searchable ? "og-composer__label og-visually-hidden" : "og-composer__label"}>Start</span>
@@ -359,20 +377,6 @@ export function IntentComposer({
         )}
       </div>
 
-      {!loop && hasStart && hasFinish && reverseRide !== undefined ? (
-        <button
-          type="button"
-          className="og-composer__swap"
-          data-testid="swap-endpoints"
-          aria-label="Swap start and destination"
-          title="Swap start and destination"
-          onClick={reverseRide}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
-          </svg>
-        </button>
-      ) : null}
       {loop && rideStyle !== undefined ? (
         <LoopTimeRow model={rideStyle} />
       ) : (
