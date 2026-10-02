@@ -5,7 +5,7 @@ import {
   type RiderOpportunity,
 } from "@/application/discover/rider-opportunities";
 import type { RiderOpportunitiesBody } from "@/application/discover/rider-opportunities-contract";
-import type { InterestingPlace, InterestingPlaceSource } from "@/application/discover";
+import type { DiscoverCoordinator, InterestingPlace, InterestingPlaceSource } from "@/application/discover";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import { defaultPlacesSource } from "@/server/places/handler";
@@ -25,6 +25,8 @@ const MILES_TO_METERS = 1609.344;
 export interface RiderOpportunitiesDependencies {
   readonly env?: Env;
   readonly now?: () => number;
+  /** Test/composition seam for corridor discovery; production uses env wiring. */
+  readonly discoverCoordinator?: DiscoverCoordinator;
 }
 
 function finite(value: string | null): number | null {
@@ -234,7 +236,12 @@ export async function handleRiderOpportunitiesRoute(
       line: route.map((point) => [point.lon, point.lat]),
       bufferMeters: ROUTE_DISCOVER_BUFFER_METERS,
       limit: 60,
-    }, { env }, request.signal),
+    }, {
+      env,
+      ...(dependencies.discoverCoordinator === undefined
+        ? {}
+        : { coordinator: dependencies.discoverCoordinator }),
+    }, request.signal),
   ]);
 
   const nearby = placesAnswer?.availability === "available" ? placesAnswer.places : [];
