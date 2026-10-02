@@ -6,7 +6,7 @@ import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 describe("Explore weekend intelligence", () => {
   it("offers road openings plus things and places as a first-class Explore lens", () => {
     render(<ExplorePanel entries={[]} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Openings" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Weekend" }));
     expect(screen.getByRole("heading", { name: "What is worth riding to?" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show weekend ideas near me" })).toBeInTheDocument();
   });
