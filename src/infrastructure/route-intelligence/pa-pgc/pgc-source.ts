@@ -21,7 +21,7 @@ const BUDGET: SourceBudget = {
   cacheTtlMs: 24 * 3_600_000,
   serveStaleMs: 7 * 24 * 3_600_000,
   retry: "none",
-  cancellable: true,
+  cancellable: false,
 };
 
 type Properties = Readonly<Record<string, unknown>>;
