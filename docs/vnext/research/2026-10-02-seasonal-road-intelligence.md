@@ -474,3 +474,145 @@ The Openings API returns `private, no-store` because the request encodes the rid
 - Opening dates shown in UI are exactly the normalized authority dates.
 - Route planning remains functional with all new sources unavailable.
 - No generated/bulk source geometry is committed to the repository.
+
+
+## Weekend rider intelligence: events.henning.rodeo + popular stops
+
+The road-opening calendar is now the first half of a broader **Weekend** lens. The other half reuses OpenGravel's existing Places/Discover/ride-interest seams rather than inventing a new destination system.
+
+### Provider wiring
+
+OpenGravel's existing Places contract already expects:
+
+- `GET /api/v1/places?bbox=...&kinds=happy_hour,event&when=week`
+- `POST /api/v1/places/along`
+
+The canonical rider-facing provider is `https://events.henning.rodeo`.
+
+Configuration accepts either the older compatibility names:
+
+```text
+OGV_PLACES_API_URL=
+OGV_PLACES_API_KEY=
+```
+
+or the clearer aliases:
+
+```text
+OGV_EVENTS_API_URL=https://events.henning.rodeo
+OGV_EVENTS_API_KEY=
+```
+
+If only `OGV_EVENTS_API_KEY` is present, the canonical `events.henning.rodeo` origin is used. A public provider may omit the key; OpenGravel then omits the Authorization header. No URL and no key means the provider remains honestly unavailable rather than adding a hidden network dependency.
+
+### Browse mode: a riding radius, not "nearby"
+
+When there is no selected route, Weekend asks for location only after the rider taps the call to action.
+
+Default radius: **100 miles**.  
+Hard maximum: **125 miles**.
+
+The external events/places provider is queried as bounded geographic tiles:
+
+- each tile <= 1.45 degrees per side;
+- <= 12 tiles per request;
+- <= 3 upstream tile requests concurrently;
+- final results are clipped to the actual circular rider radius;
+- duplicates are removed by stable provider id.
+
+The OSM Discover index is local/server-side and can scan the full radius without an upstream Overpass call.
+
+This is intentionally not nearest-first. For a motorcycle rider, a worthwhile destination 45 miles away can be better than a generic venue 2 miles away.
+
+### Route mode: the route becomes the search spine
+
+When Explore opens, it checks for route context in this order:
+
+1. the process-wide `PlanningSession` selected route;
+2. the active Ride Focus pointer and its persisted route geometry;
+3. no route -> location-based browse mode.
+
+With a selected route:
+
+- seasonal road openings: **15-mile corridor**;
+- events / happy hours from events.henning.rodeo: **10-mile corridor**;
+- OSM/Wikimedia Discover destinations: **7.5 km corridor**.
+
+The tab loads immediately from the planned route; it does not request GPS again merely to find route-side opportunities.
+
+A full reload deliberately does not recreate an old planning answer. PlanningSession is attempt state, not authored ride truth. An active Ride Focus route can still be recovered because its geometry pointer is explicitly persisted for navigation.
+
+### Rider opportunity ranking
+
+The unified list is deterministic and deliberately small: at most **8** suggestions.
+
+Inputs:
+
+- event urgency;
+- event/provider `popular` flag;
+- provider rating;
+- rider-interest prior for the destination kind;
+- route detour when a route exists;
+- broad destination distance when browsing;
+- multi-source / Wikidata notability for Discover places.
+
+Useful high-prior static destinations include:
+
+- waterfalls;
+- covered/interesting bridges;
+- viewpoints;
+- quirky roadside places;
+- ruins;
+- scenic/natural destinations;
+- museums/history when they are actually worth a stop.
+
+In route mode, detour dominates:
+
+- <= 3 min: strong boost;
+- <= 8 min: useful boost;
+- <= 15 min: near-neutral;
+- > 25 min: strong penalty.
+
+In browse mode there is a wide rider destination sweet spot. Roughly 25–80 miles away is not penalized simply because it is farther from the rider.
+
+### Minimal-result rule
+
+The Weekend lens must not become an event feed.
+
+Diversity caps:
+
+- maximum 4 events;
+- maximum 2 happy-hour / food-drink opportunities;
+- maximum 5 static destinations;
+- repeated categories receive a penalty;
+- final list is capped at 8 across all kinds.
+
+The UI shows one **Things & places — Worth stopping for** section rather than separate feeds for every provider.
+
+### Separation from routing truth
+
+Events and destinations remain discovery/recon evidence only.
+
+They **do not**:
+
+- change Best Ride on their own;
+- make a road legal;
+- override a closure;
+- prove surface or access;
+- silently insert themselves into a route.
+
+When the rider chooses a destination, it becomes an ordinary rider-authored stop/road-span request and the normal routing/authority pipeline applies.
+
+This preserves the earlier OpenGravel rule: discovery may recommend; routing still proves the path.
+
+### Next interaction work
+
+The next small interaction layer should add three actions to an opportunity:
+
+- **Add stop**
+- **Build a loop through here**
+- **Save for weekend**
+
+Do not add another destination editor. These actions should dispatch the existing typed stop/route commands.
+
+For time-bound events, a route-to-event action should also pass an arrival target through the existing arrive-by model so a "6 PM bike night" can shape departure time without giving the event provider any routing authority.
