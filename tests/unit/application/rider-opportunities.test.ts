@@ -31,6 +31,8 @@ function opportunity(
     distanceFromRouteMeters: null,
     detourMinutes: null,
     routeMile: null,
+    estimatedArrivalAt: null,
+    timingFit: "unknown",
     score,
     reason: "test",
     ...overrides,
