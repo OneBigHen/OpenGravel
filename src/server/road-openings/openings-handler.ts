@@ -7,7 +7,7 @@ import type {
 } from "@/application/route-intelligence/opening-calendar-contract";
 import type { RoadAuthorityCoordinator } from "@/application/route-intelligence/coordinator";
 import { boundingBoxOf, padBox } from "@/application/route-intelligence/match";
-import { distanceToLineMeters } from "@/application/discover/search-area";
+import { distanceToLineMeters, thinLine } from "@/application/discover/search-area";
 import type { BoundingBox, RoadAuthorityGeometry, RoadAuthorityRecord } from "@/application/route-intelligence/types";
 import type { Coordinate } from "@/domain/ride/types";
 import { roadAuthorityFromEnv } from "@/server/planning/road-authority";
@@ -159,12 +159,12 @@ function recordNearRoute(
   }
   const points = record.geometry.coordinates;
   if (points.length === 0) return false;
-  const count = Math.min(points.length, 16);
-  for (let index = 0; index < count; index += 1) {
-    const point = points[Math.round((index * (points.length - 1)) / Math.max(1, count - 1))];
-    if (point !== undefined && distanceToLineMeters(point, line) <= bufferMeters) return true;
-  }
-  return false;
+
+  // Check both directions. Authority geometries can be sparse: testing only
+  // their vertices can miss a long road that crosses a dense planned route
+  // between its endpoints.
+  if (thinLine(points, 32).some((point) => distanceToLineMeters(point, line) <= bufferMeters)) return true;
+  return thinLine(line, 64).some((point) => distanceToLineMeters(point, points) <= bufferMeters);
 }
 
 export async function handleRoadOpeningsRouteRequest(
