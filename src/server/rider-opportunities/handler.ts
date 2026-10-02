@@ -146,8 +146,10 @@ export async function handleRiderOpportunitiesNear(
   const withinRadius = uniquePlaces(nearbyPlaces).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
   const staticPlaces = uniquePlaces(osm.places).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
 
-  const placesAttribution = placesResults.find((answer) => answer.availability === "available")?.attribution
-    ?? "events.henning.rodeo";
+  const firstPlacesResult = placesResults.find((answer) => answer.availability === "available");
+  const placesAttribution = firstPlacesResult?.availability === "available"
+    ? firstPlacesResult.attribution
+    : "events.henning.rodeo";
   const context = { now, center, routeAware: false, placesSourceLabel: placesAttribution } as const;
   const ranked = rankRiderOpportunities([
     ...withinRadius.map((place) => opportunityFromNearbyPlace(place, context)),
