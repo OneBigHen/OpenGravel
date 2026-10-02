@@ -67,6 +67,23 @@ describe("rider opportunity ranking", () => {
     expect(event.score).toBeGreaterThan(staticPlace.score);
   });
 
+  it("treats an in-progress event as timely even when it started hours ago", () => {
+    const active = opportunityFromNearbyPlace(nearby({
+      startUtc: "2026-10-02T10:00:00.000Z",
+      endUtc: "2026-10-02T20:00:00.000Z",
+      popular: false,
+      rating: null,
+    }), { now: NOW, routeAware: true });
+    const stale = opportunityFromNearbyPlace(nearby({
+      id: asPlaceId("event:ended"),
+      startUtc: "2026-10-02T08:00:00.000Z",
+      endUtc: "2026-10-02T12:00:00.000Z",
+      popular: false,
+      rating: null,
+    }), { now: NOW, routeAware: true });
+    expect(active.score).toBeGreaterThan(stale.score);
+  });
+
   it("does not reduce browse mode to nearest-first", () => {
     const nearGeneric = opportunityFromInterestingPlace(place({
       id: "osm:w2",
