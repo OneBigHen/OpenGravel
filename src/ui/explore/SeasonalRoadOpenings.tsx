@@ -6,7 +6,7 @@ import type {
   RoadOpeningsBody,
   RoadOpeningSummary,
   UndatedSeasonalRoadSummary,
-} from "@/server/road-openings/openings-handler";
+} from "@/application/route-intelligence/opening-calendar-contract";
 
 type State =
   | { readonly kind: "idle" }
