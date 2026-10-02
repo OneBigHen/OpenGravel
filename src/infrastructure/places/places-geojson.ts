@@ -103,6 +103,17 @@ export function parsePlaceFeature(feature: unknown): NearbyPlace | null {
     popular: props["popular"] === true,
     dogFriendly: flag(props["dog"]),
     patio: flag(props["patio"]),
+    ...(optionalText(props["source_id"]) === null ? {} : { sourceId: optionalText(props["source_id"]) }),
+    ...(optionalText(props["source_label"]) === null ? {} : { sourceLabel: optionalText(props["source_label"]) }),
+    ...(httpsUrl(props["source_url"]) === null ? {} : { sourceUrl: httpsUrl(props["source_url"]) }),
+    ...(flag(props["motorcycle_specific"]) === null ? {} : { motorcycleSpecific: flag(props["motorcycle_specific"]) }),
+    ...(Array.isArray(props["tags"])
+      ? {
+          tags: [...new Set(props["tags"]
+            .filter((value): value is string => typeof value === "string" && value.trim() !== "")
+            .map((value) => value.trim().toLowerCase()))].slice(0, 12),
+        }
+      : {}),
     url,
     mapsUrl: httpsUrl(props["maps_url"]),
     offRouteMiles: finite(props["off_route_mi"]),
