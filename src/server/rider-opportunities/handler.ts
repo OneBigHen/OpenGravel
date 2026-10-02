@@ -68,6 +68,22 @@ function uniquePlaces<T extends { readonly id: string }>(values: readonly T[]): 
   return [...new Map(values.map((value) => [value.id, value])).values()];
 }
 
+async function mapWithConcurrency<T, R>(
+  values: readonly T[],
+  concurrency: number,
+  run: (value: T) => Promise<R>,
+): Promise<readonly R[]> {
+  const results: R[] = new Array(values.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (next < values.length) {
+      const index = next++;
+      results[index] = await run(values[index]!);
+    }
+  }));
+  return results;
+}
+
 async function broadOsm(
   env: Env,
   center: Coordinate,
@@ -119,8 +135,8 @@ export async function handleRiderOpportunitiesNear(
   const [placesResults, osm] = await Promise.all([
     placesSource === null
       ? Promise.resolve([])
-      : Promise.all(tiles.map((extent) =>
-          placesSource.inExtent(extent, { kinds: ["happy_hour", "event"], window: "week" }, request.signal))),
+      : mapWithConcurrency(tiles, 3, (extent) =>
+          placesSource.inExtent(extent, { kinds: ["happy_hour", "event"], window: "week" }, request.signal)),
     broadOsm(env, center, radiusMiles * MILES_TO_METERS, request.signal),
   ]);
 
@@ -134,7 +150,7 @@ export async function handleRiderOpportunitiesNear(
   const ranked = rankRiderOpportunities([
     ...withinRadius.map((place) => opportunityFromNearbyPlace(place, context)),
     ...staticPlaces.map((place) => opportunityFromInterestingPlace(place, context)),
-  ], 9);
+  ], 8);
 
   const placesUnavailable = placesSource === null || placesResults.every((result) => result.availability !== "available");
   const body: RiderOpportunitiesBody = {
@@ -230,7 +246,7 @@ export async function handleRiderOpportunitiesRoute(
   const bodyOut: RiderOpportunitiesBody = {
     generatedAt: now,
     mode: "route",
-    opportunities: rankRiderOpportunities(opportunities, 9),
+    opportunities: rankRiderOpportunities(opportunities, 8),
     searchedRadiusMiles: null,
     sources: [
       {
