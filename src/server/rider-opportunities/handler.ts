@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import {
   opportunityFromInterestingPlace,
   opportunityFromNearbyPlace,
