@@ -613,6 +613,21 @@ Change the query/projection semantics so the layer either:
 
 The preparation weather adapter uses its own hard-coded `NWS_USER_AGENT`; the map alert provider reads `NWS_USER_AGENT` from environment. Unify this so one deployment identity applies consistently.
 
+### Public-origin security deployment is incomplete in-repo
+
+`src/server/security/guard.ts` assumes a fail2ban `ogv` jail writes a shared blocklist, and `src/server/rate-limit.ts` can trust `cf-connecting-ip` only when `TRUST_CF_CONNECTING_IP=1` **and** the origin cannot be reached around Cloudflare.
+
+The repository currently has no checked-in fail2ban jail/service or verified reverse-proxy/firewall deployment definition.
+
+Before production closeout:
+- verify whether fail2ban is actually installed and reading `ogv-security` journal lines;
+- verify the blocklist path and permissions;
+- verify whether the origin is firewalled to the intended proxy;
+- set `TRUST_CF_CONNECTING_IP` only if that trust boundary is real;
+- capture the non-secret service/proxy/firewall topology under `infra/deploy/`.
+
+Do not assume the request guard alone provides the documented fail2ban behavior.
+
 ### Places are split into two product truths
 
 Map stop layers use TomTom Search while the generic `PlacesSource` currently models event/happy-hour content. This is acceptable as separate upstream queries, but dedupe/provenance/category semantics must converge before the same physical place can appear through Ride Discover, Things, map stops and Along-this-ride with conflicting identity or source text.
