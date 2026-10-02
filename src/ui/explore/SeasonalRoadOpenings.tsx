@@ -181,7 +181,7 @@ export function SeasonalRoadOpenings() {
         </div>
         <button type="button" className="og-secondary" onClick={load}>Refresh</button>
       </div>
-      {state.data.truncated ? <p>Showing the nearest search window's first results. Narrow the area before treating this as complete.</p> : null}
+      {state.data.truncated ? <p>Showing the first results in the nearest search window. Narrow the area before treating this as complete.</p> : null}
       {empty ? <p>No published seasonal openings were found in this search window.</p> : null}
       {groups === null ? null : (
         <>
