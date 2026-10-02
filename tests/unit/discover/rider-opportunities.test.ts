@@ -106,6 +106,46 @@ describe("rider opportunity ranking", () => {
     expect(moto.score).toBeGreaterThan(generic.score);
   });
 
+  it("estimates arrival at a route-mile and suppresses events already over then", () => {
+    const fits = opportunityFromNearbyPlace(nearby({
+      id: asPlaceId("event:fits"),
+      category: "Festival",
+      motorcycleSpecific: false,
+      popular: false,
+      rating: null,
+      routeMile: 50,
+      startUtc: "2026-10-02T16:30:00.000Z",
+      endUtc: "2026-10-02T18:00:00.000Z",
+    }), {
+      now: NOW,
+      routeAware: true,
+      routeDistanceMeters: 100 * 1609.344,
+      routeDurationSeconds: 2 * 60 * 60,
+      departAt: NOW,
+    });
+    const misses = opportunityFromNearbyPlace(nearby({
+      id: asPlaceId("event:misses"),
+      category: "Festival",
+      motorcycleSpecific: false,
+      popular: false,
+      rating: null,
+      routeMile: 50,
+      startUtc: "2026-10-02T15:00:00.000Z",
+      endUtc: "2026-10-02T16:30:00.000Z",
+    }), {
+      now: NOW,
+      routeAware: true,
+      routeDistanceMeters: 100 * 1609.344,
+      routeDurationSeconds: 2 * 60 * 60,
+      departAt: NOW,
+    });
+
+    expect(fits.estimatedArrivalAt).toBe("2026-10-02T17:00:00.000Z");
+    expect(fits.timingFit).toBe("fits");
+    expect(misses.timingFit).toBe("misses");
+    expect(rankRiderOpportunities([misses, fits], 5).map((item) => item.id)).toEqual([fits.id]);
+  });
+
   it("does not reduce browse mode to nearest-first", () => {
     const nearGeneric = opportunityFromInterestingPlace(place({
       id: "osm:w2",
