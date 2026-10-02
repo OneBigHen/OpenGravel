@@ -581,6 +581,42 @@ For each dependency PR, run full `npm run verify` and relevant E2E. Close supers
 | #4 | ESLint major | Separate migration. |
 | #2/#1 | Actions majors | Separate CI maintenance. |
 
+## Concrete audit defects to resolve
+
+These are observed implementation mismatches on the audited main branch, not speculative parity ideas.
+
+### Health policy version can lie by default
+
+`src/server/health/health-service.ts` defaults `policyVersion` to `VNEXT_STUB_0` unless `OGV_POLICY_VERSION` is explicitly configured, while `src/server/planning/plan-service.ts` uses `PA_NJ_ROUTE_POLICY_VNEXT_1`.
+
+The health response should derive the production policy version from the same code/config authority as planning. An unset environment variable must not make health report an obsolete stub version.
+
+### GraphHopper configuration is duplicated
+
+Both planning and health define their own `DEFAULT_GRAPHHOPPER_URL`. Centralize routing-service configuration so health cannot probe a different implicit service than planning.
+
+### Missing known-road databases look like empty geography
+
+`src/server/roads/known-roads-db.ts` intentionally returns empty catalogues when `CURVATURE_DB_PATH` or `GRAVEL_ATLAS_DB_PATH` is absent/unreadable. `knownRoadsProvider` then has no availability signal, so the Layers UI can report "None here" rather than "unconfigured/unavailable."
+
+Preserve graceful routing degradation, but carry catalogue availability separately from a legitimate zero-result query.
+
+### NWS map-alert coverage is center-point only
+
+The map-layer NWS provider currently queries `/alerts/active?point=<viewport-center>`. That does not mean it has checked the whole viewport and can miss an alert affecting another visible part of the map.
+
+Change the query/projection semantics so the layer either:
+- requests an area/zone representation that actually covers the visible bounds; or
+- clearly scopes the result to the checked point/corridor and does not imply full-view coverage.
+
+### NWS identity/config is split
+
+The preparation weather adapter uses its own hard-coded `NWS_USER_AGENT`; the map alert provider reads `NWS_USER_AGENT` from environment. Unify this so one deployment identity applies consistently.
+
+### Places are split into two product truths
+
+Map stop layers use TomTom Search while the generic `PlacesSource` currently models event/happy-hour content. This is acceptable as separate upstream queries, but dedupe/provenance/category semantics must converge before the same physical place can appear through Ride Discover, Things, map stops and Along-this-ride with conflicting identity or source text.
+
 ## Additional stack problems the orchestrator must actively look for
 
 ### Dead or invisible modules
