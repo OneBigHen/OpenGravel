@@ -186,6 +186,40 @@ describe("road-authority coordinator", () => {
     expect((await coordinator.assess(corridor, new AbortController().signal)).evaluate(far).evidence.closures.status).toBe("unknown");
   });
 
+  it("a traversed designation with unknown access never becomes known-open evidence", async () => {
+    const designationInfo = info({ facet: "access", authority: "authoritative-operational" });
+    const uncertain = record({
+      kind: "motor-vehicle-designation",
+      validFrom: null,
+      validUntil: null,
+      motorcycleAccess: { status: "unknown", seasons: null },
+    });
+    const coordinator = createRoadAuthorityCoordinator({
+      sources: [source({ records: [uncertain] }, designationInfo)],
+      now: () => AT,
+    });
+    const verdict = (await coordinator.assess(corridor, new AbortController().signal)).evaluate(ROUTE_ON_ROAD);
+    expect(verdict.evidence.access.status).toBe("unknown");
+    expect(verdict.failures).toEqual([]);
+  });
+
+  it("seasonal access without published dates stays unknown rather than green-lit", async () => {
+    const designationInfo = info({ facet: "access", authority: "authoritative-operational" });
+    const seasonal = record({
+      kind: "motor-vehicle-designation",
+      validFrom: null,
+      validUntil: null,
+      motorcycleAccess: { status: "open", seasons: [] },
+    });
+    const coordinator = createRoadAuthorityCoordinator({
+      sources: [source({ records: [seasonal] }, designationInfo)],
+      now: () => AT,
+    });
+    const verdict = (await coordinator.assess(corridor, new AbortController().signal)).evaluate(ROUTE_ON_ROAD);
+    expect(verdict.evidence.access.status).toBe("unknown");
+    expect(verdict.warnings.map((warning) => warning.code)).toContain("seasonal-access-unverified");
+  });
+
   it("an active closure on the route rejects it with the source's reason", async () => {
     const coordinator = createRoadAuthorityCoordinator({ sources: [source({ records: [record()] })], now: () => AT });
     const verdict = (await coordinator.assess(corridor, new AbortController().signal)).evaluate(ROUTE_ON_ROAD);
