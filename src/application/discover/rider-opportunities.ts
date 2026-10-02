@@ -53,12 +53,14 @@ const PLACE_PRIOR: Readonly<Record<string, number>> = {
   event: 0.8,
 };
 
-function eventUrgency(startsAt: string | null, now: number): number {
+function eventUrgency(startsAt: string | null, endsAt: string | null, now: number): number {
   if (startsAt === null) return 0;
   const start = Date.parse(startsAt);
   if (!Number.isFinite(start)) return 0;
+  const end = endsAt === null ? null : Date.parse(endsAt);
+  if (start <= now && (end === null || !Number.isFinite(end) || now < end)) return 1.1;
+  if (end !== null && Number.isFinite(end) && end <= now) return -1.2;
   const hours = (start - now) / 3_600_000;
-  if (hours < -4) return -0.6;
   if (hours <= 12) return 1;
   if (hours <= 48) return 0.8;
   if (hours <= 7 * 24) return 0.5;
@@ -130,7 +132,11 @@ function scoreOf(
     else if (opportunity.rating >= 4.4) score += 0.35;
     else if (opportunity.rating >= 4) score += 0.15;
   }
-  if (opportunity.kind === "event") score += eventUrgency(opportunity.startsAt, now);
+  if (opportunity.kind === "event") {
+    score += eventUrgency(opportunity.startsAt, opportunity.endsAt, now);
+  } else if (opportunity.kind === "happy-hour") {
+    score += eventUrgency(opportunity.startsAt, opportunity.endsAt, now) * 0.4;
+  }
   score += context.routeAware
     ? routeCost(opportunity.detourMinutes, opportunity.distanceFromRouteMeters)
     : destinationDistanceTerm(opportunity.distanceMeters);
