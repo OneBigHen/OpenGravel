@@ -146,7 +146,9 @@ export async function handleRiderOpportunitiesNear(
   const withinRadius = uniquePlaces(nearbyPlaces).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
   const staticPlaces = uniquePlaces(osm.places).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
 
-  const context = { now, center, routeAware: false } as const;
+  const placesAttribution = placesResults.find((answer) => answer.availability === "available")?.attribution
+    ?? "events.henning.rodeo";
+  const context = { now, center, routeAware: false, placesSourceLabel: placesAttribution } as const;
   const ranked = rankRiderOpportunities([
     ...withinRadius.map((place) => opportunityFromNearbyPlace(place, context)),
     ...staticPlaces.map((place) => opportunityFromInterestingPlace(place, context)),
@@ -237,7 +239,13 @@ export async function handleRiderOpportunitiesRoute(
   const discovered = discoverAnswer.status === 200 && "places" in discoverAnswer.body
     ? discoverAnswer.body.places
     : [];
-  const context = { now, routeAware: true } as const;
+  const context = {
+    now,
+    routeAware: true,
+    placesSourceLabel: placesAnswer?.availability === "available"
+      ? placesAnswer.attribution
+      : "events.henning.rodeo",
+  } as const;
   const opportunities: RiderOpportunity[] = [
     ...uniquePlaces(nearby).map((place) => opportunityFromNearbyPlace(place, context)),
     ...uniquePlaces(discovered).map((place) => opportunityFromInterestingPlace(place, context)),
