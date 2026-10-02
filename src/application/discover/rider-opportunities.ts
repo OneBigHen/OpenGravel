@@ -224,7 +224,10 @@ export function opportunityFromInterestingPlace(
 }
 
 const KIND_CAP: Readonly<Record<RiderOpportunityKind, number>> = {
-  event: 4,
+  // Events are useful trip hooks, but this is a rider feed rather than an event
+  // directory. Three is enough to surface a strong weekend without drowning
+  // roads, viewpoints and destination stops.
+  event: 3,
   "happy-hour": 2,
   place: 5,
 };
