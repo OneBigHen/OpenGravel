@@ -7,8 +7,9 @@
  * - GET  ?lat=&lon=[&radius=][&kind=near|destination][&categories=a,b][&limit=]
  * - POST { line: [[lon,lat],…], bufferMeters?, categories?, limit? }
  *
- * Sources: the OSM index when `OGV_DISCOVER_OSM_PLACES` points at a built
- * `osm-places.json`, and Wikimedia (no key; `WIKIMEDIA_USER_AGENT`).
+ * Sources: regional OSM and Overture indexes when configured, plus Wikimedia
+ * (no key; `WIKIMEDIA_USER_AGENT`). Runtime discovery never scans either
+ * global dataset.
  * An unavailable source is reported per source; the answer is still 200.
  */
 
@@ -27,6 +28,7 @@ import {
 } from "@/application/discover";
 import type { Coordinate } from "@/domain/ride/types";
 import { createOsmPlacesSource, type OsmPlacesIndex } from "@/infrastructure/discover/osm-places-source";
+import { createOverturePlacesSource, type OverturePlacesIndex } from "@/infrastructure/discover/overture-places-source";
 import { createWikimediaSource } from "@/infrastructure/discover/wikimedia-source";
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -82,6 +84,18 @@ export function discoverSourcesFromEnv(env: Env): readonly InterestingPlaceSourc
       },
     }));
   }
+  const overturePath = env["OGV_DISCOVER_OVERTURE_PLACES"]?.trim();
+  if (overturePath !== undefined && overturePath !== "") {
+    sources.push(createOverturePlacesSource({
+      load: async () => {
+        try {
+          return JSON.parse(await readFile(overturePath, "utf8")) as OverturePlacesIndex;
+        } catch {
+          return null;
+        }
+      },
+    }));
+  }
   sources.push(wikimedia(env));
   return sources;
 }
@@ -95,7 +109,7 @@ function wikimedia(env: Env): ReturnType<typeof createWikimediaSource> {
 
 let shared: { readonly key: string; readonly coordinator: DiscoverCoordinator } | null = null;
 function coordinatorFromEnv(env: Env): DiscoverCoordinator {
-  const key = `${env["OGV_DISCOVER_OSM_PLACES"] ?? ""}|${env["WIKIMEDIA_USER_AGENT"] ?? ""}`;
+  const key = `${env["OGV_DISCOVER_OSM_PLACES"] ?? ""}|${env["OGV_DISCOVER_OVERTURE_PLACES"] ?? ""}|${env["WIKIMEDIA_USER_AGENT"] ?? ""}`;
   if (shared?.key !== key) {
     shared = { key, coordinator: createDiscoverCoordinator({ sources: discoverSourcesFromEnv(env), enrichers: [wikimedia(env)] }) };
   }
