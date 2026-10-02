@@ -15,13 +15,32 @@ type State =
   | { readonly kind: "ready"; readonly data: RoadOpeningsBody }
   | { readonly kind: "error"; readonly message: string };
 
-function dateLabel(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
+function dateLabel(value: string, timeZone?: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(timeZone === undefined ? {} : { timeZone }),
+  }).format(new Date(value));
 }
 
-function inclusiveEndDateLabel(exclusiveEnd: string): string {
+function recurringDateLabel(value: string): string {
+  // Recurring month/day windows are calendar dates, not instants. UTC keeps an
+  // Oct 1 season from rendering as Sep 30 for an Eastern-time rider.
+  return dateLabel(value, "UTC");
+}
+
+function recurringInclusiveEndDateLabel(exclusiveEnd: string): string {
   const milliseconds = Date.parse(exclusiveEnd);
-  return Number.isFinite(milliseconds) ? dateLabel(new Date(milliseconds - 1).toISOString()) : dateLabel(exclusiveEnd);
+  return Number.isFinite(milliseconds)
+    ? recurringDateLabel(new Date(milliseconds - 1).toISOString())
+    : recurringDateLabel(exclusiveEnd);
+}
+
+function openingWindowLabel(event: RoadOpeningSummary): string {
+  if (event.certainty === "recurring-season") {
+    return `${recurringDateLabel(event.startsAt)} – ${recurringInclusiveEndDateLabel(event.endsAt)}`;
+  }
+  return `${dateLabel(event.startsAt)} · closes ${dateLabel(event.endsAt)}`;
 }
 
 function localDayStart(date: Date): Date {
@@ -81,7 +100,7 @@ function OpeningCard({ event, source }: { readonly event: RoadOpeningSummary; re
         </span>
         <strong>{event.roadName ?? "Unnamed seasonal road"}</strong>
         <span className="og-explore-card__facts">
-          <span>{dateLabel(event.startsAt)} – {inclusiveEndDateLabel(event.endsAt)}</span>
+          <span>{openingWindowLabel(event)}</span>
           <span>{event.certainty === "published-window" ? "Published dates" : "Recurring season"}</span>
         </span>
         <span className="og-explore-card__summary">{event.description}</span>
