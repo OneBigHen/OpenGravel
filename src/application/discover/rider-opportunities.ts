@@ -16,6 +16,7 @@ export interface RiderOpportunity {
   readonly endsAt: string | null;
   readonly url: string | null;
   readonly sourceLabel: string;
+  readonly motorcycleSpecific: boolean;
   readonly popular: boolean;
   readonly rating: number | null;
   readonly distanceMeters: number | null;
@@ -96,12 +97,14 @@ function destinationDistanceTerm(distanceMeters: number | null): number {
 
 function reasonFor(input: {
   readonly kind: RiderOpportunityKind;
+  readonly motorcycleSpecific: boolean;
   readonly popular: boolean;
   readonly routeAware: boolean;
   readonly detourMinutes: number | null;
   readonly startsAt: string | null;
   readonly now: number;
 }): string {
+  if (input.motorcycleSpecific) return "Motorcycle event";
   if (input.routeAware && input.detourMinutes !== null) {
     if (input.detourMinutes <= 3) return "Nearly on your route";
     if (input.detourMinutes <= 10) return `About a ${input.detourMinutes} min detour`;
@@ -126,6 +129,7 @@ function scoreOf(
       ? 0.75
       : PLACE_PRIOR[opportunity.category] ?? 0.55;
 
+  if (opportunity.motorcycleSpecific) score += 1.35;
   if (opportunity.popular) score += 0.75;
   if (opportunity.rating !== null) {
     if (opportunity.rating >= 4.7) score += 0.55;
@@ -141,6 +145,14 @@ function scoreOf(
     ? routeCost(opportunity.detourMinutes, opportunity.distanceFromRouteMeters)
     : destinationDistanceTerm(opportunity.distanceMeters);
   return Number(score.toFixed(3));
+}
+
+function motorcycleSpecific(place: NearbyPlace): boolean {
+  if (place.motorcycleSpecific === true) return true;
+  const tags = (place.tags ?? []).map((value) => value.toLowerCase());
+  if (tags.some((value) => /^(dual-sport|adventure-ride|motorcycle|enduro|hare-scramble|moto|bike-night)$/.test(value))) return true;
+  const category = place.category.toLowerCase();
+  return /dual[ -]?sport|adventure ride|motorcycle|enduro|hare scramble|moto\b|bike night/.test(category);
 }
 
 export function opportunityFromNearbyPlace(
@@ -161,7 +173,8 @@ export function opportunityFromNearbyPlace(
     startsAt: place.startUtc ?? null,
     endsAt: place.endUtc ?? null,
     url: place.url,
-    sourceLabel: context.placesSourceLabel ?? "events.henning.rodeo",
+    sourceLabel: place.sourceLabel ?? context.placesSourceLabel ?? "events.henning.rodeo",
+    motorcycleSpecific: motorcycleSpecific(place),
     popular: place.popular,
     rating: place.rating,
     distanceMeters,
@@ -175,6 +188,7 @@ export function opportunityFromNearbyPlace(
     score,
     reason: reasonFor({
       kind: base.kind,
+      motorcycleSpecific: base.motorcycleSpecific,
       popular: base.popular,
       routeAware: context.routeAware,
       detourMinutes,
@@ -201,6 +215,7 @@ export function opportunityFromInterestingPlace(
     endsAt: place.validUntil ?? null,
     url: place.provenance[0]?.url ?? null,
     sourceLabel: place.provenance[0]?.sourceLabel ?? "OpenGravel Discover",
+    motorcycleSpecific: false,
     popular: place.provenance.length > 1 || place.wikidataId !== null,
     rating: null,
     distanceMeters,
@@ -214,6 +229,7 @@ export function opportunityFromInterestingPlace(
     score,
     reason: reasonFor({
       kind: base.kind,
+      motorcycleSpecific: base.motorcycleSpecific,
       popular: base.popular,
       routeAware: context.routeAware,
       detourMinutes: base.detourMinutes,
