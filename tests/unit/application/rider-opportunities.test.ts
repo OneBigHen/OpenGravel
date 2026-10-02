@@ -24,6 +24,7 @@ function opportunity(
     endsAt: null,
     url: null,
     sourceLabel: "test",
+    motorcycleSpecific: false,
     popular: false,
     rating: null,
     distanceMeters: null,
