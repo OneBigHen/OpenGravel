@@ -522,7 +522,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
               className={lens === id ? "og-primary" : "og-secondary"}
               onClick={() => setLens(id)}
             >
-              {id === "rides" ? "Rides" : id === "roads" ? "Roads" : "Openings"}
+              {id === "rides" ? "Rides" : id === "roads" ? "Roads" : "Weekend"}
             </button>
           ))}
         </div>
