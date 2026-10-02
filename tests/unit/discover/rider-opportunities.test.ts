@@ -63,7 +63,7 @@ describe("rider opportunity ranking", () => {
   it("rewards time-limited popular events that barely leave the planned route", () => {
     const event = opportunityFromNearbyPlace(nearby(), { now: NOW, routeAware: true });
     const staticPlace = opportunityFromInterestingPlace(place(), { now: NOW, routeAware: true });
-    expect(event.reason).toMatch(/route|soon/i);
+    expect(event.reason).toMatch(/motorcycle|route|soon/i);
     expect(event.score).toBeGreaterThan(staticPlace.score);
   });
 
@@ -82,6 +82,28 @@ describe("rider opportunity ranking", () => {
       rating: null,
     }), { now: NOW, routeAware: true });
     expect(active.score).toBeGreaterThan(stale.score);
+  });
+
+  it("uses explicit motorcycle provenance to outrank a generic event with the same timing", () => {
+    const moto = opportunityFromNearbyPlace(nearby({
+      id: asPlaceId("event:moto"),
+      category: "Festival",
+      motorcycleSpecific: true,
+      sourceLabel: "ECEA",
+      popular: false,
+      rating: null,
+    }), { now: NOW, routeAware: true });
+    const generic = opportunityFromNearbyPlace(nearby({
+      id: asPlaceId("event:generic"),
+      name: "Generic Festival",
+      category: "Festival",
+      motorcycleSpecific: false,
+      popular: false,
+      rating: null,
+    }), { now: NOW, routeAware: true });
+    expect(moto.reason).toBe("Motorcycle event");
+    expect(moto.sourceLabel).toBe("ECEA");
+    expect(moto.score).toBeGreaterThan(generic.score);
   });
 
   it("does not reduce browse mode to nearest-first", () => {
@@ -109,8 +131,8 @@ describe("rider opportunity ranking", () => {
       }), { now: NOW, routeAware: true }));
     const scenic = opportunityFromInterestingPlace(place(), { now: NOW, routeAware: true });
     const ranked = rankRiderOpportunities([...items, scenic], 9);
-    expect(ranked).toHaveLength(5);
-    expect(ranked.filter((item) => item.kind === "event")).toHaveLength(4);
+    expect(ranked).toHaveLength(4);
+    expect(ranked.filter((item) => item.kind === "event")).toHaveLength(3);
     expect(ranked.some((item) => item.kind === "place")).toBe(true);
   });
 });
