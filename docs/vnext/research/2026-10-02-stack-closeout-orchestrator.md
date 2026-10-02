@@ -154,11 +154,11 @@ type ProviderHealth =
 
 No secret values may be returned.
 
-### Add an operator health endpoint
+### Extend the existing operator health endpoint
 
-Add a bounded endpoint such as `/api/health/providers` or extend the existing health endpoint.
+`/api/health` already exists and currently probes GraphHopper plus build/graph/policy version metadata. Extend that existing secrets-free contract (or add a namespaced provider subresource behind it) rather than creating a competing health system.
 
-It should answer questions such as:
+It should additionally answer questions such as:
 
 - Is GraphHopper reachable?
 - Is hosted fallback configured?
@@ -184,7 +184,10 @@ GRAPHHOPPER_API_KEY
 GRAPHHOPPER_HOSTED_DAILY_BUDGET
 
 NEXT_PUBLIC_MAPBOX_TOKEN
-NEXT_PUBLIC_BASEMAP_MODE or actual current equivalent
+NEXT_PUBLIC_OGV_BASEMAP
+OGV_BUILD_ID
+OGV_POLICY_VERSION
+OGV_GRAPH_VERSION
 
 TOMTOM_API_KEY
 TOMTOM_TRAFFIC_API_KEY
