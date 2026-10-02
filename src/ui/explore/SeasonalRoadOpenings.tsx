@@ -18,6 +18,11 @@ function dateLabel(value: string): string {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
 }
 
+function inclusiveEndDateLabel(exclusiveEnd: string): string {
+  const milliseconds = Date.parse(exclusiveEnd);
+  return Number.isFinite(milliseconds) ? dateLabel(new Date(milliseconds - 1).toISOString()) : dateLabel(exclusiveEnd);
+}
+
 function localDayStart(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -63,7 +68,7 @@ function OpeningCard({ event }: { readonly event: RoadOpeningSummary }) {
         </span>
         <strong>{event.roadName ?? "Unnamed seasonal road"}</strong>
         <span className="og-explore-card__facts">
-          <span>{dateLabel(event.startsAt)} – {dateLabel(event.endsAt)}</span>
+          <span>{dateLabel(event.startsAt)} – {inclusiveEndDateLabel(event.endsAt)}</span>
           <span>{event.certainty === "published-window" ? "Published dates" : "Recurring season"}</span>
         </span>
         <span className="og-explore-card__summary">{event.description}</span>
