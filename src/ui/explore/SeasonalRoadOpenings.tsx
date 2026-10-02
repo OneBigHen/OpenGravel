@@ -298,8 +298,13 @@ export function SeasonalRoadOpenings({ plannedRoute }: SeasonalRoadOpeningsProps
     let roads: RoadOpeningsBody | null = null;
     let opportunities: RiderOpportunitiesBody | null = null;
 
-    if (roadsResult.status === "fulfilled" && !("unavailable" in roadsResult.value)) roads = roadsResult.value;
-    else errors.push(roadsResult.status === "rejected" ? "Road openings could not be checked." : roadsResult.value.reason);
+    if (roadsResult.status === "rejected") {
+      errors.push("Road openings could not be checked.");
+    } else if ("unavailable" in roadsResult.value) {
+      errors.push(roadsResult.value.reason);
+    } else {
+      roads = roadsResult.value;
+    }
     if (opportunitiesResult.status === "fulfilled") opportunities = opportunitiesResult.value;
     else errors.push("Things and places could not be checked.");
 
