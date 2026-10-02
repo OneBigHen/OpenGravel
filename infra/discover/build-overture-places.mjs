@@ -69,7 +69,7 @@ function point(feature) {
 function website(properties) {
   const raw = parsedJson(properties.websites);
   const candidates = Array.isArray(raw) ? raw : [];
-  return candidates.find((value) => typeof value === "string" && /^https:///i.test(value));
+  return candidates.find((value) => typeof value === "string" && value.toLowerCase().startsWith("https://"));
 }
 
 const byId = new Map();
