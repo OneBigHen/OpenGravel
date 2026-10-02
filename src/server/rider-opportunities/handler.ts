@@ -186,6 +186,17 @@ export async function handleRiderOpportunitiesNear(
   return Response.json(body, { headers: { "cache-control": "private, no-store" } });
 }
 
+function optionalPositive(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function optionalInstant(value: unknown): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
 function routePoint(value: unknown): Coordinate | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
@@ -210,7 +221,8 @@ export async function handleRiderOpportunitiesRoute(
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     return Response.json({ error: { code: "validation", message: "A JSON body is required." } }, { status: 400 });
   }
-  const raw = (body as Record<string, unknown>)["line"];
+  const input = body as Record<string, unknown>;
+  const raw = input["line"];
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_LINE_POINTS) {
     return Response.json({ error: { code: "validation", message: `line must contain 2–${MAX_LINE_POINTS} points.` } }, { status: 400 });
   }
@@ -219,6 +231,21 @@ export async function handleRiderOpportunitiesRoute(
     return Response.json({ error: { code: "validation", message: "line contains an invalid coordinate." } }, { status: 400 });
   }
   const route = line as Coordinate[];
+  const routeDistanceMeters = optionalPositive(input["routeDistanceMeters"]);
+  const routeDurationSeconds = optionalPositive(input["routeDurationSeconds"]);
+  const departAt = optionalInstant(input["departAt"]);
+  if (
+    (input["routeDistanceMeters"] !== undefined && routeDistanceMeters === null)
+    || (input["routeDurationSeconds"] !== undefined && routeDurationSeconds === null)
+    || (input["departAt"] !== undefined && departAt === null)
+  ) {
+    return Response.json({
+      error: {
+        code: "validation",
+        message: "routeDistanceMeters/routeDurationSeconds must be positive and departAt must be an ISO instant.",
+      },
+    }, { status: 400 });
+  }
   const env = dependencies.env ?? process.env;
   const nowMs = (dependencies.now ?? Date.now)();
   const now = new Date(nowMs).toISOString();
@@ -251,6 +278,9 @@ export async function handleRiderOpportunitiesRoute(
   const context = {
     now,
     routeAware: true,
+    ...(routeDistanceMeters === null ? {} : { routeDistanceMeters }),
+    ...(routeDurationSeconds === null ? {} : { routeDurationSeconds }),
+    ...(departAt === null ? {} : { departAt }),
     placesSourceLabel: placesAnswer?.availability === "available"
       ? placesAnswer.attribution
       : "events.henning.rodeo",
