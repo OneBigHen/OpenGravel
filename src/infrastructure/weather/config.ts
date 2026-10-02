@@ -14,7 +14,7 @@ export interface NwsEnv {
 }
 
 export function nwsUserAgentFromEnv(
-  env: NwsEnv = process.env,
+  env: NwsEnv = { NWS_USER_AGENT: process.env["NWS_USER_AGENT"] },
 ): string {
   const configured = env.NWS_USER_AGENT?.trim();
   return configured === undefined || configured === ""
