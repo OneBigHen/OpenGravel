@@ -325,10 +325,15 @@ export function SeasonalRoadOpenings({ plannedRoute }: SeasonalRoadOpeningsProps
   }
 
   useEffect(() => {
-    if (plannedRoute === undefined || plannedRoute.line.length < 2) return;
-    void loadContext({ kind: "route", line: plannedRoute.line });
-    // The route key changes only when the selected route changes; coordinates
-    // are intentionally not a dependency because the key owns their identity.
+    const route = plannedRoute;
+    if (route === undefined || route.line.length < 2) return;
+    // Defer the state transition out of the effect body. The effect observes
+    // route identity; the actual network state machine starts on the next task.
+    const timer = window.setTimeout(() => {
+      void loadContext({ kind: "route", line: route.line });
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // The route key owns the immutable geometry identity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plannedRoute?.key]);
 
