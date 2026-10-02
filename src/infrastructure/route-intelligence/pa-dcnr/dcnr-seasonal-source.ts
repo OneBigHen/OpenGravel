@@ -163,6 +163,13 @@ export function createDcnrSeasonalRoadsSource(options: DcnrSeasonalRoadsSourceOp
       const response = await doFetch(url, { signal: controller.signal, headers: { accept: "application/geo+json, application/json" } });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload: unknown = await response.json();
+      if (
+        typeof payload === "object" && payload !== null
+        && ((payload as { exceededTransferLimit?: unknown }).exceededTransferLimit === true
+          || (payload as { properties?: { exceededTransferLimit?: unknown } }).properties?.exceededTransferLimit === true)
+      ) {
+        throw new Error("ArcGIS transfer limit exceeded");
+      }
       return { fetchedAt: new Date(now()).toISOString(), records: parseDcnrSeasonalRoads(payload, info.id) };
     } finally {
       clearTimeout(timer);
