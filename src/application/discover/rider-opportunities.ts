@@ -23,6 +23,9 @@ export interface RiderOpportunity {
   readonly distanceFromRouteMeters: number | null;
   readonly detourMinutes: number | null;
   readonly routeMile: number | null;
+  /** Estimated arrival at this route position when route timing is known. */
+  readonly estimatedArrivalAt: string | null;
+  readonly timingFit: "fits" | "wait" | "misses" | "unknown";
   readonly score: number;
   readonly reason: string;
 }
@@ -31,6 +34,10 @@ export interface RiderOpportunityRankContext {
   readonly now: string;
   readonly center?: Coordinate;
   readonly routeAware: boolean;
+  /** Selected-route totals used only to estimate arrival at provider route miles. */
+  readonly routeDistanceMeters?: number;
+  readonly routeDurationSeconds?: number;
+  readonly departAt?: string;
   readonly limit?: number;
   /** Provider label for Places-contract entries; defaults to the rider events service. */
   readonly placesSourceLabel?: string;
@@ -66,6 +73,55 @@ function eventUrgency(startsAt: string | null, endsAt: string | null, now: numbe
   if (hours <= 48) return 0.8;
   if (hours <= 7 * 24) return 0.5;
   return 0.1;
+}
+
+function routeArrival(
+  routeMile: number | null,
+  context: RiderOpportunityRankContext,
+): string | null {
+  if (
+    routeMile === null
+    || context.routeDistanceMeters === undefined
+    || context.routeDurationSeconds === undefined
+    || !(context.routeDistanceMeters > 0)
+    || !(context.routeDurationSeconds >= 0)
+  ) return null;
+  const departure = Date.parse(context.departAt ?? context.now);
+  if (!Number.isFinite(departure)) return null;
+  const alongMeters = Math.max(0, routeMile * 1609.344);
+  const progress = Math.max(0, Math.min(1, alongMeters / context.routeDistanceMeters));
+  return new Date(departure + context.routeDurationSeconds * 1_000 * progress).toISOString();
+}
+
+function timingFit(
+  startsAt: string | null,
+  endsAt: string | null,
+  arrivalAt: string | null,
+): "fits" | "wait" | "misses" | "unknown" {
+  if (arrivalAt === null) return "unknown";
+  const arrival = Date.parse(arrivalAt);
+  const start = startsAt === null ? null : Date.parse(startsAt);
+  const end = endsAt === null ? null : Date.parse(endsAt);
+  if (!Number.isFinite(arrival)) return "unknown";
+  if (end !== null && Number.isFinite(end) && arrival >= end) return "misses";
+  if (start !== null && Number.isFinite(start) && arrival < start) return "wait";
+  if (
+    (start === null || !Number.isFinite(start) || arrival >= start)
+    && (end === null || !Number.isFinite(end) || arrival < end)
+  ) return "fits";
+  return "unknown";
+}
+
+function timingScore(opportunity: Pick<RiderOpportunity, "timingFit" | "estimatedArrivalAt" | "startsAt">): number {
+  if (opportunity.timingFit === "fits") return 0.8;
+  if (opportunity.timingFit === "misses") return -3;
+  if (opportunity.timingFit !== "wait" || opportunity.estimatedArrivalAt === null || opportunity.startsAt === null) return 0;
+  const waitMinutes = (Date.parse(opportunity.startsAt) - Date.parse(opportunity.estimatedArrivalAt)) / 60_000;
+  if (!Number.isFinite(waitMinutes)) return 0;
+  if (waitMinutes <= 30) return 0.45;
+  if (waitMinutes <= 90) return 0.15;
+  if (waitMinutes <= 180) return -0.3;
+  return -0.8;
 }
 
 function routeCost(detourMinutes: number | null, offRouteMeters: number | null): number {
@@ -129,6 +185,7 @@ function scoreOf(
       ? 0.75
       : PLACE_PRIOR[opportunity.category] ?? 0.55;
 
+  score += timingScore(opportunity);
   if (opportunity.motorcycleSpecific) score += 1.35;
   if (opportunity.popular) score += 0.75;
   if (opportunity.rating !== null) {
@@ -161,6 +218,10 @@ export function opportunityFromNearbyPlace(
 ): RiderOpportunity {
   const distanceMeters = context.center === undefined ? null : Math.round(haversine(context.center, place.coordinate));
   const offRouteMeters = place.offRouteMiles === null ? null : Math.round(place.offRouteMiles * 1609.344);
+  const estimatedArrivalAt = context.routeAware ? routeArrival(place.routeMile, context) : null;
+  const fit = context.routeAware
+    ? timingFit(place.startUtc ?? null, place.endUtc ?? null, estimatedArrivalAt)
+    : "unknown" as const;
   // Provider-supplied route offsets are more useful than inventing a drive time.
   const detourMinutes = offRouteMeters === null ? null : Math.max(1, Math.round((2 * offRouteMeters) / (40_000 / 3_600) / 60));
   const base = {
@@ -181,6 +242,8 @@ export function opportunityFromNearbyPlace(
     distanceFromRouteMeters: offRouteMeters,
     detourMinutes,
     routeMile: place.routeMile,
+    estimatedArrivalAt,
+    timingFit: fit,
   };
   const score = scoreOf(base, context);
   return {
@@ -222,6 +285,8 @@ export function opportunityFromInterestingPlace(
     distanceFromRouteMeters: place.distanceFromRouteMeters ?? null,
     detourMinutes: place.detourMinutes ?? null,
     routeMile: null,
+    estimatedArrivalAt: null,
+    timingFit: "unknown" as const,
   };
   const score = scoreOf(base, context);
   return {
@@ -258,7 +323,9 @@ export function rankRiderOpportunities(
   limit = 9,
 ): readonly RiderOpportunity[] {
   const remaining = [...opportunities]
-    .filter((item) => Number.isFinite(item.score))
+    // A time-bound stop known to be over before estimated arrival is noise, not
+    // a low-ranked suggestion.
+    .filter((item) => item.timingFit !== "misses" && Number.isFinite(item.score))
     .sort((left, right) => right.score - left.score || left.id.localeCompare(right.id));
   const selected: RiderOpportunity[] = [];
   const kindCount = new Map<RiderOpportunityKind, number>();
