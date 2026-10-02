@@ -8,8 +8,12 @@
 
 export const DEFAULT_GRAPHHOPPER_URL = "http://127.0.0.1:8989";
 
+export interface GraphHopperEnv {
+  readonly GRAPHHOPPER_URL?: string | undefined;
+}
+
 export function graphHopperUrlFromEnv(
-  env: Readonly<Record<string, string | undefined>> = process.env,
+  env: GraphHopperEnv = process.env,
 ): string {
   const configured = env["GRAPHHOPPER_URL"]?.trim();
   return configured === undefined || configured === ""
