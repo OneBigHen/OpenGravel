@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createDiscoverCoordinator } from "@/application/discover";
 import { handleRiderOpportunitiesNear, handleRiderOpportunitiesRoute } from "@/server/rider-opportunities/handler";
 
 const NOW = Date.parse("2026-09-24T16:00:00.000Z");
@@ -39,6 +40,7 @@ describe("rider opportunities handler", () => {
     });
     const response = await handleRiderOpportunitiesRoute(request, {
       env: { OGV_PLACES_FIXTURE: "1" },
+      discoverCoordinator: createDiscoverCoordinator({ sources: [] }),
       now: () => NOW,
     });
     expect(response.status).toBe(200);
