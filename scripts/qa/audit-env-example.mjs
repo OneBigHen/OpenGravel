@@ -6,7 +6,7 @@ const scanRoots = ["src", "apps", "scripts", "infra"];
 const extensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 const ignoredDirectories = new Set(["node_modules", ".next", "dist", "build", "coverage", "public", "fixtures"]);
 
-const builtIns = new Set(["NODE_ENV", "CI"]);
+const builtIns = new Set(["NODE_ENV", "CI", "GITHUB_SHA"]);
 
 function looksLikeDeploymentKey(value) {
   return /^[A-Z][A-Z0-9_]{1,}$/.test(value);
@@ -71,7 +71,9 @@ function documentedKeys(example) {
   return keys;
 }
 
-const files = (await Promise.all(scanRoots.map(filesUnder))).flat();
+const files = (await Promise.all(scanRoots.map(filesUnder)))
+  .flat()
+  .filter((file) => file !== "scripts/qa/audit-env-example.mjs");
 const used = new Map();
 
 for (const file of files) {
