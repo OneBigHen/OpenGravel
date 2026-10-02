@@ -22,7 +22,8 @@
     "test:watch": "vitest",
     "vendor:maplibre": "node scripts/vendor-maplibre-worker.mjs",
     "verify": "npm run audit:env && npm run lint && npm run typecheck && npm test && npm run build",
-    "audit:env": "node scripts/qa/audit-env-example.mjs"
+    "audit:env": "node scripts/qa/audit-env-example.mjs",
+    "audit:production-env": "node scripts/qa/audit-production-env.mjs"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",
