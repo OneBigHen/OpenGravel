@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import type {
   RoadOpeningsBody,
+  RoadOpeningsUnavailableBody,
   RoadOpeningSummary,
   UndatedSeasonalRoadSummary,
 } from "@/application/route-intelligence/opening-calendar-contract";
@@ -138,8 +139,9 @@ export function SeasonalRoadOpenings() {
         });
         void fetch(`/api/road-openings?${params.toString()}`, { cache: "no-store" })
           .then(async (response) => {
-            const payload = await response.json() as RoadOpeningsBody | { readonly unavailable?: boolean; readonly reason?: string };
-            if (!response.ok || "unavailable" in payload) throw new Error("reason" in payload ? payload.reason : "Road openings are unavailable.");
+            const payload = await response.json() as RoadOpeningsBody | RoadOpeningsUnavailableBody;
+            if ("unavailable" in payload) throw new Error(payload.reason);
+            if (!response.ok) throw new Error("Road openings are unavailable.");
             setState({ kind: "ready", data: payload });
           })
           .catch((error: unknown) => {
