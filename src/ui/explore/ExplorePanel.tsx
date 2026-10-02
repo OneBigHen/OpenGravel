@@ -6,6 +6,7 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { SeasonalRoadOpenings } from "@/ui/explore/SeasonalRoadOpenings";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
@@ -345,7 +346,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Phone: search stays, the rest folds behind a Filters button (UX rework).
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [lens, setLens] = useState<"rides" | "roads">("rides");
+  const [lens, setLens] = useState<"rides" | "roads" | "openings">("rides");
   const [query, setQuery] = useState<ExploreQuery>(initialQuery ?? { sort: "recommended" });
   const readUrlOnMount = useRef(initialQuery === undefined);
   /** A discrete filter change is a history entry; typing replaces (EX-12). */
@@ -493,12 +494,20 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           onKeyDown={(event) => {
             if (event.key !== "ArrowLeft" && event.key !== "ArrowRight" && event.key !== "Home" && event.key !== "End") return;
             event.preventDefault();
-            const next = event.key === "Home" ? "rides" : event.key === "End" ? "roads" : lens === "rides" ? "roads" : "rides";
+            const lenses = ["rides", "roads", "openings"] as const;
+            const current = lenses.indexOf(lens);
+            const next = event.key === "Home"
+              ? lenses[0]
+              : event.key === "End"
+                ? lenses.at(-1)!
+                : event.key === "ArrowRight"
+                  ? lenses[(current + 1) % lenses.length]!
+                  : lenses[(current - 1 + lenses.length) % lenses.length]!;
             setLens(next);
             document.getElementById(`og-explore-tab-${next}`)?.focus();
           }}
         >
-          {(["rides", "roads"] as const).map((id) => (
+          {(["rides", "roads", "openings"] as const).map((id) => (
             <button
               key={id}
               type="button"
@@ -510,7 +519,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
               className={lens === id ? "og-primary" : "og-secondary"}
               onClick={() => setLens(id)}
             >
-              {id === "rides" ? "Rides" : "Roads"}
+              {id === "rides" ? "Rides" : id === "roads" ? "Roads" : "Openings"}
             </button>
           ))}
         </div>
@@ -624,7 +633,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           {visibleEntries.length === 1 ? "Show 1 route" : `Show ${visibleEntries.length} routes`}
         </button>
       </section>
-      </div> : (
+      </div> : lens === "roads" ? (
         <section className="og-explore__controls" aria-label="Road filters">
           <label>
             <span>Surface band</span>
@@ -648,7 +657,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           <button type="button" className="og-secondary" onClick={filterRoadsByLocation}>Use my location for road distance</button>
           {roadNearMe && roadOrigin !== undefined ? <button type="button" className="og-secondary" onClick={() => { setRoadNearMe(false); setRoadOrigin(undefined); }}>Clear near-me filter</button> : null}
         </section>
-      )}
+      ) : null}
 
       {lens === "rides" ? (
         <div className="og-explore__quick" role="group" aria-label="Quick filters">
@@ -721,7 +730,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             )}
           </div>
         ) : null}
-      </> : <>
+      </> : lens === "roads" ? <>
         <h2 className="og-road-discovery__title">Roads</h2>
         {roadLocationNote !== null ? <p className="og-explore__note" role="status">{roadLocationNote}</p> : null}
         {roadCandidates.length === 0 ? (
@@ -751,7 +760,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           </div>
         )}
         {selectedRoad !== null ? <RoadDiscoveryDetailSheet candidate={selectedRoad} onClose={() => setSelectedRoad(null)} /> : null}
-      </>}
+      </> : <SeasonalRoadOpenings />}
       </div>
     </main>
   );
