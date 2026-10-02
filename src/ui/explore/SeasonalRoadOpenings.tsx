@@ -30,8 +30,13 @@ function localDayStart(date: Date): Date {
 
 function upcomingWeekend(now: Date): { readonly start: Date; readonly end: Date } {
   const start = localDayStart(now);
-  const daysUntilSaturday = (6 - start.getDay() + 7) % 7;
-  start.setDate(start.getDate() + daysUntilSaturday);
+  if (start.getDay() === 0) {
+    // Sunday still belongs to the current weekend, not next Saturday's.
+    start.setDate(start.getDate() - 1);
+  } else {
+    const daysUntilSaturday = (6 - start.getDay() + 7) % 7;
+    start.setDate(start.getDate() + daysUntilSaturday);
+  }
   const end = new Date(start);
   end.setDate(end.getDate() + 2);
   return { start, end };
@@ -45,8 +50,11 @@ function openingGroup(events: readonly RoadOpeningSummary[], now: Date) {
   const instant = now.getTime();
   const weekend = upcomingWeekend(now);
   const week = instant + 7 * 24 * 3_600_000;
-  const openNow = events.filter((event) => Date.parse(event.startsAt) <= instant && instant < Date.parse(event.endsAt));
-  const thisWeekend = events.filter((event) => overlaps(event, weekend.start, weekend.end) && !openNow.some((open) => open.id === event.id));
+  const thisWeekend = events.filter((event) => overlaps(event, weekend.start, weekend.end));
+  const openNow = events.filter((event) =>
+    Date.parse(event.startsAt) <= instant
+    && instant < Date.parse(event.endsAt)
+    && !thisWeekend.some((weekendEvent) => weekendEvent.id === event.id));
   const soon = events.filter((event) => {
     const start = Date.parse(event.startsAt);
     return start > instant && start <= week
@@ -59,13 +67,17 @@ function openingGroup(events: readonly RoadOpeningSummary[], now: Date) {
   return { openNow, thisWeekend, soon, later };
 }
 
-function OpeningCard({ event }: { readonly event: RoadOpeningSummary }) {
+function sourceLabel(data: RoadOpeningsBody, sourceId: string): string {
+  return data.sources.find((source) => source.id === sourceId)?.label ?? sourceId;
+}
+
+function OpeningCard({ event, source }: { readonly event: RoadOpeningSummary; readonly source: string }) {
   return (
     <li className="og-explore-card">
       <div className="og-explore-card__body">
         <span className="og-explore-card__topline">
           <span className="og-explore-card__source">Seasonal road</span>
-          <span className="og-explore-card__region">{event.sourceId}</span>
+          <span className="og-explore-card__region">{source}</span>
         </span>
         <strong>{event.roadName ?? "Unnamed seasonal road"}</strong>
         <span className="og-explore-card__facts">
@@ -78,7 +90,15 @@ function OpeningCard({ event }: { readonly event: RoadOpeningSummary }) {
   );
 }
 
-function Group({ title, events }: { readonly title: string; readonly events: readonly RoadOpeningSummary[] }) {
+function Group({
+  title,
+  events,
+  data,
+}: {
+  readonly title: string;
+  readonly events: readonly RoadOpeningSummary[];
+  readonly data: RoadOpeningsBody;
+}) {
   if (events.length === 0) return null;
   return (
     <section className="og-road-discovery__slice">
@@ -87,13 +107,13 @@ function Group({ title, events }: { readonly title: string; readonly events: rea
         <span>{events.length}</span>
       </div>
       <ul className="og-explore__list">
-        {events.map((event) => <OpeningCard key={event.id} event={event} />)}
+        {events.map((event) => <OpeningCard key={event.id} event={event} source={sourceLabel(data, event.sourceId)} />)}
       </ul>
     </section>
   );
 }
 
-function Undated({ roads }: { readonly roads: readonly UndatedSeasonalRoadSummary[] }) {
+function Undated({ roads, data }: { readonly roads: readonly UndatedSeasonalRoadSummary[]; readonly data: RoadOpeningsBody }) {
   if (roads.length === 0) return null;
   return (
     <section className="og-road-discovery__slice">
@@ -106,7 +126,10 @@ function Undated({ roads }: { readonly roads: readonly UndatedSeasonalRoadSummar
         {roads.map((road) => (
           <li key={road.id} className="og-explore-card">
             <div className="og-explore-card__body">
-              <strong>{road.roadName ?? "Unnamed seasonal road"}</strong>
+              <span className="og-explore-card__topline">
+                <strong>{road.roadName ?? "Unnamed seasonal road"}</strong>
+                <span className="og-explore-card__region">{sourceLabel(data, road.sourceId)}</span>
+              </span>
               <span className="og-explore-card__summary">{road.description}</span>
             </div>
           </li>
@@ -187,13 +210,13 @@ export function SeasonalRoadOpenings() {
       {empty ? <p>No published seasonal openings were found in this search window.</p> : null}
       {groups === null ? null : (
         <>
-          <Group title="Open now" events={groups.openNow} />
-          <Group title="Open this weekend" events={groups.thisWeekend} />
-          <Group title="Opening within 7 days" events={groups.soon} />
-          <Group title="Later" events={groups.later} />
+          <Group title="Open this weekend" events={groups.thisWeekend} data={state.data} />
+          <Group title="Open now · closes before weekend" events={groups.openNow} data={state.data} />
+          <Group title="Opening within 7 days" events={groups.soon} data={state.data} />
+          <Group title="Later" events={groups.later} data={state.data} />
         </>
       )}
-      <Undated roads={state.data.undated} />
+      <Undated roads={state.data.undated} data={state.data} />
       <p className="og-explore__intro">
         Access can change with weather, hunting operations, gates and agency updates. OpenGravel uses published authority data and does not infer permission from gravel surface alone.
       </p>
