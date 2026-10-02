@@ -7,6 +7,7 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 import { AppBar } from "@/ui/nav/AppBar";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { SeasonalRoadOpenings } from "@/ui/explore/SeasonalRoadOpenings";
+import type { Coordinate } from "@/domain/ride/types";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
@@ -37,6 +38,8 @@ export interface ExplorePanelProps {
   readonly map?: ExploreMapConfig & { readonly onOpen: (entryId: string) => void };
   /** A public Mapbox token: cards then show the route on a real map image. */
   readonly mapboxToken?: string;
+  /** Current selected route, when Explore was opened from an active planner session. */
+  readonly plannedRoute?: { readonly key: string; readonly line: readonly Coordinate[] };
 }
 
 /**
@@ -342,7 +345,7 @@ function activeFilterCount(query: ExploreQuery): number {
   ).length;
 }
 
-export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken }: ExplorePanelProps) {
+export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken, plannedRoute }: ExplorePanelProps) {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Phone: search stays, the rest folds behind a Filters button (UX rework).
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -760,7 +763,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           </div>
         )}
         {selectedRoad !== null ? <RoadDiscoveryDetailSheet candidate={selectedRoad} onClose={() => setSelectedRoad(null)} /> : null}
-      </> : <SeasonalRoadOpenings />}
+      </> : <SeasonalRoadOpenings {...(plannedRoute === undefined ? {} : { plannedRoute })} />}
       </div>
     </main>
   );
