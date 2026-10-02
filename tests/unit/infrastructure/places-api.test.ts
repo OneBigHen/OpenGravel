@@ -36,6 +36,29 @@ describe("places API contract 1.0", () => {
     expect(parsed.places.some((p) => p.kind === "event")).toBe(true);
   });
 
+  it("preserves per-item aggregator provenance and motorcycle classification additively", () => {
+    const feature = FIXTURE.features[1] as Record<string, unknown>;
+    const properties = feature["properties"] as Record<string, unknown>;
+    const parsed = parsePlaceFeature({
+      ...feature,
+      properties: {
+        ...properties,
+        source_id: "ecea",
+        source_label: "ECEA",
+        source_url: "https://ecea.org/events/example",
+        motorcycle_specific: true,
+        tags: ["Dual-Sport", "Adventure-Ride", "dual-sport"],
+      },
+    });
+    expect(parsed).toMatchObject({
+      sourceId: "ecea",
+      sourceLabel: "ECEA",
+      sourceUrl: "https://ecea.org/events/example",
+      motorcycleSpecific: true,
+      tags: ["dual-sport", "adventure-ride"],
+    });
+  });
+
   it("drops malformed features instead of half-mapping them", () => {
     const good = FIXTURE.features[0] as Record<string, unknown>;
     expect(parsePlaceFeature({ ...good, geometry: { type: "Point", coordinates: [999, 40] } })).toBeNull();
