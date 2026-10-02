@@ -118,6 +118,40 @@
       "acceptance": [
         "MVUM and WZDx normalized records can be rendered without parallel truth implementations"
       ]
+    },
+    {
+      "id": "health-policy-version",
+      "priority": "P0",
+      "action": "fix",
+      "acceptance": [
+        "/api/health derives policy version from the same authority as route planning",
+        "unset env cannot report obsolete VNEXT_STUB_0 while production uses PA_NJ_ROUTE_POLICY_VNEXT_1"
+      ]
+    },
+    {
+      "id": "known-roads-availability",
+      "priority": "P0",
+      "action": "fix",
+      "acceptance": [
+        "missing Curvature/Gravel DB is distinguishable from a valid zero-result map query"
+      ]
+    },
+    {
+      "id": "nws-map-coverage",
+      "priority": "P0",
+      "action": "fix",
+      "acceptance": [
+        "weather alert map semantics do not imply full viewport coverage from a center-point-only query",
+        "NWS deployment identity is shared across preparation and map paths"
+      ]
+    },
+    {
+      "id": "routing-config-single-source",
+      "priority": "P0",
+      "action": "refactor",
+      "acceptance": [
+        "planning and health share GraphHopper default/config authority"
+      ]
     }
   ],
   "openPullRequests": [
