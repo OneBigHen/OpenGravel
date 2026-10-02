@@ -43,14 +43,16 @@ function dateLabel(value: string, timeZone?: string): string {
   }).format(new Date(value));
 }
 
-function dateTimeLabel(value: string): string {
+function dateTimeLabel(value: string): string | null {
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
   return new Intl.DateTimeFormat(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(value));
+  }).format(new Date(milliseconds));
 }
 
 function recurringDateLabel(value: string): string {
@@ -196,6 +198,7 @@ function opportunityDistance(item: RiderOpportunity): string | null {
 
 function OpportunityCard({ item }: { readonly item: RiderOpportunity }) {
   const distance = opportunityDistance(item);
+  const starts = item.startsAt === null ? null : dateTimeLabel(item.startsAt);
   const kind = item.kind === "event" ? "Event" : item.kind === "happy-hour" ? "Food & drink" : "Place";
   return (
     <li className="og-explore-card">
@@ -206,7 +209,7 @@ function OpportunityCard({ item }: { readonly item: RiderOpportunity }) {
         </span>
         <strong>{item.name}</strong>
         <span className="og-explore-card__facts">
-          {item.startsAt === null ? null : <span>{dateTimeLabel(item.startsAt)}</span>}
+          {starts === null ? null : <span>{starts}</span>}
           {distance === null ? null : <span>{distance}</span>}
           {item.popular ? <span>Popular</span> : null}
         </span>
