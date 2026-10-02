@@ -72,9 +72,17 @@ function descriptionOf(properties: Properties): string {
     const label = surface.toUpperCase() === "D" ? "dirt"
       : surface.toUpperCase() === "P" ? "paved"
         : surface.toUpperCase() === "G" ? "grass"
-          : null;
+          : surface.toUpperCase() === "L" ? "gravel"
+            : null;
     if (label !== null) parts.push(label);
   }
+  const condition = properties["CONDITION"];
+  const conditionLabel = condition === 1 ? "excellent condition"
+    : condition === 2 ? "good condition"
+      : condition === 3 ? "fair condition"
+        : condition === 4 ? "poor condition"
+          : null;
+  if (conditionLabel !== null) parts.push(conditionLabel);
   if (text(properties["MAINTENANC"])?.toUpperCase() === "N") parts.push("not maintained");
   const notes = text(properties["NOTES"]);
   if (notes !== null) parts.push(notes.slice(0, 180));
