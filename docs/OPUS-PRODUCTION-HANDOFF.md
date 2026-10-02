@@ -198,6 +198,14 @@ Before the first closeout deploy, record backup commands and test that SQLite fi
 
 Use `.env.example` as the inventory, but keep secrets out of the repo.
 
+With the real production environment loaded, run:
+
+```bash
+npm run audit:production-env
+```
+
+The preflight prints only configuration state/path errors, not secret values. Treat any ERROR as a deployment blocker; review WARN lines before cutover.
+
 At minimum production should make deliberate decisions for:
 
 - `OGV_PUBLIC_ORIGIN`;
