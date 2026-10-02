@@ -1,0 +1,504 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-02",
+  "repository": "OneBigHen/OpenGravel",
+  "baseline": {
+    "branch": "main",
+    "sha": "87a7b8aad1ac4d788cd8ec6b9e22f0fb2b2de928",
+    "driftRule": "If main SHA differs, refresh PR/branch ancestry and record drift before mutation."
+  },
+  "orchestrationRules": [
+    "Never treat unknown provider state as clear, open, legal, or empty.",
+    "GraphHopper remains routing authority.",
+    "Do not let AI/Jev establish geometry, legality, access, closure, or surface truth.",
+    "Do not merge stacked PR children without preserving or replacing parent semantics.",
+    "Do not delete squash-merged branches without content comparison.",
+    "Every retained connector must declare configuration, health, freshness, coverage, provenance, and failure behavior.",
+    "Run deterministic gates before live-provider/device gates.",
+    "Record every mutation with category, target, outcome, commit/PR, and rationale."
+  ],
+  "runOrder": [
+    "snapshot",
+    "stale-issue-verification",
+    "merged-branch-audit",
+    "provider-registry-and-env-contract",
+    "pr-60-integration",
+    "routing-map-evidence-convergence",
+    "measurement-prs",
+    "routing-experiment-consolidation",
+    "native-ux",
+    "sync-port-decision",
+    "dependency-maintenance",
+    "legacy-repo-archive-readiness"
+  ],
+  "staleIssues": [
+    {
+      "issue": 9,
+      "implementedBy": [
+        15
+      ],
+      "action": "verify-and-close",
+      "verify": [
+        "resume-mid-route",
+        "off-route-resume",
+        "reroute-after-resume"
+      ]
+    },
+    {
+      "issue": 10,
+      "implementedBy": [
+        16,
+        20
+      ],
+      "action": "verify-and-close-or-narrow",
+      "verify": [
+        "ride-screen-choice",
+        "native-handoff",
+        "instrument-strip"
+      ]
+    },
+    {
+      "issue": 11,
+      "implementedBy": [
+        23,
+        26
+      ],
+      "action": "verify-and-close-or-narrow",
+      "verify": [
+        "spotify-connect",
+        "transport-controls",
+        "disconnect",
+        "failure-isolation"
+      ]
+    }
+  ],
+  "priorityWork": [
+    {
+      "id": "provider-registry",
+      "priority": "P0",
+      "action": "build",
+      "acceptance": [
+        "provider descriptors include authority, facets, coverage, config, freshness, health and offline capability",
+        "health endpoint leaks no secrets",
+        "local DB/index absence is visible as unconfigured/unavailable"
+      ]
+    },
+    {
+      "id": "env-contract",
+      "priority": "P0",
+      "action": "repair",
+      "acceptance": [
+        ".env.example covers every production-read setting",
+        "dead aliases are removed or clearly marked"
+      ]
+    },
+    {
+      "id": "map-provenance",
+      "priority": "P0",
+      "action": "fix",
+      "acceptance": [
+        "stop layers display the actual provider provenance"
+      ]
+    },
+    {
+      "id": "pr-60",
+      "priority": "P0",
+      "action": "integrate",
+      "acceptance": [
+        "PA DCNR/PGC/NJ WMA records join canonical authority model",
+        "Ride/Things/Along-this-ride UX replaces standalone Openings lens",
+        "unknown dates remain unknown",
+        "route suggestions never mutate route without rider action"
+      ]
+    },
+    {
+      "id": "authority-map-projection",
+      "priority": "P0",
+      "action": "build",
+      "acceptance": [
+        "MVUM and WZDx normalized records can be rendered without parallel truth implementations"
+      ]
+    }
+  ],
+  "openPullRequests": [
+    {
+      "pr": 60,
+      "family": "seasonal-road-intelligence",
+      "disposition": "priority-integrate",
+      "dependencies": []
+    },
+    {
+      "pr": 59,
+      "family": "mobile-ux",
+      "disposition": "rebase-test-merge",
+      "dependencies": []
+    },
+    {
+      "pr": 54,
+      "family": "jev",
+      "disposition": "consolidate",
+      "dependencies": [
+        51
+      ]
+    },
+    {
+      "pr": 53,
+      "family": "frontier-research",
+      "disposition": "defer-until-measured",
+      "dependencies": [
+        39,
+        48
+      ]
+    },
+    {
+      "pr": 51,
+      "family": "jev",
+      "disposition": "consolidate-shadow-only",
+      "dependencies": []
+    },
+    {
+      "pr": 50,
+      "family": "ordered-evidence",
+      "disposition": "measurement-merge-candidate",
+      "dependencies": [
+        38
+      ]
+    },
+    {
+      "pr": 49,
+      "family": "ride-arc",
+      "disposition": "consolidate-with-35-after-evidence",
+      "dependencies": [
+        50
+      ]
+    },
+    {
+      "pr": 48,
+      "family": "measurement",
+      "disposition": "early-merge-candidate",
+      "dependencies": []
+    },
+    {
+      "pr": 47,
+      "family": "personalization",
+      "disposition": "independent-review",
+      "dependencies": []
+    },
+    {
+      "pr": 46,
+      "family": "carplay",
+      "disposition": "device-gated-draft",
+      "dependencies": []
+    },
+    {
+      "pr": 45,
+      "family": "attention",
+      "disposition": "review-no-nav-authority",
+      "dependencies": []
+    },
+    {
+      "pr": 44,
+      "family": "corridor-exploration",
+      "disposition": "consolidate",
+      "dependencies": [
+        33
+      ]
+    },
+    {
+      "pr": 43,
+      "family": "free-ride-network",
+      "disposition": "consolidate",
+      "dependencies": [
+        40
+      ]
+    },
+    {
+      "pr": 42,
+      "family": "corridor-prize",
+      "disposition": "experiment-measure-first",
+      "dependencies": [
+        39,
+        48
+      ]
+    },
+    {
+      "pr": 41,
+      "family": "corridor-exploration",
+      "disposition": "consolidate",
+      "dependencies": [
+        33
+      ]
+    },
+    {
+      "pr": 40,
+      "family": "free-ride-network",
+      "disposition": "consolidate",
+      "dependencies": [
+        37
+      ]
+    },
+    {
+      "pr": 39,
+      "family": "measurement",
+      "disposition": "early-merge-candidate",
+      "dependencies": []
+    },
+    {
+      "pr": 38,
+      "family": "measurement",
+      "disposition": "early-merge-candidate",
+      "dependencies": []
+    },
+    {
+      "pr": 37,
+      "family": "free-ride-network",
+      "disposition": "consolidate-parent",
+      "dependencies": []
+    },
+    {
+      "pr": 36,
+      "family": "corridor-exploration",
+      "disposition": "consolidate",
+      "dependencies": [
+        33
+      ]
+    },
+    {
+      "pr": 35,
+      "family": "ride-arc",
+      "disposition": "consolidate-with-49",
+      "dependencies": []
+    },
+    {
+      "pr": 33,
+      "family": "corridor-exploration",
+      "disposition": "rebase-parent-first",
+      "dependencies": []
+    },
+    {
+      "pr": 57,
+      "family": "dependencies",
+      "disposition": "batch-low-risk-later",
+      "dependencies": []
+    },
+    {
+      "pr": 7,
+      "family": "dependencies",
+      "disposition": "batch-low-risk-later",
+      "dependencies": []
+    },
+    {
+      "pr": 5,
+      "family": "dependencies",
+      "disposition": "batch-low-risk-later",
+      "dependencies": []
+    },
+    {
+      "pr": 4,
+      "family": "dependencies",
+      "disposition": "separate-major-migration",
+      "dependencies": []
+    },
+    {
+      "pr": 3,
+      "family": "dependencies",
+      "disposition": "batch-low-risk-later",
+      "dependencies": []
+    },
+    {
+      "pr": 2,
+      "family": "ci-dependencies",
+      "disposition": "separate-ci-maintenance",
+      "dependencies": []
+    },
+    {
+      "pr": 1,
+      "family": "ci-dependencies",
+      "disposition": "separate-ci-maintenance",
+      "dependencies": []
+    }
+  ],
+  "consolidationFamilies": [
+    {
+      "id": "corridor-exploration",
+      "prs": [
+        33,
+        36,
+        41,
+        44
+      ],
+      "objective": "one clean experimental stack using equal provider budgets and common evaluation"
+    },
+    {
+      "id": "free-ride-network",
+      "prs": [
+        37,
+        40,
+        43
+      ],
+      "objective": "one reviewed implementation with verified traversal, timeout and fallback"
+    },
+    {
+      "id": "ride-arc",
+      "prs": [
+        35,
+        49,
+        50,
+        38
+      ],
+      "objective": "one ordered-evidence/coherence model; no competing definitions"
+    },
+    {
+      "id": "jev",
+      "prs": [
+        51,
+        54
+      ],
+      "objective": "one shadow-only adapter with complete permutation audit and correct provider pins"
+    }
+  ],
+  "connectorBacklog": [
+    {
+      "id": "pasda-pa-unpaved",
+      "source": "legacy-switchback",
+      "priority": "P0-evidence",
+      "action": "port-as-supporting-evidence"
+    },
+    {
+      "id": "usgs-3dep",
+      "priority": "P0-map",
+      "action": "build-pa-nj-derivatives"
+    },
+    {
+      "id": "pad-us",
+      "priority": "P0-map",
+      "action": "build-authoritative-public-land"
+    },
+    {
+      "id": "usfs-roads-trails",
+      "priority": "P0-map",
+      "action": "ingest-separate-from-mvum"
+    },
+    {
+      "id": "access-controls",
+      "priority": "P0-map",
+      "action": "merge-osm-and-authority-evidence"
+    },
+    {
+      "id": "nws-radar",
+      "priority": "P1",
+      "action": "build"
+    },
+    {
+      "id": "nasa-firms",
+      "priority": "P1",
+      "action": "build"
+    },
+    {
+      "id": "airnow",
+      "priority": "P1",
+      "action": "build"
+    },
+    {
+      "id": "fcc-mobile-coverage",
+      "priority": "P1",
+      "action": "build"
+    },
+    {
+      "id": "snow",
+      "priority": "P1",
+      "action": "research-and-build"
+    },
+    {
+      "id": "flood-water-risk",
+      "priority": "P1",
+      "action": "research-conservative-model"
+    }
+  ],
+  "legacyCapabilities": [
+    {
+      "capability": "Google Places",
+      "repo": "OneBigHen/switchback",
+      "status": "intentionally-not-ported-pending-need",
+      "action": "do-not-restore-by-default"
+    },
+    {
+      "capability": "YOU web ride research",
+      "repo": "OneBigHen/switchback",
+      "status": "not-ported",
+      "action": "optional-enrichment-only-if-restored"
+    },
+    {
+      "capability": "Valhalla routing/elevation",
+      "repo": "OneBigHen/switchback",
+      "status": "superseded-by-GraphHopper-plus-Terrarium",
+      "action": "document-intentional-drop-unless-new-evidence"
+    },
+    {
+      "capability": "passkey identity",
+      "repo": "OneBigHen/switchback",
+      "status": "not-ported",
+      "action": "assess-with-sync"
+    },
+    {
+      "capability": "encrypted sync",
+      "repo": "OneBigHen/switchback",
+      "status": "not-ported",
+      "action": "fresh-port-assessment"
+    },
+    {
+      "capability": "PostHog destination",
+      "repo": "OneBigHen/switchback",
+      "status": "not-ported",
+      "action": "decide-telemetry-destination-explicitly"
+    }
+  ],
+  "staleOrSpecialBranches": [
+    {
+      "branch": "feature/accountless-e2ee-device-sync",
+      "status": "incomplete-no-pr",
+      "action": "salvage-or-supersede"
+    },
+    {
+      "branch": "feat/gaia-goat-layer-parity",
+      "status": "merged-pr-exists-but-branch-may-have-unique-history",
+      "action": "content-audit-before-delete"
+    }
+  ],
+  "validation": {
+    "deterministic": [
+      "npm ci",
+      "npm run lint",
+      "npm run typecheck",
+      "npm test",
+      "npm run test:architecture",
+      "npm run build"
+    ],
+    "targeted": [
+      "npm run test:real-router",
+      "npm run test:e2e:critical"
+    ],
+    "native": [
+      "Maestro resume/navigation flows",
+      "CarPlay device or supported simulator before promotion"
+    ],
+    "liveProviders": [
+      "NWS",
+      "TomTom",
+      "road-authority feeds",
+      "traffic cameras where permitted"
+    ]
+  },
+  "completionCriteria": [
+    "No open issue is merely a description of already-merged work.",
+    "No merged/superseded branch remains without an explicit reason.",
+    "Every open PR has one intentional disposition and dependency set.",
+    "Provider state is centrally observable without secrets.",
+    ".env.example is authoritative for production configuration.",
+    "Visible provenance matches actual providers.",
+    "Routing and map share canonical access/closure evidence.",
+    "PR #60 is integrated or explicitly rejected with rationale.",
+    "Legacy capabilities are marked ported, superseded, or intentionally dropped.",
+    "Remaining backlog distinguishes not-built from unconfigured."
+  ]
+}
