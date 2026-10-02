@@ -1,4 +1,10 @@
 import { buildRoadOpeningCalendar, type RoadOpeningEvent, type UndatedSeasonalRoad } from "@/application/route-intelligence/opening-calendar";
+import type {
+  RoadOpeningsBody,
+  RoadOpeningsUnavailableBody,
+  RoadOpeningSummary,
+  UndatedSeasonalRoadSummary,
+} from "@/application/route-intelligence/opening-calendar-contract";
 import type { RoadAuthorityCoordinator } from "@/application/route-intelligence/coordinator";
 import type { BoundingBox, RoadAuthorityGeometry } from "@/application/route-intelligence/types";
 import { roadAuthorityFromEnv } from "@/server/planning/road-authority";
@@ -8,45 +14,6 @@ const MAX_DAYS = 180;
 const MAX_EVENTS = 400;
 const MAX_UNDATED = 250;
 const MILES_TO_METERS = 1609.344;
-
-export interface RoadOpeningSummary {
-  readonly id: string;
-  readonly sourceId: string;
-  readonly roadName: string | null;
-  readonly description: string;
-  readonly startsAt: string;
-  readonly endsAt: string;
-  readonly certainty: RoadOpeningEvent["certainty"];
-  readonly anchor: readonly [number, number] | null;
-}
-
-export interface UndatedSeasonalRoadSummary {
-  readonly id: string;
-  readonly sourceId: string;
-  readonly roadName: string | null;
-  readonly description: string;
-  readonly anchor: readonly [number, number] | null;
-}
-
-export interface RoadOpeningsBody {
-  readonly generatedAt: string;
-  readonly from: string;
-  readonly to: string;
-  readonly events: readonly RoadOpeningSummary[];
-  readonly undated: readonly UndatedSeasonalRoadSummary[];
-  readonly truncated: boolean;
-  readonly sources: readonly {
-    readonly id: string;
-    readonly label: string;
-    readonly status: "fresh" | "stale" | "unavailable";
-    readonly reason: string | null;
-  }[];
-}
-
-export interface RoadOpeningsUnavailableBody {
-  readonly unavailable: true;
-  readonly reason: string;
-}
 
 export interface RoadOpeningsDependencies {
   readonly coordinator?: RoadAuthorityCoordinator | null;
