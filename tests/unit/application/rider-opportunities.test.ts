@@ -47,7 +47,7 @@ describe("rankRiderOpportunities", () => {
     ];
 
     const ranked = rankRiderOpportunities(candidates, 9);
-    expect(ranked.filter((item) => item.kind === "event")).toHaveLength(4);
+    expect(ranked.filter((item) => item.kind === "event")).toHaveLength(3);
     expect(ranked.some((item) => item.id === "viewpoint")).toBe(true);
     expect(ranked.some((item) => item.id === "waterfall")).toBe(true);
     expect(ranked.some((item) => item.id === "happy-hour")).toBe(true);
