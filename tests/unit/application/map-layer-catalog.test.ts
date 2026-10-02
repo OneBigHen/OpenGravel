@@ -22,6 +22,12 @@ describe("map layer catalogue provenance", () => {
     }
   });
 
+  it("describes weather coverage as map-center scoped", () => {
+    const weather = MAP_LAYERS.find((layer) => layer.id === "weather");
+    expect(weather?.legend).toContain("center");
+    expect(weather?.caveat).toContain("not every visible point");
+  });
+
   it("keeps OSM provenance on the access layers that are actually served by Overpass", () => {
     const definitions = new Map(MAP_LAYERS.map((layer) => [layer.id, layer]));
 
