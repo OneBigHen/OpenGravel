@@ -31,6 +31,8 @@ export interface RiderOpportunityRankContext {
   readonly center?: Coordinate;
   readonly routeAware: boolean;
   readonly limit?: number;
+  /** Provider label for Places-contract entries; defaults to the rider events service. */
+  readonly placesSourceLabel?: string;
 }
 
 const PLACE_PRIOR: Readonly<Record<string, number>> = {
@@ -153,7 +155,7 @@ export function opportunityFromNearbyPlace(
     startsAt: place.startUtc ?? null,
     endsAt: place.endUtc ?? null,
     url: place.url,
-    sourceLabel: "events.henning.rodeo",
+    sourceLabel: context.placesSourceLabel ?? "events.henning.rodeo",
     popular: place.popular,
     rating: place.rating,
     distanceMeters,
