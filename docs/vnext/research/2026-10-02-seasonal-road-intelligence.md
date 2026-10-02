@@ -23,9 +23,11 @@ The key product change is that a road opening is not merely a map-layer fact. It
 
 ## Product surface
 
-### Explore -> Openings
+### Explore -> Ride time lens
 
-This PR adds a third Explore lens alongside **Rides** and **Roads**:
+Seasonal access is part of the default **Ride** feed, not a separate provider-shaped Openings destination. The revised information architecture is specified in [Rider Feed and Route-Aware Opportunities UX](./2026-10-02-rider-feed-opportunity-ux.md).
+
+Useful groups remain:
 
 - **Open now**
 - **Open this weekend**
@@ -33,13 +35,13 @@ This PR adds a third Explore lens alongside **Rides** and **Roads**:
 - **Later**
 - **Seasonal · dates not published**
 
-The rider explicitly taps **Show openings near me** before location is requested. The initial search is 100 miles / 90 days. Results are source-backed and never infer permission from gravel surface.
+The rider explicitly asks for nearby/time-aware results before location is requested. Results are source-backed and never infer permission from gravel surface.
 
 The important UX rule is:
 
 **An unpublished seasonal window is interesting, not routable proof.**
 
-A PGC road whose authority record says "seasonal" but gives no date appears under "dates not published." OpenGravel can surface it as a discovery lead, but it does not silently invent a hunting-season date.
+A PGC road whose authority record says "seasonal" but gives no date appears as a discovery lead, but OpenGravel does not silently invent a hunting-season date.
 
 ### Near-term: "Plan this weekend"
 
@@ -431,7 +433,7 @@ The Openings API returns `private, no-store` because the request encodes the rid
 - [x] NJ WMA road-access adapter;
 - [x] register new access sources in route intelligence;
 - [x] `/api/road-openings` bounded nearby endpoint;
-- [x] Explore -> Openings lens;
+- [x] opening-feed prototype (to be folded into Explore -> Ride before merge);
 - [x] Open now / weekend / next-seven-days / later / unpublished grouping;
 - [x] unit coverage for parsers, calendar and dated hard gate.
 
