@@ -52,6 +52,7 @@ import { createFunJudge, type FunJudge } from "@/application/planner/fun-judge";
 import {
   parseFunJudgeMode,
   selectBestRideWithFunJudge,
+  geometryFunJudgeExtensions,
   type FunJudgeSelection,
 } from "@/application/planner/fun-judge-selection";
 import type { RoutePlanFunJudgeWire } from "@/application/planner/ports/route-plan-contract";
@@ -879,6 +880,7 @@ export async function planRide(
           : { discoveryTimebox: parsed.value.request.discovery }),
         mode: funJudgeMode,
         judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
+        extensions: geometryFunJudgeExtensions,
         signal,
       });
     } catch {

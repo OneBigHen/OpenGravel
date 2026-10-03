@@ -37,6 +37,7 @@ import {
   type DiscoveryTimebox,
   type PipelineCandidate,
 } from "./pipeline";
+import { analyzeBends } from "@/domain/geometry/bends";
 
 export type FunJudgeMode = "off" | "shadow" | "on";
 
@@ -53,6 +54,21 @@ export function parseFunJudgeMode(value: string | undefined): FunJudgeMode {
 export type FunJudgeEvidenceExtensions = (candidate: PipelineCandidate) => {
   readonly curvatureContinuity?: number | null;
   readonly rideArc?: FunJudgeRideArcSummary | null;
+};
+
+/** A sustained bend run this long or longer reads as fully continuous (1.0). */
+export const CONTINUOUS_BEND_RUN_METERS = 1_000;
+
+/**
+ * Curve continuity from the candidate's own line: its longest uninterrupted
+ * multi-vertex bend run (`analyzeBends`, junction corners excluded), scaled so
+ * 1 km of sustained curves is 1.0. A line too short to measure stays unknown.
+ * Ride Arc stays unknown until a "worthwhile road" rule exists.
+ */
+export const geometryFunJudgeExtensions: FunJudgeEvidenceExtensions = (candidate) => {
+  if (candidate.geometry.length < 3 || !(candidate.distanceMeters > 0)) return { curvatureContinuity: null };
+  const { longestRunMeters } = analyzeBends(candidate.geometry);
+  return { curvatureContinuity: Math.min(1, longestRunMeters / CONTINUOUS_BEND_RUN_METERS) };
 };
 
 export type FunJudgeExclusionReason = "outside-detour-budget" | "outside-timebox" | "extra-caution";
