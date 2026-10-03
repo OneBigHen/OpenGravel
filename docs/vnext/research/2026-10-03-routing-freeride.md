@@ -56,4 +56,4 @@ Forward traversal passes cleanly, and wrong-direction traversal scores no higher
 
 ## Gates
 
-See the final report line in the PR or handoff for the `ogv-verify-wsl.sh` result.
+`ogv-verify-wsl.sh … lint typecheck vitest build` → `ALL GATES: GREEN for a2c1eb4` (wsl). Vitest: 3,966+ tests pass. The first run went red only on `contrast-tokens`; that failure is already fixed on main by 3a4ce31, which is now merged into this branch.
