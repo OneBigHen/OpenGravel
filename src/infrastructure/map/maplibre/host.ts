@@ -1057,6 +1057,24 @@ export async function createMapLibreHost(
     }
   }
 
+  const radarScenes = new WeakMap<MapLibreMap, string>();
+  function syncLayerRasters(map: MapLibreMap, scene: MapScene): void {
+    const id = "ogv-radar";
+    try {
+      const raster = scene.infoLayers?.rasters?.find((entry) => entry.layerId === "weather-radar");
+      const signature = raster === undefined ? "off" : `${raster.url}|${JSON.stringify(raster.bounds)}`;
+      if (radarScenes.get(map) === signature && (raster === undefined || map.getLayer(id) !== undefined)) return;
+      if (map.getLayer(id) !== undefined) map.removeLayer(id);
+      if (map.getSource(id) !== undefined) map.removeSource(id);
+      if (raster === undefined) { radarScenes.set(map, signature); return; }
+      const b = raster.bounds;
+      map.addSource(id, { type: "image", url: raster.url, coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]], attribution: raster.attribution });
+      const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
+      map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.55, "raster-fade-duration": 0 } }, firstLabel);
+      radarScenes.set(map, signature);
+    } catch { recordError({ kind: "source", detail: id }); }
+  }
+
   /**
    * Terrain detail is one bounded renderer feature: raised ground, subtle
    * hillshade and high-zoom building extrusion. It never moves the camera.
@@ -1070,13 +1088,13 @@ export async function createMapLibreHost(
     // reporting a terrain failure the rider cannot fix without signal.
     if (map.setTerrain === undefined || drawingOfflineBasemap) return;
     try {
-      if (terrainOn && map.getSource(TERRAIN_SOURCE_ID) === undefined) {
+      if ((terrainOn || latestScene?.infoLayers?.visible.includes("hillshade")) && map.getSource(TERRAIN_SOURCE_ID) === undefined) {
         map.addSource(TERRAIN_SOURCE_ID, terrainSourceSpec());
       }
 
       const styleLayers = map.getStyle?.()?.layers ?? [];
-      if (terrainOn && map.getLayer(HILLSHADE_LAYER_ID) === undefined) {
-        map.addLayer(hillshadeLayerSpec(), hillshadeBeforeId(styleLayers));
+      if ((terrainOn || latestScene?.infoLayers?.visible.includes("hillshade")) && map.getLayer(HILLSHADE_LAYER_ID) === undefined) {
+        map.addLayer(hillshadeLayerSpec(palette), hillshadeBeforeId(styleLayers));
       }
 
       if (terrainOn && map.getLayer(BUILDING_EXTRUSION_LAYER_ID) === undefined) {
@@ -1090,7 +1108,7 @@ export async function createMapLibreHost(
 
       const visibility = terrainOn ? "visible" : "none";
       if (map.getLayer(HILLSHADE_LAYER_ID) !== undefined) {
-        map.setLayoutProperty?.(HILLSHADE_LAYER_ID, "visibility", visibility);
+        map.setLayoutProperty?.(HILLSHADE_LAYER_ID, "visibility", terrainOn || latestScene?.infoLayers?.visible.includes("hillshade") ? "visible" : "none");
       }
       if (map.getLayer(BUILDING_EXTRUSION_LAYER_ID) !== undefined) {
         map.setLayoutProperty?.(BUILDING_EXTRUSION_LAYER_ID, "visibility", visibility);
@@ -1131,6 +1149,8 @@ export async function createMapLibreHost(
       current.map.getSource(sourceId)?.setData(sourceData(sourceId, scene));
     }
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
+    syncLayerRasters(current.map, scene);
+    applyTerrain(current.map);
     armChangedSpanExpiry(current, scene.changedSpan ?? null);
     publishScene(scene);
   }

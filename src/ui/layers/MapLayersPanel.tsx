@@ -13,6 +13,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   MAP_LAYER_CATEGORIES,
   MAP_LAYERS,
+  type LayerFreshness,
   type MapLayerDefinition,
   type MapLayerId,
 } from "@/application/map-layers";
@@ -20,6 +21,7 @@ import {
 import type { MapLayerStatus } from "./useMapLayers";
 
 export interface MapLayersPanelProps {
+  readonly freshness?: readonly LayerFreshness[];
   readonly enabled: readonly MapLayerId[];
   readonly status: Readonly<Record<MapLayerId, MapLayerStatus>>;
   readonly counts: Readonly<Record<MapLayerId, number>>;
@@ -40,8 +42,10 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
       return "Loading…";
     case "unavailable":
       return "Unavailable";
+    case "stale":
+      return "Stale";
     case "ready":
-      return layer.kind !== "features" ? "On" : count === 0 ? "None here" : String(count);
+      return (layer.kind !== "features" || layer.id === "weather-radar" || layer.id === "hillshade") ? "On" : count === 0 ? (["mvum", "work-zones", "road-surface"].includes(layer.id) ? "No records · gaps unknown" : "None here") : String(count);
   }
 }
 
@@ -52,6 +56,7 @@ function LayerRow({
   count,
   onToggle,
   extra,
+  freshness,
 }: {
   readonly layer: MapLayerDefinition;
   readonly on: boolean;
@@ -59,6 +64,7 @@ function LayerRow({
   readonly count: number;
   readonly onToggle: () => void;
   readonly extra?: ReactNode;
+  readonly freshness?: LayerFreshness | undefined;
 }) {
   const [about, setAbout] = useState(false);
   const label = statusText(layer, status, count);
@@ -72,9 +78,10 @@ function LayerRow({
         data-testid={`map-layer-${layer.id}`}
         onClick={onToggle}
       >
-        <span className="og-layers__swatch" style={{ "--og-layer-color": layer.color } as React.CSSProperties} aria-hidden="true">
-          {layer.glyph}
-        </span>
+        <svg className="og-layers__swatch" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+          <rect width="34" height="34" rx="10" fill={layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`} opacity={on ? 1 : 0.22} />
+          <text x="17" y="18" textAnchor="middle" dominantBaseline="middle" fill={on ? "var(--og-paper)" : "var(--og-ink)"}>{layer.glyph}</text>
+        </svg>
         <span className="og-layers__text">
           <span className="og-layers__name">{layer.name}</span>
           <span className="og-layers__legend">{layer.legend}</span>
@@ -100,6 +107,9 @@ function LayerRow({
           <strong>{layer.source}.</strong> {layer.caveat}
         </p>
       ) : null}
+      {on && freshness !== undefined ? <p className="og-layers__caveat">
+        {freshness.stale ? "Stale · " : ""}{freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}
+      </p> : null}
       {extra}
     </li>
   );
@@ -107,6 +117,7 @@ function LayerRow({
 
 export function MapLayersPanel({
   enabled,
+  freshness = [],
   status,
   counts,
   cameraRouteOnly,
@@ -136,6 +147,7 @@ export function MapLayersPanel({
         type="button"
         className="og-layers__button"
         data-testid="map-layers-toggle"
+        aria-label="Layers"
         ref={buttonRef}
         aria-expanded={open}
         aria-controls={panelId}
@@ -171,6 +183,7 @@ export function MapLayersPanel({
                     <LayerRow
                       key={layer.id}
                       layer={layer}
+                      freshness={freshness.find((entry) => entry.layerId === layer.id)}
                       on={enabled.includes(layer.id)}
                       status={status[layer.id]}
                       count={counts[layer.id]}

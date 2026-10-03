@@ -86,6 +86,7 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
       />
       <div className="og-layers-overlay">
         <MapLayersPanel
+          freshness={view.freshness}
           enabled={view.enabled}
           status={view.status}
           counts={view.counts}
