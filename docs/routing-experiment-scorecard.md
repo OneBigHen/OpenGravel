@@ -91,6 +91,61 @@ The aggregate reports:
 - mean corridor adherence where relevant;
 - mean baseline preservation where relevant.
 
+## How to score a candidate set (use this)
+
+Every generator experiment calls ONE function per corpus case:
+
+```ts
+import { scoreExperimentCase } from "@/application/planner/routing-experiment-measure";
+
+const { scorecard, control, treatment } = scoreExperimentCase({
+  caseId: "hawk-mountain-jim-thorpe",          // ROUTING_QUALITY_CORPUS id
+  generator: "library-corridor-v1",
+  control:   { providerCalls: 4, planningLatencyMs, candidates, selectedCandidateId },
+  treatment: { providerCalls: 4, planningLatencyMs, candidates, selectedCandidateId },
+  // riderPreference: "control" | "treatment" | "tie" | "not-rated"
+});
+```
+
+Each candidate is an `ExperimentCandidateInput`: `id`, `eligible`,
+`canonicalScore` (RouteScore.total or null), `distanceMeters`,
+`durationSeconds`, `geometry`, optional `instructions`, `roadSummary` (keep the
+provider's — its `roadRuns` feed Ride Arc), `timeboxSeconds` for loops,
+`worthwhile` (canonical per-run judge; absent → Ride Arc stays null), and the
+generator-specific `corridorAdherenceShare` / `preservedBaselineShare`.
+
+`measureExperimentCandidate()` measures one candidate the same way (geometry bend
+detector for sustained bends, `analyzeRideCoherence()` for coherence and Ride
+Arc). Aggregate trials with `aggregateRoutingExperimentScorecards(generator, scorecards)`.
+
+### Against the production baseline (live)
+
+`tests/real-router/routing-baseline.ts` exports
+`runProductionBaselineCase(entry, { baseUrl, roadCharacter })`: it runs one
+corpus case through the real production planner (`planRide`), counts provider
+calls and returns the candidate set plus the Classic (automatic winner),
+Frontier and Sustained-curves picks. Use it as the control arm:
+
+```ts
+const baseline = await runProductionBaselineCase(entry, { baseUrl, roadCharacter: "curvy" });
+scoreExperimentCase({
+  caseId: entry.id, generator: "my-generator",
+  control: baseline.arm(baseline.frontierId),        // or baseline.classicId
+  treatment: { providerCalls: baseline.providerCalls, candidates: mine, selectedCandidateId },
+});
+```
+
+Regenerate the committed baseline (sequential, ~4 calls per case, ~7 s):
+
+```sh
+ROUTING_BASELINE_OUT=docs/vnext/research/<date>-routing-baseline-frontier.json \
+  ./node_modules/.bin/vitest run --maxWorkers=1 --config vitest.realrouter.config.mts \
+  tests/real-router/routing-baseline-live.test.ts
+```
+
+The 2026-10-03 numbers are in
+[docs/vnext/research/2026-10-03-routing-baseline-frontier.md](vnext/research/2026-10-03-routing-baseline-frontier.md).
+
 ## Direction of deltas
 
 Every numeric delta is:

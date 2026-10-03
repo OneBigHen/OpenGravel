@@ -47,8 +47,8 @@ describe("routing experiment measurement", () => {
   });
 
   it("treats missing instructions as unknown workload", () => {
-    const { instructions: _unused, ...rest } = candidate("a");
-    const measured = measureExperimentCandidate(rest);
+    // An empty list is how a provider says it described no turns.
+    const measured = measureExperimentCandidate(candidate("a", { instructions: [] }));
     expect(measured.metrics.maneuversPer10Miles).toBeNull();
     expect(measured.metrics.alternatingShortTurnPairs).toBeNull();
   });

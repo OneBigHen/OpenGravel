@@ -258,6 +258,11 @@ measures:
 
 These stay diagnostics first. After replay/ride testing establishes thresholds, severe pathologies can become a pre-ranking quality gate.
 
+Callers do not use this module directly: it is the `path` half of the one
+canonical Ride Arc / coherence contract, `analyzeRideCoherence()` in
+`src/application/planner/ride-coherence.ts` (see
+[ride-arc-analysis.md](ride-arc-analysis.md)).
+
 This directly targets the common "curvy router sent me down a side street and back" failure.
 
 ## Ride Arc
@@ -280,10 +285,10 @@ Do **not** waste route budget forcing twistiness through subdivisions.
 
 A short highway/arterial segment can be correct if it buys substantially more high-value core riding time and the rider has not excluded it.
 
-Diagnostic:
-
-    escapeEfficiency =
-      minutes until first sustained high-value corridor
+Diagnostic: the Ride Arc `escape` phase duration from the canonical contract
+(`analyzeRideCoherence()` → `arc.escape`, see
+[ride-arc-analysis.md](ride-arc-analysis.md)). It is reported only when
+ordered evidence coverage supports a phase claim; otherwise it is unknown.
 
 The UI should express this naturally:
 
@@ -316,12 +321,10 @@ Penalize:
 - tiny novelty detours;
 - fragmented "good" sections connected by excessive filler.
 
-Primary experimental metric:
-
-    worthwhileMinuteRatio =
-      estimated minutes in high-value core corridors
-      ----------------------------------------------
-                    total ride minutes
+Primary experimental metric: `worthwhileMinuteRatio`, defined once in the
+canonical contract ([ride-arc-analysis.md](ride-arc-analysis.md)) as **known**
+worthwhile seconds over total ride seconds. Unknown time stays in the
+denominator; it is never estimated.
 
 Do not expose a fake 0-100 "fun score."
 
@@ -925,14 +928,11 @@ Replace one weak baseline section with one strong corridor while preserving the 
 
 ### R4 — Ride Arc phase metrics
 
-Add phase diagnostics:
-
-- outbound escape minutes;
-- core worthwhile minutes;
-- return/arrival minutes;
-- prompt density by phase.
-
-Start as reporting only.
+Implemented as reporting only by the canonical contract
+`analyzeRideCoherence()` ([ride-arc-analysis.md](ride-arc-analysis.md)):
+escape / core / terminal phases from ordered road runs with GraphHopper edge
+time. Still missing: a canonical per-run worthwhile policy, and prompt density
+by phase.
 
 ### R5 — loop beam
 
