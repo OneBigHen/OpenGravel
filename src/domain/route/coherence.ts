@@ -52,19 +52,25 @@ export interface RouteCoherenceMetrics {
   /** Straight-line endpoint distance / traveled geometry distance, 0..1. */
   readonly endpointDirectness: number;
 
+  /**
+   * True when the provider supplied turn instructions. When false, every
+   * instruction-derived count below is null: "no instructions" is unknown
+   * workload, not zero workload.
+   */
+  readonly instructionsKnown: boolean;
   /** Non-straight maneuver instructions supplied by the provider. */
-  readonly maneuverCount: number;
-  readonly maneuversPer10Miles: number;
-  readonly explicitUTurnCount: number;
+  readonly maneuverCount: number | null;
+  readonly maneuversPer10Miles: number | null;
+  readonly explicitUTurnCount: number | null;
   /** Maneuvers whose following provider instruction leg is short. */
-  readonly shortManeuverLegCount: number;
+  readonly shortManeuverLegCount: number | null;
   /**
    * Left/right or right/left maneuver pairs separated by a short leg. This is a
    * useful detector for "turn off, travel a block, turn back" route shaping.
    */
-  readonly alternatingShortTurnPairs: number;
+  readonly alternatingShortTurnPairs: number | null;
   /** Named-road changes across successive maneuver instructions. */
-  readonly roadNameChangeCount: number;
+  readonly roadNameChangeCount: number | null;
 
   /**
    * Large direction reversals measured from simplified route geometry.
@@ -359,8 +365,8 @@ function alternatingShortTurns(
  * Measures path coherence from returned geometry and provider instructions.
  *
  * Returns null for malformed route geometry. Missing instructions are valid:
- * geometry-derived diagnostics still work and instruction-derived counts stay
- * zero rather than becoming invented estimates.
+ * geometry-derived diagnostics still work and instruction-derived counts are
+ * null (unknown) rather than zero, which would read as "no workload".
  */
 export function analyzeRouteCoherence(input: {
   readonly geometry: readonly Coordinate[];
@@ -379,34 +385,46 @@ export function analyzeRouteCoherence(input: {
     Math.min(1, directMeters / routeMeters),
   );
 
+  // A real provider route always carries at least depart/arrive instructions,
+  // so an absent or empty list means the provider did not describe the turns.
+  const instructionsKnown = (input.instructions?.length ?? 0) > 0;
   const maneuvers = meaningfulInstructions(input.instructions ?? []);
-  const maneuverCount = maneuvers.length;
+  const maneuverCount = instructionsKnown ? maneuvers.length : null;
   const routeMiles = routeMeters / METERS_PER_MILE;
   const maneuversPer10Miles =
-    routeMiles > 0 ? (maneuverCount / routeMiles) * 10 : 0;
-  const explicitUTurnCount = maneuvers.filter(
-    (instruction) => instruction.maneuver === "uturn",
-  ).length;
-  const shortManeuverLegCount = maneuvers.filter(
-    (instruction) =>
-      Number.isFinite(instruction.distanceMeters) &&
-      instruction.distanceMeters <= SHORT_MANEUVER_LEG_METERS,
-  ).length;
-  const alternatingShortTurnPairs = alternatingShortTurns(maneuvers);
+    maneuverCount === null || !(routeMiles > 0)
+      ? null
+      : (maneuverCount / routeMiles) * 10;
+  const explicitUTurnCount = instructionsKnown
+    ? maneuvers.filter((instruction) => instruction.maneuver === "uturn").length
+    : null;
+  const shortManeuverLegCount = instructionsKnown
+    ? maneuvers.filter(
+        (instruction) =>
+          Number.isFinite(instruction.distanceMeters) &&
+          instruction.distanceMeters <= SHORT_MANEUVER_LEG_METERS,
+      ).length
+    : null;
+  const alternatingShortTurnPairs = instructionsKnown
+    ? alternatingShortTurns(maneuvers)
+    : null;
   const geometryReversalCount = geometryReversals(input.geometry);
   const backtrackingShare = routeBacktrackingShare(input.geometry);
   const selfOverlapShare = routeSelfOverlapShare(input.geometry);
 
   const flags: RouteCoherenceFlag[] = [];
-  if (explicitUTurnCount > 0) flags.push("explicit-uturn");
+  if (explicitUTurnCount !== null && explicitUTurnCount > 0) {
+    flags.push("explicit-uturn");
+  }
   if (geometryReversalCount > 0) flags.push("geometry-reversal");
   if (
     routeMeters >= MIN_ROUTE_METERS_FOR_DENSITY_FLAG &&
+    maneuversPer10Miles !== null &&
     maneuversPer10Miles > MANEUVER_SPAM_PER_10_MILES
   ) {
     flags.push("maneuver-spam");
   }
-  if (alternatingShortTurnPairs >= 2) {
+  if (alternatingShortTurnPairs !== null && alternatingShortTurnPairs >= 2) {
     flags.push("alternating-short-turns");
   }
   if (backtrackingShare > LEGACY_BACKTRACKING_FLAG_SHARE) {
@@ -420,12 +438,16 @@ export function analyzeRouteCoherence(input: {
     routeMeters,
     directMeters,
     endpointDirectness,
+    instructionsKnown,
     maneuverCount,
-    maneuversPer10Miles: Number(maneuversPer10Miles.toFixed(2)),
+    maneuversPer10Miles:
+      maneuversPer10Miles === null
+        ? null
+        : Number(maneuversPer10Miles.toFixed(2)),
     explicitUTurnCount,
     shortManeuverLegCount,
     alternatingShortTurnPairs,
-    roadNameChangeCount: roadNameChanges(maneuvers),
+    roadNameChangeCount: instructionsKnown ? roadNameChanges(maneuvers) : null,
     geometryReversalCount,
     backtrackingShare: Number(backtrackingShare.toFixed(4)),
     selfOverlapShare: Number(selfOverlapShare.toFixed(4)),

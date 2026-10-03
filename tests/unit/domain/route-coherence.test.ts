@@ -39,9 +39,13 @@ describe("route coherence", () => {
     });
 
     expect(result).not.toBeNull();
-    expect(result!.maneuverCount).toBe(0);
-    expect(result!.explicitUTurnCount).toBe(0);
-    expect(result!.alternatingShortTurnPairs).toBe(0);
+    // No instructions means unknown turn workload, never zero workload.
+    expect(result!.instructionsKnown).toBe(false);
+    expect(result!.maneuverCount).toBeNull();
+    expect(result!.maneuversPer10Miles).toBeNull();
+    expect(result!.explicitUTurnCount).toBeNull();
+    expect(result!.alternatingShortTurnPairs).toBeNull();
+    expect(result!.roadNameChangeCount).toBeNull();
     expect(result!.geometryReversalCount).toBe(0);
     expect(result!.flags).toEqual([]);
   });
