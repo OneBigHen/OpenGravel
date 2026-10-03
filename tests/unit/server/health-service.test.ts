@@ -7,13 +7,15 @@
  * it never leaks the router's address, its error text or its stack.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_HEALTH_TIMEOUT_MS,
   DEFAULT_GRAPHHOPPER_URL,
   checkHealth,
 } from "@/server/health/health-service";
+
+import { GET } from "@/app/api/health/route";
 
 const FIXED = "2026-09-17T00:00:00.000Z";
 
@@ -95,6 +97,7 @@ describe("checkHealth", () => {
 
     expect(report.status).toBe("degraded");
     expect(report.router.reason).toBe("router-unhealthy");
+    expect(report.providers.find((provider) => provider.id === "graphhopper")).toMatchObject({ status: "unavailable", lastSuccess: null, lastFailureCategory: "router-unhealthy" });
   });
 
   it("falls back to the real code policy and documented runtime defaults with no environment", async () => {
@@ -123,4 +126,34 @@ describe("checkHealth", () => {
 
     expect(seen).toBeInstanceOf(AbortSignal);
   });
+});
+
+describe("provider visibility", () => {
+  it("distinguishes missing catalogues from empty geography without leaking config", async () => {
+    const report = await checkHealth({ fetcher: okFetcher({ urls: [] }), env: {}, now: () => FIXED });
+    expect(report).toHaveProperty("providers");
+    const providers = report.providers;
+    for (const id of ["curvature-db", "gravel-atlas", "discover-osm"]) {
+      expect(providers.find((provider) => provider.id === id)).toMatchObject({ status: "missing", configured: false });
+    }
+    expect(providers.find((provider) => provider.id === "graphhopper")).toMatchObject({ status: "ok", lastSuccess: FIXED });
+    expect(providers.find((provider) => provider.id === "nws")).toMatchObject({ status: "unknown", lastSuccess: null });
+  });
+});
+
+it("health HTTP adapter retains its public 200/no-store contract and strips provider values", async () => {
+  vi.stubGlobal("fetch", okFetcher({ urls: [] }));
+  vi.stubEnv("TOMTOM_API_KEY", "private-test-credential");
+  vi.stubEnv("CURVATURE_DB_PATH", "/private-test-artifacts/missing.sqlite");
+  try {
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.text();
+    expect(body).toContain('"providers"');
+    expect(body).not.toMatch(/private-test-credential|private-test-artifacts/);
+  } finally {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
 });

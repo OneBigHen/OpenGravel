@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import ts from "typescript";
 
 const root = process.cwd();
 const scanRoots = ["src", "apps", "scripts", "infra"];
@@ -34,17 +35,51 @@ async function filesUnder(directory) {
 function deploymentKeysFromSource(source) {
   const keys = new Set();
 
-  // Direct/injected env reads: process.env.KEY, process.env["KEY"], env.KEY, env["KEY"].
-  for (const match of source.matchAll(/\b(?:process\.)?env(?:\.([A-Z][A-Z0-9_]*)|\[["']([A-Z][A-Z0-9_]*)["']\])/g)) {
-    const key = match[1] ?? match[2];
-    if (key && looksLikeDeploymentKey(key)) keys.add(key);
+  // Parse real reads, not comments or documentation strings. Resolve simple
+  // process.env aliases and destructuring as well as injected `env` objects.
+  const tree = ts.createSourceFile("env-scan.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const aliases = new Set(["env"]);
+  const constants = new Map();
+  // Existing dependency-injection boundaries that wrap an environment record.
+  // Arbitrary settings.env objects are not deployment configuration.
+  const envOwners = new Set(["process", "deps", "dependencies", "context", "options"]);
+  function isEnv(node) {
+    return node && (ts.isIdentifier(node) && aliases.has(node.text) ||
+      ts.isPropertyAccessExpression(node) && node.name.text === "env" &&
+      ts.isIdentifier(node.expression) && envOwners.has(node.expression.text));
   }
-
-  // Named env constants such as ADVISOR_ENDPOINT_ENV = "ADVISOR_ENDPOINT".
-  for (const match of source.matchAll(/\b[A-Z][A-Z0-9_]*_ENV\s*=\s*["']([A-Z][A-Z0-9_]*)["']/g)) {
-    const key = match[1];
-    if (key && looksLikeDeploymentKey(key)) keys.add(key);
+  function declarations(node) {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      if (isEnv(node.initializer)) aliases.add(node.name.text);
+      if (node.initializer && ts.isStringLiteral(node.initializer)) {
+        constants.set(node.name.text, node.initializer.text);
+        // Exported config names may be imported by their reader in another file.
+        if (node.name.text.endsWith("_ENV") && looksLikeDeploymentKey(node.initializer.text)) keys.add(node.initializer.text);
+      }
+    }
+    ts.forEachChild(node, declarations);
   }
+  declarations(tree);
+  function visit(node) {
+    let key;
+    // Adapter descriptors declare their dynamic credential read by name.
+    if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === "requiresKey" && ts.isStringLiteral(node.initializer)) key = node.initializer.text;
+    if (ts.isPropertyAccessExpression(node) && isEnv(node.expression)) key = node.name.text;
+    if (ts.isElementAccessExpression(node) && isEnv(node.expression)) {
+      const argument = node.argumentExpression;
+      if (ts.isStringLiteral(argument)) key = argument.text;
+      else if (ts.isIdentifier(argument)) key = constants.get(argument.text);
+    }
+    if (key && looksLikeDeploymentKey(key)) keys.add(key);
+    if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name) && isEnv(node.initializer)) {
+      for (const element of node.name.elements) {
+        const name = element.propertyName ?? element.name;
+        if ((ts.isIdentifier(name) || ts.isStringLiteral(name)) && looksLikeDeploymentKey(name.text)) keys.add(name.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
 
   // Template-derived camera origin prefixes are real deployment keys but do
   // not appear as complete literals in source.
@@ -71,8 +106,10 @@ function documentedKeys(example) {
   return keys;
 }
 
-const files = (await Promise.all(scanRoots.map(filesUnder)))
-  .flat()
+const rootConfigs = (await readdir(root, { withFileTypes: true }))
+  .filter((entry) => entry.isFile() && extensions.has(path.extname(entry.name)))
+  .map((entry) => entry.name);
+const files = [...rootConfigs, ...(await Promise.all(scanRoots.map(filesUnder))).flat()]
   .filter((file) => file !== "scripts/qa/audit-env-example.mjs");
 const used = new Map();
 
@@ -88,6 +125,7 @@ for (const file of files) {
 
 const example = await readFile(path.join(root, ".env.example"), "utf8");
 const documented = documentedKeys(example);
+const stale = [...documented].filter((key) => !used.has(key) && !builtIns.has(key)).sort();
 const missing = [...used.keys()].filter((key) => !documented.has(key)).sort();
 
 console.log(`Environment contract: ${used.size} source keys, ${documented.size} documented keys.`);
@@ -100,4 +138,10 @@ if (missing.length > 0) {
   process.exitCode = 1;
 } else {
   console.log("All recognized production environment keys are represented in .env.example.");
+}
+
+if (stale.length > 0) {
+  console.error("\nStale documented environment keys (remove or reconcile source reads):");
+  for (const key of stale) console.error(`- ${key}`);
+  process.exitCode = 1;
 }
