@@ -45,11 +45,39 @@ export interface InfoFeature {
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras";
+export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority" | "surface";
+
+export interface LayerFreshness {
+  readonly layerId: MapLayerId;
+  readonly source: string;
+  /** Retrieval time, never a substitute for the source observation date. */
+  readonly fetchedAt: string;
+  readonly observedAt: string | null;
+  readonly stale: boolean;
+  readonly staleAfterMs?: number;
+  readonly note: string;
+}
+
+export interface TerrainGrid {
+  readonly bounds: MapLayerBounds;
+  readonly size: number;
+  /** Row-major south to north, west to east. */
+  readonly heights: readonly number[];
+}
+
+export interface LayerRaster {
+  readonly layerId: MapLayerId;
+  readonly url: string;
+  readonly bounds: MapLayerBounds;
+  readonly attribution: string;
+}
 
 export interface MapLayersResult {
   readonly features: readonly InfoFeature[];
   readonly unavailable: readonly InfoProvider[];
+  readonly freshness?: readonly LayerFreshness[];
+  readonly terrainGrid?: TerrainGrid;
+  readonly rasters?: readonly LayerRaster[];
 }
 
 export interface MapLayerBounds {

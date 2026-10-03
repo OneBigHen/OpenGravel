@@ -12,13 +12,19 @@ export type MapLayerCategory = "view" | "roads" | "conditions" | "stops" | "acce
 
 export type MapLayerId =
   | "terrain-3d"
+  | "hillshade"
+  | "contours"
+  | "slope"
   | "traffic-flow"
   | "live-traffic"
   | "traffic-cameras"
   | "weather"
+  | "weather-radar"
+  | "active-fire"
   | "closures"
   | "great-roads"
   | "gravel"
+  | "road-surface"
   | "road-history"
   | "fuel"
   | "food"
@@ -29,6 +35,8 @@ export type MapLayerId =
   | "viewpoints"
   | "public-land"
   | "forest-roads"
+  | "mvum"
+  | "work-zones"
   | "cell-towers";
 
 /**
@@ -51,6 +59,8 @@ export interface MapLayerDefinition {
   readonly minZoom: number;
   /** A palette colour name the map and the panel both use for this layer. */
   readonly color: string;
+  /** Optional existing theme token for SVG swatches and presentation accents. */
+  readonly colorToken?: string;
   /** A short glyph for the panel swatch and point markers. */
   readonly glyph: string;
 }
@@ -64,6 +74,60 @@ export const MAP_LAYER_CATEGORIES: readonly { readonly id: MapLayerCategory; rea
 ];
 
 export const MAP_LAYERS: readonly MapLayerDefinition[] = [
+  {
+    id: "road-surface", name: "Road surface evidence", category: "roads", kind: "features",
+    legend: "Dashed tan: surveyed gravel · stronger line: higher routing confidence",
+    source: "OpenGravel Gravel Atlas · canonical routing evidence",
+    caveat: "Regional surveyed gravel only. Unmarked roads, paved/unpaved classes outside the catalogue and source survey dates remain unknown. Confidence is the routing evidence model's value; surface does not prove access or passability. Online only.",
+    minZoom: 8, color: "#776353", colorToken: "--og-trail-brown", glyph: "⋯",
+  },
+  {
+    id: "mvum", name: "Legal motorized access (MVUM)", category: "access", kind: "features",
+    legend: "Green: designated · amber: unknown season/access · ember: prohibited",
+    source: "USFS MVUM · canonical routing authority",
+    caveat: "Published motorcycle designations and seasonal windows, evaluated by UTC date. Missing roads and unpublished dates stay unknown. Check current local MVUM and restrictions; designation does not prove passability. Requires the routing authority connector. Online only.",
+    minZoom: 10, color: "#243a35", colorToken: "--og-deep-spruce", glyph: "⟋",
+  },
+  {
+    id: "work-zones", name: "Authority work zones", category: "conditions", kind: "features",
+    legend: "Published work zones, restrictions and reported closures",
+    source: "USDOT WZDx registry / state DOT · canonical routing authority",
+    caveat: "Uses the same normalized snapshots as routing. Feed gaps, unknown dates and stale reports remain visible; no report is not proof of a clear road. Requires the routing authority connector. Online only.",
+    minZoom: 8, color: "#d65a36", colorToken: "--og-ember", glyph: "⚒",
+  },
+  {
+    id: "active-fire", name: "Active fire hotspots", category: "conditions", kind: "features",
+    legend: "Thermal detections in the last 48 hours",
+    source: "NASA FIRMS VIIRS SNPP NRT",
+    caveat: "Hotspots are not road closures. Nominal 375 m VIIRS footprint; clouds and satellite timing leave gaps. Acquisition time and confidence on each detection. Online only.",
+    minZoom: 5, color: "#bf4829", colorToken: "--og-ember-strong", glyph: "!",
+  },
+  {
+    id: "weather-radar", name: "Weather radar", category: "conditions", kind: "features",
+    legend: "Green → yellow → red: increasing radar reflectivity",
+    source: "NOAA NEXRAD / Iowa Environmental Mesonet",
+    caveat: "CONUS mosaic, roughly 1 km resolution. Frame valid time shown. Stale after 15 minutes. Radar gaps and beam blockage do not mean clear weather. Online only.",
+    minZoom: 4, color: "#397c96", colorToken: "--og-signal-blue", glyph: "☂",
+  },
+  {
+    id: "hillshade", name: "Hillshade", category: "view", kind: "features",
+    legend: "Shaded relief beneath roads", source: "AWS Terrain Tiles (Mapzen Terrarium)",
+    caveat: "DEM resolution roughly 30–90 m, varying by source region. Online only; source survey date unknown. Shares the existing terrain DEM without tilting the map.",
+    minZoom: 6, color: "#65745d", colorToken: "--og-trail-moss", glyph: "⛰",
+  },
+  {
+    id: "contours", name: "Contour lines", category: "view", kind: "features",
+    legend: "20 m contours; heavier lines every 100 m", source: "AWS Terrain Tiles (Mapzen Terrarium)",
+    caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
+    minZoom: 12, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
+  },
+  {
+    id: "slope", name: "Terrain slope", category: "view", kind: "features",
+    legend: "Tan <10% · amber 10–25% · ember >25% grade", source: "AWS Terrain Tiles (Mapzen Terrarium)",
+    caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
+    minZoom: 12, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
+  },
+
   {
     id: "terrain-3d",
     name: "3D terrain",
@@ -258,24 +322,24 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
   },
   {
     id: "public-land",
-    name: "Parks and public land",
+    name: "Public and protected land",
     category: "access",
     kind: "features",
-    legend: "Protected areas and nature reserves",
-    source: "OpenStreetMap",
-    caveat: "Mapped boundaries are approximate and are not a legal determination.",
+    legend: "Protected-area boundaries; ownership is not riding permission",
+    source: "USGS PAD-US (OpenStreetMap fallback)",
+    caveat: "Includes private protected land. Protection and general public access do not grant motorized access. Boundaries are generalized; survey dates vary. If PAD-US fails, OSM centres are explicitly labeled as fallback. Online only.",
     minZoom: 9,
-    color: "#3f6212",
+    color: "#9da98f", colorToken: "--og-topo-sage",
     glyph: "▲",
   },
   {
     id: "forest-roads",
-    name: "Forest roads",
+    name: "Forest roads (OSM context)",
     category: "access",
     kind: "features",
     legend: "Mapped Forest Service roads",
     source: "OpenStreetMap",
-    caveat: "Always check the current Motor Vehicle Use Map before riding one.",
+    caveat: "Community road context, not legal motorized access. Use the MVUM layer and check current local restrictions before riding.",
     minZoom: 9,
     color: "#166534",
     glyph: "⟋",

@@ -30,12 +30,18 @@ export const INFO_HIT_LAYERS = [
   INFO_LAYER_IDS.pointSelected,
   INFO_LAYER_IDS.point,
   INFO_LAYER_IDS.line,
+  "ogv-info-surface",
   INFO_LAYER_IDS.fill,
 ] as const;
 
 /** `["match", ["get", "layerId"], id, colour, …, fallback]` from the catalogue. */
-function colourByLayer(fallback: string): unknown {
-  return ["match", ["get", "layerId"], ...MAP_LAYERS.flatMap((layer) => [layer.id, layer.color]), fallback];
+function colourByLayer(palette: MapPalette): unknown {
+  const themed: Partial<Record<InfoFeature["layerId"], string>> = {
+    contours: palette.trailBrown, slope: palette.goldenHour, mvum: palette.deepSpruce,
+    "work-zones": palette.ember, "active-fire": palette.emberStrong, "public-land": palette.topoSage,
+    "road-surface": palette.trailBrown,
+  };
+  return ["match", ["get", "layerId"], ...MAP_LAYERS.flatMap((layer) => [layer.id, themed[layer.id] ?? layer.color]), palette.slate];
 }
 
 export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
@@ -49,18 +55,18 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       source: INFO_SOURCE_ID,
       filter: isPolygon,
       paint: {
-        "fill-color": colourByLayer(palette.slate),
-        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, 0.12],
+        "fill-color": ["case", ["==", ["get", "layerId"], "slope"], ["step", ["get", "weight"], palette.slate, 10, palette.goldenHour, 25, palette.ember], colourByLayer(palette)],
+        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, "slope", 0.3, 0.12],
       },
     },
     {
       id: INFO_LAYER_IDS.outline,
       type: "line",
       source: INFO_SOURCE_ID,
-      filter: isPolygon,
+      filter: ["all", isPolygon, ["!=", ["get", "layerId"], "slope"]],
       layout: { "line-join": "round" },
       paint: {
-        "line-color": colourByLayer(palette.slate),
+        "line-color": colourByLayer(palette),
         "line-width": 1.5,
         "line-opacity": 0.7,
         "line-dasharray": [3, 2],
@@ -90,27 +96,34 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       id: INFO_LAYER_IDS.line,
       type: "line",
       source: INFO_SOURCE_ID,
-      filter: isLine,
+      filter: ["all", isLine, ["!=", ["get", "layerId"], "road-surface"]],
       layout: { "line-join": "round", "line-cap": "round" },
       paint: {
-        // Great roads warm from Golden Hour to Ember as they get twistier.
+        // Terrain and access use the active Day/Night palette.
         "line-color": [
           "case",
+          ["==", ["get", "layerId"], "mvum"],
+          ["step", ["get", "weight"], palette.ember, 0.25, palette.goldenHour, 0.75, palette.deepSpruce],
           ["==", ["get", "layerId"], "great-roads"],
           ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 600, palette.goldenHour, 1000, palette.ember, 1500, palette.emberStrong],
-          colourByLayer(palette.slate),
+          colourByLayer(palette),
         ],
         "line-width": [
           "interpolate",
           ["linear"],
           ["zoom"],
           8,
-          ["match", ["get", "layerId"], "great-roads", ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 600, 1.5, 1500, 3], "road-history", 1.2, "live-traffic", 2.5, 1.5],
+          ["match", ["get", "layerId"], "great-roads", ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 600, 1.5, 1500, 3], "road-history", 1.2, "contours", ["get", "weight"], "live-traffic", 2.5, 1.5],
           14,
-          ["match", ["get", "layerId"], "great-roads", ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 600, 3.5, 1500, 7], "road-history", 3, "live-traffic", 6, 3.5],
+          ["match", ["get", "layerId"], "great-roads", ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 600, 3.5, 1500, 7], "road-history", 3, "contours", ["get", "weight"], "live-traffic", 6, 3.5],
         ],
         "line-opacity": ["match", ["get", "layerId"], "great-roads", 0.9, "road-history", 0.42, 0.85],
       },
+    },
+    {
+      id: "ogv-info-surface", type: "line", source: INFO_SOURCE_ID,
+      filter: ["all", isLine, ["==", ["get", "layerId"], "road-surface"]],
+      paint: { "line-color": palette.trailBrown, "line-width": ["interpolate", ["linear"], ["get", "weight"], 0, 2, 1, 5], "line-dasharray": [3, 2] },
     },
     {
       id: INFO_LAYER_IDS.point,
@@ -119,7 +132,7 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       filter: ["all", isPoint, ["!=", ["get", "selected"], true]],
       paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 4, 14, 7],
-        "circle-color": colourByLayer(palette.slate),
+        "circle-color": colourByLayer(palette),
         "circle-stroke-color": palette.paper,
         "circle-stroke-width": 2,
       },
@@ -131,7 +144,7 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       filter: ["==", ["get", "selected"], true],
       paint: {
         "circle-radius": 10,
-        "circle-color": colourByLayer(palette.slate),
+        "circle-color": colourByLayer(palette),
         "circle-stroke-color": palette.ink,
         "circle-stroke-width": 3,
       },

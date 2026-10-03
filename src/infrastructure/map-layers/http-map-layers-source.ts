@@ -1,3 +1,4 @@
+import { deriveTerrain } from "@/infrastructure/map-layers/terrain-worker";
 /**
  * Browser-side `MapLayersSource`: our own `/api/map-layers` route and the
  * traffic-tile proxy, which hold the provider keys. Transport failures read as
@@ -23,7 +24,7 @@ export interface HttpMapLayersSourceOptions {
   readonly origin?: string;
 }
 
-const ALL_PROVIDERS: readonly InfoProvider[] = ["osm", "tomtom", "nws", "roads", "traffic-cameras"];
+const ALL_PROVIDERS: readonly InfoProvider[] = ["osm", "tomtom", "nws", "roads", "traffic-cameras", "terrain", "hillshade", "radar", "firms", "padus", "authority", "surface"];
 
 function isResult(value: unknown): value is MapLayersResult {
   if (typeof value !== "object" || value === null) return false;
@@ -77,7 +78,13 @@ export function createHttpMapLayersSource(options: HttpMapLayersSourceOptions = 
       try {
         const body: unknown = await response.json();
         if (!isResult(body)) return { features: [], unavailable: ALL_PROVIDERS };
-        return { features: body.features as readonly InfoFeature[], unavailable: body.unavailable };
+        let features = body.features as readonly InfoFeature[];
+        const unavailable = [...body.unavailable];
+        if (body.terrainGrid !== undefined) {
+          try { features = [...features, ...await deriveTerrain(body.terrainGrid, layers, signal)]; }
+          catch { unavailable.push("terrain"); }
+        }
+        return { features, unavailable, ...(body.rasters === undefined ? {} : { rasters: body.rasters }), ...(body.freshness === undefined ? {} : { freshness: body.freshness }) };
       } catch {
         return { features: [], unavailable: ALL_PROVIDERS };
       }

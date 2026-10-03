@@ -235,8 +235,8 @@ const fake = vi.hoisted((): FakeRenderer => {
     }
 
     moveLayer(): void {}
-    removeLayer(): void {}
-    removeSource(): void {}
+    removeLayer(id: string): void { this.layers.delete(id); }
+    removeSource(id: string): void { this.sources.delete(id); }
 
     queryRenderedFeatures(
       _point: readonly [number, number] | { x: number; y: number },
@@ -423,6 +423,36 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     expect(fake.state.imageAdds).toHaveLength(firstImageAdds * 2);
     expect(map.images.size).toBe(9);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
+    host.dispose();
+  });
+
+  it("draws standalone hillshade without raising ground or moving the camera", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
+    expect(map.sources.get("og-terrain-dem")).toMatchObject({ type: "raster-dem", encoding: "terrarium" });
+    expect(map.layers.has("og-terrain-hillshade")).toBe(true);
+    expect(fake.state.terrainCalls.at(-1)).toBeNull();
+    expect(fake.state.easeCalls).toEqual([]);
+    host.dispose();
+  });
+
+  it("reuses an unchanged radar frame and removes it when the layer clears", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    const infoLayers = { features: [], trafficFlowTiles: null, selectedId: null, visible: ["weather-radar" as const], rasters: [{ layerId: "weather-radar" as const, url: "data:image/png;base64,test", attribution: "NOAA / IEM", bounds: { west: -76, south: 40, east: -75, north: 41 } }] };
+    host.applyScene(scene({ infoLayers }));
+    const source = map.sources.get("ogv-radar");
+    expect(source).toMatchObject({ type: "image", coordinates: [[-76, 41], [-75, 41], [-75, 40], [-76, 40]] });
+    host.applyScene(scene({ infoLayers }));
+    expect(map.sources.get("ogv-radar")).toBe(source);
+    map.resetStyle();
+    map.fire("style.load");
+    expect(map.layers.has("ogv-radar")).toBe(true);
+    host.applyScene(scene());
+    expect(map.sources.has("ogv-radar")).toBe(false);
     host.dispose();
   });
 

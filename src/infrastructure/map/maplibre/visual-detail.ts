@@ -1,3 +1,5 @@
+import type { MapPalette } from "@/infrastructure/map/maplibre/style";
+
 /**
  * Bounded visual-detail helpers for the MapLibre adapter.
  *
@@ -49,16 +51,16 @@ export function terrainSourceSpec(): Readonly<Record<string, unknown>> {
  * Subtle relief under roads. It intentionally reuses the terrain source in the
  * first slice to avoid another independent tile request stream on a phone.
  */
-export function hillshadeLayerSpec(): Readonly<Record<string, unknown>> {
+export function hillshadeLayerSpec(palette?: Pick<MapPalette, "deepSpruce" | "paper" | "slate">): Readonly<Record<string, unknown>> {
   return {
     id: HILLSHADE_LAYER_ID,
     type: "hillshade",
     source: TERRAIN_SOURCE_ID,
     paint: {
       "hillshade-exaggeration": 0.22,
-      "hillshade-shadow-color": "#33413b",
-      "hillshade-highlight-color": "#f4f0e6",
-      "hillshade-accent-color": "#69736b",
+      "hillshade-shadow-color": palette?.deepSpruce ?? "#33413b",
+      "hillshade-highlight-color": palette?.paper ?? "#f4f0e6",
+      "hillshade-accent-color": palette?.slate ?? "#69736b",
     },
   };
 }

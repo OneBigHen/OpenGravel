@@ -22,15 +22,18 @@ import {
   mapLayer,
   projectAlong,
   type InfoFeature,
+  type LayerFreshness,
+  type LayerRaster,
   type LngLat,
   type InfoProvider,
   type MapLayerId,
   type MapLayersSource,
 } from "@/application/map-layers";
 
-export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "unavailable";
+export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "stale" | "unavailable";
 
 export interface MapLayersView {
+  readonly freshness: readonly LayerFreshness[];
   readonly enabled: readonly MapLayerId[];
   readonly status: Readonly<Record<MapLayerId, MapLayerStatus>>;
   readonly counts: Readonly<Record<MapLayerId, number>>;
@@ -54,12 +57,16 @@ const LOAD_DEBOUNCE_MS = 450;
 
 /** Which provider serves each feature layer, to read `unavailable` per layer. */
 const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
+  hillshade: "hillshade", contours: "terrain", slope: "terrain",
   "live-traffic": "tomtom",
   "traffic-cameras": "traffic-cameras",
   weather: "nws",
+  "weather-radar": "radar",
+  "active-fire": "firms",
   closures: "osm",
   "great-roads": "roads",
   gravel: "roads",
+  "road-surface": "surface",
   "road-history": "road-history",
   fuel: "tomtom",
   food: "tomtom",
@@ -68,8 +75,10 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   lodging: "tomtom",
   repair: "tomtom",
   viewpoints: "tomtom",
-  "public-land": "osm",
+  "public-land": "padus",
   "forest-roads": "osm",
+  mvum: "authority",
+  "work-zones": "authority",
   "cell-towers": "osm",
 };
 
@@ -177,10 +186,18 @@ export function useMapLayers(
   const enabled = useSyncExternalStore(subscribeEnabled, enabledNow, () => NONE);
   const [extent, setExtent] = useState<MapExtent | null>(null);
   const [result, setResult] = useState<{
+    readonly rasters: readonly LayerRaster[];
+    readonly freshness: readonly LayerFreshness[];
     readonly key: string;
     readonly features: readonly InfoFeature[];
     readonly unavailable: ReadonlySet<InfoProvider>;
   } | null>(null);
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    if (enabled.length === 0) return;
+    const timer = setInterval(() => setRefresh((value) => value + 1), 60_000);
+    return () => clearInterval(timer);
+  }, [enabled.length]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const cameraRouteOnly = useSyncExternalStore(
     subscribeCameraRouteOnly,
@@ -210,7 +227,7 @@ export function useMapLayers(
     () => (source === undefined ? [] : featureLayerIds(enabled).filter((id) => zoom >= mapLayer(id).minZoom)),
     [enabled, source, zoom],
   );
-  const loadKey = extent === null ? "" : `${loadable.join(",")}|${[extent.minLon, extent.minLat, extent.maxLon, extent.maxLat].map((value) => value.toFixed(3)).join(",")}`;
+  const loadKey = extent === null ? "" : `${refresh}|${loadable.join(",")}|${[extent.minLon, extent.minLat, extent.maxLon, extent.maxLat].map((value) => value.toFixed(3)).join(",")}`;
 
   useEffect(() => {
     if (source === undefined || extent === null || loadable.length === 0) return;
@@ -226,7 +243,7 @@ export function useMapLayers(
       void source.load(bounds, loadable, controller.signal).then(
         (answer) => {
           if (controller.signal.aborted) return;
-          setResult({ key, features: answer.features, unavailable: new Set(answer.unavailable) });
+          setResult({ key, rasters: answer.rasters ?? [], freshness: answer.freshness ?? [], features: answer.features, unavailable: new Set(answer.unavailable) });
         },
         () => {
           // ML-02: a request that failed outright is every asked-for provider
@@ -235,7 +252,7 @@ export function useMapLayers(
           const providers = loadable
             .map((id) => LAYER_PROVIDER[id])
             .filter((provider): provider is InfoProvider => provider !== undefined);
-          setResult({ key, features: [], unavailable: new Set(providers) });
+          setResult({ key, rasters: [], freshness: [], features: [], unavailable: new Set(providers) });
         },
       );
     }, LOAD_DEBOUNCE_MS);
@@ -289,18 +306,18 @@ export function useMapLayers(
             ? "loading"
             : provider !== undefined && unavailable.has(provider)
               ? "unavailable"
-              : "ready";
+              : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
     }
     return record;
-  }, [enabled, extent, loadable, pending, unavailable, zoom]);
+  }, [enabled, extent, loadable, pending, result, unavailable, zoom]);
 
   const trafficFlow = enabled.includes("traffic-flow") && source?.trafficTileUrl != null ? source.trafficTileUrl : null;
   const scene = useMemo<InfoLayersScene | undefined>(
     () =>
       enabled.length === 0
         ? undefined
-        : { features, trafficFlowTiles: trafficFlow, selectedId, visible: enabled },
-    [enabled, features, selectedId, trafficFlow],
+        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, selectedId, visible: enabled.filter((id) => status[id] === "ready" || status[id] === "stale") },
+    [enabled, features, result, selectedId, status, trafficFlow],
   );
 
   const selected = useMemo(
@@ -319,6 +336,7 @@ export function useMapLayers(
 
   return {
     enabled,
+    freshness: result?.freshness ?? [],
     status,
     counts,
     scene,

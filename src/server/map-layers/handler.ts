@@ -27,6 +27,12 @@ import {
   fetchPinnedCameraUrl,
 } from "@/server/traffic-cameras/url-security";
 
+import { surfaceProvider } from "./surface";
+import { authorityProvider } from "./authority";
+import { publicLandProvider } from "./public-land";
+import { fireProvider } from "./fire";
+import { radarProvider } from "./radar";
+import { terrainProvider, hillshadeProvider } from "./terrain";
 import { trafficCamerasProvider } from "./traffic-cameras";
 import {
   knownRoadsProvider,
@@ -35,6 +41,7 @@ import {
   tomtomIncidentsProvider,
   tomtomStopsProvider,
   type LayerProvider,
+  type LayerSnapshot,
 } from "./providers";
 
 export interface MapLayersHandlerResult {
@@ -52,11 +59,16 @@ export interface MapLayersDeps {
 /** The grid a view is snapped to for caching, in degrees. */
 const CACHE_GRID_DEGREES = 0.05;
 const CACHE_MAX_ENTRIES = 512;
+const CACHE_MAX_BYTES = 32 * 1024 * 1024;
+let cacheBytes = 0;
+const pendingLoads = new Map<string, Promise<LayerSnapshot>>();
 
-const cache = new Map<string, { readonly features: readonly InfoFeature[]; readonly expiresAt: number }>();
+const cache = new Map<string, { readonly snapshot: LayerSnapshot; readonly expiresAt: number; readonly bytes: number }>();
 
 export function clearMapLayersCache(): void {
   cache.clear();
+  cacheBytes = 0;
+  pendingLoads.clear();
 }
 
 function validation(message: string): MapLayersHandlerResult {
@@ -88,12 +100,27 @@ function snap(bounds: MapLayerBounds): MapLayerBounds {
   return clampLayerBounds({ west: down(bounds.west), south: down(bounds.south), east: up(bounds.east), north: up(bounds.north) });
 }
 
-function remember(key: string, features: readonly InfoFeature[], expiresAt: number): void {
-  if (cache.size >= CACHE_MAX_ENTRIES) {
+function remember(key: string, snapshot: LayerSnapshot, expiresAt: number): void {
+  const bytes = JSON.stringify(snapshot).length * 2;
+  if (bytes > CACHE_MAX_BYTES) return;
+  const previous = cache.get(key);
+  if (previous !== undefined) { cacheBytes -= previous.bytes; cache.delete(key); }
+  while (cache.size >= CACHE_MAX_ENTRIES || cacheBytes + bytes > CACHE_MAX_BYTES) {
     const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
+    if (oldest === undefined) break;
+    cacheBytes -= cache.get(oldest)!.bytes;
+    cache.delete(oldest);
   }
-  cache.set(key, { features, expiresAt });
+  cache.set(key, { snapshot, expiresAt, bytes });
+  cacheBytes += bytes;
+}
+
+function coalesced(key: string, load: () => Promise<LayerSnapshot>): Promise<LayerSnapshot> {
+  const existing = pendingLoads.get(key);
+  if (existing !== undefined) return existing;
+  const pending = load().finally(() => pendingLoads.delete(key));
+  pendingLoads.set(key, pending);
+  return pending;
 }
 
 function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]): readonly InfoFeature[] {
@@ -119,6 +146,13 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
 
 export function defaultProviders(env: Readonly<Record<string, string | undefined>>): readonly LayerProvider[] {
   return [
+    terrainProvider,
+    hillshadeProvider,
+    radarProvider,
+    fireProvider,
+    publicLandProvider,
+    authorityProvider,
+    surfaceProvider,
     tomtomStopsProvider,
     tomtomIncidentsProvider,
     trafficCamerasProvider,
@@ -145,14 +179,20 @@ export async function handleMapLayersRequest(
   const now = deps.now ?? Date.now;
   const view = snap(bounds);
   const providers = deps.providers ?? defaultProviders(env);
-  const context = { fetch: deps.fetch ?? fetch, env, ...(signal === undefined ? {} : { signal }) };
+  // Shared work warms the cache even if one viewport request is cancelled.
+  // Each provider still applies its own shorter deadline; this bounds the whole job.
+  const context = { now, fetch: deps.fetch ?? fetch, env, signal: AbortSignal.timeout(30_000) };
+  if (signal?.aborted === true) return { status: 200, body: { features: [], unavailable: (deps.providers ?? defaultProviders(env)).filter((provider) => layers.some((layer) => provider.layers.includes(layer))).map((provider) => provider.id) } };
   const unavailable = new Set<InfoProvider>();
-  const answers = await Promise.all(providers.map(async (provider) => {
+  const answers = await Promise.all(providers.map(async (provider): Promise<LayerSnapshot> => {
     const wanted = layers.filter((layer) => provider.layers.includes(layer));
-    if (wanted.length === 0) return [];
+    if (wanted.length === 0) return { features: [] };
     const key = `${provider.id}:${provider.layers.join("+")}:${wanted.join("+")}:${view.west.toFixed(2)},${view.south.toFixed(2)},${view.east.toFixed(2)},${view.north.toFixed(2)}`;
     const cached = cache.get(key);
-    if (cached !== undefined && cached.expiresAt > now()) return cached.features;
+    if (cached !== undefined && cached.expiresAt > now()) {
+      if (cached.snapshot.unavailable === true) unavailable.add(provider.id);
+      return cached.snapshot;
+    }
     try {
       // Camera catalogues and session exchanges share a fixed metadata trust
       // boundary. A dependency-injected transport remains available to tests.
@@ -163,15 +203,28 @@ export async function handleMapLayersRequest(
         ...context,
         fetch: ((input, init) => fetchPinnedCameraUrl(cameraPolicy, cameraFetchTarget(input), init)) as typeof fetch,
       };
-      const features = await provider.load(view, wanted, providerContext);
-      remember(key, features, now() + provider.ttlMs);
-      return features;
+      const snapshot = await coalesced(key, async () => provider.snapshot === undefined
+        ? { features: await provider.load(view, wanted, providerContext) }
+        : await provider.snapshot(view, wanted, providerContext));
+      if (snapshot.unavailable === true) unavailable.add(provider.id);
+      remember(key, snapshot, now() + (snapshot.unavailable === true ? 60_000 : provider.ttlMs));
+      return snapshot;
     } catch {
       unavailable.add(provider.id);
-      return [];
+      return { features: [] };
     }
   }));
-  return { status: 200, body: { features: answers.flat(), unavailable: [...unavailable] } };
+  const terrainGrid = answers.find((answer) => answer.terrainGrid !== undefined)?.terrainGrid;
+  const freshness = answers.flatMap((answer) => answer.freshness ?? []).map((entry) => ({
+    ...entry,
+    stale: entry.stale || (entry.staleAfterMs !== undefined && now() - Date.parse(entry.observedAt ?? entry.fetchedAt) > entry.staleAfterMs),
+    note: `${entry.note} Loaded area is capped to the central 1.6° × 1° of the view; outside it remains unknown.`,
+  }));
+  return { status: 200, body: {
+    features: answers.flatMap((answer) => answer.features), unavailable: [...unavailable], freshness,
+    rasters: answers.flatMap((answer) => answer.rasters ?? []),
+    ...(terrainGrid === undefined ? {} : { terrainGrid }),
+  } };
 }
 
 /**
