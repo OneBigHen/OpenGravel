@@ -49,7 +49,7 @@ export NODE_ENV=production OGV_BUILD_ID=$SHA
 
 if [ ! -f .next/BUILD_ID ] || [ "$(cat .ogv-release-sha 2>/dev/null)" != "$SHA" ]; then
   log "npm ci"
-  npm ci --no-audit --no-fund >"$DIR/.ogv-npm.log" 2>&1 || { tail -30 "$DIR/.ogv-npm.log"; exit 1; }
+  npm ci --include=dev --no-audit --no-fund >"$DIR/.ogv-npm.log" 2>&1 || { tail -30 "$DIR/.ogv-npm.log"; exit 1; }
   log "npm run build"
   NODE_OPTIONS=--max-old-space-size=3072 npm run build >"$DIR/.ogv-build.log" 2>&1 || { tail -40 "$DIR/.ogv-build.log"; exit 1; }
   echo "$SHA" >.ogv-release-sha
