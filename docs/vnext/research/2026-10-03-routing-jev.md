@@ -107,3 +107,12 @@ real disagreements: it adds about 0.15–0.3 s per plan and 2 calls.
    `FUN_JUDGE_POLICY_V1` are uncalibrated.
 6. **Local-only quirk.** This worktree's `node_modules` is a symlink overlay (shared
    install plus `tsx`/`server-only`). It is not committed and has no effect on CI.
+
+## Gates
+
+`ogv-verify-wsl.sh … lint typecheck vitest build` on `851bd1b`:
+`lint rc=0 · typecheck rc=0 · vitest rc=0 · build rc=0 — ALL GATES: GREEN`. Only this
+gate note was committed after that SHA. An earlier run on `f69f9ab` was RED on
+`tests/unit/ui/contrast-tokens.test.ts` (a main-only explore-chip regression, fixed by
+main `3a4ce31`, which is merged here). Build PC disk was full (100%), so this lane
+removed only its own `rt-jev-*` gate directories.
