@@ -11567,3 +11567,36 @@ a.og-secondary {
 }
 .og-road-map { height: 320px; overflow: hidden; border-radius: var(--og-radius-object); }
 .og-road-map__image { display: block; width: 100%; height: 160px; border-radius: var(--og-radius-object); object-fit: cover; }
+/* Explore chips and pickers at every width (the phone sheet refines them in theme-glass.css). */
+.og-explore__quick-chip {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 999px;
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.og-explore__quick-chip[aria-pressed="true"] {
+  border-color: var(--og-go);
+  background: var(--og-go);
+  color: var(--og-on-fill);
+}
+.og-explore__quick-chip:focus-visible {
+  outline: 2px solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+.og-explore__row label { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.og-explore__row select {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font: inherit;
+}
