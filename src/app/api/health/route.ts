@@ -2,7 +2,7 @@
  * `/api/health` (02-ARCHITECTURE-CONTRACT §11, 23-API-CONTRACTS §12, §15).
  *
  * A thin adapter over `checkHealth`: the report is secrets-free by construction
- * (build id, one bounded router probe, declared policy/graph versions), and it
+ * (build id, bounded router probe, policy/graph versions and provider flags), and it
  * is never cached — a stale health answer is worse than none.
  */
 
