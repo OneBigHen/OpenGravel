@@ -62,8 +62,9 @@ calibrated rider preferences. See [the research and evaluation note](frontier-ro
 
 Library corridors and departure/rejoin generators need provenance-preserving,
 licensed contiguous road data plus verified connectors. A GPX attraction prior
-does not establish access or passability. Ride Arc needs ordered worthwhile-road
-evidence before it can report trustworthy core riding minutes. Neither is
+does not establish access or passability. Ride Arc now has ordered road
+runs with edge time ([canonical contract](ride-arc-analysis.md)) but still needs a
+canonical per-run worthwhile policy before it can report core riding minutes. Neither is
 presented as a runnable routing method in this release.
 
 The bounded probe allocator remains separate research in #53. Forecasts must

@@ -1,0 +1,1059 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-03T20:01:04.013Z",
+  "graphhopper": "http://127.0.0.1:8989",
+  "roadCharacter": "curvy",
+  "generator": "frontier-vs-classic-baseline",
+  "note": "control = Classic (automatic production winner); treatment = Frontier (opt-in comparison pick); same candidate set and provider calls.",
+  "cases": [
+    {
+      "caseId": "allentown-stroudsburg",
+      "label": "Allentown → Stroudsburg",
+      "providerCalls": 4,
+      "planningLatencyMs": 1351,
+      "classicId": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+      "frontierId": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+      "sustainedCurvesId": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+          "methods": [
+            "classic",
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 27.9,
+          "distanceMiles": 38.14,
+          "durationMinutes": 71.2,
+          "sustainedBendShare": 0.1071,
+          "longestBendRunMeters": 247,
+          "maneuversPer10Miles": 4.98,
+          "backtrackingShare": 0.0192,
+          "selfOverlapShare": 0.0049,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 7,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 114,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_35d42152-b241-4ac7-acfe-9b359a8ee73c",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 22.1,
+          "distanceMiles": 34.92,
+          "durationMinutes": 60.9,
+          "sustainedBendShare": 0.0763,
+          "longestBendRunMeters": 240,
+          "maneuversPer10Miles": 4.87,
+          "backtrackingShare": 0.0179,
+          "selfOverlapShare": 0.0053,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 5,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 82,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "allentown-stroudsburg",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+          "eligible": true,
+          "canonicalScore": 27.9,
+          "distanceMeters": 61382.822,
+          "durationSeconds": 4272.941,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.10709735900945858,
+          "maneuversPer10Miles": 4.98,
+          "backtrackingShare": 0.0192,
+          "selfOverlapShare": 0.0049,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 7,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_6dec007e-ed76-4df6-bfb4-6335e007790d",
+          "eligible": true,
+          "canonicalScore": 27.9,
+          "distanceMeters": 61382.822,
+          "durationSeconds": 4272.941,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.10709735900945858,
+          "maneuversPer10Miles": 4.98,
+          "backtrackingShare": 0.0192,
+          "selfOverlapShare": 0.0049,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 7,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "hawk-mountain-jim-thorpe",
+      "label": "Hawk Mountain → Jim Thorpe",
+      "providerCalls": 4,
+      "planningLatencyMs": 354,
+      "classicId": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+      "frontierId": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+      "sustainedCurvesId": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+          "methods": [
+            "classic",
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 33.2,
+          "distanceMiles": 28.69,
+          "durationMinutes": 59,
+          "sustainedBendShare": 0.1042,
+          "longestBendRunMeters": 384,
+          "maneuversPer10Miles": 2.44,
+          "backtrackingShare": 0.0312,
+          "selfOverlapShare": 0.0097,
+          "geometryReversalCount": 1,
+          "alternatingShortTurnPairs": 0,
+          "coherenceFlags": [
+            "geometry-reversal"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 64,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_c29b2675-0e43-4b5b-a558-8fccc416196e",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 31.9,
+          "distanceMiles": 32.99,
+          "durationMinutes": 59.2,
+          "sustainedBendShare": 0.0947,
+          "longestBendRunMeters": 312,
+          "maneuversPer10Miles": 1.82,
+          "backtrackingShare": 0.0239,
+          "selfOverlapShare": 0.0028,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 65,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "hawk-mountain-jim-thorpe",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+          "eligible": true,
+          "canonicalScore": 33.2,
+          "distanceMeters": 46169.548,
+          "durationSeconds": 3540.336,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.10415769285659493,
+          "maneuversPer10Miles": 2.44,
+          "backtrackingShare": 0.0312,
+          "selfOverlapShare": 0.0097,
+          "geometryReversalCount": 1,
+          "alternatingShortTurnPairs": 0,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_6e1bdad5-0e80-4acb-ba53-04bb3e0c4a2a",
+          "eligible": true,
+          "canonicalScore": 33.2,
+          "distanceMeters": 46169.548,
+          "durationSeconds": 3540.336,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.10415769285659493,
+          "maneuversPer10Miles": 2.44,
+          "backtrackingShare": 0.0312,
+          "selfOverlapShare": 0.0097,
+          "geometryReversalCount": 1,
+          "alternatingShortTurnPairs": 0,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "doylestown-new-hope",
+      "label": "Doylestown → New Hope",
+      "providerCalls": 4,
+      "planningLatencyMs": 298,
+      "classicId": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+      "frontierId": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+      "sustainedCurvesId": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+          "methods": [
+            "classic",
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 27.5,
+          "distanceMiles": 13.05,
+          "durationMinutes": 29.1,
+          "sustainedBendShare": 0.07,
+          "longestBendRunMeters": 146,
+          "maneuversPer10Miles": 7.66,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0.0071,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 0,
+          "coherenceFlags": [],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 47,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_634ba6f9-c949-4251-b204-d8eff08c9fe7",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 26.8,
+          "distanceMiles": 14.29,
+          "durationMinutes": 28.7,
+          "sustainedBendShare": 0.0596,
+          "longestBendRunMeters": 114,
+          "maneuversPer10Miles": 6.3,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0.0065,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 44,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "doylestown-new-hope",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+          "eligible": true,
+          "canonicalScore": 27.5,
+          "distanceMeters": 21005.947,
+          "durationSeconds": 1745.061,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.06999316795141566,
+          "maneuversPer10Miles": 7.66,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0.0071,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 0,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_dc140c7d-e002-4436-b425-bc89098c80e1",
+          "eligible": true,
+          "canonicalScore": 27.5,
+          "distanceMeters": 21005.947,
+          "durationSeconds": 1745.061,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.06999316795141566,
+          "maneuversPer10Miles": 7.66,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0.0071,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 0,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "harrisburg-lancaster",
+      "label": "Harrisburg → Lancaster",
+      "providerCalls": 4,
+      "planningLatencyMs": 365,
+      "classicId": "route_1c39a68f-ac5d-443f-8915-5efeeae4cecb",
+      "frontierId": "route_a3765c9f-7313-4276-8382-da54cb1d7b95",
+      "sustainedCurvesId": "route_a3765c9f-7313-4276-8382-da54cb1d7b95",
+      "frontierSameAsClassic": false,
+      "candidates": [
+        {
+          "id": "route_1c39a68f-ac5d-443f-8915-5efeeae4cecb",
+          "methods": [
+            "classic"
+          ],
+          "eligible": true,
+          "canonicalScore": 22,
+          "distanceMiles": 42.42,
+          "durationMinutes": 77.2,
+          "sustainedBendShare": 0.0468,
+          "longestBendRunMeters": 197,
+          "maneuversPer10Miles": 5.42,
+          "backtrackingShare": 0.0025,
+          "selfOverlapShare": 0.0022,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 137,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_cb8ce5b3-1d74-4f63-8e51-3df3a24b22ab",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 11.6,
+          "distanceMiles": 38.67,
+          "durationMinutes": 76.4,
+          "sustainedBendShare": 0.0281,
+          "longestBendRunMeters": 163,
+          "maneuversPer10Miles": 3.62,
+          "backtrackingShare": 0.0061,
+          "selfOverlapShare": 0,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 4,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 96,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_a3765c9f-7313-4276-8382-da54cb1d7b95",
+          "methods": [
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 12.4,
+          "distanceMiles": 38.89,
+          "durationMinutes": 50.2,
+          "sustainedBendShare": 0.0193,
+          "longestBendRunMeters": 109,
+          "maneuversPer10Miles": 3.09,
+          "backtrackingShare": 0.0013,
+          "selfOverlapShare": 0.0024,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 90,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "harrisburg-lancaster",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_1c39a68f-ac5d-443f-8915-5efeeae4cecb",
+          "eligible": true,
+          "canonicalScore": 22,
+          "distanceMeters": 68263.643,
+          "durationSeconds": 4634.207,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.046797393609454695,
+          "maneuversPer10Miles": 5.42,
+          "backtrackingShare": 0.0025,
+          "selfOverlapShare": 0.0022,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_a3765c9f-7313-4276-8382-da54cb1d7b95",
+          "eligible": true,
+          "canonicalScore": 12.4,
+          "distanceMeters": 62581.843,
+          "durationSeconds": 3011.665,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.019304961979803255,
+          "maneuversPer10Miles": 3.09,
+          "backtrackingShare": 0.0013,
+          "selfOverlapShare": 0.0024,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": -1622.5420000000004,
+          "distanceMeters": -5681.799999999996,
+          "canonicalScore": -9.6,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": -0.02749243162965144,
+          "maneuversPer10Miles": -2.33,
+          "backtrackingShare": -0.0012000000000000001,
+          "selfOverlapShare": 0.00019999999999999966,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "reading-jim-thorpe",
+      "label": "Reading → Jim Thorpe",
+      "providerCalls": 4,
+      "planningLatencyMs": 656,
+      "classicId": "route_371b7459-95d5-4249-82fd-89bc914bba4b",
+      "frontierId": "route_371b7459-95d5-4249-82fd-89bc914bba4b",
+      "sustainedCurvesId": "route_b14d8470-116e-423a-9d62-22612fd568a3",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_371b7459-95d5-4249-82fd-89bc914bba4b",
+          "methods": [
+            "classic",
+            "frontier"
+          ],
+          "eligible": true,
+          "canonicalScore": 39.8,
+          "distanceMiles": 58.12,
+          "durationMinutes": 122.3,
+          "sustainedBendShare": 0.1565,
+          "longestBendRunMeters": 509,
+          "maneuversPer10Miles": 4.65,
+          "backtrackingShare": 0.0605,
+          "selfOverlapShare": 0.0064,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 4,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 145,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_b14d8470-116e-423a-9d62-22612fd568a3",
+          "methods": [
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 34.5,
+          "distanceMiles": 53.96,
+          "durationMinutes": 107.3,
+          "sustainedBendShare": 0.1263,
+          "longestBendRunMeters": 509,
+          "maneuversPer10Miles": 3.89,
+          "backtrackingShare": 0.0466,
+          "selfOverlapShare": 0.0052,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 2,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 119,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_c4f046e0-1feb-4264-ae30-1525e2ea467f",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 34.8,
+          "distanceMiles": 57.21,
+          "durationMinutes": 116.7,
+          "sustainedBendShare": 0.1228,
+          "longestBendRunMeters": 509,
+          "maneuversPer10Miles": 4.02,
+          "backtrackingShare": 0.0715,
+          "selfOverlapShare": 0.0049,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 0,
+          "coherenceFlags": [],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 127,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "reading-jim-thorpe",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_371b7459-95d5-4249-82fd-89bc914bba4b",
+          "eligible": true,
+          "canonicalScore": 39.8,
+          "distanceMeters": 93542.455,
+          "durationSeconds": 7340.466,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.15646111524487347,
+          "maneuversPer10Miles": 4.65,
+          "backtrackingShare": 0.0605,
+          "selfOverlapShare": 0.0064,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 4,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_371b7459-95d5-4249-82fd-89bc914bba4b",
+          "eligible": true,
+          "canonicalScore": 39.8,
+          "distanceMeters": 93542.455,
+          "durationSeconds": 7340.466,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.15646111524487347,
+          "maneuversPer10Miles": 4.65,
+          "backtrackingShare": 0.0605,
+          "selfOverlapShare": 0.0064,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 4,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "west-chester-lancaster",
+      "label": "West Chester → Lancaster",
+      "providerCalls": 4,
+      "planningLatencyMs": 414,
+      "classicId": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+      "frontierId": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+      "sustainedCurvesId": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+          "methods": [
+            "classic",
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 27.4,
+          "distanceMiles": 42.03,
+          "durationMinutes": 81.8,
+          "sustainedBendShare": 0.0767,
+          "longestBendRunMeters": 270,
+          "maneuversPer10Miles": 5.23,
+          "backtrackingShare": 0.0203,
+          "selfOverlapShare": 0,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 6,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 114,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_b023c13b-8b53-440d-af0f-15afe30d257d",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 17.1,
+          "distanceMiles": 40.79,
+          "durationMinutes": 65.8,
+          "sustainedBendShare": 0.0226,
+          "longestBendRunMeters": 135,
+          "maneuversPer10Miles": 4.17,
+          "backtrackingShare": 0.0178,
+          "selfOverlapShare": 0.0046,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 4,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 115,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "west-chester-lancaster",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+          "eligible": true,
+          "canonicalScore": 27.4,
+          "distanceMeters": 67637.399,
+          "durationSeconds": 4910.312,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.07669208553489902,
+          "maneuversPer10Miles": 5.23,
+          "backtrackingShare": 0.0203,
+          "selfOverlapShare": 0,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 6,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_246f5400-9423-4e39-8a80-7dece80f55d4",
+          "eligible": true,
+          "canonicalScore": 27.4,
+          "distanceMeters": 67637.399,
+          "durationSeconds": 4910.312,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.07669208553489902,
+          "maneuversPer10Miles": 5.23,
+          "backtrackingShare": 0.0203,
+          "selfOverlapShare": 0,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 6,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "bethlehem-delaware-water-gap",
+      "label": "Bethlehem → Delaware Water Gap",
+      "providerCalls": 4,
+      "planningLatencyMs": 291,
+      "classicId": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+      "frontierId": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+      "sustainedCurvesId": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+          "methods": [
+            "classic",
+            "frontier",
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 28,
+          "distanceMiles": 34.47,
+          "durationMinutes": 63.1,
+          "sustainedBendShare": 0.0915,
+          "longestBendRunMeters": 256,
+          "maneuversPer10Miles": 6.09,
+          "backtrackingShare": 0.0457,
+          "selfOverlapShare": 0.0081,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 3,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 83,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_2c4db543-904d-46a6-a850-4847d92d877d",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 22.3,
+          "distanceMiles": 32.56,
+          "durationMinutes": 55.3,
+          "sustainedBendShare": 0.0713,
+          "longestBendRunMeters": 236,
+          "maneuversPer10Miles": 5.83,
+          "backtrackingShare": 0.0508,
+          "selfOverlapShare": 0.0143,
+          "geometryReversalCount": 1,
+          "alternatingShortTurnPairs": 9,
+          "coherenceFlags": [
+            "geometry-reversal",
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 76,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "bethlehem-delaware-water-gap",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+          "eligible": true,
+          "canonicalScore": 28,
+          "distanceMeters": 55470.752,
+          "durationSeconds": 3783.738,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.0915061842852816,
+          "maneuversPer10Miles": 6.09,
+          "backtrackingShare": 0.0457,
+          "selfOverlapShare": 0.0081,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 3,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_bb234da3-cc26-4c1e-a56c-d1cee9bd9c82",
+          "eligible": true,
+          "canonicalScore": 28,
+          "distanceMeters": 55470.752,
+          "durationSeconds": 3783.738,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.0915061842852816,
+          "maneuversPer10Miles": 6.09,
+          "backtrackingShare": 0.0457,
+          "selfOverlapShare": 0.0081,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 3,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    },
+    {
+      "caseId": "cherry-hill-batsto",
+      "label": "Cherry Hill → Batsto Village",
+      "providerCalls": 4,
+      "planningLatencyMs": 1156,
+      "classicId": "route_0126d628-3b16-4a64-b193-9210e64987d0",
+      "frontierId": "route_0126d628-3b16-4a64-b193-9210e64987d0",
+      "sustainedCurvesId": "route_2eb3265f-2741-483e-8d39-66543a67082a",
+      "frontierSameAsClassic": true,
+      "candidates": [
+        {
+          "id": "route_0126d628-3b16-4a64-b193-9210e64987d0",
+          "methods": [
+            "classic",
+            "frontier"
+          ],
+          "eligible": true,
+          "canonicalScore": 22.1,
+          "distanceMiles": 39.3,
+          "durationMinutes": 72.6,
+          "sustainedBendShare": 0.0309,
+          "longestBendRunMeters": 130,
+          "maneuversPer10Miles": 4.07,
+          "backtrackingShare": 0.0303,
+          "selfOverlapShare": 0.0024,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 5,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 99,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_2eb3265f-2741-483e-8d39-66543a67082a",
+          "methods": [
+            "sustained-curves"
+          ],
+          "eligible": true,
+          "canonicalScore": 19.5,
+          "distanceMiles": 33.16,
+          "durationMinutes": 79.1,
+          "sustainedBendShare": 0.0317,
+          "longestBendRunMeters": 226,
+          "maneuversPer10Miles": 9.35,
+          "backtrackingShare": 0.0359,
+          "selfOverlapShare": 0.0056,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 11,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 78,
+            "timedShare": 1
+          }
+        },
+        {
+          "id": "route_c86ff7cd-0b76-404b-9757-0e6744d3558f",
+          "methods": [],
+          "eligible": true,
+          "canonicalScore": 18.9,
+          "distanceMiles": 36.79,
+          "durationMinutes": 68,
+          "sustainedBendShare": 0.0241,
+          "longestBendRunMeters": 147,
+          "maneuversPer10Miles": 6.79,
+          "backtrackingShare": 0.0222,
+          "selfOverlapShare": 0.0025,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 10,
+          "coherenceFlags": [
+            "alternating-short-turns"
+          ],
+          "worthwhileMinuteRatio": null,
+          "rideArcUnavailable": "no-worthwhile-policy",
+          "orderedEvidence": {
+            "runCount": 87,
+            "timedShare": 1
+          }
+        }
+      ],
+      "scorecard": {
+        "caseId": "cherry-hill-batsto",
+        "generator": "frontier-vs-classic-baseline",
+        "equalProviderCallBudget": true,
+        "validity": "valid",
+        "control": {
+          "id": "route_0126d628-3b16-4a64-b193-9210e64987d0",
+          "eligible": true,
+          "canonicalScore": 22.1,
+          "distanceMeters": 63244.364,
+          "durationSeconds": 4357.824,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.03092168146864434,
+          "maneuversPer10Miles": 4.07,
+          "backtrackingShare": 0.0303,
+          "selfOverlapShare": 0.0024,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 5,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "treatment": {
+          "id": "route_0126d628-3b16-4a64-b193-9210e64987d0",
+          "eligible": true,
+          "canonicalScore": 22.1,
+          "distanceMeters": 63244.364,
+          "durationSeconds": 4357.824,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0.03092168146864434,
+          "maneuversPer10Miles": 4.07,
+          "backtrackingShare": 0.0303,
+          "selfOverlapShare": 0.0024,
+          "geometryReversalCount": 0,
+          "alternatingShortTurnPairs": 5,
+          "timeboxErrorSeconds": null,
+          "corridorAdherenceShare": null,
+          "preservedBaselineShare": null
+        },
+        "delta": {
+          "durationSeconds": 0,
+          "distanceMeters": 0,
+          "canonicalScore": 0,
+          "worthwhileMinuteRatio": null,
+          "sustainedBendShare": 0,
+          "maneuversPer10Miles": 0,
+          "backtrackingShare": 0,
+          "selfOverlapShare": 0,
+          "timeboxErrorSeconds": null,
+          "planningLatencyMs": 0
+        },
+        "treatmentCorridorAdherenceShare": null,
+        "treatmentPreservedBaselineShare": null,
+        "riderPreference": "not-rated"
+      }
+    }
+  ],
+  "aggregate": {
+    "generator": "frontier-vs-classic-baseline",
+    "trials": 8,
+    "validTrials": 8,
+    "equalBudgetTrials": 8,
+    "riderRatedTrials": 0,
+    "riderPreference": {
+      "treatment": 0,
+      "control": 0,
+      "tie": 0
+    },
+    "meanDelta": {
+      "durationSeconds": -202.81775000000005,
+      "canonicalScore": -1.2,
+      "worthwhileMinuteRatio": null,
+      "sustainedBendShare": -0.00343655395370643,
+      "maneuversPer10Miles": -0.29125,
+      "backtrackingShare": -0.00015000000000000001,
+      "selfOverlapShare": 0.000024999999999999957,
+      "timeboxErrorSeconds": null,
+      "planningLatencyMs": 0
+    },
+    "meanTreatmentCorridorAdherenceShare": null,
+    "meanTreatmentPreservedBaselineShare": null
+  }
+}

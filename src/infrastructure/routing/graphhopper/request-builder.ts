@@ -77,6 +77,10 @@ export const REQUESTED_DETAILS: readonly string[] = [
   "road_environment",
   "urban_density",
   "curvature",
+  // Built-in GraphHopper path detail: milliseconds per traversed edge,
+  // including turn penalties. Unlike vehicle-specific average-speed encoded
+  // values, this is available from the active weighting itself.
+  "time",
 ];
 
 /** Engine locale for instruction text. */

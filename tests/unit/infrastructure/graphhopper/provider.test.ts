@@ -218,6 +218,7 @@ describe("GraphHopper provider", () => {
         "road_environment",
         "urban_density",
         "curvature",
+        "time",
       ],
     });
     expect(result.candidates).toHaveLength(1);
