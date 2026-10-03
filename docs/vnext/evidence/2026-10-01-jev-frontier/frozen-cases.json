@@ -1,0 +1,625 @@
+[
+  {
+    "schemaVersion": 1,
+    "caseId": "allentown-stroudsburg",
+    "corridorKey": "allentown-stroudsburg",
+    "rideSessionKey": "corpus-allentown-stroudsburg",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-1gryylt",
+      "candidate-2": "motorcycle_twisty-1-1lpl4s9"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": false,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 27.7,
+          "distanceMeters": 61382.822,
+          "durationSeconds": 4272.941,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.8556628795014957,
+            "curvature": 0.52855652581998,
+            "flow": null,
+            "backroad": 0.578,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-2",
+          "canonicalRank": 2,
+          "canonicalScore": 22.2,
+          "distanceMeters": 56194.856,
+          "durationSeconds": 3656.197,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.38422198907472077,
+            "flow": null,
+            "backroad": 0.286,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-2": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "doylestown-new-hope",
+    "corridorKey": "doylestown-new-hope",
+    "rideSessionKey": "corpus-doylestown-new-hope",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-f1jcus",
+      "candidate-2": "motorcycle_fastest-1-1uc7jkw"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": true,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 26.6,
+          "distanceMeters": 22998.317,
+          "durationSeconds": 1722.194,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.28927669924302957,
+            "flow": null,
+            "backroad": 0.99,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-2",
+          "canonicalRank": 2,
+          "canonicalScore": 26,
+          "distanceMeters": 21005.947,
+          "durationSeconds": 1745.061,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.9868961600769257,
+            "curvature": 0.2971704055915429,
+            "flow": null,
+            "backroad": 0.909,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-2": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "harrisburg-lancaster",
+    "corridorKey": "harrisburg-lancaster",
+    "rideSessionKey": "corpus-harrisburg-lancaster",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-194jfje",
+      "candidate-2": "motorcycle_fastest-1-1mfb5z5"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": false,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 22.5,
+          "distanceMeters": 68263.643,
+          "durationSeconds": 4634.207,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.6498770987139763,
+            "curvature": 0.24936952983798638,
+            "flow": null,
+            "backroad": 0.887,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-2",
+          "canonicalRank": 2,
+          "canonicalScore": 13.1,
+          "distanceMeters": 62581.843,
+          "durationSeconds": 3011.665,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.12035800805832077,
+            "flow": null,
+            "backroad": 0.108,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-2": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "reading-jim-thorpe",
+    "corridorKey": "reading-jim-thorpe",
+    "rideSessionKey": "corpus-reading-jim-thorpe",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-wh9nj7",
+      "candidate-3": "motorcycle_fastest-1-15yu2tt"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": true,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 39.4,
+          "distanceMeters": 93542.455,
+          "durationSeconds": 7340.466,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.8772154247427888,
+            "curvature": 0.7684897383050295,
+            "flow": null,
+            "backroad": 0.956,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-3",
+          "canonicalRank": 2,
+          "canonicalScore": 34.2,
+          "distanceMeters": 86832.184,
+          "durationSeconds": 6439.17,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.6194925852892413,
+            "flow": null,
+            "backroad": 0.821,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-3": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "west-chester-lancaster",
+    "corridorKey": "west-chester-lancaster",
+    "rideSessionKey": "corpus-west-chester-lancaster",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-lubz6r",
+      "candidate-2": "motorcycle_fastest-1-17dy0fj"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": true,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 26.9,
+          "distanceMeters": 67637.399,
+          "durationSeconds": 4910.312,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.8040851579288648,
+            "curvature": 0.3668075513757861,
+            "flow": null,
+            "backroad": 0.987,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-2",
+          "canonicalRank": 2,
+          "canonicalScore": 16.6,
+          "distanceMeters": 65642.2,
+          "durationSeconds": 3948.309,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.09234093310625069,
+            "flow": null,
+            "backroad": 0.537,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-2": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "bethlehem-delaware-water-gap",
+    "corridorKey": "bethlehem-delaware-water-gap",
+    "rideSessionKey": "corpus-bethlehem-delaware-water-gap",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_twisty-1-wmw756",
+      "candidate-2": "motorcycle_fastest-1-1o4yhyz"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": true,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 29.5,
+          "distanceMeters": 55213.489,
+          "durationSeconds": 3763.903,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.8810689329666572,
+            "curvature": 0.5077978399894937,
+            "flow": null,
+            "backroad": 0.694,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-2",
+          "canonicalRank": 2,
+          "canonicalScore": 23.1,
+          "distanceMeters": 52406.813,
+          "durationSeconds": 3316.258,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.3851869811358499,
+            "flow": null,
+            "backroad": 0.373,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-2": 0
+      }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "caseId": "cherry-hill-batsto",
+    "corridorKey": "cherry-hill-batsto",
+    "rideSessionKey": "corpus-cherry-hill-batsto",
+    "selector": "exact-bounded-regret-v1",
+    "fingerprints": {
+      "candidate-1": "motorcycle_scenic-1-1960xwr",
+      "candidate-3": "motorcycle_twisty-1-1uwo6kw"
+    },
+    "state": {
+      "schemaVersion": 1,
+      "intent": {
+        "roadCharacter": "curvy",
+        "surfacePreference": "mixed",
+        "terrainLevel": "moderate",
+        "noveltyPreference": "balanced",
+        "avoidHighways": true,
+        "tollPolicy": "allow-with-warning",
+        "timeboxSatisfied": null
+      },
+      "rider": null,
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "canonicalRank": 1,
+          "canonicalScore": 22.5,
+          "distanceMeters": 63244.364,
+          "durationSeconds": 4357.824,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 0.9364171201039786,
+            "curvature": 0.16728036264999283,
+            "flow": null,
+            "backroad": 0.927,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        },
+        {
+          "id": "candidate-3",
+          "canonicalRank": 2,
+          "canonicalScore": 20.2,
+          "distanceMeters": 59213.797,
+          "durationSeconds": 4080.741,
+          "evidenceCoverage": 0.2,
+          "riderPreferenceUtility": null,
+          "frontier": {
+            "timeEfficiency": 1,
+            "curvature": 0.16805742915057229,
+            "flow": null,
+            "backroad": 0.689,
+            "surfaceFit": 1,
+            "gravelAffinity": null,
+            "trafficFlow": null,
+            "junctionFlow": null,
+            "novelty": null
+          },
+          "coherence": {
+            "explicitUTurns": null,
+            "geometryReversals": null,
+            "maneuverDensityPer10Miles": null,
+            "immediateBacktrackingShare": null,
+            "selfOverlapShare": null
+          }
+        }
+      ],
+      "deterministicBaselineId": "candidate-1"
+    },
+    "control": {
+      "source": "deterministic-baseline",
+      "choiceCandidateId": "candidate-1",
+      "probabilitiesByCandidateId": {
+        "candidate-1": 1,
+        "candidate-3": 0
+      }
+    }
+  }
+]

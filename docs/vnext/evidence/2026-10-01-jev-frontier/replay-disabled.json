@@ -1,0 +1,2447 @@
+{
+  "schemaVersion": 1,
+  "mode": "disabled",
+  "records": [
+    {
+      "schemaVersion": 1,
+      "caseId": "allentown-stroudsburg",
+      "corridorKey": "allentown-stroudsburg",
+      "rideSessionKey": "corpus-allentown-stroudsburg",
+      "seed": "pr51-gh-2026-10-01:allentown-stroudsburg",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-1gryylt",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-2",
+          "fingerprint": "motorcycle_twisty-1-1lpl4s9",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-2": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "doylestown-new-hope",
+      "corridorKey": "doylestown-new-hope",
+      "rideSessionKey": "corpus-doylestown-new-hope",
+      "seed": "pr51-gh-2026-10-01:doylestown-new-hope",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-f1jcus",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-2",
+          "fingerprint": "motorcycle_fastest-1-1uc7jkw",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-2": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "harrisburg-lancaster",
+      "corridorKey": "harrisburg-lancaster",
+      "rideSessionKey": "corpus-harrisburg-lancaster",
+      "seed": "pr51-gh-2026-10-01:harrisburg-lancaster",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-194jfje",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-2",
+          "fingerprint": "motorcycle_fastest-1-1mfb5z5",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-2": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "reading-jim-thorpe",
+      "corridorKey": "reading-jim-thorpe",
+      "rideSessionKey": "corpus-reading-jim-thorpe",
+      "seed": "pr51-gh-2026-10-01:reading-jim-thorpe",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-wh9nj7",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-3",
+          "fingerprint": "motorcycle_fastest-1-15yu2tt",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-3": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "west-chester-lancaster",
+      "corridorKey": "west-chester-lancaster",
+      "rideSessionKey": "corpus-west-chester-lancaster",
+      "seed": "pr51-gh-2026-10-01:west-chester-lancaster",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-lubz6r",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-2",
+          "fingerprint": "motorcycle_fastest-1-17dy0fj",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-2": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "bethlehem-delaware-water-gap",
+      "corridorKey": "bethlehem-delaware-water-gap",
+      "rideSessionKey": "corpus-bethlehem-delaware-water-gap",
+      "seed": "pr51-gh-2026-10-01:bethlehem-delaware-water-gap",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_twisty-1-wmw756",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-2",
+          "fingerprint": "motorcycle_fastest-1-1o4yhyz",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-2": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-2"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-2"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "caseId": "cherry-hill-batsto",
+      "corridorKey": "cherry-hill-batsto",
+      "rideSessionKey": "corpus-cherry-hill-batsto",
+      "seed": "pr51-gh-2026-10-01:cherry-hill-batsto",
+      "selector": "exact-bounded-regret-v1",
+      "deterministicBaselineId": "candidate-1",
+      "candidates": [
+        {
+          "id": "candidate-1",
+          "fingerprint": "motorcycle_scenic-1-1960xwr",
+          "canonicalRank": 1,
+          "riderPreferenceUtility": null
+        },
+        {
+          "id": "candidate-3",
+          "fingerprint": "motorcycle_twisty-1-1uwo6kw",
+          "canonicalRank": 2,
+          "riderPreferenceUtility": null
+        }
+      ],
+      "control": {
+        "source": "deterministic-baseline",
+        "choiceCandidateId": "candidate-1",
+        "probabilitiesByCandidateId": {
+          "candidate-1": 1,
+          "candidate-3": 0
+        }
+      },
+      "policy": {
+        "minimumChoiceConfidence": 0.7,
+        "minimumChosenProbability": 0.55,
+        "minimumChoiceMargin": 0.15,
+        "minimumMeaningfulImprovementProbability": 0.65
+      },
+      "variants": {
+        "A": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "B": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        },
+        "C": {
+          "runs": [
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 0,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-0",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-1"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-3"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            },
+            {
+              "repeat": 1,
+              "permutation": {
+                "id": "balanced-2-1",
+                "slots": [
+                  {
+                    "slot": "A",
+                    "candidateId": "candidate-3"
+                  },
+                  {
+                    "slot": "B",
+                    "candidateId": "candidate-1"
+                  }
+                ]
+              },
+              "result": {
+                "status": "skipped",
+                "reason": "disabled",
+                "latencyMs": 0
+              }
+            }
+          ],
+          "audits": [
+            null,
+            null
+          ],
+          "orderFlipRate": null,
+          "repeatedRequestStability": null,
+          "repeatedProbabilityTotalVariation": null,
+          "repeatedComparisons": 0,
+          "choiceCandidateId": null,
+          "probabilitiesByCandidateId": null,
+          "noneProbability": null,
+          "meaningfulImprovementProbability": null,
+          "verdict": "abstain"
+        }
+      }
+    }
+  ],
+  "evaluation": {
+    "schemaVersion": 1,
+    "labelCount": 0,
+    "riderCount": 0,
+    "promotionReady": false,
+    "logLossClip": 1e-15,
+    "calibration": {},
+    "test": {},
+    "diagnostics": {
+      "A": {
+        "caseCount": 7,
+        "requestCount": 28,
+        "failedOrInvalidRate": 0,
+        "skippedCount": 28,
+        "baselineAgreement": null,
+        "orderFlipRate": null,
+        "repeatedRequestStability": null,
+        "latencyP50Ms": 0,
+        "latencyP95Ms": 0,
+        "reportedCost": null
+      },
+      "B": {
+        "caseCount": 7,
+        "requestCount": 28,
+        "failedOrInvalidRate": 0,
+        "skippedCount": 28,
+        "baselineAgreement": null,
+        "orderFlipRate": null,
+        "repeatedRequestStability": null,
+        "latencyP50Ms": 0,
+        "latencyP95Ms": 0,
+        "reportedCost": null
+      },
+      "C": {
+        "caseCount": 7,
+        "requestCount": 28,
+        "failedOrInvalidRate": 0,
+        "skippedCount": 28,
+        "baselineAgreement": null,
+        "orderFlipRate": null,
+        "repeatedRequestStability": null,
+        "latencyP50Ms": 0,
+        "latencyP95Ms": 0,
+        "reportedCost": null
+      }
+    }
+  }
+}

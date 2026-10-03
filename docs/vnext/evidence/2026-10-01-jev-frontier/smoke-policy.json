@@ -1,0 +1,6 @@
+{
+  "minimumChoiceConfidence": 0.7,
+  "minimumChosenProbability": 0.55,
+  "minimumChoiceMargin": 0.15,
+  "minimumMeaningfulImprovementProbability": 0.65
+}
