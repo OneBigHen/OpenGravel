@@ -6,7 +6,7 @@ import {
 } from "@/application/planner/fun-judge-selection";
 import { analyzeBends } from "@/domain/geometry/bends";
 import type { PipelineCandidate } from "@/application/planner/pipeline";
-import type { Coordinate } from "@/domain/geometry";
+import type { Coordinate } from "@/domain/ride/types";
 
 function candidate(geometry: readonly Coordinate[], distanceMeters = 5_000): PipelineCandidate {
   return { geometry, distanceMeters } as unknown as PipelineCandidate;
