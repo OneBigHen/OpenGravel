@@ -446,6 +446,9 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     host.applyScene(scene({ infoLayers }));
     const source = map.sources.get("ogv-radar");
     expect(source).toMatchObject({ type: "image", coordinates: [[-76, 41], [-75, 41], [-75, 40], [-76, 40]] });
+    // MapLibre 6 rejects unknown image-source properties ("attribution"); the
+    // provenance lives in the layer panel instead.
+    expect(Object.keys(source as object).sort()).toEqual(["coordinates", "type", "url"]);
     host.applyScene(scene({ infoLayers }));
     expect(map.sources.get("ogv-radar")).toBe(source);
     map.resetStyle();

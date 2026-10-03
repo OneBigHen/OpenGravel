@@ -1068,7 +1068,7 @@ export async function createMapLibreHost(
       if (map.getSource(id) !== undefined) map.removeSource(id);
       if (raster === undefined) { radarScenes.set(map, signature); return; }
       const b = raster.bounds;
-      map.addSource(id, { type: "image", url: raster.url, coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]], attribution: raster.attribution });
+      map.addSource(id, { type: "image", url: raster.url, coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]] });
       const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
       map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.55, "raster-fade-duration": 0 } }, firstLabel);
       radarScenes.set(map, signature);
