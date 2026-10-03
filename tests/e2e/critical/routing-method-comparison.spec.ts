@@ -71,6 +71,9 @@ test("phone Frontier explains the authored Curvy choice and waits for manual app
   const before = await selected.getAttribute("data-testid");
   const frontier = page.getByTestId("routing-method-frontier");
   await frontier.getByRole("radio").check();
+  await expect(frontier.locator(".og-routing-methods__why")).not.toHaveAttribute("open");
+  await frontier.getByText("Why this route?", { exact: true }).click();
+  for (const paragraph of await frontier.locator(".og-routing-methods__why > p").all()) await expect(paragraph).toBeVisible();
   await expect(frontier).toContainText("your Curvy Roads choice");
   await expect(frontier).toContainText("sustained sections on the mapped route");
   await expect(selected).toHaveAttribute("data-testid", before!);
@@ -78,7 +81,7 @@ test("phone Frontier explains the authored Curvy choice and waits for manual app
   await expect(frontier.getByRole("button", { name: "Already selected" })).toBeDisabled();
 });
 
-for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
   test(`method comparison stays manual and readable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const comparison = await planComparison(page);
@@ -88,6 +91,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await sustained.getByRole("radio").check();
     // Reading a method must not select its route.
     await expect(selectedCard).toHaveAttribute("data-testid", selectedBefore!);
+    await expect(sustained.locator(".og-routing-methods__why")).not.toHaveAttribute("open");
+    await sustained.getByText("Why this route?", { exact: true }).click();
+    for (const paragraph of await sustained.locator(".og-routing-methods__why > p").all()) await expect(paragraph).toBeVisible();
     await expect(sustained).toContainText("mapped route geometry");
     await sustained.getByRole("button", { name: "Show this route" }).click();
     await expect(sustained.getByRole("button", { name: "Already selected" })).toBeDisabled();

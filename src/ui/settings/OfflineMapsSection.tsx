@@ -17,6 +17,20 @@ interface ActiveDownload {
   readonly controller: AbortController;
 }
 
+type DeviceState =
+  | { readonly status: "checking" }
+  | { readonly status: "failed" }
+  | { readonly status: "ready"; readonly installed: InstalledOfflineRegion[]; readonly storedBytes: number };
+
+async function readDevice(regions: OfflineRegionsPort): Promise<DeviceState> {
+  try {
+    const [installed, storedBytes] = await Promise.all([regions.installed(), regions.storedBytes()]);
+    return { status: "ready", installed, storedBytes };
+  } catch {
+    return { status: "failed" };
+  }
+}
+
 const STATE_LABEL = {
   available: null,
   ready: "On this device",
@@ -27,30 +41,37 @@ const STATE_LABEL = {
 export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegionsPort }) {
   const [offers, setOffers] = useState<OfflineRegionOffer[] | null>(null);
   const [offersFailed, setOffersFailed] = useState(false);
-  const [installed, setInstalled] = useState<InstalledOfflineRegion[]>([]);
-  const [storedBytes, setStoredBytes] = useState(0);
+  const [device, setDevice] = useState<DeviceState>({ status: "checking" });
   const [active, setActive] = useState<ActiveDownload | null>(null);
+  const [removing, setRemoving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const activeRef = useRef<ActiveDownload | null>(null);
+  const localRead = useRef({ live: false, revision: 0 });
 
   const refreshLocal = useCallback(async () => {
-    setInstalled(await regions.installed());
-    setStoredBytes(await regions.storedBytes());
+    const reads = localRead.current;
+    if (!reads.live) return;
+    const read = ++reads.revision;
+    const result = await readDevice(regions);
+    if (reads.live && read === reads.revision) setDevice(result);
   }, [regions]);
 
   useEffect(() => {
     let live = true;
+    const reads = localRead.current;
+    reads.live = true;
     void regions
       .offers()
       .then((list) => live && setOffers(list))
       .catch(() => live && setOffersFailed(true));
-    void Promise.all([regions.installed(), regions.storedBytes()]).then(([list, bytes]) => {
-      if (!live) return;
-      setInstalled(list);
-      setStoredBytes(bytes);
+    const read = ++reads.revision;
+    void readDevice(regions).then((result) => {
+      if (live && read === reads.revision) setDevice(result);
     });
     return () => {
       live = false;
+      reads.live = false;
+      ++reads.revision;
       activeRef.current?.controller.abort();
     };
   }, [regions]);
@@ -75,17 +96,33 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
     } finally {
       activeRef.current = null;
       setActive(null);
+      setDevice({ status: "checking" });
       await refreshLocal();
     }
   }
 
   async function remove(regionId: string, name: string): Promise<void> {
-    await regions.remove(regionId);
-    setMessage(`${name} was removed from this device.`);
-    await refreshLocal();
+    setRemoving(true);
+    setMessage(null);
+    try {
+      await regions.remove(regionId);
+      setMessage(`${name} was removed from this device.`);
+    } catch {
+      setMessage(`${name} could not be removed. Check device storage and try again.`);
+    } finally {
+      setDevice({ status: "checking" });
+      await refreshLocal();
+      setRemoving(false);
+    }
   }
 
-  const rows = offlineRegionRows(offers, installed);
+  const rows = offlineRegionRows(offers, device.status === "ready" ? device.installed : []);
+  const mutationsDisabled = active !== null || removing || device.status !== "ready";
+  const storageLabel = device.status === "checking"
+    ? "Checking device…"
+    : device.status === "failed"
+      ? "Device unavailable"
+      : device.storedBytes > 0 ? `${formatBytes(device.storedBytes)} used` : "None yet";
 
   return (
     <section className="og-settings__section og-settings__section--offline" aria-labelledby="settings-offline-title" data-testid="offline-maps">
@@ -94,13 +131,23 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
           <p className="og-settings__eyebrow">NO SIGNAL</p>
           <h2 id="settings-offline-title">Offline areas</h2>
         </div>
-        <span className="og-settings__status">{storedBytes > 0 ? `${formatBytes(storedBytes)} used` : "None yet"}</span>
+        <span className="og-settings__status">{storageLabel}</span>
       </div>
       <p className="og-settings__section-copy">
         Download an area and OpenGravel can still draw its map and plan a ride inside it when you lose signal.
       </p>
       {offers === null && !offersFailed && rows.length === 0 ? <p className="og-settings__section-copy">Checking which areas are available…</p> : null}
-      {offersFailed ? <p className="og-settings__section-copy">The list of areas needs signal. Areas already on this device still work.</p> : null}
+      {offersFailed ? <p className="og-settings__section-copy">The list of areas needs signal.{device.status === "ready" ? " Areas already on this device still work." : ""}</p> : null}
+      {device.status === "failed" ? (
+        <>
+          <p className="og-settings__section-copy" role="alert">
+            Device storage could not be checked. Saved areas cannot be verified right now. Retry before downloading or removing an area.
+          </p>
+          <button className="og-settings__button og-settings__button--quiet" type="button" aria-label="Retry device storage" onClick={() => { setDevice({ status: "checking" }); void refreshLocal(); }}>
+            Retry
+          </button>
+        </>
+      ) : null}
       <ul className="og-offline-areas__list">
         {rows.map((row) => {
           const downloading = active?.regionId === row.regionId;
@@ -134,7 +181,7 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
                     <button
                       className="og-settings__button og-settings__button--quiet"
                       type="button"
-                      disabled={active !== null}
+                      disabled={mutationsDisabled}
                       onClick={() => void download(row.regionId, row.name)}
                     >
                       {row.state === "update" ? "Update" : "Download"}
@@ -144,7 +191,7 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
                     <button
                       className="og-settings__text-button og-settings__text-button--danger"
                       type="button"
-                      disabled={active !== null}
+                      disabled={mutationsDisabled}
                       onClick={() => void remove(row.regionId, row.name)}
                     >
                       Remove
