@@ -17,6 +17,8 @@ export interface ExploreMapConfig {
   readonly hostFactory: MapHostFactory;
   readonly basemap: BasemapMode;
   readonly assetBasePath?: string;
+  /** Public static-image credential supplied by the composition root. */
+  readonly staticMapToken?: string;
 }
 
 export interface ExploreMapProps extends ExploreMapConfig {

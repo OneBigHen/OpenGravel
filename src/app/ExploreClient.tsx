@@ -75,6 +75,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     });
     return () => window.cancelAnimationFrame(frame);
   }, [garageStorage]);
+
   useEffect(() => {
     let active = true;
     void (async () => {

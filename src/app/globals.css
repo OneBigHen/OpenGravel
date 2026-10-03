@@ -11549,3 +11549,21 @@ a.og-secondary {
     animation: none;
   }
 }
+
+/* Explore Ride / Things / Along this ride (PR #60) */
+.og-explore__section { padding-block: 16px; }
+.og-explore__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-block: 16px; }
+.og-explore__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.og-explore__inline { display: flex; align-items: center; gap: 8px; }
+.og-explore__wide { width: 100%; text-align: left; }
+.og-explore__date {
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--og-slate);
+  border-radius: var(--og-radius-control);
+  background: var(--og-canvas);
+  color: inherit;
+  font: inherit;
+}
+.og-road-map { height: 320px; overflow: hidden; border-radius: var(--og-radius-object); }
+.og-road-map__image { display: block; width: 100%; height: 160px; border-radius: var(--og-radius-object); object-fit: cover; }

@@ -316,6 +316,7 @@ export function PlannerClient({
       onApplied={planAfterAdvice}
     >
       <PlannerWorkspace
+        {...(mapboxToken === undefined ? {} : { mapboxToken })}
         rideDocumentStore={rideDocumentStore}
         planningSessionStore={planningSessionStore}
         geometryStore={geometryStore}

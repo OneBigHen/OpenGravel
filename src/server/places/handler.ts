@@ -117,10 +117,17 @@ async function fixtureSource(): Promise<PlacesSource> {
 /** The configured source: fixture, places-api, or `null` when nothing is set up. */
 export async function defaultPlacesSource(env: Readonly<Record<string, string | undefined>> = process.env): Promise<PlacesSource | null> {
   if (env["OGV_PLACES_FIXTURE"] === "1") return fixtureSource();
-  const baseUrl = env["OGV_PLACES_API_URL"];
-  const apiKey = env["OGV_PLACES_API_KEY"];
-  if (!baseUrl || !apiKey) return null;
-  return createPlacesApiSource({ baseUrl, apiKey });
+
+  // Existing deployments can keep OGV_PLACES_*; the rider-facing events app
+  // gets an explicit alias so its purpose is visible in configuration.
+  const configuredUrl = env["OGV_PLACES_API_URL"]?.trim() || env["OGV_EVENTS_API_URL"]?.trim();
+  const apiKey = env["OGV_PLACES_API_KEY"]?.trim() || env["OGV_EVENTS_API_KEY"]?.trim();
+  // When a key is configured for Zac's events service, use its canonical
+  // origin unless an override URL was supplied. No key/no URL means no network
+  // dependency is silently introduced.
+  const baseUrl = configuredUrl || (apiKey ? "https://events.henning.rodeo" : "");
+  if (!baseUrl) return null;
+  return createPlacesApiSource({ baseUrl, ...(apiKey ? { apiKey } : {}) });
 }
 
 async function resolveSource(deps: PlacesHandlerDeps): Promise<PlacesSource | null> {

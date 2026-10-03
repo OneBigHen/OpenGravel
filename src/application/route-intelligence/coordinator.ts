@@ -17,7 +17,7 @@ import type { Coordinate } from "@/domain/ride/types";
 
 import { dedupeRecords } from "./dedupe";
 import { boxesIntersect, indexRoute, matchRecord } from "./match";
-import { roadAuthorityEffect } from "./policy";
+import { inSeason, roadAuthorityEffect } from "./policy";
 import type { RoadAuthoritySource } from "./road-authority-source";
 import type { BoundingBox, RoadAuthorityRecord, RoadAuthoritySnapshot, RoadAuthoritySourceInfo } from "./types";
 
@@ -107,6 +107,28 @@ function evidenceSource(info: RoadAuthoritySourceInfo, fetchedAt: string | null,
   };
 }
 
+function designationOpenAt(record: RoadAuthorityRecord, at: string): boolean | null {
+  const access = record.motorcycleAccess;
+  if (access === undefined || access.status === "unknown") return null;
+  if (access.status === "closed") return false;
+
+  if (access.windows !== undefined) {
+    const instant = Date.parse(at);
+    if (!Number.isFinite(instant)) return null;
+    const open = access.windows.some((window) => {
+      const start = Date.parse(window.validFrom);
+      const end = Date.parse(window.validUntil);
+      return Number.isFinite(start) && Number.isFinite(end) && start <= instant && instant < end;
+    });
+    if (open) return true;
+    return access.outsideWindowStatus === "closed" ? false : null;
+  }
+
+  if (access.seasons === null) return true;
+  if (access.seasons.length === 0) return null;
+  return inSeason(access.seasons, at);
+}
+
 function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadAuthorityAssessment {
   const precedence = new Map(outcomes.map((outcome) => [outcome.info.id, outcome.info.precedence]));
   const authority = new Map(outcomes.map((outcome) => [outcome.info.id, outcome.info.authority]));
@@ -162,6 +184,7 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
 
       let closureRisk = 0;
       let accessRidden = false;
+      let accessUncertain = false;
       const seen = new Set<string>();
       const roadOf = new WeakMap<object, string>();
       for (const record of records) {
@@ -169,7 +192,10 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
         if (recordAuthority === undefined) continue;
         const match = matchRecord(route, record.geometry);
         if (match.strength === "none") continue;
-        if (record.kind === "motor-vehicle-designation" && match.strength === "traverses") accessRidden = true;
+        if (record.kind === "motor-vehicle-designation" && match.strength === "traverses") {
+          accessRidden = true;
+          if (designationOpenAt(record, at) !== true) accessUncertain = true;
+        }
         const effect = roadAuthorityEffect(record, recordAuthority, match, at);
         if (effect.effect === "none") continue;
         const key = `${effect.code}:${effect.message}`;
@@ -224,16 +250,23 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
                 provenance: closures.covering.map((outcome) => evidenceSource(outcome.info, outcome.snapshot.fetchedAt, "closures")),
                 ...(closures.covering.some((outcome) => outcome.snapshot.status === "stale") ? { status: "stale" as const } : {}),
               };
+      const accessRejected = failures.some((failure) => failure.code === "access-prohibited");
       const accessEvidence: EvidenceValue<number> =
         !accessRidden || access.covering.length === 0
           ? unknownEvidence("The route rides no road with a published motor-vehicle designation.")
-          : access.gaps.length > 0 || !access.complete
-            ? unknownEvidence("Motor-vehicle designations could not be checked for all of this route.")
-            : {
-                ...knownEvidence(failures.some((failure) => failure.code === "access-prohibited") ? 0 : 1,
-                  evidenceSource(access.covering[0]!.info, access.covering[0]!.snapshot.fetchedAt, "access")),
+          : accessRejected
+            ? {
+                ...knownEvidence(0, evidenceSource(access.covering[0]!.info, access.covering[0]!.snapshot.fetchedAt, "access")),
                 provenance: access.covering.map((outcome) => evidenceSource(outcome.info, outcome.snapshot.fetchedAt, "access")),
-              };
+              }
+            : accessUncertain
+              ? unknownEvidence("A motor-vehicle designation on this route does not establish motorcycle access for this date.")
+              : access.gaps.length > 0 || !access.complete
+                ? unknownEvidence("Motor-vehicle designations could not be checked for all of this route.")
+                : {
+                    ...knownEvidence(1, evidenceSource(access.covering[0]!.info, access.covering[0]!.snapshot.fetchedAt, "access")),
+                    provenance: access.covering.map((outcome) => evidenceSource(outcome.info, outcome.snapshot.fetchedAt, "access")),
+                  };
       return { failures, warnings, evidence: { closures: closureEvidence, access: accessEvidence } };
     },
   };

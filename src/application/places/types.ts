@@ -58,6 +58,21 @@ export interface NearbyPlace {
   /** Only an explicit `true` is a claim; `null` means "not known". */
   readonly dogFriendly: boolean | null;
   readonly patio: boolean | null;
+  /**
+   * Optional per-item provenance from an aggregator such as events.henning.rodeo.
+   * These are additive contract fields: older providers may omit them.
+   */
+  readonly sourceId?: string | null;
+  readonly sourceLabel?: string | null;
+  readonly sourceUrl?: string | null;
+  /**
+   * Explicit upstream classification only. `true` means the source says this
+   * event/place is motorcycle-specific; absent/null means OpenGravel must infer
+   * nothing from the omission.
+   */
+  readonly motorcycleSpecific?: boolean | null;
+  /** Normalized provider tags such as `dual-sport`, `adventure`, `park-event`. */
+  readonly tags?: readonly string[];
   /** Detail page on the source site; riders are sent here for the full story. */
   readonly url: string;
   /** Directions deep link, or `null`. */

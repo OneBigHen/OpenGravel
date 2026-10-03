@@ -21,7 +21,7 @@ import { parsePlacesCollection, PlacesContractError } from "./places-geojson";
 export interface PlacesApiConfig {
   /** Base URL without a trailing `/api/v1`. */
   readonly baseUrl: string;
-  readonly apiKey: string;
+  readonly apiKey?: string;
   readonly fetch?: typeof fetch;
   readonly timeoutMs?: number;
 }
@@ -56,7 +56,11 @@ export function createPlacesApiSource(config: PlacesApiConfig): PlacesSource {
     try {
       response = await doFetch(`${base}/api/v1${path}`, {
         ...init,
-        headers: { ...init.headers, authorization: `Bearer ${config.apiKey}`, accept: "application/json" },
+        headers: {
+          ...init.headers,
+          ...(config.apiKey === undefined || config.apiKey.trim() === "" ? {} : { authorization: `Bearer ${config.apiKey}` }),
+          accept: "application/json",
+        },
         signal: combined,
         cache: "no-store",
       });
