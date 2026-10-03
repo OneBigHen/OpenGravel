@@ -15,6 +15,7 @@ import {
 } from "@/server/map-layers/handler";
 import {
   knownRoadsProvider,
+  nwsAlertsProvider,
   overpassQuery,
   parseNwsAlerts,
   parseOverpass,
@@ -60,6 +61,22 @@ describe("provider payloads", () => {
     });
     expect(closure).toMatchObject({ layerId: "live-traffic", name: "Road closed", detail: "Closed · +10 min · Main St → Oak Ave", weight: 4 });
     expect(closure?.geometry.type).toBe("LineString");
+  });
+
+  it("uses the configured NWS identity and checks the viewport center", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("https://api.weather.gov/alerts/active?point=40.1000,-75.3000");
+      expect(new Headers(init?.headers).get("user-agent")).toBe("OpenGravel/1.0 (ops@example.com)");
+      return Response.json({ type: "FeatureCollection", features: [] });
+    });
+
+    const features = await nwsAlertsProvider.load(VIEW, ["weather"], {
+      fetch: fetcher as typeof fetch,
+      env: { NWS_USER_AGENT: "OpenGravel/1.0 (ops@example.com)" },
+    });
+
+    expect(features).toEqual([]);
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("turns NWS multipolygons into one alert area per part", () => {
