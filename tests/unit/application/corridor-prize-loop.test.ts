@@ -211,4 +211,22 @@ describe("corridor-prize loop beam", () => {
       }),
     ).toEqual([]);
   });
+
+  it("keeps a wasteful first leg alive when a second corridor closes an efficient loop", () => {
+    // Out east on one corridor, back west on a parallel one. Either corridor
+    // alone is mostly connector; together they make a tight loop.
+    const results = searchCorridorPrizeLoops({
+      origin,
+      budgetSeconds: 10_000,
+      prizes: [
+        { id: "east", entry: at(-75.49), exit: at(-75.4), traversalSeconds: 900, utility: 0.8 },
+        { id: "west", entry: at(-75.4, 40.02), exit: at(-75.49, 40.02), traversalSeconds: 900, utility: 0.8 },
+      ],
+      estimateConnectorSeconds: estimate,
+      options: { maxPrizes: 2, maxConnectorShare: 0.45, minimumPrizeUtility: 0 },
+    });
+
+    expect(results.map((result) => result.prizeIds)).toContainEqual(["east", "west"]);
+    expect(results.every((result) => result.connectorShare <= 0.45)).toBe(true);
+  });
 });

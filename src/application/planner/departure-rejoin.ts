@@ -260,6 +260,24 @@ function candidateForOrientation(
 }
 
 /**
+ * Drops an anchor within a metre of the previous one. Library rides are engine
+ * reroutes and can share exact vertices with the baseline; two coincident vias
+ * would make a zero-length leg whose repeated vertex fails canonical
+ * eligibility (`duplicate-consecutive-points`). One live departure-rejoin answer
+ * did fail that way on 2026-10-03 and was correctly rejected; its exact cause
+ * did not reproduce, so this guard closes the one cause we can prove.
+ */
+function withoutAdjacentDuplicates(points: readonly Coordinate[]): Coordinate[] {
+  const kept: Coordinate[] = [];
+  for (const point of points) {
+    const previous = kept.at(-1);
+    if (previous !== undefined && haversine(previous, point) < 1) continue;
+    kept.push(copy(point));
+  }
+  return kept;
+}
+
+/**
  * Finds the best feasible orientation of one corridor relative to a baseline.
  *
  * This is a search-allocation decision only. Lower connector burden and lower
@@ -327,11 +345,11 @@ export function planDepartureRejoin(
     departure,
     rejoin,
     corridor: winner.corridor.map(copy),
-    shaping: [
+    shaping: withoutAdjacentDuplicates([
       departure,
       ...corridorAnchors,
       rejoin,
-    ],
+    ]),
     entryConnectorMeters: winner.entryConnectorMeters,
     exitConnectorMeters: winner.exitConnectorMeters,
     replacedBaselineMeters: winner.replacedBaselineMeters,

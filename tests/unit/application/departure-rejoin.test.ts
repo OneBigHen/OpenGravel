@@ -206,4 +206,18 @@ describe("departure-and-rejoin corridor generator", () => {
     expect(assessment!.corridorAdherenceShare).toBeGreaterThan(0.9);
     expect(assessment!.preservedBaselineShare).toBeLessThan(0.8);
   });
+
+  it("never sends two coincident anchors when the corridor starts on a baseline vertex", () => {
+    // Library rides are engine reroutes, so they can share exact vertices with
+    // the baseline; coincident vias produce a repeated vertex that canonical
+    // eligibility rejects.
+    const sharing = [at(-75.46), ...corridor().slice(1), at(-75.40)];
+    const plan = planDepartureRejoin(baseline(), sharing);
+    expect(plan).not.toBeNull();
+    const shaping = plan?.shaping ?? [];
+    for (let index = 1; index < shaping.length; index += 1) {
+      expect(shaping[index]).not.toEqual(shaping[index - 1]);
+    }
+  });
 });
+

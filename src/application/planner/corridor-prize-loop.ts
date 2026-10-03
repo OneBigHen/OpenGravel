@@ -418,17 +418,24 @@ export function searchCorridorPrizeLoops(input: {
             prize.utility * prize.traversalSeconds,
         };
 
-        const feasible = completion(
+        // A partial survives when it can still get home inside the budget.
+        // The connector-waste cap judges finished loops only: a single
+        // out-and-back corridor is mostly connector by construction, yet it is
+        // the necessary first leg of a loop that collects a second corridor
+        // on the way home (found while wiring the generator family, 2026-10-03).
+        const reachable = completion(
           input.origin,
           next,
           input.budgetSeconds,
-          options.maxConnectorShare,
+          1,
           input.estimateConnectorSeconds,
         );
-        if (feasible === null) continue;
+        if (reachable === null) continue;
 
         expanded.push(next);
-        completed.push(feasible);
+        if (reachable.connectorShare <= options.maxConnectorShare + EPSILON) {
+          completed.push(reachable);
+        }
       }
     }
 
