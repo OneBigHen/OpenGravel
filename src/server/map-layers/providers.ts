@@ -25,6 +25,7 @@ import type {
   MapLayerId,
 } from "@/application/map-layers";
 import { MIN_GREAT_ROAD_RATING, type KnownRoadsPort } from "@/application/roads/known-roads";
+import { nwsUserAgentFromEnv } from "@/infrastructure/weather/config";
 
 export interface ProviderContext {
   readonly fetch: typeof fetch;
@@ -341,7 +342,7 @@ export const nwsAlertsProvider: LayerProvider = {
     const response = await context.fetch(`https://api.weather.gov/alerts/active?point=${lat},${lon}`, {
       headers: {
         accept: "application/geo+json",
-        "user-agent": context.env["NWS_USER_AGENT"] ?? "OpenGravel route planner",
+        "user-agent": nwsUserAgentFromEnv(context.env),
       },
       signal: withTimeout(context.signal, 10_000),
     });

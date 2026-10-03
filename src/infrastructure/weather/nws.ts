@@ -1,3 +1,4 @@
+import { DEFAULT_NWS_USER_AGENT, nwsUserAgentFromEnv } from "@/infrastructure/weather/config";
 import type {
   WeatherAlert,
   WeatherForecastPeriod,
@@ -5,7 +6,8 @@ import type {
 } from "@/application/preparation/providers";
 
 export const NWS_BASE_URL = "https://api.weather.gov";
-export const NWS_USER_AGENT = "OpenGravel/0.1 (https://github.com/OneBigHen/OpenGravel)";
+/** Compatibility export for callers/tests that imported the historical constant. */
+export const NWS_USER_AGENT = DEFAULT_NWS_USER_AGENT;
 export const NWS_TIMEOUT_MS = 10_000;
 export const NWS_MAX_RETRIES = 2;
 
@@ -44,6 +46,8 @@ export interface FetchSnapshotOptions {
   readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly random?: () => number;
   readonly baseUrl?: string;
+  /** Override for tests/special transports; deployment default comes from NWS_USER_AGENT. */
+  readonly userAgent?: string;
 }
 
 function record(value: unknown): JsonRecord | null {
@@ -233,7 +237,7 @@ async function requestJson(
         method: "GET",
         headers: {
           Accept: "application/geo+json, application/json",
-          "User-Agent": NWS_USER_AGENT,
+          "User-Agent": options.userAgent ?? nwsUserAgentFromEnv(),
         },
         signal: controller.signal,
       });
