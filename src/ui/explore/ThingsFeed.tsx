@@ -85,7 +85,7 @@ export function ThingsFeed() {
         A few destinations worth the ride, ranked for riders by timing and
         destination value.
       </p>
-      <div className="flex flex-wrap items-center gap-3 py-4">
+      <div className="og-explore__row">
         <label>
           Riding radius{" "}
           <select
@@ -110,7 +110,7 @@ export function ThingsFeed() {
         </button>
       </div>
       <div
-        className="flex flex-wrap gap-2 py-4"
+        className="og-explore__row"
         role="group"
         aria-label="Things time"
       >

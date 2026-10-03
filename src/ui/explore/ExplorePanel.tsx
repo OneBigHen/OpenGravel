@@ -561,7 +561,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         )}
         {selectedRoad !== null ? <RoadDiscoveryDetailSheet candidate={selectedRoad} map={map} onClose={() => setSelectedRoad(null)} /> : null}
         </>}
-        <h2 className="py-4">Ready-made rides</h2>
+        <h2 className="og-explore__section">Ready-made rides</h2>
       </> : null}
       {lens === "ride" ? <div className="og-explore__toolbar">
         <label className="og-explore__search">

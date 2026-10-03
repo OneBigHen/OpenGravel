@@ -131,7 +131,7 @@ export function RideRoadOpenings({
         </p>
       ) : null}
       {events.length > 0 ? (
-        <section className="py-4">
+        <section className="og-explore__section">
           <h2>{lens === "now" ? "Open now" : "Open for your ride"}</h2>
           <ul className="og-explore__list">
             {events.map((road) => (
@@ -147,7 +147,7 @@ export function RideRoadOpenings({
         </section>
       ) : null}
       {closing.length > 0 ? (
-        <section className="py-4">
+        <section className="og-explore__section">
           <h2>Closing soon</h2>
           <ul className="og-explore__list">
             {closing.map((road) => (
@@ -163,7 +163,7 @@ export function RideRoadOpenings({
         </section>
       ) : null}
       {data !== null && data.undated.length > 0 ? (
-        <section className="py-4">
+        <section className="og-explore__section">
           <h2>Seasonal · dates not published</h2>
           <ul className="og-explore__list">
             {data.undated.map((road) => (

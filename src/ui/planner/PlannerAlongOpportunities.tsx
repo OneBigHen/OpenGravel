@@ -159,10 +159,10 @@ export function PlannerAlongOpportunities({
       ids: new Set(previous?.key === key ? previous.ids : []).add(id),
     }));
   return (
-    <section className="py-4" aria-label="Route opportunities">
+    <section className="og-explore__section" aria-label="Route opportunities">
       <button
         type="button"
-        className="og-secondary w-full text-left"
+        className="og-secondary og-explore__wide"
         aria-expanded={open}
         aria-controls="along-ride-results"
         onClick={() => setOpen((value) => !value)}
@@ -170,7 +170,7 @@ export function PlannerAlongOpportunities({
         Along this ride
       </button>
       {open ? (
-        <div id="along-ride-results" className="py-4">
+        <div id="along-ride-results" className="og-explore__section">
           <p>
             Worthwhile detours for this route. Choose a suggestion to change
             your ride.

@@ -101,7 +101,7 @@ export function RoadOpeningCard({
         <strong>{road.roadName ?? "Unnamed seasonal road"}</strong>
         <span>{windowLabel}</span>
         <p>{road.description}</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="og-explore__actions">
           <button
             type="button"
             className="og-secondary"

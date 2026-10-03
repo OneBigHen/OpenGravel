@@ -18,7 +18,7 @@ export function RideTimeLens({
   last.setDate(last.getDate() + 179);
   return (
     <div
-      className="flex flex-wrap items-center gap-2 py-4"
+      className="og-explore__row"
       role="group"
       aria-label="Ride time"
     >
@@ -34,17 +34,17 @@ export function RideTimeLens({
           key={id}
           type="button"
           aria-pressed={value === id}
-          className="og-explore__quick-chip focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="og-explore__quick-chip"
           onClick={() => onChange(id)}
         >
           {label}
         </button>
       ))}
       {value === "date" ? (
-        <label className="flex items-center gap-2">
+        <label className="og-explore__inline">
           Ride date
           <input
-            className="rounded-lg border border-[var(--og-slate)] bg-[var(--og-canvas)] p-2 focus-visible:outline focus-visible:outline-2"
+            className="og-explore__date"
             type="date"
             value={date}
             min={localDateValue(today)}

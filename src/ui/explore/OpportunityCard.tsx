@@ -59,10 +59,10 @@ export function OpportunityCard({
         </span>
         {item.description !== null ? <p>{item.description}</p> : null}
         <span className="og-explore-card__byline">{item.sourceLabel}</span>
-        <div className="flex flex-wrap gap-2">
+        <div className="og-explore__actions">
           {item.url !== null ? (
             <a
-              className="og-secondary focus-visible:outline focus-visible:outline-2"
+              className="og-secondary"
               href={item.url}
               target="_blank"
               rel="noreferrer"

@@ -46,7 +46,7 @@ export function RoadLocationMap({
   if (anchor === null) return <p>Road location not published.</p>;
   if (live !== undefined)
     return (
-      <div className="h-80 overflow-hidden rounded-xl">
+      <div className="og-road-map">
         <PlannerMap
           {...live}
           scene={scene}
@@ -79,7 +79,7 @@ export function RoadLocationMap({
   return (
     // eslint-disable-next-line @next/next/no-img-element -- direct provider map image, as on catalog cards.
     <img
-      className="h-40 w-full rounded-xl object-cover"
+      className="og-road-map__image"
       src={url}
       width={400}
       height={190}
