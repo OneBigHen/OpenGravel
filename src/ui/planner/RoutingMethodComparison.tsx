@@ -45,7 +45,7 @@ function routeActionLabel(
 ): string {
   if (method.routeId !== null && method.routeId === selectedRouteId) return "Already selected";
   if (stale) return "Unavailable while plan updates";
-  return method.caveat ?? "Route unavailable for this plan";
+  return "Unavailable for this plan";
 }
 
 function canApply(
@@ -151,12 +151,11 @@ function MethodOption({
       </label>
       {active ? (
         <div className="og-routing-methods__detail" aria-live="polite">
-          <p>{method.detail}</p>
-          {addedTimeLabel(method.addedMinutes, method.addedTimeReference) === null ? null : (
-            <p className="og-routing-methods__delta">{addedTimeLabel(method.addedMinutes, method.addedTimeReference)}</p>
-          )}
           {method.routeLabel === null ? null : (
             <p className="og-routing-methods__route-label">Candidate: {method.routeLabel}</p>
+          )}
+          {addedTimeLabel(method.addedMinutes, method.addedTimeReference) === null ? null : (
+            <p className="og-routing-methods__delta">{addedTimeLabel(method.addedMinutes, method.addedTimeReference)}</p>
           )}
           {method.caveat === null ? null : (
             <p className="og-routing-methods__caveat">{method.caveat}</p>
@@ -171,6 +170,10 @@ function MethodOption({
           >
             {actionLabel}
           </button>
+          <details className="og-routing-methods__why">
+            <summary>Why this route?</summary>
+            {method.detail.split("\n\n").map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+          </details>
         </div>
       ) : null}
     </article>

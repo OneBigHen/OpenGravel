@@ -167,6 +167,26 @@ describe("RoutingMethodComparison", () => {
     expect(onSelect).toHaveBeenCalledWith(FRONTIER);
   });
 
+  it("shows the candidate and added time before a closed method explanation", () => {
+    const onSelect = renderComparison();
+    fireEvent.click(screen.getByText("Compare routing methods", { exact: true }));
+    fireEvent.click(screen.getByRole("radio", { name: /Frontier search/ }));
+
+    const option = within(screen.getByTestId("routing-method-frontier"));
+    const explanation = option.getByText("Explores eligible route candidates from the same search.");
+    const disclosure = explanation.closest("details");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(explanation).not.toBeVisible();
+    const action = option.getByRole("button", { name: "Show this route" });
+    for (const first of [option.getByText("Candidate: Frontier route"), option.getByText("+8 min vs fastest shown"), action]) {
+      expect(first).toBeVisible();
+      expect(first.compareDocumentPosition(explanation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    fireEvent.click(option.getByText("Why this route?", { exact: true }));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it("disables the current route and explains unavailable or stale routes", () => {
     const onSelect = renderComparison({
       stale: true,
@@ -190,6 +210,18 @@ describe("RoutingMethodComparison", () => {
     fireEvent.click(screen.getByRole("radio", { name: /Frontier/ }));
     expect(screen.getByText("This method needs a verified connector for this plan.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unavailable while plan updates" })).toBeDisabled();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unavailable method's reason visible with a short disabled action", () => {
+    const onSelect = renderComparison({ methods: [method({
+      id: "sustained-curves", routeId: null, routeLabel: null,
+      caveat: "This method needs mapped bend measurements for this plan.",
+    })] });
+    fireEvent.click(screen.getByText("Compare routing methods", { exact: true }));
+    const option = within(screen.getByTestId("routing-method-sustained-curves"));
+    expect(option.getByText("This method needs mapped bend measurements for this plan.", { selector: "p" })).toBeVisible();
+    expect(option.getByRole("button", { name: "Unavailable for this plan" })).toBeDisabled();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
