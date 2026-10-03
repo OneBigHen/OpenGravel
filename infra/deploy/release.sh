@@ -2,6 +2,7 @@
 # Build and promote one immutable OpenGravel release on the production host.
 #
 # usage: infra/deploy/release.sh [git-ref]        (default: origin/main)
+#        CANDIDATE_ONLY=1 infra/deploy/release.sh <ref>   build + leave the candidate running for QA
 #
 # 1. checks out <ref> into its own directory  $RELEASE_ROOT/og-release-<sha12>
 # 2. npm ci + npm run build with the production environment (NEXT_PUBLIC_* are build-time)
@@ -63,6 +64,11 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 "$HERE/smoke.sh" "http://127.0.0.1:$CANDIDATE_PORT" || { log "candidate smoke failed; production untouched"; tail -20 "$DIR/.ogv-candidate.log"; exit 1; }
+if [ "${CANDIDATE_ONLY:-0}" = 1 ]; then
+  trap - EXIT
+  log "candidate left running for QA: http://127.0.0.1:$CANDIDATE_PORT (pid $CANDIDATE); production untouched"
+  exit 0
+fi
 kill "$CANDIDATE" 2>/dev/null || true
 wait "$CANDIDATE" 2>/dev/null || true
 trap - EXIT
