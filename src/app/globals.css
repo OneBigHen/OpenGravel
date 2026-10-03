@@ -3224,6 +3224,23 @@ h3,
   gap: 12px;
 }
 
+.og-composer__commitment {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.og-composer__commitment-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.og-composer__commitment-actions > button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 /* Fixed label column, flexible value cell, right-aligned action: both rows are
    the same height whatever the value's length (OGV-D-215). */
 .og-composer__row {
@@ -3262,7 +3279,7 @@ h3,
   position: relative;
   grid-template-columns: 14px minmax(0, 1fr) auto;
   grid-template-areas: "dot main action";
-  align-items: center;
+  align-items: start;
   column-gap: 12px;
 }
 
@@ -3331,6 +3348,7 @@ h3,
   width: 12px;
   height: 12px;
   border-radius: 50%;
+  margin-top: 16px;
 }
 
 .og-composer__row:not(.og-composer__row--search) > .og-composer__dot {
@@ -3553,7 +3571,7 @@ h3,
 /* The shape switch spans the composer: two equal halves. */
 [data-testid="ride-shape"] .og-style__chips {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 [data-testid="ride-shape"] .og-style__chip span {
@@ -4513,12 +4531,10 @@ h3,
     coordinates cut off — with nothing to say the row was *scrolled* rather
     than broken.
 
-    Two halves fix it, and both are anchored to the measured height of the
-    block above the scroller (`--og-sheet-head-height`, written by
-    `PlannerWorkspace`): the scroller insets its scroll origin by that height
+    The scroller insets its scroll origin by the measured head height
     (`scroll-padding-top`, so a keyboard `scrollIntoView` on a row never parks
-    it under the block above), and a short gradient hangs directly under it so
-    the clipped edge reads as "more above".
+    it under the block above). A short gradient hangs below the head, using its
+    actual position, so the clipped edge reads as "more above".
 
     Deliberately `scroll-padding-top` and not `padding-top`: padding of that
     size would leave a permanently empty band at the scroll origin, which is a
@@ -4528,13 +4544,20 @@ h3,
     scroll-padding-top: var(--og-sheet-head-height, 0px);
   }
 
-  .og-planner__sheet[data-detent="expanded"]::after {
+  .og-planner__sheet[data-detent="expanded"] .og-sheet__head {
+    position: relative;
+  }
+
+  /* Anchor the fade below the actual head, including its padding and text
+     reflow. A height measured from the sheet's top painted over the heading. */
+  .og-planner__sheet[data-detent="expanded"] .og-sheet__head::after {
     content: "";
     position: absolute;
     left: 0;
     right: 0;
-    top: var(--og-sheet-head-height, 0px);
+    top: calc(100% + 8px);
     height: 14px;
+    z-index: 1;
     pointer-events: none;
     background: linear-gradient(
       to bottom,
@@ -4603,12 +4626,27 @@ h3,
     display: contents;
   }
 
+  /* Join the editor to the scroller so its primary action can stay in reach
+     while editing style, just as Start ride does after a successful plan. */
+  .og-planner__sheet .og-composer {
+    display: contents;
+  }
+
+  .og-planner__sheet .og-composer__commitment[data-current="false"] {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    padding-block: 8px 2px;
+    background: var(--og-paper);
+    box-shadow: 0 -10px 14px -10px color-mix(in srgb, var(--og-ink) 22%, transparent);
+  }
+
   .og-planner__sheet .og-ride-start {
     position: sticky;
     bottom: 0;
     z-index: 2;
-    margin: 0 -14px;
-    padding: 10px 14px 2px;
+    margin: 0;
+    padding: 10px 0 2px;
     border-top: 0;
     background: var(--og-paper);
     box-shadow: 0 -10px 14px -10px color-mix(in srgb, var(--og-ink) 22%, transparent);
@@ -4685,6 +4723,7 @@ h3,
 
   .og-planner__sheet[data-detent="ride"] :is(
     .og-composer,
+    .og-composer__commitment,
     .og-refine,
     .og-prepare,
     .og-style,
@@ -4732,16 +4771,10 @@ h3,
   */
   .og-sheet__head > .og-sheet__handle {
     order: 2;
-    flex: none;
+    flex: 1 1 0;
+    min-width: 0;
     margin-left: auto;
-    margin-block: -6px;
-  }
-
-  .og-sheet__head > .og-sheet__handle::before {
-    position: absolute;
-    top: 6px;
-    left: calc(50% - 18px);
-    margin: 0;
+    margin-block: 0;
   }
 
   .og-sheet__head > .og-history {
@@ -4780,21 +4813,18 @@ h3,
      button with a 44px hit area (12 §10), and its label says what the next
      press does. */
   .og-sheet__handle {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
     order: -1;
     min-height: 44px;
-    /* The 44px hit area must not grow the sheet: at 390x844 the composer's
-       natural height sits right under the 58dvh expanded cap and the detents
-       must stay distinguishable (compact-sheet.spec: expanded > peek). The
-       negative block margins keep the handle's layout contribution at the
-       original 33px (it overlaps the head's padding, which is empty space)
-       while the box itself measures 44px (12 §10). */
-    margin-block: -5.5px;
-    padding: 4px 10px;
+    margin-block: 0;
+    padding: 4px 6px;
     font: inherit;
     font-size: 12px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--og-moss-text);
     background: transparent;
     border: 0;
@@ -4802,12 +4832,14 @@ h3,
     cursor: pointer;
   }
 
-  .og-sheet__handle::before {
+  .og-planner__sheet:not([data-idle="true"])::before {
     content: "";
     display: block;
+    position: absolute;
+    top: 6px;
+    left: calc(50% - 18px);
     width: 36px;
     height: 4px;
-    margin: 0 auto 4px;
     border-radius: 2px;
     background: var(--og-topo-sage);
   }
@@ -4820,7 +4852,8 @@ h3,
   .og-sheet__handle-count {
     display: inline-block;
     min-width: 18px;
-    margin-left: 6px;
+    flex: none;
+    margin-left: 0;
     padding: 1px 5px;
     border-radius: 9px;
     background: var(--og-ember-strong);
@@ -4832,7 +4865,8 @@ h3,
   }
 
   .og-sheet__handle-chevron {
-    margin-left: 4px;
+    flex: none;
+    margin-left: 0;
     font-size: 12px;
   }
 
@@ -7044,7 +7078,7 @@ h3,
        so every page that pads by it keeps working. */
     --og-tabbar-pill-h: 60px;
     --og-tabbar-gap: max(10px, calc(var(--og-safe-bottom) - 12px));
-    --og-tabbar-h: calc(var(--og-tabbar-pill-h) + var(--og-tabbar-gap));
+    --og-tabbar-h: calc(var(--og-tabbar-measured-pill-h, var(--og-tabbar-pill-h)) + var(--og-tabbar-gap));
   }
 
   .og-planner__nav-shell,
@@ -7055,10 +7089,12 @@ h3,
     right: calc(12px + var(--og-safe-right));
     bottom: var(--og-tabbar-gap);
     z-index: 8;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6.5em, 1fr));
     align-items: stretch;
     gap: 0;
-    height: var(--og-tabbar-pill-h);
+    height: auto;
+    min-height: var(--og-tabbar-pill-h);
     padding: 5px;
     border: 1px solid var(--og-glass-edge);
     border-radius: 999px;
@@ -7070,8 +7106,7 @@ h3,
   }
 
   .og-planner__nav {
-    display: flex;
-    flex: 3;
+    display: contents;
   }
 
   .og-nav__sep {
@@ -7085,7 +7120,8 @@ h3,
     justify-content: center;
     gap: 2px;
     width: auto;
-    min-height: 0;
+    min-height: 44px;
+    min-width: 0;
     padding: 0;
     border-radius: 999px;
     color: var(--og-slate-text);
@@ -8195,17 +8231,22 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-style__chips > .og-style__chip {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .og-style__chips .og-style__chip span {
   justify-content: center;
   width: 100%;
   min-height: 44px;
-  padding: 0 8px;
+  padding: 8px;
   border-color: transparent;
   border-radius: 10px;
   background: transparent;
   font-size: 13.5px;
+  line-height: 1.35;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .og-style__chips .og-style__chip input:hover:not(:checked) + span {
@@ -9244,16 +9285,28 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 2px;
 }
 
-/* Swap start and destination (PQ-04): a round button tucked between the rows. */
+/* Keep direction controls together, with a separate target for swapping. */
+.og-composer__shape-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.og-composer__shape-row > .og-style__group {
+  flex: 1;
+  min-width: 0;
+}
+
 .og-composer__swap {
-  position: relative;
-  z-index: 1;
-  align-self: flex-end;
   display: grid;
   place-items: center;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
-  margin: -22px 4px;
+  min-height: 44px;
+  margin: 0;
   border: 1px solid var(--og-sandstone);
   border-radius: 50%;
   background: var(--og-paper);
@@ -9827,27 +9880,30 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: grid;
   flex: none;
   order: 3;
-  width: 36px;
-  height: 36px;
-  margin-block: -4px;
+  width: 44px;
+  height: 44px;
+  margin-block: 0;
   place-items: center;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--og-canvas);
+  background: transparent;
   color: var(--og-slate-text);
   cursor: pointer;
 }
 
-/* A 44px hit area around the 36px disc (12 §10). */
+/* The disc sits inside its own 44px target; adjacent targets never overlap. */
 .og-sheet__clear {
   position: relative;
 }
 
-.og-sheet__clear::after {
+.og-sheet__clear::before {
   content: "";
   position: absolute;
-  inset: -4px;
+  inset: 4px;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--og-raised);
 }
 
 .og-sheet__clear:hover {

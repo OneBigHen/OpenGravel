@@ -8,7 +8,8 @@
 }
 
 .og-routing-methods__summary-toggle,
-.og-routing-methods__how > summary {
+.og-routing-methods__how > summary,
+.og-routing-methods__why > summary {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -21,19 +22,22 @@
 }
 
 .og-routing-methods__summary-toggle::-webkit-details-marker,
-.og-routing-methods__how > summary::-webkit-details-marker {
+.og-routing-methods__how > summary::-webkit-details-marker,
+.og-routing-methods__why > summary::-webkit-details-marker {
   display: none;
 }
 
 .og-routing-methods__summary-toggle::before,
-.og-routing-methods__how > summary::before {
+.og-routing-methods__how > summary::before,
+.og-routing-methods__why > summary::before {
   content: "▸";
   color: var(--og-signal-strong);
   font-size: 12px;
 }
 
 .og-routing-methods[open] > .og-routing-methods__summary-toggle::before,
-.og-routing-methods__how[open] > summary::before {
+.og-routing-methods__how[open] > summary::before,
+.og-routing-methods__why[open] > summary::before {
   content: "▾";
 }
 
@@ -50,7 +54,8 @@
 
 .og-routing-methods__summary-toggle:focus-visible,
 .og-routing-methods__how > summary:focus-visible,
-.og-routing-methods__choice:focus-within,
+.og-routing-methods__why > summary:focus-visible,
+.og-routing-methods__choice input:focus-visible,
 .og-routing-methods__action:focus-visible {
   outline: var(--og-focus-width, 2px) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset, 2px);
@@ -60,6 +65,8 @@
   display: grid;
   gap: 12px;
   padding: 0 14px 14px;
+  min-width: 0;
+  line-height: 1.55;
 }
 
 .og-routing-methods__guidance,
@@ -81,6 +88,9 @@
   display: grid;
   gap: 8px;
   border: 0;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .og-routing-methods__option {
@@ -115,6 +125,7 @@
 .og-routing-methods__choice-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .og-routing-methods__label {
@@ -131,7 +142,9 @@
   gap: 7px;
   padding: 0 12px 12px 40px;
   color: var(--og-slate-text);
-  font-size: var(--og-text-meta);
+  font-size: var(--og-text-body);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .og-routing-methods__delta,
@@ -206,6 +219,18 @@
   padding: 0 12px 4px 34px;
 }
 
+.og-routing-methods__why > summary {
+  min-height: 44px;
+  padding: 6px 0;
+  font-size: var(--og-text-meta);
+}
+
+.og-routing-methods__why > p {
+  padding-bottom: 12px;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
 @media (max-width: 520px) {
   .og-routing-methods {
     margin-top: 8px;
@@ -217,7 +242,24 @@
   }
 
   .og-routing-methods__detail {
-    padding-left: 40px;
+    padding-left: 12px;
+  }
+
+  .og-routing-methods__summary-toggle {
+    flex-wrap: wrap;
+    column-gap: 6px;
+    row-gap: 4px;
+    padding-inline: 10px;
+  }
+
+  .og-routing-methods__summary-toggle > span:first-of-type {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .og-routing-methods__action {
+    justify-self: stretch;
+    width: 100%;
   }
 }
 

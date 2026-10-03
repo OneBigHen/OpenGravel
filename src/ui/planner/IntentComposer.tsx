@@ -72,6 +72,8 @@ export interface IntentComposerProps {
   readonly onSetStart: () => void;
   readonly onSetFinish: () => void;
   readonly onPlan: () => void;
+  /** Keeps cancellation beside the planning commitment in a scrolling sheet. */
+  readonly onCancelPlanning?: () => void;
   /** 04 §8: `Create ride` with no result, `Update ride` on a deliberate edit,
    * `Plan again` after a failure (the label never claims success on an error). */
   readonly planLabel?: string;
@@ -245,6 +247,7 @@ export function IntentComposer({
   onSetStart,
   onSetFinish,
   onPlan,
+  onCancelPlanning,
   planLabel = "Create ride",
   onChangeDestination,
   onReverse,
@@ -309,7 +312,25 @@ export function IntentComposer({
         };
   return (
     <section className="og-composer" aria-label="Ride intent" data-skip-target="">
-      {shapeModel === undefined ? null : <RideShapeSwitch model={shapeModel} />}
+      {shapeModel === undefined && (loop || !hasStart || !hasFinish || reverseRide === undefined) ? null : (
+        <div className="og-composer__shape-row">
+          {shapeModel === undefined ? null : <RideShapeSwitch model={shapeModel} />}
+          {!loop && hasStart && hasFinish && reverseRide !== undefined ? (
+            <button
+              type="button"
+              className="og-composer__swap"
+              data-testid="swap-endpoints"
+              aria-label="Swap start and destination"
+              title="Swap start and destination"
+              onClick={reverseRide}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
+              </svg>
+            </button>
+          ) : null}
+        </div>
+      )}
       <div className={rowClass}>
         <span className="og-composer__dot og-composer__dot--start" aria-hidden="true" />
         <span className={searchable ? "og-composer__label og-visually-hidden" : "og-composer__label"}>Start</span>
@@ -356,20 +377,6 @@ export function IntentComposer({
         )}
       </div>
 
-      {!loop && hasStart && hasFinish && reverseRide !== undefined ? (
-        <button
-          type="button"
-          className="og-composer__swap"
-          data-testid="swap-endpoints"
-          aria-label="Swap start and destination"
-          title="Swap start and destination"
-          onClick={reverseRide}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
-          </svg>
-        </button>
-      ) : null}
       {loop && rideStyle !== undefined ? (
         <LoopTimeRow model={rideStyle} />
       ) : (
@@ -453,37 +460,46 @@ export function IntentComposer({
         </button>
       )}
 
-      <button
-        type="button"
-        className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
-        data-testid="compose-create"
-        disabled={!viewModel.canPlan}
-        {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
-        onClick={onPlan}
-      >
-        {planLabel}
-      </button>
+      <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
+        <div className="og-composer__commitment-actions">
+          <button
+            type="button"
+            className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
+            data-testid="compose-create"
+            disabled={!viewModel.canPlan}
+            {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
+            onClick={onPlan}
+          >
+            {planLabel}
+          </button>
+          {onCancelPlanning === undefined ? null : (
+            <button type="button" className="og-secondary" data-testid="cancel-planning" onClick={onCancelPlanning}>
+              Cancel
+            </button>
+          )}
+        </div>
 
-      {viewModel.failed && onChangeDestination !== undefined && !loop ? (
-        <button
-          type="button"
-          className="og-secondary"
-          data-testid="plan-recovery"
-          onClick={onChangeDestination}
-        >
-          Try a different destination
-        </button>
-      ) : null}
+        {viewModel.failed && onChangeDestination !== undefined && !loop ? (
+          <button
+            type="button"
+            className="og-secondary"
+            data-testid="plan-recovery"
+            onClick={onChangeDestination}
+          >
+            Try a different destination
+          </button>
+        ) : null}
 
-      {disabledReason === null ? null : (
-        <p
-          className="og-composer__reason"
-          id={DISABLED_REASON_ID}
-          data-testid="plan-disabled-reason"
-        >
-          {disabledReason}
-        </p>
-      )}
+        {disabledReason === null ? null : (
+          <p
+            className="og-composer__reason"
+            id={DISABLED_REASON_ID}
+            data-testid="plan-disabled-reason"
+          >
+            {disabledReason}
+          </p>
+        )}
+      </div>
 
       {/*
         The chips need the same reason even when the commitment button is not

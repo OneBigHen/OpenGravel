@@ -11,6 +11,44 @@ test("planner content is server-rendered before browser hydration", async ({ req
   expect(html).not.toContain("Loading planner…");
 });
 
+test("unavailable device storage has a clean recovery path", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => {
+    const device = window as typeof window & { offlineStorageBlocked: boolean };
+    device.offlineStorageBlocked = true;
+    const emptyDirectory = {
+      async *entries() { /* An empty device after storage recovers. */ },
+      async getDirectoryHandle() { return emptyDirectory; },
+    };
+    Object.defineProperty(navigator.storage, "getDirectory", {
+      configurable: true,
+      value: async () => {
+        if (device.offlineStorageBlocked) throw new DOMException("Transient device failure", "UnknownError");
+        return emptyDirectory;
+      },
+    });
+  });
+  await page.goto("/settings");
+  const offline = page.getByTestId("offline-maps");
+  await expect(offline.getByRole("alert")).toContainText("Device storage could not be checked");
+  await expect(offline.getByText("Device unavailable", { exact: true })).toBeVisible();
+  await expect(offline.getByText("None yet", { exact: true })).toHaveCount(0);
+  await expect(offline.getByRole("button", { name: "Download", exact: true })).toBeDisabled();
+  await expect(offline.getByRole("button", { name: "Retry device storage" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+
+  await page.evaluate(() => {
+    (window as typeof window & { offlineStorageBlocked: boolean }).offlineStorageBlocked = false;
+  });
+  await offline.getByRole("button", { name: "Retry device storage" }).click();
+  await expect(offline.getByText("None yet", { exact: true })).toBeVisible();
+  await expect(offline.getByRole("alert")).toHaveCount(0);
+  await expect(offline.getByRole("button", { name: "Download", exact: true })).toBeEnabled();
+  expect(pageErrors).toEqual([]);
+});
+
 test("active bike carries into a new ride and local data can be exported or deleted", async ({ page, context }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

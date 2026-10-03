@@ -107,6 +107,12 @@ export function PlaceSearchField({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [answer, setAnswer] = useState<Answer | null>(null);
+  // A response can arrive after the rendered handler's "searching" state,
+  // but before React commits its result list. Bridge only that commit window.
+  const answerBeforeCommit = useRef<Answer | null>(null);
+  useEffect(() => {
+    if (answerBeforeCommit.current === answer) answerBeforeCommit.current = null;
+  }, [answer]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const pickFirstWhenReady = useRef(false);
   const onPickRef = useRef(onPick);
@@ -149,11 +155,11 @@ export function PlaceSearchField({
             return;
           }
           pickFirstWhenReady.current = false;
-          setAnswer(
-            outcome.status === "ok"
-              ? { query: trimmed, status: "ok", places: outcome.places }
-              : { query: trimmed, status: "unavailable", reason: outcome.reason },
-          );
+          const next: Answer = outcome.status === "ok"
+            ? { query: trimmed, status: "ok", places: outcome.places }
+            : { query: trimmed, status: "unavailable", reason: outcome.reason };
+          answerBeforeCommit.current = next;
+          setAnswer(next);
         })
         .catch(() => {
           // An abort is a newer keystroke taking over; nothing to report.
@@ -237,7 +243,13 @@ export function PlaceSearchField({
       if (firstPlace !== undefined && state.phase === "done") {
         choose(firstPlace);
       } else if (searchable && state.phase === "searching") {
-        pickFirstWhenReady.current = true;
+        const arrived = answerBeforeCommit.current;
+        if (arrived?.query === trimmed) {
+          const place = arrived.status === "ok" ? arrived.places[0] : undefined;
+          if (place !== undefined) choose({ kind: "place", id: `${baseId}-option-0`, place });
+        } else {
+          pickFirstWhenReady.current = true;
+        }
       }
     } else if (event.key === "Escape") {
       if (query !== "" || open) {
