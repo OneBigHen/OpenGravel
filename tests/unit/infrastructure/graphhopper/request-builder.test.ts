@@ -95,6 +95,11 @@ const PREFER_SPAN: GraphHopperSpanConstraint = {
 };
 
 describe("GraphHopper request builder", () => {
+  it("requests built-in edge time for ordered phase evidence", () => {
+    expect(REQUESTED_DETAILS).toContain("time");
+  });
+
+
   it("builds the complete normal point-to-point request", () => {
     expect(
       createGraphHopperRequest(request(), { details: REQUESTED_DETAILS }),

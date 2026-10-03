@@ -260,6 +260,24 @@ export interface ProviderAssessment {
  * the application layer owns what "paved" or "a backroad" means. Every map sums
  * to `totalMeters` (an edge the engine did not describe is under `"missing"`).
  */
+export interface ProviderRoadRun {
+  /** Travel-order distance covered by this run. */
+  readonly meters: number;
+  /**
+   * Provider weighting time allocated to this run, in seconds. null when the
+   * active graph/provider did not return the built-in GraphHopper time detail.
+   */
+  readonly durationSeconds: number | null;
+  readonly surface: string;
+  readonly roadClass: string;
+  readonly roadEnvironment: string;
+  readonly urbanDensity: string;
+  readonly curvatureRatio: number | null;
+  readonly toll: boolean | null;
+}
+
+export const MAX_PROVIDER_ROAD_RUNS = 512;
+
 export interface ProviderRoadSummary {
   readonly totalMeters: number;
   /** Metres by `${surface}|${roadClass}`, e.g. `asphalt|secondary`, `missing|tertiary`. */
@@ -290,6 +308,16 @@ export interface ProviderRoadSummary {
    * is, for the surface strip under the elevation profile (UX rework phase 9).
    */
   readonly surfaceRuns?: readonly (readonly [number, string])[];
+  /**
+   * Bounded raw road facts in travel order. Adjacent steps with the same raw
+   * attributes are merged. This exists for phase/replay analysis; it is not a
+   * second route score and its raw engine vocabulary is never rider copy.
+   *
+   * Omitted rather than truncated when a pathological route exceeds
+   * MAX_PROVIDER_ROAD_RUNS, because losing a middle section would make ordered
+   * phase evidence dishonest.
+   */
+  readonly roadRuns?: readonly ProviderRoadRun[];
 }
 
 /** What one provider call returned. An empty set is a valid answer. */

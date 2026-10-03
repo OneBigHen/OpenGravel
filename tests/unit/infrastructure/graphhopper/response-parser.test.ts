@@ -145,6 +145,112 @@ describe("GraphHopper response parser", () => {
     });
   });
 
+  it("retains bounded road facts in travel order with GraphHopper edge time", () => {
+    const candidate = parseGraphHopperPath(
+      {
+        distance: 30_000,
+        time: 180_000,
+        points: {
+          coordinates: [
+            [-75.30, 40.00],
+            [-75.20, 40.00],
+            [-75.10, 40.00],
+            [-75.00, 40.00],
+          ],
+        },
+        details: {
+          surface: [
+            [0, 2, "asphalt"],
+            [2, 3, "gravel"],
+          ],
+          road_class: [
+            [0, 1, "primary"],
+            [1, 3, "secondary"],
+          ],
+          road_environment: [[0, 3, "road"]],
+          urban_density: [
+            [0, 1, "city"],
+            [1, 3, "rural"],
+          ],
+          curvature: [
+            [0, 1, 0.95],
+            [1, 3, 0.8],
+          ],
+          toll: [
+            [0, 2, "no"],
+            [2, 3, "all"],
+          ],
+          // First edge is 60 s. The second GraphHopper edge spans two geometry
+          // steps and carries 120 s, which the parser allocates by distance.
+          time: [
+            [0, 1, 60_000],
+            [1, 3, 120_000],
+          ],
+        },
+      },
+      META,
+    );
+
+    const runs = candidate.roadSummary?.roadRuns;
+    expect(runs).toHaveLength(3);
+    expect(runs?.[0]).toMatchObject({
+      durationSeconds: 60,
+      surface: "asphalt",
+      roadClass: "primary",
+      roadEnvironment: "road",
+      urbanDensity: "city",
+      curvatureRatio: 0.95,
+      toll: false,
+    });
+    expect(runs?.[1]).toMatchObject({
+      surface: "asphalt",
+      roadClass: "secondary",
+      urbanDensity: "rural",
+      curvatureRatio: 0.8,
+      toll: false,
+    });
+    expect(runs?.[2]).toMatchObject({
+      surface: "gravel",
+      roadClass: "secondary",
+      urbanDensity: "rural",
+      curvatureRatio: 0.8,
+      toll: true,
+    });
+    expect(
+      runs?.reduce(
+        (sum, run) => sum + (run.durationSeconds ?? 0),
+        0,
+      ),
+    ).toBeCloseTo(180, 5);
+    expect(
+      runs?.reduce((sum, run) => sum + run.meters, 0),
+    ).toBeCloseTo(candidate.roadSummary!.totalMeters, 5);
+  });
+
+  it("keeps ordered road-run time unknown when the provider omitted the time detail", () => {
+    const candidate = parseGraphHopperPath(
+      {
+        distance: 200,
+        time: 20_000,
+        points: {
+          coordinates: [
+            [-75, 40],
+            [-74.999, 40],
+            [-74.998, 40],
+          ],
+        },
+        details: {
+          surface: [[0, 2, "asphalt"]],
+          road_class: [[0, 2, "tertiary"]],
+        },
+      },
+      META,
+    );
+
+    expect(candidate.roadSummary?.roadRuns).toHaveLength(1);
+    expect(candidate.roadSummary?.roadRuns?.[0]?.durationSeconds).toBeNull();
+  });
+
   it("drops a repeated point the engine sends at a snapped waypoint, and remaps instructions", () => {
     const candidate = parseGraphHopperPath(
       {
