@@ -40,7 +40,7 @@ describe("provider registry", () => {
     expect(states.find((state) => state.id === "places")).toMatchObject({ configured: false, status: "unconfigured" });
     expect(states.find((state) => state.id === "tomtom")).toMatchObject({ configured: true, status: "unknown" });
     expect(states.find((state) => state.id === "traffic-cameras")?.activeSources).toEqual(["PA"]);
-    expect(states.find((state) => state.id === "road-authority")?.activeSources).toEqual(["usfs-mvum", "wzdx-states", "wzdx-ptc"]);
+    expect(states.find((state) => state.id === "road-authority")?.activeSources).toEqual(["usfs-mvum", "pa-pgc-seasonal-roads", "pa-dcnr-seasonal-roads", "nj-wma-roads", "wzdx-states", "wzdx-ptc"]);
     expect(JSON.stringify(states)).not.toMatch(/secret-value|secret-service/);
   });
 
