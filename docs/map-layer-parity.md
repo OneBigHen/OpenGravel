@@ -1012,3 +1012,46 @@ This initiative is complete when:
 - Riders get curated presets rather than a wall of switches.
 - Every authoritative/legal layer is sourced and caveated correctly.
 - OpenGravel adds motorcycle-specific surface, difficulty, grade, gates and route-aware access context that the generic outdoor apps do not center.
+
+## Layer closeout implementation (2026-10-03)
+
+The Layers sheet now exposes the following online projections through the existing
+catalog and `/api/map-layers` provider boundary. They change map presentation,
+never route eligibility or scoring.
+
+| Layer | Source and scope | Freshness / limits |
+| --- | --- | --- |
+| Hillshade | Existing AWS Mapzen Terrarium raster DEM | Roughly 30–90 m source resolution varies by region; source survey date unknown. Reuses 3D terrain DEM without tilting the map. |
+| Contours | Same Terrarium elevation adapter; small browser worker | 20 m intervals, index lines every 100 m. A bounded 65 × 65 sampled view grid; actual sampling spacing is disclosed. Not survey contours. |
+| Terrain slope | Same grid; derived gradient | Percent terrain gradient, not road grade. Tan below 10%, amber 10–25%, ember above 25%. Does not describe road passability. |
+| Weather radar | NOAA NEXRAD mosaic through Iowa Environmental Mesonet WMS-T | One current available archive frame, exact valid time, refreshed each minute; stale after 15 minutes. CONUS only. Radar gaps remain unknown. |
+| Active fire | NASA FIRMS VIIRS SNPP NRT area CSV | Last 48 hours, UTC acquisition time and source confidence on each detection, nominal 375 m footprint. **Hotspots are not road closures.** Requires server-only `NASA_FIRMS_MAP_KEY`. |
+| Public/protected land | USGS PAD-US Public Access feature service | Generalized polygons including holes; bounded pagination. Ownership/protection is not motorized access. Source boundary survey dates unknown. If primary fails, row says unavailable and explicitly labeled OSM centres provide supplementary context. |
+| Legal motorized access | Shared routing road-authority coordinator's USFS MVUM snapshots | Existing normalized designations, motorcycle classes and seasonal windows; unknown and stale states preserved. Seasonal evaluation uses the canonical UTC-date policy. Requires `OGV_ROAD_AUTHORITY=on`. |
+| Authority work zones | Same coordinator's WZDx registry/state snapshots | Same records as routing, including reported closures and restrictions; expired/future records excluded with canonical active-date policy. Unreported roads/coverage gaps remain unknown. |
+| Road surface evidence | Shared routing Gravel Atlas port | Surveyed gravel geometry and routing-model confidence only. A missing database is unavailable. Paved/dirt/smoothness beyond that catalogue remain unknown. Requires `GRAVEL_ATLAS_DB_PATH`. |
+
+Every loaded layer shows retrieval time separately from observation time. Source
+survey dates are not invented. The served area is capped to the central 1.6° × 1°
+of the view (terrain detail has a smaller bounded view); coverage outside it is
+unknown. Server snapshots are cached with a 32 MiB budget and concurrent identical
+requests are coalesced. The existing public API guard meters map-layer requests.
+No offline pack contains these overlays yet; they explicitly say online only.
+
+Reviewer visual checks: open **Layers** on any `LayeredMap` planner/ride map in
+Day and Night, both narrow and desktop widths. Check the new view, conditions,
+roads and access rows, About disclosures, timestamp text, stale radar, unavailable
+PAD-US with OSM fallback, and tapped contour/slope/fire/land/MVUM/work-zone/surface
+cards. Component tests exercise disclosures and Escape focus return; visual
+screenshots and physical-device acceptance remain reviewer checks.
+
+Source references:
+
+- [MapLibre contour worker reference](https://github.com/onthegomap/maplibre-contour) informed the choice of a small bounded GeoJSON worker rather than adding a vector-tile dependency.
+- [IEM NEXRAD mosaic documentation](https://mesonet.agron.iastate.edu/docs/nexrad_mosaic/).
+- [NASA FIRMS area API](https://firms.modaps.eosdis.nasa.gov/api/area/).
+- [USGS PAD-US web services](https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-web-services), using its maintained Public Access feature-layer view.
+
+Deferred broader work-order items: PA/NJ 3DEP ingestion, USFS road/trail inventory
+beyond MVUM, gates, PASDA evidence, actual road grade, topo preset, offline terrain
+packaging, fire perimeters, snow and FCC coverage. AirNow is deliberately skipped.

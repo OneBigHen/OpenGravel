@@ -19,11 +19,12 @@ import type { Coordinate, SketchIntent } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { RouteRole } from "@/domain/route/types";
 
-import type { InfoFeature, MapLayerId } from "@/application/map-layers";
+import type { InfoFeature, LayerRaster, MapLayerId } from "@/application/map-layers";
 import type { PlaceId, PlaceScene } from "@/application/places";
 
 /** The map-layer part of a scene (UX rework phase 8). */
 export interface InfoLayersScene {
+  readonly rasters?: readonly LayerRaster[];
   readonly features: readonly InfoFeature[];
   /**
    * The traffic-flow raster tile template (`…/{z}/{x}/{y}`), or `null` to hide

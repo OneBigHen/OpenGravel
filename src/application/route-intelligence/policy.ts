@@ -80,6 +80,27 @@ export function roadAuthorityEffect(
         ? { effect: "reject", code: "access-prohibited", message: `${name(record)} is not open to motorcycles.` }
         : { effect: "none" };
     }
+
+    if (access.windows !== undefined) {
+      const instant = Date.parse(at);
+      const open = Number.isFinite(instant) && access.windows.some((window) => {
+        const start = Date.parse(window.validFrom);
+        const end = Date.parse(window.validUntil);
+        return Number.isFinite(start) && Number.isFinite(end) && start <= instant && instant < end;
+      });
+      if (open) return { effect: "none" };
+      if (access.outsideWindowStatus === "closed") {
+        return gate
+          ? { effect: "reject", code: "access-prohibited", message: `${name(record)} is outside its published vehicle-access window.` }
+          : { effect: "none" };
+      }
+      return {
+        effect: "warn",
+        code: "seasonal-access-unverified",
+        message: `${name(record)} has published seasonal windows, but access outside them is not established.`,
+      };
+    }
+
     if (access.seasons === null) return { effect: "none" };
     if (access.seasons.length === 0) {
       return {

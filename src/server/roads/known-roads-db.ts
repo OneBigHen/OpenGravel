@@ -67,6 +67,16 @@ export function createKnownRoadsDb(options: KnownRoadsDbOptions): KnownRoadsPort
   };
 
   return {
+    catalogAvailable(catalog): boolean {
+      if (catalog === "gravel" && atlas === undefined) atlas = open(options.gravelAtlasDbPath);
+      if (catalog === "curvature" && curvature === undefined) curvature = open(options.curvatureDbPath);
+      const database = catalog === "gravel" ? atlas : curvature;
+      if (database == null) return false;
+      try {
+        database.prepare(catalog === "gravel" ? "select id, label, geometry, confidence, verification_status from gravel_atlas_corridors limit 1" : "select id, name, score, geometry from segments limit 1").get();
+        return true;
+      } catch { return false; }
+    },
     curvyRoadsNear(bounds: Bounds): readonly KnownCurvyRoad[] {
       if (curvature === undefined) curvature = open(options.curvatureDbPath);
       if (curvature === null) return [];

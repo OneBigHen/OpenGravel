@@ -18,8 +18,6 @@ import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import type { OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
 import { readBrowserOfflineRuntime } from "@/application/offline/offline-runtime";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
-import type { PlacesSource } from "@/application/places/places-source";
-import type { NearbyPlace } from "@/application/places/types";
 import {
   plannerPreparationContext,
   type PlannerPreparationRoute,
@@ -38,7 +36,9 @@ import {
 import { snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
 import { OfflineDisclosure } from "@/ui/preparation/OfflineDisclosure";
 import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
-import { PlannerAlongStops } from "@/ui/planner/PlannerAlongStops";
+import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
+import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
 import { PlannerFuelAlong } from "@/ui/planner/PlannerFuelAlong";
 
 export interface RouteTrafficLabel {
@@ -53,7 +53,6 @@ export interface PlannerPreparationProps {
   readonly bikes?: readonly BikeProfile[];
   readonly providers?: PreparationProviderRegistry;
   readonly offlineRoute: SelectedOfflineRoute | null;
-  readonly placesSource?: PlacesSource;
   readonly onDepartureChange: (departure: DepartureIntent) => void;
   /** Arrive-by (NV-09): the rider's arrival, when they planned one. */
   readonly arrival?: ArrivalTarget | null;
@@ -61,7 +60,8 @@ export interface PlannerPreparationProps {
   readonly onArrivalChange?: (arrival: ArrivalTarget | null) => void;
   readonly onBikeChange: (bike: BikeConstraintSnapshot) => void;
   readonly onRouteTraffic?: (traffic: RouteTrafficLabel | null) => void;
-  readonly onAddStop?: (place: NearbyPlace) => void;
+  readonly opportunityMap?: ExploreMapConfig | undefined;
+  readonly onRouteThrough?: ((road: RoadOpeningSummary) => void | Promise<void>) | undefined;
   readonly onAddStopAt?: (coordinate: Coordinate, name: string) => void;
 }
 
@@ -300,14 +300,14 @@ export function PlannerPreparation({
   bikes = [],
   providers,
   offlineRoute,
-  placesSource,
   onDepartureChange,
   arrival = null,
   onArrivalChange,
   onBikeChange,
   onRouteTraffic,
-  onAddStop,
   onAddStopAt,
+  onRouteThrough,
+  opportunityMap,
 }: PlannerPreparationProps) {
   const wide = useSyncExternalStore(
     subscribeToWidth,
@@ -457,13 +457,11 @@ export function PlannerPreparation({
             usableRangeMiles={Number.isFinite(bike.fuelRangeMiles) ? Math.max(0, bike.fuelRangeMiles - bike.reserveMiles) : null}
             onAddStop={onAddStopAt}
           />
-          <PlannerAlongStops
-            route={route === null ? null : { routeId: route.routeId, geometry: route.geometry }}
-            source={placesSource}
-            onAddStop={onAddStop}
-          />
+
         </details>
       )}
+
+      <PlannerAlongOpportunities route={route} departure={effectiveDeparture} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
 
       {/* Nothing to be offline-ready for until there is a route. */}
       {route === null ? null : (

@@ -118,16 +118,16 @@ test("shows the Roads empty state when no rider evidence is present", async ({ p
   });
 
   await page.goto("/explore");
-  await page.getByRole("tab", { name: "Roads" }).click();
-  await expect(page.getByRole("heading", { name: "Roads", exact: true })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("matched roads from saved or imported rides");
+  await page.getByRole("tab", { name: "Ride", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Worth riding", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });
 
 test("shows the honest Roads empty state when road data is unavailable", async ({ page }) => {
   await page.goto("/explore?roads=empty");
-  await page.getByRole("tab", { name: "Roads" }).click();
-  await expect(page.getByRole("status")).toContainText("matched roads from saved or imported rides");
+  await page.getByRole("tab", { name: "Ride", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
 });

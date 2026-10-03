@@ -38,6 +38,8 @@ export interface KnownGravelCorridor {
 }
 
 export interface KnownRoadsPort {
+  /** Optional catalogue health for presentation; never changes routing evidence. */
+  readonly catalogAvailable?: (catalog: "gravel" | "curvature") => boolean;
   readonly curvyRoadsNear: (bounds: Bounds) => readonly KnownCurvyRoad[];
   readonly gravelCorridorsNear: (bounds: Bounds) => readonly KnownGravelCorridor[];
 }

@@ -4,12 +4,12 @@ import type { BikeProfile } from "@/application/garage/garage-model";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
 import type { PlannerPreparationRoute } from "@/application/preparation/planner-context";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
-import type { PlacesSource } from "@/application/places/places-source";
-import type { NearbyPlace } from "@/application/places/types";
 import { arrivalTargetOf } from "@/application/planner/arrive-by";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import { PlannerPreparation } from "@/ui/planner/PlannerPreparation";
 import type { RideStyleActions } from "@/ui/planner/RideStyleControls";
+import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
+import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import type { RouteTrafficLabel } from "@/ui/planner/PlannerPreparation";
 
 export interface PlannerRouteBriefingProps {
@@ -17,9 +17,9 @@ export interface PlannerRouteBriefingProps {
   readonly ride: RideDocument;
   readonly bikes: readonly BikeProfile[];
   readonly providers?: PreparationProviderRegistry;
-  readonly placesSource?: PlacesSource;
-  readonly onAddStop?: (place: NearbyPlace) => void;
   /** Adds a stop at a coordinate (fuel on the way); the same typed command. */
+  readonly opportunityMap?: ExploreMapConfig;
+  readonly onRouteThrough?: (road: RoadOpeningSummary) => void | Promise<void>;
   readonly onAddStopAt?: (coordinate: Coordinate, name: string) => void;
   readonly offlineRoute: SelectedOfflineRoute | null;
   readonly actions: Pick<RideStyleActions, "setBike" | "setDeparture" | "setArriveBy">;
@@ -32,9 +32,9 @@ export function PlannerRouteBriefing({
   ride,
   bikes,
   providers,
-  placesSource,
-  onAddStop,
   onAddStopAt,
+  onRouteThrough,
+  opportunityMap,
   offlineRoute,
   actions,
   onRouteTraffic,
@@ -46,9 +46,9 @@ export function PlannerRouteBriefing({
       bike={ride.intent.bike}
       bikes={bikes}
       providers={providers}
-      placesSource={placesSource ?? providers?.places}
-      onAddStop={onAddStop}
       onAddStopAt={onAddStopAt}
+      onRouteThrough={onRouteThrough}
+      opportunityMap={opportunityMap}
       offlineRoute={offlineRoute}
       onDepartureChange={actions.setDeparture}
       arrival={arrivalTargetOf(ride.intent.time)}

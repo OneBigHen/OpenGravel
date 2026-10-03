@@ -57,11 +57,31 @@ export interface SeasonWindow {
   readonly endDay: number;
 }
 
+/** One absolute access window. `validUntil` is exclusive. */
+export interface AccessWindow {
+  readonly validFrom: string;
+  readonly validUntil: string;
+}
+
 export interface MotorcycleAccess {
   /** `unknown` when the designation names no class a motorcycle belongs to. */
   readonly status: "open" | "closed" | "unknown";
-  /** When `open` applies; `null` means all year. Empty means the dates are unpublished. */
+  /**
+   * Recurring month/day windows. `null` means all year; empty means the
+   * authority says it is seasonal but has not published exact dates.
+   */
   readonly seasons: readonly SeasonWindow[] | null;
+  /**
+   * Year-specific windows from an authority, e.g. a state-forest opening
+   * schedule. When present these take precedence over recurring `seasons`.
+   */
+  readonly windows?: readonly AccessWindow[];
+  /**
+   * What applies outside published absolute windows. A road described as
+   * normally closed can therefore fail closed without pretending the opening
+   * repeats every year.
+   */
+  readonly outsideWindowStatus?: "closed" | "unknown";
 }
 
 export type RoadAuthorityGeometry =

@@ -11,20 +11,24 @@
  * text or stack ever enters the report.
  */
 
+import { providerStates, type ProviderEnv, type ProviderState } from "@/server/health/provider-registry";
+
+import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
+import { DEFAULT_GRAPHHOPPER_URL, graphHopperUrlFromEnv } from "@/infrastructure/routing/graphhopper/config";
+
 /** GraphHopper's liveness path, pinned by the live-router suite as well. */
 export const HEALTH_PATH = "/health";
 
 /** Bounded probe budget: an unreachable router must not hang the endpoint. */
 export const DEFAULT_HEALTH_TIMEOUT_MS = 1_500;
 
-/** The deployment's router, overridable for any non-default host. */
-export const DEFAULT_GRAPHHOPPER_URL = "http://127.0.0.1:8989";
+/** Compatibility export; the canonical router default lives with GraphHopper. */
+export { DEFAULT_GRAPHHOPPER_URL };
 
-/** The environment keys this report reads; nothing else is consulted. */
-export interface HealthEnv {
+/** Runtime identity plus provider configuration; values are never echoed. */
+export interface HealthEnv extends ProviderEnv {
   readonly GRAPHHOPPER_URL?: string | undefined;
   readonly OGV_BUILD_ID?: string | undefined;
-  readonly OGV_POLICY_VERSION?: string | undefined;
   readonly OGV_GRAPH_VERSION?: string | undefined;
 }
 
@@ -48,22 +52,17 @@ export interface HealthReport {
   readonly graphVersion: string;
   readonly policyVersion: string;
   readonly checkedAt: string;
+  readonly providers: readonly ProviderState[];
 }
 
 /** Defaults are explicit so a report always states a version, never a blank. */
 export const DEFAULT_BUILD_ID = "dev";
-export const DEFAULT_POLICY_VERSION = "VNEXT_STUB_0";
+export const DEFAULT_POLICY_VERSION = PA_NJ_ROUTE_POLICY_VNEXT_1.version;
 export const DEFAULT_GRAPH_VERSION = "unknown";
 
 function envOf(deps: HealthDeps): HealthEnv {
   if (deps.env !== undefined) return deps.env;
-  const env = process.env;
-  return {
-    GRAPHHOPPER_URL: env["GRAPHHOPPER_URL"],
-    OGV_BUILD_ID: env["OGV_BUILD_ID"],
-    OGV_POLICY_VERSION: env["OGV_POLICY_VERSION"],
-    OGV_GRAPH_VERSION: env["OGV_GRAPH_VERSION"],
-  };
+  return process.env;
 }
 
 /**
@@ -95,17 +94,24 @@ async function probeRouter(
 export async function checkHealth(deps: HealthDeps = {}): Promise<HealthReport> {
   const env = envOf(deps);
   const fetcher = deps.fetcher ?? fetch;
-  const router = await probeRouter(
-    env.GRAPHHOPPER_URL ?? DEFAULT_GRAPHHOPPER_URL,
+  const [router, providers] = await Promise.all([probeRouter(
+    graphHopperUrlFromEnv(env),
     fetcher,
     deps.timeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS,
-  );
+  ), providerStates(env)]);
+  const checkedAt = (deps.now ?? ((): string => new Date().toISOString()))();
   return {
     buildId: env.OGV_BUILD_ID ?? DEFAULT_BUILD_ID,
     status: router.status === "available" ? "ok" : "degraded",
     router,
     graphVersion: env.OGV_GRAPH_VERSION ?? DEFAULT_GRAPH_VERSION,
-    policyVersion: env.OGV_POLICY_VERSION ?? DEFAULT_POLICY_VERSION,
-    checkedAt: (deps.now ?? ((): string => new Date().toISOString()))(),
+    policyVersion: DEFAULT_POLICY_VERSION,
+    checkedAt,
+    providers: providers.map((provider) => provider.id === "graphhopper" ? {
+      ...provider, evidence: "probe",
+      status: router.status === "available" ? "ok" : "unavailable",
+      lastSuccess: router.status === "available" ? checkedAt : null,
+      lastFailureCategory: router.reason,
+    } : provider),
   };
 }

@@ -3,8 +3,9 @@
  *
  * Off unless `OGV_ROAD_AUTHORITY=on`: no deployment needs a new credential or
  * network dependency to plan (§17). When on, the sources that need no key
- * (USFS MVUM, every keyless state WZDx feed in the USDOT registry) are
- * live; the Pennsylvania Turnpike WZDx feed joins when `PTC_WZDX_API_KEY` is
+ * (USFS MVUM, PA Game Commission roads, PA DCNR seasonal forest roads,
+ * NJ Fish & Wildlife WMA roads, and every keyless state WZDx feed in the
+ * USDOT registry) are live; the Pennsylvania Turnpike WZDx feed joins when `PTC_WZDX_API_KEY` is
  * set.
  */
 
@@ -17,6 +18,9 @@ import {
 } from "@/application/route-intelligence/coordinator";
 import type { RoadAuthoritySource } from "@/application/route-intelligence/road-authority-source";
 import type { RoadAuthorityRecord } from "@/application/route-intelligence/types";
+import { createDcnrSeasonalRoadsSource } from "@/infrastructure/route-intelligence/pa-dcnr/dcnr-seasonal-source";
+import { createPgcSeasonalRoadsSource } from "@/infrastructure/route-intelligence/pa-pgc/pgc-source";
+import { createNjWmaRoadsSource } from "@/infrastructure/route-intelligence/nj-wma/wma-road-source";
 import { createMvumSource } from "@/infrastructure/route-intelligence/usfs-mvum/mvum-source";
 import { createWzdxRegistrySource } from "@/infrastructure/route-intelligence/wzdx/wzdx-registry-source";
 import { createWzdxSource } from "@/infrastructure/route-intelligence/wzdx/wzdx-source";
@@ -53,6 +57,9 @@ export function roadAuthoritySourcesFromEnv(env: Env): readonly RoadAuthoritySou
       userAgent,
       ...(cacheDirectory === undefined || cacheDirectory === "" ? {} : { store: cellStore(cacheDirectory) }),
     }),
+    createPgcSeasonalRoadsSource(),
+    createDcnrSeasonalRoadsSource(),
+    createNjWmaRoadsSource(),
     // Every keyless state feed in the USDOT registry (NJ, NY, MD, DE, NC,
     // New England and ~20 more).
     createWzdxRegistrySource({ userAgent }),

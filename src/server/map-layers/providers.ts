@@ -16,17 +16,30 @@
 import type {
   InfoFeature,
   InfoGeometry,
+  LayerFreshness,
+  LayerRaster,
+  TerrainGrid,
   InfoProvider,
   LngLat,
   MapLayerBounds,
   MapLayerId,
 } from "@/application/map-layers";
 import { MIN_GREAT_ROAD_RATING, type KnownRoadsPort } from "@/application/roads/known-roads";
+import { nwsUserAgentFromEnv } from "@/infrastructure/weather/config";
 
 export interface ProviderContext {
   readonly fetch: typeof fetch;
+  readonly now?: () => number;
   readonly signal?: AbortSignal;
   readonly env: Readonly<Record<string, string | undefined>>;
+}
+
+export interface LayerSnapshot {
+  readonly unavailable?: boolean;
+  readonly features: readonly InfoFeature[];
+  readonly freshness?: readonly LayerFreshness[];
+  readonly terrainGrid?: TerrainGrid;
+  readonly rasters?: readonly LayerRaster[];
 }
 
 export interface LayerProvider {
@@ -34,6 +47,7 @@ export interface LayerProvider {
   readonly layers: readonly MapLayerId[];
   /** How long an answer for one view stays good. */
   readonly ttlMs: number;
+  snapshot?(bounds: MapLayerBounds, layers: readonly MapLayerId[], context: ProviderContext): Promise<LayerSnapshot>;
   load(bounds: MapLayerBounds, layers: readonly MapLayerId[], context: ProviderContext): Promise<readonly InfoFeature[]>;
 }
 
@@ -328,7 +342,7 @@ export const nwsAlertsProvider: LayerProvider = {
     const response = await context.fetch(`https://api.weather.gov/alerts/active?point=${lat},${lon}`, {
       headers: {
         accept: "application/geo+json",
-        "user-agent": context.env["NWS_USER_AGENT"] ?? "OpenGravel route planner",
+        "user-agent": nwsUserAgentFromEnv(context.env),
       },
       signal: withTimeout(context.signal, 10_000),
     });
@@ -473,7 +487,7 @@ export function overpassQuery(bounds: MapLayerBounds, layers: readonly MapLayerI
 
 export const overpassProvider: LayerProvider = {
   id: "osm",
-  layers: ["public-land", "forest-roads", "closures", "cell-towers"],
+  layers: ["forest-roads", "closures", "cell-towers"],
   ttlMs: 60 * 60_000,
   async load(bounds, layers, context) {
     const query = overpassQuery(bounds, layers);

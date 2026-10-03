@@ -69,3 +69,7 @@ describe("MapLibre visual detail", () => {
     expect(buildingInsertion([{ id: "place-label", type: "symbol" }])).toBeNull();
   });
 });
+
+it("uses the active Day/Night palette for hillshade", () => {
+  expect(hillshadeLayerSpec({ paper: "night-paper", deepSpruce: "night-spruce", slate: "night-slate" })).toMatchObject({ paint: { "hillshade-highlight-color": "night-paper", "hillshade-shadow-color": "night-spruce", "hillshade-accent-color": "night-slate" } });
+});

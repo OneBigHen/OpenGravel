@@ -15,6 +15,7 @@ import {
 } from "@/server/map-layers/handler";
 import {
   knownRoadsProvider,
+  nwsAlertsProvider,
   overpassQuery,
   parseNwsAlerts,
   parseOverpass,
@@ -60,6 +61,22 @@ describe("provider payloads", () => {
     });
     expect(closure).toMatchObject({ layerId: "live-traffic", name: "Road closed", detail: "Closed · +10 min · Main St → Oak Ave", weight: 4 });
     expect(closure?.geometry.type).toBe("LineString");
+  });
+
+  it("uses the configured NWS identity and checks the viewport center", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      expect(String(input)).toBe("https://api.weather.gov/alerts/active?point=40.1000,-75.3000");
+      expect(new Headers(init?.headers).get("user-agent")).toBe("OpenGravel/1.0 (ops@example.com)");
+      return Response.json({ type: "FeatureCollection", features: [] });
+    });
+
+    const features = await nwsAlertsProvider.load(VIEW, ["weather"], {
+      fetch: fetcher as typeof fetch,
+      env: { NWS_USER_AGENT: "OpenGravel/1.0 (ops@example.com)" },
+    });
+
+    expect(features).toEqual([]);
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("turns NWS multipolygons into one alert area per part", () => {
@@ -179,4 +196,43 @@ describe("stops along a route", () => {
     expect((await handleStopsAlong({ line, layer: "weather" }, { env: { TOMTOM_API_KEY: "k" } })).status).toBe(400);
     expect((await handleStopsAlong({ line, layer: "fuel" }, { env: {} })).body).toEqual({ stops: [], available: false });
   });
+});
+
+describe("layer snapshot freshness and concurrent requests", () => {
+  it("coalesces simultaneous requests for the same provider view", async () => {
+    let finish: ((features: readonly never[]) => void) | undefined;
+    const load = vi.fn(() => new Promise<readonly never[]>((resolve) => { finish = resolve; }));
+    const provider: LayerProvider = { id: "firms", layers: ["active-fire"], ttlMs: 600_000, load };
+    const url = new URL("http://x/api/map-layers?bbox=-75.6,39.9,-75,40.3&layers=active-fire");
+    const first = handleMapLayersRequest(url, { providers: [provider], env: {} });
+    const second = handleMapLayersRequest(url, { providers: [provider], env: {} });
+    expect(load).toHaveBeenCalledTimes(1);
+    finish?.([]);
+    await Promise.all([first, second]);
+  });
+  it("flags a cached frame when its observation ages past the stale threshold", async () => {
+    let clock = 100_000;
+    const provider: LayerProvider = { id: "radar", layers: ["weather-radar"], ttlMs: 600_000, load: async () => [], snapshot: async () => ({ features: [], freshness: [{ layerId: "weather-radar", source: "NOAA", fetchedAt: new Date(clock).toISOString(), observedAt: new Date(clock).toISOString(), stale: false, staleAfterMs: 60_000, note: "Coverage gaps unknown" }] }) };
+    const url = new URL("http://x/api/map-layers?bbox=-75.6,39.9,-75,40.3&layers=weather-radar");
+    await handleMapLayersRequest(url, { providers: [provider], env: {}, now: () => clock });
+    clock += 61_000;
+    const result = await handleMapLayersRequest(url, { providers: [provider], env: {}, now: () => clock });
+    expect("freshness" in result.body && result.body.freshness?.[0]?.stale).toBe(true);
+  });
+});
+it("isolates shared provider work from the first caller cancelling its viewport", async () => {
+  const controller = new AbortController();
+  let finish: (() => void) | undefined;
+  const provider: LayerProvider = { id: "firms", layers: ["active-fire"], ttlMs: 60_000, load: (_bounds, _layers, context) => new Promise((resolve, reject) => {
+    context.signal?.addEventListener("abort", () => reject(new Error("cancelled")), { once: true });
+    finish = () => resolve([]);
+  }) };
+  const url = new URL("http://x/api/map-layers?bbox=-75.6,39.9,-75,40.3&layers=active-fire");
+  const first = handleMapLayersRequest(url, { env: {}, providers: [provider] }, controller.signal);
+  const second = handleMapLayersRequest(url, { env: {}, providers: [provider] });
+  controller.abort();
+  finish?.();
+  const answer = await second;
+  expect("unavailable" in answer.body && answer.body.unavailable).toEqual([]);
+  await first;
 });

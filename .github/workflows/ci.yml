@@ -28,6 +28,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Environment contract
+        run: npm run audit:env
+
       - name: Lint
         run: npm run lint
 

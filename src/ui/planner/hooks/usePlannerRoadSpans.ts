@@ -11,7 +11,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { useStore } from "zustand";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
-import type { PreviewRoadSpanScene, MapObjectRef } from "@/application/map/types";
+import type { MapScene, PreviewRoadSpanScene, MapObjectRef } from "@/application/map/types";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import {
   authorRoadSpan,
@@ -31,6 +31,8 @@ import {
 } from "@/application/planner/road-span-draft";
 import { buildRoadSpanStatusRows } from "@/application/planner/road-span-status";
 import { roadStretchAt } from "@/application/planner/road-stretch";
+import { objectExtent } from "@/application/map/build-map-scene";
+import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
 import type { RouteInstruction } from "@/domain/route/types";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import type { RoadSpanMode } from "@/domain/road/spans";
@@ -66,6 +68,8 @@ export interface PlannerRoadSpansAuthoring {
   readonly preview: PreviewRoadSpanScene | null;
   readonly panelProps: RoadSpansPanelProjection;
   readonly roadTap: RoadTapOffer | null;
+  routeThrough(road: RoadOpeningSummary): Promise<void>;
+  zoomTo(spanId: RoadSpanId, scene: MapScene): void;
   clearGesture(): void;
   beginPointerDown(coordinate: Coordinate): void;
   previewPointerMove(coordinate: Coordinate): boolean;
@@ -324,6 +328,27 @@ export function usePlannerRoadSpans(input: {
     [document, plannerUiStore, rideDocumentStore, selectedObject],
   );
 
+  const routeThrough = useCallback(async (road: RoadOpeningSummary): Promise<void> => {
+    if (road.line === undefined || road.line.length < 2) throw new Error("This road has no published line to route through.");
+    const outcome = await authorRoadSpan({
+      document: rideDocumentStore.getState().document,
+      geometryStore,
+      geometry: road.line,
+      anchors: [road.line[0]!, road.line.at(-1)!],
+      mode: "prefer",
+      direction: "either",
+      label: `Route through ${road.roadName ?? "seasonal road"}`,
+      dispatch: rideDocumentStore.getState().dispatch,
+    });
+    if (outcome.outcome !== "applied") throw new Error("The road could not be added. Try again with the current ride.");
+  }, [geometryStore, rideDocumentStore]);
+
+  const zoomTo = useCallback((spanId: RoadSpanId, scene: MapScene): void => {
+    const ui = plannerUiStore.getState();
+    ui.selectObject({ kind: "road-span", roadSpanId: spanId });
+    ui.requestFit(objectExtent(scene, { kind: "road-span", roadSpanId: spanId }));
+  }, [plannerUiStore]);
+
   const panelProps = useMemo<RoadSpansPanelProjection>(
     () => ({
       rows,
@@ -369,6 +394,8 @@ export function usePlannerRoadSpans(input: {
     preview,
     panelProps,
     roadTap,
+    routeThrough,
+    zoomTo,
     clearGesture,
     beginPointerDown,
     previewPointerMove,
