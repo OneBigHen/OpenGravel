@@ -24,6 +24,7 @@ import type {
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
+import type { FunGeneratorReport } from "@/application/planner/fun-generators";
 
 const IDENTITY: RoutePlanIdentityWire = {
   rideId: "ride_test",
@@ -756,5 +757,92 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
     if (!off.ok || !defaulted.ok) return;
     expect(required(off.bundle.candidates[0]).warnings).toEqual(required(defaulted.bundle.candidates[0]).warnings);
     expect(required(off.bundle.candidates[0]).evidence["closures"]).toBeUndefined();
+  });
+});
+
+describe("planRide — fun-route generator family (OGV_FUN_GENERATORS)", () => {
+  const roadSummary = {
+    totalMeters: 50_000,
+    surfaceByRoadClassMeters: { "asphalt|tertiary": 50_000 },
+    curvatureMeters: { "0.95": 50_000 },
+    tollMeters: 0,
+  };
+  // A rider-curated corridor that bulges north of the straight trip.
+  const library = async () => [{
+    id: "ride",
+    geometry: Array.from({ length: 161 }, (_, index) => ({
+      lon: -75.12 + (0.25 * index) / 160,
+      lat: 40.12 + Math.sin(index * 0.6) * 0.0005,
+    })),
+  }];
+  const routedThrough = (request: ProviderRouteRequest): ProviderCandidate =>
+    candidate({
+      profile: request.profile,
+      geometry: request.shaping.length === 0 ? [ORIGIN, MIDPOINT, DESTINATION] : [ORIGIN, ...request.shaping, DESTINATION],
+      roadSummary,
+      providerMetadata: { fingerprint: `fp_${request.shaping.length}` },
+    });
+  const settings = (mode: "shadow" | "on") => ({
+    mode,
+    allocation: "fixed" as const,
+    budget: { maxProviderCalls: 2, deadlineMs: 5_000 },
+  });
+
+  it("is off by default and never calls the provider beyond the lanes", async () => {
+    const provider = stubProvider({ candidates: [candidate({ roadSummary })] });
+    let reports = 0;
+    const result = await planRide(input(), {
+      provider,
+      env: {},
+      funGeneratorLibrary: library,
+      onFunGeneratorReport: () => { reports += 1; },
+    });
+    expect(result.ok).toBe(true);
+    expect(provider.calls).toBe(1);
+    expect(reports).toBe(0);
+  });
+
+  it("shadow runs after the answer, records a report and never changes the bundle", async () => {
+    const answer = (request: ProviderRouteRequest) => ({ candidates: [routedThrough(request)] });
+    const offCalls: ProviderRouteRequest[] = [];
+    const off = await planRide(input(), {
+      provider: { ...stubProvider(), candidates: async (request) => { offCalls.push(request); return answer(request); } },
+      env: {},
+      funGeneratorLibrary: library,
+    });
+    let resolveReport: (report: FunGeneratorReport) => void = () => undefined;
+    const reported = new Promise<FunGeneratorReport>((resolve) => { resolveReport = resolve; });
+    const shadow = await planRide(input(), {
+      provider: { ...stubProvider(), candidates: async (request) => answer(request) },
+      env: {},
+      funGenerators: settings("shadow"),
+      funGeneratorLibrary: library,
+      onFunGeneratorReport: (report, mode) => { expect(mode).toBe("shadow"); resolveReport(report); },
+    });
+    expect(off.ok && shadow.ok).toBe(true);
+    if (!off.ok || !shadow.ok) return;
+    expect(shadow.bundle.candidates.map((entry) => entry.fingerprint)).toEqual(off.bundle.candidates.map((entry) => entry.fingerprint));
+    const report = await reported;
+    expect(report.providerCallsUsed).toBeGreaterThan(0);
+    expect(report.providerCallsUsed).toBeLessThanOrEqual(2);
+    expect(report.pool.length).toBeGreaterThan(0);
+    expect(report.pool[0]?.generator).toBe("corridor-probe");
+  });
+
+  it("on merges eligible generated routes into the canonical ranking", async () => {
+    let report: FunGeneratorReport | null = null;
+    const result = await planRide(input(), {
+      provider: { ...stubProvider(), candidates: async (request) => ({ candidates: [routedThrough(request)] }) },
+      env: {},
+      funGenerators: settings("on"),
+      funGeneratorLibrary: library,
+      onFunGeneratorReport: (value) => { report = value; },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(report).not.toBeNull();
+    const pooled = (report as FunGeneratorReport | null)?.pool.map((entry) => entry.candidate.geometry.length) ?? [];
+    expect(pooled.length).toBeGreaterThan(0);
+    expect(result.bundle.candidates.some((entry) => entry.geometry.length > 3)).toBe(true);
   });
 });

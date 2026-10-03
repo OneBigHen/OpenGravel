@@ -1,0 +1,2641 @@
+{
+  "measuredAt": "2026-10-03T20:13:07.393Z",
+  "router": "local GraphHopper PA/NJ",
+  "cases": [
+    {
+      "case": "jim-thorpe-to-hawk-mountain",
+      "loopMinutes": null,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_twisty|alt=false 59ms",
+          "motorcycle_fastest|alt=false 69ms",
+          "motorcycle_scenic|alt=false 69ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 722,
+        "bestRide": {
+          "minutes": 62,
+          "km": 54.6,
+          "bendShare": 0.094,
+          "backroadShare": 0.996,
+          "longestBendRunM": 376
+        },
+        "shown": [
+          {
+            "minutes": 62,
+            "km": 54.6,
+            "bendShare": 0.094,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          {
+            "minutes": 51,
+            "km": 47.5,
+            "bendShare": 0.066,
+            "backroadShare": 0.918,
+            "longestBendRunM": 376
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 151,
+          "proposals": {
+            "corridor-probe": 4
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2"
+              ],
+              "minutes": 76,
+              "bendShare": 0.132,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-17c4deb9562ab70c297a22ff#21"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 76,
+            "km": 57.7,
+            "bendShare": 0.132,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 348,
+          "proposals": {
+            "departure-rejoin": 4
+          },
+          "probes": [
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ],
+              "minutes": 80,
+              "bendShare": 0.131,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-24a25923298eb5c3046e3aa7#7"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-dce0eae0e6e1a413754f#22"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-f56a613a69468c75031c7f6a#20"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 80,
+            "km": 55.9,
+            "bendShare": 0.131,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 8,
+          "proposals": {
+            "missing-link": 4
+          },
+          "probes": [
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30",
+                "project-gpx-36c254b09b9c3ed4f182772c#35"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 62,
+            "km": 54.6,
+            "bendShare": 0.094,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 62,
+            "km": 54.6,
+            "bendShare": 0.094,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 215,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 4,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2"
+              ],
+              "minutes": 76,
+              "bendShare": 0.132,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-24a25923298eb5c3046e3aa7#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-dce0eae0e6e1a413754f#22"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-17c4deb9562ab70c297a22ff#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-f56a613a69468c75031c7f6a#20"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 76,
+            "km": 57.7,
+            "bendShare": 0.132,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 291,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 4,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ],
+              "minutes": 80,
+              "bendShare": 0.131,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-24a25923298eb5c3046e3aa7#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-dce0eae0e6e1a413754f#22"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-17c4deb9562ab70c297a22ff#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-f56a613a69468c75031c7f6a#20"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 80,
+            "km": 55.9,
+            "bendShare": 0.131,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 529,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 4,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ],
+              "minutes": 80,
+              "bendShare": 0.131,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 0.77,
+              "sources": [
+                "project-gpx-24a25923298eb5c3046e3aa7#7"
+              ],
+              "minutes": 74,
+              "bendShare": 0.129,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "ineligible",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "fb-dce0eae0e6e1a413754f#22"
+              ],
+              "ineligible": [
+                "duplicate-consecutive-points"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-17c4deb9562ab70c297a22ff#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-f56a613a69468c75031c7f6a#20"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 80,
+            "km": 55.9,
+            "bendShare": 0.131,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 424,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 4,
+            "missing-link": 4,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2"
+              ],
+              "minutes": 76,
+              "bendShare": 0.132,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ],
+              "minutes": 80,
+              "bendShare": 0.131,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 0.77,
+              "sources": [
+                "project-gpx-24a25923298eb5c3046e3aa7#7"
+              ],
+              "minutes": 74,
+              "bendShare": 0.129,
+              "backroadShare": 0.996
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-b01edce96bab0b65a51e0e45#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-dce0eae0e6e1a413754f#22"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-76b0c0d1a46a891dc8d9e900#2",
+                "project-gpx-5645c2f2c20f240b8ccf42f2#30"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-17c4deb9562ab70c297a22ff#21"
+              ]
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-f56a613a69468c75031c7f6a#20"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-ca80add2caa828989bf4#30",
+                "project-gpx-36c254b09b9c3ed4f182772c#35"
+              ]
+            }
+          ],
+          "newEligible": 2,
+          "generatedShownInBundle": 2,
+          "treatmentBestRide": {
+            "minutes": 80,
+            "km": 55.9,
+            "bendShare": 0.131,
+            "backroadShare": 0.996,
+            "longestBendRunM": 376
+          },
+          "treatmentBestIsGenerated": true
+        }
+      ]
+    },
+    {
+      "case": "doylestown-to-frenchtown",
+      "loopMinutes": null,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_fastest|alt=false 52ms",
+          "motorcycle_twisty|alt=false 62ms",
+          "motorcycle_scenic|alt=false 76ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 458,
+        "bestRide": {
+          "minutes": 33,
+          "km": 28,
+          "bendShare": 0.037,
+          "backroadShare": 0.958,
+          "longestBendRunM": 150
+        },
+        "shown": [
+          {
+            "minutes": 33,
+            "km": 28,
+            "bendShare": 0.037,
+            "backroadShare": 0.958,
+            "longestBendRunM": 150
+          },
+          {
+            "minutes": 33,
+            "km": 28.6,
+            "bendShare": 0.024,
+            "backroadShare": 0.996,
+            "longestBendRunM": 150
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 257,
+          "proposals": {
+            "corridor-probe": 4
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 55,
+              "bendShare": 0.106,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#9"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 55,
+            "km": 40,
+            "bendShare": 0.106,
+            "backroadShare": 0.971,
+            "longestBendRunM": 197
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 190,
+          "proposals": {
+            "departure-rejoin": 1
+          },
+          "probes": [
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 61,
+              "bendShare": 0.106,
+              "backroadShare": 0.974
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 61,
+            "km": 44.9,
+            "bendShare": 0.106,
+            "backroadShare": 0.974,
+            "longestBendRunM": 197
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 2,
+          "proposals": {
+            "missing-link": 4
+          },
+          "probes": [
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "project-gpx-3e116deda85e705480582073#29"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-a356b896204a1272398e25dd#12",
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 33,
+            "km": 28,
+            "bendShare": 0.037,
+            "backroadShare": 0.958,
+            "longestBendRunM": 150
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 33,
+            "km": 28,
+            "bendShare": 0.037,
+            "backroadShare": 0.958,
+            "longestBendRunM": 150
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 67,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 55,
+              "bendShare": 0.106,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#9"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 55,
+            "km": 40,
+            "bendShare": 0.106,
+            "backroadShare": 0.971,
+            "longestBendRunM": 197
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 74,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 55,
+              "bendShare": 0.106,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#9"
+              ]
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 1,
+          "treatmentBestRide": {
+            "minutes": 55,
+            "km": 40,
+            "bendShare": 0.106,
+            "backroadShare": 0.971,
+            "longestBendRunM": 197
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 211,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 55,
+              "bendShare": 0.106,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 61,
+              "bendShare": 0.106,
+              "backroadShare": 0.974
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 0.64,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#12"
+              ],
+              "minutes": 56,
+              "bendShare": 0.109,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#9"
+              ]
+            }
+          ],
+          "newEligible": 2,
+          "generatedShownInBundle": 2,
+          "treatmentBestRide": {
+            "minutes": 61,
+            "km": 44.9,
+            "bendShare": 0.106,
+            "backroadShare": 0.974,
+            "longestBendRunM": 197
+          },
+          "treatmentBestIsGenerated": true
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 167,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "missing-link": 4,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "new",
+              "note": "low-adherence",
+              "calls": 1,
+              "adherence": 0.48,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ],
+              "minutes": 55,
+              "bendShare": 0.106,
+              "backroadShare": 0.971
+            },
+            {
+              "generator": "missing-link",
+              "status": "new",
+              "note": "ok",
+              "calls": 2,
+              "adherence": 0.55,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "fb-eba231a53cc9fd76fd88#12"
+              ],
+              "minutes": 62,
+              "bendShare": 0.11,
+              "backroadShare": 0.973
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-3e116deda85e705480582073#29"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "project-gpx-3e116deda85e705480582073#29"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-a356b896204a1272398e25dd#12",
+                "fb-eba231a53cc9fd76fd88#12"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "fb-eba231a53cc9fd76fd88#9"
+              ]
+            },
+            {
+              "generator": "missing-link",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-ed9ce87fbf0dfcc71e76a58a#8",
+                "project-gpx-87a6e5f82c4c2096eedfaabe#7"
+              ]
+            }
+          ],
+          "newEligible": 2,
+          "generatedShownInBundle": 2,
+          "treatmentBestRide": {
+            "minutes": 62,
+            "km": 44.3,
+            "bendShare": 0.11,
+            "backroadShare": 0.973,
+            "longestBendRunM": 189
+          },
+          "treatmentBestIsGenerated": true
+        }
+      ]
+    },
+    {
+      "case": "water-gap-to-stroudsburg",
+      "loopMinutes": null,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_fastest|alt=false 17ms",
+          "motorcycle_scenic|alt=false 26ms",
+          "motorcycle_twisty|alt=false 26ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 116,
+        "bestRide": {
+          "minutes": 10,
+          "km": 6.3,
+          "bendShare": 0.103,
+          "backroadShare": 0.538,
+          "longestBendRunM": 164
+        },
+        "shown": [
+          {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          {
+            "minutes": 9,
+            "km": 6.6,
+            "bendShare": 0.073,
+            "backroadShare": 0.268,
+            "longestBendRunM": 267
+          },
+          {
+            "minutes": 9,
+            "km": 6.2,
+            "bendShare": 0.092,
+            "backroadShare": 0.429,
+            "longestBendRunM": 164
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "departure-rejoin": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "missing-link": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "missing-link": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 10,
+            "km": 6.3,
+            "bendShare": 0.103,
+            "backroadShare": 0.538,
+            "longestBendRunM": 164
+          },
+          "treatmentBestIsGenerated": false
+        }
+      ]
+    },
+    {
+      "case": "king-of-prussia-to-phoenixville",
+      "loopMinutes": null,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_fastest|alt=false 15ms",
+          "motorcycle_twisty|alt=false 30ms",
+          "motorcycle_scenic|alt=false 32ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 116,
+        "bestRide": {
+          "minutes": 19,
+          "km": 13.9,
+          "bendShare": 0.116,
+          "backroadShare": 0.443,
+          "longestBendRunM": 191
+        },
+        "shown": [
+          {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          {
+            "minutes": 19,
+            "km": 16.1,
+            "bendShare": 0.108,
+            "backroadShare": 0.391,
+            "longestBendRunM": 251
+          },
+          {
+            "minutes": 16,
+            "km": 13.8,
+            "bendShare": 0.086,
+            "backroadShare": 0.17,
+            "longestBendRunM": 157
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 27,
+          "proposals": {
+            "corridor-probe": 4
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#2"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#27"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#3"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 44,
+          "proposals": {
+            "departure-rejoin": 1
+          },
+          "probes": [
+            {
+              "generator": "departure-rejoin",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "missing-link": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 36,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#2"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#27"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#3"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 131,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#2"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#27"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#3"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 159,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 0.63,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#2"
+              ],
+              "minutes": 26,
+              "bendShare": 0.135,
+              "backroadShare": 0.476
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#27"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#3"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 3,
+          "generatorMs": 123,
+          "proposals": {
+            "corridor-probe": 4,
+            "departure-rejoin": 1,
+            "missing-link": 0,
+            "prize-loop": 0
+          },
+          "probes": [
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "departure-rejoin",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#0"
+              ],
+              "minutes": 19,
+              "bendShare": 0.109,
+              "backroadShare": 0.202
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "duplicate",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 0.63,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#2"
+              ],
+              "minutes": 26,
+              "bendShare": 0.135,
+              "backroadShare": 0.476
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#27"
+              ]
+            },
+            {
+              "generator": "corridor-probe",
+              "status": "skipped-budget",
+              "note": "budget",
+              "calls": 0,
+              "adherence": null,
+              "sources": [
+                "project-gpx-90bf798a2afe5e6699ccbd22#3"
+              ]
+            }
+          ],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 19,
+            "km": 13.9,
+            "bendShare": 0.116,
+            "backroadShare": 0.443,
+            "longestBendRunM": 191
+          },
+          "treatmentBestIsGenerated": false
+        }
+      ]
+    },
+    {
+      "case": "hatboro-loop-90",
+      "loopMinutes": 90,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_scenic|alt=false 2051ms",
+          "motorcycle_twisty|alt=false 2094ms",
+          "motorcycle_fastest|alt=false 2845ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 2992,
+        "bestRide": {
+          "minutes": 96,
+          "km": 77.7,
+          "bendShare": 0.083,
+          "backroadShare": 0.776,
+          "longestBendRunM": 411
+        },
+        "shown": [
+          {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          {
+            "minutes": 103,
+            "km": 82.7,
+            "bendShare": 0.047,
+            "backroadShare": 0.792,
+            "longestBendRunM": 283
+          },
+          {
+            "minutes": 102,
+            "km": 81,
+            "bendShare": 0.054,
+            "backroadShare": 0.713,
+            "longestBendRunM": 283
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "departure-rejoin": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "missing-link": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 2,
+          "proposals": {
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 0,
+          "generatorMs": 1,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "missing-link": 0,
+            "prize-loop": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 96,
+            "km": 77.7,
+            "bendShare": 0.083,
+            "backroadShare": 0.776,
+            "longestBendRunM": 411
+          },
+          "treatmentBestIsGenerated": false
+        }
+      ]
+    },
+    {
+      "case": "green-lane-loop-120",
+      "loopMinutes": 120,
+      "control": {
+        "calls": 3,
+        "lanes": [
+          "motorcycle_scenic|alt=false 1703ms",
+          "motorcycle_twisty|alt=false 2825ms",
+          "motorcycle_fastest|alt=false 3947ms"
+        ],
+        "freedCalls": 1,
+        "planMs": 4521,
+        "bestRide": {
+          "minutes": 119,
+          "km": 89.1,
+          "bendShare": 0.126,
+          "backroadShare": 0.965,
+          "longestBendRunM": 265
+        },
+        "shown": [
+          {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          {
+            "minutes": 107,
+            "km": 86.8,
+            "bendShare": 0.079,
+            "backroadShare": 0.638,
+            "longestBendRunM": 260
+          },
+          {
+            "minutes": 131,
+            "km": 106.7,
+            "bendShare": 0.06,
+            "backroadShare": 0.81,
+            "longestBendRunM": 275
+          }
+        ]
+      },
+      "arms": [
+        {
+          "arm": "corridor-probe",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "corridor-probe": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "departure-rejoin",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "departure-rejoin": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "missing-link",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": true,
+          "liveCalls": 0,
+          "generatorMs": 0,
+          "proposals": {
+            "missing-link": 0
+          },
+          "probes": [],
+          "newEligible": 0,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "prize-loop",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 230,
+          "proposals": {
+            "prize-loop": 1
+          },
+          "probes": [
+            {
+              "generator": "prize-loop",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-53058a94b50fe9f4c9465a46#3",
+                "project-gpx-74bb8e0bc247c93901d7fcd9#3",
+                "project-gpx-fef8ad9f53bc4bfec78aaeea#3"
+              ],
+              "minutes": 87,
+              "bendShare": 0.169,
+              "backroadShare": 0.768
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 115,
+            "km": 83.4,
+            "bendShare": 0.127,
+            "backroadShare": 0.781,
+            "longestBendRunM": 403
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-fixed",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 154,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 1
+          },
+          "probes": [
+            {
+              "generator": "prize-loop",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-53058a94b50fe9f4c9465a46#3",
+                "project-gpx-74bb8e0bc247c93901d7fcd9#3",
+                "project-gpx-fef8ad9f53bc4bfec78aaeea#3"
+              ],
+              "minutes": 87,
+              "bendShare": 0.169,
+              "backroadShare": 0.768
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 115,
+            "km": 83.4,
+            "bendShare": 0.127,
+            "backroadShare": 0.781,
+            "longestBendRunM": 403
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive",
+          "equalBudget": true,
+          "budgetCalls": 1,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 114,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 1
+          },
+          "probes": [
+            {
+              "generator": "prize-loop",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-53058a94b50fe9f4c9465a46#3",
+                "project-gpx-74bb8e0bc247c93901d7fcd9#3",
+                "project-gpx-fef8ad9f53bc4bfec78aaeea#3"
+              ],
+              "minutes": 87,
+              "bendShare": 0.169,
+              "backroadShare": 0.768
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 115,
+            "km": 83.4,
+            "bendShare": 0.127,
+            "backroadShare": 0.781,
+            "longestBendRunM": 403
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "family-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 168,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "prize-loop": 1
+          },
+          "probes": [
+            {
+              "generator": "prize-loop",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-53058a94b50fe9f4c9465a46#3",
+                "project-gpx-74bb8e0bc247c93901d7fcd9#3",
+                "project-gpx-fef8ad9f53bc4bfec78aaeea#3"
+              ],
+              "minutes": 87,
+              "bendShare": 0.169,
+              "backroadShare": 0.768
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          "treatmentBestIsGenerated": false
+        },
+        {
+          "arm": "all-adaptive@3-extra",
+          "equalBudget": false,
+          "budgetCalls": 3,
+          "fellBackToBalanced": false,
+          "liveCalls": 1,
+          "generatorMs": 60,
+          "proposals": {
+            "corridor-probe": 0,
+            "departure-rejoin": 0,
+            "missing-link": 0,
+            "prize-loop": 1
+          },
+          "probes": [
+            {
+              "generator": "prize-loop",
+              "status": "new",
+              "note": "ok",
+              "calls": 1,
+              "adherence": 1,
+              "sources": [
+                "project-gpx-53058a94b50fe9f4c9465a46#3",
+                "project-gpx-74bb8e0bc247c93901d7fcd9#3",
+                "project-gpx-fef8ad9f53bc4bfec78aaeea#3"
+              ],
+              "minutes": 87,
+              "bendShare": 0.169,
+              "backroadShare": 0.768
+            }
+          ],
+          "newEligible": 1,
+          "generatedShownInBundle": 0,
+          "treatmentBestRide": {
+            "minutes": 119,
+            "km": 89.1,
+            "bendShare": 0.126,
+            "backroadShare": 0.965,
+            "longestBendRunM": 265
+          },
+          "treatmentBestIsGenerated": false
+        }
+      ]
+    }
+  ]
+}
