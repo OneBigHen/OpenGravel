@@ -164,7 +164,7 @@ describe("alongStopsToRideInterest", () => {
       name: "Sunoco",
       coordinate: { lon: -75.2, lat: 40.1 },
       summary: "Open 24 hours",
-      attribution: "OpenStreetMap",
+      attribution: "TomTom Search",
     });
   });
 
