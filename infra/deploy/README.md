@@ -6,7 +6,7 @@ Captured from the running host on 2026-10-03. Secrets live only in the environme
 
 | Item | Value |
 | --- | --- |
-| Public origin | `https://opengravel.henning.rodeo` (Cloudflare tunnel → origin; `opengravel-vnext` hostname also routed) |
+| Public origin | `https://opengravel.henning.rodeo` via Cloudflare Tunnel: container `legacy-shared-services-cloudflared-1` → `http://172.23.0.1:3200` (the unit's ExecStartPre opens 3200 to 172.23.0.0/16 and the LAN) |
 | Application host | homelab `docker-dev` (Proxmox LXC, 8 GB RAM) |
 | Node | 24.x, unpacked at `/opt/opengravel-node24` |
 | Process manager | systemd `ogv.service` + drop-in `/etc/systemd/system/ogv.service.d/opengravel.conf` |
