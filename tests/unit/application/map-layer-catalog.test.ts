@@ -31,8 +31,13 @@ describe("map layer catalogue provenance", () => {
   it("keeps OSM provenance on the access layers that are actually served by Overpass", () => {
     const definitions = new Map(MAP_LAYERS.map((layer) => [layer.id, layer]));
 
-    for (const id of ["public-land", "forest-roads", "cell-towers"] as const) {
+    for (const id of ["forest-roads", "cell-towers"] as const) {
       expect(definitions.get(id)?.source).toBe("OpenStreetMap");
     }
+  });
+
+  it("credits PAD-US first and OSM as the fallback for public land", () => {
+    const publicLand = MAP_LAYERS.find((layer) => layer.id === "public-land");
+    expect(publicLand?.source).toBe("USGS PAD-US (OpenStreetMap fallback)");
   });
 });
