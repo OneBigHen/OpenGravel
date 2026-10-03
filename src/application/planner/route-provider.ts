@@ -253,13 +253,7 @@ export interface ProviderAssessment {
   readonly warnings: readonly RouteWarning[];
 }
 
-/**
- * The engine's per-edge road attributes, reduced to metres (M3, OGV-D-263).
- *
- * Raw vocabulary on purpose: keys are the engine's own OSM-derived values, so
- * the application layer owns what "paved" or "a backroad" means. Every map sums
- * to `totalMeters` (an edge the engine did not describe is under `"missing"`).
- */
+/** One travel-order run of identical raw engine road attributes. */
 export interface ProviderRoadRun {
   /** Travel-order distance covered by this run. */
   readonly meters: number;
@@ -278,6 +272,13 @@ export interface ProviderRoadRun {
 
 export const MAX_PROVIDER_ROAD_RUNS = 512;
 
+/**
+ * The engine's per-edge road attributes, reduced to metres (M3, OGV-D-263).
+ *
+ * Raw vocabulary on purpose: keys are the engine's own OSM-derived values, so
+ * the application layer owns what "paved" or "a backroad" means. Every map sums
+ * to `totalMeters` (an edge the engine did not describe is under `"missing"`).
+ */
 export interface ProviderRoadSummary {
   readonly totalMeters: number;
   /** Metres by `${surface}|${roadClass}`, e.g. `asphalt|secondary`, `missing|tertiary`. */
