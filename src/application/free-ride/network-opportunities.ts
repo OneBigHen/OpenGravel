@@ -325,6 +325,59 @@ interface QueueEntry {
   readonly distanceMeters: number;
 }
 
+function queueBefore(left: QueueEntry, right: QueueEntry): boolean {
+  return (
+    left.distanceMeters < right.distanceMeters ||
+    (left.distanceMeters === right.distanceMeters &&
+      left.nodeId.localeCompare(right.nodeId) < 0)
+  );
+}
+
+/**
+ * Minimal binary min-heap for the bounded Dijkstra horizon. The search runs on
+ * the rider's device while moving, so it must stay O(E log V) rather than
+ * re-sorting the whole frontier for every settled node.
+ */
+class DistanceQueue {
+  private readonly items: QueueEntry[] = [];
+
+  get size(): number {
+    return this.items.length;
+  }
+
+  push(entry: QueueEntry): void {
+    const items = this.items;
+    items.push(entry);
+    let index = items.length - 1;
+    while (index > 0) {
+      const parent = (index - 1) >> 1;
+      if (!queueBefore(items[index]!, items[parent]!)) break;
+      [items[index], items[parent]] = [items[parent]!, items[index]!];
+      index = parent;
+    }
+  }
+
+  pop(): QueueEntry | undefined {
+    const items = this.items;
+    const top = items[0];
+    const last = items.pop();
+    if (top === undefined || last === undefined || items.length === 0) return top;
+    items[0] = last;
+    let index = 0;
+    for (;;) {
+      const left = index * 2 + 1;
+      const right = left + 1;
+      let smallest = index;
+      if (left < items.length && queueBefore(items[left]!, items[smallest]!)) smallest = left;
+      if (right < items.length && queueBefore(items[right]!, items[smallest]!)) smallest = right;
+      if (smallest === index) break;
+      [items[index], items[smallest]] = [items[smallest]!, items[index]!];
+      index = smallest;
+    }
+    return top;
+  }
+}
+
 function reachableSegments(
   network: FreeRideNetworkIndex,
   match: SegmentMatch,
@@ -338,21 +391,15 @@ function reachableSegments(
   const bestNodeDistance = new Map<string, number>([
     [match.segment.toNodeId, remainingCurrent],
   ]);
-  const queue: QueueEntry[] = [
-    {
-      nodeId: match.segment.toNodeId,
-      distanceMeters: remainingCurrent,
-    },
-  ];
+  const queue = new DistanceQueue();
+  queue.push({
+    nodeId: match.segment.toNodeId,
+    distanceMeters: remainingCurrent,
+  });
 
   let steps = 0;
-  while (queue.length > 0 && steps < MAX_SEARCH_STEPS) {
-    queue.sort(
-      (left, right) =>
-        left.distanceMeters - right.distanceMeters ||
-        left.nodeId.localeCompare(right.nodeId),
-    );
-    const current = queue.shift();
+  while (queue.size > 0 && steps < MAX_SEARCH_STEPS) {
+    const current = queue.pop();
     if (current === undefined) break;
     if (current.distanceMeters !== bestNodeDistance.get(current.nodeId)) continue;
     steps += 1;
@@ -388,19 +435,20 @@ function findRejoinSegment(
   const last = network.segmentsById.get(corridor.segmentIds.at(-1)!);
   if (last === undefined) return null;
 
+  // The rejoin must be a real directed continuation out of the corridor exit,
+  // not a U-turn back down the corridor. Prefer the straightest continuation;
+  // ties stay deterministic by segment id (outgoing lists are id-sorted).
   const corridorIds = new Set(corridor.segmentIds);
-  const candidates = (network.outgoingByNode.get(last.toNodeId) ?? [])
-    .filter(
-      (segment) =>
-        !corridorIds.has(segment.id) &&
-        !recentSegmentIds.has(segment.id) &&
-        headingDeltaDegrees(
-          segmentBearing(last),
-          segmentBearing(segment),
-        ) <= MAX_DIRECTION_DELTA_DEGREES,
-    );
+  const lastBearing = segmentBearing(last);
+  let best: { readonly segment: FreeRideNetworkSegment; readonly delta: number } | null = null;
+  for (const segment of network.outgoingByNode.get(last.toNodeId) ?? []) {
+    if (corridorIds.has(segment.id) || recentSegmentIds.has(segment.id)) continue;
+    const delta = headingDeltaDegrees(lastBearing, segmentBearing(segment));
+    if (delta > MAX_DIRECTION_DELTA_DEGREES) continue;
+    if (best === null || delta < best.delta) best = { segment, delta };
+  }
 
-  return candidates[0] ?? null;
+  return best?.segment ?? null;
 }
 
 function corridorGeometry(
@@ -530,11 +578,14 @@ export function findFreeRideNetworkOpportunities(
 }
 
 /**
- * Verifies that a routed suggestion actually traversed the proposed corridor.
+ * Verifies that a routed suggestion actually traversed the proposed corridor,
+ * in the corridor's direction.
  *
- * Crossing one point of the corridor is not enough: samples are checked against
- * route segments, so a suggestion must recover a meaningful share of the
- * fragment before the experiment can count it as a successful opportunity.
+ * Crossing one point of the corridor is not enough: samples are taken every
+ * 120 m along the fragment and each must lie within 140 m of a route segment
+ * at or after the route position that matched the previous sample. A route
+ * that rides the corridor backwards, or touches it out of order, recovers only
+ * a small share of the samples and therefore fails the caller's threshold.
  */
 export function freeRideFragmentTraversalRatio(
   routeGeometry: readonly Coordinate[],
@@ -545,6 +596,7 @@ export function freeRideFragmentTraversalRatio(
   const samples: Coordinate[] = [{ ...fragment[0]! }];
   let carry = 0;
   const spacingMeters = 120;
+  const toleranceMeters = 140;
 
   for (let index = 0; index + 1 < fragment.length; index += 1) {
     const start = fragment[index];
@@ -566,20 +618,26 @@ export function freeRideFragmentTraversalRatio(
 
   samples.push({ ...fragment.at(-1)! });
 
-  const covered = samples.filter((point) => {
-    for (let index = 0; index + 1 < routeGeometry.length; index += 1) {
+  // Ordered matching: the route cursor never moves backwards. An unmatched
+  // sample does not advance it, so a short GPS-style gap cannot strand the
+  // remaining samples.
+  let cursor = 0;
+  let covered = 0;
+  for (const point of samples) {
+    for (let index = cursor; index + 1 < routeGeometry.length; index += 1) {
       const from = routeGeometry[index];
       const to = routeGeometry[index + 1];
       if (
         from !== undefined &&
         to !== undefined &&
-        pointToSegmentDistanceMeters(point, from, to) <= 140
+        pointToSegmentDistanceMeters(point, from, to) <= toleranceMeters
       ) {
-        return true;
+        cursor = index;
+        covered += 1;
+        break;
       }
     }
-    return false;
-  }).length;
+  }
 
   return samples.length > 0 ? covered / samples.length : 0;
 }

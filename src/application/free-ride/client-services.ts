@@ -11,6 +11,7 @@ import { createReturnPlanner } from "@/application/free-ride/return-plan";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { RideRepositoryPort } from "@/application/persistence/ride-repository";
 import type { LiveSuggestionRouteProvider } from "@/application/free-ride/live-suggestion-query";
+import type { FreeRideNetworkIndex } from "@/application/free-ride/network-opportunities";
 import type { PersonalRideTrace } from "@/application/roads/personal-road-history";
 
 export function createClientFreeRideServices(deps: {
@@ -18,6 +19,13 @@ export function createClientFreeRideServices(deps: {
   readonly geometry: GeometryStore;
   readonly providerFactory: () => LiveSuggestionRouteProvider;
   readonly rideHistory?: () => Promise<readonly PersonalRideTrace[]>;
+  /**
+   * Directed Free Ride corridor network (the switch for network-first
+   * suggestions). Omitted = off: suggestions use projected-ahead discovery
+   * only. Supply it only from a vetted corridor catalogue; it is a search hint,
+   * never legality, closure or surface truth.
+   */
+  readonly freeRideNetwork?: () => Promise<FreeRideNetworkIndex | null>;
 }) {
   return {
     suggestionQuery: createLiveSuggestionQuery({
@@ -25,6 +33,7 @@ export function createClientFreeRideServices(deps: {
       geometry: deps.geometry,
       provider: deps.providerFactory(),
       ...(deps.rideHistory === undefined ? {} : { rideHistory: deps.rideHistory }),
+      ...(deps.freeRideNetwork === undefined ? {} : { network: deps.freeRideNetwork }),
     }),
     returnPlanner: createReturnPlanner({
       rides: deps.rides,

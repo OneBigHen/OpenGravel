@@ -517,4 +517,118 @@ describe("createLiveSuggestionQuery", () => {
     expect(candidates[0]?.label).toBe("Fallback Road");
   });
 
+  function corridorNetwork(sourceBuild: string) {
+    return buildFreeRideNetwork({
+      schemaVersion: 1,
+      sourceBuild,
+      graphVersion: "unit-graph-v1",
+      segments: [
+        { id: "approach", fromNodeId: "n0", toNodeId: "n1", geometry: [{ lon: -77, lat: 40 }, { lon: -76.99, lat: 40 }], lengthMeters: 900 },
+        { id: "creek-road", fromNodeId: "n1", toNodeId: "n2", geometry: [{ lon: -76.99, lat: 40 }, { lon: -76.98, lat: 40 }], lengthMeters: 900 },
+        { id: "rejoin", fromNodeId: "n2", toNodeId: "n3", geometry: [{ lon: -76.98, lat: 40 }, { lon: -76.97, lat: 40 }], lengthMeters: 900 },
+      ],
+      corridors: [{
+        id: "creek-corridor", segmentIds: ["creek-road"], entryNodeId: "n1", exitNodeId: "n2",
+        expectedUtility: 0.92, confidence: 0.9,
+      }],
+    });
+  }
+
+  const fallbackAnswer = {
+    candidates: [{
+      providerId: "api", profile: "motorcycle",
+      geometry: [{ lon: -77, lat: 40 }, { lon: -76.999, lat: 40 }, { lon: -76.99, lat: 40 }],
+      distanceMeters: 900, durationSeconds: 240,
+      instructions: [{
+        text: "Turn onto Fallback Road", type: "turn", maneuver: "right" as const,
+        geometryIndex: 1, distanceMeters: 815, durationSeconds: 220, roadName: "Fallback Road",
+      }],
+    }],
+  };
+
+  it("never lets a slow network catalogue load delay the projected-ahead fallback", async () => {
+    const requests: ProviderRouteRequest[] = [];
+    const provider = {
+      id: "api", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      beginAttempt: vi.fn(),
+      candidates: vi.fn(async (next: ProviderRouteRequest) => {
+        requests.push(next);
+        return fallbackAnswer;
+      }),
+    };
+    const query = createLiveSuggestionQuery({
+      rides: { loadRide: vi.fn(async () => ({ ok: true as const, document })) } as never,
+      geometry: createMemoryGeometryStore(),
+      provider,
+      network: () => new Promise<never>(() => {}),
+      networkPolicy: { probeDeadlineMs: 5 },
+    });
+
+    const started = Date.now();
+    const candidates = await query.propose(navigation, new AbortController().signal);
+
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.shaping).toEqual([]);
+    expect(candidates[0]?.label).toBe("Fallback Road");
+  });
+
+  it("keeps catalogue utility and confidence out of the suggestion's road evidence", async () => {
+    const requests: ProviderRouteRequest[] = [];
+    const provider = {
+      id: "api", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      beginAttempt: vi.fn(),
+      candidates: vi.fn(async (next: ProviderRouteRequest) => {
+        requests.push(next);
+        return { candidates: [{
+          providerId: "api", profile: "motorcycle",
+          geometry: [{ lon: -77, lat: 40 }, { lon: -76.99, lat: 40 }, { lon: -76.98, lat: 40 }, { lon: -76.97, lat: 40 }],
+          distanceMeters: 2_700, durationSeconds: 360,
+        }] };
+      }),
+    };
+    const query = createLiveSuggestionQuery({
+      rides: { loadRide: vi.fn(async () => ({ ok: true as const, document })) } as never,
+      geometry: createMemoryGeometryStore(),
+      provider,
+      network: () => corridorNetwork("evidence-v1"),
+    });
+
+    const candidates = await query.propose(navigation, new AbortController().signal);
+
+    expect(requests).toHaveLength(1);
+    // One single-path probe through the corridor, no engine alternatives.
+    expect(requests[0]?.options.includeAlternatives).toBe(false);
+    expect(candidates).toHaveLength(1);
+    // A catalogue hint is not road truth: with no provider assessment the
+    // road evidence stays unknown and the label claims nothing.
+    expect(candidates[0]?.label).toBe("Suggested road");
+    expect(candidates[0]?.evidence?.roadCharacterFit.status).toBe("unknown");
+    expect(candidates[0]?.evidence?.surfaceFit.status).toBe("unknown");
+  });
+
+  it("lets the caller's cancellation win over the optional network probe", async () => {
+    const abort = new AbortController();
+    const provider = {
+      id: "api", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      beginAttempt: vi.fn(),
+      candidates: vi.fn((next: ProviderRouteRequest) => {
+        if (next.shaping.length > 0) {
+          queueMicrotask(() => abort.abort(new Error("rider moved on")));
+          return new Promise<never>(() => {});
+        }
+        return Promise.resolve(fallbackAnswer);
+      }),
+    };
+    const query = createLiveSuggestionQuery({
+      rides: { loadRide: vi.fn(async () => ({ ok: true as const, document })) } as never,
+      geometry: createMemoryGeometryStore(),
+      provider,
+      network: () => corridorNetwork("cancel-v1"),
+      networkPolicy: { probeDeadlineMs: 50 },
+    });
+
+    await expect(query.propose(navigation, abort.signal)).rejects.toThrow("rider moved on");
+    expect(provider.candidates).toHaveBeenCalledTimes(1);
+  });
 });

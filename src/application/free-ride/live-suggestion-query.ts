@@ -127,6 +127,31 @@ async function optionalNetworkProbe(
   }
 }
 
+/**
+ * Resolves the optional network catalogue within the same deadline as the
+ * probe. A slow or failing loader means "no network hint", never a delay to
+ * the projected-ahead fallback.
+ */
+async function optionalNetworkLoad(
+  load: () => FreeRideNetworkIndex | null | Promise<FreeRideNetworkIndex | null>,
+  deadlineMs: number,
+): Promise<FreeRideNetworkIndex | null> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), deadlineMs);
+  });
+  try {
+    return await Promise.race([
+      Promise.resolve()
+        .then(load)
+        .catch(() => null),
+      timeout,
+    ]);
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+  }
+}
+
 function bearingDegrees(
   from: { lon: number; lat: number },
   to: { lon: number; lat: number },
@@ -401,7 +426,13 @@ export function createLiveSuggestionQuery(deps: {
       // opportunity. This spends one provider call and returns immediately when
       // it verifies the proposed corridor on the routed geometry.
       if (deps.network !== undefined) {
-        const network = await Promise.resolve(deps.network()).catch(() => null);
+        // One deadline covers the whole optional phase (catalogue load and
+        // provider probe) so the fallback is never late by more than it.
+        const networkPhaseStartedAt = Date.now();
+        const network = await optionalNetworkLoad(
+          deps.network,
+          networkPolicy.probeDeadlineMs,
+        );
         if (signal.aborted) throw signal.reason;
 
         if (network !== null) {
@@ -444,18 +475,25 @@ export function createLiveSuggestionQuery(deps: {
             // network query and the fallback, so stay quiet.
             if (!planned.ok || planned.unresolvedRefs.length > 0) return [];
 
-            deps.provider.beginAttempt({
-              rideId: navigation.plan.rideId,
-              rideRevision: navigation.plan.rideRevision,
-              planningGeneration,
-            });
-
-            const answer = await optionalNetworkProbe(
-              deps.provider,
-              planned.request,
-              signal,
-              networkPolicy.probeDeadlineMs,
-            );
+            const remainingMs =
+              networkPolicy.probeDeadlineMs -
+              (Date.now() - networkPhaseStartedAt);
+            if (remainingMs > 0) {
+              deps.provider.beginAttempt({
+                rideId: navigation.plan.rideId,
+                rideRevision: navigation.plan.rideRevision,
+                planningGeneration,
+              });
+            }
+            const answer =
+              remainingMs <= 0
+                ? null
+                : await optionalNetworkProbe(
+                    deps.provider,
+                    planned.request,
+                    signal,
+                    remainingMs,
+                  );
             if (signal.aborted) throw signal.reason;
 
             const candidate = answer?.candidates.find(validCandidate);
@@ -476,7 +514,7 @@ export function createLiveSuggestionQuery(deps: {
                   suggestionId: opportunity.id,
                   label:
                     roadNameNear(candidate.instructions, decisionIndex) ??
-                    "Better road",
+                    "Suggested road",
                   decisionIndex,
                   currentHeadingDegrees:
                     navigation.position.headingDegrees,
