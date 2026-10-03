@@ -2118,3 +2118,10 @@ html .og-ride {
     bottom: 8px !important;
   }
 }
+
+/* Pressed Explore chip at every width: white on Go green is AA (4.6:1). */
+.og-explore__quick-chip[aria-pressed="true"] {
+  border-color: var(--og-go);
+  background: var(--og-go);
+  color: var(--og-on-fill);
+}
