@@ -7,6 +7,7 @@ import {
   predictPairPreference,
   riderPreferenceUtility,
   selectPreferenceQuestion,
+  selectPreferenceTeachingStep,
   type RiderPreferenceVector,
 } from "@/domain/personalization/rider-preference";
 
@@ -108,6 +109,101 @@ describe("rider preference learning", () => {
 
     expect(riderPreferenceUtility(model, vector({ curvature: 1 }))).toBeCloseTo(2);
     expect(riderPreferenceUtility(model, vector({ curvature: 1, backroad: 0.5 }))).toBeCloseTo(1.5);
+  });
+
+  it("asks a bounded cold-start teaching question and reports remaining budget", () => {
+    const model = createRiderPreferenceModel();
+    const candidates = [
+      { id: "curvy", item: "curvy", features: vector({ curvature: 0.95, timeEfficiency: 0.4 }) },
+      { id: "fast", item: "fast", features: vector({ curvature: 0.15, timeEfficiency: 0.95 }) },
+      { id: "backroad", item: "backroad", features: vector({ backroad: 0.95, junctionFlow: 0.8 }) },
+    ];
+
+    const step = selectPreferenceTeachingStep(model, candidates);
+
+    expect(step.status).toBe("ask");
+    if (step.status !== "ask") return;
+    expect(step.questionNumber).toBe(1);
+    expect(step.remainingBudget).toBe(7);
+    expect(step.question.informationValue).toBeGreaterThan(0);
+  });
+
+  it("stops a teaching session at its explicit comparison budget", () => {
+    const base = createRiderPreferenceModel();
+    const model = {
+      ...base,
+      explicitComparisons: 8,
+    };
+    const step = selectPreferenceTeachingStep(model, [
+      { id: "a", item: "a", features: vector({ curvature: 1 }) },
+      { id: "b", item: "b", features: vector({ curvature: 0 }) },
+    ]);
+
+    expect(step).toEqual({
+      status: "stop",
+      reason: "question-budget",
+    });
+  });
+
+  it("stops early after the minimum when remaining pairs carry little information", () => {
+    const base = createRiderPreferenceModel({
+      curvature: { mean: 2, precision: 100 },
+    });
+    const model = {
+      ...base,
+      explicitComparisons: 4,
+    };
+
+    const step = selectPreferenceTeachingStep(
+      model,
+      [
+        { id: "a", item: "a", features: vector({ curvature: 0.51 }) },
+        { id: "b", item: "b", features: vector({ curvature: 0.49 }) },
+      ],
+      {
+        minimumQuestions: 4,
+        maximumQuestions: 8,
+        minimumInformationValue: 0.01,
+      },
+    );
+
+    expect(step).toEqual({
+      status: "stop",
+      reason: "diminishing-information",
+    });
+  });
+
+  it("keeps implicit behavior from consuming the deliberate teaching budget", () => {
+    const base = createRiderPreferenceModel();
+    const model = {
+      ...base,
+      implicitComparisons: 50,
+    };
+    const step = selectPreferenceTeachingStep(model, [
+      { id: "a", item: "a", features: vector({ novelty: 1 }) },
+      { id: "b", item: "b", features: vector({ novelty: 0 }) },
+    ]);
+
+    expect(step.status).toBe("ask");
+    if (step.status !== "ask") return;
+    expect(step.questionNumber).toBe(1);
+    expect(step.remainingBudget).toBe(7);
+  });
+
+  it("stops when candidate evidence leaves no informative pair", () => {
+    const unknown = emptyPreferenceVector();
+    const step = selectPreferenceTeachingStep(
+      createRiderPreferenceModel(),
+      [
+        { id: "a", item: "a", features: unknown },
+        { id: "b", item: "b", features: unknown },
+      ],
+    );
+
+    expect(step).toEqual({
+      status: "stop",
+      reason: "no-informative-pair",
+    });
   });
 
   it("returns zero for an entirely unknown vector", () => {
