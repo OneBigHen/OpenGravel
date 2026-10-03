@@ -45,7 +45,6 @@ function statusFetcher(probe: Probe, status: number): typeof fetch {
 const ENV = {
   GRAPHHOPPER_URL: "http://router.internal:8989",
   OGV_BUILD_ID: "build_42",
-  OGV_POLICY_VERSION: "PA_NJ_ROUTE_POLICY_VNEXT_1",
   OGV_GRAPH_VERSION: "gh-pa-nj-2026-09",
 };
 
@@ -98,13 +97,13 @@ describe("checkHealth", () => {
     expect(report.router.reason).toBe("router-unhealthy");
   });
 
-  it("falls back to the documented defaults with no environment", async () => {
+  it("falls back to the real code policy and documented runtime defaults with no environment", async () => {
     const probe: Probe = { urls: [] };
 
     const report = await checkHealth({ fetcher: okFetcher(probe), env: {} });
 
     expect(report.buildId).toBe("dev");
-    expect(report.policyVersion).toBe("VNEXT_STUB_0");
+    expect(report.policyVersion).toBe("PA_NJ_ROUTE_POLICY_VNEXT_1");
     expect(report.graphVersion).toBe("unknown");
     expect(probe.urls).toEqual([`${DEFAULT_GRAPHHOPPER_URL}/health`]);
   });

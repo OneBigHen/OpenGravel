@@ -39,6 +39,7 @@ import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import { bindRoles } from "@/domain/route/roles";
 import { deepFreeze } from "@/domain/util/freeze";
 import { createGraphHopperProvider } from "@/infrastructure/routing/graphhopper/provider";
+import { DEFAULT_GRAPHHOPPER_URL, graphHopperUrlFromEnv } from "@/infrastructure/routing/graphhopper/config";
 import { profileImpliesNonPavedSurface } from "@/infrastructure/routing/graphhopper/profiles";
 import { GraphHopperProviderError } from "@/infrastructure/routing/graphhopper/response-parser";
 import {
@@ -106,8 +107,8 @@ import { parseRoutePlanRequestBody, type ValidationIssue } from "./validation";
 /** The deployment's scoring policy; its version is the default bundle version. */
 export const ROUTE_POLICY = PA_NJ_ROUTE_POLICY_VNEXT_1;
 
-/** The deployment's router, overridable for any non-default host. */
-export const DEFAULT_GRAPHHOPPER_URL = "http://127.0.0.1:8989";
+/** Compatibility export; the canonical default lives with GraphHopper config. */
+export { DEFAULT_GRAPHHOPPER_URL };
 
 /** Versions reported when the deployment does not declare its own. */
 export const DEFAULT_PLAN_VERSIONS: PlanServiceVersions = {
@@ -485,7 +486,7 @@ let sharedProvider: { readonly key: string; readonly provider: RouteCandidatePro
 export function graphHopperProviderFromEnv(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): RouteCandidateProvider {
-  const baseUrl = env["GRAPHHOPPER_URL"] ?? DEFAULT_GRAPHHOPPER_URL;
+  const baseUrl = graphHopperUrlFromEnv(env);
   const apiKey = env["GRAPHHOPPER_API_KEY"]?.trim() ?? "";
   const budget = Number(env["GRAPHHOPPER_HOSTED_DAILY_BUDGET"] ?? DEFAULT_HOSTED_DAILY_BUDGET);
   const cacheKey = `${baseUrl}|${apiKey}|${budget}`;
