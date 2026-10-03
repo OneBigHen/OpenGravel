@@ -1,0 +1,1355 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-03T20:08:06.896Z",
+  "mode": "live",
+  "model": "jev-1.13.0",
+  "graphhopper": "local GraphHopper (PA/NJ graph)",
+  "roadAuthority": "disabled for evaluation (closures/access unknown, not clear)",
+  "summary": {
+    "plans": 16,
+    "plannedOk": 16,
+    "judgedPlans": 16,
+    "modelCalls": 32,
+    "modelCallsOk": 32,
+    "outcomes": {
+      "preferred": 14,
+      "order-disagreement": 2
+    },
+    "orderAgreementRate": 0.875,
+    "rawJevVsDeterministic": {
+      "comparable": 16,
+      "agreementRate": 0.938
+    },
+    "rawJevVsFrontier": {
+      "comparable": 16,
+      "agreementRate": 0.563
+    },
+    "confidentJevVsDeterministic": {
+      "preferred": 14,
+      "agreementRate": 1,
+      "wouldChangeBestRide": 0
+    },
+    "deterministicVsFrontierAgreementRate": 0.625,
+    "callLatencyMs": {
+      "p50": 144,
+      "p95": 240,
+      "max": 297
+    },
+    "judgementLatencyMs": {
+      "p50": 151,
+      "p95": 298
+    }
+  },
+  "records": [
+    {
+      "caseId": "allentown-stroudsburg",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 618,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1gryylt",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 71.2,
+          "distanceMiles": 38.1,
+          "scoreTotal": 27.7,
+          "curvature": 0.52855652581998,
+          "backroad": 0.578,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-1lpl4s9",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 60.9,
+          "distanceMiles": 34.9,
+          "scoreTotal": 22.2,
+          "curvature": 0.38422198907472077,
+          "backroad": 0.286,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1gryylt",
+      "frontierPick": "motorcycle_scenic-1-1gryylt",
+      "sustainedCurvesPick": "motorcycle_scenic-1-1gryylt",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1gryylt",
+        "confidence": 0.945,
+        "margin": 0.9199999999999999,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.169,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 242
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_twisty-1-1lpl4s9",
+            "motorcycle_scenic-1-1gryylt"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1gryylt",
+          "probabilities": {
+            "motorcycle_twisty-1-1lpl4s9": 0.03,
+            "motorcycle_scenic-1-1gryylt": 0.94
+          },
+          "none": 0.03,
+          "latencyMs": 219
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-1gryylt",
+            "motorcycle_twisty-1-1lpl4s9"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1gryylt",
+          "probabilities": {
+            "motorcycle_scenic-1-1gryylt": 0.95,
+            "motorcycle_twisty-1-1lpl4s9": 0.02
+          },
+          "none": 0.03,
+          "latencyMs": 240
+        }
+      ]
+    },
+    {
+      "caseId": "allentown-stroudsburg",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 511,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1gryylt",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 71.2,
+          "distanceMiles": 38.1,
+          "scoreTotal": 27.3,
+          "curvature": 0.52855652581998,
+          "backroad": 0.578,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-1lpl4s9",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 60.9,
+          "distanceMiles": 34.9,
+          "scoreTotal": 21.5,
+          "curvature": 0.38422198907472077,
+          "backroad": 0.286,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1gryylt",
+      "frontierPick": "motorcycle_scenic-1-1gryylt",
+      "sustainedCurvesPick": "motorcycle_scenic-1-1gryylt",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1gryylt",
+        "confidence": 0.865,
+        "margin": 0.79,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.169,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 143
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-1gryylt",
+            "motorcycle_twisty-1-1lpl4s9"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1gryylt",
+          "probabilities": {
+            "motorcycle_scenic-1-1gryylt": 0.92,
+            "motorcycle_twisty-1-1lpl4s9": 0.04
+          },
+          "none": 0.04,
+          "latencyMs": 132
+        },
+        {
+          "order": [
+            "motorcycle_twisty-1-1lpl4s9",
+            "motorcycle_scenic-1-1gryylt"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1gryylt",
+          "probabilities": {
+            "motorcycle_twisty-1-1lpl4s9": 0.11,
+            "motorcycle_scenic-1-1gryylt": 0.81
+          },
+          "none": 0.08,
+          "latencyMs": 141
+        }
+      ]
+    },
+    {
+      "caseId": "hawk-mountain-jim-thorpe",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 398,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1jkw4mv",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 59.2,
+          "distanceMiles": 33,
+          "scoreTotal": 30.1,
+          "curvature": 0.47398928421449316,
+          "backroad": 1,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-juklvk",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 47.7,
+          "distanceMiles": 28.5,
+          "scoreTotal": 25.4,
+          "curvature": 0.2716149944419006,
+          "backroad": 0.92,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1jkw4mv",
+      "frontierPick": "motorcycle_scenic-1-1jkw4mv",
+      "sustainedCurvesPick": "motorcycle_scenic-1-1jkw4mv",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1jkw4mv",
+        "confidence": 0.92,
+        "margin": 0.88,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.239,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 298
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-1jkw4mv",
+            "motorcycle_fastest-1-juklvk"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1jkw4mv",
+          "probabilities": {
+            "motorcycle_scenic-1-1jkw4mv": 0.93,
+            "motorcycle_fastest-1-juklvk": 0.03
+          },
+          "none": 0.04,
+          "latencyMs": 167
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-juklvk",
+            "motorcycle_scenic-1-1jkw4mv"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1jkw4mv",
+          "probabilities": {
+            "motorcycle_fastest-1-juklvk": 0.05,
+            "motorcycle_scenic-1-1jkw4mv": 0.91
+          },
+          "none": 0.04,
+          "latencyMs": 297
+        }
+      ]
+    },
+    {
+      "caseId": "hawk-mountain-jim-thorpe",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 314,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1jkw4mv",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 59.2,
+          "distanceMiles": 33,
+          "scoreTotal": 32.8,
+          "curvature": 0.47398928421449316,
+          "backroad": 1,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-juklvk",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 47.7,
+          "distanceMiles": 28.5,
+          "scoreTotal": 29.6,
+          "curvature": 0.2716149944419006,
+          "backroad": 0.92,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1jkw4mv",
+      "frontierPick": "motorcycle_scenic-1-1jkw4mv",
+      "sustainedCurvesPick": "motorcycle_scenic-1-1jkw4mv",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1jkw4mv",
+        "confidence": 0.6100000000000001,
+        "margin": 0.2900000000000001,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.239,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 150
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-1jkw4mv",
+            "motorcycle_fastest-1-juklvk"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1jkw4mv",
+          "probabilities": {
+            "motorcycle_scenic-1-1jkw4mv": 0.55,
+            "motorcycle_fastest-1-juklvk": 0.38
+          },
+          "none": 0.07,
+          "latencyMs": 130
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-juklvk",
+            "motorcycle_scenic-1-1jkw4mv"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1jkw4mv",
+          "probabilities": {
+            "motorcycle_fastest-1-juklvk": 0.26,
+            "motorcycle_scenic-1-1jkw4mv": 0.67
+          },
+          "none": 0.07,
+          "latencyMs": 149
+        }
+      ]
+    },
+    {
+      "caseId": "doylestown-new-hope",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 205,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-f1jcus",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 28.7,
+          "distanceMiles": 14.3,
+          "scoreTotal": 24.6,
+          "curvature": 0.28927669924302957,
+          "backroad": 0.99,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1slywst",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 18.1,
+          "distanceMiles": 10.7,
+          "scoreTotal": 13.1,
+          "curvature": 0.11332601432743526,
+          "backroad": 0.132,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-f1jcus",
+      "frontierPick": "motorcycle_fastest-1-1slywst",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1slywst",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-f1jcus",
+        "confidence": 0.95,
+        "margin": 0.94,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.585,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 151
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-1slywst",
+            "motorcycle_scenic-1-f1jcus"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-f1jcus",
+          "probabilities": {
+            "motorcycle_fastest-1-1slywst": 0.01,
+            "motorcycle_scenic-1-f1jcus": 0.96
+          },
+          "none": 0.03,
+          "latencyMs": 123
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-f1jcus",
+            "motorcycle_fastest-1-1slywst"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-f1jcus",
+          "probabilities": {
+            "motorcycle_scenic-1-f1jcus": 0.94,
+            "motorcycle_fastest-1-1slywst": 0.01
+          },
+          "none": 0.05,
+          "latencyMs": 151
+        }
+      ]
+    },
+    {
+      "caseId": "doylestown-new-hope",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 198,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-f1jcus",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 28.7,
+          "distanceMiles": 14.3,
+          "scoreTotal": 29.1,
+          "curvature": 0.28927669924302957,
+          "backroad": 0.99,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1slywst",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 18.1,
+          "distanceMiles": 10.7,
+          "scoreTotal": 14.2,
+          "curvature": 0.11332601432743526,
+          "backroad": 0.132,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-f1jcus",
+      "frontierPick": "motorcycle_fastest-1-1slywst",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1slywst",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-f1jcus",
+        "confidence": 0.9,
+        "margin": 0.855,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.585,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 158
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-f1jcus",
+            "motorcycle_fastest-1-1slywst"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-f1jcus",
+          "probabilities": {
+            "motorcycle_scenic-1-f1jcus": 0.91,
+            "motorcycle_fastest-1-1slywst": 0.03
+          },
+          "none": 0.06,
+          "latencyMs": 156
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-1slywst",
+            "motorcycle_scenic-1-f1jcus"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-f1jcus",
+          "probabilities": {
+            "motorcycle_fastest-1-1slywst": 0.06,
+            "motorcycle_scenic-1-f1jcus": 0.89
+          },
+          "none": 0.05,
+          "latencyMs": 157
+        }
+      ]
+    },
+    {
+      "caseId": "harrisburg-lancaster",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 248,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-194jfje",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 77.2,
+          "distanceMiles": 42.4,
+          "scoreTotal": 22.5,
+          "curvature": 0.24936952983798638,
+          "backroad": 0.887,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1mfb5z5",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 50.2,
+          "distanceMiles": 38.9,
+          "scoreTotal": 13.1,
+          "curvature": 0.12035800805832077,
+          "backroad": 0.108,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-194jfje",
+      "frontierPick": "motorcycle_fastest-1-1mfb5z5",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1mfb5z5",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-194jfje",
+        "confidence": 0.9450000000000001,
+        "margin": 0.935,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.539,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 144
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-1mfb5z5",
+            "motorcycle_scenic-1-194jfje"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-194jfje",
+          "probabilities": {
+            "motorcycle_fastest-1-1mfb5z5": 0.01,
+            "motorcycle_scenic-1-194jfje": 0.96
+          },
+          "none": 0.03,
+          "latencyMs": 128
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-194jfje",
+            "motorcycle_fastest-1-1mfb5z5"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-194jfje",
+          "probabilities": {
+            "motorcycle_scenic-1-194jfje": 0.93,
+            "motorcycle_fastest-1-1mfb5z5": 0.01
+          },
+          "none": 0.06,
+          "latencyMs": 144
+        }
+      ]
+    },
+    {
+      "caseId": "harrisburg-lancaster",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 236,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-194jfje",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 77.2,
+          "distanceMiles": 42.4,
+          "scoreTotal": 26.7,
+          "curvature": 0.24936952983798638,
+          "backroad": 0.887,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1mfb5z5",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 50.2,
+          "distanceMiles": 38.9,
+          "scoreTotal": 13.9,
+          "curvature": 0.12035800805832077,
+          "backroad": 0.108,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-194jfje",
+      "frontierPick": "motorcycle_fastest-1-1mfb5z5",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1mfb5z5",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-194jfje",
+        "confidence": 0.905,
+        "margin": 0.86,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.539,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 134
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-194jfje",
+            "motorcycle_fastest-1-1mfb5z5"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-194jfje",
+          "probabilities": {
+            "motorcycle_scenic-1-194jfje": 0.92,
+            "motorcycle_fastest-1-1mfb5z5": 0.03
+          },
+          "none": 0.05,
+          "latencyMs": 127
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-1mfb5z5",
+            "motorcycle_scenic-1-194jfje"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-194jfje",
+          "probabilities": {
+            "motorcycle_fastest-1-1mfb5z5": 0.06,
+            "motorcycle_scenic-1-194jfje": 0.89
+          },
+          "none": 0.05,
+          "latencyMs": 133
+        }
+      ]
+    },
+    {
+      "caseId": "reading-jim-thorpe",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 364,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1q9r65z",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 129.4,
+          "distanceMiles": 67.9,
+          "scoreTotal": 32.9,
+          "curvature": 0.5966783350293726,
+          "backroad": 0.962,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1hm1vf7",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 80.2,
+          "distanceMiles": 50.4,
+          "scoreTotal": 17.7,
+          "curvature": 0.13600837474254843,
+          "backroad": 0.529,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-18wgfk7",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 119.1,
+          "distanceMiles": 66.5,
+          "scoreTotal": 28.4,
+          "curvature": 0.46940117076098675,
+          "backroad": 0.861,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1q9r65z",
+      "frontierPick": "motorcycle_fastest-1-1hm1vf7",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1hm1vf7",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1q9r65z",
+        "confidence": 0.965,
+        "margin": 0.955,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [
+          {
+            "fingerprint": "motorcycle_twisty-1-18wgfk7",
+            "reason": "outside-detour-budget"
+          }
+        ],
+        "why": [],
+        "addedTimePct": 0.614,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 135
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-1q9r65z",
+            "motorcycle_fastest-1-1hm1vf7"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1q9r65z",
+          "probabilities": {
+            "motorcycle_scenic-1-1q9r65z": 0.98,
+            "motorcycle_fastest-1-1hm1vf7": 0
+          },
+          "none": 0.02,
+          "latencyMs": 130
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-1hm1vf7",
+            "motorcycle_scenic-1-1q9r65z"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1q9r65z",
+          "probabilities": {
+            "motorcycle_fastest-1-1hm1vf7": 0.02,
+            "motorcycle_scenic-1-1q9r65z": 0.95
+          },
+          "none": 0.03,
+          "latencyMs": 135
+        }
+      ]
+    },
+    {
+      "caseId": "reading-jim-thorpe",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 409,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1q9r65z",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 129.4,
+          "distanceMiles": 67.9,
+          "scoreTotal": 34.1,
+          "curvature": 0.5966783350293726,
+          "backroad": 0.962,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1hm1vf7",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 80.2,
+          "distanceMiles": 50.4,
+          "scoreTotal": 20.9,
+          "curvature": 0.13600837474254843,
+          "backroad": 0.529,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-18wgfk7",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 119.1,
+          "distanceMiles": 66.5,
+          "scoreTotal": 30.2,
+          "curvature": 0.46940117076098675,
+          "backroad": 0.861,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1q9r65z",
+      "frontierPick": "motorcycle_fastest-1-1hm1vf7",
+      "sustainedCurvesPick": "motorcycle_fastest-1-1hm1vf7",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-1q9r65z",
+        "confidence": 0.775,
+        "margin": 0.6,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [
+          {
+            "fingerprint": "motorcycle_twisty-1-18wgfk7",
+            "reason": "outside-detour-budget"
+          }
+        ],
+        "why": [],
+        "addedTimePct": 0.614,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 173
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-1hm1vf7",
+            "motorcycle_scenic-1-1q9r65z"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1q9r65z",
+          "probabilities": {
+            "motorcycle_fastest-1-1hm1vf7": 0.28,
+            "motorcycle_scenic-1-1q9r65z": 0.66
+          },
+          "none": 0.06,
+          "latencyMs": 148
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-1q9r65z",
+            "motorcycle_fastest-1-1hm1vf7"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1q9r65z",
+          "probabilities": {
+            "motorcycle_scenic-1-1q9r65z": 0.89,
+            "motorcycle_fastest-1-1hm1vf7": 0.07
+          },
+          "none": 0.04,
+          "latencyMs": 173
+        }
+      ]
+    },
+    {
+      "caseId": "west-chester-lancaster",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 310,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-lubz6r",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 81.8,
+          "distanceMiles": 42,
+          "scoreTotal": 26.8,
+          "curvature": 0.3668075513757861,
+          "backroad": 0.987,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-mg785s",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 61.5,
+          "distanceMiles": 41.5,
+          "scoreTotal": 11.4,
+          "curvature": 0.09188938948093431,
+          "backroad": 0.019,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-lubz6r",
+      "frontierPick": "motorcycle_scenic-1-lubz6r",
+      "sustainedCurvesPick": "motorcycle_fastest-1-mg785s",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-lubz6r",
+        "confidence": 0.96,
+        "margin": 0.95,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.332,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 144
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-mg785s",
+            "motorcycle_scenic-1-lubz6r"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-lubz6r",
+          "probabilities": {
+            "motorcycle_fastest-1-mg785s": 0.01,
+            "motorcycle_scenic-1-lubz6r": 0.97
+          },
+          "none": 0.02,
+          "latencyMs": 122
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-lubz6r",
+            "motorcycle_fastest-1-mg785s"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-lubz6r",
+          "probabilities": {
+            "motorcycle_scenic-1-lubz6r": 0.95,
+            "motorcycle_fastest-1-mg785s": 0.01
+          },
+          "none": 0.04,
+          "latencyMs": 144
+        }
+      ]
+    },
+    {
+      "caseId": "west-chester-lancaster",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 318,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-lubz6r",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 81.8,
+          "distanceMiles": 42,
+          "scoreTotal": 30.4,
+          "curvature": 0.3668075513757861,
+          "backroad": 0.987,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-mg785s",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 61.5,
+          "distanceMiles": 41.5,
+          "scoreTotal": 12,
+          "curvature": 0.09188938948093431,
+          "backroad": 0.019,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-lubz6r",
+      "frontierPick": "motorcycle_scenic-1-lubz6r",
+      "sustainedCurvesPick": "motorcycle_fastest-1-mg785s",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_scenic-1-lubz6r",
+        "confidence": 0.89,
+        "margin": 0.835,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.332,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 169
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-mg785s",
+            "motorcycle_scenic-1-lubz6r"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-lubz6r",
+          "probabilities": {
+            "motorcycle_fastest-1-mg785s": 0.08,
+            "motorcycle_scenic-1-lubz6r": 0.86
+          },
+          "none": 0.06,
+          "latencyMs": 158
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-lubz6r",
+            "motorcycle_fastest-1-mg785s"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-lubz6r",
+          "probabilities": {
+            "motorcycle_scenic-1-lubz6r": 0.92,
+            "motorcycle_fastest-1-mg785s": 0.03
+          },
+          "none": 0.05,
+          "latencyMs": 169
+        }
+      ]
+    },
+    {
+      "caseId": "bethlehem-delaware-water-gap",
+      "roadCharacter": "curvy",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 291,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_twisty-1-wmw756",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 62.7,
+          "distanceMiles": 34.3,
+          "scoreTotal": 28.3,
+          "curvature": 0.5077978399894937,
+          "backroad": 0.694,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-20017b",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 51.2,
+          "distanceMiles": 33.2,
+          "scoreTotal": 22.7,
+          "curvature": 0.37760169809269495,
+          "backroad": 0.356,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_twisty-1-wmw756",
+      "frontierPick": "motorcycle_twisty-1-wmw756",
+      "sustainedCurvesPick": "motorcycle_twisty-1-wmw756",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_twisty-1-wmw756",
+        "confidence": 0.94,
+        "margin": 0.9149999999999999,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.224,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 165
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_twisty-1-wmw756",
+            "motorcycle_fastest-1-20017b"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-wmw756",
+          "probabilities": {
+            "motorcycle_twisty-1-wmw756": 0.94,
+            "motorcycle_fastest-1-20017b": 0.02
+          },
+          "none": 0.04,
+          "latencyMs": 124
+        },
+        {
+          "order": [
+            "motorcycle_fastest-1-20017b",
+            "motorcycle_twisty-1-wmw756"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-wmw756",
+          "probabilities": {
+            "motorcycle_fastest-1-20017b": 0.03,
+            "motorcycle_twisty-1-wmw756": 0.94
+          },
+          "none": 0.03,
+          "latencyMs": 164
+        }
+      ]
+    },
+    {
+      "caseId": "bethlehem-delaware-water-gap",
+      "roadCharacter": "backroads",
+      "surfacePreference": "pavement",
+      "status": "planned",
+      "planMs": 337,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_twisty-1-wmw756",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 62.7,
+          "distanceMiles": 34.3,
+          "scoreTotal": 28.8,
+          "curvature": 0.5077978399894937,
+          "backroad": 0.694,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-20017b",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 51.2,
+          "distanceMiles": 33.2,
+          "scoreTotal": 22.5,
+          "curvature": 0.37760169809269495,
+          "backroad": 0.356,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_twisty-1-wmw756",
+      "frontierPick": "motorcycle_twisty-1-wmw756",
+      "sustainedCurvesPick": "motorcycle_twisty-1-wmw756",
+      "funJudge": {
+        "outcome": "preferred",
+        "jevPick": "motorcycle_twisty-1-wmw756",
+        "confidence": 0.8150000000000001,
+        "margin": 0.6950000000000001,
+        "orderAgreement": true,
+        "shortlistSize": 2,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": 0.224,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 154
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-20017b",
+            "motorcycle_twisty-1-wmw756"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-wmw756",
+          "probabilities": {
+            "motorcycle_fastest-1-20017b": 0.2,
+            "motorcycle_twisty-1-wmw756": 0.72
+          },
+          "none": 0.08,
+          "latencyMs": 152
+        },
+        {
+          "order": [
+            "motorcycle_twisty-1-wmw756",
+            "motorcycle_fastest-1-20017b"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-wmw756",
+          "probabilities": {
+            "motorcycle_twisty-1-wmw756": 0.91,
+            "motorcycle_fastest-1-20017b": 0.04
+          },
+          "none": 0.05,
+          "latencyMs": 154
+        }
+      ]
+    },
+    {
+      "caseId": "cherry-hill-batsto",
+      "roadCharacter": "curvy",
+      "surfacePreference": "mixed",
+      "status": "planned",
+      "planMs": 733,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1960xwr",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 72.6,
+          "distanceMiles": 39.3,
+          "scoreTotal": 21.1,
+          "curvature": 0.16728036264999283,
+          "backroad": 0.927,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1b5r64d",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 59.2,
+          "distanceMiles": 32.9,
+          "scoreTotal": 15.7,
+          "curvature": 0.15246468956439344,
+          "backroad": 0.282,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-epl5gi",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 67.7,
+          "distanceMiles": 36.7,
+          "scoreTotal": 19.9,
+          "curvature": 0.16908320479803482,
+          "backroad": 0.688,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1960xwr",
+      "frontierPick": "motorcycle_scenic-1-1960xwr",
+      "sustainedCurvesPick": "motorcycle_twisty-1-epl5gi",
+      "funJudge": {
+        "outcome": "order-disagreement",
+        "jevPick": null,
+        "confidence": 0.515,
+        "margin": 0.19,
+        "orderAgreement": false,
+        "shortlistSize": 3,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": null,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 191
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_scenic-1-1960xwr",
+            "motorcycle_fastest-1-1b5r64d",
+            "motorcycle_twisty-1-epl5gi"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-epl5gi",
+          "probabilities": {
+            "motorcycle_scenic-1-1960xwr": 0.17,
+            "motorcycle_fastest-1-1b5r64d": 0.02,
+            "motorcycle_twisty-1-epl5gi": 0.7
+          },
+          "none": 0.11,
+          "latencyMs": 138
+        },
+        {
+          "order": [
+            "motorcycle_twisty-1-epl5gi",
+            "motorcycle_fastest-1-1b5r64d",
+            "motorcycle_scenic-1-1960xwr"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1960xwr",
+          "probabilities": {
+            "motorcycle_twisty-1-epl5gi": 0.33,
+            "motorcycle_fastest-1-1b5r64d": 0.04,
+            "motorcycle_scenic-1-1960xwr": 0.48
+          },
+          "none": 0.15,
+          "latencyMs": 191
+        }
+      ]
+    },
+    {
+      "caseId": "cherry-hill-batsto",
+      "roadCharacter": "backroads",
+      "surfacePreference": "mixed",
+      "status": "planned",
+      "planMs": 646,
+      "candidates": [
+        {
+          "fingerprint": "motorcycle_scenic-1-1960xwr",
+          "profile": "motorcycle_scenic",
+          "durationMinutes": 72.6,
+          "distanceMiles": 39.3,
+          "scoreTotal": 26.3,
+          "curvature": 0.16728036264999283,
+          "backroad": 0.927,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_twisty-1-epl5gi",
+          "profile": "motorcycle_twisty",
+          "durationMinutes": 67.7,
+          "distanceMiles": 36.7,
+          "scoreTotal": 23.7,
+          "curvature": 0.16908320479803482,
+          "backroad": 0.688,
+          "elevation": null,
+          "junctionFriction": null
+        },
+        {
+          "fingerprint": "motorcycle_fastest-1-1b5r64d",
+          "profile": "motorcycle_fastest",
+          "durationMinutes": 59.2,
+          "distanceMiles": 32.9,
+          "scoreTotal": 17.3,
+          "curvature": 0.15246468956439344,
+          "backroad": 0.282,
+          "elevation": null,
+          "junctionFriction": null
+        }
+      ],
+      "deterministicBestRide": "motorcycle_scenic-1-1960xwr",
+      "frontierPick": "motorcycle_scenic-1-1960xwr",
+      "sustainedCurvesPick": "motorcycle_twisty-1-epl5gi",
+      "funJudge": {
+        "outcome": "order-disagreement",
+        "jevPick": null,
+        "confidence": 0.515,
+        "margin": 0.09999999999999998,
+        "orderAgreement": false,
+        "shortlistSize": 3,
+        "excluded": [],
+        "why": [],
+        "addedTimePct": null,
+        "calls": 2,
+        "cached": false,
+        "latencyMs": 145
+      },
+      "modelCalls": [
+        {
+          "order": [
+            "motorcycle_fastest-1-1b5r64d",
+            "motorcycle_twisty-1-epl5gi",
+            "motorcycle_scenic-1-1960xwr"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_twisty-1-epl5gi",
+          "probabilities": {
+            "motorcycle_fastest-1-1b5r64d": 0.01,
+            "motorcycle_twisty-1-epl5gi": 0.52,
+            "motorcycle_scenic-1-1960xwr": 0.4
+          },
+          "none": 0.07,
+          "latencyMs": 134
+        },
+        {
+          "order": [
+            "motorcycle_scenic-1-1960xwr",
+            "motorcycle_twisty-1-epl5gi",
+            "motorcycle_fastest-1-1b5r64d"
+          ],
+          "status": "ok",
+          "choice": "motorcycle_scenic-1-1960xwr",
+          "probabilities": {
+            "motorcycle_scenic-1-1960xwr": 0.63,
+            "motorcycle_twisty-1-epl5gi": 0.31,
+            "motorcycle_fastest-1-1b5r64d": 0.01
+          },
+          "none": 0.05,
+          "latencyMs": 144
+        }
+      ]
+    }
+  ]
+}
