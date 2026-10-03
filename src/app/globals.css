@@ -11581,11 +11581,6 @@ a.og-secondary {
   white-space: nowrap;
   cursor: pointer;
 }
-.og-explore__quick-chip[aria-pressed="true"] {
-  border-color: var(--og-go);
-  background: var(--og-go);
-  color: var(--og-on-fill);
-}
 .og-explore__quick-chip:focus-visible {
   outline: 2px solid var(--og-focus-ring);
   outline-offset: 2px;
