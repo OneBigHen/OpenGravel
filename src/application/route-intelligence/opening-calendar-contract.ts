@@ -8,6 +8,8 @@ export interface RoadOpeningSummary {
   readonly startsAt: string;
   readonly endsAt: string;
   readonly certainty: RoadOpeningCertainty;
+  /** Authority road geometry for an explicit preferred-span action; never inferred from the anchor. */
+  readonly line?: readonly { readonly lon: number; readonly lat: number }[];
   readonly anchor: readonly [number, number] | null;
 }
 

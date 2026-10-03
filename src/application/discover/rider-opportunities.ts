@@ -304,11 +304,13 @@ export function opportunityFromInterestingPlace(
   };
 }
 
+export const RIDER_OPPORTUNITY_EVENT_LIMIT = 3;
+
 const KIND_CAP: Readonly<Record<RiderOpportunityKind, number>> = {
   // Events are useful trip hooks, but this is a rider feed rather than an event
   // directory. Three is enough to surface a strong weekend without drowning
   // roads, viewpoints and destination stops.
-  event: 3,
+  event: RIDER_OPPORTUNITY_EVENT_LIMIT,
   "happy-hour": 2,
   place: 5,
 };

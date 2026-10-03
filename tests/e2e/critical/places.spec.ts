@@ -106,31 +106,21 @@ test("Ride Focus finds fixture places in the visible viewport", async ({ page })
   await expect.poll(async () => Number(await count.textContent())).toBeGreaterThan(0);
 });
 
-test("Stops along your ride adds a fixture place to the itinerary", async ({ page }) => {
+test("Along this ride lazily adds a fixture destination to the itinerary", async ({ page }) => {
+  let opportunityRequests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/rider-opportunities") opportunityRequests++;
+  });
   await planFixtureRide(page);
-
-  const briefing = page.getByTestId("prepare");
-  if ((await briefing.getAttribute("open")) === null) {
-    await page.getByTestId("prepare-toggle").click();
-  }
-  await expect(briefing).toHaveAttribute("open", "");
-
-  const along = page.locator("details.og-places-along");
-  await expect(along).toBeVisible();
-  await along.locator("summary").click();
-  const rows = along.locator("li.og-places-along__row");
-  await expect(rows.first()).toBeVisible();
-
-  const firstRow = rows.first();
-  await expect(firstRow.locator(".og-places-along__mile")).toHaveText(/^Mile\b/);
-  const addButton = firstRow.getByRole("button", { name: /^Add .+ as a stop$/ });
-  const label = await addButton.getAttribute("aria-label");
-  if (label === null) throw new Error("the first along-route place has no accessible stop label");
-  const title = label.replace(/^Add /, "").replace(/ as a stop$/, "");
-
-  await addButton.click();
-  await expect(firstRow.getByRole("button", { name: `Added ${title} as a stop` })).toHaveText("Added");
-
+  expect(opportunityRequests).toBe(0);
+  const along = page.getByRole("region", { name: "Route opportunities" });
+  await along.getByRole("button", { name: "Along this ride" }).click();
+  const firstRow = along.locator("li.og-explore-card").filter({ has: page.getByRole("button", { name: /^Add stop/ }) }).first();
+  await expect(firstRow).toBeVisible();
+  await expect(firstRow).toContainText(/Mile/);
+  const title = await firstRow.locator("strong").textContent();
+  if (title === null) throw new Error("the destination has no name");
+  await firstRow.getByRole("button", { name: /^Add stop/ }).click();
   await openRefine(page);
   const itineraryStop = page.getByTestId("stops-list").locator('[data-testid^="point-row-stop-"]');
   await expect(itineraryStop).toHaveCount(1);

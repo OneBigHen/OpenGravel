@@ -1,3 +1,20 @@
+/* Only the reviewed Explore additions opt into utilities. No Preflight reset. */
+@layer theme, utilities;
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@source "../ui/explore/ExplorePanel.tsx";
+@source "../ui/explore/OpportunityCard.tsx";
+@source "../ui/explore/RideRoadOpenings.tsx";
+@source "../ui/explore/RideTimeLens.tsx";
+@source "../ui/explore/RoadLocationMap.tsx";
+@source "../ui/explore/RoadOpeningCard.tsx";
+@source "../ui/explore/ThingsFeed.tsx";
+@source "../ui/planner/PlannerAlongOpportunities.tsx";
+@theme {
+  --spacing: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
 /* OpenGravel VNext — design system (12-DESIGN-SYSTEM-RESPONSIVE-ACCESSIBILITY §2–§10).
    The palette is canonical; the two typefaces are self-hosted by `next/font`
    (src/app/layout.tsx) and arrive as --og-font-body / --og-font-display. */

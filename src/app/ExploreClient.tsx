@@ -29,8 +29,6 @@ import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
 import { RouteDetail } from "@/ui/explore/RouteDetail";
 import { createAppPreparationProviders } from "@/app/preparation-providers";
-import { planningSessionStore } from "@/ui/stores/planning-session-store";
-import type { Coordinate } from "@/domain/ride/types";
 
 export interface ExploreClientProps {
   readonly detailId?: string;
@@ -66,7 +64,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
   const [entries, setEntries] = useState<readonly CatalogEntry[]>([]);
   const [detailVariants, setDetailVariants] = useState<readonly CatalogVariantSummary[]>([]);
   const [roadCandidates, setRoadCandidates] = useState<readonly RoadCandidate[]>([]);
-  const [plannedRoute, setPlannedRoute] = useState<{ readonly key: string; readonly line: readonly Coordinate[] } | undefined>();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const preparationProviders = useMemo(() => createAppPreparationProviders(), []);
   /** The active garage bike, read on the client (EX-02, RS-01). */
@@ -78,59 +75,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     });
     return () => window.cancelAnimationFrame(frame);
   }, [garageStorage]);
-  useEffect(() => {
-    let active = true;
-    let loadGeneration = 0;
-
-    const loadSelectedRoute = async (): Promise<void> => {
-      const mine = ++loadGeneration;
-      const planning = planningSessionStore.getState();
-      const snapshot = planning.snapshot;
-      const bundle = snapshot.committedBundle ?? snapshot.lastGoodBundle;
-      const routeId = snapshot.selectedRouteId;
-      const candidate = bundle === null || routeId === null
-        ? undefined
-        : bundle.candidates.find((item) => item.id === routeId);
-
-      if (candidate !== undefined) {
-        const cached = planning.geometry[candidate.geometryRef];
-        const stored = cached ?? (await geometryStore.get(candidate.geometryRef))?.payload;
-        if (!active || mine !== loadGeneration) return;
-        if (stored?.kind === "line" && stored.coordinates.length >= 2) {
-          setPlannedRoute({
-            key: `plan:${candidate.id}:${snapshot.identity.planningGeneration}`,
-            line: stored.coordinates,
-          });
-          return;
-        }
-      }
-
-      // A route that has already been handed to Ride Focus is still useful
-      // context if the planner session no longer has its in-memory bundle.
-      const focus = rideFocusPointer.read();
-      if (focus.status === "found" && focus.pointer.routeGeometryRef !== null) {
-        const stored = await geometryStore.get(focus.pointer.routeGeometryRef);
-        if (!active || mine !== loadGeneration) return;
-        if (stored?.payload.kind === "line" && stored.payload.coordinates.length >= 2) {
-          setPlannedRoute({
-            key: `ride:${focus.pointer.sessionId}:${focus.pointer.updatedAt}`,
-            line: stored.payload.coordinates,
-          });
-          return;
-        }
-      }
-      if (active && mine === loadGeneration) setPlannedRoute(undefined);
-    };
-
-    void loadSelectedRoute();
-    const unsubscribe = planningSessionStore.subscribe(() => {
-      void loadSelectedRoute();
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [geometryStore, rideFocusPointer]);
 
   useEffect(() => {
     let active = true;
@@ -230,7 +174,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     <ExplorePanel
       entries={entries}
       roadCandidates={roadCandidates}
-      {...(plannedRoute === undefined ? {} : { plannedRoute })}
       {...(mapboxToken === undefined ? {} : { mapboxToken })}
       {...(basemap === undefined
         ? {}

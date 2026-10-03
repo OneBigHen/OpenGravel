@@ -122,7 +122,7 @@ import {
   plannerUiStore as defaultPlannerUiStore,
   type PlannerUiStore,
 } from "@/ui/stores/planner-ui-store";
-import type { AvoidAreaId, RoadSpanId } from "@/domain/ride/ids";
+import type { AvoidAreaId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 export interface PlannerWorkspaceProps {
@@ -143,6 +143,7 @@ export interface PlannerWorkspaceProps {
    * not know its deployment must not reach for tiles.
    */
   readonly basemap?: BasemapMode;
+  readonly mapboxToken?: string;
   /** Named saves are deliberately separate from the autosaved active draft. */
   readonly libraryService?: LibraryServicePort;
   /**
@@ -194,6 +195,7 @@ export function PlannerWorkspace({
   plannerUiStore = defaultPlannerUiStore,
   mapHostFactory,
   basemap = "empty",
+  mapboxToken,
   libraryService,
   assetBasePath,
   geometryStore,
@@ -554,15 +556,6 @@ export function PlannerWorkspace({
     [plannerUiStore, scene],
   );
 
-  const handleZoomRoadSpan = useCallback(
-    (spanId: RoadSpanId): void => {
-      const ui = plannerUiStore.getState();
-      ui.selectObject({ kind: "road-span", roadSpanId: spanId });
-      ui.requestFit(objectExtent(scene, { kind: "road-span", roadSpanId: spanId }));
-    },
-    [plannerUiStore, scene],
-  );
-
   const handlePlan = useCallback((): void => {
     markRevisionAttempted(document.revision);
     void planningSessionStore.getState().begin({
@@ -888,7 +881,8 @@ export function PlannerWorkspace({
               bikes,
               providers: preparationProviders,
               offlineRoute,
-              onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name),
+              opportunityMap: { hostFactory: mapHostFactory, basemap, ...(mapboxToken === undefined ? {} : { staticMapToken: mapboxToken }), ...(assetBasePath === undefined ? {} : { assetBasePath }) },
+              onRouteThrough: roadSpanAuthoring.routeThrough,
               onAddStopAt: stopAuthoring.addStopAt,
               actions: rideStyle.actions,
               onRouteTraffic: setRouteTraffic,
@@ -924,7 +918,7 @@ export function PlannerWorkspace({
                 ? null
                 : {
                     ...roadSpanPanelProps,
-                    onZoomTo: handleZoomRoadSpan,
+                    onZoomTo: (spanId) => roadSpanAuthoring.zoomTo(spanId, scene),
                   },
             sketch: {
               ...sketchPanelProps,

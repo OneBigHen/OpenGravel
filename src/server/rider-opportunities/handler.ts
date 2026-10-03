@@ -6,6 +6,7 @@ import {
 } from "@/application/discover/rider-opportunities";
 import type { RiderOpportunitiesBody } from "@/application/discover/rider-opportunities-contract";
 import type { DiscoverCoordinator, InterestingPlace, InterestingPlaceSource } from "@/application/discover";
+import { dedupePlaces } from "@/application/discover/dedupe";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import { defaultPlacesSource } from "@/server/places/handler";
@@ -27,6 +28,7 @@ export interface RiderOpportunitiesDependencies {
   readonly now?: () => number;
   /** Test/composition seam for corridor discovery; production uses env wiring. */
   readonly discoverCoordinator?: DiscoverCoordinator;
+  readonly wikimediaSource?: InterestingPlaceSource | null;
 }
 
 function finite(value: string | null): number | null {
@@ -142,11 +144,21 @@ export async function handleRiderOpportunitiesNear(
     broadOsm(env, center, radiusMiles * MILES_TO_METERS, request.signal),
   ]);
 
+  // Wikimedia searches bounded circles rather than pretending to index the whole
+  // riding radius. The response explicitly reports that partial coverage.
+  const wikiSource = dependencies.wikimediaSource !== undefined
+    ? dependencies.wikimediaSource
+    : env["OGV_PLACES_FIXTURE"] === "1" ? null : discoverSourcesFromEnv(env).find((source) => source.id === "wikimedia") ?? null;
+  const wikiCenters = [center, ...tiles.map((tile) => ({ lon: (tile.west + tile.east) / 2, lat: (tile.south + tile.north) / 2 }))]
+    .filter((point) => haversine(center, point) <= radiusMiles * MILES_TO_METERS).slice(0, 12);
+  const wiki = wikiSource === null ? null : await wikiSource.search({ samples: wikiCenters.map((point) => ({ center: point, radiusMeters: Math.min(10000, radiusMiles * MILES_TO_METERS) })) }, request.signal)
+    .catch(() => ({ status: "unavailable" as const, places: [], reason: "Wikimedia destinations could not be checked." }));
+
   const radiusMeters = radiusMiles * MILES_TO_METERS;
   const nearbyPlaces = placesResults.flatMap((answer) =>
     answer.availability === "available" ? answer.places : []);
   const withinRadius = uniquePlaces(nearbyPlaces).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
-  const staticPlaces = uniquePlaces(osm.places).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
+  const staticPlaces = dedupePlaces([...osm.places, ...(wiki?.places ?? [])], (id) => id === "osm" ? 0 : 1).filter((place) => haversine(center, place.coordinate) <= radiusMeters);
 
   const firstPlacesResult = placesResults.find((answer) => answer.availability === "available");
   const placesAttribution = firstPlacesResult?.availability === "available"
@@ -181,6 +193,11 @@ export async function handleRiderOpportunitiesNear(
         status: osm.status,
         reason: osm.reason,
       },
+      ...(wiki === null ? [] : [{
+        id: "wikimedia",
+        status: wiki.status === "unavailable" ? "unavailable" as const : radiusMiles * MILES_TO_METERS > 10000 || wiki.status === "stale" ? "partial" as const : "ok" as const,
+        reason: wiki.reason ?? (radiusMiles * MILES_TO_METERS > 10000 ? "Selected destination areas were checked; Wikimedia coverage is incomplete across this riding radius." : null),
+      }]),
     ],
   };
   return Response.json(body, { headers: { "cache-control": "private, no-store" } });

@@ -573,9 +573,9 @@ describe("Explore UI", () => {
     });
 
     render(<ExplorePanel entries={[]} roadCandidates={roads} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Roads" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Ride" }));
 
-    expect(screen.getByRole("heading", { name: "Roads" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Worth riding" })).toBeInTheDocument();
     expect(screen.getAllByText("Ridge Road").length).toBeGreaterThan(0);
     expect(screen.getAllByText("tertiary · 5.3 mi").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/matched on 2 rides/).length).toBeGreaterThan(0);
@@ -586,11 +586,12 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("button", { name: /use in planner/i })).not.toBeInTheDocument();
   });
 
-  it("explains what the Roads lane needs when there are no road entities", () => {
+  it("omits the empty road section while keeping ready-made rides available", () => {
     render(<ExplorePanel entries={[]} roadCandidates={[]} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Roads" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Ride" }));
 
-    expect(screen.getByRole("status")).toHaveTextContent(/matched roads from saved or imported rides/i);
+    expect(screen.queryByRole("heading", { name: "Worth riding" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ready-made rides" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /road details/i })).not.toBeInTheDocument();
   });
 });

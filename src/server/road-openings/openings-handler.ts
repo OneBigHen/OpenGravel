@@ -48,6 +48,7 @@ function summarize(event: RoadOpeningEvent): RoadOpeningSummary {
     startsAt: event.startsAt,
     endsAt: event.endsAt,
     certainty: event.certainty,
+    ...(event.geometry.type === "line" ? { line: thinLine(event.geometry.coordinates, 500) } : {}),
     anchor: anchor(event.geometry),
   };
 }

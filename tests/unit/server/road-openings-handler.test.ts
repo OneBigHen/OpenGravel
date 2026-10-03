@@ -91,7 +91,8 @@ describe("road openings route query", () => {
       now: () => Date.parse(AT),
     });
     expect(response.status).toBe(200);
-    const body = await response.json() as { events: Array<{ roadName: string | null }> };
+    const body = await response.json() as { events: Array<{ roadName: string | null; line: readonly { lon: number; lat: number }[] }> };
+    expect(body.events[0]?.line).toEqual(record.geometry.type === "line" ? record.geometry.coordinates : undefined);
     expect(body.events.map((event) => event.roadName)).toContain("Sparse Crossing Road");
   });
 });
