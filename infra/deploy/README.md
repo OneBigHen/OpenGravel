@@ -1,43 +1,31 @@
-# Production deployment capture
+# Production deployment
 
-OpenGravel currently has CI in GitHub, but the live deployment topology is not yet represented in this repository.
+Captured from the running host on 2026-10-03. Secrets live only in the environment file; names are in `.env.example`.
 
-This directory is the target home for the **verified, non-secret** production deployment definition.
+## Topology
 
-Do not invent hostnames, paths, users, service names, ports or proxy configuration from memory. The first closeout run should inspect the actual running deployment and replace the placeholders below with what is really in use.
+| Item | Value |
+| --- | --- |
+| Public origin | `https://opengravel.henning.rodeo` (Cloudflare tunnel → origin; `opengravel-vnext` hostname also routed) |
+| Application host | homelab `docker-dev` (Proxmox LXC, 8 GB RAM) |
+| Node | 24.x, unpacked at `/opt/opengravel-node24` |
+| Process manager | systemd `ogv.service` + drop-in `/etc/systemd/system/ogv.service.d/opengravel.conf` |
+| Listen | `0.0.0.0:3200` (`next start`) |
+| GraphHopper | `http://127.0.0.1:8989` on the same host (PA/NJ graph) |
+| Environment / secrets | `/etc/opengravel/ogv.env` (`EnvironmentFile`, also sourced at build time for `NEXT_PUBLIC_*`) |
+| Persistent data | `/var/lib/opengravel` (shares, community, feedback SQLite, release pointer), `/root/Vibe/opengravel-data` (offline regions, basemap, Discover index, road-authority cache) |
+| Release root | `/root/Vibe/wt/og-release-<sha12>`: one git worktree per commit of `OneBigHen/OpenGravel`, each with its own `node_modules` and `.next` |
+| Current release | the drop-in's `WorkingDirectory`; previous one in `/var/lib/opengravel/previous-release` |
 
-## Required topology record
+## Commands
 
-Document:
-
-- canonical public HTTPS origin;
-- application host;
-- Node version and installation method;
-- application service/process manager;
-- application listen address/port;
-- reverse proxy/TLS owner;
-- GraphHopper host/service/port;
-- GraphHopper graph coverage and graph build version;
-- persistent data root;
-- environment/secret source;
-- release root and current-release mechanism;
-- backup target;
-- rollback command;
-- health/smoke commands.
-
-Suggested checked-in files after discovery:
-
-```
-infra/deploy/
-  README.md
-  app.service.example          # or the actual non-secret systemd unit
-  reverse-proxy.example        # Caddy/nginx/Cloudflare notes/config as applicable
-  release.sh                   # deterministic release script
-  rollback.sh                  # deterministic rollback script
-  smoke.sh                     # public/private smoke checks
+```bash
+infra/deploy/release.sh origin/main   # build, candidate smoke on :3299, promote, smoke, auto-rollback on failure
+infra/deploy/rollback.sh              # back to /var/lib/opengravel/previous-release, no rebuild
+infra/deploy/smoke.sh https://opengravel.henning.rodeo
 ```
 
-Use names matching the real runtime rather than creating these exact filenames mechanically.
+Run them from any checkout on the host; they act on the release directories, never on the checkout itself.
 
 ## Persistent paths
 
@@ -107,21 +95,3 @@ Never commit:
 Do not fail the entire web service because an optional provider is absent.
 
 Do fail or block promotion when a release claims a core capability that is not actually configured. Provider-health work in the stack-closeout plan is intended to make that decision machine-readable.
-
-## First production capture checklist
-
-- [ ] locate the currently running OpenGravel process;
-- [ ] record current Git SHA/build;
-- [ ] record current environment variable names without printing secret values;
-- [ ] record persistent file/directory paths;
-- [ ] identify GraphHopper service and graph;
-- [ ] identify reverse proxy/TLS;
-- [ ] verify current backup exists;
-- [ ] verify current rollback path;
-- [ ] record restart command;
-- [ ] record private health check;
-- [ ] record public smoke check;
-- [ ] commit the non-secret topology;
-- [ ] only then automate releases.
-
-See `docs/OPUS-PRODUCTION-HANDOFF.md` for the complete closeout flow.
