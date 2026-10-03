@@ -13,7 +13,7 @@ describe("Jev frontier has no routing authority or browser transport", () => {
     file: path.relative(root, f),
     text: readFileSync(f, "utf8"),
   }));
-  it("allows the SDK only inside the two infrastructure adapters", () => {
+  it("allows the SDK only inside the three infrastructure adapters", () => {
     expect(
       sources
         .filter((s) => s.text.includes('from "@typesafe-ai/sdk"'))
@@ -22,7 +22,42 @@ describe("Jev frontier has no routing authority or browser transport", () => {
     ).toEqual([
       "infrastructure/routing/jev-frontier-judge.ts",
       "infrastructure/routing/jev-fun-character.ts",
+      "infrastructure/routing/jev-fun-judge.ts",
     ]);
+  });
+  it("FUN JUDGE: the Jev adapter is reached only from the server plan service", () => {
+    expect(
+      sources
+        .filter((s) => /from\s+["'][^"']*jev-fun-judge["']/.test(s.text))
+        .map((s) => s.file),
+    ).toEqual(["server/planning/plan-service.ts"]);
+  });
+  it("FUN JUDGE: the application port and policy stay provider-neutral", () => {
+    const neutral = sources.filter((s) =>
+      [
+        "application/planner/ports/fun-judge.ts",
+        "application/planner/fun-judge.ts",
+        "application/planner/fun-judge-selection.ts",
+      ].includes(s.file),
+    );
+    expect(neutral).toHaveLength(3);
+    for (const s of neutral) {
+      expect(s.text).not.toMatch(/from\s+["']@\/infrastructure|typesafe|JEV_API_KEY|process\.env/i);
+    }
+  });
+  it("FUN JUDGE: domain, UI and Free Ride never import it", () => {
+    expect(
+      sources
+        .filter(
+          (s) =>
+            (s.file.startsWith("domain/") ||
+              s.file.startsWith("ui/") ||
+              s.file.startsWith("application/free-ride/") ||
+              /^\s*["']use client["']/m.test(s.text)) &&
+            /fun-judge/.test(s.text),
+        )
+        .map((s) => s.file),
+    ).toEqual([]);
   });
   it("frontier adapter is explicitly server-only and has no production importer", () => {
     const adapter = sources.find(

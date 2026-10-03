@@ -47,6 +47,14 @@ import {
   jevCharacterClassifierFromEnv,
   type JevCharacterClassifier,
 } from "@/infrastructure/routing/jev-fun-character";
+import { jevFunJudgeFromEnv } from "@/infrastructure/routing/jev-fun-judge";
+import { createFunJudge, type FunJudge } from "@/application/planner/fun-judge";
+import {
+  parseFunJudgeMode,
+  selectBestRideWithFunJudge,
+  type FunJudgeSelection,
+} from "@/application/planner/fun-judge-selection";
+import type { RoutePlanFunJudgeWire } from "@/application/planner/ports/route-plan-contract";
 import type {
   ProviderCandidate,
   ProviderRouteRequest,
@@ -166,6 +174,11 @@ export interface PlanServiceDeps {
   readonly knownRoads?: KnownRoadsPort;
   /** Optional semantic classifier. `null` explicitly disables it in tests/fixtures. */
   readonly funCharacterClassifier?: JevCharacterClassifier | null;
+  /**
+   * FUN JUDGE for Best Ride (`OGV_JEV_FUN_JUDGE`). Defaults to the budgeted,
+   * cached TypeSafe Jev judge when a key exists; `null` disables it.
+   */
+  readonly funJudge?: FunJudge | null;
   /**
    * Road authority (route intelligence RI-1): closures and legal access. The
    * deployment's coordinator by default, `null` when `OGV_ROAD_AUTHORITY` is off.
@@ -650,6 +663,51 @@ function environmentCharacterClassifier(
   return environmentClassifier.classifier;
 }
 
+/** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
+let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
+function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
+  const key = env["JEV_API_KEY"]?.trim() ?? "";
+  if (environmentJudge?.key !== key) {
+    const port = jevFunJudgeFromEnv(env);
+    environmentJudge = { key, judge: port === null ? null : createFunJudge(port) };
+  }
+  return environmentJudge.judge;
+}
+
+function funJudgeWire(
+  selection: FunJudgeSelection,
+  routeIds: readonly string[],
+): RoutePlanFunJudgeWire | undefined {
+  const diagnostic = selection.diagnostic;
+  if (diagnostic === null) return undefined;
+  const id = (index: number): string | undefined => routeIds[index];
+  const deterministicRouteId = id(diagnostic.deterministicIndex);
+  const selectedRouteId = id(diagnostic.selectedIndex);
+  if (deterministicRouteId === undefined || selectedRouteId === undefined) return undefined;
+  return {
+    mode: diagnostic.mode,
+    outcome: diagnostic.outcome,
+    applied: diagnostic.applied,
+    deterministicRouteId,
+    jevRouteId: diagnostic.jevIndex === null ? null : id(diagnostic.jevIndex) ?? null,
+    selectedRouteId,
+    shortlistSize: diagnostic.shortlist.length,
+    excluded: diagnostic.excluded.flatMap((entry) => {
+      const routeId = id(entry.index);
+      return routeId === undefined ? [] : [{ routeId, reason: entry.reason }];
+    }),
+    confidence: diagnostic.confidence,
+    margin: diagnostic.margin,
+    orderAgreement: diagnostic.orderAgreement,
+    model: diagnostic.model,
+    calls: diagnostic.calls,
+    cached: diagnostic.cached,
+    latencyMs: diagnostic.latencyMs,
+    why: diagnostic.why,
+    addedTimePct: diagnostic.addedTimePct,
+  };
+}
+
 export async function planRide(
   input: PlanRideInput,
   deps: PlanServiceDeps = {},
@@ -798,9 +856,39 @@ export async function planRide(
   }
 
   const mapped = pipeline.candidates.map(toRoutePlanCandidate);
+  // FUN JUDGE (default off). In `on` mode a confident Jev preference among the
+  // eligible, in-budget candidates becomes Best Ride; every other outcome —
+  // including any failure here — keeps the deterministic roles.
+  const env = deps.env ?? process.env;
+  const funJudgeMode = parseFunJudgeMode(env["OGV_JEV_FUN_JUDGE"]);
+  let judged: FunJudgeSelection = {
+    roles: pipeline.roles,
+    selectedIndex: pipeline.selectedIndex,
+    diagnostic: null,
+    request: null,
+  };
+  if (funJudgeMode !== "off" && !signal.aborted) {
+    try {
+      judged = await selectBestRideWithFunJudge({
+        pipeline,
+        intent,
+        avoidHighways: parsed.value.request.options.avoidHighways,
+        policy: ROUTE_POLICY,
+        ...(parsed.value.request.discovery === undefined
+          ? {}
+          : { discoveryTimebox: parsed.value.request.discovery }),
+        mode: funJudgeMode,
+        judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
+        signal,
+      });
+    } catch {
+      // Advisory failure never changes the deterministic answer.
+    }
+  }
+  const funJudge = funJudgeWire(judged, mapped.map((candidate) => candidate.id));
   // The pipeline assigns roles by kept index because it mints no ids; binding
   // them here is the step that turns them into wire identities.
-  const roles = bindRoles(pipeline.roles, mapped);
+  const roles = bindRoles(judged.roles, mapped);
   const selectedRouteId = roles["best-ride"] ?? roles.fastest;
   if (selectedRouteId === null) {
     // Unreachable by construction: `assignRoles` fills `fastest` and `best-ride`
@@ -862,6 +950,7 @@ export async function planRide(
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
+      ...(funJudge === undefined ? {} : { funJudge }),
     },
   };
 }

@@ -129,11 +129,39 @@ export function parseRoutePlanFunCharacter(value: unknown): RoutePlanFunCharacte
   return { fingerprint, label: label as RoutePlanFunCharacterWire["label"], confidence, model, policyVersion };
 }
 
+/**
+ * What the FUN JUDGE did for this plan (`OGV_JEV_FUN_JUDGE=shadow|on`).
+ * Diagnostics only: the bundle's roles/selection are already final. `applied`
+ * is true only when Jev's preference became Best Ride; `why` lists measured
+ * evidence deltas (Jev's pick minus the deterministic winner), not model text.
+ */
+export interface RoutePlanFunJudgeWire {
+  readonly mode: "shadow" | "on";
+  readonly outcome: string;
+  readonly applied: boolean;
+  readonly deterministicRouteId: string;
+  readonly jevRouteId: string | null;
+  readonly selectedRouteId: string;
+  readonly shortlistSize: number;
+  readonly excluded: readonly { readonly routeId: string; readonly reason: string }[];
+  readonly confidence: number | null;
+  readonly margin: number | null;
+  readonly orderAgreement: boolean | null;
+  readonly model: string | null;
+  readonly calls: number;
+  readonly cached: boolean;
+  readonly latencyMs: number;
+  readonly why: readonly { readonly feature: string; readonly delta: number }[];
+  readonly addedTimePct: number | null;
+}
+
 /** Server-side diagnostics for one attempt (23 §2, §16). */
 export interface RoutePlanDiagnosticsWire {
   readonly optionalProvidersUnavailable: readonly string[];
   /** Shadow-only semantic label for the deterministic Fast & Fun shadow winner. */
   readonly funCharacter?: RoutePlanFunCharacterWire;
+  /** Present only when the FUN JUDGE ran (shadow or on). */
+  readonly funJudge?: RoutePlanFunJudgeWire;
   /**
    * Provider-level reports. Omitted by the live GraphHopper path, which reports
    * through `optionalProvidersUnavailable` and the §3 error object; present when
