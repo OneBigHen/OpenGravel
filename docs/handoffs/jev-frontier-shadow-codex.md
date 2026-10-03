@@ -1,0 +1,443 @@
+# Local Codex handoff — PR #51 Jev frontier shadow
+
+Work in repository: `OneBigHen/OpenGravel`
+
+Pull request: `#51 Experiment: bounded Jev frontier shadow judge`
+
+Branch: `feat/jev-frontier-shadow`
+
+Before editing, sync this branch with current `main` and resolve any
+planner/frontier conflicts conservatively. PR #51 is behind its original merge
+base; do not implement runtime wiring against a stale planner seam.
+
+## Goal
+
+Finish the first executable Jev 1.13 experiment without giving Jev routing
+authority.
+
+The branch already contains:
+
+- `docs/jev-frontier-shadow.md`
+- `src/application/planner/jev-frontier-shadow.ts`
+- `tests/unit/application/jev-frontier-shadow.test.ts`
+
+Read those files first. Treat their boundaries as requirements.
+
+Also inspect before editing:
+
+- `src/infrastructure/routing/jev-fun-character.ts`
+- `src/server/planning/plan-service.ts`
+- `src/application/planner/frontier-routing.ts`
+- `src/application/planner/pipeline.ts`
+- `src/domain/personalization/rider-preference.ts`
+- `src/application/personalization/route-features.ts`
+- `tests/real-router/routing-quality-corpus.ts` from PR #39 if available
+- PR #34 exact bounded-regret work
+- PR #39 permanent PA/NJ routing-quality corpus
+- PRs #37/#40/#43 only for Free Ride boundary context; do not wire Jev into
+  Free Ride in this PR.
+
+## Critical sequencing fact
+
+The frontier selector is merged, but as of PR #51 creation it is still an
+experimental pure selector and is not the production planner's rider-visible
+selection path.
+
+Do **not** invent a fake live post-frontier hook.
+
+The first executable slice should therefore be:
+
+1. server-only Jev adapter;
+2. deterministic state/question builder;
+3. replay/shadow evaluator that can consume a stable 2–3 candidate set;
+4. diagnostics/JSON output for corpus comparison;
+5. only wire into `planRide` if you can prove there is now a real stable
+   post-frontier shortlist on the branch you are working from.
+
+If that seam still does not exist, leave production `planRide` behavior
+unchanged and document the exact future insertion point.
+
+## Implement the provider adapter
+
+Create an infrastructure implementation of the application-owned
+`JevFrontierJudge` port, probably under:
+
+`src/infrastructure/routing/jev-frontier-judge.ts`
+
+Use the already-installed `@typesafe-ai/sdk ^0.6.0`.
+
+Useful SDK facts:
+
+```ts
+import { choice, noul, score, TypeSafeClient } from "@typesafe-ai/sdk";
+```
+
+For the OpenRouter experiment configure:
+
+```ts
+new TypeSafeClient({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api",
+  defaultModel: "typesafe/jev-1.13",
+  timeout: 1500,
+  retry: { maxRetries: 0 },
+  logLevel: "off",
+});
+```
+
+The TypeSafe SDK appends `/v1/systemone` to that base URL. Use the explicit
+OpenRouter ID `typesafe/jev-1.13`; direct TypeSafe uses `jev-1.13.0`.
+
+Pin 1.13 for P0. Do not use `jev-latest`.
+
+Do not expose the key to browser code.
+
+No configured OpenRouter key => return no judge / no call for the default transport.
+
+Owner-authorized follow-up: direct TypeSafe is now supported only with explicit
+`OGV_JEV_FRONTIER_PROVIDER=typesafe` and `JEV_API_KEY` (CLI: `--provider typesafe`).
+There is no automatic key/service fallback or environment URL override. Pin 1.13,
+zero retries and the same strict deadline remain required. Actual authenticated
+catalog access succeeded, but direct pinned-model pilot requests returned HTTP 400
+`Unknown model: jev-1.13`; the catalog exposes only latest/preview. No alias was
+called. See the preserved `typesafe-*` evidence and follow-up validation for limits.
+
+## Balanced permutation requests per stable candidate set
+
+Order bias is now a required part of P0.
+
+Use the application helpers already on the branch:
+
+- `buildBalancedJevFrontierPermutations()`
+- `auditJevFrontierOrder()`
+
+For two candidates, run both AB and BA.
+
+For three candidates, run all six permutations so every stable candidate
+appears exactly twice in A, B and C, including the reverse cycle.
+
+Use a reproducible seed containing the corpus/experiment case id. Log the seed
+and permutation mapping.
+
+Each permutation is one Jev request containing all Choice + Score + Noul
+questions against the same compact facts.
+
+### Choice
+
+Options are presentation slots `A`, `B`, optional `C`, plus `NONE`.
+The adapter must map slots back to stable candidate ids before returning/logging
+the experiment result.
+
+Instructions must say, in substance:
+
+> Choose the already-eligible candidate that best matches the rider's explicit
+> current ride intent and supplied rider-preference summary, using only supplied
+> measurements. Choose NONE if the supplied evidence does not support a
+> meaningful preference. Do not infer legality, access, closure, safety,
+> missing road facts, or unsupplied characteristics.
+
+Remember that TypeSafe does not send the question id as semantic content. Put
+meaning into instructions/criteria.
+
+### Per-candidate Score
+
+One score question per candidate, using exactly this 0–3 ordered rubric:
+
+0. Poor fit — materially conflicts with supplied current intent/preference.
+1. Acceptable — usable but little evidence of a particularly strong match.
+2. Strong — clearly matches several supplied priorities without a material
+   supplied tradeoff.
+3. Exceptional — unusually strong match across priorities supported by the
+   supplied evidence.
+
+The returned score is probability-weighted and can be fractional. Preserve the
+full probability distribution and confidence.
+
+Call it semantic/rider fit. Never call it RouteScore.
+
+### Noul
+
+Use an independent proposition, not one that depends on the Choice output:
+
+> At least one supplied non-baseline candidate is meaningfully better matched
+> than the deterministic baseline to this rider's explicit current intent and
+> supplied rider-preference summary.
+
+Preserve the returned `noul` probability directly.
+
+## State rules
+
+Use `JevFrontierState` as the internal experiment record, but never send it wholesale. Call `projectJevFrontierTransportState()` for the selected A/B/C ablation + permutation and send only that projected transport state.
+
+No raw GPX.
+No raw GPS history.
+No saved ride list.
+No arbitrary account metadata.
+No geometry unless you can prove the compact measurements are insufficient.
+Do not send any ineligible candidate.
+
+OpenGravel computes all arithmetic before the call.
+
+Jev may receive:
+
+- explicit current RideIntent fields;
+- precomputed timebox-satisfied boolean/null;
+- final frontier quality vector;
+- canonical score/rank;
+- distance/duration;
+- evidence coverage;
+- compact rider posterior mean, precision and evidence counts;
+- precomputed rider preference utility;
+- deterministic coherence metrics.
+
+Unknown remains null. Never turn missing evidence into 0.5 or prose such as
+"probably okay."
+
+## Failure policy
+
+The experiment must be incapable of breaking planning.
+
+- zero retries;
+- strict timeout;
+- caller abort respected;
+- transport failure => structured `failed/transport-error`;
+- timeout => structured `failed/timeout`;
+- abort => structured `failed/aborted`;
+- invalid state => structured `skipped/invalid-state`, no call;
+- disabled/no key => structured `skipped/disabled`;
+- malformed answer => structured `invalid/malformed-response`;
+- invented candidate id => structured validation failure;
+- malformed probability map => structured validation failure;
+- missing or inconsistent score => structured validation failure;
+- low confidence => retain telemetry, no production behavior change.
+
+Do not copy Jev Router's fail-the-request semantics into OpenGravel routing.
+
+If you add a foreground budget, follow the existing
+`jev-fun-character.ts` pattern: provider timeout around 1.5 s, smaller planning
+wait around 0.8 s, no retry, and cache only compact deterministic state.
+
+## Replay / corpus harness
+
+Prefer an explicit experiment runner over premature production wiring.
+
+The permanent corpus is being built in PR #39. If it has landed, extend it.
+If it has not landed, either:
+
+- stack narrowly on the relevant two real-router test files, or
+- add a replay fixture/harness to PR #51 without merging unrelated PR #39 code.
+
+Emit stable machine-readable JSON for each candidate set containing:
+
+- schema version;
+- corpus/request id;
+- candidate ids/fingerprints;
+- deterministic baseline id;
+- canonical ranks;
+- rider preference utilities/probabilities if available;
+- exact Jev model snapshot returned;
+- permutation seed/id and A/B/C -> stable id mapping;
+- Choice + all option probabilities + confidence per permutation;
+- aggregate stable-id probabilities;
+- Choice flip rate / order-dependent flag;
+- every candidate Score + distribution + confidence;
+- Noul probability;
+- latency;
+- input tokens / cost if the SDK response exposes them;
+- validation/failure reason;
+- telemetry-only counterfactual status.
+
+Never log keys or raw GPS.
+
+
+## Mandatory leakage ablations
+
+Do not evaluate only the full state. The point is to measure incremental value,
+not whether Jev can reconstruct OpenGravel's rank.
+
+Replay the same frozen candidate sets through:
+
+- **A:** explicit intent + intrinsic normalized measurements;
+- **B:** A + rider posterior mean/precision/evidence + rider utility;
+- **C:** B + canonical score/rank;
+- **D:** deterministic frontier + rider model, no Jev.
+
+Treat D as the control.
+
+If C improves deterministic-baseline agreement but not held-out rider Brier
+score/log loss/top-choice accuracy over B or D, report baseline leakage rather
+than a Jev improvement.
+
+Avoid duplicate derived signals inside a variant. Prefer intrinsic measurements
+to both the measurement and a second aggregate derived from it.
+
+## Calibration metrics
+
+Agreement with the deterministic baseline is diagnostic only.
+
+For held-out blinded labels compute:
+
+- top-choice accuracy;
+- multiclass log loss;
+- Brier score;
+- reliability curves;
+- expected calibration error;
+- abstention coverage;
+- selective accuracy;
+- order flip rate;
+- repeated-identical-request stability.
+
+Split calibration/test data by corridor and ride session, not individual
+candidate set.
+
+Do not claim promotion readiness from a single rider or the current eight-case
+unlabeled corpus.
+
+## Invariance tests
+
+Add tests proving the route-plan result is unchanged when Jev is:
+
+- absent;
+- enabled and agrees;
+- enabled and strongly disagrees;
+- returns NONE;
+- low confidence;
+- malformed;
+- times out;
+- throws;
+- aborted.
+
+If there is not yet a true live frontier seam, prove invariance at the
+experiment runner/adapter boundary instead of hacking the old planner selection
+just to satisfy this checklist.
+
+The key invariant is:
+
+```
+bundle.candidates
+bundle.roles
+bundle.selectedRouteId
+bundle.selectionSource
+```
+
+must not change in P0 because of Jev.
+
+## Architecture checks
+
+No domain module may import the Jev infrastructure adapter.
+
+No route authority / access / closure module may import it.
+
+No canonical scoring module may import it.
+
+No `RouteScore` field is overwritten from Jev output.
+
+No candidate is added or made eligible based on Jev.
+
+The adapter should depend inward on the application port, never the reverse.
+
+
+## Required dependency before interpreting results
+
+PR #34's exact bounded-regret correction is now merged into `main`.
+
+Before any Jev corpus run, sync/rebase PR #51 onto current `main` and confirm
+the frozen shortlist is produced by the exact selector. Do not interpret results
+from the older greedy/local-exchange implementation.
+
+## Do not do these in PR #51
+
+- Do not wire `typesafe/jev-router` into motorcycle routing.
+- Do not change Free Ride behavior.
+- Do not change selectedRouteId from Jev.
+- Do not add Jev values into canonical scoring.
+- Do not let Jev infer legal access, closures, surface truth or safety.
+- Do not send raw rider history to the server just to improve this experiment.
+- Do not merge unrelated visualization/map work.
+- Do not switch GraphHopper.
+- Do not make a GraphHopper fork.
+
+## Optional second experiment spec only
+
+If the routing work is complete and clean, you may add a short separate spec
+for testing `typesafe/jev-router` at the **AI Advisor transport** boundary.
+
+That experiment may choose the generative LLM/effort only. Existing Advisor
+schema validation, geocoding and command application remain authoritative.
+
+Do not implement that second experiment in the same runtime path unless it is
+trivially isolated and has its own evals.
+
+## Validation
+
+Before pushing final work, run:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:architecture
+npm test
+npm run build
+```
+
+Run the real-router corpus too when its required services/env are available:
+
+```bash
+npm run test:real-router
+```
+
+If live credentials are unavailable, do not fake a passing live Jev call.
+Unit-test the adapter with an injected fetch/client seam and report exactly what
+was not exercised.
+
+Review the final diff adversarially for:
+
+- hidden routing authority creep;
+- accidental raw rider-data upload;
+- model alias drift (both frontier and route-character Jev must remain pinned to 1.13);
+- candidate-order / A-B-C bias;
+- score value that disagrees with its probability distribution;
+- Choice label that is not the unique probability argmax;
+- unsafe object-key candidate ids;
+- remote JSON assumptions without runtime guards;
+- retries/latency on the ride path;
+- threshold constants masquerading as product policy;
+- confusing Jev confidence with option probability;
+- confusing Jev semantic score with RouteScore.
+
+Then push to `feat/jev-frontier-shadow` and update PR #51 with what is actually
+implemented, tests run, and any blocked live validation.
+
+## Implementation handoff: 2026-10-01
+
+PR #51 has been rebased onto `main@1a04c4661575fded6cde019731a64e75f128f139`
+(PR #34 exact bounded regret). The server-only OpenRouter adapter, balanced A/B/C
+replay with deterministic D, fingerprint/split-guarded evaluator, and exact-selector
+corpus freezer are now implemented. No production post-frontier hook exists or was
+added. See [the experiment contract](../jev-frontier-shadow.md) for the executable
+CLI and [preserved evidence](../vnext/evidence/2026-10-01-jev-frontier/README.md) for
+base/donor identity, changed responsibilities, actual GraphHopper measurements,
+validation results, and remaining limitations. The final pushed head is recorded
+in PR #51.
+
+The adapter pins the provider-specific Jev 1.13 ID, makes zero retries, and
+enforces a 1,500 ms deadline. The 2026-10-01 follow-up uses `jev-1.13.0` for
+direct TypeSafe and `typesafe/jev-1.13` for OpenRouter; it records
+`complete-factorial-v1` order audits. Three-candidate A/B/C replay now costs
+`18 * repeats` model requests. See
+`docs/research/2026-10-01-jev-pins-and-order.md` for the failure reproductions
+and the distinction between the earlier misspelled-ID pilot and the successful
+one-request corrected-pin smoke check. Held-out rider quality remains unmeasured.
+It serializes only `projectJevFrontierTransportState()` output. Stable IDs remain
+local; only independent Noul names the baseline presentation slot. Duration-derived
+`timeEfficiency` is excluded from remote state. Any Choice order flip or unstable
+repeated verdict abstains. D requires a caller-frozen posterior forecast whenever
+rider evidence is supplied; the no-rider corpus explicitly uses a one-hot baseline
+fallback. No raw rider history is accepted or uploaded.
+
+Live GraphHopper produced eight measured cases and seven frozen two-candidate
+shortlists. The original OpenRouter run was unavailable without its credential. The disabled
+replay records 84 structured skips, zero labels, and no held-out value claim. PR #33's
+probe-allocation change was reviewed and remains outside this implementation.
+Promotion remains a separate PR requiring calibrated multi-rider held-out evidence.
