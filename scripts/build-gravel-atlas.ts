@@ -77,8 +77,9 @@ const HOSTILE_SMOOTHNESS = new Set(["very_horrible", "horrible", "very_bad", "im
 const CONTROL_HIGHWAY_VALUES = new Set(["stop", "give_way", "traffic_signals", "crossing", "mini_roundabout", "speed_camera"]);
 /** Longest corridor; longer chains are cut so one span stays routable. */
 const MAX_CORRIDOR_METERS = 25_000;
-const MIN_DIRT_CORRIDOR_METERS = 500;
-const MIN_BACKROAD_CORRIDOR_METERS = 2_000;
+/** Shorter stretches are not worth a detour, so they are not prizes. */
+const MIN_DIRT_CORRIDOR_METERS = 1_200;
+const MIN_BACKROAD_CORRIDOR_METERS = 3_000;
 const EXCLUDED_HIGHWAYS = new Set(["path", "footway", "cycleway", "bridleway"]);
 const BACKROAD_HIGHWAYS = new Set(["unclassified", "tertiary", "residential"]);
 const AREA_BOUNDS: Readonly<Record<string, { west: number; south: number; east: number; north: number }>> = {

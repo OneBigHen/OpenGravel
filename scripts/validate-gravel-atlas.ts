@@ -11,7 +11,7 @@
  * proposed. Run after build-gravel-atlas.ts, against the graph the router
  * imported (the atlas rows stay valid only for that graph).
  *
- *   npx tsx scripts/validate-gravel-atlas.ts --atlas path.sqlite [--url http://127.0.0.1:8989] [--delay-ms 20]
+ *   npx tsx scripts/validate-gravel-atlas.ts --atlas path.sqlite [--url http://127.0.0.1:8989] [--delay-ms 20] [--concurrency 3]
  */
 
 import { DatabaseSync } from "node:sqlite";
@@ -36,7 +36,7 @@ export function isRoutable(routedMeters: number, corridorMeters: number): boolea
   return routedMeters <= corridorMeters * ROUTABLE_LENGTH_FACTOR + ROUTABLE_SLACK_METERS;
 }
 
-function args(): { atlas: string; url: string; delayMs: number } {
+function args(): { atlas: string; url: string; delayMs: number; concurrency: number } {
   const values = new Map<string, string>();
   for (let index = 2; index < process.argv.length; index += 2) {
     const key = process.argv[index];
@@ -45,7 +45,7 @@ function args(): { atlas: string; url: string; delayMs: number } {
   }
   const atlas = values.get("atlas");
   if (atlas === undefined) throw new Error("--atlas is required");
-  return { atlas, url: values.get("url") ?? "http://127.0.0.1:8989", delayMs: Number(values.get("delay-ms") ?? 20) };
+  return { atlas, url: values.get("url") ?? "http://127.0.0.1:8989", delayMs: Number(values.get("delay-ms") ?? 20), concurrency: Math.max(1, Math.min(6, Number(values.get("concurrency") ?? 3))) };
 }
 
 async function routedMeters(url: string, points: readonly (readonly [number, number])[]): Promise<number | null> {
@@ -53,35 +53,43 @@ async function routedMeters(url: string, points: readonly (readonly [number, num
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ points, profile: "motorcycle_adventure", "ch.disable": true, points_encoded: false, instructions: false, details: [] }),
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(10_000),
   });
   const json = (await response.json()) as { paths?: { distance: number }[] };
   return json.paths?.[0]?.distance ?? null;
 }
 
 async function main(): Promise<void> {
-  const { atlas, url, delayMs } = args();
+  const { atlas, url, delayMs, concurrency } = args();
   const database = new DatabaseSync(atlas);
   database.exec("pragma busy_timeout = 10000");
   const columns = (database.prepare("pragma table_info(corridors)").all() as { name: string }[]).map((column) => column.name);
   if (!columns.includes("routable")) database.exec("alter table corridors add column routable integer");
   if (!columns.includes("routed_meters")) database.exec("alter table corridors add column routed_meters real");
-  const rows = database.prepare("select id, geometry_json, length_meters from corridors where routable is null").all() as unknown as Row[];
+  // Dead ends are never proposed, so they are not worth an engine call; best corridors first.
+  const rows = database.prepare("select id, geometry_json, length_meters from corridors where routable is null and coalesce(entry_links, 1) > 0 and coalesce(exit_links, 1) > 0 order by quality desc").all() as unknown as Row[];
   const update = database.prepare("update corridors set routable = ?, routed_meters = ? where id = ?");
   let ok = 0;
   let bad = 0;
   let done = 0;
-  for (const row of rows) {
-    const line = JSON.parse(row.geometry_json) as [number, number][];
-    let meters: number | null = null;
-    try { meters = await routedMeters(url, anchorsAlong(line)); } catch { /* an engine error means the corridor is not routable */ }
-    const routable = meters !== null && isRoutable(meters, row.length_meters);
-    update.run(routable ? 1 : 0, meters, row.id);
-    if (routable) ok += 1; else bad += 1;
-    done += 1;
-    if (done % 1000 === 0) console.log(`${done}/${rows.length} routable ${ok} not ${bad}`);
-    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
+  let next = 0;
+  // A few requests in flight at once: the engine is multi-threaded and most
+  // time goes to the (rare) corridors it cannot ride at all.
+  const worker = async (): Promise<void> => {
+    for (let index = next++; index < rows.length; index = next++) {
+      const row = rows[index] as Row;
+      const line = JSON.parse(row.geometry_json) as [number, number][];
+      let meters: number | null = null;
+      try { meters = await routedMeters(url, anchorsAlong(line)); } catch { /* an engine error means the corridor is not routable */ }
+      const routable = meters !== null && isRoutable(meters, row.length_meters);
+      update.run(routable ? 1 : 0, meters, row.id);
+      if (routable) ok += 1; else bad += 1;
+      done += 1;
+      if (done % 500 === 0) console.log(`${done}/${rows.length} routable ${ok} not ${bad}`);
+      if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
   database.close();
   console.log(JSON.stringify({ atlas, checked: rows.length, routable: ok, notRoutable: bad }));
 }

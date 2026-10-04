@@ -293,7 +293,7 @@ describe("atlas dirt and backroad generators", () => {
     expect(anchors[0]!.lon).toBeLessThan(anchors.at(-1)!.lon);
   });
 
-  it("retries once without the weakest corridor when the first attempt overruns the time cap", async () => {
+  it("retries with a narrower sequence that still fits once the first attempt overruns the time cap", async () => {
     const generator = createAtlasGenerators([
       corridor("strong", { geometry: line({ lon: -75.4, lat: 40.5 }, { lon: -75.36, lat: 40.52 }, { lon: -75.32, lat: 40.5 }), quality: 0.95, lengthMeters: 2_000, longestDirtRunMeters: 2_000 }),
       corridor("weak", { geometry: line({ lon: -75.28, lat: 40.5 }, { lon: -75.24, lat: 40.52 }, { lon: -75.2, lat: 40.5 }), quality: 0.3, lengthMeters: 2_000, longestDirtRunMeters: 2_000 }),
@@ -303,10 +303,24 @@ describe("atlas dirt and backroad generators", () => {
     const spanCounts: number[] = [];
     const execution = await probe.execute(async (request) => {
       spanCounts.push(request.roadSpans!.length);
-      return candidate(request, { durationSeconds: spanCounts.length === 1 ? 4_000 : 1_900 });
+      return candidate(request, { durationSeconds: spanCounts.length === 1 ? 2_500 : 1_900 });
     });
     expect(spanCounts).toEqual([2, 1]);
     expect(execution.candidate).not.toBeNull();
     expect(execution.candidate?.providerMetadata?.["atlasCorridorIds"]).toBe(JSON.stringify(["strong"]));
+  });
+
+  it("measures detours against the fastest route: far corridors are ignored, near ones are ridden in travel order", () => {
+    const far = corridor("far", { geometry: line({ lon: -75.4, lat: 40.7 }, { lon: -75.3, lat: 40.72 }, { lon: -75.2, lat: 40.7 }) });
+    expect(createAtlasGenerators([far])[0]!.propose(context())).toEqual([]);
+    const near = corridor("near", {
+      reversible: true,
+      lengthMeters: 3_000,
+      longestDirtRunMeters: 3_000,
+      geometry: line({ lon: -75.25, lat: 40.505 }, { lon: -75.3, lat: 40.51 }, { lon: -75.35, lat: 40.505 }),
+    });
+    const probe = createAtlasGenerators([near])[0]!.propose(context())[0]!;
+    expect(probe.id).toContain("near");
+    expect(probe.forecast.addedSeconds).not.toBeNull();
   });
 });

@@ -13,6 +13,8 @@ import type {
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
+import type { FunJudge, FunJudgeVerdict } from "@/application/planner/fun-judge";
+import type { FunJudgeRequest } from "@/application/planner/ports/fun-judge";
 import { planRide, type PlanRideInput } from "@/server/planning/plan-service";
 
 const ORIGIN: Coordinate = { lon: -77.4, lat: 41.1 };
@@ -118,5 +120,29 @@ describe("OGV_RIDE_FORMULA", () => {
     const pavedRow = diagnostic.rows.find((row) => row.index !== gravelRow.index)!;
     expect(gravelRow.value).toBeGreaterThan(pavedRow.value);
     expect(gravelRow.variables["unpavedShare"]).toBeGreaterThan(pavedRow.variables["unpavedShare"] ?? 0);
+  });
+
+  it("sends Jev the formula's variables when the formula is reporting", async () => {
+    const requests: FunJudgeRequest[] = [];
+    const judge: FunJudge = {
+      async judge(request, fallbackRanking): Promise<FunJudgeVerdict> {
+        requests.push(request);
+        return { source: "fallback", outcome: "low-confidence", preferredKey: null, ranking: [...fallbackRanking], confidence: 0.4, margin: 0.05, noneProbability: 0.3, orderAgreement: true, model: "test", calls: 0, cached: false, latencyMs: 1 };
+      },
+    };
+    const result = await planRide(INPUT, {
+      provider: provider([PAVED, GRAVEL]),
+      env: { OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ATLAS_GENERATORS: "off", OGV_RIDE_FORMULA: "shadow", OGV_JEV_FUN_JUDGE: "on" },
+      funCharacterClassifier: null,
+      funJudge: judge,
+      roadAuthority: null,
+    });
+    expect(result.ok).toBe(true);
+    const evidence = requests[0]?.candidates.map((candidate) => candidate.formulaEvidence) ?? [];
+    expect(evidence.length).toBeGreaterThan(0);
+    for (const entry of evidence) {
+      expect(entry).toHaveProperty("formulaValue");
+      expect(entry).toHaveProperty("unpavedShare");
+    }
   });
 });

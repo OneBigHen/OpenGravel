@@ -157,7 +157,7 @@ export interface RoutePlanFunJudgeWire {
 
 /** Server-side diagnostics for one attempt (23 §2, §16). */
 export interface RoutePlanDiagnosticsWire {
-  readonly atlas?: { readonly available: boolean; readonly considered: number; readonly calls: number; readonly probes: readonly { readonly corridors: readonly string[]; readonly status: string; readonly minutes: number | null }[] };
+  readonly atlas?: { readonly available: boolean; readonly considered: number; readonly calls: number; readonly probes: readonly { readonly corridors: readonly string[]; readonly status: string; readonly note: string; readonly adherence: number | null; readonly minutes: number | null; readonly unpavedShare: number | null }[] };
   /** Present when `OGV_RIDE_FORMULA` is shadow or on: the formula's reading of every kept candidate. */
   readonly rideFormula?: {
     readonly mode: "shadow" | "on";

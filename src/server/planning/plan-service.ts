@@ -1,7 +1,7 @@
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
 import { corridorsInReachableEllipse, type GravelAtlasCorridor, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
 import type { RouteEvidence } from "@/domain/route/types";
-import { RIDE_FORMULA_VERSION } from "@/domain/route/ride-formula";
+import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/ride-formula";
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
@@ -64,6 +64,7 @@ import {
   selectBestRideWithFunJudge,
   scheduleFunJudgeShadow,
   geometryFunJudgeExtensions,
+  type FunJudgeEvidenceExtensions,
   type FunJudgeSelection,
 } from "@/application/planner/fun-judge-selection";
 import type { RoutePlanFunJudgeWire } from "@/application/planner/ports/route-plan-contract";
@@ -713,6 +714,12 @@ function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
   return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
 }
 
+/** The provider answer behind a kept candidate: the same line at the same engine time (profiles price one line differently). */
+function sourceOf(candidates: readonly ProviderCandidate[], kept: { readonly geometry: readonly Coordinate[]; readonly durationSeconds: number }): ProviderCandidate | undefined {
+  return candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry) && Math.abs(candidate.durationSeconds - kept.durationSeconds) < 1)
+    ?? candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry));
+}
+
 /** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
 let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
 function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
@@ -910,6 +917,25 @@ export async function planRide(
     const wantsDirt = request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
     const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
     if (wantsDirt || wantsBackroads) {
+      // The character lanes may not include the plain fastest route, and every
+      // detour is measured against it: fetch it first (one cheap router call).
+      try {
+        const plain = await provider.candidates({
+          ...request,
+          requestId: `${request.requestId}:fastest`,
+          profile: "motorcycle_fastest",
+          options: { ...request.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "efficient", targetUnpavedShare: 0, traffic: "minimize-delay" },
+        }, signal);
+        const first = plain.candidates[0];
+        if (first !== undefined) {
+          riderCalls += 1;
+          candidates = [...candidates, first];
+          roads = await assessRoads(candidates);
+          pipeline = rank(candidates);
+        }
+      } catch {
+        // No baseline: the probes fall back on the fastest route the lanes found.
+      }
       const fastest = Math.min(...pipeline.candidates.map(candidate => candidate.durationSeconds));
       const radius = request.discovery === undefined ? Math.max(5_000, fastest * 0.35 * 15) : (request.discovery.targetMinutes + request.discovery.toleranceMinutes) * 60 * 8 / 2;
       const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, wantsDirt ? "dirt" : "backroad");
@@ -1114,7 +1140,7 @@ export async function planRide(
   if (formulaMode !== "off") {
     const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
     const rows = pipeline.candidates.flatMap((kept, index) => {
-      const source = candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry));
+      const source = sourceOf(candidates, kept);
       if (source === undefined) return [];
       const result = formulaFor(kept.evidence, source, fastestSeconds);
       const raw = (name: keyof typeof result.variables): number | null => result.variables[name].value;
@@ -1160,7 +1186,24 @@ export async function planRide(
         ? {}
         : { discoveryTimebox: parsed.value.request.discovery }),
       judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
-      extensions: geometryFunJudgeExtensions,
+      // Jev judges on the same evidence as the formula: its normalized variable
+      // values ride along with every candidate when the formula is reporting.
+      extensions: ((candidate) => {
+        const base = geometryFunJudgeExtensions(candidate);
+        if (formulaMode === "off") return base;
+        const source = sourceOf(candidates, candidate);
+        if (source === undefined) return base;
+        const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
+        const reading = formulaFor(candidate.evidence, source, fastestSeconds);
+        return {
+          ...base,
+          formulaEvidence: {
+            formulaValue: reading.value,
+            formulaConfidence: reading.confidence,
+            ...Object.fromEntries(RIDE_FORMULA_VARIABLES.map((name) => [name, reading.variables[name].normalized])),
+          },
+        };
+      }) satisfies FunJudgeEvidenceExtensions,
     };
     if (funJudgeMode === "shadow") {
       // Shadow never waits for Jev: the call starts after the answer is built,
@@ -1243,7 +1286,7 @@ export async function planRide(
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
       ...(rideFormulaDiagnostic === null ? {} : { rideFormula: rideFormulaDiagnostic }),
-      ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60 })) ?? [] } }),
+      ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, note: probe.note, adherence: probe.adherence === null ? null : Number(probe.adherence.toFixed(2)), minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60, unpavedShare: (() => { const share = atlasReport?.pool.find((entry) => entry.probeId === probe.probeId)?.candidate.providerMetadata?.["observedUnpavedShare"]; return typeof share === "number" ? Number(share.toFixed(3)) : null; })() })) ?? [] } }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
       ...(funJudge === undefined ? {} : { funJudge }),
     },

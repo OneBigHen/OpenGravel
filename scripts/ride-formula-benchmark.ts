@@ -25,6 +25,8 @@ import type { ProviderCandidate, ProviderCandidateSet, ProviderRouteRequest, Rou
 import type { Coordinate } from "../src/domain/ride/types";
 import { createGraphHopperProvider } from "../src/infrastructure/routing/graphhopper/provider";
 import { planRide } from "../src/server/planning/plan-service";
+import { createFunJudge } from "../src/application/planner/fun-judge";
+import { jevFunJudgeFromEnv } from "../src/infrastructure/routing/jev-fun-judge";
 import { ROUTING_QUALITY_CORPUS } from "../tests/real-router/routing-quality-corpus";
 
 type Mode = "gravel" | "dual-sport" | "curvy";
@@ -44,7 +46,7 @@ const DIRT_TRIPS: readonly Trip[] = [
   { id: "pine-grove-loop-2h", label: "Pine Grove Furnace loop, 2 h", origin: { lon: -77.305, lat: 40.0325 }, destination: { lon: -77.305, lat: 40.0325 }, loopMinutes: 120, modes: ["gravel", "dual-sport"], dirtFocus: true },
   { id: "state-college-rothrock-loop-2h", label: "State College to Rothrock loop, 2 h", origin: { lon: -77.86, lat: 40.7934 }, destination: { lon: -77.86, lat: 40.7934 }, loopMinutes: 120, modes: ["gravel", "dual-sport"], dirtFocus: true },
   { id: "jim-thorpe-hickory-run", label: "Jim Thorpe to Hickory Run", origin: { lon: -75.7387, lat: 40.8636 }, destination: { lon: -75.6745, lat: 41.0035 }, modes: ["gravel", "dual-sport"], dirtFocus: true },
-  { id: "lock-haven-slate-run", label: "Lock Haven to Slate Run", origin: { lon: -77.4469, lat: 41.137 }, destination: { lon: -77.47, lat: 41.4617 }, modes: ["gravel", "dual-sport"], dirtFocus: true },
+  { id: "lock-haven-slate-run", label: "Lock Haven to Slate Run", origin: { lon: -77.4469, lat: 41.137 }, destination: { lon: -77.4744, lat: 41.4687 }, modes: ["gravel", "dual-sport"], dirtFocus: true },
   { id: "gettysburg-pine-grove", label: "Gettysburg to Pine Grove Furnace", origin: { lon: -77.2311, lat: 39.8309 }, destination: { lon: -77.305, lat: 40.0325 }, modes: ["gravel", "dual-sport"], dirtFocus: true },
   { id: "williamsport-waterville", label: "Williamsport to Waterville (Pine Creek)", origin: { lon: -77.0011, lat: 41.2412 }, destination: { lon: -77.3719, lat: 41.3189 }, modes: ["gravel", "dual-sport"], dirtFocus: true },
 ];
@@ -206,10 +208,11 @@ async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formu
   if (!result.ok) return { measured: null, calls: record.calls, ms, geometry: null, note: `plan failed: ${result.error.code}` };
   const best = result.bundle.candidates.find((candidate) => candidate.id === (result.bundle.roles["best-ride"] ?? result.bundle.selectedRouteId));
   if (best === undefined) return { measured: null, calls: record.calls, ms, geometry: null, note: "no best ride" };
-  const source = record.seen.find((candidate) => sameLine(candidate.geometry, best.geometry));
+  const source = record.seen.find((candidate) => sameLine(candidate.geometry, best.geometry) && Math.abs(candidate.durationSeconds - best.durationSeconds) < 1);
   if (source === undefined) return { measured: null, calls: record.calls, ms, geometry: best.geometry, note: "best ride not matched to a provider answer" };
   const atlas = result.diagnostics.atlas;
-  const note = atlas === undefined ? "" : `atlas ${atlas.considered} corridors, ${atlas.calls} calls, probes: ${atlas.probes.map((probe) => probe.status).join("/") || "none"}`;
+  const pool = result.bundle.candidates.map((candidate) => Math.round(candidate.durationSeconds / 60)).join("/");
+  const note = `pool ${pool}; ` + (atlas === undefined ? "" : `atlas ${atlas.considered} corridors, ${atlas.calls} calls, probes: ${atlas.probes.map((probe) => `${probe.status}:${probe.note}${probe.minutes === null ? "" : ` ${probe.minutes.toFixed(0)}min`}${probe.unpavedShare === null ? "" : ` dirt${(probe.unpavedShare * 100).toFixed(0)}%`}`).join(" / ") || "none"}`);
   return { measured: measure(source, request, fastestSeconds), calls: record.calls, ms, geometry: best.geometry, note };
 }
 
@@ -271,6 +274,76 @@ function table(rows: readonly Row[], includeFastest: boolean): string[] {
   return lines;
 }
 
+interface JevRow {
+  readonly label: string;
+  readonly before: string;
+  readonly beforeMs: number | null;
+  readonly after: string;
+  readonly afterMs: number | null;
+}
+
+/**
+ * Jev reliability over the benchmark trips. "Before" is the old behaviour:
+ * the judge runs in the request path (`on`, 1.2 s deadline). "After" is the
+ * new shadow path: off the response path with a 4 s budget. Each run gets a
+ * fresh judge so neither benefits from the other's cache. Needs JEV_API_KEY.
+ */
+async function jevReliability(trips: readonly Trip[]): Promise<JevRow[]> {
+  const rows: JevRow[] = [];
+  for (const trip of trips) {
+    const mode = trip.modes[0]!;
+    const run = async (judgeMode: "on" | "shadow"): Promise<{ outcome: string; ms: number | null }> => {
+      const port = jevFunJudgeFromEnv(process.env);
+      if (port === null) return { outcome: "no-key", ms: null };
+      const funJudge = createFunJudge(port);
+      let shadow: { outcome: string; ms: number } | null = null;
+      const provider = createGraphHopperProvider({ baseUrl: BASE_URL, riderModesEnabled: true, rideFormulaEnabled: false });
+      const result = await planRide(
+        { identity: { rideId: `jev_${trip.id}`, rideRevision: 1, planningGeneration: 1 }, request: requestFor(trip, mode, `jev-${judgeMode}`) },
+        {
+          provider, funJudge, funCharacterClassifier: null, roadAuthority: null,
+          env: { OGV_RIDER_MODES: "on", OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ROAD_AUTHORITY: "off", OGV_FUN_GENERATORS: "off", OGV_ATLAS_GENERATORS: "off", OGV_JEV_FUN_JUDGE: judgeMode },
+          onFunJudgeShadow: (selection) => { shadow = { outcome: selection.diagnostic?.outcome ?? "no-judgement", ms: selection.diagnostic?.latencyMs ?? 0 }; },
+        },
+      );
+      if (!result.ok) return { outcome: "plan-failed", ms: null };
+      if (judgeMode === "on") {
+        const diagnostic = result.diagnostics.funJudge;
+        return diagnostic === undefined ? { outcome: "no-judgement", ms: null } : { outcome: diagnostic.outcome, ms: diagnostic.latencyMs };
+      }
+      const deadline = Date.now() + 8_000;
+      while (shadow === null && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 100));
+      const done = shadow as { outcome: string; ms: number } | null;
+      return done === null ? { outcome: "never-finished", ms: null } : done;
+    };
+    const before = await run("on");
+    const after = await run("shadow");
+    rows.push({ label: `${trip.label} (${mode})`, before: before.outcome, beforeMs: before.ms, after: after.outcome, afterMs: after.ms });
+    console.log(`jev ${trip.id}: before ${before.outcome} ${before.ms ?? ""}ms, after ${after.outcome} ${after.ms ?? ""}ms`);
+    await new Promise((resolve) => setTimeout(resolve, 4_000));
+  }
+  return rows;
+}
+
+function jevSection(rows: readonly JevRow[]): string[] {
+  const judged = (outcome: string): boolean => !["no-judgement", "no-key", "plan-failed", "never-finished"].includes(outcome);
+  const before = rows.filter((row) => judged(row.before));
+  const after = rows.filter((row) => judged(row.after));
+  const timeouts = (set: readonly { outcome: string }[]): number => set.filter((row) => row.outcome === "timeout").length;
+  return [
+    "## Jev reliability (live judge)",
+    "",
+    `Before = judge in the request path (\`on\`, 1.2 s deadline). After = shadow path, off the response path, 4 s budget. Fresh judge per run (no shared cache). Trips where a judgement happened: before ${before.length}, after ${after.length}.`,
+    "",
+    `Timeouts: before ${timeouts(before.map((row) => ({ outcome: row.before })))} of ${before.length}; after ${timeouts(after.map((row) => ({ outcome: row.after })))} of ${after.length}.`,
+    "",
+    "| Trip | Before | ms | After | ms |",
+    "|---|---|---:|---|---:|",
+    ...rows.map((row) => `| ${row.label} | ${row.before} | ${row.beforeMs === null ? "" : Math.round(row.beforeMs)} | ${row.after} | ${row.afterMs === null ? "" : Math.round(row.afterMs)} |`),
+    "",
+  ];
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const only = new Set((args[args.indexOf("--only") + 1] ?? "").split(",").filter((entry) => entry !== "" && args.includes("--only")));
@@ -298,6 +371,7 @@ async function main(): Promise<void> {
       console.log(`${trip.id} ${mode}: prod ${row.production === null ? "-" : `${row.production.minutes.toFixed(0)}min dirt ${pct(row.production.dirtShare)}%`} formula ${row.formula === null ? "-" : `${row.formula.minutes.toFixed(0)}min dirt ${pct(row.formula.dirtShare)}%`} ${verdict(row)} (${row.formulaCalls} calls ${(row.formulaMs / 1000).toFixed(1)}s) ${row.note}`);
     }
   }
+  const jevRows = args.includes("--jev") ? await jevReliability(trips) : [];
   const dirtRows = rows.filter((row) => row.trip.dirtFocus);
   const corpusRows = rows.filter((row) => !row.trip.dirtFocus);
   const wins = rows.filter((row) => verdict(row).startsWith("WIN")).length;
@@ -345,6 +419,7 @@ async function main(): Promise<void> {
     "|---|---|---:|---:|---:|---:|---|",
     ...rows.map((row) => `| ${row.trip.label} | ${row.mode} | ${row.productionCalls} | ${(row.productionMs / 1000).toFixed(1)} | ${row.formulaCalls} | ${(row.formulaMs / 1000).toFixed(1)} | ${row.note} |`),
     "",
+    ...(jevRows.length === 0 ? [] : jevSection(jevRows)),
   ].join("\n");
   await writeFile(out, document);
   await writeFile(out.replace(/\.md$/, ".json"), JSON.stringify(rows, null, 1));

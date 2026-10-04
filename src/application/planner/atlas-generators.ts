@@ -7,7 +7,7 @@
 
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
-import { indexRoute, lineOverlap } from "@/application/roads/route-overlap";
+import { indexRoute, lineOverlap, type RouteIndex } from "@/application/roads/route-overlap";
 import type { GravelAtlasCorridor } from "@/application/roads/gravel-atlas";
 import {
   searchCorridorPrizeLoops,
@@ -44,6 +44,10 @@ const DIRT_SPEED_METERS_PER_SECOND = 8;
 const ESTIMATE_SAFETY = 1;
 /** Attempts a probe may spend: the full sequence, then one without its weakest corridor. */
 const MAX_ATTEMPTS_PER_PROBE = 2;
+/** A corridor is a reasonable detour only when both ends are this near the fastest route. */
+const MAX_APPROACH_METERS = 8_000;
+const MAX_LOOP_APPROACH_METERS = 10_000;
+const MAX_FITS = 24;
 const DIRT_SURFACES = new Set([
   "gravel",
   "fine_gravel",
@@ -60,12 +64,20 @@ interface SelectedSequence {
   readonly connectorMeters: number;
   readonly prize: number;
   readonly key: string;
+  /** Estimated extra seconds per corridor over the fastest route (point-to-point only). */
+  readonly detourSeconds?: readonly number[];
+  /** The fastest route's seconds, the base those detours add to. */
+  readonly baseSeconds?: number;
 }
 
 interface AtlasPlan {
-  /** Attempts, widest first; a failed attempt retries with the next one. */
-  readonly sequences: readonly SelectedSequence[];
-  readonly requests: readonly ProviderRouteRequest[];
+  /**
+   * Ranked alternatives, best first. A probe tries the first and, if it
+   * overruns the time cap, learns how badly its estimate was off and tries the
+   * best alternative that would still fit at that error.
+   */
+  readonly alternatives: readonly SelectedSequence[];
+  readonly attempts: number;
 }
 
 function clamp01(value: number): number {
@@ -247,6 +259,148 @@ function sequenceKey(corridors: readonly GravelAtlasCorridor[]): string {
   return corridors.map((corridor) => corridor.id).join(">");
 }
 
+/** The fastest production route, as the spine every detour is measured against. */
+interface Spine {
+  readonly points: readonly Coordinate[];
+  readonly cumulative: readonly number[];
+  readonly index: RouteIndex;
+  readonly seconds: number;
+}
+
+function spineOf(context: FunGeneratorContext): Spine | null {
+  let best: ProductionRouteLike | null = null;
+  for (const route of context.production) {
+    if (route.geometry.length < 2 || !(route.measurement.durationSeconds > 0)) continue;
+    if (best === null || route.measurement.durationSeconds < best.measurement.durationSeconds) best = route;
+  }
+  if (best === null) return null;
+  const cumulative: number[] = [0];
+  for (let at = 1; at < best.geometry.length; at += 1) {
+    cumulative.push(cumulative[at - 1]! + haversine(best.geometry[at - 1]!, best.geometry[at]!));
+  }
+  return { points: best.geometry, cumulative, index: indexRoute(best.geometry, MAX_LOOP_APPROACH_METERS), seconds: best.measurement.durationSeconds };
+}
+
+type ProductionRouteLike = FunGeneratorContext["production"][number];
+
+function nearestVertex(spine: Spine, point: Coordinate): number {
+  let best = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let at = 0; at < spine.points.length; at += 1) {
+    const distance = haversine(spine.points[at]!, point);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = at;
+    }
+  }
+  return best;
+}
+
+interface SpineFit {
+  /** Oriented along the direction of travel. */
+  readonly corridor: GravelAtlasCorridor;
+  readonly entryIndex: number;
+  readonly exitIndex: number;
+  readonly detourSeconds: number;
+}
+
+/**
+ * How a corridor fits as a detour from the fastest route: both ends near it,
+ * entered before it is left. The detour is the approach out and back at
+ * connector speed plus the corridor at dirt speed, less the stretch of the
+ * fastest route it replaces. Measured against a real route, so rivers and
+ * ridges the straight line ignores are mostly priced in.
+ */
+function fitToSpine(corridor: GravelAtlasCorridor, spine: Spine, speed: number, maxApproach: number): SpineFit | null {
+  const first = corridor.geometry[0];
+  const last = corridor.geometry.at(-1);
+  if (!validCoordinate(first) || !validCoordinate(last)) return null;
+  if (spine.index.probe(first) > maxApproach || spine.index.probe(last) > maxApproach) return null;
+  let oriented = corridor;
+  let entry = nearestVertex(spine, first);
+  let exit = nearestVertex(spine, last);
+  if (exit < entry) {
+    if (!corridor.reversible) return null;
+    oriented = reversed(corridor);
+    [entry, exit] = [exit, entry];
+  }
+  const approach = spine.index.probe(first) + spine.index.probe(last);
+  const saved = spine.cumulative[exit]! - spine.cumulative[entry]!;
+  const dirtSpeed = Math.min(speed, DIRT_SPEED_METERS_PER_SECOND);
+  const corridorSeconds = corridor.lengthMeters / (corridor.kind === "dirt" ? dirtSpeed : speed);
+  const detour = (approach * CONNECTOR_STRETCH) / speed + corridorSeconds - saved / speed;
+  return { corridor: oriented, entryIndex: entry, exitIndex: exit, detourSeconds: Math.max(0, detour) };
+}
+
+/** Allowed corridors that fit the fastest route within the detour budget, best prize first. */
+function selectAlongSpine(
+  corridors: readonly GravelAtlasCorridor[],
+  request: ProviderRouteRequest,
+  context: FunGeneratorContext,
+  kind: AtlasGeneratorId,
+): readonly SpineFit[] {
+  const spine = spineOf(context);
+  if (spine === null) return [];
+  const speed = speedProxy(context);
+  const extraBudget = spine.seconds * (MAX_DETOUR_FACTOR - 1) * ESTIMATE_SAFETY;
+  return corridors
+    .filter((corridor) => corridorAllowed(corridor, request, kind))
+    .flatMap((corridor) => {
+      const fit = fitToSpine(corridor, spine, speed, MAX_APPROACH_METERS);
+      return fit === null || fit.detourSeconds > extraBudget ? [] : [fit];
+    })
+    .sort((left, right) =>
+      sourceScore(right.corridor, kind) - sourceScore(left.corridor, kind) ||
+      left.detourSeconds - right.detourSeconds ||
+      left.corridor.id.localeCompare(right.corridor.id),
+    )
+    .slice(0, MAX_FITS);
+}
+
+/**
+ * Every corridor set along the fastest route, best prize first: increasing position, no
+ * overlap, total detour inside the budget. Small enough to enumerate.
+ */
+function sequencesAlongSpine(
+  fits: readonly SpineFit[],
+  context: FunGeneratorContext,
+  kind: AtlasGeneratorId,
+): readonly SelectedSequence[] {
+  const spine = spineOf(context);
+  if (spine === null) return [];
+  const budget = spine.seconds * (MAX_DETOUR_FACTOR - 1) * ESTIMATE_SAFETY;
+  const ordered = [...fits].sort((left, right) => left.entryIndex - right.entryIndex || left.exitIndex - right.exitIndex);
+  const found: SelectedSequence[] = [];
+  const extend = (chosen: readonly SpineFit[], from: number): void => {
+    if (chosen.length > 0) {
+      const detour = chosen.reduce((sum, fit) => sum + fit.detourSeconds, 0);
+      const corridors = chosen.map((fit) => fit.corridor);
+      found.push({
+        corridors,
+        estimatedSeconds: spine.seconds + detour,
+        connectorMeters: 0,
+        prize: sequencePrize(corridors, kind),
+        key: sequenceKey(corridors),
+        detourSeconds: chosen.map((fit) => fit.detourSeconds),
+        baseSeconds: spine.seconds,
+      });
+    }
+    if (chosen.length >= MAX_CORRIDERS_PER_SEQUENCE) return;
+    for (let at = from; at < ordered.length; at += 1) {
+      const fit = ordered[at]!;
+      const previous = chosen.at(-1);
+      if (previous !== undefined && fit.entryIndex < previous.exitIndex) continue;
+      const detour = chosen.reduce((sum, item) => sum + item.detourSeconds, 0) + fit.detourSeconds;
+      if (detour > budget) continue;
+      extend([...chosen, fit], at + 1);
+    }
+  };
+  extend([], 0);
+  return found.sort(
+    (left, right) => right.prize - left.prize || left.estimatedSeconds - right.estimatedSeconds || left.key.localeCompare(right.key),
+  );
+}
+
 function selectReachable(
   corridors: readonly GravelAtlasCorridor[],
   request: ProviderRouteRequest,
@@ -379,9 +533,14 @@ function narrowed(sequence: SelectedSequence, request: ProviderRouteRequest, spe
   if (sequence.corridors.length < 2) return null;
   const weakest = [...sequence.corridors].sort((left, right) => sourceScore(left, kind) - sourceScore(right, kind))[0]!;
   const rest = sequence.corridors.filter((corridor) => corridor.id !== weakest.id);
+  const keep = sequence.corridors.map((corridor) => corridor.id !== weakest.id);
+  const detours = sequence.detourSeconds?.filter((_, at) => keep[at] === true);
   return {
     corridors: rest,
-    estimatedSeconds: estimateSeconds(request, rest, speed),
+    ...(detours === undefined || sequence.baseSeconds === undefined ? {} : { detourSeconds: detours, baseSeconds: sequence.baseSeconds }),
+    estimatedSeconds: detours === undefined || sequence.baseSeconds === undefined
+      ? estimateSeconds(request, rest, speed)
+      : sequence.baseSeconds + detours.reduce((sum, value) => sum + value, 0),
     connectorMeters: connectorMeters(request, rest),
     prize: sequencePrize(rest, kind),
     key: sequenceKey(rest),
@@ -512,11 +671,11 @@ function makeProbe(
   fastestSeconds: number | null,
   request: ProviderRouteRequest,
 ): FunProbe {
-  const widest = plan.sequences[0]!;
+  const widest = plan.alternatives[0]!;
   return {
     id: `${id}:${widest.key}`,
     generator: id,
-    maxProviderCalls: plan.sequences.length,
+    maxProviderCalls: plan.attempts,
     sourceIds: widest.corridors.flatMap((corridor) => corridor.sourceIds.length > 0 ? corridor.sourceIds : [corridor.id]),
     forecast: {
       curvatureUnit: clamp01(widest.corridors.reduce((sum, corridor) => sum + corridor.francoScore, 0) / Math.max(widest.corridors.length, 1)),
@@ -524,10 +683,27 @@ function makeProbe(
     },
     async execute(call) {
       let last: FunProbeExecution = { candidate: null, adherence: null, note: "no-path" };
-      for (let attempt = 0; attempt < plan.sequences.length; attempt += 1) {
-        const answer = await call(plan.requests[attempt]!);
-        last = evaluateAnswer(id, answer, plan.sequences[attempt]!, fastestSeconds, request);
+      let sequence: SelectedSequence | undefined = widest;
+      const tried = new Set<string>();
+      let errorFactor = 1;
+      for (let attempt = 0; attempt < plan.attempts && sequence !== undefined; attempt += 1) {
+        tried.add(sequence.key);
+        const answer = await call(requestForSequence(request, sequence));
+        last = evaluateAnswer(id, answer, sequence, fastestSeconds, request);
         if (last.candidate !== null || !RETRYABLE_NOTES.has(last.note)) return last;
+        // How far past its estimate did the router put this sequence? Plan the
+        // next attempt as if the same error applies to its estimate too.
+        const base: number | undefined = sequence.baseSeconds;
+        if (last.note === "time-cap" && answer !== null && base !== undefined) {
+          const estimated = Math.max(60, sequence.estimatedSeconds - base);
+          errorFactor = Math.max(errorFactor, Math.min(6, (answer.durationSeconds - base) / estimated));
+        }
+        const cap: number = (base ?? fastestSeconds ?? 0) * MAX_DETOUR_FACTOR * 0.97;
+        sequence = plan.alternatives.find((candidate) => {
+          if (tried.has(candidate.key)) return false;
+          if (candidate.baseSeconds === undefined) return true;
+          return candidate.baseSeconds + (candidate.estimatedSeconds - candidate.baseSeconds) * errorFactor <= cap;
+        });
       }
       return last;
     },
@@ -542,13 +718,27 @@ function buildPlans(
   if (requestHasAuthoredGeometry(context.request)) return [];
   const fastest = fastestProductionSeconds(context);
   if (fastest === null && context.request.discovery === undefined) return [];
-  const reachable = selectReachable(corridors, context.request, context, id);
   const speed = speedProxy(context);
-  return sequenceCandidates(reachable, context.request, context, id).map((widest) => {
-    const second = narrowed(widest, context.request, speed, id);
-    const sequences = second === null ? [widest] : [widest, second].slice(0, MAX_ATTEMPTS_PER_PROBE);
-    return { sequences, requests: sequences.map((sequence) => requestForSequence(context.request, sequence)) };
-  });
+  if (context.request.discovery !== undefined) {
+    const proposed = sequenceCandidates(selectReachable(corridors, context.request, context, id), context.request, context, id);
+    return proposed.map((widest) => {
+      const second = narrowed(widest, context.request, speed, id);
+      const alternatives = second === null ? [widest] : [widest, second];
+      return { alternatives, attempts: Math.min(MAX_ATTEMPTS_PER_PROBE, alternatives.length) };
+    });
+  }
+  const ranked = sequencesAlongSpine(selectAlongSpine(corridors, context.request, context, id), context, id);
+  const plans: AtlasPlan[] = [];
+  const used = new Set<string>();
+  for (const head of ranked) {
+    if (plans.length >= MAX_ATLAS_PROPOSALS) break;
+    if (head.corridors.some((corridor) => used.has(corridor.id))) continue;
+    // Alternatives for this probe never reuse the corridors another probe leads with.
+    const alternatives = [head, ...ranked.filter((other) => other !== head && !other.corridors.some((corridor) => used.has(corridor.id)))].slice(0, 8);
+    for (const corridor of head.corridors) used.add(corridor.id);
+    plans.push({ alternatives, attempts: Math.min(MAX_ATTEMPTS_PER_PROBE, alternatives.length) });
+  }
+  return plans;
 }
 
 function generatorFor(
