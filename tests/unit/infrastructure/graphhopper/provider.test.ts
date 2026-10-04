@@ -219,6 +219,11 @@ describe("GraphHopper provider", () => {
         "urban_density",
         "curvature",
         "time",
+        "smoothness",
+        "road_class_link",
+        "roundabout",
+        "car_access",
+        "road_access",
       ],
     });
     expect(result.candidates).toHaveLength(1);
