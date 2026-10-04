@@ -185,6 +185,14 @@ export interface CandidatePipelineInput {
   readonly discoveryTimebox?: DiscoveryTimebox;
   /** Optional measured recommendation value; canonical evidence and RouteScore stay intact. */
   readonly candidateValueFor?: (candidate: PipelineCandidate, source: ProviderCandidate, fastestSeconds: number) => number | null;
+  /** How far past the fastest eligible ETA a candidate may still be recommended (default 1.35). */
+  readonly recommendationDetourCap?: number;
+  /**
+   * The rider's engine profile. When eligible candidates on it exist, the
+   * recommendation cap measures from their fastest ETA, so a faster profile's
+   * speed model (motorcycle_fastest) does not squeeze the rider's own rides out.
+   */
+  readonly recommendationProfile?: string;
 }
 
 export interface PipelineFunShadowAssessment {
@@ -611,8 +619,10 @@ export function runCandidatePipeline(
     const value = input.candidateValueFor?.(candidate, eligible[index]!.candidate, baselineDurationSeconds);
     return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
   });
+  const ownProfileSeconds = Math.min(...eligible.filter(entry => entry.candidate.profile === input.recommendationProfile).map(entry => entry.candidate.durationSeconds));
+  const recommendationBaseline = Number.isFinite(ownProfileSeconds) ? Math.max(baselineDurationSeconds, ownProfileSeconds) : baselineDurationSeconds;
   const boundedRecommendation = (index: number): number | null => {
-    if (input.discoveryTimebox === undefined && candidates[index]!.durationSeconds > baselineDurationSeconds * 1.35) return null;
+    if (input.discoveryTimebox === undefined && candidates[index]!.durationSeconds > recommendationBaseline * (input.recommendationDetourCap ?? 1.35)) return null;
     return recommendationValues[index] ?? null;
   };
   const hasRecommendation = recommendationValues.some((_, index) => boundedRecommendation(index) !== null);

@@ -76,7 +76,16 @@ const DIRT_SURFACES = new Set([
 const SAND_SURFACES = new Set(["sand", "mud"]);
 const BLOCKED_SURFACES = new Set(["sand"]);
 const ROUGH_SMOOTHNESS = new Set(["bad", "very_bad", "horrible", "very_horrible", "impassable"]);
-const DIRT_TRACK_GRADES = new Set(["grade1", "grade2", "grade3", "grade4"]);
+// OSM tracktype=grade1 is "solid, usually paved": never dirt. A track grade
+// only stands in for the surface when the surface itself is untagged; PA 44
+// is asphalt|secondary|grade1 for 15 km and used to read as dirt.
+const DIRT_TRACK_GRADES = new Set(["grade2", "grade3", "grade4"]);
+const UNKNOWN_SURFACES = new Set(["", "missing", "unknown", "other"]);
+
+function surfaceOrGradeIsDirt(surface: string, trackType: string | null | undefined): boolean {
+  if (DIRT_SURFACES.has(surface)) return true;
+  return UNKNOWN_SURFACES.has(surface) && trackType !== null && trackType !== undefined && DIRT_TRACK_GRADES.has(trackType.toLowerCase());
+}
 const BUSY_CLASSES = new Set(["motorway", "trunk", "primary"]);
 
 function clamp01(value: number): number {
@@ -106,8 +115,7 @@ function runSurface(run: ProviderRoadRun): string {
 }
 
 function runIsDirt(run: ProviderRoadRun): boolean {
-  return DIRT_SURFACES.has(runSurface(run)) ||
-    (run.trackType !== null && run.trackType !== undefined && DIRT_TRACK_GRADES.has(run.trackType.toLowerCase()));
+  return surfaceOrGradeIsDirt(runSurface(run), run.trackType);
 }
 
 function runIsUnknown(run: ProviderRoadRun): boolean {
@@ -232,7 +240,7 @@ function worthwhileJudge(
     const roadClass = run.roadClass.trim().toLowerCase();
     if (surface === "" || surface === "missing" || surface === "unknown" || roadClass === "" || roadClass === "missing") return null;
     if (run.carAccess === false || run.roadAccess?.toLowerCase() === "private") return 0;
-    const dirt = DIRT_SURFACES.has(surface) || (run.trackType !== null && run.trackType !== undefined && DIRT_TRACK_GRADES.has(run.trackType.toLowerCase()));
+    const dirt = surfaceOrGradeIsDirt(surface, run.trackType);
     const arterial = BUSY_CLASSES.has(roadClass) || run.roadClassLink === true;
     if (options.bike?.category === "dual-sport" || options.surfacePreference === "dirt-preferred") {
       if (SAND_SURFACES.has(surface)) return 0;

@@ -12,6 +12,24 @@ export function riderEnvelopeMetrics(candidate: ProviderCandidate): { unpavedSha
   return { unpavedShare: unpavedMeters / summary.totalMeters, busyShare: busyMeters === undefined ? null : busyMeters / summary.totalMeters };
 }
 
+/** A slower route must buy at least one point of dirt per this many extra minutes. */
+export const DIRT_MINUTES_PER_POINT = 3;
+const MIN_DIRT_GAIN = 0.02;
+/** Dirt mode may stretch the trip this far; {@link DIRT_MINUTES_PER_POINT} decides if it should. */
+export const DIRT_DETOUR_CAP = 1.75;
+
+/** Walk fastest-first; step up only when the extra dirt pays for the extra minutes. */
+function dirtKnee<T extends { candidate: ProviderCandidate; unpavedShare: number }>(byDuration: readonly T[]): T | undefined {
+  let chosen = byDuration[0];
+  for (const next of byDuration.slice(1)) {
+    if (chosen === undefined) break;
+    const gain = next.unpavedShare - chosen.unpavedShare;
+    const minutes = (next.candidate.durationSeconds - chosen.candidate.durationSeconds) / 60;
+    if (gain >= MIN_DIRT_GAIN && gain * 100 * DIRT_MINUTES_PER_POINT >= minutes) chosen = next;
+  }
+  return chosen;
+}
+
 export interface RiderModeTrial {
   readonly factor: number;
   readonly unpavedShare: number;
@@ -49,7 +67,11 @@ export async function searchRiderEnvelope(input: {
   const initialCount = measured.length;
   const signal = AbortSignal.any([input.signal, AbortSignal.timeout(Math.max(1, input.deadlineMs))]);
   let calls = 0;
-  let baselineSeconds = Math.min(...measured.map(entry => entry.candidate.durationSeconds));
+  // Profiles time the same road differently (adventure runs 0.82x car speed),
+  // so the cap never measures against an ETA faster than the rider's own model.
+  const ownSeconds = Math.min(...measured.map(entry => entry.candidate.durationSeconds));
+  let baselineSeconds = ownSeconds;
+  const cap = target > 0 ? DIRT_DETOUR_CAP : 1.35;
   let low = 0;
   let high = 4;
   const limit = Math.min(3, Math.max(0, input.maxCalls));
@@ -62,16 +84,16 @@ export async function searchRiderEnvelope(input: {
       const start = measured.length;
       const verified = result.candidates.filter(candidate => input.screen?.(candidate) ?? true);
       verified.forEach(candidate => add(candidate, factor));
-      if (index === 0 && verified.length > 0) baselineSeconds = Math.min(...verified.map(candidate => candidate.durationSeconds));
+      if (index === 0 && verified.length > 0) baselineSeconds = Math.max(ownSeconds, Math.min(...verified.map(candidate => candidate.durationSeconds)));
       if (index === 0) {
-        const initialWithinCap = measured.slice(0, start).filter(entry => entry.candidate.durationSeconds <= baselineSeconds * 1.35);
+        const initialWithinCap = measured.slice(0, start).filter(entry => entry.candidate.durationSeconds <= baselineSeconds * cap);
         if (initialWithinCap.length === 0 || (target > 0 && initialWithinCap.some(entry => entry.unpavedShare >= target))) high = 1;
         else low = 1;
       }
       const entries = measured.slice(start);
-      const meets = entries.some(entry => entry.candidate.durationSeconds <= baselineSeconds * 1.35 && (target > 0 ? entry.unpavedShare >= target : entry.busyShare !== null && entry.busyShare <= Math.min(...measured.slice(0, start).map(previous => previous.busyShare ?? 1))));
+      const meets = entries.some(entry => entry.candidate.durationSeconds <= baselineSeconds * cap && (target > 0 ? entry.unpavedShare >= target : entry.busyShare !== null && entry.busyShare <= Math.min(...measured.slice(0, start).map(previous => previous.busyShare ?? 1))));
       if (index > 0 && entries.length > 0) {
-        if (meets || entries.every(entry => entry.candidate.durationSeconds > baselineSeconds * 1.35)) high = factor;
+        if (meets || entries.every(entry => entry.candidate.durationSeconds > baselineSeconds * cap)) high = factor;
         else low = factor;
       }
     } catch {
@@ -89,15 +111,15 @@ export async function searchRiderEnvelope(input: {
       accepted = measured.slice(0, initialCount);
     }
   }
-  const feasible = accepted.filter(entry => entry.candidate.durationSeconds <= baselineSeconds * 1.35);
+  // The pipeline already accepted its own candidates; the cap bounds trials only.
+  const feasible = accepted.filter((entry, index) => index < initialCount || entry.candidate.durationSeconds <= baselineSeconds * cap);
   const hits = target > 0 ? feasible.filter(entry => entry.unpavedShare >= target) : [];
   const pool = hits.length > 0 ? hits : feasible;
   pool.sort((a, b) => {
-    if (hits.length > 0) return a.candidate.durationSeconds - b.candidate.durationSeconds;
-    const fit = target > 0 ? b.unpavedShare - a.unpavedShare : (a.busyShare ?? 1) - (b.busyShare ?? 1);
-    return fit || a.candidate.durationSeconds - b.candidate.durationSeconds;
+    if (hits.length > 0 || target > 0) return a.candidate.durationSeconds - b.candidate.durationSeconds;
+    return (a.busyShare ?? 1) - (b.busyShare ?? 1) || a.candidate.durationSeconds - b.candidate.durationSeconds;
   });
-  const chosen = pool[0];
+  const chosen = hits.length === 0 && target > 0 ? dirtKnee(pool) : pool[0];
   return {
     candidate: chosen === undefined ? null : { ...chosen.candidate, providerMetadata: { ...chosen.candidate.providerMetadata, riderModeFactor: chosen.factor, riderModeTrials: JSON.stringify(trials), riderModeAddedMinutes: (chosen.candidate.durationSeconds - baselineSeconds) / 60 } },
     calls,

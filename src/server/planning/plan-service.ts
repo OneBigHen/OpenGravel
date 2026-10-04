@@ -5,7 +5,7 @@ import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/rid
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
-import { searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { DIRT_DETOUR_CAP, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
 /**
@@ -765,6 +765,10 @@ function funJudgeWire(
   };
 }
 
+function seeksDirt(options: ProviderRouteRequest["options"]): boolean {
+  return options.surfacePreference === "dirt-preferred" || (options.targetUnpavedShare ?? 0) > 0 || options.bike?.category === "dual-sport";
+}
+
 export async function planRide(
   input: PlanRideInput,
   deps: PlanServiceDeps = {},
@@ -869,6 +873,11 @@ export async function planRide(
             const result = formulaFor(candidate.evidence, source, fastestSeconds);
             return result.eligible && result.confidence >= RIDE_FORMULA_MIN_CONFIDENCE ? result.value : null;
           },
+          // Same allowance the rider-mode search gives a dirt detour; the
+          // fastest eligible ETA here is often motorcycle_fastest's, which
+          // runs ~20% quicker than the adventure profile on the same road.
+          ...(seeksDirt(parsed.value.request.options) ? { recommendationDetourCap: DIRT_DETOUR_CAP } : {}),
+          recommendationProfile: parsed.value.request.profile,
         }),
     // What the engine knows about the roads under each line: surface mix, the
     // backroad share and curvature (M3, OGV-D-263).
@@ -1160,8 +1169,12 @@ export async function planRide(
         },
       }];
     });
+    // Mirror the pipeline's recommendation cap: measured from the rider's own
+    // profile ETA, with the dirt allowance for dirt-seeking riders.
+    const ownSeconds = Math.min(...pipeline.candidates.filter((kept) => sourceOf(candidates, kept)?.profile === parsed.value.request.profile).map((kept) => kept.durationSeconds));
+    const capSeconds = (Number.isFinite(ownSeconds) ? Math.max(fastestSeconds, ownSeconds) : fastestSeconds) * (seeksDirt(parsed.value.request.options) ? DIRT_DETOUR_CAP : 1.35);
     const inBudget = rows.filter((row) => row.eligible && row.confidence >= RIDE_FORMULA_MIN_CONFIDENCE
-      && (parsed.value.request.discovery !== undefined || (pipeline.candidates[row.index]?.durationSeconds ?? Infinity) <= fastestSeconds * 1.35));
+      && (parsed.value.request.discovery !== undefined || (pipeline.candidates[row.index]?.durationSeconds ?? Infinity) <= capSeconds));
     const pick = [...inBudget].sort((left, right) => right.value - left.value)[0];
     rideFormulaDiagnostic = { mode: formulaMode, version: RIDE_FORMULA_VERSION, pickIndex: pick?.index ?? null, rows };
   }
