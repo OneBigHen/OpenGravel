@@ -694,6 +694,11 @@ function environmentCharacterClassifier(
   return environmentClassifier.classifier;
 }
 
+/** Two lines are the same route when every coordinate matches (the pipeline copies geometry). */
+function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
+  return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
+}
+
 /** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
 let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
 function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
@@ -856,6 +861,25 @@ export async function planRide(
   });
   let pipeline = rank(candidates);
   let riderKneeSelected = false;
+  // A rider-mode route leads the plan as Best Ride, but the rider keeps the
+  // other choices (Fastest, alternatives) to compare it against.
+  const preferBestRide = (
+    preferred: ProviderCandidate,
+    others: readonly ProviderCandidate[],
+    verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
+  ): typeof pipeline | null => {
+    const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
+    const index = merged.candidates.findIndex((candidate) => sameLine(candidate.geometry, preferred.geometry));
+    if (index < 0) {
+      // Diversity folded it into a near-duplicate: offer it alone, as before.
+      const alone = rank([preferred], verdictFor);
+      return alone.candidates.length > 0 ? alone : null;
+    }
+    const roles = Object.fromEntries(
+      Object.entries(merged.roles).map(([role, at]) => [role, role !== "fastest" && at === index ? null : at]),
+    ) as typeof merged.roles;
+    return { ...merged, roles: { ...roles, "best-ride": index }, selectedIndex: index };
+  };
   if (riderEnabled && pipeline.candidates.length > 0) {
     const result = await searchRiderEnvelope({
       request: parsed.value.request,
@@ -872,9 +896,9 @@ export async function planRide(
     riderCalls = result.calls;
     riderTrials = result.trials;
     if (result.candidate !== null) {
-      const selected = rank([result.candidate], candidate => roads?.evaluate(candidate.geometry) ?? null);
-      if (selected.candidates.length > 0) {
-        candidates = [result.candidate]; pipeline = selected; riderKneeSelected = true;
+      const selected = preferBestRide(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
+      if (selected !== null) {
+        candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
         const factor = result.candidate.providerMetadata?.["riderModeFactor"];
         riderFactor = typeof factor === "number" ? factor : undefined;
       }
@@ -973,8 +997,9 @@ export async function planRide(
     const refined = await refineRiderTraffic({ request: { ...parsed.value.request, profile: chosen.provider.profile, options: { ...parsed.value.request.options, riderModeFactor: riderFactor } }, candidate: { ...chosen, providerId: chosen.provider.providerId, profile: chosen.provider.profile }, provider, sample: riderTrafficSampler(riderEnv), signal });
     if (refined !== null) {
       const ownRoads = await assessRoads([refined]);
-      const refinedPipeline = rank([refined], candidate => ownRoads?.evaluate(candidate.geometry) ?? null);
-      if (refinedPipeline.candidates.length > 0) pipeline = refinedPipeline;
+      const others = pipeline.candidates.filter((_, at) => at !== index).map((kept) => candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry))).filter((candidate): candidate is ProviderCandidate => candidate !== undefined);
+      const refinedPipeline = preferBestRide(refined, others, candidate => candidate === refined ? ownRoads?.evaluate(candidate.geometry) ?? null : roadVerdict(candidate));
+      if (refinedPipeline !== null) pipeline = refinedPipeline;
     }
   }
 
