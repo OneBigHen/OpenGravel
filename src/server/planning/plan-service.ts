@@ -59,6 +59,7 @@ import { createFunJudge, type FunJudge } from "@/application/planner/fun-judge";
 import {
   parseFunJudgeMode,
   selectBestRideWithFunJudge,
+  scheduleFunJudgeShadow,
   geometryFunJudgeExtensions,
   type FunJudgeSelection,
 } from "@/application/planner/fun-judge-selection";
@@ -220,6 +221,8 @@ export interface PlanServiceDeps {
   readonly funGeneratorLibrary?: () => Promise<readonly LibraryRide[]>;
   /** Receives every family report; the default writes one server log line. */
   readonly onFunGeneratorReport?: (report: FunGeneratorReport, mode: FunGeneratorMode) => void;
+  /** Receives the off-path shadow FUN JUDGE outcome; the default writes one log line. */
+  readonly onFunJudgeShadow?: (selection: FunJudgeSelection) => void;
 }
 
 /**
@@ -1072,22 +1075,30 @@ export async function planRide(
     request: null,
   };
   if (funJudgeMode !== "off" && !signal.aborted) {
-    try {
-      judged = await selectBestRideWithFunJudge({
-        pipeline,
-        intent,
-        avoidHighways: parsed.value.request.options.avoidHighways,
-        policy: ROUTE_POLICY,
-        ...(parsed.value.request.discovery === undefined
-          ? {}
-          : { discoveryTimebox: parsed.value.request.discovery }),
-        mode: funJudgeMode,
-        judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
-        extensions: geometryFunJudgeExtensions,
-        signal,
+    const judgeInput = {
+      pipeline,
+      intent,
+      avoidHighways: parsed.value.request.options.avoidHighways,
+      policy: ROUTE_POLICY,
+      ...(parsed.value.request.discovery === undefined
+        ? {}
+        : { discoveryTimebox: parsed.value.request.discovery }),
+      judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
+      extensions: geometryFunJudgeExtensions,
+    };
+    if (funJudgeMode === "shadow") {
+      // Shadow never waits for Jev: the call starts after the answer is built,
+      // with a longer budget, and its outcome goes to the shadow log.
+      scheduleFunJudgeShadow(judgeInput, (selection) => {
+        if (deps.onFunJudgeShadow !== undefined) deps.onFunJudgeShadow(selection);
+        else console.info(JSON.stringify({ event: "fun-judge-shadow", requestId: parsed.value.request.requestId, diagnostic: selection.diagnostic }));
       });
-    } catch {
-      // Advisory failure never changes the deterministic answer.
+    } else {
+      try {
+        judged = await selectBestRideWithFunJudge({ ...judgeInput, mode: funJudgeMode, signal });
+      } catch {
+        // Advisory failure never changes the deterministic answer.
+      }
     }
   }
   const funJudge = funJudgeWire(judged, mapped.map((candidate) => candidate.id));

@@ -262,13 +262,13 @@ function mergeWays(ways: readonly Way[]): readonly Corridor[] {
     if (first === undefined) continue;
     const used = new Set<string>();
     const line: Coordinate[] = [];
-    let current = first;
-    let currentKey = endpoints[0]?.[0] ?? current.startKey;
+    let current: Way | undefined = first;
+    let currentKey = endpoints[0]?.[0] ?? first.startKey;
     while (current !== undefined && !used.has(current.id)) {
       used.add(current.id);
       const reverse = current.startKey !== currentKey;
       appendLine(line, current.line, reverse);
-      const nextKey = reverse ? current.startKey : current.endKey;
+      const nextKey: string = reverse ? current.startKey : current.endKey;
       const next = (byEndpoint.get(nextKey) ?? []).find((candidate) => !used.has(candidate.id));
       current = next;
       currentKey = nextKey;

@@ -59,6 +59,7 @@ function corridor(
     francoScore: 0.8,
     curvaturePerKm: 18,
     quality: 0.9,
+    reversible: true,
     gradeMix: { grade1: 10_000, grade2: 6_000 },
     maxTrackGrade: 2,
     legalConfidence: 0.95,
