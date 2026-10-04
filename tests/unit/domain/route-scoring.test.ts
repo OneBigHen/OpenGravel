@@ -3,13 +3,14 @@
  *
  * Two contracts are pinned here: the score is a pure function of
  * (candidate, intent, policy, evidence) — same input, identical output — and a
- * component whose evidence is absent is `input: null` / `unknown` / `0`, never a
- * fabricated positive or negative (03-DOMAIN-MODEL §19, integrity rule 2).
+ * component whose evidence is absent keeps `input: null` / `unknown`; policy
+ * priors never fabricate a measured value (03-DOMAIN-MODEL §19, integrity rule 2).
  */
 
 import { describe, expect, it } from "vitest";
 
-import { knownEvidence } from "@/domain/evidence/types";
+import { engineRoadEvidence } from "@/application/roads/engine-road-evidence";
+import { knownEvidence, unknownEvidence } from "@/domain/evidence/types";
 import type { Coordinate } from "@/domain/ride/types";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import {
@@ -100,11 +101,11 @@ describe("uncertaintyPenalty", () => {
   it("decreases monotonically as evidence becomes usable", () => {
     const source = { id: "test", label: "test", category: "derived" } as const;
     const oneKnown: RouteEvidence = {
-      curvature: knownEvidence(0.5, source),
+      curvature: knownEvidence(0.5, source, 1),
     };
     const twoKnown: RouteEvidence = {
       ...oneKnown,
-      elevation: knownEvidence(0.5, source),
+      elevation: knownEvidence(0.5, source, 1),
     };
     const nothingKnown = uncertaintyPenalty({});
     const one = uncertaintyPenalty(oneKnown);
@@ -124,7 +125,7 @@ describe("scoreCandidate", () => {
     expect(score()).toEqual(score());
   });
 
-  it("marks every component with no evidence as unknown with zero contribution", () => {
+  it("keeps missing inputs unknown while quality is neutral and costs cautious", () => {
     const components = score().components;
     const unknownKeys = [
       "backroad",
@@ -140,7 +141,8 @@ describe("scoreCandidate", () => {
       const component = components[key];
       expect(component.input).toBeNull();
       expect(component.evidenceStatus).toBe("unknown");
-      expect(component.contribution).toBe(0);
+      const neutralQuality = ["backroad", "surfaceFit", "elevation", "novelty"].includes(key);
+      expect(component.contribution).toBe(neutralQuality ? component.weight * 50 : 0);
       expect(component.weight).toBe(POLICY.characterWeights.balanced[key]);
     }
   });
@@ -182,7 +184,7 @@ describe("scoreCandidate", () => {
     const traffic = scored.components.traffic;
     expect(traffic.input).toBe(0.25);
     expect(traffic.evidenceStatus).toBe("known");
-    expect(traffic.contribution).toBeCloseTo(traffic.weight * (1 - 0.25) * 100, 6);
+    expect(traffic.contribution).toBeCloseTo(9.45, 6);
   });
 
   it("uses the Protect the Ride traffic term only when traffic data is available", () => {
@@ -254,4 +256,85 @@ describe("scoreCandidate", () => {
       Number((stored.total - stored.components.novelty.contribution + replaced.components.novelty.contribution).toFixed(1)),
     );
   });
+});
+
+
+describe("measured route coverage", () => {
+  const source = { id: "test", label: "test", category: "derived" } as const;
+
+  it("does not let a tiny gravel patch outrank measured gravel or a measured mix", () => {
+    const scoreSurface = (surfaces: Record<string, number>) => scoreCandidate({
+      candidate: candidate({ distanceMeters: 10_000 }),
+      intent: { roadCharacter: "backroads" },
+      policy: POLICY,
+      evidence: engineRoadEvidence({
+        totalMeters: 10_000,
+        surfaceByRoadClassMeters: surfaces,
+        curvatureMeters: {},
+        tollMeters: 0,
+      }, "dirt-preferred"),
+    });
+    const patch = scoreSurface({ "gravel|unclassified": 1_000, "missing|unclassified": 9_000 });
+    const gravel = scoreSurface({ "gravel|unclassified": 10_000 });
+    const mixed = scoreSurface({ "gravel|unclassified": 5_000, "asphalt|unclassified": 5_000 });
+    // Surface fit is a small axis for backroads riders; the gap must still be clear.
+    expect(gravel.total - patch.total).toBeGreaterThan(1.5);
+    expect(patch.total).toBeLessThanOrEqual(mixed.total);
+    expect(patch.components.surfaceFit.contribution).toBeLessThan(mixed.components.surfaceFit.contribution);
+  });
+
+  it("keeps unknown and partially checked safety evidence cautious", () => {
+    const unknown = score({ evidence: { closures: unknownEvidence(), access: unknownEvidence() } });
+    const partial = score({ evidence: { closures: { ...knownEvidence(0, source, 1), coverage: 0.1 } } });
+    const clear = score({ evidence: { closures: knownEvidence(0, source, 1) } });
+    expect(unknown.components.closureRisk.contribution).toBe(0);
+    expect(partial.components.closureRisk.input).toBe(0);
+    expect(partial.components.closureRisk.contribution).toBeCloseTo(1.6);
+    expect(clear.components.closureRisk.contribution).toBeCloseTo(16);
+    // Access has no ranking axis: unknown access cannot add a safety reward.
+    expect(score({ evidence: { access: unknownEvidence() } })).toEqual(score());
+  });
+
+  it("weights confidence by measured metres, trust and the scored axis weight", () => {
+    const evidence: RouteEvidence = {
+      curvature: { ...knownEvidence(1, source, 0.8), coverage: 0.25 },
+      elevation: { ...knownEvidence(1, source, 0.5), coverage: 1 },
+    };
+    const scored = score({ evidence });
+    // (0.14 * 0.2 + 0.08 * 0.5) / 0.86 scored evidence weight.
+    expect(scored.components.confidence.input).toBeCloseTo(0.0790697674);
+    expect(uncertaintyPenalty(evidence)).toBeCloseTo(13.81395349);
+    expect(scored.components.curvature.input).toBe(1);
+    expect(scored.components.curvature.contribution).toBeCloseTo(8.4);
+    expect(score({ evidence: { weatherExposure: knownEvidence(1, source) } }).components.confidence.input).toBeNull();
+  });
+});
+
+
+it("uses the scored traffic signal's measured coverage for confidence", () => {
+  const scored = scoreCandidate({
+    candidate: candidate(), intent: {}, policy: POLICY,
+    trafficCost: { normalizedCost: 0, status: "known", coverage: 0.1, confidence: 0.5 },
+  });
+  expect(scored.components.traffic.contribution).toBeCloseTo(0.7);
+  expect(scored.components.confidence.input).toBeCloseTo(0.00813953488);
+});
+
+
+it("does not reward a clear cost reading whose confidence is explicitly unknown", () => {
+  const source = { id: "test", label: "test", category: "derived" } as const;
+  const scored = score({ evidence: { closures: knownEvidence(0, source) } });
+  expect(scored.components.closureRisk.input).toBe(0);
+  expect(scored.components.closureRisk.contribution).toBe(0);
+  expect(scored.components.confidence.input).toBeNull();
+});
+
+
+it("fails closed for invalid coverage instead of granting a safety reward", () => {
+  const source = { id: "test", label: "test", category: "derived" } as const;
+  for (const coverage of [Number.NaN, -1, 2]) {
+    const scored = score({ evidence: { closures: { ...knownEvidence(0, source, 1), coverage } } });
+    expect(scored.components.closureRisk.contribution).toBe(0);
+    expect(scored.components.confidence.input).toBeNull();
+  }
 });

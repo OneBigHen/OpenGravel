@@ -297,6 +297,27 @@ describe("fun generator strategies", () => {
     expect(execution.note).toBe("connector-unmeasured");
   });
 
+  it("keeps the connector search's existing non-arterial gate for secondary roads", async () => {
+    const probes = missingLinkGenerator.propose(context({
+      sources: [{ id: "a#0", geometry: curvyWindow }, { id: "b#0", geometry: secondWindow }],
+    }));
+    let calls = 0;
+    const execution = await probes[0]!.execute(async (request) => {
+      calls += 1;
+      if (calls > 1) return null;
+      return {
+        ...routed([request.origin, request.destination]),
+        roadSummary: {
+          totalMeters: 1_000,
+          surfaceByRoadClassMeters: { "asphalt|secondary": 100, "missing|missing": 900 },
+          curvatureMeters: {}, tollMeters: 0,
+        },
+      };
+    });
+    // This gate still accepts the measured secondary road and tries composition.
+    expect(execution.note).toBe("no-path");
+  });
+
   it("prize-loop only proposes for a timeboxed loop and routes back to the origin", () => {
     const sources = [
       { id: "east#0", geometry: wavy({ lon: -75.49, lat: 40.5 }, { lon: -75.38, lat: 40.5 }, 160, 0.0005) },

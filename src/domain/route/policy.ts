@@ -134,9 +134,11 @@ const ROLES: readonly RouteRole[] = [
 /**
  * Frozen PA/NJ ranking policy. Every weight traces back to
  * `PA_NJ_ROUTE_POLICY_V1`; changes require a new version and a corpus run.
+ * The public export name is retained for callers; diagnostics use VNext 2
+ * for the coverage-aware scoring semantics.
  */
 export const PA_NJ_ROUTE_POLICY_VNEXT_1: RoutePolicy = deepFreeze({
-  version: "PA_NJ_ROUTE_POLICY_VNEXT_1",
+  version: "PA_NJ_ROUTE_POLICY_VNEXT_2",
   territory: "pa-nj",
   preferredDetourPct: 0.08,
   diversityLambda: 0.35,

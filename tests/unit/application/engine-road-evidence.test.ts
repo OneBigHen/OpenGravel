@@ -15,6 +15,7 @@ import {
   curvatureLabel,
   engineCurvature,
   engineRoadEvidence,
+  engineRoadCharacter,
   engineSurfaceMix,
   surfaceFit,
   surfaceMixLabel,
@@ -122,11 +123,11 @@ describe("engine curvature and road class", () => {
     expect(curvature.continuityShare).toBeCloseTo(5 / 8, 5);
   });
 
-  it("measures the backroad share off the arterial network", () => {
+  it("measures continuous road character rather than counting every non-arterial equally", () => {
     const share = backroadShare(
       summary({ surfaceByRoadClassMeters: { "asphalt|primary": 5 * MILE, "asphalt|tertiary": 15 * MILE } }),
     );
-    expect(share).toBeCloseTo(0.75, 5);
+    expect(share).toBeCloseTo(0.7, 5);
   });
 });
 
@@ -137,7 +138,8 @@ describe("engineRoadEvidence", () => {
     expect(surface?.status).toBe("estimated");
     expect(surface?.coverage).toBeCloseTo(0.9, 5);
     expect(aggregateRouteSurface(surface).value).toBe("paved");
-    expect(evidence["roadClassMix"]?.value).toBe(1);
+    expect(evidence["roadClassMix"]?.value).toBe(0.76);
+    expect(evidence["roadClassMix"]?.coverage).toBe(1);
     expect(evidence["curvature"]?.status).toBe("estimated");
   });
 
@@ -186,5 +188,46 @@ describe("surface runs", () => {
     const mix = engineSurfaceMix(summary(), "mixed");
     expect(mix.runs).toBeUndefined();
     expect(surfaceRuns({ value: mix, status: "estimated", confidence: 0.8, provenance: [] })).toBeNull();
+  });
+});
+
+
+describe("road character coverage", () => {
+  it("orders road classes for a through ride and keeps service roads low", () => {
+    const reading = (roadClass: string) => backroadShare(summary({
+      totalMeters: 1_000,
+      surfaceByRoadClassMeters: { [`missing|${roadClass}`]: 1_000 },
+    }))!;
+    // Subdivision streets (residential) sit below the classic riding roads.
+    const classes = ["motorway", "trunk", "primary", "residential", "secondary", "tertiary", "unclassified"];
+    for (let index = 1; index < classes.length; index += 1) {
+      expect(reading(classes[index]!)).toBeGreaterThan(reading(classes[index - 1]!));
+    }
+    expect(reading("track")).toBeGreaterThan(reading("secondary"));
+    expect(reading("service")).toBeLessThan(reading("secondary"));
+  });
+
+  it("reports only recognized road metres as covered", () => {
+    const evidence = engineRoadEvidence(summary({
+      totalMeters: 10_000,
+      surfaceByRoadClassMeters: { "gravel|track": 1_000, "missing|missing": 8_000, "missing|future_class": 1_000 },
+    }), "dirt-preferred");
+    expect(engineRoadCharacter(summary({
+      totalMeters: 10_000,
+      surfaceByRoadClassMeters: { "gravel|track": 1_000, "missing|missing": 9_000 },
+    }))).toEqual({ unit: 0.9, coverage: 0.1 });
+    expect(evidence.roadClassMix?.coverage).toBe(0.1);
+    expect(evidence.roadClassMix?.value).toBe(0.9);
+    expect(backroadShare(summary({ surfaceByRoadClassMeters: { "missing|missing": 100 } }))).toBeNull();
+  });
+
+  it("separates measured surface fit from the honest whole-route unpaved share", () => {
+    const mix = engineSurfaceMix(summary({
+      totalMeters: 10_000,
+      surfaceByRoadClassMeters: { "gravel|unclassified": 1_000 },
+    }), "dirt-preferred");
+    expect(mix.unit).toBe(1);
+    expect(mix.unpavedShare).toBe(0.1);
+    expect(mix.unknownMeters).toBe(9_000);
   });
 });

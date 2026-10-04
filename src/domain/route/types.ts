@@ -220,9 +220,9 @@ export type RouteEvidenceKey =
 
 /**
  * The declared evidence keys as a runtime list, so a consumer that must count or
- * iterate the set — scoring's evidence coverage and uncertainty penalty — cannot
- * drift from the type. Keys outside this list are still valid evidence (the map
- * stays open); they simply do not count toward the declared coverage. That is
+ * iterate the set cannot drift from the type. Scoring weights measured coverage
+ * only across its quality and cost axes, rather than counting these keys.
+ * Keys outside this list are still valid evidence (the map stays open). That is
  * where `sketchAdherence` sits, on purpose: it exists only for a ride that has a
  * sketch, so it is measured and explained but never scored as a coverage gap.
  */

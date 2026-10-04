@@ -63,7 +63,7 @@ describe("checkHealth", () => {
     expect(report.status).toBe("ok");
     expect(report.router).toEqual({ status: "available", reason: null });
     expect(report.buildId).toBe("build_42");
-    expect(report.policyVersion).toBe("PA_NJ_ROUTE_POLICY_VNEXT_1");
+    expect(report.policyVersion).toBe("PA_NJ_ROUTE_POLICY_VNEXT_2");
     expect(report.graphVersion).toBe("gh-pa-nj-2026-09");
     expect(report.checkedAt).toBe(FIXED);
     expect(probe.urls).toEqual(["http://router.internal:8989/health"]);
@@ -106,7 +106,7 @@ describe("checkHealth", () => {
     const report = await checkHealth({ fetcher: okFetcher(probe), env: {} });
 
     expect(report.buildId).toBe("dev");
-    expect(report.policyVersion).toBe("PA_NJ_ROUTE_POLICY_VNEXT_1");
+    expect(report.policyVersion).toBe("PA_NJ_ROUTE_POLICY_VNEXT_2");
     expect(report.graphVersion).toBe("unknown");
     expect(probe.urls).toEqual([`${DEFAULT_GRAPHHOPPER_URL}/health`]);
   });
