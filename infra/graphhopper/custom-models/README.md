@@ -33,10 +33,10 @@ identically.
 
 ## Integrity
 
-| File | SHA-256 (identical in the baseline) |
+| File | SHA-256 (identical in the baseline unless marked changed) |
 | --- | --- |
-| `motorcycle-adventure.json` | `79fd3646f1ac000637016de63cf76ab14f768ffa284f8e25877ec309e1203e79` |
-| `motorcycle-base.json` | `f7224b42eb8ca8a951d831bada50b878eaa0206e462bf62a07ba5d66d2dc94a7` |
+| `motorcycle-adventure.json` | `45637ee2c081d3ffbaefaace2c823c476c449ffd1d1e07127b1f5a083e20a674` (changed 2026-10-04) |
+| `motorcycle-base.json` | `14438caaacd94f7431d4e86db77fe6f8cdd8d76483c4d104d25204b4c58dbbea` (changed 2026-10-04) |
 | `motorcycle-fastest.json` | `dc0e507b1469a8c68736d55de8f8e9d10abfbc89a8f83aac730d6e261fc87d2c` |
 | `motorcycle-scenic.json` | `e8455809dfdfc10490122624c60a2e01f367e5c3975595c4127cd52edcbeff29` |
 | `motorcycle-twisty.json` | `8c92480a971446a485b67c3997aab88fe5a3dea24e69c86491fce5f408204e47` |
@@ -44,3 +44,14 @@ identically.
 
 The live verification in `tests/real-router/graphhopper-live.test.ts` runs
 against a router loaded with exactly these models over the Pennsylvania graph.
+
+## Honest speeds (2026-10-04)
+
+Adventure used to limit speed to `0.82 * car_average_speed`, and the twisty and
+scenic base to `0.9 *`, to make paved roads less attractive. That also made
+every ETA a rider saw 10-18% slower than the road allows. The factor now sits in
+`priority` (`if: true, multiply_by: 0.82` / `0.9`) and the speed is the real
+`car_average_speed`. GraphHopper weighs an edge by time / priority, so road
+choice stays the same while times shrink to the truth. Changing a profile
+changes its hash, so the graph and landmarks must be re-imported; build it on
+the Windows PC, not docker-dev.
