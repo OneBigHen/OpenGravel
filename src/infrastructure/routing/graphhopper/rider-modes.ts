@@ -4,6 +4,9 @@ import type { GraphHopperCustomModelRule } from "./request-builder";
 const MAINTAINED = "surface == UNPAVED || surface == GRAVEL || surface == FINE_GRAVEL || surface == COMPACTED || surface == DIRT || surface == GROUND || (road_class == TRACK && (track_type == GRADE1 || track_type == GRADE2))";
 const ROUGH = "track_type == GRADE3 || track_type == GRADE4 || track_type == GRADE5";
 
+/** Highest dirt strength a request may ask for (pavement x0.118 at a 50% target). */
+export const MAX_DIRT_STRENGTH = 5;
+
 /** Request multipliers preserve hard zeroes. No access or speed is unlocked. */
 export function riderModeRules(
   options: Partial<ProviderRouteOptions>,
@@ -13,7 +16,11 @@ export function riderModeRules(
 ): GraphHopperCustomModelRule[] {
   if (!enabled) return [];
   const rules: GraphHopperCustomModelRule[] = [];
-  const strength = Math.max(0, Math.min(4, options.riderModeFactor ?? 1));
+  const raw = Math.max(0, options.riderModeFactor ?? 1);
+  // Dirt strength may reach the router's step near pavement x0.1; busy-road
+  // penalties stop at 4, where they already bury primaries.
+  const strength = Math.min(MAX_DIRT_STRENGTH, raw);
+  const busyStrength = Math.min(4, raw);
   const target = options.targetUnpavedShare ?? (options.surfacePreference === "dirt-preferred" ? 0.5 : 0);
   if (target > 0 && options.bike?.maintainedGravel !== "avoid") {
     const preferred = options.bike?.category === "dual-sport" && options.bike.roughTracks === "allow"
@@ -30,7 +37,7 @@ export function riderModeRules(
   }
   if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient") {
     const penalty = (condition: string, factor: number): void => {
-      rules.push({ if: condition, multiply_by: String(Number((factor ** strength).toFixed(4))) });
+      rules.push({ if: condition, multiply_by: String(Number((factor ** busyStrength).toFixed(4))) });
     };
     penalty("road_class == MOTORWAY || road_class == TRUNK", 0.65);
     penalty("road_class == PRIMARY", 0.8);

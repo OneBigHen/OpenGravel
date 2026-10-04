@@ -5,7 +5,7 @@ import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/rid
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
-import { DIRT_DETOUR_CAP, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
 /**
@@ -1000,11 +1000,14 @@ export async function planRide(
     return merged.candidates.length > 0 ? merged : null;
   };
   if (riderEnabled && pipeline.candidates.length > 0) {
+    const eligible = candidates.filter(candidate => rank([candidate]).candidates.length > 0);
+    const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
     const result = await searchRiderEnvelope({
       request: parsed.value.request,
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
-      candidates: candidates.filter(candidate => rank([candidate]).candidates.length > 0),
-      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
+      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -1304,4 +1307,10 @@ export async function planRide(
       ...(funJudge === undefined ? {} : { funJudge }),
     },
   };
+}
+
+/** The dirt sweep's own router budget (OGV_DIRT_SWEEP_CALLS), apart from the fun generators'. */
+function dirtSweepCalls(env: Readonly<Record<string, string | undefined>>): number {
+  const raw = Number.parseInt(env["OGV_DIRT_SWEEP_CALLS"] ?? "", 10);
+  return Number.isFinite(raw) ? Math.max(0, Math.min(MAX_DIRT_SWEEP_CALLS, raw)) : DIRT_SWEEP_CALLS;
 }
