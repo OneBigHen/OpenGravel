@@ -19,6 +19,12 @@
 
 import { useState, useSyncExternalStore } from "react";
 
+import type { PointerTool } from "@/application/map/interaction";
+import type { MapScene } from "@/application/map/types";
+import { sketchDraftStrokeCount } from "@/application/planner/sketch-draft";
+import type { SketchPanelProps } from "@/ui/planner/SketchPanel";
+import type { PlacementTool } from "@/ui/stores/planner-ui-store";
+
 const TIP_KEY = "opengravel-edit-tip-seen";
 
 const subscribeNothing = (): (() => void) => () => {};
@@ -160,5 +166,53 @@ export function MapEditBar(props: MapEditBarProps) {
         </p>
       ) : null}
     </div>
+  );
+}
+
+const COARSE_POINTER = "(pointer: coarse)";
+function subscribeCoarsePointer(onChange: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(COARSE_POINTER);
+  query.addEventListener?.("change", onChange);
+  return () => query.removeEventListener?.("change", onChange);
+}
+function readCoarsePointer(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(COARSE_POINTER).matches;
+}
+
+/** The bar wired to the planner's own state: the workspace passes what it has. */
+export function PlannerMapEditBar({
+  scene,
+  activeTool,
+  placementTool,
+  sketch,
+  onAddStop,
+  onCancelPlacement,
+}: {
+  readonly scene: MapScene;
+  readonly activeTool: PointerTool;
+  readonly placementTool: PlacementTool;
+  readonly sketch: Omit<SketchPanelProps, "drawing" | "committed" | "hasAuthoredEndpoints">;
+  readonly onAddStop: () => void;
+  readonly onCancelPlacement: () => void;
+}) {
+  // A touch screen grabs the route line by a hold, so the tip says so.
+  const touch = useSyncExternalStore(subscribeCoarsePointer, readCoarsePointer, () => false);
+  return (
+    <MapEditBar
+      hasRoute={scene.routes.some((route) => route.geometry.length >= 2)}
+      drawing={activeTool === "sketch"}
+      placingStop={placementTool === "place-stop"}
+      strokes={sketchDraftStrokeCount(sketch.draft)}
+      snapStatus={sketch.snapStatus ?? null}
+      touch={touch}
+      onDraw={sketch.onStartDrawing}
+      onAddStop={onAddStop}
+      onCancelPlacement={onCancelPlacement}
+      onUndo={sketch.onUndo}
+      onClear={sketch.onClear}
+      onDone={sketch.onDone}
+      onCancelDrawing={sketch.onCancel}
+    />
   );
 }

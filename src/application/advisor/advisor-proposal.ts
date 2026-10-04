@@ -387,7 +387,8 @@ function parseModelOutput(text: string): {
   if (!requiredRootKeys.every((key) => Object.hasOwn(parsed, key))) return null;
   const rootExtra = Object.keys(parsed).some((key) => !["outcome", "clarification", "fields", "unmappedDetails"].includes(key));
   const rawFields = parsed["fields"];
-  if (![...KNOWN_FIELD_KEYS].every((key) => Object.hasOwn(rawFields, key))) return null;
+  // trafficPreference arrived later (2026-10-04); a reply without it is still whole.
+  if (![...KNOWN_FIELD_KEYS].every((key) => key === "trafficPreference" || Object.hasOwn(rawFields, key))) return null;
   const fieldsExtra = Object.keys(rawFields).some((key) => !KNOWN_FIELD_KEYS.has(key));
   const rawOutcome = parsed["outcome"];
   if (rawOutcome !== "proposal" && rawOutcome !== "clarification" && rawOutcome !== "unsupported") return null;

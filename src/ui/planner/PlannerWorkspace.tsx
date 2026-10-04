@@ -56,7 +56,7 @@
  * geography.
  */
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
@@ -123,8 +123,7 @@ import {
   type PlannerUiStore,
 } from "@/ui/stores/planner-ui-store";
 import type { AvoidAreaId } from "@/domain/ride/ids";
-import { sketchDraftStrokeCount } from "@/application/planner/sketch-draft";
-import { MapEditBar } from "@/ui/planner/MapEditBar";
+import { PlannerMapEditBar } from "@/ui/planner/MapEditBar";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 export interface PlannerWorkspaceProps {
@@ -214,8 +213,6 @@ export function PlannerWorkspace({
   const { session, showingSketchPreview } = usePlannerVisibleSession({ document, snapshot: planningSnapshot, plannerUiStore });
   const geometry = useStore(planningSessionStore, (state) => state.geometry);
   const activeTool = useStore(plannerUiStore, (state) => state.activeTool);
-  /** A touch screen grabs the route line by a hold, so the tip says so. */
-  const coarsePointer = useSyncExternalStore(subscribeCoarsePointer, readCoarsePointer, () => false);
   const placementTool = useStore(plannerUiStore, (state) => state.placementTool);
   const placementStopId = useStore(plannerUiStore, (state) => state.placementStopId);
   const selectedObject = useStore(plannerUiStore, (state) => state.selectedObject);
@@ -787,23 +784,7 @@ export function PlannerWorkspace({
       layers={preparationProviders?.mapLayers && { source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
-      editBar={
-        <MapEditBar
-          hasRoute={scene.routes.some((route) => route.geometry.length >= 2)}
-          drawing={activeTool === "sketch"}
-          placingStop={placementTool === "place-stop"}
-          strokes={sketchDraftStrokeCount(sketchPanelProps.draft)}
-          snapStatus={sketchPanelProps.snapStatus ?? null}
-          touch={coarsePointer}
-          onDraw={sketchPanelProps.onStartDrawing}
-          onAddStop={stopsPanelProps.onAddStop}
-          onCancelPlacement={() => plannerUiStore.getState().cancelPlacement()}
-          onUndo={sketchPanelProps.onUndo}
-          onClear={sketchPanelProps.onClear}
-          onDone={sketchPanelProps.onDone}
-          onCancelDrawing={sketchPanelProps.onCancel}
-        />
-      }
+      editBar={<PlannerMapEditBar scene={scene} activeTool={activeTool} placementTool={placementTool} sketch={sketchPanelProps} onAddStop={stopsPanelProps.onAddStop} onCancelPlacement={() => plannerUiStore.getState().cancelPlacement()} />}
       map={{
         scene,
         onIntent: handleIntent,
@@ -955,13 +936,3 @@ export function PlannerWorkspace({
   );
 }
 
-const COARSE_POINTER = "(pointer: coarse)";
-function subscribeCoarsePointer(onChange: () => void): () => void {
-  if (typeof window.matchMedia !== "function") return () => {};
-  const query = window.matchMedia(COARSE_POINTER);
-  query.addEventListener?.("change", onChange);
-  return () => query.removeEventListener?.("change", onChange);
-}
-function readCoarsePointer(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia(COARSE_POINTER).matches;
-}

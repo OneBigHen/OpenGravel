@@ -1522,8 +1522,11 @@ export async function createMapLibreHost(
           routeHold = null;
           const live = attempt;
           if (held === null || live === null || disposed) return;
-          gestureScoped = true;
+          // The switch cancels the pan that was in flight, and that cancel
+          // clears a gesture scope; so the scope is claimed after the switch,
+          // or the map would stay on point-drag once the finger lifts.
           handleInteraction({ type: "tool-change", tool: "point-drag" });
+          gestureScoped = true;
           handleInteraction({ type: "pointer-down", pointerId, coordinate, pixel: held.origin });
           try {
             live.map.getCanvasContainer().setPointerCapture?.(pointerId);
