@@ -1,0 +1,403 @@
+[
+  {
+    "device": "desktop",
+    "layer": "hillshade",
+    "row": "⛰\nHillshade\nShaded relief beneath roads\nOn",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "visible"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [],
+      "infoCount": 0
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "layer": "contours",
+    "row": "⛰\nContour lines\n20 m contours; heavier lines every 100 m\nUnavailable",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [],
+      "infoCount": 0
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      },
+      {
+        "status": 200,
+        "layers": "contours",
+        "features": 0,
+        "unavailable": [
+          "terrain"
+        ]
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "desktop",
+    "layer": "slope",
+    "row": "⛰\nTerrain slope\nTan <10% · amber 10–25% · ember >25% grade\nUnavailable",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [],
+      "infoCount": 0
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      },
+      {
+        "status": 200,
+        "layers": "contours",
+        "features": 0,
+        "unavailable": [
+          "terrain"
+        ]
+      },
+      {
+        "status": 200,
+        "layers": "slope",
+        "features": 0,
+        "unavailable": [
+          "terrain"
+        ]
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "iphone",
+    "layer": "hillshade",
+    "row": "⛰\nHillshade\nShaded relief beneath roads\nOn",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "visible"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [
+        {
+          "state": "loaded",
+          "height": 305.765625
+        },
+        {
+          "state": "loaded",
+          "height": 291.71875
+        },
+        {
+          "state": "loaded",
+          "height": 458.4609375
+        },
+        {
+          "state": "loaded",
+          "height": 227.421875
+        },
+        {
+          "state": "loaded",
+          "height": 198.83203125
+        },
+        {
+          "state": "loaded",
+          "height": 178.27734375
+        },
+        {
+          "state": "loaded",
+          "height": 411.96484375
+        },
+        {
+          "state": "loaded",
+          "height": 167.75
+        },
+        {
+          "state": "loaded",
+          "height": 179.30078125
+        },
+        {
+          "state": "loaded",
+          "height": 222.0078125
+        },
+        {
+          "state": "loaded",
+          "height": 254.4921875
+        },
+        {
+          "state": "loaded",
+          "height": 240.80078125
+        }
+      ],
+      "infoCount": 0
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "iphone",
+    "layer": "contours",
+    "row": "⛰\nContour lines\n20 m contours; heavier lines every 100 m\n9262",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [],
+      "infoCount": 15443
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      },
+      {
+        "status": 200,
+        "layers": "contours",
+        "features": 0,
+        "unavailable": [],
+        "grid": 65
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "iphone",
+    "layer": "slope",
+    "row": "⛰\nTerrain slope\nTan <10% · amber 10–25% · ember >25% grade\n4096",
+    "info": {
+      "pitch": 0,
+      "terrain": null,
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [],
+      "infoCount": 7896
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      },
+      {
+        "status": 200,
+        "layers": "contours",
+        "features": 0,
+        "unavailable": [],
+        "grid": 65
+      },
+      {
+        "status": 200,
+        "layers": "slope",
+        "features": 0,
+        "unavailable": [],
+        "grid": 65
+      }
+    ],
+    "errors": []
+  },
+  {
+    "device": "iphone",
+    "layer": "terrain-3d",
+    "row": "⛰\n3D terrain\nTilt the map and see the ridges your ride climbs\nOn",
+    "info": {
+      "pitch": 0,
+      "terrain": {
+        "source": "og-terrain-dem",
+        "exaggeration": 1.1
+      },
+      "hillshade": {
+        "id": "og-terrain-hillshade",
+        "type": "hillshade",
+        "source": "og-terrain-dem",
+        "layout": {
+          "visibility": "visible"
+        },
+        "paint": {
+          "hillshade-exaggeration": 0.22,
+          "hillshade-shadow-color": "#243a35",
+          "hillshade-highlight-color": "#fbf9f4",
+          "hillshade-accent-color": "#68716f"
+        }
+      },
+      "demLoaded": true,
+      "demTiles": [
+        {
+          "state": "loaded",
+          "height": 469.234375
+        },
+        {
+          "state": "loaded",
+          "height": 234.41015625
+        },
+        {
+          "state": "loaded",
+          "height": 199.69140625
+        },
+        {
+          "state": "loaded",
+          "height": 229.91015625
+        },
+        {
+          "state": "loaded",
+          "height": 296.45703125
+        },
+        {
+          "state": "loaded",
+          "height": 206.88671875
+        },
+        {
+          "state": "loaded",
+          "height": 261.67578125
+        },
+        {
+          "state": "loaded",
+          "height": -85
+        },
+        {
+          "state": "loaded",
+          "height": 179.01953125
+        },
+        {
+          "state": "loaded",
+          "height": 180.73046875
+        },
+        {
+          "state": "loaded",
+          "height": 310.54296875
+        }
+      ],
+      "infoCount": 0
+    },
+    "responses": [
+      {
+        "status": 200,
+        "layers": "hillshade",
+        "features": 0,
+        "unavailable": []
+      },
+      {
+        "status": 200,
+        "layers": "contours",
+        "features": 0,
+        "unavailable": [],
+        "grid": 65
+      },
+      {
+        "status": 200,
+        "layers": "slope",
+        "features": 0,
+        "unavailable": [],
+        "grid": 65
+      }
+    ],
+    "errors": []
+  }
+]

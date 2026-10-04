@@ -848,6 +848,29 @@ describe("planRide — fun-route generator family (OGV_FUN_GENERATORS)", () => {
 });
 
 describe("rider mode plan integration", () => {
+  it("leads with the quieter rider-mode route but keeps the faster choice to compare", async () => {
+    const run = (meters: number, roadClass: string, urbanDensity: string) => ({ totalMeters: meters, surfaceByRoadClassMeters: { [`asphalt|${roadClass}`]: meters }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters, durationSeconds: null, surface: "asphalt", roadClass, roadEnvironment: "road", urbanDensity, curvatureRatio: null, toll: false }] });
+    const busy = candidate({ roadSummary: run(120_000, "primary", "city") });
+    const quiet = candidate({
+      geometry: [ORIGIN, { lat: MIDPOINT.lat + 0.05, lon: MIDPOINT.lon - 0.05 }, DESTINATION],
+      durationSeconds: 6_900,
+      distanceMeters: 125_000,
+      providerMetadata: { fingerprint: "fp_quiet" },
+      roadSummary: run(125_000, "tertiary", "rural"),
+    });
+    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => ({ candidates: [request.options.riderModeFactor === undefined ? busy : { ...quiet, providerMetadata: { ...quiet.providerMetadata, riderModeFactor: request.options.riderModeFactor } }] }) };
+    const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
+      provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_FUN_GENERATORS_CALLS: "2" },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.bundle.candidates.length).toBeGreaterThanOrEqual(2);
+    const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
+    const fastest = result.bundle.candidates.find(entry => entry.id === result.bundle.roles.fastest);
+    expect(best?.durationSeconds).toBe(6_900);
+    expect(fastest?.durationSeconds).toBe(6_000);
+  });
+
   it.each([false, true])("obeys the shared budget and kill switch (off=%s)", async off => {
     const requests: ProviderRouteRequest[] = [];
     const roadSummary = { totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|primary": 120_000 }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 120_000, durationSeconds: null, surface: "asphalt", roadClass: "primary", roadEnvironment: "road", urbanDensity: "city", curvatureRatio: null, toll: false }] };

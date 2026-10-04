@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { terrainFeatures } from "@/application/map-layers/terrain";
+import { terrainContourInterval, terrainFeatures } from "@/application/map-layers/terrain";
 import { terrainProvider } from "@/server/map-layers/terrain";
 
 const bounds = { west: 0, south: 0, east: 0.001, north: 0.001 };
@@ -19,4 +19,9 @@ describe("DEM derivatives", () => {
   it("refuses a broad view before fetching an unbounded number of tiles", async () => {
     await expect(terrainProvider.snapshot!({ ...bounds, east: 2 }, ["contours"], { fetch, env: {} })).rejects.toThrow("Zoom in");
   });
+});
+
+it("uses legible contour intervals for the regional grid and 20 m for close views", () => {
+  expect(terrainContourInterval({ bounds, size: 65, heights: [] })).toBe(20);
+  expect(terrainContourInterval({ bounds: { west: -76.5, south: 40, east: -75, north: 41 }, size: 65, heights: [] })).toBe(160);
 });

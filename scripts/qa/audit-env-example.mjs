@@ -46,7 +46,12 @@ function deploymentKeysFromSource(source) {
   function isEnv(node) {
     return node && (ts.isIdentifier(node) && aliases.has(node.text) ||
       ts.isPropertyAccessExpression(node) && node.name.text === "env" &&
-      ts.isIdentifier(node.expression) && envOwners.has(node.expression.text));
+      ts.isIdentifier(node.expression) && envOwners.has(node.expression.text) ||
+      // `deps.env ?? process.env`: an injected record with the process fallback.
+      ts.isBinaryExpression(node) &&
+      (node.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken || node.operatorToken.kind === ts.SyntaxKind.BarBarToken) &&
+      (isEnv(node.left) || isEnv(node.right)) ||
+      ts.isParenthesizedExpression(node) && isEnv(node.expression));
   }
   function declarations(node) {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {

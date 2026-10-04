@@ -110,22 +110,22 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     minZoom: 4, color: "#397c96", colorToken: "--og-signal-blue", glyph: "☂",
   },
   {
-    id: "hillshade", name: "Hillshade", category: "view", kind: "features",
+    id: "hillshade", name: "Hillshade", category: "view", kind: "view",
     legend: "Shaded relief beneath roads", source: "AWS Terrain Tiles (Mapzen Terrarium)",
     caveat: "DEM resolution roughly 30–90 m, varying by source region. Online only; source survey date unknown. Shares the existing terrain DEM without tilting the map.",
     minZoom: 6, color: "#65745d", colorToken: "--og-trail-moss", glyph: "⛰",
   },
   {
     id: "contours", name: "Contour lines", category: "view", kind: "features",
-    legend: "20 m contours; heavier lines every 100 m", source: "AWS Terrain Tiles (Mapzen Terrarium)",
+    legend: "20 m in close views; coarser contours as you zoom out", source: "AWS Terrain Tiles (Mapzen Terrarium)",
     caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
-    minZoom: 12, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
+    minZoom: 6, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
   },
   {
     id: "slope", name: "Terrain slope", category: "view", kind: "features",
     legend: "Tan <10% · amber 10–25% · ember >25% grade", source: "AWS Terrain Tiles (Mapzen Terrarium)",
     caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
-    minZoom: 12, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
+    minZoom: 6, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
   },
 
   {

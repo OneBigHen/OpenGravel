@@ -83,6 +83,7 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
         onIntent={intercept}
         onViewport={viewport}
         terrain3d={view.enabled.includes("terrain-3d")}
+        onLayerStatus={view.onLayerStatus}
       />
       <div className="og-layers-overlay">
         <MapLayersPanel

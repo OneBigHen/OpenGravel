@@ -52,6 +52,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
+import type { MapLayerDrawStatus } from "@/application/map/map-host";
 import type { PointerTool } from "@/application/map/interaction";
 import type { MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
@@ -182,6 +183,7 @@ export interface PlannerMapProps {
   readonly onViewport?: (extent: MapExtent) => void;
   /** Show the ground in 3D with a tilted camera (phase 8 map layers). */
   readonly terrain3d?: boolean;
+  readonly onLayerStatus?: (status: MapLayerDrawStatus) => void;
   /**
    * The rider's request for one more recovery attempt, as a token the workspace
    * bumps (05 §8's fit pattern). Only a *change* asks for a retry, so the mount
@@ -220,6 +222,7 @@ export function PlannerMap({
   onLoadStatus,
   onViewport,
   terrain3d = false,
+  onLayerStatus,
   retryToken = 0,
 }: PlannerMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -238,6 +241,8 @@ export function PlannerMap({
   const loadStatusRef = useRef(onLoadStatus);
   const viewportRef = useRef(onViewport);
   const terrainRef = useRef(terrain3d);
+  const layerStatusRef = useRef(onLayerStatus);
+  useEffect(() => { layerStatusRef.current = onLayerStatus; }, [onLayerStatus]);
   const followRef = useRef(followCamera);
   useEffect(() => {
     followRef.current = followCamera;
@@ -288,6 +293,7 @@ export function PlannerMap({
     let unsubscribe: (() => void) | null = null;
     let unsubscribeError: (() => void) | null = null;
     let unsubscribeStatus: (() => void) | null = null;
+    let unsubscribeLayerStatus: (() => void) | null = null;
     let unsubscribeViewport: (() => void) | null = null;
 
     void (async () => {
@@ -304,6 +310,7 @@ export function PlannerMap({
         return;
       }
       hostRef.current = host;
+      unsubscribeLayerStatus = host.onLayerStatus?.((status) => layerStatusRef.current?.(status)) ?? null;
       if (terrainRef.current) host.setTerrain3d?.(true);
       if (host.supportsSatellite === true) {
         setSatelliteAvailable(true);
@@ -340,6 +347,7 @@ export function PlannerMap({
       unsubscribeError?.();
       unsubscribeStatus?.();
       unsubscribeViewport?.();
+      unsubscribeLayerStatus?.();
       hostRef.current?.dispose();
       hostRef.current = null;
     };

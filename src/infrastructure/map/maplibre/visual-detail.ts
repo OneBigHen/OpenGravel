@@ -57,7 +57,7 @@ export function hillshadeLayerSpec(palette?: Pick<MapPalette, "deepSpruce" | "pa
     type: "hillshade",
     source: TERRAIN_SOURCE_ID,
     paint: {
-      "hillshade-exaggeration": 0.22,
+      "hillshade-exaggeration": 0.6,
       "hillshade-shadow-color": palette?.deepSpruce ?? "#33413b",
       "hillshade-highlight-color": palette?.paper ?? "#f4f0e6",
       "hillshade-accent-color": palette?.slate ?? "#69736b",
@@ -70,14 +70,17 @@ export function hillshadeLayerSpec(palette?: Pick<MapPalette, "deepSpruce" | "pa
  * road layer; otherwise put it beneath labels. Returning undefined appends it.
  */
 export function hillshadeBeforeId(layers: readonly HostedStyleLayer[]): string | undefined {
-  const road = layers.find(
+  // An opaque raster (including satellite) would completely cover relief.
+  const lastRaster = layers.reduce((last, layer, index) => layer.type === "raster" && !layer.id.startsWith("ogv-") ? index : last, -1);
+  const aboveRasters = layers.slice(lastRaster + 1);
+  const road = aboveRasters.find(
     (layer) =>
       layer.type === "line" &&
       (layer["source-layer"] === "transportation" ||
         /(?:^|[-_])(road|street|highway|transportation)(?:$|[-_])/i.test(layer.id)),
   );
   if (road !== undefined) return road.id;
-  return layers.find((layer) => layer.type === "symbol")?.id;
+  return aboveRasters.find((layer) => layer.type === "symbol")?.id;
 }
 
 /**

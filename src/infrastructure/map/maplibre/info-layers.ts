@@ -55,8 +55,8 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       source: INFO_SOURCE_ID,
       filter: isPolygon,
       paint: {
-        "fill-color": ["case", ["==", ["get", "layerId"], "slope"], ["step", ["get", "weight"], palette.slate, 10, palette.goldenHour, 25, palette.ember], colourByLayer(palette)],
-        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, "slope", 0.3, 0.12],
+        "fill-color": ["case", ["==", ["get", "layerId"], "slope"], ["step", ["get", "weight"], palette.trailBrown, 10, palette.goldenHour, 25, palette.ember], colourByLayer(palette)],
+        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, "slope", 0.45, 0.12],
       },
     },
     {
