@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "provider": "typesafe",
+  "requestedModel": "jev-1.13.0",
+  "case": "synthetic-two-candidate-derived-facts",
+  "attempts": 1,
+  "status": "ok",
+  "latencyMs": 287.97360100000003,
+  "returnedModel": "jev-1.13.0",
+  "usage": {
+    "inputTokens": 1478,
+    "outputTokens": 85,
+    "cost": null
+  },
+  "routingChanged": false,
+  "promotionReady": false
+}

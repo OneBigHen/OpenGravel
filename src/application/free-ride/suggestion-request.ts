@@ -1,7 +1,8 @@
-import { newPointId } from "@/domain/ride/ids";
+import { newPointId, newShapingId } from "@/domain/ride/ids";
 import type { Coordinate, RideIntent } from "@/domain/ride/types";
 import type { RideDocument } from "@/domain/ride/types";
 import { deepFreeze } from "@/domain/util/freeze";
+import type { FreeRideNetworkOpportunity } from "./network-opportunities";
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
@@ -66,6 +67,62 @@ export function buildLiveSuggestionIntent(input: {
       id: newPointId(), kind: "finish",
       coordinate: destinationPoint(input.origin, input.headingDegrees, input.segmentDistanceMeters),
       provenance: pointProvenance,
+    },
+  });
+}
+
+
+/**
+ * Build a constrained route request intent through one directed network
+ * opportunity.
+ *
+ * Unlike the generic projected-ahead intent, this uses the opportunity's real
+ * onward rejoin as the finish and its corridor entry/exit as shaping anchors.
+ * Authored itinerary points and sketches still stay out of the short live
+ * segment, while bike/surface/access/avoid constraints remain inherited.
+ */
+export function buildNetworkSuggestionIntent(input: {
+  readonly document: RideDocument;
+  readonly opportunity: FreeRideNetworkOpportunity;
+  readonly accuracyMeters: number;
+  readonly at: string;
+}): RideIntent {
+  if (!Number.isFinite(input.accuracyMeters) || input.accuracyMeters < 0) {
+    throw new RangeError("GPS accuracy must be a finite non-negative distance");
+  }
+  const intent = input.document.intent;
+  const pointProvenance = {
+    type: "gps" as const,
+    accuracyMeters: input.accuracyMeters,
+    observedAt: input.at,
+  };
+
+  return deepFreeze({
+    ...intent,
+    shape: "destination",
+    stops: [],
+    shaping: input.opportunity.via.map((coordinate) => ({
+      id: newShapingId(),
+      kind: "shape" as const,
+      coordinate: { ...coordinate },
+      source: "import" as const,
+    })),
+    sketch: null,
+    longTrip: null,
+    start: {
+      id: newPointId(),
+      kind: "start",
+      coordinate: { ...input.opportunity.origin },
+      provenance: pointProvenance,
+    },
+    finish: {
+      id: newPointId(),
+      kind: "finish",
+      coordinate: { ...input.opportunity.destination },
+      provenance: {
+        type: "derived" as const,
+        reason: "directed Free Ride network rejoin",
+      },
     },
   });
 }

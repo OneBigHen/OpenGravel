@@ -47,6 +47,15 @@ import {
   jevCharacterClassifierFromEnv,
   type JevCharacterClassifier,
 } from "@/infrastructure/routing/jev-fun-character";
+import { jevFunJudgeFromEnv } from "@/infrastructure/routing/jev-fun-judge";
+import { createFunJudge, type FunJudge } from "@/application/planner/fun-judge";
+import {
+  parseFunJudgeMode,
+  selectBestRideWithFunJudge,
+  geometryFunJudgeExtensions,
+  type FunJudgeSelection,
+} from "@/application/planner/fun-judge-selection";
+import type { RoutePlanFunJudgeWire } from "@/application/planner/ports/route-plan-contract";
 import type {
   ProviderCandidate,
   ProviderRouteRequest,
@@ -103,6 +112,22 @@ import {
   type FixturePlanMode,
 } from "./fixture-candidates";
 import { parseRoutePlanRequestBody, type ValidationIssue } from "./validation";
+import {
+  runFunGenerators,
+  type FunCandidateGenerator,
+  type FunCandidateVerdict,
+  type FunGeneratorReport,
+  type ProductionRoute,
+} from "@/application/planner/fun-generators";
+import { FUN_GENERATORS, funRouteMeasurement } from "@/application/planner/fun-generator-strategies";
+import { libraryCorridorSources, type LibraryRide } from "@/application/planner/fun-generator-sources";
+import {
+  deploymentLibraryRides,
+  funGeneratorLogLine,
+  funGeneratorSettingsFromEnv,
+  type FunGeneratorMode,
+  type FunGeneratorSettings,
+} from "./fun-generators";
 
 /** The deployment's scoring policy; its version is the default bundle version. */
 export const ROUTE_POLICY = PA_NJ_ROUTE_POLICY_VNEXT_1;
@@ -167,10 +192,26 @@ export interface PlanServiceDeps {
   /** Optional semantic classifier. `null` explicitly disables it in tests/fixtures. */
   readonly funCharacterClassifier?: JevCharacterClassifier | null;
   /**
+   * FUN JUDGE for Best Ride (`OGV_JEV_FUN_JUDGE`). Defaults to the budgeted,
+   * cached TypeSafe Jev judge when a key exists; `null` disables it.
+   */
+  readonly funJudge?: FunJudge | null;
+  /**
    * Road authority (route intelligence RI-1): closures and legal access. The
    * deployment's coordinator by default, `null` when `OGV_ROAD_AUTHORITY` is off.
    */
   readonly roadAuthority?: RoadAuthorityCoordinator | null;
+  /**
+   * The fun-route generator family (`OGV_FUN_GENERATORS`). Defaults to the
+   * environment's settings; tests and the research harness inject their own.
+   */
+  readonly funGenerators?: FunGeneratorSettings;
+  /** The strategies to run; every strategy by default. The research harness runs one at a time. */
+  readonly funGeneratorStrategies?: readonly FunCandidateGenerator[];
+  /** The corridor library; the curated route library by default. */
+  readonly funGeneratorLibrary?: () => Promise<readonly LibraryRide[]>;
+  /** Receives every family report; the default writes one server log line. */
+  readonly onFunGeneratorReport?: (report: FunGeneratorReport, mode: FunGeneratorMode) => void;
 }
 
 /**
@@ -650,6 +691,51 @@ function environmentCharacterClassifier(
   return environmentClassifier.classifier;
 }
 
+/** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
+let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
+function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
+  const key = env["JEV_API_KEY"]?.trim() ?? "";
+  if (environmentJudge?.key !== key) {
+    const port = jevFunJudgeFromEnv(env);
+    environmentJudge = { key, judge: port === null ? null : createFunJudge(port) };
+  }
+  return environmentJudge.judge;
+}
+
+function funJudgeWire(
+  selection: FunJudgeSelection,
+  routeIds: readonly string[],
+): RoutePlanFunJudgeWire | undefined {
+  const diagnostic = selection.diagnostic;
+  if (diagnostic === null) return undefined;
+  const id = (index: number): string | undefined => routeIds[index];
+  const deterministicRouteId = id(diagnostic.deterministicIndex);
+  const selectedRouteId = id(diagnostic.selectedIndex);
+  if (deterministicRouteId === undefined || selectedRouteId === undefined) return undefined;
+  return {
+    mode: diagnostic.mode,
+    outcome: diagnostic.outcome,
+    applied: diagnostic.applied,
+    deterministicRouteId,
+    jevRouteId: diagnostic.jevIndex === null ? null : id(diagnostic.jevIndex) ?? null,
+    selectedRouteId,
+    shortlistSize: diagnostic.shortlist.length,
+    excluded: diagnostic.excluded.flatMap((entry) => {
+      const routeId = id(entry.index);
+      return routeId === undefined ? [] : [{ routeId, reason: entry.reason }];
+    }),
+    confidence: diagnostic.confidence,
+    margin: diagnostic.margin,
+    orderAgreement: diagnostic.orderAgreement,
+    model: diagnostic.model,
+    calls: diagnostic.calls,
+    cached: diagnostic.cached,
+    latencyMs: diagnostic.latencyMs,
+    why: diagnostic.why,
+    addedTimePct: diagnostic.addedTimePct,
+  };
+}
+
 export async function planRide(
   input: PlanRideInput,
   deps: PlanServiceDeps = {},
@@ -708,14 +794,17 @@ export async function planRide(
     return verdict;
   };
 
-  const rank = (from: readonly ProviderCandidate[]) => runCandidatePipeline({
+  const rank = (
+    from: readonly ProviderCandidate[],
+    verdictFor: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null = roadVerdict,
+  ) => runCandidatePipeline({
     candidates: from,
     intent,
     policy: ROUTE_POLICY,
     // What the engine knows about the roads under each line: surface mix, the
     // backroad share and curvature (M3, OGV-D-263).
     evidenceFor: (candidate) => {
-      const verdict = roadVerdict(candidate);
+      const verdict = verdictFor(candidate);
       return {
         ...engineRoadEvidence(candidate.roadSummary, intent.surface?.preference ?? "mixed"),
         ...knownRoadEvidence(candidate.geometry, knownRoads),
@@ -723,7 +812,7 @@ export async function planRide(
       };
     },
     additionalEligibilityFor: (candidate) => {
-      const verdict = roadVerdict(candidate);
+      const verdict = verdictFor(candidate);
       return verdict === null
         ? { eligible: true, failures: [], warnings: [] }
         : { eligible: verdict.failures.length === 0, failures: verdict.failures, warnings: verdict.warnings };
@@ -775,6 +864,73 @@ export async function planRide(
       pipeline = rank(candidates);
     }
   }
+  // The fun-route generator family (routing research Phase 7). Off by default;
+  // in shadow it runs after the answer and cannot touch the bundle.
+  const funSettings = deps.funGenerators ?? funGeneratorSettingsFromEnv(deps.env ?? process.env);
+  if (funSettings.mode !== "off" && fixture === null && pipeline.candidates.length > 0) {
+    const report = (mode: FunGeneratorMode) => (result: FunGeneratorReport): void => {
+      if (deps.onFunGeneratorReport !== undefined) deps.onFunGeneratorReport(result, mode);
+      else console.info(funGeneratorLogLine(mode, parsed.value.request.requestId, result));
+    };
+    const bestIndex = pipeline.roles["best-ride"] ?? 0;
+    const ordered = [
+      ...pipeline.candidates.slice(bestIndex, bestIndex + 1),
+      ...pipeline.candidates.filter((_, index) => index !== bestIndex),
+    ];
+    const production: ProductionRoute[] = ordered.map((candidate, index) => ({
+      id: `production:${index}`,
+      geometry: candidate.geometry,
+      measurement: funRouteMeasurement(candidate),
+    }));
+    // The same canonical gate the plan used: closures and access for the new
+    // line's own corridor, avoid areas, spans and every hard eligibility rule.
+    const verify = async (candidate: ProviderCandidate): Promise<FunCandidateVerdict> => {
+      const own = await assessRoads([candidate]);
+      const single = rank([candidate], () => own?.evaluate(candidate.geometry) ?? null);
+      const kept = single.candidates[0];
+      if (kept === undefined) {
+        return {
+          eligible: false,
+          codes: single.diagnostics.flatMap((entry) => (entry.eligibilityCode === undefined ? [] : [entry.eligibilityCode])),
+        };
+      }
+      return { eligible: true, measurement: funRouteMeasurement(kept) };
+    };
+    const run = async (runSignal: AbortSignal): Promise<FunGeneratorReport> => {
+      const rides = await (deps.funGeneratorLibrary ?? deploymentLibraryRides)();
+      return runFunGenerators({
+        context: {
+          request: parsed.value.request,
+          production,
+          sources: libraryCorridorSources(parsed.value.request, rides),
+        },
+        generators: deps.funGeneratorStrategies ?? FUN_GENERATORS,
+        provider,
+        budget: funSettings.budget,
+        allocation: funSettings.allocation,
+        verify,
+        signal: runSignal,
+        duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
+      });
+    };
+    if (funSettings.mode === "shadow") {
+      // Detached: the rider's answer never waits for, or depends on, the family.
+      void run(new AbortController().signal).then(report("shadow"), () => undefined);
+    } else if (!signal.aborted) {
+      try {
+        const result = await run(signal);
+        report("on")(result);
+        if (result.pool.length > 0) {
+          candidates = [...candidates, ...result.pool.map((entry) => entry.candidate)];
+          roads = await assessRoads(candidates);
+          pipeline = rank(candidates);
+        }
+      } catch {
+        // A cancelled or failed family leaves the production answer untouched.
+      }
+    }
+  }
+
   if (pipeline.candidates.length === 0) {
     // A lane that could not answer at all is the more informative failure: it
     // says *why* there is nothing to rank, and it carries the §3 taxonomy code
@@ -798,9 +954,40 @@ export async function planRide(
   }
 
   const mapped = pipeline.candidates.map(toRoutePlanCandidate);
+  // FUN JUDGE (default off). In `on` mode a confident Jev preference among the
+  // eligible, in-budget candidates becomes Best Ride; every other outcome —
+  // including any failure here — keeps the deterministic roles.
+  const env = deps.env ?? process.env;
+  const funJudgeMode = parseFunJudgeMode(env["OGV_JEV_FUN_JUDGE"]);
+  let judged: FunJudgeSelection = {
+    roles: pipeline.roles,
+    selectedIndex: pipeline.selectedIndex,
+    diagnostic: null,
+    request: null,
+  };
+  if (funJudgeMode !== "off" && !signal.aborted) {
+    try {
+      judged = await selectBestRideWithFunJudge({
+        pipeline,
+        intent,
+        avoidHighways: parsed.value.request.options.avoidHighways,
+        policy: ROUTE_POLICY,
+        ...(parsed.value.request.discovery === undefined
+          ? {}
+          : { discoveryTimebox: parsed.value.request.discovery }),
+        mode: funJudgeMode,
+        judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
+        extensions: geometryFunJudgeExtensions,
+        signal,
+      });
+    } catch {
+      // Advisory failure never changes the deterministic answer.
+    }
+  }
+  const funJudge = funJudgeWire(judged, mapped.map((candidate) => candidate.id));
   // The pipeline assigns roles by kept index because it mints no ids; binding
   // them here is the step that turns them into wire identities.
-  const roles = bindRoles(pipeline.roles, mapped);
+  const roles = bindRoles(judged.roles, mapped);
   const selectedRouteId = roles["best-ride"] ?? roles.fastest;
   if (selectedRouteId === null) {
     // Unreachable by construction: `assignRoles` fills `fastest` and `best-ride`
@@ -862,6 +1049,7 @@ export async function planRide(
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
+      ...(funJudge === undefined ? {} : { funJudge }),
     },
   };
 }

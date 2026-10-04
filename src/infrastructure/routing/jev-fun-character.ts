@@ -4,7 +4,7 @@ import { choice, TypeSafeClient } from "@typesafe-ai/sdk";
 
 import type { FunAssessment } from "@/domain/route/fun";
 import type { RoutePlanFunCharacterWire } from "@/application/planner/ports/route-plan-contract";
-import { isFrozenJevModelIdentity, JEV_FROZEN_RELEASE_MODEL } from "@/application/planner/ports/jev-model-identity";
+import { isPinnedJevProviderModel, JEV_DIRECT_MODEL } from "./jev-models";
 
 const TIMEOUT_MS = 1_500;
 const MINIMUM_CONFIDENCE = 0.65;
@@ -12,7 +12,7 @@ const MINIMUM_CONFIDENCE = 0.65;
  * Pinned for reproducible diagnostics. Changing this requires an explicit
  * calibration/replay decision; do not silently switch back to jev-latest.
  */
-export const JEV_CHARACTER_MODEL = JEV_FROZEN_RELEASE_MODEL;
+export const JEV_CHARACTER_MODEL = JEV_DIRECT_MODEL;
 
 const CHARACTER_CHOICES = {
   FLOWING: "Sustained curves and few interruptions, with a smooth riding rhythm.",
@@ -80,7 +80,7 @@ export function jevCharacterClassifierFromEnv(
         !Object.hasOwn(CHARACTER_CHOICES, answer.choice) ||
         !Number.isFinite(answer.confidence) ||
         answer.confidence < 0 || answer.confidence > 1 ||
-        !isFrozenJevModelIdentity(result.model)
+        !isPinnedJevProviderModel(result.model, "typesafe")
       ) return null;
 
       return {

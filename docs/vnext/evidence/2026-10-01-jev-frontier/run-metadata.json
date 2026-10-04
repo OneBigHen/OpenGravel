@@ -1,0 +1,39 @@
+{
+  "capturedAtUtc": "2026-10-01T04:50:29.394663+00:00",
+  "baseSha": "1a04c4661575fded6cde019731a64e75f128f139",
+  "originalPrHeadSha": "30fdac0d1c03e5920914a56d7ecac452d88f2862",
+  "rebasedPrHeadBeforeImplementation": "9201a3a753b96e7b3073fff5894026feae937508",
+  "pr39DonorSha": "46d9a69e3eee21ebb824ecfd6d428b071d25c943",
+  "graphHopper": {
+    "version": "11.0",
+    "profiles": [
+      {
+        "name": "motorcycle_fastest"
+      },
+      {
+        "name": "motorcycle_twisty"
+      },
+      {
+        "name": "motorcycle_scenic"
+      },
+      {
+        "name": "motorcycle_adventure"
+      }
+    ],
+    "curvatureEncoded": true,
+    "elevation": false
+  },
+  "corpusCases": 8,
+  "providerCallsPerCase": 3,
+  "frozenCases": 7,
+  "frontierShortlistLimit": 2,
+  "liveJev": {
+    "status": "unavailable",
+    "reason": "no OPENROUTER_API_KEY configured in checked process/service environment"
+  },
+  "blindedLabels": {
+    "count": 0,
+    "heldOutValue": "unavailable"
+  },
+  "livePostFrontierSeam": false
+}

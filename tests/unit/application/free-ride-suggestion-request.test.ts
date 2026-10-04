@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildLiveSuggestionIntent } from "@/application/free-ride/suggestion-request";
+import { buildLiveSuggestionIntent, buildNetworkSuggestionIntent } from "@/application/free-ride/suggestion-request";
+import type { FreeRideNetworkOpportunity } from "@/application/free-ride/network-opportunities";
 import { newRideId, type ShapingId, type StopId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 
@@ -60,6 +61,57 @@ describe("buildLiveSuggestionIntent", () => {
     expect(next.finish?.provenance).toEqual({
       type: "gps", accuracyMeters: 8, observedAt: "2026-09-22T12:10:00.000Z",
     });
+    expect(next.surface).toEqual(document.intent.surface);
+    expect(next.terrain).toEqual(document.intent.terrain);
+    expect(next.bike).toEqual(document.intent.bike);
+    expect(next.avoidAreas).toEqual(document.intent.avoidAreas);
+    expect(next.roadSpans).toEqual(document.intent.roadSpans);
+    expect(next.avoidHighways).toBe(true);
+    expect(next.tollPolicy).toBe("avoid");
+  });
+});
+
+
+describe("buildNetworkSuggestionIntent", () => {
+  it("routes through the network corridor to a real onward rejoin while retaining ride constraints", () => {
+    const opportunity: FreeRideNetworkOpportunity = {
+      id: "network:fixture:corridor",
+      corridorId: "corridor",
+      expectedUtility: 0.9,
+      confidence: 0.8,
+      origin: { lon: -77, lat: 40 },
+      destination: { lon: -76.95, lat: 40.04 },
+      via: [
+        { lon: -76.99, lat: 40.01 },
+        { lon: -76.96, lat: 40.03 },
+      ],
+      routeFragment: [
+        { lon: -76.99, lat: 40.01 },
+        { lon: -76.98, lat: 40.02 },
+        { lon: -76.96, lat: 40.03 },
+      ],
+      triggerDistanceMeters: 900,
+    };
+
+    const next = buildNetworkSuggestionIntent({
+      document,
+      opportunity,
+      accuracyMeters: 7,
+      at: "2026-09-22T12:12:00.000Z",
+    });
+
+    expect(next.shape).toBe("destination");
+    expect(next.start?.coordinate).toEqual(opportunity.origin);
+    expect(next.finish?.coordinate).toEqual(opportunity.destination);
+    expect(next.finish?.provenance).toEqual({
+      type: "derived",
+      reason: "directed Free Ride network rejoin",
+    });
+    expect(next.stops).toEqual([]);
+    expect(next.sketch).toBeNull();
+    expect(next.shaping.map((point) => point.coordinate)).toEqual(opportunity.via);
+    expect(next.shaping.every((point) => point.source === "import")).toBe(true);
+
     expect(next.surface).toEqual(document.intent.surface);
     expect(next.terrain).toEqual(document.intent.terrain);
     expect(next.bike).toEqual(document.intent.bike);

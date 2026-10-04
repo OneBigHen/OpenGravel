@@ -1,0 +1,31 @@
+{
+  "capturedAtUtc": "2026-10-01T10:17:07.989219+00:00",
+  "baseSha": "1a04c4661575fded6cde019731a64e75f128f139",
+  "implementationBaseSha": "dafe596eaf1b60410f91e308be977cb042458881",
+  "provider": "typesafe",
+  "baseURL": "https://api.typesafe.ai",
+  "requestedModel": "jev-1.13",
+  "deadlineMs": 1500,
+  "retriesPerRequest": 0,
+  "catalogStatus": "authenticated-model-list-succeeded",
+  "pilotRequests": 6,
+  "pilotAblations": [
+    "A",
+    "B",
+    "C"
+  ],
+  "pilotPermutations": 2,
+  "pilotRepeats": 1,
+  "pilotHttpStatus": 400,
+  "pilotProviderError": "Unknown model: jev-1.13",
+  "resolvedModel": null,
+  "validJudgments": 0,
+  "blindedLabels": 0,
+  "totalSystemOneRequestsIncludingInitialPilotAndDiagnostic": 13,
+  "modelCatalogRequests": 1,
+  "aliasRequests": 0,
+  "promotionReady": false,
+  "livePostFrontierSeam": false,
+  "nodeVersion": "v24.21.0",
+  "note": "Pinned model unavailable on direct service for this account. No semantic fit, bias, stability, or held-out-value claim. No retry or alias fallback."
+}
