@@ -233,7 +233,13 @@ test("draw two strokes, plan through them, recover from a failure and undo as on
 
   // --- Done: one commit, one plan, and the trace reaches the request --------
   await page.getByTestId("sketch-done").click();
-  const committed = await nextRequest(requests, previews);
+  // A snap preview still in flight may land after Done; the commit is the first
+  // request at a newer revision than every preview.
+  const newestPreview = Math.max(-1, ...previewRevisions);
+  await expect
+    .poll(() => requests.slice(previews).some((body) => body.identity.rideRevision > newestPreview), { timeout: 60_000 })
+    .toBe(true);
+  const committed = requests.slice(previews).find((body) => body.identity.rideRevision > newestPreview)!;
   for (const revision of previewRevisions) {
     expect(committed.identity.rideRevision).toBeGreaterThan(revision);
   }
