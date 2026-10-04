@@ -157,6 +157,10 @@ export interface RoutePlanFunJudgeWire {
 
 /** Server-side diagnostics for one attempt (23 §2, §16). */
 export interface RoutePlanDiagnosticsWire {
+  readonly riderModes?: {
+    readonly calls: number;
+    readonly trials: readonly { readonly factor: number; readonly unpavedShare: number; readonly busyShare: number | null; readonly minutes: number }[];
+  };
   readonly optionalProvidersUnavailable: readonly string[];
   /** Shadow-only semantic label for the deterministic Fast & Fun shadow winner. */
   readonly funCharacter?: RoutePlanFunCharacterWire;

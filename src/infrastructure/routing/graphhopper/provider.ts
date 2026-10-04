@@ -120,6 +120,7 @@ interface RouteAttempt {
 export interface GraphHopperProviderOptions {
   /** Origin of the routing engine, e.g. `http://127.0.0.1:8989`. */
   readonly baseUrl: string;
+  readonly riderModesEnabled?: boolean;
   /** Injectable `fetch` for tests and server-side transports. */
   readonly fetcher?: typeof fetch;
   /**
@@ -239,6 +240,7 @@ export function createGraphHopperProvider(
           details: hosted === undefined
             ? details
             : details.filter((detail) => !HOSTED_UNSUPPORTED_DETAILS.has(detail)),
+          riderModesEnabled: options.riderModesEnabled ?? process.env["OGV_RIDER_MODES"] !== "off",
           omitSmoothness,
           spans: spanConstraints(request),
           ...(request.discovery === undefined

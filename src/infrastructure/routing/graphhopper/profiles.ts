@@ -21,7 +21,8 @@
  * default surface is `mixed`, so the override silently turned every default
  * ride — Curvy or Backroads included — into the adventure model, and the road
  * character a rider picked changed nothing. `mixed` now means "no surface rule";
- * seeking dirt is `dirt-preferred`.
+ * seeking dirt is `dirt-preferred`. Capable dual-sport bikes also use the
+ * adventure weighting for a mixed envelope, since road profiles zero rough tracks.
  *
  * Two rules are deliberate and are recorded as `OGV-D-163`:
  *
@@ -61,7 +62,7 @@ const CHARACTER_PROFILES: Readonly<Record<RoadCharacterIntent, GraphHopperEngine
 
 /**
  * Surface preferences that override the road character. Only seeking dirt
- * changes the model; `pavement`, `mostly-pavement` and `mixed` say what the rider
+ * changes the model by surface alone; `pavement`, `mostly-pavement` and `mixed` say what the rider
  * will accept, which the request-time surface rule expresses (request-builder),
  * so they leave the character mapping intact.
  */
@@ -77,9 +78,14 @@ const SURFACE_OVERRIDES: Readonly<
  * Pure and total: every intent resolves to a served profile, so the adapter
  * never has to guess and never sends a profile the deployment does not have.
  */
+export function characterProfileFor(character: RoadCharacterIntent): GraphHopperEngineProfile {
+  return CHARACTER_PROFILES[character];
+}
+
 export function profileFor(intent: RideIntent): string {
+  if (intent.bike.category === "dual-sport" && intent.bike.roughTracks === "allow" && intent.bike.maintainedGravel === "allow" && intent.surface.preference === "mixed") return "motorcycle_adventure";
   const surfaceProfile = SURFACE_OVERRIDES[intent.surface.preference];
-  return surfaceProfile ?? CHARACTER_PROFILES[intent.roadCharacter];
+  return surfaceProfile ?? characterProfileFor(intent.roadCharacter);
 }
 
 /** The profile ids a non-paved surface preference can resolve to. */
@@ -100,6 +106,6 @@ const NON_PAVED_PROFILES: ReadonlySet<string> = new Set(
  * reachable *only* through the surface override, so seeing it proves the rider
  * asked to leave pavement (`OGV-D-209`).
  */
-export function profileImpliesNonPavedSurface(profile: string): boolean {
-  return NON_PAVED_PROFILES.has(profile);
+export function profileImpliesNonPavedSurface(profile: string, bikeCategory?: RideIntent["bike"]["category"]): boolean {
+  return bikeCategory !== "dual-sport" && NON_PAVED_PROFILES.has(profile);
 }

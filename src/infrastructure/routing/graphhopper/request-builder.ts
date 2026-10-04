@@ -60,6 +60,8 @@ import {
 
 /** The custom-model area id of a sketch's corridor band. */
 export const SKETCH_BAND_AREA_ID = "opengravel_sketch";
+import { characterProfileFor } from "./profiles";
+import { riderModeRules } from "./rider-modes";
 import { GraphHopperProviderError } from "./response-parser";
 
 /**
@@ -274,6 +276,7 @@ export interface GraphHopperRequestOptions {
    * the provider's degradation retry when the active graph predates the
    * smoothness encoded value.
    */
+  readonly riderModesEnabled?: boolean;
   readonly omitSmoothness?: boolean;
   /** Surface/roughness rules; absent when no bike policy was supplied. */
   readonly surfacePolicy?: GraphHopperSurfacePolicy;
@@ -355,8 +358,10 @@ function bufferSpanToPolygon(
 }
 
 /** The inside-corridor rewards: a hard span pulls harder than a soft one. */
-const MUST_SPAN_INSIDE_REWARD = "1.8";
-const PREFER_SPAN_INSIDE_REWARD = "1.6";
+// Query priority multipliers cannot exceed one; outside penalties preserve
+// the relative corridor rewards without reviving any hard zero.
+const MUST_SPAN_OUTSIDE_FACTOR = "0.5556";
+const PREFER_SPAN_OUTSIDE_FACTOR = "0.625";
 
 /**
  * An `avoid` span is a request-time zero over its corridor: the same treatment an
@@ -696,7 +701,11 @@ export function createGraphHopperRequest(
         },
       }];
 
+  const trafficFeatures = options.riderModesEnabled === false ? [] :
+    (request.options.trafficPenaltyPolygons ?? []).map((ring, index) => areaFeature(`opengravel_traffic_${index}`, closeRing(ring)));
   const priorityRules: GraphHopperCustomModelRule[] = [
+    ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile),
+    ...trafficFeatures.map(feature => ({ if: `in_${feature.id}`, multiply_by: "0.35" })),
     ...(request.options.avoidHighways
       ? [{ if: "road_class == MOTORWAY || road_class == TRUNK", multiply_by: "0" }]
       : []),
@@ -714,12 +723,12 @@ export function createGraphHopperRequest(
       multiply_by: AVOID_SPAN_INSIDE_WEIGHT,
     })),
     ...mustFeatures.map((feature) => ({
-      if: `in_${feature.id}`,
-      multiply_by: MUST_SPAN_INSIDE_REWARD,
+      if: `!in_${feature.id}`,
+      multiply_by: MUST_SPAN_OUTSIDE_FACTOR,
     })),
     ...preferFeatures.map((feature) => ({
-      if: `in_${feature.id}`,
-      multiply_by: PREFER_SPAN_INSIDE_REWARD,
+      if: `!in_${feature.id}`,
+      multiply_by: PREFER_SPAN_OUTSIDE_FACTOR,
     })),
     ...sketchFeatures.map((feature) => ({
       if: `!in_${feature.id}`,
@@ -734,6 +743,7 @@ export function createGraphHopperRequest(
     ...mustFeatures,
     ...preferFeatures,
     ...sketchFeatures,
+    ...trafficFeatures,
   ];
   const hasCustomModelContent =
     priorityRules.length > 0 || areaFeatures.length > 0;
@@ -752,7 +762,9 @@ export function createGraphHopperRequest(
     : undefined;
 
   const body: GraphHopperRequestBody = {
-    profile: request.profile,
+    profile: options.riderModesEnabled === false && request.options.bike?.category === "dual-sport" && request.options.surfacePreference === "mixed" && request.profile === "motorcycle_adventure"
+      ? characterProfileFor(request.options.roadCharacter ?? "balanced")
+      : request.profile,
     points: points.map(({ lon, lat }) => [lon, lat] as const),
     points_encoded: false,
     instructions: true,
@@ -774,7 +786,7 @@ export function createGraphHopperRequest(
       ...body,
       algorithm: "round_trip",
       "round_trip.distance": Math.round(
-        estimateRoundTripDistanceMeters(request.profile, roundTrip.targetMinutes) *
+        estimateRoundTripDistanceMeters(body.profile, roundTrip.targetMinutes) *
           (roundTrip.distanceScale ?? 1),
       ),
       "round_trip.seed": roundTrip.seed ?? 0,

@@ -67,6 +67,18 @@ export interface ProviderRouteOptions {
    */
   readonly noveltyPreference?: "prefer-new-to-me" | "balanced" | "prefer-familiar";
   /** VNext plans motorcycle rides; a provider must never guess otherwise. */
+  readonly traffic?: "protect-ride" | "minimize-delay";
+  readonly targetUnpavedShare?: number;
+  readonly bike?: {
+    readonly category: "street" | "touring" | "adventure" | "dual-sport";
+    readonly maintainedGravel: "allow" | "avoid";
+    readonly roughTracks: "allow" | "avoid";
+  };
+  readonly departureNow?: boolean;
+  /** Internal search strength; never accepted from the public request. */
+  readonly riderModeFactor?: number;
+  /** Internal, soft flow penalties; never accepted from the public request. */
+  readonly trafficPenaltyPolygons?: readonly (readonly Coordinate[])[];
   readonly vehicle: "motorcycle";
 }
 

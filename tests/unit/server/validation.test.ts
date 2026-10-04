@@ -310,3 +310,25 @@ describe("parseRoutePlanRequestBody — validated narrowing", () => {
     expect(parsed.issues.length).toBeGreaterThan(0);
   });
 });
+
+describe("rider mode wire validation", () => {
+  it("preserves authored constraints and strips internal search controls", () => {
+    const body = validBody();
+    const options = (body["request"] as Record<string, unknown>)["options"] as Record<string, unknown>;
+    Object.assign(options, { traffic: "protect-ride", departureNow: true, targetUnpavedShare: 0.4, bike: { category: "dual-sport", maintainedGravel: "allow", roughTracks: "allow", internalOverride: true }, riderModeFactor: 999, trafficPenaltyPolygons: [] });
+    const parsed = parseRoutePlanRequestBody(body);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.request.options).toMatchObject({ traffic: "protect-ride", departureNow: true, targetUnpavedShare: 0.4, bike: { category: "dual-sport" } });
+      expect(parsed.value.request.options.bike).not.toHaveProperty("internalOverride");
+      expect(parsed.value.request.options.riderModeFactor).toBeUndefined();
+      expect(parsed.value.request.options.trafficPenaltyPolygons).toBeUndefined();
+    }
+  });
+  it.each([-1, 2, "0.5", NaN])("rejects invalid target %s", targetUnpavedShare => {
+    const body = validBody();
+    const options = (body["request"] as Record<string, unknown>)["options"] as Record<string, unknown>;
+    options["targetUnpavedShare"] = targetUnpavedShare;
+    expect(validateRoutePlanRequestBody(body).some(issue => issue.path === "request.options.targetUnpavedShare")).toBe(true);
+  });
+});

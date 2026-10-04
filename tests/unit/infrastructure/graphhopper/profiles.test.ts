@@ -10,6 +10,7 @@ import type { RideIntent } from "@/domain/ride/types";
 import {
   GRAPHHOPPER_ENGINE_PROFILES,
   profileFor,
+  profileImpliesNonPavedSurface,
 } from "@/infrastructure/routing/graphhopper/profiles";
 
 /** The default intent with only the given routing-relevant slots replaced. */
@@ -74,4 +75,17 @@ describe("GraphHopper profile mapping", () => {
       expect(resolved).not.toContain("neural");
     }
   });
+});
+
+describe("dual-sport graph access", () => {
+  it("uses the adventure weighting for permitted rough tracks while preserving paved intent", () => {
+    const bike = { ...defaultRideIntent().bike, category: "dual-sport" as const, roughTracks: "allow" as const };
+    expect(profileFor(intent({ bike, surface: { ...defaultRideIntent().surface, preference: "mixed" } }))).toBe("motorcycle_adventure");
+    expect(profileFor(intent({ bike, surface: PAVEMENT }))).toBe("motorcycle_fastest");
+  });
+});
+
+it("does not infer a dirt preference from an ambiguous dual-sport profile", () => {
+  expect(profileImpliesNonPavedSurface("motorcycle_adventure")).toBe(true);
+  expect(profileImpliesNonPavedSurface("motorcycle_adventure", "dual-sport")).toBe(false);
 });
