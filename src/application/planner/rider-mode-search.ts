@@ -40,7 +40,7 @@ const SHORT_DIRT_METERS = 500;
 const CONTINUITY_WEIGHT = 0.5;
 
 /** A slower route must buy at least one kilometre of dirt value per this many extra minutes. */
-export const DIRT_MINUTES_PER_KM = 2.5;
+export const DIRT_MINUTES_PER_KM = 4;
 const MIN_DIRT_GAIN_KM = 1.5;
 /** Dirt mode may stretch the trip this far; {@link DIRT_MINUTES_PER_KM} decides if it should. */
 export const DIRT_DETOUR_CAP = 1.75;
