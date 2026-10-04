@@ -80,6 +80,8 @@ export interface RiderModeTrial {
   /** Dirt value in km (scraps half, longest stretch +50%). */
   readonly dirtKm: number;
   readonly minutes: number;
+  /** Curvy search only: Franco curvature per km. */
+  readonly curvaturePerKm?: number;
 }
 
 function sameRoute(a: ProviderCandidate, b: ProviderCandidate): boolean {

@@ -6,6 +6,7 @@ import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormu
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
 /**
@@ -1002,7 +1003,20 @@ export async function planRide(
   if (riderEnabled && pipeline.candidates.length > 0) {
     const eligible = candidates.filter(candidate => rank([candidate]).candidates.length > 0);
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
-    const result = await searchRiderEnvelope({
+    const options = parsed.value.request.options;
+    const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred" && riderEnv["OGV_CURVY_SEARCH"] !== "off";
+    const result = curvy ? await searchCurvyEnvelope({
+      request: parsed.value.request,
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
+      provider, sweepCalls: CURVY_SWEEP.length, deadlineMs: riderBudget.deadlineMs, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return proposed.filter(candidate => rank([candidate], value => own?.evaluate(value.geometry) ?? null).candidates.length > 0);
+      },
+    }) : await searchRiderEnvelope({
       request: parsed.value.request,
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
       candidates: eligible,
