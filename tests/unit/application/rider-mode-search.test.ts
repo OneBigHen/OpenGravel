@@ -121,3 +121,21 @@ describe("dirt valued in kilometres", () => {
     expect(scrappy!.dirtValueKm).toBeCloseTo(2.2);
   });
 });
+
+describe("dirt loops", () => {
+  const loop = { ...request, destination: request.origin, discovery: { targetMinutes: 120, toleranceMinutes: 15 } } as ProviderRouteRequest;
+  const never = { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: vi.fn(async () => ({ candidates: [] })) };
+  it("leads with the dirtiest loop that fits the window, without router calls", async () => {
+    // Pine Grove dual-sport on honest ETAs: the pick was 119 min with 2% dirt; a 130-min loop had 31%.
+    const paved = candidate(119 * 60, 0.02);
+    const result = await searchRiderEnvelope({ request: loop, candidates: [paved, candidate(113 * 60, 0.05), candidate(130 * 60, 0.31), candidate(140 * 60, 0.6)], incumbent: paved, provider: never, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+    expect(result.candidate?.durationSeconds).toBe(130 * 60);
+    expect(result.calls).toBe(0);
+    expect(never.candidates).not.toHaveBeenCalled();
+  });
+  it("keeps the pick when no loop in the window has meaningfully more dirt", async () => {
+    const pick = candidate(119 * 60, 0.3);
+    const result = await searchRiderEnvelope({ request: loop, candidates: [candidate(113 * 60, (0.3 * 119) / 113), pick, candidate(125 * 60, (0.3 * 119) / 125)], incumbent: pick, provider: never, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+    expect(result.candidate).toBeNull();
+  });
+});

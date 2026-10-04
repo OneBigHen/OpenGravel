@@ -90,6 +90,8 @@ function sameRoute(a: ProviderCandidate, b: ProviderCandidate): boolean {
 export async function searchRiderEnvelope(input: {
   readonly request: ProviderRouteRequest;
   readonly candidates: readonly ProviderCandidate[];
+  /** The pipeline's current pick, which a loop must beat on dirt. */
+  readonly incumbent?: ProviderCandidate;
   readonly baselineRequest?: ProviderRouteRequest;
   readonly provider: RouteCandidateProvider;
   readonly screen?: (candidate: ProviderCandidate) => boolean;
@@ -112,6 +114,16 @@ export async function searchRiderEnvelope(input: {
     trials.push({ factor, unpavedShare: metrics.unpavedShare, busyShare: metrics.busyShare, dirtKm: metrics.dirtValueKm, minutes: candidate.durationSeconds / 60 });
   };
   input.candidates.forEach(candidate => add(candidate, 1));
+  const discovery = input.request.discovery;
+  if (target > 0 && discovery !== undefined && input.request.sketch === undefined) {
+    // Loops: among the loops that fit the time window, the dirtiest leads.
+    // No router calls and no minutes trade-off: the rider set the time.
+    const fits = measured.filter(entry => Math.abs(entry.candidate.durationSeconds / 60 - discovery.targetMinutes) <= discovery.toleranceMinutes);
+    const leader = measured.find(entry => entry.candidate === input.incumbent) ?? measured[0];
+    const dirtiest = fits.reduce<(typeof measured)[number] | undefined>((best, entry) => best === undefined || entry.dirtValueKm > best.dirtValueKm ? entry : best, undefined);
+    const chosen = dirtiest !== undefined && leader !== undefined && dirtiest.dirtValueKm - leader.dirtValueKm >= MIN_DIRT_GAIN_KM ? dirtiest : null;
+    return { candidate: chosen === null ? null : { ...chosen.candidate, providerMetadata: { ...chosen.candidate.providerMetadata, riderModeFactor: chosen.factor, riderModeTrials: JSON.stringify(trials) } }, calls: 0, trials };
+  }
   if (measured.length === 0 || (target === 0 && (!avoidBusy || measured.every(entry => entry.busyShare === null))) || input.request.sketch !== undefined || input.request.discovery !== undefined) {
     return { candidate: null, calls: 0, trials };
   }

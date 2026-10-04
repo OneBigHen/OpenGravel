@@ -1000,10 +1000,13 @@ export async function planRide(
     return merged.candidates.length > 0 ? merged : null;
   };
   if (riderEnabled && pipeline.candidates.length > 0) {
+    const eligible = candidates.filter(candidate => rank([candidate]).candidates.length > 0);
+    const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
     const result = await searchRiderEnvelope({
       request: parsed.value.request,
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
-      candidates: candidates.filter(candidate => rank([candidate]).candidates.length > 0),
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
       provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
