@@ -54,6 +54,7 @@ interface FakeRenderer {
     /** Every option object the renderer was constructed with, in order. */
     constructorOptions: Record<string, unknown>[];
     workerUrls: string[];
+    sourceLoaded: boolean;
     constructorError: Error | null;
     throwOnSource: string | null;
     throwOnLayer: string | null;
@@ -102,6 +103,7 @@ const fake = vi.hoisted((): FakeRenderer => {
     instances: [],
     constructorOptions: [],
     workerUrls: [],
+    sourceLoaded: false,
     constructorError: null,
     throwOnSource: null,
     throwOnLayer: null,
@@ -225,6 +227,8 @@ const fake = vi.hoisted((): FakeRenderer => {
     getLayer(id: string): unknown {
       return this.layers.has(id) ? { id } : undefined;
     }
+
+    isSourceLoaded(): boolean { return state.sourceLoaded; }
 
     setTerrain(terrain: unknown): void {
       state.terrainCalls.push(terrain);
@@ -369,6 +373,7 @@ afterEach(() => {
   fake.state.glyphs = null;
   fake.state.imageAdds = [];
   fake.state.terrainCalls = [];
+  fake.state.sourceLoaded = false;
   fake.state.easeCalls = [];
   document.body.innerHTML = "";
 });
@@ -438,6 +443,40 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     host.dispose();
   });
 
+  it("keeps an active terrain mesh across scene updates and tilts only on a toggle", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    host.setTerrain3d?.(true);
+    const calls = fake.state.terrainCalls.length;
+    host.applyScene(scene());
+    host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["terrain-3d"] } }));
+    expect(fake.state.terrainCalls).toHaveLength(calls);
+    expect(fake.state.easeCalls).toContainEqual(expect.objectContaining({ pitch: 55 }));
+    host.setTerrain3d?.(false);
+    expect(fake.state.easeCalls.at(-1)).toMatchObject({ pitch: 0 });
+    host.dispose();
+  });
+
+  it("acknowledges DEM content and keeps a tile failure unavailable even when metadata finishes", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const updates: { layerId: string; state: string }[] = [];
+    host.onLayerStatus?.((status) => updates.push(status));
+    const map = currentMap();
+    map.fire("load");
+    host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
+    expect(updates.at(-1)).toEqual({ layerId: "hillshade", state: "loading" });
+    fake.state.sourceLoaded = true;
+    map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "metadata" });
+    expect(updates.at(-1)?.state).toBe("loading");
+    map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "content" });
+    expect(updates.at(-1)?.state).toBe("ready");
+    map.fire("error", { sourceId: "og-terrain-dem", error: new Error("DEM tile failed") });
+    map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "content" });
+    expect(updates.at(-1)?.state).toBe("unavailable");
+    host.dispose();
+  });
+
   it("reuses an unchanged radar frame and removes it when the layer clears", async () => {
     const host = await createMapLibreHost(container(), OPTIONS);
     const map = currentMap();
@@ -459,7 +498,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     host.dispose();
   });
 
-  it("changes terrain detail without taking ownership of the camera", async () => {
+  it("tilts terrain without changing the selected center or zoom", async () => {
     const element = container();
     const host = await createMapLibreHost(element, OPTIONS);
     const map = currentMap();
@@ -475,12 +514,12 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
       source: "og-terrain-dem",
       exaggeration: 1.1,
     });
-    expect(fake.state.easeCalls).toEqual([]);
+    expect(fake.state.easeCalls).toEqual([expect.objectContaining({ pitch: 55 })]);
 
     host.setTerrain3d?.(false);
 
     expect(fake.state.terrainCalls.at(-1)).toBeNull();
-    expect(fake.state.easeCalls).toEqual([]);
+    expect(fake.state.easeCalls.at(-1)).toMatchObject({ pitch: 0 });
 
     host.dispose();
   });

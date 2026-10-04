@@ -23,15 +23,17 @@ const FETCH_TIMEOUT_MS = 8_000;
 export interface TerrariumSourceOptions {
   readonly fetchImpl?: typeof fetch;
   readonly baseUrl?: string;
+  /** Sampling DEM resolution; route profiles keep the default zoom 12. */
+  readonly zoom?: number;
 }
 
-function tileKey(x: number, y: number): string {
-  return `${TERRARIUM_ZOOM}/${x}/${y}`;
+function tileKey(x: number, y: number, zoom: number): string {
+  return `${zoom}/${x}/${y}`;
 }
 
 /** The point's position in global pixel space at the tile zoom (Web Mercator). */
-function pixelOf(point: Coordinate): { readonly px: number; readonly py: number } {
-  const scale = 256 * 2 ** TERRARIUM_ZOOM;
+function pixelOf(point: Coordinate, zoom: number): { readonly px: number; readonly py: number } {
+  const scale = 256 * 2 ** zoom;
   const lat = Math.max(-85.0511, Math.min(85.0511, point.lat));
   const sin = Math.sin((lat * Math.PI) / 180);
   return {
@@ -47,11 +49,12 @@ function heightAt(tile: DecodedPng, x: number, y: number): number {
 
 export function createTerrariumElevationSource(options: TerrariumSourceOptions = {}): ElevationSource {
   const fetchImpl = options.fetchImpl ?? fetch;
+  const zoom = options.zoom ?? TERRARIUM_ZOOM;
   const baseUrl = options.baseUrl ?? TILE_URL;
   const cache = new Map<string, Promise<DecodedPng>>();
 
   const tile = (x: number, y: number, signal?: AbortSignal): Promise<DecodedPng> => {
-    const key = tileKey(x, y);
+    const key = tileKey(x, y, zoom);
     const cached = cache.get(key);
     if (cached !== undefined) {
       cache.delete(key);
@@ -83,7 +86,7 @@ export function createTerrariumElevationSource(options: TerrariumSourceOptions =
           points.map(async (point) => {
             // Bilinear between the four nearest pixels, so the profile is smooth
             // rather than stepped at pixel edges.
-            const { px, py } = pixelOf(point);
+            const { px, py } = pixelOf(point, zoom);
             const x0 = Math.floor(px - 0.5);
             const y0 = Math.floor(py - 0.5);
             const fx = px - 0.5 - x0;

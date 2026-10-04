@@ -1,6 +1,7 @@
 import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 
+import { terrainProvider } from "@/server/map-layers/terrain";
 import { decodePng } from "@/infrastructure/elevation/png-decode";
 import { createTerrariumElevationSource } from "@/infrastructure/elevation/terrarium-source";
 
@@ -93,4 +94,20 @@ describe("createTerrariumElevationSource", () => {
     const result = await source.elevations([{ lon: -75.7, lat: 40.8 }, { lon: -75.6, lat: 40.8 }]);
     expect(result.availability).toBe("unavailable");
   });
+});
+
+it("loads a regional derivative grid using fewer than 16 DEM tiles instead of hundreds at z12", async () => {
+  const urls: string[] = [];
+  const png = terrariumTile(412.5);
+  const snapshot = await terrainProvider.snapshot!({ west: -76.5, south: 40, east: -75, north: 41 }, ["contours", "slope"], {
+    env: {}, fetch: (async (url: string) => {
+      urls.push(url);
+      return new Response(new Uint8Array(png).buffer);
+    }) as typeof fetch,
+  });
+  expect(snapshot.terrainGrid?.heights).toHaveLength(65 * 65);
+  expect(snapshot.terrainGrid?.heights.every((height) => height === 412.5)).toBe(true);
+  expect(urls.length).toBeGreaterThan(0);
+  expect(urls.length).toBeLessThan(16);
+  expect(urls.every((url) => !url.includes("/terrarium/12/"))).toBe(true);
 });

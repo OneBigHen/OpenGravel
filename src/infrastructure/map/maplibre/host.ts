@@ -66,6 +66,7 @@ import {
   type PointerTool,
 } from "@/application/map/interaction";
 import { assetUrl } from "@/application/map/asset-path";
+import type { MapLayerDrawStatus } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import {
   isDrawableArea,
@@ -288,6 +289,8 @@ interface MapLibreMap {
       }
     | undefined;
   setLayoutProperty?(layerId: string, name: string, value: unknown): void;
+  isSourceLoaded?(sourceId: string): boolean;
+  getPitch?(): number;
   setTerrain?(terrain: { readonly source: string; readonly exaggeration?: number } | null): void;
   easeTo?(options: Readonly<Record<string, unknown>>): void;
   moveLayer(id: string): void;
@@ -685,6 +688,30 @@ export async function createMapLibreHost(
       : null;
   let satelliteVisible = false;
   let terrainOn = false;
+  let terrainPitchBefore: number | null = null;
+  const terrainApplied = new WeakMap<MapLibreMap, boolean>();
+  const layerStatusListeners = new Set<(status: MapLayerDrawStatus) => void>();
+  const layerStates = new Map<MapLayerDrawStatus["layerId"], MapLayerDrawStatus["state"]>();
+  let terrainFailed = false;
+  let terrainHasContent = false;
+  let terrainRequested = false;
+  let terrainTimer: ReturnType<typeof setTimeout> | null = null;
+  function reportLayer(layerId: MapLayerDrawStatus["layerId"], state: MapLayerDrawStatus["state"]): void {
+    if (layerStates.get(layerId) === state) return;
+    layerStates.set(layerId, state);
+    for (const listener of layerStatusListeners) listener({ layerId, state });
+  }
+  function reportTerrain(state: MapLayerDrawStatus["state"]): void {
+    if (state === "unavailable") terrainFailed = true;
+    if (terrainFailed) state = "unavailable";
+    if (terrainOn) reportLayer("terrain-3d", state);
+    if (latestScene?.infoLayers?.visible.includes("hillshade")) reportLayer("hillshade", state);
+    if (state !== "loading" && terrainTimer !== null) { clearTimeout(terrainTimer); terrainTimer = null; }
+    if (state === "loading" && terrainTimer === null) terrainTimer = setTimeout(() => {
+      terrainTimer = null;
+      reportTerrain("unavailable");
+    }, 15_000);
+  }
   let style: string | MapStyleSpec =
     options.basemap === "mapbox"
       ? mapboxToken !== null && spec.styleUrl !== null
@@ -1086,9 +1113,15 @@ export async function createMapLibreHost(
   function applyTerrain(map: MapLibreMap): void {
     // The DEM is a network source; a downloaded basemap draws flat rather than
     // reporting a terrain failure the rider cannot fix without signal.
-    if (map.setTerrain === undefined || drawingOfflineBasemap) return;
+    if (map.setTerrain === undefined || drawingOfflineBasemap) { reportTerrain("unavailable"); return; }
     try {
-      if ((terrainOn || latestScene?.infoLayers?.visible.includes("hillshade")) && map.getSource(TERRAIN_SOURCE_ID) === undefined) {
+      const requested = terrainOn || latestScene?.infoLayers?.visible.includes("hillshade") === true;
+      if (requested && !terrainRequested) terrainFailed = false;
+      terrainRequested = requested;
+      const newDem = requested && map.getSource(TERRAIN_SOURCE_ID) === undefined;
+      if (newDem) {
+        terrainHasContent = false;
+        terrainFailed = false;
         map.addSource(TERRAIN_SOURCE_ID, terrainSourceSpec());
       }
 
@@ -1104,7 +1137,21 @@ export async function createMapLibreHost(
         }
       }
 
-      map.setTerrain(terrainOn ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
+      // setTerrain destroys/rebuilds the mesh even for identical options.
+      // A provider result, selection or status update must not restart DEM work.
+      if (terrainApplied.get(map) !== terrainOn || newDem) {
+        terrainApplied.set(map, terrainOn);
+        map.setTerrain(terrainOn ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
+      }
+      if (terrainOn && terrainPitchBefore === null) {
+        terrainPitchBefore = map.getPitch?.() ?? 0;
+        map.easeTo?.({ pitch: Math.max(55, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
+      } else if (!terrainOn && terrainPitchBefore !== null) {
+        map.easeTo?.({ pitch: terrainPitchBefore, duration: options.reducedMotion === true ? 0 : 300 });
+        terrainPitchBefore = null;
+      }
+      if (requested) reportTerrain(!newDem && terrainHasContent && map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true ? "ready" : "loading");
+      else if (terrainTimer !== null) { clearTimeout(terrainTimer); terrainTimer = null; }
 
       const visibility = terrainOn ? "visible" : "none";
       if (map.getLayer(HILLSHADE_LAYER_ID) !== undefined) {
@@ -1114,6 +1161,7 @@ export async function createMapLibreHost(
         map.setLayoutProperty?.(BUILDING_EXTRUSION_LAYER_ID, "visibility", visibility);
       }
     } catch {
+      reportTerrain("unavailable");
       recordError({ kind: "source", detail: TERRAIN_SOURCE_ID });
     }
   }
@@ -1427,6 +1475,7 @@ export async function createMapLibreHost(
   }
 
   function onMoveStart(event: { readonly originalEvent?: unknown }): void {
+    terrainFailed = false;
     if (event.originalEvent === undefined) return;
     // 05 §8: a rider pan/zoom suspends automatic fit until they ask for it back.
     riderTookCamera();
@@ -1655,6 +1704,7 @@ export async function createMapLibreHost(
     current.map.off("moveend", onMoveEnd);
     current.map.off("error", onMapError);
     current.map.off("sourcedata", onSourceData);
+    current.map.off("sourcedataloading", onSourceLoading);
     current.map.off("idle", onIdle);
     current.map.off("webglcontextlost", onContextLost);
     try {
@@ -1747,9 +1797,14 @@ export async function createMapLibreHost(
   }
 
   /** Renderer data arrived: a tile, a source update, or a settled map. */
-  function onSourceData(): void {
+  function onSourceData(payload?: unknown): void {
     const current = attempt;
     if (disposed || current === null || !current.styleReady) return;
+    const event = payload as { sourceId?: string; sourceDataType?: string } | undefined;
+    if (event?.sourceId === TERRAIN_SOURCE_ID && event.sourceDataType === "content") {
+      terrainHasContent = true;
+      if (current.map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true) reportTerrain("ready");
+    }
     // Whether it was a basemap tile or one of our own GeoJSON sources, the
     // renderer is parsing and drawing. The starvation bound has been satisfied and
     // is never re-armed, which is what keeps a slow-but-working load from being
@@ -1764,6 +1819,10 @@ export async function createMapLibreHost(
     clearWatchdog(current);
     markReady(current);
     markPainted(current);
+  }
+
+  function onSourceLoading(payload: unknown): void {
+    if ((payload as { sourceId?: string } | null)?.sourceId === TERRAIN_SOURCE_ID) reportTerrain("loading");
   }
 
   /**
@@ -1783,6 +1842,7 @@ export async function createMapLibreHost(
   /** The renderer's own `error` event, classified and never swallowed. */
   function onMapError(payload: unknown): void {
     if (disposed) return;
+    if ((payload as { sourceId?: string } | null)?.sourceId === TERRAIN_SOURCE_ID) reportTerrain("unavailable");
     const error = classifyMapError(payload);
     if (error === null) return;
     const current = attempt;
@@ -1910,6 +1970,7 @@ export async function createMapLibreHost(
     // The evidence the load-health machine waits for, and the evidence that ends
     // the starvation bound.
     map.on("sourcedata", onSourceData);
+    map.on("sourcedataloading", onSourceLoading);
     map.on("idle", onIdle);
     // A lost context is a failed renderer, not a working one (4.0s).
     map.on("webglcontextlost", onContextLost);
@@ -2005,6 +2066,12 @@ export async function createMapLibreHost(
       return () => listeners.delete(listener);
     },
 
+    onLayerStatus(listener: (status: MapLayerDrawStatus) => void): () => void {
+      layerStatusListeners.add(listener);
+      for (const [layerId, state] of layerStates) listener({ layerId, state });
+      return () => layerStatusListeners.delete(listener);
+    },
+
     onError(listener: (error: MapRenderError) => void): () => void {
       errorListeners.add(listener);
       // The failure may already have happened — a renderer that could not start,
@@ -2069,6 +2136,8 @@ export async function createMapLibreHost(
 
     dispose(): void {
       if (disposed) return;
+      if (terrainTimer !== null) clearTimeout(terrainTimer);
+      layerStatusListeners.clear();
       disposed = true;
       if (changedSpanExpiry !== null) {
         clearTimeout(changedSpanExpiry);

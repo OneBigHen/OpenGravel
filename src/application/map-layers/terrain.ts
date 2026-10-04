@@ -1,6 +1,13 @@
 import type { MapLayerId } from "@/application/map-layers/catalog";
 import type { InfoFeature, LngLat, TerrainGrid } from "@/application/map-layers/types";
 
+/** Keep regional contours legible and bounded; close views retain 20 m detail. */
+export function terrainContourInterval(grid: TerrainGrid): number {
+  const { bounds, size } = grid;
+  const spacing = Math.max((bounds.east - bounds.west) * 111_195 * Math.cos((bounds.north + bounds.south) * Math.PI / 360), (bounds.north - bounds.south) * 111_195) / (size - 1);
+  return 20 * 2 ** Math.max(0, Math.ceil(Math.log2(spacing / 250)));
+}
+
 /** Marching triangles avoids the ambiguous saddle case of marching squares. */
 export function terrainFeatures(grid: TerrainGrid, layers: readonly MapLayerId[]): readonly InfoFeature[] {
   const { bounds, size, heights } = grid;
@@ -11,6 +18,7 @@ export function terrainFeatures(grid: TerrainGrid, layers: readonly MapLayerId[]
   const dx = (bounds.east - bounds.west) / (size - 1);
   const dy = (bounds.north - bounds.south) / (size - 1);
   const features: InfoFeature[] = [];
+  const interval = terrainContourInterval(grid);
   for (let row = 0; row < size - 1; row++) {
     const lat = bounds.south + row * dy;
     const mx = dx * 111_195 * Math.cos((lat + dy / 2) * Math.PI / 180);
@@ -27,7 +35,7 @@ export function terrainFeatures(grid: TerrainGrid, layers: readonly MapLayerId[]
       for (const triangle of [[0, 1, 2], [0, 2, 3]]) {
         const min = Math.min(...triangle.map((i) => h[i]!));
         const max = Math.max(...triangle.map((i) => h[i]!));
-        for (let elevation = Math.ceil(min / 20) * 20; elevation < max; elevation += 20) {
+        for (let elevation = Math.ceil(min / interval) * interval; elevation < max; elevation += interval) {
           const crossings: LngLat[] = [];
           for (let edge = 0; edge < 3; edge++) {
             const a = triangle[edge]!;
@@ -38,7 +46,7 @@ export function terrainFeatures(grid: TerrainGrid, layers: readonly MapLayerId[]
             }
           }
           if (crossings.length === 2 && (crossings[0]![0] !== crossings[1]![0] || crossings[0]![1] !== crossings[1]![1])) {
-            features.push({ id: `contour:${lon}:${lat}:${dx}:${dy}:${triangle[1]}:${elevation}`, layerId: "contours", name: `${elevation} m contour`, detail: "Derived Terrarium elevation, metres above sea level; source survey date unknown.", weight: elevation % 100 === 0 ? 2 : 1, geometry: { type: "LineString", coordinates: crossings } });
+            features.push({ id: `contour:${lon}:${lat}:${dx}:${dy}:${triangle[1]}:${elevation}`, layerId: "contours", name: `${elevation} m contour`, detail: `Derived Terrarium elevation, metres above sea level; ${interval} m interval at this view. Source survey date unknown.`, weight: elevation % (interval * 5) === 0 ? 2 : 1, geometry: { type: "LineString", coordinates: crossings } });
           }
           if (features.length > 30_000) throw new Error("Terrain detail exceeds view budget; zoom in");
         }

@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import type { MapLayerDrawStatus } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { InfoLayersScene, MapIntent } from "@/application/map/types";
 import {
@@ -46,6 +47,7 @@ export interface MapLayersView {
   readonly clearAll: () => void;
   readonly select: (id: string | null) => void;
   readonly onViewport: (extent: MapExtent) => void;
+  readonly onLayerStatus: (status: MapLayerDrawStatus) => void;
   /** `null` consumes a feature tap; every other intent is passed through. */
   readonly interceptIntent: (intent: MapIntent) => MapIntent | null;
 }
@@ -183,6 +185,10 @@ export function useMapLayers(
   source: MapLayersSource | undefined,
   cameraRoute: readonly LngLat[] | null = null,
 ): MapLayersView {
+  const [drawStatus, setDrawStatus] = useState<Partial<Record<MapLayerId, MapLayerDrawStatus["state"]>>>({});
+  const onLayerStatus = useCallback(({ layerId, state }: MapLayerDrawStatus): void => {
+    setDrawStatus((current) => current[layerId] === state ? current : { ...current, [layerId]: state });
+  }, []);
   const enabled = useSyncExternalStore(subscribeEnabled, enabledNow, () => NONE);
   const [extent, setExtent] = useState<MapExtent | null>(null);
   const [result, setResult] = useState<{
@@ -291,7 +297,7 @@ export function useMapLayers(
     for (const id of enabled) {
       const definition = mapLayer(id);
       if (definition.kind === "view") {
-        record[id] = "ready";
+        record[id] = drawStatus[id] ?? "loading";
         continue;
       }
       if (definition.kind === "raster") {
@@ -309,14 +315,14 @@ export function useMapLayers(
               : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
     }
     return record;
-  }, [enabled, extent, loadable, pending, result, unavailable, zoom]);
+  }, [drawStatus, enabled, extent, loadable, pending, result, unavailable, zoom]);
 
   const trafficFlow = enabled.includes("traffic-flow") && source?.trafficTileUrl != null ? source.trafficTileUrl : null;
   const scene = useMemo<InfoLayersScene | undefined>(
     () =>
       enabled.length === 0
         ? undefined
-        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, selectedId, visible: enabled.filter((id) => status[id] === "ready" || status[id] === "stale") },
+        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, selectedId, visible: enabled.filter((id) => mapLayer(id).kind === "view" || status[id] === "ready" || status[id] === "stale") },
     [enabled, features, result, selectedId, status, trafficFlow],
   );
 
@@ -348,6 +354,7 @@ export function useMapLayers(
     clearAll,
     select: setSelectedId,
     onViewport,
+    onLayerStatus,
     interceptIntent,
   };
 }
