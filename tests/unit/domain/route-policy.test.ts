@@ -36,7 +36,7 @@ const ROLES: readonly RouteRole[] = [
 describe("PA_NJ_ROUTE_POLICY_VNEXT_1", () => {
   it("is a valid, versioned frozen policy", () => {
     expect(isRoutePolicy(PA_NJ_ROUTE_POLICY_VNEXT_1)).toBe(true);
-    expect(PA_NJ_ROUTE_POLICY_VNEXT_1.version).toBe("PA_NJ_ROUTE_POLICY_VNEXT_1");
+    expect(PA_NJ_ROUTE_POLICY_VNEXT_1.version).toBe("PA_NJ_ROUTE_POLICY_VNEXT_2");
     expect(Object.isFrozen(PA_NJ_ROUTE_POLICY_VNEXT_1)).toBe(true);
     expect(PA_NJ_ROUTE_POLICY_VNEXT_1.territory).toBe("pa-nj");
   });

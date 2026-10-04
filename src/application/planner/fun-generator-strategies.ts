@@ -19,7 +19,7 @@ import { isUsableEvidence } from "@/domain/evidence/types";
 import { analyzeBends } from "@/domain/geometry/bends";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteEvidence } from "@/domain/route/types";
-import { backroadShare } from "@/application/roads/engine-road-evidence";
+import { nonArterialShare } from "@/application/roads/engine-road-evidence";
 import { indexRoute, lineOverlap } from "@/application/roads/route-overlap";
 import { searchCorridorPrizeLoops, type CorridorPrize } from "./corridor-prize-loop";
 import {
@@ -317,7 +317,7 @@ export const missingLinkGenerator: FunCandidateGenerator = {
             return { candidate: null, adherence: null, note: "connector-dogleg" };
           }
           // The connector earns inclusion on its own measured roads; unknown is not a pass.
-          const backroad = connector.roadSummary === undefined ? null : backroadShare(connector.roadSummary);
+          const backroad = connector.roadSummary === undefined ? null : nonArterialShare(connector.roadSummary);
           if (backroad === null) return { candidate: null, adherence: null, note: "connector-unmeasured" };
           if (backroad < MIN_CONNECTOR_BACKROAD_SHARE) return { candidate: null, adherence: null, note: "connector-arterial" };
           const request = buildMissingLinkRoute(context.request, plan, connector.geometry);

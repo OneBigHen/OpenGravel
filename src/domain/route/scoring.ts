@@ -12,9 +12,9 @@
  *    evidence)` always produces an identical `RouteScore`, so a score is
  *    reproducible and explainable rather than plausible.
  * 2. **Absence is never a value.** A component whose evidence is missing or
- *    unusable is `input: null`, `evidenceStatus: "unknown"`, `contribution: 0`.
- *    It is never a mid-range default, which would be a fabricated measurement
- *    dressed as neutrality (03 §18, integrity rule 2).
+ *    unusable is `input: null`, `evidenceStatus: "unknown"`. Policy blends
+ *    quality towards neutral and costs towards caution without inventing a
+ *    measurement (03 §18, integrity rule 2).
  *
  * ## Geometry-proxy substitutions (`OGV-D-1xx`)
  *
@@ -41,12 +41,12 @@ import type { Coordinate, RoadCharacterIntent } from "../ride/types";
 import type { PipelineIntent } from "./intent";
 import {
   isRoutePolicy,
+  PA_NJ_ROUTE_POLICY_VNEXT_1,
   type RoutePolicy,
   type RouteScoreComponentKey,
   type RouteScoreWeights,
 } from "./policy";
 import {
-  ROUTE_EVIDENCE_KEYS,
   type RouteEvidence,
   type RouteEvidenceKey,
   type RouteScore,
@@ -85,6 +85,8 @@ export interface TrafficCostSignal {
   readonly status: EvidenceStatus;
   readonly explanationKey?: string;
   readonly label?: string;
+  readonly coverage?: number;
+  readonly confidence?: number | null;
 }
 
 /** The character used when the rider did not state one (`06 §6`). */
@@ -124,28 +126,49 @@ export function piecewiseDetourPenalty(
   return clamp(preferredBand * 20 + progress ** 2 * 48, 0, 100);
 }
 
-/**
- * Uncertainty penalty in points (0–15), from the share of the §18 declared
- * evidence keys that are not usable. Monotone: the more that is unknown, the
- * higher the penalty, and nothing is ever assumed known.
- */
-export function uncertaintyPenalty(evidence: RouteEvidence): number {
-  let unknown = 0;
-  for (const key of ROUTE_EVIDENCE_KEYS) {
-    const value = evidence[key];
-    if (value === undefined || !isUsableEvidence(value)) unknown += 1;
-  }
-  return (unknown / ROUTE_EVIDENCE_KEYS.length) * MAX_UNCERTAINTY_PENALTY;
+/** Scored evidence axes only; unrelated metadata cannot increase confidence. */
+const SCORED_EVIDENCE = {
+  curvature: "curvature",
+  backroad: "roadClassMix",
+  surfaceFit: "surfaceMix",
+  elevation: "elevation",
+  traffic: "traffic",
+  junctionFriction: "urbanFriction",
+  novelty: "novelty",
+  closureRisk: "closures",
+} as const satisfies Partial<Record<RouteScoreComponentKey, RouteEvidenceKey>>;
+
+/** Unknown metres and untrusted observations both leave uncertainty, bounded at 15. */
+export function uncertaintyPenalty(
+  evidence: RouteEvidence,
+  weights: RouteScoreWeights = PA_NJ_ROUTE_POLICY_VNEXT_1.characterWeights.balanced,
+): number {
+  return (1 - evidenceCoverage(evidence, weights)) * MAX_UNCERTAINTY_PENALTY;
 }
 
-/** Share (0–1) of the declared evidence keys that are usable. */
-function evidenceCoverage(evidence: RouteEvidence): number {
-  let usable = 0;
-  for (const key of ROUTE_EVIDENCE_KEYS) {
-    const value = evidence[key];
-    if (value !== undefined && isUsableEvidence(value)) usable += 1;
+/** Mean measured-and-trusted route share, weighted by the active scored axes. */
+function evidenceCoverage(
+  evidence: RouteEvidence,
+  weights: RouteScoreWeights,
+  trafficCost?: TrafficCostSignal | null,
+): number {
+  let measured = 0;
+  let total = 0;
+  for (const [axis, key] of Object.entries(SCORED_EVIDENCE)) {
+    const weight = weights[axis as keyof typeof SCORED_EVIDENCE];
+    total += weight;
+    const scalar = axis === "traffic" && trafficCost !== undefined && trafficCost !== null
+      ? readTrafficSignal(trafficCost) : readUnitScalar(evidence, key);
+    measured += weight * scalar.reliability;
   }
-  return usable / ROUTE_EVIDENCE_KEYS.length;
+  return total > 0 ? measured / total : 0;
+}
+
+/** Omitted coverage means route-wide; explicitly unknown trust fails closed. */
+function evidenceFraction(value: number | null | undefined): number {
+  if (value === undefined) return 1;
+  if (value === null || !Number.isFinite(value) || value < 0 || value > 1) return 0;
+  return value;
 }
 
 /**
@@ -158,6 +181,7 @@ function evidenceCoverage(evidence: RouteEvidence): number {
 interface ScalarEvidence {
   readonly value: number | null;
   readonly status: EvidenceStatus;
+  readonly reliability: number;
 }
 
 function readUnitScalar(
@@ -166,7 +190,7 @@ function readUnitScalar(
 ): ScalarEvidence {
   const entry = evidence[key];
   if (entry === undefined || !isUsableEvidence(entry)) {
-    return { value: null, status: "unknown" };
+    return { value: null, status: "unknown", reliability: 0 };
   }
   // A structured value (a surface mix, a curvature tally) carries its own
   // normalized reading as `unit`, so the rider-facing detail and the scored
@@ -176,9 +200,16 @@ function readUnitScalar(
       ? (entry.value as { readonly unit: unknown }).unit
       : entry.value;
   if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
-    return { value: null, status: "unknown" };
+    return { value: null, status: "unknown", reliability: 0 };
   }
-  return { value, status: entry.status };
+  // The reading covers only the measured metres; coverage × confidence then
+  // blends it towards the policy prior, so a small gravel patch on a mostly
+  // unknown route cannot claim a whole-route match.
+  return {
+    value,
+    status: entry.status,
+    reliability: evidenceFraction(entry.coverage) * evidenceFraction(entry.confidence),
+  };
 }
 
 interface ComponentSpec {
@@ -188,6 +219,7 @@ interface ComponentSpec {
   readonly explanationKey: string;
   /** A cost axis contributes `weight × (1 - input)`; a quality axis `weight × input`. */
   readonly costAxis: boolean;
+  readonly reliability?: number;
 }
 
 /**
@@ -237,10 +269,12 @@ export function replaceNoveltyScore(input: {
 }
 
 function component(spec: ComponentSpec): ScoreComponent {
-  const contribution =
-    spec.input === null
-      ? 0
-      : spec.weight * (spec.costAxis ? 1 - spec.input : spec.input) * 100;
+  // Policy priors affect utility only; input remains the actual measurement.
+  // Unknown quality is neutral; unknown cost is maximally cautious, never safe.
+  const prior = spec.costAxis ? 1 : 0.5;
+  const reliability = spec.input === null ? 0 : spec.reliability ?? 1;
+  const effective = prior + reliability * ((spec.input ?? prior) - prior);
+  const contribution = spec.weight * (spec.costAxis ? 1 - effective : effective) * 100;
   return {
     input: spec.input,
     weight: spec.weight,
@@ -261,6 +295,7 @@ function qualityComponent(
   return component({
     weight: weights[key],
     input: scalar.value,
+    reliability: scalar.reliability,
     status: scalar.status,
     explanationKey:
       scalar.value === null ? `score.${key}.no-evidence` : `score.${key}.evidence`,
@@ -279,11 +314,28 @@ function costComponent(
   return component({
     weight: weights[key],
     input: scalar.value,
+    reliability: scalar.reliability,
     status: scalar.status,
     explanationKey:
       scalar.value === null ? `score.${key}.no-evidence` : `score.${key}.evidence`,
     costAxis: true,
   });
+}
+
+/** The traffic override is the scored observation, so confidence uses it too. */
+function readTrafficSignal(trafficCost: TrafficCostSignal): ScalarEvidence {
+  const normalizedCost = trafficCost.normalizedCost;
+  const usable = normalizedCost !== null
+    && Number.isFinite(normalizedCost)
+    && normalizedCost >= 0
+    && normalizedCost <= 1
+    && (trafficCost.status === "known" || trafficCost.status === "estimated");
+  return {
+    value: usable ? normalizedCost : null,
+    status: usable ? trafficCost.status : "unknown",
+    reliability: usable
+      ? evidenceFraction(trafficCost.coverage) * evidenceFraction(trafficCost.confidence) : 0,
+  };
 }
 
 function trafficComponent(
@@ -294,17 +346,13 @@ function trafficComponent(
   if (trafficCost === undefined || trafficCost === null) {
     return costComponent("traffic", evidence, "traffic", weights);
   }
-  const normalizedCost = trafficCost.normalizedCost;
-  const usable = normalizedCost !== null
-    && Number.isFinite(normalizedCost)
-    && normalizedCost >= 0
-    && normalizedCost <= 1
-    && (trafficCost.status === "known" || trafficCost.status === "estimated");
+  const scalar = readTrafficSignal(trafficCost);
   return component({
     weight: weights.traffic,
-    input: usable ? normalizedCost : null,
-    status: usable ? trafficCost.status : "unknown",
-    explanationKey: usable
+    input: scalar.value,
+    reliability: scalar.reliability,
+    status: scalar.status,
+    explanationKey: scalar.value !== null
       ? trafficCost.explanationKey ?? "score.traffic.evidence"
       : "score.traffic.no-evidence",
     costAxis: true,
@@ -335,6 +383,7 @@ export function scoreCandidate(input: CandidateScoringInput): RouteScore {
     input:
       curvatureEvidence.value ??
       clamp(smoothed.twistiness / 100, 0, 1),
+    reliability: curvatureEvidence.value === null ? 1 : curvatureEvidence.reliability,
     status: curvatureEvidence.value === null ? "estimated" : curvatureEvidence.status,
     explanationKey:
       curvatureEvidence.value === null
@@ -343,15 +392,16 @@ export function scoreCandidate(input: CandidateScoringInput): RouteScore {
     costAxis: false,
   });
 
-  const coverage = evidenceCoverage(evidence);
-  const confidence = component({
+  const coverage = evidenceCoverage(evidence, weights, input.trafficCost);
+  // Coverage is already a policy-weighted confidence metric, not a quality axis.
+  const confidence: ScoreComponent = {
     weight: weights.confidence,
     input: coverage > 0 ? coverage : null,
-    status: coverage > 0 ? "estimated" : "unknown",
+    contribution: weights.confidence * coverage * 100,
+    evidenceStatus: coverage > 0 ? "estimated" : "unknown",
     explanationKey:
       coverage > 0 ? "score.confidence.evidence-coverage" : "score.confidence.no-evidence",
-    costAxis: false,
-  });
+  };
 
   const baseline =
     input.baselineDurationSeconds !== undefined &&

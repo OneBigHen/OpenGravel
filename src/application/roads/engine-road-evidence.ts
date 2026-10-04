@@ -11,7 +11,7 @@
  *   apart as `inferredPavedMeters`, because in PA/NJ those are paved and a
  *   rider deserves the estimate — while an untagged unclassified road, service
  *   road or track stays unknown, since that is exactly where gravel hides;
- * - **road class** — the backroad share is the metres off the arterial network;
+ * - **road class** — continuous road character over recognized classes, with coverage;
  * - **curvature** — the share of metres ridden through bends, measured on the
  *   route line (`bendMeters`, UX rework 2); an engine without it falls back to
  *   the metres on edges whose straight-line/road-length ratio is at or below
@@ -32,8 +32,13 @@ const GRAVEL_TAGS = new Set(["compacted", "fine_gravel", "gravel", "pebblestone"
 const DIRT_TAGS = new Set(["unpaved", "ground", "dirt", "earth", "grass", "sand", "mud", "rock"]);
 /** Untagged edges of these classes are counted as (inferred) paved. */
 const PAVED_BY_CLASS = new Set(["motorway", "trunk", "primary", "secondary", "tertiary", "residential"]);
-/** The arterial network; everything else is a backroad. */
-const ARTERIAL_CLASSES = new Set(["motorway", "trunk", "primary"]);
+/** Simple road-character prior, not a traffic or access claim. In PA/NJ the
+ * tertiary and unclassified roads are the classic riding roads; residential is
+ * mostly subdivision streets, and service roads are poor through-ride backroads. */
+const ROAD_CHARACTER: Readonly<Record<string, number>> = {
+  motorway: 0, trunk: 0.05, primary: 0.25, secondary: 0.6,
+  tertiary: 0.85, unclassified: 0.9, residential: 0.45, track: 0.9, service: 0.2,
+};
 
 /** An edge this bent or more counts as a curve (`1` is dead straight). */
 export const CURVY_RATIO = 0.9;
@@ -74,8 +79,10 @@ export interface EngineSurfaceMix {
   readonly gravelMeters: number;
   readonly dirtMeters: number;
   readonly unknownMeters: number;
-  /** How well the mix fits the rider's surface preference, `0..1` (scoring reads it). */
+  /** Preference fit over the measured surface metres, `0..1`. */
   readonly unit: number;
+  /** Unpaved metres / all route metres; unknown never counts as unpaved. */
+  readonly unpavedShare: number;
   /** Where each surface is, in travel order, as `[metres, surface]` runs; absent from older answers. */
   readonly runs?: readonly (readonly [number, SurfaceRunKind])[];
 }
@@ -179,7 +186,10 @@ export function engineSurfaceMix(
     }
   }
   const known = pavedMeters + gravelMeters + dirtMeters;
-  const unpavedShare = known > 0 ? (gravelMeters + dirtMeters) / known : 0;
+  unknownMeters = Math.max(unknownMeters, summary.totalMeters - known);
+  const measuredUnpavedShare = known > 0 ? (gravelMeters + dirtMeters) / known : 0;
+  const unpavedShare = summary.totalMeters > 0
+    ? clamp01((gravelMeters + dirtMeters) / summary.totalMeters) : 0;
   const dominant = known === 0
     ? "unknown"
     : pavedMeters >= gravelMeters && pavedMeters >= dirtMeters
@@ -194,7 +204,8 @@ export function engineSurfaceMix(
     gravelMeters,
     dirtMeters,
     unknownMeters,
-    unit: surfaceFit(preference, unpavedShare),
+    unit: surfaceFit(preference, measuredUnpavedShare),
+    unpavedShare,
     ...(summary.surfaceRuns === undefined || summary.surfaceRuns.length === 0
       ? {}
       : { runs: classifyRuns(summary.surfaceRuns, summary.totalMeters) }),
@@ -241,15 +252,36 @@ export function engineCurvature(summary: ProviderRoadSummary): EngineCurvature {
   };
 }
 
-/** The backroad share: metres off motorways, trunks and primaries. */
+/** Metre-weighted road character over recognized classes, with route coverage. */
+export function engineRoadCharacter(summary: ProviderRoadSummary): { readonly unit: number; readonly coverage: number } | null {
+  let character = 0;
+  let measured = 0;
+  for (const [key, meters] of Object.entries(summary.surfaceByRoadClassMeters)) {
+    const roadClass = key.split("|")[1] ?? "missing";
+    const value = ROAD_CHARACTER[roadClass];
+    if (value === undefined || !Number.isFinite(meters) || meters <= 0) continue;
+    measured += meters;
+    character += value * meters;
+  }
+  return measured > 0 && summary.totalMeters > 0
+    ? { unit: character / measured, coverage: clamp01(measured / summary.totalMeters) }
+    : null;
+}
+
+/** Measured road-character reading; engineRoadCharacter also exposes route coverage. */
 export function backroadShare(summary: ProviderRoadSummary): number | null {
+  return engineRoadCharacter(summary)?.unit ?? null;
+}
+
+/** Retain the connector search's binary gate; scoring uses road character instead. */
+export function nonArterialShare(summary: ProviderRoadSummary): number | null {
   let backroad = 0;
   let measured = 0;
   for (const [key, meters] of Object.entries(summary.surfaceByRoadClassMeters)) {
     const roadClass = key.split("|")[1] ?? "missing";
     if (roadClass === "missing") continue;
     measured += meters;
-    if (!ARTERIAL_CLASSES.has(roadClass)) backroad += meters;
+    if (!["motorway", "trunk", "primary"].includes(roadClass)) backroad += meters;
   }
   return measured > 0 ? backroad / measured : null;
 }
@@ -279,10 +311,11 @@ export function engineRoadEvidence(
     };
   }
 
-  const backroads = backroadShare(summary);
+  const backroads = engineRoadCharacter(summary);
   if (backroads !== null) {
     evidence["roadClassMix"] = {
-      value: Number(backroads.toFixed(3)),
+      value: Number(backroads.unit.toFixed(3)),
+      coverage: backroads.coverage,
       status: "estimated",
       confidence: 0.8,
       provenance: [OSM_ROAD_SOURCE],
