@@ -709,7 +709,9 @@ export async function createMapLibreHost(
     if (state !== "loading" && terrainTimer !== null) { clearTimeout(terrainTimer); terrainTimer = null; }
     if (state === "loading" && terrainTimer === null) terrainTimer = setTimeout(() => {
       terrainTimer = null;
-      reportTerrain("unavailable");
+      // Slow is not failed: a DEM that finished loading is ready.
+      const map = attempt?.map;
+      reportTerrain(map?.getSource(TERRAIN_SOURCE_ID) !== undefined && map?.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true ? "ready" : "unavailable");
     }, 15_000);
   }
   let style: string | MapStyleSpec =
@@ -1801,7 +1803,9 @@ export async function createMapLibreHost(
     const current = attempt;
     if (disposed || current === null || !current.styleReady) return;
     const event = payload as { sourceId?: string; sourceDataType?: string } | undefined;
-    if (event?.sourceId === TERRAIN_SOURCE_ID && event.sourceDataType === "content") {
+    // DEM tile loads arrive as plain `sourcedata` (no `content` type), so any
+    // terrain-source event counts once the source reports itself loaded.
+    if (event?.sourceId === TERRAIN_SOURCE_ID) {
       terrainHasContent = true;
       if (current.map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true) reportTerrain("ready");
     }
@@ -1819,6 +1823,11 @@ export async function createMapLibreHost(
     clearWatchdog(current);
     markReady(current);
     markPainted(current);
+    // A settled map with a loaded DEM has drawn the relief.
+    if (terrainRequested && current.map.getSource(TERRAIN_SOURCE_ID) !== undefined && current.map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true) {
+      terrainHasContent = true;
+      reportTerrain("ready");
+    }
   }
 
   function onSourceLoading(payload: unknown): void {
