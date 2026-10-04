@@ -846,3 +846,20 @@ describe("planRide — fun-route generator family (OGV_FUN_GENERATORS)", () => {
     expect(result.bundle.candidates.some((entry) => entry.geometry.length > 3)).toBe(true);
   });
 });
+
+describe("rider mode plan integration", () => {
+  it.each([false, true])("obeys the shared budget and kill switch (off=%s)", async off => {
+    const requests: ProviderRouteRequest[] = [];
+    const roadSummary = { totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|primary": 120_000 }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 120_000, durationSeconds: null, surface: "asphalt", roadClass: "primary", roadEnvironment: "road", urbanDensity: "city", curvatureRatio: null, toll: false }] };
+    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => { requests.push(request); return { candidates: [candidate({ roadSummary })] }; } };
+    const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
+      provider, roadAuthority: null, env: { OGV_RIDER_MODES: off ? "off" : "on", OGV_FUN_GENERATORS_CALLS: "2" },
+    });
+    expect(result.ok).toBe(true);
+    expect(requests.filter(request => request.options.riderModeFactor !== undefined)).toHaveLength(off ? 0 : 2);
+    if (result.ok) {
+      if (off) expect(result.diagnostics.riderModes).toBeUndefined();
+      else expect(result.diagnostics.riderModes).toMatchObject({ calls: 2, trials: expect.arrayContaining([expect.objectContaining({ busyShare: 1, minutes: 100 })]) });
+    }
+  });
+});
