@@ -29,6 +29,7 @@ import {
   noveltyPreferenceCommand,
   surfacePreferenceCommand,
   tollPolicyCommand,
+  trafficPreferenceCommand,
 } from "@/ui/stores/ride-document-store";
 
 afterEach(() => cleanup());
@@ -39,6 +40,7 @@ const VIEW: RideStyleView = {
   roadCharacter: "balanced",
   noveltyPreference: "balanced",
   surface: "mixed",
+  traffic: "protect-ride",
   avoidHighways: false,
   avoidTolls: false,
 };
@@ -50,6 +52,7 @@ function actions() {
     setLoopMinutes: vi.fn<RideStyleActions["setLoopMinutes"]>(),
     setRoadCharacter: vi.fn<RideStyleActions["setRoadCharacter"]>(),
     setNoveltyPreference: vi.fn<RideStyleActions["setNoveltyPreference"]>(),
+    setTraffic: vi.fn<RideStyleActions["setTraffic"]>(),
     setSurface: vi.fn<RideStyleActions["setSurface"]>(),
     setAvoidHighways: vi.fn<RideStyleActions["setAvoidHighways"]>(),
     setAvoidTolls: vi.fn<RideStyleActions["setAvoidTolls"]>(),
@@ -127,7 +130,7 @@ describe("ride style controls", () => {
       />,
     );
     const toggle = screen.getByTestId("ride-style-toggle");
-    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · New to me · Paved · No tolls");
+    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · New to me · Paved · Avoid busy roads · No tolls");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -138,6 +141,21 @@ describe("ride style controls", () => {
     expect(formatRideTime(60)).toBe("1 h");
     expect(formatRideTime(90)).toBe("1 h 30 min");
     expect(formatRideTime(45)).toBe("45 min");
-    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed · No highways");
+    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed · Avoid busy roads · No highways");
   });
+});
+
+describe("traffic chips", () => {
+  it("dispatches the traffic preference and applies the existing reducer command", () => {
+    const callbacks = actions();
+    render(<RideStylePanel model={{ view: VIEW, actions: callbacks }} />);
+    fireEvent.click(screen.getByTestId("traffic-preference-minimize-delay"));
+    expect(callbacks.setTraffic).toHaveBeenCalledWith("minimize-delay");
+    const document = createRideDocument();
+    expect(applied(document, trafficPreferenceCommand(document, "minimize-delay")).intent.traffic).toBe("minimize-delay");
+  });
+});
+
+it("shows the active traffic choice in the collapsed style summary", () => {
+  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toContain("Fastest");
 });

@@ -1161,3 +1161,10 @@ export function bikeCommand(
     bike,
   };
 }
+
+export function trafficPreferenceCommand(
+  document: RideDocument,
+  traffic: RideDocument["intent"]["traffic"],
+): Extract<RideCommand, { type: "trafficPreference.set" }> {
+  return { ...commandBase(document, "rider", "Set traffic preference"), type: "trafficPreference.set", traffic };
+}
