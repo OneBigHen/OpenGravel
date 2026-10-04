@@ -17,3 +17,12 @@ it("dirt requests penalise paved arterials and keep eligible grade3–4 in the p
   expect(dual[0]?.if).toContain("GRADE4");
   expect(dual.every(rule => Number(rule.multiply_by) <= 1)).toBe(true);
 });
+
+it("dirt and dual-sport requests penalise straight pavement and urban streets, never reward", () => {
+  for (const options of [{ surfacePreference: "dirt-preferred" as const }, { bike: { category: "dual-sport" as const, maintainedGravel: "allow" as const, roughTracks: "allow" as const } }]) {
+    const rules = rideFormulaRules(options, true);
+    expect(rules.some(rule => rule.if?.startsWith("curvature >= 0.98 && !("))).toBe(true);
+    expect(rules.some(rule => rule.if?.includes("urban_density != RURAL"))).toBe(true);
+    expect(rules.every(rule => Number(rule.multiply_by) <= 1)).toBe(true);
+  }
+});

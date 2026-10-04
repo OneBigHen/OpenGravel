@@ -53,14 +53,14 @@ function corridor(
       { lon: -75.3, lat: 40.55 },
       { lon: -75.24, lat: 40.5 },
     ),
-    lengthMeters: 16_000,
-    longestDirtRunMeters: 12_000,
+    lengthMeters: 6_000,
+    longestDirtRunMeters: 5_000,
     bendShare: 0.22,
     francoScore: 0.8,
     curvaturePerKm: 18,
     quality: 0.9,
     reversible: true,
-    gradeMix: { grade1: 10_000, grade2: 6_000 },
+    gradeMix: { grade1: 4_000, grade2: 2_000 },
     maxTrackGrade: 2,
     legalConfidence: 0.95,
     access: { legal: true, unknownRestrictionFlags: [], sandShare: 0 },
@@ -164,9 +164,9 @@ describe("atlas dirt and backroad generators", () => {
   });
 
   it("uses the fastest production route for the point-to-point cap", async () => {
-    const slower = { ...PRODUCTION, id: "slower", measurement: measurement({ durationSeconds: 2_400 }) };
+    const slower = { ...PRODUCTION, id: "slower", measurement: measurement({ durationSeconds: 1_900 }) };
     const fastest = { ...PRODUCTION, id: "fastest", measurement: measurement({ durationSeconds: 1_500 }) };
-    const generator = createAtlasGenerators([corridor("dirt")])[0]!;
+    const generator = createAtlasGenerators([corridor("dirt", { lengthMeters: 2_000, longestDirtRunMeters: 2_000 })])[0]!;
     const probes = generator.propose(context(REQUEST, [slower, fastest]));
     const result = await probes[0]!.execute(async (probeRequest) =>
       candidate(probeRequest, { durationSeconds: 2_100 }),
@@ -220,7 +220,7 @@ describe("atlas dirt and backroad generators", () => {
   });
 
   it("permits grade 3/4 only for dual-sport rough-track requests", () => {
-    const rough = corridor("rough", { maxTrackGrade: 4, gradeMix: { grade4: 16_000 } });
+    const rough = corridor("rough", { maxTrackGrade: 4, gradeMix: { grade4: 6_000 } });
     const street = {
       ...REQUEST,
       options: {
@@ -268,7 +268,45 @@ describe("atlas dirt and backroad generators", () => {
       const probes = generator.propose(context());
       expect(probes.length).toBeLessThanOrEqual(2);
       expect(new Set(probes.map((probe) => probe.id)).size).toBe(probes.length);
-      expect(probes.every((probe) => probe.maxProviderCalls === 1)).toBe(true);
+      expect(probes.every((probe) => probe.maxProviderCalls >= 1 && probe.maxProviderCalls <= 2)).toBe(true);
     }
+  });
+
+  it("never proposes dead ends or corridors the router could not ride", () => {
+    const dirt = corridor("dirt");
+    const generator = createAtlasGenerators([
+      corridor("dead-start", { entryLinks: 0, exitLinks: 2 }),
+      corridor("dead-end", { entryLinks: 2, exitLinks: 0 }),
+      corridor("unroutable", { routable: false }),
+    ])[0]!;
+    expect(generator.propose(context())).toEqual([]);
+    expect(createAtlasGenerators([dirt, corridor("through", { entryLinks: 1, exitLinks: 3, routable: true })])[0]!.propose(context()).length).toBeGreaterThan(0);
+  });
+
+  it("rides a reversible corridor in the direction that costs the least connector", async () => {
+    const backwards = corridor("flip", {
+      reversible: true,
+      geometry: line({ lon: -75.2, lat: 40.5 }, { lon: -75.3, lat: 40.52 }, { lon: -75.4, lat: 40.5 }),
+    });
+    const result = await executeFirst("gravel-prize", [backwards]);
+    const anchors = result.requests[0]!.roadSpans![0]!.anchors;
+    expect(anchors[0]!.lon).toBeLessThan(anchors.at(-1)!.lon);
+  });
+
+  it("retries once without the weakest corridor when the first attempt overruns the time cap", async () => {
+    const generator = createAtlasGenerators([
+      corridor("strong", { geometry: line({ lon: -75.4, lat: 40.5 }, { lon: -75.36, lat: 40.52 }, { lon: -75.32, lat: 40.5 }), quality: 0.95, lengthMeters: 2_000, longestDirtRunMeters: 2_000 }),
+      corridor("weak", { geometry: line({ lon: -75.28, lat: 40.5 }, { lon: -75.24, lat: 40.52 }, { lon: -75.2, lat: 40.5 }), quality: 0.3, lengthMeters: 2_000, longestDirtRunMeters: 2_000 }),
+    ])[0]!;
+    const probe = generator.propose(context())[0]!;
+    expect(probe.maxProviderCalls).toBe(2);
+    const spanCounts: number[] = [];
+    const execution = await probe.execute(async (request) => {
+      spanCounts.push(request.roadSpans!.length);
+      return candidate(request, { durationSeconds: spanCounts.length === 1 ? 4_000 : 1_900 });
+    });
+    expect(spanCounts).toEqual([2, 1]);
+    expect(execution.candidate).not.toBeNull();
+    expect(execution.candidate?.providerMetadata?.["atlasCorridorIds"]).toBe(JSON.stringify(["strong"]));
   });
 });

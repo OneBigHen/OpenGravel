@@ -4,6 +4,9 @@ import {
   analyzeFrancoCurvature,
   type FrancoCurvatureAnalysis,
 } from "@/domain/geometry/franco-curvature";
+import type { Coordinate } from "@/domain/ride/types";
+import type { GravelAtlasCorridor } from "@/application/roads/gravel-atlas";
+import { indexRoute, lineOverlap } from "@/application/roads/route-overlap";
 import type { RouteEvidence } from "@/domain/route/types";
 import {
   scoreRideFormula,
@@ -255,8 +258,10 @@ function preferenceFor(options: ProviderRouteOptions): RideFormulaPreference {
 function targetFit(options: ProviderRouteOptions, unpavedShare: number | null): number | null {
   if (unpavedShare === null) return null;
   if (options.surfacePreference !== "dirt-preferred" && options.bike?.category !== "dual-sport") return 1 - unpavedShare;
-  const target = options.targetUnpavedShare ?? 0.35;
-  return clamp01(1 - Math.abs(unpavedShare - target) / Math.max(target, 1 - target));
+  // The target is a wish for at least this much dirt: falling short costs,
+  // having more never does.
+  const target = Math.max(0.05, options.targetUnpavedShare ?? 0.35);
+  return clamp01(unpavedShare / target);
 }
 
 function routeCoherenceMeasurement(candidate: ProviderCandidate, options: ProviderRouteOptions) {
@@ -395,4 +400,46 @@ export function scoreCandidateWithRideFormula(
     variables,
     ...(enrichment.personalization === undefined ? {} : { personalization: enrichment.personalization }),
   });
+}
+
+/** `OGV_RIDE_FORMULA`: off (default) never scores, shadow only reports, on ranks Best Ride. */
+export type RideFormulaMode = "off" | "shadow" | "on";
+
+/** Conservative parse: anything but "shadow" or "on" is off. */
+export function parseRideFormulaMode(value: string | undefined): RideFormulaMode {
+  const text = value?.trim().toLowerCase();
+  return text === "shadow" || text === "on" ? text : "off";
+}
+
+/**
+ * What the Gravel Atlas knows about the corridors a route actually rides:
+ * overlap metres, length-weighted corridor quality and legal confidence.
+ * Null when the route rides none of them (no evidence, never a fake zero).
+ */
+export function dirtAtlasEvidenceFor(
+  geometry: readonly Coordinate[],
+  corridors: readonly GravelAtlasCorridor[],
+): RideFormulaDirtAtlasEvidence | null {
+  if (geometry.length < 2 || corridors.length === 0) return null;
+  const index = indexRoute(geometry);
+  let overlap = 0;
+  let quality = 0;
+  let legal = 0;
+  let bend = 0;
+  for (const corridor of corridors) {
+    const ridden = lineOverlap(index, corridor.geometry, 50).riddenMeters;
+    if (!(ridden > 0)) continue;
+    overlap += ridden;
+    quality += ridden * corridor.quality;
+    legal += ridden * corridor.legalConfidence;
+    bend += ridden * corridor.bendShare;
+  }
+  if (!(overlap > 0)) return null;
+  return {
+    overlapMeters: overlap,
+    longestContinuousDirtMeters: null,
+    bendShare: bend / overlap,
+    quality: quality / overlap,
+    legalConfidence: legal / overlap,
+  };
 }

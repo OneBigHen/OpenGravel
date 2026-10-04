@@ -1,5 +1,8 @@
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
-import { corridorsInReachableEllipse, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
+import { corridorsInReachableEllipse, type GravelAtlasCorridor, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
+import type { RouteEvidence } from "@/domain/route/types";
+import { RIDE_FORMULA_VERSION } from "@/domain/route/ride-formula";
+import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { searchRiderEnvelope } from "@/application/planner/rider-mode-search";
@@ -89,6 +92,9 @@ import {
 const FAST_FIRST_MIN_LANES = 3;
 
 /** The alternatives pass after fast-first converged on one ride. */
+/** A formula reading with less evidence than this never ranks a candidate. */
+const RIDE_FORMULA_MIN_CONFIDENCE = 0.3;
+
 const ALTERNATIVES_LANE = (profile: string): CandidateLane => ({
   id: "alternatives",
   profile,
@@ -791,6 +797,14 @@ export async function planRide(
   const atlas = deps.gravelAtlas ?? gravelAtlasFromEnv(riderEnv);
   let atlasReport: FunGeneratorReport | null = null;
   let atlasConsidered = 0;
+  let atlasCorridors: readonly GravelAtlasCorridor[] = [];
+  // OGV_ATLAS_GENERATORS=off turns the Gravel Atlas probes off; OGV_RIDE_FORMULA
+  // (off|shadow|on) decides whether the formula only reports or also ranks.
+  const atlasEnabled = riderEnv["OGV_ATLAS_GENERATORS"] !== "off";
+  // Atlas probes have their own router-call budget (default 2, at most 4) so
+  // they never starve the phase 1 knee search.
+  const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
+  const formulaMode = riderEnabled ? parseRideFormulaMode(riderEnv["OGV_RIDE_FORMULA"]) : "off";
   let riderCalls = 0;
   let riderFactor: number | undefined;
   let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
@@ -821,6 +835,17 @@ export async function planRide(
     return verdict;
   };
 
+  const formulaFor = (evidence: RouteEvidence, source: ProviderCandidate, fastestSeconds: number) => {
+    const request = parsed.value.request;
+    const atlasEvidence = dirtAtlasEvidenceFor(source.geometry, atlasCorridors);
+    return scoreCandidateWithRideFormula(source, request.options, {
+      evidence,
+      canonicalEligible: true,
+      fastestSeconds,
+      ...(request.discovery === undefined ? {} : { discovery: request.discovery }),
+      ...(atlasEvidence === null ? {} : { dirtAtlas: atlasEvidence }),
+    });
+  };
   const rank = (
     from: readonly ProviderCandidate[],
     verdictFor: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null = roadVerdict,
@@ -828,6 +853,16 @@ export async function planRide(
     candidates: from,
     intent,
     policy: ROUTE_POLICY,
+    // OGV_RIDE_FORMULA=on: the versioned Ride Formula picks Best Ride among the
+    // eligible, in-budget candidates; evidence and RouteScore stay canonical.
+    ...(formulaMode !== "on"
+      ? {}
+      : {
+          candidateValueFor: (candidate, source, fastestSeconds) => {
+            const result = formulaFor(candidate.evidence, source, fastestSeconds);
+            return result.eligible && result.confidence >= RIDE_FORMULA_MIN_CONFIDENCE ? result.value : null;
+          },
+        }),
     // What the engine knows about the roads under each line: surface mix, the
     // backroad share and curvature (M3, OGV-D-263).
     evidenceFor: (candidate) => {
@@ -870,7 +905,7 @@ export async function planRide(
         }),
   });
   let pipeline = rank(candidates);
-  if (riderEnabled && pipeline.candidates.length > 0 && riderBudget.maxProviderCalls > 0) {
+  if (riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
     const request = parsed.value.request;
     const wantsDirt = request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
     const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
@@ -879,10 +914,11 @@ export async function planRide(
       const radius = request.discovery === undefined ? Math.max(5_000, fastest * 0.35 * 15) : (request.discovery.targetMinutes + request.discovery.toleranceMinutes) * 60 * 8 / 2;
       const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, wantsDirt ? "dirt" : "backroad");
       atlasConsidered = corridors.length;
+      atlasCorridors = corridors;
       atlasReport = await runFunGenerators({
         context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })), sources: [] },
         generators: createAtlasGenerators(corridors), provider,
-        budget: { ...riderBudget, maxProviderCalls: Math.min(2, riderBudget.maxProviderCalls) },
+        budget: { ...riderBudget, maxProviderCalls: atlasCallBudget },
         allocation: "fixed", signal, duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
         verify: async candidate => {
           const own = await assessRoads([candidate]);
@@ -917,12 +953,23 @@ export async function planRide(
     ) as typeof merged.roles;
     return { ...merged, roles: { ...roles, "best-ride": index }, selectedIndex: index };
   };
+  // With the formula ranking, a rider-mode route simply joins the pool and the
+  // formula decides; otherwise it leads as Best Ride (phase 1 behaviour).
+  const adoptRiderRoute = (
+    preferred: ProviderCandidate,
+    others: readonly ProviderCandidate[],
+    verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
+  ): typeof pipeline | null => {
+    if (formulaMode !== "on") return preferBestRide(preferred, others, verdictFor);
+    const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
+    return merged.candidates.length > 0 ? merged : null;
+  };
   if (riderEnabled && pipeline.candidates.length > 0) {
     const result = await searchRiderEnvelope({
       request: parsed.value.request,
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
       candidates: candidates.filter(candidate => rank([candidate]).candidates.length > 0),
-      provider, maxCalls: Math.min(3, Math.max(0, riderBudget.maxProviderCalls - riderCalls)), deadlineMs: riderBudget.deadlineMs, signal,
+      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -933,7 +980,7 @@ export async function planRide(
     riderCalls += result.calls;
     riderTrials = result.trials;
     if (result.candidate !== null) {
-      const selected = preferBestRide(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
+      const selected = adoptRiderRoute(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
       if (selected !== null) {
         candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
         const factor = result.candidate.providerMetadata?.["riderModeFactor"];
@@ -1035,7 +1082,7 @@ export async function planRide(
     if (refined !== null) {
       const ownRoads = await assessRoads([refined]);
       const others = pipeline.candidates.filter((_, at) => at !== index).map((kept) => candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry))).filter((candidate): candidate is ProviderCandidate => candidate !== undefined);
-      const refinedPipeline = preferBestRide(refined, others, candidate => candidate === refined ? ownRoads?.evaluate(candidate.geometry) ?? null : roadVerdict(candidate));
+      const refinedPipeline = adoptRiderRoute(refined, others, candidate => candidate === refined ? ownRoads?.evaluate(candidate.geometry) ?? null : roadVerdict(candidate));
       if (refinedPipeline !== null) pipeline = refinedPipeline;
     }
   }
@@ -1063,6 +1110,35 @@ export async function planRide(
   }
 
   const mapped = pipeline.candidates.map(toRoutePlanCandidate);
+  let rideFormulaDiagnostic: NonNullable<RoutePlanDiagnosticsWire["rideFormula"]> | null = null;
+  if (formulaMode !== "off") {
+    const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
+    const rows = pipeline.candidates.flatMap((kept, index) => {
+      const source = candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry));
+      if (source === undefined) return [];
+      const result = formulaFor(kept.evidence, source, fastestSeconds);
+      const raw = (name: keyof typeof result.variables): number | null => result.variables[name].value;
+      return [{
+        index,
+        value: result.value,
+        confidence: result.confidence,
+        eligible: result.eligible,
+        variables: {
+          unpavedShare: raw("unpavedShare"),
+          continuousDirtMeters: raw("continuousDirtMeters"),
+          busyRoadShare: raw("busyRoadShare"),
+          bendShare: raw("bendShare"),
+          francoCurvaturePerKm: raw("francoCurvaturePerKm"),
+          routeCoherence: raw("routeCoherence"),
+          timeCost: raw("timeCost"),
+        },
+      }];
+    });
+    const inBudget = rows.filter((row) => row.eligible && row.confidence >= RIDE_FORMULA_MIN_CONFIDENCE
+      && (parsed.value.request.discovery !== undefined || (pipeline.candidates[row.index]?.durationSeconds ?? Infinity) <= fastestSeconds * 1.35));
+    const pick = [...inBudget].sort((left, right) => right.value - left.value)[0];
+    rideFormulaDiagnostic = { mode: formulaMode, version: RIDE_FORMULA_VERSION, pickIndex: pick?.index ?? null, rows };
+  }
   // FUN JUDGE (default off). In `on` mode a confident Jev preference among the
   // eligible, in-budget candidates becomes Best Ride; every other outcome —
   // including any failure here — keeps the deterministic roles.
@@ -1166,6 +1242,7 @@ export async function planRide(
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
+      ...(rideFormulaDiagnostic === null ? {} : { rideFormula: rideFormulaDiagnostic }),
       ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60 })) ?? [] } }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
       ...(funJudge === undefined ? {} : { funJudge }),

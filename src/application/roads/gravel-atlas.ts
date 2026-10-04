@@ -38,6 +38,17 @@ export interface GravelAtlasCorridor {
   };
   readonly sourceIds: readonly string[];
   readonly areaHints: readonly string[];
+  /**
+   * Other drivable ways meeting the corridor's first and last point. Zero at
+   * an end is a dead end: riding it means turning round. Null when unknown.
+   */
+  readonly entryLinks?: number | null;
+  readonly exitLinks?: number | null;
+  /**
+   * Whether the deployed router rode this corridor at about its own length
+   * (scripts/validate-gravel-atlas.ts). Null means never checked.
+   */
+  readonly routable?: boolean | null;
 }
 
 export interface GravelAtlasAvailability {

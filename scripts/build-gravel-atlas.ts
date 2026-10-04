@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Build Gravel Atlas v3 from the exact GraphHopper PBF. `osmium export`
- * produces GeoJSON sequence records so the PBF is streamed and never loaded
- * into this process. A small JSON/NDJSON fixture is also accepted for tests.
+ * Build Gravel Atlas v3 from the exact GraphHopper PBF. Two input shapes:
+ *  - a `.pbf`, streamed through `osmium export` (needs osmium-tool), or
+ *  - NDJSON/JSON GeoJSON features (LineString ways with OSM tags as
+ *    properties, Point control nodes), as produced by
+ *    `scripts/extract-gravel-atlas-ways.py` or the tiny test fixture.
+ * Ways are chained through continuous road nodes into corridors, each scored
+ * with the Franco curvature method (paved backroads and dirt alike).
  */
 
 import { createReadStream, existsSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
@@ -31,6 +35,8 @@ interface Way {
   readonly startKey: string;
   readonly endKey: string;
   readonly lengthMeters: number;
+  /** Other drivable ways meeting the start and end node; null when the source did not say. */
+  readonly links: readonly [number, number] | null;
   readonly reversible: boolean;
   readonly gradeMix: Readonly<Record<string, number>>;
   readonly maxTrackGrade: number | null;
@@ -49,6 +55,8 @@ interface Corridor {
   readonly kind: Kind;
   readonly line: readonly Coordinate[];
   readonly lengthMeters: number;
+  /** Other drivable ways at the corridor's first and last point; null when unknown. */
+  readonly links: readonly [number, number] | null;
   readonly reversible: boolean;
   readonly gradeMix: Readonly<Record<string, number>>;
   readonly maxTrackGrade: number | null;
@@ -62,6 +70,15 @@ interface Corridor {
 }
 
 const DIRT_SURFACES = new Set(["gravel", "fine_gravel", "compacted", "dirt", "ground", "unpaved", "earth"]);
+const PAVED_SURFACES = new Set(["asphalt", "paved", "concrete", "concrete:plates", "concrete:lanes", "paving_stones", "sett", "cobblestone", "unhewn_cobblestone", "bricks", "chipseal", "metal"]);
+/** Surfaces a motorcycle should never be sent onto, however the way is tagged. */
+const HOSTILE_SURFACES = new Set(["sand", "mud", "grass", "rock", "snow", "ice", "woodchips", "wood", "stepping_stones", "grass_paver"]);
+const HOSTILE_SMOOTHNESS = new Set(["very_horrible", "horrible", "very_bad", "impassable"]);
+const CONTROL_HIGHWAY_VALUES = new Set(["stop", "give_way", "traffic_signals", "crossing", "mini_roundabout", "speed_camera"]);
+/** Longest corridor; longer chains are cut so one span stays routable. */
+const MAX_CORRIDOR_METERS = 25_000;
+const MIN_DIRT_CORRIDOR_METERS = 500;
+const MIN_BACKROAD_CORRIDOR_METERS = 2_000;
 const EXCLUDED_HIGHWAYS = new Set(["path", "footway", "cycleway", "bridleway"]);
 const BACKROAD_HIGHWAYS = new Set(["unclassified", "tertiary", "residential"]);
 const AREA_BOUNDS: Readonly<Record<string, { west: number; south: number; east: number; north: number }>> = {
@@ -72,7 +89,35 @@ const AREA_BOUNDS: Readonly<Record<string, { west: number; south: number; east: 
   delaware: { west: -75.4, south: 40.75, east: -74.7, north: 41.65 },
   "hickory-run": { west: -75.9, south: 40.8, east: -75.3, north: 41.2 },
 };
-const controlPoints: Coordinate[] = [];
+const CONTROL_CELL_DEGREES = 0.001;
+/** Franco suppression nodes (stop, signal, crossing, calming, barrier, ...) in a coarse grid. */
+const controlGrid = new Map<string, Coordinate[]>();
+
+function cellKey(x: number, y: number): string {
+  return `${x},${y}`;
+}
+
+function addControlPoint(feature: Feature): void {
+  if (feature.geometry?.type !== "Point") return;
+  const properties = feature.properties ?? {};
+  const reason = CONTROL_HIGHWAY_VALUES.has(text(properties, "highway")) || ["crossing", "traffic_calming", "barrier", "junction"].some((key) => text(properties, key) !== "");
+  const point = coordinate(feature.geometry.coordinates);
+  if (!reason || point === null) return;
+  const key = cellKey(Math.floor(point.lon / CONTROL_CELL_DEGREES), Math.floor(point.lat / CONTROL_CELL_DEGREES));
+  const cell = controlGrid.get(key);
+  if (cell === undefined) controlGrid.set(key, [point]);
+  else cell.push(point);
+}
+
+function controlPointsNear(line: readonly Coordinate[]): readonly Coordinate[] {
+  const keys = new Set<string>();
+  for (const point of line) {
+    const x = Math.floor(point.lon / CONTROL_CELL_DEGREES);
+    const y = Math.floor(point.lat / CONTROL_CELL_DEGREES);
+    for (let dx = -1; dx <= 1; dx += 1) for (let dy = -1; dy <= 1; dy += 1) keys.add(cellKey(x + dx, y + dy));
+  }
+  return [...keys].flatMap((key) => controlGrid.get(key) ?? []);
+}
 
 function args(): { input: string; output: string } {
   const values = new Map<string, string>();
@@ -122,6 +167,23 @@ function areaHints(line: readonly Coordinate[]): readonly string[] {
   return Object.entries(AREA_BOUNDS).flatMap(([name, bounds]) => boundsOverlap(middle, bounds) ? [name] : []);
 }
 
+/**
+ * NJ Pine Barrens (Wharton) roads are mostly sugar sand, often tagged only
+ * ground/dirt/unpaved. Inside that box only an explicit hard surface counts as
+ * dirt a street bike can ride; the rest is flagged sandy and kept out.
+ */
+function pineBarrensSandRisk(line: readonly Coordinate[], surface: string): boolean {
+  const middle = line[Math.floor(line.length / 2)];
+  const bounds = AREA_BOUNDS["wharton"];
+  if (middle === undefined || bounds === undefined || !boundsOverlap(middle, bounds)) return false;
+  return !["gravel", "fine_gravel", "compacted"].includes(surface);
+}
+
+function linksOf(properties: Record<string, unknown>): readonly [number, number] | null {
+  const value = properties["@links"];
+  return Array.isArray(value) && typeof value[0] === "number" && typeof value[1] === "number" ? [value[0], value[1]] : null;
+}
+
 function accessDecision(properties: Record<string, unknown>): { legal: boolean; confidence: number; unknown: string[] } {
   const unknown: string[] = [];
   let confidence = 0.85;
@@ -137,7 +199,7 @@ function accessDecision(properties: Record<string, unknown>): { legal: boolean; 
   return { legal: true, confidence: Math.max(0.25, confidence), unknown };
 }
 
-function classify(feature: Feature): Way | null {
+export function classify(feature: Feature): Way | null {
   const properties = feature.properties ?? {};
   const line = lineFromFeature(feature);
   if (line.length < 2) return null;
@@ -148,12 +210,19 @@ function classify(feature: Feature): Way | null {
   const access = accessDecision(properties);
   if (!access.legal) return null;
   const surface = text(properties, "surface");
-  if (surface === "sand") return null;
+  if (HOSTILE_SURFACES.has(surface)) return null;
+  if (HOSTILE_SMOOTHNESS.has(text(properties, "smoothness"))) return null;
+  if (text(properties, "4wd_only") === "yes" || text(properties, "area") === "yes") return null;
   const trackType = text(properties, "tracktype");
   const trackGradeMatch = /^grade([1-5])$/.exec(trackType);
   const trackGrade = trackGradeMatch === null ? null : Number(trackGradeMatch[1]);
-  const dirt = DIRT_SURFACES.has(surface) || (highway === "track" && trackGrade !== null && trackGrade <= 4);
-  const curvedConnector = BACKROAD_HIGHWAYS.has(highway) && !dirt;
+  // Grade 5 is an overgrown track, whatever surface it also carries.
+  if (trackGrade === 5) return null;
+  const paved = PAVED_SURFACES.has(surface);
+  // Grade 1 is "solid, usually paved": a dirt corridor only when the surface says so.
+  const trackIsDirt = highway === "track" && trackGrade !== null && trackGrade <= 4 && (trackGrade >= 2 || DIRT_SURFACES.has(surface));
+  const dirt = !paved && (DIRT_SURFACES.has(surface) || trackIsDirt);
+  const curvedConnector = BACKROAD_HIGHWAYS.has(highway) && !dirt && (surface === "" || paved) && text(properties, "junction") === "";
   if (!dirt && !curvedConnector) return null;
   const lengthMeters = line.slice(0, -1).reduce((sum, point, index) => sum + haversine(point, line[index + 1] as Coordinate), 0);
   if (lengthMeters < 10) return null;
@@ -167,15 +236,16 @@ function classify(feature: Feature): Way | null {
   return {
     id: String(properties["@id"] ?? properties["id"] ?? "way-unknown"),
     kind: dirt ? "dirt" : "backroad",
-    roadKey: [highway, text(properties, "ref"), text(properties, "name"), text(properties, "oneway")].join("|") ,
+    roadKey: [text(properties, "ref"), text(properties, "name")].join("|"),
     line,
     startKey: endpointKey(line[0] as Coordinate),
     endKey: endpointKey(line[line.length - 1] as Coordinate),
     lengthMeters,
-    reversible: text(properties, "oneway") === "no",
+    links: linksOf(properties),
+    reversible: !["yes", "1", "true", "-1", "reverse"].includes(text(properties, "oneway")),
     gradeMix,
     maxTrackGrade: trackGrade,
-    sandShare: 0,
+    sandShare: dirt && pineBarrensSandRisk(line, surface) ? 1 : 0,
     legalConfidence: access.confidence,
     unknownRestrictionFlags: access.unknown,
     closed,
@@ -203,17 +273,19 @@ async function readFeatures(input: string, visit: (feature: Feature) => void): P
       const pointLines = createInterface({ input: points.stdout });
       for await (const line of pointLines) {
         if (line.trim() === "") continue;
-        try {
-          const feature = JSON.parse(line.replace(/^\u001e/, "")) as Feature;
-          const properties = feature.properties ?? {};
-          const reason = ["highway", "junction", "crossing", "traffic_calming", "barrier", "traffic_signals"].some((key) => text(properties, key) !== "");
-          const point = coordinate(feature.geometry?.coordinates);
-          if (reason && point !== null) controlPoints.push(point);
-        } catch { /* skip malformed source records */ }
+        try { visit(JSON.parse(line.replace(/^\u001e/, "")) as Feature); } catch { /* skip malformed source records */ }
       }
       await new Promise<void>((resolvePromise, reject) => points.once("close", (code) => code === 0 ? resolvePromise() : reject(new Error(`osmium point export exited ${code ?? "unknown"}`))));
     } finally {
       if (existsSync(filtered)) unlinkSync(filtered);
+    }
+    return;
+  }
+  if (/\.(ndjson|jsonl|geojsonl)$/i.test(input)) {
+    // Real extracts are hundreds of MB: stream them line by line.
+    for await (const line of createInterface({ input: createReadStream(input, "utf8") })) {
+      if (line.trim() === "") continue;
+      try { visit(JSON.parse(line) as Feature); } catch { /* skip malformed source records */ }
     }
     return;
   }
@@ -237,50 +309,97 @@ function appendLine(base: Coordinate[], line: readonly Coordinate[], reverse: bo
   else base.push(...points);
 }
 
-function mergeWays(ways: readonly Way[]): readonly Corridor[] {
-  const endpointWays = new Map<string, number[]>();
+/**
+ * Chain ways into continuous corridors. Two ways continue each other through a
+ * shared node when they are the only two there (any name) or when, at a
+ * junction, exactly two share a name/ref. Chains never branch, so a corridor
+ * is always one rideable line, and long chains are cut at MAX_CORRIDOR_METERS.
+ */
+export /** Other drivable ways at the corridor's first and last point, in travel order. */
+function endLinks(members: readonly Way[], flips: readonly boolean[]): readonly [number, number] | null {
+  const first = members[0];
+  const last = members[members.length - 1];
+  if (first?.links === null || first === undefined || last?.links === null || last === undefined) return null;
+  const entry = flips[0] === true ? first.links[1] : first.links[0];
+  const exit = flips[flips.length - 1] === true ? last.links[0] : last.links[1];
+  return [entry, exit];
+}
+
+export function mergeWays(ways: readonly Way[]): readonly Corridor[] {
+  // Each way end is addressed as index*2 + end (0 = start, 1 = end).
+  const nodeEnds = new Map<string, number[]>();
   ways.forEach((way, index) => {
-    for (const key of [way.startKey, way.endKey]) endpointWays.set(key, [...(endpointWays.get(key) ?? []), index]);
-  });
-  const parent = ways.map((_, index) => index);
-  const find = (index: number): number => parent[index] === index ? index : (parent[index] = find(parent[index] as number));
-  const union = (left: number, right: number): void => { const a = find(left), b = find(right); if (a !== b) parent[b] = a; };
-  for (const indices of endpointWays.values()) for (let index = 1; index < indices.length; index += 1) {
-    const left = indices[0] as number;
-    const right = indices[index] as number;
-    if (ways[left]?.kind === ways[right]?.kind && ways[left]?.roadKey === ways[right]?.roadKey) union(left, right);
-  }
-  const groups = new Map<number, number[]>();
-  ways.forEach((_, index) => groups.set(find(index), [...(groups.get(find(index)) ?? []), index]));
-  const corridors: Corridor[] = [];
-  for (const [root, indices] of groups) {
-    const members = indices.map((index) => ways[index] as Way);
-    const byEndpoint = new Map<string, Way[]>();
-    for (const way of members) for (const key of [way.startKey, way.endKey]) byEndpoint.set(key, [...(byEndpoint.get(key) ?? []), way]);
-    const endpoints = [...byEndpoint.entries()].filter(([, values]) => values.length === 1);
-    const first = endpoints[0]?.[1][0] ?? members[0];
-    if (first === undefined) continue;
-    const used = new Set<string>();
-    const line: Coordinate[] = [];
-    let current: Way | undefined = first;
-    let currentKey = endpoints[0]?.[0] ?? first.startKey;
-    while (current !== undefined && !used.has(current.id)) {
-      used.add(current.id);
-      const reverse = current.startKey !== currentKey;
-      appendLine(line, current.line, reverse);
-      const nextKey: string = reverse ? current.startKey : current.endKey;
-      const next = (byEndpoint.get(nextKey) ?? []).find((candidate) => !used.has(candidate.id));
-      current = next;
-      currentKey = nextKey;
+    for (const [end, key] of [[0, way.startKey], [1, way.endKey]] as const) {
+      const list = nodeEnds.get(key);
+      if (list === undefined) nodeEnds.set(key, [index * 2 + end]);
+      else list.push(index * 2 + end);
     }
-    for (const member of members) if (!used.has(member.id)) appendLine(line, member.line, false);
+  });
+  const partner = new Map<number, number>();
+  const pair = (left: number, right: number): void => {
+    if (Math.floor(left / 2) === Math.floor(right / 2) || partner.has(left) || partner.has(right)) return;
+    partner.set(left, right);
+    partner.set(right, left);
+  };
+  for (const ends of nodeEnds.values()) {
+    if (ends.length < 2) continue;
+    if (ends.length === 2) {
+      const [left, right] = ends as [number, number];
+      if (ways[Math.floor(left / 2)]?.kind === ways[Math.floor(right / 2)]?.kind) pair(left, right);
+      continue;
+    }
+    const byName = new Map<string, number[]>();
+    for (const end of ends) {
+      const way = ways[Math.floor(end / 2)] as Way;
+      if (way.roadKey === "|") continue;
+      const key = `${way.kind}|${way.roadKey}`;
+      byName.set(key, [...(byName.get(key) ?? []), end]);
+    }
+    for (const group of byName.values()) if (group.length === 2) pair(group[0] as number, group[1] as number);
+  }
+
+  const visited = new Array<boolean>(ways.length).fill(false);
+  const chains: number[][] = [];
+  const walk = (startIndex: number, startEnd: number): void => {
+    // Enter the way at `startEnd` and leave through the opposite end.
+    const chain: number[] = [];
+    const entries: number[] = [];
+    let index = startIndex;
+    let entry = startEnd;
+    while (!visited[index]) {
+      visited[index] = true;
+      chain.push(index);
+      entries.push(entry);
+      const next = partner.get(index * 2 + (1 - entry));
+      if (next === undefined) break;
+      index = Math.floor(next / 2);
+      entry = next % 2;
+    }
+    chains.push(chain.map((member, at) => member * 2 + (entries[at] as number)));
+  };
+  ways.forEach((_, index) => {
+    if (visited[index]) return;
+    // Start at a free end; the walk then runs the whole chain.
+    if (!partner.has(index * 2)) walk(index, 0);
+    else if (!partner.has(index * 2 + 1)) walk(index, 1);
+  });
+  // Whatever is left belongs to closed rings.
+  ways.forEach((_, index) => { if (!visited[index]) walk(index, 0); });
+
+  const corridors: Corridor[] = [];
+  const emit = (members: readonly Way[], flips: readonly boolean[], line: readonly Coordinate[], serial: number): void => {
     const lengthMeters = members.reduce((sum, member) => sum + member.lengthMeters, 0);
+    const kind = members[0]?.kind ?? "dirt";
+    if (lengthMeters < (kind === "dirt" ? MIN_DIRT_CORRIDOR_METERS : MIN_BACKROAD_CORRIDOR_METERS)) return;
     const gradeMix: Record<string, number> = {};
     for (const member of members) for (const [grade, length] of Object.entries(member.gradeMix)) gradeMix[grade] = (gradeMix[grade] ?? 0) + length;
+    const first = (members[0] as Way).id.replace(/^way\//, "");
+    const last = (members[members.length - 1] as Way).id.replace(/^way\//, "");
     corridors.push({
-      id: `ga3-${members.map((member) => member.id).sort().join("-")}-${root}`,
-      sourceIds: members.map((member) => member.id).sort(),
-      kind: members[0]?.kind ?? "dirt",
+      id: `ga3-${kind === "dirt" ? "d" : "b"}-${first}-${last}-${members.length}-${serial}`,
+      sourceIds: members.map((member) => member.id),
+      links: endLinks(members, flips),
+      kind,
       line,
       lengthMeters,
       reversible: members.every((member) => member.reversible),
@@ -294,6 +413,30 @@ function mergeWays(ways: readonly Way[]): readonly Corridor[] {
       seasonalFlags: [...new Set(members.flatMap((member) => member.seasonalFlags))],
       areaHints: [...new Set(members.flatMap((member) => member.areaHints))],
     });
+  };
+  let serial = 0;
+  for (const chain of chains) {
+    let members: Way[] = [];
+    let flips: boolean[] = [];
+    let line: Coordinate[] = [];
+    let length = 0;
+    for (const code of chain) {
+      const way = ways[Math.floor(code / 2)] as Way;
+      if (members.length > 0 && length + way.lengthMeters > MAX_CORRIDOR_METERS) {
+        emit(members, flips, line, serial);
+        serial += 1;
+        members = [];
+        flips = [];
+        line = [];
+        length = 0;
+      }
+      members.push(way);
+      flips.push(code % 2 === 1);
+      length += way.lengthMeters;
+      appendLine(line, way.line, code % 2 === 1);
+    }
+    if (members.length > 0) emit(members, flips, line, serial);
+    serial += 1;
   }
   return corridors;
 }
@@ -310,35 +453,78 @@ function createSchema(database: DatabaseSync): void {
       legal_confidence real not null, access_legal integer not null, sand_share real not null,
       unknown_restriction_flags_json text not null, closed integer not null,
       seasonal_closed integer not null, seasonal_flags_json text not null,
-      source_ids_json text not null, area_hints_json text not null
+      source_ids_json text not null, area_hints_json text not null,
+      entry_links integer, exit_links integer,
+      routable integer, routed_meters real
     );
     create index corridors_bounds on corridors(kind, east, west, north, south);`);
 }
 
-function writeAtlas(output: string, corridors: readonly Corridor[]): void {
+/**
+ * Corridor quality in 0..1: legal confidence times length (a corridor worth
+ * the detour), Franco curvature per km, and how kind the track grades are.
+ * Rough grade 3-4 track costs score because only dual-sport riders may use it.
+ */
+export function corridorQuality(input: {
+  readonly lengthMeters: number;
+  readonly curvaturePerKm: number;
+  readonly legalConfidence: number;
+  readonly roughShare: number;
+}): number {
+  const length = Math.min(1, input.lengthMeters / 12_000);
+  const curvy = Math.min(1, input.curvaturePerKm / 500);
+  const quality = input.legalConfidence * (0.25 + 0.3 * length + 0.35 * curvy + 0.1 * (1 - input.roughShare));
+  return Math.max(0, Math.min(1, quality));
+}
+
+interface ScoredCorridor {
+  readonly corridor: Corridor;
+  readonly bendShare: number;
+  readonly totalCurvature: number;
+  readonly curvaturePerKm: number;
+  readonly quality: number;
+}
+
+function scoreCorridors(corridors: readonly Corridor[]): readonly ScoredCorridor[] {
+  return corridors.flatMap((corridor) => {
+    const analysis = analyzeFrancoCurvature(corridor.line, { controlPoints: controlPointsNear(corridor.line) });
+    // A paved backroad is only a prize when Franco calls it worth riding.
+    if (corridor.kind === "backroad" && analysis.totalCurvature < 300) return [];
+    const rough = Object.entries(corridor.gradeMix).reduce((sum, [grade, meters]) => sum + (/[34]$/.test(grade) ? meters : 0), 0);
+    const quality = corridorQuality({
+      lengthMeters: corridor.lengthMeters,
+      curvaturePerKm: analysis.curvaturePerKm,
+      legalConfidence: corridor.legalConfidence,
+      roughShare: rough / Math.max(1, corridor.lengthMeters),
+    });
+    return [{ corridor, bendShare: analysis.bendShare, totalCurvature: analysis.totalCurvature, curvaturePerKm: analysis.curvaturePerKm, quality }];
+  });
+}
+
+function writeAtlas(output: string, scored: readonly ScoredCorridor[]): void {
   mkdirSync(dirname(resolve(output)), { recursive: true });
   if (existsSync(output)) unlinkSync(output);
   const database = new DatabaseSync(output);
   createSchema(database);
-  const insert = database.prepare(`insert into corridors values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const insert = database.prepare(`insert into corridors values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, null, null)`);
   database.exec("begin");
   try {
-    for (const corridor of corridors) {
-      const analysis = analyzeFrancoCurvature(corridor.line);
-      const minLon = Math.min(...corridor.line.map((point) => point.lon));
-      const maxLon = Math.max(...corridor.line.map((point) => point.lon));
-      const minLat = Math.min(...corridor.line.map((point) => point.lat));
-      const maxLat = Math.max(...corridor.line.map((point) => point.lat));
-      const quality = Math.max(0, Math.min(1, corridor.legalConfidence * (0.35 + Math.min(0.35, analysis.bendShare) + Math.min(0.3, corridor.lengthMeters / 20_000))));
+    for (const { corridor, bendShare, totalCurvature, curvaturePerKm, quality } of scored) {
+      let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+      for (const point of corridor.line) {
+        minLon = Math.min(minLon, point.lon); maxLon = Math.max(maxLon, point.lon);
+        minLat = Math.min(minLat, point.lat); maxLat = Math.max(maxLat, point.lat);
+      }
       insert.run(
-        corridor.id, corridor.kind, JSON.stringify(corridor.line), corridor.reversible ? 1 : 0, minLon, minLat, maxLon, maxLat,
+        corridor.id, corridor.kind, JSON.stringify(corridor.line.map((point) => [Number(point.lon.toFixed(6)), Number(point.lat.toFixed(6))])), corridor.reversible ? 1 : 0, minLon, minLat, maxLon, maxLat,
         corridor.lengthMeters, corridor.kind === "dirt" ? corridor.lengthMeters : 0,
-        analysis.bendShare, analysis.totalCurvature, analysis.curvaturePerKm, quality,
+        bendShare, totalCurvature, curvaturePerKm, quality,
         JSON.stringify(corridor.gradeMix), corridor.maxTrackGrade,
         corridor.legalConfidence, 1, corridor.sandShare,
         JSON.stringify(corridor.unknownRestrictionFlags), corridor.closed ? 1 : 0,
         corridor.seasonalClosed ? 1 : 0, JSON.stringify(corridor.seasonalFlags),
         JSON.stringify(corridor.sourceIds), JSON.stringify(corridor.areaHints),
+        corridor.links?.[0] ?? null, corridor.links?.[1] ?? null,
       );
     }
     database.exec("commit");
@@ -355,15 +541,20 @@ async function main(): Promise<void> {
   const ways: Way[] = [];
   let seen = 0;
   await readFeatures(input, (feature) => {
+    if (feature.geometry?.type === "Point") {
+      addControlPoint(feature);
+      return;
+    }
     seen += 1;
     const way = classify(feature);
     if (way !== null) ways.push(way);
   });
-  const corridors = mergeWays(ways);
-  writeAtlas(output, corridors);
+  const scored = scoreCorridors(mergeWays(ways));
+  writeAtlas(output, scored);
+  const corridors = scored.map((entry) => entry.corridor);
   const counts = corridors.reduce((result, corridor) => ({ ...result, [corridor.kind]: (result[corridor.kind] ?? 0) + 1 }), {} as Record<string, number>);
   const areas = Object.fromEntries(Object.keys(AREA_BOUNDS).map((area) => [area, corridors.filter((corridor) => corridor.areaHints.includes(area)).length]));
-  console.log(JSON.stringify({ input, output, seenFeatures: seen, selectedWays: ways.length, corridors: corridors.length, counts, knownAreas: areas }, null, 2));
+  console.log(JSON.stringify({ input, output, seenFeatures: seen, selectedWays: ways.length, controlCells: controlGrid.size, corridors: corridors.length, counts, knownAreas: areas }, null, 2));
 }
 
-void main();
+if (process.argv[1] !== undefined && /build-gravel-atlas\.[tj]s$/.test(process.argv[1])) void main();

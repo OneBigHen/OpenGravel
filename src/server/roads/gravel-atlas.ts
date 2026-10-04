@@ -76,6 +76,9 @@ function rowToCorridor(row: Record<string, unknown>): GravelAtlasCorridor | null
     },
     sourceIds: parseJsonArray(row["source_ids_json"]),
     areaHints: parseJsonArray(row["area_hints_json"]),
+    entryLinks: row["entry_links"] === null || row["entry_links"] === undefined ? null : optionalNumber(row["entry_links"]),
+    routable: row["routable"] === null || row["routable"] === undefined ? null : boolValue(row["routable"]),
+    exitLinks: row["exit_links"] === null || row["exit_links"] === undefined ? null : optionalNumber(row["exit_links"]),
   };
 }
 
@@ -89,6 +92,7 @@ export function createGravelAtlas(path: string): GravelAtlasPort {
   let reason: string | undefined;
   let count = 0;
   let schemaVersion: number | null = null;
+  let hasRoutable = false;
 
   if (database === null) {
     reason = "file-missing-or-unreadable";
@@ -99,6 +103,8 @@ export function createGravelAtlas(path: string): GravelAtlasPort {
         reason = `unsupported-schema-${schemaVersion}`;
       } else {
         count = numberValue(database.prepare("select count(*) as count from corridors").get()?.count, 0);
+        // Atlases written before graph validation have no routable column.
+        hasRoutable = (database.prepare("pragma table_info(corridors)").all() as { name?: unknown }[]).some((column) => column.name === "routable");
         valid = true;
       }
     } catch {
@@ -110,12 +116,14 @@ export function createGravelAtlas(path: string): GravelAtlasPort {
     corridorsNear(bounds: GravelAtlasBounds, kind: GravelAtlasCorridorKind, limit = MAX_ROWS): readonly GravelAtlasCorridor[] {
       if (!valid || database === null) return [];
       const boundedLimit = Math.max(1, Math.min(MAX_ROWS, Math.floor(limit)));
+      const routableFilter = hasRoutable ? "and (routable is null or routable = 1)" : "";
       try {
         const rows = database.prepare(
           `select * from corridors
            where kind = ?
              and east >= ? and west <= ? and north >= ? and south <= ?
              and access_legal = 1 and closed = 0 and seasonal_closed = 0
+             ${routableFilter}
            order by quality desc, franco_score desc, length_meters desc
            limit ${boundedLimit}`,
         ).all(kind, bounds.west, bounds.east, bounds.south, bounds.north) as Record<string, unknown>[];

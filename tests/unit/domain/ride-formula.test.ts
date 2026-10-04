@@ -101,4 +101,21 @@ describe("ride formula v1", () => {
     expect(adjusted.weights.continuousDirtMeters).toBeGreaterThan(adjusted.weights.busyRoadShare);
     expect(adjusted.value).not.toBe(base.value);
   });
+
+  it("rewards unpaved road for a dirt rider and pavement for everyone else", () => {
+    const unpaved = (value: number) => ({ unpavedShare: measurement(value) });
+    const dirtLow = scoreRideFormula(input({ variables: unpaved(0.05) }));
+    const dirtHigh = scoreRideFormula(input({ variables: unpaved(0.6) }));
+    expect(dirtHigh.value).toBeGreaterThan(dirtLow.value);
+    const roadLow = scoreRideFormula(input({ preference: "curvy", variables: unpaved(0.05) }));
+    const roadHigh = scoreRideFormula(input({ preference: "curvy", variables: unpaved(0.6) }));
+    expect(roadLow.value).toBeGreaterThan(roadHigh.value);
+  });
+
+  it("treats dirt continuity as not applicable to a rider who did not ask for dirt", () => {
+    const result = scoreRideFormula(input({ preference: "curvy" }));
+    expect(result.variables.continuousDirtMeters.normalized).toBeNull();
+    expect(result.variables.dirtCorridorQuality.normalized).toBeNull();
+    expect(scoreRideFormula(input()).variables.continuousDirtMeters.normalized).toBe(1);
+  });
 });

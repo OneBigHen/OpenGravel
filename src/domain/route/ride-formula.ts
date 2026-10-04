@@ -155,7 +155,8 @@ function finite(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value);
 }
 
-function normalize(variable: RideFormulaVariable, value: number): number {
+function normalize(variable: RideFormulaVariable, value: number, preference: RideFormulaPreference): number {
+  const seeksDirt = preference === "gravel" || preference === "dual-sport";
   switch (variable) {
     case "urbanEscapeMinutes": return 1 - clamp01(value / 60);
     case "arrivalSlackMinutes":
@@ -178,8 +179,10 @@ function normalize(variable: RideFormulaVariable, value: number): number {
     case "sustainedRunMeters":
     case "continuousDirtMeters": return clamp01(value / 4_000);
     case "stopDensityPer10Km": return 1 - clamp01(value / 25);
+    // A dirt rider is rewarded for unpaved road (full marks at 60%); everyone
+    // else is rewarded for pavement.
+    case "unpavedShare": return seeksDirt ? clamp01(value / 0.6) : 1 - clamp01(value);
     case "busyRoadShare":
-    case "unpavedShare":
     case "gradeRisk":
     case "smoothnessRisk":
     case "unknownSurfaceShare": return 1 - clamp01(value);
@@ -208,11 +211,16 @@ function effectiveWeights(input: RideFormulaInput): Record<RideFormulaVariable, 
   return weights;
 }
 
+/** Dirt facts only matter to a rider who wants dirt; for the rest they are not applicable. */
+const DIRT_ONLY_VARIABLES: ReadonlySet<RideFormulaVariable> = new Set(["continuousDirtMeters", "dirtCorridorQuality"]);
+
 function measurementResult(
   variable: RideFormulaVariable,
   measurement: RideFormulaMeasurement | undefined,
+  preference: RideFormulaPreference,
 ): RideFormulaVariableResult {
-  if (measurement === undefined || !finite(measurement.value)) {
+  const notApplicable = DIRT_ONLY_VARIABLES.has(variable) && preference !== "gravel" && preference !== "dual-sport";
+  if (measurement === undefined || !finite(measurement.value) || notApplicable) {
     return {
       value: null,
       unit: measurement?.unit ?? "unknown",
@@ -226,7 +234,7 @@ function measurementResult(
     ...measurement,
     value: measurement.value,
     confidence,
-    normalized: normalize(variable, measurement.value),
+    normalized: normalize(variable, measurement.value, preference),
   };
 }
 
@@ -238,7 +246,7 @@ export function scoreRideFormula(input: RideFormulaInput): RideFormulaResult {
   let observedWeight = 0;
   let confidenceWeight = 0;
   for (const variable of RIDE_FORMULA_VARIABLES) {
-    const result = measurementResult(variable, input.variables[variable]);
+    const result = measurementResult(variable, input.variables[variable], input.preference);
     variables[variable] = result;
     const weight = weights[variable] ?? 0;
     if (result.normalized === null || result.confidence === null || result.confidence <= 0) continue;
