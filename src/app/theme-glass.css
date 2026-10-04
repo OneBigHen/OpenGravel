@@ -2688,3 +2688,7 @@ html .og-ride {
   color: var(--og-ink);
 }
 .og-places-overlay--planner .og-places-control__toggle { gap: 6px; }
+/* On a phone the tip sits below the Places pill row instead of over it. */
+@media (max-width: 760px) {
+  .og-editbar__tip { margin-top: 48px; max-width: calc(100vw - 100px); }
+}
