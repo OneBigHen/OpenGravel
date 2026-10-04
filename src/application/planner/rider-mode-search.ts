@@ -86,7 +86,11 @@ export async function searchRiderEnvelope(input: {
   let calls = 0;
   // Profiles time the same road differently (adventure runs 0.82x car speed),
   // so the cap never measures against an ETA faster than the rider's own model.
-  const ownSeconds = Math.min(...measured.map(entry => entry.candidate.durationSeconds));
+  // The pipeline also carries a fastest-profile line; only the rider's own
+  // profile sets the baseline when it is there (Gettysburg -> Pine Grove: 36
+  // min fastest vs 44 own pushed the 66-min dirt route 30 s over the cap).
+  const own = measured.filter(entry => entry.candidate.profile === input.request.profile);
+  const ownSeconds = Math.min(...(own.length > 0 ? own : measured).map(entry => entry.candidate.durationSeconds));
   let baselineSeconds = ownSeconds;
   const cap = target > 0 ? DIRT_DETOUR_CAP : 1.35;
   let low = 0;

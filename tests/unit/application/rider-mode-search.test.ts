@@ -94,3 +94,10 @@ describe("dirt sweep", () => {
     expect(verify.mock.calls[0]![0]).toHaveLength(1);
   });
 });
+
+it("ignores the pipeline's fastest-profile line when it sets the cap", async () => {
+  // Gettysburg -> Pine Grove, live 2026-10-04: fastest 36 min, adventure 44, dirt 66 min 28%.
+  const fastestLine = { ...candidate(36 * 60, 0), profile: "motorcycle_fastest" };
+  const result = await searchRiderEnvelope({ request, candidates: [fastestLine, candidate(44 * 60, 0)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: async r => ({ candidates: [r.options.riderModeFactor === 0 ? { ...candidate(37.6 * 60, 0), profile: "motorcycle_fastest" } : candidate(66.3 * 60, 0.28)] }) }, maxCalls: 3, sweepCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+  expect(result.candidate?.durationSeconds).toBe(66.3 * 60);
+});
