@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { DIRT_DETOUR_CAP, searchRiderEnvelope, riderEnvelopeMetrics } from "@/application/planner/rider-mode-search";
 import type { ProviderCandidate, ProviderRouteRequest } from "@/application/planner/route-provider";
 const request: ProviderRouteRequest = { requestId: "test", origin: { lat: 40, lon: -75 }, destination: { lat: 41, lon: -75 }, stops: [], shaping: [], avoidPolygons: [], profile: "motorcycle_adventure", options: { vehicle: "motorcycle", tollPolicy: "avoid", avoidHighways: false, includeAlternatives: false, targetUnpavedShare: 0.5 } };
-const candidate = (seconds: number, share: number): ProviderCandidate => ({ providerId: "test", profile: request.profile, geometry: [request.origin, request.destination], durationSeconds: seconds, distanceMeters: 1000, roadSummary: { totalMeters: 1000, surfaceByRoadClassMeters: { "gravel|track": 1000 * share, "asphalt|primary": 1000 * (1 - share) }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 1000 * share, durationSeconds: null, surface: "gravel", roadClass: "track", urbanDensity: "rural", roadEnvironment: "road", toll: false, curvatureRatio: null }, { meters: 1000 * (1 - share), durationSeconds: null, surface: "asphalt", roadClass: "primary", urbanDensity: "city", roadEnvironment: "road", toll: false, curvatureRatio: null }] } });
+// About a kilometre a minute, like a rural ride.
+const candidate = (seconds: number, share: number, meters = (seconds / 60) * 1000): ProviderCandidate => ({ providerId: "test", profile: request.profile, geometry: [request.origin, request.destination], durationSeconds: seconds, distanceMeters: meters, roadSummary: { totalMeters: meters, surfaceByRoadClassMeters: { "gravel|track": meters * share, "asphalt|primary": meters * (1 - share) }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: meters * share, durationSeconds: null, surface: "gravel", roadClass: "track", urbanDensity: "rural", roadEnvironment: "road", toll: false, curvatureRatio: null }, { meters: meters * (1 - share), durationSeconds: null, surface: "asphalt", roadClass: "primary", urbanDensity: "city", roadEnvironment: "road", toll: false, curvatureRatio: null }] } });
 describe("rider envelope search", () => {
   it("counts busy-road union once", () => expect(riderEnvelopeMetrics(candidate(600, 0.5))?.busyShare).toBe(0.5));
   it("chooses the cheapest target hit and caps detours", async () => {
@@ -40,7 +41,7 @@ describe("search bounds", () => {
   });
   it("keeps the pipeline's own dirtier candidate even when the trial baseline is faster", async () => {
     const calls = async (r: ProviderRouteRequest) => ({ candidates: [r.options.riderModeFactor === 0 ? candidate(20 * 60, 0) : candidate(26 * 60, 0)] });
-    const result = await searchRiderEnvelope({ request, candidates: [candidate(26 * 60, 0), candidate(38 * 60, 0.06)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: true }), candidates: calls }, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+    const result = await searchRiderEnvelope({ request, candidates: [candidate(26 * 60, 0), candidate(38 * 60, 0.15)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: true }), candidates: calls }, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
     expect(result.candidate?.durationSeconds).toBe(38 * 60);
   });
   it("uses no calls when budget is zero", async () => {
@@ -51,22 +52,22 @@ describe("search bounds", () => {
   });
   it("rejects a candidate that fails the canonical gate", async () => {
     const result = await searchRiderEnvelope({ request, candidates: [candidate(600, 0.1)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: true }), candidates: async () => ({ candidates: [candidate(600, 0.9)] }) }, verify: async () => [], maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
-    expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(100);
+    expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(1000);
   });
 });
 
 it("screens hard constraints before using a trial to steer the interval", async () => {
   const result = await searchRiderEnvelope({ request, candidates: [candidate(600, 0.1)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: true }), candidates: async r => ({ candidates: [r.options.riderModeFactor === 0 ? candidate(600, 0.1) : candidate(600, 0.9)] }) }, screen: next => (riderEnvelopeMetrics(next)?.unpavedShare ?? 0) < 0.5, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
-  expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(100);
+  expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(1000);
 });
 
 describe("dirt sweep", () => {
   const provider = (answer: (factor: number) => ProviderCandidate[]) => ({ id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates: answer(r.options.riderModeFactor ?? 1) })) });
   it("fires every strength at once and finds a step bisection skipped", async () => {
     // Lock Haven -> Slate Run, live 2026-10-04: no dirt below 1.25, then 126 min
-    // with 28% as an alternative; 2 and up only give the slower 133-min line.
+    // with 28% as an alternative; 2 and up only give a slower line with no more dirt.
     const fast = candidate(91 * 60, 0);
-    const p = provider(f => f < 1.25 ? [fast] : f < 2 ? [fast, candidate(126 * 60, 0.28)] : [candidate(133 * 60, 0.29)]);
+    const p = provider(f => f < 1.25 ? [fast] : f < 2 ? [fast, candidate(126 * 60, 0.28)] : [candidate(133 * 60, 0.26)]);
     const result = await searchRiderEnvelope({ request, candidates: [fast], provider: p, maxCalls: 3, sweepCalls: 7, deadlineMs: 1000, signal: new AbortController().signal });
     expect(p.candidates).toHaveBeenCalledTimes(7);
     expect(result.calls).toBe(7);
@@ -100,4 +101,23 @@ it("ignores the pipeline's fastest-profile line when it sets the cap", async () 
   const fastestLine = { ...candidate(36 * 60, 0), profile: "motorcycle_fastest" };
   const result = await searchRiderEnvelope({ request, candidates: [fastestLine, candidate(44 * 60, 0)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: async r => ({ candidates: [r.options.riderModeFactor === 0 ? { ...candidate(37.6 * 60, 0), profile: "motorcycle_fastest" } : candidate(66.3 * 60, 0.28)] }) }, maxCalls: 3, sweepCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
   expect(result.candidate?.durationSeconds).toBe(66.3 * 60);
+});
+
+describe("dirt valued in kilometres", () => {
+  const provider = (answer: (factor: number) => ProviderCandidate[]) => ({ id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: async (r: ProviderRouteRequest) => ({ candidates: answer(r.options.riderModeFactor ?? 1) }) });
+  const run = (initial: ProviderCandidate, answer: (factor: number) => ProviderCandidate[]) => searchRiderEnvelope({ request, candidates: [initial], provider: provider(answer), maxCalls: 3, sweepCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+  it("pays the same minutes for the same dirt km on a long trip as on a short one", async () => {
+    // 10% of a 300 km day is 30 km of dirt: worth 20 extra minutes, though only 10 pp.
+    const long = await run(candidate(300 * 60, 0, 300_000), f => [f === 0 ? candidate(300 * 60, 0, 300_000) : candidate(320 * 60, 0.1, 300_000)]);
+    expect(long.candidate?.durationSeconds).toBe(320 * 60);
+  });
+  it("prefers one long stretch to the same dirt in scraps", () => {
+    const scraps = candidate(3600, 0, 60_000);
+    const runs = Array.from({ length: 20 }, (_, i) => ({ meters: 400, durationSeconds: null, surface: i % 2 === 0 ? "gravel" : "asphalt", roadClass: "unclassified", urbanDensity: "rural", roadEnvironment: "road", toll: false, curvatureRatio: null }));
+    const scrappy = riderEnvelopeMetrics({ ...scraps, roadSummary: { ...scraps.roadSummary!, surfaceByRoadClassMeters: { "gravel|unclassified": 4000 }, roadRuns: runs } });
+    const stretch = riderEnvelopeMetrics({ ...scraps, roadSummary: { ...scraps.roadSummary!, surfaceByRoadClassMeters: { "gravel|unclassified": 4000 }, roadRuns: [{ ...runs[0]!, meters: 4000 }] } });
+    expect(scrappy?.unpavedShare).toBe(stretch?.unpavedShare);
+    expect(stretch!.dirtValueKm).toBeCloseTo(6);
+    expect(scrappy!.dirtValueKm).toBeCloseTo(2.2);
+  });
 });

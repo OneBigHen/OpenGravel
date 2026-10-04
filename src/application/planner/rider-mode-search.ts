@@ -1,31 +1,63 @@
-import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from "./route-provider";
+import type { ProviderCandidate, ProviderRoadRun, ProviderRouteRequest, RouteCandidateProvider } from "./route-provider";
 
 const UNPAVED = new Set(["unpaved", "gravel", "fine_gravel", "compacted", "dirt", "ground", "grass", "sand"]);
 const BUSY = new Set(["motorway", "trunk", "primary"]);
 
 /** Union exposure in travelled metres; missing road runs keep busy share unknown. */
-export function riderEnvelopeMetrics(candidate: ProviderCandidate): { unpavedShare: number; busyShare: number | null } | null {
+export function riderEnvelopeMetrics(candidate: ProviderCandidate): { unpavedShare: number; busyShare: number | null; dirtValueKm: number; longestDirtMeters: number | null } | null {
   const summary = candidate.roadSummary;
   if (summary === undefined || summary.totalMeters <= 0) return null;
   const unpavedMeters = Object.entries(summary.surfaceByRoadClassMeters).reduce((sum, [key, meters]) => sum + (UNPAVED.has(key.split("|")[0]!.toLowerCase()) ? meters : 0), 0);
   const busyMeters = summary.roadRuns?.reduce((sum, run) => sum + (BUSY.has(run.roadClass.toLowerCase()) || run.urbanDensity.toLowerCase() === "city" ? run.meters : 0), 0);
-  return { unpavedShare: unpavedMeters / summary.totalMeters, busyShare: busyMeters === undefined ? null : busyMeters / summary.totalMeters };
+  const stretches = dirtStretches(summary.roadRuns);
+  const longest = stretches === null ? null : Math.max(0, ...stretches);
+  // Scraps under SHORT_DIRT_METERS count half; one long unbroken stretch earns a bonus.
+  const counted = stretches === null ? unpavedMeters : stretches.reduce((sum, meters) => sum + (meters < SHORT_DIRT_METERS ? meters / 2 : meters), 0);
+  return {
+    unpavedShare: unpavedMeters / summary.totalMeters,
+    busyShare: busyMeters === undefined ? null : busyMeters / summary.totalMeters,
+    dirtValueKm: (counted + CONTINUITY_WEIGHT * (longest ?? 0)) / 1000,
+    longestDirtMeters: longest,
+  };
 }
 
-/** A slower route must buy at least one point of dirt per this many extra minutes. */
-export const DIRT_MINUTES_PER_POINT = 3;
-const MIN_DIRT_GAIN = 0.02;
-/** Dirt mode may stretch the trip this far; {@link DIRT_MINUTES_PER_POINT} decides if it should. */
+/** Lengths of consecutive dirt runs in travel order; null without road runs. */
+function dirtStretches(runs: readonly ProviderRoadRun[] | undefined): number[] | null {
+  if (runs === undefined || runs.length === 0) return null;
+  const stretches: number[] = [];
+  let current = 0;
+  for (const run of runs) {
+    if (UNPAVED.has(run.surface.toLowerCase())) current += run.meters;
+    else if (current > 0) { stretches.push(current); current = 0; }
+  }
+  if (current > 0) stretches.push(current);
+  return stretches;
+}
+
+/** Dirt shorter than this between paved runs is a scrap, not a ride. */
+const SHORT_DIRT_METERS = 500;
+/** The longest unbroken stretch counts this much again. */
+const CONTINUITY_WEIGHT = 0.5;
+
+/** A slower route must buy at least one kilometre of dirt value per this many extra minutes. */
+export const DIRT_MINUTES_PER_KM = 2.5;
+const MIN_DIRT_GAIN_KM = 1.5;
+/** Dirt mode may stretch the trip this far; {@link DIRT_MINUTES_PER_KM} decides if it should. */
 export const DIRT_DETOUR_CAP = 1.75;
 
-/** Walk fastest-first; step up only when the extra dirt pays for the extra minutes. */
-function dirtKnee<T extends { candidate: ProviderCandidate; unpavedShare: number }>(byDuration: readonly T[]): T | undefined {
+/**
+ * Walk fastest-first; step up only when the extra dirt pays for the extra
+ * minutes. Dirt is valued in kilometres, not percentage points, so a long
+ * trip is not punished for being long, and a long unbroken stretch beats the
+ * same distance in scraps.
+ */
+function dirtKnee<T extends { candidate: ProviderCandidate; dirtValueKm: number }>(byDuration: readonly T[]): T | undefined {
   let chosen = byDuration[0];
   for (const next of byDuration.slice(1)) {
     if (chosen === undefined) break;
-    const gain = next.unpavedShare - chosen.unpavedShare;
+    const gain = next.dirtValueKm - chosen.dirtValueKm;
     const minutes = (next.candidate.durationSeconds - chosen.candidate.durationSeconds) / 60;
-    if (gain >= MIN_DIRT_GAIN && gain * 100 * DIRT_MINUTES_PER_POINT >= minutes) chosen = next;
+    if (gain >= MIN_DIRT_GAIN_KM && gain * DIRT_MINUTES_PER_KM >= minutes) chosen = next;
   }
   return chosen;
 }
@@ -45,6 +77,8 @@ export interface RiderModeTrial {
   readonly factor: number;
   readonly unpavedShare: number;
   readonly busyShare: number | null;
+  /** Dirt value in km (scraps half, longest stretch +50%). */
+  readonly dirtKm: number;
   readonly minutes: number;
 }
 
@@ -70,12 +104,12 @@ export async function searchRiderEnvelope(input: {
   const target = input.request.options.targetUnpavedShare ?? (input.request.options.surfacePreference === "dirt-preferred" ? 0.5 : 0);
   const avoidBusy = input.request.options.traffic === "protect-ride" && input.request.options.roadCharacter !== "efficient";
   const trials: RiderModeTrial[] = [];
-  const measured: { candidate: ProviderCandidate; factor: number; unpavedShare: number; busyShare: number | null }[] = [];
+  const measured: { candidate: ProviderCandidate; factor: number; unpavedShare: number; busyShare: number | null; dirtValueKm: number; longestDirtMeters: number | null }[] = [];
   const add = (candidate: ProviderCandidate, factor: number): void => {
     const metrics = riderEnvelopeMetrics(candidate);
     if (metrics === null) return;
     measured.push({ candidate, factor, ...metrics });
-    trials.push({ factor, ...metrics, minutes: candidate.durationSeconds / 60 });
+    trials.push({ factor, unpavedShare: metrics.unpavedShare, busyShare: metrics.busyShare, dirtKm: metrics.dirtValueKm, minutes: candidate.durationSeconds / 60 });
   };
   input.candidates.forEach(candidate => add(candidate, 1));
   if (measured.length === 0 || (target === 0 && (!avoidBusy || measured.every(entry => entry.busyShare === null))) || input.request.sketch !== undefined || input.request.discovery !== undefined) {
