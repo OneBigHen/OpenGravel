@@ -783,6 +783,7 @@ export function PlannerWorkspace({
       layers={preparationProviders?.mapLayers && { source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
+      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene,
         onIntent: handleIntent,
@@ -933,3 +934,4 @@ export function PlannerWorkspace({
     </PlannerWorkspaceFrame>
   );
 }
+

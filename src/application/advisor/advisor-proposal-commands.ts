@@ -25,7 +25,8 @@ export type AdvisorProposalField =
   | "surface"
   | "terrain"
   | "highways"
-  | "tolls";
+  | "tolls"
+  | "traffic";
 
 export interface AdvisorProposalChange {
   readonly field: AdvisorProposalField;
@@ -190,6 +191,8 @@ function changesFor(before: RideIntent, after: RideIntent, timeZone: string): Ad
   add("terrain", before.terrain.level, after.terrain.level);
   add("highways", before.avoidHighways ? "Avoid" : "Allowed", after.avoidHighways ? "Avoid" : "Allowed");
   add("tolls", before.tollPolicy === "avoid" ? "Avoid" : "Allowed with warning", after.tollPolicy === "avoid" ? "Avoid" : "Allowed with warning");
+  const trafficLabel = (traffic: RideIntent["traffic"]): string => (traffic === "protect-ride" ? "Avoid busy roads" : "Fastest through traffic");
+  add("traffic", trafficLabel(before.traffic), trafficLabel(after.traffic));
   return changes;
 }
 
@@ -339,6 +342,9 @@ export function buildAdvisorProposal(
   if (fields.tollPolicy !== null) {
     operations.push({ ...base(document, "Set toll preference"), type: "tollPolicy.set", tollPolicy: fields.tollPolicy });
   }
+  if (fields.trafficPreference !== null) {
+    operations.push({ ...base(document, "Set traffic preference"), type: "trafficPreference.set", traffic: fields.trafficPreference });
+  }
   if (operations.length === 0) return { status: "unsupported", message: "The advisor did not find a ride setting to change." };
 
   const command: Extract<RideCommand, { type: "proposal.apply" }> = {
@@ -367,6 +373,7 @@ export function buildAdvisorProposal(
     "terrain.set": "terrain",
     "highwayPolicy.set": "highways",
     "tollPolicy.set": "tolls",
+    "trafficPreference.set": "traffic",
   };
   const effectiveCommand = {
     ...command,

@@ -141,13 +141,6 @@ export function ThingsFeed() {
       {state.kind === "error" ? <p role="alert">{state.message}</p> : null}
       {state.kind === "ready" ? (
         <>
-          {state.data.sources
-            .filter((source) => source.status !== "ok")
-            .map((source) => (
-              <p role="status" key={source.id}>
-                {source.id}: {source.reason ?? "Some results are unavailable."}
-              </p>
-            ))}
           {items.length === 0 ? (
             <p role="status">
               No suggestions returned by the available sources in this riding
@@ -160,6 +153,21 @@ export function ThingsFeed() {
               ))}
             </ul>
           )}
+          {/* Source caveats are for the curious, not the headline (owner review 2026-10-04). */}
+          {state.data.sources.some((source) => source.status !== "ok") ? (
+            <details className="og-along__sources">
+              <summary role="status">Some sources had gaps</summary>
+              <ul>
+                {state.data.sources
+                  .filter((source) => source.status !== "ok")
+                  .map((source) => (
+                    <li key={source.id}>
+                      {source.id}: {source.reason ?? "Some results are unavailable."}
+                    </li>
+                  ))}
+              </ul>
+            </details>
+          ) : null}
         </>
       ) : null}
     </section>

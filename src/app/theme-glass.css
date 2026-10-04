@@ -2125,3 +2125,511 @@ html .og-ride {
   background: var(--og-go);
   color: var(--og-on-fill);
 }
+
+/* ── Map style menu: Map / Night / Satellite (2026-10-04) ───────────────── */
+.og-map__look-menu {
+  position: absolute;
+  top: var(--og-look-top, 12px);
+  z-index: 6;
+  display: grid;
+  gap: 4px;
+  width: 232px;
+  padding: 6px;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 18px;
+  background: var(--og-glass-dense);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
+}
+.og-map__look[data-side="right"] .og-map__look-menu { right: var(--og-look-x, 60px); }
+.og-map__look[data-side="left"] .og-map__look-menu { left: var(--og-look-x, 60px); }
+
+.og-map__look-option {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 6px 10px 6px 6px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.og-map__look-option:hover { background: color-mix(in srgb, var(--og-ink) 7%, transparent); }
+.og-map__look-option:focus-visible {
+  outline: var(--og-focus-width, 3px) solid var(--og-focus-ring, var(--og-go));
+  outline-offset: 1px;
+}
+.og-map__look-option[aria-checked="true"] {
+  background: var(--og-go-soft);
+  box-shadow: inset 0 0 0 1.5px var(--og-go);
+}
+.og-map__look-swatch {
+  grid-row: 1 / 3;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--og-glass-edge);
+  background-size: cover;
+}
+/* Swatches are drawn, not photos: a road ladder over each basemap's ground. */
+.og-map__look-swatch[data-look="map"] {
+  background:
+    linear-gradient(28deg, transparent 46%, #f3c46a 47% 53%, transparent 54%),
+    linear-gradient(118deg, transparent 58%, #ffffff 59% 63%, transparent 64%),
+    radial-gradient(circle at 25% 30%, #b9d3a3 0 22%, transparent 23%),
+    linear-gradient(160deg, #e9efe0, #d8e6cf);
+}
+.og-map__look-swatch[data-look="night"] {
+  background:
+    linear-gradient(28deg, transparent 46%, #ebe4d6 47% 53%, transparent 54%),
+    linear-gradient(118deg, transparent 58%, #b8b8b8 59% 62%, transparent 63%),
+    radial-gradient(circle at 78% 78%, #22384f 0 24%, transparent 25%),
+    linear-gradient(160deg, #26292c, #1d2023);
+}
+.og-map__look-swatch[data-look="satellite"] {
+  background:
+    linear-gradient(28deg, transparent 47%, rgb(255 255 255 / 70%) 48% 51%, transparent 52%),
+    radial-gradient(circle at 30% 70%, #5b6b3e 0 30%, transparent 31%),
+    radial-gradient(circle at 70% 30%, #7d7a5a 0 26%, transparent 27%),
+    linear-gradient(160deg, #3e4d2e, #2b3826);
+}
+.og-map__look-name { font-weight: 650; font-size: 15px; line-height: 1.2; }
+.og-map__look-note { font-size: 12.5px; line-height: 1.25; color: var(--og-slate-text, var(--og-slate)); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .og-map__look-menu { background: var(--og-paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* ── Route editing bar on the map (owner review 2026-10-04) ─────────────── */
+.og-editbar {
+  position: absolute;
+  top: calc(12px + var(--og-safe-top, 0px));
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  max-width: calc(100% - 24px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.og-editbar > * { pointer-events: auto; }
+
+.og-editbar__row {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 999px;
+  background: var(--og-glass-bg);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
+}
+
+.og-editbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.og-editbar__btn:hover:not(:disabled) { background: color-mix(in srgb, var(--og-ink) 9%, transparent); }
+.og-editbar__btn:disabled { opacity: 0.4; cursor: default; }
+.og-editbar__btn:focus-visible {
+  outline: var(--og-focus-width, 3px) solid var(--og-focus-ring, var(--og-go));
+  outline-offset: 1px;
+}
+.og-editbar__btn--go {
+  background: var(--og-go-strong, var(--og-go));
+  color: #fff;
+}
+.og-editbar__btn--go:hover:not(:disabled) { background: var(--og-go); }
+.og-editbar__icon { flex: none; }
+
+.og-editbar__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--og-glass-shadow);
+}
+.og-editbar__pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--og-ember, #d65a36);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--og-ember, #d65a36) 60%, transparent);
+  animation: og-editbar-pulse 1.6s ease-out infinite;
+}
+@keyframes og-editbar-pulse {
+  to { box-shadow: 0 0 0 9px transparent; }
+}
+
+.og-editbar__tip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: min(340px, calc(100vw - 160px));
+  margin: 0;
+  padding: 6px 4px 6px 12px;
+  border-radius: 14px;
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  font-size: 12.5px;
+  line-height: 1.35;
+  box-shadow: var(--og-glass-shadow);
+}
+.og-editbar__tip-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--og-slate-text, var(--og-ink));
+  cursor: pointer;
+}
+
+/* While drawing on a phone the pen's controls take the whole top edge. */
+@media (max-width: 760px) {
+  .og-editbar[data-mode="drawing"],
+  .og-editbar[data-mode="placing"] { left: 12px; right: 12px; max-width: none; transform: none; }
+  .og-editbar[data-mode="drawing"] .og-editbar__row { width: 100%; justify-content: space-between; }
+  .og-editbar__btn { padding: 0 11px; font-size: 13.5px; }
+  .og-editbar[data-mode="idle"] .og-editbar__btn { padding: 0 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-editbar__pulse { animation: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .og-editbar__row { background: var(--og-paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+/* Ride Focus and fullscreen keep the map bare. */
+.og-ride .og-editbar { display: none; }
+
+/* ── Along this ride + opportunity cards (owner review 2026-10-04) ──────── */
+.og-along { display: grid; gap: 8px; margin-top: 4px; }
+
+.og-along__toggle {
+  display: grid;
+  grid-template-columns: 36px 1fr 20px;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px 8px 10px;
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-object, 14px);
+  background: var(--og-raised, var(--og-paper));
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.og-along__toggle:hover { border-color: var(--og-hairline-strong); }
+.og-along__toggle:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
+.og-along__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--og-ember, #d65a36) 16%, transparent);
+  color: var(--og-ember-text, #d65a36);
+}
+.og-along__label { display: grid; gap: 1px; min-width: 0; }
+.og-along__title { font-weight: 700; font-size: 15px; }
+.og-along__hint { font-size: 12.5px; color: var(--og-slate-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-along__chevron { color: var(--og-slate-text); transition: transform 160ms ease; }
+.og-along__toggle[aria-expanded="true"] .og-along__chevron { transform: rotate(180deg); }
+
+.og-along__results { display: grid; gap: 8px; }
+.og-along__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.og-along__status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 4px;
+  font-size: 13.5px;
+  color: var(--og-slate-text);
+}
+.og-along__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--og-hairline-strong);
+  border-top-color: var(--og-go);
+  border-radius: 50%;
+  animation: og-along-spin 0.8s linear infinite;
+}
+@keyframes og-along-spin { to { transform: rotate(360deg); } }
+.og-along__road { list-style: none; }
+.og-along__road > ul { margin: 0; padding: 0; list-style: none; }
+.og-along__road-note { margin: 0 0 4px; font-size: 12px; font-weight: 650; color: var(--og-golden-text, var(--og-slate-text)); }
+.og-along__error { margin: 0; font-size: 13px; color: var(--og-danger); }
+.og-along__sources { font-size: 12.5px; color: var(--og-slate-text); }
+.og-along__sources summary { cursor: pointer; padding: 4px 2px; }
+.og-along__sources ul { margin: 4px 0 0; padding-left: 18px; }
+.og-along__refresh {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--og-go-text);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.og-along__refresh:hover { background: var(--og-go-soft); }
+
+.og-opp {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-object, 14px);
+  background: var(--og-raised, var(--og-paper));
+  color: var(--og-ink);
+  list-style: none;
+}
+.og-opp__when {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1px;
+  min-height: 58px;
+  padding: 6px 2px;
+  border-radius: 12px;
+  background: var(--og-well, color-mix(in srgb, var(--og-ink) 6%, transparent));
+  text-align: center;
+}
+.og-opp__when-top { font-size: 11px; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; color: var(--og-slate-text); }
+.og-opp__when-main { font-size: 13.5px; font-weight: 750; line-height: 1.15; }
+.og-opp[data-live="true"] .og-opp__when { background: var(--og-go-soft); }
+.og-opp[data-live="true"] .og-opp__when-top { color: var(--og-go-text); }
+.og-opp[data-live="true"] .og-opp__when-top::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--og-go);
+  vertical-align: 1px;
+}
+.og-opp__glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--og-topo-sage);
+}
+.og-opp__glyph[data-kind="happy-hour"] { background: var(--og-golden-hour, #c99a46); }
+.og-opp__glyph[data-kind="event"] { background: var(--og-ember, #d65a36); }
+
+.og-opp__body { display: grid; gap: 3px; min-width: 0; }
+.og-opp__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: var(--og-slate-text);
+}
+.og-opp__kind { color: var(--og-ember-text, var(--og-ink)); text-transform: uppercase; letter-spacing: 0.06em; }
+.og-opp[data-kind="happy-hour"] .og-opp__kind { color: var(--og-golden-text, var(--og-ink)); }
+.og-opp[data-kind="place"] .og-opp__kind { color: var(--og-go-text); }
+.og-opp__reason::before { content: "·"; margin-right: 6px; }
+.og-opp__title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.og-opp__facts { margin: 0; font-size: 13px; font-weight: 600; color: var(--og-ink); opacity: 0.86; }
+.og-opp__fit { margin: 0; font-size: 12.5px; color: var(--og-slate-text); }
+.og-opp__fit[data-fit="fits"] { color: var(--og-go-text); }
+.og-opp__fit[data-fit="misses"] { color: var(--og-danger); }
+.og-opp__desc {
+  display: -webkit-box;
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--og-slate-text);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.og-opp__foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.og-opp__source { min-width: 0; overflow: hidden; font-size: 11.5px; color: var(--og-slate-text); text-overflow: ellipsis; white-space: nowrap; }
+.og-opp__actions { display: flex; flex: none; gap: 6px; }
+.og-opp__link,
+.og-opp__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.og-opp__link { border: 1px solid var(--og-hairline-strong); background: transparent; color: var(--og-ink); }
+.og-opp__add { border: 0; background: var(--og-go-strong); color: #fff; }
+.og-opp__add:hover:not(:disabled) { background: var(--og-go); }
+.og-opp__add[data-added="true"] { background: var(--og-go-soft); color: var(--og-go-text); cursor: default; }
+.og-opp__link:focus-visible,
+.og-opp__add:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .og-along__spinner { animation: none; }
+  .og-along__chevron { transition: none; }
+}
+
+/* Layers count: "layers on", not an alert — green, with the button's own edge. */
+.og-layers__badge.og-layers__badge {
+  background: var(--og-go-strong);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--og-paper);
+}
+
+/* Collapsed attribution: a neat 28 px glass disc, not a stretched white pill
+   running off the edge (owner review 2026-10-04). Expanded, it is a readable card. */
+.og-map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) {
+  width: 28px;
+  min-height: 28px;
+  height: 28px;
+  margin: 0 10px 10px 0;
+  padding: 0;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 50%;
+  background: var(--og-glass-bg);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
+}
+.og-map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-button {
+  top: 1px;
+  right: 1px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: transparent;
+}
+:root:not([data-theme="day"]) .og-map .maplibregl-ctrl-attrib-button { filter: invert(1); }
+.og-map .maplibregl-ctrl-attrib.maplibregl-compact-show {
+  border-radius: 12px;
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+}
+.og-map .maplibregl-ctrl-attrib.maplibregl-compact-show a { color: var(--og-ink); }
+
+/* Settings: developer-only setup behind a quiet disclosure. */
+.og-settings__advanced { margin-top: 12px; border-top: 1px solid var(--og-hairline); padding-top: 8px; }
+.og-settings__advanced > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--og-slate-text);
+  cursor: pointer;
+}
+.og-settings__advanced > summary:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
+.og-settings__advanced[open] > summary { color: var(--og-ink); }
+/* Cards never outgrow a 400 px sheet: the text column may shrink, actions wrap. */
+.og-opp { grid-template-columns: 58px minmax(0, 1fr); min-width: 0; max-width: 100%; box-sizing: border-box; }
+.og-opp__foot { flex-wrap: wrap; row-gap: 6px; }
+.og-opp__actions { margin-left: auto; }
+.og-along, .og-along__results, .og-along__list { min-width: 0; max-width: 100%; }
+
+/* Event photos (owner 2026-10-04: "I don't see photos in the events list"). */
+.og-opp:has(.og-opp__media) { grid-template-columns: 84px minmax(0, 1fr); }
+.og-opp__media {
+  position: relative;
+  align-self: start;
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--og-well, color-mix(in srgb, var(--og-ink) 8%, transparent));
+}
+.og-opp__photo { display: block; width: 100%; height: 100%; object-fit: cover; }
+.og-opp__media[data-broken="true"] .og-opp__photo { visibility: hidden; }
+.og-opp__media-badge {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  padding: 2px 4px;
+  border-radius: 7px;
+  background: rgb(10 16 14 / 78%);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.og-opp[data-live="true"] .og-opp__media-badge { background: var(--og-go-strong); }
+.og-places-card__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 6px 0 8px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--og-well, transparent);
+}
+
+/* The compact first screen keeps only the input row, but the advisor's answer
+   to a typed ride idea must show there: before this, "2 h twisty loop" + Enter
+   produced a proposal nobody could see (QA 2026-10-04). */
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-planner__sheet[data-idle="true"] .og-composer > .og-advisor {
+    display: grid;
+    flex: 1 1 100%;
+  }
+}

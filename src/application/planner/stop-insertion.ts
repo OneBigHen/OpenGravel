@@ -74,3 +74,55 @@ export function canMoveStopUp(index: number): boolean {
 export function canMoveStopDown(index: number, count: number): boolean {
   return index >= 0 && index < count - 1;
 }
+
+/**
+ * Where along `line` a coordinate falls, as a fractional vertex index: the
+ * nearest segment's start index plus how far along that segment the
+ * coordinate projects. Plane geometry on lon/lat scaled by latitude is plenty
+ * for ordering points along one ride.
+ */
+export function alongRoutePosition(
+  line: readonly { readonly lon: number; readonly lat: number }[],
+  coordinate: { readonly lon: number; readonly lat: number },
+): number {
+  if (line.length < 2) return 0;
+  const k = Math.cos((coordinate.lat * Math.PI) / 180);
+  let best = Number.POSITIVE_INFINITY;
+  let at = 0;
+  for (let index = 0; index < line.length - 1; index += 1) {
+    const a = line[index]!;
+    const b = line[index + 1]!;
+    const ax = a.lon * k;
+    const bx = b.lon * k;
+    const px = coordinate.lon * k;
+    const dx = bx - ax;
+    const dy = b.lat - a.lat;
+    const span = dx * dx + dy * dy;
+    const t = span === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (coordinate.lat - a.lat) * dy) / span));
+    const ex = ax + t * dx - px;
+    const ey = a.lat + t * dy - coordinate.lat;
+    const distance = ex * ex + ey * ey;
+    if (distance < best) {
+      best = distance;
+      at = index + t;
+    }
+  }
+  return at;
+}
+
+/**
+ * The stop a new stop belongs in front of when it is added *on the route*
+ * (a dragged route line, an "Add stop" on a place along the ride): the first
+ * existing stop that comes later along the drawn line, or `undefined` (append)
+ * when none does. Without this, a place at mile 3 was appended after a stop at
+ * mile 40 and the ride doubled back.
+ */
+export function routeOrderInsertionBeforeId(
+  stops: readonly StopPoint[],
+  line: readonly { readonly lon: number; readonly lat: number }[],
+  coordinate: { readonly lon: number; readonly lat: number },
+): StopId | undefined {
+  if (stops.length === 0 || line.length < 2) return undefined;
+  const target = alongRoutePosition(line, coordinate);
+  return stops.find((stop) => alongRoutePosition(line, stop.coordinate) > target)?.id;
+}

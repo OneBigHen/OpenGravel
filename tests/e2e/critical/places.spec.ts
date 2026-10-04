@@ -115,10 +115,10 @@ test("Along this ride lazily adds a fixture destination to the itinerary", async
   expect(opportunityRequests).toBe(0);
   const along = page.getByRole("region", { name: "Route opportunities" });
   await along.getByRole("button", { name: "Along this ride" }).click();
-  const firstRow = along.locator("li.og-explore-card").filter({ has: page.getByRole("button", { name: /^Add stop/ }) }).first();
+  const firstRow = along.locator("li.og-opp").filter({ has: page.getByRole("button", { name: /^Add stop/ }) }).first();
   await expect(firstRow).toBeVisible();
   await expect(firstRow).toContainText(/Mile/);
-  const title = await firstRow.locator("strong").textContent();
+  const title = await firstRow.locator(".og-opp__title").textContent();
   if (title === null) throw new Error("the destination has no name");
   await firstRow.getByRole("button", { name: /^Add stop/ }).click();
   await openRefine(page);

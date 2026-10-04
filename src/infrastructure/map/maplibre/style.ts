@@ -27,6 +27,7 @@
 import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
 import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
 import { PUCK_IMAGE_ID } from "./puck-image";
+import { MARKER_IMAGE_IDS } from "./marker-images";
 
 /** The tokens the cartography uses, as literal CSS colour values. */
 export interface MapPalette {
@@ -157,6 +158,7 @@ export const MAP_LAYER_IDS = {
   pointFinish: "ogv-point-finish",
   pointSelected: "ogv-point-selected",
   pointPreview: "ogv-point-preview",
+  pointPin: "ogv-point-pin",
   avoidSelected: "ogv-avoid-selected",
   roadSpanSelected: "ogv-road-span-selected",
   riderPositionHalo: "ogv-rider-position-halo",
@@ -448,12 +450,42 @@ export function pointLayers(palette: MapPalette): readonly MapLayerSpec[] {
       },
     },
     {
+      // The pins over the circles (owner review 2026-10-04): a green "go" start,
+      // a checkered finish, numbered white stops. The circles stay underneath as
+      // the fallback when the images cannot be added.
+      id: MAP_LAYER_IDS.pointPin,
+      type: "symbol",
+      source: MAP_SOURCE_IDS.points,
+      filter: ["match", ["get", "kind"], ["start", "finish", "stop"], true, false],
+      layout: {
+        "icon-image": [
+          "match",
+          ["get", "kind"],
+          "start",
+          MARKER_IMAGE_IDS.start,
+          "finish",
+          MARKER_IMAGE_IDS.finish,
+          MARKER_IMAGE_IDS.stop,
+        ],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "text-field": ["coalesce", ["get", "order"], ""],
+        "text-font": ["Open Sans Bold"],
+        "text-size": 13,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+        // The finish draws over the start on a loop, and stops over both.
+        "symbol-sort-key": ["match", ["get", "kind"], "start", 0, "finish", 1, 2],
+      },
+      paint: { "text-color": "#161d1c" },
+    },
+    {
       id: MAP_LAYER_IDS.pointSelected,
       type: "circle",
       source: MAP_SOURCE_IDS.points,
       filter: equals("selected", true),
       paint: {
-        "circle-radius": 12,
+        "circle-radius": 21,
         "circle-color": "rgba(0,0,0,0)",
         "circle-stroke-color": palette.ember,
         "circle-stroke-width": 3,
@@ -469,7 +501,7 @@ export function pointLayers(palette: MapPalette): readonly MapLayerSpec[] {
       source: MAP_SOURCE_IDS.points,
       filter: equals("kind", "preview"),
       paint: {
-        "circle-radius": 11,
+        "circle-radius": 16,
         "circle-color": "rgba(0,0,0,0)",
         "circle-stroke-color": palette.ember,
         "circle-stroke-width": 3,

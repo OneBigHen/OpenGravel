@@ -159,40 +159,48 @@ export function PlannerAlongOpportunities({
       ids: new Set(previous?.key === key ? previous.ids : []).add(id),
     }));
   return (
-    <section className="og-explore__section" aria-label="Route opportunities">
+    <section className="og-along" aria-label="Route opportunities">
       <button
         type="button"
-        className="og-secondary og-explore__wide"
+        className="og-along__toggle"
         aria-expanded={open}
         aria-controls="along-ride-results"
         onClick={() => setOpen((value) => !value)}
       >
-        Along this ride
+        <span className="og-along__icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+            <circle cx="12" cy="10" r="2.3" />
+          </svg>
+        </span>
+        <span className="og-along__label">
+          <span className="og-along__title">Along this ride</span>
+          <span className="og-along__hint">
+            {open && current !== null
+              ? `${current.suggestions.length} worth a stop`
+              : "Events, food and road windows on your way"}
+          </span>
+        </span>
+        <svg className="og-along__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </button>
       {open ? (
-        <div id="along-ride-results" className="og-explore__section">
-          <p>
-            Worthwhile detours for this route. Choose a suggestion to change
-            your ride.
-          </p>
+        <div id="along-ride-results" className="og-along__results">
           {current === null ? (
-            <p role="status">
-              Checking road windows and destinations along this ride…
+            <p className="og-along__status" role="status">
+              <span className="og-along__spinner" aria-hidden="true" />
+              Checking events, stops and road windows along this ride…
             </p>
           ) : (
             <>
-              {current.errors.map((message) => (
-                <p role="status" key={message}>
-                  {message}
-                </p>
-              ))}
               {current.suggestions.length === 0 ? (
-                <p role="status">
-                  No suggestions returned for this route and departure.
+                <p className="og-along__status" role="status">
+                  Nothing worth a stop on this route for this departure.
                 </p>
               ) : (
                 <ul
-                  className="og-explore__list"
+                  className="og-along__list"
                   aria-label="Along this ride suggestions"
                 >
                   {current.suggestions.map((suggestion) => {
@@ -216,8 +224,8 @@ export function PlannerAlongOpportunities({
                         />
                       );
                     return (
-                      <li key={suggestion.road.id}>
-                        <p>~{suggestion.detour} min estimated detour</p>
+                      <li key={suggestion.road.id} className="og-along__road">
+                        <p className="og-along__road-note">~{suggestion.detour} min detour</p>
                         <ul>
                           <RoadOpeningCard
                             map={map}
@@ -275,11 +283,25 @@ export function PlannerAlongOpportunities({
                 </ul>
               )}
               {actionError?.key === key ? (
-                <p role="alert">{actionError.message}</p>
+                <p className="og-along__error" role="alert">{actionError.message}</p>
               ) : null}
+              {current.errors.length === 0 ? null : (
+                <details className="og-along__sources">
+                  <summary role="status">
+                    {current.errors.length === 1
+                      ? "One source didn’t answer"
+                      : `${current.errors.length} sources didn’t answer`}
+                  </summary>
+                  <ul>
+                    {current.errors.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               <button
                 type="button"
-                className="og-secondary"
+                className="og-along__refresh"
                 onClick={() => {
                   setResult(null);
                   setRetry((value) => value + 1);

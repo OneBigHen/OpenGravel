@@ -7,7 +7,7 @@
  * renderer and receives the existing MapIntent callback from the workspace.
  */
 
-import type { ComponentProps, ReactNode, RefObject } from "react";
+import { useEffect, type ComponentProps, type ReactNode, type RefObject } from "react";
 
 import type { RideDocument } from "@/domain/ride/types";
 import type { LibraryServicePort } from "@/application/library/library-service";
@@ -15,6 +15,7 @@ import { PlannerMap, TOOL_HINTS } from "@/ui/map/PlannerMap";
 import type { MapLayersProps } from "@/ui/layers/LayeredMap";
 import { PlannerPlacesMap, type PlannerPlacesProps } from "@/ui/places/PlannerPlacesMap";
 import { PrimaryNav } from "@/ui/nav/PrimaryNav";
+import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import type { PlannerLocateMe } from "@/ui/planner/usePlannerPlaces";
 import { useRouteScrub } from "@/ui/stores/route-scrub-store";
 
@@ -36,6 +37,8 @@ export interface PlannerWorkspaceFrameProps {
   readonly onShowWholeRide: () => void;
   /** "Center on me", when the surface can locate the rider. */
   readonly locateMe?: PlannerLocateMe | undefined;
+  /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
+  readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly children: ReactNode;
 }
 
@@ -62,14 +65,19 @@ export function PlannerWorkspaceFrame({
   layers,
   onShowWholeRide,
   locateMe,
+  editBar,
   children,
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
+  useSnapBackAfterKeyboard();
   // The elevation profile's scrub point, drawn on the route (UX rework phase 3).
   const scrub = useRouteScrub();
   const scene = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
+  // The edit bar says what a stop tap does, so the map does not say it twice.
   const hint =
-    armedTool !== null && armedTool !== missingTarget ? TOOL_HINTS[armedTool] : null;
+    armedTool !== null && armedTool !== missingTarget && !(armedTool === "stop" && editBar !== undefined)
+      ? TOOL_HINTS[armedTool]
+      : null;
   return (
     <main id="main" className="og-planner">
       <header className="og-planner__header" ref={headerRef}>
@@ -93,6 +101,7 @@ export function PlannerWorkspaceFrame({
       <div className="og-planner__body">
         <div className="og-planner__map-slot" ref={mapSlotRef}>
           <PlannerPlacesMap {...map} scene={scene} hint={hint} places={places} layers={layers} />
+          {editBar === undefined ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
             <span className="og-map__retrying" data-testid="map-retry-chip" role="status">
               Retrying the map…
@@ -160,4 +169,33 @@ export function PlannerWorkspaceFrame({
       </div>
     </main>
   );
+}
+
+/**
+ * iOS Safari leaves the page scrolled after the on-screen keyboard closes (the
+ * owner's 2026-10-04 iPad screenshot: the map stopped short of the bottom and
+ * the right-hand controls were cut off at the top). The planner is a fixed,
+ * full-screen map, so it never wants a scroll offset: when focus leaves a text
+ * field, or the visual viewport grows back, it snaps back to the top.
+ */
+function useSnapBackAfterKeyboard(): void {
+  useEffect(() => {
+    const snap = (): void => {
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) return;
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const later = (): void => {
+      if (timer !== null) clearTimeout(timer);
+      timer = setTimeout(snap, 120);
+    };
+    window.addEventListener("focusout", later);
+    window.visualViewport?.addEventListener("resize", later);
+    return () => {
+      if (timer !== null) clearTimeout(timer);
+      window.removeEventListener("focusout", later);
+      window.visualViewport?.removeEventListener("resize", later);
+    };
+  }, []);
 }

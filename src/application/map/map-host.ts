@@ -107,6 +107,12 @@ export interface MapHostOptions {
    * deployment that silently 404s its worker draws a background and no data.
    */
   readonly assetBasePath?: string;
+  /**
+   * The basemap look to open with: the configured map, or Night contrast (our
+   * dark-gray high-contrast Mapbox map). Only a Mapbox host can draw `night`;
+   * any other host ignores it.
+   */
+  readonly basemapLook?: "map" | "night";
 }
 
 /** Renderer acknowledgement, separate from successful provider transport. */
@@ -173,6 +179,14 @@ export interface MapHost {
   setSatellite?(visible: boolean): void;
   /** True when this host can draw satellite imagery. */
   readonly supportsSatellite?: boolean;
+  /**
+   * Switches between the configured basemap and Night contrast. The ride, its
+   * points and every overlay are redrawn on the new basemap. Present only on a
+   * host that can draw Night contrast.
+   */
+  setBasemapLook?(look: "map" | "night"): void;
+  /** True when this host can draw Night contrast. */
+  readonly supportsNightContrast?: boolean;
   /**
    * Shows the ground in 3D and tilts the camera (UX rework phase 8), or lays it
    * flat again. A no-op before the style loads; applied when it does.

@@ -128,6 +128,8 @@ function refFor(point: PointScene): MapObjectRef {
 }
 
 export function pointFeatureCollection(scene: MapScene): GeoJsonFeatureCollection {
+  // Stops are numbered in ride order on their pins (owner review 2026-10-04).
+  let stopNumber = 0;
   const features: GeoJsonFeature[] = scene.points.map((point, index) => ({
     type: "Feature",
     id: index,
@@ -136,6 +138,7 @@ export function pointFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
       kind: point.kind,
       label: point.label,
       selected: isSelected(scene.selectedObject, refFor(point)),
+      ...(point.kind === "stop" ? { order: String((stopNumber += 1)) } : {}),
     },
     geometry: { type: "Point", coordinates: position(point.coordinate) },
   }));

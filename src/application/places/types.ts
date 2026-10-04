@@ -63,6 +63,10 @@ export interface NearbyPlace {
    * These are additive contract fields: older providers may omit them.
    */
   readonly sourceId?: string | null;
+  /** The event's own photo (an https URL from the provider), when it has one. */
+  readonly imageUrl?: string | null;
+  /** Where an event happens, e.g. "Hellerick's Adventure Farm". */
+  readonly venue?: string | null;
   readonly sourceLabel?: string | null;
   readonly sourceUrl?: string | null;
   /**

@@ -74,7 +74,7 @@ const RIDER_STATES: RiderStateByClass = {
   },
   "grounding-failed": {
     recovery: "retry",
-    message: "That could not be matched to the map.",
+    message: "I couldn't find that place on the map. Try its street address or a nearby town, or set it on the map.",
   },
   "stale-revision": {
     recovery: "refresh",

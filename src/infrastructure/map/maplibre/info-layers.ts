@@ -131,10 +131,11 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       source: INFO_SOURCE_ID,
       filter: ["all", isPoint, ["!=", ["get", "selected"], true]],
       paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 4, 14, 7],
+        // Small at overview zooms so a busy layer never buries the ride.
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 11, 4, 14, 7],
         "circle-color": colourByLayer(palette),
         "circle-stroke-color": palette.paper,
-        "circle-stroke-width": 2,
+        "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 12, 2],
       },
     },
     {

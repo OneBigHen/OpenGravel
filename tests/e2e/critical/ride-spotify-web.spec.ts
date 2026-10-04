@@ -50,6 +50,8 @@ test("Spotify setup accepts only a public client ID and explains the exact brows
   await page.goto("/settings#spotify");
   const setup = page.locator("#spotify");
   await expect(setup).toContainText(`${new URL(page.url()).origin}/api/spotify/callback`);
+  // The developer setup sits behind an "advanced" disclosure.
+  await setup.getByText("Use your own Spotify app (advanced)").click();
   const input = page.getByTestId("spotify-client-id");
   await input.fill("invalid");
   await setup.getByRole("button", { name: "Save app ID" }).click();
