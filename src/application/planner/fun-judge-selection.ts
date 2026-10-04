@@ -25,9 +25,15 @@ import {
 import { assignRoles, type RoleAssignment } from "@/domain/route/roles";
 import type { RoutePolicy } from "@/domain/route/policy";
 import type { PipelineIntent } from "@/domain/route/intent";
-import type { FunJudge, FunJudgeOutcome } from "./fun-judge";
+import {
+  FUN_JUDGE_SHADOW_DEADLINE_MS,
+  type FunJudge,
+  type FunJudgeCallOptions,
+  type FunJudgeOutcome,
+} from "./fun-judge";
 import type {
   FunJudgeCandidateEvidence,
+  FunJudgeFormulaEvidence,
   FunJudgeIntent,
   FunJudgeRideArcSummary,
 } from "./ports/fun-judge";
@@ -54,6 +60,7 @@ export function parseFunJudgeMode(value: string | undefined): FunJudgeMode {
 export type FunJudgeEvidenceExtensions = (candidate: PipelineCandidate) => {
   readonly curvatureContinuity?: number | null;
   readonly rideArc?: FunJudgeRideArcSummary | null;
+  readonly formulaEvidence?: FunJudgeFormulaEvidence;
 };
 
 /** A sustained bend run this long or longer reads as fully continuous (1.0). */
@@ -119,8 +126,12 @@ export interface FunJudgeSelectionInput {
   readonly mode: FunJudgeMode;
   readonly judge: FunJudge | null;
   readonly signal: AbortSignal;
+  readonly judgeOptions?: FunJudgeCallOptions;
   readonly extensions?: FunJudgeEvidenceExtensions;
 }
+
+/** Name used by callers that invoke the selection seam directly. */
+export type SelectFunJudgeInput = FunJudgeSelectionInput;
 
 const METERS_PER_MILE = 1609.344;
 const WHY_MIN_DELTA = 0.05;
@@ -172,6 +183,7 @@ export function funJudgeEvidenceFor(
     maneuversPer10Miles: maneuvers === undefined || miles < 0.5 ? null : (maneuvers / miles) * 10,
     rideArc: extra.rideArc ?? null,
     evidenceCoverage: assessment.coverage,
+    ...(extra.formulaEvidence === undefined ? {} : { formulaEvidence: extra.formulaEvidence }),
   };
 }
 
@@ -298,7 +310,7 @@ export async function selectBestRideWithFunJudge(
     candidateKey(deterministicIndex),
     ...shortlist.indexes.filter((index) => index !== deterministicIndex).map(candidateKey),
   ];
-  const verdict = await input.judge.judge(request, fallbackRanking, input.signal);
+  const verdict = await input.judge.judge(request, fallbackRanking, input.signal, input.judgeOptions);
   const jevIndex = verdict.preferredKey === null
     ? null
     : shortlist.indexes.find((index) => candidateKey(index) === verdict.preferredKey) ?? null;
@@ -354,4 +366,39 @@ export async function selectBestRideWithFunJudge(
       addedTimePct: pickEvidence === null ? null : Number(pickEvidence.addedTimePct.toFixed(3)),
     },
   };
+}
+
+/**
+ * Defers shadow judging until the caller has built its response object. The
+ * timer keeps the model call off the response path; its fresh signal and
+ * four-second call options make a late result useful for the shared cache.
+ */
+export function scheduleFunJudgeShadow(
+  input: Omit<SelectFunJudgeInput, "mode" | "signal">,
+  onComplete: (selection: FunJudgeSelection) => void,
+): void {
+  setTimeout(() => {
+    const signal = new AbortController().signal;
+    const judgeOptions: FunJudgeCallOptions = {
+      ...input.judgeOptions,
+      deadlineMs: FUN_JUDGE_SHADOW_DEADLINE_MS,
+      transportTimeoutMs: FUN_JUDGE_SHADOW_DEADLINE_MS,
+    };
+    void selectBestRideWithFunJudge({
+      ...input,
+      mode: "shadow",
+      signal,
+      judgeOptions,
+    })
+      .then((selection) => {
+        try {
+          onComplete(selection);
+        } catch {
+          // Shadow telemetry must never become a planning failure.
+        }
+      })
+      .catch(() => {
+        // An injected judge may throw; shadow remains advisory and fail-open.
+      });
+  }, 0);
 }

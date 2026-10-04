@@ -29,6 +29,7 @@
 
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
+import type { GravelAtlasCorridor } from "@/application/roads/gravel-atlas";
 import { routeSimilarity } from "@/domain/route/diversity";
 import { selectNextFrontierProbe } from "./frontier-probe-allocation";
 import type { FrontierCandidate, FrontierPreferenceProfile } from "./frontier-routing";
@@ -36,7 +37,14 @@ import { FRONTIER_QUALITY_KEYS } from "./frontier-routing";
 import type { LibraryCorridorSource } from "./library-corridor-probes";
 import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from "./route-provider";
 
-export const FUN_GENERATOR_IDS = ["corridor-probe", "departure-rejoin", "missing-link", "prize-loop"] as const;
+export const FUN_GENERATOR_IDS = [
+  "gravel-prize",
+  "backroad-stitch",
+  "corridor-probe",
+  "departure-rejoin",
+  "missing-link",
+  "prize-loop",
+] as const;
 export type FunGeneratorId = (typeof FUN_GENERATOR_IDS)[number];
 
 export type FunGeneratorAllocation = "fixed" | "adaptive";
@@ -87,6 +95,8 @@ export interface FunGeneratorContext {
   readonly production: readonly ProductionRoute[];
   /** Caller-approved corridor library windows near this ride. */
   readonly sources: readonly LibraryCorridorSource[];
+  /** Optional atlas rows supplied to an atlas generator by the planner. */
+  readonly atlasCorridors?: readonly GravelAtlasCorridor[];
 }
 
 /**

@@ -1,7 +1,7 @@
 import type { ProviderRouteOptions } from "@/application/planner/route-provider";
 import type { GraphHopperCustomModelRule } from "./request-builder";
 
-const MAINTAINED = "surface == GRAVEL || surface == FINE_GRAVEL || surface == COMPACTED || surface == DIRT || surface == GROUND || (road_class == TRACK && (track_type == GRADE1 || track_type == GRADE2))";
+const MAINTAINED = "surface == UNPAVED || surface == GRAVEL || surface == FINE_GRAVEL || surface == COMPACTED || surface == DIRT || surface == GROUND || (road_class == TRACK && (track_type == GRADE1 || track_type == GRADE2))";
 const ROUGH = "track_type == GRADE3 || track_type == GRADE4 || track_type == GRADE5";
 
 /** Request multipliers preserve hard zeroes. No access or speed is unlocked. */
@@ -16,7 +16,17 @@ export function riderModeRules(
   const strength = Math.max(0, Math.min(4, options.riderModeFactor ?? 1));
   const target = options.targetUnpavedShare ?? (options.surfacePreference === "dirt-preferred" ? 0.5 : 0);
   if (target > 0 && options.bike?.maintainedGravel !== "avoid") {
-    rules.push({ if: `!(${MAINTAINED})`, multiply_by: String(Number((1 / (1 + 3 * target * strength)).toFixed(4))) });
+    const preferred = options.bike?.category === "dual-sport" && options.bike.roughTracks === "allow"
+      ? `${MAINTAINED} || (road_class == TRACK && (track_type == GRADE3 || track_type == GRADE4))`
+      : MAINTAINED;
+    rules.push({ if: `!(${preferred})`, multiply_by: String(Number((1 / (1 + 3 * target * strength)).toFixed(4))) });
+  }
+  if (target > 0 && options.bike?.maintainedGravel !== "avoid") {
+    const dirtPenalty = (condition: string, factor: number): void => {
+      rules.push({ if: condition, multiply_by: String(Number((factor ** (target * strength)).toFixed(4))) });
+    };
+    dirtPenalty("road_class == MOTORWAY || road_class == TRUNK || road_class == PRIMARY", 0.45);
+    dirtPenalty("road_class == SECONDARY && max_speed >= 80", 0.7);
   }
   if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient") {
     const penalty = (condition: string, factor: number): void => {

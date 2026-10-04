@@ -77,7 +77,11 @@ function sameRoadRun(
     left.roadEnvironment === right.roadEnvironment &&
     left.urbanDensity === right.urbanDensity &&
     left.curvatureRatio === right.curvatureRatio &&
-    left.toll === right.toll
+    left.toll === right.toll &&
+    left.trackType === right.trackType && left.smoothness === right.smoothness &&
+    left.maxSpeedKmh === right.maxSpeedKmh && left.maxSpeedEstimated === right.maxSpeedEstimated &&
+    left.roadClassLink === right.roadClassLink && left.roundabout === right.roundabout &&
+    left.carAccess === right.carAccess && left.roadAccess === right.roadAccess
   );
 }
 
@@ -136,6 +140,16 @@ export function summarizeRoadDetails(
   const toll = valuesPerStep(details["toll"], steps);
   const roadEnvironment = valuesPerStep(details["road_environment"], steps);
   const urbanDensity = valuesPerStep(details["urban_density"], steps);
+  const extraNames = ["track_type", "smoothness", "max_speed", "max_speed_estimated", "road_class_link", "roundabout", "car_access", "road_access"] as const;
+  const extra = Object.fromEntries(extraNames.map(name => [name, valuesPerStep(details[name], steps)]));
+  const booleanFact = (name: string, step: number): boolean | null => {
+    const value = extra[name]?.[step];
+    return typeof value === "boolean" ? value : null;
+  };
+  const textFact = (name: string, step: number): string | null => {
+    const value = extra[name]?.[step];
+    return value == null || value === "" ? null : String(value).toLowerCase();
+  };
   const timeMilliseconds = allocatedTimeMillisecondsPerStep(
     geometry,
     details["time"],
@@ -181,6 +195,11 @@ export function summarizeRoadDetails(
           ? null
           : Number(rawCurvature.toFixed(2)),
       toll: tollState(toll[step] ?? null),
+      trackType: textFact("track_type", step), smoothness: textFact("smoothness", step),
+      maxSpeedKmh: numeric(extra["max_speed"]?.[step] ?? null),
+      maxSpeedEstimated: booleanFact("max_speed_estimated", step),
+      roadClassLink: booleanFact("road_class_link", step), roundabout: booleanFact("roundabout", step),
+      carAccess: booleanFact("car_access", step), roadAccess: textFact("road_access", step),
     };
     const previousRoadRun = roadRuns.at(-1);
     if (previousRoadRun !== undefined && sameRoadRun(previousRoadRun, roadRun)) {

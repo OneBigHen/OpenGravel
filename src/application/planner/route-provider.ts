@@ -280,6 +280,14 @@ export interface ProviderRoadRun {
   readonly urbanDensity: string;
   readonly curvatureRatio: number | null;
   readonly toll: boolean | null;
+  readonly trackType?: string | null;
+  readonly smoothness?: string | null;
+  readonly maxSpeedKmh?: number | null;
+  readonly maxSpeedEstimated?: boolean | null;
+  readonly roadClassLink?: boolean | null;
+  readonly roundabout?: boolean | null;
+  readonly carAccess?: boolean | null;
+  readonly roadAccess?: string | null;
 }
 
 export const MAX_PROVIDER_ROAD_RUNS = 512;

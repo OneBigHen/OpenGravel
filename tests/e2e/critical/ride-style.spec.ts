@@ -73,7 +73,7 @@ test("road character, surface and tolls are one tap each and replan", async ({ p
   await expect(page.getByTestId("avoid-tolls")).toBeChecked();
   await page.getByTestId("avoid-tolls").uncheck();
   await expect(page.getByTestId("avoid-tolls")).not.toBeChecked();
-  await expect(page.getByTestId("ride-style-summary")).toHaveText("Curvy · New to me · Paved");
+  await expect(page.getByTestId("ride-style-summary")).toHaveText("Curvy · New to me · Paved · Avoid busy roads");
 
   // The replan the style change started still answers.
   await expect(routeCards(page).first()).toBeVisible();

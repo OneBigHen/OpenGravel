@@ -31,7 +31,10 @@ function evidence(key: string, overrides: Partial<FunJudgeCandidateEvidence> = {
 
 const REQUEST: FunJudgeRequest = {
   intent: { roadCharacter: "curvy", surfacePreference: "pavement", avoidHighways: true },
-  candidates: [evidence("secret_key_a"), evidence("secret_key_b", { curvature: 0.7, addedTimePct: 0.18 })],
+  candidates: [
+    evidence("secret_key_a", { formulaEvidence: { coreQuality: 0.73, busyShare: null } }),
+    evidence("secret_key_b", { curvature: 0.7, addedTimePct: 0.18 }),
+  ],
 };
 
 function apiAnswer(
@@ -67,7 +70,14 @@ describe("Jev FUN JUDGE adapter", () => {
       state: {
         intent: { roadCharacter: "curvy", surfacePreference: "pavement", avoidHighways: true },
         candidates: [
-          { slot: "A", durationMinutes: 61.2, distanceMiles: 45.7, curvature: 0.312, maneuversPer10Miles: 4.3 },
+          {
+            slot: "A",
+            durationMinutes: 61.2,
+            distanceMiles: 45.7,
+            curvature: 0.312,
+            maneuversPer10Miles: 4.3,
+            formulaEvidence: { busyShare: null, coreQuality: 0.73 },
+          },
           { slot: "B", curvature: 0.7, addedTimePct: 0.18 },
         ],
       },
@@ -147,5 +157,18 @@ describe("Jev FUN JUDGE adapter", () => {
     const pending = hanging!.rank(REQUEST, controller.signal);
     controller.abort();
     expect(await pending).toMatchObject({ status: "unavailable", reason: "aborted" });
+  });
+
+  it("honours a per-request timeout override while retaining the pinned model", async () => {
+    const hanging = jevFunJudgeFromEnv({ JEV_API_KEY: "apikey_test" }, {
+      fetcher: (_input, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+    });
+    const started = Date.now();
+    const answer = await hanging!.rank(REQUEST, new AbortController().signal, { timeoutMs: 10 });
+    expect(answer).toMatchObject({ status: "unavailable", reason: "timeout" });
+    expect(Date.now() - started).toBeLessThan(500);
   });
 });

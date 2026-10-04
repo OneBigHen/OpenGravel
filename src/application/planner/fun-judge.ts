@@ -26,6 +26,7 @@ import {
   type FunJudgePort,
   type FunJudgeRequest,
   type FunJudgeUnavailableReason,
+  isValidFunJudgeFormulaEvidence,
   projectFunJudgeEvidence,
 } from "./ports/fun-judge";
 
@@ -102,7 +103,111 @@ export interface FunJudge {
     request: FunJudgeRequest,
     fallbackRanking: readonly string[],
     signal: AbortSignal,
+    options?: FunJudgeCallOptions,
   ): Promise<FunJudgeVerdict>;
+}
+
+export interface FunJudgeCallOptions {
+  /** Caller wait budget; a timeout returns the deterministic fallback. */
+  readonly deadlineMs?: number;
+  /** Optional transport budget; omitted keeps the adapter's own default. */
+  readonly transportTimeoutMs?: number;
+}
+
+/** @deprecated Use FunJudgeCallOptions. */
+export type FunJudgeJudgeOptions = FunJudgeCallOptions;
+
+export const FUN_JUDGE_SHADOW_DEADLINE_MS = 4_000;
+
+export interface FunJudgeShadowLog {
+  readonly mode: "shadow";
+  readonly outcome: FunJudgeOutcome;
+  readonly source: FunJudgeVerdict["source"];
+  readonly candidateCount: number;
+  readonly calls: number;
+  readonly cached: boolean;
+  readonly latencyMs: number;
+  readonly confidence: number | null;
+  readonly margin: number | null;
+  readonly orderAgreement: boolean | null;
+  readonly model: string | null;
+  readonly unavailableReason?: FunJudgeUnavailableReason;
+}
+
+export function funJudgeShadowLog(
+  verdict: FunJudgeVerdict,
+  candidateCount: number,
+): FunJudgeShadowLog {
+  return {
+    mode: "shadow",
+    outcome: verdict.outcome,
+    source: verdict.source,
+    candidateCount,
+    calls: verdict.calls,
+    cached: verdict.cached,
+    latencyMs: Math.round(verdict.latencyMs),
+    confidence: verdict.confidence,
+    margin: verdict.margin,
+    orderAgreement: verdict.orderAgreement,
+    model: verdict.model,
+    ...(verdict.unavailableReason === undefined ? {} : { unavailableReason: verdict.unavailableReason }),
+  };
+}
+
+export interface FunJudgeShadowOptions {
+  readonly signal?: AbortSignal;
+  readonly onComplete?: (log: FunJudgeShadowLog) => void;
+}
+
+/**
+ * Starts the advisory judge after the response is ready. The returned promise
+ * is intentionally detached from response selection; callers may retain it in
+ * tests, while production callers can simply schedule it and return.
+ */
+export function runFunJudgeShadow(
+  judge: FunJudge,
+  request: FunJudgeRequest,
+  fallbackRanking: readonly string[],
+  options: FunJudgeShadowOptions = {},
+): Promise<FunJudgeShadowLog> {
+  const signal = options.signal ?? new AbortController().signal;
+  const notify = (log: FunJudgeShadowLog): void => {
+    try {
+      options.onComplete?.(log);
+    } catch {
+      // Shadow telemetry must never become a planning failure.
+    }
+  };
+  return judge
+    .judge(request, fallbackRanking, signal, {
+      deadlineMs: FUN_JUDGE_SHADOW_DEADLINE_MS,
+      transportTimeoutMs: FUN_JUDGE_SHADOW_DEADLINE_MS,
+    })
+    .then((verdict) => {
+      const log = funJudgeShadowLog(verdict, request.candidates.length);
+      notify(log);
+      return log;
+    })
+    .catch(() => {
+      // The existing public taxonomy has no additional shadow failure state.
+      // A throwing injected judge therefore remains advisory and silent.
+      const log: FunJudgeShadowLog = {
+        mode: "shadow",
+        outcome: "unavailable",
+        source: "fallback",
+        candidateCount: request.candidates.length,
+        calls: 0,
+        cached: false,
+        latencyMs: 0,
+        confidence: null,
+        margin: null,
+        orderAgreement: null,
+        model: null,
+        unavailableReason: "transport-error",
+      };
+      notify(log);
+      return log;
+    });
 }
 
 /** One order's answer re-keyed by evidence fingerprint. */
@@ -153,9 +258,16 @@ export function createFunJudge(
   }
 
   return {
-    async judge(request, fallbackRanking, signal) {
+    async judge(request, fallbackRanking, signal, judgeOptions = {}) {
       const start = now();
       const elapsed = () => Math.max(0, now() - start);
+      const deadlineMs = Number.isFinite(judgeOptions.deadlineMs) && (judgeOptions.deadlineMs ?? 0) > 0
+        ? judgeOptions.deadlineMs!
+        : policy.deadlineMs;
+      const transportTimeoutMs = Number.isFinite(judgeOptions.transportTimeoutMs) &&
+        (judgeOptions.transportTimeoutMs ?? 0) > 0
+        ? Math.max(1, Math.ceil(judgeOptions.transportTimeoutMs!))
+        : undefined;
       const fallback = (
         outcome: Exclude<FunJudgeOutcome, "preferred">,
         extra: Partial<FunJudgeVerdict> = {},
@@ -205,7 +317,11 @@ export function createFunJudge(
         pending = Promise.all(
           orders.map((candidates) =>
             port
-              .rank({ intent: request.intent, candidates }, AbortSignal.timeout(MINUTE_MS))
+              .rank(
+                { intent: request.intent, candidates },
+                AbortSignal.timeout(MINUTE_MS),
+                transportTimeoutMs === undefined ? undefined : { timeoutMs: transportTimeoutMs },
+              )
               .then(
                 (answer) => rekey(answer, candidates, fingerprints, request.candidates),
                 (): OrderResult => ({ status: "unavailable", reason: "transport-error" }),
@@ -227,7 +343,7 @@ export function createFunJudge(
       const results = await Promise.race<readonly OrderResult[] | "timeout" | "aborted">([
         pending,
         new Promise<"timeout">((resolve) => {
-          timer = setTimeout(() => resolve("timeout"), policy.deadlineMs);
+          timer = setTimeout(() => resolve("timeout"), deadlineMs);
         }),
         new Promise<"aborted">((resolve) => {
           onAbort = () => resolve("aborted");
@@ -375,6 +491,7 @@ function isValidEvidence(candidate: FunJudgeCandidateEvidence): boolean {
     finiteNonNegative(candidate.addedTimePct) &&
     UNIT_KEYS.every((key) => unitOrNull(candidate[key])) &&
     (candidate.maneuversPer10Miles === null || finiteNonNegative(candidate.maneuversPer10Miles)) &&
+    isValidFunJudgeFormulaEvidence(candidate.formulaEvidence) &&
     unitOrNull(candidate.evidenceCoverage) && candidate.evidenceCoverage !== null &&
     (candidate.rideArc === null ||
       (unitOrNull(candidate.rideArc.escapeShare) &&

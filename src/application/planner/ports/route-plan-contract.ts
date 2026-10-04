@@ -157,6 +157,21 @@ export interface RoutePlanFunJudgeWire {
 
 /** Server-side diagnostics for one attempt (23 §2, §16). */
 export interface RoutePlanDiagnosticsWire {
+  readonly atlas?: { readonly available: boolean; readonly considered: number; readonly calls: number; readonly probes: readonly { readonly corridors: readonly string[]; readonly status: string; readonly note: string; readonly adherence: number | null; readonly minutes: number | null; readonly unpavedShare: number | null }[] };
+  /** Present when `OGV_RIDE_FORMULA` is shadow or on: the formula's reading of every kept candidate. */
+  readonly rideFormula?: {
+    readonly mode: "shadow" | "on";
+    readonly version: string;
+    /** Index (into the bundle's candidates) of the formula's own best in-budget pick; null when none qualified. */
+    readonly pickIndex: number | null;
+    readonly rows: readonly {
+      readonly index: number;
+      readonly value: number;
+      readonly confidence: number;
+      readonly eligible: boolean;
+      readonly variables: Readonly<Record<string, number | null>>;
+    }[];
+  };
   readonly riderModes?: {
     readonly calls: number;
     readonly trials: readonly { readonly factor: number; readonly unpavedShare: number; readonly busyShare: number | null; readonly minutes: number }[];
