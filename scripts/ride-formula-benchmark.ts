@@ -224,6 +224,7 @@ async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formu
     OGV_FUN_GENERATORS_CALLS: "3",
     OGV_FUN_GENERATORS_DEADLINE_MS: "20000",
     OGV_ATLAS_CALLS: process.env["OGV_ATLAS_CALLS"] ?? "3",
+    ...(process.env["OGV_DIRT_SWEEP_CALLS"] === undefined ? {} : { OGV_DIRT_SWEEP_CALLS: process.env["OGV_DIRT_SWEEP_CALLS"] }),
   };
   const started = performance.now();
   const result = await planRide(

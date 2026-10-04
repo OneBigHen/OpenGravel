@@ -59,3 +59,38 @@ it("screens hard constraints before using a trial to steer the interval", async 
   const result = await searchRiderEnvelope({ request, candidates: [candidate(600, 0.1)], provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: true }), candidates: async r => ({ candidates: [r.options.riderModeFactor === 0 ? candidate(600, 0.1) : candidate(600, 0.9)] }) }, screen: next => (riderEnvelopeMetrics(next)?.unpavedShare ?? 0) < 0.5, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
   expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(100);
 });
+
+describe("dirt sweep", () => {
+  const provider = (answer: (factor: number) => ProviderCandidate[]) => ({ id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates: answer(r.options.riderModeFactor ?? 1) })) });
+  it("fires every strength at once and finds a step bisection skipped", async () => {
+    // Lock Haven -> Slate Run, live 2026-10-04: no dirt below 1.25, then 126 min
+    // with 28% as an alternative; 2 and up only give the slower 133-min line.
+    const fast = candidate(91 * 60, 0);
+    const p = provider(f => f < 1.25 ? [fast] : f < 2 ? [fast, candidate(126 * 60, 0.28)] : [candidate(133 * 60, 0.29)]);
+    const result = await searchRiderEnvelope({ request, candidates: [fast], provider: p, maxCalls: 3, sweepCalls: 7, deadlineMs: 1000, signal: new AbortController().signal });
+    expect(p.candidates).toHaveBeenCalledTimes(7);
+    expect(result.calls).toBe(7);
+    expect(result.candidate?.durationSeconds).toBe(126 * 60);
+    expect(result.candidate?.providerMetadata?.["riderModeFactor"]).toBe(1.25);
+  });
+  it("asks for alternatives on every strength but the baseline", async () => {
+    const p = provider(() => [candidate(600, 0)]);
+    await searchRiderEnvelope({ request, candidates: [candidate(600, 0)], provider: p, maxCalls: 3, sweepCalls: 4, deadlineMs: 1000, signal: new AbortController().signal });
+    const asked = p.candidates.mock.calls.map(([r]) => [r.options.riderModeFactor, r.options.includeAlternatives]);
+    expect(asked).toEqual([[0, false], [2, true], [1.25, true], [3, true]]);
+  });
+  it("keeps the pool when some strengths fail", async () => {
+    const p = { ...provider(() => []), candidates: vi.fn(async (r: ProviderRouteRequest) => {
+      if (r.options.riderModeFactor === 2) throw Error("timeout");
+      return { candidates: [r.options.riderModeFactor === 0 ? candidate(600, 0) : candidate(700, 0.3)] };
+    }) };
+    const result = await searchRiderEnvelope({ request, candidates: [candidate(620, 0)], provider: p, maxCalls: 3, sweepCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+    expect(result.candidate?.durationSeconds).toBe(700);
+  });
+  it("verifies one copy of a line several strengths returned", async () => {
+    const verify = vi.fn(async (proposed: readonly ProviderCandidate[]) => proposed);
+    await searchRiderEnvelope({ request, candidates: [candidate(600, 0)], provider: provider(f => [f === 0 ? candidate(600, 0) : candidate(700, 0.3)]), verify, maxCalls: 3, sweepCalls: 5, deadlineMs: 1000, signal: new AbortController().signal });
+    // The baseline repeats the pipeline's own line and four strengths share one dirt line.
+    expect(verify.mock.calls[0]![0]).toHaveLength(1);
+  });
+});
