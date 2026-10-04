@@ -38,6 +38,9 @@ import { isRouteInstruction, isSpeedLimitSpans, MAX_ROUTE_INSTRUCTIONS } from "@
 /** The provider id recorded for this transport (diagnostics only). */
 export const API_PROVIDER_ID = "api";
 
+/** The longest a plan request may stay open before it is treated as lost. */
+export const PLAN_REQUEST_CEILING_MS = 90_000;
+
 /** OpenGravel copy for a transport failure; never the fetch error's own text. */
 const UNREACHABLE_MESSAGE = "The route planner could not be reached.";
 const UNREADABLE_MESSAGE = "The route planner returned an unreadable response.";
@@ -195,17 +198,30 @@ export function createApiRouteProvider(
       }
 
       let response: Response;
+      // A request iOS froze while Safari was in the background never settles;
+      // without a ceiling the planner stayed "on its way" with the map dimmed
+      // (owner, 2026-10-04). The server's stages are bounded well inside this.
+      const ceiling = new AbortController();
+      const ceilingTimer = setTimeout(() => ceiling.abort(), PLAN_REQUEST_CEILING_MS);
+      const onCallerAbort = (): void => ceiling.abort();
+      if (signal.aborted) ceiling.abort();
+      else signal.addEventListener("abort", onCallerAbort, { once: true });
+      const settle = (): void => {
+        clearTimeout(ceilingTimer);
+        signal.removeEventListener("abort", onCallerAbort);
+      };
       try {
         response = await fetcher(path, {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ identity, request }),
-          signal,
+          signal: ceiling.signal,
         });
       } catch {
         // The caller owns cancellation: its reason travels unchanged, exactly as
         // the routing port's contract requires (OGV-D-152/OGV-D-164). The
         // transport's own error text is dropped, never forwarded.
+        settle();
         if (signal.aborted) throw signal.reason;
         throw new ApiRouteProviderError(UNREACHABLE_MESSAGE, "provider-unavailable", {
           recoverable: true,
@@ -214,14 +230,18 @@ export function createApiRouteProvider(
 
       let body: unknown;
       try {
+        // The ceiling covers the body too: a frozen stream is as lost as a frozen request.
         body = await response.json();
       } catch {
+        settle();
+        if (signal.aborted) throw signal.reason;
         throw new ApiRouteProviderError(UNREADABLE_MESSAGE, "provider-unavailable", {
           recoverable: true,
           httpStatus: response.status,
         });
       }
 
+      settle();
       if (!response.ok) throw errorFromBody(body, response.status);
       if (isRoutePlanErrorBody(body as RoutePlanResponseBody)) {
         // A 2xx carrying an error object is a broken deployment, not an answer.

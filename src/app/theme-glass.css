@@ -2633,3 +2633,58 @@ html .og-ride {
     flex: 1 1 100%;
   }
 }
+
+/* The first screen is "From / Where to?" and nothing else: no Undo/Redo row
+   (owner 2026-10-04). Right after a clear, "Undo clear" still offers itself. */
+.og-planner__sheet[data-idle="true"] .og-history { display: none; }
+.og-planner__sheet[data-idle="true"] .og-sheet__undo-clear { justify-self: start; margin-bottom: 4px; }
+
+/* ── Tab bar: real frosted glass, and out of the way while the map moves ── */
+:root {
+  --og-tabbar-glass: rgb(16 22 20 / 58%);
+}
+:root[data-theme="day"] {
+  --og-tabbar-glass: rgb(255 255 255 / 64%);
+}
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-planner__nav-shell,
+  .og-planner__header .og-planner__nav-shell,
+  .og-library__header > .og-planner__nav-shell {
+    background: var(--og-tabbar-glass);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    transition: transform 220ms ease, opacity 180ms ease;
+  }
+  .og-planner__dock { transition: transform 220ms ease; }
+
+  html[data-chrome="away"] .og-planner .og-planner__nav-shell {
+    transform: translateY(calc(100% + var(--og-tabbar-gap) + 12px));
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* The sheet drops into the space the bar left, down to the home indicator. */
+  html[data-chrome="away"] .og-planner__dock {
+    transform: translateY(calc(var(--og-tabbar-h) - var(--og-safe-bottom, 0px) - 2px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .og-planner__nav-shell,
+  .og-planner__dock { transition: none !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root, :root[data-theme="day"] { --og-tabbar-glass: var(--og-glass-dense); }
+}
+
+/* Places: always say what the button is. A bare dot in a disc puzzled new
+   riders (owner 2026-10-04); the word costs ~50 px on a 390 px phone. */
+.og-places-overlay--planner .og-places-control__label.og-places-control__label {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--og-ink);
+}
+.og-places-overlay--planner .og-places-control__toggle { gap: 6px; }

@@ -766,10 +766,13 @@ function disabledReasonFor(
   phase: PlanningSessionSnapshot["phase"],
   endpoints: SketchEndpoints | null,
 ): string | null {
-  if (isPlanningInFlight(phase)) return DISABLED_IN_FLIGHT;
+  // A ride with nothing to plan says what is missing, even while an older
+  // attempt is still settling: "on its way" over an empty form read as stuck
+  // (owner review 2026-10-04).
   const target = nextPlacementTarget(document, endpoints);
   if (target === "start") return DISABLED_MISSING_START;
   if (target === "finish") return DISABLED_MISSING_FINISH;
+  if (isPlanningInFlight(phase)) return DISABLED_IN_FLIGHT;
   return null;
 }
 
