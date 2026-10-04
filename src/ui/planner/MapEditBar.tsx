@@ -180,6 +180,15 @@ function readCoarsePointer(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(COARSE_POINTER).matches;
 }
 
+export interface PlannerMapEditBarProps {
+  readonly scene: MapScene;
+  readonly activeTool: PointerTool;
+  readonly placementTool: PlacementTool;
+  readonly sketch: Omit<SketchPanelProps, "drawing" | "committed" | "hasAuthoredEndpoints">;
+  readonly onAddStop: () => void;
+  readonly onCancelPlacement: () => void;
+}
+
 /** The bar wired to the planner's own state: the workspace passes what it has. */
 export function PlannerMapEditBar({
   scene,
@@ -188,14 +197,7 @@ export function PlannerMapEditBar({
   sketch,
   onAddStop,
   onCancelPlacement,
-}: {
-  readonly scene: MapScene;
-  readonly activeTool: PointerTool;
-  readonly placementTool: PlacementTool;
-  readonly sketch: Omit<SketchPanelProps, "drawing" | "committed" | "hasAuthoredEndpoints">;
-  readonly onAddStop: () => void;
-  readonly onCancelPlacement: () => void;
-}) {
+}: PlannerMapEditBarProps) {
   // A touch screen grabs the route line by a hold, so the tip says so.
   const touch = useSyncExternalStore(subscribeCoarsePointer, readCoarsePointer, () => false);
   return (

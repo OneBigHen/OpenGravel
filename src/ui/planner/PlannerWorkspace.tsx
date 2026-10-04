@@ -123,7 +123,6 @@ import {
   type PlannerUiStore,
 } from "@/ui/stores/planner-ui-store";
 import type { AvoidAreaId } from "@/domain/ride/ids";
-import { PlannerMapEditBar } from "@/ui/planner/MapEditBar";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 export interface PlannerWorkspaceProps {
@@ -784,7 +783,7 @@ export function PlannerWorkspace({
       layers={preparationProviders?.mapLayers && { source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
-      editBar={<PlannerMapEditBar scene={scene} activeTool={activeTool} placementTool={placementTool} sketch={sketchPanelProps} onAddStop={stopsPanelProps.onAddStop} onCancelPlacement={() => plannerUiStore.getState().cancelPlacement()} />}
+      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene,
         onIntent: handleIntent,

@@ -15,6 +15,7 @@ import { PlannerMap, TOOL_HINTS } from "@/ui/map/PlannerMap";
 import type { MapLayersProps } from "@/ui/layers/LayeredMap";
 import { PlannerPlacesMap, type PlannerPlacesProps } from "@/ui/places/PlannerPlacesMap";
 import { PrimaryNav } from "@/ui/nav/PrimaryNav";
+import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import type { PlannerLocateMe } from "@/ui/planner/usePlannerPlaces";
 import { useRouteScrub } from "@/ui/stores/route-scrub-store";
 
@@ -37,7 +38,7 @@ export interface PlannerWorkspaceFrameProps {
   /** "Center on me", when the surface can locate the rider. */
   readonly locateMe?: PlannerLocateMe | undefined;
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
-  readonly editBar?: ReactNode;
+  readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly children: ReactNode;
 }
 
@@ -100,7 +101,7 @@ export function PlannerWorkspaceFrame({
       <div className="og-planner__body">
         <div className="og-planner__map-slot" ref={mapSlotRef}>
           <PlannerPlacesMap {...map} scene={scene} hint={hint} places={places} layers={layers} />
-          {editBar}
+          {editBar === undefined ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
             <span className="og-map__retrying" data-testid="map-retry-chip" role="status">
               Retrying the map…
