@@ -83,7 +83,7 @@ describe("surface preference", () => {
     expect(request.options.surfacePreference).toBe("pavement");
   });
 
-  it("becomes a GraphHopper priority rule for pavement and mostly-pavement only", () => {
+  it("shapes paved and dirt envelopes while mixed stays neutral", () => {
     const base = {
       requestId: "r",
       origin: START,
@@ -104,7 +104,7 @@ describe("surface preference", () => {
     expect(bodyFor("pavement").custom_model?.priority).toContainEqual({ if: UNPAVED_SURFACE_CONDITION, multiply_by: "0.05" });
     expect(bodyFor("mostly-pavement").custom_model?.priority).toContainEqual({ if: UNPAVED_SURFACE_CONDITION, multiply_by: "0.4" });
     expect(bodyFor("mixed").custom_model).toBeUndefined();
-    expect(bodyFor("dirt-preferred").custom_model).toBeUndefined();
+    expect(bodyFor("dirt-preferred").custom_model?.priority).toContainEqual(expect.objectContaining({ multiply_by: "0.4" }));
   });
 
   it("dirt-preferred selects the adventure model", async () => {

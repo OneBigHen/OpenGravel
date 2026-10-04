@@ -1,3 +1,6 @@
+import { searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
+import { riderTrafficSampler } from "./rider-traffic";
 /**
  * The server-side route-plan service (23-API-CONTRACTS §2–§3, §14;
  * 17-IMPLEMENTATION-PLAN Task 2.4a, goal: "server builds the provider request
@@ -302,9 +305,8 @@ function pipelineIntentFromRequest(request: ProviderRouteRequest): PipelineInten
     shape: closesLoop ? "loop" : "destination",
     // The request carries rider-facing scoring context because provider profiles
     // cannot reconstruct road character or personal familiarity.
-    // `surface` is inferable in exactly one direction: the adventure profile is
-    // reachable only through the surface override, so seeing it proves the rider
-    // prefers non-paved and the surface-targeted lane is offered (OGV-D-209).
+    // Legacy adventure requests infer dirt (OGV-D-209). A dual-sport profile
+    // without explicit surface is ambiguous and retains the mixed default.
     // A client that sends its surface preference is believed (OGV-D-262);
     // an older one is still inferred from the adventure profile.
     // A client that sends its road character is believed too (OGV-D-263).
@@ -314,7 +316,7 @@ function pipelineIntentFromRequest(request: ProviderRouteRequest): PipelineInten
     noveltyPreference: request.options.noveltyPreference ?? "balanced",
     ...(request.options.surfacePreference !== undefined
       ? { surface: { preference: request.options.surfacePreference } }
-      : profileImpliesNonPavedSurface(request.profile)
+      : profileImpliesNonPavedSurface(request.profile, request.options.bike?.category)
         ? { surface: { preference: "dirt-preferred" as const } }
         : {}),
   };
@@ -530,14 +532,15 @@ export function graphHopperProviderFromEnv(
   const baseUrl = graphHopperUrlFromEnv(env);
   const apiKey = env["GRAPHHOPPER_API_KEY"]?.trim() ?? "";
   const budget = Number(env["GRAPHHOPPER_HOSTED_DAILY_BUDGET"] ?? DEFAULT_HOSTED_DAILY_BUDGET);
-  const cacheKey = `${baseUrl}|${apiKey}|${budget}`;
+  const riderModesEnabled = env["OGV_RIDER_MODES"] !== "off";
+  const cacheKey = `${baseUrl}|${apiKey}|${budget}|${riderModesEnabled}`;
   if (sharedProvider?.key === cacheKey) return sharedProvider.provider;
-  const primary = createGraphHopperProvider({ baseUrl });
+  const primary = createGraphHopperProvider({ baseUrl, riderModesEnabled });
   const provider = apiKey.length === 0
     ? primary
     : createFallbackRouteProvider({
         primary,
-        hosted: createGraphHopperProvider({ baseUrl: HOSTED_GRAPHHOPPER_URL, hosted: { apiKey } }),
+        hosted: createGraphHopperProvider({ baseUrl: HOSTED_GRAPHHOPPER_URL, hosted: { apiKey }, riderModesEnabled }),
         coverage: engineCoverage({ baseUrl }),
         dailyBudget: Number.isFinite(budget) && budget >= 0 ? budget : DEFAULT_HOSTED_DAILY_BUDGET,
       });
@@ -691,6 +694,11 @@ function environmentCharacterClassifier(
   return environmentClassifier.classifier;
 }
 
+/** Two lines are the same route when every coordinate matches (the pipeline copies geometry). */
+function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
+  return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
+}
+
 /** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
 let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
 function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
@@ -744,7 +752,7 @@ export async function planRide(
   if (!parsed.ok) return { ok: false, error: validationFailure(parsed.issues) };
 
   const versions = deps.versions ?? DEFAULT_PLAN_VERSIONS;
-  const provider = deps.provider ?? graphHopperProviderFromEnv();
+  const provider = deps.provider ?? graphHopperProviderFromEnv(deps.env ?? process.env);
   const knownRoads = deps.knownRoads ?? knownRoadsFromEnv(deps.env ?? process.env);
   const signal = deps.signal ?? new AbortController().signal;
   const fixture =
@@ -768,6 +776,14 @@ export async function planRide(
   if (!source.ok) return { ok: false, error: source.error };
   let candidates = source.candidates;
   let laneDiagnostics = source.lanes;
+  const riderEnv = deps.env ?? process.env;
+  const riderEnabled = riderEnv["OGV_RIDER_MODES"] !== "off" && fixture === null;
+  const configuredFunSettings = deps.funGenerators ?? funGeneratorSettingsFromEnv(riderEnv);
+  const riderBudget = configuredFunSettings.budget;
+  let riderCalls = 0;
+  let riderFactor: number | undefined;
+  let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
+
 
   // Lane A (ROUTE-INTELLIGENCE-PROVIDER-MESH §6): closures and legal access,
   // fetched once per plan for the candidates' corridor inside a strict
@@ -776,11 +792,11 @@ export async function planRide(
   const roadAuthority = deps.roadAuthority === undefined
     ? roadAuthorityFromEnv(deps.env ?? process.env)
     : deps.roadAuthority;
-  const assessRoads = async (from: readonly ProviderCandidate[]): Promise<RoadAuthorityAssessment | null> => {
+  const assessRoads = async (from: readonly ProviderCandidate[], runSignal: AbortSignal = signal): Promise<RoadAuthorityAssessment | null> => {
     if (roadAuthority === null || roadAuthority.sources.length === 0) return null;
     const points = from.flatMap((candidate) => candidate.geometry);
     if (points.length === 0) return null;
-    return roadAuthority.assess(padBox(boundingBoxOf(points), 500), signal);
+    return roadAuthority.assess(padBox(boundingBoxOf(points), 500), runSignal);
   };
   let roads = await assessRoads(candidates);
   const verdicts = new WeakMap<ProviderCandidate, RoadAuthorityVerdict>();
@@ -844,7 +860,51 @@ export async function planRide(
         }),
   });
   let pipeline = rank(candidates);
-  if (source.fastFirst === true && pipeline.candidates.length < 2) {
+  let riderKneeSelected = false;
+  // A rider-mode route leads the plan as Best Ride, but the rider keeps the
+  // other choices (Fastest, alternatives) to compare it against.
+  const preferBestRide = (
+    preferred: ProviderCandidate,
+    others: readonly ProviderCandidate[],
+    verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
+  ): typeof pipeline | null => {
+    const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
+    const index = merged.candidates.findIndex((candidate) => sameLine(candidate.geometry, preferred.geometry));
+    if (index < 0) {
+      // Diversity folded it into a near-duplicate: offer it alone, as before.
+      const alone = rank([preferred], verdictFor);
+      return alone.candidates.length > 0 ? alone : null;
+    }
+    const roles = Object.fromEntries(
+      Object.entries(merged.roles).map(([role, at]) => [role, role !== "fastest" && at === index ? null : at]),
+    ) as typeof merged.roles;
+    return { ...merged, roles: { ...roles, "best-ride": index }, selectedIndex: index };
+  };
+  if (riderEnabled && pipeline.candidates.length > 0) {
+    const result = await searchRiderEnvelope({
+      request: parsed.value.request,
+      baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
+      candidates: candidates.filter(candidate => rank([candidate]).candidates.length > 0),
+      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return proposed.filter(candidate => rank([candidate], value => own?.evaluate(value.geometry) ?? null).candidates.length > 0);
+      },
+    });
+    riderCalls = result.calls;
+    riderTrials = result.trials;
+    if (result.candidate !== null) {
+      const selected = preferBestRide(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
+      if (selected !== null) {
+        candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
+        const factor = result.candidate.providerMetadata?.["riderModeFactor"];
+        riderFactor = typeof factor === "number" ? factor : undefined;
+      }
+    }
+  }
+  if (!riderKneeSelected && source.fastFirst === true && pipeline.candidates.length < 2) {
     // The profiles converged on one ride: ask the engine for alternatives to
     // the rider's own character, and rank everything together.
     const more = await candidateSource({
@@ -866,7 +926,7 @@ export async function planRide(
   }
   // The fun-route generator family (routing research Phase 7). Off by default;
   // in shadow it runs after the answer and cannot touch the bundle.
-  const funSettings = deps.funGenerators ?? funGeneratorSettingsFromEnv(deps.env ?? process.env);
+  const funSettings = { ...configuredFunSettings, budget: { ...configuredFunSettings.budget, maxProviderCalls: Math.max(0, configuredFunSettings.budget.maxProviderCalls - riderCalls) } };
   if (funSettings.mode !== "off" && fixture === null && pipeline.candidates.length > 0) {
     const report = (mode: FunGeneratorMode) => (result: FunGeneratorReport): void => {
       if (deps.onFunGeneratorReport !== undefined) deps.onFunGeneratorReport(result, mode);
@@ -928,6 +988,18 @@ export async function planRide(
       } catch {
         // A cancelled or failed family leaves the production answer untouched.
       }
+    }
+  }
+
+  if (riderEnabled && riderEnv["OGV_TRAFFIC_LIVE_AVOID"] !== "off" && pipeline.candidates.length > 0) {
+    const index = pipeline.roles["best-ride"] ?? 0;
+    const chosen = pipeline.candidates[index]!;
+    const refined = await refineRiderTraffic({ request: { ...parsed.value.request, profile: chosen.provider.profile, options: { ...parsed.value.request.options, riderModeFactor: riderFactor } }, candidate: { ...chosen, providerId: chosen.provider.providerId, profile: chosen.provider.profile }, provider, sample: riderTrafficSampler(riderEnv), signal });
+    if (refined !== null) {
+      const ownRoads = await assessRoads([refined]);
+      const others = pipeline.candidates.filter((_, at) => at !== index).map((kept) => candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry))).filter((candidate): candidate is ProviderCandidate => candidate !== undefined);
+      const refinedPipeline = preferBestRide(refined, others, candidate => candidate === refined ? ownRoads?.evaluate(candidate.geometry) ?? null : roadVerdict(candidate));
+      if (refinedPipeline !== null) pipeline = refinedPipeline;
     }
   }
 
@@ -1048,6 +1120,7 @@ export async function planRide(
     bundle,
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
+      ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
       ...(funJudge === undefined ? {} : { funJudge }),
     },

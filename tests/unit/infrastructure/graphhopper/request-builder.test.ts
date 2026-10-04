@@ -490,8 +490,8 @@ describe("GraphHopper request builder", () => {
       [-76.3055, 40.0379],
     ]);
     expect(body.custom_model?.priority).toEqual([
-      { if: "in_opengravel_span_0", multiply_by: "1.8" },
-      { if: "in_opengravel_span_1", multiply_by: "1.6" },
+      { if: "!in_opengravel_span_0", multiply_by: "0.5556" },
+      { if: "!in_opengravel_span_1", multiply_by: "0.625" },
     ]);
     expect(body.custom_model?.areas?.features.map((feature) => feature.id)).toEqual([
       "opengravel_span_0",

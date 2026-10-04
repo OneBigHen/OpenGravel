@@ -18,7 +18,7 @@
 import { useId, useState } from "react";
 
 import type { ArrivalTarget } from "@/application/planner/arrive-by";
-import type { BikeConstraintSnapshot, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent } from "@/domain/ride/types";
+import type { BikeConstraintSnapshot, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -31,6 +31,7 @@ export interface RideStyleView {
   readonly roadCharacter: RoadCharacterIntent;
   readonly noveltyPreference: NoveltyPreference;
   readonly surface: SurfaceChoice;
+  readonly traffic: TrafficPreference;
   readonly avoidHighways: boolean;
   readonly avoidTolls: boolean;
 }
@@ -41,6 +42,7 @@ export interface RideStyleActions {
   readonly setLoopMinutes: (minutes: number) => void;
   readonly setRoadCharacter: (character: RoadCharacterIntent) => void;
   readonly setNoveltyPreference: (preference: NoveltyPreference) => void;
+  readonly setTraffic: (traffic: TrafficPreference) => void;
   readonly setSurface: (surface: SurfaceChoice) => void;
   readonly setAvoidHighways: (avoid: boolean) => void;
   readonly setAvoidTolls: (avoid: boolean) => void;
@@ -74,6 +76,11 @@ export const SURFACE_LABELS: Readonly<Record<SurfaceChoice, string>> = {
   "dirt-preferred": "Dirt OK",
 };
 
+export const TRAFFIC_LABELS: Readonly<Record<TrafficPreference, string>> = {
+  "protect-ride": "Avoid busy roads",
+  "minimize-delay": "Fastest",
+};
+
 export const NOVELTY_LABELS: Readonly<Record<NoveltyPreference, string>> = {
   "prefer-new-to-me": "New to me",
   balanced: "Balanced",
@@ -98,6 +105,7 @@ export function rideStyleSummary(view: RideStyleView): string {
     ROAD_CHARACTER_LABELS[view.roadCharacter],
     ...(view.noveltyPreference === "balanced" ? [] : [NOVELTY_LABELS[view.noveltyPreference]]),
     SURFACE_LABELS[view.surface],
+    TRAFFIC_LABELS[view.traffic],
     ...(view.avoidHighways ? ["No highways"] : []),
     ...(view.avoidTolls ? ["No tolls"] : []),
   ].join(" · ");
@@ -203,6 +211,7 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
   const characterName = useId();
   const noveltyName = useId();
   const surfaceName = useId();
+  const trafficName = useId();
   const { view, actions } = model;
   return (
     <section className="og-style" aria-label="Ride style" data-testid="ride-style">
@@ -254,6 +263,15 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
           labelFor={(surface) => SURFACE_LABELS[surface]}
           onChange={actions.setSurface}
           testId="surface-preference"
+        />
+        <ChipGroup<TrafficPreference>
+          name={trafficName}
+          legend="Traffic"
+          options={["protect-ride", "minimize-delay"]}
+          value={view.traffic}
+          labelFor={(traffic) => TRAFFIC_LABELS[traffic]}
+          onChange={actions.setTraffic}
+          testId="traffic-preference"
         />
         <div className="og-style__switches">
           <label className="og-style__switch">

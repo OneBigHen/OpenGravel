@@ -633,6 +633,20 @@ function requestOptionsIssues(value: unknown, issues: ValidationIssue[]): void {
       issue("invalid-value", "request.options.vehicle", 'must be "motorcycle"'),
     );
   }
+  for (const key of ["departureNow"] as const) {
+    if (value[key] !== undefined && typeof value[key] !== "boolean") issues.push(issue("invalid-value", `request.options.${key}`, "must be boolean"));
+  }
+  if (value["traffic"] !== undefined && !["protect-ride", "minimize-delay"].includes(String(value["traffic"]))) {
+    issues.push(issue("invalid-value", "request.options.traffic", "invalid traffic preference"));
+  }
+  const target = value["targetUnpavedShare"];
+  if (target !== undefined && (typeof target !== "number" || !Number.isFinite(target) || target < 0 || target > 1)) {
+    issues.push(issue("invalid-value", "request.options.targetUnpavedShare", "must be between zero and one"));
+  }
+  const bike = value["bike"];
+  if (bike !== undefined && (!isPlainObject(bike) || !["street", "touring", "adventure", "dual-sport"].includes(String(bike["category"])) || !["allow", "avoid"].includes(String(bike["maintainedGravel"])) || !["allow", "avoid"].includes(String(bike["roughTracks"])))) {
+    issues.push(issue("invalid-value", "request.options.bike", "invalid bike constraints"));
+  }
   const surfacePreference = value["surfacePreference"];
   if (surfacePreference !== undefined && !SURFACE_PREFERENCES.has(String(surfacePreference))) {
     issues.push(
@@ -853,6 +867,10 @@ export function parseRoutePlanRequestBody(
               "noveltyPreference"
             ] as NonNullable<ProviderRouteRequest["options"]["noveltyPreference"]>,
           }),
+      ...(optionsSource["traffic"] === undefined ? {} : { traffic: optionsSource["traffic"] as ProviderRouteRequest["options"]["traffic"] }),
+      ...(optionsSource["targetUnpavedShare"] === undefined ? {} : { targetUnpavedShare: optionsSource["targetUnpavedShare"] as number }),
+      ...(optionsSource["departureNow"] === undefined ? {} : { departureNow: optionsSource["departureNow"] as boolean }),
+      ...(optionsSource["bike"] === undefined ? {} : { bike: { category: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).category, maintainedGravel: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).maintainedGravel, roughTracks: (optionsSource["bike"] as NonNullable<ProviderRouteRequest["options"]["bike"]>).roughTracks } }),
       vehicle: "motorcycle",
     },
   };
