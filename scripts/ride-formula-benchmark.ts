@@ -67,7 +67,9 @@ const BUSY_CLASSES = new Set(["motorway", "trunk", "primary"]);
 function requestFor(trip: Trip, mode: Mode, tag: string): ProviderRouteRequest {
   const dirt = mode !== "curvy";
   return {
-    requestId: `bench:${trip.id}:${mode}:${tag}`,
+    // One seed per trip and mode: loop shapes are seeded by the request id, so
+    // a per-treatment id compared two different loops, not two rankings.
+    requestId: `bench:${trip.id}:${mode}:${tag === "fastest" ? tag : "plan"}`,
     origin: trip.origin,
     destination: trip.destination,
     stops: [],
@@ -193,7 +195,7 @@ async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formu
     OGV_ROAD_AUTHORITY: "off",
     OGV_FUN_GENERATORS: "off",
     OGV_JEV_FUN_JUDGE: "off",
-    OGV_ATLAS_GENERATORS: formulaOn ? "on" : "off",
+    OGV_ATLAS_GENERATORS: formulaOn && process.env["BENCH_ATLAS"] !== "off" ? "on" : "off",
     OGV_RIDE_FORMULA: formulaOn ? "on" : "off",
     OGV_FUN_GENERATORS_CALLS: "3",
     OGV_FUN_GENERATORS_DEADLINE_MS: "20000",

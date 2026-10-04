@@ -50,3 +50,31 @@ the dirt exists: Lock Haven -> Slate Run 104-115 min with 12-28% dirt, Gettysbur
 | Bethlehem → Delaware Water Gap | gravel | 74 / 0 | 55 / 0 | longest dirt 0.1 km, busy 63% |
 | Cherry Hill → Batsto Village | curvy | 75 / 0 | 75 / 0 | longest dirt 0 km, busy 1% |
 | Cherry Hill → Batsto Village | gravel | 92 / 1 | 77 / 1 | longest dirt 0.5 km, busy 1% |
+
+## Formula fixes (same day)
+
+- **Paved roads read as dirt.** `ride-formula.ts` counted any `tracktype=grade1..4` as dirt, even with
+  `surface=asphalt`. PA 44 is `asphalt|secondary|grade1` for 15 km, so the all-paved Lock Haven route
+  scored 29% dirt, the same as the real dirt route, and its faster ETA won (39.1 vs 35.5). Now an explicit
+  surface wins; grade1 is never dirt (OSM: solid, usually paved); grade2-4 count only when the surface is
+  untagged. After the fix: paved 22.0, dirt 34.6.
+- **Formula cap.** The pipeline's recommendation cap (1.35x the fastest eligible ETA) had the same
+  profile-ETA skew; it now measures from the rider's own profile and gives dirt riders 1.75x. The shadow
+  diagnostic pick in plan-service uses the same rule.
+- **Benchmark seeds.** Loop shapes are seeded by the request id, and the benchmark gave production and
+  formula different ids, so loop "losses" compared two different loops. Both treatments now share a seed.
+  With the same seed, Pine Grove's formula pick is the 38%-dirt loop (43.3 vs 35.0).
+
+Benchmark after all fixes (production -> formula, both with the search fix):
+
+|---|---:|---|---|---|---|---|---|
+| Dirt-focused trips | 12 | 17 -> 22 | 9.1 -> 11.8 | 52 -> 59 | 13 -> 6 | 85 -> 88 | 28.9 -> 32.6 |
+| PA/NJ corpus | 16 | 1 -> 1 | 0.6 -> 0.5 | 36 -> 48 | 20 -> 13 | 70 -> 72 | 26.3 -> 27.8 |
+| All | 28 | 8 -> 10 | 4.2 -> 5.3 | 43 -> 53 | 17 -> 10 | 77 -> 79 | 27.4 -> 29.9 |
+
+Verdicts over 28 plans: 7 win, 5 loss, 16 tie or same route. A win means the formula route has at least +3 pp dirt (dirt modes) or +10% Franco curvature per km (Curvy), with busy-road share not worse by more than 10 pp.
+
+Open: Pine Grove loops still -5/-6 pp; Curvy formula loses on 3 trips (Allentown, Reading, West Chester).
+Next: oracle/regret columns in the benchmark (best route in the pool vs the pick), a multi-strength
+dirt sweep feeding one pool, dirt-km/continuity value in place of percentage points, and moving
+rider taste out of profile speeds (needs an LM rebuild off-host).
