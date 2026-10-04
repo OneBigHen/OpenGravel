@@ -18,6 +18,8 @@
  *   sheets are not recreation reasons.
  */
 
+import type { MapLayerId } from "@/application/map-layers";
+
 import type { MapExtent } from "./build-map-scene";
 import type { InteractionEvent } from "./interaction";
 import type { MapInsets } from "./insets";
@@ -107,6 +109,12 @@ export interface MapHostOptions {
   readonly assetBasePath?: string;
 }
 
+/** Renderer acknowledgement, separate from successful provider transport. */
+export interface MapLayerDrawStatus {
+  readonly layerId: MapLayerId;
+  readonly state: "loading" | "ready" | "unavailable";
+}
+
 export interface MapHost {
   /** Declarative sync of the whole scene. Never recreates the map (05 §2). */
   applyScene(scene: MapScene): void;
@@ -180,6 +188,8 @@ export interface MapHost {
    * subscription time. Optional, like `onStatus`, for test doubles.
    */
   onViewport?(listener: (extent: MapExtent) => void): () => void;
+  /** Tile/renderer progress for layers with no feature-provider acknowledgement. */
+  onLayerStatus?(listener: (status: MapLayerDrawStatus) => void): () => void;
   /** Remove listeners and unload the map. Idempotent. */
   dispose(): void;
 }

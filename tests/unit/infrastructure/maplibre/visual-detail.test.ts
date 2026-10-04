@@ -73,3 +73,14 @@ describe("MapLibre visual detail", () => {
 it("uses the active Day/Night palette for hillshade", () => {
   expect(hillshadeLayerSpec({ paper: "night-paper", deepSpruce: "night-spruce", slate: "night-slate" })).toMatchObject({ paint: { "hillshade-highlight-color": "night-paper", "hillshade-shadow-color": "night-spruce", "hillshade-accent-color": "night-slate" } });
 });
+
+it("makes the requested hillshade visible over existing relief and satellite imagery", () => {
+  expect(hillshadeLayerSpec()).toMatchObject({ paint: { "hillshade-exaggeration": 0.6 } });
+  expect(hillshadeBeforeId([
+    { id: "land", type: "fill" },
+    { id: "tunnel-street", type: "line", "source-layer": "road" },
+    { id: "og-satellite", type: "raster" },
+    { id: "road-minor", type: "line" },
+    { id: "label", type: "symbol" },
+  ])).toBe("road-minor");
+});

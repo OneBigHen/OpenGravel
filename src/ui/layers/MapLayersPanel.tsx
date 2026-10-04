@@ -87,7 +87,7 @@ function LayerRow({
           <span className="og-layers__legend">{layer.legend}</span>
         </span>
         {label === null ? null : (
-          <span className="og-layers__status" data-status={status}>
+          <span className="og-layers__status" data-status={status} role="status" aria-live="polite">
             {label}
           </span>
         )}
