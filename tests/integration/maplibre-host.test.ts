@@ -466,15 +466,49 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     map.fire("load");
     host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
     expect(updates.at(-1)).toEqual({ layerId: "hillshade", state: "loading" });
-    fake.state.sourceLoaded = true;
+    fake.state.sourceLoaded = false;
     map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "metadata" });
     expect(updates.at(-1)?.state).toBe("loading");
-    map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "content" });
+    // MapLibre reports DEM tile loads without a `content` type.
+    fake.state.sourceLoaded = true;
+    map.fire("sourcedata", { sourceId: "og-terrain-dem" });
     expect(updates.at(-1)?.state).toBe("ready");
     map.fire("error", { sourceId: "og-terrain-dem", error: new Error("DEM tile failed") });
     map.fire("sourcedata", { sourceId: "og-terrain-dem", sourceDataType: "content" });
     expect(updates.at(-1)?.state).toBe("unavailable");
     host.dispose();
+  });
+
+  it("marks drawn relief ready on idle, and a slow-but-loaded DEM ready instead of unavailable", async () => {
+    vi.useFakeTimers();
+    try {
+      const host = await createMapLibreHost(container(), OPTIONS);
+      const updates: { layerId: string; state: string }[] = [];
+      host.onLayerStatus?.((status) => updates.push(status));
+      const map = currentMap();
+      map.fire("load");
+      fake.state.sourceLoaded = false;
+      host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
+      expect(updates.at(-1)?.state).toBe("loading");
+      fake.state.sourceLoaded = true;
+      vi.advanceTimersByTime(15_000);
+      expect(updates.at(-1)).toEqual({ layerId: "hillshade", state: "ready" });
+      host.dispose();
+
+      const second = await createMapLibreHost(container(), OPTIONS);
+      const seen: { layerId: string; state: string }[] = [];
+      second.onLayerStatus?.((status) => seen.push(status));
+      const other = currentMap();
+      other.fire("load");
+      fake.state.sourceLoaded = false;
+      second.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
+      fake.state.sourceLoaded = true;
+      other.fire("idle");
+      expect(seen.at(-1)?.state).toBe("ready");
+      second.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reuses an unchanged radar frame and removes it when the layer clears", async () => {
