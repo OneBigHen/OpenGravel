@@ -157,6 +157,7 @@ export interface RoutePlanFunJudgeWire {
 
 /** Server-side diagnostics for one attempt (23 §2, §16). */
 export interface RoutePlanDiagnosticsWire {
+  readonly atlas?: { readonly available: boolean; readonly considered: number; readonly calls: number; readonly probes: readonly { readonly corridors: readonly string[]; readonly status: string; readonly minutes: number | null }[] };
   readonly riderModes?: {
     readonly calls: number;
     readonly trials: readonly { readonly factor: number; readonly unpavedShare: number; readonly busyShare: number | null; readonly minutes: number }[];

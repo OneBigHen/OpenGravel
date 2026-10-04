@@ -151,9 +151,12 @@ export function jevFunJudgeFromEnv(
 
   return {
     modelId: JEV_DIRECT_MODEL,
-    async rank(request, signal) {
+    async rank(request, signal, rankOptions = {}) {
       const start = now();
       const latency = () => Math.max(0, now() - start);
+      const timeoutMs = Number.isFinite(rankOptions.timeoutMs) && (rankOptions.timeoutMs ?? 0) > 0
+        ? Math.max(1, Math.ceil(rankOptions.timeoutMs!))
+        : JEV_FUN_JUDGE_TIMEOUT_MS;
       if (signal.aborted) return { status: "unavailable", reason: "aborted", latencyMs: 0 };
       const wire = buildJevFunJudgeRequest(request);
       if (wire === null) return { status: "unavailable", reason: "invalid-request", latencyMs: 0 };
@@ -162,11 +165,11 @@ export function jevFunJudgeFromEnv(
       const controller = new AbortController();
       const onAbort = () => controller.abort();
       signal.addEventListener("abort", onAbort, { once: true });
-      const timer = setTimeout(() => controller.abort(), JEV_FUN_JUDGE_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
         const raw: unknown = await client.systemOne(wire, {
           signal: controller.signal,
-          timeout: JEV_FUN_JUDGE_TIMEOUT_MS,
+          timeout: timeoutMs,
           retry: { maxRetries: 0 },
         });
         return decodeJevFunJudgeAnswer(snapshot, raw, latency());

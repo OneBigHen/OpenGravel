@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { createFunJudge, evidenceFingerprint, FUN_JUDGE_POLICY_V1 } from "@/application/planner/fun-judge";
+import {
+  createFunJudge,
+  evidenceFingerprint,
+  FUN_JUDGE_POLICY_V1,
+  FUN_JUDGE_SHADOW_DEADLINE_MS,
+  runFunJudgeShadow,
+  type FunJudge,
+} from "@/application/planner/fun-judge";
 import type {
   FunJudgeAnswer,
   FunJudgeCandidateEvidence,
   FunJudgePort,
   FunJudgeRequest,
 } from "@/application/planner/ports/fun-judge";
+import { projectFunJudgeFormulaEvidence } from "@/application/planner/ports/fun-judge";
 
 function evidence(key: string, overrides: Partial<FunJudgeCandidateEvidence> = {}): FunJudgeCandidateEvidence {
   return {
@@ -231,6 +239,30 @@ describe("FUN JUDGE service", () => {
     expect(port.calls).toHaveLength(0);
   });
 
+  it("rejects an oversized formula projection before any model call", async () => {
+    const port = curvaturePort();
+    const formulaEvidence = Object.fromEntries(
+      Array.from({ length: 33 }, (_, index) => [`feature_${index}`, index / 33]),
+    );
+    const request: FunJudgeRequest = {
+      ...REQUEST,
+      candidates: [{ ...REQUEST.candidates[0]!, formulaEvidence }, REQUEST.candidates[1]!],
+    };
+    const verdict = await createFunJudge(port).judge(request, FALLBACK, signal());
+    expect(verdict.outcome).toBe("invalid-request");
+    expect(port.calls).toHaveLength(0);
+  });
+
+  it("keeps all 32 bounded formula variables in the validated projection", () => {
+    const formulaEvidence = Object.fromEntries(
+      Array.from({ length: 32 }, (_, index) => [`feature_${index}`, index / 32]),
+    );
+    const projected = projectFunJudgeFormulaEvidence(formulaEvidence);
+    expect(Object.keys(projected)).toHaveLength(32);
+    expect(projected.feature_0).toBe(0);
+    expect(projected.feature_31).toBeCloseTo(31 / 32, 3);
+  });
+
   it("fingerprints only what the model sees, never the opaque key", () => {
     const a = evidence("a");
     expect(evidenceFingerprint(a)).toBe(evidenceFingerprint({ ...a, key: "b" }));
@@ -245,5 +277,68 @@ describe("FUN JUDGE service", () => {
     const verdict = await createFunJudge(port).judge(REQUEST, FALLBACK, controller.signal);
     expect(verdict).toMatchObject({ source: "fallback", outcome: "unavailable", unavailableReason: "aborted" });
     expect(port.calls).toHaveLength(0);
+  });
+
+  it("includes coordinate-free formula evidence in the cache fingerprint", () => {
+    const base = evidence("formula", { formulaEvidence: { coreQuality: 0.7, busyShare: null } });
+    expect(evidenceFingerprint(base)).not.toBe(
+      evidenceFingerprint({ ...base, formulaEvidence: { coreQuality: 0.71, busyShare: null } }),
+    );
+    expect(evidenceFingerprint(base)).toBe(
+      evidenceFingerprint({ ...base, key: "renamed" }),
+    );
+  });
+
+  it("runs shadow with an explicit long deadline and emits aggregate telemetry", async () => {
+    let receivedDeadline: number | undefined;
+    const logs: unknown[] = [];
+    const judge: FunJudge = {
+      async judge(_request, fallbackRanking, _signal, options) {
+        receivedDeadline = options?.deadlineMs;
+        return {
+          source: "fallback",
+          outcome: "timeout",
+          preferredKey: null,
+          ranking: [...fallbackRanking],
+          confidence: null,
+          margin: null,
+          noneProbability: null,
+          orderAgreement: null,
+          model: "jev-1.13.0",
+          calls: 2,
+          cached: false,
+          latencyMs: 4_001,
+        };
+      },
+    };
+    const log = await runFunJudgeShadow(judge, REQUEST, FALLBACK, {
+      onComplete: (value) => logs.push(value),
+    });
+    expect(receivedDeadline).toBe(FUN_JUDGE_SHADOW_DEADLINE_MS);
+    expect(log).toMatchObject({ mode: "shadow", outcome: "timeout", candidateCount: 2, calls: 2, model: "jev-1.13.0" });
+    expect(logs).toEqual([log]);
+    expect(JSON.stringify(log)).not.toContain("fast");
+    expect(JSON.stringify(log)).not.toContain("twisty");
+  });
+
+  it("allows an on-mode caller to override the wait deadline without changing thresholds", async () => {
+    const optionsSeen: Array<{ readonly timeoutMs?: number }> = [];
+    const port: FunJudgePort = {
+      modelId: "jev-1.13.0",
+      async rank(request, _signal, options) {
+        optionsSeen.push(options ?? {});
+        return curvaturePort().rank(request, signal());
+      },
+    };
+    const verdict = await createFunJudge(port, {
+      policy: { ...FUN_JUDGE_POLICY_V1, deadlineMs: 5 },
+    }).judge(REQUEST, FALLBACK, signal(), { deadlineMs: 50 });
+    expect(verdict.source).toBe("jev");
+    expect(optionsSeen).toEqual([{}, {}]);
+
+    await createFunJudge(port, {
+      policy: { ...FUN_JUDGE_POLICY_V1, deadlineMs: 5 },
+    }).judge(REQUEST, FALLBACK, signal(), { deadlineMs: 50, transportTimeoutMs: 75 });
+    expect(optionsSeen.slice(2)).toEqual([{ timeoutMs: 75 }, { timeoutMs: 75 }]);
   });
 });

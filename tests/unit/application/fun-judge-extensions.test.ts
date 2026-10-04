@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   CONTINUOUS_BEND_RUN_METERS,
   geometryFunJudgeExtensions,
+  scheduleFunJudgeShadow,
+  type SelectFunJudgeInput,
 } from "@/application/planner/fun-judge-selection";
 import { analyzeBends } from "@/domain/geometry/bends";
 import type { PipelineCandidate } from "@/application/planner/pipeline";
@@ -41,5 +43,22 @@ describe("geometryFunJudgeExtensions", () => {
     expect(value).toBeCloseTo(expected, 6);
     expect(value).toBeGreaterThanOrEqual(0);
     expect(value).toBeLessThanOrEqual(1);
+  });
+
+  it("schedules shadow selection after the response path returns", async () => {
+    const completed: unknown[] = [];
+    const input = {
+      pipeline: { roles: {}, selectedIndex: null, candidates: [] },
+      intent: {},
+      avoidHighways: false,
+      policy: {},
+      judge: null,
+      judgeOptions: { deadlineMs: 25, transportTimeoutMs: 25 },
+    } as unknown as Omit<SelectFunJudgeInput, "mode" | "signal">;
+
+    expect(scheduleFunJudgeShadow(input, (selection) => completed.push(selection))).toBeUndefined();
+    expect(completed).toHaveLength(0);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(completed).toHaveLength(1);
   });
 });

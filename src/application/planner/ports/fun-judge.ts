@@ -63,7 +63,17 @@ export interface FunJudgeCandidateEvidence {
   readonly rideArc: FunJudgeRideArcSummary | null;
   /** Share of the fun feature space that was measured (0..1). */
   readonly evidenceCoverage: number;
+  /** Coordinate-free Ride Formula variables projected for the judge. */
+  readonly formulaEvidence?: FunJudgeFormulaEvidence;
 }
+
+/** Bounded, scalar-only extension for the versioned Ride Formula projection. */
+export type FunJudgeFormulaEvidence = Readonly<Record<string, number | null>>;
+
+export const FUN_JUDGE_FORMULA_MAX_KEYS = 32;
+export const FUN_JUDGE_FORMULA_MAX_KEY_LENGTH = 64;
+export const FUN_JUDGE_FORMULA_MAX_ABS_VALUE = 1_000_000;
+const FORMULA_KEY = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/;
 
 export interface FunJudgeRequest {
   readonly intent: FunJudgeIntent;
@@ -104,7 +114,11 @@ export type FunJudgeAnswer =
 export interface FunJudgePort {
   /** The pinned model identity this port requests; part of every cache key. */
   readonly modelId: string;
-  rank(request: FunJudgeRequest, signal: AbortSignal): Promise<FunJudgeAnswer>;
+  rank(
+    request: FunJudgeRequest,
+    signal: AbortSignal,
+    options?: { readonly timeoutMs?: number },
+  ): Promise<FunJudgeAnswer>;
 }
 
 /** What a judge may send for one candidate: rounded aggregates, never the key. */
@@ -124,6 +138,7 @@ export interface FunJudgeProjectedEvidence {
   readonly maneuversPer10Miles: number | null;
   readonly rideArc: FunJudgeRideArcSummary | null;
   readonly evidenceCoverage: number;
+  readonly formulaEvidence: Readonly<Record<string, number | null>>;
 }
 
 function fixed(value: number, digits: number): number {
@@ -131,6 +146,34 @@ function fixed(value: number, digits: number): number {
 }
 function fixedOrNull(value: number | null, digits: number): number | null {
   return value === null ? null : fixed(value, digits);
+}
+
+export function isValidFunJudgeFormulaEvidence(value: unknown): value is FunJudgeFormulaEvidence {
+  if (value === undefined) return true;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length > FUN_JUDGE_FORMULA_MAX_KEYS) return false;
+  return entries.every(([key, raw]) => {
+    if (key.length === 0 || key.length > FUN_JUDGE_FORMULA_MAX_KEY_LENGTH || !FORMULA_KEY.test(key)) {
+      return false;
+    }
+    return raw === null || (
+      typeof raw === "number" && Number.isFinite(raw) && Math.abs(raw) <= FUN_JUDGE_FORMULA_MAX_ABS_VALUE
+    );
+  });
+}
+
+export function projectFunJudgeFormulaEvidence(
+  value: FunJudgeFormulaEvidence | undefined,
+): Readonly<Record<string, number | null>> {
+  if (!isValidFunJudgeFormulaEvidence(value) || value === undefined) return {};
+  const projected: Record<string, number | null> = {};
+  for (const key of Object.keys(value).sort()) {
+    const raw = value[key];
+    if (raw === undefined) continue;
+    projected[key] = raw === null ? null : fixed(raw, 3);
+  }
+  return projected;
 }
 
 /**
@@ -164,5 +207,6 @@ export function projectFunJudgeEvidence(
           coreQuality: fixedOrNull(candidate.rideArc.coreQuality, 3),
         },
     evidenceCoverage: fixed(candidate.evidenceCoverage, 3),
+    formulaEvidence: projectFunJudgeFormulaEvidence(candidate.formulaEvidence),
   };
 }

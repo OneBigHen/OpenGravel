@@ -61,6 +61,7 @@ import {
 /** The custom-model area id of a sketch's corridor band. */
 export const SKETCH_BAND_AREA_ID = "opengravel_sketch";
 import { characterProfileFor } from "./profiles";
+import { rideFormulaRules } from "./ride-formula-rules";
 import { riderModeRules } from "./rider-modes";
 import { GraphHopperProviderError } from "./response-parser";
 
@@ -83,6 +84,11 @@ export const REQUESTED_DETAILS: readonly string[] = [
   // including turn penalties. Unlike vehicle-specific average-speed encoded
   // values, this is available from the active weighting itself.
   "time",
+  "smoothness",
+  "road_class_link",
+  "roundabout",
+  "car_access",
+  "road_access",
 ];
 
 /** Engine locale for instruction text. */
@@ -277,6 +283,7 @@ export interface GraphHopperRequestOptions {
    * smoothness encoded value.
    */
   readonly riderModesEnabled?: boolean;
+  readonly rideFormulaEnabled?: boolean;
   readonly omitSmoothness?: boolean;
   /** Surface/roughness rules; absent when no bike policy was supplied. */
   readonly surfacePolicy?: GraphHopperSurfacePolicy;
@@ -704,6 +711,7 @@ export function createGraphHopperRequest(
   const trafficFeatures = options.riderModesEnabled === false ? [] :
     (request.options.trafficPenaltyPolygons ?? []).map((ring, index) => areaFeature(`opengravel_traffic_${index}`, closeRing(ring)));
   const priorityRules: GraphHopperCustomModelRule[] = [
+    ...rideFormulaRules(request.options, options.riderModesEnabled !== false && options.rideFormulaEnabled === true),
     ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile),
     ...trafficFeatures.map(feature => ({ if: `in_${feature.id}`, multiply_by: "0.35" })),
     ...(request.options.avoidHighways

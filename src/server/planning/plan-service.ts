@@ -1,3 +1,7 @@
+import { createAtlasGenerators } from "@/application/planner/atlas-generators";
+import { corridorsInReachableEllipse, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
+import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
+import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
@@ -192,6 +196,7 @@ export interface PlanServiceDeps {
    * deployment's SQLite files by default; empty when they are not configured.
    */
   readonly knownRoads?: KnownRoadsPort;
+  readonly gravelAtlas?: GravelAtlasPort;
   /** Optional semantic classifier. `null` explicitly disables it in tests/fixtures. */
   readonly funCharacterClassifier?: JevCharacterClassifier | null;
   /**
@@ -775,6 +780,9 @@ export async function planRide(
   const riderEnabled = riderEnv["OGV_RIDER_MODES"] !== "off" && fixture === null;
   const configuredFunSettings = deps.funGenerators ?? funGeneratorSettingsFromEnv(riderEnv);
   const riderBudget = configuredFunSettings.budget;
+  const atlas = deps.gravelAtlas ?? gravelAtlasFromEnv(riderEnv);
+  let atlasReport: FunGeneratorReport | null = null;
+  let atlasConsidered = 0;
   let riderCalls = 0;
   let riderFactor: number | undefined;
   let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
@@ -824,9 +832,8 @@ export async function planRide(
     },
     additionalEligibilityFor: (candidate) => {
       const verdict = verdictFor(candidate);
-      return verdict === null
-        ? { eligible: true, failures: [], warnings: [] }
-        : { eligible: verdict.failures.length === 0, failures: verdict.failures, warnings: verdict.warnings };
+      const riderVerdict = riderEnabled ? riderRoadEligibility(candidate, parsed.value.request.options) : { eligible: true, failures: [], warnings: [] };
+      return { eligible: riderVerdict.eligible && (verdict?.failures.length ?? 0) === 0, failures: [...riderVerdict.failures, ...(verdict?.failures ?? [])], warnings: verdict?.warnings ?? [] };
     },
     // A loop's ride time is its budget (OGV-D-262): the discovery request is
     // only ever sent for a loop, so this never touches point-to-point planning.
@@ -855,13 +862,40 @@ export async function planRide(
         }),
   });
   let pipeline = rank(candidates);
+  if (riderEnabled && pipeline.candidates.length > 0 && riderBudget.maxProviderCalls > 0) {
+    const request = parsed.value.request;
+    const wantsDirt = request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
+    const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
+    if (wantsDirt || wantsBackroads) {
+      const fastest = Math.min(...pipeline.candidates.map(candidate => candidate.durationSeconds));
+      const radius = request.discovery === undefined ? Math.max(5_000, fastest * 0.35 * 15) : (request.discovery.targetMinutes + request.discovery.toleranceMinutes) * 60 * 8 / 2;
+      const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, wantsDirt ? "dirt" : "backroad");
+      atlasConsidered = corridors.length;
+      atlasReport = await runFunGenerators({
+        context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })), sources: [] },
+        generators: createAtlasGenerators(corridors), provider,
+        budget: { ...riderBudget, maxProviderCalls: Math.min(2, riderBudget.maxProviderCalls) },
+        allocation: "fixed", signal, duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
+        verify: async candidate => {
+          const own = await assessRoads([candidate]);
+          const checked = rank([candidate], value => own?.evaluate(value.geometry) ?? null);
+          return checked.candidates[0] === undefined ? { eligible: false, codes: checked.diagnostics.flatMap(item => item.eligibilityCode === undefined ? [] : [item.eligibilityCode]) } : { eligible: true, measurement: funRouteMeasurement(checked.candidates[0]) };
+        },
+      });
+      riderCalls += atlasReport.providerCallsUsed;
+      if (atlasReport.pool.length > 0) {
+        candidates = [...candidates, ...atlasReport.pool.map(entry => entry.candidate)];
+        roads = await assessRoads(candidates); pipeline = rank(candidates);
+      }
+    }
+  }
   let riderKneeSelected = false;
   if (riderEnabled && pipeline.candidates.length > 0) {
     const result = await searchRiderEnvelope({
       request: parsed.value.request,
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
       candidates: candidates.filter(candidate => rank([candidate]).candidates.length > 0),
-      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
+      provider, maxCalls: Math.min(3, Math.max(0, riderBudget.maxProviderCalls - riderCalls)), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -869,7 +903,7 @@ export async function planRide(
         return proposed.filter(candidate => rank([candidate], value => own?.evaluate(value.geometry) ?? null).candidates.length > 0);
       },
     });
-    riderCalls = result.calls;
+    riderCalls += result.calls;
     riderTrials = result.trials;
     if (result.candidate !== null) {
       const selected = rank([result.candidate], candidate => roads?.evaluate(candidate.geometry) ?? null);
@@ -1096,6 +1130,7 @@ export async function planRide(
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
+      ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60 })) ?? [] } }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
       ...(funJudge === undefined ? {} : { funJudge }),
     },
