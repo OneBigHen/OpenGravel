@@ -180,11 +180,35 @@ interface Row {
   readonly productionMs: number;
   readonly formulaMs: number;
   readonly note: string;
+  /** Every distinct in-budget route either treatment's generators produced. */
+  readonly pool: readonly Measured[];
+}
+
+/** Dirt modes: dirt km; Curvy: Franco curvature per km. The oracle maximizes it. */
+function oracleValue(mode: Mode, m: Measured | null): number | null {
+  if (m === null) return null;
+  return mode === "curvy" ? m.francoPerKm : m.dirtShare === null ? null : m.dirtShare * m.km;
+}
+
+function inBudget(trip: Trip, mode: Mode, m: Measured, fastestSeconds: number): boolean {
+  if (trip.loopMinutes !== undefined) return Math.abs(m.minutes - trip.loopMinutes) <= 15;
+  return fastestSeconds > 0 && m.minutes * 60 <= fastestSeconds * (mode === "curvy" ? 1.35 : 1.75);
+}
+
+function oracleOf(row: Row): Measured | null {
+  let best: Measured | null = null;
+  // The picks join the pool, so the oracle is never below what was chosen.
+  for (const m of [...row.pool, ...[row.production, row.formula].filter((pick): pick is Measured => pick !== null)]) {
+    const value = oracleValue(row.mode, m) ?? -1;
+    const current = oracleValue(row.mode, best) ?? -1;
+    if (value > current || (value === current && best !== null && m.minutes < best.minutes)) best = m;
+  }
+  return best;
 }
 
 const BASE_URL = process.env["GRAPHHOPPER_URL"] ?? "http://127.0.0.1:8989";
 
-async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formula", fastestSeconds: number): Promise<{ measured: Measured | null; calls: number; ms: number; geometry: readonly Coordinate[] | null; note: string }> {
+async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formula", fastestSeconds: number): Promise<{ measured: Measured | null; calls: number; ms: number; geometry: readonly Coordinate[] | null; note: string; pool: Measured[] }> {
   const formulaOn = treatment === "formula";
   const inner = createGraphHopperProvider({ baseUrl: BASE_URL, riderModesEnabled: true, rideFormulaEnabled: formulaOn && process.env["BENCH_REQUEST_RULES"] !== "off" });
   const record = recorder(inner);
@@ -207,15 +231,17 @@ async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formu
     { provider: record.provider, env, funCharacterClassifier: null, funJudge: null, roadAuthority: null },
   );
   const ms = performance.now() - started;
-  if (!result.ok) return { measured: null, calls: record.calls, ms, geometry: null, note: `plan failed: ${result.error.code}` };
+  if (!result.ok) return { measured: null, calls: record.calls, ms, geometry: null, note: `plan failed: ${result.error.code}`, pool: [] };
   const best = result.bundle.candidates.find((candidate) => candidate.id === (result.bundle.roles["best-ride"] ?? result.bundle.selectedRouteId));
-  if (best === undefined) return { measured: null, calls: record.calls, ms, geometry: null, note: "no best ride" };
+  if (best === undefined) return { measured: null, calls: record.calls, ms, geometry: null, note: "no best ride", pool: [] };
   const source = record.seen.find((candidate) => sameLine(candidate.geometry, best.geometry) && Math.abs(candidate.durationSeconds - best.durationSeconds) < 1);
-  if (source === undefined) return { measured: null, calls: record.calls, ms, geometry: best.geometry, note: "best ride not matched to a provider answer" };
+  if (source === undefined) return { measured: null, calls: record.calls, ms, geometry: best.geometry, note: "best ride not matched to a provider answer", pool: [] };
   const atlas = result.diagnostics.atlas;
   const pool = result.bundle.candidates.map((candidate) => Math.round(candidate.durationSeconds / 60)).join("/");
   const note = `pool ${pool}; ` + (atlas === undefined ? "" : `atlas ${atlas.considered} corridors, ${atlas.calls} calls, probes: ${atlas.probes.map((probe) => `${probe.status}:${probe.note}${probe.minutes === null ? "" : ` ${probe.minutes.toFixed(0)}min`}${probe.unpavedShare === null ? "" : ` dirt${(probe.unpavedShare * 100).toFixed(0)}%`}`).join(" / ") || "none"}`);
-  return { measured: measure(source, request, fastestSeconds), calls: record.calls, ms, geometry: best.geometry, note };
+  const distinct = record.seen.filter((candidate, at) => record.seen.findIndex((other) => sameLine(other.geometry, candidate.geometry)) === at);
+  const inBudgetPool = distinct.map((candidate) => measure(candidate, request, fastestSeconds)).filter((m) => inBudget(trip, mode, m, fastestSeconds));
+  return { measured: measure(source, request, fastestSeconds), calls: record.calls, ms, geometry: best.geometry, note, pool: inBudgetPool };
 }
 
 async function fastestFor(trip: Trip, mode: Mode): Promise<Measured | null> {
@@ -230,6 +256,31 @@ async function fastestFor(trip: Trip, mode: Mode): Promise<Measured | null> {
   const answer = await provider.candidates(request, AbortSignal.timeout(60_000));
   const first = answer.candidates[0];
   return first === undefined ? null : measure(first, base, first.durationSeconds);
+}
+
+function oracleSection(rows: readonly Row[]): string[] {
+  const unit = (mode: Mode): string => mode === "curvy" ? "Franco/km" : "dirt km";
+  const lines = [
+    "| Trip | Mode | Pool | Unit | Oracle | Oracle min | Production | Formula | Prod regret | Formula regret |",
+    "|---|---|---:|---|---:|---:|---:|---:|---:|---:|",
+  ];
+  const regrets: { dirt: number[]; dirtFormula: number[]; curvy: number[]; curvyFormula: number[] } = { dirt: [], dirtFormula: [], curvy: [], curvyFormula: [] };
+  for (const row of rows) {
+    const oracle = oracleOf(row);
+    const o = oracleValue(row.mode, oracle);
+    const p = oracleValue(row.mode, row.production);
+    const f = oracleValue(row.mode, row.formula);
+    const regret = (pick: number | null): number | null => o === null || pick === null ? null : Math.max(0, o - pick);
+    const pr = regret(p);
+    const fr = regret(f);
+    if (pr !== null) (row.mode === "curvy" ? regrets.curvy : regrets.dirt).push(pr);
+    if (fr !== null) (row.mode === "curvy" ? regrets.curvyFormula : regrets.dirtFormula).push(fr);
+    const digits = row.mode === "curvy" ? 0 : 1;
+    lines.push(`| ${row.trip.label} | ${row.mode} | ${row.pool.length} | ${unit(row.mode)} | ${num(o, digits)} | ${oracle === null ? "n/a" : oracle.minutes.toFixed(0)} | ${num(p, digits)} | ${num(f, digits)} | ${num(pr, digits)} | ${num(fr, digits)} |`);
+  }
+  const avg = (values: readonly number[]): string => values.length === 0 ? "n/a" : (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(1);
+  lines.push("", `Mean regret: dirt modes production ${avg(regrets.dirt)} km, formula ${avg(regrets.dirtFormula)} km; Curvy production ${avg(regrets.curvy)} Franco/km, formula ${avg(regrets.curvyFormula)} Franco/km.`);
+  return lines;
 }
 
 function pct(value: number | null): string {
@@ -368,6 +419,7 @@ async function main(): Promise<void> {
         productionCalls: production?.calls ?? 0, formulaCalls: formula?.calls ?? 0,
         productionMs: production?.ms ?? 0, formulaMs: formula?.ms ?? 0,
         note: [production?.note, formula?.note].filter((entry) => entry !== undefined && entry !== "").join(" | "),
+        pool: [...(production?.pool ?? []), ...(formula?.pool ?? [])],
       };
       rows.push(row);
       console.log(`${trip.id} ${mode}: prod ${row.production === null ? "-" : `${row.production.minutes.toFixed(0)}min dirt ${pct(row.production.dirtShare)}%`} formula ${row.formula === null ? "-" : `${row.formula.minutes.toFixed(0)}min dirt ${pct(row.formula.dirtShare)}%`} ${verdict(row)} (${row.formulaCalls} calls ${(row.formulaMs / 1000).toFixed(1)}s) ${row.note}`);
@@ -406,6 +458,12 @@ async function main(): Promise<void> {
     summary("All", rows),
     "",
     `Verdicts over ${rows.length} plans: ${wins} win, ${losses} loss, ${ties} tie or same route. A win means the formula route has at least +3 pp dirt (dirt modes) or +10% Franco curvature per km (Curvy), with busy-road share not worse by more than 10 pp.`,
+    "",
+    "## Generator oracle and selection regret",
+    "",
+    "Oracle = the best in-budget route anywhere in either treatment's candidate pool (dirt modes: most dirt km; Curvy: highest Franco /km). Budget: A-to-B within 1.75x fastest (dirt) or 1.35x (Curvy); loops within 15 min of the target. Regret = oracle minus the pick. A low oracle means generation is the problem; a high oracle with high regret means selection is.",
+    "",
+    ...oracleSection(rows),
     "",
     "## Dirt-focused trips",
     "",
