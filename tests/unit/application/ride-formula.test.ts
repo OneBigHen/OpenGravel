@@ -72,6 +72,18 @@ function candidate(overrides: Partial<ProviderCandidate> = {}): ProviderCandidat
 }
 
 describe("ride formula evidence projection", () => {
+  it("reads a track grade as dirt only when the surface is untagged, and never grade1", () => {
+    const base = candidate();
+    const runs = base.roadSummary!.roadRuns!;
+    const withRuns = (first: Partial<(typeof runs)[number]>) => candidate({ roadSummary: { ...base.roadSummary!, roadRuns: [{ ...runs[0]!, ...first }, runs[1]!] } });
+    const share = (value: ProviderCandidate) => scoreCandidateWithRideFormula(value, options).variables.unpavedShare.value;
+    // PA 44: asphalt|secondary|grade1 used to read as 15 km of dirt.
+    expect(share(withRuns({ surface: "asphalt", trackType: "grade1" }))).toBe(0);
+    expect(share(withRuns({ surface: "asphalt", trackType: "grade3" }))).toBe(0);
+    expect(share(withRuns({ surface: "missing", trackType: "grade1" }))).toBe(0);
+    expect(share(withRuns({ surface: "missing", trackType: "grade2" }))).toBeCloseTo(0.7);
+    expect(share(withRuns({ surface: "gravel", trackType: null }))).toBeCloseTo(0.7);
+  });
   it("projects raw road runs, Franco geometry, and canonical evidence into formula variables", () => {
     const result = scoreCandidateWithRideFormula(candidate(), options, {
       canonicalEligible: true,
