@@ -184,7 +184,7 @@ const BASE_URL = process.env["GRAPHHOPPER_URL"] ?? "http://127.0.0.1:8989";
 
 async function planOnce(trip: Trip, mode: Mode, treatment: "production" | "formula", fastestSeconds: number): Promise<{ measured: Measured | null; calls: number; ms: number; geometry: readonly Coordinate[] | null; note: string }> {
   const formulaOn = treatment === "formula";
-  const inner = createGraphHopperProvider({ baseUrl: BASE_URL, riderModesEnabled: true, rideFormulaEnabled: formulaOn });
+  const inner = createGraphHopperProvider({ baseUrl: BASE_URL, riderModesEnabled: true, rideFormulaEnabled: formulaOn && process.env["BENCH_REQUEST_RULES"] !== "off" });
   const record = recorder(inner);
   const request = requestFor(trip, mode, treatment);
   const env: Record<string, string> = {
