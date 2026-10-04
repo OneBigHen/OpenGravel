@@ -40,6 +40,20 @@ export function PlaceCard({ place, card, attribution, onClose, onAddStop }: Plac
           <span aria-hidden="true">×</span>
         </button>
       </div>
+      {place.imageUrl == null ? null : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="og-places-card__photo"
+          src={place.imageUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={(event) => {
+            event.currentTarget.hidden = true;
+          }}
+        />
+      )}
       <h2 className="og-places-card__title">{card.title}</h2>
       {card.eventTime === null ? null : <p className="og-places-card__time">{card.eventTime}</p>}
       {card.meta.length === 0 ? null : <p className="og-places-card__meta">{card.meta}</p>}

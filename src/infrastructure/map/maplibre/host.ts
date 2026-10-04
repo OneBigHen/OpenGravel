@@ -115,6 +115,7 @@ import {
 } from "@/infrastructure/map/maplibre/geojson";
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
+import { createMarkerImages } from "@/infrastructure/map/maplibre/marker-images";
 import { planSceneSync, type SceneFingerprints } from "@/infrastructure/map/maplibre/scene-diff";
 import {
   HIT_LAYER_IDS,
@@ -139,6 +140,7 @@ import {
   type HostedStyleLayer,
 } from "@/infrastructure/map/maplibre/visual-detail";
 import { prepareOfflineBasemap, type MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
+import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
 
 /** The default location of the vendored worker module (see the header). */
 export const DEFAULT_WORKER_PATH = "/vendor/maplibre/maplibre-gl-worker.mjs";
@@ -289,11 +291,13 @@ interface MapLibreMap {
       }
     | undefined;
   setLayoutProperty?(layerId: string, name: string, value: unknown): void;
+  setPaintProperty?(layerId: string, name: string, value: unknown): void;
   isSourceLoaded?(sourceId: string): boolean;
   getPitch?(): number;
   setTerrain?(terrain: { readonly source: string; readonly exaggeration?: number } | null): void;
   easeTo?(options: Readonly<Record<string, unknown>>): void;
-  moveLayer(id: string): void;
+  moveLayer(id: string, beforeId?: string): void;
+  setStyle?(style: unknown, options?: Record<string, unknown>): void;
   removeLayer(id: string): void;
   removeSource(id: string): void;
   queryRenderedFeatures(
@@ -315,6 +319,52 @@ interface MapLibreMap {
   dragPan?: { enable(): void; disable(): void };
   boxZoom?: { enable(): void; disable(): void };
   doubleClickZoom?: { enable(): void; disable(): void };
+}
+
+/** How far from a pin a press still picks it up, in CSS pixels. */
+const GRAB_RADIUS_PX = 18;
+/** How far from the selected route line a press still picks it up. */
+const ROUTE_GRAB_RADIUS_PX = 9;
+/** How long a finger rests on the route line before it picks the line up. */
+const ROUTE_HOLD_MS = 420;
+const GRAB_POINT_LAYER_IDS: readonly string[] = [
+  MAP_LAYER_IDS.pointStart,
+  MAP_LAYER_IDS.pointFinish,
+  MAP_LAYER_IDS.pointStop,
+  MAP_LAYER_IDS.pointShaping,
+];
+
+/**
+ * The ride's line layers: drawn under the basemap's labels, so a town name or a
+ * road number is never cut by the route (the owner's 2026-10-04 iPad review
+ * showed "Buck ingham" and "War inster" split by the line).
+ */
+const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
+  MAP_LAYER_IDS.routePrevious,
+  MAP_LAYER_IDS.routeAlternativeCasing,
+  MAP_LAYER_IDS.routeAlternative,
+  MAP_LAYER_IDS.routePreview,
+  MAP_LAYER_IDS.routeProposed,
+  MAP_LAYER_IDS.routeCasing,
+  MAP_LAYER_IDS.routeSelected,
+]);
+
+/** The basemap's first label layer (never one of ours), or `undefined`. */
+function firstBasemapLabelId(map: MapLibreMap): string | undefined {
+  return map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol" && !layer.id.startsWith("ogv-"))?.id;
+}
+
+/**
+ * Where a late basemap-detail layer (satellite, traffic, radar, hillshade,
+ * buildings) goes: before `beforeId`, or before our own first layer when that
+ * comes earlier, so detail added after the ride is drawn never covers it.
+ */
+function belowOverlay(map: MapLibreMap, beforeId: string | undefined): string | undefined {
+  const layers = map.getStyle?.()?.layers ?? [];
+  const ours = layers.findIndex((layer) => layer.id.startsWith("ogv-") && layer.id !== MAP_LAYER_IDS.background && layer.id !== MAP_LAYER_IDS.basemapRaster);
+  if (ours < 0) return beforeId;
+  const wanted = beforeId === undefined ? -1 : layers.findIndex((layer) => layer.id === beforeId);
+  return wanted >= 0 && wanted < ours ? beforeId : layers[ours]?.id;
 }
 
 interface MapLibreModule extends MapLibreProtocolHost {
@@ -656,6 +706,17 @@ export async function createMapLibreHost(
    * (see `onPointerDown`). It is always cleared on release or cancellation.
    */
   let gestureScoped = false;
+  /** A touch press on the selected route, waiting to become a route drag. */
+  let routeHold: {
+    readonly pointerId: number;
+    readonly origin: { readonly x: number; readonly y: number };
+    readonly timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+  function clearRouteHold(): void {
+    if (routeHold === null) return;
+    clearTimeout(routeHold.timer);
+    routeHold = null;
+  }
   /** The published load health; `loading` until an attempt says otherwise. */
   let status: MapLoadStatus = { state: "loading", reason: null };
   /** Unattended recoveries spent by this host: one, ever (4.0s). */
@@ -670,6 +731,7 @@ export async function createMapLibreHost(
   const palette = readMapPalette(container);
   const placePillImages = createPlacePillImages(palette);
   const puckImage = createPuckImage(palette);
+  const markerImages = createMarkerImages();
   const spec = describeBasemap(options.basemap);
   /**
    * The style the renderer loads.
@@ -726,6 +788,20 @@ export async function createMapLibreHost(
         : emptyBasemapStyle(palette);
 
   container.setAttribute(MAP_BASEMAP_ATTRIBUTE, options.basemap);
+  /** The configured basemap, kept so Night contrast can switch back to it. */
+  const configuredStyle = style;
+  /** Night contrast is a Mapbox map: it needs the public token. */
+  const nightAvailable = mapboxToken !== null;
+  let basemapLook: "map" | "night" = nightAvailable && options.basemapLook === "night" ? "night" : "map";
+  /** The repainted Night contrast style, fetched once per host. */
+  let nightStyle: Promise<MapStyleSpec | null> | null = null;
+  function loadNightStyle(): Promise<MapStyleSpec | null> {
+    if (mapboxToken === null) return Promise.resolve(null);
+    nightStyle ??= fetch(mapboxRequestUrl(NIGHT_CONTRAST_BASE_STYLE_URL, mapboxToken))
+      .then(async (response) => (response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null))
+      .catch(() => null);
+    return nightStyle;
+  }
   /** True when the map draws the rider's downloaded basemap (Lane A2). */
   let drawingOfflineBasemap = false;
 
@@ -989,8 +1065,20 @@ export async function createMapLibreHost(
         recordError({ kind: "renderer", detail: `image:${puckImage.id}` });
       }
     }
+    // The ride's pins; without their images the plain circles still mark the points.
+    let pinsReady = true;
+    for (const image of markerImages) {
+      if (map.hasImage(image.id)) continue;
+      try {
+        map.addImage(image.id, image.data, image.options as PlacePillImage["options"]);
+      } catch {
+        pinsReady = false;
+        recordError({ kind: "renderer", detail: `image:${image.id}` });
+      }
+    }
     for (const layer of overlayLayers(palette)) {
       if (isPlaceSymbolLayer(layer.id) && !placeImagesReady) continue;
+      if (layer.id === MAP_LAYER_IDS.pointPin && !pinsReady) continue;
       if (layer.id === MAP_LAYER_IDS.riderHeading && !puckReady) continue;
       // Info labels need the basemap's glyphs; without them the dots still draw.
       if ((layer.id === INFO_LAYER_IDS.label || layer.id === MAP_LAYER_IDS.routeLabel) && fonts === null) continue;
@@ -1003,10 +1091,30 @@ export async function createMapLibreHost(
           : layer;
         // No arrow image: the dot stands in for the arrow, so it drops its filter.
         const added: Record<string, unknown> = { ...styledLayer };
+        // Stop numbers are map text: with the basemap's fonts, or not at all.
+        if (layer.id === MAP_LAYER_IDS.pointPin) {
+          const layout = { ...(layer.layout ?? {}) } as Record<string, unknown>;
+          if (fonts === null) {
+            for (const key of Object.keys(layout)) if (key.startsWith("text-")) delete layout[key];
+          } else layout["text-font"] = fonts;
+          added["layout"] = layout;
+        }
         if (layer.id === MAP_LAYER_IDS.riderPosition && !puckReady) delete added["filter"];
-        map.addLayer(added as unknown as MapLibreLayerSpec);
+        if (ROUTE_LINE_LAYER_IDS.has(layer.id)) {
+          map.addLayer(added as unknown as MapLibreLayerSpec, firstBasemapLabelId(map));
+        } else {
+          map.addLayer(added as unknown as MapLibreLayerSpec);
+        }
       } catch {
         failed.push(layer.id);
+      }
+    }
+    // On Night contrast a light casing makes an alternative read as a highway.
+    if (basemapLook === "night" && map.getLayer(MAP_LAYER_IDS.routeAlternativeCasing) !== undefined) {
+      try {
+        map.setPaintProperty?.(MAP_LAYER_IDS.routeAlternativeCasing, "line-color", "#0a0f0d");
+      } catch {
+        // Cosmetic only; the alternative still draws.
       }
     }
     if (failed.length === 0) {
@@ -1042,7 +1150,7 @@ export async function createMapLibreHost(
             source: SATELLITE_ID,
             layout: { visibility: satelliteVisible ? "visible" : "none" },
           },
-          firstLabel,
+          belowOverlay(map, firstLabel),
         );
       }
     } catch {
@@ -1077,7 +1185,7 @@ export async function createMapLibreHost(
         const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
         map.addLayer(
           { id: TRAFFIC_FLOW_SOURCE_ID, type: "raster", source: TRAFFIC_FLOW_SOURCE_ID, paint: { "raster-opacity": 0.85 } },
-          firstLabel,
+          belowOverlay(map, firstLabel),
         );
       }
       map.setLayoutProperty?.(TRAFFIC_FLOW_SOURCE_ID, "visibility", "visible");
@@ -1099,7 +1207,7 @@ export async function createMapLibreHost(
       const b = raster.bounds;
       map.addSource(id, { type: "image", url: raster.url, coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]] });
       const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
-      map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.55, "raster-fade-duration": 0 } }, firstLabel);
+      map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.55, "raster-fade-duration": 0 } }, belowOverlay(map, firstLabel));
       radarScenes.set(map, signature);
     } catch { recordError({ kind: "source", detail: id }); }
   }
@@ -1129,13 +1237,13 @@ export async function createMapLibreHost(
 
       const styleLayers = map.getStyle?.()?.layers ?? [];
       if ((terrainOn || latestScene?.infoLayers?.visible.includes("hillshade")) && map.getLayer(HILLSHADE_LAYER_ID) === undefined) {
-        map.addLayer(hillshadeLayerSpec(palette), hillshadeBeforeId(styleLayers));
+        map.addLayer(hillshadeLayerSpec(palette), belowOverlay(map, hillshadeBeforeId(styleLayers)));
       }
 
       if (terrainOn && map.getLayer(BUILDING_EXTRUSION_LAYER_ID) === undefined) {
         const insertion = buildingInsertion(styleLayers);
         if (insertion !== null) {
-          map.addLayer(buildingExtrusionLayerSpec(insertion.source), insertion.beforeId);
+          map.addLayer(buildingExtrusionLayerSpec(insertion.source), belowOverlay(map, insertion.beforeId));
         }
       }
 
@@ -1288,6 +1396,39 @@ export async function createMapLibreHost(
     return HIT_LAYER_IDS.filter((layerId) => map.getLayer(layerId) !== undefined);
   }
 
+  /**
+   * What a press picks up with a finger-sized box: the nearest authored pin
+   * within {@link GRAB_RADIUS_PX}, else the selected route line within
+   * {@link ROUTE_GRAB_RADIUS_PX}, else `null`.
+   */
+  function grabAt(map: MapLibreMap, pixel: { readonly x: number; readonly y: number }): MapObjectRef | null {
+    const pointLayers = GRAB_POINT_LAYER_IDS.filter((layerId) => map.getLayer(layerId) !== undefined);
+    if (pointLayers.length > 0) {
+      const box: [[number, number], [number, number]] = [
+        [pixel.x - GRAB_RADIUS_PX, pixel.y - GRAB_RADIUS_PX],
+        [pixel.x + GRAB_RADIUS_PX, pixel.y + GRAB_RADIUS_PX],
+      ];
+      const hits = map.queryRenderedFeatures(box, { layers: pointLayers });
+      if (hits.length > 0) {
+        const coordinate = map.unproject([pixel.x, pixel.y]);
+        const intent = resolveIntent(hits, { lon: coordinate.lng, lat: coordinate.lat });
+        if (intent.type === "object-click") return intent.ref;
+        if (intent.type === "overlap-click") return intent.candidates[0] ?? null;
+      }
+    }
+    const selected = latestScene?.selectedRouteId ?? null;
+    const routeLayers = [MAP_LAYER_IDS.routeSelected, MAP_LAYER_IDS.routeCasing].filter((layerId) => map.getLayer(layerId) !== undefined);
+    if (selected === null || routeLayers.length === 0) return null;
+    const box: [[number, number], [number, number]] = [
+      [pixel.x - ROUTE_GRAB_RADIUS_PX, pixel.y - ROUTE_GRAB_RADIUS_PX],
+      [pixel.x + ROUTE_GRAB_RADIUS_PX, pixel.y + ROUTE_GRAB_RADIUS_PX],
+    ];
+    const onLine = map
+      .queryRenderedFeatures(box, { layers: routeLayers })
+      .some((hit) => hit.properties?.["id"] === selected);
+    return onLine ? { kind: "route", routeId: selected as never } : null;
+  }
+
   /** The one selectable object under a coordinate, or `null` for the surface. */
   function objectAt(
     map: MapLibreMap,
@@ -1336,7 +1477,9 @@ export async function createMapLibreHost(
     const layers = PLACE_SYMBOL_LAYERS.filter((layerId) => current.map.getLayer(layerId) !== undefined);
     const hits = current.map.queryRenderedFeatures([point.x, point.y], { layers });
     const hasPlace = hits.some((hit) => typeof hit.properties?.["id"] === "string");
-    current.map.getCanvas().style.cursor = hasPlace ? "pointer" : "";
+    // A pin or the selected line under the mouse says it can be dragged.
+    const grabbable = !hasPlace && interaction.activeTool === "pan" && grabAt(current.map, { x: point.x, y: point.y }) !== null;
+    current.map.getCanvas().style.cursor = hasPlace ? "pointer" : grabbable ? "grab" : "";
   }
 
   function onPointerDown(event: PointerEvent): void {
@@ -1349,13 +1492,48 @@ export async function createMapLibreHost(
     // What the press grabbed is decided here, at press time, by the renderer's
     // own hit test: a release cannot be asked which object it started on, and the
     // workspace may not query the renderer (05 §4).
-    const ref = objectAt(map, coordinate);
+    clearRouteHold();
+    // Pins are grabbed with a finger-sized box, not a single pixel: a 14 px dot
+    // under a gloved thumb was the difference between moving the start and
+    // panning the map.
+    const grabbed = interaction.activeTool === "pan" ? grabAt(map, pixel) : null;
+    const ref = grabbed ?? objectAt(map, coordinate);
+    const onSelectedRoute =
+      interaction.activeTool === "pan" &&
+      ref?.kind === "route" &&
+      latestScene !== null &&
+      ref.routeId === latestScene.selectedRouteId;
     // A press on an authored point with the neutral tool is a point drag, not a
     // camera pan — the rider grabbed the marker. The scope lasts exactly this one
     // gesture, so the neutral tool is what the rider still holds afterwards.
-    if (interaction.activeTool === "pan" && isDraggablePointRef(ref)) {
+    // A mouse or pen press on the selected route line drags the line itself.
+    if (interaction.activeTool === "pan" && (isDraggablePointRef(ref) || (onSelectedRoute && event.pointerType !== "touch"))) {
       gestureScoped = true;
       handleInteraction({ type: "tool-change", tool: "point-drag" });
+    } else if (onSelectedRoute && event.pointerType === "touch") {
+      // On touch the line is under every pan, so it is grabbed by a hold: a
+      // finger that rests on it ~0.4 s picks it up, one that moves pans.
+      const pointerId = event.pointerId;
+      routeHold = {
+        pointerId,
+        origin: pixel,
+        timer: setTimeout(() => {
+          const held = routeHold;
+          routeHold = null;
+          const live = attempt;
+          if (held === null || live === null || disposed) return;
+          gestureScoped = true;
+          handleInteraction({ type: "tool-change", tool: "point-drag" });
+          handleInteraction({ type: "pointer-down", pointerId, coordinate, pixel: held.origin });
+          try {
+            live.map.getCanvasContainer().setPointerCapture?.(pointerId);
+          } catch {
+            // The finger may already be gone; the release still ends the gesture.
+          }
+          if (typeof navigator !== "undefined") navigator.vibrate?.(12);
+          emit({ type: "pointer-down", pointerId, coordinate, ref });
+        }, ROUTE_HOLD_MS),
+      };
     }
     handleInteraction({
       type: "pointer-down",
@@ -1384,6 +1562,9 @@ export async function createMapLibreHost(
   }
 
   function onPointerMove(event: PointerEvent): void {
+    if (routeHold !== null && routeHold.pointerId === event.pointerId && exceedsTapThreshold(routeHold.origin, pixelOf(event))) {
+      clearRouteHold();
+    }
     const current = attempt;
     if (current === null || !gestureControlsPointer(interaction)) return;
     if (interaction.ownership === null || interaction.ownership.pointerId !== event.pointerId) {
@@ -1400,6 +1581,7 @@ export async function createMapLibreHost(
   }
 
   function onPointerUp(event: PointerEvent): void {
+    if (routeHold?.pointerId === event.pointerId) clearRouteHold();
     const current = attempt;
     const ownership = interaction.ownership;
     if (current === null || ownership === null || ownership.pointerId !== event.pointerId) {
@@ -1467,6 +1649,7 @@ export async function createMapLibreHost(
   }
 
   function onPointerCancel(event: PointerEvent): void {
+    clearRouteHold();
     // A cancelled pointer is not a release: it drops the gesture and emits
     // `gesture-cancel`, never a commit and never a tap (05 §4).
     handleInteraction({ type: "pointer-cancel", pointerId: event.pointerId });
@@ -2110,6 +2293,23 @@ export async function createMapLibreHost(
 
     supportsSatellite: mapboxToken !== null,
 
+    supportsNightContrast: nightAvailable,
+
+    setBasemapLook(look: "map" | "night"): void {
+      if (!nightAvailable || drawingOfflineBasemap || look === basemapLook) return;
+      basemapLook = look;
+      container.setAttribute("data-basemap-look", look);
+      void (async () => {
+        const next = look === "night" ? await loadNightStyle() : configuredStyle;
+        // A later choice wins; a failed fetch keeps the map the rider has.
+        if (disposed || basemapLook !== look || next === null) return;
+        style = next;
+        const map = attempt?.map;
+        // `style.load` follows, and restoreStyle redraws the ride on the new map.
+        map?.setStyle?.(next, { diff: false });
+      })();
+    },
+
     setSatellite(visible: boolean): void {
       satelliteVisible = visible;
       const map = attempt?.map;
@@ -2192,6 +2392,14 @@ export async function createMapLibreHost(
   // one resolves last.
   const claimedAfterLoad = claimedContainers.get(container);
   if (claimedAfterLoad !== undefined) claimedAfterLoad.dispose();
+
+  // Night contrast opens dark from the first frame instead of flashing the day map.
+  if (renderer !== null && basemapLook === "night" && !drawingOfflineBasemap) {
+    const night = await loadNightStyle();
+    if (night !== null) style = night;
+    else basemapLook = "map";
+  }
+  if (basemapLook === "night") container.setAttribute("data-basemap-look", "night");
 
   claimedContainers.set(container, host);
   publishStatus({ state: "loading", reason: null });

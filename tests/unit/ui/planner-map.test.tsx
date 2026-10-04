@@ -581,12 +581,51 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
       await settle();
     });
     const toggle = screen.getByTestId("map-satellite-toggle");
-    expect(toggle).toHaveTextContent("Satellite");
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(toggle);
-    expect(setSatellite).toHaveBeenLastCalledWith(true);
     expect(toggle).toHaveTextContent("Map");
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    // No Night contrast on this host: the menu offers Map and Satellite only.
+    expect(screen.queryByTestId("map-look-night")).toBeNull();
+    expect(screen.getByTestId("map-look-map")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByTestId("map-look-satellite"));
+    expect(setSatellite).toHaveBeenLastCalledWith(true);
+    expect(toggle).toHaveTextContent("Satellite");
+    expect(screen.queryByTestId("map-look-menu")).toBeNull();
     expect(window.localStorage.getItem("opengravel-vnext-satellite")).toBe("1");
+    expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
+  });
+
+  it("offers Night contrast on a host that can draw it, opens with it next time, and leaves satellite off", async () => {
+    const base = createStubMapHostFactory();
+    const setSatellite = vi.fn();
+    const setBasemapLook = vi.fn();
+    const seen: unknown[] = [];
+    const factory = (container: HTMLElement, options: Parameters<typeof base.factory>[1]) => {
+      seen.push(options.basemapLook);
+      return Object.assign(base.factory(container, options), {
+        supportsSatellite: true,
+        supportsNightContrast: true,
+        setSatellite,
+        setBasemapLook,
+      });
+    };
+    render(<PlannerMap scene={scene()} onIntent={vi.fn() as never} hostFactory={factory as never} activeTool="pan" />);
+    await act(async () => {
+      await settle();
+    });
+    fireEvent.click(screen.getByTestId("map-satellite-toggle"));
+    fireEvent.click(screen.getByTestId("map-look-night"));
+    expect(setBasemapLook).toHaveBeenLastCalledWith("night");
+    expect(setSatellite).toHaveBeenLastCalledWith(false);
+    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
+    expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("night");
+    cleanup();
+
+    render(<PlannerMap scene={scene()} onIntent={vi.fn() as never} hostFactory={factory as never} activeTool="pan" />);
+    await act(async () => {
+      await settle();
+    });
+    expect(seen.at(-1)).toBe("night");
+    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
   });
 });

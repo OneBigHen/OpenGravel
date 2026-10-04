@@ -26,7 +26,10 @@ import {
   type PointRowVm,
 } from "@/application/planner/planner-view-model";
 import { snapPreviewCoordinate } from "@/application/planner/point-snap";
-import { nextStopInsertionBeforeId } from "@/application/planner/stop-insertion";
+import {
+  nextStopInsertionBeforeId,
+  routeOrderInsertionBeforeId,
+} from "@/application/planner/stop-insertion";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import {
   insertStopCommand,
@@ -177,19 +180,42 @@ export function usePlannerStops(input: {
     [document, rideDocumentStore, snappedCoordinate],
   );
 
+  /** The selected ride's line, which a route drag reshapes. */
+  const selectedLine = useMemo(
+    () => scene.routes.find((route) => route.id === scene.selectedRouteId)?.geometry ?? [],
+    [scene.routes, scene.selectedRouteId],
+  );
+  /**
+   * A press on the selected route line, dragged: the ride is pulled through
+   * the release point as a new stop, inserted where it falls along the ride
+   * (owner review 2026-10-04: "I can't modify the route plotted").
+   */
+  const routeDragRef = useRef(false);
+
   const beginPointDrag = useCallback(
     (ref: MapObjectRef | null, coordinate: Coordinate): void => {
+      if (ref?.kind === "route" && ref.routeId === scene.selectedRouteId) {
+        routeDragRef.current = true;
+        dragTargetRef.current = null;
+        plannerUiStore.getState().setDragPreview({ kind: "stop", coordinate, snapped: false });
+        return;
+      }
+      routeDragRef.current = false;
       const row = isDraggablePointRef(ref) ? rowForMapRef(allRows, document, ref) : null;
       dragTargetRef.current = row?.ref ?? null;
       plannerUiStore
         .getState()
         .setDragPreview(row === null ? null : previewFor(row.ref, coordinate));
     },
-    [allRows, document, plannerUiStore, previewFor],
+    [allRows, document, plannerUiStore, previewFor, scene.selectedRouteId],
   );
 
   const previewPointDrag = useCallback(
     (coordinate: Coordinate): void => {
+      if (routeDragRef.current) {
+        plannerUiStore.getState().setDragPreview({ kind: "stop", coordinate, snapped: false });
+        return;
+      }
       const target = dragTargetRef.current;
       if (target === null) return;
       plannerUiStore.getState().setDragPreview(previewFor(target, coordinate));
@@ -202,15 +228,31 @@ export function usePlannerStops(input: {
       const target = dragTargetRef.current;
       dragTargetRef.current = null;
       plannerUiStore.getState().setDragPreview(null);
+      if (routeDragRef.current) {
+        routeDragRef.current = false;
+        if (coordinate === undefined) return;
+        rideDocumentStore
+          .getState()
+          .dispatch(
+            insertStopCommand(
+              document,
+              coordinate,
+              routeOrderInsertionBeforeId(document.intent.stops, selectedLine, coordinate),
+            ),
+          );
+        return;
+      }
       if (target === null || coordinate === undefined) return;
       commitDrag(target, coordinate);
     },
-    [commitDrag, plannerUiStore],
+    [commitDrag, document, plannerUiStore, rideDocumentStore, selectedLine],
   );
 
   const cancelPointDrag = useCallback((): void => {
     dragTargetRef.current = null;
-  }, []);
+    routeDragRef.current = false;
+    plannerUiStore.getState().setDragPreview(null);
+  }, [plannerUiStore]);
 
   const placeFromMap = useCallback(
     (coordinate: Coordinate): boolean => {

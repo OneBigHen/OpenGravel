@@ -63,6 +63,7 @@ const unchanged: AdvisorModelFields = {
   terrainLevel: null,
   avoidHighways: null,
   tollPolicy: null,
+  trafficPreference: null,
   departureKind: "unchanged",
   departureLocalDate: null,
   departureLocalTime: null,

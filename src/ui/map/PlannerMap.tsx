@@ -65,7 +65,7 @@ import type {
   MapRenderError,
 } from "@/application/map/map-host";
 import type { MapIntent, MapScene } from "@/application/map/types";
-import { SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
+import { BASEMAP_LOOK_PREFERENCE_KEY, SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
 
 /**
  * The rider-facing copy for a renderer failure (05 §22, 4.0 review finding 1).
@@ -229,7 +229,12 @@ export function PlannerMap({
   const hostRef = useRef<MapHost | null>(null);
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
-  const [satellite, setSatellite] = useState(false);
+  /** Night contrast, when the host can draw it. */
+  const [nightAvailable, setNightAvailable] = useState(false);
+  /** The rider's basemap look; one of Map / Night / Satellite. */
+  const [look, setLook] = useState<BasemapLook>("map");
+  const [lookMenuOpen, setLookMenuOpen] = useState(false);
+  const lookMenuRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef(scene);
   const insetsRef = useRef(insets);
   const fitExtentRef = useRef(fitExtent);
@@ -297,8 +302,10 @@ export function PlannerMap({
     let unsubscribeViewport: (() => void) | null = null;
 
     void (async () => {
+      const rememberedLook = readLookChoice();
       const host = await hostFactory(container, {
         basemap,
+        ...(rememberedLook === "night" ? { basemapLook: "night" as const } : {}),
         initialExtent: sceneExtent(sceneRef.current),
         reducedMotion: prefersReducedMotion(),
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
@@ -312,13 +319,13 @@ export function PlannerMap({
       hostRef.current = host;
       unsubscribeLayerStatus = host.onLayerStatus?.((status) => layerStatusRef.current?.(status)) ?? null;
       if (terrainRef.current) host.setTerrain3d?.(true);
-      if (host.supportsSatellite === true) {
-        setSatelliteAvailable(true);
-        const remembered = readSatelliteChoice();
-        if (remembered) {
-          host.setSatellite?.(true);
-          setSatellite(true);
-        }
+      if (host.supportsSatellite === true) setSatelliteAvailable(true);
+      if (host.supportsNightContrast === true) setNightAvailable(true);
+      if (rememberedLook === "satellite" && host.supportsSatellite === true) {
+        host.setSatellite?.(true);
+        setLook("satellite");
+      } else if (rememberedLook === "night" && host.supportsNightContrast === true) {
+        setLook("night");
       }
       unsubscribe = host.onIntent((intent) => intentRef.current(intent));
       // A renderer failure is reported up rather than only painted on the
@@ -440,14 +447,61 @@ export function PlannerMap({
     hostRef.current?.followCamera?.(follow.camera, insets);
   }, [followKey, insets]);
 
-  const toggleSatellite = useCallback((): void => {
-    setSatellite((current) => {
-      const next = !current;
-      hostRef.current?.setSatellite?.(next);
-      writeSatelliteChoice(next);
-      return next;
-    });
+  /** One look at a time: satellite draws over Map, Night swaps the basemap. */
+  const chooseLook = useCallback((next: BasemapLook): void => {
+    const host = hostRef.current;
+    host?.setSatellite?.(next === "satellite");
+    host?.setBasemapLook?.(next === "night" ? "night" : "map");
+    setLook(next);
+    setLookMenuOpen(false);
+    writeLookChoice(next);
   }, []);
+
+  /**
+   * The style button sits in a different corner per tier and surface, so the
+   * menu is anchored to wherever the button actually is: beside it, opening
+   * toward the middle of the map.
+   */
+  useEffect(() => {
+    if (!lookMenuOpen) return;
+    const wrap = lookMenuRef.current;
+    const button = wrap?.querySelector<HTMLElement>(".og-map__layer-toggle");
+    const host = wrap?.closest<HTMLElement>(".og-map-host");
+    if (wrap == null || button == null || host == null) return;
+    const b = button.getBoundingClientRect();
+    const h = host.getBoundingClientRect();
+    const onRight = b.left + b.width / 2 > h.left + h.width / 2;
+    wrap.dataset["side"] = onRight ? "right" : "left";
+    wrap.style.setProperty("--og-look-top", `${Math.round(b.top - h.top)}px`);
+    wrap.style.setProperty(
+      "--og-look-x",
+      `${Math.round(onRight ? h.right - b.left + 8 : b.right - h.left + 8)}px`,
+    );
+  }, [lookMenuOpen]);
+
+  /** A tap outside, or Escape, closes the style menu. */
+  useEffect(() => {
+    if (!lookMenuOpen) return;
+    const onPointer = (event: PointerEvent): void => {
+      if (lookMenuRef.current?.contains(event.target as Node) === true) return;
+      setLookMenuOpen(false);
+    };
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setLookMenuOpen(false);
+    };
+    window.addEventListener("pointerdown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [lookMenuOpen]);
+
+  const looks: readonly BasemapLook[] = [
+    "map",
+    ...(nightAvailable ? (["night"] as const) : []),
+    ...(satelliteAvailable ? (["satellite"] as const) : []),
+  ];
 
   const handleContextMenu = useCallback((event: React.MouseEvent): void => {
     // A long-press/right-click menu (05 §7) is not authored yet; the context menu
@@ -481,30 +535,61 @@ export function PlannerMap({
         onContextMenu={handleContextMenu}
       />
 
-      {satelliteAvailable ? (
-        <button
-          type="button"
-          className="og-map__layer-toggle"
-          data-testid="map-satellite-toggle"
-          aria-pressed={satellite}
-          onClick={toggleSatellite}
-        >
-          <svg
-            className="og-map__ctl-icon"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-            aria-hidden="true"
+      {looks.length > 1 ? (
+        <div className="og-map__look" ref={lookMenuRef}>
+          <button
+            type="button"
+            className="og-map__layer-toggle"
+            data-testid="map-satellite-toggle"
+            aria-haspopup="true"
+            aria-expanded={lookMenuOpen}
+            aria-controls="og-map-look-menu"
+            aria-label={`Map style: ${LOOK_LABEL[look]}`}
+            onClick={() => setLookMenuOpen((open) => !open)}
           >
-            <circle cx="12" cy="12" r="8.5" />
-            <path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5s1.1-5.9 3.6-8.5z" />
-          </svg>
-          <span className="og-map__ctl-label">{satellite ? "Map" : "Satellite"}</span>
-        </button>
+            <svg
+              className="og-map__ctl-icon"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="8.5" />
+              <path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5s1.1-5.9 3.6-8.5z" />
+            </svg>
+            <span className="og-map__ctl-label">{LOOK_LABEL[look]}</span>
+          </button>
+          {lookMenuOpen ? (
+            <div
+              id="og-map-look-menu"
+              className="og-map__look-menu"
+              role="radiogroup"
+              aria-label="Map style"
+              data-testid="map-look-menu"
+            >
+              {looks.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={look === option}
+                  className="og-map__look-option"
+                  data-look={option}
+                  data-testid={`map-look-${option}`}
+                  onClick={() => chooseLook(option)}
+                >
+                  <span className="og-map__look-swatch" data-look={option} aria-hidden="true" />
+                  <span className="og-map__look-name">{LOOK_LABEL[option]}</span>
+                  <span className="og-map__look-note">{LOOK_NOTE[option]}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {/*
@@ -527,18 +612,36 @@ export function PlannerMap({
 }
 
 
-/** The rider's last map/satellite choice; a per-device convenience only. */
-function readSatelliteChoice(): boolean {
+type BasemapLook = "map" | "night" | "satellite";
+
+const LOOK_LABEL: Readonly<Record<BasemapLook, string>> = {
+  map: "Map",
+  night: "Night",
+  satellite: "Satellite",
+};
+
+const LOOK_NOTE: Readonly<Record<BasemapLook, string>> = {
+  map: "Terrain, trails and roads",
+  night: "Dark gray, high contrast",
+  satellite: "Aerial imagery",
+};
+
+/** The rider's last basemap look; a per-device convenience only. */
+function readLookChoice(): BasemapLook {
   try {
-    return window.localStorage.getItem(SATELLITE_PREFERENCE_KEY) === "1";
+    const stored = window.localStorage.getItem(BASEMAP_LOOK_PREFERENCE_KEY);
+    if (stored === "map" || stored === "night" || stored === "satellite") return stored;
+    // The older Map/Satellite toggle's choice carries over.
+    return window.localStorage.getItem(SATELLITE_PREFERENCE_KEY) === "1" ? "satellite" : "map";
   } catch {
-    return false;
+    return "map";
   }
 }
 
-function writeSatelliteChoice(visible: boolean): void {
+function writeLookChoice(look: BasemapLook): void {
   try {
-    window.localStorage.setItem(SATELLITE_PREFERENCE_KEY, visible ? "1" : "0");
+    window.localStorage.setItem(BASEMAP_LOOK_PREFERENCE_KEY, look);
+    window.localStorage.setItem(SATELLITE_PREFERENCE_KEY, look === "satellite" ? "1" : "0");
   } catch {
     // Storage may be unavailable (private mode); the choice simply is not kept.
   }

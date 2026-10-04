@@ -16,6 +16,8 @@ export interface RiderOpportunity {
   readonly endsAt: string | null;
   readonly url: string | null;
   readonly sourceLabel: string;
+  /** A provider photo of the event or place, when there is one. */
+  readonly imageUrl?: string | null;
   readonly motorcycleSpecific: boolean;
   readonly popular: boolean;
   readonly rating: number | null;
@@ -230,7 +232,11 @@ export function opportunityFromNearbyPlace(
     name: place.name,
     category: place.category,
     coordinate: place.coordinate,
-    description: place.specials[0] ?? place.schedule ?? place.label ?? null,
+    // An event says where it is; a happy hour says what is on.
+    description: place.kind === "event"
+      ? [place.venue, place.city].filter((part) => typeof part === "string" && part.length > 0).join(", ") || place.label || null
+      : place.specials[0] ?? place.schedule ?? place.label ?? null,
+    ...(place.imageUrl == null ? {} : { imageUrl: place.imageUrl }),
     startsAt: place.startUtc ?? null,
     endsAt: place.endUtc ?? null,
     url: place.url,

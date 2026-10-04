@@ -9,6 +9,7 @@ import {
 import {
   moveDownBeforeId,
   moveUpBeforeId,
+  routeOrderInsertionBeforeId,
 } from "@/application/planner/stop-insertion";
 import type { StopId } from "@/domain/ride/ids";
 import type {
@@ -170,13 +171,19 @@ export function usePlannerItineraryActions(input: {
 
   const addStopAt = useCallback(
     (coordinate: Coordinate, label: string): void => {
-      const command = insertStopCommand(document, coordinate, undefined);
+      // A place along the ride joins it where it falls, not after the last stop.
+      const line = scene.routes.find((route) => route.id === scene.selectedRouteId)?.geometry ?? [];
+      const command = insertStopCommand(
+        document,
+        coordinate,
+        routeOrderInsertionBeforeId(document.intent.stops, line, coordinate),
+      );
       rideDocumentStore.getState().dispatch({
         ...command,
         stop: { ...command.stop, label },
       });
     },
-    [document, rideDocumentStore],
+    [document, rideDocumentStore, scene],
   );
 
   const editCoordinate = useCallback(

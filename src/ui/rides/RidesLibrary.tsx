@@ -442,6 +442,8 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
       {importsFirst === false ? null : importPanels}
 
+      {/* Filters only once there is something to filter (owner review 2026-10-04). */}
+      {status === "ready" && sortedRides.length === 0 && !search && type === null ? null : (
       <section className="og-library__controls" aria-label="Ride library filters">
         <label className="og-library__search">
           <span>Search</span>
@@ -474,6 +476,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           </select>
         </label>
       </section>
+      )}
 
       {removed === null ? null : (
         <div className="og-library__undo" role="status">

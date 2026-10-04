@@ -89,33 +89,43 @@ export function SpotifySetupSection({ readClientId, saveClientId, clearClientId,
       <div className="og-settings__section-heading">
         <div><p className="og-settings__eyebrow">OPTIONAL MUSIC</p><h2 id="settings-spotify-title">Spotify</h2></div>
       </div>
-      <p className="og-settings__section-copy">Connect your own Spotify account to control playback from a ride. OpenGravel never receives your Spotify password or sends an access token to this page.</p>
-      <p className="og-settings__section-copy">Leave this blank to use the server&apos;s configured app. To use your own app in the browser or PWA, create one in the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer Dashboard</a>, enable Web API, add the callback below, add your account to the app&apos;s allowed users when the app is in development mode, then save your public client ID. Development Mode allows up to five allowlisted users and requires the app owner to have Premium; playback controls also require Premium.</p>
-      <ol className="og-settings__section-copy">
-        <li>Create an app and enable Web API.</li>
-        <li>Add this exact callback URL:</li>
-      </ol>
-      <p className="og-settings__spotify-callback"><code id="spotify-callback-url">{callbackUrl}</code> <button className="og-settings__text-button" type="button" onClick={() => void copyCallback()}>Copy</button></p>
-      <label htmlFor="spotify-client-id">Your public Spotify client ID (optional)</label>
-      <input
-        id="spotify-client-id"
-        data-testid="spotify-client-id"
-        inputMode="text"
-        autoComplete="off"
-        spellCheck={false}
-        value={clientId}
-        placeholder="32-character client ID"
-        onChange={(event) => { setClientId(event.target.value); setSaved(false); }}
-      />
-      <p className="og-settings__section-copy">Only the public client ID is stored in this browser. This setting applies to the browser/PWA; the native iPhone app uses its built-in Spotify app registration. Do not paste a client secret here.</p>
+      <p className="og-settings__section-copy">Control your music from the ride screen. OpenGravel never sees your Spotify password. Playback controls need Spotify Premium.</p>
       <div className="og-settings__editor-actions">
-        <button className="og-settings__button og-settings__button--quiet" type="button" onClick={save}>Save app ID</button>
         {nativeSnapshot?.connection === "connected" || nativeSnapshot?.connection === "connecting" ? (
           <button className="og-settings__button" type="button" onClick={() => void nativePlayer?.disconnect()}>{nativeSnapshot.connection === "connecting" ? "Cancel" : "Disconnect Spotify"}</button>
         ) : (
           <button className="og-settings__button" type="button" disabled={nativePlayer !== undefined && nativeSnapshot?.connection === "unavailable"} onClick={connect}>Connect Spotify</button>
         )}
       </div>
+      {/* The developer setup is for people running their own Spotify app; it
+          used to be the first thing on Settings (owner review 2026-10-04). */}
+      <details className="og-settings__advanced" open={clientId.length > 0 ? true : undefined}>
+        <summary>Use your own Spotify app (advanced)</summary>
+        <ol className="og-settings__section-copy">
+          <li>In the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer Dashboard</a>, create an app and enable Web API.</li>
+          <li>Add this exact callback URL:</li>
+        </ol>
+        <p className="og-settings__spotify-callback"><code id="spotify-callback-url">{callbackUrl}</code> <button className="og-settings__text-button" type="button" onClick={() => void copyCallback()}>Copy</button></p>
+        <ol className="og-settings__section-copy" start={3}>
+          <li>While the app is in Development Mode, add your Spotify account to its allowed users (up to five; the app owner needs Premium).</li>
+          <li>Paste the app&apos;s public client ID here and save.</li>
+        </ol>
+        <label htmlFor="spotify-client-id">Public client ID</label>
+        <input
+          id="spotify-client-id"
+          data-testid="spotify-client-id"
+          inputMode="text"
+          autoComplete="off"
+          spellCheck={false}
+          value={clientId}
+          placeholder="32-character client ID"
+          onChange={(event) => { setClientId(event.target.value); setSaved(false); }}
+        />
+        <p className="og-settings__section-copy">Only the public client ID is stored, in this browser. Never paste a client secret. The iPhone app uses its own built-in registration.</p>
+        <div className="og-settings__editor-actions">
+          <button className="og-settings__button og-settings__button--quiet" type="button" onClick={save}>Save app ID</button>
+        </div>
+      </details>
       {nativeSnapshot === null ? null : <p className="og-settings__section-copy" role="status">{nativeSnapshot.errorMessage ?? (nativeSnapshot.connection === "connected" ? "Spotify is connected on this iPhone." : nativeSnapshot.connection === "connecting" ? "Connecting…" : nativeSnapshot.connection === "unavailable" ? "Spotify is unavailable in this iPhone build." : "Spotify is disconnected on this iPhone.")}</p>}
       {saved ? <p className="og-settings__section-copy" role="status">Saved.</p> : null}
       {message === null ? null : <p className="og-settings__section-copy" role="status">{message}</p>}

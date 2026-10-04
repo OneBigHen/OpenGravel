@@ -104,6 +104,8 @@ export function parsePlaceFeature(feature: unknown): NearbyPlace | null {
     dogFriendly: flag(props["dog"]),
     patio: flag(props["patio"]),
     ...(optionalText(props["source_id"]) === null ? {} : { sourceId: optionalText(props["source_id"]) }),
+    ...(httpsUrl(props["image"]) === null ? {} : { imageUrl: httpsUrl(props["image"]) }),
+    ...(optionalText(props["venue"]) === null ? {} : { venue: optionalText(props["venue"]) }),
     ...(optionalText(props["source_label"]) === null ? {} : { sourceLabel: optionalText(props["source_label"]) }),
     ...(httpsUrl(props["source_url"]) === null ? {} : { sourceUrl: httpsUrl(props["source_url"]) }),
     ...(flag(props["motorcycle_specific"]) === null ? {} : { motorcycleSpecific: flag(props["motorcycle_specific"]) }),

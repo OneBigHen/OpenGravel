@@ -172,7 +172,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     legend: "Tap a roadside camera to check conditions now",
     source: "State DOT and 511 camera feeds",
     caveat: "Coverage and playback differ by state. Cameras load only for the visible region; video opens only on demand.",
-    minZoom: 8,
+    // Hundreds of highway cameras buried the ride at overview zooms (owner review 2026-10-04).
+    minZoom: 11,
     color: "#6b4f8a",
     glyph: "◉",
   },

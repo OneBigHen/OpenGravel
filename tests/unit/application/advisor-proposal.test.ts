@@ -45,6 +45,7 @@ function draft(overrides: Partial<AdvisorDraft> = {}): AdvisorDraft {
       terrainLevel: null,
       avoidHighways: true,
       tollPolicy: null,
+      trafficPreference: null,
       departureKind: "now",
       departureLocalDate: null,
       departureLocalTime: null,
