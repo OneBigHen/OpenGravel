@@ -1,0 +1,8 @@
+[
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-77.01,40.01],[-77.0,40.02],[-76.99,40.03]]},"properties":{"@id":"way/fixture-dirt-1","highway":"track","tracktype":"grade2","surface":"gravel","access":"permissive"}},
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-76.99,40.03],[-76.98,40.04],[-76.97,40.04]]},"properties":{"@id":"way/fixture-dirt-2","highway":"track","tracktype":"grade3","surface":"compacted","motor_vehicle":"yes"}},
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-76.97,40.04],[-76.96,40.05],[-76.95,40.06]]},"properties":{"@id":"way/fixture-backroad","highway":"unclassified","surface":"asphalt"}},
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-76.95,40.06],[-76.94,40.07]]},"properties":{"@id":"way/fixture-sand","highway":"track","tracktype":"grade3","surface":"sand"}},
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-76.94,40.07],[-76.93,40.08]]},"properties":{"@id":"way/fixture-private","highway":"track","tracktype":"grade2","surface":"gravel","access":"private"}},
+  {"type":"Feature","geometry":{"type":"LineString","coordinates":[[-76.93,40.08],[-76.92,40.09]]},"properties":{"@id":"way/fixture-closed","highway":"track","tracktype":"grade2","surface":"gravel","seasonal":"closed"}}
+]

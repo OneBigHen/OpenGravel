@@ -1,0 +1,1602 @@
+[
+ {
+  "trip": {
+   "id": "pine-grove-loop-2h",
+   "label": "Pine Grove Furnace loop, 2 h",
+   "origin": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "destination": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "loopMinutes": 120,
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": null,
+  "production": {
+   "minutes": 106.62711666666668,
+   "km": 57.791059000000004,
+   "dirtShare": 0.3796357909942272,
+   "longestDirtKm": 13.014598435188523,
+   "francoBendShare": 0.05478856874516332,
+   "francoPerKm": 79.74042134547307,
+   "busyShare": 0,
+   "formulaValue": 36.3677,
+   "formulaConfidence": 0.6177
+  },
+  "formula": {
+   "minutes": 105.57163333333332,
+   "km": 70.230642,
+   "dirtShare": 0.19431629970000666,
+   "longestDirtKm": 13.646972659077955,
+   "francoBendShare": 0.027518740047236895,
+   "francoPerKm": 40.80131013810394,
+   "busyShare": 0.036118180073505105,
+   "formulaValue": 31.0585,
+   "formulaConfidence": 0.6177
+  },
+  "productionCalls": 4,
+  "formulaCalls": 7,
+  "productionMs": 3656.072856,
+  "formulaMs": 5422.792143000001,
+  "note": "pool 107/108/105;  | pool 106/133/122; atlas 111 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "pine-grove-loop-2h",
+   "label": "Pine Grove Furnace loop, 2 h",
+   "origin": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "destination": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "loopMinutes": 120,
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": null,
+  "production": {
+   "minutes": 117.73536666666668,
+   "km": 62.300886,
+   "dirtShare": 0.41978077025617894,
+   "longestDirtKm": 10.912758864365964,
+   "francoBendShare": 0.041055851058041534,
+   "francoPerKm": 61.23237474339083,
+   "busyShare": 0.018151167127065965,
+   "formulaValue": 37.2653,
+   "formulaConfidence": 0.606
+  },
+  "formula": {
+   "minutes": 105.63788333333333,
+   "km": 63.8688,
+   "dirtShare": 0.1574110758675881,
+   "longestDirtKm": 9.634979312222239,
+   "francoBendShare": 0.045593669804138315,
+   "francoPerKm": 64.68223668316527,
+   "busyShare": 0.0014624374887962505,
+   "formulaValue": 30.1674,
+   "formulaConfidence": 0.606
+  },
+  "productionCalls": 4,
+  "formulaCalls": 7,
+  "productionMs": 2333.617180000001,
+  "formulaMs": 3062.7145980000005,
+  "note": "pool 118/132/126;  | pool 106/126/120; atlas 111 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "state-college-rothrock-loop-2h",
+   "label": "State College to Rothrock loop, 2 h",
+   "origin": {
+    "lon": -77.86,
+    "lat": 40.7934
+   },
+   "destination": {
+    "lon": -77.86,
+    "lat": 40.7934
+   },
+   "loopMinutes": 120,
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": null,
+  "production": {
+   "minutes": 117.94720000000001,
+   "km": 78.528496,
+   "dirtShare": 0.3639816464731299,
+   "longestDirtKm": 7.278454669940827,
+   "francoBendShare": 0.04779246278255647,
+   "francoPerKm": 67.29072831524249,
+   "busyShare": 0.18668859002810403,
+   "formulaValue": 39.1808,
+   "formulaConfidence": 0.67
+  },
+  "formula": {
+   "minutes": 118.85648333333333,
+   "km": 69.226784,
+   "dirtShare": 0.41566612177290696,
+   "longestDirtKm": 9.914167846512449,
+   "francoBendShare": 0.06055515472344125,
+   "francoPerKm": 86.78301301524165,
+   "busyShare": 0.16189314910559602,
+   "formulaValue": 40.3783,
+   "formulaConfidence": 0.67
+  },
+  "productionCalls": 4,
+  "formulaCalls": 7,
+  "productionMs": 1553.712093,
+  "formulaMs": 3770.0738949999977,
+  "note": "pool 118/98/154;  | pool 119/112/135; atlas 173 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "state-college-rothrock-loop-2h",
+   "label": "State College to Rothrock loop, 2 h",
+   "origin": {
+    "lon": -77.86,
+    "lat": 40.7934
+   },
+   "destination": {
+    "lon": -77.86,
+    "lat": 40.7934
+   },
+   "loopMinutes": 120,
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": null,
+  "production": {
+   "minutes": 121.17268333333332,
+   "km": 85.966628,
+   "dirtShare": 0.4127802358712691,
+   "longestDirtKm": 23.042349580187583,
+   "francoBendShare": 0.050551951953786936,
+   "francoPerKm": 72.41678246579752,
+   "busyShare": 0.2618799323511415,
+   "formulaValue": 39.8093,
+   "formulaConfidence": 0.6536
+  },
+  "formula": {
+   "minutes": 133.06533333333334,
+   "km": 95.532958,
+   "dirtShare": 0.28288374441868375,
+   "longestDirtKm": 26.367603444851017,
+   "francoBendShare": 0.036695958666477416,
+   "francoPerKm": 54.7547403935783,
+   "busyShare": 0.07415370303963482,
+   "formulaValue": 36.8885,
+   "formulaConfidence": 0.6536
+  },
+  "productionCalls": 4,
+  "formulaCalls": 7,
+  "productionMs": 2496.5728039999995,
+  "formulaMs": 5794.869468000001,
+  "note": "pool 121/111/118;  | pool 133/109/123; atlas 173 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "jim-thorpe-hickory-run",
+   "label": "Jim Thorpe to Hickory Run",
+   "origin": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "destination": {
+    "lon": -75.6745,
+    "lat": 41.0035
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.6026,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.6026,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.6026,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 8,
+  "productionMs": 318.59763100000055,
+  "formulaMs": 711.0200490000025,
+  "note": "pool 44;  | pool 44/84; atlas 21 corridors, 0 calls, probes: none"
+ },
+ {
+  "trip": {
+   "id": "jim-thorpe-hickory-run",
+   "label": "Jim Thorpe to Hickory Run",
+   "origin": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "destination": {
+    "lon": -75.6745,
+    "lat": 41.0035
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.3406,
+   "formulaConfidence": 0.654
+  },
+  "production": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.3406,
+   "formulaConfidence": 0.654
+  },
+  "formula": {
+   "minutes": 44.10411666666666,
+   "km": 25.527381000000002,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.049285370485849654,
+   "francoPerKm": 70.1641312634433,
+   "busyShare": 0.029934130928843936,
+   "formulaValue": 21.3406,
+   "formulaConfidence": 0.654
+  },
+  "productionCalls": 7,
+  "formulaCalls": 8,
+  "productionMs": 253.38851200000136,
+  "formulaMs": 407.93362200000047,
+  "note": "pool 44;  | pool 44/84; atlas 21 corridors, 0 calls, probes: none"
+ },
+ {
+  "trip": {
+   "id": "lock-haven-slate-run",
+   "label": "Lock Haven to Slate Run",
+   "origin": {
+    "lon": -77.4469,
+    "lat": 41.137
+   },
+   "destination": {
+    "lon": -77.4744,
+    "lat": 41.4687
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 75.13778333333333,
+   "km": 52.10474,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02545586218798093,
+   "francoPerKm": 36.416358176029334,
+   "busyShare": 0.00576376544516143,
+   "formulaValue": 39.0574,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 75.13778333333333,
+   "km": 52.10474,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02545586218798093,
+   "francoPerKm": 36.416358176029334,
+   "busyShare": 0.00576376544516143,
+   "formulaValue": 39.0574,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 74.97643333333333,
+   "km": 52.220833,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.025707344178979477,
+   "francoPerKm": 35.851517262593006,
+   "busyShare": 0.01208060039058274,
+   "formulaValue": 39.0542,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 8,
+  "productionMs": 380.3078779999996,
+  "formulaMs": 1537.209982999997,
+  "note": "pool 115/75;  | pool 75/115; atlas 207 corridors, 0 calls, probes: none"
+ },
+ {
+  "trip": {
+   "id": "lock-haven-slate-run",
+   "label": "Lock Haven to Slate Run",
+   "origin": {
+    "lon": -77.4469,
+    "lat": 41.137
+   },
+   "destination": {
+    "lon": -77.4744,
+    "lat": 41.4687
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": {
+   "minutes": 75.13778333333333,
+   "km": 52.10474,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02545586218798093,
+   "francoPerKm": 36.416358176029334,
+   "busyShare": 0.00576376544516143,
+   "formulaValue": 38.7747,
+   "formulaConfidence": 0.654
+  },
+  "production": {
+   "minutes": 75.13778333333333,
+   "km": 52.10474,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02545586218798093,
+   "francoPerKm": 36.416358176029334,
+   "busyShare": 0.00576376544516143,
+   "formulaValue": 38.7747,
+   "formulaConfidence": 0.654
+  },
+  "formula": {
+   "minutes": 74.97643333333333,
+   "km": 52.220833,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.025707344178979477,
+   "francoPerKm": 35.851517262593006,
+   "busyShare": 0.01208060039058274,
+   "formulaValue": 38.7753,
+   "formulaConfidence": 0.654
+  },
+  "productionCalls": 7,
+  "formulaCalls": 8,
+  "productionMs": 318.68535500000144,
+  "formulaMs": 1316.5624920000046,
+  "note": "pool 115/75;  | pool 75/115; atlas 207 corridors, 0 calls, probes: none"
+ },
+ {
+  "trip": {
+   "id": "gettysburg-pine-grove",
+   "label": "Gettysburg to Pine Grove Furnace",
+   "origin": {
+    "lon": -77.2311,
+    "lat": 39.8309
+   },
+   "destination": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 37.60341666666667,
+   "km": 27.039555,
+   "dirtShare": 0.0002806572802085116,
+   "longestDirtKm": 0.007588868150319052,
+   "francoBendShare": 0.021358697352670125,
+   "francoPerKm": 30.590240950217876,
+   "busyShare": 0.5859411237752042,
+   "formulaValue": 18.5774,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 37.60341666666667,
+   "km": 27.039555,
+   "dirtShare": 0.0002806572802085116,
+   "longestDirtKm": 0.007588868150319052,
+   "francoBendShare": 0.021358697352670125,
+   "francoPerKm": 30.590240950217876,
+   "busyShare": 0.5859411237752042,
+   "formulaValue": 18.5774,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 42.507333333333335,
+   "km": 33.545659,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.025909961984200165,
+   "francoPerKm": 38.90358894839722,
+   "busyShare": 0.004661938419501072,
+   "formulaValue": 20.6126,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 246.14818299999752,
+  "formulaMs": 932.1170370000036,
+  "note": "pool 36/38;  | pool 43/38/36; atlas 32 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "gettysburg-pine-grove",
+   "label": "Gettysburg to Pine Grove Furnace",
+   "origin": {
+    "lon": -77.2311,
+    "lat": 39.8309
+   },
+   "destination": {
+    "lon": -77.305,
+    "lat": 40.0325
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": {
+   "minutes": 37.60341666666667,
+   "km": 27.039555,
+   "dirtShare": 0.0002806572802085116,
+   "longestDirtKm": 0.007588868150319052,
+   "francoBendShare": 0.021358697352670125,
+   "francoPerKm": 30.590240950217876,
+   "busyShare": 0.5859411237752042,
+   "formulaValue": 18.6886,
+   "formulaConfidence": 0.654
+  },
+  "production": {
+   "minutes": 37.60341666666667,
+   "km": 27.039555,
+   "dirtShare": 0.0002806572802085116,
+   "longestDirtKm": 0.007588868150319052,
+   "francoBendShare": 0.021358697352670125,
+   "francoPerKm": 30.590240950217876,
+   "busyShare": 0.5859411237752042,
+   "formulaValue": 18.6886,
+   "formulaConfidence": 0.654
+  },
+  "formula": {
+   "minutes": 42.507333333333335,
+   "km": 33.545659,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.025909961984200165,
+   "francoPerKm": 38.90358894839722,
+   "busyShare": 0.004661938419501072,
+   "formulaValue": 20.2118,
+   "formulaConfidence": 0.654
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 526.837781000002,
+  "formulaMs": 973.5114890000041,
+  "note": "pool 66/38/36;  | pool 43/38/36; atlas 32 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "williamsport-waterville",
+   "label": "Williamsport to Waterville (Pine Creek)",
+   "origin": {
+    "lon": -77.0011,
+    "lat": 41.2412
+   },
+   "destination": {
+    "lon": -77.3719,
+    "lat": 41.3189
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.8448,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.8448,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.8448,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 525.1422600000005,
+  "formulaMs": 1588.3569199999984,
+  "note": "pool 68/40/55;  | pool 40/75/55; atlas 37 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "williamsport-waterville",
+   "label": "Williamsport to Waterville (Pine Creek)",
+   "origin": {
+    "lon": -77.0011,
+    "lat": 41.2412
+   },
+   "destination": {
+    "lon": -77.3719,
+    "lat": 41.3189
+   },
+   "modes": [
+    "gravel",
+    "dual-sport"
+   ],
+   "dirtFocus": true
+  },
+  "mode": "dual-sport",
+  "fastest": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.956,
+   "formulaConfidence": 0.654
+  },
+  "production": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.956,
+   "formulaConfidence": 0.654
+  },
+  "formula": {
+   "minutes": 39.71561666666666,
+   "km": 45.427853999999996,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.002798065247632324,
+   "francoPerKm": 4.232303662683628,
+   "busyShare": 0.5967426137073463,
+   "formulaValue": 16.956,
+   "formulaConfidence": 0.654
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 377.87039899999945,
+  "formulaMs": 1441.7383809999956,
+  "note": "pool 68/40/55;  | pool 40/75/55; atlas 37 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "allentown-stroudsburg",
+   "label": "Allentown → Stroudsburg",
+   "origin": {
+    "lon": -75.4714,
+    "lat": 40.6023
+   },
+   "destination": {
+    "lon": -75.1946,
+    "lat": 40.9868
+   },
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 58.040166666666664,
+   "km": 55.990764000000006,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02393856359218273,
+   "francoPerKm": 37.76360838031667,
+   "busyShare": 0.7043016631311486,
+   "formulaValue": 30.6307,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 70.63031666666667,
+   "km": 60.724771000000004,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02187734750929412,
+   "francoPerKm": 32.83237467662846,
+   "busyShare": 0.26638194980834246,
+   "formulaValue": 32.2372,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 70.29921666666668,
+   "km": 58.690681,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.03203213416025134,
+   "francoPerKm": 47.18594603316071,
+   "busyShare": 0.2514709023911985,
+   "formulaValue": 33.1427,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 1461.409753,
+  "formulaMs": 7297.542175000002,
+  "note": "pool 80/71/58;  | pool 70/58/83; atlas 197 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "allentown-stroudsburg",
+   "label": "Allentown → Stroudsburg",
+   "origin": {
+    "lon": -75.4714,
+    "lat": 40.6023
+   },
+   "destination": {
+    "lon": -75.1946,
+    "lat": 40.9868
+   },
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 58.040166666666664,
+   "km": 55.990764000000006,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02393856359218273,
+   "francoPerKm": 37.76360838031667,
+   "busyShare": 0.7043016631311486,
+   "formulaValue": 18.5335,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 58.040166666666664,
+   "km": 55.990764000000006,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02393856359218273,
+   "francoPerKm": 37.76360838031667,
+   "busyShare": 0.7043016631311486,
+   "formulaValue": 18.5335,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 54.08806666666667,
+   "km": 59.05464,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.017346473152418967,
+   "francoPerKm": 27.617521699810386,
+   "busyShare": 0.9963483647788673,
+   "formulaValue": 18.4598,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 3570.6609650000028,
+  "formulaMs": 7830.229868000002,
+  "note": "pool 92/74/58;  | pool 54/73/58; atlas 58 corridors, 2 calls, probes: no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "hawk-mountain-jim-thorpe",
+   "label": "Hawk Mountain → Jim Thorpe",
+   "origin": {
+    "lon": -75.9832,
+    "lat": 40.6364
+   },
+   "destination": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 59.005599999999994,
+   "km": 46.169548000000006,
+   "dirtShare": 0.019672515894723165,
+   "longestDirtKm": 0.9082724631713807,
+   "francoBendShare": 0.013280234674498565,
+   "francoPerKm": 19.06323414618678,
+   "busyShare": 0,
+   "formulaValue": 31.4294,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 58.931799999999996,
+   "km": 53.050163999999995,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01618996571073468,
+   "francoPerKm": 22.94415577961558,
+   "busyShare": 0,
+   "formulaValue": 35.5483,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 58.931799999999996,
+   "km": 53.050163999999995,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01618996571073468,
+   "francoPerKm": 22.94415577961558,
+   "busyShare": 0,
+   "formulaValue": 35.5483,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 715.5809450000015,
+  "formulaMs": 1945.7666029999964,
+  "note": "pool 59/59;  | pool 59/59; atlas 156 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "hawk-mountain-jim-thorpe",
+   "label": "Hawk Mountain → Jim Thorpe",
+   "origin": {
+    "lon": -75.9832,
+    "lat": 40.6364
+   },
+   "destination": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 59.005599999999994,
+   "km": 46.169548000000006,
+   "dirtShare": 0.019672515894723165,
+   "longestDirtKm": 0.9082724631713807,
+   "francoBendShare": 0.013280234674498565,
+   "francoPerKm": 19.06323414618678,
+   "busyShare": 0,
+   "formulaValue": 21.8819,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 72.40305,
+   "km": 46.297375,
+   "dirtShare": 0.02389135819811783,
+   "longestDirtKm": 0.9082724631713807,
+   "francoBendShare": 0.019477779084301153,
+   "francoPerKm": 29.25130524791652,
+   "busyShare": 0,
+   "formulaValue": 23.7593,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 59.3991,
+   "km": 53.077568,
+   "dirtShare": 0.0037054960237510206,
+   "longestDirtKm": 0.19668011033707195,
+   "francoBendShare": 0.023376091269972473,
+   "francoPerKm": 33.09477102419668,
+   "busyShare": 0,
+   "formulaValue": 22.5237,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 11,
+  "productionMs": 308.8084730000046,
+  "formulaMs": 1391.0099889999983,
+  "note": "pool 72;  | pool 59/72; atlas 48 corridors, 3 calls, probes: duplicate:ok 73min / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "doylestown-new-hope",
+   "label": "Doylestown → New Hope",
+   "origin": {
+    "lon": -75.1299,
+    "lat": 40.3101
+   },
+   "destination": {
+    "lon": -74.9513,
+    "lat": 40.3643
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 29.084349999999997,
+   "km": 21.005947,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.024089310098640418,
+   "francoPerKm": 38.136874924528406,
+   "busyShare": 0.0913535605480767,
+   "formulaValue": 28.7462,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 29.677733333333332,
+   "km": 23.03352,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.024238690608653315,
+   "francoPerKm": 37.231419336038726,
+   "busyShare": 0.005061205531102838,
+   "formulaValue": 31.867,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 31.282,
+   "km": 23.003297,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.07349720034058113,
+   "francoPerKm": 104.6878323313172,
+   "busyShare": 0.0050678498973203015,
+   "formulaValue": 35.7791,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 9,
+  "productionMs": 260.2689420000097,
+  "formulaMs": 898.6478789999965,
+  "note": "pool 30/29/29;  | pool 31/26/29; atlas 18 corridors, 1 calls, probes: ineligible:ok"
+ },
+ {
+  "trip": {
+   "id": "doylestown-new-hope",
+   "label": "Doylestown → New Hope",
+   "origin": {
+    "lon": -75.1299,
+    "lat": 40.3101
+   },
+   "destination": {
+    "lon": -74.9513,
+    "lat": 40.3643
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 29.084349999999997,
+   "km": 21.005947,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.024089310098640418,
+   "francoPerKm": 38.136874924528406,
+   "busyShare": 0.0913535605480767,
+   "formulaValue": 17.6443,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 38.0611,
+   "km": 23.309112000000002,
+   "dirtShare": 0.06138816520609669,
+   "longestDirtKm": 1.4309077336457738,
+   "francoBendShare": 0.016281360097147556,
+   "francoPerKm": 29.116503969210267,
+   "busyShare": 0.005501407603349524,
+   "formulaValue": 21.5292,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 28.703233333333333,
+   "km": 22.998317,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.04374321801059016,
+   "francoPerKm": 60.586452474717824,
+   "busyShare": 0.009862902104080706,
+   "formulaValue": 19.2544,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 9,
+  "productionMs": 424.2005999999965,
+  "formulaMs": 1151.0349419999984,
+  "note": "pool 30/26/38;  | pool 29/30/29; atlas 10 corridors, 1 calls, probes: duplicate:ok 33min"
+ },
+ {
+  "trip": {
+   "id": "harrisburg-lancaster",
+   "label": "Harrisburg → Lancaster",
+   "origin": {
+    "lon": -76.8867,
+    "lat": 40.2732
+   },
+   "destination": {
+    "lon": -76.3055,
+    "lat": 40.0379
+   },
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 50.19441666666667,
+   "km": 62.581843,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.013099137836084582,
+   "francoPerKm": 20.17098897460348,
+   "busyShare": 0.895077265757524,
+   "formulaValue": 24.2278,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 54.7923,
+   "km": 61.982926,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01625580950567977,
+   "francoPerKm": 25.73432625974606,
+   "busyShare": 0.7721157058431999,
+   "formulaValue": 25.7549,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 55.3581,
+   "km": 62.451505,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.014325712460225171,
+   "francoPerKm": 22.22535934232743,
+   "busyShare": 0.7464982122370629,
+   "formulaValue": 27.4294,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 1758.4927499999903,
+  "formulaMs": 7030.708533000012,
+  "note": "pool 79/55/83;  | pool 55/50/83; atlas 175 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "harrisburg-lancaster",
+   "label": "Harrisburg → Lancaster",
+   "origin": {
+    "lon": -76.8867,
+    "lat": 40.2732
+   },
+   "destination": {
+    "lon": -76.3055,
+    "lat": 40.0379
+   },
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 50.19441666666667,
+   "km": 62.581843,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.013099137836084582,
+   "francoPerKm": 20.17098897460348,
+   "busyShare": 0.895077265757524,
+   "formulaValue": 14.7819,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 50.19441666666667,
+   "km": 62.581843,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.013099137836084582,
+   "francoPerKm": 20.17098897460348,
+   "busyShare": 0.895077265757524,
+   "formulaValue": 14.7819,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 49.40793333333333,
+   "km": 63.234601000000005,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.016042105763654883,
+   "francoPerKm": 24.76179066635081,
+   "busyShare": 0.9709276808750861,
+   "formulaValue": 16.7328,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 9,
+  "productionMs": 3169.032984000005,
+  "formulaMs": 7369.440261999989,
+  "note": "pool 85/50/77;  | pool 49/90/76; atlas 29 corridors, 1 calls, probes: no-route:low-adherence"
+ },
+ {
+  "trip": {
+   "id": "reading-jim-thorpe",
+   "label": "Reading → Jim Thorpe",
+   "origin": {
+    "lon": -75.9269,
+    "lat": 40.3356
+   },
+   "destination": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 107.3195,
+   "km": 86.832184,
+   "dirtShare": 0.011550813581599607,
+   "longestDirtKm": 1.002981318546584,
+   "francoBendShare": 0.027075269772133394,
+   "francoPerKm": 40.61555267258763,
+   "busyShare": 0.17865488444719405,
+   "formulaValue": 35.3733,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 123.30856666666666,
+   "km": 94.301478,
+   "dirtShare": 0.010635887277390425,
+   "longestDirtKm": 1.002981318546584,
+   "francoBendShare": 0.038703693648507086,
+   "francoPerKm": 57.53100872360867,
+   "busyShare": 0.03911296470147042,
+   "formulaValue": 34.333,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 107.3195,
+   "km": 86.832184,
+   "dirtShare": 0.011550813581599607,
+   "longestDirtKm": 1.002981318546584,
+   "francoBendShare": 0.027075269772133394,
+   "francoPerKm": 40.61555267258763,
+   "busyShare": 0.17865488444719405,
+   "formulaValue": 35.3733,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 1300.8313520000083,
+  "formulaMs": 7294.579437000008,
+  "note": "pool 123;  | pool 107/130/124; atlas 393 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "reading-jim-thorpe",
+   "label": "Reading → Jim Thorpe",
+   "origin": {
+    "lon": -75.9269,
+    "lat": 40.3356
+   },
+   "destination": {
+    "lon": -75.7387,
+    "lat": 40.8636
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 107.3195,
+   "km": 86.832184,
+   "dirtShare": 0.011550813581599607,
+   "longestDirtKm": 1.002981318546584,
+   "francoBendShare": 0.027075269772133394,
+   "francoPerKm": 40.61555267258763,
+   "busyShare": 0.17865488444719405,
+   "formulaValue": 23.8775,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 142.68116666666668,
+   "km": 92.958994,
+   "dirtShare": 0.06314805541820324,
+   "longestDirtKm": 4.9579698169554325,
+   "francoBendShare": 0.050469413820370276,
+   "francoPerKm": 72.43037987633801,
+   "busyShare": 0.018936022804282797,
+   "formulaValue": 29.8052,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 111.90631666666667,
+   "km": 91.849284,
+   "dirtShare": 0.053979435230869455,
+   "longestDirtKm": 4.9579698169554325,
+   "francoBendShare": 0.03616820128188292,
+   "francoPerKm": 52.28533844273497,
+   "busyShare": 0.04499453073504323,
+   "formulaValue": 31.0912,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 3941.1989729999914,
+  "formulaMs": 7278.225491000005,
+  "note": "pool 132/116/143;  | pool 112/130/136; atlas 119 corridors, 2 calls, probes: duplicate:ok 147min / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "west-chester-lancaster",
+   "label": "West Chester → Lancaster",
+   "origin": {
+    "lon": -75.6055,
+    "lat": 39.9607
+   },
+   "destination": {
+    "lon": -76.3055,
+    "lat": 40.0379
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 65.80515,
+   "km": 65.6422,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01256581793563462,
+   "francoPerKm": 21.228368350969614,
+   "busyShare": 0.4798199978468172,
+   "formulaValue": 26.3739,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 82.1003,
+   "km": 67.61170600000001,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.029480177910995962,
+   "francoPerKm": 42.70774659859253,
+   "busyShare": 0.02617195510902739,
+   "formulaValue": 34.1433,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 75.74273333333333,
+   "km": 67.52761199999999,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02154411638242189,
+   "francoPerKm": 33.60615495139323,
+   "busyShare": 0.035937523029021305,
+   "formulaValue": 34.8281,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 1346.4768369999947,
+  "formulaMs": 5449.5951649999915,
+  "note": "pool 82;  | pool 76/66; atlas 180 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "west-chester-lancaster",
+   "label": "West Chester → Lancaster",
+   "origin": {
+    "lon": -75.6055,
+    "lat": 39.9607
+   },
+   "destination": {
+    "lon": -76.3055,
+    "lat": 40.0379
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 65.80515,
+   "km": 65.6422,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01256581793563462,
+   "francoPerKm": 21.228368350969614,
+   "busyShare": 0.4798199978468172,
+   "formulaValue": 16.525,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 65.80515,
+   "km": 65.6422,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.01256581793563462,
+   "francoPerKm": 21.228368350969614,
+   "busyShare": 0.4798199978468172,
+   "formulaValue": 16.525,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 75.74273333333333,
+   "km": 67.52761199999999,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02154411638242189,
+   "francoPerKm": 33.60615495139323,
+   "busyShare": 0.035937523029021305,
+   "formulaValue": 20.8404,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 3883.6790260000125,
+  "formulaMs": 6903.367868000001,
+  "note": "pool 76/66;  | pool 76/66/87; atlas 49 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "bethlehem-delaware-water-gap",
+   "label": "Bethlehem → Delaware Water Gap",
+   "origin": {
+    "lon": -75.3705,
+    "lat": 40.6259
+   },
+   "destination": {
+    "lon": -75.1424,
+    "lat": 40.9793
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 55.270966666666666,
+   "km": 52.406813,
+   "dirtShare": 0.0015802723918821944,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.034036397760877794,
+   "francoPerKm": 48.20239821770567,
+   "busyShare": 0.6278251765741788,
+   "formulaValue": 30.3651,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 66.3537,
+   "km": 54.318161,
+   "dirtShare": 0.0015246653538802213,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.02812702057181759,
+   "francoPerKm": 41.47628339124074,
+   "busyShare": 0.17415712627414087,
+   "formulaValue": 33.5359,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 62.49576666666667,
+   "km": 52.343312,
+   "dirtShare": 0.0015821957912777373,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.04193934665480874,
+   "francoPerKm": 61.06143629774355,
+   "busyShare": 0.17948569662113145,
+   "formulaValue": 32.8357,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 864.4452960000053,
+  "formulaMs": 4753.9532910000125,
+  "note": "pool 66/61/66;  | pool 62/55/77; atlas 169 corridors, 2 calls, probes: no-route:time-cap / no-route:time-cap"
+ },
+ {
+  "trip": {
+   "id": "bethlehem-delaware-water-gap",
+   "label": "Bethlehem → Delaware Water Gap",
+   "origin": {
+    "lon": -75.3705,
+    "lat": 40.6259
+   },
+   "destination": {
+    "lon": -75.1424,
+    "lat": 40.9793
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 55.270966666666666,
+   "km": 52.406813,
+   "dirtShare": 0.0015802723918821944,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.034036397760877794,
+   "francoPerKm": 48.20239821770567,
+   "busyShare": 0.6278251765741788,
+   "formulaValue": 18.7116,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 73.78491666666667,
+   "km": 52.343312,
+   "dirtShare": 0.0015821957912777373,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.04193934665480874,
+   "francoPerKm": 61.06143629774355,
+   "busyShare": 0.17948569662113145,
+   "formulaValue": 19.1547,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 62.49576666666667,
+   "km": 52.343312,
+   "dirtShare": 0.0015821957912777373,
+   "longestDirtKm": 0.0828165420384264,
+   "francoBendShare": 0.04193934665480874,
+   "francoPerKm": 61.06143629774355,
+   "busyShare": 0.17948569662113145,
+   "formulaValue": 20.0974,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 10,
+  "productionMs": 2114.181944000011,
+  "formulaMs": 3710.626418,
+  "note": "pool 74;  | pool 62/55/76; atlas 45 corridors, 2 calls, probes: no-route:time-cap / skipped-budget:budget"
+ },
+ {
+  "trip": {
+   "id": "cherry-hill-batsto",
+   "label": "Cherry Hill → Batsto Village",
+   "origin": {
+    "lon": -75.0307,
+    "lat": 39.9348
+   },
+   "destination": {
+    "lon": -74.6477,
+    "lat": 39.6418
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "curvy",
+  "fastest": {
+   "minutes": 79.09083333333334,
+   "km": 53.360336000000004,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02151808134429068,
+   "francoPerKm": 29.367076375719318,
+   "busyShare": 0.298555603664918,
+   "formulaValue": 27.8531,
+   "formulaConfidence": 0.6508
+  },
+  "production": {
+   "minutes": 75.2475,
+   "km": 61.015648,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.008344227981892209,
+   "francoPerKm": 13.0755183925747,
+   "busyShare": 0.007219562317762707,
+   "formulaValue": 28.0406,
+   "formulaConfidence": 0.6508
+  },
+  "formula": {
+   "minutes": 97.74538333333334,
+   "km": 75.456721,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02215875250543988,
+   "francoPerKm": 32.92731218052107,
+   "busyShare": 0.0029051162474655586,
+   "formulaValue": 31.0572,
+   "formulaConfidence": 0.6508
+  },
+  "productionCalls": 7,
+  "formulaCalls": 11,
+  "productionMs": 2036.442676000006,
+  "formulaMs": 8288.835018000012,
+  "note": "pool 80/74/75;  | pool 98/79/76; atlas 36 corridors, 3 calls, probes: new:ok 98min dirt0% / duplicate:ok 90min"
+ },
+ {
+  "trip": {
+   "id": "cherry-hill-batsto",
+   "label": "Cherry Hill → Batsto Village",
+   "origin": {
+    "lon": -75.0307,
+    "lat": 39.9348
+   },
+   "destination": {
+    "lon": -74.6477,
+    "lat": 39.6418
+   },
+   "avoidHighways": true,
+   "modes": [
+    "curvy",
+    "gravel"
+   ],
+   "dirtFocus": false
+  },
+  "mode": "gravel",
+  "fastest": {
+   "minutes": 79.09083333333334,
+   "km": 53.360336000000004,
+   "dirtShare": 0,
+   "longestDirtKm": 0,
+   "francoBendShare": 0.02151808134429068,
+   "francoPerKm": 29.367076375719318,
+   "busyShare": 0.298555603664918,
+   "formulaValue": 17.0352,
+   "formulaConfidence": 0.6638
+  },
+  "production": {
+   "minutes": 91.83511666666666,
+   "km": 63.666452,
+   "dirtShare": 0.00977825134817007,
+   "longestDirtKm": 0.6225471775393722,
+   "francoBendShare": 0.01266341166786158,
+   "francoPerKm": 20.765921037507432,
+   "busyShare": 0,
+   "formulaValue": 19.7119,
+   "formulaConfidence": 0.6638
+  },
+  "formula": {
+   "minutes": 76.83968333333334,
+   "km": 61.170576000000004,
+   "dirtShare": 0.007767349759853762,
+   "longestDirtKm": 0.4751334265359267,
+   "francoBendShare": 0.013442656443162764,
+   "francoPerKm": 22.71432389217542,
+   "busyShare": 0.007201262093638545,
+   "formulaValue": 21.3637,
+   "formulaConfidence": 0.6638
+  },
+  "productionCalls": 7,
+  "formulaCalls": 8,
+  "productionMs": 3194.6108400000085,
+  "formulaMs": 3284.3198089999787,
+  "note": "pool 81/77/92;  | pool 77/79/81; atlas 75 corridors, 0 calls, probes: none"
+ }
+]

@@ -183,6 +183,8 @@ export interface CandidatePipelineInput {
    * normal RideIntent time budget cannot silently change standard planning.
    */
   readonly discoveryTimebox?: DiscoveryTimebox;
+  /** Optional measured recommendation value; canonical evidence and RouteScore stay intact. */
+  readonly candidateValueFor?: (candidate: PipelineCandidate, source: ProviderCandidate, fastestSeconds: number) => number | null;
 }
 
 export interface PipelineFunShadowAssessment {
@@ -605,6 +607,19 @@ export function runCandidatePipeline(
     enrichCandidate(entry, input, baselineDurationSeconds),
   );
 
+  const recommendationValues = candidates.map((candidate, index) => {
+    const value = input.candidateValueFor?.(candidate, eligible[index]!.candidate, baselineDurationSeconds);
+    return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
+  });
+  const boundedRecommendation = (index: number): number | null => {
+    if (input.discoveryTimebox === undefined && candidates[index]!.durationSeconds > baselineDurationSeconds * 1.35) return null;
+    return recommendationValues[index] ?? null;
+  };
+  const hasRecommendation = recommendationValues.some((_, index) => boundedRecommendation(index) !== null);
+  const rankingValue = (index: number): number => hasRecommendation
+    ? boundedRecommendation(index) ?? -1
+    : candidates[index]!.score.total;
+
   // Shadow evaluation: measure recreational character for every eligible
   // candidate before diversity can remove alternatives. This deliberately does
   // not feed rankDiverseCandidates, assignRoles, or selectedIndex yet.
@@ -629,7 +644,7 @@ export function runCandidatePipeline(
     input.discoveryTimebox,
   );
   const maximumScore = candidates.reduce(
-    (maximum, candidate) => Math.max(maximum, candidate.score.total),
+    (maximum, candidate) => Math.max(maximum, rankingValue(candidates.indexOf(candidate))),
     0,
   );
 
@@ -646,8 +661,8 @@ export function runCandidatePipeline(
       surfaceMix: unitEvidenceValue(candidate.evidence.surfaceMix),
       score: {
         total: timeboxPreferred?.has(index)
-          ? maximumScore + 1 + candidate.score.total
-          : candidate.score.total,
+          ? maximumScore + 1 + rankingValue(index)
+          : rankingValue(index),
       },
       profile: candidate.provider.profile,
     })),
@@ -719,6 +734,11 @@ export function runCandidatePipeline(
   // A timeboxed loop's best ride fits the ride time (OGV-D-262): a shorter,
   // higher-scoring loop is still a choice, but never the recommendation.
   const keptInBox = timeboxPreferredIndexes(kept, input.discoveryTimebox);
+  const recommendationPick = hasRecommendation
+    ? kept.map((candidate, index) => ({ index, value: boundedRecommendation(candidates.indexOf(candidate)) }))
+      .filter(entry => entry.value !== null && (keptInBox === null || keptInBox.has(entry.index)))
+      .sort((left, right) => (right.value! - left.value!) || kept[left.index]!.durationSeconds - kept[right.index]!.durationSeconds)[0]?.index
+    : undefined;
   const roles = assignRoles(
     kept.map((candidate, index) => ({
       id: index,
@@ -728,7 +748,7 @@ export function runCandidatePipeline(
     })),
     input.policy,
     undefined,
-    (candidate) => keptInBox === null || keptInBox.has(candidate.id),
+    (candidate) => recommendationPick === undefined ? keptInBox === null || keptInBox.has(candidate.id) : candidate.id === recommendationPick,
   );
 
   const scoreSelection = roles["best-ride"] ?? roles.fastest;

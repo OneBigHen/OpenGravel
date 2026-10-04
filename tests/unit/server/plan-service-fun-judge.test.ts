@@ -3,7 +3,7 @@
  * The judge here is a test double at the application port; the pipeline,
  * eligibility, scoring and roles are the real ones.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { FunJudge, FunJudgeVerdict } from "@/application/planner/fun-judge";
 import type { FunJudgeRequest } from "@/application/planner/ports/fun-judge";
@@ -129,12 +129,13 @@ function fallbackJudge(): FunJudge {
   };
 }
 
-async function plan(env: Record<string, string>, funJudge: FunJudge | null) {
+async function plan(env: Record<string, string>, funJudge: FunJudge | null, onFunJudgeShadow?: (selection: import("@/application/planner/fun-judge-selection").FunJudgeSelection) => void) {
   const result = await planRide(INPUT, {
     provider: provider([FAST, MILD, FAR]),
     env,
     funCharacterClassifier: null,
     funJudge,
+    onFunJudgeShadow,
   });
   if (!result.ok) throw new Error(`plan failed: ${result.error.code}`);
   return result;
@@ -168,15 +169,18 @@ describe("FUN JUDGE Best Ride promotion", () => {
   it("shadow reports Jev's pick but never changes roles or selection", async () => {
     const baseline = await plan({}, null);
     const judge = contrarianJudge();
-    const result = await plan({ OGV_JEV_FUN_JUDGE: "shadow" }, judge);
+    let observed: import("@/application/planner/fun-judge-selection").FunJudgeSelection | null = null;
+    const result = await plan({ OGV_JEV_FUN_JUDGE: "shadow" }, judge, selection => { observed = selection; });
+    expect(judge.requests).toHaveLength(0);
+    expect(result.diagnostics.funJudge).toBeUndefined();
+    await vi.waitFor(() => expect(observed).not.toBeNull());
     expect(result.bundle.candidates.length).toBe(3);
     expect(roleFingerprints(result)).toEqual(roleFingerprints(baseline));
     expect(fp(result, result.bundle.selectedRouteId)).toBe(fp(baseline, baseline.bundle.selectedRouteId));
-    const diagnostic = result.diagnostics.funJudge!;
+    const diagnostic = observed!.diagnostic!;
     expect(diagnostic).toMatchObject({ mode: "shadow", outcome: "preferred", applied: false });
-    expect(diagnostic.selectedRouteId).toBe(result.bundle.selectedRouteId);
-    expect(diagnostic.jevRouteId).not.toBeNull();
-    expect(diagnostic.jevRouteId).not.toBe(diagnostic.deterministicRouteId);
+    expect(diagnostic.jevIndex).not.toBeNull();
+    expect(diagnostic.jevIndex).not.toBe(diagnostic.deterministicIndex);
   });
 
   it("on: a confident Jev pick inside the budget becomes Best Ride and says why", async () => {
