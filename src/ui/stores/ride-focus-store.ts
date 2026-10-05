@@ -118,6 +118,7 @@ import {
   type LeanTelemetryState,
   type Vector3,
 } from "@/domain/motion/lean";
+import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /**
  * What the surface is doing right now.
@@ -2262,13 +2263,17 @@ export function createRideFocusStore(
           } else if (finished.outcome !== "finished") {
             set({ lastError: null, statusMessage: finished.message });
           } else {
+            emitTelemetry("ride_completed");
             set({ lastError: null, statusMessage: `Saved ${finished.summary.distanceMeters} m to My rides.` });
           }
           await syncNavigationEngine();
           refresh();
           return;
         }
-        if (await dispatchCommand(sessionCompletedEvent(now()))) pointer.clear();
+        if (await dispatchCommand(sessionCompletedEvent(now()))) {
+          emitTelemetry("ride_completed");
+          pointer.clear();
+        }
       },
 
       async discard(): Promise<void> {

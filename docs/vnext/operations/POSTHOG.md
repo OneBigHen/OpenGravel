@@ -48,8 +48,10 @@ coordinates, provider bodies or rider text. Use local logs/reproduction for exac
 error details. Precise latency percentiles are unavailable: timings are coarse
 bands, by policy. Map canvas playback is unavailable in this configuration.
 
-Ride lifecycle, drawing/import/export and advisor events have typed vocabulary but
-are not all instrumented yet. Do not treat missing events as zero usage. LLM prompt,
+Planner, drawing (start/done/failed), advisor (requested/ready/applied/discarded),
+ride start/completion, GPX export and file import are instrumented. Reroute,
+off-route, free-ride suggestion and route-edit events have vocabulary but no
+emitters yet. Do not treat missing events as zero usage. LLM prompt,
 response and token/cost tracing is not enabled; it needs a separate redaction design.
 Feature flags, experiments and surveys do not influence route decisions.
 
@@ -78,8 +80,13 @@ contains the four starter insights. `ogv-posthog-report.timer` runs daily around
 11:00 UTC and writes a read-only 24-hour aggregate report to
 `/var/lib/opengravel/analytics/latest.json`. The first run is verified separately
 in release evidence. The source is `scripts/posthog-report.py`; its credentials
-come from `/etc/opengravel/posthog-admin.env`. This is automatic data collection
-for AI review, not an unattended LLM or automatic code deployment.
+come from `/etc/opengravel/posthog-admin.env`. `ogv-posthog-triage.timer` (11:30 UTC) then runs `infra/posthog/triage.sh`: a
+headless Sonnet agent with the PostHog MCP reads the report and files deduplicated
+`posthog-triage` issues on GitHub (max 3/day, evidence + repro + test idea), and may
+open a *draft* PR for a small, test-covered fix. It skips entirely (no model spend)
+when the report is empty, never merges, deploys, or touches routing/consent/secrets.
+Logs: `/var/lib/opengravel/analytics/triage-<date>.log`. Install/refresh the units
+with `sudo infra/posthog/install.sh`; pause with `systemctl disable --now ogv-posthog-triage.timer`.
 
 Useful prompts:
 
@@ -92,8 +99,8 @@ Useful prompts:
 
 A useful automation is a daily findings report with build IDs, counts, links to
 insights/replays and suggested regression tests. Analytics are evidence for a code
-change; they are not authority to mutate routing policy or deploy a fix. Start with
-read-only AI analysis, then implement and validate findings in the normal repo flow.
+change; they are not authority to mutate routing policy or deploy a fix. A human (or
+the normal repo flow) reviews and merges every triage PR.
 
 Sources: [capture API](https://posthog.com/docs/api/capture),
 [replay privacy](https://posthog.com/docs/session-replay/privacy),

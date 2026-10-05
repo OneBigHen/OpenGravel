@@ -31,6 +31,7 @@ import { RecordedTrackThumbnail } from "./RecordedTrackThumbnail";
 import { staticPointsMapUrl, staticRouteMapUrl } from "@/application/map/static-map";
 import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
+import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 const TYPE_FILTERS: readonly { readonly value: LibraryRideType | null; readonly label: string }[] = [
   { value: null, label: "All" },
@@ -271,6 +272,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
       mode === "original" ? { extension: originalExtension(source.originalFilename, source.originalMime) } : undefined,
     );
     downloadExport(bytes, filename, undefined, mode === "original" ? (source.originalMime ?? undefined) : undefined);
+    emitTelemetry("export_completed");
   }
 
   const filter: RideListFilter = useMemo(

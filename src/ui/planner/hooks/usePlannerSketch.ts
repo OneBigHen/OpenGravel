@@ -47,6 +47,7 @@ import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 import type { SketchPanelProps } from "@/ui/planner/SketchPanel";
+import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 export type SketchPanelProjection = Omit<
   SketchPanelProps,
@@ -193,6 +194,7 @@ export function usePlannerSketch(input: {
         : "preserve-existing",
     );
     ui.setSketchTool(true);
+    emitTelemetry("draw_started", { source: "drawing" });
   }, [discardPreviewPayloads, document, plannerUiStore]);
   /**
    * Extend: re-open the committed drawing with its own strokes in the draft, so
@@ -254,9 +256,11 @@ export function usePlannerSketch(input: {
       dispatch: (command) => rideDocumentStore.getState().dispatch(command),
     });
     if (result.outcome !== "applied") {
+      emitTelemetry("draw_failed", { source: "drawing", errorClass: "no-result" });
       ui.setSketchError(sketchRefusalMessage(result));
       return;
     }
+    emitTelemetry("draw_completed", { source: "drawing" });
     ui.setSketchError(null);
     ui.setSketchDraft(clearSketchDraft());
     ui.setSketchTool(false);
