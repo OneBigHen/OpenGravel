@@ -8,9 +8,16 @@
  * covered by unit tests instead of only by a running server.
  */
 
+import { createApiGuard, guarded } from "@/server/api-guard";
 import { handleRoutePlanRequest } from "@/server/planning/route-handler";
 
+const guard = createApiGuard({ perMinute: 20, maxConcurrent: 6 });
+
 export async function POST(request: Request): Promise<Response> {
+  return guarded(guard, request, () => plan(request));
+}
+
+async function plan(request: Request): Promise<Response> {
   let body: unknown;
   try {
     body = await request.json();

@@ -434,6 +434,40 @@ export function classifyMapError(payload: unknown): MapRenderError | null {
   return { kind: matched?.[1] ?? "renderer", detail };
 }
 
+const MAPBOX_REFUSAL_KEY = "ogv.mapbox-refused-until";
+const MAPBOX_REFUSAL_MS = 60 * 60 * 1000;
+
+/** Mapbox said no (quota, token, rate): 401, 403 or 429 from its API. */
+export function isMapboxRefusal(payload: unknown): boolean {
+  if (typeof payload !== "object" || payload === null) return false;
+  const error = (payload as { readonly error?: unknown }).error;
+  if (typeof error !== "object" || error === null) return false;
+  const { status, url } = error as { readonly status?: unknown; readonly url?: unknown };
+  return (
+    (status === 401 || status === 403 || status === 429) &&
+    typeof url === "string" &&
+    url.startsWith("https://api.mapbox.com/")
+  );
+}
+
+/** True for an hour after Mapbox refused this browser, so reloads stop spending quota on failures. */
+function mapboxRecentlyRefused(): boolean {
+  try {
+    const until = Number(window.localStorage.getItem(MAPBOX_REFUSAL_KEY));
+    return Number.isFinite(until) && until > Date.now();
+  } catch {
+    return false;
+  }
+}
+
+function rememberMapboxRefusal(): void {
+  try {
+    window.localStorage.setItem(MAPBOX_REFUSAL_KEY, String(Date.now() + MAPBOX_REFUSAL_MS));
+  } catch {
+    // Storage can be blocked; the fallback still holds for this page view.
+  }
+}
+
 /** Containers the host module has already claimed (05 §2, §26). */
 const claimedContainers = new WeakMap<HTMLElement, { dispose(): void }>();
 
@@ -732,6 +766,13 @@ export async function createMapLibreHost(
   const placePillImages = createPlacePillImages(palette);
   const puckImage = createPuckImage(palette);
   const markerImages = createMarkerImages();
+  /**
+   * The basemap in use. It starts as the requested one and drops from `mapbox` to
+   * `openfreemap` for good if Mapbox refuses us (free-tier quota spent, token
+   * revoked): a deployment without a payment method on Mapbox goes dark at its
+   * cap, and the rider should keep a map.
+   */
+  let activeBasemap = options.basemap;
   const spec = describeBasemap(options.basemap);
   /**
    * The style the renderer loads.
@@ -744,8 +785,8 @@ export async function createMapLibreHost(
    */
   // Mapbox needs its public token; without one the mode falls back to the
   // token-free style rather than a canvas that never loads (OGV-D-265).
-  const mapboxToken =
-    options.basemap === "mapbox" && isPublicMapboxToken(options.mapboxToken)
+  let mapboxToken =
+    options.basemap === "mapbox" && isPublicMapboxToken(options.mapboxToken) && !mapboxRecentlyRefused()
       ? options.mapboxToken.trim()
       : null;
   let satelliteVisible = false;
@@ -787,9 +828,10 @@ export async function createMapLibreHost(
         ? osmBasemapStyle(palette, spec.rasterTiles, spec.attribution)
         : emptyBasemapStyle(palette);
 
-  container.setAttribute(MAP_BASEMAP_ATTRIBUTE, options.basemap);
+  if (options.basemap === "mapbox" && mapboxToken === null) activeBasemap = "openfreemap";
+  container.setAttribute(MAP_BASEMAP_ATTRIBUTE, activeBasemap);
   /** The configured basemap, kept so Night contrast can switch back to it. */
-  const configuredStyle = style;
+  let configuredStyle = style;
   /** Night contrast is a Mapbox map: it needs the public token. */
   const nightAvailable = mapboxToken !== null;
   let basemapLook: "map" | "night" = nightAvailable && options.basemapLook === "night" ? "night" : "map";
@@ -2034,12 +2076,29 @@ export async function createMapLibreHost(
     failAttempt("context-lost");
   }
 
+  /** Rebuilds the map on the token-free basemap after Mapbox refused a request. */
+  function fallBackFromMapbox(): void {
+    rememberMapboxRefusal();
+    activeBasemap = "openfreemap";
+    mapboxToken = null;
+    satelliteVisible = false;
+    style = OPENFREEMAP_STYLE_URL;
+    configuredStyle = OPENFREEMAP_STYLE_URL;
+    basemapLook = "map";
+    container.setAttribute(MAP_BASEMAP_ATTRIBUTE, "openfreemap");
+    startAttempt();
+  }
+
   /** The renderer's own `error` event, classified and never swallowed. */
   function onMapError(payload: unknown): void {
     if (disposed) return;
     if ((payload as { sourceId?: string } | null)?.sourceId === TERRAIN_SOURCE_ID) reportTerrain("unavailable");
     const error = classifyMapError(payload);
     if (error === null) return;
+    if (activeBasemap === "mapbox" && isMapboxRefusal(payload)) {
+      fallBackFromMapbox();
+      return;
+    }
     const current = attempt;
     // A failure *before* the map has drawn is a load failure: the load is not
     // going to finish on its own, so the bounded recovery starts here. Afterwards
@@ -2103,7 +2162,7 @@ export async function createMapLibreHost(
         ...(mapboxToken === null
           ? {}
           : {
-              transformRequest: (url: string) => ({ url: mapboxRequestUrl(url, mapboxToken) }),
+              transformRequest: ((token: string) => (url: string) => ({ url: mapboxRequestUrl(url, token) }))(mapboxToken),
               // Mapbox styles carry `projection: {name: "globe"}`, a Mapbox-only
               // spelling MapLibre's validator rejects outright; unvalidated, it
               // is ignored and the map draws in Mercator (OGV-D-265).
@@ -2294,9 +2353,13 @@ export async function createMapLibreHost(
       return () => viewportListeners.delete(listener);
     },
 
-    supportsSatellite: mapboxToken !== null,
+    get supportsSatellite(): boolean {
+      return mapboxToken !== null;
+    },
 
-    supportsNightContrast: nightAvailable,
+    get supportsNightContrast(): boolean {
+      return nightAvailable && mapboxToken !== null;
+    },
 
     setBasemapLook(look: "map" | "night"): void {
       if (!nightAvailable || drawingOfflineBasemap || look === basemapLook) return;

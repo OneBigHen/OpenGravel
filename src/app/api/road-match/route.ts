@@ -8,12 +8,19 @@
  * covered by unit tests instead of only by a running server.
  */
 
+import { createApiGuard, guarded } from "@/server/api-guard";
 import { handleRoadMatchRequest } from "@/server/road-matching/match-handler";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const guard = createApiGuard({ perMinute: 30, maxConcurrent: 6 });
+
 export async function POST(request: Request): Promise<Response> {
+  return guarded(guard, request, () => match(request));
+}
+
+async function match(request: Request): Promise<Response> {
   let body: unknown;
   try {
     body = await request.json();

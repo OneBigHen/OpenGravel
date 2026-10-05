@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import {
   clearReverseGeocodeCache,
+  clearSearchGeocodeCache,
   handleGeocodeReverse,
   handleGeocodeSearch,
   type GeocodeDependencies,
@@ -77,10 +78,11 @@ describe("GET /api/geocode", () => {
 
   it("rate-limits per client with a Retry-After", async () => {
     const dependencies = deps({ limiter: createRateLimiter({ windowMs: 60_000, max: 1 }) });
-    const request = () =>
-      new Request("http://x/api/geocode?q=Easton", { headers: { "x-real-ip": "10.0.0.1" } });
-    expect((await handleGeocodeSearch(request(), dependencies)).status).toBe(200);
-    const limited = await handleGeocodeSearch(request(), dependencies);
+    // Distinct queries: a repeated one is served from the cache and never reaches the limiter.
+    const request = (q: string) =>
+      new Request(`http://x/api/geocode?q=${q}`, { headers: { "x-real-ip": "10.0.0.1" } });
+    expect((await handleGeocodeSearch(request("Easton"), dependencies)).status).toBe(200);
+    const limited = await handleGeocodeSearch(request("Bethlehem"), dependencies);
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBe("60");
   });
@@ -129,5 +131,19 @@ describe("GET /api/geocode/reverse", () => {
     expect(((await near.json()) as { place: PlaceMatch }).place.label).toBe("Jim Thorpe, PA");
     const far = await handleGeocodeReverse(new Request("http://x/r?lat=40.2&lon=-75.0"), dependencies);
     expect(await far.json()).toEqual({ place: null });
+  });
+});
+
+describe("search cache", () => {
+  it("serves a repeated search without another upstream call or a rate-limit hit", async () => {
+    clearSearchGeocodeCache();
+    const search = vi.fn(async () => []);
+    const limiter = { check: vi.fn(() => null) };
+    const dependencies = { search, reverse: vi.fn(), limiter };
+    const get = () => new Request("https://ogv.test/api/geocode?q=Hawk%20Mountain&lat=40.62&lon=-75.47");
+    await handleGeocodeSearch(get(), dependencies);
+    await handleGeocodeSearch(get(), dependencies);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(limiter.check).toHaveBeenCalledTimes(1);
   });
 });

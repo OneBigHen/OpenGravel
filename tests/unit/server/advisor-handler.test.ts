@@ -9,7 +9,7 @@ import {
 import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import { handleAdvisorRequest, MAX_ADVISOR_REQUEST_BYTES } from "@/server/advisor/handler";
-import { createRateLimiter } from "@/server/rate-limit";
+import { createDailyCap, createRateLimiter } from "@/server/rate-limit";
 
 const FIELDS: AdvisorModelFields = {
   shape: null,
@@ -189,5 +189,15 @@ describe("advisor HTTP handler", () => {
     expect(first.status).toBe(200);
     expect(second.status).toBe(429);
     expect(second.headers.get("retry-after")).toBe("60");
+  });
+  it("stops calling the model once the daily budget is spent, for every client", async () => {
+    const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
+    const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };
+    const first = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const second = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(429);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 });

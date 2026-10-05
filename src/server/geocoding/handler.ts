@@ -26,6 +26,7 @@ export interface GeocodeDependencies {
   readonly reverse: (coordinate: Coordinate, signal: AbortSignal) => Promise<PlaceMatch | null>;
   readonly limiter?: RateLimiter;
   readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly now?: () => number;
   /** Optional regional hint configured by the deployment operator. */
   readonly defaultBias?: Coordinate;
 }
@@ -39,6 +40,20 @@ const reverseCache = new Map<string, { readonly place: PlaceMatch | null; readon
 
 export function clearReverseGeocodeCache(): void {
   reverseCache.clear();
+}
+
+const SEARCH_CACHE_LIMIT = 2_000;
+const SEARCH_CACHE_TTL_MS = 60 * 60 * 1000;
+const searchCache = new Map<string, { readonly places: PlaceMatch[]; readonly expiresAt: number }>();
+
+export function clearSearchGeocodeCache(): void {
+  searchCache.clear();
+}
+
+/** Same words, same neighbourhood (~11 km bias cell): one upstream call serves everyone. */
+function searchKey(query: string, bias: Coordinate | undefined): string {
+  const cell = bias === undefined ? "-" : `${bias.lat.toFixed(1)},${bias.lon.toFixed(1)}`;
+  return `${query.toLowerCase().replace(/\s+/g, " ")}|${cell}`;
 }
 
 const defaultLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
@@ -85,12 +100,28 @@ export async function handleGeocodeSearch(
   }
   const bias = coordinateFrom(url);
   if (bias === "invalid") return error(400, "The search location is invalid.");
+  const fixture = fixtureMode(dependencies);
+  const effectiveBias = bias ?? dependencies.defaultBias;
+  const key = searchKey(query, effectiveBias);
+  const now = (dependencies.now ?? Date.now)();
+  const cached = fixture ? undefined : searchCache.get(key);
+  if (cached !== undefined && cached.expiresAt > now) {
+    return Response.json({ places: cached.places }, { headers: NO_STORE });
+  }
   const blocked = limited(dependencies.limiter ?? defaultLimiter, request);
   if (blocked !== null) return blocked;
   try {
-    const places = fixtureMode(dependencies)
+    const places = fixture
       ? fixtureSearch(query)
-      : await dependencies.search(query, bias ?? dependencies.defaultBias, request.signal);
+      : await dependencies.search(query, effectiveBias, request.signal);
+    if (!fixture) {
+      searchCache.set(key, { places, expiresAt: now + SEARCH_CACHE_TTL_MS });
+      while (searchCache.size > SEARCH_CACHE_LIMIT) {
+        const oldest = searchCache.keys().next().value;
+        if (oldest === undefined) break;
+        searchCache.delete(oldest);
+      }
+    }
     return Response.json({ places }, { headers: NO_STORE });
   } catch {
     return error(503, UNAVAILABLE);
@@ -99,7 +130,7 @@ export async function handleGeocodeSearch(
 
 export async function handleGeocodeReverse(
   request: Request,
-  dependencies: GeocodeDependencies & { readonly now?: () => number },
+  dependencies: GeocodeDependencies,
 ): Promise<Response> {
   const url = new URL(request.url);
   const coordinate = coordinateFrom(url);
