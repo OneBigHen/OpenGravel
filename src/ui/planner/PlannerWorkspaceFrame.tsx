@@ -70,6 +70,7 @@ export function PlannerWorkspaceFrame({
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
   useSnapBackAfterKeyboard();
+  useChromeAwayWhileMoving(mapSlotRef);
   // The elevation profile's scrub point, drawn on the route (UX rework phase 3).
   const scrub = useRouteScrub();
   const scene = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
@@ -198,4 +199,64 @@ function useSnapBackAfterKeyboard(): void {
       window.visualViewport?.removeEventListener("resize", later);
     };
   }, []);
+}
+
+/**
+ * The tab bar gets out of the way while the rider moves the map (owner
+ * 2026-10-04: "I can't hide the bottom bar"), like Safari's own toolbars: a
+ * pan, pinch or wheel sets `data-chrome="away"` on <html>, and it comes back a
+ * moment after the map settles. A tap never hides it.
+ */
+function useChromeAwayWhileMoving(slotRef: RefObject<HTMLDivElement | null>): void {
+  useEffect(() => {
+    const slot = slotRef.current;
+    if (slot === null) return;
+    const root = document.documentElement;
+    let origin: { x: number; y: number } | null = null;
+    let restore: ReturnType<typeof setTimeout> | null = null;
+    const onMap = (target: EventTarget | null): boolean =>
+      target instanceof Element && target.closest(".og-map canvas, .og-map .maplibregl-canvas-container") !== null;
+    const away = (): void => {
+      if (restore !== null) clearTimeout(restore);
+      restore = null;
+      root.dataset["chrome"] = "away";
+    };
+    const back = (delay: number): void => {
+      if (restore !== null) clearTimeout(restore);
+      restore = setTimeout(() => {
+        restore = null;
+        delete root.dataset["chrome"];
+      }, delay);
+    };
+    const onDown = (event: PointerEvent): void => {
+      origin = onMap(event.target) ? { x: event.clientX, y: event.clientY } : null;
+    };
+    const onMove = (event: PointerEvent): void => {
+      if (origin === null || root.dataset["chrome"] === "away") return;
+      if (Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) away();
+    };
+    const onUp = (): void => {
+      if (origin !== null && root.dataset["chrome"] === "away") back(1600);
+      origin = null;
+    };
+    const onWheel = (event: WheelEvent): void => {
+      if (!onMap(event.target)) return;
+      away();
+      back(1600);
+    };
+    slot.addEventListener("pointerdown", onDown, { passive: true });
+    slot.addEventListener("pointermove", onMove, { passive: true });
+    window.addEventListener("pointerup", onUp, { passive: true });
+    window.addEventListener("pointercancel", onUp, { passive: true });
+    slot.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      if (restore !== null) clearTimeout(restore);
+      delete root.dataset["chrome"];
+      slot.removeEventListener("pointerdown", onDown);
+      slot.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      slot.removeEventListener("wheel", onWheel);
+    };
+  }, [slotRef]);
 }

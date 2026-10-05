@@ -1273,6 +1273,20 @@ describe("ride.clear and ride.create", () => {
     expect(expectNoop(applyRideCommand(document, command)).document).toBe(document);
   });
 
+  it("keeps a start that is the rider's own location or a saved place", () => {
+    for (const provenance of [
+      { type: "gps" as const, accuracyMeters: 8, observedAt: "2026-10-04T12:00:00.000Z" },
+      { type: "saved" as const, savedPlaceId: "home" },
+    ]) {
+      const start = startPoint({ provenance });
+      const document = fixture({ start, finish: finishPoint(), stops: [stopPoint()] });
+      const result = expectApplied(applyRideCommand(document, { ...base(document), type: "ride.clear" }));
+      expect(result.document.intent.start).toEqual(start);
+      expect(result.document.intent.finish).toBeNull();
+      expect(result.document.intent.stops).toEqual([]);
+    }
+  });
+
   it("resets the intent to defaults while keeping document identity metadata", () => {
     const document = fixture(
       { start: startPoint(), roadCharacter: "curvy", stops: [stopPoint()] },

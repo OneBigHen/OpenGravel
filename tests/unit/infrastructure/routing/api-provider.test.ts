@@ -21,6 +21,7 @@ import {
   ApiRouteProviderError,
   API_PROVIDER_ID,
   createApiRouteProvider,
+  PLAN_REQUEST_CEILING_MS,
 } from "@/infrastructure/routing/api-provider";
 
 const IDENTITY = {
@@ -193,7 +194,7 @@ function recordingFetcher(result: Response | Error): {
 }
 
 describe("createApiRouteProvider — the request it sends", () => {
-  it("POSTs the contract payload with the attempt identity and the caller's signal", async () => {
+  it("POSTs the contract payload with the attempt identity and an abortable signal", async () => {
     const { fetcher, probe } = recordingFetcher(response(true, 200, successBody()));
     const provider = createApiRouteProvider({ fetcher });
     provider.beginAttempt(IDENTITY);
@@ -204,7 +205,9 @@ describe("createApiRouteProvider — the request it sends", () => {
     const call = required(probe.calls[0]);
     expect(call.url).toBe(ROUTE_PLAN_PATH);
     expect(call.init?.method).toBe("POST");
-    expect(call.init?.signal).toBe(controller.signal);
+    // The request carries a signal that follows the caller's (and the ceiling's).
+    expect(call.init?.signal).toBeInstanceOf(AbortSignal);
+    expect(call.init?.signal?.aborted).toBe(false);
     const body = JSON.parse(String(call.init?.body)) as RoutePlanRequestBody;
     expect(body.identity).toEqual(IDENTITY);
     expect(body.request.origin).toEqual(REQUEST.origin);
@@ -403,5 +406,42 @@ describe("createApiRouteProvider — failures", () => {
       provider.candidates(REQUEST, new AbortController().signal),
     ).rejects.toBeInstanceOf(ApiRouteProviderError);
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("createApiRouteProvider — a request that never settles", () => {
+  it("gives up at the ceiling with a recoverable error instead of planning forever", async () => {
+    vi.useFakeTimers();
+    try {
+      // iOS can freeze a request while Safari is in the background: it never settles.
+      const fetcher = vi.fn((_path: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+      ) as unknown as typeof fetch;
+      const provider = createApiRouteProvider({ fetcher });
+      provider.beginAttempt(IDENTITY);
+      const result = provider.candidates(REQUEST, new AbortController().signal);
+      const settled = expect(result).rejects.toMatchObject({ code: "provider-unavailable", recoverable: true });
+      await vi.advanceTimersByTimeAsync(PLAN_REQUEST_CEILING_MS + 1);
+      await settled;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still reports the caller's own cancellation as the caller's reason", async () => {
+    const fetcher = vi.fn((_path: string, init?: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      }),
+    ) as unknown as typeof fetch;
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    const controller = new AbortController();
+    const result = provider.candidates(REQUEST, controller.signal);
+    const reason = new Error("superseded");
+    controller.abort(reason);
+    await expect(result).rejects.toBe(reason);
   });
 });
