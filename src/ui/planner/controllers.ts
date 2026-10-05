@@ -3,6 +3,7 @@ export { usePlannerAvoidAreas } from "./hooks/usePlannerAvoidAreas";
 export { usePlannerCamera } from "./hooks/usePlannerCamera";
 export { usePlannerGeometryCache } from "./usePlannerGeometryCache";
 export { usePlannerHistoryActions } from "./hooks/usePlannerHistoryActions";
+export { usePlannerSheetActions } from "./hooks/usePlannerSheetActions";
 export { usePlannerItineraryActions } from "./usePlannerItineraryActions";
 export { usePlannerMapIntentController } from "./hooks/usePlannerMapIntentController";
 export { usePlannerPlaces, type PlannerPlaceServices } from "./usePlannerPlaces";

@@ -41,6 +41,8 @@ export interface PlannerWorkspaceDockProps {
   /** "Avoid this road" after a tap on the selected route (NV-14). */
   readonly roadTap?: RoadTapOffer | null;
   readonly onToggleSheet: () => void;
+  /** Swipe or drag the sheet one height up or down (mini < resting < expanded). */
+  readonly onStepSheet: (direction: "up" | "down") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   /** True when the ride has any authored point, so there is a route to clear. */
@@ -106,6 +108,7 @@ export function PlannerWorkspaceDock({
   onDismissOverlap,
   roadTap = null,
   onToggleSheet,
+  onStepSheet,
   onUndo,
   onRedo,
   canClear,
@@ -141,14 +144,14 @@ export function PlannerWorkspaceDock({
       if (start === null || start.id !== event.pointerId) return;
       const dy = event.clientY - start.y;
       if (Math.abs(dy) < SWIPE_PX) return;
-      const expanded = sheetDetent === "expanded";
-      if ((dy < 0 && !expanded) || (dy > 0 && expanded)) {
-        swallowClick.current = true;
-        window.setTimeout(() => {
-          swallowClick.current = false;
-        }, 400);
-        onToggleSheet();
-      }
+      const direction = dy < 0 ? "up" : "down";
+      // Nothing above the full sheet, nothing below the thin bar.
+      if ((direction === "up" && sheetDetent === "expanded") || (direction === "down" && sheetDetent === "mini")) return;
+      swallowClick.current = true;
+      window.setTimeout(() => {
+        swallowClick.current = false;
+      }, 400);
+      onStepSheet(direction);
     },
     onPointerCancel: (): void => {
       swipe.current = null;
@@ -183,7 +186,7 @@ export function PlannerWorkspaceDock({
         aria-label="Ride planning"
         style={{ "--og-sheet-head-height": `${sheetHeadHeight}px` } as CSSProperties}
       >
-        <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...(idle ? {} : swipeHandlers)}>
+        <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...swipeHandlers}>
           <PlannerWorkspaceStatus {...status} />
 
           {overlapCandidates.length === 0 ? null : (
@@ -264,14 +267,24 @@ export function PlannerWorkspaceDock({
             data-detent={sheetDetent}
             aria-expanded={sheetDetent === "expanded"}
             aria-controls="og-sheet-body"
-            aria-label={`${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
-              viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
-            }`}
+            aria-label={
+              sheetDetent === "mini"
+                ? "Show planner"
+                : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
+                    viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
+                  }`
+            }
             onClick={onToggleSheet}
           >
             <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
               {/* Collapsed with alternatives behind it, the label says what a tap does (FT-02). */}
-              {hasChoices ? (sheetDetent !== "expanded" && viewModel.routeCards.length > 1 ? "Compare rides" : "Ride choices") : "Ride style"}
+              {sheetDetent === "mini"
+                ? "Show planner"
+                : hasChoices
+                  ? sheetDetent !== "expanded" && viewModel.routeCards.length > 1
+                    ? "Compare rides"
+                    : "Ride choices"
+                  : "Ride style"}
             </span>
             {viewModel.routeCards.length === 0 ? null : (
               <span className="og-sheet__handle-count" data-testid="ride-choices-count">
@@ -279,7 +292,7 @@ export function PlannerWorkspaceDock({
               </span>
             )}
             <span className="og-sheet__handle-chevron" aria-hidden="true">
-              {sheetDetent === "expanded" ? "⌃" : "⌄"}
+              {sheetDetent === "expanded" ? "⌃" : sheetDetent === "mini" ? "⌃" : "⌄"}
             </span>
           </button>
 

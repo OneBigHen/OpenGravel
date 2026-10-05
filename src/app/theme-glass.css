@@ -2691,3 +2691,73 @@ html .og-ride {
 @media (max-width: 760px) {
   .og-editbar__tip { margin-top: 48px; max-width: calc(100vw - 100px); }
 }
+
+/* --------------------------------------------------------------------------
+   Plan sheet, folded (phone): drag the sheet down and it folds to one thin bar
+   (a grip, the status line, "Show planner") so the map gets the whole screen;
+   drag it up, or tap the bar, and it comes back. Owner 2026-10-05.
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  /* The head owns vertical drags, so iOS does not turn a swipe into a page
+     scroll and cancel the gesture halfway. */
+  .og-planner__sheet .og-sheet__head {
+    touch-action: none;
+  }
+
+  /* Idle has no handle, so give the swipe a grip and a finger-sized target. */
+  .og-planner__sheet[data-idle="true"]:not([data-detent="mini"]) .og-sheet__head {
+    padding: 4px 0 10px;
+  }
+
+  .og-planner__sheet[data-idle="true"]:not([data-detent="mini"]) .og-sheet__head::before {
+    content: "";
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 0 auto;
+    border-radius: 2px;
+    background: var(--og-topo-sage);
+  }
+
+  .og-planner__sheet[data-detent="mini"] {
+    max-height: none;
+    padding: 6px 12px calc(6px + var(--og-safe-bottom));
+  }
+
+  .og-planner__sheet[data-detent="mini"] .og-sheet__body,
+  .og-planner__sheet[data-detent="mini"] .og-sheet__head > :is(.og-history, .og-sheet__undo-clear, .og-sheet__clear),
+  .og-planner__sheet[data-detent="mini"]::after {
+    display: none;
+  }
+
+  .og-planner__sheet[data-detent="mini"] .og-sheet__head {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .og-planner__sheet[data-detent="mini"] .og-sheet__head > .og-planner__status {
+    position: static;
+    width: auto;
+    height: auto;
+    clip: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 2px;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-planner__sheet[data-detent="mini"] .og-sheet__head > .og-sheet__handle {
+    display: block;
+    order: 2;
+    flex: none;
+    margin: 0 0 0 auto;
+  }
+}
