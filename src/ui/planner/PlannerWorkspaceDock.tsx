@@ -312,7 +312,9 @@ export function PlannerWorkspaceDock({
             </button>
           ) : null}
 
-          {viewModel.undoLabel === null && viewModel.redoLabel === null ? null : (
+          {/* The first screen is From / Where to? only (owner 2026-10-04), unless
+              the rider just undid back to it and Redo is the way forward. */}
+          {(viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null) ? null : (
             <div className="og-history" data-testid="history-controls">
               {/*
                 Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills

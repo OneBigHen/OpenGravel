@@ -2636,7 +2636,6 @@ html .og-ride {
 
 /* The first screen is "From / Where to?" and nothing else: no Undo/Redo row
    (owner 2026-10-04). Right after a clear, "Undo clear" still offers itself. */
-.og-planner__sheet[data-idle="true"] .og-history { display: none; }
 .og-planner__sheet[data-idle="true"] .og-sheet__undo-clear { justify-self: start; margin-bottom: 4px; }
 
 /* ── Tab bar: real frosted glass, and out of the way while the map moves ── */
