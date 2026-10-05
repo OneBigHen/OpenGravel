@@ -112,6 +112,12 @@ npm run dev
 
 Everything else is optional and set in `.env.local`: a Mapbox public token for terrain and satellite (OpenFreeMap is the free default), a self-hosted Photon geocoder, a places feed, and an OpenAI-compatible endpoint for "Describe a ride". See [`.env.example`](.env.example).
 
+### Hosting it for other people
+
+Every public API route has a per-IP limit (over it: `429` with `Retry-After`), and route planning and road matching also cap how many run at once so one crowd can't starve the router. Free-tier upstreams are protected too: the advisor and TomTom traffic tiles have shared daily budgets (`ADVISOR_DAILY_CAP`, `TOMTOM_TILE_DAILY_CAP`), and place searches are cached. If Mapbox refuses a request (quota spent, token revoked) the map switches to OpenFreeMap on its own.
+
+Before going public: restrict your Mapbox token to your domain in the Mapbox dashboard, leave billing off on any free-tier AI key, and put a rate-limit rule at your CDN or reverse proxy. The limits above are per process, so run a single instance or enforce them at the edge.
+
 Optional browser/PWA Spotify controls use PKCE and never stream audio in the browser. See the [Spotify setup guide](docs/spotify.md) for the private session key, callback allowlist and rider-owned app setup.
 
 ## How it works
