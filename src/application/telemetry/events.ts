@@ -59,6 +59,7 @@ export const TELEMETRY_EVENT_NAMES = [
   "prepare_opened",
   "ride_saved",
   "export_completed",
+  "import_completed",
   // map interaction and drawing
   "draw_started",
   "draw_completed",
@@ -157,6 +158,7 @@ export const TELEMETRY_EVENT_PROPERTY_KEYS = {
   prepare_opened: [],
   ride_saved: [],
   export_completed: ["distanceBand", "durationBand"],
+  import_completed: ["source"],
   draw_started: ["source"],
   draw_completed: ["source", "durationBand"],
   draw_failed: ["source", "errorClass"],

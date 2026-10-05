@@ -34,6 +34,7 @@ import {
 } from "@/application/advisor";
 import type { AdvisorProposalChange } from "@/application/advisor/advisor-proposal-commands";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
+import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /** What happens after an applied proposal, in the rider's words. */
 export type AdvisorAppliedNext =
@@ -104,6 +105,7 @@ export function RideAdvisorProvider({ enabled, store, client, onApplied, childre
       const controller = new AbortController();
       requestController.current = controller;
       const generation = ++requestGeneration.current;
+      emitTelemetry("advisor_proposal_requested", { capabilityStatus: "available" });
       setPrompt(text);
       setPending(true);
       setProposal(null);
@@ -118,11 +120,13 @@ export function RideAdvisorProvider({ enabled, store, client, onApplied, childre
           );
           if (generation !== requestGeneration.current) return;
           if (!result.ok) {
+            emitTelemetry("advisor_proposal_ready", { capabilityStatus: "unavailable" });
             fail(result.message, result.recovery);
             return;
           }
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status === "ready") {
+            emitTelemetry("advisor_proposal_ready", { capabilityStatus: "available" });
             setProposal(built);
           } else if (built.status === "error") {
             fail(built.message, built.recovery);
@@ -157,6 +161,7 @@ export function RideAdvisorProvider({ enabled, store, client, onApplied, childre
     const result = store.getState().dispatch(proposal.command);
     setProposal(null);
     if (result.outcome === "applied") {
+      emitTelemetry("advisor_proposal_applied", { source: "advisor" });
       setRecovery("none");
       setPrompt("");
       const next = onAppliedRef.current?.() ?? { kind: "planning" as const };
@@ -170,13 +175,14 @@ export function RideAdvisorProvider({ enabled, store, client, onApplied, childre
   }, [proposal, store, fail]);
 
   const dismiss = useCallback(() => {
+    if (proposal !== null) emitTelemetry("advisor_proposal_discarded");
     requestController.current?.abort();
     requestGeneration.current += 1;
     setPending(false);
     setProposal(null);
     setMessage(null);
     setRecovery("none");
-  }, []);
+  }, [proposal]);
 
   const retry = useCallback(() => ask(prompt), [ask, prompt]);
 

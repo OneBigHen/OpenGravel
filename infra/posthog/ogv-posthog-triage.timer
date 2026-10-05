@@ -1,0 +1,11 @@
+[Unit]
+Description=Run OpenGravel PostHog triage after the daily report
+
+[Timer]
+OnCalendar=*-*-* 11:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=ogv-posthog-triage.service
+
+[Install]
+WantedBy=timers.target

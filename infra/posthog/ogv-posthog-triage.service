@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenGravel autonomous PostHog triage (files issues, never deploys)
+After=ogv-posthog-report.service network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=7200
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/opengravel/posthog-triage.sh
+Restart=on-failure
+RestartSec=900
+SuccessExitStatus=75
+Nice=10
+MemoryMax=2G
+Environment=HOME=/root

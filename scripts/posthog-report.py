@@ -18,7 +18,12 @@ def main():
         WHERE timestamp >= now() - INTERVAL 1 DAY
         AND event IN ('planner_opened', 'route_plan_requested',
           'route_primary_ready', 'route_plan_failed', '$rageclick',
-          '$dead_click', '$exception')
+          '$dead_click', '$exception',
+          'route_alternatives_ready', 'route_selected', 'draw_started',
+          'draw_completed', 'draw_failed', 'advisor_proposal_requested',
+          'advisor_proposal_ready', 'advisor_proposal_applied',
+          'advisor_proposal_discarded', 'ride_started', 'ride_completed',
+          'export_completed', 'import_completed')
         GROUP BY event, build, error_class, latency
         ORDER BY count DESC LIMIT 200"""
     request = urllib.request.Request(

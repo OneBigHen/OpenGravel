@@ -13,6 +13,7 @@ import {
 import type { ImportFile } from "@/application/import/import-artifact";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ImportProgress, ParsedImport, ParsedImportTrack } from "@/application/import/types";
+import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 export interface ImportPanelProps {
   readonly service: ImportServicePort;
@@ -246,6 +247,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
       setOutcome(nextOutcome);
       setPhase("success");
       try {
+        emitTelemetry("import_completed", { source: "import" });
         await onImported?.(nextOutcome);
       } catch {
         // The import itself is already durable; a library refresh failure must

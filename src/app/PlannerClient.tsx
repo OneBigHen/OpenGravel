@@ -57,6 +57,7 @@ import type { Garage } from "@/application/garage/garage-model";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { createHomeLocationStorage } from "@/infrastructure/storage/home-location-storage";
 import { createPlaceMemoryStore } from "@/infrastructure/storage/place-memory-storage";
+import { publishTelemetryIntent } from "@/infrastructure/telemetry/browser-event-bridge";
 
 /**
  * The browser composition root.
@@ -269,6 +270,7 @@ export function PlannerClient({
         // The rider's own Start: the ride page resumes it instead of opening
         // paused as it does after a reload (ride-handoff-marker.ts).
         markRideHandoff();
+        publishTelemetryIntent(existingSessionId === null ? "ride_started" : "ride_resumed", existingSessionId === null ? { source: "rider" } : {});
         router.push(RIDE_FOCUS_PATH);
       }
       return outcome;
@@ -283,6 +285,7 @@ export function PlannerClient({
         writerToken: globalThis.crypto.randomUUID(),
       });
       if (outcome.outcome === "ready") {
+        publishTelemetryIntent("ride_started", { source: "rider" });
         router.push(
           `${RIDE_FOCUS_PATH}?record=1&rideId=${encodeURIComponent(document.rideId)}&revision=${document.revision}`,
         );
@@ -303,6 +306,7 @@ export function PlannerClient({
       });
       if (outcome.outcome !== "rejected") {
         markRideHandoff();
+        publishTelemetryIntent("ride_started", { source: "system-location" });
         router.push(RIDE_FOCUS_PATH);
       }
       return outcome;
