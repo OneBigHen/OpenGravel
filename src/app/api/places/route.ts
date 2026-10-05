@@ -1,9 +1,16 @@
+import { createApiGuard, guarded } from "@/server/api-guard";
 import { handlePlacesExtentRequest } from "@/server/places/handler";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const guard = createApiGuard({ perMinute: 60, maxConcurrent: 6 });
+
 export async function GET(request: Request): Promise<Response> {
+  return guarded(guard, request, () => extent(request));
+}
+
+async function extent(request: Request): Promise<Response> {
   let url: URL;
   try {
     url = new URL(request.url);

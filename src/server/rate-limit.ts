@@ -61,3 +61,50 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
     },
   };
 }
+
+/** Caps how many expensive requests run at once, so a burst queues at the client, not in the router. */
+export interface ConcurrencyGate {
+  /** A release function when a slot is free, otherwise `null`. Call release exactly once. */
+  acquire(): (() => void) | null;
+}
+
+export function createConcurrencyGate(max: number): ConcurrencyGate {
+  let active = 0;
+  return {
+    acquire() {
+      if (active >= max) return null;
+      active += 1;
+      let released = false;
+      return () => {
+        if (released) return;
+        released = true;
+        active -= 1;
+      };
+    },
+  };
+}
+
+/** A process-wide daily budget (UTC day), for free-tier upstreams that must never be exhausted by one crowd. */
+export interface DailyCap {
+  /** `null` when a unit was taken; otherwise seconds until the budget resets. */
+  take(): number | null;
+}
+
+export function createDailyCap(max: number, now: () => number = Date.now): DailyCap {
+  const DAY_MS = 86_400_000;
+  let day = Math.floor(now() / DAY_MS);
+  let used = 0;
+  return {
+    take() {
+      const time = now();
+      const today = Math.floor(time / DAY_MS);
+      if (today !== day) {
+        day = today;
+        used = 0;
+      }
+      if (used >= max) return Math.max(1, Math.ceil(((day + 1) * DAY_MS - time) / 1000));
+      used += 1;
+      return null;
+    },
+  };
+}

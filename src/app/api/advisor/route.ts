@@ -1,13 +1,15 @@
 import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { advisorTransportFromEnv } from "@/infrastructure/advisor/advisor-transport";
 import { geocodeDependencies } from "@/app/api/geocode/geocoder";
-import { createRateLimiter } from "@/server/rate-limit";
+import { createDailyCap, createRateLimiter } from "@/server/rate-limit";
 import { handleAdvisorRequest } from "@/server/advisor/handler";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const limiter = createRateLimiter({ windowMs: 60_000, max: 8 });
+// Gemini's free tier is shared by every rider; stay under it. Override with ADVISOR_DAILY_CAP.
+const dailyCap = createDailyCap(Number(process.env.ADVISOR_DAILY_CAP) || 600);
 
 const places: PlaceSearchPort = {
   async search(query, options = {}) {
@@ -36,5 +38,6 @@ export async function POST(request: Request): Promise<Response> {
     transport: advisorTransportFromEnv(),
     places,
     limiter,
+    dailyCap,
   });
 }

@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { createApiGuard, guarded } from "@/server/api-guard";
 import type { WeatherSnapshot } from "@/application/preparation/providers";
 import {
   fetchSnapshot as fetchNwsSnapshot,
@@ -158,6 +159,8 @@ export async function handleWeatherRequest(
   }
 }
 
+const guard = createApiGuard({ perMinute: 60, maxConcurrent: 6 });
+
 export async function GET(request: Request): Promise<Response> {
-  return handleWeatherRequest(request);
+  return guarded(guard, request, () => handleWeatherRequest(request));
 }

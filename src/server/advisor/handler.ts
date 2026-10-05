@@ -8,7 +8,7 @@ import {
   type AdvisorTransport,
 } from "@/application/advisor";
 import type { PlaceSearchPort } from "@/application/geocoding/place-search";
-import type { RateLimiter } from "@/server/rate-limit";
+import type { DailyCap, RateLimiter } from "@/server/rate-limit";
 
 export const MAX_ADVISOR_REQUEST_BYTES = 8 * 1024;
 
@@ -16,6 +16,8 @@ export interface AdvisorHandlerDependencies {
   readonly transport: AdvisorTransport | null;
   readonly places: PlaceSearchPort;
   readonly limiter: RateLimiter;
+  /** Process-wide daily budget so one crowd cannot exhaust the free-tier model quota for everyone. */
+  readonly dailyCap?: DailyCap;
 }
 
 type BodyRead =
@@ -109,6 +111,8 @@ export async function handleAdvisorRequest(
   if (advisorRequest === null) return errorResponse("invalid-request");
   const transport = dependencies.transport;
   if (transport === null) return errorResponse("unavailable");
+  const capRetry = dependencies.dailyCap?.take() ?? null;
+  if (capRetry !== null) return errorResponse("rate-limit", capRetry);
 
   try {
     const result = await requestAdvisorDraft(
