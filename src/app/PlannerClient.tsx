@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePlanningTelemetry } from "@/app/use-planning-telemetry";
 import { useRouter } from "next/navigation";
 
 // The renderer's own stylesheet (canvas positioning, attribution controls). It is
@@ -203,6 +204,7 @@ export function PlannerClient({
     }),
     [geometryStore, libraryService],
   );
+  usePlanningTelemetry(planningSessionStore);
   const rideDocumentStore = useMemo(
     () =>
       createRideDocumentStore({

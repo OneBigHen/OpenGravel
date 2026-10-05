@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
   // byte-identical by a test rather than reformatted to satisfy our style rules.
   globalIgnores([
     ".next/**",
+    // Nested agent checkouts and browser artifacts are not this source tree.
+    ".claude/worktrees/**",
+    ".playwright-mcp/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

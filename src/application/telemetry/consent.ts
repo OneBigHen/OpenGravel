@@ -48,7 +48,7 @@ export function telemetryGateOpen(
   mode: TelemetryMode,
   consent: TelemetryConsentState,
 ): boolean {
-  return mode === "hosted-beta" && consent.status === "acknowledged";
+  return mode === "hosted-beta" && consent.status === "acknowledged" && consent.policyVersion === TELEMETRY_CONSENT_POLICY_VERSION;
 }
 
 /**

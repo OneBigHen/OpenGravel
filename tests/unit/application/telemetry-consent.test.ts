@@ -164,3 +164,7 @@ describe("session replay masking policy (11 §15)", () => {
     );
   });
 });
+
+it("does not accept acknowledgement of an obsolete disclosure", () => {
+  expect(telemetryGateOpen("hosted-beta", { status: "acknowledged", acknowledgedAt: "now", policyVersion: 0 })).toBe(false);
+});
