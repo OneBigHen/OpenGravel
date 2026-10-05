@@ -6,7 +6,7 @@ import { SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
 import { createGarage, type Garage } from "@/application/garage/garage-model";
 import type { TelemetryConsentState } from "@/application/telemetry/consent";
 import type { TelemetryConsentRead } from "@/application/telemetry/ports/telemetry-consent-store";
-import { createLocalStorageTelemetryConsentStore } from "@/infrastructure/telemetry/local-storage-consent-store";
+import { createLocalStorageTelemetryConsentStore, TELEMETRY_CONSENT_CHANGED_EVENT } from "@/infrastructure/telemetry/local-storage-consent-store";
 import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
 import { createHomeLocationStorage } from "@/infrastructure/storage/home-location-storage";
 import { createLocalStorageRiderSettings } from "@/infrastructure/storage/rider-settings-storage";
@@ -97,13 +97,23 @@ export function SettingsClient() {
     return () => window.cancelAnimationFrame(frame);
   }, [garageStorage, consentStore, homeStorage]);
 
+  useEffect(() => {
+    const changed = (event: Event) => setConsent((event as CustomEvent<TelemetryConsentState>).detail);
+    const storageChanged = () => setConsent(consentState(consentStore.read()));
+    window.addEventListener(TELEMETRY_CONSENT_CHANGED_EVENT, changed);
+    window.addEventListener("storage", storageChanged);
+    return () => {
+      window.removeEventListener(TELEMETRY_CONSENT_CHANGED_EVENT, changed);
+      window.removeEventListener("storage", storageChanged);
+    };
+  }, [consentStore]);
+
   function saveGarage(next: Garage): void {
     setGarage(next);
     garageStorage.write(next);
   }
 
   function saveConsent(next: TelemetryConsentState): void {
-    setConsent(next);
     consentStore.write(next);
   }
 
@@ -159,6 +169,7 @@ export function SettingsClient() {
     setStatusMessage(null);
     setHomeFeedback(null);
     try {
+      consentStore.clear();
       await clearAllLocalData();
       setGarage(createGarage());
       setConsent({ status: "unacknowledged" });

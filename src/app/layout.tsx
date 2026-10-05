@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { version as appVersion } from "../../package.json";
+import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
+import { resolveTelemetryConfig } from "@/infrastructure/telemetry/config";
+import { TelemetryClient } from "./TelemetryClient";
 import "./theme-glass.css";
 import "@/ui/planner/routing-method-comparison.css";
 import { NativeShell } from "./NativeShell";
@@ -118,6 +123,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${body.variable} ${display.variable}`}>
+        <Suspense fallback={null}><TelemetryClient
+          mode={resolveTelemetryConfig({ NEXT_PUBLIC_TELEMETRY_MODE: process.env.NEXT_PUBLIC_TELEMETRY_MODE ?? (process.env.TELEMETRY_ENABLED === "true" ? "hosted-beta" : "self-host") }).mode}
+          build={{ appVersion, buildId: process.env.OGV_BUILD_ID ?? "dev", routePolicyVersion: PA_NJ_ROUTE_POLICY_VNEXT_1.version, graphVersionBand: process.env.OGV_GRAPH_VERSION ?? "unknown" }}
+        /></Suspense>
         <SkipLink />
         <NativeShell />
         {children}

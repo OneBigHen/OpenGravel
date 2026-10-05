@@ -20,10 +20,16 @@ export interface TelemetryStorageLike {
   removeItem(key: string): void;
 }
 
+export const TELEMETRY_CONSENT_CHANGED_EVENT = "opengravel:telemetry-consent-changed";
+
+function notifyConsent(state: TelemetryConsentState): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(TELEMETRY_CONSENT_CHANGED_EVENT, { detail: state }));
+}
+
 export const TELEMETRY_CONSENT_STORAGE_KEY = "opengravel.vnext.telemetry-consent";
 
 function defaultStorage(): TelemetryStorageLike | null {
-  return typeof window === "undefined" ? null : window.localStorage;
+  try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; }
 }
 
 function parseConsentRecord(raw: string): TelemetryConsentRead {
@@ -78,16 +84,22 @@ export function createLocalStorageTelemetryConsentStore(
     },
     write(state: TelemetryConsentState): void {
       try {
-        storage?.setItem(TELEMETRY_CONSENT_STORAGE_KEY, JSON.stringify(state));
+        if (storage === null) { notifyConsent({ status: "unacknowledged" }); return; }
+        storage.setItem(TELEMETRY_CONSENT_STORAGE_KEY, JSON.stringify(state));
+        notifyConsent(state);
       } catch {
+        notifyConsent({ status: "unacknowledged" });
         // Fail closed: the service gate stays off when nothing can persist.
       }
     },
     clear(): void {
       try {
         storage?.removeItem(TELEMETRY_CONSENT_STORAGE_KEY);
+
       } catch {
         // Fail closed: the service gate never reopens on its own.
+      } finally {
+        notifyConsent({ status: "unacknowledged" });
       }
     },
   };

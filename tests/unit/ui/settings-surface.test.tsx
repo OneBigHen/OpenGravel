@@ -6,6 +6,10 @@ import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 afterEach(() => cleanup());
 
 describe("settings surface", () => {
+  it("leaves an obsolete telemetry acknowledgement unchecked", () => {
+    render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} telemetryConsent={{ status: "acknowledged", policyVersion: 0, acknowledgedAt: "2026-10-01T00:00:00Z" }} />);
+    expect(screen.getByLabelText("I understand and acknowledge this collection")).not.toBeChecked();
+  });
   it("keeps location-denial recovery beside the Home action", () => {
     render(<SettingsSurface
       garage={createGarage()}

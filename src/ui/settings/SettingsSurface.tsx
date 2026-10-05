@@ -11,7 +11,7 @@ import {
   type Garage,
 } from "@/application/garage/garage-model";
 import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
-import { TELEMETRY_ACKNOWLEDGEMENT, type TelemetryConsentState } from "@/application/telemetry/consent";
+import { TELEMETRY_ACKNOWLEDGEMENT, telemetryGateOpen, acknowledgedConsentState, type TelemetryConsentState } from "@/application/telemetry/consent";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { HomeSearch } from "./HomeSearch";
 import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
@@ -240,9 +240,9 @@ export function SettingsSurface({
         </section>
 
         <section className="og-settings__section" aria-labelledby="settings-privacy-title">
-          <div className="og-settings__section-heading"><div><p className="og-settings__eyebrow">PRIVACY</p><h2 id="settings-privacy-title">Usage data</h2></div><span className="og-settings__status">{telemetryConsent.status === "acknowledged" ? "Acknowledged" : "Off"}</span></div>
+          <div className="og-settings__section-heading"><div><p className="og-settings__eyebrow">PRIVACY</p><h2 id="settings-privacy-title">Usage data</h2></div><span className="og-settings__status">{telemetryGateOpen("hosted-beta", telemetryConsent) ? "Acknowledged" : "Off"}</span></div>
           <p>{TELEMETRY_ACKNOWLEDGEMENT.collectedSummary}</p><p className="og-settings__section-copy">{TELEMETRY_ACKNOWLEDGEMENT.neverCollectedSummary}</p><p className="og-settings__section-copy">{TELEMETRY_ACKNOWLEDGEMENT.mapContextDisclosure}</p>
-          <label className="og-settings__check"><input type="checkbox" checked={telemetryConsent.status === "acknowledged"} onChange={(event) => onTelemetryConsentChange?.(event.target.checked ? { status: "acknowledged", acknowledgedAt: new Date().toISOString(), policyVersion: 1 } : { status: "unacknowledged" })} />I understand and acknowledge this collection</label>
+          <label className="og-settings__check"><input type="checkbox" checked={telemetryGateOpen("hosted-beta", telemetryConsent)} onChange={(event) => onTelemetryConsentChange?.(event.target.checked ? acknowledgedConsentState(new Date().toISOString()) : { status: "unacknowledged" })} />I understand and acknowledge this collection</label>
           <p className="og-settings__section-copy">{TELEMETRY_ACKNOWLEDGEMENT.offUntilAcknowledgedNote}</p>
         </section>
 
