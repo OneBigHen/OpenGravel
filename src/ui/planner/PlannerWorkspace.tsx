@@ -99,6 +99,7 @@ import {
   usePlannerCamera,
   usePlannerGeometryCache,
   usePlannerHistoryActions,
+  usePlannerSheetActions,
   usePlannerMapIntentController,
   usePlannerPlaces,
   usePlannerRideStyle,
@@ -662,10 +663,7 @@ export function PlannerWorkspace({
     plannerUiStore.getState().requestMapRetry();
   }, [plannerUiStore]);
 
-  const handleToggleSheet = useCallback((): void => {
-    const session = planningSessionStore.getState().snapshot;
-    plannerUiStore.getState().toggleSheet((session.committedBundle ?? session.lastGoodBundle) !== null);
-  }, [plannerUiStore, planningSessionStore]);
+  const sheetActions = usePlannerSheetActions(plannerUiStore, planningSessionStore);
 
   /** 04 §20 undo/redo and OW-01 Clear route, for the sheet. */
   const history = usePlannerHistoryActions({ document, rideDocumentStore, plannerUiStore });
@@ -835,7 +833,8 @@ export function PlannerWorkspace({
           onSelectOverlap={handleSelectOverlap}
           onDismissOverlap={handleDismissOverlap}
           roadTap={roadTap}
-          onToggleSheet={handleToggleSheet}
+          onToggleSheet={sheetActions.onToggleSheet}
+          onStepSheet={sheetActions.onStepSheet}
           {...history}
           composer={{
             viewModel,

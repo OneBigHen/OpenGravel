@@ -292,3 +292,49 @@ test("the armed-placement instruction is a note, never a control", async ({
     await hint.evaluate((element) => getComputedStyle(element).pointerEvents),
   ).toBe("none");
 });
+
+/** A one-finger vertical drag on an element, as the browser reports a touch. */
+async function touchDrag(page: import("@playwright/test").Page, testId: string, dy: number): Promise<void> {
+  await page.getByTestId(testId).evaluate((el, delta) => {
+    const box = el.getBoundingClientRect();
+    const x = box.left + box.width / 2;
+    const y = box.top + Math.min(box.height / 2, 12);
+    const fire = (type: string, clientY: number): void => {
+      el.dispatchEvent(
+        new PointerEvent(type, { bubbles: true, pointerType: "touch", pointerId: 7, clientX: x, clientY }),
+      );
+    };
+    fire("pointerdown", y);
+    fire("pointerup", y + delta);
+  }, dy);
+}
+
+test("dragging the sheet down folds it to a thin bar, and dragging up opens it again", async ({ page }) => {
+  const sheet = page.getByTestId("planner-sheet");
+  await expect(sheet).toHaveAttribute("data-detent", "peek");
+  const openBox = await sheet.boundingBox();
+  if (openBox === null) throw new Error("the sheet has no measured box");
+
+  await touchDrag(page, "sheet-head", 80);
+  await expect(sheet).toHaveAttribute("data-detent", "mini");
+  const miniBox = await sheet.boundingBox();
+  if (miniBox === null) throw new Error("the folded sheet has no measured box");
+  expect(miniBox.height).toBeLessThan(openBox.height / 2);
+  expect(miniBox.height).toBeLessThan(110);
+  await expect(page.getByTestId("sheet-handle")).toBeVisible();
+  await expect(page.getByTestId("sheet-handle")).toHaveAccessibleName("Show planner");
+
+  // Down again does nothing; up brings the sheet back.
+  await touchDrag(page, "sheet-head", 80);
+  await expect(sheet).toHaveAttribute("data-detent", "mini");
+  await touchDrag(page, "sheet-head", -80);
+  await expect(sheet).toHaveAttribute("data-detent", "peek");
+
+  // A tap on the bar opens it too.
+  await touchDrag(page, "sheet-head", 80);
+  await expect(sheet).toHaveAttribute("data-detent", "mini");
+  // A swipe swallows the click it ends in for a moment; a real tap comes later.
+  await page.waitForTimeout(500);
+  await page.getByTestId("sheet-handle").click();
+  await expect(sheet).toHaveAttribute("data-detent", "peek");
+});

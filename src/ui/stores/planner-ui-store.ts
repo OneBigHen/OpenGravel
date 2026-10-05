@@ -101,7 +101,7 @@ export function pointerToolForAvoidArea(tool: AvoidAreaTool): PointerTool {
  * planned ride at a glance (the chosen route in one line and Start ride) so
  * the map keeps most of the screen; `expanded` is everything, scrolling.
  */
-export type SheetDetent = "peek" | "ride" | "expanded";
+export type SheetDetent = "mini" | "peek" | "ride" | "expanded";
 
 /** A tap on the selected route: which route, and where on the map. */
 export interface RouteTap {
@@ -265,6 +265,7 @@ export interface PlannerUiState {
   readonly setCameraUserOwned: (owned: boolean) => void;
   readonly setInsets: (insets: MapInsets) => void;
   readonly setSheetDetent: (detent: SheetDetent) => void;
+  readonly stepSheet: (direction: "up" | "down", hasRide: boolean) => void;
   /**
    * The handle: up opens everything; down returns to the ride at a glance
    * when there is a ride (`hasRide`), and to the composer when there is not.
@@ -499,8 +500,24 @@ export function createPlannerUiStore(
       set({ insets });
     },
     setSheetDetent: (detent: SheetDetent): void => set({ sheetDetent: detent }),
+    // A folded sheet opens to its resting height first, not all the way up.
     toggleSheet: (hasRide: boolean): void =>
-      set((state) => ({ sheetDetent: state.sheetDetent !== "expanded" ? "expanded" : hasRide ? "ride" : "peek" })),
+      set((state) => ({
+        sheetDetent:
+          state.sheetDetent === "mini"
+            ? hasRide ? "ride" : "peek"
+            : state.sheetDetent !== "expanded" ? "expanded" : hasRide ? "ride" : "peek",
+      })),
+    // One step along mini < peek/ride < expanded: the swipe and the drag grip.
+    stepSheet: (direction: "up" | "down", hasRide: boolean): void =>
+      set((state) => {
+        const rest = hasRide ? "ride" : "peek";
+        const current = state.sheetDetent;
+        if (direction === "down") {
+          return { sheetDetent: current === "expanded" ? rest : "mini" };
+        }
+        return { sheetDetent: current === "mini" ? rest : "expanded" };
+      }),
     setOverlapCandidates: (candidates: readonly MapObjectRef[], at: Coordinate | null = null): void =>
       set({ overlapCandidates: candidates, overlapAt: candidates.length === 0 ? null : at }),
     setRouteTap: (tap: RouteTap | null): void => set({ routeTap: tap }),
