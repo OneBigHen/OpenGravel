@@ -1,7 +1,13 @@
+import { createDailyCap, createRateLimiter } from "@/server/rate-limit";
 import { trafficTileUpstream } from "@/server/map-layers/handler";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+// A map view asks for a dozen tiles, so the per-client budget is generous; the daily
+// cap protects TomTom's free quota for everyone. Override with TOMTOM_TILE_DAILY_CAP.
+const limiter = createRateLimiter({ windowMs: 60_000, max: 600 });
+const dailyCap = createDailyCap(Number(process.env.TOMTOM_TILE_DAILY_CAP) || 30_000);
 
 /** An empty 1×1 PNG: a missing tile draws nothing instead of a broken image. */
 const EMPTY_PNG = Buffer.from(
@@ -18,12 +24,14 @@ function empty(): Response {
  * browser. Tiles are cached briefly: flow changes by the minute.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ z: string; x: string; y: string }> },
 ): Promise<Response> {
   const { z, x, y } = await context.params;
   const upstream = trafficTileUpstream(Number(z), Number(x), Number(y.replace(/\.png$/, "")));
   if (upstream === null) return empty();
+  // Over budget draws no traffic layer rather than failing the map.
+  if (limiter.check(request) !== null || dailyCap.take() !== null) return empty();
   try {
     const response = await fetch(upstream, { signal: AbortSignal.timeout(8_000) });
     if (!response.ok) return empty();
