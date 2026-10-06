@@ -1,6 +1,5 @@
 "use client";
 
-import { shareRouteWithEveryone } from "@/application/community/route-sharing-client";
 import { formatDistance as formatMiles } from "@/application/planner/measurements";
 import { useMemo, useRef, useState } from "react";
 
@@ -140,8 +139,6 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
   const [error, setError] = useState<{ readonly code: ImportFlowError["code"]; readonly reason: string } | null>(null);
   const [warning, setWarning] = useState<{ readonly code: "refresh-failed"; readonly reason: string } | null>(null);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
-  const [shareWithEveryone, setShareWithEveryone] = useState(false);
-  const [shareNote, setShareNote] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const operationRef = useRef(0);
 
@@ -162,7 +159,6 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
     controllerRef.current?.abort();
     controllerRef.current = null;
     setPhase("idle");
-    setShareNote(null);
     setFile(null);
     setParsed(null);
     setSelected(new Set());
@@ -175,6 +171,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
   }
 
   async function previewFile(nextFile: File): Promise<void> {
+    reset();
     if (nextFile.size > MAX_FILE_BYTES) {
       setError({ code: "too-large", reason: `This file is larger than the ${MAX_FILE_BYTES / (1024 * 1024)} MB import limit.` });
       setPhase("idle");
@@ -225,27 +222,6 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
     setPhase("options");
   }
 
-  /** Puts the imported tracks on Explore for everyone; the import itself already succeeded. */
-  async function shareImported(tracks: readonly ParsedImportTrack[], combined: boolean): Promise<void> {
-    const groups = combined
-      ? [{ name: tracks[0]?.name ?? "Shared route", line: tracks.flatMap((track) => track.segments.flat()) }]
-      : tracks.map((track) => ({ name: track.name, line: track.segments.flat() }));
-    setShareNote("Sharing with everyone…");
-    let shared = 0;
-    let lastError = "";
-    for (const group of groups) {
-      try {
-        await shareRouteWithEveryone(group.name, group.line);
-        shared += 1;
-      } catch (caught) {
-        lastError = caught instanceof Error ? caught.message : "It could not be shared.";
-      }
-    }
-    setShareNote(shared === groups.length
-      ? `Shared ${shared} route${shared === 1 ? "" : "s"} with everyone on Explore.`
-      : `Shared ${shared} of ${groups.length}. ${lastError}`);
-  }
-
   async function importSelected(): Promise<void> {
     if (file === null || selectedTracks.length === 0) return;
     operationRef.current += 1;
@@ -271,7 +247,6 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
       if (operation !== operationRef.current) return;
       setOutcome(nextOutcome);
       setPhase("success");
-      if (shareWithEveryone) void shareImported(selectedTracks, choice === "combine");
       try {
         emitTelemetry("import_completed", { source: "import" });
         await onImported?.(nextOutcome);
@@ -292,8 +267,8 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
       <div className="og-import__header">
         <div>
           <p className="og-eyebrow">OpenGravel / Bring a ride</p>
-          <h2 id="og-import-title">Import a route file</h2>
-          <p>GPX, KML, and KMZ are read locally within bounded safety limits. Your original file stays unchanged.</p>
+          <h2 id="og-import-title">Upload your GPX ride</h2>
+          <p>Choose a GPX from any route planner or GPS device. KML and KMZ work too. Rides are saved privately in this browser; sharing with the group is a separate choice.</p>
         </div>
         {phase !== "idle" ? <button type="button" className="og-secondary" onClick={reset}>Start over</button> : null}
       </div>
@@ -375,19 +350,13 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
 
       {phase === "options" ? (
         <section className="og-import__options" aria-labelledby="og-import-options-title">
-          <h3 id="og-import-options-title">How should this enter the planner?</h3>
+          <h3 id="og-import-options-title">Save this ride to My rides</h3>
           <p className="og-import__semantic-note">Follow keeps the imported geometry as the source of truth. Routing along roads would be a new route and may deviate from the file.</p>
           <fieldset>
             <legend>Import meaning</legend>
             <label><input type="radio" name="import-route-option" value="follow" checked={routeOption === "follow"} onChange={() => setRouteOption("follow")} /> <strong>Follow original track</strong> <span>(default)</span></label>
             <label><input type="radio" name="import-route-option" value="route-along" checked={routeOption === "route-along"} onChange={() => setRouteOption("route-along")} /> <strong>Route along roads</strong> <span>Builds with imported anchors; the road route may deviate from the original.</span></label>
-            <label className="og-import__disabled-option"><input type="checkbox" disabled /> <strong>Use as sketch corridor</strong> <span>Arrives with the drawing/road-span workstreams.</span></label>
-            <label className="og-import__disabled-option"><input type="checkbox" disabled /> <strong>Use selected spans as kept roads</strong> <span>Arrives with the drawing/road-span workstreams.</span></label>
           </fieldset>
-          <label className="og-import__share-option">
-            <input type="checkbox" checked={shareWithEveryone} onChange={(event) => setShareWithEveryone(event.target.checked)} /> <strong>Share with everyone</strong>{" "}
-            <span>Puts the route on Explore for anyone to ride and download, including where it starts and ends. Anyone can take it down.</span>
-          </label>
           <div className="og-import__choice-actions">
             <button type="button" className="og-primary" disabled={selectedTracks.length === 0} onClick={() => void importSelected()}>{choice === "combine" ? "Import as one ride" : "Import selected tracks"}</button>
             <button type="button" className="og-secondary" onClick={() => setPhase("chooser")}>Back to track choices</button>
@@ -398,8 +367,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
       {phase === "success" && outcome !== null ? (
         <section className="og-import__success" role="status">
           <h3>Import complete</h3>
-          {shareNote === null ? null : <p>{shareNote}</p>}
-          <p>{outcome.namedRides.length} ride{outcome.namedRides.length === 1 ? "" : "s"} added to your library. Original bytes are preserved.</p>
+          <p>{outcome.namedRides.length} ride{outcome.namedRides.length === 1 ? "" : "s"} added to your library. Your original file stays available for download. To add a ride to the group listing, choose “Share with everyone” on its saved card.</p>
           {outcome.warnings.length > 0 ? (
             <div>
               <strong>Warnings kept with this import</strong>

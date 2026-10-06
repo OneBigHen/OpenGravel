@@ -113,8 +113,8 @@ export function parseGpx(xml: string, options: GpxParseOptions = {}): ParsedImpo
     if (error instanceof RangeError || error instanceof Error && (error.name === "ImportSecurityError" || error.name === "ImportCancelledError")) throw error;
     throw new SyntaxError("The GPX file is malformed.");
   }
-  if (root.localName !== "gpx" || root.attributes["version"] !== "1.1") {
-    throw new SyntaxError("The GPX file must use the GPX 1.1 root.");
+  if (root.localName !== "gpx" || !(["1.0", "1.1"].includes(root.attributes["version"] ?? ""))) {
+    throw new SyntaxError("The GPX file must use a GPX 1.0 or 1.1 root.");
   }
 
   const tracks = root.children.filter((child) => child.localName === "trk");
@@ -124,7 +124,7 @@ export function parseGpx(xml: string, options: GpxParseOptions = {}): ParsedImpo
   if (tracks.length + routes.length > limits.MAX_TRACKS) throw new RangeError(`Import exceeds the ${limits.MAX_TRACKS}-track limit.`);
 
   const parsedTracks: ParsedImportTrack[] = [];
-  const sourceName = boundedName(metadataName(root), fileFallbackName(filename), limits, state);
+  const sourceName = boundedName(metadataName(root) ?? childText(root, "name"), fileFallbackName(filename), limits, state);
   for (const element of tracks) {
     const parsed = parseTrack(element, "track", sourceName, state, limits);
     if (parsed !== null) parsedTracks.push(parsed);

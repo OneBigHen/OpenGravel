@@ -184,3 +184,16 @@ describe("import cancellation and progress", () => {
     expect(value).toEqual({ tracks: [], warnings: [] });
   });
 });
+
+
+describe("ordinary GPX uploads", () => {
+  it("accepts GPX 1.0 route exports from other apps", () => {
+    const parsed = parseGpx('<gpx version="1.0"><name>Weekend ride</name><rte><rtept lat="40" lon="-75"/><rtept lat="40.01" lon="-75.01"/></rte></gpx>');
+    expect(parsed.tracks[0]?.name).toBe("Weekend ride");
+    expect(parsed.tracks[0]?.segments[0]).toHaveLength(2);
+  });
+
+  it("bounds XML element allocation even inside ignored extensions", () => {
+    expect(() => parseGpx('<gpx version="1.1"><extensions>' + '<x/>'.repeat(500_001) + '</extensions></gpx>')).toThrow(/element.*limit/i);
+  });
+});

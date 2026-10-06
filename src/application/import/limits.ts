@@ -20,6 +20,8 @@ export const MAX_KMZ_ENTRIES = 32;
 export const MAX_KMZ_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
 export const MAX_KMZ_COMPRESSION_RATIO = 100;
 export const MAX_XML_DEPTH = 64;
+/** Bounds allocation for ignored extensions as well as route points. */
+export const MAX_XML_ELEMENTS = 500_000;
 
 /** Maximum text held by one XML element or attribute value. */
 export const MAX_STRING_BYTES = 64 * 1024;
@@ -41,6 +43,7 @@ export interface ImportLimits {
   readonly MAX_KMZ_UNCOMPRESSED_BYTES: number;
   readonly MAX_KMZ_COMPRESSION_RATIO: number;
   readonly MAX_XML_DEPTH: number;
+  readonly MAX_XML_ELEMENTS: number;
   readonly MAX_STRING_BYTES: number;
   readonly MAX_NAME_BYTES: number;
   readonly MAX_TIMESTAMP_BYTES: number;
@@ -57,6 +60,7 @@ export const DEFAULT_IMPORT_LIMITS: ImportLimits = {
   MAX_KMZ_UNCOMPRESSED_BYTES,
   MAX_KMZ_COMPRESSION_RATIO,
   MAX_XML_DEPTH,
+  MAX_XML_ELEMENTS,
   MAX_STRING_BYTES,
   MAX_NAME_BYTES,
   MAX_TIMESTAMP_BYTES,

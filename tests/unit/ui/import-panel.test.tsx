@@ -42,7 +42,7 @@ function service(): ImportServicePort {
   };
 }
 
-it("chooses tracks, explains disabled route options, and reports progress", async () => {
+it("chooses tracks, offers supported route options, and reports progress", async () => {
   const importService = service();
   const bytes = new TextEncoder().encode("gpx");
   const file = new File([bytes], "ride.gpx", { type: "application/gpx+xml" });
@@ -55,7 +55,8 @@ it("chooses tracks, explains disabled route options, and reports progress", asyn
   expect(screen.getByRole("button", { name: /import separately/i })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: /as one ride/i }));
   expect(screen.getByRole("radio", { name: /route along roads/i })).toBeEnabled();
-  expect(screen.getAllByText(/arrives with the drawing\/road-span workstreams/i)).toHaveLength(2);
+  expect(screen.queryAllByText(/workstreams/i)).toHaveLength(0);
+  expect(screen.queryByRole("checkbox", { name: /share with everyone/i })).not.toBeInTheDocument();
   await waitFor(() => expect(importService.previewFile).toHaveBeenCalled());
 });
 
@@ -105,4 +106,19 @@ it("aborts the first controller if import is invoked twice", async () => {
   await waitFor(() => expect(pending).toHaveLength(2));
   expect(pending[0]?.signal.aborted).toBe(true);
   expect(pending[1]?.signal.aborted).toBe(false);
+});
+
+
+it("does not let an earlier preview replace an oversized file error", async () => {
+  const importService = service();
+  let complete: (value: { parsed: ParsedImport; sizeBytes: number }) => void = () => undefined;
+  vi.mocked(importService.previewFile).mockImplementation(() => new Promise((resolve) => { complete = resolve; }));
+  render(<ImportPanel service={importService} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [new File(["x"], "ride.gpx")] } });
+  const oversized = new File(["x"], "large.gpx");
+  Object.defineProperty(oversized, "size", { value: 11 * 1024 * 1024 });
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [oversized] } });
+  complete({ parsed, sizeBytes: 1 });
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("File is too large"));
+  expect(screen.queryByText("North")).not.toBeInTheDocument();
 });

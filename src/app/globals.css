@@ -11728,3 +11728,36 @@ a.og-secondary {
   font: inherit;
 }
 .og-community-action__error { color: var(--og-danger); font-weight: 600; }
+
+/* Public GPX preview stays readable within a saved-ride card on narrow screens. */
+.og-community-action fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--og-sandstone);
+}
+.og-community-action fieldset label { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.og-community-action fieldset .og-community-action__label { display: grid; }
+.og-community-action input[type="text"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--og-sandstone);
+  border-radius: 8px;
+  background: var(--og-canvas);
+  color: var(--og-ink);
+  font: inherit;
+}
+.og-community-action { min-width: 0; overflow-wrap: anywhere; }
+
+.og-community-action input[type="number"], .og-community-action textarea {
+  width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px;
+  border: 1px solid var(--og-sandstone); border-radius: 8px;
+  background: var(--og-canvas); color: var(--og-ink); font: inherit;
+}
+.og-community-action textarea { resize: vertical; }
+.og-public-photos { display: grid; gap: 12px; min-width: 0; }
+.og-public-photos input[type="file"] { width: 100%; min-width: 0; }

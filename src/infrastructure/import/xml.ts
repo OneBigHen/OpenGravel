@@ -154,6 +154,7 @@ export function parseXmlDocument(xml: string, limits: ImportLimits): XmlElement 
   const stack: MutableElement[] = [];
   let root: XmlElement | null = null;
   let cursor = 0;
+  let elements = 0;
   while (cursor < xml.length) {
     const opening = xml.indexOf("<", cursor);
     if (opening < 0) {
@@ -200,6 +201,10 @@ export function parseXmlDocument(xml: string, limits: ImportLimits): XmlElement 
       else root = completed;
     } else {
       if (content.startsWith("!")) throw new ImportSecurityError("Unsupported XML declaration.");
+      elements += 1;
+      if (elements > limits.MAX_XML_ELEMENTS) {
+        throw new ImportSecurityError(`XML element count exceeds the ${limits.MAX_XML_ELEMENTS}-element limit.`);
+      }
       const tag = parseOpeningTag(content, limits);
       if (stack.length + 1 > limits.MAX_XML_DEPTH) {
         throw new ImportSecurityError(`XML nesting exceeds the ${limits.MAX_XML_DEPTH}-level limit.`);
