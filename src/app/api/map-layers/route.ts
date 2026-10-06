@@ -13,6 +13,6 @@ export async function GET(request: Request): Promise<Response> {
   const result = await handleMapLayersRequest(url, {}, request.signal);
   return Response.json(result.body, {
     status: result.status,
-    headers: { "cache-control": "private, max-age=60" },
+    headers: { "cache-control": "public, max-age=30, stale-while-revalidate=300" },
   });
 }

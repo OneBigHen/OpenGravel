@@ -36,7 +36,7 @@ export async function GET(
     const response = await fetch(upstream, { signal: AbortSignal.timeout(8_000) });
     if (!response.ok) return empty();
     return new Response(await response.arrayBuffer(), {
-      headers: { "content-type": "image/png", "cache-control": "public, max-age=90" },
+      headers: { "content-type": "image/png", "cache-control": "public, max-age=90, s-maxage=90, stale-while-revalidate=300" },
     });
   } catch {
     return empty();

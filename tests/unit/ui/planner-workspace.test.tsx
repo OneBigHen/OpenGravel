@@ -345,6 +345,35 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(drawn?.selectedRouteId).not.toBe(asRouteCandidateId("route_unused"));
   });
 
+  it("un-dims the map once the first route is shown while the others are still loading", async () => {
+    const pending: Array<(response: Response) => void> = [];
+    const { posts, mapFactory } = await renderWorkspace(
+      (async (): Promise<Response> =>
+        new Promise<Response>((resolve) => {
+          pending.push(resolve);
+        })) as typeof fetch,
+    );
+
+    await placeBothPoints();
+    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
+    await waitFor(() => {
+      expect(pending.length).toBeGreaterThan(0);
+    });
+    expect(screen.getByTestId("map-host")).toHaveAttribute("data-dimmed", "true");
+
+    const identity = posts[0];
+    if (identity === undefined) throw new Error("expected a plan request");
+    await act(async () => {
+      pending[0]?.(jsonResponse(successBody(identity)));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("status-line")).toHaveTextContent("Finding other roads…");
+    });
+    expect(screen.getByTestId("map-host")).toHaveAttribute("data-dimmed", "false");
+    expect(mapFactory.hosts[0]?.lastScene()?.routes.length).toBeGreaterThan(0);
+  });
+
   it("cancels a running plan and returns to the last committed state", async () => {
     const hanging = (async (): Promise<Response> =>
       new Promise<Response>(() => {
