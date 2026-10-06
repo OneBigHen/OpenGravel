@@ -236,7 +236,9 @@ describe("createPlanningSessionStore — one attempt through the real client pat
       intent: plannedIntent(),
     });
 
-    expect(posts).toHaveLength(1);
+    // One request for the first route alone, one for the full set.
+    expect(posts).toHaveLength(2);
+    expect(posts.map((post) => (post.body.request.options as { includeAlternatives?: boolean }).includeAlternatives).sort()).toEqual([false, true]);
     expect(posts[0]?.url).toBe("/api/route-plan");
     expect(posts[0]?.body.identity).toEqual({
       rideId: RIDE_ID,

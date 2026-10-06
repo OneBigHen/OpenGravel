@@ -277,8 +277,9 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
 
-    // The plan was requested for the document revision the rider just authored.
-    expect(posts).toHaveLength(1);
+    // The plan was requested for the document revision the rider just authored:
+    // once for the first route alone, once for the full set.
+    expect(posts).toHaveLength(2);
     expect(posts[0]).toEqual({
       rideId: rideDocumentStore.getState().document.rideId,
       rideRevision: 2,
@@ -968,12 +969,13 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     await placeBothPoints();
     fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
-      expect(pending).toHaveLength(1);
+      expect(pending).toHaveLength(2);
     });
     const firstIdentity = posts[0];
     if (firstIdentity === undefined) throw new Error("expected a plan request");
     await act(async () => {
       pending[0]?.(jsonResponse(successBody(firstIdentity)));
+      pending[1]?.(jsonResponse(successBody(firstIdentity)));
       await Promise.resolve();
     });
     await waitFor(() => {
@@ -987,15 +989,16 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     clickMap(500, 500);
 
     await waitFor(() => {
-      expect(pending).toHaveLength(2);
+      expect(pending).toHaveLength(4);
     });
     expect(screen.getByTestId("status-line")).toHaveTextContent("Updating ride…");
     expect(mapFactory.hosts[0]?.lastScene()?.routes).toHaveLength(2);
 
-    const secondIdentity = posts[1];
+    const secondIdentity = posts[2];
     if (secondIdentity === undefined) throw new Error("expected a second plan request");
     await act(async () => {
-      pending[1]?.(jsonResponse(successBody(secondIdentity)));
+      pending[2]?.(jsonResponse(successBody(secondIdentity)));
+      pending[3]?.(jsonResponse(successBody(secondIdentity)));
       await Promise.resolve();
     });
     await waitFor(() => {
