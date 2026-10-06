@@ -5006,8 +5006,10 @@ h3,
   /* The left column in phone landscape; 0 elsewhere (set on the root by JS). */
   --og-ride-col: 0px;
 
-  position: relative;
-  height: 100dvh;
+  /* Pinned to the viewport, not sized to it: a stale 100dvh left a dead black
+     band under the strip on iPad (owner, 2026-10-05). */
+  position: fixed;
+  inset: 0;
   overflow: hidden;
   background: var(--og-ink);
   color: var(--og-paper);

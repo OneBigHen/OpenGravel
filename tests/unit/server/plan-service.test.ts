@@ -731,7 +731,8 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.message).toBe("Every route found uses a road that is closed right now.");
+    expect(result.error.message).toContain("Every route to this destination is blocked.");
+    expect(result.error.message).toContain("Ridge Road is closed: Bridge out.");
   });
 
   it("a feed outage keeps the route, with closures unknown and a stated caveat", async () => {

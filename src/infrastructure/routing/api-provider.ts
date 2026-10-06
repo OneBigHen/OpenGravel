@@ -41,6 +41,15 @@ export const API_PROVIDER_ID = "api";
 /** The longest a plan request may stay open before it is treated as lost. */
 export const PLAN_REQUEST_CEILING_MS = 90_000;
 
+/** Pause before the one automatic retry of a plan the network or a 5xx dropped. */
+const RETRY_DELAY_MS = 1_200;
+
+function isTransient(error: unknown): boolean {
+  if (!(error instanceof ApiRouteProviderError) || error.code !== "provider-unavailable") return false;
+  if (error.timedOut) return false;
+  return error.httpStatus === null || error.httpStatus === 502 || error.httpStatus === 503 || error.httpStatus === 504;
+}
+
 /** OpenGravel copy for a transport failure; never the fetch error's own text. */
 const UNREACHABLE_MESSAGE = "The route planner could not be reached.";
 const UNREADABLE_MESSAGE = "The route planner returned an unreadable response.";
@@ -51,17 +60,31 @@ export class ApiRouteProviderError extends Error {
   readonly code: string;
   readonly recoverable: boolean;
   readonly httpStatus: number | null;
+  /**
+   * The server's own sentence for a "no route" answer, which names the road
+   * that blocks the ride. Absent for every other code: those stay generic.
+   */
+  readonly riderMessage: string | null;
+  /** The request hit the 90 s ceiling: retrying would only double a wait the rider already sat through. */
+  readonly timedOut: boolean;
 
   constructor(
     message: string,
     code: string,
-    options: { readonly recoverable?: boolean; readonly httpStatus?: number | null } = {},
+    options: {
+      readonly recoverable?: boolean;
+      readonly httpStatus?: number | null;
+      readonly riderMessage?: string | null;
+      readonly timedOut?: boolean;
+    } = {},
   ) {
     super(message);
     this.name = "ApiRouteProviderError";
     this.code = code;
     this.recoverable = options.recoverable ?? false;
     this.httpStatus = options.httpStatus ?? null;
+    this.riderMessage = options.riderMessage ?? null;
+    this.timedOut = options.timedOut ?? false;
   }
 }
 
@@ -152,6 +175,11 @@ function errorFromBody(body: unknown, httpStatus: number): ApiRouteProviderError
     return new ApiRouteProviderError(error.message, error.code, {
       recoverable: error.recoverable === true,
       httpStatus,
+      // Only the road-blocked answer: its sentence is written for the rider. Any
+      // other no-route text is a machine note and keeps the generic copy.
+      ...(error.code === "no-route" && error.message.length <= 400 && (error.details as { roadBlocked?: unknown } | undefined)?.roadBlocked === true
+        ? { riderMessage: error.message }
+        : {}),
     });
   }
   return new ApiRouteProviderError(UNREADABLE_MESSAGE, "provider-unavailable", {
@@ -168,28 +196,10 @@ export function createApiRouteProvider(
   const path = options.path ?? ROUTE_PLAN_PATH;
   let attempt: RoutePlanIdentityWire | null = null;
 
-  return {
-    id: API_PROVIDER_ID,
-
-    beginAttempt(identity: RoutePlanIdentityWire): void {
-      attempt = {
-        rideId: identity.rideId,
-        rideRevision: identity.rideRevision,
-        planningGeneration: identity.planningGeneration,
-      };
-    },
-
-    capabilities(): ProviderCapabilities {
-      // The bridge does not know which engine profiles the deployment serves;
-      // claiming a list here would be a fabricated capability. It can carry
-      // alternatives and avoid polygons because the contract supports both.
-      return { profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true };
-    },
-
-    async candidates(
-      request: ProviderRouteRequest,
-      signal: AbortSignal,
-    ): Promise<ProviderCandidateSet> {
+  const attemptOnce = async (
+    request: ProviderRouteRequest,
+    signal: AbortSignal,
+  ): Promise<ProviderCandidateSet> => {
       const identity = attempt;
       if (identity === null) {
         throw new ApiRouteProviderError(MISSING_ATTEMPT_MESSAGE, "missing-input", {
@@ -225,6 +235,7 @@ export function createApiRouteProvider(
         if (signal.aborted) throw signal.reason;
         throw new ApiRouteProviderError(UNREACHABLE_MESSAGE, "provider-unavailable", {
           recoverable: true,
+          timedOut: ceiling.signal.aborted,
         });
       }
 
@@ -275,6 +286,45 @@ export function createApiRouteProvider(
         candidates: success.bundle.candidates.map((candidate) => toProviderCandidate(candidate, success.bundle.roles)),
         ...(matching ? { funCharacter: reading } : {}),
       };
+  };
+
+  return {
+    id: API_PROVIDER_ID,
+
+    beginAttempt(identity: RoutePlanIdentityWire): void {
+      attempt = {
+        rideId: identity.rideId,
+        rideRevision: identity.rideRevision,
+        planningGeneration: identity.planningGeneration,
+      };
+    },
+
+    capabilities(): ProviderCapabilities {
+      // The bridge does not know which engine profiles the deployment serves;
+      // claiming a list here would be a fabricated capability. It can carry
+      // alternatives and avoid polygons because the contract supports both.
+      return { profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true };
+    },
+
+    async candidates(
+      request: ProviderRouteRequest,
+      signal: AbortSignal,
+    ): Promise<ProviderCandidateSet> {
+      try {
+        return await attemptOnce(request, signal);
+      } catch (error) {
+        // A dropped connection or a 502 is usually the next request's success
+        // (a slow engine, a flaky mobile link, a VPN): try once more before the
+        // rider sees "unavailable" (owner, 2026-10-05: a plan died at 43 s).
+        if (!isTransient(error) || signal.aborted) throw error;
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, RETRY_DELAY_MS);
+          signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+        });
+        if (signal.aborted) throw signal.reason;
+        return attemptOnce(request, signal);
+      }
+
     },
   };
 }
