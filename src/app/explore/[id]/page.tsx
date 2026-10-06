@@ -1,7 +1,7 @@
 import { assetBasePathFromEnv } from "@/app/asset-base-path";
 import { ExploreClient } from "@/app/ExploreClient";
 import { resolveBasemapMode } from "@/infrastructure/map/basemap";
-import { serverCatalogEntries } from "@/server/explore/catalog-data";
+import { liveCatalogEntries } from "@/server/community-routes/live-catalog";
 import { routeMetadata } from "@/server/explore/route-metadata";
 import type { Metadata } from "next";
 
@@ -15,7 +15,7 @@ export async function generateMetadata({
   readonly params: Promise<{ readonly id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return routeMetadata(decodeURIComponent(id), serverCatalogEntries, process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
+  return routeMetadata(decodeURIComponent(id), liveCatalogEntries(), process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
 }
 
 export default async function ExploreRoutePage({

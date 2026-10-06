@@ -33,7 +33,7 @@ const PROBE = new RegExp(
 );
 
 /** API routes that spend engine time or paid quota per call. */
-const METERED = /^\/api\/(?:route-plan|advisor|geocode|road-match|map-layers|places|weather|route-traffic|contributions|elevation)(?:\/|$)/;
+const METERED = /^\/api\/(?:route-plan|advisor|geocode|road-match|map-layers|places|weather|route-traffic|contributions|elevation|community)(?:\/|$)/;
 
 export type GuardVerdict =
   | { readonly action: "pass" }

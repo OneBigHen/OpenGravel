@@ -33,6 +33,7 @@ import type { PreparationProviderRegistry, RegisteredPreparationProviders } from
 import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
 import { readBrowserOfflineRuntime, type OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
+import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
 
 export interface RouteDetailProps {
@@ -466,6 +467,7 @@ export function RouteDetail({
         {entry.source === "personal" && onAddToLibrary !== undefined ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={() => void runAction("library", () => onAddToLibrary(entry))}>Add to library</button> : null}
         {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
         <ShareRouteButton name={entry.name} />
+        {entry.source === "personal" || entry.source === "import" ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
       </section>
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}
@@ -560,6 +562,7 @@ export function RouteDetail({
         </p>
       ) : null}
       {entry.source === "catalog" ? <RouteCommunity routeId={entry.id} /> : null}
+      {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
       <p className="og-route-detail__summary">{entry.summary}</p>
       <p className="og-route-detail__region">{entry.region}</p>
       {status !== null ? <p role="status">{status}</p> : null}

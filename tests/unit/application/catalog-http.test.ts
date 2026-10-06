@@ -19,7 +19,7 @@ describe("catalog HTTP queries", () => {
 
   it("allows public caching for non-personal catalog filters", () => {
     expect(handleCatalogList(new URL("http://localhost/api/catalog?surface=paved&curvy=false"), [entry]).headers).toEqual({
-      "cache-control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "cache-control": "public, max-age=0, s-maxage=15, must-revalidate",
     });
   });
 

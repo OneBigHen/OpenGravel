@@ -11651,3 +11651,30 @@ a.og-secondary {
   color: var(--og-ink);
   font: inherit;
 }
+
+/* Community sharing: share with everyone, and take a route down. */
+.og-community-action {
+  display: grid;
+  gap: 0.6rem;
+  margin-block: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--og-sandstone);
+  border-radius: 14px;
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.og-community-action p { margin: 0; }
+.og-community-action__row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.og-community-action__label { font-weight: 600; }
+.og-community-action__reason {
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--og-sandstone);
+  border-radius: 10px;
+  background: var(--og-canvas);
+  color: var(--og-ink);
+  font: inherit;
+}
+.og-community-action__error { color: var(--og-danger); font-weight: 600; }
