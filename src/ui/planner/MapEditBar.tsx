@@ -75,6 +75,8 @@ export function MapEditBar(props: MapEditBarProps) {
   const { hasRoute, drawing, placingStop } = props;
   const storedSeen = useSyncExternalStore(subscribeNothing, readTipSeen, () => true);
   const [dismissed, setDismissed] = useState(false);
+  // The idle tools stay tucked behind one button so the map is not cluttered.
+  const [open, setOpen] = useState(false);
   const tipSeen = storedSeen || dismissed;
   const dismissTip = (): void => {
     setDismissed(true);
@@ -139,19 +141,63 @@ export function MapEditBar(props: MapEditBarProps) {
     );
   }
 
+  if (!open) {
+    return (
+      <div className="og-editbar" data-mode="idle" data-testid="map-edit-bar" role="toolbar" aria-label="Edit the ride">
+        <div className="og-editbar__row">
+          <button
+            type="button"
+            className="og-editbar__btn"
+            data-testid="map-edit-open"
+            aria-expanded="false"
+            onClick={() => setOpen(true)}
+          >
+            <Icon path={PEN} />
+            Edit
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="og-editbar" data-mode="idle" data-testid="map-edit-bar" role="toolbar" aria-label="Edit the ride">
       <div className="og-editbar__row">
-        <button type="button" className="og-editbar__btn" data-testid="map-edit-draw" onClick={props.onDraw}>
+        <button
+          type="button"
+          className="og-editbar__btn"
+          data-testid="map-edit-draw"
+          onClick={() => {
+            setOpen(false);
+            props.onDraw();
+          }}
+        >
           <Icon path={PEN} />
           Draw
         </button>
         {hasRoute ? (
-          <button type="button" className="og-editbar__btn" data-testid="map-edit-add-stop" onClick={props.onAddStop}>
+          <button
+            type="button"
+            className="og-editbar__btn"
+            data-testid="map-edit-add-stop"
+            onClick={() => {
+              setOpen(false);
+              props.onAddStop();
+            }}
+          >
             <Icon path={PIN_PLUS} />
             Add stop
           </button>
         ) : null}
+        <button
+          type="button"
+          className="og-editbar__btn"
+          data-testid="map-edit-close"
+          aria-label="Close edit tools"
+          onClick={() => setOpen(false)}
+        >
+          <Icon path={CLOSE} />
+        </button>
       </div>
       {hasRoute && !tipSeen ? (
         <p className="og-editbar__tip" data-testid="map-edit-tip">

@@ -892,7 +892,8 @@ export function PlannerWorkspace({
             forceOpen:
               (activeTool !== "pan" &&
                 activeTool !== "point-drag" &&
-                activeTool !== "route-sculpt") ||
+                activeTool !== "route-sculpt" &&
+                activeTool !== "sketch") ||
               avoidAreaTool !== "idle" ||
               avoidAreaDraft.length > 0 ||
               roadSpanDraft !== null ||
