@@ -131,6 +131,12 @@ export interface GraphHopperProviderOptions {
    */
   readonly timeoutMs?: number;
   /**
+   * Lets identical engine requests in flight (or answered in the last minute)
+   * share one search. Off by default so a suite sees every call; the server
+   * turns it on because one plan sends a first-route and a full request.
+   */
+  readonly shareIdenticalRequests?: boolean;
+  /**
    * Route through GraphHopper's hosted Directions API instead of our own graph
    * (WORK-ORDER §1.2). The free plan answers only the stock `car` profile with no
    * custom model, so every answer is marked `basicRouting`: the rider's road
@@ -198,6 +204,37 @@ function discoverySeeds(requestId: string): readonly number[] {
   return [0, 1, 2].map((index) => (base + index) % 2_147_483_647);
 }
 
+/** An engine answer being fetched or just fetched, shared by identical requests. */
+const SHARED_ATTEMPTS = new Map<string, { readonly attempt: Promise<RouteAttempt>; readonly at: number }>();
+const SHARED_ATTEMPT_TTL_MS = 60_000;
+const SHARED_ATTEMPT_LIMIT = 64;
+
+class SharedAttemptAborted extends Error {}
+
+function pruneSharedAttempts(): void {
+  const now = Date.now();
+  for (const [key, entry] of SHARED_ATTEMPTS) {
+    if (now - entry.at > SHARED_ATTEMPT_TTL_MS || SHARED_ATTEMPTS.size > SHARED_ATTEMPT_LIMIT) SHARED_ATTEMPTS.delete(key);
+  }
+}
+
+/** Waits for a shared answer but lets this caller's own signal end the wait. */
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => { signal.removeEventListener("abort", onAbort); resolve(value); },
+      (error: unknown) => {
+        signal.removeEventListener("abort", onAbort);
+        // An abort that came from the other caller's signal surfaces as a non-provider error.
+        reject(error instanceof GraphHopperProviderError ? error : new SharedAttemptAborted());
+      },
+    );
+  });
+}
+
 /**
  * Creates the GraphHopper baseline provider.
  *
@@ -256,6 +293,38 @@ export function createGraphHopperProvider(
               }),
         });
         const body = hosted === undefined ? built : hostedBody(built);
+        // The planner sends a first-route request and a full request for the
+        // same ride at the same moment. The engine search for the main route is
+        // identical in both, so the second caller shares it instead of paying
+        // for it again (a 187 km search is ~8 s of CPU).
+        if (options.shareIdenticalRequests !== true) return fetchAttempt(body);
+        const shareKey = `${routeUrl}\n${JSON.stringify(body)}`;
+        const shared = SHARED_ATTEMPTS.get(shareKey);
+        if (shared !== undefined) {
+          try {
+            return await abortable(shared.attempt, signal);
+          } catch (caught) {
+            // The first caller's own cancellation is not this caller's: ask again.
+            if (signal.aborted) throw signal.reason;
+            if (!(caught instanceof SharedAttemptAborted)) throw caught;
+          }
+        }
+        const run = postOnce(body, shareKey);
+        return run;
+      };
+
+      const postOnce = (body: unknown, shareKey: string): Promise<RouteAttempt> => {
+        const attempt = fetchAttempt(body);
+        SHARED_ATTEMPTS.set(shareKey, { attempt, at: Date.now() });
+        pruneSharedAttempts();
+        attempt.then(
+          (done) => { if (!done.response.ok) SHARED_ATTEMPTS.delete(shareKey); },
+          () => { SHARED_ATTEMPTS.delete(shareKey); },
+        );
+        return attempt;
+      };
+
+      const fetchAttempt = async (body: unknown): Promise<RouteAttempt> => {
         const timeoutSignal = AbortSignal.timeout(timeoutMs);
         const combined = AbortSignal.any([signal, timeoutSignal]);
         let response: Response;

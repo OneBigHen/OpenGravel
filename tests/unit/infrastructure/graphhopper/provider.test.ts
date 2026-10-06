@@ -249,6 +249,17 @@ describe("GraphHopper provider", () => {
     expect(calls[0]?.init.signal?.aborted).toBe(false);
   });
 
+  it("shares one engine search between identical requests when asked to", async () => {
+    const { calls, fetcher } = stubFetch([() => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE)]);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.share.test", fetcher, shareIdenticalRequests: true });
+    const [first, second] = await Promise.all([
+      provider.candidates(REQUEST, new AbortController().signal),
+      provider.candidates(REQUEST, new AbortController().signal),
+    ]);
+    expect(calls).toHaveLength(1);
+    expect(second.candidates.length).toBe(first.candidates.length);
+  });
+
   it("rejects with the caller's abort reason instead of a provider error", async () => {
     const provider = createGraphHopperProvider({
       baseUrl: "http://router.test",

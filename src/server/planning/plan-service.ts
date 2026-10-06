@@ -558,7 +558,7 @@ export function graphHopperProviderFromEnv(
   const riderModesEnabled = env["OGV_RIDER_MODES"] !== "off";
   const cacheKey = `${baseUrl}|${apiKey}|${budget}|${riderModesEnabled}`;
   if (sharedProvider?.key === cacheKey) return sharedProvider.provider;
-  const primary = createGraphHopperProvider({ baseUrl, riderModesEnabled });
+  const primary = createGraphHopperProvider({ baseUrl, riderModesEnabled, shareIdenticalRequests: true });
   const provider = apiKey.length === 0
     ? primary
     : createFallbackRouteProvider({
