@@ -42,11 +42,9 @@ export function usePlannerHistoryActions(input: {
   return {
     onUndo,
     onRedo,
-    // A start that is the rider's own location (or Home) survives a clear, so it
-    // alone is nothing to clear.
-    canClear:
-      (intent.start !== null && intent.start.provenance.type !== "gps" && intent.start.provenance.type !== "saved") ||
-      intent.finish !== null || intent.stops.length > 0 || intent.shaping.length > 0,
+    // Anything authored can be cleared, a lone From included: the first tap
+    // keeps the rider's own location behind a destination, the next clears it.
+    canClear: intent.start !== null || intent.finish !== null || intent.stops.length > 0 || intent.shaping.length > 0,
     onClearRide,
   };
 }

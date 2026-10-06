@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   buildElevationProfile,
@@ -37,10 +37,17 @@ export function useElevationProfile(
 ): ElevationProfileState | null {
   const key = routeId === null ? null : `${routeId}:${line.length}`;
   const [answer, setAnswer] = useState<{ readonly key: string; readonly state: ElevationProfileState } | null>(null);
+  // The line is read through a ref: a re-render that rebuilds the same route's
+  // array must not cancel the request in flight (it left the chart on its
+  // loading skeleton for good while a drawing or an edit kept re-rendering).
+  const lineRef = useRef(line);
+  useEffect(() => {
+    lineRef.current = line;
+  });
 
   useEffect(() => {
     if (source === undefined || key === null || cache.has(key)) return;
-    const samples = sampleLine(line);
+    const samples = sampleLine(lineRef.current);
     if (samples.length === 0) return;
     const controller = new AbortController();
     void source
@@ -58,9 +65,13 @@ export function useElevationProfile(
         // Only a real answer is cached; an outage is retried on the next plan.
         if (state.status === "ready") remember(key, state);
         setAnswer({ key, state });
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setAnswer({ key, state: { status: "unavailable", reason: "Elevation data is not available right now." } });
       });
     return () => controller.abort();
-  }, [source, key, line]);
+  }, [source, key]);
 
   if (source === undefined || key === null || line.length < 2) return null;
   const cached = cache.get(key);

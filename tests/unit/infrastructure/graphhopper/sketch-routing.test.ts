@@ -203,6 +203,40 @@ describe("routeSketch", () => {
     expect(result.path.points?.coordinates).toHaveLength(5);
   });
 
+  it("retries a chunk the engine cannot join without its heading hints", async () => {
+    const calls: (readonly GraphHopperWirePoint[])[] = [];
+    const router: SketchChunkRouter = async (points, band) => {
+      if (points.some((point) => point.heading !== undefined)) {
+        throw new Error("Connection between locations not found");
+      }
+      return straightRouter(calls)(points, band);
+    };
+    const result = await routeSketch({
+      request: sketchRequest(corridor, anchors),
+      wirePoints: wire(anchors),
+      maxPointsPerRequest: 5,
+      routeChunk: router,
+    });
+    expect(result.path.points?.coordinates).toHaveLength(21);
+  });
+
+  it("lets go of the one drawn anchor the engine cannot reach", async () => {
+    const bad = anchors[7]!;
+    const router: SketchChunkRouter = async (points, band) => {
+      if (points.some((point) => point.lon === bad.lon && point.lat === bad.lat)) {
+        throw new Error("Connection between locations not found");
+      }
+      return straightRouter([])(points, band);
+    };
+    const result = await routeSketch({
+      request: sketchRequest(corridor, anchors),
+      wirePoints: wire(anchors),
+      maxPointsPerRequest: 5,
+      routeChunk: router,
+    });
+    expect(result.path.points?.coordinates).toHaveLength(20);
+  });
+
   it("fails the whole sketch when a chunk cannot be routed, never leaving a hole", async () => {
     const router: SketchChunkRouter = async (points) => {
       if (points[0]!.lon > at(9_000).lon) throw new Error("no route");
