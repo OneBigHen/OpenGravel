@@ -251,7 +251,11 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       // part of the ride they are clearing, so it stays: clearing lands on the
       // calm "From <here> / Where to?" screen, not an empty two-field form
       // (owner review 2026-10-04).
+      // When nothing else is left to clear, the From itself goes, so a stale
+      // start from hours ago is one tap away (owner 2026-10-05).
+      const hasOtherPoints = intent.finish !== null || intent.stops.length > 0 || intent.shaping.length > 0;
       const keepStart =
+        hasOtherPoints &&
         intent.start !== null &&
         (intent.start.provenance.type === "gps" || intent.start.provenance.type === "saved");
       return applyChange(

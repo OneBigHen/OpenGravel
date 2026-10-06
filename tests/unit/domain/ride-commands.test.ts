@@ -1287,6 +1287,17 @@ describe("ride.clear and ride.create", () => {
     }
   });
 
+  it("clears a lone GPS or saved start once nothing else is left to clear", () => {
+    for (const provenance of [
+      { type: "gps" as const, accuracyMeters: 8, observedAt: "2026-10-04T12:00:00.000Z" },
+      { type: "saved" as const, savedPlaceId: "home" },
+    ]) {
+      const document = fixture({ start: startPoint({ provenance }) });
+      const result = expectApplied(applyRideCommand(document, { ...base(document), type: "ride.clear" }));
+      expect(result.document.intent.start).toBeNull();
+    }
+  });
+
   it("resets the intent to defaults while keeping document identity metadata", () => {
     const document = fixture(
       { start: startPoint(), roadCharacter: "curvy", stops: [stopPoint()] },

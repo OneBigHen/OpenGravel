@@ -313,8 +313,55 @@ export async function routeSketch(input: {
       Math.max(...alongs) + CHUNK_BAND_MARGIN_METERS,
     );
   };
-  const route = (chunk: readonly PlacedPoint[]): Promise<SketchChunkAnswer> =>
+  const attempt = (chunk: readonly PlacedPoint[]): Promise<SketchChunkAnswer> =>
     input.routeChunk(chunk.map((entry) => entry.point), bandFor(chunk));
+  const unheaded = (chunk: readonly PlacedPoint[]): PlacedPoint[] =>
+    chunk.map((entry) => ({
+      ...entry,
+      point: {
+        lon: entry.point.lon,
+        lat: entry.point.lat,
+        ...(entry.point.label === undefined ? {} : { label: entry.point.label }),
+      },
+    }));
+  /**
+   * A drawing is the rider's hand, not a route: one anchor can sit on a road the
+   * engine cannot join to its neighbour ("Connection between locations not
+   * found"), and that used to fail the whole drawing. The chunk is retried
+   * without its heading hints, then split at its middle so only the stretch that
+   * truly cannot be joined is refused. Joins are kept, so halves still meet.
+   */
+  const cancelled = (): boolean => input.signal?.aborted === true;
+  const route = async (chunk: readonly PlacedPoint[]): Promise<SketchChunkAnswer> => {
+    try {
+      return await attempt(chunk);
+    } catch (caught) {
+      if (cancelled()) throw caught;
+      if (chunk.some((entry) => entry.point.heading !== undefined)) {
+        try {
+          return await attempt(unheaded(chunk));
+        } catch (again) {
+          if (cancelled()) throw again;
+        }
+      }
+      if (chunk.length <= 2) throw caught;
+      const middle = Math.floor(chunk.length / 2);
+      const [left, right] = [chunk.slice(0, middle + 1), chunk.slice(middle)];
+      try {
+        const [a, b] = [await route(unheaded(left)), await route(unheaded(right))];
+        return {
+          path: mergeSketchPaths([a.path, b.path]),
+          engineVersion: a.engineVersion,
+          degraded: a.degraded || b.degraded,
+        };
+      } catch (stuck) {
+        if (cancelled()) throw stuck;
+        // A drawn anchor no road reaches is let go; the joins never are.
+        if (chunk[middle]?.point.label !== SKETCH_LABEL) throw stuck;
+        return route(unheaded(chunk.filter((_entry, index) => index !== middle)));
+      }
+    }
+  };
 
   let spursDropped = 0;
   let anchorsAdded = 0;
