@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { MAP_LAYERS } from "@/application/map-layers";
 import { clampLayerBounds } from "@/application/map-layers";
-import { infoFeatureCollection, infoLayerSpecs } from "@/infrastructure/map/maplibre/info-layers";
-import { MAP_SOURCE_IDS, overlayLayers } from "@/infrastructure/map/maplibre/style";
+import { INFO_HIT_LAYERS, infoFeatureCollection, infoLayerSpecs } from "@/infrastructure/map/maplibre/info-layers";
+import { DEFAULT_MAP_PALETTE, MAP_SOURCE_IDS, overlayLayers } from "@/infrastructure/map/maplibre/style";
 import { planSceneSync } from "@/infrastructure/map/maplibre/scene-diff";
 import type { MapScene } from "@/application/map/types";
 import { filterTrafficCamerasToRoute, zoomOf } from "@/ui/layers/useMapLayers";
@@ -68,4 +68,19 @@ describe("map layers on the renderer (phase 8)", () => {
     );
     expect(filtered.map((feature) => feature.id)).toEqual(["near", "fuel"]);
   });
+});
+
+it("renders slope separately without cell seams or a mask over flat ground", () => {
+  const specs = infoLayerSpecs(DEFAULT_MAP_PALETTE);
+  const slope = specs.find((layer) => layer.id === "ogv-info-slope");
+  expect(INFO_HIT_LAYERS).toContain("ogv-info-slope");
+  expect(slope).toMatchObject({
+    type: "fill",
+    filter: ["all", ["==", ["geometry-type"], "Polygon"], ["==", ["get", "layerId"], "slope"]],
+    paint: {
+      "fill-antialias": false,
+      "fill-opacity": ["step", ["get", "weight"], 0, 10, 0.12, 25, 0.22],
+    },
+  });
+  expect(specs.find((layer) => layer.id === "ogv-info-fill")?.filter).toEqual(["all", ["==", ["geometry-type"], "Polygon"], ["!=", ["get", "layerId"], "slope"]]);
 });

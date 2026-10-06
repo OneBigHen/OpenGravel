@@ -123,7 +123,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
   },
   {
     id: "slope", name: "Terrain slope", category: "view", kind: "features",
-    legend: "Tan <10% · amber 10–25% · ember >25% grade", source: "AWS Terrain Tiles (Mapzen Terrarium)",
+    legend: "Clear <10% · amber 10–25% · ember ≥25% grade", source: "AWS Terrain Tiles (Mapzen Terrarium)",
     caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
     minZoom: 6, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
   },
