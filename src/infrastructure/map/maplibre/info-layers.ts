@@ -17,6 +17,7 @@ export const TRAFFIC_FLOW_SOURCE_ID = "ogv-traffic-flow";
 
 export const INFO_LAYER_IDS = {
   fill: "ogv-info-fill",
+  slope: "ogv-info-slope",
   outline: "ogv-info-outline",
   line: "ogv-info-line",
   lineCasing: "ogv-info-line-casing",
@@ -31,6 +32,7 @@ export const INFO_HIT_LAYERS = [
   INFO_LAYER_IDS.point,
   INFO_LAYER_IDS.line,
   "ogv-info-surface",
+  INFO_LAYER_IDS.slope,
   INFO_LAYER_IDS.fill,
 ] as const;
 
@@ -53,10 +55,23 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       id: INFO_LAYER_IDS.fill,
       type: "fill",
       source: INFO_SOURCE_ID,
-      filter: isPolygon,
+      filter: ["all", isPolygon, ["!=", ["get", "layerId"], "slope"]],
       paint: {
-        "fill-color": ["case", ["==", ["get", "layerId"], "slope"], ["step", ["get", "weight"], palette.trailBrown, 10, palette.goldenHour, 25, palette.ember], colourByLayer(palette)],
-        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, "slope", 0.45, 0.12],
+        "fill-color": colourByLayer(palette),
+        "fill-opacity": ["match", ["get", "layerId"], "weather", 0.16, 0.12],
+      },
+    },
+    {
+      id: INFO_LAYER_IDS.slope,
+      type: "fill",
+      source: INFO_SOURCE_ID,
+      filter: ["all", isPolygon, ["==", ["get", "layerId"], "slope"]],
+      paint: {
+        // Adjacent DEM cells are a continuous tint, not a grid of outlined boxes.
+        "fill-antialias": false,
+        "fill-color": ["step", ["get", "weight"], palette.trailBrown, 10, palette.goldenHour, 25, palette.ember],
+        // Flat ground (including water) stays clear; steep ground never hides roads.
+        "fill-opacity": ["step", ["get", "weight"], 0, 10, 0.12, 25, 0.22],
       },
     },
     {

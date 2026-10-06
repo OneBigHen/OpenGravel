@@ -57,10 +57,12 @@ export function hillshadeLayerSpec(palette?: Pick<MapPalette, "deepSpruce" | "pa
     type: "hillshade",
     source: TERRAIN_SOURCE_ID,
     paint: {
-      "hillshade-exaggeration": 0.6,
+      "hillshade-method": "standard",
+      "hillshade-exaggeration": 0.3,
       "hillshade-shadow-color": palette?.deepSpruce ?? "#33413b",
-      "hillshade-highlight-color": palette?.paper ?? "#f4f0e6",
-      "hillshade-accent-color": palette?.slate ?? "#69736b",
+      // Only add shadows: opaque highlights bleach the hosted basemap.
+      "hillshade-highlight-color": "rgba(0, 0, 0, 0)",
+      "hillshade-accent-color": "rgba(0, 0, 0, 0)",
     },
   };
 }
