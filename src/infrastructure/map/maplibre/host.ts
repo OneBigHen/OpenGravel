@@ -1395,6 +1395,7 @@ export async function createMapLibreHost(
     const native = needsNativeGestures(tool);
     const canvas = map.getCanvas();
     canvas.style.cursor = native ? "" : "crosshair";
+    map.getCanvasContainer().setAttribute("data-og-drawing", native ? "false" : "true");
     if (native) {
       map.dragPan?.enable();
       map.boxZoom?.enable();

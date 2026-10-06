@@ -2761,3 +2761,10 @@ html .og-ride {
     margin: 0 0 0 auto;
   }
 }
+
+/* A drawing tool owns the touch stream: without this the browser claims the drag
+   as a scroll after a few pixels and cancels the stroke mid-draw. */
+.og-map [data-og-drawing="true"],
+.og-map [data-og-drawing="true"] .maplibregl-canvas {
+  touch-action: none !important;
+}

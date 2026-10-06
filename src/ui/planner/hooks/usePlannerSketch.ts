@@ -194,6 +194,8 @@ export function usePlannerSketch(input: {
         : "preserve-existing",
     );
     ui.setSketchTool(true);
+    // The drawing bar floats over the map: keep the sheet out of the way.
+    ui.setSheetDetent("peek");
     emitTelemetry("draw_started", { source: "drawing" });
   }, [discardPreviewPayloads, document, plannerUiStore]);
   /**
