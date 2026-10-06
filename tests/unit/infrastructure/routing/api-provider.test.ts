@@ -19,6 +19,7 @@ import { asRouteCandidateId } from "@/domain/route/ids";
 import type { RouteScoreComponents } from "@/domain/route/types";
 import {
   ApiRouteProviderError,
+  API_FIRST_ROUTE_PROVIDER_ID,
   API_PROVIDER_ID,
   createApiRouteProvider,
   PLAN_REQUEST_CEILING_MS,
@@ -365,6 +366,17 @@ describe("createApiRouteProvider — failures", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("a first-route provider asks for the main route alone, under its own id", async () => {
+    const { fetcher, probe } = recordingFetcher(response(true, 200, successBody()));
+    const provider = createApiRouteProvider({ fetcher, firstRouteOnly: true });
+    provider.beginAttempt(IDENTITY);
+    await provider.candidates(REQUEST, new AbortController().signal);
+    expect(provider.id).toBe(API_FIRST_ROUTE_PROVIDER_ID);
+    expect(provider.id).not.toBe(API_PROVIDER_ID);
+    const sent = JSON.parse(String(probe.calls[0]?.init?.body)) as RoutePlanRequestBody;
+    expect(sent.request.options.includeAlternatives).toBe(false);
   });
 
   it("does not retry a real answer such as no-route", async () => {

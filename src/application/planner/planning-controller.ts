@@ -881,7 +881,12 @@ class PlanningSessionController implements PlanningController {
         lowerWorkload: candidate.providerMetadata?.["lowerWorkload"] === true,
       });
     }
-    run.candidates.push(...normalized);
+    // The fast first-route answer and the full answer both carry the main
+    // route; keep the first copy so the rider sees one card, not two.
+    const fresh = normalized.filter(
+      (incoming) => !run.candidates.some((known) => known.fingerprint === incoming.fingerprint),
+    );
+    run.candidates.push(...fresh);
     this.advance(run);
   }
 

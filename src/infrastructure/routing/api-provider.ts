@@ -37,6 +37,8 @@ import { isRouteInstruction, isSpeedLimitSpans, MAX_ROUTE_INSTRUCTIONS } from "@
 
 /** The provider id recorded for this transport (diagnostics only). */
 export const API_PROVIDER_ID = "api";
+/** The fast, main-route-only twin of {@link API_PROVIDER_ID}. */
+export const API_FIRST_ROUTE_PROVIDER_ID = "api-first";
 
 /** The longest a plan request may stay open before it is treated as lost. */
 export const PLAN_REQUEST_CEILING_MS = 90_000;
@@ -93,6 +95,12 @@ export interface ApiRouteProviderOptions {
   readonly fetcher?: typeof fetch;
   /** Endpoint override; the contract's path is the default. */
   readonly path?: string;
+  /**
+   * A "first route" provider: asks the server for the main route only, so it
+   * answers in seconds while the full provider is still gathering alternatives.
+   * It needs its own id because the planner tracks answers per provider.
+   */
+  readonly firstRouteOnly?: boolean;
 }
 
 /**
@@ -194,6 +202,7 @@ export function createApiRouteProvider(
 ): ApiRouteProvider {
   const fetcher = options.fetcher ?? fetch;
   const path = options.path ?? ROUTE_PLAN_PATH;
+  const firstRouteOnly = options.firstRouteOnly === true;
   let attempt: RoutePlanIdentityWire | null = null;
 
   const attemptOnce = async (
@@ -224,7 +233,10 @@ export function createApiRouteProvider(
         response = await fetcher(path, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ identity, request }),
+          body: JSON.stringify({
+            identity,
+            request: firstRouteOnly ? { ...request, options: { ...request.options, includeAlternatives: false } } : request,
+          }),
           signal: ceiling.signal,
         });
       } catch {
@@ -289,7 +301,7 @@ export function createApiRouteProvider(
   };
 
   return {
-    id: API_PROVIDER_ID,
+    id: options.firstRouteOnly === true ? API_FIRST_ROUTE_PROVIDER_ID : API_PROVIDER_ID,
 
     beginAttempt(identity: RoutePlanIdentityWire): void {
       attempt = {

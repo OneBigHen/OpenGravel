@@ -11,7 +11,7 @@
 import { createApiGuard, guarded } from "@/server/api-guard";
 import { handleRoutePlanRequest } from "@/server/planning/route-handler";
 
-const guard = createApiGuard({ perMinute: 20, maxConcurrent: 6 });
+const guard = createApiGuard({ perMinute: 40, maxConcurrent: 8 });
 
 export async function POST(request: Request): Promise<Response> {
   return guarded(guard, request, () => plan(request));

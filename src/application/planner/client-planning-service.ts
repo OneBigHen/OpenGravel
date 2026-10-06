@@ -237,6 +237,17 @@ export function createClientPlanningService(
     ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
     ...(options.routePlanPath === undefined ? {} : { path: options.routePlanPath }),
   });
+  // Long routes take the engine many seconds to widen into alternatives. A
+  // second request for the main route alone lets the planner show a ride as
+  // soon as it exists while "Finding other roads…" keeps filling in the rest.
+  const firstRouteProvider =
+    (options.includeAlternatives ?? true)
+      ? createApiRouteProvider({
+          ...(options.fetcher === undefined ? {} : { fetcher: options.fetcher }),
+          ...(options.routePlanPath === undefined ? {} : { path: options.routePlanPath }),
+          firstRouteOnly: true,
+        })
+      : null;
   const listeners = new Set<() => void>();
   const offlineEngine = options.offlineEngine === undefined ? defaultOfflineEngine() : options.offlineEngine;
   const localHistoryPipeline = createLocalHistoryPipeline({
@@ -245,7 +256,10 @@ export function createClientPlanningService(
   });
 
   const controller = createPlanningController({
-    providers: [offlineEngine === null ? apiProvider : withOfflineFallback(apiProvider, offlineEngine)],
+    providers: [
+      ...(firstRouteProvider === null ? [] : [firstRouteProvider]),
+      offlineEngine === null ? apiProvider : withOfflineFallback(apiProvider, offlineEngine),
+    ],
     requestContext: {
       resolveGeometry: async (ref): Promise<GeometryPayload | null> => {
         const record = await geometryStore.get(ref);
@@ -280,11 +294,13 @@ export function createClientPlanningService(
       // Ownership is moved synchronously inside `begin`, which is what makes
       // reading the generation back here the same generation the providers will
       // be called for.
-      apiProvider.beginAttempt({
+      const identity = {
         rideId: input.rideId,
         rideRevision: input.rideRevision,
         planningGeneration: controller.snapshot().identity.planningGeneration,
-      });
+      };
+      apiProvider.beginAttempt(identity);
+      firstRouteProvider?.beginAttempt(identity);
       return attempt;
     },
 
