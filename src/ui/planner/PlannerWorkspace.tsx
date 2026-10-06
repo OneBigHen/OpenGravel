@@ -787,7 +787,7 @@ export function PlannerWorkspace({
         onIntent: handleIntent,
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
-        dimmed: planning,
+        dimmed: planning && session.phase !== "alternatives-loading" && session.phase !== "primary-ready",
         insets,
         activeTool,
         rideRevision: document.revision,
