@@ -1,4 +1,5 @@
 import type { CatalogEntry, CatalogSource } from "./catalog";
+import { parsePaRidingArea, startsInPaRidingArea, type PaRidingArea } from "./riding-areas";
 
 /** Short ≤ 30 mi, medium 30–90 mi, long > 90 mi. */
 export type DistanceBucket = "short" | "medium" | "long";
@@ -19,6 +20,7 @@ export interface ExploreQuery {
   readonly source?: CatalogSource;
   readonly distance?: DistanceBucket;
   readonly region?: string;
+  readonly area?: PaRidingArea;
   readonly search?: string;
   readonly surface?: "paved" | "gravel";
   readonly curvy?: boolean;
@@ -53,6 +55,7 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
   const params = typeof value === "string" ? new URLSearchParams(value.startsWith("?") ? value.slice(1) : value) : value;
   const parsedSource = source(params.get("source"));
   const parsedDistance = distance(params.get("distance"));
+  const area = parsePaRidingArea(params.get("area"));
   const region = params.get("region")?.trim() ?? "";
   const search = params.get("search")?.trim() ?? "";
   const surface = params.get("surface");
@@ -64,12 +67,14 @@ export function parseExploreQuery(value: string | URLSearchParams): ExploreQuery
     ...(search.length === 0 ? {} : { search }),
     ...(surface === "paved" || surface === "gravel" ? { surface } : {}),
     ...(curvy === "true" ? { curvy: true } : {}),
+    ...(area === undefined ? {} : { area }),
     sort: sort(params.get("sort")),
   };
 }
 
 export function serializeExploreQuery(query: ExploreQuery): string {
   const params = new URLSearchParams();
+  if (query.area !== undefined) params.set("area", query.area);
   if (query.source !== undefined) params.set("source", query.source);
   if (query.distance !== undefined) params.set("distance", query.distance);
   if (query.region?.trim()) params.set("region", query.region.trim());
@@ -139,6 +144,7 @@ function selectCatalogCardMember(
 function matchesQuery(entry: CatalogEntry, query: ExploreQuery): boolean {
   return (query.source === undefined || entry.source === query.source)
     && (query.distance === undefined || inDistanceBucket(entry, query.distance))
+    && (query.area === undefined || startsInPaRidingArea(entry, query.area))
     && (query.region === undefined || entry.region.toLowerCase().includes(query.region.trim().toLowerCase()))
     && (query.search === undefined || `${entry.name} ${entry.region} ${entry.summary}`.toLowerCase().includes(query.search.trim().toLowerCase()))
     && (query.surface === undefined || (entry.surfaceSummary !== undefined

@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { createPortal } from "react-dom";
+import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 
 import type { CatalogEntry } from "@/application/explore/catalog";
 import type { MapExtent } from "@/application/map/build-map-scene";
@@ -9,9 +12,6 @@ import type { MapIntent, MapScene, RouteScene } from "@/application/map/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { Coordinate } from "@/domain/ride/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
-
-/** A regional sample stays legible even when a catalog has hundreds of routes. */
-const MAX_LINES = 12;
 
 export interface ExploreMapConfig {
   readonly hostFactory: MapHostFactory;
@@ -54,21 +54,15 @@ function extentOf(entries: readonly CatalogEntry[]): MapExtent | null {
  * The card under the pointer is drawn as the chosen line, and tapping a line
  * opens that route. A read-only map: nothing here authors a ride.
  */
-export function ExploreMap({ entries, highlightedId, onOpen, hostFactory, basemap, assetBasePath }: ExploreMapProps) {
+function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap, assetBasePath }: ExploreMapProps) {
+  const [fitRevision, setFitRevision] = useState(0);
+  const [cameraOwned, setCameraOwned] = useState(false);
   const available = useMemo(() => entries.filter((entry) => lineOf(entry).length >= 2), [entries]);
-  const drawn = useMemo(() => {
-    const step = Math.max(1, Math.ceil(available.length / MAX_LINES));
-    const sample = available.filter((_, index) => index % step === 0).slice(0, MAX_LINES);
-    const highlighted = available.find((entry) => entry.id === highlightedId);
-    return highlighted !== undefined && !sample.some((entry) => entry.id === highlighted.id)
-      ? [...sample.slice(0, MAX_LINES - 1), highlighted]
-      : sample;
-  }, [available, highlightedId]);
   const scene = useMemo<MapScene>(() => {
     // EX-10: one quiet colour for the catalog (colours with no legend read as a
     // key that isn't there), and the route under the rider's pointer or focus
     // stands out with its name on the map.
-    const routes: RouteScene[] = drawn.map((entry) => {
+    const routes: RouteScene[] = available.map((entry) => {
       const line = lineOf(entry);
       const highlighted = entry.id === highlightedId;
       const at = line[Math.floor((line.length - 1) / 2)];
@@ -94,13 +88,14 @@ export function ExploreMap({ entries, highlightedId, onOpen, hostFactory, basema
       previewArea: null,
       selectedObject: null,
     };
-  }, [drawn, highlightedId]);
-  const fitExtent = useMemo(() => extentOf(drawn), [drawn]);
-  const fitKey = useMemo(() => drawn.map((entry) => entry.id).join("|"), [drawn]);
+  }, [available, highlightedId]);
+  const fitExtent = useMemo(() => extentOf(available), [available]);
+  const fitKey = useMemo(() => `${available.map((entry) => entry.id).join("|")}:${fitRevision}`, [available, fitRevision]);
 
   const onIntent = useCallback(
     (intent: MapIntent): void => {
-      if (intent.type === "object-click" && intent.ref.kind === "route") onOpen(intent.ref.routeId);
+      if (intent.type === "camera-changed") setCameraOwned(true);
+      else if (intent.type === "object-click" && intent.ref.kind === "route") onOpen(intent.ref.routeId);
       else if (intent.type === "overlap-click") {
         const route = intent.candidates.find((ref) => ref.kind === "route");
         if (route !== undefined && route.kind === "route") onOpen(route.routeId);
@@ -111,9 +106,10 @@ export function ExploreMap({ entries, highlightedId, onOpen, hostFactory, basema
 
   return (
     <div className="og-explore-map" data-testid="explore-map">
-      {available.length > drawn.length ? (
-        <p className="og-explore-map__sample">{drawn.length} routes shown of {available.length}</p>
-      ) : null}
+      <div className="og-explore-map__tools">
+        <span>{available.length} mapped{entries.length > available.length ? ` · ${entries.length - available.length} without geometry` : ""}</span>
+        <button type="button" className="og-secondary" onClick={() => { setCameraOwned(false); setFitRevision((value) => value + 1); }}>Fit routes</button>
+      </div>
       <PlannerMap
         scene={scene}
         label="Map of the routes in this list"
@@ -123,9 +119,43 @@ export function ExploreMap({ entries, highlightedId, onOpen, hostFactory, basema
         activeTool="pan"
         basemap={basemap}
         dimmed={false}
-        fitKey={fitKey}
+        fitKey={cameraOwned ? null : fitKey}
         fitExtent={fitExtent}
       />
+    </div>
+  );
+}
+
+
+function ExpandedExploreMap({ props, onClose }: { readonly props: ExploreMapProps; readonly onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
+  useDialogFocus(dialogRef, onClose);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+  return createPortal(
+    <section ref={dialogRef} className="og-explore-map-dialog" role="dialog" aria-modal="true" aria-labelledby="explore-map-title">
+      <header>
+        <div><h2 id="explore-map-title">Explore route map</h2><p>All matching routes. Tap a route to open its details.</p></div>
+        <button type="button" className="og-secondary" onClick={onClose}>Close map</button>
+      </header>
+      <ExploreMapCanvas {...props} />
+    </section>, document.body,
+  );
+}
+
+export function ExploreMap(props: ExploreMapProps) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="og-explore-map-panel">
+      <div className="og-explore-map-panel__head">
+        <span>Every matching route on the map</span>
+        <button type="button" className="og-secondary" onClick={() => setExpanded(true)}>Expand map</button>
+      </div>
+      {expanded ? null : <ExploreMapCanvas {...props} />}
+      {expanded ? <ExpandedExploreMap props={props} onClose={() => setExpanded(false)} /> : null}
     </div>
   );
 }

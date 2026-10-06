@@ -7530,7 +7530,7 @@ h3,
   gap: 12px;
 }
 
-.og-explore__split > .og-explore-map { grid-area: map; }
+.og-explore__split > .og-explore-map-panel { grid-area: map; }
 .og-explore__split > .og-explore__list { grid-area: list; }
 
 .og-explore-map {
@@ -7541,20 +7541,64 @@ h3,
   box-shadow: 0 1px 3px rgb(22 29 28 / 10%);
 }
 
-.og-explore-map__sample {
+.og-explore-map__tools {
   position: absolute;
   z-index: 2;
-  top: 12px;
+  bottom: 44px;
+  left: 12px;
   right: 12px;
-  padding: 5px 9px;
-  border-radius: var(--og-radius-chip);
-  background: var(--og-paper);
-  color: var(--og-deep-spruce);
-  font-size: 12px;
-  font-weight: 650;
-  box-shadow: var(--og-shadow-1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
   pointer-events: none;
 }
+
+.og-explore-map__tools > * { pointer-events: auto; }
+.og-explore-map__tools span {
+  padding: 8px;
+  border-radius: var(--og-radius-chip);
+  background: var(--og-paper);
+  font-size: var(--og-text-meta);
+  box-shadow: var(--og-shadow-1);
+}
+
+.og-explore-map-panel { min-width: 0; }
+.og-explore-map-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: var(--og-text-meta);
+}
+
+.og-explore__areas {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 16px 0;
+}
+.og-explore__areas label { display: grid; gap: 8px; flex: 1 1 240px; }
+.og-explore__areas label > span { font-weight: 650; font-size: var(--og-text-meta); }
+.og-explore__areas select { width: 100%; min-height: 44px; }
+.og-explore__areas p { flex: 1 1 280px; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
+
+.og-explore-map-dialog {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--og-canvas);
+}
+.og-explore-map-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.og-explore-map-dialog h2 { margin: 0; font-size: var(--og-text-title); }
+.og-explore-map-dialog p { margin: 4px 0 0; font-size: var(--og-text-meta); color: var(--og-slate-text); }
+.og-explore-map-dialog .og-explore-map { flex: 1; height: auto; min-height: 0; }
 
 .og-explore-map .og-map,
 .og-explore-map .og-map-host {
@@ -7579,10 +7623,14 @@ h3,
     align-items: start;
   }
 
-  .og-explore-map {
+  .og-explore__split > .og-explore-map-panel {
     position: sticky;
     top: 16px;
-    height: calc(100dvh - 32px);
+  }
+
+  .og-explore__split .og-explore-map {
+    height: min(720px, calc(100dvh - 104px));
+    min-height: 380px;
   }
 }
 
@@ -10469,7 +10517,7 @@ a.og-secondary {
 }
 
 /* The aggregate map: a short strip on a phone, so the first route is on the
-   first screen; beside the list, sticky, on a wide screen. */
+   browse comfortably; beside the list, sticky, on a wide screen. */
 .og-explore-map {
   border-radius: var(--og-radius-panel);
   box-shadow: var(--og-shadow-2);
@@ -10477,7 +10525,7 @@ a.og-secondary {
 
 @media (max-width: 760px) {
   .og-explore-map {
-    height: 112px;
+    height: 300px;
   }
 }
 
