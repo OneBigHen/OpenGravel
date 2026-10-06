@@ -82,7 +82,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
       try {
         const rides = library.listExploreRides === undefined ? [] : await library.listExploreRides();
         if (!active) return;
-        const response = await fetch("/api/catalog", { cache: "force-cache" });
+        const response = await fetch("/api/catalog", { cache: "no-cache" });
         if (!response.ok) throw new Error("catalog-unavailable");
         const payload = await response.json() as { readonly routes?: readonly unknown[] };
         const catalogRoutes = parseCatalogEntries((payload.routes ?? []).flatMap((value) => {
@@ -93,7 +93,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
         let completeRoutes = catalogRoutes;
         let variants: CatalogVariantSummary[] = [];
         if (detailId !== undefined) {
-          const detailResponse = await fetch(`/api/catalog/${encodeURIComponent(detailId)}`, { cache: "force-cache" });
+          const detailResponse = await fetch(`/api/catalog/${encodeURIComponent(detailId)}`, { cache: "no-cache" });
           if (detailResponse.ok) {
             const detailPayload = await detailResponse.json() as { readonly route?: unknown; readonly variants?: readonly unknown[] };
             const detailEntry = parseCatalogEntry(detailPayload.route);

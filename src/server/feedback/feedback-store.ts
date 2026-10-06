@@ -114,20 +114,23 @@ export function handleFeedbackPost(
   store: Pick<SQLiteFeedbackStore, "add">,
   clientIp: string,
   userAgent: string | null,
+  onStored?: (entry: FeedbackEntry) => void,
 ): FeedbackResult {
   const record = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   const message = text(record.message, FEEDBACK_MESSAGE_MAX);
   if (message === null || message.length < 3) {
     return { status: 400, body: { error: "Write a few words about what happened." } };
   }
-  const stored = store.add({
+  const entry: FeedbackEntry = {
     message,
     contact: text(record.contact, FEEDBACK_CONTACT_MAX),
     page: text(record.page, FEEDBACK_PAGE_MAX),
     userAgent: userAgent === null ? null : userAgent.slice(0, 300),
-  }, clientIp);
+  };
+  const stored = store.add(entry, clientIp);
   if (stored === null) {
     return { status: 429, body: { error: "Thanks — that's a lot of feedback at once. Try again in a few minutes." } };
   }
+  onStored?.(entry);
   return { status: 201, body: { ok: true } };
 }

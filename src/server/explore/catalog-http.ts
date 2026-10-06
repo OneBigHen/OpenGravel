@@ -4,7 +4,7 @@ import { storyTeaser } from "@/application/explore/ride-story";
 
 const MILES_PER_KM = 1 / 1.609344;
 export const CATALOG_CACHE_HEADERS = {
-  "cache-control": "public, s-maxage=3600, stale-while-revalidate=86400",
+  "cache-control": "public, max-age=0, s-maxage=15, must-revalidate",
 };
 const CATALOG_PRIVATE_HEADERS = { "cache-control": "private, no-store" };
 

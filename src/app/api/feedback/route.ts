@@ -1,5 +1,6 @@
 import { clientIpFromForwardedFor } from "@/server/contributions/catalog-community";
 import { SQLiteFeedbackStore, handleFeedbackPost } from "@/server/feedback/feedback-store";
+import { escapeHtml, sendOwnerMail } from "@/server/mail/resend";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,6 +30,16 @@ export async function POST(request: Request): Promise<Response> {
     sharedStore(),
     clientIpFromForwardedFor(request.headers.get("x-forwarded-for")),
     request.headers.get("user-agent"),
+    (entry) => {
+      // Saved first; the email is a courtesy and never holds the answer up.
+      const lines = [`Page: ${entry.page ?? "(unknown)"}`, `Contact: ${entry.contact ?? "(none given)"}`, `Device: ${entry.userAgent ?? "(unknown)"}`];
+      void sendOwnerMail({
+        subject: `OpenGravel feedback: ${entry.message.slice(0, 60)}`,
+        text: `${entry.message}\n\n${lines.join("\n")}`,
+        html: `<p>${escapeHtml(entry.message).replace(/\n/g, "<br>")}</p><p style="color:#68716f">${lines.map(escapeHtml).join("<br>")}</p>`,
+        event: "feedback",
+      });
+    },
   );
   return Response.json(result.body, { status: result.status, headers: NO_STORE });
 }
