@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { PA_RIDING_AREAS, parsePaRidingArea } from "@/application/explore/riding-areas";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 
 import { AppBar } from "@/ui/nav/AppBar";
@@ -324,7 +325,7 @@ const DISTANCE_CHIPS: readonly { readonly value: DistanceBucket; readonly label:
 ];
 
 function activeFilterCount(query: ExploreQuery): number {
-  return [query.source, query.distance, query.surface, query.curvy, query.region].filter(
+  return [query.source, query.distance, query.surface, query.curvy, query.region, query.area].filter(
     (value) => value !== undefined && value !== "",
   ).length;
 }
@@ -391,6 +392,13 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   );
 
   const filterCount = activeFilterCount(query);
+  const regions = useMemo(() => [...new Set(entries.flatMap((entry) =>
+    entry.catalogMembers?.map((member) => member.region) ?? [entry.region],
+  ))].filter((region) => region !== "Region not identified").sort(), [entries]);
+  const areaCounts = useMemo(() => PA_RIDING_AREAS.map((area) => ({
+    ...area,
+    count: filterAndSortCatalog(entries, { ...query, region: undefined, area: area.id }).length,
+  })), [entries, query]);
 
   // A rider who already let OpenGravel see their location gets "N mi away" on
   // every card and nearest-first Recommended, without being asked again. No
@@ -423,8 +431,8 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     return () => window.removeEventListener("keydown", onKey);
   }, [filtersOpen]);
 
-  function updateQuery(patch: Partial<ExploreQuery>): void {
-    pushNext.current = !("search" in patch) && !("region" in patch);
+  function updateQuery(patch: Partial<ExploreQuery>, pushHistory = !("search" in patch) && !("region" in patch)): void {
+    pushNext.current = pushHistory;
     setQuery((current) => queryWith(current, patch));
   }
 
@@ -472,7 +480,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         <div className="og-explore__heading">
           <p className="og-eyebrow">Find your next ride</p>
           <h1>Explore</h1>
-          <p className="og-explore__intro">Roads, seasonal windows and rides worth a closer look.</p>
+          <p className="og-explore__intro">Find your next ride around Pennsylvania and beyond. Browse by riding area, distance or surface.</p>
         </div>
         {/* AQ-06, AQ-07: a real tab list — arrow keys move, one tab stop, and
             each tab owns the panel below. */}
@@ -671,6 +679,27 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </button>
       </section>
       </div> : null}
+
+      {lens === "ride" ? (
+        <section className="og-explore__areas" aria-label="Browse riding regions">
+          <label>
+            <span>Region</span>
+            <select aria-label="Browse region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
+              <option value="">All regions</option>
+              {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
+              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>PA riding area</span>
+            <select aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
+              <option value="">All riding areas</option>
+              {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
+            </select>
+          </label>
+          <p>Areas include nearby border towns and show where routes start. Expand the map to see full paths.</p>
+        </section>
+      ) : null}
 
       {lens === "ride" ? (
         <div className="og-explore__quick" role="group" aria-label="Quick filters">

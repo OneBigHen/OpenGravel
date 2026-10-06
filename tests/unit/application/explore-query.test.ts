@@ -169,3 +169,19 @@ describe("Explore query state", () => {
     expect(filterAndSortCatalog([grouped], parseExploreQuery(""), [-75, 40])[0]?.id).toBe("near-copy");
   });
 });
+
+
+describe("PA riding areas", () => {
+  it("round-trips riding areas and rejects unknown areas", () => {
+    const query = { sort: "name" as const, area: "eastern-pa" as const };
+    expect(parseExploreQuery(serializeExploreQuery(query))).toEqual(query);
+    expect(parseExploreQuery("?area=made-up").area).toBeUndefined();
+  });
+
+  it("filters by the start of the matching family member, excluding missing geometry", () => {
+    const east = { ...entries[0]!, region: "Pennsylvania", geometry: [{ lon: -75.5, lat: 40.6 }, { lon: -75.4, lat: 40.7 }] };
+    const west = { ...east, id: "west", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] };
+    expect(filterAndSortCatalog([east, west, entries[1]!], { sort: "name", area: "eastern-pa" })).toEqual([east]);
+    expect(filterAndSortCatalog([east, west], { sort: "name", area: "western-pa" })).toEqual([west]);
+  });
+});

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
@@ -31,19 +31,66 @@ const entry: CatalogEntry = {
   provenanceDetail: "Geometry was produced from real road data between two anchor points.",
 };
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState({}, "", "/explore"); });
 
 describe("Explore UI", () => {
-  it("keeps the regional map quiet while still drawing a highlighted route outside its sample", async () => {
+  it("draws all matching routes and keeps the camera steady when a card is highlighted", async () => {
     const entries = Array.from({ length: 100 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}` }));
     const hosts = createStubMapHostFactory();
-    render(<ExploreMap entries={entries} highlightedId="route-99" onOpen={vi.fn()} hostFactory={hosts.factory} basemap="empty" />);
+    const props = { entries, onOpen: vi.fn(), hostFactory: hosts.factory, basemap: "empty" as const };
+    const view = render(<ExploreMap {...props} highlightedId={null} />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(100));
+    const fits = hosts.hosts[0]!.fits.length;
+    view.rerender(<ExploreMap {...props} highlightedId="route-99" />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes.find((route) => route.id === "route-99")?.state).toBe("selected"));
+    expect(hosts.hosts[0]!.fits).toHaveLength(fits);
+    fireEvent.click(screen.getByRole("button", { name: "Fit routes" }));
+    await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
+  });
 
-    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes.length).toBeGreaterThan(0));
-    const routes = hosts.hosts[0]?.lastScene()?.routes ?? [];
-    expect(routes.length).toBeLessThanOrEqual(12);
-    expect(routes.some((route) => route.id === "route-99" && route.state === "selected")).toBe(true);
-    expect(screen.getByText(/routes shown of 100/i)).toBeInTheDocument();
+  it("keeps a rider's pan when filtering until Fit routes is requested", async () => {
+    const hosts = createStubMapHostFactory();
+    const props = { onOpen: vi.fn(), hostFactory: hosts.factory, basemap: "empty" as const, highlightedId: null };
+    const view = render(<ExploreMap {...props} entries={[entry]} />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1));
+    const fits = hosts.hosts[0]!.fits.length;
+    act(() => hosts.hosts[0]!.emit({ type: "camera-changed" }));
+    view.rerender(<ExploreMap {...props} entries={[entry, { ...entry, id: "second" }]} />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(2));
+    expect(hosts.hosts[0]!.fits).toHaveLength(fits);
+    fireEvent.click(screen.getByRole("button", { name: "Fit routes" }));
+    await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
+  });
+
+  it("expands the route map with a close control", () => {
+    const hosts = createStubMapHostFactory();
+    render(<ExploreMap entries={[entry]} highlightedId={null} onOpen={vi.fn()} hostFactory={hosts.factory} basemap="empty" />);
+    fireEvent.click(screen.getByRole("button", { name: "Expand map" }));
+    expect(screen.getByRole("dialog", { name: "Explore route map" })).toBeInTheDocument();
+    expect(screen.getAllByTestId("explore-map")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Close map" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("adds discrete region and riding-area selections to browser history", () => {
+    render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
+    const push = vi.spyOn(window.history, "pushState");
+    fireEvent.change(screen.getByRole("combobox", { name: "Browse region" }), { target: { value: "Lehigh Valley" } });
+    expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("region=Lehigh"));
+    fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
+    expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("area=eastern-pa"));
+    push.mockRestore();
+  });
+
+  it("shows more than ten rides and filters Pennsylvania riding areas without opening the sheet", () => {
+    const entries = Array.from({ length: 30 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}`, region: "Pennsylvania" }));
+    entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
+    render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
+    fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
+    expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
+    expect(window.location.search).toContain("area=eastern-pa");
   });
 
   it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
