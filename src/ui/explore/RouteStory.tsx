@@ -97,7 +97,7 @@ export function RouteStory({ story, routeName }: { readonly story: CatalogRideSt
           {story.photos.map((item, index) => (
             <li key={item.src}>
               <button type="button" onClick={() => openPhoto(index)} aria-label={`Open photo ${index + 1} of ${story.photos.length}`}>
-                <Image src={item.src} alt="" width={item.width} height={item.height} sizes="(max-width: 640px) 60vw, 240px" />
+                <Image src={item.src} unoptimized={item.src.startsWith("/api/community/routes/")} alt="" width={item.width} height={item.height} sizes="(max-width: 640px) 60vw, 240px" />
               </button>
             </li>
           ))}
@@ -183,7 +183,7 @@ export function RouteStory({ story, routeName }: { readonly story: CatalogRideSt
       >
         {photo === undefined ? null : (
           <figure>
-            <Image src={photo.src} alt={`Rider photo ${photoIndex! + 1} of ${story.photos.length} from ${routeName}`} width={photo.width} height={photo.height} sizes="100vw" />
+            <Image src={photo.src} unoptimized={photo.src.startsWith("/api/community/routes/")} alt={`Rider photo ${photoIndex! + 1} of ${story.photos.length} from ${routeName}`} width={photo.width} height={photo.height} sizes="100vw" />
             <figcaption>
               {story.photos.length > 1 ? <button type="button" className="og-secondary" onClick={() => stepPhoto(-1)}>Previous</button> : null}
               <span>{photoIndex! + 1} / {story.photos.length}</span>

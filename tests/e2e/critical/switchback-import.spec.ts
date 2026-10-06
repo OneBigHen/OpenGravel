@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test("imports a redacted SwitchBack saved-ride GPX and shows its migration report", async ({ page }) => {
   await page.goto("/rides");
-  await expect(page.getByRole("heading", { name: "Import from SwitchBack" })).toBeVisible();
+  await page.getByText("Import older saved rides (advanced)", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Import older saved rides" })).toBeVisible();
   await page.getByLabel("SwitchBack GPX files").setInputFiles([
     "tests/fixtures/m10/switchback-track-waypoints.gpx",
     "tests/fixtures/m10/switchback-route-only.gpx",

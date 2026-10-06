@@ -55,10 +55,10 @@ export function SwitchBackImportPanel({ service, onImported }: SwitchBackImportP
       <div className="og-import__header">
         <div>
           <p className="og-eyebrow">OpenGravel / Bring saved rides</p>
-          <h2 id="switchback-import-title">Import from SwitchBack</h2>
+          <h2 id="switchback-import-title">Import older saved rides</h2>
           {report === null ? (
             <p>
-              In SwitchBack, export saved rides as GPX Track or Track + Waypoints, then select them together here.
+              For saved rides from older OpenGravel (SwitchBack) versions, export GPX Track or Track + Waypoints, then select them together here. For other GPX files, use the uploader above.
               Route and cue exports do not include the dense saved route line. The source rides stay unchanged.
             </p>
           ) : null}
@@ -69,7 +69,7 @@ export function SwitchBackImportPanel({ service, onImported }: SwitchBackImportP
       {report === null ? (
         <>
           <label className="og-import__dropzone" htmlFor="switchback-gpx-files">
-            <span>Choose SwitchBack GPX tracks</span>
+            <span>Choose older saved-ride GPX tracks</span>
             <small>Track and Track + Waypoints exports · select multiple files · maximum 10 MB each</small>
             <input
               ref={inputRef}

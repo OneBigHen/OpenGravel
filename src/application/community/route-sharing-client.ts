@@ -21,8 +21,13 @@ async function failure(response: Response, fallback: string): Promise<CommunityR
 }
 
 /** Shares a route line with everyone. Resolves to the new route's id. */
-export async function shareRouteWithEveryone(name: string, geometry: readonly Coordinate[]): Promise<string> {
-  const response = await post("/api/community/routes", { name, geometry: geometry.map((point) => [point.lon, point.lat]) });
+export interface PublicRideDetails {
+  readonly description?: string;
+  /** Base64 raster previews; the server independently decodes and strips metadata. */
+  readonly photos?: readonly string[];
+}
+export async function shareRouteWithEveryone(name: string, geometry: readonly Coordinate[], details: PublicRideDetails = {}): Promise<string> {
+  const response = await post("/api/community/routes", { name, geometry: geometry.map((point) => [point.lon, point.lat]), ...(details.description ? { description: details.description } : {}), ...(details.photos?.length ? { photos: details.photos } : {}) });
   if (!response.ok) throw await failure(response, "The route could not be shared.");
   return ((await response.json()) as { id: string }).id;
 }

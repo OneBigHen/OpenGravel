@@ -2,6 +2,8 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import type { PublicRoutePhoto } from "./photos";
+
 import { DEFAULT_COMMUNITY_DATABASE_PATH } from "@/server/contributions/catalog-community-store";
 
 /** One shared route, as the catalog's raw JSON plus its bookkeeping. */
@@ -34,6 +36,14 @@ export class CommunityRouteStore {
         raw_json TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS community_route_photos (
+        route_id TEXT NOT NULL,
+        photo_index INTEGER NOT NULL,
+        bytes BLOB NOT NULL,
+        width INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        PRIMARY KEY (route_id, photo_index)
+      );
       CREATE TABLE IF NOT EXISTS route_removals (
         route_id TEXT PRIMARY KEY,
         removed_at TEXT NOT NULL,
@@ -56,8 +66,27 @@ export class CommunityRouteStore {
     return `${shared.n}:${shared.m}:${removed.n}:${removed.m}`;
   }
 
-  public addRoute(id: string, raw: Record<string, unknown>, now: string): void {
-    this.database.prepare("INSERT INTO community_routes (id, raw_json, created_at) VALUES (?, ?, ?)").run(id, JSON.stringify(raw), now);
+  public addRoute(id: string, raw: Record<string, unknown>, now: string, photos: readonly PublicRoutePhoto[] = [], maximum = 2000): boolean {
+    if (!Number.isSafeInteger(maximum) || maximum <= 0) throw new Error("Invalid shared-route capacity.");
+    this.database.exec("BEGIN IMMEDIATE");
+    try {
+      if (this.routeCount() >= maximum) { this.database.exec("ROLLBACK"); return false; }
+      this.database.prepare("INSERT INTO community_routes (id, raw_json, created_at) VALUES (?, ?, ?)").run(id, JSON.stringify(raw), now);
+      const insert = this.database.prepare("INSERT INTO community_route_photos (route_id, photo_index, bytes, width, height) VALUES (?, ?, ?, ?, ?)");
+      photos.forEach((photo, index) => insert.run(id, index, photo.bytes, photo.width, photo.height));
+      this.database.exec("COMMIT");
+      return true;
+    } catch (error) { this.database.exec("ROLLBACK"); throw error; }
+  }
+
+  public photo(routeId: string, index: number): PublicRoutePhoto | null {
+    if (this.removal(routeId) !== null) return null;
+    const row = this.database.prepare("SELECT bytes, width, height FROM community_route_photos WHERE route_id = ? AND photo_index = ?").get(routeId, index) as { bytes: Uint8Array; width: number; height: number } | undefined;
+    return row === undefined ? null : { bytes: Buffer.from(row.bytes), width: row.width, height: row.height };
+  }
+
+  public routeCount(): number {
+    return (this.database.prepare("SELECT COUNT(*) AS n FROM community_routes").get() as { n: number }).n;
   }
 
   public routes(): readonly CommunityRouteRow[] {

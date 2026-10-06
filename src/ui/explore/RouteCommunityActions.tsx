@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { CommunityRouteError, removeCommunityRoute, shareRouteWithEveryone } from "@/application/community/route-sharing-client";
-import type { Coordinate } from "@/domain/ride/types";
+import { CommunityRouteError, removeCommunityRoute } from "@/application/community/route-sharing-client";
+export { ShareWithEveryone } from "@/ui/community/GroupRouteShare";
 
 /** Riders who first posted a route in the group these were gathered from can still ask for it to go. */
 const IMPORTED_NOTICE_UNTIL = Date.UTC(2026, 9, 20);
@@ -12,56 +12,6 @@ const IMPORTED_NOTICE_LAST_DAY = "Oct 19";
 
 function message(caught: unknown): string {
   return caught instanceof CommunityRouteError ? caught.message : "Something went wrong. Try again.";
-}
-
-/** One tap puts a rider's own route on Explore for everyone. */
-export function ShareWithEveryone({ name, geometry }: { readonly name: string; readonly geometry: readonly Coordinate[] }) {
-  const [phase, setPhase] = useState<"idle" | "confirm" | "busy" | "done">("idle");
-  const [sharedId, setSharedId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  if (geometry.length < 2) return null;
-  if (phase === "done" && sharedId !== null) {
-    return (
-      <p className="og-community-action" role="status">
-        Shared with everyone. <Link href={`/explore/${encodeURIComponent(sharedId)}`}>See it on Explore</Link>. Anyone can take a shared route down.
-      </p>
-    );
-  }
-  if (phase === "idle") {
-    return <button type="button" className="og-secondary" onClick={() => setPhase("confirm")}>Share with everyone</button>;
-  }
-  return (
-    <div className="og-community-action" role="group" aria-label="Share with everyone">
-      <p>
-        This puts <b>{name}</b> on Explore for anyone to see, ride and download, including exactly where it starts and ends. Anyone can also take it down again.
-      </p>
-      <div className="og-community-action__row">
-        <button
-          type="button"
-          className="og-primary"
-          disabled={phase === "busy"}
-          onClick={() => {
-            setPhase("busy");
-            setError(null);
-            shareRouteWithEveryone(name, geometry).then(
-              (id) => {
-                setSharedId(id);
-                setPhase("done");
-              },
-              (caught: unknown) => {
-                setError(message(caught));
-                setPhase("confirm");
-              },
-            );
-          }}
-        >
-          {phase === "busy" ? "Sharing…" : "Share it"}
-        </button>
-        <button type="button" className="og-secondary" disabled={phase === "busy"} onClick={() => setPhase("idle")}>Not now</button>
-      </div>
-      {error === null ? null : <p role="alert" className="og-community-action__error">{error}</p>}
-    </div>
-  );
 }
 
 /** Anyone can take a community route down, at once, with an optional reason. */

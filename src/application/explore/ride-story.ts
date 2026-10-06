@@ -70,7 +70,8 @@ function finite(value: unknown): value is number {
 
 /** Only same-origin media and http(s) links make it to the page. */
 function safeMediaPath(value: unknown): value is string {
-  return typeof value === "string" && /^\/catalog-media\/[A-Za-z0-9._/-]+$/.test(value) && !value.includes("..");
+  return typeof value === "string" && ((/^\/catalog-media\/[A-Za-z0-9._/-]+$/.test(value) && !value.includes(".."))
+    || /^\/api\/community\/routes\/community_[A-Za-z0-9_-]{1,40}\/photos\/[0-2]$/.test(value));
 }
 
 function safeUrl(value: unknown): value is string {

@@ -90,3 +90,36 @@ describe("owner mail", () => {
     expect(await sendOwnerMail({ subject: "s", text: "t", html: "h", event: "x" }, {})).toBe(false);
   });
 });
+
+
+describe("public route upload boundary", () => {
+  it.each(["<script>alert(1)</script>", "Ride\u0000title", "Ride\u202etitle"])("rejects markup or control characters in a public name: %s", (name) => {
+    expect(buildSharedRoute({ name, geometry: line }, NOW).ok).toBe(false);
+  });
+
+  it("rejects coordinate tuples carrying extra data", () => {
+    expect(buildSharedRoute({ name: "Ride", geometry: line.map(([lon, lat]) => [lon, lat, "private"]) }, NOW).ok).toBe(false);
+  });
+
+  it("does not publish arbitrary metadata, file bytes, timestamps or client provenance", () => {
+    const built = buildSharedRoute({ name: "Ride", geometry: line, authorEmail: "private", originalBytes: "bad", provenance: "verified" }, NOW);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(JSON.stringify(built.raw)).not.toMatch(/private|originalBytes|verified/);
+  });
+});
+
+it("keeps bounded rider notes in the public story and rejects malformed notes", () => {
+  const built = buildSharedRoute({ name: "Ride", geometry: line, description: "Fuel at the village.\nCheck seasonal closures." }, NOW);
+  expect(built.ok).toBe(true);
+  if (built.ok) expect(built.raw["story"]).toMatchObject({ description: "Fuel at the village.\nCheck seasonal closures.", comments: [], stops: [] });
+  expect(buildSharedRoute({ name: "Ride", geometry: line, description: "x".repeat(2001) }, NOW).ok).toBe(false);
+  expect(buildSharedRoute({ name: "Ride", geometry: line, description: "<script>bad</script>" }, NOW).ok).toBe(false);
+});
+
+it("enforces the shared-route capacity inside the write transaction", () => {
+  const store = new CommunityRouteStore(":memory:");
+  expect(store.addRoute("community_first", { name: "First" }, "2026-10-06", [], 1)).toBe(true);
+  expect(store.addRoute("community_second", { name: "Second" }, "2026-10-06", [], 1)).toBe(false);
+  expect(store.routeCount()).toBe(1);
+});

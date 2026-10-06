@@ -24,6 +24,7 @@ import {
 import type { ImportOutcome, ImportServicePort } from "@/application/import/import-service";
 import { ImportPanel } from "./../import/ImportPanel";
 import { SwitchBackImportPanel } from "./../import/SwitchBackImportPanel";
+import { SavedRideGroupShare } from "./SavedRideGroupShare";
 import { ExportMenu } from "./ExportMenu";
 import { libraryTypeLabel, type LibraryRideType } from "@/application/library/provenance";
 import { formatDistance } from "@/application/planner/measurements";
@@ -409,7 +410,10 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           router.push("/");
         }}
       />
-      <SwitchBackImportPanel service={importService} onImported={() => load()} />
+      <details>
+        <summary>Import older saved rides (advanced)</summary>
+        <SwitchBackImportPanel service={importService} onImported={() => load()} />
+      </details>
     </div>
   ) : null;
 
@@ -420,7 +424,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
         <div>
           <h1>My rides</h1>
           <p className="og-library__intro">
-            Named rides stay here. Your active planning draft remains separate and recoverable.
+            Keep your rides here, upload your own GPX files, and choose which rides to share with everyone on Explore. Saved rides stay in this browser until you share them.
           </p>
         </div>
       </header>
@@ -611,6 +615,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       Open
                     </button>
                   )}
+                  {library.loadExportSource !== undefined && (ride.exportCapabilities?.track || ride.exportCapabilities?.recordedRide) ? (
+                    <SavedRideGroupShare ride={ride} loadSource={library.loadExportSource.bind(library)} />
+                  ) : null}
                   <ExportMenu
                     title={ride.title}
                     capabilities={ride.exportCapabilities ?? { plannedRoute: false, track: false, original: false, recordedRide: false }}
