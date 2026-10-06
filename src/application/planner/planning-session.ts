@@ -105,6 +105,8 @@ export interface PlanningError {
   readonly code: PlanningErrorCode;
   readonly message: string;
   readonly recoverable: boolean;
+  /** A rider-safe sentence from the server that says why (which road blocks the ride); shown instead of the generic copy. */
+  readonly riderMessage?: string;
 }
 
 /**

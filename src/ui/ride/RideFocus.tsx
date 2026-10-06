@@ -218,6 +218,16 @@ export function RideFocus({
   const [insetsReady, setInsetsReady] = useState(false);
   /** The rider opened the sheet (DV-10); some states hold it open by themselves. */
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // iPad/iPhone Safari keeps the on-screen keyboard (and a shrunken viewport)
+  // alive when the planner's text box was focused as the ride opened, which left
+  // the whole ride screen dead to taps (owner, 2026-10-05). Drop focus and reset
+  // the scroll so the ride always opens on a clean, tappable viewport.
+  useEffect(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active !== document.body) active.blur();
+    window.scrollTo(0, 0);
+  }, []);
   /** Bumped by every touch inside the ride, so the auto-close clock restarts. */
   const [touchedAt, setTouchedAt] = useState(0);
   /** The readout slot whose picker is open (RIDE-INSTRUMENT-STRIP §2.2), or `null`. */

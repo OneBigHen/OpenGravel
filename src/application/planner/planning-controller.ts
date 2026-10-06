@@ -424,6 +424,8 @@ interface Run {
    * has to survive `receiveFailure` for `normalizeFailure` to prefer it.
    */
   readonly answeredCodes: Map<string, string>;
+  /** The server's rider-safe sentence for an answered no-route, by provider. */
+  readonly answeredMessages: Map<string, string>;
   readonly candidates: RouteCandidate[];
   /**
    * Role hints a provider attached to its candidates (the server pipeline's
@@ -581,6 +583,7 @@ class PlanningSessionController implements PlanningController {
       pending: new Set<string>(),
       answered: new Set<string>(),
       answeredCodes: new Map<string, string>(),
+      answeredMessages: new Map<string, string>(),
       candidates: [],
       roleHints: new Map(),
       cancelled: false,
@@ -893,6 +896,8 @@ class PlanningSessionController implements PlanningController {
     if (code !== null && ANSWERED_FAILURE_CODES.includes(code)) {
       run.answered.add(provider.id);
       run.answeredCodes.set(provider.id, code);
+      const said = (error as { readonly riderMessage?: unknown } | null)?.riderMessage;
+      if (code === "no-route" && typeof said === "string" && said.length > 0) run.answeredMessages.set(provider.id, said);
     }
     this.recordDiagnostic(run, {
       providerId: provider.id,
@@ -1046,10 +1051,12 @@ class PlanningSessionController implements PlanningController {
         recoverable: true,
       };
     }
+    const riderMessage = [...run.answeredMessages.values()][0];
     return {
       code: "no-route",
       message: "no provider produced a usable route",
       recoverable: false,
+      ...(riderMessage === undefined ? {} : { riderMessage }),
     };
   }
 }

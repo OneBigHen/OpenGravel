@@ -334,6 +334,47 @@ describe("createApiRouteProvider — failures", () => {
     expect(error.httpStatus).toBe(422);
   });
 
+  it("carries the server's sentence for a no-route answer, and only for that code", async () => {
+    const said = "Every route to this destination is blocked. Hawk Mountain Rd is closed: Rockslide.";
+    const { fetcher } = recordingFetcher(response(false, 422, { error: { code: "no-route", message: said, recoverable: true, details: { roadBlocked: true } } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    const rejection = (await provider.candidates(REQUEST, new AbortController().signal).catch((error: unknown) => error)) as ApiRouteProviderError;
+    expect(rejection.riderMessage).toBe(said);
+
+    const other = recordingFetcher(response(false, 409, { error: { code: "constraint-conflict", message: "internal detail", recoverable: true } }));
+    const second = createApiRouteProvider({ fetcher: other.fetcher });
+    second.beginAttempt(IDENTITY);
+    const generic = (await second.candidates(REQUEST, new AbortController().signal).catch((error: unknown) => error)) as ApiRouteProviderError;
+    expect(generic.riderMessage).toBeNull();
+  });
+
+  it("tries a dropped connection once more before giving up", async () => {
+    vi.useFakeTimers();
+    try {
+      const good = response(true, 200, successBody());
+      const fetcher = vi.fn()
+        .mockRejectedValueOnce(new TypeError("Load failed"))
+        .mockResolvedValueOnce(good) as unknown as typeof fetch;
+      const provider = createApiRouteProvider({ fetcher });
+      provider.beginAttempt(IDENTITY);
+      const result = provider.candidates(REQUEST, new AbortController().signal);
+      await vi.advanceTimersByTimeAsync(2_000);
+      await expect(result).resolves.toBeDefined();
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not retry a real answer such as no-route", async () => {
+    const { fetcher, probe } = recordingFetcher(response(false, 422, { error: { code: "no-route", message: "No route.", recoverable: false } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    await provider.candidates(REQUEST, new AbortController().signal).catch(() => undefined);
+    expect(probe.calls).toHaveLength(1);
+  });
+
   it("never forwards a transport error's own text", async () => {
     const { fetcher } = recordingFetcher(new Error("Failed to fetch http://127.0.0.1:8989"));
     const provider = createApiRouteProvider({ fetcher });

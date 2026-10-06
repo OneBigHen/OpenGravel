@@ -906,7 +906,7 @@ export function buildPlannerViewModel(
     }),
     selectedRouteId,
     errorMessage:
-      session.error === null ? null : planningErrorCopy(session.error.code, document),
+      session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage),
     failed,
     planLabel: failed
       ? PLAN_LABEL_RETRY
@@ -926,7 +926,8 @@ export function buildPlannerViewModel(
 }
 
 /** The §29 copy for one error code, with the loop's destination-free variant. */
-export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument): string {
+export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument, riderMessage?: string): string {
+  if (code === "no-route" && riderMessage !== undefined && riderMessage.length > 0) return riderMessage;
   if (code === "no-route" && document.intent.shape === "loop") {
     return NO_ROUTE_LOOP_COPY;
   }

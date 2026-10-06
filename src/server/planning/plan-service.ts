@@ -397,6 +397,8 @@ function pipelineFailure(input: {
   readonly candidateCount: number;
   /** How many road spans this request carried, for the span-specific copy. */
   readonly spanCount: number;
+  /** The named roads that blocked every candidate ("Hawk Mountain Rd is closed: ..."), when a source named them. */
+  readonly roadReasons?: readonly string[];
 }): PlanServiceError {
   const constraintDropped = input.diagnostics.some(
     (entry) =>
@@ -432,11 +434,16 @@ function pipelineFailure(input: {
     );
   }
   if (closedDropped && !constraintDropped) {
+    // Say which road and why: "try another point" hides that the destination
+    // itself sits behind a shut or off-limits road (owner, Hawk Mountain).
+    const reasons = (input.roadReasons ?? []).slice(0, 2);
     return planError(
       "no-route",
-      "Every route found uses a road that is closed right now.",
+      reasons.length === 0
+        ? "Every route found uses a road that is closed or off-limits to motorcycles right now."
+        : `Every route to this destination is blocked. ${reasons.join(" ")} Pick a point before it, or another destination.`,
       true,
-      details,
+      { ...details, roadBlocked: true, ...(reasons.length === 0 ? {} : { roadReasons: reasons }) },
     );
   }
   if (constraintDropped) {
@@ -1157,6 +1164,11 @@ export async function planRide(
         providerId: fixture === null ? provider.id : FIXTURE_PROVIDER_ID,
         candidateCount: candidates.length,
         spanCount: parsed.value.request.roadSpans?.length ?? 0,
+        roadReasons: [
+          ...new Set(
+            candidates.flatMap((candidate) => roadVerdict(candidate)?.failures.map((failure) => failure.message) ?? []),
+          ),
+        ],
       }),
     };
   }

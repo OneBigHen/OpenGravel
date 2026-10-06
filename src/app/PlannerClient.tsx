@@ -59,6 +59,12 @@ import { createHomeLocationStorage } from "@/infrastructure/storage/home-locatio
 import { createPlaceMemoryStore } from "@/infrastructure/storage/place-memory-storage";
 import { publishTelemetryIntent } from "@/infrastructure/telemetry/browser-event-bridge";
 
+/** Drops the on-screen keyboard before a ride opens: a focused box makes iOS keep a dead viewport over the ride. */
+function blurFocusedField(): void {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active !== document.body) active.blur();
+}
+
 /**
  * The browser composition root.
  *
@@ -269,6 +275,7 @@ export function PlannerClient({
       if (outcome.outcome !== "rejected") {
         // The rider's own Start: the ride page resumes it instead of opening
         // paused as it does after a reload (ride-handoff-marker.ts).
+        blurFocusedField();
         markRideHandoff();
         publishTelemetryIntent(existingSessionId === null ? "ride_started" : "ride_resumed", existingSessionId === null ? { source: "rider" } : {});
         router.push(RIDE_FOCUS_PATH);
@@ -305,6 +312,7 @@ export function PlannerClient({
         now: new Date().toISOString(),
       });
       if (outcome.outcome !== "rejected") {
+        blurFocusedField();
         markRideHandoff();
         publishTelemetryIntent("ride_started", { source: "system-location" });
         router.push(RIDE_FOCUS_PATH);
