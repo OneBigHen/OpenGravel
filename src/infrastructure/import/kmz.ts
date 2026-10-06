@@ -119,7 +119,7 @@ async function inflateRaw(entry: CentralEntry, signal: AbortSignal | undefined):
   sourceBytes.set(entry.data);
   const source = new ReadableStream<BufferSource>({
     start(controller) {
-      controller.enqueue(sourceBytes.buffer);
+      controller.enqueue(sourceBytes);
       controller.close();
     },
   });
