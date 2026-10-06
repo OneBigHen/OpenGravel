@@ -109,7 +109,7 @@ describe("the acknowledgement view model is honest (11 §15)", () => {
 
   it("says the gate is off until acknowledged and reversible", () => {
     const note = TELEMETRY_ACKNOWLEDGEMENT.offUntilAcknowledgedNote;
-    expect(note).toContain("stays off until you acknowledge");
+    expect(note).toContain("only counts anonymous page visits");
     expect(note).toContain("turn it off again at any time");
   });
 

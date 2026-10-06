@@ -37,9 +37,12 @@ sections are blocked. Network bodies/headers, console recordings, clipboard text
 and map canvas capture are disabled. Autocapture sends only element structure and
 an allowlist of static control identifiers, not arbitrary text, URLs or attributes.
 Private/dynamic routes and query/hash-bearing pages stop capture. Event URLs are
-replaced with canonical page categories. SDK identifiers are anonymous and kept in
-memory, so funnels describe a browser visit rather than persistent rider identity.
-Withdrawal stops new recording and capturing and resets the identity. Requests
+replaced with canonical page categories. SDK identifiers are anonymous.
+Visitor tier (2026-10-06, owner decision): before acknowledgement only an anonymous
+`$pageview` is sent, with a random visitor id kept in localStorage (no cookie, no
+person profile), so unique visitors can be counted. Actions, errors, autocapture and
+replay still need acknowledgement. Count uniques with `uniq(distinct_id)` on `$pageview`.
+Withdrawal stops recording and everything beyond the page visit. Requests
 queued while consent was active may finish delivery. Already ingested data is not deleted by withdrawal or Delete all local data.
 
 Error messages are replaced with a generic description; static JavaScript stack

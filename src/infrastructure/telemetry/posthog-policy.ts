@@ -65,10 +65,18 @@ export function sanitizePostHogEvent(event: CaptureResult | null, build: Telemet
   return { uuid: event.uuid, event: event.event, properties, ...(event.timestamp instanceof Date ? { timestamp: event.timestamp } : {}) };
 }
 
-export function postHogConfig(host: string, build: TelemetryBuildCorrelation, allowed: () => boolean): Partial<PostHogConfig> {
+export interface PostHogPolicyOptions {
+  /** True once the rider acknowledged: only then may more than a page visit leave the browser. */
+  readonly full?: () => boolean;
+  /** Keep an anonymous visitor id in localStorage (no cookie) so unique visitors can be counted. */
+  readonly persistent?: boolean;
+}
+
+export function postHogConfig(host: string, build: TelemetryBuildCorrelation, allowed: () => boolean, policy: PostHogPolicyOptions = {}): Partial<PostHogConfig> {
+  const full = policy.full ?? allowed;
   return {
     api_host: host,
-    persistence: "memory",
+    persistence: policy.persistent === true ? "localStorage" : "memory",
     person_profiles: "never",
     capture_pageview: false,
     capture_pageleave: false,
@@ -85,6 +93,11 @@ export function postHogConfig(host: string, build: TelemetryBuildCorrelation, al
       if (name === "type" && ["button", "checkbox", "radio", "submit", "text"].includes(value)) return value;
       return "[masked]";
     }, blockSelector: '.ph-no-capture, input[type="file"], input[type="hidden"], [data-telemetry-sensitive]', recordHeaders: false, recordBody: false, captureCanvas: { recordCanvas: false }, maskCapturedNetworkRequestFn: () => null },
-    before_send: (event) => allowed() ? sanitizePostHogEvent(event, build) : null,
+    before_send: (event) => {
+      if (!allowed()) return null;
+      // Before acknowledgement only the anonymous page visit is counted.
+      if (!full() && event?.event !== "$pageview") return null;
+      return sanitizePostHogEvent(event, build);
+    },
   };
 }
