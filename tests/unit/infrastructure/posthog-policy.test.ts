@@ -29,6 +29,16 @@ describe("PostHog privacy policy", () => {
   });
 });
 
+it("before acknowledgement lets only an anonymous page visit through, with a persistent visitor id", () => {
+  const config = postHogConfig("https://us.i.posthog.com", build, () => true, { full: () => false, persistent: true });
+  expect(config.persistence).toBe("localStorage");
+  const send = config.before_send as (event: CaptureResult) => CaptureResult | null;
+  expect(send(event("$pageview", { distinct_id: "anon", page: "planner" }))?.properties.distinct_id).toBe("anon");
+  expect(send(event("$autocapture", {}))).toBeNull();
+  expect(send(event("route_plan_requested", {}))).toBeNull();
+  expect(send(event("$exception", {}))).toBeNull();
+});
+
 it("preserves safe UI styling and masks rider-controlled attributes", () => {
   const recording = postHogConfig("https://us.i.posthog.com", { appVersion: "0", buildId: "test" }, () => true).session_recording;
   expect(recording?.maskAttributeFn?.("class", "og-settings__section")).toBe("og-settings__section");

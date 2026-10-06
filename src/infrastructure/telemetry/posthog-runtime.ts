@@ -19,24 +19,39 @@ export function createPostHogRuntime(options: PostHogRuntimeOptions): { sync(): 
  let epoch = 0;
  let pending: Promise<void> | null = null;
  const host = options.host?.replace(/\/$/, "");
+ let recording = false;
+ /** Visitor tier: anonymous page-visit counting needs no acknowledgement. */
  const allowed = (): boolean => {
    try {
+     return (options.eligible?.() ?? true) && options.mode === "hosted-beta" && !!options.projectToken?.startsWith("phc_") && !!host && ["https://us.i.posthog.com", "https://eu.i.posthog.com"].includes(host);
+   } catch { return false; }
+ };
+ /** Full tier: actions, errors and replay still require the acknowledgement. */
+ const full = (): boolean => {
+   try {
      const consent = options.consent();
-     return (options.eligible?.() ?? true) && options.mode === "hosted-beta" && !!options.projectToken?.startsWith("phc_") && !!host && ["https://us.i.posthog.com", "https://eu.i.posthog.com"].includes(host) && consent.status === "acknowledged" && consent.policyVersion === TELEMETRY_CONSENT_POLICY_VERSION;
+     return allowed() && consent.status === "acknowledged" && consent.policyVersion === TELEMETRY_CONSENT_POLICY_VERSION;
    } catch { return false; }
  };
  const stop = (): void => {
    epoch++;
    active = false;
+   recording = false;
    try {
      sdk?.stopSessionRecording();
      sdk?.opt_out_capturing();
      sdk?.reset();
    } catch { /* Telemetry cannot interrupt the application. */ }
  };
+ const syncRecording = (): void => {
+   try {
+     if (full() && !recording) { sdk?.startSessionRecording(); recording = true; }
+     else if (!full() && recording) { sdk?.stopSessionRecording(); recording = false; }
+   } catch { /* Telemetry cannot interrupt the application. */ }
+ };
  const sync = async (): Promise<void> => {
    if (!allowed()) { stop(); return; }
-   if (active) return;
+   if (active) { syncRecording(); return; }
    if (pending !== null) {
      await pending;
      if (!active && allowed()) await sync();
@@ -49,7 +64,7 @@ export function createPostHogRuntime(options: PostHogRuntimeOptions): { sync(): 
        if (loadingEpoch !== epoch || !allowed()) return;
        if (sdk === null) {
          sdk = loaded;
-         const config = postHogConfig(host!, options.build, () => active && allowed());
+         const config = postHogConfig(host!, options.build, () => active && allowed(), { full: () => active && full(), persistent: true });
          sdk.init(options.projectToken!, config);
          // init() is a no-op for an existing browser singleton (e.g. remount).
          // Refresh the privacy callback instead of retaining a disposed closure.
@@ -57,7 +72,7 @@ export function createPostHogRuntime(options: PostHogRuntimeOptions): { sync(): 
        }
        active = true;
        sdk.opt_in_capturing({ captureEventName: false });
-       sdk.startSessionRecording();
+       syncRecording();
      } catch { active = false; }
    })();
    await pending;
@@ -70,7 +85,7 @@ export function createPostHogRuntime(options: PostHogRuntimeOptions): { sync(): 
      try { if (active && allowed()) sdk?.capture("$pageview", { page }); } catch { /* Optional. */ }
    },
    transport: { send(envelope): void {
-     try { if (active && allowed()) sdk?.capture(envelope.name, envelope.properties); } catch { /* Optional. */ }
+     try { if (active && full()) sdk?.capture(envelope.name, envelope.properties); } catch { /* Optional. */ }
    } },
  };
 }

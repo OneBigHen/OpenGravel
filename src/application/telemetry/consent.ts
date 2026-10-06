@@ -80,5 +80,5 @@ export const TELEMETRY_ACKNOWLEDGEMENT: TelemetryAcknowledgementCopy = {
   mapContextDisclosure:
     "A session replay shows the map exactly as you see it, so map pixels and the map viewport can reveal the geographic context of where you plan and ride. Acknowledge this only if that is acceptable.",
   offUntilAcknowledgedNote:
-    "Usage data stays off until you acknowledge this, and you can turn it off again at any time.",
+    "Until you acknowledge this, OpenGravel only counts anonymous page visits (no actions, no errors, no replay). Everything above stays off until you acknowledge, and you can turn it off again at any time.",
 };
