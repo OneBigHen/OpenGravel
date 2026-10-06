@@ -52,7 +52,7 @@ import type { GeometryPayload } from "@/domain/geometry/types";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideIntent } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
-import type { ProviderCandidate } from "@/application/planner/route-provider";
+import type { ProviderCandidate, RouteCandidateProvider } from "@/application/planner/route-provider";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import { assignRoles } from "@/domain/route/roles";
 import { replaceNoveltyScore } from "@/domain/route/scoring";
@@ -132,6 +132,9 @@ export function createClientRouteCandidateProvider() {
 }
 
 const LOCAL_HISTORY_CACHE_LIMIT = 8;
+
+/** The longest the full request waits for the first-route answer before going anyway. */
+const FIRST_ROUTE_WAIT_MS = 25_000;
 
 function attemptKey(input: { readonly rideId: RideId | null; readonly rideRevision: number; readonly planningGeneration: number }): string {
   return `${input.rideId}:${input.rideRevision}:${input.planningGeneration}`;
@@ -248,6 +251,39 @@ export function createClientPlanningService(
           firstRouteOnly: true,
         })
       : null;
+  // The server does its scoring on one thread, so two requests sent together
+  // slow each other down (measured: 6 s alone, 16-23 s together). The full
+  // request therefore waits for the first-route answer (or 25 s, whichever is
+  // first) before it goes out: the rider sees a ride sooner and everything
+  // still arrives.
+  let firstRouteSettled: Promise<void> = Promise.resolve();
+  const startedFirstRoute: RouteCandidateProvider | null =
+    firstRouteProvider === null
+      ? null
+      : {
+          ...firstRouteProvider,
+          candidates: (request, signal) => {
+            const answer = firstRouteProvider.candidates(request, signal);
+            firstRouteSettled = answer.then(() => undefined, () => undefined);
+            return answer;
+          },
+        };
+  const fullProvider: RouteCandidateProvider =
+    firstRouteProvider === null
+      ? apiProvider
+      : {
+          ...apiProvider,
+          candidates: async (request, signal) => {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(resolve, FIRST_ROUTE_WAIT_MS);
+              const done = (): void => { clearTimeout(timer); resolve(); };
+              void firstRouteSettled.then(done);
+              signal.addEventListener("abort", done, { once: true });
+            });
+            if (signal.aborted) throw signal.reason;
+            return apiProvider.candidates(request, signal);
+          },
+        };
   const listeners = new Set<() => void>();
   const offlineEngine = options.offlineEngine === undefined ? defaultOfflineEngine() : options.offlineEngine;
   const localHistoryPipeline = createLocalHistoryPipeline({
@@ -257,8 +293,8 @@ export function createClientPlanningService(
 
   const controller = createPlanningController({
     providers: [
-      ...(firstRouteProvider === null ? [] : [firstRouteProvider]),
-      offlineEngine === null ? apiProvider : withOfflineFallback(apiProvider, offlineEngine),
+      ...(startedFirstRoute === null ? [] : [startedFirstRoute]),
+      offlineEngine === null ? fullProvider : withOfflineFallback(fullProvider, offlineEngine),
     ],
     requestContext: {
       resolveGeometry: async (ref): Promise<GeometryPayload | null> => {

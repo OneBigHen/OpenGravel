@@ -969,12 +969,19 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     await placeBothPoints();
     fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
-      expect(pending).toHaveLength(2);
+      expect(pending).toHaveLength(1);
     });
     const firstIdentity = posts[0];
     if (firstIdentity === undefined) throw new Error("expected a plan request");
+    // The first-route answer lands first; only then does the full request go out.
     await act(async () => {
       pending[0]?.(jsonResponse(successBody(firstIdentity)));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(pending).toHaveLength(2);
+    });
+    await act(async () => {
       pending[1]?.(jsonResponse(successBody(firstIdentity)));
       await Promise.resolve();
     });
@@ -989,7 +996,7 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     clickMap(500, 500);
 
     await waitFor(() => {
-      expect(pending).toHaveLength(4);
+      expect(pending).toHaveLength(3);
     });
     expect(screen.getByTestId("status-line")).toHaveTextContent("Updating ride…");
     expect(mapFactory.hosts[0]?.lastScene()?.routes).toHaveLength(2);
@@ -998,6 +1005,12 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     if (secondIdentity === undefined) throw new Error("expected a second plan request");
     await act(async () => {
       pending[2]?.(jsonResponse(successBody(secondIdentity)));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(pending).toHaveLength(4);
+    });
+    await act(async () => {
       pending[3]?.(jsonResponse(successBody(secondIdentity)));
       await Promise.resolve();
     });
