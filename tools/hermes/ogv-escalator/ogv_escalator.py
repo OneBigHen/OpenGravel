@@ -152,6 +152,7 @@ def wake_opus(reason: str, task: dict | None, detail: str, state: dict, dry: boo
     )
     remote = (f"cd {shlex.quote(OPUS_REPO)} && git fetch -q origin main && git reset -q --hard origin/main; "
               f"nohup flock -w 1800 /tmp/ogv-opus.lock timeout 3600 claude -p --model opus --permission-mode auto "
+              f"--permission-prompts none "
               f"{shlex.quote(prompt)} > /tmp/ogv-opus-{label}-{int(now)}.log 2>&1 < /dev/null &")
     if dry:
         log(f"  DRY opus <- {reason} {label}")
