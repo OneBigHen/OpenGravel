@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenGravel board escalator (event-driven: DeepSeek -> Sol -> Opus -> owner)
+After=hermes-gateway.service
+Wants=hermes-gateway.service
+
+[Service]
+Type=simple
+Environment=OGV_BOARD=opengravel-ios
+Environment=OGV_OWNER_TARGET=slack
+EnvironmentFile=-%h/.hermes/ogv-escalator/env
+ExecStart=/usr/bin/python3 %h/.hermes/ogv-escalator/ogv_escalator.py
+Restart=always
+RestartSec=20
+
+[Install]
+WantedBy=default.target
