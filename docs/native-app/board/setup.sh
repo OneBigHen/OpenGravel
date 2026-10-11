@@ -80,7 +80,12 @@ if [ "${1:-}" = "--parallel" ]; then
 import re, sys
 p = sys.argv[1]; t = open(p).read()
 t = re.sub(r'(?m)^(  max_in_progress:\s*)\d+', r'\g<1>3', t)
-t = re.sub(r'(?m)^(  max_in_progress_per_profile:\s*)\d+', r'\g<1>2', t)
+pattern = r'(?m)^(  max_in_progress_per_profile:\s*).*$'
+t, count = re.subn(pattern, r'\g<1>2', t, count=1)
+if count == 0:
+    t, count = re.subn(r'(?m)^(  max_in_progress:\s*.*)$', r'\g<1>\n  max_in_progress_per_profile: 2', t, count=1)
+if count == 0:
+    sys.exit("could not find kanban.max_in_progress in config")
 open(p, 'w').write(t); print("kanban: max_in_progress=3, per_profile=2 (restart the gateway to apply)")
 PY
 fi
