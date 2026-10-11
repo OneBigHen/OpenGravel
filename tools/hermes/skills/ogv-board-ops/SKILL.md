@@ -19,7 +19,7 @@ description: How to work an OpenGravel iPhone card on the opengravel-ios kanban 
 - **CI (any Swift change):** `gh pr checks --watch` until `ios / build + unit tests` finishes. On failure: `gh run view <id> --log-failed | tail -150`.
 - **Mac (screens, components, navigation, ride):** `mac-gate <branch> [--snapshots] [--ui] [--maestro] [--replay]`. Results land in `./mac-gate/<timestamp>/`. Attach the screenshots with `kanban_attach`.
   - Waiting for the Mac lock is normal.
-  - If the Mac is unreachable: `~/bin/wake-mac.py --timeout 120`, then retry once. If it's still down, block with `kind=transient` and reason "Mac unreachable". The escalator alerts the owner.
+  - If the Mac is unreachable: `~/bin/wake-mac.py --timeout 120`, then retry once. If it's still down, block with `kind=transient` and reason "Mac unreachable". The escalator wakes Opus; only Opus can decide whether an owner message is needed.
 - **Server changes:** `npm run lint && npm run typecheck && npm test` in the worktree, and the `ci.yml` check on the PR.
 - New snapshot references: `mac-gate <branch> --record-snapshots`, commit the images, and say so in the handoff.
 

@@ -25,7 +25,7 @@ OWNER_TARGET = os.environ.get("OGV_OWNER_TARGET", "slack")
 OPUS_HOST = os.environ.get("OGV_OPUS_HOST", "dev-server")
 OPUS_REPO = os.environ.get("OGV_OPUS_REPO", "/root/Vibe/ogv-opus-monitor")
 OPUS_MAX_PER_DAY = int(os.environ.get("OGV_OPUS_MAX_PER_DAY", "8"))
-SWEEP_SECONDS = int(os.environ.get("OGV_SWEEP_SECONDS", "1800"))
+SWEEP_SECONDS = int(os.environ.get("OGV_SWEEP_SECONDS", "600"))
 STATE_DIR = Path.home() / ".hermes" / "ogv-escalator"
 STATE_FILE = STATE_DIR / "state.json"
 LOG_FILE = STATE_DIR / "escalator.log"
@@ -103,14 +103,6 @@ def tstate(state: dict, task_id: str) -> dict:
     return state["tasks"].setdefault(task_id, {"escalations": [], "changes_requested": 0, "quota_retries": 0})
 
 
-def notify_owner(text: str, dry: bool) -> None:
-    if dry:
-        log(f"  DRY owner <- {text[:200]}")
-        return
-    res = run(["hermes", "send", "-t", OWNER_TARGET, "-s", "OpenGravel board", "-q", text])
-    log(f"  owner notified ({'ok' if res.returncode == 0 else 'FAILED: ' + res.stderr.strip()[-200:]})")
-
-
 # ---------------------------------------------------------------- tier moves
 
 def escalate_to(task: dict, profile: str, why: str, state: dict, dry: bool) -> None:
@@ -138,17 +130,24 @@ def wake_opus(reason: str, task: dict | None, detail: str, state: dict, dry: boo
     state["opus_runs"] = [t for t in state["opus_runs"] if now - t < 86400]
     label = card_id(task) if task else "board"
     if len(state["opus_runs"]) >= OPUS_MAX_PER_DAY:
-        notify_owner(f"Opus escalation budget used up today ({OPUS_MAX_PER_DAY}). Needs a look: {label}: {detail[:300]}", dry)
+        message = f"Opus escalation budget used up today ({OPUS_MAX_PER_DAY}); needs a look: {detail[:300]}"
+        if task:
+            kanban("comment", "--author", "ogv-escalator", task["task"]["id"], message, dry=dry)
+        log(f"  Opus escalation budget exhausted for {label}")
         return
     tid = task["task"]["id"] if task else ""
+    reach_board = (f"ssh megaplex \"pct exec 124 -- su claw -s /bin/bash -lc 'hermes kanban --board "
+                   f"{BOARD} show {tid}'\"" if tid else
+                   f"ssh megaplex \"pct exec 124 -- su claw -s /bin/bash -lc 'hermes kanban --board {BOARD} diagnostics'\"")
+    wrap_up = ("End by writing a one-paragraph summary as a comment on the card (author opus-monitor)." if task else
+               "End by recording a one-paragraph summary in your run log; if a card is affected, add the summary as its comment.")
     prompt = (
         f"You are the OpenGravel Opus monitor. Reason: {reason}. Card {label} ({tid}) on Hermes board {BOARD}.\n"
         f"Detail: {detail[:1500]}\n\n"
         "Read docs/native-app/board/OPUS-MONITOR.md in this repo first and follow it exactly. "
-        "Reach the board with: ssh megaplex \"pct exec 124 -- su claw -s /bin/bash -lc 'hermes kanban --board "
-        f"{BOARD} show {tid}'\". Resolve it yourself if you can (re-scope, fix card, comment + unblock, gate review). "
+        f"Reach the board with: {reach_board}. Resolve it yourself if you can (re-scope, fix card, comment + unblock, gate review). "
         "Message the owner only for things only the owner can do, using the OWNER ASK format in OPUS-MONITOR.md. "
-        "End by writing a one-paragraph summary as a comment on the card (author opus-monitor)."
+        f"{wrap_up}"
     )
     remote = (f"cd {shlex.quote(OPUS_REPO)} && git fetch -q origin main && git reset -q --hard origin/main; "
               f"nohup flock -w 1800 /tmp/ogv-opus.lock timeout 3600 claude -p --model opus --permission-mode auto "
@@ -161,7 +160,9 @@ def wake_opus(reason: str, task: dict | None, detail: str, state: dict, dry: boo
     state["opus_runs"].append(now)
     log(f"  Opus woken for {label} ({reason}): rc={res.returncode}")
     if res.returncode != 0:
-        notify_owner(f"Couldn't start the Opus monitor for {label} ({reason}). {detail[:300]}", dry)
+        if task:
+            kanban("comment", "--author", "ogv-escalator", tid,
+                   f"Could not start Opus monitor ({reason}): {res.stderr.strip()[-300:]}", dry=dry)
 
 
 # ---------------------------------------------------------------- event handling
@@ -248,11 +249,12 @@ def sweep(state: dict, dry: bool) -> None:
     if mac.returncode != 0:
         if not state.get("mac_down_since"):
             state["mac_down_since"] = time.time()
-            notify_owner("The MacBook build rig is unreachable and didn't wake. Swift cards will wait. "
-                         "Check it's on power and the dock. (FileVault: after a restart it needs your password.)", dry)
+            wake_opus("mac-unreachable", None,
+                      "The MacBook build rig is unreachable after one wake attempt. Swift cards will wait; "
+                      "check power, dock, and FileVault if owner action is needed.", state, dry)
     elif state.get("mac_down_since"):
         state["mac_down_since"] = None
-        notify_owner("The MacBook build rig is back.", dry)
+        wake_opus("mac-restored", None, "The MacBook build rig is reachable again.", state, dry)
     check_gates(state, dry)
 
 
@@ -275,13 +277,13 @@ def main() -> None:
 
     def sweeper():
         while True:
-            time.sleep(SWEEP_SECONDS)
             with _lock:
                 try:
                     sweep(state, args.dry_run)
                     save_state(state)
                 except Exception as exc:  # keep supervising whatever happens
                     log(f"sweep error: {exc!r}")
+            time.sleep(SWEEP_SECONDS)
 
     threading.Thread(target=sweeper, daemon=True).start()
     log(f"ogv-escalator watching board {BOARD} ({'dry-run' if args.dry_run else 'live'})")

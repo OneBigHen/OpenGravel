@@ -66,28 +66,18 @@ else
   quiet hermes project bind-board "$PROJECT" "$BOARD"
 fi
 
-# 4. Escalator: event-driven supervision (DeepSeek -> Sol -> Opus -> owner).
+# 4. Optional parallel limits; apply them before starting/restarting services.
+if [ "${1:-}" = "--parallel" ]; then
+  python3 "$REPO/tools/hermes/ogv-escalator/configure_parallel.py" "$HOME/.hermes/config.yaml"
+  systemctl --user restart hermes-gateway.service
+fi
+
+# 5. Escalator: event-driven supervision (DeepSeek -> Sol -> Opus -> owner).
 mkdir -p "$HOME/.hermes/ogv-escalator" "$HOME/.config/systemd/user"
 install -m 755 "$REPO/tools/hermes/ogv-escalator/ogv_escalator.py" "$HOME/.hermes/ogv-escalator/ogv_escalator.py"
 install -m 644 "$REPO/tools/hermes/ogv-escalator/ogv-escalator.service" "$HOME/.config/systemd/user/ogv-escalator.service"
 systemctl --user daemon-reload
 systemctl --user enable --now ogv-escalator.service
 systemctl --user restart ogv-escalator.service
-
-# 5. Optional: more cards in flight at once.
-if [ "${1:-}" = "--parallel" ]; then
-  python3 - "$HOME/.hermes/config.yaml" <<'PY'
-import re, sys
-p = sys.argv[1]; t = open(p).read()
-t = re.sub(r'(?m)^(  max_in_progress:\s*)\d+', r'\g<1>3', t)
-pattern = r'(?m)^(  max_in_progress_per_profile:\s*).*$'
-t, count = re.subn(pattern, r'\g<1>2', t, count=1)
-if count == 0:
-    t, count = re.subn(r'(?m)^(  max_in_progress:\s*.*)$', r'\g<1>\n  max_in_progress_per_profile: 2', t, count=1)
-if count == 0:
-    sys.exit("could not find kanban.max_in_progress in config")
-open(p, 'w').write(t); print("kanban: max_in_progress=3, per_profile=2 (restart the gateway to apply)")
-PY
-fi
 
 echo "Setup done. Next: python3 $REPO/docs/native-app/board/load_board.py --dry-run"

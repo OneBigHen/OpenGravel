@@ -42,6 +42,8 @@ Gates G1–G4 need the owner (a look choice or real rides). Send one OWNER ASK w
 
 **`board-diagnostics`.** Something is stranded or stuck. Read the diagnostics and fix the cause: wrong assignee, missing profile, a dead dispatcher (`systemctl --user status hermes-gateway`).
 
+**`mac-unreachable` / `mac-restored`.** Check Mac reachability and whether a wake attempt worked. If it is still down, leave Swift cards waiting and message the owner only when power, dock, or FileVault needs their action. When it returns, record that in the relevant blocked card or board summary.
+
 ## OWNER ASK format (the only way to message the owner)
 
 ```bash
