@@ -1,0 +1,31 @@
+name: Corridor acquisition research contract
+on:
+  pull_request:
+    paths:
+      - 'research/corridor-acquisition/**'
+      - '.github/workflows/corridor-acquisition.yml'
+  push:
+    branches:
+      - research/corridor-acquisition-protocol-20261015
+    paths:
+      - 'research/corridor-acquisition/**'
+      - '.github/workflows/corridor-acquisition.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  research-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Run audit contract tests
+        run: node --test research/corridor-acquisition/*.test.mjs
+      - name: Reproduce legacy call accounting
+        run: node research/corridor-acquisition/audit-legacy.mjs
+      - name: Validate synthetic evidence fixture
+        run: node research/corridor-acquisition/validate.mjs research/corridor-acquisition/fixtures/synthetic-manifest.json research/corridor-acquisition/fixtures/synthetic-trials.ndjson
