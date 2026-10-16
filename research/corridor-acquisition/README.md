@@ -29,7 +29,8 @@ optimization, regret minimization, or GPX-guided routing.
 
 With Node.js 24+ (the repository-supported version):
 
-    node --test research/corridor-acquisition/validate.test.mjs
+    node --test research/corridor-acquisition/*.test.mjs
+    node research/corridor-acquisition/audit-legacy.mjs
     node research/corridor-acquisition/validate.mjs research/corridor-acquisition/fixtures/synthetic-manifest.json research/corridor-acquisition/fixtures/synthetic-trials.ndjson
 
 The validator checks structural fidelity, actual attempt accounting, impossible

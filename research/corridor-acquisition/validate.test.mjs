@@ -87,6 +87,11 @@ test("missing confidence or proxy facts must be explicit null, not omitted", () 
   assert.ok(hasIssue(validateRun(manifest, changed), "bendShare"));
 });
 
+test("malformed manifest produces a validation error, never crashes", () => {
+  const r = validateRun(null, trials);
+  assert.ok(hasIssue(r, "expected object"));
+});
+
 test("malformed NDJSON names its line", () => {
   assert.throws(() => parseNdjson('{"ok":true}\n{bad'), /NDJSON line 2/);
 });

@@ -157,6 +157,7 @@ function validateArm(arm, label, policy, budget, errors) {
 
 export function validateRun(manifest, trials) {
   const errors = validateManifest(manifest);
+  if (!isObject(manifest)) return { errors, summary: null };
   if (!Array.isArray(trials) || trials.length === 0) {
     issue(errors, "trials", "expected at least one paired scenario");
     return { errors, summary: null };

@@ -24,6 +24,8 @@ jobs:
         with:
           node-version: 24
       - name: Run audit contract tests
-        run: node --test research/corridor-acquisition/validate.test.mjs
+        run: node --test research/corridor-acquisition/*.test.mjs
+      - name: Reproduce legacy call accounting
+        run: node research/corridor-acquisition/audit-legacy.mjs
       - name: Validate synthetic evidence fixture
         run: node research/corridor-acquisition/validate.mjs research/corridor-acquisition/fixtures/synthetic-manifest.json research/corridor-acquisition/fixtures/synthetic-trials.ndjson
