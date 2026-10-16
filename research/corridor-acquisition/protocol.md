@@ -79,6 +79,12 @@ GPX tracks and corridor-derived copies. Audit source-to-test geometric overlap,
 not merely duplicate route IDs. Pin OSM/GraphHopper graph and legal authority
 snapshots and record their digests.
 
+The version-one contract requires every selected route to be traceable to a logged
+eligible executed probe. If experimental designs share initial incumbent routes,
+log those origin queries in BOTH arms with their setup cost accounted for;
+a later contract can explicitly model common paid warm-start incumbents.
+Never grant one policy free precomputed candidates while charging another.
+
 The included validator checks that a cluster or sourceFamilyId does not
 appear in multiple splits in the provided records. It CANNOT compute geometric
 buffers. A separate GIS check is mandatory before calling the split clean.

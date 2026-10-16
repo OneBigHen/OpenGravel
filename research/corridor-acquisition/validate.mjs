@@ -93,7 +93,7 @@ function validateSelected(value, path, errors) {
     return;
   }
   if (!identifier(value.candidateId)) issue(errors, path + ".candidateId", "required identifier");
-  if (!identifier(value.routeFingerprint)) issue(errors, path + ".routeFingerprint", "hash/fingerprint required; do not log raw GPS");
+  if (!SHA256.test(value.routeFingerprint ?? "")) issue(errors, path + ".routeFingerprint", "sha256 fingerprint required; never raw GPS");
   if (value.eligible !== true) issue(errors, path + ".eligible", "selected candidate must pass canonical eligibility");
   if (!ACCESS.has(value.accessStatus)) issue(errors, path + ".accessStatus", "unknown / verified-open / known-prohibited required");
   if (value.accessStatus === "known-prohibited") issue(errors, path + ".accessStatus", "a known-prohibited candidate cannot be selected");
@@ -129,6 +129,9 @@ function validateArm(arm, label, policy, budget, errors) {
       }
       ids.add(probe.probeId);
       if (!PROBE_STATUSES.has(probe.status)) issue(errors, path + ".status", "invalid probe outcome");
+      if (probe.status === "eligible" && !identifier(probe.candidateId)) {
+        issue(errors, path + ".candidateId", "eligible probe must identify its returned candidate");
+      }
       if (!integer(probe.attempts)) issue(errors, path + ".attempts", "nonnegative attempts required");
       else {
         total += probe.attempts;
@@ -145,6 +148,11 @@ function validateArm(arm, label, policy, budget, errors) {
     }
   }
   validateSelected(arm.selected, label + ".selected", errors);
+  if (isObject(arm.selected) && Array.isArray(arm.probes) &&
+      !arm.probes.some((probe) => isObject(probe) &&
+        probe.status === "eligible" && probe.candidateId === arm.selected.candidateId)) {
+    issue(errors, label + ".selected", "selected route must appear in an eligible executed probe result");
+  }
 }
 
 export function validateRun(manifest, trials) {

@@ -69,6 +69,18 @@ test("confirmatory study requires registration and frozen test records", () => {
   assert.ok(hasIssue(validateRun(changed, trials), "frozen test split"));
 });
 
+test("cannot select a candidate that no eligible executed probe returned", () => {
+  const changed = clone(trials);
+  changed[0].arms.treatment.selected.candidateId = "invented-winner";
+  assert.ok(hasIssue(validateRun(manifest, changed), "selected route must appear"));
+});
+
+test("selected-route fingerprint must be a SHA256 digest, not a GPS trace", () => {
+  const changed = clone(trials);
+  changed[0].arms.control.selected.routeFingerprint = "40.1,-75.1";
+  assert.ok(hasIssue(validateRun(manifest, changed), "sha256 fingerprint required"));
+});
+
 test("missing confidence or proxy facts must be explicit null, not omitted", () => {
   const changed = clone(trials);
   delete changed[0].arms.control.selected.bendShare;
