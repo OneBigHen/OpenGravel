@@ -19,6 +19,8 @@ optimization, regret minimization, or GPX-guided routing.
 - [protocol.md](protocol.md): confirmatory design, failure criteria, fairness, splits, metrics, and human-study safeguards.
 - [prior-art.md](prior-art.md): closest papers, anticipated novelty objections, missing comparisons.
 - [validate.mjs](validate.mjs): a zero-dependency validator and descriptive audit for paired experiment records.
+- [legacy-benchmark-audit.md](legacy-benchmark-audit.md): independently counted unequal provider calls in the saved October 4 benchmark.
+- [audit-legacy.mjs](audit-legacy.mjs): executable reproduction of the confounding audit.
 - [validate.test.mjs](validate.test.mjs): executable contract tests.
 - [fixtures/synthetic-manifest.json](fixtures/synthetic-manifest.json): dummy manifest.
 - [fixtures/synthetic-trials.ndjson](fixtures/synthetic-trials.ndjson): dummy records; **never use these as scientific evidence**.
