@@ -1,0 +1,151 @@
+# OpenGravel acceptance campaign — nightly deterministic QA.
+#
+# Lanes:
+#   web-gate    ubuntu — Playwright critical gate on Chromium AND WebKit
+#                        (fixture mode, production build, port 3210).
+#   ios-maestro macos  — Maestro suite on an iPhone simulator against the
+#                        Capacitor shell. macOS is required: iOS simulators do
+#                        not exist on Linux runners.
+#   aggregate   ubuntu — scripts/qa/aggregate.mjs rolls the lane outputs into
+#                        per-mission result.json files and QA_CAMPAIGN.json.
+#
+# The iOS job needs the repo variable OGV_DEPLOYMENT_URL (an HTTPS OpenGravel
+# deployment the runner can reach); CAPACITOR_SERVER_URL is injected at
+# `npm run sync` time, never committed.
+name: acceptance
+
+on:
+  schedule:
+    # 06:00 US Eastern, daily.
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: validate acceptance contracts
+        run: node scripts/qa/aggregate.mjs --validate
+
+  web-gate:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: install dependencies
+        run: npm ci
+      - name: install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+      - name: production build
+        run: npm run build
+      - name: critical gate — Chromium
+        run: |
+          mkdir -p qa-out
+          npx playwright test --project=critical-chromium --reporter=json > qa-out/playwright-chromium.json
+      - name: critical gate — WebKit
+        run: npx playwright test --project=critical-webkit --reporter=json > qa-out/playwright-webkit.json
+        env:
+          OGV_E2E_WEBKIT: "1"
+      - name: upload lane output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: qa-out/playwright-*.json
+
+  ios-maestro:
+    runs-on: macos-14
+    needs: validate
+    env:
+      CAPACITOR_SERVER_URL: ${{ vars.OGV_DEPLOYMENT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: install Maestro
+        run: |
+          brew tap mobile-dev-inc/tap
+          brew install mobile-dev-inc/tap/maestro --formula
+          maestro --version
+      - name: require a reachable deployment
+        run: |
+          if [ -z "$CAPACITOR_SERVER_URL" ]; then
+            echo "Set the OGV_DEPLOYMENT_URL repo variable to an HTTPS OpenGravel deployment this runner can reach." >&2
+            exit 1
+          fi
+      - name: sync Capacitor shell
+        working-directory: apps/ios
+        run: |
+          npm ci
+          npm run sync
+      - name: build for simulator
+        working-directory: apps/ios
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -derivedDataPath build/derived \
+            build
+      - name: boot simulator, install app, fix location
+        run: |
+          UDID="$(xcrun simctl list devices available | grep -m1 'iPhone 16 Pro' | sed -E 's/.*\(([0-9A-F-]+)\).*/\1/')"
+          if [ -z "$UDID" ]; then
+            echo "No iPhone 16 Pro simulator runtime on this runner; pick a name from 'xcrun simctl list devices available'." >&2
+            exit 1
+          fi
+          xcrun simctl boot "$UDID"
+          xcrun simctl install booted "apps/ios/build/derived/Build/Products/Debug-iphonesimulator/App.app"
+          # Maestro cannot set iOS simulator location; the GPS-dependent flows
+          # (M12, M13, M14) need this fix or they time out by design.
+          xcrun simctl location booted set 40.14 -75.44
+      - name: run Maestro suite
+        run: |
+          mkdir -p qa-out
+          maestro test .maestro/ --format junit --output qa-out/maestro-report.xml \
+            --test-output-dir qa-out/maestro
+      - name: upload lane output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-results
+          path: qa-out/
+
+  aggregate:
+    runs-on: ubuntu-latest
+    needs: [web-gate, ios-maestro]
+    # A red lane must still produce a campaign file that says red.
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: download lane outputs
+        uses: actions/download-artifact@v4
+        with:
+          path: qa-out
+          merge-multiple: true
+      - name: roll up QA_CAMPAIGN.json
+        run: >
+          node scripts/qa/aggregate.mjs
+          --playwright qa-out/playwright-chromium.json
+          --playwright qa-out/playwright-webkit.json
+          --maestro qa-out/maestro-report.xml
+          --sha "${{ github.sha }}"
+          --out qa-out
+      - name: upload campaign
+        uses: actions/upload-artifact@v4
+        with:
+          name: QA_CAMPAIGN
+          path: |
+            qa-out/QA_CAMPAIGN.json
+            qa-out/M*.result.json
