@@ -64,8 +64,8 @@ id: M14
 feature: M14-ride-continuity.feature
 priority: P0                      # P0 = critical, P1, P2
 executors:
-  chromium: { kind: playwright, spec: tests/e2e/critical/foo.spec.ts }  # or null
-  webkit:   { kind: playwright, spec: tests/e2e/critical/foo.spec.ts }  # or null
+  chromium: { kind: playwright, spec: tests/e2e/critical/foo.spec.ts }  # or null, or a list of specs
+  webkit:   { kind: playwright, spec: tests/e2e/critical/foo.spec.ts }  # or null, or a list of specs
   iphone:   { kind: maestro, flow: .maestro/M14-resume-ride.yaml }       # or "planned"
   ipad:     { kind: maestro, flow: .maestro/M14-resume-ride.yaml }       # or "planned"
 preflight:
@@ -86,43 +86,60 @@ exploratory:
 A lane with no executable target says `planned`, never green. A lane that did
 not run says `not_run`, never green. `aggregate.mjs --validate` checks manifest rules and file references. Aggregation requires report-specific preflight attestations before a passing result can count.
 
+A mission may claim several Playwright specs per lane when one spec file cannot
+cover the mission's whole surface:
+
+```yaml
+executors:
+  chromium:
+    kind: playwright
+    spec:
+      - tests/e2e/critical/ride-style.spec.ts
+      - tests/e2e/critical/routing-method-comparison.spec.ts
+```
+
+The mission passes only when **every** claimed spec passes; one failure fails the
+mission. `--validate` also fails when a spec file in `tests/e2e/critical/` is not
+claimed by any manifest, so new specs cannot silently slip out of the campaign.
+
 ## Mission ↔ spec map
 
 | Mission | Feature | P | Playwright spec | iOS flow |
 |---|---|---|---|---|
 | M01 | plan-first-route | P0 | first-route.spec.ts | planned |
-| M02 | place-search | P1 | place-search.spec.ts | planned |
+| M02 | place-search | P1 | place-search.spec.ts, places.spec.ts | planned |
 | M03 | stops | P1 | stops.spec.ts | planned |
 | M04 | avoid-area | P1 | avoid-area.spec.ts | planned |
 | M05 | draw | P2 | draw.spec.ts | planned |
 | M06 | road-span | P2 | road-span.spec.ts | planned |
-| M07 | ride-style | P1 | ride-style.spec.ts | planned |
+| M07 | ride-style | P1 | ride-style.spec.ts, routing-method-comparison.spec.ts | planned |
 | M08 | long-trip | P1 | long-trip.spec.ts | planned |
 | M09 | advisor | P2 | advisor.spec.ts | planned |
-| M10 | prepare | P1 | prepare.spec.ts | planned |
-| M11 | plan-and-start | P0 | ride-focus.spec.ts | ✅ M11 |
-| M12 | free-ride | P0 | free-ride.spec.ts | ✅ M12 |
+| M10 | prepare | P1 | prepare.spec.ts, weather.spec.ts, traffic.spec.ts | planned |
+| M11 | plan-and-start | P0 | ride-focus, compact-sheet, mobile-planner-ux, desktop-rail | ✅ M11 |
+| M12 | free-ride | P0 | free-ride.spec.ts, ride-offers.spec.ts | ✅ M12 |
 | M13 | record | P0 | record.spec.ts | ✅ M13 |
 | M14 | ride-continuity | P0 | — (new mission) | ✅ M14 |
 | M15 | recovery | P0 | recovery.spec.ts | planned |
-| M16 | offline-ride | P0 | offline.spec.ts | ✅ M16 |
+| M16 | offline-ride | P0 | offline.spec.ts, offline-routing.spec.ts | ✅ M16 |
 | M17 | offline-basemap | P1 | offline-basemap.spec.ts | planned |
 | M18 | map-resilience | P1 | map-resilience.spec.ts | planned |
-| M19 | explore-catalog | P1 | explore-catalog.spec.ts | planned |
+| M19 | explore-catalog | P1 | explore-catalog.spec.ts, explore-browser.spec.ts | planned |
 | M20 | explore-filters | P1 | explore.spec.ts | planned |
-| M21 | import-export | P0 | import-export.spec.ts | planned |
+| M21 | import-export | P0 | import-export.spec.ts, gpx-sharing.spec.ts | planned |
 | M22 | switchback-import | P2 | switchback-import.spec.ts | planned |
-| M23 | share | P2 | share.spec.ts | planned |
+| M23 | share | P2 | share.spec.ts, public-share.spec.ts | planned |
 | M24 | library | P1 | library.spec.ts | planned |
-| M25 | settings | P2 | settings.spec.ts | planned |
+| M25 | settings | P2 | settings.spec.ts, telemetry.spec.ts | planned |
+| M26 | ride-companions | P2 | ride-spotify.spec.ts, ride-spotify-web.spec.ts | planned |
 
-Covered inside missions rather than as their own: `offline-routing` (M16),
-`places` (M20), `ride-offers` (M12), `traffic`/`weather` readiness (M10),
-`ride-spotify-web` contract (M25). Not in acceptance scope:
-`compact-sheet`, `desktop-rail` (desktop responsive chrome — covered by the
-existing e2e specs directly), `ride-spotify` native (needs the Spotify app +
-App Remote; manual). M14 has no Playwright spec yet — it is a new mission
-from the QA proposal; its web implementation is future work.
+Every spec file in `tests/e2e/critical/` is claimed by a mission above —
+`aggregate.mjs --validate` fails if a spec is ever left unclaimed. The native
+Spotify iOS flow (Spotify app + physical device authorization) is not in
+acceptance scope for the Playwright lanes; it is represented by the
+`ride-spotify.spec.ts` bridge/UI contract until a Maestro flow exists. M14 has no
+Playwright spec yet — it is a new mission from the QA proposal; its web
+implementation is future work.
 
 ## What runs where (honest)
 

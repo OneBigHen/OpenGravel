@@ -4,10 +4,14 @@ priority: P1
 executors:
   chromium:
     kind: playwright
-    spec: "tests/e2e/critical/place-search.spec.ts"
+    spec:
+      - tests/e2e/critical/place-search.spec.ts
+      - tests/e2e/critical/places.spec.ts
   webkit:
     kind: playwright
-    spec: "tests/e2e/critical/place-search.spec.ts"
+    spec:
+      - tests/e2e/critical/place-search.spec.ts
+      - tests/e2e/critical/places.spec.ts
   iphone:
     kind: maestro
     flow: planned
