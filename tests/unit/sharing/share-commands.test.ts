@@ -5,7 +5,7 @@ import { newCommandId } from "@/domain/ride/ids";
 import { serializeShareSnapshot } from "@/domain/sharing/snapshot";
 import type { ShareSource } from "@/domain/sharing/types";
 import type { ShareRepositoryPort } from "@/application/sharing/ports/share-repository";
-import { MemoryShareRepository } from "@/application/sharing/memory-share-repository";
+import { MemoryShareRepository } from "../../helpers/memory-share-repository";
 import {
   createShareService,
   dispatchShareCommand,
