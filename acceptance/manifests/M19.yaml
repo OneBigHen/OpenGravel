@@ -4,10 +4,14 @@ priority: P1
 executors:
   chromium:
     kind: playwright
-    spec: "tests/e2e/critical/explore-catalog.spec.ts"
+    spec:
+      - tests/e2e/critical/explore-catalog.spec.ts
+      - tests/e2e/critical/explore-browser.spec.ts
   webkit:
     kind: playwright
-    spec: "tests/e2e/critical/explore-catalog.spec.ts"
+    spec:
+      - tests/e2e/critical/explore-catalog.spec.ts
+      - tests/e2e/critical/explore-browser.spec.ts
   iphone:
     kind: maestro
     flow: planned

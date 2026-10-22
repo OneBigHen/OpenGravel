@@ -4,10 +4,14 @@ priority: P0
 executors:
   chromium:
     kind: playwright
-    spec: "tests/e2e/critical/offline.spec.ts"
+    spec:
+      - tests/e2e/critical/offline.spec.ts
+      - tests/e2e/critical/offline-routing.spec.ts
   webkit:
     kind: playwright
-    spec: "tests/e2e/critical/offline.spec.ts"
+    spec:
+      - tests/e2e/critical/offline.spec.ts
+      - tests/e2e/critical/offline-routing.spec.ts
   iphone:
     kind: maestro
     flow: ".maestro/M16-offline-ride.yaml"
