@@ -16,10 +16,10 @@ executors:
       - tests/e2e/critical/traffic.spec.ts
   iphone:
     kind: maestro
-    flow: planned
+    flow: ".maestro/M10-prepare.yaml"
   ipad:
     kind: maestro
-    flow: planned
+    flow: ".maestro/M10-prepare.yaml"
 preflight:
   require_matching_sha: true
   require_real_device_session: true
