@@ -1,0 +1,33 @@
+id: M26
+feature: M26-ride-companions.feature
+priority: P2
+executors:
+  chromium:
+    kind: playwright
+    spec:
+      - tests/e2e/critical/ride-spotify.spec.ts
+      - tests/e2e/critical/ride-spotify-web.spec.ts
+  webkit:
+    kind: playwright
+    spec:
+      - tests/e2e/critical/ride-spotify.spec.ts
+      - tests/e2e/critical/ride-spotify-web.spec.ts
+  iphone:
+    kind: maestro
+    flow: planned
+  ipad:
+    kind: maestro
+    flow: planned
+preflight:
+  require_matching_sha: true
+  require_real_device_session: true
+  prohibit_desktop_fallback: true
+evidence:
+  screenshot: on_failure
+  video: on_failure
+  trace: on_failure
+  console: always
+  network_errors: always
+exploratory:
+  enabled: false
+  model_tier: cheap
