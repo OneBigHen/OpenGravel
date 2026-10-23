@@ -237,7 +237,7 @@ describe("the drawing tool", () => {
     const workspace = await renderWorkspace();
     const puts = vi.spyOn(workspace.geometryStore, "put");
 
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     expect(workspace.plannerUiStore.getState().activeTool).toBe("sketch");
 
     const before = revisionOf(workspace);
@@ -265,7 +265,7 @@ describe("the drawing tool", () => {
 
   it("drops a tap and keeps the strokes already drawn", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
 
     drawStroke(workspace, [metres(0, 0), metres(200, 0)]);
     // A press and release in the same place: not a stroke.
@@ -276,7 +276,7 @@ describe("the drawing tool", () => {
 
   it("Escape cancels the current stroke and keeps the pen armed", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(200, 0)]);
 
     // A second stroke in flight.
@@ -301,7 +301,7 @@ describe("the drawing tool", () => {
 
   it("Undo removes the last stroke, Redo restores it, Clear empties the surface", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(200, 0)]);
     drawStroke(workspace, [metres(0, 200), metres(200, 200)], 2);
 
@@ -316,7 +316,7 @@ describe("the drawing tool", () => {
 
   it("Done commits one sketch and plans once", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(300, 100)]);
     drawStroke(workspace, [metres(150, -100), metres(150, 200)], 2);
 
@@ -351,7 +351,7 @@ describe("the drawing tool", () => {
 
   it("is one undo unit: undoing the sketch removes the whole drawing", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(300, 100)]);
     drawStroke(workspace, [metres(150, -100), metres(150, 200)], 2);
 
@@ -370,7 +370,7 @@ describe("the drawing tool", () => {
 
   it("keeps the drawing editable when the commit is refused", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(300, 100)]);
 
     // A stale document: the commit cannot apply, and the draft must survive it.
@@ -388,7 +388,7 @@ describe("the drawing tool", () => {
 
   it("offers the endpoint toggle only when the ride has an endpoint to keep", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
 
     // A fresh ride has nothing to keep: the toggle is absent, and the policy is
     // the derive the drawing needs.
@@ -402,7 +402,7 @@ describe("snap-as-you-go and extending a drawing (OGV-D-285)", () => {
 
   it("plans the drawing so far when the finger lifts and rests, authoring nothing", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     const commandsBefore = workspace.commands.length;
     drawStroke(workspace, [metres(0, 0), metres(300, 100), metres(600, 0)]);
 
@@ -419,7 +419,7 @@ describe("snap-as-you-go and extending a drawing (OGV-D-285)", () => {
 
   it("does not plan while a stroke is still under the finger", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     workspace.emit({ type: "pointer-down", pointerId: 1, coordinate: metres(0, 0), ref: null });
     workspace.emit({ type: "pointer-move", pointerId: 1, coordinate: metres(300, 0) });
     await new Promise((resolve) => setTimeout(resolve, SKETCH_PREVIEW_SETTLE_MS + 300));
@@ -429,7 +429,7 @@ describe("snap-as-you-go and extending a drawing (OGV-D-285)", () => {
   it("Cancel removes the preview's payloads and asks for nothing on an empty ride", async () => {
     const workspace = await renderWorkspace();
     const removed = vi.spyOn(workspace.geometryStore, "remove");
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(300, 100)]);
     await waitFor(() => expect(workspace.session.inputs).toHaveLength(1), settle);
 
@@ -444,7 +444,7 @@ describe("snap-as-you-go and extending a drawing (OGV-D-285)", () => {
 
   it("Extend re-opens the committed drawing so the next stroke carries on from its end", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     drawStroke(workspace, [metres(0, 0), metres(300, 100)]);
     await act(async () => {
       fireEvent.click(screen.getByTestId("sketch-done"));
@@ -496,7 +496,7 @@ describe("drawing a ride that already has endpoints", () => {
     });
     expect(workspace.rideDocumentStore.getState().document.intent.start).not.toBeNull();
 
-    fireEvent.click(screen.getByTestId("start-drawing"));
+    fireEvent.click(await screen.findByTestId("start-drawing"));
     expect(screen.getByTestId("sketch-keep-endpoints")).toBeInTheDocument();
     expect(workspace.plannerUiStore.getState().sketchEndpointPolicy).toBe(
       "preserve-existing",

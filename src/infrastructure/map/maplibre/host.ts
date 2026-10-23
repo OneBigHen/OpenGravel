@@ -140,7 +140,7 @@ import {
   terrainSourceSpec,
   type HostedStyleLayer,
 } from "@/infrastructure/map/maplibre/visual-detail";
-import { prepareOfflineBasemap, type MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
+import type { MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
 import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
 
 /** The default location of the vendored worker module (see the header). */
@@ -2546,7 +2546,10 @@ export async function createMapLibreHost(
   }
   // With no network, the configured basemap cannot draw; a downloaded one can.
   if (renderer !== null && deviceOffline()) {
-    const offlineStyle = await prepareOfflineBasemap(renderer).catch(() => null);
+    const offlineRenderer = renderer;
+    const offlineStyle = await import("@/infrastructure/map/offline-basemap")
+      .then(({ prepareOfflineBasemap }) => prepareOfflineBasemap(offlineRenderer))
+      .catch(() => null);
     if (offlineStyle !== null) {
       style = offlineStyle as unknown as MapStyleSpec;
       drawingOfflineBasemap = true;
