@@ -66,7 +66,7 @@ it('explains unsupported video without claiming playback works',async()=>{
  render(<InfoFeatureMedia media={media} name="River road"/>);
  fireEvent.click(screen.getByRole('button',{name:'Play live camera'}));
  expect(await screen.findByRole('status')).toHaveTextContent('Live video is unavailable in this browser.');
- expect(screen.getByRole('link',{name:'Open provider camera'})).toHaveAttribute('href',media.sourceHref);
+ expect(screen.getByRole('link',{name:'Open live camera'})).toHaveAttribute('href',media.sourceHref);
 });
 it('reports unsupported fallback after native playback fails',async()=>{
  hls.supported=false;

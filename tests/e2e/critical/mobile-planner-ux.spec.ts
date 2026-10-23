@@ -84,6 +84,10 @@ test("small-phone ride style has a named entry and planning stays visible while 
 
 test("320px comparison fits its sheet and keeps the header controls on one row", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
+  // The comparison only renders on the explicit debug page.
+  await page.goto("/?debug=routing");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
   await chooseEndpoints(page);
   await page.getByTestId("compose-create").click();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

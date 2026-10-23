@@ -159,6 +159,8 @@ describe("StopsPanel — the ordered list (04 §15)", () => {
       "point-row-finish",
     ]);
     expect(screen.getByTestId("label-stop-1")).toHaveTextContent("Coffee");
+    // A named stop reads as its name; only a dropped pin repeats a coordinate.
+    expect(screen.queryByTestId("coordinate-stop-1")).not.toBeInTheDocument();
     expect(screen.getByTestId("intent-stop-1")).toHaveAccessibleName("Food");
     // A stop with no name of its own is a dropped pin, and the coordinate is its
     // secondary value — the raw number is never the point's name (defect: raw

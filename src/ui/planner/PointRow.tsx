@@ -23,6 +23,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 
 import {
   legLabel,
+  placeFieldLines,
   type ItineraryRef,
   type PointRowVm,
 } from "@/application/planner/planner-view-model";
@@ -165,6 +166,9 @@ export function PointRow({
   const key = rowKey(row, index);
   const name = rowName(row, index);
   const leg = legLabel(row.leg);
+  // A named place reads as its name; only a dropped pin carries the coordinate
+  // as secondary text (the raw number is never the point's name).
+  const lines = placeFieldLines(row.label, row.coordinateLabel);
   const stopRef = row.ref.kind === "stop" ? row.ref : null;
   const dragging = drag !== null && drag.active && stopRef !== null && drag.stopId === stopRef.stopId;
   const stopIndex = stopRef === null ? -1 : (row.position ?? 1) - 1;
@@ -215,17 +219,19 @@ export function PointRow({
         <span className="sr-only">{`${name}: `}</span>
         {/*
           The row's value is the point's name — the rider's own, or
-          `Dropped pin` — with the leg and the coordinate as its secondary lines
-          (04 §15, defect: a raw coordinate is not a place). The coordinate stays
-          machine-readable on `data-coordinate`, which is what the browser gate
-          reads to prove the app recorded the point the rider placed.
+          `Dropped pin` — with the leg as its secondary line (04 §15, defect: a
+          raw coordinate is not a place). Only a dropped pin also shows its
+          coordinate, because that is the only case where the name alone would
+          not identify the point. The coordinate stays machine-readable on
+          `data-coordinate`, which is what the browser gate reads to prove the
+          app recorded the point the rider placed.
         */}
         <span
           className="og-point__title"
           data-testid={`label-${key}`}
           data-coordinate={row.coordinateLabel}
         >
-          {row.label}
+          {lines.label}
         </span>
         {leg === null ? null : (
           <span
@@ -236,9 +242,11 @@ export function PointRow({
             {leg}
           </span>
         )}
-        <span className="og-point__coordinate" data-testid={`coordinate-${key}`}>
-          {row.coordinateLabel}
-        </span>
+        {lines.coordinate === null ? null : (
+          <span className="og-point__coordinate" data-testid={`coordinate-${key}`}>
+            {lines.coordinate}
+          </span>
+        )}
       </button>
 
       {row.arrivalIntent === null ? null : (

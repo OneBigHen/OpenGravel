@@ -201,6 +201,21 @@ describe("PlaceSearchField", () => {
     expect((input as HTMLInputElement).value).toBe("");
   });
 
+  it("lists a repeated place once, keeping the first-ranked answer", async () => {
+    vi.useFakeTimers();
+    const repeated: readonly PlaceMatch[] = [
+      HAWK,
+      { ...HAWK, id: "photon:hawk-2", context: "Albany, PA" },
+      { ...HAWK, id: "photon:hawk-3", name: "hawk mountain sanctuary", coordinate: { lat: 40.6350, lon: -75.9910 } },
+    ];
+    render(<PlaceSearchField slot="finish" search={fakePort(repeated)} onPick={vi.fn()} />);
+    const input = screen.getByRole("combobox", { name: "Search for a destination" });
+    await typeAndSettle(input, "hawk");
+
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    expect(screen.getByRole("option")).toHaveTextContent("Hawk Mountain Sanctuary");
+  });
+
   it("Enter before the answer arrives picks the first result when it does", async () => {
     vi.useFakeTimers();
     const onPick = vi.fn();

@@ -23,6 +23,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import {
+  dedupePlaces,
   PLACE_QUERY_MAX_LENGTH,
   PLACE_QUERY_MIN_LENGTH,
   type PlaceMatch,
@@ -183,8 +184,12 @@ export function PlaceSearchField({
       ? []
       : remembered(trimmed, typed ? REMEMBERED_TYPED_LIMIT : REMEMBERED_EMPTY_LIMIT);
   const rememberedKeys = new Set(memory.map((entry) => placeKey(entry.place.coordinate)));
-  const places = (state.phase === "done" ? state.places : []).filter(
-    (place) => !rememberedKeys.has(placeKey(place.coordinate)),
+  // Dedupe here too: a port is free to return the same venue several times,
+  // and the rider should see one row per place (the first-ranked answer).
+  const places = dedupePlaces(
+    (state.phase === "done" ? state.places : []).filter(
+      (place) => !rememberedKeys.has(placeKey(place.coordinate)),
+    ),
   );
   const describeOption: Option[] = reading === "place" ? [] : [{ kind: "describe", id: `${baseId}-describe` }];
   const options: Option[] = [
