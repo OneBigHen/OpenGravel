@@ -7,6 +7,7 @@ import { relativeAdvisorTime } from "./advisor-relative-time";
 import { isAdvisorHistory, type AdvisorExchange } from "./advisor-conversation";
 import { advisorRideAnswer, isAdvisorRideSummary, type AdvisorRideSummary } from "./advisor-ride-summary";
 import { advisorRiderState, type AdvisorErrorClass, type AdvisorRecovery } from "./advisor-errors";
+import { RIDE_DESCRIPTION_MAX_LENGTH } from "./ride-description";
 import type { AdvisorMessage, AdvisorOutputSchema, AdvisorTransport } from "./ports/advisor-transport";
 
 export interface AdvisorContextSnapshot {
@@ -318,7 +319,7 @@ export function parseAdvisorRequest(value: unknown): AdvisorRequest | null {
   const baseRevision = value["baseRevision"];
   const context = value["context"];
   if (
-    typeof prompt !== "string" || prompt.trim().length < 2 || prompt.trim().length > 600 || prompt.includes("\u0000") ||
+    typeof prompt !== "string" || prompt.trim().length < 2 || prompt.trim().length > RIDE_DESCRIPTION_MAX_LENGTH || prompt.includes("\u0000") ||
     typeof rideId !== "string" || !/^ride_[\w-]{1,90}$/.test(rideId) ||
     !Number.isInteger(baseRevision) || Number(baseRevision) < 0 || !isRecord(context)
   ) return null;
