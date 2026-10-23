@@ -10429,6 +10429,236 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   }
 }
 
+/* The glance strip: the live ride summary over the map. One pill, one sentence —
+   the route's colour, its time, distance and climb, and the surface the evidence
+   covers — so "how big is this ride?" is answered without opening the sheet.
+   `surface unknown` is stated rather than rounded up to a paved claim. */
+.og-glance {
+  --og-glance-tint: var(--og-ember);
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+}
+
+.og-glance__button,
+.og-glance--failed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 999px;
+  background: var(--og-glass-dense, var(--og-paper));
+  box-shadow: var(--og-shadow-2);
+  color: var(--og-ink);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-glance__button {
+  font-family: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.og-glance__button:focus-visible,
+.og-glance__retry:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-glance__button:hover .og-glance__open {
+  color: var(--og-ink);
+}
+
+/* The route's own colour: the same slot its map line and its card carry. */
+.og-glance[data-tint="0"] { --og-glance-tint: var(--og-ember); }
+.og-glance[data-tint="1"] { --og-glance-tint: var(--og-route-plum); }
+.og-glance[data-tint="2"] { --og-glance-tint: var(--og-deep-spruce); }
+
+.og-glance__swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--og-glance-tint);
+}
+
+.og-glance__metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.og-glance__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The worst surface, and how much of the line it covers. */
+.og-glance__surface {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-sandstone) 32%, transparent);
+  color: var(--og-ink);
+  white-space: nowrap;
+}
+
+/* No usable surface report: a stated unknown in the muted trail voice, never a
+   paved (or gravel) claim. `--og-sandstone` is a surface token, so the AA text
+   variant of the same warm hue carries the words. */
+.og-glance__surface--unknown {
+  padding: 0;
+  background: none;
+  color: var(--og-trail-brown);
+}
+
+/* Planning: a 12px shimmer over the metrics (the elevation skeleton's own
+   recipe), never the previous answer's numbers. */
+.og-glance__planning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.og-glance__shimmer {
+  width: 46px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--og-well), color-mix(in srgb, var(--og-sandstone) 55%, var(--og-well)), var(--og-well));
+  background-size: 200% 100%;
+  animation: og-glance-shimmer 1.4s ease-in-out infinite;
+}
+
+.og-glance__shimmer--short {
+  width: 30px;
+}
+
+.og-glance__planning-word {
+  display: none;
+  color: var(--og-slate-text);
+  white-space: nowrap;
+}
+
+@keyframes og-glance-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-glance__shimmer { display: none; animation: none; }
+  .og-glance__planning-word { display: inline; }
+}
+
+/* The trailing tap target: 44x44, reaching the pill's own right edge so a thumb
+   cannot miss it. It opens the sheet at the ride detent. */
+.og-glance__open {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: -14px;
+  color: var(--og-slate-text);
+  transition: color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-glance__promise {
+  color: var(--og-ink);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.og-glance--failed {
+  padding: 0 6px 0 14px;
+  gap: 8px;
+}
+
+.og-glance__retry {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--og-deep-spruce);
+  color: var(--og-paper);
+  font: inherit;
+  font-variant-numeric: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+/* The sheet's column: the strip sits directly above the dock, where the dock
+   lies over the map (phone and tablet portrait). On the tiers where the dock is
+   a sibling column it is the map slot's own strip that shows instead; the two
+   never render at once. */
+.og-glance--dock {
+  display: none;
+}
+
+/* The map slot's strip, where the dock is a column beside the map. The map's top
+   band already belongs to its own tools — the edit bar and its tool status,
+   Layers/Satellite, Places, and Show whole ride — so a top-centre summary would
+   cover one of them on the map columns this workspace actually has (as narrow as
+   ~440 px beside the ride inspector). The strip takes the map's lower band
+   instead, which is the same place the phone's strip takes above the sheet, and
+   the one control down there — Center on me — steps up above it. */
+@media (min-width: 1181px), (orientation: landscape) and (max-height: 500px) and (min-width: 760px) {
+  .og-glance--map {
+    bottom: 60px;
+  }
+
+  .og-planner__map-slot:has(> .og-glance) .og-map__locate {
+    bottom: 116px;
+  }
+
+  /* An open place card owns that band (it is the thing the rider is reading),
+     so the summary steps out of the way until the card is closed. */
+  .og-planner__map-slot:has(.og-places-card) .og-glance--map {
+    display: none;
+  }
+}
+
+/* The short landscape's second column takes most of a small phone's width: below
+   this the map column cannot hold the strip beside its controls (the ride cards
+   are on screen there anyway). */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) and (max-width: 759px) {
+  .og-glance--map {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-glance--map {
+    display: none;
+  }
+
+  .og-glance--dock {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 1;
+    display: flex;
+  }
+}
+
+/* A folded sheet keeps most of a small phone, so the least load-bearing item
+   (the surface share) steps out of the pill before the numbers do. */
+@media (max-width: 359px) {
+  .og-glance__surface {
+    display: none;
+  }
+}
+
 /* ==========================================================================
    Shared app surfaces and refinements for Explore, route details, My rides,
    Settings, and map controls.

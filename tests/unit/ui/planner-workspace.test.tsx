@@ -247,7 +247,7 @@ afterEach(() => {
 
 describe("PlannerWorkspace — the Wave-2 slice", () => {
   it("plans from two map clicks and marks the recommended route", async () => {
-    const { rideDocumentStore, posts, mapFactory } = await renderWorkspace(
+    const { rideDocumentStore, posts, mapFactory, plannerUiStore } = await renderWorkspace(
       (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
         jsonResponse(
           successBody(
@@ -304,6 +304,19 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(drawn?.points.map((point) => point.kind)).toEqual(["start", "finish"]);
     expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready.");
     expect(screen.queryByTestId("planner-error")).not.toBeInTheDocument();
+
+    // The glance strip states the ride over the map, with the same labels the
+    // selected card carries. This composition has no elevation source, so the
+    // climb is omitted rather than guessed, and a candidate with no surface
+    // evidence says so instead of claiming one (CLAUDE.md).
+    const glance = screen.getByTestId("ride-glance-map");
+    expect(within(glance).getByTestId("ride-glance-duration")).toHaveTextContent("1 h 48 min");
+    expect(within(glance).getByTestId("ride-glance-distance")).toHaveTextContent("75 mi");
+    expect(within(glance).queryByTestId("ride-glance-climb")).not.toBeInTheDocument();
+    expect(within(glance).getByTestId("ride-glance-surface")).toHaveTextContent("surface unknown");
+    // Tapping the pill opens the sheet at the ride detent, not the composer.
+    fireEvent.click(within(glance).getByRole("button"));
+    expect(plannerUiStore.getState().sheetDetent).toBe("ride");
   });
 
   it("moves the selection and the map highlight when another card is chosen", async () => {
