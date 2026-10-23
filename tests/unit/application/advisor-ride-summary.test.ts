@@ -61,3 +61,15 @@ describe("advisor planned ride summary", () => {
     expect(parseAdvisorRequest({ ...request, context: { ...request.context, plannedRide: { ...summary, roads: ["x".repeat(2000)] } } })).toBeNull();
   });
 });
+
+describe("advisor ride answer words", () => {
+  it("reads like a sentence: no zero parts, one estimated note, hours and minutes, feet", async () => {
+    const { advisorRideAnswer } = await import("@/application/advisor/advisor-ride-summary");
+    const text = advisorRideAnswer({
+      distanceKm: 86.9, durationMinutes: 110, climbMeters: 1223,
+      surface: "Estimated: 98% paved, 0% gravel, 0% dirt, 2% unknown", curviness: "Estimated: Very curvy",
+      roads: [], stops: [], stopCount: 0, why: "Matches the fastest option in time.", alternatives: [],
+    });
+    expect(text).toBe("Matches the fastest option in time. 54 mi, about 1 h 50 min. 98% paved, 2% unknown (estimated). Very curvy (estimated). About 4,010 ft of climbing. I can't see closures, gates or access rules, so check those before you go.");
+  });
+});
