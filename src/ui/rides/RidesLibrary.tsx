@@ -215,9 +215,10 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   }
 
   useEffect(() => {
+    const requests = roadProgressRequests.current;
     return () => {
-      for (const request of roadProgressRequests.current.values()) request.controller.abort();
-      roadProgressRequests.current.clear();
+      for (const request of requests.values()) request.controller.abort();
+      requests.clear();
     };
   }, [roadProgressReader]);
 
@@ -400,6 +401,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     }
   }
 
+  const libraryIsEmpty = status === "ready" && sortedRides.length === 0 && !search && type === null;
+  const showFilters = status === "ready" && !libraryIsEmpty;
+
   const importPanels = importService !== undefined ? (
     <div className="og-library__imports">
       <ImportPanel
@@ -410,7 +414,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           router.push("/");
         }}
       />
-      <details>
+      <details className="og-library__advanced">
         <summary>Import older saved rides (advanced)</summary>
         <SwitchBackImportPanel service={importService} onImported={() => load()} />
       </details>
@@ -448,38 +452,40 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
       {importsFirst === false ? null : importPanels}
 
-      <section className="og-library__controls" aria-label="Ride library filters">
-        <label className="og-library__search">
-          <span>Search</span>
-          <input
-            type="search"
-            aria-label="Search rides"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search titles"
-          />
-        </label>
-        <div className="og-library__chips" aria-label="Ride type">
-          {TYPE_FILTERS.map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              className="og-chip"
-              aria-pressed={type === item.value}
-              onClick={() => setType(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <label className="og-library__sort">
-          <span>Sort</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
-            <option value="updated-desc">Updated, newest first</option>
-            <option value="updated-asc">Updated, oldest first</option>
-          </select>
-        </label>
-      </section>
+      {showFilters ? (
+        <section className="og-library__controls" aria-label="Ride library filters">
+          <label className="og-library__search">
+            <span>Search</span>
+            <input
+              type="search"
+              aria-label="Search rides"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search titles"
+            />
+          </label>
+          <div className="og-library__chips" aria-label="Ride type">
+            {TYPE_FILTERS.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className="og-chip"
+                aria-pressed={type === item.value}
+                onClick={() => setType(item.value)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <label className="og-library__sort">
+            <span>Sort</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
+              <option value="updated-desc">Updated, newest first</option>
+              <option value="updated-asc">Updated, oldest first</option>
+            </select>
+          </label>
+        </section>
+      ) : null}
 
       {removed === null ? null : (
         <div className="og-library__undo" role="status">

@@ -277,8 +277,20 @@ describe("RidesLibrary", () => {
       target: { value: "missing" },
     });
     expect(await screen.findByText("No rides match these filters.")).toBeInTheDocument();
+    // An empty filter result keeps the filters so the rider can clear them.
+    expect(screen.getByRole("searchbox", { name: "Search rides" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
     expect(library.renameRide).not.toHaveBeenCalled();
     expect(library.deleteRide).not.toHaveBeenCalled();
+  });
+
+  it("hides the search, filter, and sort card when the library has no rides", async () => {
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} />);
+
+    expect(await screen.findByRole("heading", { name: "Your library is ready for its first ride." })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox", { name: "Search rides" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
   it("disables an empty inline rename and requires confirmation before delete", async () => {

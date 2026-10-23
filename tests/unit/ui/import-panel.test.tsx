@@ -122,3 +122,29 @@ it("does not let an earlier preview replace an oversized file error", async () =
   await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("File is too large"));
   expect(screen.queryByText("North")).not.toBeInTheDocument();
 });
+
+it("keeps the native file input visually hidden and opens the picker from the keyboard", () => {
+  render(<ImportPanel service={service()} />);
+  const input = screen.getByLabelText("Import GPX, KML, or KMZ");
+  expect(input).toHaveClass("sr-only");
+  expect(screen.getByText(/or drop it here/i)).toBeInTheDocument();
+
+  const click = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => undefined);
+  try {
+    input.focus();
+    expect(input).toHaveFocus();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(click).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(input, { key: " " });
+    expect(click).toHaveBeenCalledTimes(2);
+  } finally {
+    click.mockRestore();
+  }
+});
+
+it("shows the chosen file's name in the drop zone", async () => {
+  const file = new File([new TextEncoder().encode("gpx")], "north-loop.gpx", { type: "application/gpx+xml" });
+  render(<ImportPanel service={service()} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [file] } });
+  expect(await screen.findByTestId("import-file-name")).toHaveTextContent("Selected file: north-loop.gpx");
+});
