@@ -21,10 +21,8 @@ export type MapLayerId =
   | "weather"
   | "weather-radar"
   | "active-fire"
-  | "closures"
   | "great-roads"
   | "gravel"
-  | "road-surface"
   | "road-history"
   | "fuel"
   | "food"
@@ -34,10 +32,8 @@ export type MapLayerId =
   | "repair"
   | "viewpoints"
   | "public-land"
-  | "forest-roads"
   | "mvum"
-  | "work-zones"
-  | "cell-towers";
+  | "work-zones";
 
 /**
  * How the layer is drawn: a camera/view change (3D terrain), a raster tile

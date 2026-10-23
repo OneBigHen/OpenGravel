@@ -14,7 +14,7 @@ import type { MapLayerSpec, MapPalette } from "./style";
 
 
 /** Dirt evidence draws dashed, like a dirt road on a paper map. */
-const DASHED_LINE_LAYERS = ["gravel", "road-surface"];
+const DASHED_LINE_LAYERS = ["gravel"];
 export const INFO_SOURCE_ID = "ogv-info";
 export const TRAFFIC_FLOW_SOURCE_ID = "ogv-traffic-flow";
 
@@ -44,7 +44,6 @@ function colourByLayer(palette: MapPalette): unknown {
   const themed: Partial<Record<InfoFeature["layerId"], string>> = {
     contours: palette.trailBrown, slope: palette.goldenHour, mvum: palette.deepSpruce,
     "work-zones": palette.ember, "active-fire": palette.emberStrong, "public-land": palette.topoSage,
-    "road-surface": palette.trailBrown,
   };
   return ["match", ["get", "layerId"], ...MAP_LAYERS.flatMap((layer) => [layer.id, themed[layer.id] ?? layer.color]), palette.slate];
 }

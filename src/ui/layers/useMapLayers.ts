@@ -69,10 +69,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   weather: "nws",
   "weather-radar": "radar",
   "active-fire": "firms",
-  closures: "osm",
   "great-roads": "roads",
   gravel: "roads",
-  "road-surface": "surface",
   "road-history": "road-history",
   fuel: "tomtom",
   food: "tomtom",
@@ -82,10 +80,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   repair: "tomtom",
   viewpoints: "tomtom",
   "public-land": "padus",
-  "forest-roads": "osm",
   mvum: "authority",
   "work-zones": "authority",
-  "cell-towers": "osm",
 };
 
 /** The enabled-layer choice as an external store, so SSR and hydration agree. */

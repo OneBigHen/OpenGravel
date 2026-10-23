@@ -28,7 +28,6 @@ import {
   fetchPinnedCameraUrl,
 } from "@/server/traffic-cameras/url-security";
 
-import { surfaceProvider } from "./surface";
 import { authorityProvider } from "./authority";
 import { publicLandProvider } from "./public-land";
 import { fireProvider } from "./fire";
@@ -38,7 +37,6 @@ import { trafficCamerasProvider } from "./traffic-cameras";
 import {
   knownRoadsProvider,
   nwsAlertsProvider,
-  overpassProvider,
   tomtomIncidentsProvider,
   tomtomStopsProvider,
   type LayerProvider,
@@ -141,7 +139,7 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
       name: `${definition.name} (fixture)`,
       detail: definition.legend,
       weight: 5,
-      geometry: layerId === "great-roads" || layerId === "gravel" || layerId === "forest-roads"
+      geometry: layerId === "great-roads" || layerId === "gravel"
         ? { type: "LineString", coordinates: [[lon - dx, lat + offset * dy], [lon + dx, lat + offset * dy]] }
         : { type: "Point", coordinates: [lon + offset * dx, lat - dy] },
     };
@@ -155,13 +153,11 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     fireProvider,
     publicLandProvider,
     authorityProvider,
-    surfaceProvider,
     tomtomStopsProvider,
     tomtomIncidentsProvider,
     trafficCamerasProvider,
     nwsAlertsProvider,
     knownRoadsProvider(knownRoadsFromEnv(env), gravelAtlasFromEnv(env)),
-    overpassProvider,
   ];
 }
 

@@ -439,13 +439,12 @@ export function knownRoadsProvider(roads: KnownRoadsPort, atlas?: GravelAtlasPor
 }
 
 // --- OpenStreetMap via Overpass ---------------------------------------------
+// Only the `public-land` fallback still reaches Overpass: when USGS PAD-US
+// cannot answer, mapped protected-area centres are offered and labelled as a
+// fallback. The forest-road, closure and cell-tower layers that Overpass once
+// served are retired.
 
-const OVERPASS_SELECTORS: Partial<Record<MapLayerId, readonly string[]>> = {
-  "public-land": ['way["boundary"="protected_area"]', 'way["leisure"="nature_reserve"]', 'way["boundary"="national_park"]'],
-  "forest-roads": ['way["highway"]["operator"~"Forest Service",i]', 'way["highway"]["ref"~"^(FS|FR) ",i]'],
-  closures: ['way["highway"="construction"]'],
-  "cell-towers": ['node["man_made"="mast"]["tower:type"="communication"]', 'node["man_made"="communications_tower"]'],
-};
+const PUBLIC_LAND_SELECTORS = ['way["boundary"="protected_area"]', 'way["leisure"="nature_reserve"]', 'way["boundary"="national_park"]'];
 
 export const OVERPASS_MIRRORS = [
   "https://overpass-api.de/api/interpreter",
@@ -454,11 +453,7 @@ export const OVERPASS_MIRRORS = [
 ] as const;
 
 function overpassLayer(tags: Record<string, unknown>, layers: readonly MapLayerId[]): MapLayerId | null {
-  if (layers.includes("public-land") && (tags["boundary"] === "protected_area" || tags["leisure"] === "nature_reserve" || tags["boundary"] === "national_park")) return "public-land";
-  if (layers.includes("forest-roads") && typeof tags["highway"] === "string" && tags["highway"] !== "construction") return "forest-roads";
-  if (layers.includes("closures") && tags["highway"] === "construction") return "closures";
-  if (layers.includes("cell-towers") && (tags["man_made"] === "mast" || tags["man_made"] === "communications_tower")) return "cell-towers";
-  return null;
+  return layers.includes("public-land") && (tags["boundary"] === "protected_area" || tags["leisure"] === "nature_reserve" || tags["boundary"] === "national_park") ? "public-land" : null;
 }
 
 export function parseOverpass(payload: unknown, layers: readonly MapLayerId[]): readonly InfoFeature[] {
@@ -466,53 +461,34 @@ export function parseOverpass(payload: unknown, layers: readonly MapLayerId[]): 
   if (!Array.isArray(elements)) throw new Error("Overpass answered without elements");
   return elements.flatMap((entry): InfoFeature[] => {
     const element = record(entry);
-    const tags = record(element?.["tags"]) ?? {};
+    if (element === null) return [];
+    const tags = record(element["tags"]) ?? {};
     const layerId = overpassLayer(tags, layers);
-    if (element === null || layerId === null) return [];
-    const id = `osm:${text(element["type"]) ?? "x"}/${String(element["id"])}`;
-    const name = layerId === "cell-towers" ? "Cell tower" : text(tags["name"]) ?? text(tags["ref"]) ?? text(tags["operator"]) ?? {
-      "public-land": "Protected area",
-      "forest-roads": "Forest road",
-      closures: "Road construction",
-      "cell-towers": "Cell tower",
-    }[layerId as "public-land"] ?? "Mapped feature";
-    const detail = layerId === "forest-roads"
-      ? [text(tags["ref"]), text(tags["surface"]), text(tags["motor_vehicle"]) === null ? null : `motor vehicles: ${String(tags["motor_vehicle"])}`].filter((part) => part !== null).join(" · ") || null
-      : layerId === "public-land"
-        ? text(tags["operator"]) ?? text(tags["protection_title"])
-        : layerId === "cell-towers"
-          ? text(tags["operator"])
-          : null;
-    const geometryList = Array.isArray(element["geometry"]) ? element["geometry"] : null;
-    if (geometryList !== null && layerId !== "public-land") {
-      const line = geometryList
-        .map((point) => lngLat(record(point)?.["lon"], record(point)?.["lat"]))
-        .filter((point): point is LngLat => point !== null);
-      if (line.length >= 2) return [{ id, layerId, name, detail, weight: null, geometry: { type: "LineString", coordinates: line } }];
-    }
+    if (layerId === null) return [];
     const center = record(element["center"]);
     const point = lngLat(element["lon"] ?? center?.["lon"], element["lat"] ?? center?.["lat"]);
-    return point === null ? [] : [{ id, layerId, name, detail, weight: null, geometry: { type: "Point", coordinates: point } }];
+    return point === null ? [] : [{
+      id: `osm:${text(element["type"]) ?? "x"}/${String(element["id"])}`,
+      layerId,
+      name: text(tags["name"]) ?? text(tags["ref"]) ?? text(tags["operator"]) ?? "Protected area",
+      detail: text(tags["operator"]) ?? text(tags["protection_title"]),
+      weight: null,
+      geometry: { type: "Point", coordinates: point },
+    }];
   });
 }
 
 export function overpassQuery(bounds: MapLayerBounds, layers: readonly MapLayerId[]): string | null {
+  if (!layers.includes("public-land")) return null;
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-  const lineLayers = layers.filter((layer) => layer === "forest-roads" || layer === "closures");
-  const pointLayers = layers.filter((layer) => layer === "public-land" || layer === "cell-towers");
-  const lines = lineLayers.flatMap((layer) => OVERPASS_SELECTORS[layer] ?? []).map((selector) => `${selector}(${bbox});`);
-  const points = pointLayers.flatMap((layer) => OVERPASS_SELECTORS[layer] ?? []).map((selector) => `${selector}(${bbox});`);
-  if (lines.length === 0 && points.length === 0) return null;
-  const parts = [
-    lines.length === 0 ? "" : `(${lines.join("")});out geom 400;`,
-    points.length === 0 ? "" : `(${points.join("")});out center 400;`,
-  ];
-  return `[out:json][timeout:12];${parts.join("")}`;
+  return `[out:json][timeout:12];(${PUBLIC_LAND_SELECTORS.map((selector) => `${selector}(${bbox});`).join("")});out center 400;`;
 }
 
 export const overpassProvider: LayerProvider = {
   id: "osm",
-  layers: ["forest-roads", "closures", "cell-towers"],
+  // Not registered with the handler: public land calls `load` directly as its
+  // fallback, so no requested layer is served through this provider id.
+  layers: [],
   ttlMs: 60 * 60_000,
   async load(bounds, layers, context) {
     const query = overpassQuery(bounds, layers);
