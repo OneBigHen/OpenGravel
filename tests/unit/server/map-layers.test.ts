@@ -136,8 +136,8 @@ describe("provider payloads", () => {
     );
     const features = await provider.load(VIEW, ["gravel"], { fetch, env: {} });
     expect(features.map((feature) => [feature.name, feature.detail])).toEqual([
-      ["Back road with dirt", "Back road · 2.0 mi of dirt · twisty"],
-      ["Dirt road", "2.0 mi of dirt · twisty"],
+      ["Back road with dirt", "2.5 mi back road with some dirt · twisty"],
+      ["Dirt road", "2.5 mi of dirt · twisty"],
     ]);
     expect(old).not.toHaveBeenCalled();
   });

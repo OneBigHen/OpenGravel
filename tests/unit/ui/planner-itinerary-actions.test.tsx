@@ -6,7 +6,7 @@ import type { PlannerItineraryActions } from "@/ui/planner/usePlannerItineraryAc
 import { usePlannerItineraryActions } from "@/ui/planner/usePlannerItineraryActions";
 import { createRideDocument } from "@/domain/ride/create";
 import { createPlannerUiStore } from "@/ui/stores/planner-ui-store";
-import { createRideDocumentStore, insertStopCommand } from "@/ui/stores/ride-document-store";
+import { createRideDocumentStore, insertStopCommand, placeStartCommand } from "@/ui/stores/ride-document-store";
 
 const NOW = "2026-09-24T12:00:00.000Z";
 const COORDINATE = { lon: -75.31, lat: 40.02 };
@@ -104,6 +104,19 @@ describe("usePlannerItineraryActions.addRideRoad", () => {
     expect(stops[1]?.coordinate).toEqual(exit);
     expect(stops[0]?.label).toBe("Pine Creek Road entry");
     expect(stops[1]?.label).toBe("Pine Creek Road exit");
+  });
+
+  it("rides the road and comes home when there is no destination yet", () => {
+    const rideDocumentStore = createRideDocumentStore({ document: createRideDocument({ now: NOW }), now: () => NOW });
+    act(() => rideDocumentStore.getState().dispatch(placeStartCommand(rideDocumentStore.getState().document, { lon: -75.73, lat: 40.87 })));
+    const current = probe(rideDocumentStore, createPlannerUiStore());
+
+    act(() => current()?.addRideRoad({ lon: -75.4, lat: 40.0 }, { lon: -75.1, lat: 40.0 }, "Dirt road"));
+
+    const intent = rideDocumentStore.getState().document.intent;
+    expect(intent.stops).toHaveLength(2);
+    expect(intent.shape).toBe("destination");
+    expect(intent.finish?.coordinate).toEqual({ lon: -75.73, lat: 40.87 });
   });
 
   it("appends after stops the rider already has", () => {

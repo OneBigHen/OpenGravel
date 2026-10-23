@@ -375,10 +375,10 @@ function miles(line: readonly { readonly lon: number; readonly lat: number }[]):
 
 /** How much gravel the atlas corridor carries, in a rider's words. */
 function atlasGravelWords(corridor: GravelAtlasCorridor): string {
-  const dirtMiles = corridor.longestDirtRunMeters / 1609.344;
-  const dirt = `${dirtMiles < 10 ? dirtMiles.toFixed(1) : Math.round(dirtMiles)} mi of dirt`;
+  const lengthMiles = corridor.lengthMeters / 1609.344;
+  const length = `${lengthMiles < 10 ? lengthMiles.toFixed(1) : Math.round(lengthMiles)} mi`;
   const bends = corridor.curvaturePerKm >= 0.9 ? " · twisty" : corridor.bendShare >= 0.25 ? " · some bends" : "";
-  return corridor.kind === "dirt" ? `${dirt}${bends}` : `Back road · ${dirt}${bends}`;
+  return corridor.kind === "dirt" ? `${length} of dirt${bends}` : `${length} back road with some dirt${bends}`;
 }
 
 export function knownRoadsProvider(roads: KnownRoadsPort, atlas?: GravelAtlasPort): LayerProvider {
