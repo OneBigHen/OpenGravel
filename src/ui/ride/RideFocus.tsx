@@ -358,11 +358,21 @@ export function RideFocus({
     position: navigation?.position.coordinate ?? null,
   });
 
+  // The engine's own progress answer, and only while it holds the rider on the
+  // line: an off-route, rejoining or not-yet-decided match projects onto a line
+  // the rider is not on, so the map must not paint a split it cannot stand
+  // behind (08 §5). A null fraction (no telemetry, or a stale fix the view model
+  // has already dropped) leaves the whole line ahead.
+  const onRoute = navigation?.offRouteState === "on-route";
+  const progressFraction = onRoute ? viewModel?.progress.fraction ?? null : null;
+
   const scene = useMemo(
     () => ({
       ...buildRideScene({
         routeId: navigation?.plan.route?.routeId ?? null,
         routeLine: availableRouteLine,
+        progressFraction,
+        onRoute,
         suggestionPreview: rideOffer !== null ? {
           routeId: asRouteCandidateId(`offer:${rideOffer.id}`),
           routeLine: suggestionPreviewLine,
@@ -381,7 +391,7 @@ export function RideFocus({
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
     }),
-    [availableRouteLine, liveSuggestion, navigation, rideCamera, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
+    [availableRouteLine, liveSuggestion, navigation, onRoute, progressFraction, rideCamera, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
   );
 
   const selectRideInterest = rideInterest.select;

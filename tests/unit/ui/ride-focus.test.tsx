@@ -40,6 +40,7 @@ import type {
 import { newRideId, newStopId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RideSessionId } from "@/domain/ride-session/ids";
+import type { RideFocusTelemetryProvider } from "@/application/ride-session/ride-focus-view-model";
 import {
   instructionIssuedEvent,
   newSessionInstruction,
@@ -230,6 +231,9 @@ async function harness(options: {
   readonly placesSource?: PlacesSource;
   readonly autoResume?: boolean;
   readonly riderSettings?: RiderSettingsStoragePort;
+  readonly telemetry?: RideFocusTelemetryProvider;
+  /** The matcher's continuity verdict for a positioned ride; defaults to "on-route". */
+  readonly offRoute?: Parameters<typeof offRouteChangedEvent>[0];
 } = {}): Promise<Harness> {
   const databaseName = options.databaseName ?? freshDatabaseName();
   const repository = createRideSessionRepository({ databaseName });
@@ -261,6 +265,7 @@ async function harness(options: {
     readRouteLine: async () => LINE,
     now: () => NOW,
     ...(options.riderSettings === undefined ? {} : { riderSettings: options.riderSettings }),
+    ...(options.telemetry === undefined ? {} : { telemetry: options.telemetry }),
     // The store's own clock is the surface's freshness, not the test's business.
     setInterval: () => 0,
     clearInterval: () => undefined,
@@ -303,7 +308,7 @@ async function harness(options: {
     );
   }
   if (options.position === "fresh" || options.position === "stale") {
-    await controller.dispatch(offRouteChangedEvent("on-route", NOW));
+    await controller.dispatch(offRouteChangedEvent(options.offRoute ?? "on-route", NOW));
   }
   if (options.instruction !== undefined) {
     await controller.dispatch(
@@ -757,6 +762,45 @@ describe("camera (08 §2, DV-10)", () => {
       reason: "There is no position to center on yet.",
     });
     expect(screen.queryByTestId("ride-recenter")).not.toBeInTheDocument();
+  });
+});
+
+describe("route progress on the map (08 §5)", () => {
+  const progress = (routeProgress: number): RideFocusTelemetryProvider => () => ({
+    routeProgress,
+    remainingDistanceMeters: 1_200,
+    remainingDurationSeconds: 240,
+    etaIso: null,
+  });
+
+  it("dims the part of the line already ridden and keeps the road ahead bright", async () => {
+    const { hosts } = await harness({ position: "fresh", telemetry: progress(0.5) });
+
+    await waitFor(() => {
+      const scene = hosts.hosts[0]?.lastScene();
+      expect(scene?.routes.map((route) => route.state)).toEqual(["selected", "travelled"]);
+    });
+    const routes = hosts.hosts[0]?.lastScene()?.routes ?? [];
+    const ridden = routes.find((route) => route.state === "travelled")?.geometry ?? [];
+    const ahead = routes.find((route) => route.state === "selected")?.geometry ?? [];
+    // Half of the fixture line, and the two halves meet where the rider is.
+    expect(ridden[0]).toEqual(LINE[0]);
+    expect(ridden.at(-1)?.lon).toBeCloseTo(-75.43, 3);
+    expect(ahead[0]).toEqual(ridden.at(-1));
+    expect(ahead.at(-1)).toEqual(LINE.at(-1));
+  });
+
+  it("never splits on a progress answer the matcher is not standing behind", async () => {
+    // A stale fix has no current progress to draw: the whole line stays ahead.
+    const stale = await harness({ position: "stale", telemetry: progress(0.5) });
+    await waitFor(() => expect(stale.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(stale.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+
+    // The same fraction with the matcher off the line is not progress along it.
+    const off = await harness({ position: "fresh", telemetry: progress(0.5), offRoute: "off-route" });
+    await waitFor(() => expect(off.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(off.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+    expect(off.hosts.hosts[0]?.lastScene()?.routes[0]?.state).toBe("selected");
   });
 });
 

@@ -10,8 +10,9 @@
  * The layer set is small on purpose (05 §14–§15: a layer catalogue is not a
  * feature). It is exactly what `MapScene` can draw:
  *
- * - routes, with the five 05 §11 treatments (selected, alternative, preview,
- *   previous, proposed) and the selected one unmistakably heaviest,
+ * - routes, with the 05 §11 treatments (selected, alternative, preview, previous,
+ *   proposed, and the `travelled` half of a ride in progress) and the selected
+ *   one unmistakably heaviest,
  * - points (start, finish, stop, shaping) with a selection halo,
  * - avoid areas as a low-opacity warm fill with a solid selection edge (05 §21),
  * - road spans, split by mode so a `must` span and an `avoid` span never read as
@@ -145,6 +146,7 @@ export const MAP_LAYER_IDS = {
   roadSpanPreviewLine: "ogv-road-span-preview-line",
   roadSpanPreviewHandle: "ogv-road-span-preview-handle",
   routePrevious: "ogv-route-previous",
+  routeTravelled: "ogv-route-travelled",
   routeAlternativeCasing: "ogv-route-alternative-casing",
   routeAlternative: "ogv-route-alternative",
   routePreview: "ogv-route-preview",
@@ -296,15 +298,37 @@ function surfaceBandColor(palette: MapPalette): unknown {
 }
 
 /**
- * Route layers, drawn in ascending weight: the previous route, the alternatives,
- * the preview, the proposal, then the selected line's casing and core, then the
- * surface band and the direction arrows it carries. The selected route is last
- * for the same reason it is heaviest: it must never be overdrawn by something
- * the rider did not choose (05 §11).
+ * Route layers, drawn in ascending weight: the ridden part of the ride's answer,
+ * the previous route, the alternatives, the preview, the proposal, then the
+ * selected line's casing and core, then the surface band and the direction
+ * arrows it carries. The selected route is last for the same reason it is
+ * heaviest: it must never be overdrawn by something the rider did not choose
+ * (05 §11).
  */
 export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
   const dashed = { "line-dasharray": [2, 2] } as const;
   return [
+    {
+      // The road just ridden (08 §5): the same answer as the selected line, cut
+      // at the matcher's progress point and dimmed so the rider reads "how far I
+      // have come" without opening the sheet. Topo Sage rather than the `previous`
+      // treatment, which means "the answer a replan replaced": a ridden stretch
+      // was not replaced, it was used. No casing, and a flat 5 px against the
+      // selected line's 6–13 px by zoom, so the road ahead always reads heaviest.
+      // The Day ride map is brighter, and gets the extra opacity (`routeCasing` is
+      // the sunlight ride palette's own signal, see `.og-ride .og-map` in the
+      // stylesheet); Night keeps the quieter 0.5.
+      id: MAP_LAYER_IDS.routeTravelled,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", "travelled"),
+      layout: LINE_LAYOUT,
+      paint: {
+        "line-color": palette.topoSage,
+        "line-width": 5,
+        "line-opacity": palette.routeCasing === "auto" ? 0.5 : 0.62,
+      },
+    },
     {
       id: MAP_LAYER_IDS.routePrevious,
       type: "line",

@@ -343,6 +343,7 @@ const GRAB_POINT_LAYER_IDS: readonly string[] = [
  * showed "Buck ingham" and "War inster" split by the line).
  */
 const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
+  MAP_LAYER_IDS.routeTravelled,
   MAP_LAYER_IDS.routePrevious,
   MAP_LAYER_IDS.routeAlternativeCasing,
   MAP_LAYER_IDS.routeAlternative,
