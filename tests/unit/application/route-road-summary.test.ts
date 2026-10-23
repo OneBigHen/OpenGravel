@@ -4,6 +4,7 @@ import {
   buildRouteRoadSummary,
   type MatchedRoadSpan,
 } from "@/application/roads/route-road-summary";
+import { aggregateRoadEvidence, type RoadEvidenceRecord } from "@/application/roads/road-evidence";
 import { asRoadEntityId } from "@/domain/ride/ids";
 import { aggregateSurface } from "@/domain/roads/surface";
 
@@ -134,6 +135,48 @@ describe("route road summaries", () => {
     );
 
     expect(result.surfaceAssessment).toMatchObject({ value: "paved", band: "confirmed", conflicts: [] });
+  });
+
+  it("keeps access and condition reports out of the route surface claim", () => {
+    const records: RoadEvidenceRecord[] = [
+      {
+        id: "surface-report",
+        entityId: ROAD_A,
+        source: "official-authority",
+        observedAt: "2026-09-17T12:00:00.000Z",
+        aspect: "surface",
+        value: "asphalt",
+        confidence: 0.9,
+      },
+      {
+        id: "condition-report",
+        entityId: ROAD_A,
+        source: "official-authority",
+        observedAt: "2026-09-17T12:00:00.000Z",
+        aspect: "condition",
+        value: "gravel",
+        confidence: 0.9,
+      },
+      {
+        id: "access-report",
+        entityId: ROAD_A,
+        source: "official-authority",
+        observedAt: "2026-09-17T12:00:00.000Z",
+        aspect: "access",
+        value: "open",
+        confidence: 0.9,
+      },
+    ];
+    const [road] = aggregateRoadEvidence(records);
+    expect(road).toBeDefined();
+
+    const result = buildRouteRoadSummary(ROUTE, [span(ROAD_A, 0, 1_000)], [road!]);
+
+    // Only the surface report describes the surface; a condition or access
+    // report must not make the route disagree with the road row it came from.
+    expect(road?.surfaceBand).toBe("confirmed");
+    expect(result.surfaceAssessment).toMatchObject({ value: "paved", band: "confirmed", conflicts: [] });
+    expect(result.surfaceBand).toBe(road?.surfaceBand);
   });
 
   it("union-counts overlapping frontage and ramp spans only once", () => {

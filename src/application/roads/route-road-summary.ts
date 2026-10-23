@@ -290,8 +290,15 @@ export function buildRouteRoadSummary(
   const routeSurfaceEvidence: SurfaceEvidence[] = roads.flatMap((road) => {
     const summary = evidenceByEntity.get(road.entityId);
     if (summary === undefined) return [];
-    if (summary.records.length > 0) {
-      return summary.records.map(surfaceEvidenceFromRoadEvidence);
+    // Only reports about the surface describe the surface: an access or
+    // condition report ("open", "washed out", "graded") would otherwise be
+    // aggregated as if it named a surface, and the route could contradict the
+    // road row it was built from.
+    const surfaceRecords = summary.records.filter(
+      (record) => record.aspect === undefined || record.aspect === "surface",
+    );
+    if (surfaceRecords.length > 0) {
+      return surfaceRecords.map(surfaceEvidenceFromRoadEvidence);
     }
     if (summary.surfaceAssessment !== undefined) {
       return summary.surfaceAssessment.provenance.map((record) => ({
