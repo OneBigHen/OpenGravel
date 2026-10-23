@@ -223,6 +223,9 @@ export function createRideNavigationEngine(
       kind: maneuver.kind,
       maneuver: maneuver.maneuver,
       roadName: maneuver.roadName,
+      ...(maneuver.exitNumber === undefined || maneuver.exitNumber === null
+        ? {}
+        : { exitNumber: maneuver.exitNumber }),
       distanceMeters,
       targetStopId: maneuver.targetStopId,
     };

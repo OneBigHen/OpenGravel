@@ -172,6 +172,11 @@ function isPlainRecord(value: unknown): value is Record<string, never> {
 
 /** Parses an error payload without trusting it; unknown shapes stay generic. */
 function errorFromBody(body: unknown, httpStatus: number): ApiRouteProviderError {
+  // The shared HTTP guard has a smaller error envelope. Busy is recoverable
+  // regardless of that envelope, and must remain distinct from an outage.
+  if (httpStatus === 429) return new ApiRouteProviderError(
+    "The route planner is busy. Wait a moment and try again.", "rate-limit", { recoverable: true, httpStatus },
+  );
   const parsed = body as Partial<RoutePlanErrorBody> | null;
   const error = parsed?.error;
   if (
@@ -217,18 +222,6 @@ export function createApiRouteProvider(
       }
 
       let response: Response;
-      // A request iOS froze while Safari was in the background never settles;
-      // without a ceiling the planner stayed "on its way" with the map dimmed
-      // (owner, 2026-10-04). The server's stages are bounded well inside this.
-      const ceiling = new AbortController();
-      const ceilingTimer = setTimeout(() => ceiling.abort(), PLAN_REQUEST_CEILING_MS);
-      const onCallerAbort = (): void => ceiling.abort();
-      if (signal.aborted) ceiling.abort();
-      else signal.addEventListener("abort", onCallerAbort, { once: true });
-      const settle = (): void => {
-        clearTimeout(ceilingTimer);
-        signal.removeEventListener("abort", onCallerAbort);
-      };
       try {
         response = await fetcher(path, {
           method: "POST",
@@ -237,17 +230,15 @@ export function createApiRouteProvider(
             identity,
             request: firstRouteOnly ? { ...request, options: { ...request.options, includeAlternatives: false } } : request,
           }),
-          signal: ceiling.signal,
+          signal,
         });
       } catch {
         // The caller owns cancellation: its reason travels unchanged, exactly as
         // the routing port's contract requires (OGV-D-152/OGV-D-164). The
         // transport's own error text is dropped, never forwarded.
-        settle();
         if (signal.aborted) throw signal.reason;
         throw new ApiRouteProviderError(UNREACHABLE_MESSAGE, "provider-unavailable", {
           recoverable: true,
-          timedOut: ceiling.signal.aborted,
         });
       }
 
@@ -256,7 +247,6 @@ export function createApiRouteProvider(
         // The ceiling covers the body too: a frozen stream is as lost as a frozen request.
         body = await response.json();
       } catch {
-        settle();
         if (signal.aborted) throw signal.reason;
         throw new ApiRouteProviderError(UNREADABLE_MESSAGE, "provider-unavailable", {
           recoverable: true,
@@ -264,7 +254,6 @@ export function createApiRouteProvider(
         });
       }
 
-      settle();
       if (!response.ok) throw errorFromBody(body, response.status);
       if (isRoutePlanErrorBody(body as RoutePlanResponseBody)) {
         // A 2xx carrying an error object is a broken deployment, not an answer.
@@ -322,19 +311,42 @@ export function createApiRouteProvider(
       request: ProviderRouteRequest,
       signal: AbortSignal,
     ): Promise<ProviderCandidateSet> {
+      // One ceiling includes both attempts, the body and the retry delay.
+      const ceiling = new AbortController();
+      const timer = setTimeout(() => ceiling.abort(new ApiRouteProviderError(
+        UNREACHABLE_MESSAGE, "provider-unavailable", { recoverable: true, timedOut: true },
+      )), PLAN_REQUEST_CEILING_MS);
+      const runSignal = AbortSignal.any([signal, ceiling.signal]);
+      let onAbort: () => void = () => undefined;
+      const aborted = new Promise<never>((_resolve, reject) => {
+        onAbort = () => reject(runSignal.reason);
+        if (runSignal.aborted) onAbort();
+        else runSignal.addEventListener("abort", onAbort, { once: true });
+      });
+      const run = async (): Promise<ProviderCandidateSet> => {
+        if (runSignal.aborted) throw runSignal.reason;
+        try {
+          return await attemptOnce(request, runSignal);
+        } catch (error) {
+          if (!isTransient(error) || runSignal.aborted) throw error;
+          await new Promise<void>((resolve) => {
+            const done = (): void => {
+              clearTimeout(delay);
+              runSignal.removeEventListener("abort", done);
+              resolve();
+            };
+            const delay = setTimeout(done, RETRY_DELAY_MS);
+            runSignal.addEventListener("abort", done, { once: true });
+          });
+          if (runSignal.aborted) throw runSignal.reason;
+          return attemptOnce(request, runSignal);
+        }
+      };
       try {
-        return await attemptOnce(request, signal);
-      } catch (error) {
-        // A dropped connection or a 502 is usually the next request's success
-        // (a slow engine, a flaky mobile link, a VPN): try once more before the
-        // rider sees "unavailable" (owner, 2026-10-05: a plan died at 43 s).
-        if (!isTransient(error) || signal.aborted) throw error;
-        await new Promise<void>((resolve) => {
-          const timer = setTimeout(resolve, RETRY_DELAY_MS);
-          signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
-        });
-        if (signal.aborted) throw signal.reason;
-        return attemptOnce(request, signal);
+        return await Promise.race([run(), aborted]);
+      } finally {
+        clearTimeout(timer);
+        runSignal.removeEventListener("abort", onAbort);
       }
 
     },

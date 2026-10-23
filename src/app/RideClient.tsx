@@ -19,7 +19,7 @@ import { createRideRecordingWorkflow } from "@/application/ride-session/recordin
 import { createFreeRideTelemetry, recordingPositionFromFix } from "@/application/ride-session/free-ride-telemetry";
 import { createGuidedReroutePlanner } from "@/application/ride-session/guided-reroute";
 import { createRideActivitySync } from "@/application/ride-session/ride-activity";
-import { liveManeuverOf } from "@/application/ride-session/ride-focus-view-model";
+import { followingManeuverOf, liveManeuverOf } from "@/application/ride-session/ride-focus-view-model";
 import { haptic } from "@/infrastructure/native/native-feel";
 import { createClientFreeRideServices } from "@/application/free-ride/client-services";
 import { parseOfferCatalog } from "@/application/free-ride/ride-offers";
@@ -341,6 +341,8 @@ export function RideClient({
               : new Date(Date.parse(instant) + remainingDurationSeconds * 1_000).toISOString(),
           speedLimitKmh,
           liveManeuver: liveManeuverOf(frame),
+          distanceFromRouteMeters: frame.distanceFromRouteMeters,
+          followingManeuver: followingManeuverOf(frame),
         };
       },
     });
