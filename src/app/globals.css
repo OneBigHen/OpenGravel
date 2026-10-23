@@ -4935,6 +4935,7 @@ h3,
     .og-plan-actions__record-row,
     .og-plan-actions__row,
     .og-advisor,
+    .og-advisor-ask,
     .og-route-card[data-selected="false"]
   ),
   .og-planner__sheet[data-detent="ride"] [data-testid="offline-checking"],
