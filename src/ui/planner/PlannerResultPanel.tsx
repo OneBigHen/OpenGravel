@@ -1,10 +1,11 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { RoutingComparisonVm } from "@/application/planner/routing-method-comparison";
+import type { ElevationWaypoint } from "@/application/elevation/waypoints";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
 import { PlannerRouteBriefing, type PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
@@ -57,15 +58,27 @@ export interface PlannerResultPanelProps {
   };
   readonly actions: RideActionsProps;
   readonly briefing: PlannerRouteBriefingProps;
+  /** The sheet is at its expanded detent: the elevation chart opens expanded. */
+  readonly sheetExpanded?: boolean;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const elevation = useElevationProfile(
     briefing.providers?.elevationProfile,
     briefing.route?.routeId ?? null,
     briefing.route?.geometry ?? NO_LINE,
   );
+  // The authored points in ride order, for the chart's numbered notches: the
+  // start, the stops, then the finish. Shaping anchors stay off the list (04 §15).
+  const waypoints = useMemo((): readonly ElevationWaypoint[] => {
+    const { start, stops, finish } = briefing.ride.intent;
+    const points: ElevationWaypoint[] = [];
+    if (start !== null) points.push({ coordinate: start.coordinate, label: "Start" });
+    stops.forEach((stop, index) => points.push({ coordinate: stop.coordinate, label: `Stop ${index + 1}` }));
+    if (finish !== null) points.push({ coordinate: finish.coordinate, label: "Finish" });
+    return points;
+  }, [briefing.ride.intent]);
   const selectedCard = choices.cards.find((card) => card.isSelected);
   const tint = selectedCard?.tint ?? 0;
   const result = (
@@ -85,7 +98,13 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing }: Pl
       {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {elevation === null || choices.cards.length === 0 ? null : (
         <div className="og-elevation-slot" data-tint={tint}>
-          <ElevationProfileChart state={elevation} surface={selectedCard?.surfaceRuns} />
+          <ElevationProfileChart
+            state={elevation}
+            surface={selectedCard?.surfaceRuns}
+            waypoints={waypoints}
+            line={briefing.route?.geometry}
+            expandedBySheet={sheetExpanded}
+          />
         </div>
       )}
       <RideActions {...actions} />
