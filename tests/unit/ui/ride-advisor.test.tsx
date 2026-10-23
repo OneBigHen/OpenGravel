@@ -7,7 +7,7 @@ import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { AdvisorInline, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
+import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
 
 afterEach(() => cleanup());
@@ -175,5 +175,39 @@ describe("conversation ownership", () => {
     expect(screen.queryByLabelText("Ride conversation")).toBeNull();
     expect(screen.queryByText(/I couldn't understand the ride time/)).toBeNull();
     expect(screen.getByTestId("advisor-open")).toBeInTheDocument();
+  });
+});
+
+describe("ask about this ride", () => {
+  function setupRide() {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = {
+      request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+    };
+    render(
+      <RideAdvisorProvider enabled store={store} client={client}>
+        <section data-testid="composer-side"><AdvisorInline /></section>
+        <AdvisorRideAsk />
+      </RideAdvisorProvider>,
+    );
+    return { client };
+  }
+
+  it("sends a one-tap ask and shows the answer under the ride, not in the composer", async () => {
+    const { client } = setupRide();
+    fireEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await waitFor(() => expect(screen.getByTestId("advisor-proposal")).toBeInTheDocument());
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("Make this ride about 30 minutes shorter");
+    expect(screen.getAllByTestId("advisor-proposal")).toHaveLength(1);
+    expect(screen.getByTestId("advisor-ride-ask")).toContainElement(screen.getByTestId("advisor-proposal"));
+    expect(screen.getByText("Here's a ride that fits. Tap Plan it to see it on the map.")).toBeInTheDocument();
+  });
+
+  it("asks a typed question about the planned ride", async () => {
+    const { client } = setupRide();
+    fireEvent.change(screen.getByTestId("advisor-ride-prompt"), { target: { value: "add a coffee stop in Jim Thorpe" } });
+    fireEvent.submit(screen.getByTestId("advisor-ride-prompt").closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("add a coffee stop in Jim Thorpe");
   });
 });

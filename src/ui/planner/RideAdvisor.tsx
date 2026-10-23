@@ -44,9 +44,14 @@ export type AdvisorAppliedNext =
   | { readonly kind: "planning" }
   | { readonly kind: "needs-point"; readonly point: "start" | "finish" };
 
+/** Where the rider asked from: the composer (no ride yet) or the planned ride's sheet. */
+export type AdvisorSurface = "composer" | "ride";
+
 export interface RideAdvisor {
   /** Send a ride description or answer the latest clarification. */
-  ask(text: string): void;
+  ask(text: string, surface?: AdvisorSurface): void;
+  /** The surface that shows the conversation, so it never draws twice. */
+  readonly surface: AdvisorSurface;
   readonly prompt: string;
   readonly conversation: readonly AdvisorExchange[];
   readonly pending: boolean;
@@ -92,6 +97,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const getRevision = useCallback(() => store.getState().document.revision, [store]);
   const revision = useSyncExternalStore(subscribe, getRevision, getRevision);
   const [prompt, setPrompt] = useState("");
+  const [surface, setSurface] = useState<AdvisorSurface>("composer");
   const [conversation, setConversation] = useState<readonly AdvisorExchange[]>([]);
   const conversationRef = useRef<{ rideId: string; exchanges: readonly AdvisorExchange[] }>({ rideId: store.getState().document.rideId, exchanges: [] });
   const [pending, setPending] = useState(false);
@@ -114,7 +120,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   }, []);
 
   const ask = useCallback(
-    (value: string) => {
+    (value: string, from: AdvisorSurface = "composer") => {
       const text = value.trim();
       if (text.length < 2 || text.length > 600) return;
       requestController.current?.abort();
@@ -123,6 +129,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       const generation = ++requestGeneration.current;
       emitTelemetry("advisor_proposal_requested", { capabilityStatus: "available" });
       setPrompt(text);
+      setSurface(from);
       setPending(true);
       setProposal(null);
       setMessage(null);
@@ -155,7 +162,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
           }
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status !== "error") {
-            const reply = built.status === "ready" ? `Ready to plan: ${built.summary}` : built.message;
+            const reply = built.status === "ready" ? "Here's a ride that fits. Tap Plan it to see it on the map." : built.message;
             const exchanges = appendAdvisorExchange(history, { riderRequest: text, reply, outcome: built.status === "ready" ? "proposal" : built.status });
             conversationRef.current = { rideId: requestedDocument.rideId, exchanges };
             setConversation(exchanges);
@@ -222,11 +229,11 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     conversationRef.current = { rideId: store.getState().document.rideId, exchanges: [] };
   }, [proposal, store]);
 
-  const retry = useCallback(() => ask(prompt), [ask, prompt]);
+  const retry = useCallback(() => ask(prompt, surface), [ask, prompt, surface]);
 
   const value = useMemo<RideAdvisor>(
-    () => ({ ask, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry }),
-    [ask, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry],
+    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry }),
+    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry],
   );
   return <AdvisorContext.Provider value={enabled ? value : null}>{children}</AdvisorContext.Provider>;
 }
@@ -302,7 +309,7 @@ export function AdvisorMark() {
  * the times the composer has no search field to type into (a loop's start is
  * already set, say).
  */
-export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean }) {
+export function AdvisorInline({ askBox = false, surface = "composer" }: { readonly askBox?: boolean; readonly surface?: AdvisorSurface }) {
   const advisor = useRideAdvisor();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -310,14 +317,15 @@ export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean })
   if (advisor === null) return null;
   const { pending, proposal, proposalIsStale, message, messageIsError, recovery } = advisor;
   const composerText = draftBase === advisor.prompt ? draft : advisor.prompt;
-  const idle = !pending && proposal === null && message === null;
+  // Another surface owns the live conversation: this one stays quiet.
+  const idle = (!pending && proposal === null && message === null) || advisor.surface !== surface;
   if (idle && !askBox) return null;
 
   function submit(): void {
     if (advisor === null || advisor.pending) return;
     const text = composerText;
     if (text.trim().length < 2) return;
-    advisor.ask(text);
+    advisor.ask(text, surface);
   }
 
   return (
@@ -328,7 +336,7 @@ export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean })
           Describe a ride instead
         </button>
       ) : null}
-      {advisor.conversation.length > 0 || advisor.prompt !== "" ? (
+      {advisor.surface === surface && (advisor.conversation.length > 0 || advisor.prompt !== "") ? (
         <ol className="og-advisor__conversation" aria-label="Ride conversation">
           {advisor.conversation.map((exchange, index) => (
             <li key={`${index}-${exchange.riderRequest}`}>
@@ -341,14 +349,14 @@ export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean })
       ) : null}
 
 
-      {pending ? (
+      {pending && !idle ? (
         <p className="og-advisor__working" role="status" data-testid="advisor-working">
           <AdvisorMark />
           Reading “{advisor.prompt}”…
         </p>
       ) : null}
 
-      {proposal !== null ? (
+      {proposal !== null && !idle ? (
         <div className="og-advisor__proposal" data-testid="advisor-proposal">
           <p className="og-advisor__summary">
             <AdvisorMark />
@@ -382,7 +390,7 @@ export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean })
         </div>
       ) : null}
 
-      {message !== null ? (
+      {message !== null && !idle ? (
         <div className={messageIsError ? "og-advisor__error" : "og-advisor__notice"} role={messageIsError ? "alert" : "status"}>
           <p>{message}</p>
           {recoveryLabel(recovery) === null ? null : (
@@ -422,6 +430,61 @@ export function AdvisorInline({ askBox = false }: { readonly askBox?: boolean })
           <button type="submit" className="og-secondary" disabled={pending || composerText.trim().length < 2}>Send</button>
         </form>
       ) : null}
+    </section>
+  );
+}
+
+/** One-tap asks about a planned ride, in the rider's words. */
+const RIDE_ASKS: readonly { readonly label: string; readonly prompt: string }[] = [
+  { label: "Why this route?", prompt: "Why this route?" },
+  { label: "Shorter", prompt: "Make this ride about 30 minutes shorter" },
+  { label: "More dirt", prompt: "More gravel and dirt roads on this ride" },
+  { label: "Curvier", prompt: "Make this ride curvier" },
+  { label: "No highways", prompt: "Avoid highways on this ride" },
+];
+
+/**
+ * "Ask about this ride", under a planned ride: the advisor sees the selected
+ * route's summary, so a question or a tweak is one tap away instead of buried
+ * in the composer the planned sheet no longer shows.
+ */
+export function AdvisorRideAsk() {
+  const advisor = useRideAdvisor();
+  const [draft, setDraft] = useState("");
+  if (advisor === null) return null;
+  const busy = advisor.pending;
+  const live = advisor.surface === "ride" && (busy || advisor.proposal !== null || advisor.message !== null);
+  function send(text: string): void {
+    if (advisor === null || busy || text.trim().length < 2) return;
+    advisor.ask(text, "ride");
+    setDraft("");
+  }
+  return (
+    <section className="og-advisor-ask" aria-label="Ask about this ride" data-testid="advisor-ride-ask">
+      <h3 className="og-advisor-ask__title"><AdvisorMark /> Ask about this ride</h3>
+      <ul className="og-advisor-ask__chips" aria-label="Quick asks">
+        {RIDE_ASKS.map((item) => (
+          <li key={item.label}>
+            <button type="button" disabled={busy} onClick={() => send(item.prompt)}>{item.label}</button>
+          </li>
+        ))}
+      </ul>
+      {live ? <AdvisorInline surface="ride" /> : (
+        <form className="og-advisor-ask__form" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
+          <input
+            type="text"
+            className="og-place-search__input"
+            data-testid="advisor-ride-prompt"
+            aria-label="Ask about this ride"
+            placeholder="Ask or change anything: “lunch stop in Jim Thorpe”"
+            enterKeyHint="send"
+            maxLength={600}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <button type="submit" className="og-secondary" disabled={busy || draft.trim().length < 2}>Ask</button>
+        </form>
+      )}
     </section>
   );
 }

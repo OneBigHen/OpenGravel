@@ -11,6 +11,7 @@ import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefin
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
 import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
+import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 
 // No route means there is no briefing or chart to draw. Keep their dependency
 // trees out of the first map interaction.
@@ -99,6 +100,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
         />
       )}
       <RideActions {...actions} />
+      {choices.cards.length === 0 ? null : <AdvisorRideAsk />}
       {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
     </>
   );

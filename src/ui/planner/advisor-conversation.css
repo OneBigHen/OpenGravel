@@ -52,3 +52,115 @@
 .og-advisor__error p {
   flex-basis: 70%;
 }
+
+/* Chat bubbles: the rider on the right in a filled bubble, the advisor on the left beside its mark. */
+.og-advisor__rider {
+  max-width: 85%;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 18px 18px 4px 18px;
+  background: var(--og-go-soft, var(--og-paper));
+  color: var(--og-ink);
+  font-weight: 550;
+}
+
+.og-advisor__reply {
+  max-width: 92%;
+  padding: 2px 0;
+  background: none;
+  color: var(--og-ink);
+}
+
+.og-advisor__reply .og-advisor__mark {
+  margin-right: 4px;
+}
+
+/* "Ask about this ride" under a planned ride. */
+.og-advisor-ask {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--og-hairline, var(--og-sandstone));
+}
+
+.og-advisor-ask__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--og-ink);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.og-advisor-ask__chips {
+  display: flex;
+  gap: 8px;
+  margin: 0 -4px;
+  padding: 2px 4px 4px;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.og-advisor-ask__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.og-advisor-ask__chips li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.og-advisor-ask__chips button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--og-hairline, var(--og-sandstone));
+  border-radius: 999px;
+  background: var(--og-raised, var(--og-paper));
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--og-dur-fast, 120ms) ease, border-color var(--og-dur-fast, 120ms) ease;
+}
+
+.og-advisor-ask__chips button:hover:not(:disabled) {
+  border-color: var(--og-ember-text);
+}
+
+.og-advisor-ask__chips button:active:not(:disabled) {
+  background: var(--og-go-soft, var(--og-paper));
+}
+
+.og-advisor-ask__chips button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.og-advisor-ask__form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.og-advisor-ask__form input,
+.og-advisor-ask__form button {
+  min-height: 44px;
+  min-width: 0;
+}
+
+.og-advisor-ask :is(input, button):focus-visible {
+  outline: 2px solid var(--og-ember-text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-advisor-ask__chips button {
+    transition: none;
+  }
+}
