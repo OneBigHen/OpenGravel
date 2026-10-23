@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { MAX_SKETCH_REQUEST_ANCHORS } from "../../../src/domain/sketch/types";
 
+import { interceptNextPlanAttempt } from "./plan-attempt";
+
 import {
   expectDrawnScene,
   expectHealthyMap,
@@ -154,23 +156,19 @@ async function drawStroke(page: Page, points: readonly Coordinate[]): Promise<vo
 }
 
 /**
- * Makes the **next** plan request fail, the way a router with no path down that
+ * Makes the **next** plan attempt fail, the way a router with no path down that
  * trace would (23 §3's error object).
  *
  * An interception rather than an environment switch on purpose: the failure has to
- * hit exactly one attempt so the retry after it can succeed against the fixture,
- * and a server-wide switch would either fail every spec's plans or need a
- * request-addressable flag that no deployment should carry. The client cannot tell
- * the difference — it sees the same 422 `no-route` body the wire contract defines.
+ * be scoped to exactly one attempt so the retry after it can succeed against the
+ * fixture, and a server-wide switch would either fail every spec's plans or need a
+ * request-addressable flag that no deployment should carry. The attempt is both of
+ * the plan queries the planner sends under one generation (`plan-attempt.ts`). The
+ * client cannot tell the difference — it sees the same 422 `no-route` body the wire
+ * contract defines.
  */
 async function failNextPlan(page: Page): Promise<void> {
-  let spent = false;
-  await page.route("**/api/route-plan", async (route) => {
-    if (spent) {
-      await route.continue();
-      return;
-    }
-    spent = true;
+  await interceptNextPlanAttempt(page, async (route) => {
     await route.fulfill({
       status: 422,
       contentType: "application/json",

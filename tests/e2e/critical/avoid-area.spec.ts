@@ -175,9 +175,15 @@ test("a rectangle over the route is authored, reaches the request, and is undone
   await planFixtureRide(page);
 
   // The baseline: the fixture plan carried no avoid rings, so a later one that
-  // does is a real change and not an artifact of the harness.
-  expect(posted).toHaveLength(1);
-  expect(posted[0]?.request.avoidPolygons).toEqual([]);
+  // does is a real change and not an artifact of the harness. One plan attempt
+  // sends two queries (the fast first route and the full alternatives answer,
+  // `client-planning-service.ts`), so the baseline is "every query of the one
+  // attempt carried no ring", not "exactly one request".
+  expect(posted.length).toBeGreaterThanOrEqual(1);
+  expect(new Set(posted.map((body) => body.identity.rideRevision)).size).toBe(1);
+  expect(posted.map((body) => body.request.avoidPolygons)).toEqual(
+    posted.map(() => []),
+  );
   await expectDrawnScene(page, { areas: "0" });
 
   const startBefore = await readCoordinate(page, "start-value");
