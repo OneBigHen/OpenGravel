@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,8 +29,8 @@ import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { AppBar } from "@/ui/nav/AppBar";
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
-import { RouteDetail } from "@/ui/explore/RouteDetail";
-import { createAppPreparationProviders } from "@/app/preparation-providers";
+
+const RouteDetail = dynamic(() => import("./ExploreRouteDetail").then((mod) => mod.ExploreRouteDetail), { loading: () => <main id="main" className="og-explore"><AppBar current="/explore" /><p role="status">Loading ride details…</p></main> });
 
 export interface ExploreClientProps {
   readonly detailId?: string;
@@ -65,7 +67,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
   const [detailVariants, setDetailVariants] = useState<readonly CatalogVariantSummary[]>([]);
   const [roadCandidates, setRoadCandidates] = useState<readonly RoadCandidate[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  const preparationProviders = useMemo(() => createAppPreparationProviders(), []);
   /** The active garage bike, read on the client (EX-02, RS-01). */
   const [bike, setBike] = useState<{ readonly fuelRangeMiles: number; readonly reserveMiles: number } | null>(null);
   useEffect(() => {
@@ -159,7 +160,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
         activeBike={bike}
         onUse={useRide}
         onAddToLibrary={addToLibrary}
-        preparationProviders={preparationProviders}
         {...(mapboxToken === undefined ? {} : { mapboxToken })}
         {...(basemap === undefined
           ? {}
