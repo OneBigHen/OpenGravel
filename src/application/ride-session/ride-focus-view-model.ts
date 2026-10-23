@@ -809,7 +809,7 @@ function guidanceOf(
       "not-moving": "Ride paused",
       "off-route": "Off the route. Head back to the line.",
       locating: "Finding you on the route…",
-      "gps-stale": "GPS is stale. Waiting for a fresh fix…",
+      "gps-stale": "Waiting for a GPS fix…",
       "gps-unavailable": "No GPS fix yet. Looking…",
     };
     return {
@@ -916,7 +916,7 @@ function warningsOf(
     warnings.push({
       id: "gps-stale",
       severity: "caution",
-      text: `GPS is stale (${position.ageText ?? "no recent fix"}). Speed, heading and route estimates are paused.`,
+      text: `Weak GPS signal (${position.ageText ?? "no recent fix"}). Speed, heading and route estimates are paused.`,
     });
   }
   if (environment.locationPermission === "denied") {
