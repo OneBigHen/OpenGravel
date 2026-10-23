@@ -171,7 +171,10 @@ export function RideActions({
     try {
       const result = await rideActions.freeRide(document);
       if (result.outcome === "rejected") {
-        if (result.sessionId !== null) setUnfinishedRide(true);
+        if (result.sessionId !== null) {
+          // Only a ride that is still recording blocks Free Ride now.
+          setUnfinishedRide(true);
+        }
         else setFreeRideError(result.message);
         setFreeRideState("idle");
       }
