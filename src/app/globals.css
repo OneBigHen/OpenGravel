@@ -6197,6 +6197,20 @@ h3,
   color: var(--og-danger-light);
 }
 
+/*
+  `/ride` with no ride in progress (owner, 2026-10-05): nothing is running, so
+  the surface is not in ride mode and keeps the app's frame — the shared app
+  bar, which is the bottom tab bar on a phone. The card clears the floating tab
+  bar instead of sitting under it; ride mode drops the bar entirely, below.
+*/
+.og-ride--state {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--og-tabbar-h, var(--og-safe-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .og-ride__recovery {
   position: relative;
   z-index: 1;
@@ -10566,6 +10580,7 @@ a.og-secondary {
   padding: 22px 20px 24px;
 }
 
+.og-empty-state__body h1,
 .og-empty-state__body h2 {
   font-size: clamp(22px, 1.4vw + 16px, 30px);
   line-height: 1.12;
@@ -10613,6 +10628,54 @@ a.og-secondary {
   .og-empty-state__body {
     padding: 32px 36px;
   }
+}
+
+/*
+  `/ride` with no ride in progress reuses the empty-state card the My rides
+  library opens with, over the ride surface's dark ground. Inside `.og-ride` the
+  theme tokens are flipped (theme-glass.css: --og-ink paints surfaces and
+  --og-paper its text), so the card takes the ride chrome's own surface tokens
+  rather than the page ones — and one column, because there is no photograph.
+*/
+.og-ride .og-ride__empty {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(calc(100% - 32px - var(--og-safe-left, 0px) - var(--og-safe-right, 0px)), 520px);
+  max-width: 520px;
+  margin: auto;
+  border: 1px solid var(--og-ride-border);
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 24%);
+}
+
+.og-ride .og-ride__empty-note {
+  font-size: 14px;
+  color: var(--og-ride-muted);
+}
+
+/*
+  The frame around that card wears the ride surface's palette too, because
+  inside `.og-ride` the theme tokens are flipped and the shared bar's own
+  colours would land dark-on-dark. On a phone `.og-appbar` is `display:
+  contents`: the glass tab bar is drawn exactly as it is on every other page.
+*/
+.og-ride--state .og-appbar {
+  background: var(--og-ride-surface);
+  box-shadow: 0 1px 0 var(--og-ride-border);
+}
+
+.og-ride--state .og-appbar__brand {
+  color: var(--og-paper);
+}
+
+.og-ride--state .og-appbar__tagline,
+.og-ride--state .og-planner__nav a,
+.og-ride--state .og-planner__settings-link {
+  color: var(--og-ride-muted);
+}
+
+.og-ride--state .og-planner__nav a[aria-current="page"] {
+  color: var(--og-paper);
 }
 
 /* -- Route detail ---------------------------------------------------------- */

@@ -128,6 +128,6 @@ test.describe("recorded rides", () => {
     await page.getByTestId("ride-discard").click();
     await expect(page.getByTestId("ride-terminal")).toContainText("Recording discarded");
     await page.reload();
-    await expect(page.getByTestId("ride-recovery")).toContainText("no ride in progress");
+    await expect(page.getByTestId("ride-recovery")).toContainText(/no ride in progress/i);
   });
 });
