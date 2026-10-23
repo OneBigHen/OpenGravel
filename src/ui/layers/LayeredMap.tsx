@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 /**
  * The planner map with the rider's map layers (UX rework phase 8): the layer
  * scene merged into the map scene, taps on layer features consumed into a
@@ -15,9 +17,10 @@ import type { MapLayersSource } from "@/application/map-layers";
 import type { Coordinate } from "@/domain/ride/types";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 
-import { InfoFeatureCard } from "./InfoFeatureCard";
 import { MapLayersPanel } from "./MapLayersPanel";
 import { useMapLayers } from "./useMapLayers";
+
+const InfoFeatureCard = dynamic(() => import("./InfoFeatureCard").then((mod) => mod.InfoFeatureCard), { loading: () => <p className="og-composer__reason" role="status">Loading map details…</p> });
 
 type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 

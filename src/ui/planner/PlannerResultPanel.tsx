@@ -1,17 +1,21 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { RoutingComparisonVm } from "@/application/planner/routing-method-comparison";
 import type { RouteCandidateId } from "@/domain/route/ids";
-import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
-import { PlannerRouteBriefing, type PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
+import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
-import { useElevationProfile } from "@/ui/planner/useElevationProfile";
 import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
+
+// No route means there is no briefing or chart to draw. Keep their dependency
+// trees out of the first map interaction.
+const PlannerElevationProfile = dynamic(() => import("./PlannerElevationProfile").then((mod) => mod.PlannerElevationProfile), { loading: () => <p className="og-composer__reason" role="status">Loading elevation profile…</p> });
+const PlannerRouteBriefing = dynamic(() => import("./PlannerRouteBriefing").then((mod) => mod.PlannerRouteBriefing), { loading: () => <p className="og-composer__reason" role="status">Loading ride briefing…</p> });
 
 /**
  * The wide tier (MVP parity row 27): once there is a ride, its result — the
@@ -44,8 +48,6 @@ function useInspectorTier(): boolean {
   );
 }
 
-const NO_LINE: readonly never[] = [];
-
 export interface PlannerResultPanelProps {
   /** The inspector column's element; `null` until it is mounted. */
   readonly inspector: HTMLElement | null;
@@ -61,11 +63,10 @@ export interface PlannerResultPanelProps {
 
 export function PlannerResultPanel({ inspector, choices, actions, briefing }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
-  const elevation = useElevationProfile(
-    briefing.providers?.elevationProfile,
-    briefing.route?.routeId ?? null,
-    briefing.route?.geometry ?? NO_LINE,
-  );
+  const { route, onRouteTraffic } = briefing;
+  useEffect(() => {
+    if (route === null) onRouteTraffic?.(null);
+  }, [route, onRouteTraffic]);
   const selectedCard = choices.cards.find((card) => card.isSelected);
   const tint = selectedCard?.tint ?? 0;
   const result = (
@@ -83,13 +84,11 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing }: Pl
         </RouteChoices>
       )}
       {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
-      {elevation === null || choices.cards.length === 0 ? null : (
-        <div className="og-elevation-slot" data-tint={tint}>
-          <ElevationProfileChart state={elevation} surface={selectedCard?.surfaceRuns} />
-        </div>
+      {briefing.route === null || briefing.providers?.elevationProfile === undefined || choices.cards.length === 0 ? null : (
+        <PlannerElevationProfile route={briefing.route} source={briefing.providers.elevationProfile} tint={tint} surface={selectedCard?.surfaceRuns} />
       )}
       <RideActions {...actions} />
-      <PlannerRouteBriefing {...briefing} />
+      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
     </>
   );
   if (!wide || inspector === null || choices.cards.length === 0) return result;

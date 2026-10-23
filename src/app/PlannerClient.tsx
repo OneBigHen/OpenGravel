@@ -45,7 +45,7 @@ import { createLibraryService } from "@/application/library/library-service";
 import { createShareService } from "@/application/sharing/share-commands";
 import { createShareRepository } from "@/infrastructure/storage/share-repository";
 import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
-import { createAdvisorApiClient } from "@/infrastructure/advisor/advisor-api-client";
+import type { AdvisorProposalClient } from "@/application/advisor/ports/advisor-proposal-client";
 import { PlannerWorkspace } from "@/ui/planner/PlannerWorkspace";
 import { RideAdvisorProvider, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { isPlanningInFlight, nextPlacementTarget } from "@/application/planner/planner-view-model";
@@ -137,7 +137,10 @@ export function PlannerClient({
   );
   const bootstrapPointer = useMemo(() => createLocalStorageBootstrapPointer(), []);
   const rideFocusPointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
-  const advisorClient = useMemo(() => createAdvisorApiClient(), []);
+  const advisorClient = useMemo<AdvisorProposalClient>(() => ({
+    request: (...args) => import("@/infrastructure/advisor/advisor-api-client")
+      .then(({ createAdvisorApiClient }) => createAdvisorApiClient().request(...args)),
+  }), []);
   // The repository owns the hint cache too, so deleting a ride drops a hint that
   // names it and a deleted ride cannot be recovered on the next boot.
   const repository = useMemo(
