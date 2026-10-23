@@ -4,9 +4,18 @@
  * The card for a tapped map-layer feature (UX rework phase 8): what it is,
  * the one supporting line the provider gave, where the data comes from, and —
  * for a stop — "Add as stop", the same typed command the places card uses.
+ *
+ * A tapped road line (`great-roads`, `gravel`) instead offers "Ride this road":
+ * its two via points are handed to the host, which adds them as stops.
  */
 
-import { mapLayer, type InfoFeature } from "@/application/map-layers";
+import {
+  isRideRoadLayer,
+  mapLayer,
+  rideRoadViaPoints,
+  type InfoFeature,
+  type LngLat,
+} from "@/application/map-layers";
 import type { Coordinate } from "@/domain/ride/types";
 
 import { InfoFeatureMedia } from "./InfoFeatureMedia";
@@ -16,11 +25,27 @@ export interface InfoFeatureCardProps {
   readonly onClose: () => void;
   /** Present when the host can add a stop; only point features offer it. */
   readonly onAddStop?: ((coordinate: Coordinate, name: string) => void) | undefined;
+  /** Where the rider is coming from, so a tapped road is entered at the near end. */
+  readonly rideRoadReference?: Coordinate | null | undefined;
+  /** Present when the host can add a road's two via points as stops. */
+  readonly onRideRoad?:
+    | ((entry: Coordinate, exit: Coordinate, name: string) => void)
+    | undefined;
 }
 
-export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCardProps) {
+export function InfoFeatureCard({
+  feature,
+  onClose,
+  onAddStop,
+  rideRoadReference = null,
+  onRideRoad,
+}: InfoFeatureCardProps) {
   const layer = mapLayer(feature.layerId);
   const point = feature.geometry.type === "Point" ? feature.geometry.coordinates : null;
+  const viaPoints =
+    onRideRoad === undefined || !isRideRoadLayer(feature.layerId) || feature.geometry.type !== "LineString"
+      ? null
+      : rideRoadViaPoints(feature.geometry.coordinates, referenceLngLat(rideRoadReference));
   const searchHref = point === null || layer.category !== "stops"
     ? null
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${feature.name} ${point[1]},${point[0]}`)}`;
@@ -49,30 +74,54 @@ export function InfoFeatureCard({ feature, onClose, onAddStop }: InfoFeatureCard
       <p className="og-info-card__source">
         {layer.source}. {layer.caveat}
       </p>
-      {point === null ? null : (
+      {viaPoints === null && point === null ? null : (
         <div className="og-info-card__actions">
-          {onAddStop === undefined || layer.category !== "stops" ? null : (
+          {viaPoints === null || onRideRoad === undefined ? null : (
             <button
               type="button"
               className="og-info-card__add"
-              data-testid="info-feature-add-stop"
-              onClick={() => onAddStop({ lon: point[0], lat: point[1] }, feature.name)}
+              data-testid="info-feature-ride-road"
+              onClick={() =>
+                onRideRoad(toCoordinate(viaPoints[0]), toCoordinate(viaPoints[1]), feature.name)
+              }
             >
-              Add as stop
+              Ride this road
             </button>
           )}
-          {searchHref === null ? null : (
-            <a className="og-info-card__link" href={searchHref} target="_blank" rel="noreferrer">
-              Hours and reviews
-            </a>
-          )}
-          {sourceHref === null || feature.media?.playbackUrl != null ? null : (
-            <a className="og-info-card__link" href={sourceHref} target="_blank" rel="noreferrer">
-              {feature.media?.videoAvailable === true ? "Open live camera" : "Open source"}
-            </a>
+          {point === null ? null : (
+            <>
+              {onAddStop === undefined || layer.category !== "stops" ? null : (
+                <button
+                  type="button"
+                  className="og-info-card__add"
+                  data-testid="info-feature-add-stop"
+                  onClick={() => onAddStop({ lon: point[0], lat: point[1] }, feature.name)}
+                >
+                  Add as stop
+                </button>
+              )}
+              {searchHref === null ? null : (
+                <a className="og-info-card__link" href={searchHref} target="_blank" rel="noreferrer">
+                  Hours and reviews
+                </a>
+              )}
+              {sourceHref === null || feature.media?.playbackUrl != null ? null : (
+                <a className="og-info-card__link" href={sourceHref} target="_blank" rel="noreferrer">
+                  {feature.media?.videoAvailable === true ? "Open live camera" : "Open source"}
+                </a>
+              )}
+            </>
           )}
         </div>
       )}
     </section>
   );
+}
+
+function referenceLngLat(reference: Coordinate | null | undefined): LngLat | null {
+  return reference === null || reference === undefined ? null : [reference.lon, reference.lat];
+}
+
+function toCoordinate(point: LngLat): Coordinate {
+  return { lon: point[0], lat: point[1] };
 }

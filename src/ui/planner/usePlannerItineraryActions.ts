@@ -45,6 +45,8 @@ export interface PlannerItineraryActions {
   readonly convert: (ref: ItineraryRef) => void;
   readonly addStop: () => void;
   readonly addStopAt: (coordinate: Coordinate, label: string) => void;
+  /** A tapped road on the map: its entry and exit as two stops, in that order. */
+  readonly addRideRoad: (entry: Coordinate, exit: Coordinate, name: string) => void;
   readonly editCoordinate: (ref: ItineraryRef, coordinate: Coordinate) => void;
   readonly setArrivalIntent: (
     stopId: StopId,
@@ -197,6 +199,28 @@ export function usePlannerItineraryActions(input: {
     [document, rideDocumentStore, scene],
   );
 
+  /**
+   * "Ride this road": the two via points become two stops, entry then exit.
+   *
+   * One rider action, two typed `stop.insert` commands. Each command is built
+   * from the document the previous one produced, so the exit stop lands after
+   * the entry stop instead of being inserted against a stale stop list.
+   */
+  const addRideRoad = useCallback(
+    (entry: Coordinate, exit: Coordinate, name: string): void => {
+      const viaPoints: readonly (readonly [Coordinate, string])[] = [
+        [entry, `${name} entry`],
+        [exit, `${name} exit`],
+      ];
+      for (const [coordinate, label] of viaPoints) {
+        const state = rideDocumentStore.getState();
+        const command = insertStopCommand(state.document, coordinate, undefined);
+        state.dispatch({ ...command, stop: { ...command.stop, label } });
+      }
+    },
+    [rideDocumentStore],
+  );
+
   const editCoordinate = useCallback(
     (ref: ItineraryRef, coordinate: Coordinate): void => {
       const state = rideDocumentStore.getState();
@@ -244,6 +268,7 @@ export function usePlannerItineraryActions(input: {
     convert,
     addStop,
     addStopAt,
+    addRideRoad,
     editCoordinate,
     setArrivalIntent,
     changeDestination,
