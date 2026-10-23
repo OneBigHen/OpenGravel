@@ -330,6 +330,7 @@ export function PlannerClient({
       enabled={advisorEnabled}
       store={rideDocumentStore}
       client={advisorClient}
+      planningStore={planningSessionStore}
       onApplied={planAfterAdvice}
     >
       <PlannerWorkspace

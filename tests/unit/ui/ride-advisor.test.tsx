@@ -7,7 +7,7 @@ import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { AdvisorInline, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
+import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
 
 afterEach(() => cleanup());
@@ -116,5 +116,99 @@ describe("one box for where to and describe a ride", () => {
     fireEvent.keyDown(box, { key: "Enter" });
     fireEvent.click(await screen.findByRole("button", { name: "Plan it" }));
     expect(await screen.findByText("Now set your destination to plan this ride.")).toBeInTheDocument();
+  });
+});
+
+describe("advisor conversation", () => {
+  it("keeps the rider text, accepts just the missing detail and sends prior turns", async () => {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = { request: vi.fn()
+      .mockResolvedValueOnce({ ok: true, draft: { ...jimThorpeLoop(store.getState().document), outcome: "clarification", clarification: "ride-time" } })
+      .mockResolvedValue({ ok: true, draft: jimThorpeLoop(store.getState().document) }) };
+    render(<RideAdvisorProvider enabled store={store} client={client}><AdvisorInline askBox /></RideAdvisorProvider>);
+    fireEvent.click(screen.getByTestId("advisor-open"));
+    const input = screen.getByTestId("advisor-prompt");
+    fireEvent.change(input, { target: { value: "A backroads loop from Jim Thorpe" } });
+    fireEvent.submit(input.closest("form")!);
+    await screen.findByText(/I couldn't understand the ride time/);
+    expect(screen.getByTestId("advisor-prompt")).toHaveValue("A backroads loop from Jim Thorpe");
+    fireEvent.change(screen.getByTestId("advisor-prompt"), { target: { value: "2 hours" } });
+    fireEvent.submit(screen.getByTestId("advisor-prompt").closest("form")!);
+    await screen.findByTestId("advisor-proposal");
+    expect(client.request).toHaveBeenLastCalledWith(expect.objectContaining({ prompt: "2 hours", history: [expect.objectContaining({ riderRequest: "A backroads loop from Jim Thorpe", outcome: "clarification" })] }), expect.any(AbortSignal));
+    expect(screen.getByLabelText("Ride conversation")).toHaveTextContent("A backroads loop from Jim Thorpe");
+    expect(screen.getByTestId("advisor-prompt")).toHaveValue("2 hours");
+    expect(screen.getByRole("button", { name: "Plan it" })).toBeInTheDocument();
+  });
+});
+
+describe("advisor explanation and continued conversation", () => {
+  it("renders an explanation without a Plan it command and accepts the next question", async () => {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = { request: vi.fn(async () => ({ ok: true as const, draft: { ...jimThorpeLoop(store.getState().document), outcome: "answer" as const, answer: "About 62 miles and 120 minutes. Surface unknown." } })) };
+    render(<RideAdvisorProvider enabled store={store} client={client}><AdvisorInline askBox /></RideAdvisorProvider>);
+    fireEvent.click(screen.getByTestId("advisor-open"));
+    fireEvent.change(screen.getByTestId("advisor-prompt"), { target: { value: "Why this route?" } });
+    fireEvent.submit(screen.getByTestId("advisor-prompt").closest("form")!);
+    await screen.findByText("About 62 miles and 120 minutes. Surface unknown.");
+    expect(screen.queryByTestId("advisor-apply")).toBeNull();
+    expect(store.getState().document.revision).toBe(0);
+    expect(screen.getByTestId("advisor-prompt")).toHaveValue("Why this route?");
+    fireEvent.change(screen.getByTestId("advisor-prompt"), { target: { value: "More dirt" } });
+    fireEvent.submit(screen.getByTestId("advisor-prompt").closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledTimes(2));
+    expect(client.request).toHaveBeenLastCalledWith(expect.objectContaining({ prompt: "More dirt", history: [expect.objectContaining({ outcome: "answer", riderRequest: "Why this route?" })] }), expect.any(AbortSignal));
+  });
+});
+
+describe("conversation ownership", () => {
+  it("clears the transcript when switching to another ride at the same revision", async () => {
+    const first = createRideDocumentStore({ document: createRideDocument() });
+    const second = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = { request: vi.fn(async () => ({ ok: true as const, draft: { ...jimThorpeLoop(first.getState().document), outcome: "clarification" as const, clarification: "ride-time" as const } })) };
+    const view = render(<RideAdvisorProvider enabled store={first} client={client}><AdvisorInline askBox /></RideAdvisorProvider>);
+    fireEvent.click(screen.getByTestId("advisor-open"));
+    fireEvent.change(screen.getByTestId("advisor-prompt"), { target: { value: "A gravel loop from Jim Thorpe" } });
+    fireEvent.submit(screen.getByTestId("advisor-prompt").closest("form")!);
+    await screen.findByText(/I couldn't understand the ride time/);
+    view.rerender(<RideAdvisorProvider enabled store={second} client={client}><AdvisorInline askBox /></RideAdvisorProvider>);
+    expect(screen.queryByLabelText("Ride conversation")).toBeNull();
+    expect(screen.queryByText(/I couldn't understand the ride time/)).toBeNull();
+    expect(screen.getByTestId("advisor-open")).toBeInTheDocument();
+  });
+});
+
+describe("ask about this ride", () => {
+  function setupRide() {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = {
+      request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+    };
+    render(
+      <RideAdvisorProvider enabled store={store} client={client}>
+        <section data-testid="composer-side"><AdvisorInline /></section>
+        <AdvisorRideAsk />
+      </RideAdvisorProvider>,
+    );
+    return { client };
+  }
+
+  it("sends a one-tap ask and shows the answer under the ride, not in the composer", async () => {
+    const { client } = setupRide();
+    fireEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await waitFor(() => expect(screen.getByTestId("advisor-proposal")).toBeInTheDocument());
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("Make this ride about 30 minutes shorter");
+    expect(screen.getAllByTestId("advisor-proposal")).toHaveLength(1);
+    expect(screen.getByTestId("advisor-ride-ask")).toContainElement(screen.getByTestId("advisor-proposal"));
+    // The card already shows the chips; the matching reply waits for history.
+    expect(screen.queryByText(/^Suggested:/)).toBeNull();
+  });
+
+  it("asks a typed question about the planned ride", async () => {
+    const { client } = setupRide();
+    fireEvent.change(screen.getByTestId("advisor-ride-prompt"), { target: { value: "add a coffee stop in Jim Thorpe" } });
+    fireEvent.submit(screen.getByTestId("advisor-ride-prompt").closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("add a coffee stop in Jim Thorpe");
   });
 });

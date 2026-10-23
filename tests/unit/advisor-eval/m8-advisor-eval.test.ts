@@ -7,6 +7,7 @@ import {
   type AdvisorModelFields,
 } from "@/application/advisor";
 import type { AdvisorMessage, AdvisorTransport, AdvisorTransportRequest } from "@/application/advisor";
+import type { AdvisorRideSummary } from "@/application/advisor/advisor-ride-summary";
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import type { RideDocument } from "@/domain/ride/types";
@@ -71,7 +72,8 @@ const unchanged: AdvisorModelFields = {
 
 interface EvalCase {
   readonly prompt: string;
-  readonly outcome?: "proposal" | "clarification" | "unsupported";
+  readonly plannedRide?: AdvisorRideSummary;
+  readonly outcome?: "proposal" | "clarification" | "unsupported" | "answer";
   readonly clarification?: "ride-time" | "place" | "referent" | "other" | null;
   readonly fields?: Partial<AdvisorModelFields>;
   readonly extraProposalFields?: Readonly<Record<string, unknown>>;
@@ -81,8 +83,18 @@ interface EvalCase {
   readonly expectedChanges?: readonly string[];
 }
 
-/** Fourteen fixed rider prompts; no live model, network, or clock enters this eval. */
+/** Fixed rider prompts through the shipping schema; no live model or network enters this eval. */
 const cases: readonly EvalCase[] = [
+  {
+    prompt: "Make it 30 minutes shorter",
+    plannedRide: { distanceKm: 100, durationMinutes: 120, climbMeters: null, surface: "Surface unknown", curviness: "Curviness unknown", roads: [], stops: [], stopCount: 0, why: "Matches the fastest option in time.", alternatives: [] },
+    // A wrong model budget must be corrected against the selected ride.
+    fields: { rideTimeKind: "budget", rideTimeMinutes: 400 }, expectedOperations: ["time.set"], expectedChanges: ["time"],
+  },
+  { prompt: "Why this route?", outcome: "answer" },
+  { prompt: "More dirt on this ride", fields: { surfacePreference: "dirt-preferred" }, expectedOperations: ["surface.set"], expectedChanges: ["surface"] },
+  { prompt: "Avoid the highway part", fields: { avoidHighways: true }, expectedOperations: ["highwayPolicy.set"], expectedChanges: ["highways"] },
+  { prompt: "Add a coffee stop halfway", outcome: "clarification", clarification: "place" },
   {
     prompt: "Two hours of twisty backroads from Jim Thorpe, avoid highways",
     fields: { shape: "loop", startPlace: "Jim Thorpe", rideTimeKind: "budget", rideTimeMinutes: 120, roadCharacter: "backroads", avoidHighways: true },
@@ -186,10 +198,11 @@ function fixtureTransport(): AdvisorTransport {
   return {
     async send(request: AdvisorTransportRequest) {
       const messages: readonly AdvisorMessage[] = request.messages;
-      const user = JSON.parse(messages[1]?.content ?? "{}") as { riderRequest?: string };
+      const user = JSON.parse(messages.at(-1)?.content ?? "{}") as { riderRequest?: string; plannedRide?: AdvisorRideSummary };
       const entry = cases.find((item) => item.prompt === user.riderRequest);
       if (entry === undefined) return { ok: false, errorClass: "invalid-request", retryable: false, message: "invalid" };
       expect(request.outputSchema).toMatchObject({ name: "opengravel_ride_proposal" });
+      if (entry.plannedRide !== undefined) expect(user.plannedRide).toEqual(entry.plannedRide);
       return { ok: true, text: outputFor(entry) };
     },
   };
@@ -251,10 +264,10 @@ describe("M8 advisor rider-prompt eval", () => {
       prompt: entry.prompt,
       rideId: document.rideId,
       baseRevision: document.revision,
-      context: advisorContextFromDocument(document, {
+      context: { ...advisorContextFromDocument(document, {
         now: EVAL_NOW,
         timeZone: "America/New_York",
-      }),
+      }), ...(entry.plannedRide === undefined ? {} : { plannedRide: entry.plannedRide }) },
     };
     const response = await requestAdvisorDraft(request, {
       transport: fixtureTransport(),
@@ -273,6 +286,7 @@ describe("M8 advisor rider-prompt eval", () => {
     if (proposal.status !== "ready") return;
     expect(proposal.command.operations.map((operation) => operation.type)).toEqual(entry.expectedOperations);
     expect(proposal.changes.map((change) => change.field)).toEqual(entry.expectedChanges);
+    if (entry.prompt === "Make it 30 minutes shorter") expect(proposal.command.operations[0]).toMatchObject({ time: { kind: "budget", targetMinutes: 90 } });
     expect(proposal.notes).toEqual(entry.unmappedDetails?.length || entry.extraFields !== undefined
       ? ["I left out a detail that does not map to a supported ride setting yet."]
       : []);

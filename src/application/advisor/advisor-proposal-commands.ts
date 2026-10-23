@@ -44,6 +44,7 @@ export interface ReadyAdvisorProposal {
 
 export type AdvisorProposalBuildResult =
   | ReadyAdvisorProposal
+  | { readonly status: "answer"; readonly message: string }
   | { readonly status: "clarification"; readonly message: string }
   | { readonly status: "unsupported"; readonly message: string }
   | {
@@ -204,6 +205,9 @@ export function buildAdvisorProposal(
 ): AdvisorProposalBuildResult {
   if (document.rideId !== draft.rideId || document.revision !== draft.baseRevision) {
     return failure("stale-revision");
+  }
+  if (draft.outcome === "answer") {
+    return { status: "answer", message: draft.answer ?? "Plan a ride first so I can explain it." };
   }
   if (draft.outcome === "clarification") {
     const messages = {
