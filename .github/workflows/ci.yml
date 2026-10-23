@@ -40,6 +40,9 @@ jobs:
       - name: Unit / integration / contract tests
         run: npm test
 
+      - name: Hermes board unit tests
+        run: python3 -m unittest discover -s tools/hermes/ogv-escalator -p 'test_*.py'
+
       - name: Architecture tests
         run: npm run test:architecture
 
