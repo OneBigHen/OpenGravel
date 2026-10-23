@@ -48,6 +48,10 @@ export interface RideSafety {
   imOkay(): void;
   alertNow(): void;
   imOkayNow(): void;
+  /** After mount: restores a shared link and restarts sending. */
+  restore(): void;
+  /** Before unmount: stops timers and any countdown; `restore` starts again. */
+  suspend(): void;
   dispose(): void;
 }
 
@@ -133,6 +137,13 @@ export function createRideSafety(deps: RideSafetyDeps): RideSafety {
     imOkay: () => { controller.dismiss(); },
     alertNow: () => { controller.alertNow(); },
     imOkayNow: () => { controller.cancelAfterAlert(); },
+    restore() {
+      deps.live.restore();
+    },
+    suspend() {
+      controller.reset();
+      deps.live.dispose();
+    },
     dispose() {
       unsubscribeLive();
       controller.dispose();

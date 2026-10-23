@@ -43,7 +43,7 @@ import {
 import { createBrowserRideEnvironment } from "@/infrastructure/ride/browser-ride-environment";
 import { createBrowserLeanMotion } from "@/infrastructure/motion/browser-lean-motion";
 import { createLiveShareSession } from "@/application/live/live-share";
-import { createRideSafety, type RideSafety } from "@/application/safety/ride-safety";
+import { createRideSafety } from "@/application/safety/ride-safety";
 import { createFixturePositionSource } from "@/infrastructure/ride/fixture-position-source";
 import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -157,68 +157,8 @@ export function RideClient({
       player?.dispose();
     };
   }, []);
-  // Live location sharing and crash detection (Follow my ride). Created after
-  // hydration: a ride that reloads mid-share restores its link from storage,
-  // which the server render cannot see.
-  const [safety, setSafety] = useState<RideSafety>();
-  // A plain holder, not a ref: the navigation engine's fix callback reads it.
-  const safetyFeed = useMemo<{ current: RideSafety | undefined }>(() => ({ current: undefined }), []);
   const crashMotion = useMemo(() => createBrowserLeanMotion(), []);
   const syncMotionRef = useRef<() => void>(() => undefined);
-  useEffect(() => {
-    let battery: { level: number } | null = null;
-    const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
-    void nav.getBattery?.().then((value) => { battery = value; }).catch(() => undefined);
-    const voice = nativeShellSpeech() ?? createBrowserSpeech();
-    const created = createRideSafety({
-      live: createLiveShareSession({
-        fetch: (input, init) => fetch(input, init),
-        now: () => Date.now(),
-        setInterval: (work, ms) => window.setInterval(work, ms),
-        clearInterval: (handle) => window.clearInterval(handle as number),
-        storage: {
-          read: () => { try { return window.localStorage.getItem("og.live.session"); } catch { return null; } },
-          write: (value) => {
-            try {
-              if (value === null) window.localStorage.removeItem("og.live.session");
-              else window.localStorage.setItem("og.live.session", value);
-            } catch { /* private window: the link lasts this page only */ }
-          },
-        },
-        battery: () => battery?.level ?? null,
-      }),
-      announce: (text) => {
-        void voice?.speakText?.(text);
-        haptic("heavy");
-      },
-    });
-    safetyFeed.current = created;
-    // After hydration, like the Spotify player: the stored link is client-only.
-    let cancelled = false;
-    void Promise.resolve().then(() => { if (!cancelled) setSafety(created); });
-    // Motion feeds crash detection only while a live link is shared.
-    let stopMotion: (() => void) | null = null;
-    const syncMotion = (): void => {
-      const sharing = created.snapshot().live.status === "sharing";
-      if (sharing && stopMotion === null && crashMotion.permission() === "granted") {
-        stopMotion = crashMotion.subscribe((g, atMs) => created.acceptMotion({ atMs, x: g.x, y: g.y, z: g.z }));
-      } else if (!sharing && stopMotion !== null) {
-        stopMotion();
-        stopMotion = null;
-      }
-    };
-    syncMotionRef.current = syncMotion;
-    syncMotion();
-    const unsubscribe = created.subscribe(syncMotion);
-    return () => {
-      cancelled = true;
-      unsubscribe();
-      stopMotion?.();
-      safetyFeed.current = undefined;
-      syncMotionRef.current = () => undefined;
-      created.dispose();
-    };
-  }, [crashMotion, safetyFeed]);
   const requestMotion = useCallback(async () => {
     const answer = await crashMotion.requestPermission();
     // Permission can arrive after the share started: subscribe now.
@@ -227,7 +167,7 @@ export function RideClient({
   }, [crashMotion]);
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
-  const { store, rides, library, activitySync } = useMemo(() => {
+  const { store, rides, library, activitySync, safety } = useMemo(() => {
     // The ride on the Lock Screen and Dynamic Island, inside the iOS app only.
     const rideActivity = nativeShellRideActivity();
     const activitySync = rideActivity === undefined ? null : createRideActivitySync(rideActivity);
@@ -284,6 +224,37 @@ export function RideClient({
       const port = nativeShellSpeech() ?? createBrowserSpeech();
       return port === undefined ? undefined : mutableSpeech(port);
     })();
+    // Live location sharing and crash detection (Follow my ride). The saved
+    // link is restored after mount (the server render cannot see it).
+    let battery: { level: number } | null = null;
+    const safety = createRideSafety({
+      live: createLiveShareSession({
+        fetch: (input, init) => fetch(input, init),
+        now: () => Date.now(),
+        setInterval: (work, ms) => window.setInterval(work, ms),
+        clearInterval: (handle) => window.clearInterval(handle as number),
+        storage: {
+          read: () => { try { return window.localStorage.getItem("og.live.session"); } catch { return null; } },
+          write: (value) => {
+            try {
+              if (value === null) window.localStorage.removeItem("og.live.session");
+              else window.localStorage.setItem("og.live.session", value);
+            } catch { /* private window: the link lasts this page only */ }
+          },
+        },
+        battery: () => {
+          if (battery === null && typeof navigator !== "undefined") {
+            const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
+            void nav.getBattery?.().then((value) => { battery = value; }).catch(() => undefined);
+          }
+          return battery?.level ?? null;
+        },
+      }),
+      announce: (text) => {
+        void opportunityVoice?.speakText?.(text);
+        haptic("heavy");
+      },
+    });
     const store = createRideFocusStore({
       controller: sessions,
       announceOpportunity: (text) => { void opportunityVoice?.speakText?.(text); },
@@ -380,7 +351,7 @@ export function RideClient({
             : nativeShellPositionSource() ?? createBrowserPositionSource()),
           onSessionFix: (fix, appliedState) => {
             freeRideTelemetry.accept(fix, appliedState);
-            safetyFeed.current?.acceptFix({
+            safety.acceptFix({
               atMs: Date.parse(fix.observedAt),
               lat: fix.coordinate.lat,
               lon: fix.coordinate.lon,
@@ -426,8 +397,32 @@ export function RideClient({
         };
       },
     });
-    return { rides, store, library, activitySync };
-  }, [fixturePosition, homeLocation, pointer, safetyFeed]);
+    return { rides, store, library, activitySync, safety };
+  }, [fixturePosition, homeLocation, pointer]);
+
+  useEffect(() => {
+    safety.restore();
+    // Motion feeds crash detection only while a live link is shared.
+    let stopMotion: (() => void) | null = null;
+    const syncMotion = (): void => {
+      const sharing = safety.snapshot().live.status === "sharing";
+      if (sharing && stopMotion === null && crashMotion.permission() === "granted") {
+        stopMotion = crashMotion.subscribe((g, atMs) => safety.acceptMotion({ atMs, x: g.x, y: g.y, z: g.z }));
+      } else if (!sharing && stopMotion !== null) {
+        stopMotion();
+        stopMotion = null;
+      }
+    };
+    syncMotionRef.current = syncMotion;
+    syncMotion();
+    const unsubscribe = safety.subscribe(syncMotion);
+    return () => {
+      unsubscribe();
+      stopMotion?.();
+      syncMotionRef.current = () => undefined;
+      safety.suspend();
+    };
+  }, [crashMotion, safety]);
 
   const mapLayersSource = useMemo(
     () => createRoadHistoryMapLayersSource(
@@ -501,7 +496,8 @@ export function RideClient({
       mapLayersSource={mapLayersSource}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
-      {...(safety === undefined ? {} : { safety, requestMotion })}
+      safety={safety}
+      requestMotion={requestMotion}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
   );

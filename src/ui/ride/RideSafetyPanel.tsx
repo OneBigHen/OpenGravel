@@ -15,6 +15,11 @@ import { CrashCheckOverlay } from "@/ui/safety/CrashCheckOverlay";
 
 const NAME_KEY = "og.live.riderName";
 
+/** The saved name never changes under the panel; there is nothing to watch. */
+function subscribeNothing(): () => void {
+  return () => undefined;
+}
+
 function readName(): string {
   try {
     return window.localStorage.getItem(NAME_KEY) ?? "";
@@ -31,11 +36,17 @@ function writeName(name: string): void {
   }
 }
 
+/** What the server render (and hydration) shows: nothing shared, no check. */
+const SERVER_SNAPSHOT: RideSafetySnapshot = {
+  live: { status: "off", followUrl: null, alert: null, lastSentAt: null, pending: 0, error: null },
+  crash: { phase: "idle", suspected: null, secondsRemaining: null },
+};
+
 function useSafety(safety: RideSafety): RideSafetySnapshot {
   return useSyncExternalStore(
     (listener) => safety.subscribe(listener),
     () => safety.snapshot(),
-    () => safety.snapshot(),
+    () => SERVER_SNAPSHOT,
   );
 }
 
@@ -72,8 +83,9 @@ export interface RideSafetyPanelProps {
 
 export function RideSafetyPanel({ safety, requestMotion }: RideSafetyPanelProps) {
   const { live } = useSafety(safety);
-  // The panel mounts only after hydration (the ride screen creates safety then).
-  const [name, setName] = useState(readName);
+  const [name, setName] = useState("");
+  const saved = useSyncExternalStore(subscribeNothing, readName, () => "");
+  const typedName = name !== "" ? name : saved;
   const [note, setNote] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
@@ -86,7 +98,7 @@ export function RideSafetyPanel({ safety, requestMotion }: RideSafetyPanelProps)
   const share = async (): Promise<void> => {
     setNote(null);
     void requestMotion?.();
-    const riderName = name.trim();
+    const riderName = typedName.trim();
     if (riderName !== "") writeName(riderName);
     const url = live.followUrl ?? (await safety.startSharing({ riderName: riderName === "" ? "Your rider" : riderName }));
     if (url === null) return;
@@ -127,7 +139,7 @@ export function RideSafetyPanel({ safety, requestMotion }: RideSafetyPanelProps)
         <span>Your name for the link</span>
         <input
           type="text"
-          value={name}
+          value={typedName}
           maxLength={40}
           autoComplete="given-name"
           placeholder="Zac"

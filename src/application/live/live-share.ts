@@ -69,7 +69,9 @@ export interface LiveShareSession {
   clearAlert(): Promise<void>;
   /** Sends what is left, marks the ride finished and forgets the link. */
   finish(): Promise<void>;
-  /** Stops timers without ending the ride (screen teardown). */
+  /** Picks up a link this device was sharing before a reload, and restarts sending. */
+  restore(): void;
+  /** Stops timers without ending the ride (screen teardown); `restore` restarts them. */
   dispose(): void;
 }
 
@@ -177,15 +179,6 @@ export function createLiveShareSession(deps: LiveShareDeps): LiveShareSession {
     }
   }
 
-  const stored = parseStored(deps.storage?.read() ?? null);
-  if (stored !== null) {
-    credentials = stored.credentials;
-    buffer = [...stored.buffer];
-    lastPoint = buffer.at(-1) ?? null;
-    state = { ...EMPTY, status: "sharing", followUrl: stored.credentials.followUrl, alert: stored.alert, pending: buffer.length };
-    arm();
-  }
-
   return {
     snapshot: () => state,
     subscribe(listener) {
@@ -267,9 +260,19 @@ export function createLiveShareSession(deps: LiveShareDeps): LiveShareSession {
       persist();
       publish({ ...EMPTY });
     },
+    restore() {
+      if (credentials === null) {
+        const stored = parseStored(deps.storage?.read() ?? null);
+        if (stored === null) return;
+        credentials = stored.credentials;
+        buffer = [...stored.buffer];
+        lastPoint = buffer.at(-1) ?? null;
+        publish({ status: "sharing", followUrl: stored.credentials.followUrl, alert: stored.alert, error: null });
+      }
+      arm();
+    },
     dispose() {
       disarm();
-      listeners.clear();
     },
   };
 }
