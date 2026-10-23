@@ -28,6 +28,7 @@ import { summarizeAdvisorRide } from "@/application/advisor/advisor-ride-summary
 import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import { cachedElevationClimb } from "./useElevationProfile";
 import { advisorRiderState } from "@/application/advisor/advisor-errors";
+import { RIDE_DESCRIPTION_MAX_LENGTH } from "@/application/advisor/ride-description";
 import type {
   AdvisorDraftResult,
   AdvisorProposalClient,
@@ -122,7 +123,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const ask = useCallback(
     (value: string, from: AdvisorSurface = "composer") => {
       const text = value.trim();
-      if (text.length < 2 || text.length > 600) return;
+      if (text.length < 2 || text.length > RIDE_DESCRIPTION_MAX_LENGTH) return;
       requestController.current?.abort();
       const controller = new AbortController();
       requestController.current = controller;
@@ -419,7 +420,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             aria-label="Describe your ride"
             placeholder="2 h of twisty backroads, no highways"
             enterKeyHint="go"
-            maxLength={600}
+            maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
             autoFocus
             value={composerText}
             onChange={(event) => { setOpen(true); setDraftBase(advisor.prompt); setDraft(event.target.value); }}
@@ -478,7 +479,7 @@ export function AdvisorRideAsk() {
             aria-label="Ask about this ride"
             placeholder="Ask or change anything: “lunch stop in Jim Thorpe”"
             enterKeyHint="send"
-            maxLength={600}
+            maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
           />

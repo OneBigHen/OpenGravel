@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
-import type { PlaceSearchPort } from "@/application/geocoding/place-search";
+import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
@@ -30,9 +30,26 @@ function jimThorpeLoop(document: RideDocument): AdvisorDraft {
   };
 }
 
-function places(): PlaceSearchPort & { search: ReturnType<typeof vi.fn> } {
+const OLD_MILL_GAP: PlaceMatch = {
+  id: "photon:addr-1",
+  label: "1234 Old Mill Gap Road, Stroudsburg, PA 18360",
+  name: "1234 Old Mill Gap Road",
+  context: "Stroudsburg, Monroe County, PA",
+  coordinate: { lat: 40.9868, lon: -75.1947 },
+  provider: "photon",
+};
+const COFFEE: PlaceMatch = {
+  id: "photon:poi-1",
+  label: "Notebook Coffee, Jim Thorpe, PA",
+  name: "Notebook Coffee",
+  context: "Jim Thorpe, Carbon County, PA",
+  coordinate: { lat: 40.8631, lon: -75.7377 },
+  provider: "photon",
+};
+
+function places(list: readonly PlaceMatch[] = []): PlaceSearchPort & { search: ReturnType<typeof vi.fn> } {
   return {
-    search: vi.fn(async () => ({ status: "ok" as const, places: [] })),
+    search: vi.fn(async () => ({ status: "ok" as const, places: list })),
     reverse: vi.fn(async () => null),
   };
 }
@@ -50,12 +67,18 @@ function WhereTo({ port }: { readonly port: PlaceSearchPort }) {
   );
 }
 
-function setup(options: { readonly enabled?: boolean; readonly onApplied?: () => AdvisorAppliedNext } = {}) {
+function setup(
+  options: {
+    readonly enabled?: boolean;
+    readonly onApplied?: () => AdvisorAppliedNext;
+    readonly places?: readonly PlaceMatch[];
+  } = {},
+) {
   const store = createRideDocumentStore({ document: createRideDocument() });
   const client: AdvisorProposalClient = {
     request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
   };
-  const port = places();
+  const port = places(options.places);
   render(
     <RideAdvisorProvider enabled={options.enabled ?? true} store={store} client={client} {...(options.onApplied === undefined ? {} : { onApplied: options.onApplied })}>
       <WhereTo port={port} />
@@ -87,6 +110,35 @@ describe("one box for where to and describe a ride", () => {
     await waitFor(() => expect(client.request).toHaveBeenCalledOnce());
     await new Promise((resolve) => setTimeout(resolve, 300));
     expect(port.search).not.toHaveBeenCalled();
+  });
+
+  it("accepts a ride description far longer than a place query", () => {
+    setup();
+    expect(screen.getByTestId("finish-search")).toHaveAttribute("maxLength", "600");
+  });
+
+  it("still searches places for a long street address", async () => {
+    const { port } = setup({ places: [OLD_MILL_GAP] });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "1234 Old Mill Gap Road, Stroudsburg, PA 18360" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByTestId("place-option")).toHaveLength(1));
+    expect(screen.getByText("1234 Old Mill Gap Road")).toBeInTheDocument();
+  });
+
+  it("keeps the place results for a business search, with the ride row after them", async () => {
+    const { port } = setup({ places: [COFFEE] });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "coffee shop, Jim Thorpe PA" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getAllByRole("option").map((option) => option.getAttribute("data-testid"))).toEqual([
+        "place-option",
+        "place-option-describe",
+      ]),
+    );
   });
 
   it("shows the proposal in rider words and plans it on one tap", async () => {
