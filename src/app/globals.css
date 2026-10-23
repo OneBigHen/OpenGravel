@@ -6562,7 +6562,7 @@ h3,
 }
 
 /*
-  `/ride` with no ride in progress (owner, 2026-10-05): nothing is running, so
+  `/ride` with no ride in progress: nothing is running, so
   the surface is not in ride mode and keeps the app's frame — the shared app
   bar, which is the bottom tab bar on a phone. The card clears the floating tab
   bar instead of sitting under it; ride mode drops the bar entirely, below.
