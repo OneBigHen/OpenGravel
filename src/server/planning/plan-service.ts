@@ -6,6 +6,7 @@ import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/rid
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
+import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
 import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
@@ -1167,6 +1168,52 @@ async function planRideAttempt(
     }
   }
 
+  let approachNotice: { readonly accessBlocked: boolean } | null = null;
+  if (pipeline.candidates.length === 0 && fixture === null && intent.shape === "destination" && candidates.length > 0
+    && pipeline.diagnostics.length > 0 && pipeline.diagnostics.every(entry => entry.code === "ineligible"
+      && entry.eligibilityCode !== undefined && ROAD_AUTHORITY_ELIGIBILITY_CODES.has(entry.eligibilityCode))) {
+    const approaches = candidates.map(candidate => {
+      const verdict = approachBlocksFor(candidate, roadVerdict(candidate));
+      return { verdict, targets: verdict === null ? [] : finalApproachTargets(candidate.geometry, verdict) };
+    });
+    // Every candidate must fail exclusively on a located final-approach block.
+    // A middle-route block or an unlocated/unknown restriction cannot authorize this fallback.
+    if (approaches.every(approach => approach.targets.length > 0)) {
+      const request = parsed.value.request;
+      const retries = approaches.flatMap(approach => approach.targets.map(target => ({ ...approach, target })))
+        .sort((a, b) => haversine(a.target, request.destination) - haversine(b.target, request.destination));
+      const attempted: Coordinate[] = [];
+      const retrySignal = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
+      for (const retry of retries) {
+        if (attempted.length >= 3 || retrySignal.aborted) break;
+        if (attempted.some(point => haversine(point, retry.target) < 25)) continue;
+        attempted.push(retry.target);
+        try {
+          const answer = await provider.candidates({
+            ...request, requestId: `${request.requestId}:approach:${attempted.length}`,
+            destination: retry.target, options: { ...request.options, includeAlternatives: false },
+          }, retrySignal);
+          const proposed = answer.candidates.filter(candidate => {
+            const end = candidate.geometry.at(-1);
+            return end !== undefined && haversine(end, retry.target) <= 125
+              && !blockedRoadOverlap(candidate.geometry, retry.verdict!);
+          });
+          const ownRoads = await assessRoads(proposed, retrySignal);
+          const checked = rank(proposed, candidate => ownRoads?.evaluate(candidate.geometry) ?? null);
+          if (checked.candidates.length === 0) continue;
+          candidates = proposed;
+          roads = ownRoads;
+          pipeline = checked;
+          approachNotice = { accessBlocked: retry.verdict!.failures.some(failure => failure.code === "access-prohibited") };
+          break;
+        } catch {
+          if (signal.aborted) throw signal.reason;
+          // An optional retry cannot replace the original blocked-road diagnosis.
+        }
+      }
+    }
+  }
+
   if (pipeline.candidates.length === 0) {
     // Candidates the engine returned own their eligibility diagnosis. An
     // optional lane's refusal cannot explain why another lane's line was dropped.
@@ -1191,7 +1238,16 @@ async function planRideAttempt(
     };
   }
 
-  const mapped = pipeline.candidates.map(toRoutePlanCandidate);
+  const mapped = pipeline.candidates.map(candidate => {
+    const wire = toRoutePlanCandidate(candidate);
+    return approachNotice === null ? wire : {
+      ...wire,
+      warnings: [...wire.warnings, {
+        id: "destination:final-approach", code: "destination-final-approach", severity: "warning" as const,
+        message: finalApproachMessage(candidate.geometry.at(-1)!, parsed.value.request.destination, approachNotice.accessBlocked, parsed.value.request.destinationLabel),
+      }],
+    };
+  });
   let rideFormulaDiagnostic: NonNullable<RoutePlanDiagnosticsWire["rideFormula"]> | null = null;
   if (formulaMode !== "off") {
     const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));

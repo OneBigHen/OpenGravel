@@ -28,6 +28,7 @@ export function requestRoadAssessments(authority: RoadAuthorityCoordinator | nul
         if (previous !== null && contains(previous.box, boundingBoxOf(line))) return prior!;
         return {
           failures: prior?.failures ?? [],
+          ...(prior?.blockedRoads === undefined ? {} : { blockedRoads: prior.blockedRoads }),
           warnings: [...(prior?.warnings ?? []), { code: "road-authority-unavailable", message: reason }],
           evidence: {
             closures: prior?.failures.some(failure => failure.code === "road-closed") ? prior.evidence.closures : unknownEvidence(reason),

@@ -430,10 +430,14 @@ export async function buildProviderRequest(
     vehicle: "motorcycle",
   };
 
+  const destinationLabel = intent.shape === "destination"
+    ? intent.finish?.label?.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 200)
+    : undefined;
   const request = deepFreeze<ProviderRouteRequest>({
     requestId: context.requestId ?? mintRequestId(),
     origin: copyCoordinate(origin),
     destination: copyCoordinate(destination),
+    ...(destinationLabel ? { destinationLabel } : {}),
     stops: intent.stops.map((stop) => copyCoordinate(stop.coordinate)),
     shaping: intent.shaping.map((point) => copyCoordinate(point.coordinate)),
     profile,
