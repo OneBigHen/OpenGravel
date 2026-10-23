@@ -403,8 +403,7 @@ export function PlannerWorkspace({
         bundle: session.committedBundle ?? session.lastGoodBundle,
         selectedCandidate,
         hasRouteLine: activeRoute !== null,
-        sketchPreview: showingSketchPreview,
-        sketchDerivedEndpoints,
+        sketchPreview: showingSketchPreview, sketchDerivedEndpoints,
       }),
     [document, session, selectedCandidate, activeRoute, showingSketchPreview, sketchDerivedEndpoints],
   );
