@@ -351,7 +351,10 @@ export class SQLiteLiveRideStore {
       .get(row.id) as PointRow | undefined;
     const trail = this.#db
       .prepare("SELECT t,lat,lon,speed FROM live_points WHERE ride_id=? ORDER BY t")
-      .all(row.id) as unknown as LiveTrailPoint[];
+      .all(row.id)
+      // node:sqlite rows have a null prototype; a Server Component cannot hand
+      // those to the follow page, so copy them into plain objects.
+      .map((point) => ({ t: Number(point["t"]), lat: Number(point["lat"]), lon: Number(point["lon"]), speed: point["speed"] === null ? null : Number(point["speed"]) })) as LiveTrailPoint[];
     return {
       riderName: row.rider_name,
       status: row.status as LiveRideStatus,

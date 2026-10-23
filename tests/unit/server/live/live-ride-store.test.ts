@@ -93,6 +93,18 @@ describe("live ride store", () => {
     expect(JSON.stringify(snapshot)).not.toContain(ride.secret);
   });
 
+  it("hands the follow page plain objects a Server Component can pass on", () => {
+    const time = clock();
+    const target = store({ now: time.now });
+    const ride = create(target);
+    target.appendPoints(ride.id, ride.secret, [point(time.now())]);
+    const snapshot = target.followSnapshot(ride.token);
+    expect(snapshot?.trail).toHaveLength(1);
+    for (const value of [snapshot?.last, ...(snapshot?.trail ?? [])]) {
+      expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+    }
+  });
+
   it("refuses writes with the wrong secret and reads for unknown tokens", () => {
     const time = clock();
     const target = store({ now: time.now });
