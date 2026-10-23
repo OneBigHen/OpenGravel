@@ -3471,6 +3471,9 @@ h3,
      down, so two fields can never overlap at a narrow phone width. */
   grid-auto-rows: minmax(min-content, max-content);
   min-height: 44px;
+  /* The sheet body is a flex column: without this a row of wrapped ride-time
+     chips was squeezed to 120 px of its 144 px and painted over the next row. */
+  flex-shrink: 0;
 }
 
 /* With place search (M1) the row is two lines: the name beside the label, then
