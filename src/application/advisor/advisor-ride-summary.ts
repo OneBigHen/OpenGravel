@@ -128,5 +128,5 @@ export function isAdvisorRideSummary(value: unknown): value is AdvisorRideSummar
 /** Model chooses the answer intent; only the app's bounded facts become the answer. */
 export function advisorRideAnswer(summary: AdvisorRideSummary | undefined): string {
   if (summary === undefined) return "Plan a ride first, then I can explain the selected route.";
-  return `${summary.why} About ${Math.round(summary.distanceKm / 1.609344)} miles and ${Math.round(summary.durationMinutes)} minutes. ${summary.surface}. ${summary.curviness}. ${summary.climbMeters === null ? "Climb unknown." : `Estimated climb: ${summary.climbMeters} m.`} Access, closures and legality are not established by this summary.`;
+  return `${summary.why} About ${Math.round(summary.distanceKm / 1.609344)} miles and ${Math.round(summary.durationMinutes)} minutes. ${summary.surface}. ${summary.curviness}. ${summary.climbMeters === null ? "Climb unknown." : `About ${Math.round(summary.climbMeters * 3.28084).toLocaleString("en-US")} ft of climbing.`} I can't see closures, gates or access rules, so check those before you go.`;
 }
