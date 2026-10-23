@@ -42,10 +42,21 @@ function body(overrides: Record<string, unknown> = {}): string {
   });
 }
 
+let clientAddressSeq = 0;
+/**
+ * Each submission comes from its own client address (198.18.0.0/15, the
+ * benchmarking range), so these tests exercise the per-reporter caps rather
+ * than the route's per-address budget, which every key is metered by.
+ */
+function nextClientAddress(): string {
+  clientAddressSeq += 1;
+  return `198.18.${Math.floor(clientAddressSeq / 250)}.${(clientAddressSeq % 250) + 1}`;
+}
+
 function postRequest(payload: string): Request {
   return new Request("http://localhost/api/contributions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-real-ip": nextClientAddress() },
     body: payload,
   });
 }
