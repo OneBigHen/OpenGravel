@@ -1,3 +1,5 @@
+import { HIDDEN_ROUTES_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+
 /**
  * Routes this device has hidden from its own Explore list.
  *
@@ -6,7 +8,7 @@
  * showing it to me". The detail page stays reachable by link and offers the
  * reverse action.
  */
-const STORAGE_KEY = "opengravel.explore.hidden-routes";
+const STORAGE_KEY = HIDDEN_ROUTES_STORAGE_KEY;
 
 function read(): Set<string> {
   if (typeof window === "undefined") return new Set();

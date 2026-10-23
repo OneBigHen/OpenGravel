@@ -18,3 +18,6 @@ export const VOICE_MUTED_STORAGE_KEY = "ogv.ride.voiceMuted";
 
 /** The rider's own Spotify app client id (`client-id.ts`). */
 export const SPOTIFY_CLIENT_ID_STORAGE_KEY = "OGV_SPOTIFY_CLIENT_ID";
+
+/** Catalog routes this device has hidden from its own Explore list (a local preference). */
+export const HIDDEN_ROUTES_STORAGE_KEY = "opengravel.explore.hidden-routes";
