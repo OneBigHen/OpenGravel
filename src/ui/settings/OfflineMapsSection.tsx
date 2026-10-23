@@ -77,6 +77,10 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
   }, [regions]);
 
   async function download(regionId: string, name: string): Promise<void> {
+    // The lock is the ref, not the rendered state: two taps in the same frame
+    // both read `active === null` from the previous render, and would start two
+    // downloads of the same tiles whose counters and completion fight.
+    if (activeRef.current !== null) return;
     const controller = new AbortController();
     const started: ActiveDownload = { regionId, progress: null, controller };
     activeRef.current = started;
@@ -102,6 +106,8 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
   }
 
   async function remove(regionId: string, name: string): Promise<void> {
+    // Removing under a live download leaves a half-written area behind.
+    if (activeRef.current !== null || removing) return;
     setRemoving(true);
     setMessage(null);
     try {
