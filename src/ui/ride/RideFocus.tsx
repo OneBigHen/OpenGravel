@@ -433,9 +433,9 @@ export function RideFocus({
   );
 
   /*
-    Nothing is running. That is an ordinary state, not an error (owner,
-    2026-10-05: the old screen offered a dead "Try again" on a blank page with
-    no tab bar, so a rider who opened /ride was stranded). It keeps the app's
+    Nothing is running. That is an ordinary state, not an error (the old
+    screen offered a dead "Try again" on a blank page with no tab bar, so a
+    rider who opened /ride was stranded). It keeps the app's
     frame — the shared bar, which is the bottom tab bar on a phone — and the
     same invitation card the My rides library opens with: a headline, one line
     that says what to do, and Plan a ride. Ride mode below drops all of it.
