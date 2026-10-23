@@ -57,3 +57,18 @@ describe("readQuery: a ride or a place?", () => {
     expect(readQuery("Jim")).toBe("place");
   });
 });
+
+describe("ride phrases", () => {
+  it.each([
+    "loop from Jim Thorpe, leave at 8",
+    "ride from Doylestown to the coast",
+    "lunch stop in Jim Thorpe",
+    "leave by 9 and back by lunch",
+  ])("reads %s as a ride", (text) => {
+    expect(readQuery(text)).toBe("ride");
+  });
+
+  it.each(["Loop Road", "Lunch Box Cafe, Easton PA", "Ride Shop, Stroudsburg, PA"])("keeps %s a place", (text) => {
+    expect(readQuery(text)).not.toBe("ride");
+  });
+});

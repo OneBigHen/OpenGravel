@@ -34,6 +34,14 @@ export const RIDE_DESCRIPTION_MAX_LENGTH = 600;
 const RIDE_WORDS =
   /\b(round ?trip|twist(y|ies)|curv(y|es)|windy|backroads?|back roads?|gravel|dirt|unpaved|paved|scenic|highways?|interstates?|tolls?|avoid|hours?|hrs?|minutes?|mins?|miles?|mi|km|ride|riding|cruise|rip|spirited|dual ?sport|adv|new roads?|unridden|familiar|haven'?t ridden|never ridden|not ridden|return(ing)?|home by|back by)\b/i;
 
+/**
+ * Phrases that only a ride description uses, even when each word alone is
+ * also a place name: "loop from Jim Thorpe", "leave at 8", "lunch in Jim
+ * Thorpe". "Loop Road" and "Lunch Box Cafe" stay place searches.
+ */
+const RIDE_PHRASES =
+  /\b(?:loop|ride|run)\s+(?:from|near|around|out of|starting)\b|\b(?:leave|leaving|depart(?:ing)?|start(?:ing)?)\s+(?:at|by|around|after)\s+\d|\b(?:lunch|coffee|breakfast|gas|fuel)\s+(?:stop|in|at|near|on the way|along the way)\b/i;
+
 /** "2h", "90 min", "1.5 hours", "60mi": a duration or a distance. */
 const AMOUNT = /\b\d+(\.\d+)?\s?(h|hr|hrs|hours?|m|min|mins|minutes?|mi|miles?|km)\b/i;
 
@@ -73,6 +81,8 @@ export function readQuery(text: string): QueryReading {
   const words = trimmed.split(/\s+/).filter((word) => word.length > 0);
   // A duration or a distance is a ride ask, whatever else the text says.
   if (AMOUNT.test(trimmed)) return "ride";
+  // "loop from Jim Thorpe, leave at 8" is a ride even with a place in it.
+  if (RIDE_PHRASES.test(trimmed)) return "ride";
   // "1234 Old Mill Gap Road, Stroudsburg, PA 18360" is a place search even when
   // it is long enough to read like a sentence: the geocoder is what the rider
   // wants here.
