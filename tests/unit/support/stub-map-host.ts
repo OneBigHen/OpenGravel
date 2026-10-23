@@ -13,6 +13,7 @@ import { DEFAULT_MAP_EXTENT, type MapExtent } from "@/application/map/build-map-
 import type { InteractionEvent } from "@/application/map/interaction";
 import type { MapInsets } from "@/application/map/insets";
 import type {
+  MapCameraState,
   MapHost,
   MapHostFactory,
   MapHostOptions,
@@ -32,6 +33,10 @@ export interface StubMapHost extends MapHost {
   readonly fits: StubFit[];
   /** Every heading-up ride camera the surface asked for (DV-10). */
   readonly follows: RideCamera[];
+  /** Every zoom step the rider's zoom buttons asked for, in order (05 §9). */
+  readonly zooms: number[];
+  /** How many times the compass asked the map to face north. */
+  readonly northResets: number;
   readonly events: InteractionEvent[];
   /** How many times `dispose()` was called. */
   readonly disposals: number;
@@ -58,6 +63,11 @@ export interface StubMapHost extends MapHost {
   reportStatus(status: MapLoadStatus): void;
   /** Drive the visible extent after the surface subscribes (OGV-D-274). */
   reportViewport(extent: MapExtent): void;
+  /**
+   * Drive a camera reading exactly as the MapLibre host would (05 §9): every
+   * camera listener hears it, including the replay a late subscriber gets.
+   */
+  reportCamera(camera: MapCameraState): void;
   lastScene(): MapScene | null;
   /** Drop every recorded call, keeping the subscription. */
   reset(): void;
@@ -68,22 +78,38 @@ export function createStubMapHost(): StubMapHost {
   const errorListeners = new Set<(error: MapRenderError) => void>();
   const statusListeners = new Set<(status: MapLoadStatus) => void>();
   const viewportListeners = new Set<(extent: MapExtent) => void>();
+  const cameraListeners = new Set<(camera: MapCameraState) => void>();
   const scenes: MapScene[] = [];
   const fits: StubFit[] = [];
   const follows: RideCamera[] = [];
   const events: InteractionEvent[] = [];
+  const zooms: number[] = [];
+  let northResets = 0;
   let disposals = 0;
   let retries = 0;
   // A fresh renderer is `loading` until it says otherwise (4.0s), which is also
   // the state a late subscriber must be told about.
   let status: MapLoadStatus = { state: "loading", reason: null };
+  // An unturned, mid-zoom camera, so the default compass is hidden and neither
+  // zoom button claims a limit it does not know about.
+  let camera: MapCameraState = {
+    bearing: 0,
+    zoom: 12,
+    minZoom: 0,
+    maxZoom: 22,
+    metersPerPixel: 38.2,
+  };
   let container: HTMLElement | null = null;
   let hostOptions: MapHostOptions | null = null;
   const host: StubMapHost = {
     scenes,
     fits,
     follows,
+    zooms,
     events,
+    get northResets(): number {
+      return northResets;
+    },
     get disposals(): number {
       return disposals;
     },
@@ -132,6 +158,22 @@ export function createStubMapHost(): StubMapHost {
       listener(DEFAULT_MAP_EXTENT);
       return () => viewportListeners.delete(listener);
     },
+    onCamera(listener: (next: MapCameraState) => void): () => void {
+      cameraListeners.add(listener);
+      // The real host replays the camera that holds, so a compass mounted into an
+      // already-turned map points the right way at once.
+      listener(camera);
+      return () => cameraListeners.delete(listener);
+    },
+    zoomBy(delta: number): void {
+      zooms.push(delta);
+    },
+    faceNorth(): void {
+      northResets += 1;
+      // The real host eases to north; the double says the same thing, so the
+      // compass's visible state follows without WebGL.
+      host.reportCamera({ ...camera, bearing: 0 });
+    },
     retry(): void {
       retries += 1;
       // The real host publishes `retrying` before it rebuilds; the double says
@@ -143,6 +185,7 @@ export function createStubMapHost(): StubMapHost {
       errorListeners.clear();
       statusListeners.clear();
       viewportListeners.clear();
+      cameraListeners.clear();
       disposals += 1;
     },
     reportStatus(next: MapLoadStatus): void {
@@ -158,6 +201,10 @@ export function createStubMapHost(): StubMapHost {
     reportViewport(extent: MapExtent): void {
       for (const listener of [...viewportListeners]) listener(extent);
     },
+    reportCamera(next: MapCameraState): void {
+      camera = next;
+      for (const listener of [...cameraListeners]) listener(next);
+    },
     emit(intent: MapIntent): void {
       for (const listener of [...listeners]) listener(intent);
     },
@@ -172,6 +219,7 @@ export function createStubMapHost(): StubMapHost {
       scenes.length = 0;
       fits.length = 0;
       follows.length = 0;
+      zooms.length = 0;
       events.length = 0;
     },
   };
