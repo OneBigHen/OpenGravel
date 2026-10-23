@@ -14,7 +14,19 @@ import dynamic from "next/dynamic";
 
 import { useMemo, useState } from "react";
 
-import type { LibraryServicePort } from "@/application/library/library-service";
+import {
+  waypointsFromIntent,
+  type LibraryServicePort,
+} from "@/application/library/library-service";
+import {
+  buildPlannedRouteGpx,
+  buildPlannedTrackGpx,
+  downloadExport,
+  exportFilename,
+  rideExportTitle,
+  type ExportMode,
+} from "@/application/export/gpx-export";
+import { ExportMenu } from "@/ui/rides/ExportMenu";
 import type { ShareServicePort } from "@/application/sharing/share-commands";
 import type { RideDocument } from "@/domain/ride/types";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
@@ -79,6 +91,9 @@ export function RideActions({
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [freeRideState, setFreeRideState] = useState<"idle" | "starting">("idle");
   const [freeRideError, setFreeRideError] = useState<string | null>(null);
+  // Start, stops and finish are the route's waypoints; unnamed points stay unnamed.
+  const waypoints = useMemo(() => waypointsFromIntent(document.intent), [document.intent]);
+  const exportTitle = rideExportTitle(document.title);
 
   const trimmed = title.trim();
   const canSave = libraryService !== undefined && trimmed.length > 0 && saveState !== "saving";
@@ -93,7 +108,14 @@ export function RideActions({
     try {
       await libraryService.saveNamed(document, {
         title: trimmed,
-        ...(route === null ? {} : { offlinePack: route.pack, bundleSummary: bundleSummaryOf(route) }),
+        // The selected line is what My rides needs to export this ride later.
+        ...(route === null
+          ? {}
+          : {
+              offlinePack: route.pack,
+              bundleSummary: bundleSummaryOf(route),
+              plannedRoute: { geometry: route.geometry },
+            }),
       });
       setSaveState("saved");
       setSavedTitle(trimmed);
@@ -101,6 +123,24 @@ export function RideActions({
     } catch {
       setSaveState("failed");
     }
+  };
+
+  /**
+   * The route on screen is enough to export: the rider does not have to save
+   * first, and nothing is written to the library by downloading a file.
+   */
+  const exportRoute = async (mode: ExportMode): Promise<void> => {
+    if (route === null || (mode !== "planned-route" && mode !== "planned-track")) {
+      throw new Error("Only the planned route can be exported from here.");
+    }
+    const input = {
+      title: exportTitle,
+      geometry: route.geometry,
+      waypoints,
+      createdTime: document.createdAt,
+    };
+    const xml = mode === "planned-route" ? buildPlannedRouteGpx(input) : buildPlannedTrackGpx(input);
+    downloadExport(new TextEncoder().encode(xml), exportFilename(exportTitle, mode));
   };
 
   const recordRideNow = async (): Promise<void> => {
@@ -254,6 +294,18 @@ export function RideActions({
           </button>
         </form>
       ) : null}
+      {route === null ? null : (
+        <div className="og-plan-actions__row">
+          <ExportMenu
+            title={exportTitle}
+            capabilities={{ plannedRoute: true, track: false, original: false }}
+            onExport={exportRoute}
+            {...(shareService === undefined || shareSource === null
+              ? {}
+              : { onShare: () => setShareOpen(true) })}
+          />
+        </div>
+      )}
       {freeRideError === null ? null : (
         <p className="og-planner__error" data-testid="just-ride-error" role="alert">
           {freeRideError}
