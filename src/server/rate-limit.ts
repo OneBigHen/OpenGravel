@@ -25,6 +25,16 @@ export interface RateLimitOptions {
 const MAX_TRACKED_KEYS = 10_000;
 const IP_LIKE = /^[\d.a-fA-F:[\]%]+$/;
 
+/**
+ * The browser gate drives one origin from one address and plans many rides per
+ * spec, so its own per-client budgets would answer 429 before the workflow it
+ * is testing had run. `playwright.config.ts` sets this flag on the server it
+ * starts; unset, the configured budgets are exactly what production enforces.
+ * It lifts the per-client windows only — the concurrency gates and daily caps
+ * still apply, because they bound work, not a single caller.
+ */
+export const RATE_LIMIT_UNLIMITED_ENV = "OGV_RATE_LIMIT_UNLIMITED";
+
 export function clientKey(request: Request, env: Readonly<Record<string, string | undefined>> = process.env): string {
   if (env.TRUST_CF_CONNECTING_IP === "1") {
     const cf = request.headers.get("cf-connecting-ip")?.trim();
@@ -49,7 +59,9 @@ export function actionableAddress(key: string): string | null {
 }
 
 export function createRateLimiter(options: RateLimitOptions): RateLimiter {
+  const env = options.env ?? process.env;
   const now = options.now ?? Date.now;
+  const max = env[RATE_LIMIT_UNLIMITED_ENV] === "1" ? Number.POSITIVE_INFINITY : options.max;
   const hitsByKey = new Map<string, number[]>();
 
   return {
@@ -61,9 +73,9 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
           if (hits.every((hit) => hit <= cutoff)) hitsByKey.delete(key);
         }
       }
-      const key = clientKey(request, options.env);
+      const key = clientKey(request, env);
       const hits = (hitsByKey.get(key) ?? []).filter((hit) => hit > cutoff);
-      if (hits.length >= options.max) {
+      if (hits.length >= max) {
         hitsByKey.set(key, hits);
         const oldest = hits[0] ?? time;
         return Math.max(1, Math.ceil((oldest + options.windowMs - time) / 1000));

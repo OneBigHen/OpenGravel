@@ -105,6 +105,10 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       OGV_ROUTE_PLAN_FIXTURE: "1",
+      // The gate plans many rides from one address; its own per-client API
+      // budgets would turn the next spec's plan into a 429. The flag lifts
+      // those windows for this server only (`src/server/rate-limit.ts`).
+      OGV_RATE_LIMIT_UNLIMITED: "1",
       OGV_CATALOG_FIXTURE: "1",
       COMMUNITY_DB_PATH: ":memory:",
       OGV_SHARE_DB_PATH: join(mkdtempSync(join(tmpdir(), "og-share-e2e-")), "shares.sqlite"),
