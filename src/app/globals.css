@@ -6480,6 +6480,70 @@ h3,
   border-radius: var(--og-radius-object);
 }
 
+.og-ride__safety {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+}
+
+.og-ride__safety-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.og-ride__safety-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--og-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--og-success) 30%, transparent);
+}
+
+.og-ride__safety-status,
+.og-ride__safety-note {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: 13px;
+}
+
+.og-ride__safety-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__safety-actions > button {
+  flex: 1 1 0;
+}
+
+.og-ride__safety-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--og-ride-muted);
+}
+
+.og-ride__safety-name input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-control);
+  background: var(--og-ride-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.og-ride__safety-name input:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
 .og-ride__spotify {
   display: flex;
   flex-direction: column;
@@ -13320,4 +13384,172 @@ a.og-secondary {
 .og-map-point-menu__info p { margin: 6px 0 0; }
 @media (prefers-reduced-transparency: reduce) {
   .og-map-point-menu { background: var(--og-paper); backdrop-filter: none; }
+}
+
+/* Crash check (issue #12 follower safety): the one screen that takes over a
+   ride. Full-bleed Ink with Paper text, the seconds in the largest type in the
+   app, and an "I'm OK" button that fills at least 40 % of the viewport height
+   so a gloved hand or a bystander cannot miss it. Everything scrolls rather
+   than clips on a short phone; only the countdown's unit pulses, and
+   `prefers-reduced-motion` removes even that. */
+.og-ride-crash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, var(--og-safe-top)) max(16px, var(--og-safe-right))
+    max(16px, var(--og-safe-bottom)) max(16px, var(--og-safe-left));
+  background: var(--og-ink);
+  color: var(--og-paper);
+}
+
+.og-ride-crash__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.og-ride-crash__eyebrow {
+  margin: 0;
+  font-size: var(--og-text-eyebrow);
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--og-danger-light);
+}
+
+.og-ride-crash__title {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 48px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__digits {
+  font-size: clamp(72px, 22vh, 160px);
+  font-weight: 800;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-crash__unit {
+  font-size: clamp(24px, 6vh, 40px);
+  font-weight: 700;
+  color: var(--og-paper);
+  animation: og-crash-pulse 2s ease-in-out infinite;
+}
+
+@keyframes og-crash-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.og-ride-crash__line {
+  margin: 0;
+  font-size: clamp(17px, 2.4vh, 21px);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* The glove target: 40 % of the viewport height, never a tiny corner button. */
+.og-ride-crash__ok {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 40vh;
+  min-height: 40dvh;
+  padding: 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--og-success);
+  color: var(--og-paper);
+  font: inherit;
+  font-size: clamp(30px, 7vh, 52px);
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.og-ride-crash__alert,
+.og-ride-crash__call {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--og-radius-control);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__alert {
+  border: 1px solid var(--og-border-dark);
+  background: transparent;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__call {
+  border: 0;
+  background: var(--og-ember-strong);
+  color: var(--og-paper);
+}
+
+.og-ride-crash :is(button, a):focus-visible {
+  outline: 3px solid var(--og-golden-hour);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-ride-crash__unit {
+    animation: none;
+  }
+}
+
+/* Phone landscape: the digit block would push the button off-screen, so the
+   seconds shrink and everything still scrolls inside the panel. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride-crash__digits {
+    font-size: clamp(44px, 16vh, 84px);
+  }
+
+  .og-ride-crash__title {
+    font-size: clamp(24px, 7vh, 34px);
+  }
 }

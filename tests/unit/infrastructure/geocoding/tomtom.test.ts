@@ -23,7 +23,7 @@ describe("TomTom place search", () => {
   });
 
   it("searches near the bias and never leaks the key into results", async () => {
-    const fetcher = vi.fn(async (_url: URL | RequestInfo) => json({ results: [{ id: "1", type: "POI", poi: { name: "Wawa" }, address: { municipality: "Jim Thorpe", countrySubdivisionCode: "PA", countryCode: "US" }, position: { lat: 40.86, lon: -75.74 } }] }));
+    const fetcher = vi.fn(async (_url: URL | RequestInfo) =>  json({ results: [{ id: "1", type: "POI", poi: { name: "Wawa" }, address: { municipality: "Jim Thorpe", countrySubdivisionCode: "PA", countryCode: "US" }, position: { lat: 40.86, lon: -75.74 } }] }));
     const places = await createTomTomGeocoder({ apiKey: "secret-key", fetcher: fetcher as unknown as typeof fetch }).search("Wawa Jim Thorpe", { bias: { lat: 40.87, lon: -75.73 } });
     const url = new URL(String(fetcher.mock.calls[0]?.[0]));
     expect(url.pathname).toBe("/search/2/search/Wawa%20Jim%20Thorpe.json");
