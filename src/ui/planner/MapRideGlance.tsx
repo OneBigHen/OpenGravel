@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The glance strip: the live ride summary over the map (owner request).
+ * The glance strip: the live ride summary over the map.
  *
  * A rider looking at a drawn route has one question the sheet answers only after
  * it is opened — *how big is this ride?* This is that answer, always on screen

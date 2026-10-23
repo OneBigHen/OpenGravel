@@ -1,5 +1,5 @@
 /**
- * The glance strip (owner request): the live ride summary over the map.
+ * The glance strip: the live ride summary over the map.
  *
  * The pill answers "how big is this ride?" without the sheet, so what it claims
  * matters: it states the selected route's own labels, omits a climb nobody
