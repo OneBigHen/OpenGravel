@@ -50,6 +50,12 @@ export interface ElevationProfile {
   readonly maxMeters: number;
   /** Steepest sustained grade uphill, as a percentage; `null` on a short line. */
   readonly steepestGradePercent: number | null;
+  /**
+   * Where the steepest run sits, as a 0–1 share of the ride (its midpoint), so
+   * the chart can annotate the climb the percentage is about. `null` when no
+   * sustained run exists.
+   */
+  readonly steepestGradeShare: number | null;
 }
 
 /** `count` points evenly spaced along the line by distance, both ends included. */
@@ -97,8 +103,15 @@ function climbAndDescent(elevations: readonly number[]): { climb: number; descen
   return { climb, descent };
 }
 
-function steepestGrade(points: ElevationProfile["points"]): number | null {
-  let steepest: number | null = null;
+interface SteepestGrade {
+  readonly percent: number;
+  readonly share: number;
+}
+
+function steepestGrade(points: ElevationProfile["points"]): SteepestGrade | null {
+  const total = points[points.length - 1]?.distanceMeters ?? 0;
+  if (total <= 0) return null;
+  let steepest: SteepestGrade | null = null;
   let back = 0;
   for (let index = 1; index < points.length; index += 1) {
     const here = points[index]!;
@@ -107,9 +120,28 @@ function steepestGrade(points: ElevationProfile["points"]): number | null {
     const run = here.distanceMeters - from.distanceMeters;
     if (run < GRADE_RUN_METERS) continue;
     const grade = ((here.elevationMeters - from.elevationMeters) / run) * 100;
-    if (steepest === null || grade > steepest) steepest = grade;
+    if (steepest === null || grade > steepest.percent) {
+      steepest = {
+        percent: grade,
+        share: (from.distanceMeters + here.distanceMeters) / 2 / total,
+      };
+    }
   }
   return steepest;
+}
+
+/** The sample nearest `share` of the way along the ride; `null` when unreadable. */
+export function pointAtShare(
+  profile: ElevationProfile,
+  share: number,
+): ElevationProfile["points"][number] | null {
+  if (profile.points.length === 0 || profile.totalMeters <= 0 || !Number.isFinite(share)) return null;
+  const target = Math.min(1, Math.max(0, share)) * profile.totalMeters;
+  let best = profile.points[0]!;
+  for (const point of profile.points) {
+    if (Math.abs(point.distanceMeters - target) < Math.abs(best.distanceMeters - target)) best = point;
+  }
+  return best;
 }
 
 /** The profile from samples and the source's answer; `null` if they disagree. */
@@ -125,6 +157,7 @@ export function buildElevationProfile(
     coordinate: sample.coordinate,
   }));
   const { climb, descent } = climbAndDescent(elevationsMeters);
+  const steepest = steepestGrade(points);
   return {
     points,
     totalMeters: samples[samples.length - 1]!.distanceMeters,
@@ -132,6 +165,7 @@ export function buildElevationProfile(
     descentMeters: descent,
     minMeters: Math.min(...elevationsMeters),
     maxMeters: Math.max(...elevationsMeters),
-    steepestGradePercent: steepestGrade(points),
+    steepestGradePercent: steepest?.percent ?? null,
+    steepestGradeShare: steepest === null ? null : Math.min(1, Math.max(0, steepest.share)),
   };
 }

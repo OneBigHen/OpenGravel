@@ -101,6 +101,8 @@ import {
   usePlannerHistoryActions,
   usePlannerSheetActions,
   usePlannerMapIntentController,
+  usePlanCommand,
+  useRideGlance,
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
@@ -557,14 +559,7 @@ export function PlannerWorkspace({
     [plannerUiStore, scene],
   );
 
-  const handlePlan = useCallback((): void => {
-    markRevisionAttempted(document.revision);
-    void planningSessionStore.getState().begin({
-      rideId: document.rideId,
-      rideRevision: document.revision,
-      intent: document.intent,
-    });
-  }, [document, markRevisionAttempted, planningSessionStore]);
+  const handlePlan = usePlanCommand({ document, markRevisionAttempted, planningSessionStore });
 
   const handleCancel = useCallback((): void => {
     planningSessionStore.getState().cancel();
@@ -688,22 +683,6 @@ export function PlannerWorkspace({
   );
 
   /**
-   * Retry: ask again for the revision on screen (04 §21).
-   *
-   * The automatic replan guard is armed for this revision on purpose: a retry is an
-   * explicit rider action and must be allowed to spend an attempt the background
-   * rule has already spent, while still preventing a failure from looping.
-   */
-  const handleRetryFailedUpdate = useCallback((): void => {
-    markRevisionAttempted(document.revision);
-    void planningSessionStore.getState().begin({
-      rideId: document.rideId,
-      rideRevision: document.revision,
-      intent: document.intent,
-    });
-  }, [document, markRevisionAttempted, planningSessionStore]);
-
-  /**
    * Edit: open the editor of the object the failed change touched (04 §21).
    *
    * The target is derived from the change itself (`update-recovery.ts`); this
@@ -769,6 +748,13 @@ export function PlannerWorkspace({
 
   const planning = isPlanningInFlight(session.phase);
 
+  /** The ride summary over the map: built once, mounted in the map slot and above the sheet (CSS shows one). */
+  const glance = useRideGlance({
+    cards: viewModel.routeCards, route: activeRoute,
+    elevationSource: preparationProviders?.elevationProfile, failed: viewModel.failed,
+    planning, onRetry: handlePlan, plannerUiStore,
+  });
+
   return (
     <PlannerWorkspaceFrame
       document={document} libraryService={libraryService}
@@ -781,6 +767,7 @@ export function PlannerWorkspace({
       layers={preparationProviders?.mapLayers && { source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
+      glance={glance.map}
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene,
@@ -804,6 +791,7 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
+          glance={glance.dock}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{
@@ -812,7 +800,7 @@ export function PlannerWorkspace({
             updateHighlight,
             updateRecovery,
             recoveryActions,
-            onRetryFailedUpdate: handleRetryFailedUpdate,
+            onRetryFailedUpdate: handlePlan,
             onEditFailedUpdate: handleEditFailedUpdate,
             onDiscardFailedUpdate: handleDiscardFailedUpdate,
             onRetrySave: retrySave,
@@ -887,6 +875,7 @@ export function PlannerWorkspace({
               actions: rideStyle.actions,
               onRouteTraffic: setRouteTraffic,
             },
+            sheetExpanded: sheetDetent === "expanded",
           }}
           refine={{
             forceOpen:

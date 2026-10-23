@@ -7256,9 +7256,49 @@ h3,
 
 .og-elevation__head {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 6px 12px;
+}
+
+/* The stats and the density control share the head's trailing side; the control
+   is a real 44 px target even though the chart itself is compact. */
+.og-elevation__head-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 10px;
+  margin-left: auto;
+}
+
+.og-elevation__expand {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--og-route-tint) 30%, var(--og-sandstone));
+  border-radius: var(--og-radius-chip);
+  background: color-mix(in srgb, var(--og-route-tint) 9%, transparent);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    background-color var(--og-dur-fast) var(--og-ease),
+    border-color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-elevation__expand:hover {
+  background: color-mix(in srgb, var(--og-route-tint) 16%, transparent);
+  border-color: color-mix(in srgb, var(--og-route-tint) 44%, var(--og-sandstone));
+}
+
+.og-elevation__expand[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--og-route-tint) 20%, transparent);
+  border-color: color-mix(in srgb, var(--og-route-tint) 52%, var(--og-sandstone));
 }
 
 .og-elevation__title {
@@ -7296,6 +7336,11 @@ h3,
   height: 96px;
 }
 
+/* Expanded is the same drawing with room for a readable chart (168 px). */
+.og-elevation__plot[data-density="expanded"] {
+  height: 168px;
+}
+
 .og-elevation__svg {
   display: block;
   width: 100%;
@@ -7328,6 +7373,12 @@ h3,
   stroke-dasharray: 3 3;
 }
 
+/* Quartile gridlines: structure at hairline weight, never chart furniture. */
+.og-elevation__grid {
+  stroke: var(--og-hairline);
+  stroke-width: 1;
+}
+
 .og-elevation__axis {
   position: absolute;
   left: 4px;
@@ -7343,9 +7394,91 @@ h3,
 .og-elevation__axis--max { top: 0; }
 .og-elevation__axis--min { bottom: 2px; }
 
+/* Expanded reads as a chart: a 44 px gutter of right-aligned feet, the same
+   values the gridlines mark. */
+.og-elevation__yaxis {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 44px;
+  pointer-events: none;
+}
+
+.og-elevation__ylabel {
+  position: absolute;
+  right: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--og-paper) 84%, transparent);
+  color: var(--og-slate-text);
+  font-size: 11px;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  transform: translateY(-50%);
+}
+
+/* A notch at each authored point's distance, numbered in ride order. */
+.og-elevation__waypoints {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 22px;
+  pointer-events: none;
+}
+
+.og-elevation__waypoint {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  transform: translateX(-50%);
+}
+
+.og-elevation__waypoint-bar {
+  width: 2px;
+  height: 8px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--og-ink) 62%, transparent);
+}
+
+.og-elevation__waypoint-index {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: var(--og-paper);
+  box-shadow: inset 0 0 0 1px var(--og-hairline);
+  color: var(--og-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The steepest sustained grade, over the climb it measured. */
+.og-elevation__grade-pin {
+  position: absolute;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--og-paper);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--og-route-tint) 38%, transparent),
+    var(--og-shadow-1);
+  color: var(--og-ink);
+  font-size: var(--og-text-eyebrow);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translate(-50%, -115%);
+}
+
 .og-elevation__readout {
   position: absolute;
   top: -6px;
+  z-index: 1;
   transform: translateX(-50%);
   padding: 2px 8px;
   border-radius: 999px;
@@ -7417,6 +7550,28 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
+.og-elevation__ticks--expanded {
+  position: relative;
+  display: block;
+  height: 16px;
+  font-size: 12px;
+}
+
+/* Distance ticks sit on their exact share of the ride, not on flex gaps. */
+.og-elevation__ticks--expanded > span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.og-elevation__ticks--expanded > [data-edge="start"] {
+  transform: none;
+}
+
+.og-elevation__ticks--expanded > [data-edge="end"] {
+  transform: translateX(-100%);
+}
+
 .og-elevation__status {
   margin: 0;
   color: var(--og-slate-text);
@@ -7438,6 +7593,7 @@ h3,
 
 @media (prefers-reduced-motion: reduce) {
   .og-elevation__skeleton { animation: none; }
+  .og-elevation__expand { transition: none; }
 }
 
 /* Phone portrait with the tab-bar shell: the Places pill takes the slot under
@@ -8104,6 +8260,21 @@ h3,
     top: auto;
     bottom: 40px;
     right: var(--og-float-right);
+  }
+
+  /* "Center on me" joins that right column rather than keeping its 12 px window
+     offset, where the floating inspector covered all but a sliver of it: the
+     same right edge as Show whole ride, stacked one button above it (40 px
+     bottom + 44 px tall + 8 px gap). Its failure note steps to the button's
+     left, as it does at the window edge on the other tiers. */
+  .og-planner__map-slot .og-map__locate {
+    right: var(--og-float-right);
+    bottom: 92px;
+  }
+
+  .og-planner__map-slot .og-map__locate-failure {
+    right: calc(var(--og-float-right) + 52px);
+    bottom: 92px;
   }
 
   .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
@@ -10270,6 +10441,263 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   .og-map__locate-failure {
     top: calc(168px + var(--og-safe-top));
     right: 12px;
+  }
+}
+
+/* The glance strip: the live ride summary over the map. One pill, one sentence —
+   the route's colour, its time, distance and climb, and the surface the evidence
+   covers — so "how big is this ride?" is answered without opening the sheet.
+   `surface unknown` is stated rather than rounded up to a paved claim. */
+.og-glance {
+  --og-glance-tint: var(--og-ember);
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+}
+
+.og-glance__button,
+.og-glance--failed {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 14px;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 999px;
+  background: var(--og-glass-dense, var(--og-paper));
+  box-shadow: var(--og-shadow-2);
+  color: var(--og-ink);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-glance__button {
+  font-family: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+.og-glance__button:focus-visible,
+.og-glance__retry:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-glance__button:hover .og-glance__open {
+  color: var(--og-ink);
+}
+
+/* The route's own colour: the same slot its map line and its card carry. */
+.og-glance[data-tint="0"] { --og-glance-tint: var(--og-ember); }
+.og-glance[data-tint="1"] { --og-glance-tint: var(--og-route-plum); }
+.og-glance[data-tint="2"] { --og-glance-tint: var(--og-deep-spruce); }
+
+.og-glance__swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--og-glance-tint);
+}
+
+.og-glance__metrics {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.og-glance__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The worst surface, and how much of the line it covers. */
+.og-glance__surface {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-sandstone) 32%, transparent);
+  color: var(--og-ink);
+  white-space: nowrap;
+}
+
+/* No usable surface report: a stated unknown in the muted trail voice, never a
+   paved (or gravel) claim. `--og-sandstone` is a surface token, so the AA text
+   variant of the same warm hue carries the words. */
+.og-glance__surface--unknown {
+  padding: 0;
+  background: none;
+  color: var(--og-trail-brown);
+}
+
+/* Planning: a 12px shimmer over the metrics (the elevation skeleton's own
+   recipe), never the previous answer's numbers. */
+.og-glance__planning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.og-glance__shimmer {
+  width: 46px;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--og-well), color-mix(in srgb, var(--og-sandstone) 55%, var(--og-well)), var(--og-well));
+  background-size: 200% 100%;
+  animation: og-glance-shimmer 1.4s ease-in-out infinite;
+}
+
+.og-glance__shimmer--short {
+  width: 30px;
+}
+
+.og-glance__planning-word {
+  display: none;
+  color: var(--og-slate-text);
+  white-space: nowrap;
+}
+
+@keyframes og-glance-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-glance__shimmer { display: none; animation: none; }
+  .og-glance__planning-word { display: inline; }
+}
+
+/* The trailing tap target: 44x44, reaching the pill's own right edge so a thumb
+   cannot miss it. It opens the sheet at the ride detent. */
+.og-glance__open {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-right: -14px;
+  color: var(--og-slate-text);
+  transition: color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-glance__promise {
+  color: var(--og-ink);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.og-glance--failed {
+  padding: 0 6px 0 14px;
+  gap: 8px;
+}
+
+.og-glance__retry {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--og-deep-spruce);
+  color: var(--og-paper);
+  font: inherit;
+  font-variant-numeric: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+/* The sheet's column: the strip sits directly above the dock, where the dock
+   lies over the map (phone and tablet portrait). On the tiers where the dock is
+   a sibling column it is the map slot's own strip that shows instead; the two
+   never render at once. */
+.og-glance--dock {
+  display: none;
+}
+
+/* The map slot's strip on the wide tiers: top centre, the summary above the
+   geography it describes. It clears the top control band — Layers and Along
+   ride end at 108 px, the edit bar's row at 62 px and the tool status or drag
+   tip it prints under itself at 112 px — and it is centred in the map the two
+   floating panels leave visible rather than in the window, so neither panel can
+   sit on it and it never reaches Show whole ride in the bottom right. The
+   panels' insets are the tokens the map's own controls use; where they are
+   columns instead of overlays the insets are undefined and it spans the map
+   cell's edges. Only the pill takes pointers: the band itself stays draggable. */
+@media (min-width: 1181px) {
+  .og-glance--map {
+    top: 120px;
+    bottom: auto;
+    left: var(--og-float-left, 12px);
+    right: var(--og-float-right, 12px);
+    justify-content: center;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .og-glance--map > * {
+    pointer-events: auto;
+  }
+
+  /* An open place card, or the filters under the Along-ride pill, owns the band
+     the strip would take (it is the thing the rider is reading), so the summary
+     steps out of the way until it is closed. */
+  .og-planner__map-slot:has(.og-places-card) .og-glance--map,
+  .og-planner__map-slot:has(.og-places-control__panel) .og-glance--map {
+    display: none;
+  }
+}
+
+/* The short landscape's map column keeps the strip in its lower band, above the
+   corner controls, where the window is too short to spend a top row on it; the
+   one control down there — Center on me — steps up above it. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 760px) {
+  .og-glance--map {
+    bottom: 60px;
+  }
+
+  .og-planner__map-slot:has(> .og-glance) .og-map__locate {
+    bottom: 116px;
+  }
+
+  .og-planner__map-slot:has(.og-places-card) .og-glance--map {
+    display: none;
+  }
+}
+
+/* The short landscape's second column takes most of a small phone's width: below
+   this the map column cannot hold the strip beside its controls (the ride cards
+   are on screen there anyway). */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) and (max-width: 759px) {
+  .og-glance--map {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  .og-glance--map {
+    display: none;
+  }
+
+  .og-glance--dock {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 1;
+    display: flex;
+  }
+}
+
+/* A folded sheet keeps most of a small phone, so the least load-bearing item
+   (the surface share) steps out of the pill before the numbers do. */
+@media (max-width: 359px) {
+  .og-glance__surface {
+    display: none;
   }
 }
 

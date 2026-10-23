@@ -172,7 +172,9 @@ export function fingerprintScene(scene: MapScene): SceneFingerprints {
     routes: scene.routes
       .map(
         (route) =>
-          `${route.id}|${route.state}|${route.role ?? "none"}|${route.tint ?? 0}|${route.label === undefined ? "" : `${route.label.text}@${coordinateKey(route.label.at)}`}|${geometryKey(route.geometry)}`,
+          `${route.id}|${route.state}|${route.role ?? "none"}|${route.tint ?? 0}|${route.label === undefined ? "" : `${route.label.text}@${coordinateKey(route.label.at)}`}|${(route.surface ?? [])
+            .map((run) => `${run.kind}:${run.from.toFixed(4)}-${run.to.toFixed(4)}`)
+            .join(",")}|${geometryKey(route.geometry)}`,
       )
       .join(";"),
     points: scene.points

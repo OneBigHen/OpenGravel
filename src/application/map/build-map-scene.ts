@@ -27,6 +27,7 @@
 import { allVertexHandles } from "@/application/planner/avoid-area-geometry";
 import { formatDuration } from "@/application/planner/measurements";
 import { ALTERNATIVE_LABEL, ROLE_LABELS } from "@/application/planner/planner-view-model";
+import { surfaceRuns } from "@/application/roads/engine-road-evidence";
 import { routeLabelAnchors } from "./route-labels";
 import { ROUTE_ROLES } from "@/application/planner/planning-session";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
@@ -62,6 +63,7 @@ import type {
   RiderPositionScene,
   RoadSpanScene,
   RouteScene,
+  RouteSurfaceRunScene,
   SketchScene,
 } from "./types";
 
@@ -202,6 +204,42 @@ function answerIsStale(
   return bundle.rideRevision !== document.revision;
 }
 
+/**
+ * The surface the engine measured along one candidate, in travel order (05 §11).
+ *
+ * `surfaceRuns` is the same reader the elevation strip uses, so the map band and
+ * the card's strip can never disagree about where the gravel is. A run outside
+ * `0..1` or one that ends before it starts is dropped rather than clamped to a
+ * stretch the reader never described; `undefined` means the answer carries no
+ * runs at all, which is not the same fact as "the whole line is paved".
+ *
+ * A run whose class is not one of the four the engine writes is carried as
+ * `unknown`, never guessed into a surface: a tag this module does not recognise is
+ * exactly the case where painting would be an invention.
+ */
+function surfaceRunScenes(
+  candidate: RouteCandidate,
+): readonly RouteSurfaceRunScene[] | undefined {
+  const runs = surfaceRuns(candidate.evidence["surfaceMix"]);
+  if (runs === null) return undefined;
+  const usable = runs
+    .filter(
+      (run) =>
+        Number.isFinite(run.from) &&
+        Number.isFinite(run.to) &&
+        run.from >= 0 &&
+        run.to <= 1 &&
+        run.to > run.from,
+    )
+    .map((run) => ({ kind: surfaceKind(run.kind), from: run.from, to: run.to }));
+  return usable.length === 0 ? undefined : usable;
+}
+
+/** One of the four classes the engine writes; anything else is `unknown`. */
+function surfaceKind(value: string): RouteSurfaceRunScene["kind"] {
+  return value === "paved" || value === "gravel" || value === "dirt" ? value : "unknown";
+}
+
 function routeScenes(
   bundle: RouteBundle | null,
   document: RideDocument,
@@ -218,16 +256,22 @@ function routeScenes(
   return bundle.candidates.map((candidate, index) => {
     const role = roleFor(bundle.roles, candidate.id);
     const at = anchors[index] ?? null;
+    const state = stale
+      ? "previous"
+      : candidate.id === bundle.selectedRouteId
+        ? "selected"
+        : "alternative";
+    // Only the rider's chosen line carries its surface: the alternatives are
+    // there to be compared by colour and time, and a second set of bands would
+    // turn choosing into reading four maps at once.
+    const surface = state === "selected" ? surfaceRunScenes(candidate) : undefined;
     return {
       id: candidate.id,
       role,
       geometry: lines[index]!,
-      state: stale
-        ? "previous"
-        : candidate.id === bundle.selectedRouteId
-          ? "selected"
-          : "alternative",
+      state,
       tint: index,
+      ...(surface === undefined ? {} : { surface }),
       ...(at === null
         ? {}
         : {

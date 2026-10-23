@@ -84,6 +84,9 @@ export function postHogConfig(host: string, build: TelemetryBuildCorrelation, al
     capture_exceptions: { capture_unhandled_errors: true, capture_unhandled_rejections: true, capture_console_errors: false },
     capture_dead_clicks: true,
     rageclick: true,
+    // Replay costs ~0.5s of main-thread time. It stays off at init and is only
+    // started by the runtime after consent and after the page is interactive.
+    disable_session_recording: true,
     disable_surveys: true,
     advanced_disable_feature_flags: true,
     enable_recording_console_log: false,

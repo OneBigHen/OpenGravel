@@ -19,9 +19,14 @@ EU projects use `https://eu.i.posthog.com`. The existing server setting
 overrides it. Never put a personal API key in a `NEXT_PUBLIC_*` variable.
 
 Enable session recording and Error Tracking in the matching PostHog project.
-The SDK starts replay after acknowledgement; network failures, blockers, project
-settings and sampling can still prevent delivery. Confirm recordings in PostHog,
-not only that the browser issued a request.
+The browser SDK is imported only after the page becomes interactive (idle time,
+at most ~4 s after the window load event), so the SDK and recorder stay out of
+the initial load. Events captured before that import are queued and flushed; a
+visit shorter than the deferral sends no telemetry. Replay is disabled at init
+and the runtime starts it only after acknowledgement, once the page is
+interactive. Network failures, blockers, project settings and sampling can
+still prevent delivery. Confirm recordings in PostHog, not only that the browser
+issued a request.
 
 ## What is collected
 

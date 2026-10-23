@@ -11,9 +11,9 @@ interface CompositionBudget {
 const COMPOSITION_BUDGETS: readonly CompositionBudget[] = [
   {
     path: "src/ui/planner/PlannerWorkspace.tsx",
-    // Ratcheted down after extracting Refine, status, authoring, camera, dock, frame, and map-intent modules (M9).
+    // Ratcheted down after extracting Refine, status, authoring, camera, dock, frame, map-intent, plan-command and glance modules (M9).
     // Lower both ceilings whenever extraction removes more composition debt.
-    maxLines: 942,
+    maxLines: 931,
     maxStaticImports: 25,
   },
 ];
