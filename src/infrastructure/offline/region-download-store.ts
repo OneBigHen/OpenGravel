@@ -29,6 +29,8 @@ import type {
   OfflineRegionsPort,
 } from "@/application/offline/offline-regions";
 
+import { hasSpaceFor, isQuotaExceeded, QUOTA_RECHECK_BYTES, STORAGE_QUOTA_MESSAGE } from "./storage-quota";
+
 export const OFFLINE_REGION_DB_NAME = "ogv-offline-regions";
 
 interface RegionPointer extends InstalledOfflineRegion {
@@ -182,25 +184,46 @@ export class RegionDownloadStore implements OfflineRegionsPort {
     return stored;
   }
 
-  private async checkQuota(requiredBytes: number): Promise<void> {
-    // An offline area is only useful if the browser keeps it; ask once, and a
-    // refusal still leaves the download usable until storage runs short.
-    await globalThis.navigator?.storage?.persist?.().catch(() => false);
-    const estimate = await globalThis.navigator?.storage?.estimate?.();
-    if (estimate?.quota === undefined) return;
-    if (estimate.quota - (estimate.usage ?? 0) < requiredBytes) {
-      throw new OfflineRegionError("quota", "There is not enough free storage on this device for that area.");
+  /**
+   * Runs one write, translating the browser's storage refusal — which would
+   * otherwise surface as a bare `DOMException` — into the area's own error.
+   */
+  private async write<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (isQuotaExceeded(error)) throw new OfflineRegionError("quota", STORAGE_QUOTA_MESSAGE);
+      throw error;
+    }
+  }
+
+  /**
+   * Refuses the download when the device cannot hold it.
+   *
+   * `requiredBytes` covers everything the *area* still needs, not only these
+   * tiles: an offline area is its road graph plus its map archive, and the
+   * browser gives both one budget. A refusal is a typed failure so the rider
+   * hears about storage instead of a stalled progress bar.
+   */
+  private async checkQuota(requiredBytes: number, requestPersistence = false): Promise<void> {
+    if (!(await hasSpaceFor(requiredBytes, { requestPersistence }))) {
+      throw new OfflineRegionError("quota", STORAGE_QUOTA_MESSAGE);
     }
   }
 
   /**
    * Downloads (or resumes, or updates) one region. Abort the signal to pause:
    * verified tiles stay, and the next call only fetches the rest.
+   *
+   * `extraRequiredBytes` is what the same area needs beside these tiles — its
+   * map archive — so the storage check is about the whole download rather than
+   * the roadside half of it.
    */
   async download(
     regionId: string,
     onProgress: (progress: OfflineDownloadProgress) => void,
     signal?: AbortSignal,
+    extraRequiredBytes = 0,
   ): Promise<InstalledOfflineRegion> {
     const response = await this.fetcher(this.manifestUrl(regionId), {
       headers: { accept: "application/json" },
@@ -213,14 +236,22 @@ export class RegionDownloadStore implements OfflineRegionsPort {
     }
     const totalBytes = manifest.tileByteTotal;
     let completedBytes = await this.verifiedBytes(manifest);
-    await this.checkQuota(totalBytes - completedBytes);
+    // One check for the whole area, before a byte is fetched: a phone with
+    // 300 MB free must not spend minutes downloading 900 MB of roads before
+    // discovering that the 1.2 GB archive will never fit beside them.
+    await this.checkQuota(totalBytes - completedBytes + extraRequiredBytes, true);
+    let nextQuotaCheck = completedBytes + QUOTA_RECHECK_BYTES;
 
     const key = versionKey(regionId, manifest.version);
-    await this.versions.put({ id: key, regionId, version: manifest.version, manifest });
+    await this.write(() => this.versions.put({ id: key, regionId, version: manifest.version, manifest }));
     onProgress({ completedBytes, totalBytes });
 
     for (const entry of manifest.tiles) {
       signal?.throwIfAborted();
+      if (completedBytes >= nextQuotaCheck) {
+        nextQuotaCheck = completedBytes + QUOTA_RECHECK_BYTES;
+        await this.checkQuota(totalBytes - completedBytes + extraRequiredBytes);
+      }
       const id = tileKey(regionId, manifest.version, entry.tileId);
       const existing = await this.tiles.get(id);
       if (existing?.sha256 === entry.sha256 && existing.byteSize === entry.bytes) continue;
@@ -230,7 +261,7 @@ export class RegionDownloadStore implements OfflineRegionsPort {
       if (bytes.byteLength !== entry.bytes || (await sha256Hex(bytes)) !== entry.sha256.toLowerCase()) {
         throw new OfflineRegionError("integrity", "Part of the area arrived damaged; download it again.");
       }
-      await this.tiles.put({ id, regionId, versionKey: key, tileId: entry.tileId, sha256: entry.sha256, byteSize: entry.bytes, bytes });
+      await this.write(() => this.tiles.put({ id, regionId, versionKey: key, tileId: entry.tileId, sha256: entry.sha256, byteSize: entry.bytes, bytes }));
       completedBytes += entry.bytes;
       onProgress({ completedBytes, totalBytes });
     }
@@ -245,7 +276,7 @@ export class RegionDownloadStore implements OfflineRegionsPort {
       downloadedAt: this.now().toISOString(),
       previousVersion: null,
     };
-    await this.db.transaction("rw", this.regions, this.versions, this.tiles, async () => {
+    await this.write(() => this.db.transaction("rw", this.regions, this.versions, this.tiles, async () => {
       const current = await this.regions.get(regionId);
       // Keep one previous version at most: the one being replaced now.
       if (current?.previousVersion && current.previousVersion !== manifest.version) {
@@ -255,7 +286,7 @@ export class RegionDownloadStore implements OfflineRegionsPort {
       }
       const previous = current && current.version !== manifest.version ? current.version : (current?.previousVersion ?? null);
       await this.regions.put({ ...installed, previousVersion: previous === manifest.version ? null : previous });
-    });
+    }));
     return summaryOf(installed);
   }
 
@@ -265,11 +296,11 @@ export class RegionDownloadStore implements OfflineRegionsPort {
   }
 
   async remove(regionId: string): Promise<void> {
-    await this.db.transaction("rw", this.regions, this.versions, this.tiles, async () => {
+    await this.write(() => this.db.transaction("rw", this.regions, this.versions, this.tiles, async () => {
       await this.tiles.where("regionId").equals(regionId).delete();
       await this.versions.where("regionId").equals(regionId).delete();
       await this.regions.delete(regionId);
-    });
+    }));
   }
 
   /** Bytes held on the device, finished or partial. */
