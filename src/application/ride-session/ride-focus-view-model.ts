@@ -19,6 +19,12 @@
  * - **Unknown stays unknown** (§2: progress, ETA and remaining distance come
  *   from the 8.2 matching engine). With no answer the surface says so; it does
  *   not print `0 mi`, and it does not draw a progress bar it cannot justify.
+ * - **The turn's distance is a measurement, not a memory.** The stored
+ *   `instruction.distanceMeters` is the distance at issue time; the card shows
+ *   the engine's live distance for the same instruction identity when the
+ *   matcher measured one, and falls back to the issued value only when it did
+ *   not (DV-06). A live measurement of the *next* maneuver is never printed
+ *   against the previous instruction.
  * - **Suspended ahead guidance is respected** (OGV-RID-005): while the session
  *   is not moving, or the fix is stale/unavailable, no ahead content is
  *   produced at all — not dimmed, not greyed, absent — and the reason is stated.
@@ -41,6 +47,8 @@ import {
 } from "@/application/planner/measurements";
 import type { Coordinate } from "@/domain/ride/types";
 import { speedLimitMph, type RouteWarning } from "@/domain/route/types";
+import type { SessionInstructionId } from "@/domain/ride-session/ids";
+import type { ProgressFrame } from "@/domain/ride-session/progress";
 import type {
   PositionQuality,
   SessionInstruction,
@@ -232,6 +240,19 @@ export interface RideFocusViewModel {
 }
 
 /**
+ * The maneuver the live engine is measuring toward right now, and the distance
+ * it measured on the current match frame. `SessionInstruction.distanceMeters`
+ * is the distance *at issue time*; a surface that printed that value as the
+ * current distance froze at the leg's first length (8 §6, DV-06). The identity
+ * travels with the measurement so a frame that has already moved on to the next
+ * maneuver can never be shown against the previous instruction.
+ */
+export interface LiveManeuverDistance {
+  readonly instructionId: SessionInstructionId;
+  readonly distanceMeters: number;
+}
+
+/**
  * Everything the 8.2 engine will answer and this surface must not invent.
  *
  * `null` is the honest value today: the matching engine is a parallel lane, so
@@ -245,6 +266,8 @@ export interface RideFocusTelemetryInput {
   readonly etaIso: string | null;
   /** The posted limit where the matcher places the rider (NV-04); absent = unknown. */
   readonly speedLimitKmh?: number | null;
+  /** The engine's live distance to the maneuver ahead (see {@link LiveManeuverDistance}). */
+  readonly liveManeuver?: LiveManeuverDistance | null;
 }
 
 export type RideFocusTelemetryProvider = (now: string) => RideFocusTelemetryInput | null;
@@ -371,16 +394,36 @@ function maneuverCopy(
 }
 
 /**
+ * The engine's live measurement of the maneuver ahead, or `null` when the
+ * matcher has no maneuver or no usable distance. The value is the engine's own
+ * answer for this frame: it is never derived from the instruction's issue-time
+ * distance here.
+ */
+export function liveManeuverOf(
+  frame: ProgressFrame | null | undefined,
+): LiveManeuverDistance | null {
+  const maneuver = frame?.nextManeuver ?? null;
+  const distanceMeters = frame?.distanceToManeuverMeters ?? null;
+  if (maneuver === null || distanceMeters === null) return null;
+  if (!isKnownMeasurement(distanceMeters)) return null;
+  return { instructionId: maneuver.instructionId, distanceMeters };
+}
+
+/**
  * The spoken form of an issued maneuver: the banner's own words, as one
  * sentence a rider hears in a helmet ("In 800 feet, turn left onto 1st
  * Avenue."). Units are spelled out, because a speech engine reads "mi" as
- * letters.
+ * letters. `distanceMeters` is the live distance when the caller measured one;
+ * it defaults to the distance the instruction was issued at.
  */
-export function spokenManeuver(instruction: SessionInstruction): string {
+export function spokenManeuver(
+  instruction: SessionInstruction,
+  distanceMeters: number = instruction.distanceMeters,
+): string {
   const copy = maneuverCopy(instruction);
   const roadName = roadNameOf(instruction);
   const road = roadName === null ? "" : ` ${copy.roadPreposition ?? "on"} ${roadName}`;
-  const distance = formatManeuverDistance(instruction.distanceMeters);
+  const distance = formatManeuverDistance(distanceMeters);
   if (distance === "now" || distance === UNKNOWN_VALUE) return `${copy.actionText}${road}${distance === "now" ? " now" : ""}.`;
   const spokenDistance = distance
     .replace(/^1 mi$/, "1 mile")
@@ -390,10 +433,14 @@ export function spokenManeuver(instruction: SessionInstruction): string {
   return `In ${spokenDistance}, ${action}${road}.`;
 }
 
-function maneuverOf(instruction: SessionInstruction): RideFocusManeuver {
+function maneuverOf(
+  instruction: SessionInstruction,
+  liveDistanceMeters: number | null,
+): RideFocusManeuver {
   const copy = maneuverCopy(instruction);
   const roadName = roadNameOf(instruction);
-  const formatted = formatManeuverDistance(instruction.distanceMeters);
+  const distanceMeters = liveDistanceMeters ?? instruction.distanceMeters;
+  const formatted = formatManeuverDistance(distanceMeters);
   const immediate = formatted === "now";
   const distanceText = immediate ? "Now" : formatted;
   const road = roadName === null ? "" : ` ${copy.roadPreposition ?? "on"} ${roadName}`;
@@ -403,15 +450,27 @@ function maneuverOf(instruction: SessionInstruction): RideFocusManeuver {
     roadName,
     roadPreposition: roadName === null ? null : copy.roadPreposition,
     distanceText,
-    distanceMeters: instruction.distanceMeters,
-    glyph:
-      instruction.kind === "arrive"
-        ? "arrive"
-        : instruction.kind === "continue"
-          ? "continue"
-          : instruction.maneuver ?? "straight",
+    distanceMeters,
+    glyph: instruction.kind === "arrive"
+      ? "arrive"
+      : instruction.kind === "continue"
+        ? "continue"
+        : instruction.maneuver ?? "straight",
     label: `${copy.actionText}${road}${distance}`,
   };
+}
+
+/**
+ * The live distance only when the engine measured *this* instruction; a frame
+ * that has already advanced to the next maneuver says nothing about this one.
+ */
+function liveDistanceFor(
+  instruction: SessionInstruction,
+  telemetry: RideFocusTelemetryInput | null,
+): number | null {
+  const live = telemetry?.liveManeuver ?? null;
+  if (live === null || live.instructionId !== instruction.instructionId) return null;
+  return isKnownMeasurement(live.distanceMeters) ? live.distanceMeters : null;
 }
 
 function timerText(seconds: number): string {
@@ -517,7 +576,10 @@ function positionOf(position: NavigationPosition): RideFocusPosition {
   };
 }
 
-function guidanceOf(navigation: SessionNavigationState): RideFocusGuidance {
+function guidanceOf(
+  navigation: SessionNavigationState,
+  telemetry: RideFocusTelemetryInput | null,
+): RideFocusGuidance {
   if (navigation.aheadGuidanceSuspended) {
     // Name the real cause (UX rework phase 6): a rider who is moving but off
     // the line must not be told the ride is stopped.
@@ -548,7 +610,10 @@ function guidanceOf(navigation: SessionNavigationState): RideFocusGuidance {
     const onRoute = navigation.activity === "guided" || navigation.activity === "track";
     return { kind: "waiting", text: onRoute ? "Follow the route" : activityLabelOf(navigation) };
   }
-  return { kind: "maneuver", maneuver: maneuverOf(instruction) };
+  return {
+    kind: "maneuver",
+    maneuver: maneuverOf(instruction, liveDistanceFor(instruction, telemetry)),
+  };
 }
 
 function progressOf(
@@ -811,7 +876,7 @@ export function buildRideFocusViewModel(
     activity: navigation.activity,
     activityLabel: activityLabelOf(navigation),
     moving: navigation.activity === "guided" || navigation.activity === "free" || navigation.activity === "track",
-    guidance: guidanceOf(navigation),
+    guidance: guidanceOf(navigation, currentTelemetry),
     position,
     progress: progressOf(navigation, currentTelemetry),
     secondary: secondaryOf(currentTelemetry),

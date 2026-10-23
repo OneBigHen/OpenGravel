@@ -25,6 +25,7 @@ import {
   formatManeuverDistance,
   formatSpeed,
   permissionLabel,
+  spokenManeuver,
 } from "@/application/ride-session/ride-focus-view-model";
 import type { RideFocusEnvironmentSnapshot } from "@/application/ride-session/ports/ride-focus-environment";
 import type {
@@ -474,6 +475,49 @@ describe("maneuver copy (08 §2, §6)", () => {
     if (guidance.kind !== "maneuver") throw new Error("expected a maneuver");
     expect(guidance.maneuver.distanceText).toBe("Now");
     expect(guidance.maneuver.label).toBe("Arrive at your destination now");
+  });
+
+  it("renders the engine's live distance to the maneuver, not the distance at issue time", () => {
+    const issued = instruction();
+    const { guidance } = view({
+      navigation: navigation({ instruction: issued }),
+      telemetry: {
+        routeProgress: 0.4,
+        remainingDistanceMeters: 8_000,
+        remainingDurationSeconds: 900,
+        etaIso: null,
+        liveManeuver: { instructionId: issued.instructionId, distanceMeters: 60 },
+      },
+    });
+
+    if (guidance.kind !== "maneuver") throw new Error("expected a maneuver");
+    expect(guidance.maneuver.distanceMeters).toBe(60);
+    expect(guidance.maneuver.distanceText).toBe("200 ft");
+    expect(guidance.maneuver.label).toBe("Turn left onto Gravel Pike in 200 ft");
+  });
+
+  it("ignores a live distance that measures a different maneuver", () => {
+    const { guidance } = view({
+      navigation: navigation({ instruction: instruction() }),
+      telemetry: {
+        routeProgress: 0.4,
+        remainingDistanceMeters: 8_000,
+        remainingDurationSeconds: 900,
+        etaIso: null,
+        liveManeuver: { instructionId: asSessionInstructionId("ins_other"), distanceMeters: 60 },
+      },
+    });
+
+    if (guidance.kind !== "maneuver") throw new Error("expected a maneuver");
+    // The matcher has already moved on; this instruction's own distance stands.
+    expect(guidance.maneuver.distanceMeters).toBe(120);
+    expect(guidance.maneuver.distanceText).toBe("400 ft");
+  });
+
+  it("speaks the live distance when the engine measured one", () => {
+    expect(spokenManeuver(instruction(), 60)).toBe("In 200 feet, turn left onto Gravel Pike.");
+    // With no live measurement the sentence keeps the issued distance.
+    expect(spokenManeuver(instruction())).toBe("In 400 feet, turn left onto Gravel Pike.");
   });
 
   it("keeps feet under a fifth of a mile and miles above it", () => {
