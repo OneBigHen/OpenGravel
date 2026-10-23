@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, settledExtent, type Coordinate } from "./map-helpers";
+import {
+  clickMapAtCoordinate,
+  plannerMap,
+  pressPlan,
+  settledExtent,
+  type Coordinate,
+} from "./map-helpers";
 
 const START: Coordinate = { lon: -75.4385, lat: 40.1385 };
 const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
@@ -71,7 +77,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await settledExtent(page);
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await page.getByTestId("named-ride-title").fill("My sample ride");
   await page.getByTestId("save-named-ride").click();
@@ -93,7 +99,7 @@ test("labels missing road evidence clearly and without console errors", async ({
   await settledExtent(page);
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 

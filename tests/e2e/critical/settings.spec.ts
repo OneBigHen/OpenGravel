@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 test("planner content is server-rendered before browser hydration", async ({ request }) => {
   const response = await request.get("/");
@@ -87,7 +87,7 @@ test("active bike carries into a new ride and local data can be exported or dele
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();

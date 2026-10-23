@@ -7,7 +7,9 @@ import {
   fractionOf,
   plannerMap,
   settledExtent,
-  type Coordinate, openRefine } from "./map-helpers";
+  type Coordinate, openRefine,
+  pressPlan,
+} from "./map-helpers";
 
 /**
  * Critical browser workflow: keep / prefer / avoid a road span
@@ -117,7 +119,7 @@ async function planFixtureRide(page: Page): Promise<void> {
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await clickMapAtCoordinate(page, NEW_DESTINATION);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", {
     timeout: 30_000,
   });

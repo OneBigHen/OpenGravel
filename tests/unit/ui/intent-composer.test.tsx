@@ -113,24 +113,58 @@ describe("IntentComposer", () => {
   });
 
   it("explains that an attempt is already running", () => {
-    renderComposer(
-      viewModelFor(
-        documentWith({
-          start: endpoint("pt_start", "start", ORIGIN),
-          finish: endpoint("pt_finish", "finish", DESTINATION),
-        }),
-        "routing-primary",
-      ),
+    // A loop keeps its commitment control, so this is the surface that still has
+    // something to explain while an attempt is in flight (04 §8).
+    render(
+      <IntentComposer
+        viewModel={viewModelFor(
+          documentWith({
+            shape: "loop",
+            start: endpoint("pt_start", "start", ORIGIN),
+          }),
+          "routing-primary",
+        )}
+        onPlan={vi.fn()}
+        onSetStart={vi.fn()}
+        onSetFinish={vi.fn()}
+        rideStyle={{
+          view: {
+            shape: "loop",
+            loopMinutes: 120,
+            roadCharacter: "balanced",
+            noveltyPreference: "balanced",
+            surface: "mixed",
+            traffic: "protect-ride",
+            avoidHighways: false,
+            avoidTolls: true,
+          },
+          actions: {
+            setBike: vi.fn(),
+            setShape: vi.fn(),
+            setLoopMinutes: vi.fn(),
+            setRoadCharacter: vi.fn(),
+            setNoveltyPreference: vi.fn(),
+            setTraffic: vi.fn(),
+            setSurface: vi.fn(),
+            setAvoidHighways: vi.fn(),
+            setAvoidTolls: vi.fn(),
+            setDeparture: vi.fn(),
+          },
+        }}
+      />,
     );
 
-    expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Make my loop" })).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
       "Your ride is on its way — one moment.",
     );
   });
 
-  it("commits when the intent is complete", () => {
-    const { onPlan } = renderComposer(
+  it("leaves nothing to press once a destination is chosen", () => {
+    // The ride plans itself the moment the destination completes it, so a
+    // commitment control here would only ask the planner a question it is already
+    // answering (04 §8).
+    renderComposer(
       viewModelFor(
         documentWith({
           start: endpoint("pt_start", "start", ORIGIN),
@@ -140,7 +174,25 @@ describe("IntentComposer", () => {
       ),
     );
 
-    const plan = screen.getByRole("button", { name: "Create ride" });
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
+    expect(screen.getByTestId("finish-value")).toHaveTextContent("40.2000, -74.8000");
+  });
+
+  it("asks for a loop in one tap, and names the tap", () => {
+    // A loop has no destination to wait for: its shape and ride time are the
+    // rider's to accept, so the button stays and says what it will do.
+    const { onPlan } = renderComposer(
+      viewModelFor(
+        documentWith({
+          shape: "loop",
+          start: endpoint("pt_start", "start", ORIGIN),
+        }),
+        "idle",
+      ),
+    );
+
+    const plan = screen.getByRole("button", { name: "Make my loop" });
     expect(plan).toBeEnabled();
     expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
     fireEvent.click(plan);

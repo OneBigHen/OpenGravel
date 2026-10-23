@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, settledExtent, type Coordinate } from "./map-helpers";
+import {
+  clickMapAtCoordinate,
+  plannerMap,
+  pressPlan,
+  settledExtent,
+  type Coordinate,
+} from "./map-helpers";
 
 /**
  * Lane A1's proof: with the route planner unreachable, a ride inside a
@@ -31,7 +37,7 @@ async function planWithNoSignal(page: Page): Promise<void> {
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await clickMapAtCoordinate(page, FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
 }
 
 test("with no signal, a ride inside a downloaded area is planned on the device and says so", async ({ page }) => {
@@ -65,7 +71,7 @@ test("with the browser itself offline, a ride inside a downloaded area is still 
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await clickMapAtCoordinate(page, FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
 
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 45_000 });
   await expect(page.locator('[data-testid^="route-card-"]').first()).toContainText("Planned offline");

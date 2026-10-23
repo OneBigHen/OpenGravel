@@ -4,6 +4,7 @@ export { usePlannerAvoidAreas } from "./hooks/usePlannerAvoidAreas";
 export { usePlannerCamera } from "./hooks/usePlannerCamera";
 export { usePlannerGeometryCache } from "./usePlannerGeometryCache";
 export { usePlanCommand } from "./hooks/usePlanCommand";
+export { usePlannerAutoPlan } from "./hooks/usePlannerAutoPlan";
 export { usePlannerHistoryActions } from "./hooks/usePlannerHistoryActions";
 export { usePlannerSheetActions } from "./hooks/usePlannerSheetActions";
 export { usePlannerItineraryActions } from "./usePlannerItineraryActions";

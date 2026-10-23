@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, settledExtent } from "./map-helpers";
+import { clickMapAtCoordinate, plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 const START = { lon: -75.4385, lat: 40.1385 };
 const FINISH = { lon: -75.4335, lat: 40.1325 };
@@ -32,7 +32,7 @@ test("no TomTom key keeps preparation and route traffic surfaces unknown", async
   await settledExtent(page);
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   // Unknown traffic is stated once for the list, never implied per card.
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("route-traffic-status")).toHaveCount(0);

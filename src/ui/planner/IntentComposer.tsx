@@ -11,10 +11,17 @@ import { useState } from "react";
  * geocoder; without one the rows are the two placement tools, never a fake field.
  *
  * The commit button is disabled only for the three truthful reasons the view
- * model can state, and the reason is always rendered next to it (04 §8). Its
+ * model can state, and the reason is rendered with it (04 §8). Its
  * test hook is `compose-create` whichever label it carries: one button commits
- * an attempt, and the label (`Create ride` / `Update ride`) says which attempt
- * that is.
+ * an attempt, and the label (`Create ride` / `Make my loop` / `Update ride`) says
+ * which attempt that is.
+ *
+ * It is *absent* for a ride with a destination: that ride plans itself the moment
+ * the destination (or the start that completes it) is picked, so a press would ask
+ * a question the planner is already answering. The press survives where it is
+ * still the rider's own decision — a loop's `Make my loop`, and `Plan again` after
+ * a failure — and the disabled reason stays on screen beside the placement chips
+ * when it is the only instruction there is.
  */
 
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
@@ -75,8 +82,12 @@ export interface IntentComposerProps {
   readonly onPlan: () => void;
   /** Keeps cancellation beside the planning commitment in a scrolling sheet. */
   readonly onCancelPlanning?: () => void;
-  /** 04 §8: `Create ride` with no result, `Update ride` on a deliberate edit,
-   * `Plan again` after a failure (the label never claims success on an error). */
+  /**
+   * 04 §8: `Create ride` with no result, `Make my loop` for a loop, `Update ride`
+   * on a deliberate edit, `Plan again` after a failure (the label never claims
+   * success on an error). Defaults to the view model's own answer, so a caller
+   * cannot label a loop's one tap as something it is not.
+   */
   readonly planLabel?: string;
   /**
    * The recovery action when the last attempt failed (04 §29; owner review
@@ -251,7 +262,7 @@ export function IntentComposer({
   onSetFinish,
   onPlan,
   onCancelPlanning,
-  planLabel = "Create ride",
+  planLabel = viewModel.planLabel,
   onChangeDestination,
   onReverse,
   armedTool = null,
@@ -465,16 +476,18 @@ export function IntentComposer({
 
       <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
         <div className="og-composer__commitment-actions">
-          <button
-            type="button"
-            className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
-            data-testid="compose-create"
-            disabled={!viewModel.canPlan}
-            {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
-            onClick={onPlan}
-          >
-            {planLabel}
-          </button>
+          {viewModel.showPlanAction ? (
+            <button
+              type="button"
+              className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
+              data-testid="compose-create"
+              disabled={!viewModel.canPlan}
+              {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
+              onClick={onPlan}
+            >
+              {planLabel}
+            </button>
+          ) : null}
           {onCancelPlanning === undefined ? null : (
             <button type="button" className="og-secondary" data-testid="cancel-planning" onClick={onCancelPlanning}>
               Cancel
@@ -493,7 +506,13 @@ export function IntentComposer({
           </button>
         ) : null}
 
-        {disabledReason === null ? null : (
+        {/*
+          The reason is an explanation of a control, so it goes with the control —
+          except for the two placement reasons, which are the surface's single
+          instruction while a point is missing and therefore outlive the button.
+          A ride that is being planned already says so in the status line.
+        */}
+        {disabledReason === null || !(viewModel.showPlanAction || placementBlocked) ? null : (
           <p
             className="og-composer__reason"
             id={DISABLED_REASON_ID}

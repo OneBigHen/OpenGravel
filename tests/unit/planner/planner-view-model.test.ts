@@ -759,6 +759,40 @@ describe("buildPlannerViewModel — commitment label and recovery (04 §8, §29)
     expect(vm.planLabel).toBe("Plan again");
   });
 
+  it("asks for the loop's one tap, and names it", () => {
+    // A loop needs only its origin, so once that is set planning is unblocked —
+    // and the button stays, because the rider accepts the shape and ride time by
+    // pressing it.
+    const vm = buildPlannerViewModel(
+      input({
+        document: documentWith({ ...READY_DOCUMENT.intent, shape: "loop" }),
+      }),
+    );
+
+    expect(vm.planLabel).toBe("Make my loop");
+    expect(vm.showPlanAction).toBe(true);
+  });
+
+  it("offers the press only where a press still decides something", () => {
+    // A ride with a destination plans itself on the pick, so the control is absent
+    // — the composer hid a button that would re-ask the same question (04 §8).
+    expect(buildPlannerViewModel(input({ document: READY_DOCUMENT })).showPlanAction).toBe(false);
+    // A ride with no destination keeps it: its disabled state carries the single
+    // instruction that says which point is missing.
+    expect(buildPlannerViewModel(input({ document: documentWith() })).showPlanAction).toBe(true);
+    // A failure keeps it too: `Plan again` is a deliberate retry, never a claim
+    // that the update succeeded.
+    expect(
+      buildPlannerViewModel(
+        input({
+          session: session("failed", {
+            error: { code: "no-route", message: "x", recoverable: false },
+          }),
+        }),
+      ).showPlanAction,
+    ).toBe(true);
+  });
+
   it("blames no destination on a loop, which has none", () => {
     const vm = buildPlannerViewModel(
       input({

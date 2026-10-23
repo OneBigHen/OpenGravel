@@ -243,7 +243,8 @@ async function planFixtureRide(): Promise<void> {
   await waitFor(() =>
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent("No destination yet"),
   );
-  fireEvent.click(screen.getByTestId("compose-create"));
+  // The destination completes the ride, so the pick itself asks for it (04 §8):
+  // there is no commitment button to press here any more.
   await waitFor(() => expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready."));
 }
 

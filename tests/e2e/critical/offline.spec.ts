@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 test("empty caches never claim offline-ready network capabilities", async ({ page }) => {
   const consoleErrors: string[] = [];
@@ -17,7 +17,7 @@ test("empty caches never claim offline-ready network capabilities", async ({ pag
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   // Offline readiness is a collapsed detail under the route briefing.
   await page.getByTestId("offline-toggle").click();

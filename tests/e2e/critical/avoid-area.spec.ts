@@ -9,7 +9,9 @@ import {
   plannerMap,
   readCoordinate,
   settledExtent,
-  type Coordinate, openRefine } from "./map-helpers";
+  type Coordinate, openRefine,
+  pressPlan,
+} from "./map-helpers";
 
 /**
  * Avoid areas in a real browser (04-PLANNER-AND-WORKSPACE-UX §18, §20, §31;
@@ -126,7 +128,7 @@ async function planFixtureRide(page: Page): Promise<void> {
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 }
