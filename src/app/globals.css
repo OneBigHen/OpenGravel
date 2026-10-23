@@ -8262,6 +8262,21 @@ h3,
     right: var(--og-float-right);
   }
 
+  /* "Center on me" joins that right column rather than keeping its 12 px window
+     offset, where the floating inspector covered all but a sliver of it: the
+     same right edge as Show whole ride, stacked one button above it (40 px
+     bottom + 44 px tall + 8 px gap). Its failure note steps to the button's
+     left, as it does at the window edge on the other tiers. */
+  .og-planner__map-slot .og-map__locate {
+    right: var(--og-float-right);
+    bottom: 92px;
+  }
+
+  .og-planner__map-slot .og-map__locate-failure {
+    right: calc(var(--og-float-right) + 52px);
+    bottom: 92px;
+  }
+
   .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
     right: calc(var(--og-float-right) - 12px);
   }
@@ -10605,14 +10620,43 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: none;
 }
 
-/* The map slot's strip, where the dock is a column beside the map. The map's top
-   band already belongs to its own tools — the edit bar and its tool status,
-   Layers/Satellite, Places, and Show whole ride — so a top-centre summary would
-   cover one of them on the map columns this workspace actually has (as narrow as
-   ~440 px beside the ride inspector). The strip takes the map's lower band
-   instead, which is the same place the phone's strip takes above the sheet, and
-   the one control down there — Center on me — steps up above it. */
-@media (min-width: 1181px), (orientation: landscape) and (max-height: 500px) and (min-width: 760px) {
+/* The map slot's strip on the wide tiers: top centre, the summary above the
+   geography it describes. It clears the top control band — Layers and Along
+   ride end at 108 px, the edit bar's row at 62 px and the tool status or drag
+   tip it prints under itself at 112 px — and it is centred in the map the two
+   floating panels leave visible rather than in the window, so neither panel can
+   sit on it and it never reaches Show whole ride in the bottom right. The
+   panels' insets are the tokens the map's own controls use; where they are
+   columns instead of overlays the insets are undefined and it spans the map
+   cell's edges. Only the pill takes pointers: the band itself stays draggable. */
+@media (min-width: 1181px) {
+  .og-glance--map {
+    top: 120px;
+    bottom: auto;
+    left: var(--og-float-left, 12px);
+    right: var(--og-float-right, 12px);
+    justify-content: center;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .og-glance--map > * {
+    pointer-events: auto;
+  }
+
+  /* An open place card, or the filters under the Along-ride pill, owns the band
+     the strip would take (it is the thing the rider is reading), so the summary
+     steps out of the way until it is closed. */
+  .og-planner__map-slot:has(.og-places-card) .og-glance--map,
+  .og-planner__map-slot:has(.og-places-control__panel) .og-glance--map {
+    display: none;
+  }
+}
+
+/* The short landscape's map column keeps the strip in its lower band, above the
+   corner controls, where the window is too short to spend a top row on it; the
+   one control down there — Center on me — steps up above it. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 760px) {
   .og-glance--map {
     bottom: 60px;
   }
@@ -10621,8 +10665,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
     bottom: 116px;
   }
 
-  /* An open place card owns that band (it is the thing the rider is reading),
-     so the summary steps out of the way until the card is closed. */
   .og-planner__map-slot:has(.og-places-card) .og-glance--map {
     display: none;
   }
