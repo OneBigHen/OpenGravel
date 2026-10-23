@@ -3,6 +3,16 @@ import { compareCatalogQuality, matchesCatalogSurface } from "@/application/expl
 import { storyTeaser } from "@/application/explore/ride-story";
 
 const MILES_PER_KM = 1 / 1.609344;
+/**
+ * The list is a card list, not the route. A card image and the overview map
+ * thin a line to 80 points themselves (`staticRouteMapUrl`), so sending more
+ * cannot change a pixel; the route page fetches `/api/catalog/<id>` for the
+ * full line. Coordinates are rounded to five decimals (~1 m), which is the
+ * precision the static map encodes at.
+ */
+const LIST_PREVIEW_POINTS = 80;
+const MEMBER_PREVIEW_POINTS = 24;
+const PREVIEW_DECIMALS = 5;
 export const CATALOG_CACHE_HEADERS = {
   "cache-control": "public, max-age=0, s-maxage=15, must-revalidate",
 };
@@ -47,9 +57,19 @@ function distanceKm(first: readonly [number, number], second: readonly [number, 
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function compactPreview(points: CatalogEntry["geometry"]): CatalogEntry["geometry"] {
-  if (points.length <= 24) return points;
-  return Array.from({ length: 24 }, (_, index) => points[Math.round(index * (points.length - 1) / 23)]!);
+function roundCoordinate(value: number): number {
+  const scale = 10 ** PREVIEW_DECIMALS;
+  return Math.round(value * scale) / scale;
+}
+
+function compactPreview(
+  points: CatalogEntry["geometry"],
+  maximum: number,
+): CatalogEntry["geometry"] {
+  const source = points.length <= maximum
+    ? points
+    : Array.from({ length: maximum }, (_, index) => points[Math.round(index * (points.length - 1) / (maximum - 1))]!);
+  return source.map((point) => ({ lat: roundCoordinate(point.lat), lon: roundCoordinate(point.lon) }));
 }
 
 export function handleCatalogList(url: URL, entries: readonly CatalogEntry[]): CatalogHttpResult {
@@ -102,7 +122,7 @@ export function handleCatalogList(url: URL, entries: readonly CatalogEntry[]): C
       region: member.region,
       summary: member.summary,
       distanceKm: member.distanceKm,
-      previewGeometry: compactPreview(member.previewGeometry ?? member.geometry),
+      previewGeometry: compactPreview(member.previewGeometry ?? member.geometry, MEMBER_PREVIEW_POINTS),
       ...(member.surfaceSummary === undefined ? {} : { surfaceSummary: member.surfaceSummary }),
       ...(member.curvatureSummary === undefined ? {} : { curvatureSummary: member.curvatureSummary }),
       ...(member.nameIsGenerated === undefined ? {} : { nameIsGenerated: member.nameIsGenerated }),
@@ -113,7 +133,7 @@ export function handleCatalogList(url: URL, entries: readonly CatalogEntry[]): C
       variantCount,
       exportCount: sourceMembers.length,
       catalogMembers,
-      preview: previewGeometry ?? geometry,
+      preview: compactPreview(previewGeometry ?? geometry, LIST_PREVIEW_POINTS),
     };
   });
   return respond(200, { count: routes.length, routes });

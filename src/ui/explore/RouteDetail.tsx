@@ -40,7 +40,6 @@ export interface RouteDetailProps {
   readonly entry: CatalogEntry;
   readonly variants?: readonly CatalogVariantSummary[];
   readonly onUse: (entry: CatalogEntry) => Promise<void> | void;
-  readonly onAddToLibrary?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
   readonly preparation?: RoutePreparation;
   /** The rider's active garage bike; fuel advice uses it (EX-02, RS-01). */
@@ -272,7 +271,6 @@ export function RouteDetail({
   entry,
   variants = [],
   onUse,
-  onAddToLibrary,
   preparation: providedPreparation,
   preparationProviders,
   activeBike,
@@ -293,7 +291,11 @@ export function RouteDetail({
   const staticMapUrl = mapboxToken === undefined
     ? null
     : staticRouteMapUrl(entry.geometry.length >= 2 ? entry.geometry : entry.previewGeometry ?? [], { token: mapboxToken, width: 640, height: 400 });
-  const canExport = entry.geometry.length >= 2;
+  // A list entry carries only the card's preview line. Plan, export and share
+  // must wait for the route page's full geometry (ExploreClient shows the
+  // load state when the full line cannot be fetched).
+  const fullGeometry = entry.geometryComplete !== false;
+  const canExport = fullGeometry && entry.geometry.length >= 2;
   const registeredProviders: RegisteredPreparationProviders = preparationProviders ?? {};
   const weatherCandidate = Array.isArray(registeredProviders)
     ? registeredProviders.find((provider) => provider.kind === "weather")
@@ -397,7 +399,6 @@ export function RouteDetail({
     try {
       await callback();
       if (action === "use") setStatus("Opening a private copy in the planner.");
-      if (action === "library") setStatus("Added a copy to your library.");
     } catch {
       setStatus("That action could not be completed.");
     } finally {
@@ -463,11 +464,10 @@ export function RouteDetail({
       {/* EX-03: the main action sits with the summary, not 3,000 px below it;
           on a phone it stays pinned above the tab bar. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button type="button" className="og-primary" disabled={busy !== null} onClick={() => void runAction("use", () => onUse(entry))}>Plan this ride</button>
-        {entry.source === "personal" && onAddToLibrary !== undefined ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={() => void runAction("library", () => onAddToLibrary(entry))}>Add to library</button> : null}
+        <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Plan this ride</button>
         {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
         <ShareRouteButton name={entry.name} />
-        {entry.source === "personal" || entry.source === "import" ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+        {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
       </section>
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}

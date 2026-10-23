@@ -12050,6 +12050,24 @@ a.og-secondary {
   margin: 24px;
 }
 
+/* A route page that could not get its full line: the reason, then the ways out. */
+.og-explore-detail-status {
+  display: grid;
+  gap: 12px;
+  max-width: 46rem;
+  margin: 24px;
+}
+
+.og-explore-detail-status .og-explore-status {
+  margin: 0;
+}
+
+.og-explore-detail-status__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 @keyframes og-skeleton-shimmer {
   from { background-position: 100% 0; }
   to { background-position: -100% 0; }

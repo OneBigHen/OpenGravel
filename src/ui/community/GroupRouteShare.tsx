@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { CommunityRouteError, shareRouteWithEveryone } from "@/application/community/route-sharing-client";
+import { rememberOwnerToken } from "@/ui/community/community-owner-token";
 import { PublicRidePhotos } from "./PublicRidePhotos";
 import type { PreparedPublicPhoto } from "@/application/community/prepare-photo";
 import { PUBLIC_RIDE_MAX_NAME, PUBLIC_RIDE_MAX_NOTES, PUBLIC_RIDE_MAX_POINTS, PUBLIC_RIDE_MIN_METERS } from "@/application/community/public-ride";
@@ -23,6 +24,7 @@ export function ShareWithEveryone({ name, geometry, initiallyOpen = false }: {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [privacy, setPrivacy] = useState(defaultPrivacyTrim);
   const [sharedId, setSharedId] = useState<string | null>(null);
+  const [canRemove, setCanRemove] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const publishing = useRef(false);
   const preview = useMemo(() => {
@@ -43,7 +45,7 @@ export function ShareWithEveryone({ name, geometry, initiallyOpen = false }: {
   if (geometry.length < 2) return null;
   if (phase === "done" && sharedId !== null) return (
     <p className="og-community-action" role="status">
-      Shared with everyone. <Link href={`/explore/${encodeURIComponent(sharedId)}`}>See it on Explore</Link>. Your private ride is unchanged. You can add comments on the shared ride page. Anyone can take a shared route down.
+      Shared with everyone. <Link href={`/explore/${encodeURIComponent(sharedId)}`}>See it on Explore</Link>. Your private ride is unchanged. You can add comments on the shared ride page. {canRemove ? "Only this device can take it down again." : "This browser could not keep the removal key, so you cannot take it down from here."}
     </p>
   );
   if (phase === "idle") return <button type="button" className="og-secondary" onClick={() => setPhase("confirm")}>Share with everyone</button>;
@@ -72,8 +74,9 @@ export function ShareWithEveryone({ name, geometry, initiallyOpen = false }: {
           setPhase("busy");
           setError(null);
           try {
-            const id = await shareRouteWithEveryone(title, preview.line, { description: notes.trim(), photos: photos.map((photo) => photo.base64) });
-            setSharedId(id);
+            const shared = await shareRouteWithEveryone(title, preview.line, { description: notes.trim(), photos: photos.map((photo) => photo.base64) });
+            setCanRemove(shared.removalToken === undefined ? false : rememberOwnerToken(shared.id, shared.removalToken));
+            setSharedId(shared.id);
             setPhase("done");
           } catch (caught: unknown) {
             setError(caught instanceof CommunityRouteError ? caught.message : "The ride could not be shared. Try again.");
