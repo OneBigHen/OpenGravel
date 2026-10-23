@@ -7,7 +7,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   departureIsLive,
@@ -28,6 +28,27 @@ import { departureFor, departureSummary, PlannerPreparation } from "@/ui/planner
 import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
 afterEach(() => cleanup());
+
+/**
+ * A device whose app shell reopens offline: a controlling service worker and a
+ * fresh cached shell. "Plan offline" needs that as well as a downloaded area.
+ */
+function withOfflineShell(): () => void {
+  const previous = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: { controller: { scriptURL: "https://opengravel.test/sw.js" }, getRegistrations: async () => [{}] },
+  });
+  vi.stubGlobal("caches", {
+    match: vi.fn(async () => new Response("shell", { headers: { "x-og-cached-at": new Date().toISOString() } })),
+  });
+  return () => {
+    if (previous === undefined) delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+    else Object.defineProperty(navigator, "serviceWorker", previous);
+    vi.unstubAllGlobals();
+  };
+}
+
 
 const NOW = "2026-06-21T14:00:00.000Z";
 const LINE: Coordinate[] = Array.from({ length: 400 }, (_, index) => ({ lon: -75.7 + index * 0.001, lat: 40.86 }));
@@ -272,6 +293,8 @@ describe("PlannerPreparation", () => {
   });
 
   it("says the downloaded area plans rides offline instead of 'online only for now'", async () => {
+    const restore = withOfflineShell();
+    onTestFinished(restore);
     const offlineRegions = {
       installed: vi.fn(async () => [{ regionId: "pennsylvania" }, { regionId: "maryland" }]),
     };
@@ -301,6 +324,8 @@ describe("PlannerPreparation", () => {
   });
 
   it("reads the areas the composition root provided when no prop is given", async () => {
+    const restore = withOfflineShell();
+    onTestFinished(restore);
     render(
       <InstalledOfflineAreasProvider regions={{ installed: async () => [{ regionId: "pennsylvania" }] as never }}>
         <PlannerPreparation
