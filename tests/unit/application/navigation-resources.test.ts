@@ -27,14 +27,30 @@ describe("speech coordinator", () => {
     expect(speech.snapshot().status).toBe("unsupported");
   });
 
-  it("refuses a re-issued instruction identity", async () => {
+  it("speaks one maneuver once per distance band, and never twice for the same band", async () => {
     const speak = vi.fn(async () => undefined);
     const speech = createSpeechCoordinator({ speak });
 
     expect(await speech.announce(CUE)).toBe(true);
-    expect(await speech.announce({ ...CUE, distanceMeters: 30 })).toBe(false);
-    expect(speak).toHaveBeenCalledOnce();
+    // Same identity, same band: the rider already heard it.
+    expect(await speech.announce({ ...CUE, distanceMeters: 150 })).toBe(false);
+    // The next band down is new information.
+    expect(await speech.announce({ ...CUE, distanceMeters: 80 })).toBe(true);
+    expect(await speech.announce({ ...CUE, distanceMeters: 70 })).toBe(false);
+    expect(speak).toHaveBeenCalledTimes(2);
     expect(speech.snapshot()).toMatchObject({ status: "ready", lastInstructionId: CUE.instructionId });
+  });
+
+  it("starts the bands over for the next maneuver", async () => {
+    const speak = vi.fn(async () => undefined);
+    const speech = createSpeechCoordinator({ speak });
+
+    expect(await speech.announce(CUE)).toBe(true);
+    expect(await speech.announce({ ...CUE, distanceMeters: 80 })).toBe(true);
+    const next = asSessionInstructionId("instr_route_1_1");
+    // A new turn is a new announcement even at a distance this one covered.
+    expect(await speech.announce({ ...CUE, instructionId: next, distanceMeters: 80 })).toBe(true);
+    expect(speak).toHaveBeenCalledTimes(3);
   });
 
   it("surfaces speech failure without throwing or retry-spamming the cue", async () => {

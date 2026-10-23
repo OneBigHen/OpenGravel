@@ -145,6 +145,12 @@ export interface SessionInstruction {
     | "uturn"
     | null;
   readonly roadName: string | null;
+  /**
+   * The distance to the maneuver **at the instant it was issued** (8 §6). It is
+   * not the current distance and a surface must not print it as one: the live
+   * engine measures the closing distance on every match frame
+   * (`RideFocusTelemetryInput.liveManeuver`).
+   */
   readonly distanceMeters: number;
   readonly targetStopId: StopId | null;
 }
