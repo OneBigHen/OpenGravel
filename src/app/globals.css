@@ -6993,20 +6993,21 @@ h3,
 }
 
 .og-advisor__changes li {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
   border: 1px solid var(--og-sandstone);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--og-paper);
   font-size: 13px;
   line-height: 1.35;
 }
 
 .og-advisor__was {
+  margin: 0;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .og-advisor__brief {

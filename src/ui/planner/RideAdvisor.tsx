@@ -340,6 +340,18 @@ export function changeChip(change: AdvisorProposalChange): string {
 }
 
 /** What the setting was before, in the same rider words, for a visible comparison. */
+/**
+ * The settings a proposal actually overwrites, in rider words. Filling an empty
+ * slot ("No start", "No time target") or the ride shape is self-evident from
+ * the chips, so only real previous choices are named.
+ */
+export function replacedSettings(changes: readonly AdvisorProposalChange[]): readonly string[] {
+  return changes
+    .filter((change) => change.field !== "shape")
+    .map(changeWas)
+    .filter((before) => !/^(no |none\b|not set\b)/i.test(before));
+}
+
 export function changeWas(change: AdvisorProposalChange): string {
   return fieldWords(change.field, change.before);
 }
@@ -447,15 +459,17 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             <AdvisorMark />
             <span>Proposed ride</span>
           </p>
-          <p className="og-advisor__brief">{proposal.summary}</p>
           <ul className="og-advisor__changes" aria-label="What this sets">
             {proposal.changes.map((change) => (
               <li key={change.field}>
-                <span>{changeChip(change)}</span>
-                <span className="og-advisor__was">was {changeWas(change)}</span>
+                {changeChip(change)}
+                <span className="og-visually-hidden">, was {changeWas(change)}</span>
               </li>
             ))}
           </ul>
+          {replacedSettings(proposal.changes).length === 0 ? null : (
+            <p className="og-advisor__was" aria-hidden="true">Replaces {replacedSettings(proposal.changes).join(", ")}</p>
+          )}
           {proposal.notes.map((note, index) => (
             <p className="og-advisor__note" key={`${index}-${note}`}>
               {note}

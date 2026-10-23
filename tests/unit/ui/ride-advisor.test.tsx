@@ -355,12 +355,13 @@ describe("the proposal card", () => {
 
     const proposal = await screen.findByTestId("advisor-proposal");
     expect(proposal).toHaveTextContent("Proposed ride");
-    expect(proposal).toHaveTextContent("Review the proposed changes before applying them.");
     expect(proposal).toHaveTextContent("New roads");
     expect(proposal).toHaveTextContent(`Back by 6:00 pm on ${dayWords(returnDay)}`);
     expect(proposal.textContent).not.toMatch(/prefer-new-to-me|\d{4}-\d{2}-\d{2}/);
-    // The old value is readable on a touch screen, not hidden in a hover title.
-    expect(proposal).toHaveTextContent("was Balanced roads");
+    // The old value is readable on a touch screen, not hidden in a hover title,
+    // and filling an empty slot ("No time target") is not called a replacement.
+    expect(proposal).toHaveTextContent("Replaces Balanced roads");
+    expect(proposal.querySelector(".og-advisor__was")?.textContent).not.toMatch(/No time target|No start/);
     expect(proposal.querySelector("li[title]")).toBeNull();
   });
 
