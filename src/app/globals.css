@@ -5062,7 +5062,7 @@ h3,
   position: relative;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: 14px;
   align-items: center;
   align-content: center;
@@ -5134,9 +5134,19 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
-.og-ride__maneuver-glyph {
+/* The glyph owns the icon column for the two instruction rows; the "then" row
+   starts below them. */
+.og-ride__maneuver-symbol {
   grid-row: 1 / span 2;
   grid-column: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+}
+
+.og-ride__maneuver-glyph {
   width: 64px;
   height: 64px;
   color: var(--og-paper);
@@ -5178,12 +5188,98 @@ h3,
   font-weight: 700;
 }
 
+/* A roundabout exit the provider stated: a paper disc with an ink ring at the
+   glyph's lower-right. No number means no badge — never a guessed exit. */
+.og-ride__maneuver-exit {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--og-paper);
+  box-shadow: 0 0 0 2px #07100c;
+  color: #07100c;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "then" row: two turns in quick succession are the classic missed turn.
+   It spans both columns, and the card only reserves its height when the row
+   exists (`data-then`), so a distant next maneuver never adds clutter. */
+.og-ride__maneuver-then {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 30px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: color-mix(in srgb, var(--og-paper) 86%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.og-ride__maneuver-then-label {
+  flex: 0 0 auto;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  /* Night draws the whole second line at 86% paper; the glyph belongs to it. */
+  color: inherit;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then path {
+  stroke-width: 3.6;
+}
+
+.og-ride__maneuver-then-action {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.og-ride__maneuver-then-road {
+  font-weight: 700;
+}
+
+/* Only a card that really carries a "then" row is taller. Injection: the map's
+   ResizeObserver re-insets as the card grows or shrinks. */
+.og-ride__maneuver[data-then="true"] {
+  min-height: 126px;
+}
+
 .og-ride__maneuver[data-kind="suspended"],
 .og-ride__maneuver[data-kind="waiting"] {
   grid-template-columns: minmax(0, 1fr);
   min-height: 64px;
   background: var(--og-ride-glass);
   backdrop-filter: blur(10px);
+}
+
+/* Off the line the card also carries the recovery (DV-10): the sentence, the
+   measured offset, and two 56 px controls. A taller fixed box, so the way back
+   is under the thumb that is already there and the layout never jumps. */
+.og-ride__maneuver[data-kind="suspended"] {
+  row-gap: 6px;
+  min-height: 124px;
 }
 
 .og-ride__maneuver-suspended {
@@ -5203,6 +5299,29 @@ h3,
 .og-ride__maneuver .og-ride__maneuver-suspended {
   font-size: 17px;
   color: var(--og-paper);
+}
+
+/* "220 ft off route": the engine's own measurement, muted, one line. The right
+   padding is the GPS badge's; a poor fix shows it over this corner. */
+.og-ride__off-route-distance {
+  grid-column: 1 / -1;
+  padding-right: 48px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--og-ride-muted);
+}
+
+/* Side by side, glove-sized: the recovery is one thumb, not a menu. */
+.og-ride__off-route-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__off-route-actions .og-ride__off-route-action {
+  flex: 1 1 132px;
+  /* Narrow landscape columns: the label keeps its line instead of wrapping. */
+  padding-inline: 10px;
 }
 
 /* A small warning, only while the fix is bad (DV-10): no GPS text on screen. */
@@ -5588,6 +5707,18 @@ h3,
 
   .og-ride__maneuver {
     min-height: 84px;
+  }
+
+  /* Landscape has the height to spare and the width it does not; the off-route
+     card keeps its two controls side by side at 116 px. */
+  .og-ride__maneuver[data-kind="suspended"] {
+    min-height: 116px;
+  }
+
+  /* The "then" row is a second line, not a second card: landscape buys it the
+     same 116 px so the primary maneuver never loses its distance. */
+  .og-ride__maneuver[data-then="true"] {
+    min-height: 116px;
   }
 
   .og-ride__maneuver-distance {
@@ -9828,7 +9959,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
+  width: 56px;
   height: 56px;
   padding: 0;
   border: 0;
@@ -9836,6 +9967,52 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   background: transparent;
   color: var(--og-ride-muted);
   cursor: pointer;
+}
+
+/*
+  Recording, from the map screen (a mounted phone's "is it recording?"): the
+  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a 9 px
+  REC caption and the elapsed time, stacked in two lines. No pulse and no
+  animation in either theme: a dot beside a counting clock is enough, and
+  nothing moves at 60 mph (and nothing to stop for reduced motion).
+*/
+.og-ride-metrics__toggle[data-recording="true"] {
+  gap: 1px;
+  border: 1px solid var(--og-ride-border);
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  line-height: 1;
+}
+
+.og-ride-metrics__rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.og-ride-metrics__rec-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--og-danger);
+}
+
+.og-ride-metrics__rec-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.og-ride-metrics__toggle .og-ride-metrics__rec-chevron {
+  width: 10px;
+  height: 10px;
+}
+
+.og-ride-metrics__rec-time {
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 .og-ride-metrics__toggle[data-held="true"] {

@@ -30,7 +30,16 @@ import { SESSION_ACTIVITIES, SESSION_EVENT_TYPES, SESSION_MOVING_ACTIVITIES } fr
 
 const SESSION_PAUSE_REASONS = ["rider", "interruption"] as const;
 const SESSION_END_REASONS = ["completed", "abandoned"] as const;
-const INSTRUCTION_KINDS = ["turn", "continue", "arrive"] as const;
+const INSTRUCTION_KINDS = [
+  "turn",
+  "continue",
+  "arrive",
+  "roundabout",
+  "keep-left",
+  "keep-right",
+] as const;
+/** The most exits a real roundabout presents; a larger number is not a count. */
+const MAX_ROUNDABOUT_EXIT = 20;
 const MANEUVERS = [
   "left",
   "right",
@@ -152,6 +161,24 @@ export function validateSessionInstruction(value: unknown): readonly string[] {
   }
   if (value.targetStopId !== null && !isBrandedId(value.targetStopId, "stop_")) {
     issues.push("instruction.targetStopId must be null or a stop_ identifier");
+  }
+  // An exit number exists only where the provider stated one, and only for a
+  // roundabout: it is never derived from the ring's shape or the instruction
+  // text (8 §6). A missing or null value is honest and expected.
+  const exitNumber = value.exitNumber;
+  if (exitNumber !== undefined && exitNumber !== null) {
+    if (value.kind !== "roundabout") {
+      issues.push("only a roundabout instruction carries an exit number");
+    } else if (
+      typeof exitNumber !== "number" ||
+      !Number.isInteger(exitNumber) ||
+      exitNumber < 1 ||
+      exitNumber > MAX_ROUNDABOUT_EXIT
+    ) {
+      issues.push(
+        `instruction.exitNumber must be an integer from 1 to ${MAX_ROUNDABOUT_EXIT}`,
+      );
+    }
   }
   return issues;
 }

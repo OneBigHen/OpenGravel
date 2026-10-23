@@ -121,6 +121,12 @@ export interface RouteInstruction {
   readonly roadName?: string;
   /** First route-geometry vertex in the provider's instruction interval. */
   readonly geometryIndex?: number;
+  /**
+   * The roundabout exit the engine stated, when it stated one (`roundabout`
+   * instructions only). Optional because a deployed engine version may not send
+   * it; absent means "unknown", never "first exit".
+   */
+  readonly exitNumber?: number;
 }
 
 export const MAX_ROUTE_INSTRUCTIONS = 512;
@@ -177,6 +183,7 @@ export function isRouteInstruction(value: unknown): value is RouteInstruction {
   const allowedManeuvers = ["left", "right", "slight-left", "slight-right", "straight", "uturn"];
   const geometryIndex = value["geometryIndex"];
   const roadName = value["roadName"];
+  const exitNumber = value["exitNumber"];
   return (
     typeof value["text"] === "string" && value["text"].length <= 512 &&
     typeof value["type"] === "string" && value["type"].length > 0 && value["type"].length <= 40 &&
@@ -184,6 +191,8 @@ export function isRouteInstruction(value: unknown): value is RouteInstruction {
     typeof value["durationSeconds"] === "number" && Number.isFinite(value["durationSeconds"]) && value["durationSeconds"] >= 0 &&
     (maneuver === undefined || (typeof maneuver === "string" && allowedManeuvers.includes(maneuver)) ) &&
     (roadName === undefined || (typeof roadName === "string" && roadName.length <= 160)) &&
+    (exitNumber === undefined ||
+      (typeof exitNumber === "number" && Number.isInteger(exitNumber) && exitNumber >= 1 && exitNumber <= 20)) &&
     (geometryIndex === undefined || (typeof geometryIndex === "number" && Number.isSafeInteger(geometryIndex) && geometryIndex >= 0))
   );
 }
