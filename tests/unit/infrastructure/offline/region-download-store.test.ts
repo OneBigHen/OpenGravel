@@ -123,3 +123,57 @@ describe("RegionDownloadStore rate limits", () => {
     expect(await regions.list()).toHaveLength(1);
   });
 });
+
+/** Presents a device with a fixed storage budget to the download store. */
+function stubStorage(quota: number, usage = 0): () => void {
+  const previous = Object.getOwnPropertyDescriptor(navigator, "storage");
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: {
+      estimate: async () => ({ quota, usage }),
+      persist: async () => true,
+    },
+  });
+  return () => {
+    if (previous === undefined) delete (navigator as unknown as Record<string, unknown>)["storage"];
+    else Object.defineProperty(navigator, "storage", previous);
+  };
+}
+
+describe("RegionDownloadStore storage quota", () => {
+  // The fixture's two tiles are 262,715 bytes together.
+  it("refuses an area that cannot fit beside its map archive before fetching a byte", async () => {
+    const restore = stubStorage(1_000_000);
+    try {
+      const log: string[] = [];
+      await expect(
+        store(serverFetch(log)).download(REGION, () => undefined, undefined, 900_000),
+      ).rejects.toMatchObject({ code: "quota" });
+      expect(log.filter((path) => path.includes("/tiles/"))).toHaveLength(0);
+    } finally {
+      restore();
+    }
+  });
+
+  it("reports a device storage refusal while writing as quota, not as a network failure", async () => {
+    const restore = stubStorage(100_000_000);
+    try {
+      const regions = store(serverFetch());
+      const tiles = (regions as unknown as {
+        tiles: { put: (value: unknown) => Promise<unknown> };
+      }).tiles;
+      const put = tiles.put;
+      tiles.put = () => Promise.reject(new DOMException("The quota has been exceeded.", "QuotaExceededError"));
+      try {
+        await expect(regions.download(REGION, () => undefined)).rejects.toMatchObject({
+          code: "quota",
+          message: "There is not enough storage on this device for this area.",
+        });
+      } finally {
+        tiles.put = put;
+      }
+    } finally {
+      restore();
+    }
+  });
+});

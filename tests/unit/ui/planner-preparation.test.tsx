@@ -25,6 +25,7 @@ import { DEFAULT_BIKE } from "@/domain/ride/create";
 import { createGarage } from "@/application/garage/garage-model";
 import type { Coordinate } from "@/domain/ride/types";
 import { departureFor, departureSummary, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
+import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
 afterEach(() => cleanup());
 
@@ -268,6 +269,83 @@ describe("PlannerPreparation", () => {
       />,
     );
     expect(screen.queryByTestId("departure-arrive")).toBeNull();
+  });
+
+  it("says the downloaded area plans rides offline instead of 'online only for now'", async () => {
+    const offlineRegions = {
+      installed: vi.fn(async () => [{ regionId: "pennsylvania" }, { regionId: "maryland" }]),
+    };
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        offlineRegions={offlineRegions as never}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByTestId("offline-summary-note");
+    expect(note).toHaveTextContent("2 areas ready · plan offline");
+    expect(note).not.toHaveTextContent("online only for now");
+    // The disclosure underneath agrees with the line above it.
+    expect(screen.getByTestId("offline-state-plan.route")).not.toHaveTextContent("Needs network");
+  });
+
+  it("reads the areas the composition root provided when no prop is given", async () => {
+    render(
+      <InstalledOfflineAreasProvider regions={{ installed: async () => [{ regionId: "pennsylvania" }] as never }}>
+        <PlannerPreparation
+          route={{ routeId: "route_a", ...ROUTE }}
+          departure={{ kind: "now" }}
+          bike={DEFAULT_BIKE}
+          offlineRoute={null}
+          onDepartureChange={vi.fn()}
+          onBikeChange={vi.fn()}
+        />
+      </InstalledOfflineAreasProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("offline-summary-note")).toHaveTextContent("1 area ready · plan offline");
+  });
+
+  it("says so plainly when this device holds no downloaded area", async () => {
+    const offlineRegions = { installed: vi.fn(async () => []) };
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        offlineRegions={offlineRegions as never}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByTestId("offline-summary-note");
+    expect(note).toHaveTextContent("no downloaded area · online only");
+    expect(note).not.toHaveTextContent("online only for now");
   });
 
   it("shows nothing before there is a route", () => {

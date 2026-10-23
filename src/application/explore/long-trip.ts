@@ -1,7 +1,7 @@
 import type { CatalogEntry } from "./catalog";
 import {
-  calculateSunset,
   longTripConsiderations,
+  sunsetOnDepartureDay,
   type LongTripBike,
   type LongTripFacts,
 } from "@/application/long-trip";
@@ -51,8 +51,10 @@ export function enrichRoutePreparationForLongTrip(
   const departure = sourceDocument?.intent.departure.kind === "future"
     ? sourceDocument.intent.departure.at
     : null;
+  // The sunset of the rider's own day: the UTC-date calculation alone gets the
+  // previous evening for a morning start in the Americas.
   const derivedDaylight = departure !== null && entry.geometry[0] !== undefined
-    ? calculateSunset(entry.geometry[0], departure)
+    ? sunsetOnDepartureDay(entry.geometry[0], departure)
     : null;
   const longTripFacts: LongTripFacts = {
     ...(entry.longTripFacts ?? {}),

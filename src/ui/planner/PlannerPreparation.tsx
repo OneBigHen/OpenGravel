@@ -16,6 +16,8 @@
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
 
 import type { OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
+import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
+import { useInstalledOfflineAreas } from "@/ui/planner/installed-offline-areas";
 import { readBrowserOfflineRuntime } from "@/application/offline/offline-runtime";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
@@ -53,6 +55,12 @@ export interface PlannerPreparationProps {
   readonly bikes?: readonly BikeProfile[];
   readonly providers?: PreparationProviderRegistry;
   readonly offlineRoute: SelectedOfflineRoute | null;
+  /**
+   * The downloaded areas on this device, so the summary describes this phone
+   * rather than a build-time assumption. Defaults to the composition root's
+   * provider; absent leaves that unknown.
+   */
+  readonly offlineRegions?: Pick<OfflineRegionsPort, "installed"> | undefined;
   readonly onDepartureChange: (departure: DepartureIntent) => void;
   /** Arrive-by (NV-09): the rider's arrival, when they planned one. */
   readonly arrival?: ArrivalTarget | null;
@@ -300,6 +308,7 @@ export function PlannerPreparation({
   bikes = [],
   providers,
   offlineRoute,
+  offlineRegions: offlineRegionsProp,
   onDepartureChange,
   arrival = null,
   onArrivalChange,
@@ -340,6 +349,8 @@ export function PlannerPreparation({
     readonly snapshot: OfflineRuntimeSnapshot;
   } | null>(null);
   const offlineRouteKey = offlineRoute?.routeKey ?? "none";
+  const providedOfflineRegions = useInstalledOfflineAreas();
+  const offlineRegions = offlineRegionsProp ?? providedOfflineRegions;
 
   // One refresh per (route, departure): weather for the ride's window, and
   // live traffic when the ride leaves now. The context is computed here, not
@@ -390,7 +401,14 @@ export function PlannerPreparation({
 
   useEffect(() => {
     let cancelled = false;
-    void readBrowserOfflineRuntime({ route: offlineRoute })
+    const installedAreas = offlineRegions === undefined
+      ? Promise.resolve<number | null>(null)
+      : offlineRegions.installed().then(
+          (areas) => areas.length,
+          () => null,
+        );
+    void installedAreas
+      .then((count) => readBrowserOfflineRuntime({ route: offlineRoute, installedAreas: count }))
       .then((snapshot) => {
         if (!cancelled) setOffline({ routeKey: offlineRouteKey, snapshot });
       })
@@ -400,7 +418,7 @@ export function PlannerPreparation({
     return () => {
       cancelled = true;
     };
-  }, [offlineRoute, offlineRouteKey]);
+  }, [offlineRoute, offlineRouteKey, offlineRegions]);
   const offlineSnapshot = offline?.routeKey === offlineRouteKey ? offline.snapshot : null;
 
   const current = briefing !== null && briefing.key === briefingKey ? briefing : null;
@@ -466,10 +484,14 @@ export function PlannerPreparation({
       {/* Nothing to be offline-ready for until there is a route. */}
       {route === null ? null : (
       <details className="og-offline-details">
-        {/* Offline region downloads are cut for the MVP (parity row 26): say so
-            in the one line a rider sees, not only inside the disclosure. */}
+        {/* The one line a rider sees has to describe this phone, not a build:
+            it is derived from the disclosure's own facts, so the two cannot
+            disagree with each other or with Settings. */}
         <summary data-testid="offline-toggle">
-          Offline readiness <span className="og-offline-details__note">· online only for now</span>
+          Offline readiness{" "}
+          <span className="og-offline-details__note" data-testid="offline-summary-note">
+            · {offlineSummaryNote(offlineSnapshot)}
+          </span>
         </summary>
         {offlineSnapshot === null ? (
           <p className="og-offline__readiness" data-testid="offline-checking" role="status">
@@ -486,6 +508,21 @@ export function PlannerPreparation({
       )}
     </>
   );
+}
+
+/**
+ * What offline really means for this rider right now, in one line.
+ *
+ * No downloaded area is the only honest "online only"; with areas on the device
+ * the planner can answer from them, which is exactly what Settings promised.
+ */
+export function offlineSummaryNote(snapshot: OfflineRuntimeSnapshot | null): string {
+  if (snapshot === null) return "checking this device";
+  const areas = snapshot.installedAreas;
+  if (areas === null) return "downloads not checked";
+  if (areas === 0) return "no downloaded area · online only";
+  const ready = `${areas} ${areas === 1 ? "area" : "areas"} ready`;
+  return snapshot.matrix["plan.route"].state === "requires_network" ? ready : `${ready} · plan offline`;
 }
 
 /** The briefing's verdicts a rider needs before Start, in a few words each (FT-03). */

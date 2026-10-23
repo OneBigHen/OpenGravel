@@ -57,6 +57,8 @@ import type { Garage } from "@/application/garage/garage-model";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { createHomeLocationStorage } from "@/infrastructure/storage/home-location-storage";
 import { createPlaceMemoryStore } from "@/infrastructure/storage/place-memory-storage";
+import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
+import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 import { publishTelemetryIntent } from "@/infrastructure/telemetry/browser-event-bridge";
 
 /** Drops the on-screen keyboard before a ride opens: a focused box makes iOS keep a dead viewport over the ride. */
@@ -120,6 +122,13 @@ export function PlannerClient({
 }: PlannerClientProps) {
   const [garage, setGarage] = useState<Garage>(createGarage);
   const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
+  // What the rider downloaded, so the briefing describes this phone instead of
+  // a build-time assumption. Absent where the browser has no local storage.
+  const offlineRegions = useMemo(
+    () => (typeof indexedDB === "undefined" ? undefined : new OfflineAreaStore()),
+    [],
+  );
+  useEffect(() => () => offlineRegions?.close(), [offlineRegions]);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setGarage(garageStorage.read());
@@ -333,21 +342,23 @@ export function PlannerClient({
       planningStore={planningSessionStore}
       onApplied={planAfterAdvice}
     >
-      <PlannerWorkspace
-        {...(mapboxToken === undefined ? {} : { mapboxToken })}
-        rideDocumentStore={rideDocumentStore}
-        planningSessionStore={planningSessionStore}
-        geometryStore={geometryStore}
-        places={places}
-        preparationProviders={preparationProviders}
-        bikes={garage.bikes}
-        libraryService={libraryService}
-        shareService={shareService}
-        basemap={basemap}
-        mapHostFactory={hostFactory}
-        rideActions={{ start: startRide, record: recordRide, freeRide: startFreeRide }}
-        {...(assetBasePath === undefined ? {} : { assetBasePath })}
-      />
+      <InstalledOfflineAreasProvider regions={offlineRegions}>
+        <PlannerWorkspace
+          {...(mapboxToken === undefined ? {} : { mapboxToken })}
+          rideDocumentStore={rideDocumentStore}
+          planningSessionStore={planningSessionStore}
+          geometryStore={geometryStore}
+          places={places}
+          preparationProviders={preparationProviders}
+          bikes={garage.bikes}
+          libraryService={libraryService}
+          shareService={shareService}
+          basemap={basemap}
+          mapHostFactory={hostFactory}
+          rideActions={{ start: startRide, record: recordRide, freeRide: startFreeRide }}
+          {...(assetBasePath === undefined ? {} : { assetBasePath })}
+        />
+      </InstalledOfflineAreasProvider>
     </RideAdvisorProvider>
   );
 }

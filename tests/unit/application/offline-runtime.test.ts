@@ -18,4 +18,23 @@ describe("browser offline runtime", () => {
     expect(snapshot.matrix["import.export"].state).toBe("available");
     expect(snapshot.readiness).toBeNull();
   });
+
+  it("knows a downloaded road graph lets the planner answer with no signal", async () => {
+    const snapshot = await readBrowserOfflineRuntime({ now: "2026-09-18T12:00:00.000Z", installedAreas: 2 });
+
+    expect(snapshot.installedAreas).toBe(2);
+    expect(snapshot.facts.caches.offlineGraph.presence).toBe("present");
+    // Presence is a fact; the graph's data date is the region's, so the age stays
+    // unknown rather than being claimed fresh by this read.
+    expect(snapshot.matrix["plan.route"].state).not.toBe("requires_network");
+    expect(snapshot.matrix["plan.replan"].state).not.toBe("requires_network");
+  });
+
+  it("does not invent an offline graph when the caller could not check", async () => {
+    const snapshot = await readBrowserOfflineRuntime({ now: "2026-09-18T12:00:00.000Z", installedAreas: null });
+
+    expect(snapshot.installedAreas).toBeNull();
+    expect(snapshot.facts.caches.offlineGraph.presence).toBe("absent");
+    expect(snapshot.matrix["plan.route"].state).toBe("requires_network");
+  });
 });

@@ -59,6 +59,8 @@ export class OfflineAreaStore implements OfflineRegionsPort {
         onProgress({ completedBytes: progress.completedBytes, totalBytes: progress.totalBytes + mapBytes });
       },
       signal,
+      // The archive is part of this one download, so the storage check counts it.
+      mapBytes,
     );
     if (this.maps !== null && mapBytes > 0) {
       await this.maps.download(
