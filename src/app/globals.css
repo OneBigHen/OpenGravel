@@ -6993,12 +6993,26 @@ h3,
 }
 
 .og-advisor__changes li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   padding: 4px 10px;
   border: 1px solid var(--og-sandstone);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--og-paper);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.og-advisor__was {
+  color: var(--og-slate-text);
+  font-size: 12px;
+}
+
+.og-advisor__brief {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: 13px;
 }
 
 .og-advisor__note {

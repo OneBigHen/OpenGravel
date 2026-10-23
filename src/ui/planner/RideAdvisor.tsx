@@ -288,31 +288,60 @@ const TERRAIN_WORDS: Readonly<Record<string, string>> = {
   moderate: "Moderate terrain",
   "any-supported": "Any terrain",
 };
+const NOVELTY_WORDS: Readonly<Record<string, string>> = {
+  "prefer-new-to-me": "New roads",
+  balanced: "Balanced roads",
+  "prefer-familiar": "Roads I know",
+};
+const TRAFFIC_WORDS: Readonly<Record<string, string>> = {
+  "protect-ride": "Avoid busy roads",
+  "minimize-delay": "Fastest through traffic",
+};
+
+/**
+ * One value of one changed field in rider words: "From Jim Thorpe, PA", "New
+ * roads", "Back by 6:00 pm on Sep 26". Every field is named explicitly so a
+ * stored setting value never reaches the card as a machine token.
+ */
+function fieldWords(field: AdvisorProposalChange["field"], value: string): string {
+  switch (field) {
+    case "shape":
+      return value === "A to B" ? "To a destination" : value;
+    case "start":
+      return value === "No start set" ? "No start" : `From ${value}`;
+    case "finish":
+      return value === "No finish set" ? "No destination" : `To ${value}`;
+    case "stop":
+      return value === "No stops" ? "No stops" : `Via ${value}`;
+    case "time":
+      return value;
+    case "departure":
+      return value === "Leave now" ? "Leave now" : `Leave ${value}`;
+    case "roadCharacter":
+      return ROAD_WORDS[value] ?? value;
+    case "novelty":
+      return NOVELTY_WORDS[value] ?? value;
+    case "surface":
+      return SURFACE_WORDS[value] ?? value;
+    case "terrain":
+      return TERRAIN_WORDS[value] ?? value;
+    case "highways":
+      return value === "Avoid" ? "No highways" : "Highways OK";
+    case "tolls":
+      return value === "Avoid" ? "No tolls" : "Tolls OK";
+    case "traffic":
+      return TRAFFIC_WORDS[value] ?? value;
+  }
+}
 
 /** One short chip per change, in rider words ("From Jim Thorpe, PA", "No highways"). */
 export function changeChip(change: AdvisorProposalChange): string {
-  switch (change.field) {
-    case "shape":
-      return change.after === "A to B" ? "To a destination" : change.after;
-    case "start":
-      return `From ${change.after}`;
-    case "finish":
-      return `To ${change.after}`;
-    case "stop":
-      return `Via ${change.after}`;
-    case "roadCharacter":
-      return ROAD_WORDS[change.after] ?? change.after;
-    case "surface":
-      return SURFACE_WORDS[change.after] ?? change.after;
-    case "terrain":
-      return TERRAIN_WORDS[change.after] ?? change.after;
-    case "highways":
-      return change.after === "Avoid" ? "No highways" : "Highways OK";
-    case "tolls":
-      return change.after === "Avoid" ? "No tolls" : "Tolls OK";
-    default:
-      return change.after;
-  }
+  return fieldWords(change.field, change.after);
+}
+
+/** What the setting was before, in the same rider words, for a visible comparison. */
+export function changeWas(change: AdvisorProposalChange): string {
+  return fieldWords(change.field, change.before);
 }
 
 function recoveryLabel(recovery: AdvisorRecovery): string | null {
@@ -416,12 +445,14 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         <div className="og-advisor__proposal" data-testid="advisor-proposal">
           <p className="og-advisor__summary">
             <AdvisorMark />
-            <span>Your ride</span>
+            <span>Proposed ride</span>
           </p>
+          <p className="og-advisor__brief">{proposal.summary}</p>
           <ul className="og-advisor__changes" aria-label="What this sets">
             {proposal.changes.map((change) => (
-              <li key={change.field} title={`Was: ${change.before}`}>
-                {changeChip(change)}
+              <li key={change.field}>
+                <span>{changeChip(change)}</span>
+                <span className="og-advisor__was">was {changeWas(change)}</span>
               </li>
             ))}
           </ul>

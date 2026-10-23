@@ -48,6 +48,18 @@ const COFFEE: PlaceMatch = {
   provider: "photon",
 };
 
+/** A date a few days ahead, so a proposed return-by time is still in the future. */
+function futureDay(offsetDays: number): string {
+  return new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** The month and day names of a rider-local date, as the card reads them. */
+function dayWords(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1)));
+}
+
 function places(list: readonly PlaceMatch[] = []): PlaceSearchPort & { search: ReturnType<typeof vi.fn> } {
   return {
     search: vi.fn(async () => ({ status: "ok" as const, places: list })),
@@ -74,11 +86,12 @@ function setup(
     readonly onApplied?: () => AdvisorAppliedNext;
     readonly places?: readonly PlaceMatch[];
     readonly client?: AdvisorProposalClient;
+    readonly draft?: (document: RideDocument) => AdvisorDraft;
   } = {},
 ) {
   const store = createRideDocumentStore({ document: createRideDocument() });
   const client: AdvisorProposalClient = options.client ?? {
-    request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+    request: vi.fn(async () => ({ ok: true as const, draft: (options.draft ?? jimThorpeLoop)(store.getState().document) })),
   };
   const port = places(options.places);
   render(
@@ -311,6 +324,70 @@ describe("ask about this ride", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByTestId("advisor-working")).toBeNull());
     expect(requested?.aborted).toBe(true);
+  });
+});
+
+describe("the proposal card", () => {
+  it("reads in rider words, with a local date and the before-value in text", async () => {
+    const returnDay = futureDay(3);
+    setup({
+      draft: (document) => {
+        const draft = jimThorpeLoop(document);
+        return {
+          ...draft,
+          fields: {
+            ...draft.fields,
+            rideTimeKind: "returnBy",
+            rideTimeMinutes: null,
+            rideTimeDate: returnDay,
+            rideTimeLocalTime: "18:00",
+            noveltyPreference: "prefer-new-to-me",
+            departureKind: "unchanged",
+            departureLocalDate: null,
+            departureLocalTime: null,
+          },
+        };
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "new roads, back by 6" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const proposal = await screen.findByTestId("advisor-proposal");
+    expect(proposal).toHaveTextContent("Proposed ride");
+    expect(proposal).toHaveTextContent("Review the proposed changes before applying them.");
+    expect(proposal).toHaveTextContent("New roads");
+    expect(proposal).toHaveTextContent(`Back by 6:00 pm on ${dayWords(returnDay)}`);
+    expect(proposal.textContent).not.toMatch(/prefer-new-to-me|\d{4}-\d{2}-\d{2}/);
+    // The old value is readable on a touch screen, not hidden in a hover title.
+    expect(proposal).toHaveTextContent("was Balanced roads");
+    expect(proposal.querySelector("li[title]")).toBeNull();
+  });
+
+  it("names the departure in rider words", async () => {
+    const leaveDay = futureDay(4);
+    setup({
+      draft: (document) => {
+        const draft = jimThorpeLoop(document);
+        return {
+          ...draft,
+          fields: {
+            ...draft.fields,
+            departureKind: "future",
+            departureLocalDate: leaveDay,
+            departureLocalTime: "08:00",
+          },
+        };
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "loop from Jim Thorpe, leave at 8" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const proposal = await screen.findByTestId("advisor-proposal");
+    expect(proposal).toHaveTextContent("8:00 AM");
+    expect(proposal.textContent).toMatch(/Leave /);
+    expect(proposal.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 });
 
