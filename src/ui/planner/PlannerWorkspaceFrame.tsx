@@ -37,6 +37,12 @@ export interface PlannerWorkspaceFrameProps {
   readonly onShowWholeRide: () => void;
   /** "Center on me", when the surface can locate the rider. */
   readonly locateMe?: PlannerLocateMe | undefined;
+  /**
+   * The glance strip: the live ride summary, rendered over the map itself rather
+   * than in the sheet (`MapRideGlance`). Absent when the composition has no ride
+   * summary to show.
+   */
+  readonly glance?: ReactNode;
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
   readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly children: ReactNode;
@@ -65,6 +71,7 @@ export function PlannerWorkspaceFrame({
   layers,
   onShowWholeRide,
   locateMe,
+  glance,
   editBar,
   children,
 }: PlannerWorkspaceFrameProps) {
@@ -102,6 +109,7 @@ export function PlannerWorkspaceFrame({
       <div className="og-planner__body">
         <div className="og-planner__map-slot" ref={mapSlotRef}>
           <PlannerPlacesMap {...map} scene={scene} hint={hint} places={places} layers={layers} />
+          {glance}
           {editBar === undefined ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
             <span className="og-map__retrying" data-testid="map-retry-chip" role="status">

@@ -138,6 +138,7 @@ const SCAN_EXEMPT_SELECTORS = [
   ".og-info-card__add",
   ".og-ride__limit",
   ".og-map__locate-failure",
+  ".og-glance__retry",
   ".og-settings__button",
   ".og-places-card__actions button",
   // decorative, aria-hidden layer glyphs drawn in the layer's own colour
@@ -325,6 +326,13 @@ describe("contrast — filled controls keep their text at 4.5:1 (12 §15)", () =
         text: "--og-paper",
         background: "--og-deep-spruce",
         rule: "12 §15 text-on-fill; Add as stop on a layer card",
+      },
+      {
+        // The glance strip's failed state: Paper on Spruce, the pill's only fill.
+        selector: ".og-glance__retry",
+        text: declaredVar(exactRuleBody(".og-glance__retry"), "color") ?? "",
+        background: declaredVar(exactRuleBody(".og-glance__retry"), "background") ?? "",
+        rule: "12 §15 text-on-fill; Retry inside the glance strip",
       },
       {
         selector: ".og-layers__badge",
