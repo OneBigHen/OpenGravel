@@ -7,6 +7,9 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { createApiGuard, guarded } from "@/server/api-guard";
+import { createApiRouteProvider } from "@/infrastructure/routing/api-provider";
+import type { ProviderRouteRequest } from "@/application/planner/route-provider";
 
 import type {
   RoutePlanSuccessBody,
@@ -200,4 +203,21 @@ describe("httpStatusForPlanErrorCode", () => {
 
     expect(JSON.stringify(result.body)).not.toMatch(/stack|ECONNREFUSED|8989/);
   });
+});
+
+
+it("preserves a concurrency-guard 429 as a recoverable busy transport answer", async () => {
+  const guard = createApiGuard({ perMinute: 40, maxConcurrent: 1 });
+  const request = new Request("https://example.test/api/route-plan", { method: "POST" });
+  let release: () => void = () => undefined;
+  const first = guarded(guard, request, () => new Promise<Response>(resolve => { release = () => resolve(Response.json({})); }));
+  try {
+    const busy = await guarded(guard, request, async () => Response.json({}));
+    expect(busy.status).toBe(429);
+    expect(await busy.clone().json()).toMatchObject({ error: { code: "rate-limit" } });
+    const provider = createApiRouteProvider({ fetcher: (async () => busy) as typeof fetch });
+    provider.beginAttempt({ rideId: "busy", rideRevision: 1, planningGeneration: 1 });
+    const routeRequest = validBody()["request"] as ProviderRouteRequest;
+    await expect(provider.candidates(routeRequest, new AbortController().signal)).rejects.toMatchObject({ code: "rate-limit", recoverable: true, message: "The route planner is busy. Wait a moment and try again." });
+  } finally { release(); await first; }
 });
