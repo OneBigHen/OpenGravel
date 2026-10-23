@@ -380,6 +380,33 @@ describe("Explore UI", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows the server's own refusal for a full review queue instead of blaming the note", async () => {
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === "/api/contributions" && init?.method === "POST") {
+        return Response.json({
+          error: {
+            code: "abuse",
+            message: "New community notes are paused: the review queue is full.",
+            details: { reason: "queue-full" },
+          },
+        }, { status: 429 });
+      }
+      if (init?.method === "POST") return Response.json({ ratingAverage: 5, ratingCount: 1 }, { status: 201 });
+      return Response.json({ ratingAverage: null, ratingCount: 0, comments: [] });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    window.localStorage.clear();
+    render(<RouteCommunity routeId="route-1" />);
+    await screen.findByText((_, element) => element?.textContent === "No ratings yet · 0 ratings");
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Leave a comment" }), { target: { value: "Bridge is out." } });
+    fireEvent.click(screen.getByRole("button", { name: "Post comment" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("New community notes are paused: the review queue is full.");
+    vi.unstubAllGlobals();
+  });
+
   it("renders the roads-on-this-ride list and an honest road detail sheet", async () => {
     const roadEntry = {
       ...entry,
