@@ -87,8 +87,11 @@ export function parseBounds(raw: string | null): MapLayerBounds | string {
   return clampLayerBounds({ west, south, east, north });
 }
 
+const RETIRED_LAYER_IDS = new Set(["road-surface", "forest-roads", "cell-towers", "closures"]);
+
 export function parseLayers(raw: string | null): readonly MapLayerId[] | string {
-  const ids = [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter((id) => id !== ""))];
+  // Pages loaded before a layer was retired still ask for it; drop those quietly.
+  const ids = [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter((id) => id !== "" && !RETIRED_LAYER_IDS.has(id)))];
   if (ids.length === 0) return "layers is required.";
   if (!ids.every(isMapLayerId)) return "layers names an unknown layer.";
   const features = ids.filter((id) => mapLayer(id).kind === "features");
