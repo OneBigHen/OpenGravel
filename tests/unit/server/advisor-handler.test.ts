@@ -133,6 +133,39 @@ describe("advisor HTTP handler", () => {
     expect(capturedMessages.join(" ")).not.toContain(DOCUMENT.rideId);
   });
 
+  it("gives the model the ride's rough area, and nothing when the ride has no point", async () => {
+    const started = {
+      ...DOCUMENT,
+      intent: {
+        ...DOCUMENT.intent,
+        start: {
+          id: "point_start",
+          kind: "start",
+          coordinate: { lon: -75.13, lat: 40.31 },
+          label: "Doylestown",
+          provenance: { type: "map", selectedAt: "2026-09-24T12:00:00.000Z" },
+        },
+      },
+    } as unknown as typeof DOCUMENT;
+    const userMessage = (): Record<string, unknown> => {
+      const messages = JSON.parse(capturedMessages[0] ?? "[]") as { role: string; content: string }[];
+      return JSON.parse(messages[1]?.content ?? "{}") as Record<string, unknown>;
+    };
+
+    capturedMessages = [];
+    const withArea = await handleAdvisorRequest(
+      makeRequest(JSON.stringify({ ...INPUT, context: advisorContextFromDocument(started, { now: new Date("2026-09-24T12:00:00.000Z"), timeZone: "America/New_York" }) })),
+      dependencies(),
+    );
+    expect(withArea.status).toBe(200);
+    expect(userMessage()["rideArea"]).toEqual({ lat: 40.31, lon: -75.13 });
+
+    capturedMessages = [];
+    const withoutArea = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), dependencies());
+    expect(withoutArea.status).toBe(200);
+    expect(userMessage()).not.toHaveProperty("rideArea");
+  });
+
   it("keeps the advisor honestly unavailable without a configured key", async () => {
     capturedMessages = [];
     const response = await handleAdvisorRequest(
@@ -191,6 +224,33 @@ describe("advisor HTTP handler", () => {
     expect(second.status).toBe(429);
     expect(second.headers.get("retry-after")).toBe("60");
   });
+  it("stops waiting at its own deadline and answers with a timeout", async () => {
+    const transport: AdvisorTransport = {
+      send: () => new Promise(() => undefined),
+    };
+    const deps = { ...dependencies({ transport }), deadlineMs: 20 };
+    const response = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const body = await response.json() as { error?: { class?: string } };
+
+    expect(response.status).toBe(504);
+    expect(body.error?.class).toBe("timeout");
+  });
+
+  it("tells the rider the shared daily allowance is spent, not that the advisor is busy", async () => {
+    const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
+    const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };
+    await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const response = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const body = await response.json() as { error?: { class?: string; message?: string } };
+
+    expect(response.status).toBe(429);
+    expect(body.error?.class).toBe("quota-exhausted");
+    expect(body.error?.message).toBe("The advisor has used up today's limit. Everything else works without it.");
+    // The wait is the rest of the UTC day, not "a moment".
+    expect(Number(response.headers.get("retry-after"))).toBeGreaterThan(3_600);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it("stops calling the model once the daily budget is spent, for every client", async () => {
     const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
     const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };

@@ -149,13 +149,35 @@ function shapeLabel(value: RideIntent["shape"]): string {
   return value === "destination" ? "A to B" : value === "loop" ? "Loop" : "Open ride";
 }
 
+/** One local clock time as the rider reads it: "6:00 pm", never "18:00". */
+function clockLabel(localTime: string): string {
+  const [hourText = "0", minuteText = "00"] = localTime.split(":");
+  const hour = Number(hourText);
+  if (!Number.isFinite(hour)) return localTime;
+  const suffix = hour < 12 ? "am" : "pm";
+  const twelve = hour % 12 === 0 ? 12 : hour % 12;
+  return `${twelve}:${minuteText} ${suffix}`;
+}
+
+/**
+ * A rider-local date as words ("Sep 26"). The date is already the rider's own
+ * local day, so the month and day names are formatted on that day rather than
+ * shifted through a time zone again.
+ */
+function dayLabel(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1));
+  if (!Number.isFinite(parsed.getTime())) return date;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(parsed);
+}
+
 function timeLabel(time: TimeIntent): string {
   if (time.kind === "none") return "No time target";
   if (time.kind === "budget") {
     const hours = time.targetMinutes / 60;
     return Number.isInteger(hours) ? `${hours} ${hours === 1 ? "hour" : "hours"}` : `${time.targetMinutes} minutes`;
   }
-  return `${time.kind === "returnBy" ? "Back by" : "Arrive by"} ${time.localTime} on ${time.date}`;
+  return `${time.kind === "returnBy" ? "Back by" : "Arrive by"} ${clockLabel(time.localTime)} on ${dayLabel(time.date)}`;
 }
 
 function departureLabel(value: RideIntent["departure"], timeZone: string): string {
@@ -195,6 +217,21 @@ function changesFor(before: RideIntent, after: RideIntent, timeZone: string): Ad
   const trafficLabel = (traffic: RideIntent["traffic"]): string => (traffic === "protect-ride" ? "Avoid busy roads" : "Fastest through traffic");
   add("traffic", trafficLabel(before.traffic), trafficLabel(after.traffic));
   return changes;
+}
+
+/**
+ * Re-validates a draft the server already returned against the ride as it is
+ * now, so a stale proposal can be refreshed without another model call, more
+ * latency or more of the shared daily budget. The model's intent does not
+ * change; only the revision it is applied to moves forward.
+ */
+export function refreshAdvisorProposal(
+  document: RideDocument,
+  draft: AdvisorDraft,
+  options: { readonly now?: string } = {},
+): AdvisorProposalBuildResult {
+  if (document.rideId !== draft.rideId) return failure("stale-revision");
+  return buildAdvisorProposal(document, { ...draft, baseRevision: document.revision }, options);
 }
 
 /** Builds a revision-fenced proposal and dry-runs it through the domain reducer. */

@@ -30,6 +30,7 @@ import { cachedElevationClimb } from "./useElevationProfile";
 import { advisorRiderState } from "@/application/advisor/advisor-errors";
 import { RIDE_DESCRIPTION_MAX_LENGTH } from "@/application/advisor/ride-description";
 import type {
+  AdvisorDraft,
   AdvisorDraftResult,
   AdvisorProposalClient,
   AdvisorRecovery,
@@ -65,6 +66,8 @@ export interface RideAdvisor {
   apply(): void;
   dismiss(): void;
   retry(): void;
+  /** Re-validates the last draft against the ride as it is now; no model call. */
+  refresh(): void;
 }
 
 const AdvisorContext = createContext<RideAdvisor | null>(null);
@@ -106,6 +109,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
   const [recovery, setRecovery] = useState<AdvisorRecovery>("none");
+  const [lastDraft, setLastDraft] = useState<AdvisorDraft | null>(null);
   const requestController = useRef<AbortController | null>(null);
   const requestGeneration = useRef(0);
   const onAppliedRef = useRef(onApplied);
@@ -133,6 +137,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       setSurface(from);
       setPending(true);
       setProposal(null);
+      setLastDraft(null);
       setMessage(null);
       setMessageIsError(false);
       setRecovery("none");
@@ -161,6 +166,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
             fail(result.message, result.recovery);
             return;
           }
+          setLastDraft(result.draft);
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status !== "error") {
             const reply = built.status === "ready" ? `Suggested: ${built.changes.map(changeChip).join(" · ")}.` : built.message;
@@ -203,6 +209,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     }
     const result = store.getState().dispatch(proposal.command);
     setProposal(null);
+    setLastDraft(null);
     if (result.outcome === "applied") {
       emitTelemetry("advisor_proposal_applied", { source: "advisor" });
       setRecovery("none");
@@ -223,6 +230,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     requestGeneration.current += 1;
     setPending(false);
     setProposal(null);
+    setLastDraft(null);
     setMessage(null);
     setRecovery("none");
     setPrompt("");
@@ -232,9 +240,33 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
 
   const retry = useCallback(() => ask(prompt, surface), [ask, prompt, surface]);
 
+  const refresh = useCallback(() => {
+    if (lastDraft === null) return;
+    const generation = ++requestGeneration.current;
+    void (async () => {
+      const { refreshAdvisorProposal } = await import("@/application/advisor/advisor-proposal-commands");
+      if (generation !== requestGeneration.current) return;
+      const built = refreshAdvisorProposal(store.getState().document, lastDraft);
+      if (built.status === "ready") {
+        setProposal(built);
+        setMessage(null);
+        setMessageIsError(false);
+        setRecovery("none");
+        return;
+      }
+      if (built.status === "error") {
+        fail(built.message, built.recovery);
+        return;
+      }
+      setMessage(built.message);
+      setMessageIsError(false);
+      setRecovery("none");
+    })();
+  }, [lastDraft, store, fail]);
+
   const value = useMemo<RideAdvisor>(
-    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry }),
-    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry],
+    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh }),
+    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh],
   );
   return <AdvisorContext.Provider value={enabled ? value : null}>{children}</AdvisorContext.Provider>;
 }
@@ -256,36 +288,77 @@ const TERRAIN_WORDS: Readonly<Record<string, string>> = {
   moderate: "Moderate terrain",
   "any-supported": "Any terrain",
 };
+const NOVELTY_WORDS: Readonly<Record<string, string>> = {
+  "prefer-new-to-me": "New roads",
+  balanced: "Balanced roads",
+  "prefer-familiar": "Roads I know",
+};
+const TRAFFIC_WORDS: Readonly<Record<string, string>> = {
+  "protect-ride": "Avoid busy roads",
+  "minimize-delay": "Fastest through traffic",
+};
+
+/**
+ * One value of one changed field in rider words: "From Jim Thorpe, PA", "New
+ * roads", "Back by 6:00 pm on Sep 26". Every field is named explicitly so a
+ * stored setting value never reaches the card as a machine token.
+ */
+function fieldWords(field: AdvisorProposalChange["field"], value: string): string {
+  switch (field) {
+    case "shape":
+      return value === "A to B" ? "To a destination" : value;
+    case "start":
+      return value === "No start set" ? "No start" : `From ${value}`;
+    case "finish":
+      return value === "No finish set" ? "No destination" : `To ${value}`;
+    case "stop":
+      return value === "No stops" ? "No stops" : `Via ${value}`;
+    case "time":
+      return value;
+    case "departure":
+      return value === "Leave now" ? "Leave now" : `Leave ${value}`;
+    case "roadCharacter":
+      return ROAD_WORDS[value] ?? value;
+    case "novelty":
+      return NOVELTY_WORDS[value] ?? value;
+    case "surface":
+      return SURFACE_WORDS[value] ?? value;
+    case "terrain":
+      return TERRAIN_WORDS[value] ?? value;
+    case "highways":
+      return value === "Avoid" ? "No highways" : "Highways OK";
+    case "tolls":
+      return value === "Avoid" ? "No tolls" : "Tolls OK";
+    case "traffic":
+      return TRAFFIC_WORDS[value] ?? value;
+  }
+}
 
 /** One short chip per change, in rider words ("From Jim Thorpe, PA", "No highways"). */
 export function changeChip(change: AdvisorProposalChange): string {
-  switch (change.field) {
-    case "shape":
-      return change.after === "A to B" ? "To a destination" : change.after;
-    case "start":
-      return `From ${change.after}`;
-    case "finish":
-      return `To ${change.after}`;
-    case "stop":
-      return `Via ${change.after}`;
-    case "roadCharacter":
-      return ROAD_WORDS[change.after] ?? change.after;
-    case "surface":
-      return SURFACE_WORDS[change.after] ?? change.after;
-    case "terrain":
-      return TERRAIN_WORDS[change.after] ?? change.after;
-    case "highways":
-      return change.after === "Avoid" ? "No highways" : "Highways OK";
-    case "tolls":
-      return change.after === "Avoid" ? "No tolls" : "Tolls OK";
-    default:
-      return change.after;
-  }
+  return fieldWords(change.field, change.after);
+}
+
+/** What the setting was before, in the same rider words, for a visible comparison. */
+/**
+ * The settings a proposal actually overwrites, in rider words. Filling an empty
+ * slot ("No start", "No time target") or the ride shape is self-evident from
+ * the chips, so only real previous choices are named.
+ */
+export function replacedSettings(changes: readonly AdvisorProposalChange[]): readonly string[] {
+  return changes
+    .filter((change) => change.field !== "shape")
+    .map(changeWas)
+    .filter((before) => !/^(no |none\b|not set\b)/i.test(before));
+}
+
+export function changeWas(change: AdvisorProposalChange): string {
+  return fieldWords(change.field, change.before);
 }
 
 function recoveryLabel(recovery: AdvisorRecovery): string | null {
   if (recovery === "retry") return "Try again";
-  if (recovery === "refresh") return "Ask again";
+  if (recovery === "refresh") return "Refresh";
   return null;
 }
 
@@ -295,6 +368,9 @@ function recoveryLabel(recovery: AdvisorRecovery): string | null {
  */
 export const ADVISOR_GLYPH = "\u2733\uFE0E";
 
+/** After this long a turn stops looking like a moment and says what it is doing. */
+export const ADVISOR_SLOW_HINT_MS = 3_000;
+
 /** The glyph the advisor answers under, everywhere it appears. */
 export function AdvisorMark() {
   return (
@@ -302,6 +378,21 @@ export function AdvisorMark() {
       {ADVISOR_GLYPH}
     </span>
   );
+}
+
+/**
+ * Says what the wait is for once a turn stops looking like a moment. Mounted
+ * only while the advisor is thinking, so its timer is the wait's own clock.
+ */
+function AdvisorSlowHint() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), ADVISOR_SLOW_HINT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return slow ? (
+    <span className="og-advisor__working-detail">Still reading your ride and checking places…</span>
+  ) : null;
 }
 
 /**
@@ -349,27 +440,36 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         </ol>
       ) : null}
 
-
       {pending && !idle ? (
-        <p className="og-advisor__working" role="status" data-testid="advisor-working">
-          <AdvisorMark />
-          Reading “{advisor.prompt}”…
-        </p>
+        <div className="og-advisor__pending">
+          <p className="og-advisor__working" role="status" data-testid="advisor-working">
+            <AdvisorMark />
+            Reading “{advisor.prompt}”…
+            <AdvisorSlowHint />
+          </p>
+          <button type="button" className="og-advisor__cancel" data-testid="advisor-cancel" onClick={advisor.dismiss}>
+            Cancel
+          </button>
+        </div>
       ) : null}
 
       {proposal !== null && !idle ? (
         <div className="og-advisor__proposal" data-testid="advisor-proposal">
           <p className="og-advisor__summary">
             <AdvisorMark />
-            <span>Your ride</span>
+            <span>Proposed ride</span>
           </p>
           <ul className="og-advisor__changes" aria-label="What this sets">
             {proposal.changes.map((change) => (
-              <li key={change.field} title={`Was: ${change.before}`}>
+              <li key={change.field}>
                 {changeChip(change)}
+                <span className="og-visually-hidden">, was {changeWas(change)}</span>
               </li>
             ))}
           </ul>
+          {replacedSettings(proposal.changes).length === 0 ? null : (
+            <p className="og-advisor__was" aria-hidden="true">Replaces {replacedSettings(proposal.changes).join(", ")}</p>
+          )}
           {proposal.notes.map((note, index) => (
             <p className="og-advisor__note" key={`${index}-${note}`}>
               {note}
@@ -381,9 +481,15 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             </p>
           ) : null}
           <div className="og-advisor__actions">
-            <button type="button" className="og-primary" data-testid="advisor-apply" disabled={proposalIsStale} onClick={advisor.apply}>
-              Plan it
-            </button>
+            {proposalIsStale ? (
+              <button type="button" className="og-primary" data-testid="advisor-refresh" onClick={advisor.refresh}>
+                Refresh
+              </button>
+            ) : (
+              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={advisor.apply}>
+                Plan it
+              </button>
+            )}
             <button type="button" className="og-secondary" data-testid="advisor-dismiss" onClick={advisor.dismiss}>
               Not this
             </button>
@@ -395,7 +501,11 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         <div className={messageIsError ? "og-advisor__error" : "og-advisor__notice"} role={messageIsError ? "alert" : "status"}>
           <p>{messageIsError ? null : <AdvisorMark />} {message}</p>
           {recoveryLabel(recovery) === null ? null : (
-            <button type="button" className="og-advisor__retry" onClick={advisor.retry}>
+            <button
+              type="button"
+              className="og-advisor__retry"
+              onClick={recovery === "refresh" ? advisor.refresh : advisor.retry}
+            >
               {recoveryLabel(recovery)}
             </button>
           )}

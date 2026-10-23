@@ -55,6 +55,50 @@ describe("advisor browser API adapter", () => {
     expect(init.headers).not.toHaveProperty("authorization");
   });
 
+  it("gives up at its own deadline instead of waiting on a stalled server", async () => {
+    const fetcher = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createAdvisorApiClient({ fetcher, deadlineMs: 20 });
+    const result = await client.request(REQUEST);
+
+    expect(result).toMatchObject({ ok: false, errorClass: "timeout", recovery: "retry" });
+  });
+
+  it("still lets the caller cancel while it is waiting", async () => {
+    const fetcher = vi.fn<typeof fetch>(() => new Promise<Response>(() => undefined));
+    const client = createAdvisorApiClient({ fetcher });
+    const controller = new AbortController();
+    const pending = client.request(REQUEST, controller.signal);
+    controller.abort();
+
+    await expect(pending).rejects.toBeDefined();
+  });
+
+  it("does not offer Retry when the answer says the wait is hours, not a moment", async () => {
+    const client = createAdvisorApiClient({
+      fetcher: vi.fn<typeof fetch>().mockResolvedValue(new Response(
+        JSON.stringify({ error: { class: "rate-limit", message: "The advisor is busy. Try again in a moment." } }),
+        { status: 429, headers: { "retry-after": "30000" } },
+      )),
+    });
+    const result = await client.request(REQUEST);
+
+    expect(result).toMatchObject({ ok: false, errorClass: "quota-exhausted", recovery: "none" });
+    if (result.ok) return;
+    expect(result.message).not.toMatch(/try again in a moment/i);
+  });
+
+  it("keeps Retry for a per-minute rate limit", async () => {
+    const client = createAdvisorApiClient({
+      fetcher: vi.fn<typeof fetch>().mockResolvedValue(new Response(
+        JSON.stringify({ error: { class: "rate-limit", message: "ignored" } }),
+        { status: 429, headers: { "retry-after": "60" } },
+      )),
+    });
+    const result = await client.request(REQUEST);
+
+    expect(result).toMatchObject({ ok: false, errorClass: "rate-limit", recovery: "retry", retryAfterSeconds: 60 });
+  });
+
   it("does not expose provider error details and rejects malformed place coordinates", async () => {
     const errorClient = createAdvisorApiClient({
       fetcher: vi.fn<typeof fetch>().mockResolvedValue(new Response(
