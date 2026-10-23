@@ -46,7 +46,7 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
     case "unavailable":
       return "Unavailable";
     case "stale":
-      return "Stale";
+      return "Out of date";
     case "ready":
       return (layer.kind !== "features" || layer.id === "weather-radar" || layer.id === "hillshade") ? "On" : count === 0 ? "None here" : String(count);
   }
@@ -108,10 +108,11 @@ function LayerRow({
       {about ? (
         <p className="og-layers__caveat">
           <strong>{layer.source}.</strong> {layer.caveat}
+          {freshness === undefined ? null : <> {freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}</>}
         </p>
       ) : null}
-      {on && freshness !== undefined ? <p className="og-layers__caveat">
-        {freshness.stale ? "Stale · " : ""}{freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}
+      {on && freshness !== undefined && !about ? <p className="og-layers__caveat">
+        {freshness.stale ? "May be out of date · " : ""}Updated {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
       </p> : null}
       {extra}
     </li>

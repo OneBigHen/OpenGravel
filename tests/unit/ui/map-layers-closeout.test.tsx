@@ -24,9 +24,12 @@ describe("closeout layers sheet", () => {
   it("shows stale frame time, unavailable primary and empty gravel", () => {
     panel({ "weather-radar": "stale", "public-land": "unavailable", gravel: "ready" });
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
-    expect(screen.getByText("Stale")).toBeInTheDocument();
+    expect(screen.getByText("Out of date")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/May be out of date · Updated/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About Rain radar" }));
     expect(screen.getByText(/NOAA \/ IEM · Observed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About Public land" }));
     expect(screen.getByText(/OpenStreetMap fallback · Retrieved/)).toBeInTheDocument();
     expect(screen.getByText("None here")).toBeInTheDocument();
   });
