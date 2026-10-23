@@ -5062,7 +5062,7 @@ h3,
   position: relative;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: 14px;
   align-items: center;
   align-content: center;
@@ -5134,9 +5134,19 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
-.og-ride__maneuver-glyph {
+/* The glyph owns the icon column for the two instruction rows; the "then" row
+   starts below them. */
+.og-ride__maneuver-symbol {
   grid-row: 1 / span 2;
   grid-column: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+}
+
+.og-ride__maneuver-glyph {
   width: 64px;
   height: 64px;
   color: var(--og-paper);
@@ -5176,6 +5186,84 @@ h3,
 .og-ride__maneuver-road {
   color: var(--og-paper);
   font-weight: 700;
+}
+
+/* A roundabout exit the provider stated: a paper disc with an ink ring at the
+   glyph's lower-right. No number means no badge — never a guessed exit. */
+.og-ride__maneuver-exit {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--og-paper);
+  box-shadow: 0 0 0 2px #07100c;
+  color: #07100c;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "then" row: two turns in quick succession are the classic missed turn.
+   It spans both columns, and the card only reserves its height when the row
+   exists (`data-then`), so a distant next maneuver never adds clutter. */
+.og-ride__maneuver-then {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 30px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: color-mix(in srgb, var(--og-paper) 86%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.og-ride__maneuver-then-label {
+  flex: 0 0 auto;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  /* Night draws the whole second line at 86% paper; the glyph belongs to it. */
+  color: inherit;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then path {
+  stroke-width: 3.6;
+}
+
+.og-ride__maneuver-then-action {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.og-ride__maneuver-then-road {
+  font-weight: 700;
+}
+
+/* Only a card that really carries a "then" row is taller. Injection: the map's
+   ResizeObserver re-insets as the card grows or shrinks. */
+.og-ride__maneuver[data-then="true"] {
+  min-height: 126px;
 }
 
 .og-ride__maneuver[data-kind="suspended"],
@@ -5588,6 +5676,10 @@ h3,
 
   .og-ride__maneuver {
     min-height: 84px;
+  }
+
+  .og-ride__maneuver[data-then="true"] {
+    min-height: 116px;
   }
 
   .og-ride__maneuver-distance {

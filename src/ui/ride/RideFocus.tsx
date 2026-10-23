@@ -11,6 +11,10 @@
  *   follow camera turns it heading-up, tilted, zoomed for speed.
  * - **The top is one compact maneuver card**: a big arrow, a big distance, the
  *   road. A small warning badge appears on it only when the GPS fix is bad.
+ * - **Two turns in quick succession get a "then" line** under the action,
+ *   shown only when the next maneuver is known and within a mile (it is
+ *   `aria-hidden`: one card reads one instruction). A roundabout carries its
+ *   exit badge only when the engine stated the number.
  * - **The bottom is one slim strip**: three instrument readouts (speed, miles
  *   left, time left by default; RIDE-INSTRUMENT-STRIP), the sheet toggle, and
  *   a single Exit. While moving, tapping a readout opens the sheet; while
@@ -139,15 +143,31 @@ const MANEUVER_GLYPH_PATHS: Readonly<Record<RideFocusManeuver["glyph"], string>>
   continue: "M24 42V7m-10 11L24 7l10 11",
   uturn: "M34 42V23c0-6-4-10-10-10s-10 4-10 10v19m-8-9 8 9 8-9",
   arrive: "M10 40V8m0 2h25l-6 8 6 8H10",
+  // A ring with the exit spur leaving it: the decision a roundabout asks for.
+  roundabout: "M22 18a11 11 0 1 0 0 22 11 11 0 0 0 0-22M29.6 20.4 40 10m-7 0h7v7",
+  // A fork, with the branch the rider must take drawn long and arrowed.
+  "keep-left": "M24 42V28L10 14m0 8v-8h8M24 28l10-6",
+  "keep-right": "M24 42V28l14-14m0 8v-8h-8M24 28l-10-6",
 };
 
-function ManeuverGlyph({ glyph }: { readonly glyph: RideFocusManeuver["glyph"] }) {
+function ManeuverGlyph({
+  glyph,
+  variant,
+}: {
+  readonly glyph: RideFocusManeuver["glyph"];
+  /** `then` draws the small second-line glyph (24 px), `card` the big one. */
+  readonly variant?: "card" | "then";
+}) {
   return (
     <svg
-      className="og-ride__maneuver-glyph"
+      className={
+        variant === "then"
+          ? "og-ride__maneuver-glyph og-ride__maneuver-glyph--then"
+          : "og-ride__maneuver-glyph"
+      }
       viewBox="0 0 48 48"
       aria-hidden="true"
-      data-testid="ride-maneuver-glyph"
+      data-testid={variant === "then" ? "ride-maneuver-then-glyph" : "ride-maneuver-glyph"}
       data-glyph={glyph}
     >
       <path d={MANEUVER_GLYPH_PATHS[glyph]} />
@@ -569,6 +589,14 @@ export function RideFocus({
             data-testid="ride-maneuver"
             data-kind={guidance.kind}
             /*
+              The card only reserves the extra row when there really is a
+              second maneuver inside a mile, so it never grows for a guess
+              ("then" would otherwise be permanent clutter).
+            */
+            data-then={
+              guidance.kind === "maneuver" && guidance.maneuver.then !== null ? "true" : "false"
+            }
+            /*
               12 §17: a new maneuver and a suspended-guidance transition are the
               two things worth announcing; the 1 Hz stream is not a live region.
             */
@@ -577,7 +605,22 @@ export function RideFocus({
           >
             {guidance.kind === "maneuver" ? (
               <>
-                <ManeuverGlyph glyph={guidance.maneuver.glyph} />
+                <span className="og-ride__maneuver-symbol">
+                  <ManeuverGlyph glyph={guidance.maneuver.glyph} />
+                  {/*
+                    A provider-stated roundabout exit, and only that: with no
+                    number there is no badge, never a guessed "1st".
+                  */}
+                  {guidance.maneuver.exitNumber === null ? null : (
+                    <span
+                      className="og-ride__maneuver-exit"
+                      data-testid="ride-maneuver-exit"
+                      aria-hidden="true"
+                    >
+                      {guidance.maneuver.exitNumber}
+                    </span>
+                  )}
+                </span>
                 <p className="og-ride__maneuver-distance" data-testid="ride-maneuver-distance">
                   {guidance.maneuver.distanceText}
                 </p>
@@ -590,6 +633,31 @@ export function RideFocus({
                     </span>
                   )}
                 </p>
+                {/*
+                  The "then" line: the next maneuver, only when it is known and
+                  within a mile. It is display-only — `aria-hidden` keeps the
+                  1 Hz card from reading two instructions, and the spoken
+                  announcement still describes the maneuver being ridden now.
+                */}
+                {guidance.maneuver.then === null ? null : (
+                  <p
+                    className="og-ride__maneuver-then"
+                    data-testid="ride-maneuver-then"
+                    aria-hidden="true"
+                  >
+                    <span className="og-ride__maneuver-then-label">Then</span>
+                    <ManeuverGlyph glyph={guidance.maneuver.then.glyph} variant="then" />
+                    <span className="og-ride__maneuver-then-action">
+                      {guidance.maneuver.then.actionText}
+                      {guidance.maneuver.then.roadName === null ? null : (
+                        <span className="og-ride__maneuver-then-road">
+                          {guidance.maneuver.then.roadPreposition === "on" ? " on " : " onto "}
+                          {guidance.maneuver.then.roadName}
+                        </span>
+                      )}
+                    </span>
+                  </p>
+                )}
               </>
             ) : (
               <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">

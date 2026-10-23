@@ -179,4 +179,72 @@ describe("route guidance source", () => {
     expect(track.distanceToManeuverMeters).toBeNull();
     expect(track.trackFollowing).toBe(true);
   });
+
+  it("reports the following maneuver and the gap between the two", () => {
+    const first = {
+      instructionId: asSessionInstructionId("instr_pair_0"),
+      kind: "turn" as const,
+      maneuver: "left" as const,
+      roadName: "Ridge Road",
+      targetStopId: null,
+      atDistanceMeters: 400,
+    };
+    const second = {
+      instructionId: asSessionInstructionId("instr_pair_1"),
+      kind: "roundabout" as const,
+      maneuver: null,
+      roadName: null,
+      targetStopId: null,
+      atDistanceMeters: 900,
+      exitNumber: 2,
+    };
+    const geometry = [metres(0, 0), metres(1_000, 0)];
+    const frame = match(
+      { mode: "guided", geometry, maneuvers: [first, second] },
+      fix(100, 0, 0),
+    );
+
+    expect(frame.nextManeuver?.instructionId).toBe(first.instructionId);
+    expect(frame.followingManeuver?.instructionId).toBe(second.instructionId);
+    expect(frame.followingManeuver?.exitNumber).toBe(2);
+    // The gap is measured between the two maneuvers, not from the rider.
+    expect(frame.distanceToFollowingManeuverMeters).toBe(500);
+  });
+
+  it("keeps the following maneuver unknown when the route has no second one", () => {
+    const only = {
+      instructionId: asSessionInstructionId("instr_pair_single"),
+      kind: "turn" as const,
+      maneuver: "right" as const,
+      roadName: "Mill Road",
+      targetStopId: null,
+      atDistanceMeters: 300,
+    };
+    const geometry = [metres(0, 0), metres(1_000, 0)];
+    const frame = match({ mode: "guided", geometry, maneuvers: [only] }, fix(50, 0, 0));
+
+    expect(frame.nextManeuver?.instructionId).toBe(only.instructionId);
+    expect(frame.followingManeuver).toBeNull();
+    expect(frame.distanceToFollowingManeuverMeters).toBeNull();
+  });
+
+  it("never pairs maneuvers for a track", () => {
+    const first = {
+      instructionId: asSessionInstructionId("instr_track_0"),
+      kind: "turn" as const,
+      maneuver: "left" as const,
+      roadName: null,
+      targetStopId: null,
+      atDistanceMeters: 300,
+    };
+    const second = { ...first, instructionId: asSessionInstructionId("instr_track_1"), atDistanceMeters: 600 };
+    const geometry = [metres(0, 0), metres(1_000, 0)];
+    const frame = match(
+      { mode: "track", geometry, maneuvers: [first, second] },
+      fix(50, 0, 0),
+    );
+
+    expect(frame.followingManeuver).toBeNull();
+    expect(frame.distanceToFollowingManeuverMeters).toBeNull();
+  });
 });

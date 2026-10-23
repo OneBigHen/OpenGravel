@@ -649,6 +649,27 @@ describe("RideSession instructions", () => {
     expect(rejection(stateIn("completed"), issuedEvent(5)).code).toBe("illegal-transition");
   });
 
+  it("accepts roundabout and fork instructions, with an exit only where one was stated", () => {
+    const roundabout = apply(
+      apply(null, startedEvent(0)),
+      issuedEvent(1, instruction({ kind: "roundabout", maneuver: null, exitNumber: 2 })),
+    );
+    expect(roundabout.activeInstruction).toMatchObject({ kind: "roundabout", exitNumber: 2 });
+
+    const unnumbered = apply(
+      apply(null, startedEvent(0)),
+      issuedEvent(1, instruction({ kind: "roundabout", maneuver: null })),
+    );
+    expect(unnumbered.activeInstruction?.kind).toBe("roundabout");
+    expect(unnumbered.activeInstruction?.exitNumber).toBeUndefined();
+
+    const fork = apply(
+      apply(null, startedEvent(0)),
+      issuedEvent(1, instruction({ kind: "keep-left", maneuver: null })),
+    );
+    expect(fork.activeInstruction?.kind).toBe("keep-left");
+  });
+
   it("rejects a malformed instruction payload", () => {
     const guided = apply(null, startedEvent(0));
 
@@ -660,6 +681,22 @@ describe("RideSession instructions", () => {
     ).toBe("invalid-instruction");
     expect(
       rejection(guided, issuedEvent(1, instruction({ kind: "continue", maneuver: "left" }))).code,
+    ).toBe("invalid-instruction");
+    // An exit number is only ever the provider's, and only on a roundabout.
+    expect(
+      rejection(
+        guided,
+        issuedEvent(1, instruction({ kind: "roundabout", maneuver: null, exitNumber: 0 })),
+      ).code,
+    ).toBe("invalid-instruction");
+    expect(
+      rejection(
+        guided,
+        issuedEvent(1, instruction({ kind: "roundabout", maneuver: null, exitNumber: 1.5 })),
+      ).code,
+    ).toBe("invalid-instruction");
+    expect(
+      rejection(guided, issuedEvent(1, instruction({ exitNumber: 2 }))).code,
     ).toBe("invalid-instruction");
   });
 });

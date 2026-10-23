@@ -103,7 +103,7 @@ describe("GraphHopper response parser", () => {
           ).instructions?.[0]?.type,
       );
 
-    expect(types([0, 2, -2, 4, 5, 6, 7, -7, undefined])).toEqual([
+    expect(types([0, 2, -2, 4, 5, 6, 7, 8, -7, undefined])).toEqual([
       "continue",
       "turn",
       "turn",
@@ -112,8 +112,37 @@ describe("GraphHopper response parser", () => {
       "roundabout",
       "keep-left",
       "keep-right",
+      "keep-right",
       "continue",
     ]);
+  });
+
+  it("carries a roundabout exit only when the engine stated a usable one", () => {
+    const candidate = parseGraphHopperPath(
+      {
+        ...PATH,
+        instructions: [
+          { sign: 6, exit_number: 3, street_name: "PA-23" },
+          { sign: 6 },
+          { sign: 6, exit_number: 0 },
+          { sign: 6, exit_number: 2.5 },
+          { sign: 2, exit_number: 2 },
+        ],
+      },
+      META,
+    );
+
+    expect(candidate.instructions?.[0]).toMatchObject({
+      type: "roundabout",
+      exitNumber: 3,
+      roadName: "PA-23",
+    });
+    // No stated number, no number: the rider sees "enter the roundabout".
+    expect(candidate.instructions?.[1]?.exitNumber).toBeUndefined();
+    expect(candidate.instructions?.[2]?.exitNumber).toBeUndefined();
+    expect(candidate.instructions?.[3]?.exitNumber).toBeUndefined();
+    // An exit belongs to a roundabout, never to a turn.
+    expect(candidate.instructions?.[4]?.exitNumber).toBeUndefined();
   });
 
   it("never invents instruction copy when the engine sent none", () => {
