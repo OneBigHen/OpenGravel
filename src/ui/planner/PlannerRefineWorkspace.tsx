@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 /**
  * The workspace assembly for the controls that shape a planned ride.
  *
@@ -9,9 +11,15 @@
 
 import { AvoidAreasPanel, type AvoidAreasPanelProps } from "@/ui/planner/AvoidAreasPanel";
 import { RefineSection, refineSummary } from "@/ui/planner/RefineSection";
-import { RoadSpansPanel, type RoadSpansPanelProps } from "@/ui/planner/RoadSpansPanel";
-import { SketchPanel, type SketchPanelProps } from "@/ui/planner/SketchPanel";
-import { StopsPanel, type StopsPanelProps } from "@/ui/planner/StopsPanel";
+import type { RoadSpansPanelProps } from "@/ui/planner/RoadSpansPanel";
+import type { SketchPanelProps } from "@/ui/planner/SketchPanel";
+import type { StopsPanelProps } from "@/ui/planner/StopsPanel";
+
+const RoadSpansPanel = dynamic(() => import("./RoadSpansPanel").then((mod) => mod.RoadSpansPanel), { loading: () => <p className="og-composer__reason" role="status">Loading road controls…</p> });
+
+const SketchPanel = dynamic(() => import("./SketchPanel").then((mod) => mod.SketchPanel), { loading: () => <p className="og-composer__reason" role="status">Loading drawing controls…</p> });
+
+const StopsPanel = dynamic(() => import("./StopsPanel").then((mod) => mod.StopsPanel), { loading: () => <p className="og-composer__reason" role="status">Loading stop controls…</p> });
 
 export interface PlannerRefineWorkspaceProps {
   readonly forceOpen: boolean;

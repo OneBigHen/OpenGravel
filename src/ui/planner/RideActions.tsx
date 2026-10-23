@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 /**
  * What a rider does with a planned ride: ride it, keep it, share it.
  *
@@ -20,7 +22,8 @@ import type {
   PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
 import { shareSourceFromRide } from "@/domain/sharing/from-ride";
-import { ShareSheet } from "@/ui/sharing/ShareSheet";
+
+const ShareSheet = dynamic(() => import("@/ui/sharing/ShareSheet").then((mod) => mod.ShareSheet), { loading: () => <p className="og-composer__reason" role="status">Opening sharing…</p> });
 
 export interface RideActionsProps {
   readonly document: RideDocument;

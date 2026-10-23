@@ -251,6 +251,8 @@ async function harness(options: {
   readonly telemetry?: RideFocusTelemetryProvider;
   /** A fixed identity for the issued maneuver, so telemetry can name it. */
   readonly instructionId?: SessionInstructionId;
+  /** The matcher's continuity verdict for a positioned ride; defaults to "on-route". */
+  readonly offRoute?: Parameters<typeof offRouteChangedEvent>[0];
 } = {}): Promise<Harness> {
   const databaseName = options.databaseName ?? freshDatabaseName();
   const repository = createRideSessionRepository({ databaseName });
@@ -345,7 +347,7 @@ async function harness(options: {
     );
   }
   if (options.position === "fresh" || options.position === "poor" || options.position === "stale") {
-    await controller.dispatch(offRouteChangedEvent("on-route", NOW));
+    await controller.dispatch(offRouteChangedEvent(options.offRoute ?? "on-route", NOW));
   }
   if (options.instruction !== undefined) {
     const roundabout = options.instruction.startsWith("roundabout");
@@ -1124,6 +1126,45 @@ describe("camera (08 §2, DV-10)", () => {
       reason: "There is no position to center on yet.",
     });
     expect(screen.queryByTestId("ride-recenter")).not.toBeInTheDocument();
+  });
+});
+
+describe("route progress on the map (08 §5)", () => {
+  const progress = (routeProgress: number): RideFocusTelemetryProvider => () => ({
+    routeProgress,
+    remainingDistanceMeters: 1_200,
+    remainingDurationSeconds: 240,
+    etaIso: null,
+  });
+
+  it("dims the part of the line already ridden and keeps the road ahead bright", async () => {
+    const { hosts } = await harness({ position: "fresh", telemetry: progress(0.5) });
+
+    await waitFor(() => {
+      const scene = hosts.hosts[0]?.lastScene();
+      expect(scene?.routes.map((route) => route.state)).toEqual(["selected", "travelled"]);
+    });
+    const routes = hosts.hosts[0]?.lastScene()?.routes ?? [];
+    const ridden = routes.find((route) => route.state === "travelled")?.geometry ?? [];
+    const ahead = routes.find((route) => route.state === "selected")?.geometry ?? [];
+    // Half of the fixture line, and the two halves meet where the rider is.
+    expect(ridden[0]).toEqual(LINE[0]);
+    expect(ridden.at(-1)?.lon).toBeCloseTo(-75.43, 3);
+    expect(ahead[0]).toEqual(ridden.at(-1));
+    expect(ahead.at(-1)).toEqual(LINE.at(-1));
+  });
+
+  it("never splits on a progress answer the matcher is not standing behind", async () => {
+    // A stale fix has no current progress to draw: the whole line stays ahead.
+    const stale = await harness({ position: "stale", telemetry: progress(0.5) });
+    await waitFor(() => expect(stale.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(stale.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+
+    // The same fraction with the matcher off the line is not progress along it.
+    const off = await harness({ position: "fresh", telemetry: progress(0.5), offRoute: "off-route" });
+    await waitFor(() => expect(off.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(off.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+    expect(off.hosts.hosts[0]?.lastScene()?.routes[0]?.state).toBe("selected");
   });
 });
 

@@ -43,13 +43,18 @@
  *   host is where a lost WebGL context can actually be replaced.
  *
  * The map is also the app's own `data-*` seam (13 §7 spirit): `data-basemap`,
- * `data-map-extent`, `data-map-camera`, `data-map-scene`, `data-map-error`,
- * `data-map-load` and `data-layer-error` are published by the host so a browser
- * gate can compute a deterministic click position and assert what is drawn — and
- * what failed — without reading pixels it cannot parse.
+ * `data-map-extent`, `data-map-camera`, `data-bearing`, `data-map-scene`,
+ * `data-map-error`, `data-map-load` and `data-layer-error` are published by the
+ * host so a browser gate can compute a deterministic click position and assert
+ * what is drawn — and what failed — without reading pixels it cannot parse.
+ *
+ * The rider's instruments — compass, zoom buttons and the scale rule — are drawn
+ * here as one control column, but every number in them comes from the host
+ * through `onCamera`: the map under the finger is the authority on which way it
+ * is turned and how far a pixel reaches (05 §9).
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
@@ -58,14 +63,21 @@ import type { MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
 import type {
   BasemapMode,
+  MapCameraState,
   MapErrorKind,
   MapHost,
   MapHostFactory,
   MapLoadStatus,
   MapRenderError,
 } from "@/application/map/map-host";
+import {
+  MAX_SCALE_BAR_PX,
+  scaleBarFor,
+  type MapScaleBar as MapScaleBarReading,
+} from "@/application/map/scale";
 import type { MapIntent, MapScene } from "@/application/map/types";
 import { BASEMAP_LOOK_PREFERENCE_KEY, SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
+import { MapCompass, MapScaleBar, MapZoomControls } from "@/ui/map/MapControls";
 
 /**
  * The rider-facing copy for a renderer failure (05 §22, 4.0 review finding 1).
@@ -185,6 +197,13 @@ export interface PlannerMapProps {
   readonly terrain3d?: boolean;
   readonly onLayerStatus?: (status: MapLayerDrawStatus) => void;
   /**
+   * Extra controls for the bottom of the map's control column, rendered after
+   * the zoom buttons (Locate, Show whole ride). A surface that adds one gets the
+   * column's spacing, glass and pointer behaviour for free; the map itself stays
+   * unaware of what those controls mean.
+   */
+  readonly clusterControls?: ReactNode;
+  /**
    * The rider's request for one more recovery attempt, as a token the workspace
    * bumps (05 §8's fit pattern). Only a *change* asks for a retry, so the mount
    * itself never spends one; the one live host is asked, never a new surface.
@@ -193,6 +212,48 @@ export interface PlannerMapProps {
 }
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/**
+ * What the instrument column shows, reduced to the values that change its
+ * drawing.
+ *
+ * The host reports the camera on every animation frame of an eased zoom or a
+ * rotate; a state update per frame would re-render the whole surface for a
+ * needle that moved a fraction of a degree. Rounding to the degree and the
+ * hundredth of a zoom level, and comparing the derived scale, means React only
+ * hears about a change a rider could actually see.
+ */
+interface CameraView {
+  readonly bearing: number;
+  readonly zoom: number;
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  readonly scale: MapScaleBarReading | null;
+}
+
+function cameraViewOf(camera: MapCameraState): CameraView {
+  return {
+    bearing: Math.round(camera.bearing),
+    zoom: Math.round(camera.zoom * 100) / 100,
+    minZoom: camera.minZoom,
+    maxZoom: camera.maxZoom,
+    // Unknown (a renderer that cannot name its centre) stays absent: no rule is
+    // drawn rather than a ruler that might be wrong.
+    scale: scaleBarFor(camera.metersPerPixel, MAX_SCALE_BAR_PX),
+  };
+}
+
+function sameCameraView(previous: CameraView | null, next: CameraView): boolean {
+  return (
+    previous !== null &&
+    previous.bearing === next.bearing &&
+    previous.zoom === next.zoom &&
+    previous.minZoom === next.minZoom &&
+    previous.maxZoom === next.maxZoom &&
+    previous.scale?.meters === next.scale?.meters &&
+    previous.scale?.widthPx === next.scale?.widthPx
+  );
+}
 
 /** `prefers-reduced-motion` (12 §13), read once per host creation. */
 function prefersReducedMotion(): boolean {
@@ -224,9 +285,21 @@ export function PlannerMap({
   terrain3d = false,
   onLayerStatus,
   retryToken = 0,
+  clusterControls,
 }: PlannerMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<MapHost | null>(null);
+  /** The camera the instrument column is showing (05 §9). */
+  const [cameraView, setCameraView] = useState<CameraView | null>(null);
+  /**
+   * Folds one camera reading into the column's state. Only a visible change
+   * replaces the object, so a continuous rotate does not re-render the surface
+   * sixty times a second for a needle that moved a degree.
+   */
+  const updateCamera = useCallback((camera: MapCameraState): void => {
+    const next = cameraViewOf(camera);
+    setCameraView((previous) => (sameCameraView(previous, next) ? previous : next));
+  }, []);
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
   /** Night contrast, when the host can draw it. */
@@ -300,6 +373,7 @@ export function PlannerMap({
     let unsubscribeStatus: (() => void) | null = null;
     let unsubscribeLayerStatus: (() => void) | null = null;
     let unsubscribeViewport: (() => void) | null = null;
+    let unsubscribeCamera: (() => void) | null = null;
 
     void (async () => {
       const rememberedLook = readLookChoice();
@@ -337,6 +411,10 @@ export function PlannerMap({
       unsubscribeStatus = host.onStatus?.((status) => loadStatusRef.current?.(status)) ?? null;
       unsubscribeViewport =
         host.onViewport?.((extent) => viewportRef.current?.(extent)) ?? null;
+      // The camera's bearing, zoom and scale, for the compass, the zoom buttons
+      // and the scale rule. A host without a camera (a test double) reports
+      // nothing and the column simply has no instruments to show.
+      unsubscribeCamera = host.onCamera?.((camera) => updateCamera(camera)) ?? null;
       // The scene may have changed while the renderer was loading; the refs hold
       // the current values, so the map never starts a frame — or a tool — behind.
       host.dispatch({ type: "tool-change", tool: activeToolRef.current });
@@ -355,6 +433,7 @@ export function PlannerMap({
       unsubscribeStatus?.();
       unsubscribeViewport?.();
       unsubscribeLayerStatus?.();
+      unsubscribeCamera?.();
       hostRef.current?.dispose();
       hostRef.current = null;
     };
@@ -509,6 +588,12 @@ export function PlannerMap({
     event.preventDefault();
   }, []);
 
+  /** One zoom level per press; the host clamps to its own limits (05 §9). */
+  const zoomIn = useCallback((): void => hostRef.current?.zoomBy?.(1), []);
+  const zoomOut = useCallback((): void => hostRef.current?.zoomBy?.(-1), []);
+  /** The compass's one job: turn the map north-up again. */
+  const faceNorth = useCallback((): void => hostRef.current?.faceNorth?.(), []);
+
   return (
     <div
       className="og-map-host"
@@ -591,6 +676,36 @@ export function PlannerMap({
           ) : null}
         </div>
       ) : null}
+
+      {/*
+        One control column on the right edge: the map's own instruments first
+        (compass, zoom), then whatever this surface adds below them (Locate,
+        Show whole ride). Pointer events sit on the buttons alone, so a drag
+        that starts between two of them still pans the map.
+      */}
+      <div className="og-map__cluster" data-testid="map-cluster">
+        <MapCompass bearing={cameraView?.bearing ?? 0} onFaceNorth={faceNorth} />
+        <MapZoomControls
+          zoom={cameraView?.zoom ?? 0}
+          minZoom={cameraView?.minZoom ?? Number.NEGATIVE_INFINITY}
+          maxZoom={cameraView?.maxZoom ?? Number.POSITIVE_INFINITY}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
+        />
+        {clusterControls}
+      </div>
+
+      {/*
+        The scale rule: bottom-left of the map the rider can actually see, which
+        is why it is offset by the measured camera insets rather than by a tier.
+      */}
+      {cameraView?.scale === null || cameraView === null ? null : (
+        <MapScaleBar
+          scale={cameraView.scale}
+          insetLeft={insets.left}
+          insetBottom={insets.bottom}
+        />
+      )}
 
       {/*
         A visible "Loading map…" until the renderer has drawn tiles (AQ-01,
