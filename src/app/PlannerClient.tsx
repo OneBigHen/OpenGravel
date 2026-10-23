@@ -328,6 +328,12 @@ export function PlannerClient({
         markRideHandoff();
         publishTelemetryIntent("ride_started", { source: "system-location" });
         router.push(RIDE_FOCUS_PATH);
+      } else if (outcome.sessionId !== null) {
+        // A ride that is still recording: Free Ride means "keep riding", so
+        // open that ride and resume it rather than showing a refusal.
+        blurFocusedField();
+        markRideHandoff();
+        router.push(RIDE_FOCUS_PATH);
       }
       return outcome;
     },
