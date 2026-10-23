@@ -8,7 +8,8 @@
 # 2. npm ci + npm run build with the production environment (NEXT_PUBLIC_* are build-time)
 # 3. starts the candidate on $CANDIDATE_PORT and smoke-checks it
 # 4. points the systemd drop-in at the new directory, restarts, smoke-checks :$PORT
-# The previous release directory is kept and recorded for infra/deploy/rollback.sh.
+# The previous release directory is kept and recorded for infra/deploy/rollback.sh;
+# older ones are removed by infra/deploy/prune.sh (KEEP_EXTRA_RELEASES, default 1).
 set -euo pipefail
 
 REF=${1:-origin/main}
@@ -33,6 +34,11 @@ DIR="$RELEASE_ROOT/og-release-${SHA:0:12}"
 PREVIOUS=$(sed -n 's/^WorkingDirectory=//p' "$DROPIN" | tail -1)
 log "ref $REF -> $SHA"
 log "current release: ${PREVIOUS:-none}"
+
+# Make room before building: a full disk fails `npm ci` halfway through.
+"$HERE/prune.sh" "$DIR"
+FREE_KB=$(df -Pk "$RELEASE_ROOT" | awk 'NR == 2 { print $4 }')
+[ "$FREE_KB" -ge $(( ${MIN_FREE_GB:-3} * 1024 * 1024 )) ] || { log "only $((FREE_KB / 1024)) MB free under $RELEASE_ROOT; need ${MIN_FREE_GB:-3} GB"; exit 1; }
 
 if [ ! -e "$DIR/.git" ]; then
   git -C "$SOURCE_REPO" worktree add -q --detach "$DIR" "$SHA"
@@ -96,4 +102,5 @@ if ! "$HERE/smoke.sh" "http://127.0.0.1:$PORT"; then
   exit 1
 fi
 "$HERE/smoke.sh" "$PUBLIC_ORIGIN" || log "WARNING: public origin smoke failed (origin is up locally; check the tunnel/proxy)"
+"$HERE/prune.sh" "$DIR" || log "WARNING: pruning old releases failed"
 log "live: $SHA in $DIR (previous: ${PREVIOUS:-none})"
