@@ -639,8 +639,39 @@ describe("reload, resume and stop (08 §2, §13)", () => {
   it("offers an honest empty state when no session is recorded", async () => {
     await harness({ pointerAt: "nothing" });
 
-    expect(screen.getByTestId("ride-recovery")).toHaveTextContent("no ride in progress");
-    expect(screen.getByTestId("ride-exit")).toHaveAttribute("href", "/");
+    // No session is not a failure: the screen says so, keeps the app's own frame
+    // (the tab bar every other surface has) and offers the action that starts a
+    // ride. `Try again` used to retry a load that had nothing to load.
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-status", "absent");
+    expect(screen.getByTestId("ride-recovery")).toHaveTextContent("No ride in progress");
+    // The card is the same empty-state one My rides opens with, and the app's
+    // own bar (the bottom tab bar on a phone) is around it.
+    expect(screen.getByTestId("ride-recovery").closest(".og-empty-state")).not.toBeNull();
+    expect(screen.getByTestId("primary-nav")).toBeInTheDocument();
+    const plan = screen.getByRole("link", { name: "Plan a ride" });
+    expect(plan).toHaveAttribute("href", "/");
+    expect(screen.queryByTestId("ride-retry-recovery")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("keeps Try again for a ride that could not be opened", async () => {
+    const { store } = await harness({ pointerAt: "nothing" });
+
+    act(() => {
+      store.setState({ status: "unavailable", statusMessage: null });
+    });
+
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-status", "unavailable");
+    expect(screen.getByTestId("ride-retry-recovery")).toHaveTextContent("Try again");
+    // Retrying is the point here, so the empty state's invitation is not shown.
+    expect(screen.queryByTestId("ride-plan-ride")).not.toBeInTheDocument();
+  });
+
+  it("stays minimal once a ride is running: no tab bar in ride mode", async () => {
+    await harness({ position: "fresh" });
+
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-status", "ready");
+    expect(screen.queryByTestId("primary-nav")).not.toBeInTheDocument();
   });
 });
 

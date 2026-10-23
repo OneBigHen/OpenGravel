@@ -38,6 +38,7 @@
 
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useStore } from "zustand";
 
 import { buildRideScene } from "@/application/map/build-ride-scene";
@@ -57,6 +58,7 @@ import type {
 } from "@/ui/stores/ride-focus-store";
 import type { MapLayersSource } from "@/application/map-layers";
 import type { RideInterestDiscoverSource } from "@/application/ride-interest";
+import { AppBar } from "@/ui/nav/AppBar";
 import { LayeredMap } from "@/ui/layers/LayeredMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
@@ -89,12 +91,19 @@ export interface RideFocusProps {
 }
 
 /** The recovery screen's copy, per state: what happened, and what to do. */
-const RECOVERY_COPY: Readonly<Record<Exclude<RideFocusStoreStatus, "ready">, string>> = {
+const RECOVERY_COPY: Readonly<Record<Exclude<RideFocusStoreStatus, "ready" | "absent">, string>> = {
   loading: "Opening your ride…",
-  absent: "There is no ride in progress. Start one from the planner.",
   unrecoverable: "This ride's journal could not be replayed, so it can't be resumed.",
   unavailable: "This ride's saved data couldn't be opened.",
 };
+
+/**
+ * No session at all is not a failure: nothing was being tracked, so there is
+ * nothing to retry. The card says so and offers the one thing that starts one.
+ */
+const NO_RIDE_HEADLINE = "No ride in progress";
+const NO_RIDE_COPY =
+  "Plan a route in the planner and press Start ride, or record a ride as you go — it opens here.";
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -116,9 +125,9 @@ function sameInsets(a: MapInsets, b: MapInsets): boolean {
   return a.top === b.top && a.right === b.right && a.bottom === b.bottom && a.left === b.left;
 }
 
-/** A `ready` status never renders this screen, but the type has to say so. */
+/** A `ready` or `absent` status never renders this screen, but the type has to say so. */
 function recoveryCopy(status: RideFocusStoreStatus): string {
-  return status === "ready" ? "" : RECOVERY_COPY[status];
+  return status === "ready" || status === "absent" ? "" : RECOVERY_COPY[status];
 }
 
 const MANEUVER_GLYPH_PATHS: Readonly<Record<RideFocusManeuver["glyph"], string>> = {
@@ -423,9 +432,54 @@ export function RideFocus({
     </div>
   );
 
+  /*
+    Nothing is running. That is an ordinary state, not an error (the old
+    screen offered a dead "Try again" on a blank page with no tab bar, so a
+    rider who opened /ride was stranded). It keeps the app's
+    frame — the shared bar, which is the bottom tab bar on a phone — and the
+    same invitation card the My rides library opens with: a headline, one line
+    that says what to do, and Plan a ride. Ride mode below drops all of it.
+  */
+  if (status === "absent") {
+    return (
+      <main id="main" className="og-ride og-ride--state" data-testid="ride-focus" data-status={status}>
+        <AppBar current="" />
+        <section className="og-ride__empty og-empty-state" aria-labelledby="og-ride-empty-title">
+          <div className="og-empty-state__body">
+            <h1 id="og-ride-empty-title" data-testid="ride-recovery">
+              {NO_RIDE_HEADLINE}
+            </h1>
+            <p>{NO_RIDE_COPY}</p>
+            {statusMessage === null ? null : (
+              <p className="og-ride__empty-note" data-testid="ride-empty-note" role="status">
+                {statusMessage}
+              </p>
+            )}
+            <div className="og-empty-state__actions">
+              {/*
+                Only Plan a ride. Free Ride and Record start a session through
+                the planner's own handoff (its ride document store, session
+                controller and bootstrap pointer, composed in PlannerClient),
+                which this surface does not own — so offering them here would
+                duplicate that logic instead of reusing it. They are one tap
+                away on the planner this card leads to.
+              */}
+              <Link className="og-primary" href={exitHref} data-testid="ride-plan-ride">
+                Plan a ride
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // A ride that could not be opened: retrying is meaningful here, and the exit
+  // stays reachable while the tab bar does.
   if (status !== "ready" || viewModel === null) {
     return (
-      <main id="main" className="og-ride" data-testid="ride-focus" data-status={status}>
+      <main id="main" className="og-ride og-ride--state" data-testid="ride-focus" data-status={status}>
+        <AppBar current="" />
         <section className="og-ride__recovery" aria-labelledby="og-ride-recovery-title">
           <h1 id="og-ride-recovery-title" className="og-ride__title">
             Ride Focus

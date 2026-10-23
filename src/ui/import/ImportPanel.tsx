@@ -140,6 +140,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
   const [warning, setWarning] = useState<{ readonly code: "refresh-failed"; readonly reason: string } | null>(null);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const operationRef = useRef(0);
 
   const selectedTracks = useMemo(
@@ -275,6 +276,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
 
       <label
         className="og-import__dropzone"
+        htmlFor="og-import-file"
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
@@ -282,9 +284,10 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
           if (dropped !== undefined) void previewFile(dropped);
         }}
       >
-        <span>Choose a GPX, KML, or KMZ file</span>
-        <small>Drop it here · maximum {MAX_FILE_BYTES / (1024 * 1024)} MB</small>
         <input
+          ref={fileInputRef}
+          id="og-import-file"
+          className="sr-only"
           type="file"
           aria-label="Import GPX, KML, or KMZ"
           accept=".gpx,.kml,.kmz"
@@ -292,7 +295,21 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
             const nextFile = event.target.files?.[0];
             if (nextFile !== undefined) void previewFile(nextFile);
           }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            // A native file input already opens the picker on Enter/Space;
+            // prevent that so the dialog never opens twice.
+            event.preventDefault();
+            fileInputRef.current?.click();
+          }}
         />
+        <span>Choose a GPX, KML, or KMZ file</span>
+        <small>or drop it here · max {MAX_FILE_BYTES / (1024 * 1024)} MB</small>
+        {file === null ? null : (
+          <small className="og-import__file-name" data-testid="import-file-name">
+            Selected file: <strong>{file.name}</strong>
+          </small>
+        )}
       </label>
 
       {error !== null ? (

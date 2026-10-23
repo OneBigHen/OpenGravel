@@ -82,6 +82,22 @@ describe("Explore UI", () => {
     push.mockRestore();
   });
 
+  it("dresses every picker as the app's own control and ties the browse captions to their selects", () => {
+    // UX: the browse pickers were raw native selects beside rounded controls.
+    // Each select now sits in the shared .og-select wrapper (pill, hairline,
+    // custom chevron), and the visible caption is associated by htmlFor/id.
+    render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
+    for (const id of ["og-explore-region-picker", "og-explore-area-picker"]) {
+      const select = document.getElementById(id);
+      expect(select?.tagName).toBe("SELECT");
+      expect(select?.parentElement).toHaveClass("og-select");
+      expect(select?.closest("label")).toHaveAttribute("for", id);
+    }
+    const selects = Array.from(document.querySelectorAll("select"));
+    expect(selects.length).toBeGreaterThan(0);
+    for (const select of selects) expect(select.parentElement).toHaveClass("og-select");
+  });
+
   it("shows more than ten rides and filters Pennsylvania riding areas without opening the sheet", () => {
     const entries = Array.from({ length: 30 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}`, region: "Pennsylvania" }));
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });

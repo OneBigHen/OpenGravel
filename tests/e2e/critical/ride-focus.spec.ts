@@ -192,7 +192,7 @@ test.describe("ride focus", () => {
     // The ride is over: a reload finds no ride rather than reopening a finished
     // one (the pointer is the only thing that said which session to restore).
     await page.reload();
-    await expect(page.getByTestId("ride-recovery")).toContainText("no ride in progress");
+    await expect(page.getByTestId("ride-recovery")).toContainText(/no ride in progress/i);
   });
 
   test("a reload restores the same ride, paused, with the route still drawn", async ({ page }) => {

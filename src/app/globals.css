@@ -2914,6 +2914,17 @@ h3,
   cursor: pointer;
 }
 
+.og-import__dropzone:hover {
+  background: color-mix(in srgb, var(--og-signal-blue) 10%, var(--og-paper));
+}
+
+/* The visible control is the drop zone; keyboard focus lives on the visually
+   hidden native input, so the ring is drawn on the zone it belongs to. */
+.og-import__dropzone:focus-within {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
 .og-import__dropzone > * {
   min-width: 0;
   max-width: 100%;
@@ -2931,10 +2942,9 @@ h3,
   color: var(--og-trail-brown);
 }
 
-.og-import__dropzone input {
-  min-height: 44px;
-  margin-top: 4px;
-  font: inherit;
+.og-import__dropzone .og-import__file-name {
+  color: var(--og-ink);
+  overflow-wrap: anywhere;
 }
 
 .og-import__error,
@@ -6197,6 +6207,20 @@ h3,
   color: var(--og-danger-light);
 }
 
+/*
+  `/ride` with no ride in progress (owner, 2026-10-05): nothing is running, so
+  the surface is not in ride mode and keeps the app's frame — the shared app
+  bar, which is the bottom tab bar on a phone. The card clears the floating tab
+  bar instead of sitting under it; ride mode drops the bar entirely, below.
+*/
+.og-ride--state {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--og-tabbar-h, var(--og-safe-bottom, 0px));
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
 .og-ride__recovery {
   position: relative;
   z-index: 1;
@@ -7574,16 +7598,20 @@ h3,
 }
 
 .og-explore__areas {
-  display: flex;
+  display: grid;
+  /* Region and PA riding area share one row from 360px up (a 390px phone puts
+     them side by side); below that they stack rather than squash. */
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
-  flex-wrap: wrap;
-  gap: 12px 24px;
+  gap: 12px 16px;
   margin: 16px 0;
 }
-.og-explore__areas label { display: grid; gap: 8px; flex: 1 1 240px; }
-.og-explore__areas label > span { font-weight: 650; font-size: var(--og-text-meta); }
-.og-explore__areas select { width: 100%; min-height: 44px; }
-.og-explore__areas p { flex: 1 1 280px; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
+@media (min-width: 360px) {
+  .og-explore__areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.og-explore__areas label { display: grid; gap: 6px; min-width: 0; }
+.og-explore__areas label > span:not(.og-select) { font-weight: 650; font-size: var(--og-text-meta); }
+.og-explore__areas p { grid-column: 1 / -1; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 
 .og-explore-map-dialog {
   position: fixed;
@@ -7759,7 +7787,7 @@ h3,
     min-width: 0;
   }
 
-  .og-explore__controls label > span {
+  .og-explore__controls label > span:not(.og-select) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -9100,6 +9128,55 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-library__imports {
   display: grid;
   gap: 16px;
+}
+
+/* Advanced import is a native disclosure, styled like the app's other
+   secondary rows instead of the browser's default triangle. */
+.og-library__advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--og-sandstone);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+  color: var(--og-slate-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.og-library__advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-library__advanced > summary::after {
+  content: "\2304";
+  color: var(--og-moss-text);
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.og-library__advanced[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.og-library__advanced > summary:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-library__advanced[open] > summary {
+  margin-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-library__advanced > summary::after {
+    transition: none;
+  }
 }
 
 @media (min-width: 1100px) {
@@ -10566,6 +10643,7 @@ a.og-secondary {
   padding: 22px 20px 24px;
 }
 
+.og-empty-state__body h1,
 .og-empty-state__body h2 {
   font-size: clamp(22px, 1.4vw + 16px, 30px);
   line-height: 1.12;
@@ -10613,6 +10691,54 @@ a.og-secondary {
   .og-empty-state__body {
     padding: 32px 36px;
   }
+}
+
+/*
+  `/ride` with no ride in progress reuses the empty-state card the My rides
+  library opens with, over the ride surface's dark ground. Inside `.og-ride` the
+  theme tokens are flipped (theme-glass.css: --og-ink paints surfaces and
+  --og-paper its text), so the card takes the ride chrome's own surface tokens
+  rather than the page ones — and one column, because there is no photograph.
+*/
+.og-ride .og-ride__empty {
+  grid-template-columns: minmax(0, 1fr);
+  width: min(calc(100% - 32px - var(--og-safe-left, 0px) - var(--og-safe-right, 0px)), 520px);
+  max-width: 520px;
+  margin: auto;
+  border: 1px solid var(--og-ride-border);
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 24%);
+}
+
+.og-ride .og-ride__empty-note {
+  font-size: 14px;
+  color: var(--og-ride-muted);
+}
+
+/*
+  The frame around that card wears the ride surface's palette too, because
+  inside `.og-ride` the theme tokens are flipped and the shared bar's own
+  colours would land dark-on-dark. On a phone `.og-appbar` is `display:
+  contents`: the glass tab bar is drawn exactly as it is on every other page.
+*/
+.og-ride--state .og-appbar {
+  background: var(--og-ride-surface);
+  box-shadow: 0 1px 0 var(--og-ride-border);
+}
+
+.og-ride--state .og-appbar__brand {
+  color: var(--og-paper);
+}
+
+.og-ride--state .og-appbar__tagline,
+.og-ride--state .og-planner__nav a,
+.og-ride--state .og-planner__settings-link {
+  color: var(--og-ride-muted);
+}
+
+.og-ride--state .og-planner__nav a[aria-current="page"] {
+  color: var(--og-paper);
 }
 
 /* -- Route detail ---------------------------------------------------------- */
@@ -11761,3 +11887,60 @@ a.og-secondary {
 .og-community-action textarea { resize: vertical; }
 .og-public-photos { display: grid; gap: 12px; min-width: 0; }
 .og-public-photos input[type="file"] { width: 100%; min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   Native selects, dressed once. The control stays a real <select> — the phone's
+   own picker, keyboard support and screen-reader semantics stay intact — but it
+   wears the same pill, hairline and paper as the Explore search field and chips
+   instead of the browser's square default. `.og-select` is only the chevron
+   carrier: a select is a replaced element, so its own ::after never paints.
+   Everything below reads the palette tokens, so Day and Night both hold.
+   -------------------------------------------------------------------------- */
+.og-select {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.og-select > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  /* 40px on the right keeps the value clear of the chevron. */
+  padding: 0 40px 0 16px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 999px;
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  /* WebKit can paint a long value outside its box; clip it, the popup still
+     lists every option in full. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.og-select > select:disabled {
+  background: var(--og-well);
+  color: var(--og-slate-text);
+  cursor: not-allowed;
+}
+
+/* Two borders on a turned square: muted text ink, so it reads in both themes. */
+.og-select::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 6px);
+  right: 18px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--og-slate-text);
+  border-bottom: 2px solid var(--og-slate-text);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
