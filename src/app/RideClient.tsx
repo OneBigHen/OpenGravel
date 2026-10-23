@@ -161,7 +161,8 @@ export function RideClient({
   // hydration: a ride that reloads mid-share restores its link from storage,
   // which the server render cannot see.
   const [safety, setSafety] = useState<RideSafety>();
-  const safetyRef = useRef<RideSafety | undefined>(undefined);
+  // A plain holder, not a ref: the navigation engine's fix callback reads it.
+  const safetyFeed = useMemo<{ current: RideSafety | undefined }>(() => ({ current: undefined }), []);
   const crashMotion = useMemo(() => createBrowserLeanMotion(), []);
   const syncMotionRef = useRef<() => void>(() => undefined);
   useEffect(() => {
@@ -191,8 +192,10 @@ export function RideClient({
         haptic("heavy");
       },
     });
-    safetyRef.current = created;
-    setSafety(created);
+    safetyFeed.current = created;
+    // After hydration, like the Spotify player: the stored link is client-only.
+    let cancelled = false;
+    void Promise.resolve().then(() => { if (!cancelled) setSafety(created); });
     // Motion feeds crash detection only while a live link is shared.
     let stopMotion: (() => void) | null = null;
     const syncMotion = (): void => {
@@ -208,13 +211,14 @@ export function RideClient({
     syncMotion();
     const unsubscribe = created.subscribe(syncMotion);
     return () => {
+      cancelled = true;
       unsubscribe();
       stopMotion?.();
-      safetyRef.current = undefined;
+      safetyFeed.current = undefined;
       syncMotionRef.current = () => undefined;
       created.dispose();
     };
-  }, [crashMotion]);
+  }, [crashMotion, safetyFeed]);
   const requestMotion = useCallback(async () => {
     const answer = await crashMotion.requestPermission();
     // Permission can arrive after the share started: subscribe now.
@@ -376,7 +380,7 @@ export function RideClient({
             : nativeShellPositionSource() ?? createBrowserPositionSource()),
           onSessionFix: (fix, appliedState) => {
             freeRideTelemetry.accept(fix, appliedState);
-            safetyRef.current?.acceptFix({
+            safetyFeed.current?.acceptFix({
               atMs: Date.parse(fix.observedAt),
               lat: fix.coordinate.lat,
               lon: fix.coordinate.lon,
@@ -423,7 +427,7 @@ export function RideClient({
       },
     });
     return { rides, store, library, activitySync };
-  }, [fixturePosition, homeLocation, pointer]);
+  }, [fixturePosition, homeLocation, pointer, safetyFeed]);
 
   const mapLayersSource = useMemo(
     () => createRoadHistoryMapLayersSource(

@@ -8,7 +8,7 @@
  * by `RideSafetyOverlay` over everything else.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { RideSafety, RideSafetySnapshot } from "@/application/safety/ride-safety";
 import { CrashCheckOverlay } from "@/ui/safety/CrashCheckOverlay";
@@ -32,12 +32,11 @@ function writeName(name: string): void {
 }
 
 function useSafety(safety: RideSafety): RideSafetySnapshot {
-  const [snapshot, setSnapshot] = useState<RideSafetySnapshot>(() => safety.snapshot());
-  useEffect(() => {
-    setSnapshot(safety.snapshot());
-    return safety.subscribe(setSnapshot);
-  }, [safety]);
-  return snapshot;
+  return useSyncExternalStore(
+    (listener) => safety.subscribe(listener),
+    () => safety.snapshot(),
+    () => safety.snapshot(),
+  );
 }
 
 function agoText(ms: number): string {
@@ -73,11 +72,11 @@ export interface RideSafetyPanelProps {
 
 export function RideSafetyPanel({ safety, requestMotion }: RideSafetyPanelProps) {
   const { live } = useSafety(safety);
-  const [name, setName] = useState("");
+  // The panel mounts only after hydration (the ride screen creates safety then).
+  const [name, setName] = useState(readName);
   const [note, setNote] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => setName(readName()), []);
   useEffect(() => {
     if (live.status !== "sharing") return;
     const timer = window.setInterval(() => setNow(Date.now()), 5_000);
@@ -164,7 +163,7 @@ export function RideSafetyOverlay({ safety }: { readonly safety: RideSafety }) {
     return () => window.clearInterval(timer);
   }, [crash.phase]);
   if (!live) return null;
-  const current = safety.snapshot().crash;
+  const current = safety.crashNow();
   return (
     <CrashCheckOverlay
       status={crash.phase === "escalated" ? "escalated" : "countdown"}

@@ -36,7 +36,10 @@ export interface RideSafetyFix {
 }
 
 export interface RideSafety {
+  /** The same object until something changes (safe for useSyncExternalStore). */
   snapshot(): RideSafetySnapshot;
+  /** The countdown as of now, for a screen that ticks the seconds. */
+  crashNow(): CrashAlertSnapshot;
   subscribe(listener: (snapshot: RideSafetySnapshot) => void): () => void;
   startSharing(input: { readonly riderName: string; readonly route?: LiveRouteGeometry | null }): Promise<string | null>;
   stopSharing(): Promise<void>;
@@ -60,13 +63,15 @@ export function createRideSafety(deps: RideSafetyDeps): RideSafety {
   const detector = deps.detector ?? createCrashDetector();
   const listeners = new Set<(snapshot: RideSafetySnapshot) => void>();
   const now = (): number => deps.scheduler?.now() ?? Date.now();
-  let controller: CrashAlertController;
+  let current: RideSafetySnapshot | null = null;
 
   function snapshot(): RideSafetySnapshot {
-    return { live: deps.live.snapshot(), crash: controller.snapshot() };
+    if (current === null) current = { live: deps.live.snapshot(), crash: controller.snapshot() };
+    return current;
   }
 
   function emit(): void {
+    current = null;
     const next = snapshot();
     for (const listener of listeners) listener(next);
   }
@@ -91,7 +96,8 @@ export function createRideSafety(deps: RideSafetyDeps): RideSafety {
     emit();
   }
 
-  controller = createCrashAlertController({
+  // Declared after the handlers it calls; they only run once it exists.
+  const controller: CrashAlertController = createCrashAlertController({
     ...(deps.scheduler === undefined ? {} : { scheduler: deps.scheduler }),
     onEvent,
   });
@@ -101,6 +107,7 @@ export function createRideSafety(deps: RideSafetyDeps): RideSafety {
 
   return {
     snapshot,
+    crashNow: () => controller.snapshot(),
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
