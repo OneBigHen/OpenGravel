@@ -29,10 +29,7 @@ export function usePlannerMapIntentController(input: {
     readonly previewPointDrag: (coordinate: Coordinate) => void;
     readonly commitPointDrag: (coordinate: Coordinate | undefined) => void;
     readonly cancelPointDrag: () => void;
-    readonly placeFromMap: (
-      coordinate: Coordinate,
-      options?: { readonly implicitTarget?: boolean },
-    ) => boolean;
+    readonly placeFromMap: (coordinate: Coordinate) => boolean;
   };
   readonly avoidAreas: {
     readonly clearGesture: () => void;
@@ -162,19 +159,7 @@ export function usePlannerMapIntentController(input: {
         return;
       }
 
-      // An unarmed tap on the open map surface authors the ride's missing
-      // point. A tap the renderer resolved to an object (or to overlapping
-      // routes) is a selection, not an authorship command: applying the
-      // missing-point rule there created a start on top of the stop the rider
-      // was trying to select. An armed placement still owns every tap (05
-      // §4/§6).
-      if (
-        placeFromMap(intent.coordinate, {
-          implicitTarget: intent.type === "map-click",
-        })
-      ) {
-        return;
-      }
+      if (placeFromMap(intent.coordinate)) return;
       if (intent.type === "overlap-click") {
         ui.setOverlapCandidates(intent.candidates, intent.coordinate);
         return;
