@@ -10,9 +10,12 @@
  * Only the app offers the choice; the browser always uses Ride Focus.
  */
 
+import { NAV_SCREEN_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+
 export type NavScreen = "opengravel" | "native";
 
-export const NAV_SCREEN_STORAGE_KEY = "og-nav-screen";
+/** Registry-owned so a device wipe removes the rider's choice too. */
+export { NAV_SCREEN_STORAGE_KEY };
 export const NAV_SCREEN_CHANGE_EVENT = "og-nav-screen-change";
 export const DEFAULT_NAV_SCREEN: NavScreen = "opengravel";
 

@@ -16,6 +16,10 @@ import type { MapLayerDrawStatus } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { InfoLayersScene, MapIntent } from "@/application/map/types";
 import {
+  CAMERA_ROUTE_ONLY_STORAGE_KEY,
+  MAP_LAYERS_STORAGE_KEY,
+} from "@/application/map/preferences";
+import {
   MAP_LAYERS,
   clampLayerBounds,
   featureLayerIds,
@@ -52,8 +56,6 @@ export interface MapLayersView {
   readonly interceptIntent: (intent: MapIntent) => MapIntent | null;
 }
 
-const STORAGE_KEY = "ogv.map-layers.v1";
-const CAMERA_ROUTE_ONLY_KEY = "ogv.camera-route-only.v1";
 const CAMERA_ROUTE_CORRIDOR_METERS = 5_000;
 const LOAD_DEBOUNCE_MS = 450;
 
@@ -109,7 +111,7 @@ function setEnabledNow(next: readonly MapLayerId[]): void {
 
 function readEnabled(): readonly MapLayerId[] {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(MAP_LAYERS_STORAGE_KEY);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((id): id is MapLayerId => typeof id === "string" && isMapLayerId(id)) : [];
@@ -120,7 +122,7 @@ function readEnabled(): readonly MapLayerId[] {
 
 function writeEnabled(ids: readonly MapLayerId[]): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    window.localStorage.setItem(MAP_LAYERS_STORAGE_KEY, JSON.stringify(ids));
   } catch {
     // A per-device convenience: private mode just forgets the choice.
   }
@@ -133,7 +135,7 @@ function subscribeCameraRouteOnly(listener: () => void): () => void {
 
 function readCameraRouteOnly(): boolean {
   try {
-    return window.localStorage.getItem(CAMERA_ROUTE_ONLY_KEY) === "1";
+    return window.localStorage.getItem(CAMERA_ROUTE_ONLY_STORAGE_KEY) === "1";
   } catch {
     return false;
   }
@@ -147,7 +149,7 @@ function cameraRouteOnlyNow(): boolean {
 function setCameraRouteOnlyNow(next: boolean): void {
   cameraRouteSnapshot = next;
   try {
-    window.localStorage.setItem(CAMERA_ROUTE_ONLY_KEY, next ? "1" : "0");
+    window.localStorage.setItem(CAMERA_ROUTE_ONLY_STORAGE_KEY, next ? "1" : "0");
   } catch {
     // A per-device convenience only.
   }
