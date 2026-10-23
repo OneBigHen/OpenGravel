@@ -80,7 +80,9 @@ export class CommunityRouteStore {
     if (!Number.isSafeInteger(maximum) || maximum <= 0) throw new Error("Invalid shared-route capacity.");
     this.database.exec("BEGIN IMMEDIATE");
     try {
-      if (this.routeCount() >= maximum) { this.database.exec("ROLLBACK"); return false; }
+      // Removed routes are hidden, not erased, so they hold no slot: otherwise
+      // every takedown permanently shrinks what riders may share.
+      if (this.liveRouteCount() >= maximum) { this.database.exec("ROLLBACK"); return false; }
       this.database.prepare("INSERT INTO community_routes (id, raw_json, created_at, owner_token_hash) VALUES (?, ?, ?, ?)").run(id, JSON.stringify(raw), now, ownerTokenHash);
       const insert = this.database.prepare("INSERT INTO community_route_photos (route_id, photo_index, bytes, width, height) VALUES (?, ?, ?, ?, ?)");
       photos.forEach((photo, index) => insert.run(id, index, photo.bytes, photo.width, photo.height));
@@ -95,8 +97,18 @@ export class CommunityRouteStore {
     return row === undefined ? null : { bytes: Buffer.from(row.bytes), width: row.width, height: row.height };
   }
 
+  /** Every shared row, including removed ones. Capacity uses `liveRouteCount`. */
   public routeCount(): number {
     return (this.database.prepare("SELECT COUNT(*) AS n FROM community_routes").get() as { n: number }).n;
+  }
+
+  /** Shared routes riders can still see: the capacity budget. */
+  public liveRouteCount(): number {
+    return (this.database.prepare(`
+      SELECT COUNT(*) AS n FROM community_routes c
+      LEFT JOIN route_removals r ON r.route_id = c.id
+      WHERE r.route_id IS NULL
+    `).get() as { n: number }).n;
   }
 
   public routes(): readonly CommunityRouteRow[] {

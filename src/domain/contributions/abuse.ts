@@ -64,19 +64,22 @@ export function checkContributionAbuseBounds(
   if (boundedCount(counts.queuePending) >= limits.queueMaxPending) {
     return {
       code: "queue-full",
-      message: "The moderation queue is full.",
+      // Nothing the rider did caused this and nothing they can do fixes it; a
+      // moderator has to clear the queue, so the copy does not ask them to retry
+      // a specific action.
+      message: "New community notes are paused: the review queue is full.",
     };
   }
   if (boundedCount(counts.reporterPending) >= limits.maxPendingPerReporter) {
     return {
       code: "reporter-pending-cap",
-      message: "The reporter has too many contributions awaiting moderation.",
+      message: "You already have several notes waiting for review.",
     };
   }
   if (boundedCount(counts.reporterRecentSubmissions) >= limits.maxSubmissionsPerWindow) {
     return {
       code: "reporter-rate-exceeded",
-      message: "The reporter has submitted too many contributions recently.",
+      message: "You have sent several notes recently. Try again later.",
     };
   }
   return null;
