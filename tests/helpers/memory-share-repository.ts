@@ -1,8 +1,8 @@
 import type { ShareId, ShareToken } from "@/domain/sharing/ids";
-import type { ShareRecord, ShareRepositoryPort } from "./ports/share-repository";
+import type { ShareRecord, ShareRepositoryPort } from "@/application/sharing/ports/share-repository";
 
 /**
- * In-memory share store for tests, SSR, and embeddings without persistence.
+ * In-memory share store for tests.
  *
  * It implements exactly the port — including the absence of any list call.
  */

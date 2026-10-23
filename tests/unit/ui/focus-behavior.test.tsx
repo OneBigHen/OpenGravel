@@ -13,7 +13,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState, type ReactElement } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { MemoryShareRepository } from "@/application/sharing/memory-share-repository";
+import { MemoryShareRepository } from "../../helpers/memory-share-repository";
 import { createShareService } from "@/application/sharing/share-commands";
 import type { Coordinate, SurfaceIntent } from "@/domain/ride/types";
 import type { ShareSource } from "@/domain/sharing/types";

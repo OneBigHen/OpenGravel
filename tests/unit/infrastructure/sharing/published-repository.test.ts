@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { MemoryShareRepository } from "@/application/sharing/memory-share-repository";
+import { MemoryShareRepository } from "../../../helpers/memory-share-repository";
 import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
 import { createShareService } from "@/application/sharing/share-commands";
 import { buildShareSnapshot } from "@/domain/sharing/snapshot";

@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MemoryShareRepository } from "@/application/sharing/memory-share-repository";
+import { MemoryShareRepository } from "../../helpers/memory-share-repository";
 import { createShareService } from "@/application/sharing/share-commands";
 import type { Coordinate, SurfaceIntent } from "@/domain/ride/types";
 import { asShareToken, type ShareToken } from "@/domain/sharing/ids";
