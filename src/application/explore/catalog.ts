@@ -93,6 +93,12 @@ export interface CatalogEntry {
   readonly distanceKm: number | null;
   readonly bounds: Bounds | null;
   readonly geometry: readonly Coordinate[];
+  /**
+   * False when `geometry` is only the list's card line (a preview), never the
+   * full route. Plan, export and share wait for the route page's full line.
+   * Absent means the geometry is the route's own.
+   */
+  readonly geometryComplete?: boolean;
   /** Small list-card line; detail and planning use full `geometry`. */
   readonly previewGeometry?: readonly Coordinate[];
   readonly stats?: CatalogStats;
@@ -137,6 +143,7 @@ interface RawCatalogEntry {
   readonly estimatedTimeMinutes?: unknown;
   readonly bounds?: unknown;
   readonly geometry?: unknown;
+  readonly geometryComplete?: unknown;
   readonly previewGeometry?: unknown;
   readonly stats?: unknown;
   readonly provenance?: unknown;
@@ -573,6 +580,7 @@ export function parseCatalogEntry(value: unknown): CatalogEntry | null {
     distanceKm,
     bounds: raw.bounds === undefined ? null : raw.bounds,
     geometry: raw.geometry,
+    ...(raw.geometryComplete === false ? { geometryComplete: false } : {}),
     ...(previewGeometry === undefined ? {} : { previewGeometry }),
     provenance: raw.provenance,
     ...(typeof raw.provenanceDetail === "string" ? { provenanceDetail: raw.provenanceDetail } : {}),
