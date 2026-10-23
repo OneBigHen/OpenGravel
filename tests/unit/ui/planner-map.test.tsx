@@ -16,6 +16,7 @@
  *   key (the rider owns the camera) requests nothing (05 §8).
  */
 
+import { readFileSync } from "node:fs";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -628,4 +629,142 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
     expect(seen.at(-1)).toBe("night");
     expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
   });
+});
+
+
+describe("the map point menu", () => {
+  const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 100, y: 100 }, authorityFeatureId: null } as const;
+
+  it("offers all five rows at 48 px minimum and an inline disabled reason", async () => {
+    const style = document.createElement("style");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    style.textContent = css.slice(css.indexOf("/* Map-point authoring:"));
+    document.head.append(style);
+    try {
+      const { factory } = await renderMap({ onPointAction: vi.fn(), addStopDisabledReason: "plan a start and finish first" });
+      act(() => factory.hosts[0]?.emit(press));
+      const buttons = screen.getByRole("dialog", { name: "Plan here" }).querySelectorAll("button");
+      expect(buttons).toHaveLength(5);
+      for (const button of buttons) {
+        expect(getComputedStyle(button).minHeight).toBe("48px");
+        expect(button.querySelector("svg")).toHaveAttribute("width", "20");
+      }
+      expect(screen.getByRole("button", { name: /Add stop here — plan a start and finish first/ })).toBeDisabled();
+    } finally { style.remove(); }
+  });
+
+  it("says it does not know when no authority record exists", async () => {
+    const onPointAction = vi.fn();
+    const { factory, onIntent } = await renderMap({ onPointAction });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
+    expect(screen.getByRole("status")).toHaveTextContent("No authority record for this spot");
+    expect(screen.getByRole("status")).toHaveTextContent(/source coverage.*unknown/);
+    expect(screen.getByRole("status")).not.toHaveTextContent(/public|open/i);
+    expect(onPointAction).not.toHaveBeenCalled();
+    expect(onIntent).not.toHaveBeenCalled();
+  });
+
+  it.each([ ["Start here", "start"], ["Add stop here", "stop"], ["Finish here", "finish"], ["Loop from here (1 h)", "loop"] ])("dispatches %s at the original press coordinate", async (label, action) => {
+    const onPointAction = vi.fn();
+    const { factory } = await renderMap({ onPointAction });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    expect(onPointAction).toHaveBeenCalledExactlyOnceWith(action, press.coordinate);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("dismisses on outside press and Escape", async () => {
+    const { factory } = await renderMap({ onPointAction: vi.fn() });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("disables the reducer entry point when placement is armed", async () => {
+    const { factory } = await renderMap({ onPointAction: vi.fn(), longPressEnabled: false });
+    expect(factory.hosts[0]?.events).toContainEqual({ type: "long-press-enabled", enabled: false });
+    act(() => factory.hosts[0]?.emit(press));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+
+describe("map point evidence and positioning", () => {
+  const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 950, y: 700 }, authorityFeatureId: null } as const;
+
+  it("shows the road name and source only for a hit on a loaded authority feature", async () => {
+    const base = scene(false);
+    const { factory } = await renderMap({ onPointAction: vi.fn(), scene: { ...base, infoLayers: {
+      trafficFlowTiles: null, selectedId: null, visible: ["mvum"], features: [{
+        id: "authority:usfs:123", layerId: "mvum", name: "Forest Road 123", detail: "USFS MVUM · retrieved 2026-10-23 · dates unknown",
+        weight: null, geometry: { type: "Point", coordinates: [-75.2, 39.95] },
+      }],
+    } } });
+    act(() => factory.hosts[0]?.emit({ ...press, authorityFeatureId: "authority:usfs:123" }));
+    fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Forest Road 123");
+    expect(screen.getByRole("status")).toHaveTextContent("USFS MVUM");
+    expect(screen.getByRole("status")).toHaveTextContent(/Check current local MVUM/);
+  });
+
+  it("flips a wide card left and up near the viewport edge", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
+      const box = this.className === "og-map-point-menu"
+        ? { left: 0, top: 0, width: 320, height: 260 }
+        : { left: 20, top: 10, width: 1000, height: 750 };
+      return { ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => ({}) } as DOMRect;
+    });
+    const previous = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+    try {
+      const { factory } = await renderMap({ onPointAction: vi.fn() });
+      act(() => factory.hosts[0]?.emit(press));
+      const menu = screen.getByRole("dialog");
+      expect(menu.style.left).toBe("642px");
+      expect(menu.style.top).toBe("442px");
+    } finally { window.matchMedia = previous; }
+  });
+
+  it("places a compact sheet above the measured dock", async () => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
+      const box = this.className === "og-map-point-menu" ? { left: 0, top: 0, width: 366, height: 260 }
+        : this.className === "og-planner__dock" ? { left: 0, top: 600, width: 390, height: 200 }
+        : { left: 0, top: 0, width: 390, height: 800 };
+      return { ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => ({}) } as DOMRect;
+    });
+    const previous = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true });
+    try {
+      const factory = createStubMapHostFactory();
+      render(<main className="og-planner"><PlannerMap scene={scene()} activeTool="pan" hostFactory={factory.factory} onIntent={vi.fn()} onPointAction={vi.fn()} /><div className="og-planner__dock" /></main>);
+      await settle();
+      act(() => factory.hosts[0]?.emit(press));
+      const menu = screen.getByRole("dialog");
+      expect(menu.style.top).toBe("332px");
+      expect(menu.style.left).toBe("12px");
+      expect(menu.style.width).toBe("366px");
+    } finally { window.matchMedia = previous; }
+  });
+});
+
+
+it("closes the menu on tool and revision changes without restoring an old menu", async () => {
+  const factory = createStubMapHostFactory();
+  const props = { scene: scene(), hostFactory: factory.factory, onIntent: vi.fn(), onPointAction: vi.fn() };
+  const view = render(<PlannerMap {...props} activeTool="pan" rideRevision={0} />);
+  await settle();
+  const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 100, y: 100 }, authorityFeatureId: null } as const;
+  act(() => factory.hosts[0]?.emit(press));
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  view.rerender(<PlannerMap {...props} activeTool="sketch" rideRevision={0} />);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  view.rerender(<PlannerMap {...props} activeTool="pan" rideRevision={0} />);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  act(() => factory.hosts[0]?.emit(press));
+  view.rerender(<PlannerMap {...props} activeTool="pan" rideRevision={1} />);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

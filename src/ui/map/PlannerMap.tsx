@@ -49,7 +49,9 @@
  * what failed — without reading pixels it cannot parse.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Coordinate } from "@/domain/ride/types";
+import { MAP_LAYERS } from "@/application/map-layers/catalog";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
@@ -64,7 +66,7 @@ import type {
   MapLoadStatus,
   MapRenderError,
 } from "@/application/map/map-host";
-import type { MapIntent, MapScene } from "@/application/map/types";
+import type { MapIntent, MapScene, MapPointAction } from "@/application/map/types";
 import { BASEMAP_LOOK_PREFERENCE_KEY, SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
 
 /**
@@ -96,7 +98,12 @@ export const TOOL_HINTS: Readonly<Record<"start" | "finish" | "stop", string>> =
   stop: "Tap the map to place the stop.",
 };
 
+type PointMenuIntent = Extract<MapIntent, { type: "map-long-press" }>;
+
 export interface PlannerMapProps {
+  readonly onPointAction?: (action: MapPointAction, coordinate: Coordinate) => void;
+  readonly longPressEnabled?: boolean;
+  readonly addStopDisabledReason?: string | null;
   readonly scene: MapScene;
   readonly onIntent: (intent: MapIntent) => void;
   /**
@@ -205,6 +212,9 @@ function prefersReducedMotion(): boolean {
 export function PlannerMap({
   scene,
   onIntent,
+  onPointAction,
+  longPressEnabled = onPointAction !== undefined,
+  addStopDisabledReason = null,
   hostFactory,
   assetBasePath,
   hint = null,
@@ -225,6 +235,16 @@ export function PlannerMap({
   onLayerStatus,
   retryToken = 0,
 }: PlannerMapProps) {
+  const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
+  const [menuContext, setMenuContext] = useState("");
+  const context = `${activeTool}:${rideRevision}:${longPressEnabled}`;
+  // Reset during render so a cancelled menu cannot reappear when a tool changes back.
+  if (menuContext !== context) {
+    setMenuContext(context);
+    setPointMenu(null);
+  }
+  const longPressEnabledRef = useRef(longPressEnabled);
+  useEffect(() => { longPressEnabledRef.current = longPressEnabled; }, [longPressEnabled]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<MapHost | null>(null);
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
@@ -327,7 +347,15 @@ export function PlannerMap({
       } else if (rememberedLook === "night" && host.supportsNightContrast === true) {
         setLook("night");
       }
-      unsubscribe = host.onIntent((intent) => intentRef.current(intent));
+      unsubscribe = host.onIntent((intent) => {
+        if (intent.type === "map-long-press") {
+          if (longPressEnabledRef.current && activeToolRef.current === "pan") setPointMenu(intent);
+          return;
+        }
+        if (intent.type === "camera-changed" || intent.type === "gesture-cancel" ||
+            intent.type === "object-click" || intent.type === "map-click") setPointMenu(null);
+        intentRef.current(intent);
+      });
       // A renderer failure is reported up rather than only painted on the
       // container: the rider-facing notice lives in the sheet, and the attribute
       // the browser gate reads is written by the host itself.
@@ -339,6 +367,7 @@ export function PlannerMap({
         host.onViewport?.((extent) => viewportRef.current?.(extent)) ?? null;
       // The scene may have changed while the renderer was loading; the refs hold
       // the current values, so the map never starts a frame — or a tool — behind.
+      host.dispatch({ type: "long-press-enabled", enabled: longPressEnabledRef.current });
       host.dispatch({ type: "tool-change", tool: activeToolRef.current });
       host.dispatch({ type: "ride-revision-change", revision: rideRevisionRef.current });
       host.applyScene(sceneRef.current);
@@ -374,6 +403,10 @@ export function PlannerMap({
     hostRef.current?.dispatch({ type: "tool-change", tool: activeTool });
   }, [activeTool]);
 
+  useEffect(() => {
+    hostRef.current?.dispatch({ type: "long-press-enabled", enabled: longPressEnabled });
+  }, [longPressEnabled]);
+
   /** A ride-revision change cancels an in-flight gesture (05 §4). */
   useEffect(() => {
     hostRef.current?.dispatch({ type: "ride-revision-change", revision: rideRevision });
@@ -392,6 +425,7 @@ export function PlannerMap({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== "Escape") return;
+      setPointMenu(null);
       hostRef.current?.dispatch({ type: "escape" });
       escapeRef.current?.();
     };
@@ -504,8 +538,7 @@ export function PlannerMap({
   ];
 
   const handleContextMenu = useCallback((event: React.MouseEvent): void => {
-    // A long-press/right-click menu (05 §7) is not authored yet; the context menu
-    // must not cover the map in the meantime.
+    // The host feeds contextmenu through the same reducer as a timed hold.
     event.preventDefault();
   }, []);
 
@@ -534,6 +567,13 @@ export function PlannerMap({
         aria-label={label}
         onContextMenu={handleContextMenu}
       />
+
+      {pointMenu !== null && longPressEnabled && activeTool === "pan" ? (
+        <MapPointMenu intent={pointMenu} scene={scene} container={containerRef}
+          insets={insets} addStopDisabledReason={addStopDisabledReason}
+          onClose={() => setPointMenu(null)}
+          onAction={(action) => { onPointAction?.(action, pointMenu.coordinate); setPointMenu(null); }} />
+      ) : null}
 
       {looks.length > 1 ? (
         <div className="og-map__look" ref={lookMenuRef}>
@@ -649,3 +689,103 @@ function writeLookChoice(look: BasemapLook): void {
 
 /** The baseline region, re-exported so the E2E's documented default stays one value. */
 export { DEFAULT_MAP_EXTENT };
+
+
+const POINT_ROWS = [
+  { action: "start", label: "Start here", path: "M7 21V3l12 4-12 4" },
+  { action: "stop", label: "Add stop here", path: "M12 5v14M5 12h14" },
+  { action: "finish", label: "Finish here", path: "M6 21V3h13v9H6M10 3v9M15 3v9" },
+  { action: "loop", label: "Loop from here (1 h)", path: "M19 8a8 8 0 1 0 1 7M19 3v5h-5" },
+  { action: "info", label: "What's here?", path: "M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },
+] as const;
+
+function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason, onAction, onClose }: {
+  readonly intent: PointMenuIntent;
+  readonly scene: MapScene;
+  readonly container: React.RefObject<HTMLDivElement | null>;
+  readonly insets: MapInsets;
+  readonly addStopDisabledReason: string | null;
+  readonly onAction: (action: MapPointAction) => void;
+  readonly onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const authority = scene.infoLayers?.features.find((feature) =>
+    feature.id === intent.authorityFeatureId && feature.id.startsWith("authority:") &&
+    (feature.layerId === "mvum" || feature.layerId === "work-zones"));
+
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    const map = container.current;
+    if (menu === null || map === null) return;
+    const previous = document.activeElement;
+    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
+    const position = (): void => {
+      const bounds = map.getBoundingClientRect();
+      const compact = window.matchMedia?.("(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))").matches ?? window.innerWidth <= 1180;
+      const dock = map.closest(".og-planner")?.querySelector(".og-planner__dock")?.getBoundingClientRect();
+      const bottom = Math.min(window.innerHeight - 8, bounds.bottom - insets.bottom,
+        compact && dock !== undefined && dock.height > 0 ? dock.top - 8 : Infinity);
+      menu.style.maxHeight = `${Math.max(48, bottom - Math.max(8, bounds.top))}px`;
+      menu.style.width = compact ? `${Math.max(0, Math.min(window.innerWidth, bounds.width) - 24)}px` : "min(320px, calc(100vw - 24px))";
+      const box = menu.getBoundingClientRect();
+      const pressX = bounds.left + intent.pixel.x;
+      const pressY = bounds.top + intent.pixel.y;
+      const left = compact ? Math.max(12, bounds.left + 12)
+        : Math.max(8, Math.min(pressX + box.width + 8 <= window.innerWidth ? pressX + 8 : pressX - box.width - 8, window.innerWidth - box.width - 8));
+      const top = compact ? bottom - box.height
+        : Math.max(8, Math.min(pressY + box.height + 8 <= bottom ? pressY + 8 : pressY - box.height - 8, bottom - box.height));
+      menu.style.left = `${left}px`;
+      menu.style.top = `${Math.max(8, top)}px`;
+    };
+    position();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(position);
+    observer?.observe(menu);
+    const dock = map.closest(".og-planner")?.querySelector(".og-planner__dock");
+    if (dock !== null && dock !== undefined) observer?.observe(dock);
+    window.addEventListener("resize", position);
+    window.visualViewport?.addEventListener("resize", position);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", position);
+      window.visualViewport?.removeEventListener("resize", position);
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [container, intent, insets]);
+
+  useEffect(() => {
+    const outside = (event: PointerEvent): void => {
+      if (!ref.current?.contains(event.target as Node)) onClose();
+    };
+    window.addEventListener("pointerdown", outside);
+    return () => window.removeEventListener("pointerdown", outside);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} className="og-map-point-menu" role="dialog" aria-modal="true" aria-label="Plan here"
+      data-testid="map-point-menu" onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+        if (event.key !== "Tab") return;
+        const buttons = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+        const first = buttons[0];
+        const last = buttons.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }}>
+      {POINT_ROWS.map((row) => {
+        const reason = row.action === "stop" ? addStopDisabledReason : null;
+        return <button key={row.action} type="button" className="og-map-point-menu__row"
+          disabled={reason !== null}
+          onClick={() => row.action === "info" ? setShowInfo(true) : onAction(row.action)}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={row.path} /></svg>
+          <span>{row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
+        </button>;
+      })}
+      {showInfo ? <div className="og-map-point-menu__info" role="status">
+        <strong>{authority?.name ?? "No authority record for this spot"}</strong>
+        <p>{authority?.detail ?? "Only loaded authority layers and their source coverage are checked. Missing, disabled or unavailable layers and source gaps leave this spot unknown."}</p>
+        {authority === undefined ? null : <p>{MAP_LAYERS.find((layer) => layer.id === authority.layerId)?.caveat}</p>}
+      </div> : null}
+    </div>
+  );
+}

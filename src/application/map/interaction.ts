@@ -60,6 +60,7 @@ export type PointerTool =
  * reliable on a phone, in a glove, on a bar mount.
  */
 export const TAP_DRAG_THRESHOLD_PX = 10;
+export const LONG_PRESS_MS = 450;
 
 /** A pointer position in CSS pixels, as the DOM reports it. */
 export interface PointerPixel {
@@ -111,10 +112,18 @@ export interface PointerOwnership {
    * unmoved release is not a drag, and a tremor is not movement.
    */
   readonly moved: boolean;
+  /** Consumes release and native contextmenu after a hold has fired. */
+  readonly longPressed?: boolean;
+  /** A neutral-tool mouse press that temporarily grabbed the selected route. */
+  readonly routePress?: boolean;
+  /** Right-button releases are context-menu requests, never placement taps. */
+  readonly button?: number;
 }
 
 /** Why a gesture ended without committing. */
 export type CancelReason =
+  | "placement-change"
+  | "multi-pointer"
   | "pointer-cancel"
   | "lost-capture"
   | "escape"
@@ -129,11 +138,23 @@ export interface InteractionState {
   readonly lastCancel: CancelReason | null;
   /** The ride revision the machine is bound to (05 §4, task 4.0). */
   readonly rideRevision: number;
+  /** Placement and non-authoring surfaces explicitly disable holds. */
+  readonly longPressEnabled?: boolean;
+  /** Keep a pinch consumed until every participating pointer has lifted. */
+  readonly activePointers?: readonly number[];
+  /** Native menus from a consumed or cancelled pointer cannot start a new hold. */
+  readonly contextMenuSuppressed?: boolean;
 }
 
 export type InteractionEvent =
+  | { readonly type: "hold-timeout"; readonly pointerId: number; readonly elapsedMs: number }
+  | { readonly type: "long-press-enabled"; readonly enabled: boolean }
+  | { readonly type: "context-menu"; readonly coordinate: Coordinate; readonly pixel: PointerPixel }
   | {
       readonly type: "pointer-down";
+      readonly routePress?: boolean;
+      readonly button?: number;
+      readonly pointerType?: string;
       readonly pointerId: number;
       readonly coordinate: Coordinate;
       readonly pixel: PointerPixel;
@@ -164,6 +185,7 @@ export type InteractionEvent =
  * gesture, with the two points the machine retained.
  */
 export type InteractionEffect =
+  | { readonly type: "long-press"; readonly coordinate: Coordinate; readonly pixel: PointerPixel }
   | { readonly type: "tap"; readonly pointerId: number; readonly coordinate: Coordinate }
   | {
       readonly type: "commit-gesture";
@@ -191,7 +213,7 @@ export function gestureControlsPointer(state: InteractionState): boolean {
 }
 
 function cancelled(state: InteractionState, reason: CancelReason): InteractionResult {
-  return { state: { ...state, ownership: null, lastCancel: reason }, effects: [] };
+  return { state: { ...state, ownership: null, lastCancel: reason, contextMenuSuppressed: true }, effects: [] };
 }
 
 function released(state: InteractionState): InteractionState {
@@ -233,6 +255,7 @@ function finishGesture(
   release: Coordinate,
   pointerId: number,
 ): readonly InteractionEffect[] {
+  if (ownership.longPressed || ownership.button === 2) return [];
   const { moved } = ownership;
   if (ownership.tool === "pan") {
     return moved ? [] : [{ type: "tap", pointerId, coordinate: release }];
@@ -250,7 +273,7 @@ function finishGesture(
 
 /**
  * One transition. Total: every event is accepted, and an event that cannot apply
- * (a second pointer, a foreign release) leaves the state untouched instead of
+ * (a foreign release, an unowned move) leaves ownership untouched instead of
  * raising or guessing.
  */
 export function reduceInteraction(
@@ -258,14 +281,57 @@ export function reduceInteraction(
   event: InteractionEvent,
 ): InteractionResult {
   const ownership = state.ownership;
+  const pointers = state.activePointers ?? [];
+  if (event.type === "pointer-down") {
+    state = { ...state, activePointers: [...pointers.filter((id) => id !== event.pointerId), event.pointerId] };
+    // The owner may already have lifted while a second finger is still down.
+    if (ownership === null && pointers.some((id) => id !== event.pointerId)) return { state, effects: [] };
+  } else if (event.type === "pointer-up" || event.type === "pointer-cancel" || event.type === "lost-capture") {
+    state = { ...state, activePointers: pointers.filter((id) => id !== event.pointerId) };
+  }
 
   switch (event.type) {
+    case "long-press-enabled": {
+      if (state.longPressEnabled === event.enabled) return { state, effects: [] };
+      const next = { ...state, longPressEnabled: event.enabled, contextMenuSuppressed: true };
+      return ownership === null ? { state: next, effects: [] } : cancelled(next, "placement-change");
+    }
+
+    case "hold-timeout": {
+      if (event.elapsedMs < LONG_PRESS_MS || ownership === null ||
+          ownership.pointerId !== event.pointerId || (ownership.tool !== "pan" && !ownership.routePress) ||
+          ownership.moved || ownership.longPressed || state.longPressEnabled === false) {
+        return { state, effects: [] };
+      }
+      return {
+        state: { ...state, contextMenuSuppressed: true, ownership: { ...ownership, longPressed: true } },
+        effects: [{ type: "long-press", coordinate: ownership.origin, pixel: ownership.originPixel }],
+      };
+    }
+
+    case "context-menu": {
+      if (state.contextMenuSuppressed || pointers.length > 1 || (ownership === null && pointers.length > 0) ||
+          state.activeTool !== "pan" || state.longPressEnabled === false ||
+          ownership?.moved || ownership?.longPressed) return { state, effects: [] };
+      return {
+        state: { ...state, contextMenuSuppressed: true, ...(ownership === null ? {} : { ownership: { ...ownership, longPressed: true } }) },
+        effects: [{ type: "long-press", coordinate: event.coordinate, pixel: event.pixel }],
+      };
+    }
+
     case "pointer-down": {
-      if (ownership !== null) return { state, effects: [] };
+      if (ownership !== null) {
+        // A second finger cancels the neutral gesture, including a temporarily
+        // grabbed route. A pinch can neither author a point nor commit a drag.
+        return ownership.pointerId !== event.pointerId && (ownership.tool === "pan" || ownership.routePress)
+          ? cancelled(state, "multi-pointer")
+          : { state, effects: [] };
+      }
       return {
         state: {
           ...state,
           lastCancel: null,
+          contextMenuSuppressed: event.pointerType === "touch",
           ownership: {
             tool: state.activeTool,
             pointerId: event.pointerId,
@@ -274,6 +340,8 @@ export function reduceInteraction(
             originPixel: event.pixel,
             currentPixel: event.pixel,
             moved: false,
+            ...(event.routePress ? { routePress: true } : {}),
+            ...(event.button === 2 ? { button: 2 } : {}),
           },
         },
         effects: [],
@@ -288,6 +356,7 @@ export function reduceInteraction(
         state: {
           ...state,
           ownership: observed(ownership, event.coordinate, event.pixel),
+          contextMenuSuppressed: state.contextMenuSuppressed || exceedsTapThreshold(ownership.originPixel, event.pixel),
         },
         effects: [],
       };
@@ -304,7 +373,7 @@ export function reduceInteraction(
         event.coordinate,
         event.pointerId,
       );
-      return { state: released(state), effects };
+      return { state: released({ ...state, contextMenuSuppressed: state.contextMenuSuppressed || exceedsTapThreshold(ownership.originPixel, event.pixel) }), effects };
     }
 
     case "pointer-cancel": {
@@ -323,11 +392,11 @@ export function reduceInteraction(
 
     case "escape": {
       if (ownership !== null) return cancelled(state, "escape");
-      if (state.activeTool === "pan") return { state, effects: [] };
+      if (state.activeTool === "pan") return { state: { ...state, contextMenuSuppressed: true }, effects: [] };
       // No gesture to drop: Escape releases the armed tool, because a tool the
       // rider escaped from must not keep owning the next tap.
       return {
-        state: { ...state, activeTool: "pan", lastCancel: "escape" },
+        state: { ...state, activeTool: "pan", lastCancel: "escape", contextMenuSuppressed: true },
         effects: [],
       };
     }
@@ -341,12 +410,13 @@ export function reduceInteraction(
             activeTool: event.tool,
             ownership: null,
             lastCancel: "tool-change",
+            contextMenuSuppressed: true,
           },
           effects: [],
         };
       }
       return {
-        state: { ...state, activeTool: event.tool, lastCancel: null },
+        state: { ...state, activeTool: event.tool, lastCancel: null, contextMenuSuppressed: true },
         effects: [],
       };
     }
@@ -360,12 +430,13 @@ export function reduceInteraction(
             rideRevision: event.revision,
             ownership: null,
             lastCancel: "route-revision-change",
+            contextMenuSuppressed: true,
           },
           effects: [],
         };
       }
       return {
-        state: { ...state, rideRevision: event.revision, lastCancel: null },
+        state: { ...state, rideRevision: event.revision, lastCancel: null, contextMenuSuppressed: true },
         effects: [],
       };
     }

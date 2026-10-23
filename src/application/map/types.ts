@@ -415,10 +415,15 @@ export interface MapScene {
  * committed it) or as `gesture-cancel` (it was dropped); there is no third
  * outcome, and neither is a tap.
  */
+export type MapPointAction = "start" | "stop" | "finish" | "loop";
+
 export type MapIntent =
+  | { readonly type: "map-long-press"; readonly coordinate: Coordinate; readonly pixel: { readonly x: number; readonly y: number }; readonly authorityFeatureId: string | null }
   | { readonly type: "map-click"; readonly coordinate: Coordinate }
   | {
       readonly type: "object-click";
+      /** A held selected road offers its actions without implicit placement. */
+      readonly source?: "long-press";
       readonly ref: MapObjectRef;
       readonly coordinate: Coordinate;
     }

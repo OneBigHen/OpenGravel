@@ -25,6 +25,8 @@ import {
   type PlannerViewModel,
   type PointRowVm,
 } from "@/application/planner/planner-view-model";
+import { defaultLoopToleranceMinutes } from "@/application/planner/build-plan-request";
+import type { MapPointAction } from "@/application/map/types";
 import { snapPreviewCoordinate } from "@/application/planner/point-snap";
 import {
   nextStopInsertionBeforeId,
@@ -33,6 +35,8 @@ import {
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import {
   insertStopCommand,
+  rideShapeCommand,
+  loopTimeCommand,
   moveFinishCommand,
   moveShapeCommand,
   moveStartCommand,
@@ -52,6 +56,7 @@ export interface PlannerStopsAuthoring {
   readonly missingTarget: PlacementTarget;
   readonly panelProps: StopsPanelProps;
   readonly changeDestination: () => void;
+  readonly onMapPointAction: (action: MapPointAction, coordinate: Coordinate) => void;
   /** Adds a stop at a known place (a places card's "Add as stop"). */
   readonly addStopAt: (coordinate: Coordinate, label: string) => void;
   beginPointDrag(ref: MapObjectRef | null, coordinate: Coordinate): void;
@@ -304,9 +309,30 @@ export function usePlannerStops(input: {
     ],
   );
 
+  const onMapPointAction = useCallback((action: MapPointAction, coordinate: Coordinate): void => {
+    const current = (): RideDocument => rideDocumentStore.getState().document;
+    const dispatch = rideDocumentStore.getState().dispatch;
+    // Each command reads the current revision; a loop uses the existing shape,
+    // start and time commands rather than bypassing the document authority.
+    if (action === "start") dispatch(placeStartCommand(current(), coordinate));
+    if (action === "finish") {
+      dispatch(rideShapeCommand(current(), "destination"));
+      dispatch(placeFinishCommand(current(), coordinate));
+    }
+    if (action === "stop" && current().intent.start !== null && current().intent.finish !== null) {
+      dispatch(insertStopCommand(current(), coordinate, undefined));
+    }
+    if (action === "loop") {
+      dispatch(rideShapeCommand(current(), "loop"));
+      dispatch(placeStartCommand(current(), coordinate));
+      dispatch(loopTimeCommand(current(), 60, defaultLoopToleranceMinutes(60)));
+    }
+  }, [rideDocumentStore]);
+
   return {
     armedTool,
     missingTarget,
+    onMapPointAction,
     panelProps,
     changeDestination: actions.changeDestination,
     addStopAt: actions.addStopAt,

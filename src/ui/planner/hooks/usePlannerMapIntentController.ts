@@ -159,7 +159,10 @@ export function usePlannerMapIntentController(input: {
         return;
       }
 
-      if (placeFromMap(intent.coordinate)) return;
+      // Consumed by PlannerMap; never turn a hold into an implicit placement.
+      if (intent.type === "map-long-press") return;
+      const heldRoad = intent.type === "object-click" && intent.source === "long-press";
+      if (!heldRoad && placeFromMap(intent.coordinate)) return;
       if (intent.type === "overlap-click") {
         ui.setOverlapCandidates(intent.candidates, intent.coordinate);
         return;
