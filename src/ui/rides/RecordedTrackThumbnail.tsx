@@ -1,4 +1,9 @@
 import type { Coordinate } from "@/domain/ride/types";
+import {
+  LIBRARY_TRACK_BOX,
+  projectTrackPoints,
+  type TrackProjectionBox,
+} from "./track-projection";
 
 export interface RecordedTrackThumbnailProps {
   readonly coordinates: readonly Coordinate[];
@@ -6,24 +11,14 @@ export interface RecordedTrackThumbnailProps {
 }
 
 /** Pure geographic extent projection used only by the inline library preview. */
-export function projectRecordedTrack(coordinates: readonly Coordinate[]): readonly string[] {
+export function projectRecordedTrack(
+  coordinates: readonly Coordinate[],
+  box: TrackProjectionBox = LIBRARY_TRACK_BOX,
+): readonly string[] {
   if (coordinates.length < 2) return [];
-  const longitudes = coordinates.map((coordinate) => coordinate.lon);
-  const latitudes = coordinates.map((coordinate) => coordinate.lat);
-  const minLon = Math.min(...longitudes);
-  const maxLon = Math.max(...longitudes);
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const width = maxLon - minLon || 1;
-  const height = maxLat - minLat || 1;
-  const padding = 6;
-  const innerWidth = 148;
-  const innerHeight = 40;
-  return coordinates.map((coordinate) => {
-    const x = padding + ((coordinate.lon - minLon) / width) * innerWidth;
-    const y = padding + ((maxLat - coordinate.lat) / height) * innerHeight;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
+  const points = projectTrackPoints(coordinates, coordinates, box);
+  // One point per coordinate, so the preview keeps the shape it simplified to.
+  return points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`);
 }
 
 export function RecordedTrackThumbnail({ coordinates, title }: RecordedTrackThumbnailProps) {

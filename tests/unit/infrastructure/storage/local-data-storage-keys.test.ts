@@ -18,12 +18,16 @@ const KEY_DECLARATION = /\b(?:const|let)\s+[A-Z0-9_]*KEY[A-Z0-9_]*\s*=\s*"((?:og
 
 /**
  * Keys that are not the rider's data: a renderer throttle, a one-time UI hint,
- * and a this-tab-only sessionStorage marker.
+ * a this-tab-only sessionStorage marker, and the owner secret for a publicly shared route.
  */
 const NOT_RIDER_DATA: ReadonlyMap<string, string> = new Map([
   ["ogv.mapbox-refused-until", "a renderer retry throttle with its own expiry"],
   ["opengravel-edit-tip-seen", "a one-time UI hint"],
   ["opengravel-vnext-ride-handoff", "a sessionStorage marker for this tab's Start ride"],
+  [
+    "opengravel.community.owner.",
+    "the removal secret for a route this device shared publicly; wiping it would leave a public route nobody can take down",
+  ],
 ]);
 
 function sourceFiles(directory: string): string[] {

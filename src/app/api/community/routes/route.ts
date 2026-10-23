@@ -1,7 +1,10 @@
 import { createConcurrencyGate, createRateLimiter } from "@/server/rate-limit";
+import { randomBytes } from "node:crypto";
+
 import { readCommunityRouteUpload } from "@/server/community-routes/upload";
 import { buildSharedRoute } from "@/server/community-routes/share";
 import { prepareRoutePhotos } from "@/server/community-routes/photos";
+import { hashOwnerToken } from "@/server/community-routes/removal";
 import { sharedCommunityRouteStore } from "@/server/community-routes/store";
 
 export const runtime = "nodejs";
@@ -33,7 +36,9 @@ export async function POST(request: Request): Promise<Response> {
     if (store.routeCount() >= max) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
     const story = built.raw["story"] as Record<string, unknown>;
     const raw = { ...built.raw, story: { ...story, photos: photos.map((photo, index) => ({ src: `/api/community/routes/${built.id}/photos/${index}`, width: photo.width, height: photo.height })) } };
-    if (!store.addRoute(built.id, raw, new Date().toISOString(), photos, max)) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
-    return Response.json({ id: built.id }, { status: 201, headers: HEADERS });
+    // The device that shared the route gets the only proof that can remove it.
+    const removalToken = randomBytes(32).toString("base64url");
+    if (!store.addRoute(built.id, raw, new Date().toISOString(), photos, max, hashOwnerToken(removalToken))) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
+    return Response.json({ id: built.id, removalToken }, { status: 201, headers: HEADERS });
   } finally { release(); }
 }

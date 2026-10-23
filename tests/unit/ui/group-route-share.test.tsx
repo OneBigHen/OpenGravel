@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
+import { ownerTokenFor } from "@/ui/community/community-owner-token";
 import { applyPrivacyTrim, defaultPrivacyTrim } from "@/domain/sharing/privacy";
 
 const geometry = Array.from({ length: 20 }, (_, index) => ({ lon: -75 + index * 0.002, lat: 40 + index * 0.002 }));
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); });
 
 it("publishes only the exact privacy preview after explicit confirmation", async () => {
   const fetcher = vi.fn().mockResolvedValue(Response.json({ id: "community_test" }, { status: 201 }));
@@ -36,6 +37,19 @@ it("blocks publication if privacy settings remove the entire route", () => {
   fireEvent.click(screen.getByRole("button", { name: "Share with everyone" }));
   expect(screen.getByRole("button", { name: "Share it" })).toBeDisabled();
   expect(screen.getByRole("alert")).toHaveTextContent(/trim|short/i);
+});
+
+it("keeps the minted removal token on the sharing device only", async () => {
+  const removalToken = "minted-removal-token-0123456789abcdef";
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ id: "community_owned", removalToken }, { status: 201 }));
+  vi.stubGlobal("fetch", fetcher);
+  render(<ShareWithEveryone name="Ride" geometry={geometry} />);
+  fireEvent.click(screen.getByRole("button", { name: "Share with everyone" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share it" }));
+
+  await screen.findByText(/Only this device can take it down again/);
+  expect(ownerTokenFor("community_owned")).toBe(removalToken);
+  expect(ownerTokenFor("community_other")).toBeNull();
 });
 
 it("lets the rider trim more from home and add public notes before publishing", async () => {

@@ -14,6 +14,7 @@ import {
   sourceKindForEntry,
   type CatalogEntry,
   type CatalogVariantSummary,
+  type LibraryExploreRide,
   roadDiscoveryScopeFromCatalog,
 } from "@/application/explore/catalog";
 import { discoverRoads, type RoadCandidate } from "@/application/roads/discovery";
@@ -29,7 +30,11 @@ import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { AppBar } from "@/ui/nav/AppBar";
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
+import { hiddenRouteIds } from "@/ui/explore/hidden-routes";
 
+// The detail page owns the heavy detail-only modules (map host, preparation
+// providers). Importing it through the wrapper keeps them out of the Explore
+// list's bundle and off its first interaction.
 const RouteDetail = dynamic(() => import("./ExploreRouteDetail").then((mod) => mod.ExploreRouteDetail), { loading: () => <main id="main" className="og-explore"><AppBar current="/explore" /><p role="status">Loading ride details…</p></main> });
 
 export interface ExploreClientProps {
@@ -39,6 +44,13 @@ export interface ExploreClientProps {
   readonly mapboxToken?: string;
   readonly assetBasePath?: string;
 }
+
+/** A route page's full line, which the list's card preview cannot stand in for. */
+type DetailState = { readonly id: string; readonly attempt: number } & (
+  | { readonly status: "loading" }
+  | { readonly status: "ready" }
+  | { readonly status: "error"; readonly kind: "missing" | "unreachable" }
+);
 
 export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: ExploreClientProps) {
   const router = useRouter();
@@ -63,9 +75,16 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     () => createLibraryService(repository, { blobStore, geometryStore }),
     [blobStore, geometryStore, repository],
   );
-  const [entries, setEntries] = useState<readonly CatalogEntry[]>([]);
-  const [detailVariants, setDetailVariants] = useState<readonly CatalogVariantSummary[]>([]);
-  const [roadCandidates, setRoadCandidates] = useState<readonly RoadCandidate[]>([]);
+  const [libraryRides, setLibraryRides] = useState<readonly LibraryExploreRide[] | null>(null);
+  const [catalogRoutes, setCatalogRoutes] = useState<readonly CatalogEntry[] | null>(null);
+  const [loadedDetail, setLoadedDetail] = useState<{
+    readonly id: string;
+    readonly entry: CatalogEntry;
+    readonly variants: readonly CatalogVariantSummary[];
+  } | null>(null);
+  const [detailState, setDetailState] = useState<DetailState>({ id: "", attempt: 0, status: "loading" });
+  const [detailAttempt, setDetailAttempt] = useState(0);
+  const [hiddenIds] = useState<ReadonlySet<string>>(() => hiddenRouteIds());
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   /** The active garage bike, read on the client (EX-02, RS-01). */
   const [bike, setBike] = useState<{ readonly fuelRangeMiles: number; readonly reserveMiles: number } | null>(null);
@@ -86,44 +105,91 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
         const response = await fetch("/api/catalog", { cache: "no-cache" });
         if (!response.ok) throw new Error("catalog-unavailable");
         const payload = await response.json() as { readonly routes?: readonly unknown[] };
-        const catalogRoutes = parseCatalogEntries((payload.routes ?? []).flatMap((value) => {
+        // The list only carries a card line, so it is flagged as incomplete: a
+        // route page must fetch its own full geometry before planning/exporting.
+        const routes = parseCatalogEntries((payload.routes ?? []).flatMap((value) => {
           if (typeof value !== "object" || value === null || Array.isArray(value)) return [];
           const route = value as Record<string, unknown>;
-          return [parseCatalogEntry({ ...route, geometry: route.preview, previewGeometry: route.preview })].filter((entry) => entry !== null);
+          return [parseCatalogEntry({
+            ...route,
+            geometry: route.preview,
+            previewGeometry: route.preview,
+            geometryComplete: false,
+          })].filter((entry) => entry !== null);
         }));
-        let completeRoutes = catalogRoutes;
-        let variants: CatalogVariantSummary[] = [];
-        if (detailId !== undefined) {
-          const detailResponse = await fetch(`/api/catalog/${encodeURIComponent(detailId)}`, { cache: "no-cache" });
-          if (detailResponse.ok) {
-            const detailPayload = await detailResponse.json() as { readonly route?: unknown; readonly variants?: readonly unknown[] };
-            const detailEntry = parseCatalogEntry(detailPayload.route);
-            if (detailEntry !== null) completeRoutes = [...catalogRoutes.filter((entry) => entry.id !== detailEntry.id), detailEntry];
-            variants = (detailPayload.variants ?? []).flatMap((candidate) => {
-              if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return [];
-              const variant = candidate as Record<string, unknown>;
-              return typeof variant.id === "string" && typeof variant.name === "string" && typeof variant.label === "string"
-                && (variant.distanceKm === null || (typeof variant.distanceKm === "number" && Number.isFinite(variant.distanceKm) && variant.distanceKm >= 0))
-                && typeof variant.copyCount === "number" && Number.isSafeInteger(variant.copyCount) && variant.copyCount > 0
-                ? [{ id: variant.id, name: variant.name, label: variant.label, distanceKm: variant.distanceKm, copyCount: variant.copyCount }]
-                : [];
-            });
-          }
-        }
         if (!active) return;
-        const loadedEntries = loadCatalog(rides, completeRoutes);
-        const emptyRoadData = typeof window !== "undefined"
-          && new URLSearchParams(window.location.search).get("roads") === "empty";
-        setEntries(loadedEntries);
-        setDetailVariants(variants);
-        setRoadCandidates(emptyRoadData ? [] : discoverRoads(roadDiscoveryScopeFromCatalog(loadedEntries)));
+        setLibraryRides(rides);
+        setCatalogRoutes(routes);
         setStatus("ready");
       } catch {
         if (active) setStatus("error");
       }
     })();
     return () => { active = false; };
-  }, [detailId, library]);
+  }, [library]);
+
+  useEffect(() => {
+    if (detailId === undefined || catalogRoutes === null || libraryRides === null) return;
+    // A saved ride comes from the local library with its own geometry; there is
+    // no catalog route to fetch for it, and the entry renders from `entries`.
+    if (libraryRides.some((ride) => String(ride.summary.rideId) === detailId)) return;
+    let active = true;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/catalog/${encodeURIComponent(detailId)}`, { cache: "no-cache" });
+        if (!active) return;
+        if (!response.ok) {
+          // A missing route is not a network failure: only the latter earns a retry.
+          setDetailState({ id: detailId, attempt: detailAttempt, status: "error", kind: response.status === 404 ? "missing" : "unreachable" });
+          return;
+        }
+        const payload = await response.json() as { readonly route?: unknown; readonly variants?: readonly unknown[] };
+        const entry = parseCatalogEntry(payload.route);
+        if (!active) return;
+        if (entry === null) {
+          setDetailState({ id: detailId, attempt: detailAttempt, status: "error", kind: "unreachable" });
+          return;
+        }
+        const variants = (payload.variants ?? []).flatMap((candidate) => {
+          if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return [];
+          const variant = candidate as Record<string, unknown>;
+          return typeof variant.id === "string" && typeof variant.name === "string" && typeof variant.label === "string"
+            && (variant.distanceKm === null || (typeof variant.distanceKm === "number" && Number.isFinite(variant.distanceKm) && variant.distanceKm >= 0))
+            && typeof variant.copyCount === "number" && Number.isSafeInteger(variant.copyCount) && variant.copyCount > 0
+            ? [{ id: variant.id, name: variant.name, label: variant.label, distanceKm: variant.distanceKm, copyCount: variant.copyCount }]
+            : [];
+        });
+        setLoadedDetail({ id: detailId, entry, variants });
+        setDetailState({ id: detailId, attempt: detailAttempt, status: "ready" });
+      } catch {
+        if (active) setDetailState({ id: detailId, attempt: detailAttempt, status: "error", kind: "unreachable" });
+      }
+    })();
+    return () => { active = false; };
+  }, [catalogRoutes, detailAttempt, detailId, libraryRides]);
+
+  const detailEntry = loadedDetail !== null && loadedDetail.id === detailId ? loadedDetail.entry : null;
+  const detailVariants = loadedDetail !== null && loadedDetail.id === detailId ? loadedDetail.variants : [];
+  const visibleDetailState: DetailState = detailState.id === detailId && detailState.attempt === detailAttempt
+    ? detailState
+    : { id: detailId ?? "", attempt: detailAttempt, status: "loading" };
+
+  const entries = useMemo(() => {
+    const catalog = catalogRoutes ?? [];
+    const withDetail = detailEntry === null
+      ? catalog
+      : [...catalog.filter((entry) => entry.id !== detailEntry.id), detailEntry];
+    const loaded = loadCatalog(libraryRides ?? [], withDetail);
+    // Hiding a catalog route is a local preference; the route page stays reachable.
+    return detailId === undefined
+      ? loaded.filter((entry) => entry.source !== "catalog" || !hiddenIds.has(entry.id))
+      : loaded;
+  }, [catalogRoutes, detailEntry, detailId, hiddenIds, libraryRides]);
+  const roadCandidates = useMemo<readonly RoadCandidate[]>(() => {
+    const emptyRoadData = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("roads") === "empty";
+    return emptyRoadData ? [] : discoverRoads(roadDiscoveryScopeFromCatalog(entries));
+  }, [entries]);
 
   async function useRide(entry: CatalogEntry): Promise<void> {
     const garage = garageStorage.read();
@@ -137,11 +203,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     router.push("/");
   }
 
-  async function addToLibrary(entry: CatalogEntry): Promise<void> {
-    if (entry.sourceDocument === undefined) return;
-    await library.saveNamed(entry.sourceDocument, { title: entry.name });
-  }
-
   if (status === "loading") return <ExploreLoading />;
   if (status === "error") {
     return (
@@ -152,23 +213,29 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     );
   }
   const detail = detailId === undefined ? null : entries.find((entry) => entry.id === detailId) ?? null;
-  if (detail !== null) {
-    return (
-      <RouteDetail
-        entry={detail}
-        variants={detailVariants}
-        activeBike={bike}
-        onUse={useRide}
-        onAddToLibrary={addToLibrary}
-        {...(mapboxToken === undefined ? {} : { mapboxToken })}
-        {...(basemap === undefined
-          ? {}
-          : { map: { hostFactory, basemap, ...(assetBasePath === undefined ? {} : { assetBasePath }) } })}
-      />
-    );
-  }
   if (detailId !== undefined) {
-    return <main id="main" className="og-explore"><p>That route is not available.</p><Link href="/explore">Back to Explore</Link></main>;
+    // Only a route with its own full line may be planned, exported or shared.
+    if (detail !== null && detail.geometryComplete !== false) {
+      return (
+        <RouteDetail
+          entry={detail}
+          variants={detailVariants}
+          activeBike={bike}
+          onUse={useRide}
+          {...(mapboxToken === undefined ? {} : { mapboxToken })}
+          {...(basemap === undefined
+            ? {}
+            : { map: { hostFactory, basemap, ...(assetBasePath === undefined ? {} : { assetBasePath }) } })}
+        />
+      );
+    }
+    if (visibleDetailState.status === "error") {
+      return <RouteLoadFailure kind={visibleDetailState.kind} onRetry={() => setDetailAttempt((value) => value + 1)} />;
+    }
+    if (visibleDetailState.status === "ready") {
+      return <RouteLoadFailure kind="missing" onRetry={() => setDetailAttempt((value) => value + 1)} />;
+    }
+    return <ExploreLoading />;
   }
   return (
     <ExplorePanel
@@ -186,6 +253,29 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
             },
           })}
     />
+  );
+}
+
+/** The route page could not get the full line; the list's preview is not a substitute. */
+function RouteLoadFailure({ kind, onRetry }: {
+  readonly kind: "missing" | "unreachable";
+  readonly onRetry: () => void;
+}) {
+  return (
+    <main id="main" className="og-explore">
+      <AppBar current="/explore" />
+      <div className="og-explore-detail-status">
+        <p className="og-explore-status" role="alert">
+          {kind === "missing"
+            ? "That route is not on Explore. It may have been removed."
+            : "That route could not be loaded. Check your connection and try again."}
+        </p>
+        <div className="og-explore-detail-status__actions">
+          <Link className="og-secondary" href="/explore">Back to Explore</Link>
+          {kind === "unreachable" ? <button type="button" className="og-secondary" onClick={onRetry}>Try again</button> : null}
+        </div>
+      </div>
+    </main>
   );
 }
 

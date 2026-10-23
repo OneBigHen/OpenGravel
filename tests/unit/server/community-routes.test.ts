@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import { notifyRouteRemoved, restoreUrl, validRestoreSignature } from "@/server/community-routes/notify";
+import { handleRouteRemoval, hashOwnerToken } from "@/server/community-routes/removal";
 import { buildSharedRoute, cleanReason } from "@/server/community-routes/share";
 import { CommunityRouteStore } from "@/server/community-routes/store";
 
@@ -84,13 +89,100 @@ describe("removal email and restore link", () => {
   });
 });
 
+describe("route removal ownership", () => {
+  const NOW = "2026-10-05T12:00:00Z";
+  const OWNER_TOKEN = "owner-token-for-this-device-0123456789abcdef";
+  const BUILT_IN_ID = "sample-ridge-loop";
+  const builtIn = (id: string): boolean => id === BUILT_IN_ID;
+
+  function storeWithSharedRoute(): CommunityRouteStore {
+    const store = new CommunityRouteStore(":memory:");
+    store.addRoute("community_mine", { id: "community_mine", name: "Hawk Mountain loop" }, NOW, [], 10, hashOwnerToken(OWNER_TOKEN));
+    return store;
+  }
+
+  it("refuses a built-in catalog route even for a caller who knows its id", () => {
+    const store = storeWithSharedRoute();
+    const outcome = handleRouteRemoval(
+      { id: BUILT_IN_ID, ownerToken: "", reason: "" },
+      { store, catalogRouteExists: builtIn, now: () => NOW },
+    );
+    expect(outcome).toMatchObject({ status: 403 });
+    expect(store.removedIds().has(BUILT_IN_ID)).toBe(false);
+  });
+
+  it("refuses a shared route without its owner token", () => {
+    const store = storeWithSharedRoute();
+    for (const ownerToken of ["", "another-device-token-0123456789abcdef"]) {
+      const outcome = handleRouteRemoval(
+        { id: "community_mine", ownerToken, reason: "" },
+        { store, catalogRouteExists: builtIn, now: () => NOW },
+      );
+      expect(outcome).toMatchObject({ status: 403 });
+    }
+    expect(store.removedIds().has("community_mine")).toBe(false);
+  });
+
+  it("removes a shared route for its owner and keeps the signed restore path", () => {
+    const store = storeWithSharedRoute();
+    const outcome = handleRouteRemoval(
+      { id: "community_mine", ownerToken: OWNER_TOKEN, reason: " It is mine " },
+      { store, catalogRouteExists: builtIn, now: () => NOW },
+    );
+    expect(outcome).toEqual({ status: 200, removed: true, name: "Hawk Mountain loop", removedAt: NOW });
+    expect(store.removal("community_mine")).toMatchObject({ removedAt: NOW, reason: " It is mine " });
+
+    const env = { OGV_RESTORE_SECRET: "a-long-enough-secret-value", OGV_PUBLIC_ORIGIN: "https://example.test" };
+    const signature = new URL(restoreUrl("community_mine", NOW, env)!).searchParams.get("sig")!;
+    expect(validRestoreSignature("community_mine", NOW, signature, env)).toBe(true);
+    expect(store.restore("community_mine", "2026-10-05T13:00:00Z")).toBe(true);
+    expect(store.removal("community_mine")).toBeNull();
+
+    const again = handleRouteRemoval(
+      { id: "community_mine", ownerToken: OWNER_TOKEN, reason: "" },
+      { store, catalogRouteExists: builtIn, now: () => "2026-10-05T14:00:00Z" },
+    );
+    expect(again).toMatchObject({ status: 200, removed: true });
+  });
+
+  it("reports an unknown id as missing rather than forbidden", () => {
+    const store = storeWithSharedRoute();
+    expect(handleRouteRemoval(
+      { id: "nobody_knows_this", ownerToken: OWNER_TOKEN, reason: "" },
+      { store, catalogRouteExists: builtIn, now: () => NOW },
+    )).toMatchObject({ status: 404 });
+  });
+});
+
+describe("community route store schema migration", () => {
+  it("adds the owner token column to a database created before it existed", () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "ogv-community-migration-"));
+    const filename = path.join(directory, "community.sqlite");
+    const legacy = new DatabaseSync(filename);
+    legacy.exec(`CREATE TABLE community_routes (id TEXT PRIMARY KEY, raw_json TEXT NOT NULL, created_at TEXT NOT NULL)`);
+    legacy.prepare("INSERT INTO community_routes (id, raw_json, created_at) VALUES (?, ?, ?)").run("community_old", JSON.stringify({ name: "Old share" }), "2026-10-01T00:00:00Z");
+    legacy.close();
+
+    const store = new CommunityRouteStore(filename);
+    try {
+      expect(store.ownerTokenHash("community_old")).toBeNull();
+      const hash = hashOwnerToken("owner-token-for-this-device-0123456789abcdef");
+      store.addRoute("community_new", { name: "New share" }, "2026-10-06T00:00:00Z", [], 10, hash);
+      expect(store.ownerTokenHash("community_new")).toBe(hash);
+    } finally {
+      store.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+
 describe("owner mail", () => {
   it("is quiet without configuration", async () => {
     const { sendOwnerMail } = await import("@/server/mail/resend");
     expect(await sendOwnerMail({ subject: "s", text: "t", html: "h", event: "x" }, {})).toBe(false);
   });
 });
-
 
 describe("public route upload boundary", () => {
   it.each(["<script>alert(1)</script>", "Ride\u0000title", "Ride\u202etitle"])("rejects markup or control characters in a public name: %s", (name) => {

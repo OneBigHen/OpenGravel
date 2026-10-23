@@ -20,20 +20,31 @@ async function failure(response: Response, fallback: string): Promise<CommunityR
   }
 }
 
-/** Shares a route line with everyone. Resolves to the new route's id. */
 export interface PublicRideDetails {
   readonly description?: string;
   /** Base64 raster previews; the server independently decodes and strips metadata. */
   readonly photos?: readonly string[];
 }
-export async function shareRouteWithEveryone(name: string, geometry: readonly Coordinate[], details: PublicRideDetails = {}): Promise<string> {
-  const response = await post("/api/community/routes", { name, geometry: geometry.map((point) => [point.lon, point.lat]), ...(details.description ? { description: details.description } : {}), ...(details.photos?.length ? { photos: details.photos } : {}) });
-  if (!response.ok) throw await failure(response, "The route could not be shared.");
-  return ((await response.json()) as { id: string }).id;
+
+/** A shared route's id and the ownership proof this device must keep to remove it. */
+export interface ShareRouteResult {
+  readonly id: string;
+  /** Proof that this device shared the route; the removal endpoint requires it. */
+  readonly removalToken?: string;
 }
 
-/** Takes a route down for everyone, at once. The owner is told and can restore it. */
-export async function removeCommunityRoute(routeId: string, reason: string): Promise<void> {
-  const response = await post(`/api/community/routes/${encodeURIComponent(routeId)}/remove`, { reason });
+/** Shares a route line with everyone. Resolves to the new route's id and ownership proof. */
+export async function shareRouteWithEveryone(name: string, geometry: readonly Coordinate[], details: PublicRideDetails = {}): Promise<ShareRouteResult> {
+  const response = await post("/api/community/routes", { name, geometry: geometry.map((point) => [point.lon, point.lat]), ...(details.description ? { description: details.description } : {}), ...(details.photos?.length ? { photos: details.photos } : {}) });
+  if (!response.ok) throw await failure(response, "The route could not be shared.");
+  const body = (await response.json()) as { id: string; removalToken?: unknown };
+  return typeof body.removalToken === "string"
+    ? { id: body.id, removalToken: body.removalToken }
+    : { id: body.id };
+}
+
+/** Takes down a route this device shared. The owner token is the proof of ownership. */
+export async function removeCommunityRoute(routeId: string, reason: string, ownerToken: string): Promise<void> {
+  const response = await post(`/api/community/routes/${encodeURIComponent(routeId)}/remove`, { reason, ownerToken });
   if (!response.ok) throw await failure(response, "The route could not be removed.");
 }
