@@ -197,3 +197,12 @@
   align-self: flex-start;
   margin: -10px -10px 0 0;
 }
+
+.og-advisor .og-advisor__notice {
+  flex-wrap: nowrap;
+}
+
+.og-advisor .og-advisor__notice p {
+  flex-basis: auto;
+  min-width: 0;
+}
