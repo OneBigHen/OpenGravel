@@ -32,7 +32,7 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   const exportMenu = page.getByRole("button", { name: "Export North Track" });
   await exportMenu.click();
   const plannedDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: "Planned route GPX" }).click();
+  await page.getByRole("menuitem", { name: "GPX route" }).click();
   const plannedDownload = await plannedDownloadPromise;
   expect(plannedDownload.suggestedFilename()).toBe("opengravel-north-track-planned-route.gpx");
   const plannedBytes = await readFile((await plannedDownload.path())!);
