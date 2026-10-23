@@ -38,11 +38,29 @@ export function clientKey(request: Request, env: Readonly<Record<string, string 
 }
 
 /** A public address we may act on; private, loopback and unknown keys never are. */
+/** An IPv4 address carried inside an IPv4-mapped IPv6 literal, or `null`. */
+function mappedIpv4(key: string): string | null {
+  const match = /^::ffff:(.+)$/i.exec(key);
+  if (match === null) return null;
+  const tail = match[1];
+  if (tail === undefined) return null;
+  if (isIP(tail) === 4) return tail;
+  // `::ffff:7f00:1` is the hexadecimal spelling of the same IPv4 address.
+  const groups = /^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i.exec(tail);
+  if (groups === null) return null;
+  const high = Number.parseInt(groups[1] ?? "", 16);
+  const low = Number.parseInt(groups[2] ?? "", 16);
+  if (!Number.isFinite(high) || !Number.isFinite(low)) return null;
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+}
+
 export function actionableAddress(key: string): string | null {
   const bare = key.replace(/^\[|\]$/g, "");
   if (isIP(bare) === 0) return null;
-  if (bare === "::1" || /^127\./.test(bare) || /^10\./.test(bare) || /^192\.168\./.test(bare) ||
-    /^172\.(?:1[6-9]|2\d|3[01])\./.test(bare) || /^(?:fc|fd|fe80)/i.test(bare) || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(bare)) {
+  // An IPv4-mapped literal (::ffff:127.0.0.1) is the IPv4 address it carries.
+  const address = mappedIpv4(bare) ?? bare;
+  if (address === "::1" || /^127\./.test(address) || /^10\./.test(address) || /^192\.168\./.test(address) ||
+    /^172\.(?:1[6-9]|2\d|3[01])\./.test(address) || /^(?:fc|fd|fe80)/i.test(address) || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(address)) {
     return null;
   }
   return bare;

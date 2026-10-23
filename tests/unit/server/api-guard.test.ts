@@ -7,6 +7,12 @@ const request = (ip = "203.0.113.5") => new Request("https://ogv.test/api/x", { 
 const ok = () => Promise.resolve(Response.json({ ok: true }));
 
 describe("guarded", () => {
+  it.each(["127.0.0.1", "::ffff:127.0.0.1", "10.0.0.1"])("keeps metering a forwarded %s: a header a client can write never buys an exemption", async (ip) => {
+    const guard = createApiGuard({ perMinute: 1 });
+    expect((await guarded(guard, request(ip), ok)).status).toBe(200);
+    expect((await guarded(guard, request(ip), ok)).status).toBe(429);
+  });
+
   it("answers 429 with Retry-After once a client passes its per-minute budget", async () => {
     const guard = createApiGuard({ perMinute: 2 });
     expect((await guarded(guard, request(), ok)).status).toBe(200);

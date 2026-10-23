@@ -13,6 +13,19 @@ function request(ip = RIDER): Request {
   return new Request("https://opengravel.example/x", { headers: { "cf-connecting-ip": ip } });
 }
 
+/**
+ * A request as the deployed Next.js server presents one from its own host: the
+ * socket peer arrives as an IPv4-mapped IPv6 literal on `x-forwarded-for` (no
+ * proxy header of our own), which is what the browser gate and `next start`
+ * produce for every loopback call.
+ */
+function loopbackRequest(ip = "::ffff:127.0.0.1"): Request {
+  return new Request("http://127.0.0.1:3210/api/route-plan", {
+    method: "POST",
+    headers: { "x-forwarded-for": ip },
+  });
+}
+
 describe("security guard", () => {
   it("lets every real page and API through", () => {
     const guard = createGuard({ env: ENV, readBlocklist: () => new Set() });
@@ -73,6 +86,47 @@ describe("security guard", () => {
     expect(actionableAddress("2001:db8::1")).toBe("2001:db8::1");
     const guard = createGuard({ env: ENV, readBlocklist: () => new Set(["192.168.1.61"]) });
     expect(guard.inspect(request("192.168.1.61"), "/.env")).toEqual({ action: "pass" });
+  });
+
+  it("recognizes an IPv4 address carried as an IPv4-mapped IPv6 literal", () => {
+    // The socket peer of a loopback connection is `::ffff:127.0.0.1`, not
+    // `127.0.0.1`; the private/loopback rule is about the address, not its
+    // spelling. Both the dotted and the hexadecimal mapped forms are the same
+    // IPv4 address.
+    for (const key of [
+      "::ffff:127.0.0.1",
+      "::FFFF:127.0.0.1",
+      "::ffff:192.168.1.61",
+      "::ffff:172.23.0.1",
+      "::ffff:10.0.0.4",
+      "::ffff:100.100.1.1",
+      "[::ffff:127.0.0.1]",
+      "::ffff:7f00:1",
+    ]) {
+      expect(actionableAddress(key), key).toBeNull();
+    }
+    // A mapped **public** address is still metered, and still named by the
+    // address the peer actually has.
+    expect(actionableAddress("::ffff:203.0.113.7")).toBe("::ffff:203.0.113.7");
+  });
+
+  it("never meters the deployment's own loopback traffic", () => {
+    // The browser gate (and any same-host client) arrives through the server's
+    // own socket: `x-forwarded-for: ::ffff:127.0.0.1`. It is not a remote
+    // client, so the public abuse budget must not apply — a gate run that
+    // plans a few dozen times in a minute must never meet a 429 it wrote
+    // itself. A public peer keeps its budget.
+    const time = 0;
+    const guard = createGuard({ env: {}, now: () => time, readBlocklist: () => new Set(), meteredPerMinute: 2 });
+    for (let call = 0; call < 50; call += 1) {
+      expect(guard.inspect(loopbackRequest(), "/api/route-plan"), `call ${call}`).toEqual({ action: "pass" });
+    }
+    const publicRequest = new Request("https://opengravel.example/api/route-plan", {
+      headers: { "x-forwarded-for": RIDER },
+    });
+    expect(guard.inspect(publicRequest, "/api/route-plan")).toEqual({ action: "pass" });
+    expect(guard.inspect(publicRequest, "/api/route-plan")).toEqual({ action: "pass" });
+    expect(guard.inspect(publicRequest, "/api/route-plan")).toMatchObject({ status: 429 });
   });
 
   it("reads the fail2ban blocklist file and picks up changes", () => {
