@@ -748,12 +748,7 @@ export function PlannerWorkspace({
 
   const planning = isPlanningInFlight(session.phase);
 
-  /**
-   * The live ride summary over the map (owner request): the selected route's own
-   * labels, the climb the elevation profile measured, and the surface its
-   * evidence covers. Built once and mounted in both compositions it can live in
-   * (the map slot's top centre, or directly above the sheet) — CSS shows one.
-   */
+  /** The ride summary over the map: built once, mounted in the map slot and above the sheet (CSS shows one). */
   const glance = useRideGlance({
     cards: viewModel.routeCards, route: activeRoute,
     elevationSource: preparationProviders?.elevationProfile, failed: viewModel.failed,
