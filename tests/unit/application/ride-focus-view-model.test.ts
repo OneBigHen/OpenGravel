@@ -328,12 +328,35 @@ describe("maneuver copy (08 §2, §6)", () => {
       distanceText: "1 mi",
       movingTimeText: "1:42",
       elapsedTimeText: "2:05",
+      // The map screen's recording dot is read aloud, so the timer has words.
+      elapsedTimeSpoken: "2 minutes 5 seconds",
       currentSpeedText: "32 mph",
       averageSpeedText: "35 mph",
       waitingForFix: false,
       saveWarningText: null,
       canRetrySave: false,
     });
+  });
+
+  it("speaks the recording's elapsed time in hours, minutes and seconds", () => {
+    const recordingId = asRecordingId("rec_spoken_hours");
+    const { recording } = view({
+      navigation: navigation({
+        activity: "free",
+        plan: { rideId: newRideId(), rideRevision: 0, route: null },
+        recordingId,
+      }),
+      recordingSummary: {
+        distanceMeters: 42_000,
+        elapsedSeconds: 4_512,
+        movingSeconds: 3_900,
+        pointCount: 900,
+      },
+      now: NOW,
+    });
+
+    expect(recording?.elapsedTimeText).toBe("1:15:12");
+    expect(recording?.elapsedTimeSpoken).toBe("1 hour 15 minutes 12 seconds");
   });
 
   it("keeps recorded durations and average speed at the last accepted fix when GPS is stale", () => {
@@ -560,6 +583,83 @@ describe("suspended ahead guidance (OGV-RID-005, 8 §15)", () => {
     if (guidance.kind !== "suspended") throw new Error("expected suspension");
     expect(guidance.reason).toBe("off-route");
     expect(guidance.text).toContain("Off the route");
+  });
+
+  it("puts the engine's own off-route distance on the card, in the maneuver card's units", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 67,
+      },
+    });
+
+    if (guidance.kind !== "suspended") throw new Error("expected suspension");
+    // 67 m ≈ 220 ft: the same feet/mile rule the maneuver card uses.
+    expect(guidance.offRouteDistanceText).toBe("200 ft off route");
+  });
+
+  it("says miles, not feet, once the rider is a mile off the line", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 2_800,
+      },
+    });
+
+    if (guidance.kind !== "suspended") throw new Error("expected suspension");
+    expect(guidance.offRouteDistanceText).toBe("1.7 mi off route");
+  });
+
+  it("shows no off-route distance the matcher did not measure, and none for other suspensions", () => {
+    const offRoute = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: null,
+      },
+    });
+    if (offRoute.guidance.kind !== "suspended") throw new Error("expected suspension");
+    expect(offRoute.guidance.offRouteDistanceText).toBeNull();
+
+    const stale = view({
+      navigation: navigation({
+        aheadGuidanceSuspended: true,
+        position: { ...HEALTHY_POSITION, speedMps: null, headingDegrees: null, quality: "stale" },
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 67,
+      },
+    });
+    if (stale.guidance.kind !== "suspended") throw new Error("expected suspension");
+    // A stale fix is a different suspension: no distance claim rides along.
+    expect(stale.guidance.offRouteDistanceText).toBeNull();
   });
 
   it("suspends for a stale fix, with the reason the rider can act on", () => {

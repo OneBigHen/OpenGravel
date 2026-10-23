@@ -1094,6 +1094,32 @@ html .og-ride {
   color: #0f6e3a;
 }
 
+/* The suspended card is glass, not the green turn card: in Day it is white
+   glass with the same soft shadow the other Day cards wear, and the ember
+   primary reads on it. At Night it keeps the ink glass. */
+:root[data-theme="day"] .og-ride__maneuver[data-kind="suspended"],
+:root[data-theme="day"] .og-ride__maneuver[data-kind="waiting"] {
+  border: 1px solid rgb(7 16 12 / 14%);
+  box-shadow: 0 6px 20px rgb(7 16 12 / 18%), 0 1px 3px rgb(7 16 12 / 20%);
+}
+
+/* Recording from the map screen: a white pill with ink type in Day (the strip
+   is already white there), ink glass with paper type at Night. The dot is the
+   same danger red in both themes; the elapsed figures carry the meaning. */
+:root[data-theme="day"] .og-ride-metrics__toggle[data-recording="true"] {
+  border-color: rgb(7 16 12 / 18%);
+  background: #ffffff;
+  color: #07100c;
+}
+
+:root[data-theme="night"] .og-ride-metrics__toggle[data-recording="true"] {
+  border-color: rgb(255 255 255 / 14%);
+  background: rgb(16 22 20 / 92%);
+  color: #ecf1ee;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
 :root[data-theme="day"] .og-ride__rail-button {
   border: 1px solid rgb(7 16 12 / 12%);
   background: #ffffff;
@@ -1710,7 +1736,7 @@ html .og-ride {
 }
 
 /* No thin grey text on the Day ride screen. */
-:root[data-theme="day"] .og-ride :is(.og-ride__notice, .og-ride__metrics-hint, .og-ride__progress-text, .og-ride__gps) {
+:root[data-theme="day"] .og-ride :is(.og-ride__notice, .og-ride__metrics-hint, .og-ride__progress-text, .og-ride__gps, .og-ride__off-route-distance) {
   color: #26302c;
   font-weight: 600;
 }

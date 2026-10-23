@@ -115,6 +115,12 @@ export type RideFocusGuidance =
       readonly kind: "suspended";
       readonly reason: GuidanceSuspendReason;
       readonly text: string;
+      /**
+       * "220 ft off route" from the engine's own lateral offset, only while the
+       * rider is off the line. `null` when the matcher measured nothing: a
+       * guessed distance would be worse than none (12 §16).
+       */
+      readonly offRouteDistanceText: string | null;
     }
   | { readonly kind: "waiting"; readonly text: string };
 
@@ -180,6 +186,8 @@ export interface RideFocusRecordingHud {
   readonly distanceText: string;
   readonly movingTimeText: string;
   readonly elapsedTimeText: string;
+  /** The elapsed time as a sentence ("12 minutes 34 seconds"), for the map screen's accessible name. */
+  readonly elapsedTimeSpoken: string;
   readonly currentSpeedText: string;
   readonly averageSpeedText: string;
   readonly waitingForFix: boolean;
@@ -268,6 +276,11 @@ export interface RideFocusTelemetryInput {
   readonly speedLimitKmh?: number | null;
   /** The engine's live distance to the maneuver ahead (see {@link LiveManeuverDistance}). */
   readonly liveManeuver?: LiveManeuverDistance | null;
+  /**
+   * How far the rider is from the line, as the matcher projected it
+   * (`ProgressFrame.distanceFromRouteMeters`). Absent = not measured.
+   */
+  readonly distanceFromRouteMeters?: number | null;
 }
 
 export type RideFocusTelemetryProvider = (now: string) => RideFocusTelemetryInput | null;
@@ -483,6 +496,23 @@ function timerText(seconds: number): string {
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
 }
 
+/**
+ * `1872 → "31 minutes 12 seconds"`: the recording's elapsed time the way it is
+ * spoken, because the map screen's dot and figures are read aloud too.
+ */
+function durationWords(seconds: number): string {
+  const value = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const remainder = value % 60;
+  const part = (count: number, unit: string): string => `${count} ${unit}${count === 1 ? "" : "s"}`;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(part(hours, "hour"));
+  if (minutes > 0) parts.push(part(minutes, "minute"));
+  if (remainder > 0 || parts.length === 0) parts.push(part(remainder, "second"));
+  return parts.join(" ");
+}
+
 function recordingOf(
   navigation: SessionNavigationState,
   position: RideFocusPosition,
@@ -515,6 +545,7 @@ function recordingOf(
       distanceText: UNKNOWN_VALUE,
       movingTimeText: "0:00",
       elapsedTimeText: "0:00",
+      elapsedTimeSpoken: "0 seconds",
       currentSpeedText: position.speedText ?? "—",
       averageSpeedText: "—",
       waitingForFix: true,
@@ -531,6 +562,7 @@ function recordingOf(
     distanceText: formatDistance(summary.distanceMeters),
     movingTimeText: timerText(movingSeconds),
     elapsedTimeText: timerText(summary.elapsedSeconds),
+    elapsedTimeSpoken: durationWords(summary.elapsedSeconds),
     currentSpeedText: position.speedText ?? "—",
     averageSpeedText: averageMps === null ? "—" : (formatSpeed(averageMps) ?? "—"),
     waitingForFix: false,
@@ -576,6 +608,20 @@ function positionOf(position: NavigationPosition): RideFocusPosition {
   };
 }
 
+/**
+ * "220 ft off route" from the matcher's own lateral offset, in the same
+ * feet/mile rule as the maneuver card. Below the immediate-action threshold
+ * the card's word is "now", which describes a maneuver, not a distance, so the
+ * line is simply absent rather than reworded into a claim.
+ */
+function offRouteDistanceTextOf(telemetry: RideFocusTelemetryInput | null): string | null {
+  const meters = telemetry?.distanceFromRouteMeters ?? null;
+  if (meters === null || !isKnownMeasurement(meters) || meters <= 0) return null;
+  const formatted = formatManeuverDistance(meters);
+  if (formatted === "now" || formatted === UNKNOWN_VALUE) return null;
+  return `${formatted} off route`;
+}
+
 function guidanceOf(
   navigation: SessionNavigationState,
   telemetry: RideFocusTelemetryInput | null,
@@ -602,7 +648,12 @@ function guidanceOf(
       "gps-stale": "GPS is stale. Waiting for a fresh fix…",
       "gps-unavailable": "No GPS fix yet. Looking…",
     };
-    return { kind: "suspended", reason, text: text[reason] };
+    return {
+      kind: "suspended",
+      reason,
+      text: text[reason],
+      offRouteDistanceText: reason === "off-route" ? offRouteDistanceTextOf(telemetry) : null,
+    };
   }
   const instruction = navigation.instruction;
   if (instruction === null) {
