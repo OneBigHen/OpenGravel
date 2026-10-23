@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // The renderer's own stylesheet, imported at the composition root exactly as the
 // planner does: the UI layer may not know which renderer it draws with
 // (02-ARCHITECTURE-CONTRACT §7, 4.0 review finding 8).
@@ -42,6 +42,8 @@ import {
 } from "@/infrastructure/ride/native-shell";
 import { createBrowserRideEnvironment } from "@/infrastructure/ride/browser-ride-environment";
 import { createBrowserLeanMotion } from "@/infrastructure/motion/browser-lean-motion";
+import { createLiveShareSession } from "@/application/live/live-share";
+import { createRideSafety, type RideSafety } from "@/application/safety/ride-safety";
 import { createFixturePositionSource } from "@/infrastructure/ride/fixture-position-source";
 import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -155,6 +157,70 @@ export function RideClient({
       player?.dispose();
     };
   }, []);
+  // Live location sharing and crash detection (Follow my ride). Created after
+  // hydration: a ride that reloads mid-share restores its link from storage,
+  // which the server render cannot see.
+  const [safety, setSafety] = useState<RideSafety>();
+  const safetyRef = useRef<RideSafety | undefined>(undefined);
+  const crashMotion = useMemo(() => createBrowserLeanMotion(), []);
+  const syncMotionRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    let battery: { level: number } | null = null;
+    const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
+    void nav.getBattery?.().then((value) => { battery = value; }).catch(() => undefined);
+    const voice = nativeShellSpeech() ?? createBrowserSpeech();
+    const created = createRideSafety({
+      live: createLiveShareSession({
+        fetch: (input, init) => fetch(input, init),
+        now: () => Date.now(),
+        setInterval: (work, ms) => window.setInterval(work, ms),
+        clearInterval: (handle) => window.clearInterval(handle as number),
+        storage: {
+          read: () => { try { return window.localStorage.getItem("og.live.session"); } catch { return null; } },
+          write: (value) => {
+            try {
+              if (value === null) window.localStorage.removeItem("og.live.session");
+              else window.localStorage.setItem("og.live.session", value);
+            } catch { /* private window: the link lasts this page only */ }
+          },
+        },
+        battery: () => battery?.level ?? null,
+      }),
+      announce: (text) => {
+        void voice?.speakText?.(text);
+        haptic("heavy");
+      },
+    });
+    safetyRef.current = created;
+    setSafety(created);
+    // Motion feeds crash detection only while a live link is shared.
+    let stopMotion: (() => void) | null = null;
+    const syncMotion = (): void => {
+      const sharing = created.snapshot().live.status === "sharing";
+      if (sharing && stopMotion === null && crashMotion.permission() === "granted") {
+        stopMotion = crashMotion.subscribe((g, atMs) => created.acceptMotion({ atMs, x: g.x, y: g.y, z: g.z }));
+      } else if (!sharing && stopMotion !== null) {
+        stopMotion();
+        stopMotion = null;
+      }
+    };
+    syncMotionRef.current = syncMotion;
+    syncMotion();
+    const unsubscribe = created.subscribe(syncMotion);
+    return () => {
+      unsubscribe();
+      stopMotion?.();
+      safetyRef.current = undefined;
+      syncMotionRef.current = () => undefined;
+      created.dispose();
+    };
+  }, [crashMotion]);
+  const requestMotion = useCallback(async () => {
+    const answer = await crashMotion.requestPermission();
+    // Permission can arrive after the share started: subscribe now.
+    syncMotionRef.current();
+    return answer;
+  }, [crashMotion]);
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
   const { store, rides, library, activitySync } = useMemo(() => {
@@ -308,7 +374,17 @@ export function RideClient({
                 routeLine: () => routeLine,
               })
             : nativeShellPositionSource() ?? createBrowserPositionSource()),
-          onSessionFix: (fix, appliedState) => freeRideTelemetry.accept(fix, appliedState),
+          onSessionFix: (fix, appliedState) => {
+            freeRideTelemetry.accept(fix, appliedState);
+            safetyRef.current?.acceptFix({
+              atMs: Date.parse(fix.observedAt),
+              lat: fix.coordinate.lat,
+              lon: fix.coordinate.lon,
+              speedMps: fix.speedMps,
+              headingDeg: fix.headingDegrees,
+              accuracyM: fix.accuracyMeters,
+            });
+          },
           onAcceptedFix: async (fix, appliedState) => {
             if (appliedState.recordingId === null) return;
             // Raw device values only: a derived speed is recomputed by the
@@ -421,6 +497,7 @@ export function RideClient({
       mapLayersSource={mapLayersSource}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
+      {...(safety === undefined ? {} : { safety, requestMotion })}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
   );

@@ -6480,6 +6480,70 @@ h3,
   border-radius: var(--og-radius-object);
 }
 
+.og-ride__safety {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+}
+
+.og-ride__safety-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.og-ride__safety-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--og-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--og-success) 30%, transparent);
+}
+
+.og-ride__safety-status,
+.og-ride__safety-note {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: 13px;
+}
+
+.og-ride__safety-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__safety-actions > button {
+  flex: 1 1 0;
+}
+
+.og-ride__safety-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--og-ride-muted);
+}
+
+.og-ride__safety-name input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-control);
+  background: var(--og-ride-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.og-ride__safety-name input:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
 .og-ride__spotify {
   display: flex;
   flex-direction: column;
