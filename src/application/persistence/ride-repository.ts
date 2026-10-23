@@ -69,6 +69,17 @@ export interface RecordedTrackEnvelope {
   readonly summary: RecordingSummary;
 }
 
+/**
+ * The route line the rider actually selected when they saved the ride.
+ *
+ * The authored document holds the intent (start, stops, finish, bike) but not
+ * the routed line; without this handle a planned ride has no geometry to
+ * export. Like every other geometry, it is a handle into the GeometryStore.
+ */
+export interface PlannedRouteEnvelope {
+  readonly geometryRef: GeometryRef;
+}
+
 /** The optional library envelope lives beside the authored document. */
 export interface RideRecord {
   readonly rideId: RideId;
@@ -87,6 +98,8 @@ export interface RideRecord {
   readonly offlinePack?: CorridorPackManifest;
   readonly importData?: ImportRideData;
   readonly recordedTrack?: RecordedTrackEnvelope;
+  /** The selected route line, kept so a planned ride can be exported later. */
+  readonly plannedRoute?: PlannedRouteEnvelope;
 }
 
 export interface SaveLibraryRideOptions {
@@ -100,6 +113,7 @@ export interface SaveLibraryRideOptions {
   readonly offlinePack?: CorridorPackManifest;
   readonly importData?: ImportRideData;
   readonly recordedTrack?: RecordedTrackEnvelope;
+  readonly plannedRoute?: PlannedRouteEnvelope;
 }
 
 export type SaveLibraryRideResult =
