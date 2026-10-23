@@ -1,6 +1,6 @@
 import { protectTheRideCost } from "@/application/traffic";
 import type { Coordinate } from "@/domain/ride/types";
-import type { TrafficResponse } from "@/infrastructure/traffic";
+import type { TrafficResponse, TrafficSegment } from "@/infrastructure/traffic";
 import type { RoutePreparationContext } from "./prepare-route";
 import type {
   ProviderCapability,
@@ -20,8 +20,26 @@ const LIVE_TRAFFIC_PROVENANCE = "Live traffic feed";
 
 const TRAFFIC_PATH = "/api/route-traffic";
 
+/**
+ * The answer only speaks for the segments the corridor match assigned to this
+ * route. Below this share it says too little to stand as an answer at all, and
+ * above it the rider is told how much of the route was actually checked.
+ */
+export const MIN_TRAFFIC_COVERAGE_RATIO = 0.25;
+
+const PARTIAL_COVERAGE_REASON = "Traffic was checked for only part of this route.";
+const PARTIAL_COVERAGE_NOTE = "Traffic was checked for part of this route; the rest is unknown.";
+const PARTIAL_COVERAGE_NOTE_SHORT = "part of route checked";
+
 interface TrafficRouteResponse {
   readonly traffic?: unknown;
+  readonly corridorMatch?: unknown;
+}
+
+/** What the server's corridor match proved about this answer. */
+interface TrafficCoverage {
+  readonly coverageRatio: number;
+  readonly matchedTrafficSegmentIds: readonly string[];
 }
 
 export interface TomTomTrafficPreparationProviderOptions {
@@ -46,6 +64,36 @@ function isTrafficResponse(value: unknown): value is TrafficResponse {
 function corridorFrom(context: RoutePreparationContext): readonly Coordinate[] | null {
   const corridor = context.trafficCorridor;
   return corridor !== undefined && corridor.length >= 2 ? corridor : null;
+}
+
+/** An unreadable match means the coverage claim cannot be checked. */
+function coverageFrom(value: unknown): TrafficCoverage | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const candidate = value as Record<string, unknown>;
+  const ratio = candidate["coverageRatio"];
+  const ids = candidate["matchedTrafficSegmentIds"];
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio < 0 || ratio > 1) return null;
+  if (!Array.isArray(ids) || !ids.every((id) => typeof id === "string")) return null;
+  return { coverageRatio: ratio, matchedTrafficSegmentIds: ids };
+}
+
+/**
+ * Only the provider segments the corridor match assigned to this route count,
+ * each once: an unmatched or repeated segment must not add delay the route was
+ * never shown to carry.
+ */
+function matchedSegments(
+  traffic: TrafficResponse,
+  coverage: TrafficCoverage,
+): readonly TrafficSegment[] | null {
+  const matched = new Set(coverage.matchedTrafficSegmentIds);
+  const seen = new Set<string>();
+  const segments = traffic.segments.filter((segment) => {
+    if (!matched.has(segment.id) || seen.has(segment.id)) return false;
+    seen.add(segment.id);
+    return true;
+  });
+  return segments.length === 0 ? null : segments;
 }
 
 export interface TomTomTrafficPreparationProvider extends TrafficProvider {
@@ -118,7 +166,18 @@ export function createTomTomTrafficPreparationProvider(
         lastResult = unavailable(traffic.reason ?? "Traffic is unknown.");
         return lastResult;
       }
-      const cost = protectTheRideCost(traffic, {
+      const coverage = coverageFrom(typeof body === "object" && body !== null && !Array.isArray(body)
+        ? (body as TrafficRouteResponse).corridorMatch
+        : undefined);
+      const matched = coverage === null ? null : matchedSegments(traffic, coverage);
+      if (coverage === null || matched === null) {
+        // Without a verifiable match the answer describes some other stretch of
+        // road; presenting it as this route's traffic would be a clear claim.
+        lastResult = unavailable(PARTIAL_COVERAGE_REASON);
+        return lastResult;
+      }
+      const partialCoverage = coverage.coverageRatio < 1;
+      const cost = protectTheRideCost({ ...traffic, segments: matched }, {
         routeDurationSeconds: context.rideDurationMinutes === null || context.rideDurationMinutes === undefined
           ? undefined
           : context.rideDurationMinutes * 60,
@@ -127,24 +186,35 @@ export function createTomTomTrafficPreparationProvider(
         ...(traffic.freshness.fetchedAt === null ? {} : { observedAt: traffic.freshness.fetchedAt }),
         ...(traffic.freshness.validUntil === null ? {} : { validUntil: traffic.freshness.validUntil }),
         freshnessLabel: traffic.freshness.status === "fresh" ? "Fresh" as const : "Stale" as const,
+        coverageRatio: coverage.coverageRatio,
       };
       if (cost.closed) {
         // A closure is a route fact worth a row of its own, not an unavailable
-        // provider and never a zero-delay all-clear.
+        // provider and never a zero-delay all-clear. It outranks coverage: a
+        // shut road is worth knowing about even when only part was checked.
         lastResult = {
           state: "ready",
-          reason: "A traffic source reports a closure on this route; check before you ride.",
+          reason: partialCoverage
+            ? `A traffic source reports a closure on this route; check before you ride. ${PARTIAL_COVERAGE_NOTE}`
+            : "A traffic source reports a closure on this route; check before you ride.",
           provenance: traffic.provenance,
           data: { display: cost.label, ...observation, roadClosure: true, delayBand: null },
         };
         return lastResult;
       }
+      if (coverage.coverageRatio < MIN_TRAFFIC_COVERAGE_RATIO) {
+        lastResult = unavailable(PARTIAL_COVERAGE_REASON);
+        return lastResult;
+      }
+      const known = cost.status === "known";
       lastResult = {
-        state: cost.status === "known" ? "ready" : "unavailable",
-        reason: cost.status === "known" ? "Traffic matched to this route." : "Traffic is unknown.",
+        state: known ? "ready" : "unavailable",
+        reason: known
+          ? partialCoverage ? PARTIAL_COVERAGE_NOTE : "Traffic matched to this route."
+          : "Traffic is unknown.",
         provenance: traffic.provenance,
         data: {
-          display: cost.label,
+          display: known && partialCoverage ? `${cost.label} · ${PARTIAL_COVERAGE_NOTE_SHORT}` : cost.label,
           ...observation,
           delayBand: cost.delayBand,
         },

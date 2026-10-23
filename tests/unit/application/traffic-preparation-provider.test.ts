@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createTomTomTrafficPreparationProvider } from "@/application/preparation/traffic-provider";
 import type { RoutePreparationContext } from "@/application/preparation/prepare-route";
+import type { CorridorMatch } from "@/application/traffic";
 import type { TrafficResponse, TrafficSegment } from "@/infrastructure/traffic";
 
 const CORRIDOR = [
@@ -20,7 +21,7 @@ const context: RoutePreparationContext = {
 // traffic observation and never presentable as live traffic.
 function segment(overrides: Partial<TrafficSegment> = {}): TrafficSegment {
   return {
-    id: "synthetic-segment",
+    id: "synthetic-segment-a",
     geometry: [CORRIDOR[0], CORRIDOR[1]],
     speedClass: "congested",
     delaySeconds: 300,
@@ -46,7 +47,21 @@ function traffic(overrides: Partial<TrafficResponse> = {}): TrafficResponse {
       validUntil: "2026-09-17T14:01:00.000Z",
       departureTime: "2026-09-17T14:00:00.000Z",
     },
-    segments: [segment()],
+    segments: [
+      segment(),
+      segment({ id: "synthetic-segment-b", geometry: [CORRIDOR[1], CORRIDOR[2]] }),
+    ],
+    ...overrides,
+  };
+}
+
+/** Both route segments of the synthetic corridor are covered. */
+function fullMatch(overrides: Partial<CorridorMatch> = {}): CorridorMatch {
+  return {
+    segmentMatches: [],
+    matchedTrafficSegmentIds: ["synthetic-segment-a", "synthetic-segment-b"],
+    unmatchedTrafficSegmentIds: [],
+    coverageRatio: 1,
     ...overrides,
   };
 }
@@ -57,12 +72,83 @@ function provider(body: unknown): ReturnType<typeof createTomTomTrafficPreparati
   });
 }
 
+describe("traffic preparation provider coverage", () => {
+  it("keeps a full-coverage answer as matched traffic", async () => {
+    const result = await provider({ traffic: traffic(), corridorMatch: fullMatch() }).refresh(context);
+
+    expect(result.state).toBe("ready");
+    expect(result.reason).toBe("Traffic matched to this route.");
+    expect(result.data?.coverageRatio).toBe(1);
+    expect(result.data?.display).not.toContain("part of route");
+  });
+
+  it("never claims a whole-route match from a one-segment answer on a long route", async () => {
+    const oneSegment = traffic({ segments: [segment()] });
+    const thinMatch = fullMatch({
+      matchedTrafficSegmentIds: ["synthetic-segment-a"],
+      unmatchedTrafficSegmentIds: [],
+      coverageRatio: 1 / 127,
+    });
+    const result = await provider({ traffic: oneSegment, corridorMatch: thinMatch }).refresh(context);
+
+    expect(result.state).toBe("unavailable");
+    expect(result.reason).toBe("Traffic was checked for only part of this route.");
+    expect(result.reason).not.toBe("Traffic matched to this route.");
+    expect(result.data).toBeUndefined();
+  });
+
+  it("labels partial coverage honestly and sums only the matched segments", async () => {
+    const unmatchedLongDelay = segment({
+      id: "synthetic-segment-b",
+      geometry: [CORRIDOR[1], CORRIDOR[2]],
+      delaySeconds: 3_600,
+    });
+    const partialMatch = fullMatch({
+      matchedTrafficSegmentIds: ["synthetic-segment-a"],
+      unmatchedTrafficSegmentIds: ["synthetic-segment-b"],
+      coverageRatio: 0.5,
+    });
+    const result = await provider({
+      traffic: traffic({ segments: [segment(), unmatchedLongDelay] }),
+      corridorMatch: partialMatch,
+    }).refresh(context);
+
+    expect(result.state).toBe("ready");
+    expect(result.reason).toBe("Traffic was checked for part of this route; the rest is unknown.");
+    expect(result.data?.display).toContain("part of route checked");
+    expect(result.data?.coverageRatio).toBe(0.5);
+    // The unmatched hour-long delay must not be added to the route's band.
+    expect(result.data?.delayBand?.maxMinutes).toBeLessThan(30);
+  });
+
+  it("does not double-count a provider segment that appears twice", async () => {
+    const duplicated = traffic({
+      segments: [segment(), segment({ id: "synthetic-segment-a" })],
+    });
+    const duplicatedMatch = fullMatch({
+      matchedTrafficSegmentIds: ["synthetic-segment-a", "synthetic-segment-a"],
+      coverageRatio: 0.5,
+    });
+    const result = await provider({ traffic: duplicated, corridorMatch: duplicatedMatch }).refresh(context);
+
+    expect(result.state).toBe("ready");
+    expect(result.data?.delayBand?.maxMinutes).toBeLessThan(15);
+  });
+
+  it("treats a response without coverage as unchecked rather than matched", async () => {
+    const result = await provider({ traffic: traffic() }).refresh(context);
+
+    expect(result.state).toBe("unavailable");
+    expect(result.reason).toBe("Traffic was checked for only part of this route.");
+  });
+});
+
 describe("traffic preparation provider closures", () => {
   it("surfaces a reported closure instead of claiming no traffic delays", async () => {
     const closed = traffic({
-      segments: [segment({ id: "closed", speedClass: "closed", roadClosure: true, delaySeconds: 0 })],
+      segments: [segment({ id: "synthetic-segment-a", speedClass: "closed", roadClosure: true, delaySeconds: 0 })],
     });
-    const result = await provider({ traffic: closed }).refresh(context);
+    const result = await provider({ traffic: closed, corridorMatch: fullMatch() }).refresh(context);
 
     expect(result.state).toBe("ready");
     expect(result.data?.roadClosure).toBe(true);
@@ -75,11 +161,11 @@ describe("traffic preparation provider closures", () => {
   it("keeps a closure visible even when another segment reports a delay", async () => {
     const mixed = traffic({
       segments: [
-        segment({ id: "delayed", delaySeconds: 600 }),
-        segment({ id: "closed", geometry: [CORRIDOR[1], CORRIDOR[2]], speedClass: "closed", roadClosure: true, delaySeconds: 0 }),
+        segment({ id: "synthetic-segment-a", delaySeconds: 600 }),
+        segment({ id: "synthetic-segment-b", geometry: [CORRIDOR[1], CORRIDOR[2]], speedClass: "closed", roadClosure: true, delaySeconds: 0 }),
       ],
     });
-    const result = await provider({ traffic: mixed }).refresh(context);
+    const result = await provider({ traffic: mixed, corridorMatch: fullMatch() }).refresh(context);
 
     expect(result.state).toBe("ready");
     expect(result.data?.roadClosure).toBe(true);
@@ -94,9 +180,9 @@ describe("traffic preparation provider closures", () => {
         validUntil: "2026-09-17T12:01:00.000Z",
         departureTime: "2026-09-17T14:00:00.000Z",
       },
-      segments: [segment({ id: "closed", speedClass: "closed", roadClosure: true, delaySeconds: 0 })],
+      segments: [segment({ id: "synthetic-segment-a", speedClass: "closed", roadClosure: true, delaySeconds: 0 })],
     });
-    const result = await provider({ traffic: stale }).refresh(context);
+    const result = await provider({ traffic: stale, corridorMatch: fullMatch() }).refresh(context);
 
     expect(result.data?.roadClosure).toBe(true);
     expect(result.data?.display.toLowerCase()).toContain("closure");
@@ -104,7 +190,7 @@ describe("traffic preparation provider closures", () => {
   });
 
   it("still reports ordinary delays as a delay band", async () => {
-    const result = await provider({ traffic: traffic() }).refresh(context);
+    const result = await provider({ traffic: traffic(), corridorMatch: fullMatch() }).refresh(context);
 
     expect(result.state).toBe("ready");
     expect(result.data?.roadClosure).toBeUndefined();

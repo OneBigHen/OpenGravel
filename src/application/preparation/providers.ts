@@ -89,6 +89,8 @@ export interface TrafficData {
   readonly delayBand?: { readonly minMinutes: number; readonly maxMinutes: number } | null;
   /** True when a matched segment is reported shut; the delay band is then absent. */
   readonly roadClosure?: boolean;
+  /** Share of this route's segments the traffic answer actually covered, 0..1. */
+  readonly coverageRatio?: number;
 }
 
 export interface OfflineRouteData {
