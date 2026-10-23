@@ -143,6 +143,9 @@ export function createRideSafety(deps: RideSafetyDeps): RideSafety {
     suspend() {
       controller.reset();
       deps.live.dispose();
+      // Neither reset nor dispose publishes, so the cached snapshot would keep
+      // reporting the countdown a torn-down screen no longer has.
+      emit();
     },
     dispose() {
       unsubscribeLive();
