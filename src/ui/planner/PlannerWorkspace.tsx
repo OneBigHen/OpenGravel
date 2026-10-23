@@ -772,6 +772,9 @@ export function PlannerWorkspace({
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene,
+        onPointAction: stopAuthoring.onMapPointAction,
+        longPressEnabled: placementTool === "idle" && activeTool === "pan",
+        addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,
         onIntent: handleIntent,
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),

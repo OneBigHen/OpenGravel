@@ -338,12 +338,13 @@ function currentMap(): FakeMapInstance {
  * `PointerEvent` constructor does not always carry it. */
 function pointerEvent(
   type: string,
-  init: { readonly x: number; readonly y: number; readonly pointerId?: number },
+  init: { readonly x: number; readonly y: number; readonly pointerId?: number; readonly button?: number; readonly pointerType?: string },
 ): PointerEvent {
   const event = new PointerEvent(type, {
     clientX: init.x,
     clientY: init.y,
-    button: 0,
+    button: init.button ?? 0,
+    pointerType: init.pointerType ?? "mouse",
     bubbles: true,
   });
   Object.defineProperty(event, "pointerId", { value: init.pointerId ?? 1 });
@@ -1174,7 +1175,7 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
     host.dispose();
   });
 
-  it("picks the route line up on touch only after a hold, and pans normally afterwards", async () => {
+  it("offers the selected road on touch hold, and pans normally afterwards", async () => {
     vi.useFakeTimers();
     try {
       const { host, map, intents } = await loaded();
@@ -1192,15 +1193,17 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
       map.getCanvasContainer().dispatchEvent(touch("pointerup", 80, 80));
       expect(intents.filter((intent) => intent.type === "pointer-down")).toHaveLength(0);
 
-      // A hold picks it up.
+      // A hold offers the road instead of a point menu or route drag.
       map.getCanvasContainer().dispatchEvent(touch("pointerdown", 10, 10));
       vi.advanceTimersByTime(500);
-      expect(intents.filter((intent) => intent.type === "pointer-down")).toHaveLength(1);
+      expect(intents.at(-1)).toMatchObject({ type: "object-click", ref: { kind: "route", routeId: ROUTE_ID } });
+      expect(intents.filter((intent) => intent.type === "map-long-press")).toHaveLength(0);
+      const afterHold = intents.length;
       map.getCanvasContainer().dispatchEvent(touch("pointermove", 90, 90));
       map.getCanvasContainer().dispatchEvent(touch("pointerup", 90, 90));
-      expect(intents.at(-1)).toMatchObject({ type: "gesture-commit", tool: "point-drag" });
+      expect(intents).toHaveLength(afterHold);
 
-      // The temporary drag tool is gone once the finger lifts.
+      // The neutral tool still pans after the finger lifts.
       fake.state.queryFeatures = [];
       const before = intents.length;
       map.getCanvasContainer().dispatchEvent(touch("pointerdown", 300, 300));
@@ -1526,4 +1529,169 @@ describe("MapLibreHost — load health and bounded self-heal (4.0s)", () => {
     degraded.dispose();
     host.dispose();
   });
+});
+
+
+describe("reducer-authored map holds", () => {
+  async function loaded() {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    return { host, map, intents: recordIntents(host) };
+  }
+  it.each(["touch", "mouse"])("emits exactly once after a 450 ms %s hold, without a release tap", async (pointerType) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, pointerType }));
+      vi.advanceTimersByTime(449);
+      expect(intents).toEqual([]);
+      vi.advanceTimersByTime(1);
+      expect(intents).toEqual([{ type: "map-long-press", coordinate: COORDINATE, pixel: { x: 30, y: 40 }, authorityFeatureId: null }]);
+      vi.advanceTimersByTime(900);
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40, pointerType }));
+      canvas.dispatchEvent(new MouseEvent("contextmenu", { clientX: 30, clientY: 40, bubbles: true }));
+      expect(intents).toHaveLength(1);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("records pan movement even when the finger returns to its origin", async () => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40 }));
+      canvas.dispatchEvent(pointerEvent("pointermove", { x: 40, y: 40 }));
+      canvas.dispatchEvent(pointerEvent("pointermove", { x: 30, y: 40 }));
+      vi.advanceTimersByTime(900);
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40 }));
+      expect(intents).toEqual([]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("opens on right-click but never after a right-button drag", async () => {
+    const { host, map, intents } = await loaded();
+    const canvas = map.getCanvasContainer();
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, button: 2 }));
+    canvas.dispatchEvent(new MouseEvent("contextmenu", { clientX: 30, clientY: 40, bubbles: true }));
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40, button: 2 }));
+    expect(intents).toHaveLength(1);
+    expect(intents[0]).toMatchObject({ type: "map-long-press" });
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, button: 2 }));
+    canvas.dispatchEvent(pointerEvent("pointermove", { x: 80, y: 80, button: 2 }));
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 80, y: 80, button: 2 }));
+    canvas.dispatchEvent(new MouseEvent("contextmenu", { clientX: 80, clientY: 80, bubbles: true }));
+    expect(intents).toHaveLength(1);
+    host.dispose();
+  });
+
+  it.each(["pointercancel", "lostpointercapture", "escape", "revision", "sketch", "road-span-select", "placement", "pinch", "dispose"])("clears the hold timer on %s", async (cancel) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, pointerType: "touch" }));
+      if (cancel === "pointercancel" || cancel === "lostpointercapture") canvas.dispatchEvent(pointerEvent(cancel, { x: 30, y: 40 }));
+      if (cancel === "escape") host.dispatch({ type: "escape" });
+      if (cancel === "revision") host.dispatch({ type: "ride-revision-change", revision: 2 });
+      if (cancel === "sketch" || cancel === "road-span-select") host.dispatch({ type: "tool-change", tool: cancel });
+      if (cancel === "placement") host.dispatch({ type: "long-press-enabled", enabled: false });
+      if (cancel === "pinch") canvas.dispatchEvent(pointerEvent("pointerdown", { x: 80, y: 40, pointerId: 2, pointerType: "touch" }));
+      if (cancel === "dispose") host.dispose();
+      vi.advanceTimersByTime(900);
+      expect(intents.filter((intent) => intent.type === "map-long-press")).toEqual([]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+});
+
+describe("native context menu event ordering", () => {
+  it("never authors a point when right-button pointerup precedes contextmenu", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    const intents = recordIntents(host);
+    const canvas = map.getCanvasContainer();
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, button: 2 }));
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40, button: 2 }));
+    expect(intents).toEqual([]);
+    canvas.dispatchEvent(new MouseEvent("contextmenu", { clientX: 30, clientY: 40, bubbles: true }));
+    expect(intents.map((intent) => intent.type)).toEqual(["map-long-press"]);
+    host.dispose();
+  });
+
+  it.each(["pointercancel", "lostpointercapture", "escape", "revision", "tool", "placement", "pinch"])("does not reopen from a delayed native MouseEvent after %s", async (cancel) => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    const intents = recordIntents(host);
+    const canvas = map.getCanvasContainer();
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40 }));
+    if (cancel === "pointercancel" || cancel === "lostpointercapture") canvas.dispatchEvent(pointerEvent(cancel, { x: 30, y: 40 }));
+    if (cancel === "escape") host.dispatch({ type: "escape" });
+    if (cancel === "revision") host.dispatch({ type: "ride-revision-change", revision: 2 });
+    if (cancel === "tool") {
+      host.dispatch({ type: "tool-change", tool: "sketch" });
+      host.dispatch({ type: "tool-change", tool: "pan" });
+    }
+    if (cancel === "placement") {
+      host.dispatch({ type: "long-press-enabled", enabled: false });
+      host.dispatch({ type: "long-press-enabled", enabled: true });
+    }
+    if (cancel === "pinch") {
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 60, y: 40, pointerId: 2 }));
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 60, y: 40, pointerId: 2 }));
+    }
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40 }));
+    canvas.dispatchEvent(new MouseEvent("contextmenu", { clientX: 30, clientY: 40, bubbles: true }));
+    expect(intents.filter((intent) => intent.type === "map-long-press")).toEqual([]);
+    host.dispose();
+  });
+});
+
+
+it("gives a stationary mouse hold on the selected route to the existing road offer", async () => {
+  vi.useFakeTimers();
+  try {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    host.applyScene(scene());
+    fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.routeSelected }, properties: { id: ROUTE_ID } }];
+    const intents = recordIntents(host);
+    const canvas = map.getCanvasContainer();
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 40, pointerType: "mouse" }));
+    vi.advanceTimersByTime(450);
+    expect(intents.at(-1)).toMatchObject({ type: "object-click", source: "long-press", ref: { kind: "route", routeId: ROUTE_ID } });
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 40, pointerType: "mouse" }));
+    expect(intents.filter((intent) => intent.type === "object-click")).toHaveLength(1);
+    expect(intents.filter((intent) => intent.type === "gesture-commit" || intent.type === "map-long-press")).toHaveLength(0);
+    host.dispose();
+  } finally { vi.useRealTimers(); }
+});
+
+
+it("does not arm a scoped route drag when another finger lands during a consumed pinch", async () => {
+  const host = await createMapLibreHost(container(), OPTIONS);
+  const map = currentMap();
+  map.fire("load");
+  host.applyScene(scene());
+  const intents = recordIntents(host);
+  const canvas = map.getCanvasContainer();
+  canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10, pointerId: 1 }));
+  canvas.dispatchEvent(pointerEvent("pointerdown", { x: 20, y: 10, pointerId: 2 }));
+  canvas.dispatchEvent(pointerEvent("pointerup", { x: 10, y: 10, pointerId: 1 }));
+  fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.routeSelected }, properties: { id: ROUTE_ID } }];
+  canvas.dispatchEvent(pointerEvent("pointerdown", { x: 30, y: 10, pointerId: 3 }));
+  canvas.dispatchEvent(pointerEvent("pointerup", { x: 20, y: 10, pointerId: 2 }));
+  canvas.dispatchEvent(pointerEvent("pointerup", { x: 30, y: 10, pointerId: 3 }));
+  fake.state.queryFeatures = [];
+  canvas.dispatchEvent(pointerEvent("pointerdown", { x: 40, y: 40, pointerId: 4 }));
+  canvas.dispatchEvent(pointerEvent("pointermove", { x: 80, y: 80, pointerId: 4 }));
+  canvas.dispatchEvent(pointerEvent("pointerup", { x: 80, y: 80, pointerId: 4 }));
+  expect(intents.filter((intent) => intent.type === "pointer-down" || intent.type === "gesture-commit")).toHaveLength(0);
+  host.dispose();
 });

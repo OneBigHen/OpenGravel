@@ -1295,3 +1295,39 @@ describe("PlannerWorkspace — a restored draft", () => {
     expect(screen.getByTestId("status-line")).toHaveTextContent("No plan yet.");
   });
 });
+
+describe("map hold point authoring", () => {
+  const holdAt = (coordinate: typeof ORIGIN): void => emitIntent({
+    type: "map-long-press", coordinate, pixel: { x: 100, y: 100 }, authorityFeatureId: null,
+  });
+  it("sets start, finish and an explicit stop using the existing document commands", async () => {
+    const { rideDocumentStore } = await renderWorkspace(vi.fn<typeof fetch>());
+    holdAt(ORIGIN);
+    fireEvent.click(screen.getByRole("button", { name: "Start here" }));
+    expect(rideDocumentStore.getState().document.intent.start?.coordinate).toEqual(ORIGIN);
+    holdAt(DESTINATION);
+    fireEvent.click(screen.getByRole("button", { name: "Finish here" }));
+    expect(rideDocumentStore.getState().document.intent.finish?.coordinate).toEqual(DESTINATION);
+    holdAt(MIDPOINT);
+    fireEvent.click(screen.getByRole("button", { name: "Add stop here" }));
+    expect(rideDocumentStore.getState().document.intent.stops.map((stop) => stop.coordinate)).toEqual([MIDPOINT]);
+  });
+  it("authors a one hour loop at the held coordinate", async () => {
+    const { rideDocumentStore } = await renderWorkspace(vi.fn<typeof fetch>());
+    holdAt(MIDPOINT);
+    fireEvent.click(screen.getByRole("button", { name: "Loop from here (1 h)" }));
+    const { intent } = rideDocumentStore.getState().document;
+    expect(intent.start?.coordinate).toEqual(MIDPOINT);
+    expect(intent.shape).toBe("loop");
+    expect(intent.time).toMatchObject({ kind: "budget", targetMinutes: 60 });
+  });
+  it("does not offer stop placement without endpoints and does not create a point on inspection", async () => {
+    const { rideDocumentStore } = await renderWorkspace(vi.fn<typeof fetch>());
+    const before = rideDocumentStore.getState().document;
+    holdAt(MIDPOINT);
+    expect(screen.getByRole("button", { name: /Add stop here.*plan a start and finish first/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
+    expect(rideDocumentStore.getState().document).toBe(before);
+    expect(within(screen.getByRole("dialog", { name: "Plan here" })).getByRole("status")).toHaveTextContent("No authority record for this spot");
+  });
+});

@@ -55,6 +55,7 @@
 
 import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
+  LONG_PRESS_MS,
   gestureControlsPointer,
   initialInteractionState,
   isDrawingTool,
@@ -351,8 +352,6 @@ interface MapLibreMap {
 const GRAB_RADIUS_PX = 18;
 /** How far from the selected route line a press still picks it up. */
 const ROUTE_GRAB_RADIUS_PX = 9;
-/** How long a finger rests on the route line before it picks the line up. */
-const ROUTE_HOLD_MS = 420;
 const GRAB_POINT_LAYER_IDS: readonly string[] = [
   MAP_LAYER_IDS.pointStart,
   MAP_LAYER_IDS.pointFinish,
@@ -791,16 +790,10 @@ export async function createMapLibreHost(
    * (see `onPointerDown`). It is always cleared on release or cancellation.
    */
   let gestureScoped = false;
-  /** A touch press on the selected route, waiting to become a route drag. */
-  let routeHold: {
-    readonly pointerId: number;
-    readonly origin: { readonly x: number; readonly y: number };
-    readonly timer: ReturnType<typeof setTimeout>;
-  } | null = null;
-  function clearRouteHold(): void {
-    if (routeHold === null) return;
-    clearTimeout(routeHold.timer);
-    routeHold = null;
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
+  function clearHold(): void {
+    if (holdTimer !== null) clearTimeout(holdTimer);
+    holdTimer = null;
   }
   /** The published load health; `loading` until an attempt says otherwise. */
   let status: MapLoadStatus = { state: "loading", reason: null };
@@ -1578,6 +1571,51 @@ export async function createMapLibreHost(
     const before = interaction;
     const result = reduceInteraction(interaction, event);
     interaction = result.state;
+    if (interaction.ownership === null || interaction.ownership.moved ||
+        interaction.ownership.longPressed || interaction.longPressEnabled === false) clearHold();
+    if (event.type === "pointer-down" && before.ownership === null &&
+        interaction.ownership !== null &&
+        (interaction.ownership.tool === "pan" || interaction.ownership.routePress) &&
+        interaction.longPressEnabled !== false) {
+      clearHold();
+      const started = performance.now();
+      const timeout = (): void => {
+        const elapsedMs = performance.now() - started;
+        // Browser timers can wake a fraction early. Keep the reducer's 450 ms
+        // boundary exact rather than silently losing that rider's hold.
+        if (elapsedMs < LONG_PRESS_MS) {
+          holdTimer = setTimeout(timeout, LONG_PRESS_MS - elapsedMs);
+          return;
+        }
+        holdTimer = null;
+        handleInteraction({ type: "hold-timeout", pointerId: event.pointerId, elapsedMs });
+      };
+      holdTimer = setTimeout(timeout, LONG_PRESS_MS);
+    }
+    for (const effect of result.effects) {
+      if (effect.type !== "long-press" || attempt === null || disposed) continue;
+      const map = attempt.map;
+      const [x, y] = pixelAt(map, { clientX: effect.pixel.x, clientY: effect.pixel.y });
+      const pixel = { x, y };
+      const ref = grabAt(map, pixel);
+      if (before.ownership?.routePress) emit({ type: "gesture-cancel" });
+      if (ref?.kind === "route" && ref.routeId === latestScene?.selectedRouteId) {
+        emit({ type: "object-click", coordinate: effect.coordinate, ref, source: "long-press" });
+      } else {
+        const layers = INFO_HIT_LAYERS.filter((id) => map.getLayer(id) !== undefined);
+        const box: [[number, number], [number, number]] = [[pixel.x - 8, pixel.y - 8], [pixel.x + 8, pixel.y + 8]];
+        const hits = layers.length === 0 ? [] : map.queryRenderedFeatures(box, { layers });
+        const authority = latestScene?.infoLayers?.features.find((feature) =>
+          feature.id.startsWith("authority:") &&
+          (feature.layerId === "mvum" || feature.layerId === "work-zones") &&
+          hits.some((hit) => hit.properties?.["id"] === feature.id));
+        emit({ type: "map-long-press", coordinate: effect.coordinate,
+          pixel: { x: pixel.x, y: pixel.y }, authorityFeatureId: authority?.id ?? null });
+      }
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        try { navigator.vibrate(8); } catch { /* Haptics are optional. */ }
+      }
+    }
     if (interaction.activeTool !== before.activeTool) {
       const current = attempt;
       if (current !== null) applyGestures(current.map, interaction.activeTool);
@@ -1694,15 +1732,23 @@ export async function createMapLibreHost(
 
   function onPointerDown(event: PointerEvent): void {
     const current = attempt;
-    if (current === null || event.button !== 0) return;
+    if (current === null) return;
+    if (event.button !== 0 && event.button !== 2) return;
+    if (event.button === 2 && interaction.activeTool !== "pan") return;
     const map = current.map;
+    if (interaction.ownership !== null || interaction.activePointers?.some((id) => id !== event.pointerId)) {
+      handleInteraction({ type: "pointer-down", pointerId: event.pointerId, button: event.button, pointerType: event.pointerType,
+        coordinate: coordinateAt(map, event), pixel: pixelOf(event) });
+      map.getCanvasContainer().setPointerCapture?.(event.pointerId);
+      return;
+    }
     const canvasContainer = map.getCanvasContainer();
     const coordinate = coordinateAt(map, event);
     const pixel = pixelOf(event);
     // What the press grabbed is decided here, at press time, by the renderer's
     // own hit test: a release cannot be asked which object it started on, and the
     // workspace may not query the renderer (05 §4).
-    clearRouteHold();
+    clearHold();
     // Pins are grabbed with a finger-sized box, not a single pixel: a 14 px dot
     // under a gloved thumb was the difference between moving the start and
     // panning the map.
@@ -1717,39 +1763,15 @@ export async function createMapLibreHost(
     // camera pan — the rider grabbed the marker. The scope lasts exactly this one
     // gesture, so the neutral tool is what the rider still holds afterwards.
     // A mouse or pen press on the selected route line drags the line itself.
-    if (interaction.activeTool === "pan" && (isDraggablePointRef(ref) || (onSelectedRoute && event.pointerType !== "touch"))) {
+    if (event.button === 0 && interaction.activeTool === "pan" && (isDraggablePointRef(ref) || (onSelectedRoute && event.pointerType !== "touch"))) {
       gestureScoped = true;
       handleInteraction({ type: "tool-change", tool: "point-drag" });
-    } else if (onSelectedRoute && event.pointerType === "touch") {
-      // On touch the line is under every pan, so it is grabbed by a hold: a
-      // finger that rests on it ~0.4 s picks it up, one that moves pans.
-      const pointerId = event.pointerId;
-      routeHold = {
-        pointerId,
-        origin: pixel,
-        timer: setTimeout(() => {
-          const held = routeHold;
-          routeHold = null;
-          const live = attempt;
-          if (held === null || live === null || disposed) return;
-          // The switch cancels the pan that was in flight, and that cancel
-          // clears a gesture scope; so the scope is claimed after the switch,
-          // or the map would stay on point-drag once the finger lifts.
-          handleInteraction({ type: "tool-change", tool: "point-drag" });
-          gestureScoped = true;
-          handleInteraction({ type: "pointer-down", pointerId, coordinate, pixel: held.origin });
-          try {
-            live.map.getCanvasContainer().setPointerCapture?.(pointerId);
-          } catch {
-            // The finger may already be gone; the release still ends the gesture.
-          }
-          if (typeof navigator !== "undefined") navigator.vibrate?.(12);
-          emit({ type: "pointer-down", pointerId, coordinate, ref });
-        }, ROUTE_HOLD_MS),
-      };
     }
     handleInteraction({
       type: "pointer-down",
+      ...(onSelectedRoute && gestureScoped ? { routePress: true } : {}),
+      button: event.button,
+      pointerType: event.pointerType,
       pointerId: event.pointerId,
       coordinate,
       pixel,
@@ -1775,11 +1797,9 @@ export async function createMapLibreHost(
   }
 
   function onPointerMove(event: PointerEvent): void {
-    if (routeHold !== null && routeHold.pointerId === event.pointerId && exceedsTapThreshold(routeHold.origin, pixelOf(event))) {
-      clearRouteHold();
-    }
     const current = attempt;
-    if (current === null || !gestureControlsPointer(interaction)) return;
+    if (current === null) return;
+    const drawing = gestureControlsPointer(interaction);
     if (interaction.ownership === null || interaction.ownership.pointerId !== event.pointerId) {
       return;
     }
@@ -1790,14 +1810,16 @@ export async function createMapLibreHost(
       coordinate,
       pixel: pixelOf(event),
     });
-    emit({ type: "pointer-move", pointerId: event.pointerId, coordinate });
+    if (drawing && !interaction.ownership?.longPressed) emit({ type: "pointer-move", pointerId: event.pointerId, coordinate });
   }
 
   function onPointerUp(event: PointerEvent): void {
-    if (routeHold?.pointerId === event.pointerId) clearRouteHold();
     const current = attempt;
     const ownership = interaction.ownership;
-    if (current === null || ownership === null || ownership.pointerId !== event.pointerId) {
+    if (current === null) return;
+    if (ownership === null || ownership.pointerId !== event.pointerId) {
+      handleInteraction({ type: "pointer-up", pointerId: event.pointerId,
+        coordinate: coordinateAt(current.map, event), pixel: pixelOf(event) });
       return;
     }
     const coordinate = coordinateAt(current.map, event);
@@ -1814,7 +1836,7 @@ export async function createMapLibreHost(
       coordinate,
       pixel,
     });
-    if (drawing) emit({ type: "pointer-up", pointerId: event.pointerId, coordinate });
+    if (drawing && !ownership.longPressed) emit({ type: "pointer-up", pointerId: event.pointerId, coordinate });
     for (const effect of effects) {
       if (effect.type === "tap") tapAt(current.map, coordinate, !drawing);
       else if (effect.type === "commit-gesture") {
@@ -1832,7 +1854,7 @@ export async function createMapLibreHost(
       // select it would author nothing at all.
       // The renderer temporarily armed `point-drag`, so this release belonged to
       // a drawing owner even though the rider's neutral tool is restored above.
-      if (!moved) tapAt(current.map, coordinate, false);
+      if (!moved && !ownership.longPressed) tapAt(current.map, coordinate, false);
     }
   }
 
@@ -1861,8 +1883,16 @@ export async function createMapLibreHost(
     emit(resolveIntent(hits, coordinate));
   }
 
+  function onContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+    if (attempt === null) return;
+    // Touch browsers synthesize this after a hold, sometimes after pointerup.
+    // The timer owns touch; contextmenu is the mouse's alternate entry point.
+    if ((event as PointerEvent).pointerType === "touch") return;
+    handleInteraction({ type: "context-menu", coordinate: coordinateAt(attempt.map, event), pixel: pixelOf(event) });
+  }
+
   function onPointerCancel(event: PointerEvent): void {
-    clearRouteHold();
     // A cancelled pointer is not a release: it drops the gesture and emits
     // `gesture-cancel`, never a commit and never a tap (05 §4).
     handleInteraction({ type: "pointer-cancel", pointerId: event.pointerId });
@@ -2086,6 +2116,8 @@ export async function createMapLibreHost(
     const camera = readCameraBounds(current);
     if (camera !== null) restoredCamera = camera;
     const canvasContainer = current.map.getCanvasContainer();
+    clearHold();
+    canvasContainer.removeEventListener("contextmenu", onContextMenu);
     canvasContainer.removeEventListener("pointerdown", onPointerDown);
     canvasContainer.removeEventListener("pointermove", onPointerMove);
     canvasContainer.removeEventListener("pointerup", onPointerUp);
@@ -2367,6 +2399,7 @@ export async function createMapLibreHost(
     armWatchdog(current, "style", BOOT_WATCHDOG_MS);
 
     const canvasContainer = map.getCanvasContainer();
+    canvasContainer.addEventListener("contextmenu", onContextMenu);
     canvasContainer.addEventListener("pointerdown", onPointerDown);
     canvasContainer.addEventListener("pointermove", onPointerMove);
     canvasContainer.addEventListener("pointerup", onPointerUp);
