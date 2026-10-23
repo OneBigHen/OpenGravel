@@ -39,6 +39,8 @@ export interface PlannerItineraryActions {
   readonly zoomTo: (ref: ItineraryRef) => void;
   readonly replacePlace: (ref: ItineraryRef) => void;
   readonly moveStop: (stopId: StopId, direction: "up" | "down") => void;
+  /** One drag, one `stop.reorder`: the stop lands before the named neighbour. */
+  readonly reorder: (stopId: StopId, beforeStopId: StopId | undefined) => void;
   readonly remove: (ref: ItineraryRef) => void;
   readonly convert: (ref: ItineraryRef) => void;
   readonly addStop: () => void;
@@ -119,6 +121,15 @@ export function usePlannerItineraryActions(input: {
           ? moveUpBeforeId(stops, index)
           : moveDownBeforeId(stops, index);
 
+      rideDocumentStore
+        .getState()
+        .dispatch(reorderStopCommand(document, stopId, beforeStopId));
+    },
+    [document, rideDocumentStore],
+  );
+
+  const reorder = useCallback(
+    (stopId: StopId, beforeStopId: StopId | undefined): void => {
       rideDocumentStore
         .getState()
         .dispatch(reorderStopCommand(document, stopId, beforeStopId));
@@ -228,6 +239,7 @@ export function usePlannerItineraryActions(input: {
     zoomTo,
     replacePlace,
     moveStop,
+    reorder,
     remove,
     convert,
     addStop,

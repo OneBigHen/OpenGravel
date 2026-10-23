@@ -81,4 +81,12 @@ describe("share creation is metered per client address", () => {
     expect((await handlePublishShareRequest(publishRequest("198.51.100.17"), target)).status).toBe(429);
     expect((await handlePublishShareRequest(publishRequest("198.51.100.18"), target)).status).toBe(201);
   });
+
+  it.each(["10.0.0.7", "127.0.0.1", "::ffff:127.0.0.1"])("meters a forwarded %s too: a header a client can write buys no exemption", async (address) => {
+    const target = store();
+    for (let index = 0; index < 10; index += 1) {
+      await handlePublishShareRequest(publishRequest(address), target);
+    }
+    expect((await handlePublishShareRequest(publishRequest(address), target)).status).toBe(429);
+  });
 });

@@ -7,11 +7,19 @@ type PlannerProjectionInput = Omit<Parameters<typeof buildPlannerViewModel>[0], 
 
 /** Keeps preparation feedback beside the projection it enriches. */
 export function usePlannerViewModel(input: PlannerProjectionInput) {
-  const { document, session, sketchDerivedEndpoints, placeNameFor } = input;
+  const { document, session, sketchDerivedEndpoints, placeNameFor, routeLine } = input;
   const [routeTraffic, setRouteTraffic] = useState<RouteTrafficLabel | null>(null);
   const viewModel = useMemo(
-    () => buildPlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor, routeTraffic }),
-    [document, session, sketchDerivedEndpoints, placeNameFor, routeTraffic],
+    () =>
+      buildPlannerViewModel({
+        document,
+        session,
+        sketchDerivedEndpoints,
+        placeNameFor,
+        routeLine,
+        routeTraffic,
+      }),
+    [document, session, sketchDerivedEndpoints, placeNameFor, routeLine, routeTraffic],
   );
   return { viewModel, setRouteTraffic };
 }

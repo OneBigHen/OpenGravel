@@ -20,6 +20,7 @@ import {
   moveDownBeforeId,
   moveUpBeforeId,
   nextStopInsertionBeforeId,
+  reorderTargetFor,
 } from "@/application/planner/stop-insertion";
 import { newStopId, type StopId } from "@/domain/ride/ids";
 import type { Coordinate, StopPoint } from "@/domain/ride/types";
@@ -148,5 +149,50 @@ describe("move up / move down anchors", () => {
     // A single stop cannot move anywhere.
     expect(canMoveStopDown(0, 1)).toBe(false);
     expect(canMoveStopUp(0)).toBe(false);
+  });
+});
+
+describe("reorderTargetFor — one drag, one reorder command (03 §27)", () => {
+  const stops = [stop("A"), stop("B"), stop("C"), stop("D")];
+  const ids = stops.map((entry) => entry.id);
+
+  it("anchors a move down before the stop after its destination slot", () => {
+    const target = reorderTargetFor(ids, 0, 2);
+    expect(target).not.toBeNull();
+    expect(labels(reordered(stops, ids[0] as StopId, target?.beforeStopId))).toEqual([
+      "B",
+      "C",
+      "A",
+      "D",
+    ]);
+  });
+
+  it("anchors a move up before the stop that already holds the slot", () => {
+    const target = reorderTargetFor(ids, 3, 1);
+    expect(target).not.toBeNull();
+    expect(labels(reordered(stops, ids[3] as StopId, target?.beforeStopId))).toEqual([
+      "A",
+      "D",
+      "B",
+      "C",
+    ]);
+  });
+
+  it("appends when the drag lands in the last slot", () => {
+    const target = reorderTargetFor(ids, 1, 3);
+    expect(target).not.toBeNull();
+    expect(target?.beforeStopId).toBeUndefined();
+    expect(labels(reordered(stops, ids[1] as StopId, target?.beforeStopId))).toEqual([
+      "A",
+      "C",
+      "D",
+      "B",
+    ]);
+  });
+
+  it("returns null for a drop that changes nothing, so an append is never dispatched", () => {
+    expect(reorderTargetFor(ids, 1, 1)).toBeNull();
+    expect(reorderTargetFor(ids, 0, -2)).toBeNull();
+    expect(reorderTargetFor(ids, 9, 1)).toBeNull();
   });
 });

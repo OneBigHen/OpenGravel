@@ -132,6 +132,7 @@ export function usePlannerStops(input: {
       onZoomTo: actions.zoomTo,
       onReplacePlace: actions.replacePlace,
       onMoveStop: actions.moveStop,
+      onReorder: actions.reorder,
       onRemove: actions.remove,
       onConvert: actions.convert,
       onAddStop: actions.addStop,

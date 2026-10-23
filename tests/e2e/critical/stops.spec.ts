@@ -62,6 +62,16 @@ function stopRows(page: Page): Locator {
   return page.locator('[data-testid^="point-row-stop-"]');
 }
 
+/**
+ * Opens a row's action sheet. Every per-row action (zoom, replace, reorder,
+ * convert, remove) lives there, so the list itself stays one reading with one
+ * control (04 §15, §31).
+ */
+async function openRowMenu(page: Page, key: string): Promise<void> {
+  await page.getByTestId(`more-${key}`).click();
+  await expect(page.getByTestId("point-menu")).toBeVisible();
+}
+
 /** Places both endpoints and plans the fixture ride. */
 async function planFixtureRide(page: Page): Promise<void> {
   await clickMapAtCoordinate(page, START_COORDINATE);
@@ -131,7 +141,10 @@ test("a stop is added, reordered, removed and restored by undo", async ({ page }
   expectCoordinateNear(secondBefore, STOP_B);
 
   // Reorder is a list action, disabled at the ends and nowhere else.
+  await openRowMenu(page, "stop-1");
   await expect(page.getByTestId("move-up-stop-1")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await openRowMenu(page, "stop-2");
   await expect(page.getByTestId("move-down-stop-2")).toBeDisabled();
   // Armed before the press; see `settleReplan`.
   const reorderInFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
@@ -147,6 +160,7 @@ test("a stop is added, reordered, removed and restored by undo", async ({ page }
   // Removing leaves the route on screen and the labels honest.
   // Armed before the press; see `settleReplan`.
   const removeInFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
+  await openRowMenu(page, "stop-1");
   await page.getByTestId("remove-stop-1").click();
   await removeInFlight;
   await settleReplan(page);
