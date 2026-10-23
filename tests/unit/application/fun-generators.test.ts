@@ -363,3 +363,12 @@ describe("funRouteMeasurement", () => {
     expect(measured).toMatchObject({ bendShare: 0.1, curvatureUnit: 0.5, longestBendRunMeters: 60, backroadShare: null });
   });
 });
+
+it("reports the sources actually routed after an adaptive probe changes its sequence", async () => {
+  const original = syntheticGenerator("gravel-prize", 1);
+  const generator: FunCandidateGenerator = { ...original, propose: value => original.propose(value).map(probe => ({ ...probe, execute: async call => ({ ...await probe.execute(call), sourceIds: ["actual-corridor"] }) })) };
+  const { provider } = providerReturning(detourFor);
+  const report = await runFunGenerators({ ...BASE, context: context(), generators: [generator], provider });
+  expect(report.probes[0]?.sourceIds).toEqual(["actual-corridor"]);
+  expect(report.pool[0]?.sourceIds).toEqual(["actual-corridor"]);
+});

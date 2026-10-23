@@ -1,0 +1,2055 @@
+{
+  "date": "2026-10-23",
+  "baseSha": "4f6544b4cb783286a65814fbffe23edfd632f86a",
+  "router": "http://127.0.0.1:18989",
+  "rawHttpCallsIncludingExploration": 523,
+  "rows": [
+    {
+      "key": "jim-thorpe-120-dirt-preferred",
+      "origin": {
+        "lat": 40.8676,
+        "lon": -75.7327
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 131.0178,
+        "km": 95.195009,
+        "dirtPct": 9.5134066469725,
+        "dirtKm": 9.056244265682913,
+        "dirtValueKm": 12.168513763646983,
+        "vsRequestedPct": 9.181,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 129.53083333333333,
+        "km": 74.217076,
+        "dirtPct": 42.633437279944445,
+        "dirtKm": 31.641269535771922,
+        "dirtValueKm": 41.046750818456964,
+        "vsRequestedPct": 7.942,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 55,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/15068099",
+              "way/1049791143",
+              "way/1049791144",
+              "way/15067744",
+              "way/49852077",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 129.53083333333333,
+            "unpavedShare": 0.426
+          }
+        ]
+      }
+    },
+    {
+      "key": "jim-thorpe-120-mixed",
+      "origin": {
+        "lat": 40.8676,
+        "lon": -75.7327
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 102.23,
+        "km": 80.55,
+        "dirtPct": 2.02,
+        "dirtKm": 1.62,
+        "dirtValueKm": 2.4370271409956206,
+        "vsRequestedPct": -14.808,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 129.04815,
+        "km": 88.44762300000001,
+        "dirtPct": 29.488035033602355,
+        "dirtKm": 26.081527899650332,
+        "dirtValueKm": 33.03076928321235,
+        "vsRequestedPct": 7.54,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 55,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11937709",
+              "way/11950440",
+              "way/15067744",
+              "way/49852077",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075",
+              "way/15069629"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 129.04815,
+            "unpavedShare": 0.295
+          }
+        ]
+      }
+    },
+    {
+      "key": "jim-thorpe-180-dirt-preferred",
+      "origin": {
+        "lat": 40.8676,
+        "lon": -75.7327
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 202.07,
+        "km": 142.63,
+        "dirtPct": 11.67,
+        "dirtKm": 16.64,
+        "dirtValueKm": 19.728415378830316,
+        "vsRequestedPct": 12.261,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 179.67611666666664,
+        "km": 119.420872,
+        "dirtPct": 29.84285114897273,
+        "dirtKm": 35.63865346363293,
+        "dirtValueKm": 42.587894847194946,
+        "vsRequestedPct": -0.18,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 152,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11937709",
+              "way/11939476",
+              "way/15067744",
+              "way/49852077",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075",
+              "way/15068099",
+              "way/1049791143",
+              "way/1049791144"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 179.67611666666664,
+            "unpavedShare": 0.298
+          }
+        ]
+      }
+    },
+    {
+      "key": "jim-thorpe-180-mixed",
+      "origin": {
+        "lat": 40.8676,
+        "lon": -75.7327
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 167.18,
+        "km": 126.71,
+        "dirtPct": 8.28,
+        "dirtKm": 10.5,
+        "dirtValueKm": 13.609876629600809,
+        "vsRequestedPct": -7.122,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 172.39264999999997,
+        "km": 135.126043,
+        "dirtPct": 17.01982249279608,
+        "dirtKm": 22.998238058651232,
+        "dirtValueKm": 26.581686274097354,
+        "vsRequestedPct": -4.226,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 152,
+        "calls": 4,
+        "probes": [
+          {
+            "corridors": [
+              "way/11937709",
+              "way/15067744",
+              "way/49852077",
+              "way/15068099",
+              "way/1049791143",
+              "way/1049791144",
+              "way/15008486"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 172.39264999999997,
+            "unpavedShare": 0.17
+          }
+        ]
+      }
+    },
+    {
+      "key": "pine-grove-120-dirt-preferred",
+      "origin": {
+        "lat": 40.5484,
+        "lon": -76.3847
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 127.78,
+        "km": 102.21,
+        "dirtPct": 0,
+        "dirtKm": 0,
+        "dirtValueKm": 0,
+        "vsRequestedPct": 6.483,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 126.90476666666667,
+        "km": 72.345774,
+        "dirtPct": 31.669192856864964,
+        "dirtKm": 22.911391958955804,
+        "dirtValueKm": 31.69231795122907,
+        "vsRequestedPct": 5.754,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 68,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/9059305",
+              "way/886373525",
+              "way/9059419"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.92,
+            "minutes": 126.90476666666667,
+            "unpavedShare": 0.317
+          }
+        ]
+      }
+    },
+    {
+      "key": "pine-grove-120-mixed",
+      "origin": {
+        "lat": 40.5484,
+        "lon": -76.3847
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 117.54,
+        "km": 93.83,
+        "dirtPct": 0,
+        "dirtKm": 0,
+        "dirtValueKm": 0,
+        "vsRequestedPct": -2.05,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 134.85858333333334,
+        "km": 90.58239900000001,
+        "dirtPct": 31.44548522156877,
+        "dirtKm": 28.48398014055662,
+        "dirtValueKm": 34.82731227328127,
+        "vsRequestedPct": 12.382,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 68,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/1015487870",
+              "way/9059419",
+              "way/127200379",
+              "way/9067475",
+              "way/9067480"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.81,
+            "minutes": 134.85858333333334,
+            "unpavedShare": 0.314
+          }
+        ]
+      }
+    },
+    {
+      "key": "pine-grove-180-dirt-preferred",
+      "origin": {
+        "lat": 40.5484,
+        "lon": -76.3847
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_fastest",
+        "minutes": 157.44,
+        "km": 122.45,
+        "dirtPct": 10.69,
+        "dirtKm": 13.09,
+        "dirtValueKm": 17.483024340854083,
+        "vsRequestedPct": -12.533,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 191.08061666666666,
+        "km": 111.932492,
+        "dirtPct": 42.95034935573715,
+        "dirtKm": 48.075310259025684,
+        "dirtValueKm": 55.826016808514915,
+        "vsRequestedPct": 6.156,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 138,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/9067475",
+              "way/9067480",
+              "way/127188745",
+              "way/127188961",
+              "way/9062742",
+              "way/127192271",
+              "way/127200379",
+              "way/9059305",
+              "way/886373525",
+              "way/9059419"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.98,
+            "minutes": 191.08061666666666,
+            "unpavedShare": 0.43
+          }
+        ]
+      }
+    },
+    {
+      "key": "pine-grove-180-mixed",
+      "origin": {
+        "lat": 40.5484,
+        "lon": -76.3847
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 187.67,
+        "km": 155.14,
+        "dirtPct": 0.64,
+        "dirtKm": 0.99,
+        "dirtValueKm": 1.4790589191580468,
+        "vsRequestedPct": 4.261,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 192.9694,
+        "km": 119.7747,
+        "dirtPct": 46.48777327228005,
+        "dirtKm": 55.68037567428928,
+        "dirtValueKm": 68.84718688839638,
+        "vsRequestedPct": 7.205,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 138,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/9067475",
+              "way/9067480",
+              "way/127188745",
+              "way/127188961",
+              "way/9062742",
+              "way/127192271",
+              "way/9059419",
+              "way/9059305",
+              "way/886373525",
+              "way/1015487870"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.86,
+            "minutes": 192.9694,
+            "unpavedShare": 0.465
+          }
+        ]
+      }
+    },
+    {
+      "key": "lock-haven-120-dirt-preferred",
+      "origin": {
+        "lat": 41.137,
+        "lon": -77.4469
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 126.61,
+        "km": 88.24,
+        "dirtPct": 21.09,
+        "dirtKm": 18.61,
+        "dirtValueKm": 27.477490952308287,
+        "vsRequestedPct": 5.508,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 119.28473333333334,
+        "km": 75.935003,
+        "dirtPct": 30.30073140032497,
+        "dirtKm": 23.00886211354169,
+        "dirtValueKm": 31.389548213095388,
+        "vsRequestedPct": -0.596,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 187,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11876301",
+              "way/11876927",
+              "way/11876956"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.57,
+            "minutes": 119.28473333333334,
+            "unpavedShare": 0.303
+          }
+        ]
+      }
+    },
+    {
+      "key": "lock-haven-120-mixed",
+      "origin": {
+        "lat": 41.137,
+        "lon": -77.4469
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_fastest",
+        "minutes": 131.32,
+        "km": 81.63,
+        "dirtPct": 33.95,
+        "dirtKm": 27.72,
+        "dirtValueKm": 39.343960953996294,
+        "vsRequestedPct": 9.433,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 113.96966666666667,
+        "km": 75.037826,
+        "dirtPct": 28.28826237939429,
+        "dirtKm": 21.226916766314382,
+        "dirtValueKm": 29.60760286586809,
+        "vsRequestedPct": -5.025,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 187,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11876301",
+              "way/11876927",
+              "way/11876956"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.57,
+            "minutes": 113.96966666666667,
+            "unpavedShare": 0.283
+          }
+        ]
+      }
+    },
+    {
+      "key": "lock-haven-180-dirt-preferred",
+      "origin": {
+        "lat": 41.137,
+        "lon": -77.4469
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_fastest",
+        "minutes": 166.59,
+        "km": 94.52,
+        "dirtPct": 31.48,
+        "dirtKm": 29.76,
+        "dirtValueKm": 40.48992057580622,
+        "vsRequestedPct": -7.45,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 178.84456666666668,
+        "km": 102.52774400000001,
+        "dirtPct": 55.67764117304617,
+        "dirtKm": 57.085015126761945,
+        "dirtValueKm": 82.50377773292557,
+        "vsRequestedPct": -0.642,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 395,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11864223",
+              "way/11877076",
+              "way/11876301",
+              "way/11876927",
+              "way/11876956"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.71,
+            "minutes": 178.84456666666668,
+            "unpavedShare": 0.557
+          }
+        ]
+      }
+    },
+    {
+      "key": "lock-haven-180-mixed",
+      "origin": {
+        "lat": 41.137,
+        "lon": -77.4469
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 158.38,
+        "km": 122.25,
+        "dirtPct": 16.96,
+        "dirtKm": 20.74,
+        "dirtValueKm": 31.10251980560359,
+        "vsRequestedPct": -12.011,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 204.80833333333334,
+        "km": 134.77975899999998,
+        "dirtPct": 36.42984058490023,
+        "dirtKm": 49.1001158832256,
+        "dirtValueKm": 62.33113909797966,
+        "vsRequestedPct": 13.782,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 395,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/11864223",
+              "way/11877076",
+              "way/11876927",
+              "way/11876956",
+              "way/11875750"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.76,
+            "minutes": 204.80833333333334,
+            "unpavedShare": 0.364
+          }
+        ]
+      }
+    },
+    {
+      "key": "renovo-120-dirt-preferred",
+      "origin": {
+        "lat": 41.3265,
+        "lon": -77.7508
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_twisty",
+        "minutes": 101.39,
+        "km": 63.11,
+        "dirtPct": 23.69,
+        "dirtKm": 14.95,
+        "dirtValueKm": 22.12951189003932,
+        "vsRequestedPct": -15.508,
+        "inWindow": false
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 123.10740000000001,
+        "km": 68.888446,
+        "dirtPct": 57.18894310085665,
+        "dirtKm": 39.39661798473216,
+        "dirtValueKm": 45.55652927634077,
+        "vsRequestedPct": 2.59,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 189,
+        "calls": 4,
+        "probes": [
+          {
+            "corridors": [
+              "way/11864122",
+              "way/1299584431"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 123.10740000000001,
+            "unpavedShare": 0.572
+          }
+        ]
+      }
+    },
+    {
+      "key": "renovo-120-mixed",
+      "origin": {
+        "lat": 41.3265,
+        "lon": -77.7508
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_twisty",
+        "minutes": 121.55,
+        "km": 78.36,
+        "dirtPct": 23.28,
+        "dirtKm": 18.24,
+        "dirtValueKm": 22.582390296937426,
+        "vsRequestedPct": 1.292,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_twisty",
+        "minutes": 121.54731666666666,
+        "km": 78.359673,
+        "dirtPct": 23.276295396323093,
+        "dirtKm": 18.239273753551277,
+        "dirtValueKm": 22.582390296937426,
+        "vsRequestedPct": 1.289,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 189,
+        "calls": 3,
+        "probes": [
+          {
+            "corridors": [
+              "way/11876927",
+              "way/11876956",
+              "way/11864122",
+              "way/11867061",
+              "way/11874550"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.64,
+            "minutes": 120.45576666666666,
+            "unpavedShare": 0.389
+          }
+        ]
+      }
+    },
+    {
+      "key": "renovo-180-dirt-preferred",
+      "origin": {
+        "lat": 41.3265,
+        "lon": -77.7508
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 183.89,
+        "km": 139.7,
+        "dirtPct": 26.75,
+        "dirtKm": 37.37,
+        "dirtValueKm": 46.611362784798985,
+        "vsRequestedPct": 2.161,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 189.25238333333334,
+        "km": 111.60086199999999,
+        "dirtPct": 56.29280500134546,
+        "dirtKm": 62.82328428438046,
+        "dirtValueKm": 76.05145077672819,
+        "vsRequestedPct": 5.14,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 458,
+        "calls": 3,
+        "probes": [
+          {
+            "corridors": [
+              "way/11869575",
+              "way/11872161",
+              "way/11863409"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 189.25238333333334,
+            "unpavedShare": 0.563
+          }
+        ]
+      }
+    },
+    {
+      "key": "renovo-180-mixed",
+      "origin": {
+        "lat": 41.3265,
+        "lon": -77.7508
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_fastest",
+        "minutes": 164.35,
+        "km": 117.77,
+        "dirtPct": 18.88,
+        "dirtKm": 22.23,
+        "dirtValueKm": 33.34780836596082,
+        "vsRequestedPct": -8.694,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 160.1697166666667,
+        "km": 102.699065,
+        "dirtPct": 41.13159741333872,
+        "dirtKm": 42.241774327430505,
+        "dirtValueKm": 61.12988920754215,
+        "vsRequestedPct": -11.017,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 458,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/11876301",
+              "way/11876927",
+              "way/11876956"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.57,
+            "minutes": 160.1697166666667,
+            "unpavedShare": 0.411
+          }
+        ]
+      }
+    },
+    {
+      "key": "kempton-120-dirt-preferred",
+      "origin": {
+        "lat": 40.6268,
+        "lon": -75.853
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 114.31,
+        "km": 85.59,
+        "dirtPct": 14.59,
+        "dirtKm": 12.49,
+        "dirtValueKm": 16.898568316502327,
+        "vsRequestedPct": -4.742,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 127.27308333333333,
+        "km": 77.829216,
+        "dirtPct": 50.3125642100613,
+        "dirtKm": 39.15803471390657,
+        "dirtValueKm": 46.10727609746859,
+        "vsRequestedPct": 6.061,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 54,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/15067744",
+              "way/49852077",
+              "way/15069629",
+              "way/15068099",
+              "way/1049791143",
+              "way/1049791144",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075",
+              "way/11937709"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 127.27308333333333,
+            "unpavedShare": 0.503
+          }
+        ]
+      }
+    },
+    {
+      "key": "kempton-120-mixed",
+      "origin": {
+        "lat": 40.6268,
+        "lon": -75.853
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 110.71,
+        "km": 68.95,
+        "dirtPct": 9.18,
+        "dirtKm": 6.33,
+        "dirtValueKm": 8.150931918134653,
+        "vsRequestedPct": -7.742,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 107.68458333333334,
+        "km": 68.63404200000001,
+        "dirtPct": 41.68886512971749,
+        "dirtKm": 28.612940610706914,
+        "dirtValueKm": 33.04374939232006,
+        "vsRequestedPct": -10.263,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 54,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/15067744",
+              "way/49852077",
+              "way/15069629",
+              "way/15068099",
+              "way/1049791143",
+              "way/1049791144",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075",
+              "way/11937709"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 107.68458333333334,
+            "unpavedShare": 0.417
+          }
+        ]
+      }
+    },
+    {
+      "key": "kempton-180-dirt-preferred",
+      "origin": {
+        "lat": 40.6268,
+        "lon": -75.853
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 205.99,
+        "km": 155.65,
+        "dirtPct": 4.09,
+        "dirtKm": 6.36,
+        "dirtValueKm": 8.742315289692714,
+        "vsRequestedPct": 14.439,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 165.73326666666665,
+        "km": 110.470314,
+        "dirtPct": 37.99536623275967,
+        "dirtKm": 41.97361373805606,
+        "dirtValueKm": 50.83523130128239,
+        "vsRequestedPct": -7.926,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 123,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/15069629",
+              "way/11939476",
+              "way/15069779",
+              "way/176164071",
+              "way/176164075"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 165.73326666666665,
+            "unpavedShare": 0.38
+          }
+        ]
+      }
+    },
+    {
+      "key": "kempton-180-mixed",
+      "origin": {
+        "lat": 40.6268,
+        "lon": -75.853
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 166.87,
+        "km": 141.18,
+        "dirtPct": 0,
+        "dirtKm": 0,
+        "dirtValueKm": 0,
+        "vsRequestedPct": -7.294,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 172.3604,
+        "km": 133.449105,
+        "dirtPct": 18.803170501640338,
+        "dirtKm": 25.092718897506465,
+        "dirtValueKm": 30.050688714461902,
+        "vsRequestedPct": -4.244,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 123,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/15069779",
+              "way/176164071",
+              "way/176164075",
+              "way/11937709",
+              "way/15008486",
+              "way/11943982"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 172.3604,
+            "unpavedShare": 0.188
+          }
+        ]
+      }
+    },
+    {
+      "key": "wellsboro-120-dirt-preferred",
+      "origin": {
+        "lat": 41.7487,
+        "lon": -77.3005
+      },
+      "minutesRequested": 120,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_twisty",
+        "minutes": 128.95,
+        "km": 68.05,
+        "dirtPct": 40.27,
+        "dirtKm": 27.4,
+        "dirtValueKm": 31.040411271255955,
+        "vsRequestedPct": 7.458,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 121.56718333333333,
+        "km": 57.381928,
+        "dirtPct": 51.64634655152728,
+        "dirtKm": 29.635496170002554,
+        "dirtValueKm": 38.99938977342086,
+        "vsRequestedPct": 1.306,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 334,
+        "calls": 2,
+        "probes": [
+          {
+            "corridors": [
+              "way/10690398",
+              "way/537183469",
+              "way/10690080",
+              "way/10691084"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 121.56718333333333,
+            "unpavedShare": 0.516
+          }
+        ]
+      }
+    },
+    {
+      "key": "wellsboro-120-mixed",
+      "origin": {
+        "lat": 41.7487,
+        "lon": -77.3005
+      },
+      "minutesRequested": 120,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_scenic",
+        "minutes": 121.62,
+        "km": 78.94,
+        "dirtPct": 20.69,
+        "dirtKm": 16.34,
+        "dirtValueKm": 20.725350906915146,
+        "vsRequestedPct": 1.35,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 104.52035,
+        "km": 71.81502499999999,
+        "dirtPct": 32.79904792558111,
+        "dirtKm": 23.554588342523886,
+        "dirtValueKm": 27.998703199649256,
+        "vsRequestedPct": -12.9,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 334,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/10688794",
+              "way/479134768",
+              "way/537183469",
+              "way/10690080",
+              "way/10691084",
+              "way/10690398",
+              "way/10692089"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.69,
+            "minutes": 104.52035,
+            "unpavedShare": 0.328
+          }
+        ]
+      }
+    },
+    {
+      "key": "wellsboro-180-dirt-preferred",
+      "origin": {
+        "lat": 41.7487,
+        "lon": -77.3005
+      },
+      "minutesRequested": 180,
+      "surface": "dirt-preferred",
+      "before": {
+        "profile": "motorcycle_adventure",
+        "minutes": 196.59,
+        "km": 137.68,
+        "dirtPct": 29.48,
+        "dirtKm": 40.58,
+        "dirtValueKm": 45.800096763065106,
+        "vsRequestedPct": 9.217,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_adventure",
+        "minutes": 203.79916666666668,
+        "km": 116.22334699999999,
+        "dirtPct": 54.71197550506673,
+        "dirtKm": 63.588436000940085,
+        "dirtValueKm": 77.85737498413252,
+        "vsRequestedPct": 13.222,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 528,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/10694551",
+              "way/10694204",
+              "way/10694234",
+              "way/1372568008",
+              "way/1372568007",
+              "way/1372568003",
+              "way/1372568002",
+              "way/10695772",
+              "way/10695798",
+              "way/537183469",
+              "way/10690398"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 1,
+            "minutes": 203.79916666666668,
+            "unpavedShare": 0.547
+          }
+        ]
+      }
+    },
+    {
+      "key": "wellsboro-180-mixed",
+      "origin": {
+        "lat": 41.7487,
+        "lon": -77.3005
+      },
+      "minutesRequested": 180,
+      "surface": "mixed",
+      "before": {
+        "profile": "motorcycle_fastest",
+        "minutes": 167.34,
+        "km": 107.96,
+        "dirtPct": 29.52,
+        "dirtKm": 31.86,
+        "dirtValueKm": 38.14448677415398,
+        "vsRequestedPct": -7.033,
+        "inWindow": true
+      },
+      "after": {
+        "profile": "motorcycle_fastest",
+        "minutes": 167.34338333333332,
+        "km": 107.95696799999999,
+        "dirtPct": 29.51564152691557,
+        "dirtKm": 31.864090462497664,
+        "dirtValueKm": 38.14448677415398,
+        "vsRequestedPct": -7.031,
+        "inWindow": true
+      },
+      "atlas": {
+        "available": true,
+        "considered": 528,
+        "calls": 1,
+        "probes": [
+          {
+            "corridors": [
+              "way/10694551",
+              "way/10694204",
+              "way/10694234",
+              "way/1372568008",
+              "way/1372568007",
+              "way/1372568003",
+              "way/1372568002",
+              "way/10695772",
+              "way/10695798",
+              "way/537183469",
+              "way/10690398"
+            ],
+            "status": "new",
+            "note": "ok",
+            "adherence": 0.81,
+            "minutes": 187.14486666666664,
+            "unpavedShare": 0.447
+          }
+        ]
+      }
+    }
+  ],
+  "jimThorpeTrace": {
+    "before": {
+      "sha": "4f6544b4cb783286a65814fbffe23edfd632f86a",
+      "arm": "before",
+      "key": "jim-thorpe-120-dirt-preferred",
+      "request": {
+        "requestId": "dirt-loop:jim-thorpe-120-dirt-preferred",
+        "origin": {
+          "lat": 40.8676,
+          "lon": -75.7327
+        },
+        "destination": {
+          "lat": 40.8676,
+          "lon": -75.7327
+        },
+        "stops": [],
+        "shaping": [],
+        "avoidPolygons": [],
+        "profile": "motorcycle_adventure",
+        "options": {
+          "vehicle": "motorcycle",
+          "includeAlternatives": true,
+          "avoidHighways": false,
+          "tollPolicy": "avoid",
+          "surfacePreference": "dirt-preferred",
+          "roadCharacter": "balanced",
+          "traffic": "protect-ride",
+          "bike": {
+            "category": "adventure",
+            "maintainedGravel": "allow",
+            "roughTracks": "avoid"
+          }
+        },
+        "discovery": {
+          "targetMinutes": 120,
+          "toleranceMinutes": 18
+        }
+      },
+      "env": {
+        "OGV_ATLAS_GENERATORS": "off",
+        "OGV_ATLAS_CALLS": "4",
+        "OGV_FUN_GENERATORS": "shadow",
+        "OGV_RIDE_FORMULA": "shadow",
+        "OGV_GRAVEL_ATLAS_PATH": "/var/lib/opengravel/gravel-atlas-v3.sqlite",
+        "OGV_TRAFFIC_LIVE_AVOID": "off",
+        "OGV_ROAD_AUTHORITY": "off",
+        "OGV_JEV_FUN_JUDGE": "off"
+      },
+      "responseStatus": 200,
+      "picked": {
+        "id": "route_31d13f67-a6f2-4309-9fff-bfc1689e9410",
+        "profile": "motorcycle_scenic",
+        "minutes": 131.0178,
+        "km": 95.195009,
+        "dirtPct": 9.5134066469725,
+        "dirtKm": 9.056244265682913,
+        "dirtValueKm": 12.168513763646983
+      },
+      "pool": [
+        {
+          "id": "route_31d13f67-a6f2-4309-9fff-bfc1689e9410",
+          "profile": "motorcycle_scenic",
+          "minutes": 131.0178,
+          "km": 95.195009,
+          "dirtPct": 9.5134066469725,
+          "dirtKm": 9.056244265682913,
+          "dirtValueKm": 12.168513763646983
+        },
+        {
+          "id": "route_194d9f79-6976-46c3-b43a-86c69267125d",
+          "profile": "motorcycle_fastest",
+          "minutes": 134.90961666666666,
+          "km": 104.11142,
+          "dirtPct": 6.284411135861917,
+          "dirtKm": 6.54280702370491,
+          "dirtValueKm": 8.334531131427976
+        },
+        {
+          "id": "route_239c5c33-db58-40f7-9d1a-7fc1da43241f",
+          "profile": "motorcycle_fastest",
+          "minutes": 105.21164999999999,
+          "km": 108.482096,
+          "dirtPct": 0,
+          "dirtKm": 0,
+          "dirtValueKm": 0
+        }
+      ],
+      "seen": [
+        {
+          "profile": "motorcycle_fastest",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 111.47593333333333,
+              "km": 93.948451,
+              "dirtPct": 0.13380103603367385,
+              "dirtKm": 0.1257035400998084,
+              "dirtValueKm": 0.1257035400998084
+            },
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 105.21164999999999,
+              "km": 108.482096,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 134.90961666666666,
+              "km": 104.11142,
+              "dirtPct": 6.284411135861917,
+              "dirtKm": 6.54280702370491,
+              "dirtValueKm": 8.334531131427976
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 132.57165,
+              "km": 103.012296,
+              "dirtPct": 2.9398226356025408,
+              "dirtKm": 3.028385380091847,
+              "dirtValueKm": 4.3458979598007
+            },
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 153.65175,
+              "km": 137.07353899999998,
+              "dirtPct": 2.489295709301178,
+              "dirtKm": 3.412168558429123,
+              "dirtValueKm": 4.537789548969338
+            },
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 131.0178,
+              "km": 95.195009,
+              "dirtPct": 9.5134066469725,
+              "dirtKm": 9.056244265682913,
+              "dirtValueKm": 12.168513763646983
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 126.03763333333333,
+              "km": 118.928601,
+              "dirtPct": 0.3904401288282205,
+              "dirtKm": 0.46434456807501767,
+              "dirtValueKm": 0.391831727440259
+            },
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 132.51291666666665,
+              "km": 101.51517299999999,
+              "dirtPct": 1.0256229104399457,
+              "dirtKm": 1.0411678605373966,
+              "dirtValueKm": 1.0974072227310774
+            },
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 132.29305,
+              "km": 85.613006,
+              "dirtPct": 15.049002619030372,
+              "dirtKm": 12.883859563029025,
+              "dirtValueKm": 15.921532491606017
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 130.43985,
+              "km": 121.335374,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 118.3452,
+              "km": 116.66762200000001,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 133.13193333333334,
+              "km": 85.164392,
+              "dirtPct": 15.33521280514207,
+              "dirtKm": 13.060105170042494,
+              "dirtValueKm": 16.009655295112754
+            }
+          ]
+        }
+      ],
+      "diagnostics": {
+        "optionalProvidersUnavailable": [],
+        "riderModes": {
+          "calls": 0,
+          "trials": [
+            {
+              "factor": 1,
+              "unpavedShare": 0.0013380103603367385,
+              "busyShare": 0.36128168060977056,
+              "dirtKm": 0.1257035400998084,
+              "minutes": 111.47593333333333
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0,
+              "busyShare": 0.47808070133847896,
+              "dirtKm": 0,
+              "minutes": 105.21164999999999
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.06284411135861917,
+              "busyShare": 0.08217548037648646,
+              "dirtKm": 8.334531131427976,
+              "minutes": 134.90961666666666
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.029398226356025407,
+              "busyShare": 0.0013354511714129603,
+              "dirtKm": 4.3458979598007,
+              "minutes": 132.57165
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.024892957093011783,
+              "busyShare": 0.04108153817655379,
+              "dirtKm": 4.537789548969338,
+              "minutes": 153.65175
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.095134066469725,
+              "busyShare": 0.00012257677827145382,
+              "dirtKm": 12.168513763646983,
+              "minutes": 131.0178
+            }
+          ]
+        },
+        "rideFormula": {
+          "mode": "shadow",
+          "version": "ride-formula-v1",
+          "pickIndex": 0,
+          "rows": [
+            {
+              "index": 0,
+              "value": 33.2959,
+              "confidence": 0.6946,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0.09513406646972496,
+                "continuousDirtMeters": 6224.538995928137,
+                "busyRoadShare": 0.00012257677827145377,
+                "bendShare": 0.0446298216001147,
+                "francoCurvaturePerKm": 59.96526550251147,
+                "routeCoherence": 0.92383,
+                "timeCost": 1.2452784458755282
+              }
+            },
+            {
+              "index": 1,
+              "value": 30.7556,
+              "confidence": 0.6946,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0.0628441113586193,
+                "continuousDirtMeters": 3583.4482154461184,
+                "busyRoadShare": 0.08341580906689472,
+                "bendShare": 0.036536901323986015,
+                "francoCurvaturePerKm": 51.903972817038024,
+                "routeCoherence": 0.95016,
+                "timeCost": 1.2822688045161033
+              }
+            },
+            {
+              "index": 2,
+              "value": 22.7213,
+              "confidence": 0.6946,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0,
+                "continuousDirtMeters": 0,
+                "busyRoadShare": 0.4780807013384784,
+                "bendShare": 0.006098033671712105,
+                "francoCurvaturePerKm": 8.97177422466873,
+                "routeCoherence": 0.9682499999999999,
+                "timeCost": 1
+              }
+            }
+          ]
+        }
+      },
+      "httpCalls": 0,
+      "totalCachedResponses": 523
+    },
+    "after": {
+      "sha": "4f6544b4cb783286a65814fbffe23edfd632f86a",
+      "arm": "after",
+      "key": "jim-thorpe-120-dirt-preferred",
+      "request": {
+        "requestId": "dirt-loop:jim-thorpe-120-dirt-preferred",
+        "origin": {
+          "lat": 40.8676,
+          "lon": -75.7327
+        },
+        "destination": {
+          "lat": 40.8676,
+          "lon": -75.7327
+        },
+        "stops": [],
+        "shaping": [],
+        "avoidPolygons": [],
+        "profile": "motorcycle_adventure",
+        "options": {
+          "vehicle": "motorcycle",
+          "includeAlternatives": true,
+          "avoidHighways": false,
+          "tollPolicy": "avoid",
+          "surfacePreference": "dirt-preferred",
+          "roadCharacter": "balanced",
+          "traffic": "protect-ride",
+          "bike": {
+            "category": "adventure",
+            "maintainedGravel": "allow",
+            "roughTracks": "avoid"
+          }
+        },
+        "discovery": {
+          "targetMinutes": 120,
+          "toleranceMinutes": 18
+        }
+      },
+      "env": {
+        "OGV_ATLAS_GENERATORS": "off",
+        "OGV_DIRT_LOOP_GENERATORS": "on",
+        "OGV_ATLAS_CALLS": "4",
+        "OGV_FUN_GENERATORS": "shadow",
+        "OGV_RIDE_FORMULA": "shadow",
+        "OGV_GRAVEL_ATLAS_PATH": "/var/lib/opengravel/gravel-atlas-v3.sqlite",
+        "OGV_TRAFFIC_LIVE_AVOID": "off",
+        "OGV_ROAD_AUTHORITY": "off",
+        "OGV_JEV_FUN_JUDGE": "off"
+      },
+      "responseStatus": 200,
+      "picked": {
+        "id": "route_aab8f12b-5af3-4ecf-9754-b9666619fdbd",
+        "profile": "motorcycle_adventure",
+        "minutes": 129.53083333333333,
+        "km": 74.217076,
+        "dirtPct": 42.633437279944445,
+        "dirtKm": 31.641269535771922,
+        "dirtValueKm": 41.046750818456964
+      },
+      "pool": [
+        {
+          "id": "route_aab8f12b-5af3-4ecf-9754-b9666619fdbd",
+          "profile": "motorcycle_adventure",
+          "minutes": 129.53083333333333,
+          "km": 74.217076,
+          "dirtPct": 42.633437279944445,
+          "dirtKm": 31.641269535771922,
+          "dirtValueKm": 41.046750818456964
+        },
+        {
+          "id": "route_4468d4cb-df49-4884-a171-3181868131a0",
+          "profile": "motorcycle_fastest",
+          "minutes": 111.47593333333333,
+          "km": 93.948451,
+          "dirtPct": 0.13380103603367385,
+          "dirtKm": 0.1257035400998084,
+          "dirtValueKm": 0.1257035400998084
+        },
+        {
+          "id": "route_5cbcf1cc-f77c-49d6-8391-51b86ec67b73",
+          "profile": "motorcycle_fastest",
+          "minutes": 134.90961666666666,
+          "km": 104.11142,
+          "dirtPct": 6.284411135861917,
+          "dirtKm": 6.54280702370491,
+          "dirtValueKm": 8.334531131427976
+        }
+      ],
+      "seen": [
+        {
+          "profile": "motorcycle_fastest",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 111.47593333333333,
+              "km": 93.948451,
+              "dirtPct": 0.13380103603367385,
+              "dirtKm": 0.1257035400998084,
+              "dirtValueKm": 0.1257035400998084
+            },
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 105.21164999999999,
+              "km": 108.482096,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_fastest",
+              "minutes": 134.90961666666666,
+              "km": 104.11142,
+              "dirtPct": 6.284411135861917,
+              "dirtKm": 6.54280702370491,
+              "dirtValueKm": 8.334531131427976
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 132.57165,
+              "km": 103.012296,
+              "dirtPct": 2.9398226356025408,
+              "dirtKm": 3.028385380091847,
+              "dirtValueKm": 4.3458979598007
+            },
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 153.65175,
+              "km": 137.07353899999998,
+              "dirtPct": 2.489295709301178,
+              "dirtKm": 3.412168558429123,
+              "dirtValueKm": 4.537789548969338
+            },
+            {
+              "profile": "motorcycle_scenic",
+              "minutes": 131.0178,
+              "km": 95.195009,
+              "dirtPct": 9.5134066469725,
+              "dirtKm": 9.056244265682913,
+              "dirtValueKm": 12.168513763646983
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 126.03763333333333,
+              "km": 118.928601,
+              "dirtPct": 0.3904401288282205,
+              "dirtKm": 0.46434456807501767,
+              "dirtValueKm": 0.391831727440259
+            },
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 132.51291666666665,
+              "km": 101.51517299999999,
+              "dirtPct": 1.0256229104399457,
+              "dirtKm": 1.0411678605373966,
+              "dirtValueKm": 1.0974072227310774
+            },
+            {
+              "profile": "motorcycle_twisty",
+              "minutes": 132.29305,
+              "km": 85.613006,
+              "dirtPct": 15.049002619030372,
+              "dirtKm": 12.883859563029025,
+              "dirtValueKm": 15.921532491606017
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "discovery": {
+            "targetMinutes": 120,
+            "toleranceMinutes": 18
+          },
+          "candidates": [
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 130.43985,
+              "km": 121.335374,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 118.3452,
+              "km": 116.66762200000001,
+              "dirtPct": 0,
+              "dirtKm": 0,
+              "dirtValueKm": 0
+            },
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 133.13193333333334,
+              "km": 85.164392,
+              "dirtPct": 15.33521280514207,
+              "dirtKm": 13.060105170042494,
+              "dirtValueKm": 16.009655295112754
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "roadSpans": [
+            "atlas:ga3-d-11937709-11937709-1-173384",
+            "atlas:ga3-d-11950440-11950440-1-178710",
+            "atlas:ga3-d-15067744-49852077-2-277175",
+            "atlas:ga3-d-15069779-176164075-3-277726",
+            "atlas:ga3-d-15069629-15069629-1-277686"
+          ],
+          "candidates": [
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 187.4317,
+              "km": 109.37988,
+              "dirtPct": 41.031033079507964,
+              "dirtKm": 44.879624138094776,
+              "dirtValueKm": 51.82886552165678
+            }
+          ]
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "roadSpans": [
+            "atlas:ga3-d-15068099-1049791144-3-277290",
+            "atlas:ga3-d-15067744-49852077-2-277175",
+            "atlas:ga3-d-15069779-176164075-3-277726"
+          ],
+          "candidates": [
+            {
+              "profile": "motorcycle_adventure",
+              "minutes": 129.53083333333333,
+              "km": 74.217076,
+              "dirtPct": 42.633437279944445,
+              "dirtKm": 31.641269535771922,
+              "dirtValueKm": 41.046750818456964
+            }
+          ]
+        }
+      ],
+      "diagnostics": {
+        "optionalProvidersUnavailable": [],
+        "riderModes": {
+          "calls": 2,
+          "trials": [
+            {
+              "factor": 1,
+              "unpavedShare": 0.0013380103603367385,
+              "busyShare": 0.36128168060977056,
+              "dirtKm": 0.1257035400998084,
+              "minutes": 111.47593333333333
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0,
+              "busyShare": 0.47808070133847896,
+              "dirtKm": 0,
+              "minutes": 105.21164999999999
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.06284411135861917,
+              "busyShare": 0.08217548037648646,
+              "dirtKm": 8.334531131427976,
+              "minutes": 134.90961666666666
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.029398226356025407,
+              "busyShare": 0.0013354511714129603,
+              "dirtKm": 4.3458979598007,
+              "minutes": 132.57165
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.024892957093011783,
+              "busyShare": 0.04108153817655379,
+              "dirtKm": 4.537789548969338,
+              "minutes": 153.65175
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.095134066469725,
+              "busyShare": 0.00012257677827145382,
+              "dirtKm": 12.168513763646983,
+              "minutes": 131.0178
+            },
+            {
+              "factor": 1,
+              "unpavedShare": 0.42633437279944447,
+              "busyShare": 0.00031444646256433576,
+              "dirtKm": 41.046750818456964,
+              "minutes": 129.53083333333333
+            }
+          ]
+        },
+        "rideFormula": {
+          "mode": "shadow",
+          "version": "ride-formula-v1",
+          "pickIndex": 0,
+          "rows": [
+            {
+              "index": 0,
+              "value": 51.7103,
+              "confidence": 0.8125,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0.4263343727994444,
+                "continuousDirtMeters": 18810.96256537012,
+                "busyRoadShare": 0.0003144464625643358,
+                "bendShare": 0.08961471664485657,
+                "francoCurvaturePerKm": 125.04840847879234,
+                "routeCoherence": 0.48562999999999995,
+                "timeCost": 1.1619623129416874
+              }
+            },
+            {
+              "index": 1,
+              "value": 22.2834,
+              "confidence": 0.6946,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0.0013380103603367402,
+                "continuousDirtMeters": 125.70354009980838,
+                "busyRoadShare": 0.3617222032028455,
+                "bendShare": 0.015685480875959747,
+                "francoCurvaturePerKm": 21.325908637496884,
+                "routeCoherence": 0.7646999999999999,
+                "timeCost": 1
+              }
+            },
+            {
+              "index": 2,
+              "value": 35.3146,
+              "confidence": 0.7602,
+              "eligible": true,
+              "variables": {
+                "unpavedShare": 0.0628441113586193,
+                "continuousDirtMeters": 3583.4482154461184,
+                "busyRoadShare": 0.08341580906689472,
+                "bendShare": 0.036536901323986015,
+                "francoCurvaturePerKm": 51.903972817038024,
+                "routeCoherence": 0.95016,
+                "timeCost": 1.2102129368431693
+              }
+            }
+          ]
+        },
+        "atlas": {
+          "available": true,
+          "considered": 55,
+          "calls": 2,
+          "probes": [
+            {
+              "corridors": [
+                "way/15068099",
+                "way/1049791143",
+                "way/1049791144",
+                "way/15067744",
+                "way/49852077",
+                "way/15069779",
+                "way/176164071",
+                "way/176164075"
+              ],
+              "status": "new",
+              "note": "ok",
+              "adherence": 1,
+              "minutes": 129.53083333333333,
+              "unpavedShare": 0.426
+            }
+          ]
+        }
+      },
+      "httpCalls": 0,
+      "totalCachedResponses": 523
+    }
+  },
+  "atlasInventory": [
+    {
+      "name": "Jim Thorpe",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 135.0,
+        "generatorAllowedKm": 83.2
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 308.4,
+        "generatorAllowedKm": 202.8
+      }
+    },
+    {
+      "name": "Pine Grove",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 194.0,
+        "generatorAllowedKm": 95.8
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 349.0,
+        "generatorAllowedKm": 221.5
+      }
+    },
+    {
+      "name": "Lock Haven",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 689.5,
+        "generatorAllowedKm": 463.9
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 1511.2,
+        "generatorAllowedKm": 1091.4
+      }
+    },
+    {
+      "name": "Renovo",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 739.4,
+        "generatorAllowedKm": 555.0
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 1546.5,
+        "generatorAllowedKm": 1201.0
+      }
+    },
+    {
+      "name": "Kempton",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 107.3,
+        "generatorAllowedKm": 79.0
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 195.1,
+        "generatorAllowedKm": 120.1
+      }
+    },
+    {
+      "name": "Wellsboro",
+      "120": {
+        "radiusKm": 33.12,
+        "legalKm": 1017.1,
+        "generatorAllowedKm": 875.0
+      },
+      "180": {
+        "radiusKm": 49.67999999999999,
+        "legalKm": 1715.1,
+        "generatorAllowedKm": 1455.1
+      }
+    }
+  ],
+  "treatmentEnvironment": {
+    "OGV_ATLAS_GENERATORS": "off",
+    "OGV_DIRT_LOOP_GENERATORS": "on",
+    "OGV_ATLAS_CALLS": "4",
+    "OGV_FUN_GENERATORS": "shadow",
+    "OGV_RIDE_FORMULA": "shadow",
+    "OGV_GRAVEL_ATLAS_PATH": "/var/lib/opengravel/gravel-atlas-v3.sqlite",
+    "OGV_TRAFFIC_LIVE_AVOID": "off",
+    "OGV_ROAD_AUTHORITY": "off",
+    "OGV_JEV_FUN_JUDGE": "off"
+  }
+}

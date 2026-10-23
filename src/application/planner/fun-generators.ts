@@ -114,6 +114,8 @@ export type FunProviderCall = (request: ProviderRouteRequest) => Promise<Provide
 
 /** What one executed probe produced before verification. */
 export interface FunProbeExecution {
+  /** Actual sources when an adaptive probe changes its proposed sequence. */
+  readonly sourceIds?: readonly string[];
   readonly candidate: ProviderCandidate | null;
   /** Share of the intended corridor(s) the route actually rode, when measurable. */
   readonly adherence: number | null;
@@ -437,7 +439,7 @@ export async function runFunGenerators(input: RunFunGeneratorsInput): Promise<Fu
       const base = {
         probeId: pick.id,
         generator: pick.generator,
-        sourceIds: pick.sourceIds,
+        sourceIds: execution.sourceIds ?? pick.sourceIds,
         providerCalls: probeCalls,
         adherence: execution.adherence,
         note: execution.note,
@@ -481,7 +483,7 @@ export async function runFunGenerators(input: RunFunGeneratorsInput): Promise<Fu
       pool.push({
         probeId: pick.id,
         generator: pick.generator,
-        sourceIds: pick.sourceIds,
+        sourceIds: base.sourceIds,
         adherence: execution.adherence,
         candidate: execution.candidate,
         measurement: verdict.measurement,

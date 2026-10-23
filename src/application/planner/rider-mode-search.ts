@@ -1,3 +1,4 @@
+import { loopDirtTarget } from "./atlas-dirt-loops";
 import type { ProviderCandidate, ProviderRoadRun, ProviderRouteRequest, RouteCandidateProvider } from "./route-provider";
 
 const UNPAVED = new Set(["unpaved", "gravel", "fine_gravel", "compacted", "dirt", "ground", "grass", "sand"]);
@@ -105,7 +106,7 @@ export async function searchRiderEnvelope(input: {
   readonly signal: AbortSignal;
 }): Promise<{ candidate: ProviderCandidate | null; calls: number; trials: readonly RiderModeTrial[] }> {
   if (input.signal.aborted) throw input.signal.reason;
-  const target = input.request.options.targetUnpavedShare ?? (input.request.options.surfacePreference === "dirt-preferred" ? 0.5 : 0);
+  const target = loopDirtTarget(input.request) || (input.request.options.targetUnpavedShare ?? (input.request.options.surfacePreference === "dirt-preferred" ? 0.5 : 0));
   const avoidBusy = input.request.options.traffic === "protect-ride" && input.request.options.roadCharacter !== "efficient";
   const trials: RiderModeTrial[] = [];
   const measured: { candidate: ProviderCandidate; factor: number; unpavedShare: number; busyShare: number | null; dirtValueKm: number; longestDirtMeters: number | null }[] = [];
@@ -122,8 +123,22 @@ export async function searchRiderEnvelope(input: {
     // No router calls and no minutes trade-off: the rider set the time.
     const fits = measured.filter(entry => Math.abs(entry.candidate.durationSeconds / 60 - discovery.targetMinutes) <= discovery.toleranceMinutes);
     const leader = measured.find(entry => entry.candidate === input.incumbent) ?? measured[0];
-    const dirtiest = fits.reduce<(typeof measured)[number] | undefined>((best, entry) => best === undefined || entry.dirtValueKm > best.dirtValueKm ? entry : best, undefined);
-    const chosen = dirtiest !== undefined && leader !== undefined && dirtiest.dirtValueKm - leader.dirtValueKm >= MIN_DIRT_GAIN_KM ? dirtiest : null;
+    const mixed = input.request.options.surfacePreference === "mixed";
+    const referenceKm = (leader?.candidate.roadSummary?.totalMeters ?? 0) / 1000;
+    // A fixed reference distance prevents a longer paved loop from buying
+    // additional Mixed value once its target is met. Dirt OK still buys km.
+    const value = (entry: (typeof measured)[number]): number => mixed
+      ? Math.min(target, entry.unpavedShare) * referenceKm : entry.dirtValueKm;
+    const dirtiest = fits.reduce<(typeof measured)[number] | undefined>((best, entry) => {
+      if (best === undefined || value(entry) > value(best)) return entry;
+      if (value(entry) < value(best)) return best;
+      if (mixed && entry.unpavedShare !== best.unpavedShare) return entry.unpavedShare < best.unpavedShare ? entry : best;
+      return entry.dirtValueKm > best.dirtValueKm ? entry : best;
+    }, undefined);
+    const targetFitImproved = mixed && dirtiest !== undefined && leader !== undefined &&
+      dirtiest.unpavedShare >= target && leader.unpavedShare - dirtiest.unpavedShare >= 0.03;
+    const chosen = dirtiest !== undefined && leader !== undefined &&
+      (value(dirtiest) - value(leader) >= MIN_DIRT_GAIN_KM || targetFitImproved) ? dirtiest : null;
     return { candidate: chosen === null ? null : { ...chosen.candidate, providerMetadata: { ...chosen.candidate.providerMetadata, riderModeFactor: chosen.factor, riderModeTrials: JSON.stringify(trials) } }, calls: 0, trials };
   }
   if (measured.length === 0 || (target === 0 && (!avoidBusy || measured.every(entry => entry.busyShare === null))) || input.request.sketch !== undefined || input.request.discovery !== undefined) {
