@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import type { ReturnPlanResult } from "@/application/free-ride/return-plan";
 import type { GuidedReroutePlanner } from "@/application/ride-session/guided-reroute";
+import type { RideNavigationEngine, RideNavigationEngineState } from "@/application/ride-session/navigation-engine";
+import type { RideSessionState } from "@/domain/ride-session/types";
+import { UI_TELEMETRY_INTENT_EVENT } from "@/ui/telemetry/emit-telemetry";
 import type { LiveSuggestionResult } from "@/application/free-ride/live-suggestions";
 import type { RideFocusPointerPort, RideFocusPointerRead } from "@/application/persistence/ride-focus-pointer";
 import { createRideSessionRepository } from "@/infrastructure/storage/ride-session-repository";
@@ -35,11 +38,41 @@ function environment(): RideFocusEnvironmentPort {
   };
 }
 
+/** A navigation engine double that records the lifecycle the store drives. */
+function engineDouble(): {
+  readonly engine: RideNavigationEngine;
+  readonly start: ReturnType<typeof vi.fn>;
+  readonly syncLifecycle: ReturnType<typeof vi.fn>;
+  readonly stop: ReturnType<typeof vi.fn>;
+} {
+  const start = vi.fn(async () => true);
+  const syncLifecycle = vi.fn(async () => undefined);
+  const stop = vi.fn(async () => undefined);
+  return {
+    start,
+    syncLifecycle,
+    stop,
+    engine: {
+      snapshot: () => ({ status: "active", message: null } as RideNavigationEngineState),
+      start,
+      syncLifecycle,
+      stop,
+      flush: async () => undefined,
+    },
+  };
+}
+
 async function makeRide(input: {
   readonly suggestions: "on" | "off";
   readonly evaluateLiveSuggestion?: () => Promise<LiveSuggestionResult>;
   readonly readSavedHome?: () => typeof SAVED_HOME | null;
   readonly readRouteLine?: (ref: GeometryRef) => Promise<readonly { readonly lon: number; readonly lat: number }[] | null>;
+  readonly createNavigationEngine?: (
+    state: RideSessionState,
+    routeLine: readonly { readonly lon: number; readonly lat: number }[],
+  ) => RideNavigationEngine;
+  /** A switch a test flips to make every journal append fail (a full device). */
+  readonly failingJournal?: { failed: boolean };
   readonly returnPlanner?: {
     plan: (request: {
       readonly navigation: import("@/domain/ride-session/navigation").SessionNavigationState;
@@ -58,8 +91,20 @@ async function makeRide(input: {
   databaseSequence += 1;
   const database = new VNextDatabase(`ogv-free-ride-store-${databaseSequence}`);
   let tick: (() => void) | null = null;
+  const repository = createRideSessionRepository({ database });
+  const failingJournal = input.failingJournal;
   const controller = createRideSessionController({
-    repository: createRideSessionRepository({ database }),
+    repository: failingJournal === undefined
+      ? repository
+      : {
+          appendEvents: async (sessionId, entries) => failingJournal.failed
+            ? { ok: false, reason: "write-failed" as const }
+            : repository.appendEvents(sessionId, entries),
+          checkpoint: (checkpoint) => repository.checkpoint(checkpoint),
+          loadSession: (sessionId) => repository.loadSession(sessionId),
+          listSessions: () => repository.listSessions(),
+          deleteSession: (sessionId) => repository.deleteSession(sessionId),
+        },
     now: () => new Date(clock).toISOString(),
   });
   let clock = BASE + 5_000;
@@ -102,6 +147,7 @@ async function makeRide(input: {
     ...(input.readSavedHome === undefined ? {} : { readSavedHome: input.readSavedHome }),
     ...(input.returnPlanner === undefined ? {} : { returnPlanner: input.returnPlanner }),
     ...(input.reroutePlanner === undefined ? {} : { reroutePlanner: input.reroutePlanner }),
+    ...(input.createNavigationEngine === undefined ? {} : { createNavigationEngine: input.createNavigationEngine }),
     ...(input.announceOpportunity === undefined ? {} : { announceOpportunity: input.announceOpportunity }),
     ...(input.feelOpportunity === undefined ? {} : { feelOpportunity: input.feelOpportunity }),
     ...(input.rideOffers === undefined ? {} : { rideOffers: input.rideOffers }),
@@ -285,6 +331,70 @@ describe("Ride Focus Free Ride actions", () => {
     expect(ride.store.getState().follow).toBe(true);
     expect(ride.store.getState().cameraToken).toBeGreaterThan(cameraTokenBeforeReturn);
     expect(ride.store.getState().routeLine).toEqual(LINE);
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("keeps the preview line when a taken suggestion's geometry cannot be read again", async () => {
+    const suggestion = {
+      id: "ahead-road",
+      label: "Oak Hollow Road",
+      entry: { lon: -77.19, lat: 40.11 },
+      distanceToDecisionMeters: 600,
+      distanceMeters: 1_200,
+      route: { planningGeneration: 9, routeId: asRouteCandidateId("route_suggestion_late") },
+      routeGeometryRef: "geo_suggestion_late" as GeometryRef,
+      durationSeconds: 300,
+      headingDeltaDegrees: 15,
+      requiresUTurn: false,
+    };
+    let lineReadable = true;
+    const ride = await makeRide({
+      suggestions: "on",
+      evaluateLiveSuggestion: async () => ({ status: "suggestion", suggestion }),
+      readRouteLine: async () => (lineReadable ? LINE : null),
+    });
+    await vi.waitFor(() => expect(ride.store.getState().liveSuggestion).toEqual(suggestion));
+    expect(ride.store.getState().suggestionPreviewLine).toEqual(LINE);
+
+    // A second geometry read can fail (storage pressure) though the line the
+    // card drew is already in hand. Binding without it leaves nothing to follow.
+    lineReadable = false;
+    ride.advance();
+    await ride.store.getState().acceptLiveSuggestion();
+
+    expect(ride.controller.snapshot()).toMatchObject({
+      activity: "guided",
+      plan: { route: suggestion.route },
+    });
+    expect(ride.store.getState()).toMatchObject({ routeLine: LINE, routeLineAvailable: true });
+    expect(ride.store.getState().lastError).toBeNull();
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("refuses a suggestion that has no line to follow", async () => {
+    const ride = await makeRide({ suggestions: "on" });
+    ride.store.setState({
+      liveSuggestion: {
+        id: "no-line",
+        label: "Unknown road",
+        entry: { lon: -77.19, lat: 40.11 },
+        distanceToDecisionMeters: 600,
+        distanceMeters: 1_200,
+        route: { planningGeneration: 9, routeId: asRouteCandidateId("route_no_line") },
+        headingDeltaDegrees: 15,
+        requiresUTurn: false,
+      },
+      suggestionPreviewLine: [],
+    });
+
+    await ride.store.getState().acceptLiveSuggestion();
+
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "free", plan: { route: null } });
+    expect(ride.store.getState().freeRideError).toBe("That road's line could not be loaded. Keep riding.");
 
     ride.store.getState().stop();
     ride.database.close();
@@ -736,6 +846,91 @@ describe("Free Ride ride offers (#14)", () => {
     ride.database.close();
   });
 
+  it("builds the guided navigation engine only after the offer's line is bound", async () => {
+    const plan = vi.fn(async () => planned("start-engine", 45));
+    const created: {
+      readonly state: RideSessionState;
+      readonly routeLine: readonly { readonly lon: number; readonly lat: number }[];
+    }[] = [];
+    const engines: ReturnType<typeof engineDouble>[] = [];
+    const ride = await makeRide({
+      suggestions: "on",
+      rideOffers: true,
+      returnPlanner: { plan },
+      createNavigationEngine: (state, routeLine) => {
+        created.push({ state, routeLine });
+        const double = engineDouble();
+        engines.push(double);
+        return double.engine;
+      },
+    });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:45"));
+
+    await ride.store.getState().acceptRideOffer();
+
+    // The guided engine is created from the accepted line, not the empty Free
+    // Ride line — an empty one fails its own binding check and never starts.
+    expect(created.at(-1)?.state).toMatchObject({
+      activity: "guided",
+      plan: { route: { routeId: "route_offer_start-engine" } },
+    });
+    expect(created.at(-1)?.routeLine).toEqual(LINE);
+    expect(engines.at(-1)?.start).toHaveBeenCalledOnce();
+    expect(ride.store.getState().lastError).toBeNull();
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("takes a Home offer without planning it a second time", async () => {
+    const plan = vi.fn(async (request: { readonly mode: string; readonly loopMinutes?: number }) => {
+      if (request.mode === "head-home") {
+        return {
+          status: "planned" as const,
+          route: { planningGeneration: 77, routeId: asRouteCandidateId("route_offer_home") },
+          routeGeometryRef: "geo_offer_home" as GeometryRef,
+          durationSeconds: 1_800,
+          distanceMeters: 24_000,
+        };
+      }
+      return planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30);
+    });
+    const ride = await makeRide({
+      suggestions: "on",
+      rideOffers: true,
+      readSavedHome: () => SAVED_HOME,
+      returnPlanner: { plan },
+    });
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:45"));
+    ride.store.getState().skipRideOffer();
+    ride.advance(180_000);
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("loop:90"));
+    ride.store.getState().skipRideOffer();
+    ride.advance(180_000);
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer?.id).toBe("home"));
+    const plansBeforeAccept = plan.mock.calls.length;
+
+    ride.advance();
+    await ride.store.getState().acceptRideOffer();
+
+    // The plan the card was summarized from is the one bound; Home is not
+    // re-planned behind the rider's back.
+    expect(plan).toHaveBeenCalledTimes(plansBeforeAccept);
+    expect(ride.controller.snapshot()).toMatchObject({
+      activity: "guided",
+      plan: { route: { routeId: "route_offer_home" } },
+    });
+    expect(ride.writes.at(-1)).toMatchObject({ routeGeometryRef: "geo_offer_home" });
+    expect(ride.store.getState().freeRideStatusMessage).toBe("Riding to your saved Home. Free Ride picks up there.");
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
   it("swipe left never brings that offer back, and a moving rider waits for the next", async () => {
     const plan = vi.fn(async (request: { readonly loopMinutes?: number }) =>
       planned(`loop${request.loopMinutes ?? 0}`, request.loopMinutes ?? 30));
@@ -907,6 +1102,115 @@ describe("Free Ride ride offers (#14)", () => {
     await Promise.resolve();
     expect(plan).not.toHaveBeenCalled();
     expect(ride.store.getState().rideOffersAvailable).toBe(false);
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+});
+
+describe("Ride Focus navigation engine binding", () => {
+  it("waits for a guided ride's line and rebuilds the engine when it arrives", async () => {
+    let lineReadable = false;
+    const created: {
+      readonly state: RideSessionState;
+      readonly routeLine: readonly { readonly lon: number; readonly lat: number }[];
+    }[] = [];
+    const engines: ReturnType<typeof engineDouble>[] = [];
+    const planHome = vi.fn(async () => ({
+      status: "planned" as const,
+      route: { planningGeneration: 31, routeId: asRouteCandidateId("route_home_late") },
+      routeGeometryRef: "geo_home_late" as GeometryRef,
+      durationSeconds: 1_200,
+      distanceMeters: 9_000,
+    }));
+    const ride = await makeRide({
+      suggestions: "off",
+      readSavedHome: () => SAVED_HOME,
+      returnPlanner: { plan: planHome },
+      readRouteLine: async () => (lineReadable ? LINE : null),
+      createNavigationEngine: (state, routeLine) => {
+        created.push({ state, routeLine });
+        const double = engineDouble();
+        engines.push(double);
+        return double.engine;
+      },
+    });
+
+    await ride.store.getState().headHome();
+
+    // A guided binding exists, but with no readable line there is nothing to
+    // guide by; a guided engine built on an empty line fails and freezes GPS.
+    expect(ride.controller.snapshot()?.activity).toBe("guided");
+    expect(created.filter((entry) => entry.state.activity === "guided")).toHaveLength(0);
+    expect(ride.store.getState().routeLineAvailable).toBe(false);
+    expect(ride.store.getState().lastError).toBeNull();
+
+    await ride.store.getState().pause();
+    expect(created.filter((entry) => entry.state.activity === "guided")).toHaveLength(0);
+
+    lineReadable = true;
+    await ride.store.getState().resume();
+
+    // The line is part of the engine's identity: the arrived line rebuilds it.
+    const guided = created.filter((entry) => entry.state.activity === "guided");
+    expect(guided).toHaveLength(1);
+    expect(guided[0]?.routeLine).toEqual(LINE);
+    expect(engines.at(-1)?.start).toHaveBeenCalledOnce();
+    expect(ride.store.getState().routeLineAvailable).toBe(true);
+    expect(ride.store.getState().lastError).toBeNull();
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+});
+
+describe("Ride Focus journal write failures", () => {
+  function collectTelemetryIntents(): { readonly intents: string[]; readonly stop: () => void } {
+    const intents: string[] = [];
+    const listener = (event: Event): void => {
+      intents.push((event as CustomEvent<{ readonly name: string }>).detail.name);
+    };
+    window.addEventListener(UI_TELEMETRY_INTENT_EVENT, listener);
+    return {
+      intents,
+      stop: () => window.removeEventListener(UI_TELEMETRY_INTENT_EVENT, listener),
+    };
+  }
+
+  it("surfaces a failed completion, keeps the pointer and does not report the ride saved", async () => {
+    const journal = { failed: false };
+    const ride = await makeRide({ suggestions: "off", failingJournal: journal });
+    const telemetry = collectTelemetryIntents();
+
+    journal.failed = true;
+    ride.advance();
+    await ride.store.getState().finish();
+
+    expect(ride.controller.snapshot()?.activity).toBe("completed");
+    expect(ride.store.getState().statusMessage).toBe(
+      "The ride was updated on this device but could not be saved. Free device storage, then retry.",
+    );
+    // Not durable, so the pointer stays: the ride must still be recoverable.
+    expect(ride.pointer.read().status).toBe("found");
+    expect(telemetry.intents).not.toContain("ride_completed");
+
+    telemetry.stop();
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("surfaces a failed pause instead of reporting nothing", async () => {
+    const journal = { failed: false };
+    const ride = await makeRide({ suggestions: "off", failingJournal: journal });
+
+    journal.failed = true;
+    await ride.store.getState().pause();
+
+    expect(ride.controller.snapshot()?.activity).toBe("paused");
+    expect(ride.store.getState().lastError).toBeNull();
+    expect(ride.store.getState().statusMessage).toBe(
+      "The ride was updated on this device but could not be saved. Free device storage, then retry.",
+    );
+
     ride.store.getState().stop();
     ride.database.close();
   });
