@@ -147,8 +147,9 @@ export async function readBrowserOfflineRuntime(
   const now = nowIso(options.now);
   const route = options.route;
   const worker = await serviceWorkerFact();
+  const controllerUrl = typeof navigator === "undefined" ? undefined : navigator.serviceWorker?.controller?.scriptURL;
   const appShell = await cachedUrl(
-    typeof location === "undefined" ? "/" : `${location.origin}/`,
+    controllerUrl ? new URL("./", controllerUrl).href : typeof location === "undefined" ? "/" : `${location.origin}/`,
     24 * 60 * 60 * 1000,
   );
   const routeGeometry = routeCache(route, now);

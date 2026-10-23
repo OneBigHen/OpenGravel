@@ -314,7 +314,7 @@ function combineCacheFacts(
 function shellState(facts: OfflineRuntimeFacts): OfflineCapabilityState {
   const shell = freshness(facts.caches.appShell, facts.now, "The app");
   if (facts.serviceWorker.state === "controlled" && shell.state === "available") return shell;
-  if (shell.state === "requires_network") {
+  if (facts.serviceWorker.state !== "controlled" || shell.state === "requires_network") {
     return { state: "requires_network", reason: "You'll need a connection to open OpenGravel again offline." };
   }
   return {

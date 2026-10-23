@@ -92,6 +92,14 @@ describe("offline capability matrix", () => {
     expect(matrix["plan.replan"].state).not.toBe("available");
     expect(matrix["explore.browse"].state).not.toBe("available");
   });
+
+  it.each(["absent", "registered", "unknown"] as const)("requires network to reopen with a cached shell but a %s worker", (state) => {
+    const matrix = buildCapabilityMatrix(facts({ serviceWorker: { state } }));
+
+    expect(matrix["plan.route"].state).toBe("requires_network");
+    expect(matrix["nav.guidance"].state).toBe("requires_network");
+    expect(matrix["explore.browse"].state).toBe("requires_network");
+  });
 });
 
 describe("corridor pack and route readiness", () => {

@@ -9,6 +9,8 @@ import { TelemetryClient } from "./TelemetryClient";
 import "./theme-glass.css";
 import "@/ui/planner/routing-method-comparison.css";
 import { NativeShell } from "./NativeShell";
+import { OfflineShell } from "./OfflineShell";
+import { assetBasePathFromEnv } from "./asset-base-path";
 import { OfflineNavGuard } from "@/ui/nav/OfflineNavGuard";
 import { SkipLink } from "@/ui/nav/SkipLink";
 import { APPEARANCE_BOOT_SCRIPT, THEME_COLOR } from "@/ui/appearance/appearance";
@@ -102,6 +104,7 @@ window.addEventListener("load",function(){var links=document.querySelectorAll('l
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const assetBasePath = assetBasePathFromEnv(process.env);
   return (
     <html lang="en" data-theme="night" suppressHydrationWarning>
       <head>
@@ -129,8 +132,9 @@ export default function RootLayout({
         /></Suspense>
         <SkipLink />
         <NativeShell />
+        <OfflineShell assetBasePath={assetBasePath} />
         {children}
-        <OfflineNavGuard />
+        <OfflineNavGuard assetBasePath={assetBasePath} />
       </body>
     </html>
   );
