@@ -131,7 +131,7 @@ describe("provider payloads", () => {
       { curvyRoadsNear: () => [], gravelCorridorsNear: old },
       {
         availability: () => ({ available: true, path: "x", schemaVersion: 3, corridorCount: 2 }),
-        corridorsNear: (_bounds, kind) => kind === "dirt" ? [corridor("d", "dirt", 0.4)] : [corridor("b", "backroad", 0.9)],
+        corridorsNear: (_bounds: unknown, kind: string) => kind === "dirt" ? [corridor("d", "dirt", 0.4)] : [corridor("b", "backroad", 0.9)],
       } as never,
     );
     const features = await provider.load(VIEW, ["gravel"], { fetch, env: {} });
