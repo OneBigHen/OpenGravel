@@ -123,15 +123,29 @@ export function createTomTomTrafficPreparationProvider(
           ? undefined
           : context.rideDurationMinutes * 60,
       });
+      const observation = {
+        ...(traffic.freshness.fetchedAt === null ? {} : { observedAt: traffic.freshness.fetchedAt }),
+        ...(traffic.freshness.validUntil === null ? {} : { validUntil: traffic.freshness.validUntil }),
+        freshnessLabel: traffic.freshness.status === "fresh" ? "Fresh" as const : "Stale" as const,
+      };
+      if (cost.closed) {
+        // A closure is a route fact worth a row of its own, not an unavailable
+        // provider and never a zero-delay all-clear.
+        lastResult = {
+          state: "ready",
+          reason: "A traffic source reports a closure on this route; check before you ride.",
+          provenance: traffic.provenance,
+          data: { display: cost.label, ...observation, roadClosure: true, delayBand: null },
+        };
+        return lastResult;
+      }
       lastResult = {
         state: cost.status === "known" ? "ready" : "unavailable",
         reason: cost.status === "known" ? "Traffic matched to this route." : "Traffic is unknown.",
         provenance: traffic.provenance,
         data: {
           display: cost.label,
-          ...(traffic.freshness.fetchedAt === null ? {} : { observedAt: traffic.freshness.fetchedAt }),
-          ...(traffic.freshness.validUntil === null ? {} : { validUntil: traffic.freshness.validUntil }),
-          freshnessLabel: traffic.freshness.status === "fresh" ? "Fresh" : "Stale",
+          ...observation,
           delayBand: cost.delayBand,
         },
       };

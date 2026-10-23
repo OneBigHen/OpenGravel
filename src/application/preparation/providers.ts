@@ -87,6 +87,8 @@ export interface TrafficData {
   readonly validUntil?: string;
   readonly freshnessLabel?: "Fresh" | "Stale";
   readonly delayBand?: { readonly minMinutes: number; readonly maxMinutes: number } | null;
+  /** True when a matched segment is reported shut; the delay band is then absent. */
+  readonly roadClosure?: boolean;
 }
 
 export interface OfflineRouteData {
