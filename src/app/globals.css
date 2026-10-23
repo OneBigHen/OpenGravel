@@ -6922,6 +6922,13 @@ h3,
   gap: 8px;
 }
 
+.og-advisor__pending {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .og-advisor__working {
   display: flex;
   align-items: center;
@@ -6931,6 +6938,24 @@ h3,
   color: var(--og-slate-text);
   font-size: 14px;
   overflow-wrap: anywhere;
+}
+
+.og-advisor__working-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.og-advisor__cancel {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--og-slate-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .og-advisor__working .og-advisor__mark {

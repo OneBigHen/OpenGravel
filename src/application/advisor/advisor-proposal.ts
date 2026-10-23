@@ -95,6 +95,8 @@ export type AdvisorDraftResult =
       readonly errorClass: AdvisorErrorClass;
       readonly message: string;
       readonly recovery: AdvisorRecovery;
+      /** Seconds the server asked the surface to wait, when it knows. */
+      readonly retryAfterSeconds?: number;
     };
 
 export interface AdvisorProposalDependencies {

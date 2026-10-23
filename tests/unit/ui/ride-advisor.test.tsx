@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
@@ -72,10 +72,11 @@ function setup(
     readonly enabled?: boolean;
     readonly onApplied?: () => AdvisorAppliedNext;
     readonly places?: readonly PlaceMatch[];
+    readonly client?: AdvisorProposalClient;
   } = {},
 ) {
   const store = createRideDocumentStore({ document: createRideDocument() });
-  const client: AdvisorProposalClient = {
+  const client: AdvisorProposalClient = options.client ?? {
     request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
   };
   const port = places(options.places);
@@ -262,5 +263,65 @@ describe("ask about this ride", () => {
     fireEvent.submit(screen.getByTestId("advisor-ride-prompt").closest("form")!);
     await waitFor(() => expect(client.request).toHaveBeenCalledTimes(1));
     expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("add a coffee stop in Jim Thorpe");
+  });
+
+  it("lets the rider cancel an ask that came from the ride sheet", async () => {
+    let requested: AbortSignal | undefined;
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = {
+      request: (_request, signal) => {
+        requested = signal;
+        return new Promise(() => undefined);
+      },
+    };
+    render(<RideAdvisorProvider enabled store={store} client={client}><AdvisorRideAsk /></RideAdvisorProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Curvier" }));
+    const working = await screen.findByTestId("advisor-working");
+    expect(screen.getByTestId("advisor-ride-ask")).toContainElement(working);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByTestId("advisor-working")).toBeNull());
+    expect(requested?.aborted).toBe(true);
+  });
+});
+
+describe("waiting for the advisor", () => {
+  it("offers Cancel while the advisor is thinking, and cancelling returns to idle", async () => {
+    let requested: AbortSignal | undefined;
+    setup({
+      client: {
+        request: (_request, signal) => {
+          requested = signal;
+          return new Promise(() => undefined);
+        },
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const working = await screen.findByTestId("advisor-working");
+    expect(working).toHaveTextContent("Reading");
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveClass("og-advisor__cancel");
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(screen.queryByTestId("advisor-inline")).toBeNull());
+    expect(requested?.aborted).toBe(true);
+  });
+
+  it("says what it is still doing after a few seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      setup({ client: { request: () => new Promise(() => undefined) } });
+      const box = screen.getByTestId("finish-search");
+      fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+      fireEvent.keyDown(box, { key: "Enter" });
+      await act(async () => { await Promise.resolve(); });
+      expect(screen.getByTestId("advisor-working")).not.toHaveTextContent("checking places");
+      await act(async () => { vi.advanceTimersByTime(3_100); });
+      expect(screen.getByTestId("advisor-working")).toHaveTextContent("Still reading your ride and checking places");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -191,6 +191,18 @@ describe("advisor HTTP handler", () => {
     expect(second.status).toBe(429);
     expect(second.headers.get("retry-after")).toBe("60");
   });
+  it("stops waiting at its own deadline and answers with a timeout", async () => {
+    const transport: AdvisorTransport = {
+      send: () => new Promise(() => undefined),
+    };
+    const deps = { ...dependencies({ transport }), deadlineMs: 20 };
+    const response = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const body = await response.json() as { error?: { class?: string } };
+
+    expect(response.status).toBe(504);
+    expect(body.error?.class).toBe("timeout");
+  });
+
   it("stops calling the model once the daily budget is spent, for every client", async () => {
     const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
     const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };

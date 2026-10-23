@@ -295,6 +295,9 @@ function recoveryLabel(recovery: AdvisorRecovery): string | null {
  */
 export const ADVISOR_GLYPH = "\u2733\uFE0E";
 
+/** After this long a turn stops looking like a moment and says what it is doing. */
+export const ADVISOR_SLOW_HINT_MS = 3_000;
+
 /** The glyph the advisor answers under, everywhere it appears. */
 export function AdvisorMark() {
   return (
@@ -302,6 +305,21 @@ export function AdvisorMark() {
       {ADVISOR_GLYPH}
     </span>
   );
+}
+
+/**
+ * Says what the wait is for once a turn stops looking like a moment. Mounted
+ * only while the advisor is thinking, so its timer is the wait's own clock.
+ */
+function AdvisorSlowHint() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), ADVISOR_SLOW_HINT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  return slow ? (
+    <span className="og-advisor__working-detail">Still reading your ride and checking places…</span>
+  ) : null;
 }
 
 /**
@@ -349,12 +367,17 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         </ol>
       ) : null}
 
-
       {pending && !idle ? (
-        <p className="og-advisor__working" role="status" data-testid="advisor-working">
-          <AdvisorMark />
-          Reading “{advisor.prompt}”…
-        </p>
+        <div className="og-advisor__pending">
+          <p className="og-advisor__working" role="status" data-testid="advisor-working">
+            <AdvisorMark />
+            Reading “{advisor.prompt}”…
+            <AdvisorSlowHint />
+          </p>
+          <button type="button" className="og-advisor__cancel" data-testid="advisor-cancel" onClick={advisor.dismiss}>
+            Cancel
+          </button>
+        </div>
       ) : null}
 
       {proposal !== null && !idle ? (

@@ -11,6 +11,12 @@ import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import type { DailyCap, RateLimiter } from "@/server/rate-limit";
 
 export const MAX_ADVISOR_REQUEST_BYTES = 8 * 1024;
+/**
+ * One advisor turn's ceiling on the server, a little under the browser's own
+ * deadline so this honest class usually reaches the rider first. Without it a
+ * slow primary plus its fallback plus geocoding could hold the sheet for ~48 s.
+ */
+export const ADVISOR_DEADLINE_MS = 18_000;
 
 export interface AdvisorHandlerDependencies {
   readonly transport: AdvisorTransport | null;
@@ -18,6 +24,8 @@ export interface AdvisorHandlerDependencies {
   readonly limiter: RateLimiter;
   /** Process-wide daily budget so one crowd cannot exhaust the free-tier model quota for everyone. */
   readonly dailyCap?: DailyCap;
+  /** Overrides {@link ADVISOR_DEADLINE_MS}; deployments with a slower model may raise it. */
+  readonly deadlineMs?: number;
 }
 
 type BodyRead =
@@ -114,12 +122,28 @@ export async function handleAdvisorRequest(
   const capRetry = dependencies.dailyCap?.take() ?? null;
   if (capRetry !== null) return errorResponse("rate-limit", capRetry);
 
+  // The turn is bounded as a whole: the transport's timeout plus a fallback's
+  // timeout plus geocoding must not add up to a minute of "Reading …".
+  const controller = new AbortController();
+  const onClientAbort = (): void => controller.abort();
+  if (request.signal.aborted) controller.abort();
+  else request.signal.addEventListener("abort", onClientAbort, { once: true });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      resolve(null);
+    }, dependencies.deadlineMs ?? ADVISOR_DEADLINE_MS);
+  });
+
   try {
-    const result = await requestAdvisorDraft(
+    const turn = requestAdvisorDraft(
       advisorRequest,
       { transport, places: dependencies.places },
-      request.signal,
+      controller.signal,
     );
+    const result = await Promise.race([turn, deadline]);
+    if (result === null) return errorResponse("timeout");
     if (!result.ok) return errorResponse(result.errorClass);
     return Response.json(
       { draft: result.draft },
@@ -127,6 +151,10 @@ export async function handleAdvisorRequest(
     );
   } catch {
     if (request.signal.aborted) return new Response(null, { status: 499 });
+    if (controller.signal.aborted) return errorResponse("timeout");
     return errorResponse("unavailable");
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+    request.signal.removeEventListener("abort", onClientAbort);
   }
 }
