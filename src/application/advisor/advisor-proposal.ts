@@ -402,7 +402,7 @@ function parseModelOutput(text: string): {
   // curvy roads; the rider's word wins over the echoed current setting.
   const curvyWords = (rawUnmapped as string[]).filter((item) => CURVY_WORDS.test(item));
   const unmapped = rawUnmapped.length > curvyWords.length;
-  const notes = rootExtra || fieldsExtra || unmapped
+  const notes: string[] = rootExtra || fieldsExtra || unmapped
     ? ["I left out a detail that does not map to a supported ride setting yet."]
     : [];
 
@@ -468,16 +468,37 @@ function parseModelOutput(text: string): {
     !["unchanged", "now", "future"].includes(String(departureKind)) ||
     departureLocalDate === undefined || departureLocalTime === undefined
   ) return null;
-  const timeKind = rideTimeKind as AdvisorModelFields["rideTimeKind"];
-  if (
-    (timeKind === "budget" && rideTimeMinutes === null) ||
-    ((timeKind === "returnBy" || timeKind === "arriveBy") && rideTimeLocalTime === null) ||
-    (timeKind !== "budget" && rideTimeMinutes !== null) ||
-    (timeKind !== "returnBy" && timeKind !== "arriveBy" && (rideTimeDate !== null || rideTimeLocalTime !== null)) ||
-    ((stopPlace === null) !== (stopArrivalIntent === null)) ||
-    (departureKind === "future" && departureLocalTime === null) ||
-    (departureKind !== "future" && (departureLocalDate !== null || departureLocalTime !== null))
-  ) return null;
+  // A model often half-fills a pair (a "food" stop with no named place, minutes
+  // beside a return-by time). Repair the pair instead of discarding a reply the
+  // rider would otherwise see as an outage; anything dropped is said in a note.
+  const repairs: string[] = [];
+  let timeKind = rideTimeKind as AdvisorModelFields["rideTimeKind"];
+  if ((timeKind === "budget" && rideTimeMinutes === null) ||
+    ((timeKind === "returnBy" || timeKind === "arriveBy") && rideTimeLocalTime === null)) {
+    timeKind = "unchanged";
+    repairs.push("I could not tell the ride time; set it in the ride settings.");
+  }
+  const fixedMinutes = timeKind === "budget" ? rideTimeMinutes : null;
+  const keepsClock = timeKind === "returnBy" || timeKind === "arriveBy";
+  const fixedTimeDate = keepsClock ? rideTimeDate : null;
+  const fixedTimeLocal = keepsClock ? rideTimeLocalTime : null;
+  let fixedStopIntent = stopArrivalIntent;
+  if (stopPlace === null && stopArrivalIntent !== null) {
+    fixedStopIntent = null;
+    repairs.push(stopArrivalIntent === "food"
+      ? "Name a town for the food stop, or add it on the map."
+      : "Name a place for the stop, or add it on the map.");
+  } else if (stopPlace !== null && stopArrivalIntent === null) {
+    fixedStopIntent = "visit";
+  }
+  let fixedDepartureKind = departureKind as AdvisorModelFields["departureKind"];
+  if (fixedDepartureKind === "future" && departureLocalTime === null) {
+    fixedDepartureKind = "unchanged";
+    repairs.push("I could not tell when you leave; set the departure in the ride settings.");
+  }
+  const fixedDepartureDate = fixedDepartureKind === "future" ? departureLocalDate : null;
+  const fixedDepartureTime = fixedDepartureKind === "future" ? departureLocalTime : null;
+  notes.push(...repairs);
   if (rawOutcome !== "proposal") {
     return { outcome: rawOutcome, clarification, fields: NULL_FIELDS, notes };
   }
@@ -489,11 +510,11 @@ function parseModelOutput(text: string): {
       startPlace,
       finishPlace,
       stopPlace,
-      stopArrivalIntent,
+      stopArrivalIntent: fixedStopIntent,
       rideTimeKind: timeKind,
-      rideTimeMinutes,
-      rideTimeDate,
-      rideTimeLocalTime,
+      rideTimeMinutes: fixedMinutes,
+      rideTimeDate: fixedTimeDate,
+      rideTimeLocalTime: fixedTimeLocal,
       roadCharacter,
       noveltyPreference,
       surfacePreference,
@@ -501,9 +522,9 @@ function parseModelOutput(text: string): {
       avoidHighways,
       tollPolicy,
       trafficPreference,
-      departureKind: departureKind as AdvisorModelFields["departureKind"],
-      departureLocalDate,
-      departureLocalTime,
+      departureKind: fixedDepartureKind,
+      departureLocalDate: fixedDepartureDate,
+      departureLocalTime: fixedDepartureTime,
     },
     notes,
   };
