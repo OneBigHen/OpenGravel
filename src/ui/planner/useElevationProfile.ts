@@ -12,6 +12,11 @@ import type { Coordinate } from "@/domain/ride/types";
 
 export type ElevationProfileState =
   | { readonly status: "loading" }
+  /**
+   * Ready carries everything the chart reads: each sample's own distance along
+   * the ride, the surface-friendly coordinate, and `steepestGradeShare` — where
+   * the steepest sustained grade sits — so a surface never re-derives them.
+   */
   | { readonly status: "ready"; readonly profile: ElevationProfile }
   | { readonly status: "unavailable"; readonly reason: string };
 

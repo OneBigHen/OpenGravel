@@ -887,6 +887,7 @@ export function PlannerWorkspace({
               actions: rideStyle.actions,
               onRouteTraffic: setRouteTraffic,
             },
+            sheetExpanded: sheetDetent === "expanded",
           }}
           refine={{
             forceOpen:
