@@ -381,8 +381,22 @@ function applyTransition(
       );
     }
 
+    case "recording.started": {
+      if ((state.recordingId !== null && state.recordingId !== event.recordingId) || !isBrandedId(event.recordingId, "rec_")) {
+        return rejected("invalid-plan", "a recording requires an unused rec_ reference");
+      }
+      return applied(next(state, { recordingId: event.recordingId }, event.at));
+    }
+
     case "recording.discarded": {
-      if (state.recordingId === null) {
+      // A trace-specific retry must journal the removal even when a previous
+      // failed write already cleared the live reference. Never clear another trace.
+      if (event.recordingId !== undefined &&
+        (!isBrandedId(event.recordingId, "rec_") ||
+          (state.recordingId !== null && state.recordingId !== event.recordingId))) {
+        return rejected("no-recording-reference", "the session references a different recording");
+      }
+      if (state.recordingId === null && event.recordingId === undefined) {
         return rejected("no-recording-reference", "the session has no recording to discard");
       }
       return applied(next(state, { recordingId: null }, event.at));

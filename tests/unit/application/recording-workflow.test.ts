@@ -100,6 +100,7 @@ describe("ride recording workflow", () => {
 
     const started = await workflow.start(newRideId(), 1, INITIAL);
     expect(started.outcome).toBe("started");
+    expect(session.snapshot()).toMatchObject({ activity: "free", suggestions: "off" });
 
     const discarded = await workflow.discard(DISCARD_AT);
 

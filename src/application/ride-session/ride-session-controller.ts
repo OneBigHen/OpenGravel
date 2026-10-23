@@ -79,6 +79,7 @@ export const SESSION_BOUNDARY_EVENT_TYPES: readonly RideSessionEventType[] = [
   "session.resumed",
   "session.completed",
   "session.abandoned",
+  "recording.started",
   "recording.discarded",
   "suggestions.changed",
   "mode.changed",

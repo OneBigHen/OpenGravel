@@ -13,7 +13,7 @@ import {
   recordingPositionFromFix,
   type FreeRideTelemetryStoragePort,
 } from "@/application/ride-session/free-ride-telemetry";
-import { INITIAL_RECORDING_TELEMETRY_STATE, summarizeRecordingTelemetry } from "@/domain/recording/telemetry";
+import { createRecordingTelemetry, INITIAL_RECORDING_TELEMETRY_STATE, summarizeRecordingTelemetry } from "@/domain/recording/telemetry";
 import { asRecordingId } from "@/domain/recording/ids";
 import type { PositionFix, RideSessionState } from "@/domain/ride-session/types";
 import {
@@ -237,5 +237,25 @@ describe("a store that fails", () => {
     expect(port.read("ses_free")).toBeNull();
     expect(port.write("ses_free", INITIAL_RECORDING_TELEMETRY_STATE)).toBe(false);
     expect(() => port.clear()).not.toThrow();
+  });
+});
+
+
+describe("recording opt-out telemetry handoff", () => {
+  it("keeps recording aggregates and prior unrecorded riding across opt-out and reload", () => {
+    const storage = createLocalStorageFreeRideTelemetry(memoryStorage());
+    const { telemetry, feed } = service(storage);
+    feed(fixes(10, 30 * MPH));
+    const before = telemetry.snapshot(session())!;
+    const recording = createRecordingTelemetry();
+    for (const fix of fixes(10, 30 * MPH, 20, 300)) recording.add(recordingPositionFromFix(fix, 0));
+    const recorded = recording.snapshot();
+    telemetry.adoptRecording(session().sessionId, recording.state());
+    const total = telemetry.snapshot(session())!;
+    expect(total.acceptedDistanceMeters).toBeCloseTo(before.acceptedDistanceMeters + recorded.acceptedDistanceMeters);
+    expect(total.movingMs).toBe(before.movingMs + recorded.movingMs);
+    const restored = createFreeRideTelemetry({ storage }).snapshot(session())!;
+    expect(restored.acceptedDistanceMeters).toBe(total.acceptedDistanceMeters);
+    expect(restored.movingMs).toBe(total.movingMs);
   });
 });

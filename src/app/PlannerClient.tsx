@@ -28,6 +28,8 @@ import {
   type RideHandoffRequest,
   type RideStartOutcome,
 } from "@/application/ride-session/ride-focus-handoff";
+import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
+import { createRecordingRepository } from "@/infrastructure/storage/recording-repository";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import { markRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -313,6 +315,12 @@ export function PlannerClient({
         rides: repository,
         writerToken: globalThis.crypto.randomUUID(),
         now: new Date().toISOString(),
+        recording: createRideRecordingWorkflow({
+          session: rideSessions.controller,
+          pointer: rideSessions.pointer,
+          recordings: createRecordingRepository(),
+          library: libraryService,
+        }),
       });
       if (outcome.outcome !== "rejected") {
         blurFocusedField();
@@ -322,7 +330,7 @@ export function PlannerClient({
       }
       return outcome;
     },
-    [repository, rideSessions, router],
+    [repository, rideSessions, router, libraryService],
   );
 
   return (

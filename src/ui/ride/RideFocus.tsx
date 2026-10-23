@@ -240,6 +240,10 @@ export function RideFocus({
   const voiceMuted = useSyncExternalStore(subscribeVoiceMuted, isVoiceMuted, () => false);
   const farFromStart = useStore(store, (state) => state.farFromStart);
   const stopConfirm = useStore(store, (state) => state.stopConfirm);
+  const recordingToggleBusy = useStore(store, (state) => state.recordingToggleBusy);
+  const recordingCleanupPending = useStore(store, (state) => state.recordingCleanupPending);
+  const canSaveFreeRideSummary = useStore(store, (state) => state.canSaveFreeRideSummary);
+  const savedSummaryRideId = useStore(store, (state) => state.savedSummaryRideId);
   const rerouteAvailable = useStore(store, (state) => state.rerouteAvailable);
   const rerouteBusy = useStore(store, (state) => state.rerouteBusy);
   const rerouteMessage = useStore(store, (state) => state.rerouteMessage);
@@ -973,8 +977,8 @@ export function RideFocus({
                 summary and the two ways onward stay outside it, so a change to
                 the card never re-reads the whole screen to a rider. */}
             <div className="og-ride__terminal-head" role="status">
-              <h2 className="og-ride__terminal-title">{terminal.title}</h2>
-              <p className="og-ride__terminal-text">{terminal.text}</p>
+              <h2 className="og-ride__terminal-title">{savedSummaryRideId !== null ? "Free Ride summary saved" : terminal.title}</h2>
+              <p className="og-ride__terminal-text">{savedSummaryRideId !== null ? "Your ride summary is in My rides." : terminal.text}</p>
             </div>
             {terminal.reason !== "completed" ? null : (
               <RideRouteSketch
@@ -1000,7 +1004,7 @@ export function RideFocus({
                 rides has something to open only once the recording landed
                 there, so the link exists only when it does. */}
             <div className="og-ride__actions og-ride__terminal-actions">
-              {terminal.reason !== "completed" || navigation?.recordingId == null ? null : (
+              {terminal.reason !== "completed" || (navigation?.recordingId == null && savedSummaryRideId === null) ? null : (
                 <Link
                   className="og-ride__action og-ride__action--primary"
                   data-testid="ride-summary-rides"
@@ -1025,24 +1029,28 @@ export function RideFocus({
         {terminal !== null || !stopConfirm ? null : (
           <div className="og-ride__confirm" data-testid="ride-stop-confirm">
             <p className="og-ride__confirm-text">End this ride?</p>
+            {navigation?.recordingId == null && canSaveFreeRideSummary ? <p>Save your distance, moving time, elevation and accepted suggestions as a ride summary. No GPS track was retained.</p> : null}
             <div className="og-ride__actions">
               <button
                 type="button"
                 className="og-ride__action og-ride__action--primary"
                 data-testid="ride-finish"
-                disabled={!controls.finish.enabled}
+                disabled={recordingToggleBusy || recordingCleanupPending || !controls.finish.enabled}
                 title={controls.finish.reason ?? undefined}
                 onClick={(): void => {
                   void store.getState().finish();
                 }}
               >
-                Finish ride
+                {navigation?.recordingId == null && canSaveFreeRideSummary ? "Save summary & finish" : "Finish ride"}
               </button>
+              {navigation?.recordingId == null && canSaveFreeRideSummary ? (
+                <button type="button" className="og-ride__action" onClick={(): void => { void store.getState().finish(false); }}>Finish without saving</button>
+              ) : null}
               <button
                 type="button"
                 className="og-ride__action"
                 data-testid="ride-discard"
-                disabled={!controls.discard.enabled}
+                disabled={recordingToggleBusy || recordingCleanupPending || !controls.discard.enabled}
                 title={controls.discard.reason ?? undefined}
                 onClick={(): void => {
                   void store.getState().discard();
@@ -1102,10 +1110,33 @@ export function RideFocus({
           </section>
         )}
 
-        {terminal !== null ? null : navigation?.activity === "free" && navigation.recordingId === null ? (
+        {terminal === null && recordingCleanupPending && navigation?.activity !== "free" ? (
+          <section aria-label="Recording cleanup">
+            <p>Retry turning recording off before finishing this ride.</p>
+            <button type="button" className="og-ride__action" disabled={recordingToggleBusy}
+              onClick={(): void => { void store.getState().stopRecording(); }}>Retry turning recording off</button>
+          </section>
+        ) : null}
+
+        {terminal !== null ? null : navigation?.activity === "free" ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
             <div className="og-ride__free-ride-heading">
               <h2 className="og-visually-hidden">Free Ride</h2>
+              <button
+                type="button"
+                className="og-ride__action"
+                data-testid="free-ride-recording-toggle"
+                disabled={recordingToggleBusy}
+                aria-pressed={navigation.recordingId !== null}
+                aria-describedby="free-ride-recording-help"
+                onClick={(): void => {
+                  if (recordingCleanupPending || navigation.recordingId !== null) void store.getState().stopRecording();
+                  else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
+                }}
+              >
+                {recordingCleanupPending ? "Retry turning recording off" : navigation.recordingId === null ? "Not recording · tap to record" : "Recording · tap to turn off"}
+              </button>
+              <p id="free-ride-recording-help" className="og-ride__free-ride-copy">Turning recording off discards the track. Your ride summary can still be saved.</p>
               <button
                 type="button"
                 className="og-ride__action"
@@ -1216,7 +1247,7 @@ export function RideFocus({
               </p>
             )}
           </section>
-        ) : navigation?.activity === "guided" && navigation.recordingId === null && (suggestions === "on" || freeRideStatusMessage !== null) ? (
+        ) : navigation?.activity === "guided" && (suggestions === "on" || freeRideStatusMessage !== null) ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
             {freeRideStatusMessage === null
               ? <p className="og-ride__free-ride-copy">Following a suggested route segment.</p>

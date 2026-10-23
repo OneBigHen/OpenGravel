@@ -32,6 +32,7 @@ import type { RouteCandidateId } from "@/domain/route/ids";
 import type { RideSessionId } from "@/domain/ride-session/ids";
 import type { SessionRouteBinding } from "@/domain/ride-session/types";
 
+import type { RideRecordingWorkflow } from "./recording-workflow";
 import type { RideSessionCommandResult, RideSessionController } from "./ride-session-controller";
 import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import type { RideRepositoryPort } from "@/application/persistence/ride-repository";
@@ -296,6 +297,9 @@ export async function startFreeRideFromPlanner(input: {
   readonly rides: RideRepositoryPort;
   readonly writerToken: string;
   readonly now: string;
+  readonly recording?: RideRecordingWorkflow;
+  /** Explicit opt-out; recording is otherwise required before starting. */
+  readonly record?: boolean;
 }): Promise<RideStartOutcome> {
   const current = input.pointer.read();
   if (current.status === "found") {
@@ -324,6 +328,15 @@ export async function startFreeRideFromPlanner(input: {
   }
   if (!saved.ok) {
     return { outcome: "rejected", sessionId: null, message: "The ride could not be saved, so Free Ride was not started." };
+  }
+
+  if (input.record !== false) {
+    const recorded = await input.recording?.start(input.document.rideId, input.document.revision, input.now, "on");
+    const state = input.controller.snapshot();
+    if (recorded?.outcome !== "started" || state === null) {
+      return { outcome: "rejected", sessionId: null, message: "Recording could not start. Check device storage and try again." };
+    }
+    return { outcome: "started", sessionId: state.sessionId, message: null };
   }
 
   const started = await input.controller.start({
