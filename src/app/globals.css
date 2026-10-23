@@ -12569,6 +12569,7 @@ a.og-secondary {
 }
 .og-map-point-menu__row {
   display: flex;
+  font: inherit;
   align-items: center;
   gap: 12px;
   width: 100%;
