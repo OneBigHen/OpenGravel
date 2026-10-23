@@ -345,6 +345,15 @@ function isEngineSurfaceMix(value: unknown): value is EngineSurfaceMix {
 
 const METERS_PER_MILE = 1609.344;
 
+/** From this share up, the untagged remainder is worth naming on the card. */
+const UNKNOWN_MATERIAL_SHARE = 0.15;
+/**
+ * From this share up, the untagged remainder is most of the line: the tagged
+ * sliver cannot describe the ride, so the card says the surface is unknown
+ * rather than naming a class the route mostly does not have.
+ */
+const UNKNOWN_DOMINANT_SHARE = 0.5;
+
 function miles(meters: number): string {
   const value = meters / METERS_PER_MILE;
   return `${value >= 10 ? Math.round(value) : Number(value.toFixed(1))} mi`;
@@ -352,8 +361,11 @@ function miles(meters: number): string {
 
 /**
  * The card's one-line surface: `Paved`, `Mostly paved · 2.1 mi gravel`,
- * `Mixed · 14 mi unpaved`, `Mostly unpaved`. `null` when the evidence is not an
- * engine mix or measured nothing, so the caller keeps its band badge.
+ * `Mixed · 14 mi unpaved`, `Mostly unpaved`, `Surface mostly unknown`. The
+ * untagged share is never rounded away into `Paved`: when most of the line has
+ * no surface tag the card says so, and a material remainder is named
+ * (`Paved · 2 mi unknown`). `null` when the evidence is not an engine mix or
+ * measured nothing, so the caller keeps its band badge.
  */
 export function surfaceMixLabel(evidence: EvidenceValue<unknown> | undefined): string | null {
   if (evidence === undefined || !isEngineSurfaceMix(evidence.value)) return null;
@@ -361,13 +373,19 @@ export function surfaceMixLabel(evidence: EvidenceValue<unknown> | undefined): s
   const unpaved = mix.gravelMeters + mix.dirtMeters;
   const known = mix.pavedMeters + unpaved;
   if (known <= 0) return null;
+  const totalMeters = known + mix.unknownMeters;
+  const unknownShare = totalMeters > 0 ? mix.unknownMeters / totalMeters : 0;
+  if (unknownShare >= UNKNOWN_DOMINANT_SHARE) return "Surface mostly unknown";
+  const unknownNote = unknownShare >= UNKNOWN_MATERIAL_SHARE
+    ? ` · ${miles(mix.unknownMeters)} unknown`
+    : "";
   const share = unpaved / known;
   const unpavedWord = mix.dirtMeters > mix.gravelMeters ? "dirt" : "gravel";
   // Under ~0.1 mi of unpaved is a driveway, not a surface a rider plans for.
-  if (unpaved < 160) return "Paved";
-  if (share <= 0.2) return `Mostly paved · ${miles(unpaved)} ${unpavedWord}`;
-  if (share < 0.6) return `Mixed · ${miles(unpaved)} unpaved`;
-  return `Mostly unpaved · ${miles(unpaved)} ${unpavedWord}`;
+  if (unpaved < 160) return `Paved${unknownNote}`;
+  if (share <= 0.2) return `Mostly paved · ${miles(unpaved)} ${unpavedWord}${unknownNote}`;
+  if (share < 0.6) return `Mixed · ${miles(unpaved)} unpaved${unknownNote}`;
+  return `Mostly unpaved · ${miles(unpaved)} ${unpavedWord}${unknownNote}`;
 }
 
 /** `12 mi of curves`, or `null` when curvature was not measured by the engine. */
