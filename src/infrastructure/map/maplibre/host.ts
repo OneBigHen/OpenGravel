@@ -78,6 +78,7 @@ import {
   isDrawableSketch,
 } from "@/application/map/drawable";
 import type {
+  MapCameraState,
   MapErrorKind,
   MapHost,
   MapHostOptions,
@@ -87,6 +88,7 @@ import type {
 import type { PlaceId } from "@/application/places/types";
 import { clampInsetsToViewport, type MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
+import { metersPerPixelAt } from "@/application/map/scale";
 import {
   isDraggablePointRef,
   type ChangedSpanScene,
@@ -141,7 +143,7 @@ import {
   terrainSourceSpec,
   type HostedStyleLayer,
 } from "@/infrastructure/map/maplibre/visual-detail";
-import { prepareOfflineBasemap, type MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
+import type { MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
 import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
 
 /** The default location of the vendored worker module (see the header). */
@@ -152,6 +154,14 @@ const MAX_FIT_ZOOM = 15;
 
 /** Camera animation, unless the rider asked for reduced motion (12 §13). */
 const FIT_DURATION_MS = 450;
+/**
+ * One press of a zoom button, or one tap on the compass, eases this long.
+ *
+ * Long enough to keep the rider's place on the map across the jump, short
+ * enough that the map feels like an instrument rather than a slideshow; zero
+ * under reduced motion.
+ */
+const CONTROL_CAMERA_DURATION_MS = 220;
 /** One fix a second: the follow camera glides from one to the next. */
 const FOLLOW_DURATION_MS = 950;
 /** Where the rider sits in the open map, from its top: low, to show the road ahead. */
@@ -166,6 +176,16 @@ export const MAP_EXTENT_ATTRIBUTE = "data-map-extent";
 
 /** The camera generation, bumped on every completed camera move. */
 export const MAP_CAMERA_ATTRIBUTE = "data-map-camera";
+
+/**
+ * The map's rotation in whole degrees, clockwise from north.
+ *
+ * The compass reads this to know that the map is not north-up, and a browser
+ * gate reads it without parsing the canvas. It is the renderer's own bearing,
+ * not the compass's idea of it: a control that disagreed with the map under the
+ * rider's finger would be worse than no control.
+ */
+export const MAP_BEARING_ATTRIBUTE = "data-bearing";
 
 /** A compact description of what is drawn, for the browser gate's assertions. */
 export const MAP_SCENE_ATTRIBUTE = "data-map-scene";
@@ -277,6 +297,9 @@ interface MapLibreMap {
   getZoom?(): number;
   getPitch?(): number;
   getBearing?(): number;
+  getCenter?(): { readonly lng: number; readonly lat: number };
+  getMinZoom?(): number;
+  getMaxZoom?(): number;
   getContainer(): HTMLElement;
   project(coordinate: readonly [number, number]): { x: number; y: number };
   unproject(point: readonly [number, number]): { lng: number; lat: number };
@@ -342,6 +365,7 @@ const GRAB_POINT_LAYER_IDS: readonly string[] = [
  * showed "Buck ingham" and "War inster" split by the line).
  */
 const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
+  MAP_LAYER_IDS.routeTravelled,
   MAP_LAYER_IDS.routePrevious,
   MAP_LAYER_IDS.routeAlternativeCasing,
   MAP_LAYER_IDS.routeAlternative,
@@ -712,6 +736,8 @@ export async function createMapLibreHost(
   const listeners = new Set<(intent: MapIntent) => void>();
   /** Subscribers to the settled camera extent (OGV-D-274). */
   const viewportListeners = new Set<(extent: MapExtent) => void>();
+  /** Subscribers to the camera's bearing and zoom (the compass and zoom buttons). */
+  const cameraListeners = new Set<(camera: MapCameraState) => void>();
   /** Subscribers to renderer failures (the UI notice, and a test). */
   const errorListeners = new Set<(error: MapRenderError) => void>();
   /** Subscribers to load health (the workspace's honest failure surface). */
@@ -964,6 +990,48 @@ export async function createMapLibreHost(
     if (zoom !== undefined) container.setAttribute("data-map-zoom", zoom.toFixed(2));
     if (pitch !== undefined) container.setAttribute("data-map-pitch", pitch.toFixed(1));
     if (bearing !== undefined) container.setAttribute("data-map-bearing", bearing.toFixed(1));
+    publishCameraState(map);
+  }
+
+  /** The bearing last published as `data-bearing`, so a move only writes a change. */
+  let publishedBearing: number | null = null;
+
+  /**
+   * The camera's bearing, zoom and scale as one reading, or `null` when the
+   * renderer cannot answer (before the map exists, or a test double without a
+   * camera).
+   */
+  function readCamera(map: MapLibreMap): MapCameraState | null {
+    const zoom = map.getZoom?.();
+    const bearing = map.getBearing?.();
+    const center = map.getCenter?.();
+    if (zoom === undefined || bearing === undefined || center === undefined) return null;
+    return {
+      bearing,
+      zoom,
+      minZoom: map.getMinZoom?.() ?? 0,
+      maxZoom: map.getMaxZoom?.() ?? 22,
+      metersPerPixel: metersPerPixelAt(zoom, center.lat),
+    };
+  }
+
+  /**
+   * Publishes the camera the instruments read, while the camera moves.
+   *
+   * Called from `move`, which MapLibre raises on every animation frame of an
+   * eased zoom or a rotate as well as during a drag — the compass follows the
+   * map instead of catching up after it stops. The attribute is only rewritten
+   * when the whole degree changes, so a smooth rotation does not thrash it.
+   */
+  function publishCameraState(map: MapLibreMap): void {
+    const camera = readCamera(map);
+    if (camera === null) return;
+    const bearing = Math.round(camera.bearing);
+    if (bearing !== publishedBearing) {
+      publishedBearing = bearing;
+      container.setAttribute(MAP_BEARING_ATTRIBUTE, String(bearing));
+    }
+    for (const listener of [...cameraListeners]) listener(camera);
   }
 
   function visibleExtent(map: MapLibreMap): MapExtent | null {
@@ -1892,6 +1960,13 @@ export async function createMapLibreHost(
     publishViewport(current.map);
   }
 
+  /** Publishes the camera while it moves, for the rider's instruments (05 §9). */
+  function onCameraMove(): void {
+    const current = attempt;
+    if (current === null || disposed) return;
+    publishCameraState(current.map);
+  }
+
   // --- Load health, the watchdog, and bounded recovery --------------------
 
   /** Disarms one attempt's watchdog. */
@@ -2064,6 +2139,7 @@ export async function createMapLibreHost(
     current.map.off("rotatestart", onMoveStart as (payload: unknown) => void);
     current.map.off("pitchstart", onMoveStart as (payload: unknown) => void);
     current.map.off("moveend", onMoveEnd);
+    current.map.off("move", onCameraMove);
     current.map.off("error", onMapError);
     current.map.off("sourcedata", onSourceData);
     current.map.off("sourcedataloading", onSourceLoading);
@@ -2349,6 +2425,10 @@ export async function createMapLibreHost(
     // mid-glide raises no new `movestart`; the drag's own start is the signal.
     map.on("dragstart", onMoveStart as (payload: unknown) => void);
     map.on("moveend", onMoveEnd);
+    // The instruments (compass, zoom buttons, scale rule) follow the camera while
+    // it moves, not only when it settles: a rotation the rider is dragging must
+    // be visible under the finger doing it (05 §9).
+    map.on("move", onCameraMove);
     // The renderer's asynchronous failures (worker, style, source, tile) arrive
     // here and nowhere else. Without this listener a worker 404 leaves
     // `data-basemap` and `data-map-scene` present while nothing is drawn — the
@@ -2486,6 +2566,52 @@ export async function createMapLibreHost(
       return () => viewportListeners.delete(listener);
     },
 
+    onCamera(listener: (camera: MapCameraState) => void): () => void {
+      cameraListeners.add(listener);
+      // Same rule as `onStatus`: a subscriber that attaches after the map exists
+      // is told the camera that holds, so the compass opens pointing the right
+      // way instead of waiting for the rider's first rotate.
+      const current = attempt;
+      const camera = current === null ? null : readCamera(current.map);
+      if (camera !== null) listener(camera);
+      return () => cameraListeners.delete(listener);
+    },
+
+    zoomBy(delta: number): void {
+      if (disposed || !Number.isFinite(delta) || delta === 0) return;
+      const current = attempt;
+      if (current === null || !current.styleReady) return;
+      const map = current.map;
+      const zoom = map.getZoom?.();
+      if (zoom === undefined) return;
+      const min = map.getMinZoom?.() ?? 0;
+      const max = map.getMaxZoom?.() ?? 22;
+      const next = Math.min(max, Math.max(min, zoom + delta));
+      if (next === zoom) return;
+      // A press on the zoom button is rider intent, exactly like a wheel or a
+      // double-tap: the automatic fit lets go (05 §8).
+      riderTookCamera();
+      map.easeTo?.({
+        zoom: next,
+        duration: options.reducedMotion === true ? 0 : CONTROL_CAMERA_DURATION_MS,
+      });
+    },
+
+    faceNorth(): void {
+      if (disposed) return;
+      const current = attempt;
+      if (current === null || !current.styleReady) return;
+      const map = current.map;
+      const bearing = map.getBearing?.();
+      // Already north-up: nothing to animate, and nothing to take from the fit.
+      if (bearing === undefined || Math.abs(bearing) < 0.5) return;
+      riderTookCamera();
+      map.easeTo?.({
+        bearing: 0,
+        duration: options.reducedMotion === true ? 0 : CONTROL_CAMERA_DURATION_MS,
+      });
+    },
+
     get supportsSatellite(): boolean {
       return mapboxToken !== null;
     },
@@ -2553,6 +2679,7 @@ export async function createMapLibreHost(
       }
       listeners.clear();
       viewportListeners.clear();
+      cameraListeners.clear();
       errorListeners.clear();
       statusListeners.clear();
       const current = attempt;
@@ -2560,6 +2687,7 @@ export async function createMapLibreHost(
       teardownAttempt(current);
       container.removeAttribute(MAP_EXTENT_ATTRIBUTE);
       container.removeAttribute(MAP_CAMERA_ATTRIBUTE);
+      container.removeAttribute(MAP_BEARING_ATTRIBUTE);
       container.removeAttribute(MAP_ERROR_ATTRIBUTE);
       container.removeAttribute(MAP_LOAD_ATTRIBUTE);
       container.removeAttribute(MAP_LOAD_REASON_ATTRIBUTE);
@@ -2579,7 +2707,10 @@ export async function createMapLibreHost(
   }
   // With no network, the configured basemap cannot draw; a downloaded one can.
   if (renderer !== null && deviceOffline()) {
-    const offlineStyle = await prepareOfflineBasemap(renderer).catch(() => null);
+    const offlineRenderer = renderer;
+    const offlineStyle = await import("@/infrastructure/map/offline-basemap")
+      .then(({ prepareOfflineBasemap }) => prepareOfflineBasemap(offlineRenderer))
+      .catch(() => null);
     if (offlineStyle !== null) {
       style = offlineStyle as unknown as MapStyleSpec;
       drawingOfflineBasemap = true;

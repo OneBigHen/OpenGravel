@@ -466,9 +466,11 @@ describe("the overlay hint", () => {
     const hint = screen.getByTestId("map-hint");
     expect(hint).toHaveTextContent("Tap the map to set your start.");
     // 12 §16/§20: an instruction is not a control — no button role, no action.
+    // (The map's own camera controls are buttons; the instruction is not one of
+    // them, and nothing offers to "perform" the instruction.)
     expect(hint).toHaveRole("note");
     expect(hint.tagName).not.toBe("BUTTON");
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /set your start/i })).toBeNull();
   });
 
   it("renders no hint when the workspace supplies none", async () => {
@@ -631,7 +633,6 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
   });
 });
 
-
 describe("the map point menu", () => {
   const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 100, y: 100 }, authorityFeatureId: null } as const;
 
@@ -729,6 +730,27 @@ describe("map point evidence and positioning", () => {
     } finally { window.matchMedia = previous; }
   });
 
+  it("keeps a wide card clear of the instrument column on the right edge", async () => {
+    // The control column is live chrome (12 px inset + a 44 px button), so a card
+    // pressed at the map's right edge must end before x = 1024 - 56 = 968 rather
+    // than sitting under the compass and zoom buttons.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
+      const box = this.className === "og-map-point-menu"
+        ? { left: 0, top: 0, width: 320, height: 260 }
+        : { left: 0, top: 0, width: 1024, height: 700 };
+      return { ...box, right: box.left + box.width, bottom: box.top + box.height, x: box.left, y: box.top, toJSON: () => ({}) } as DOMRect;
+    });
+    const previous = window.matchMedia;
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false });
+    try {
+      const { factory } = await renderMap({ onPointAction: vi.fn() });
+      act(() => factory.hosts[0]?.emit({ ...press, pixel: { x: 1000, y: 600 } }));
+      const menu = screen.getByRole("dialog");
+      expect(parseFloat(menu.style.left) + 320).toBeLessThanOrEqual(1024 - 56);
+      expect(menu.style.left).toBe("648px");
+    } finally { window.matchMedia = previous; }
+  });
+
   it("places a compact sheet above the measured dock", async () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function(this: HTMLElement) {
       const box = this.className === "og-map-point-menu" ? { left: 0, top: 0, width: 366, height: 260 }
@@ -767,4 +789,101 @@ it("closes the menu on tool and revision changes without restoring an old menu",
   act(() => factory.hosts[0]?.emit(press));
   view.rerender(<PlannerMap {...props} activeTool="pan" rideRevision={1} />);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+describe("the map's instruments (05 §9)", () => {
+  /** The one live host of the rendered surface. */
+  function hostOf(factory: StubMapHostFactory) {
+    const host = factory.hosts[0];
+    if (host === undefined) throw new Error("expected a host");
+    return host;
+  }
+
+  it("states the rotation in the compass's accessible name and faces north on a tap", async () => {
+    const { factory } = await renderMap();
+    const host = hostOf(factory);
+
+    // The host is the authority on the bearing; the compass reads it, it does not
+    // guess. 42 degrees clockwise from north is the top of the screen pointing east.
+    act(() => {
+      host.reportCamera({ bearing: 42, zoom: 14, minZoom: 0, maxZoom: 22, metersPerPixel: 4.8 });
+    });
+    const compass = screen.getByRole("button", {
+      name: "Face north. Map is rotated 42 degrees east.",
+    });
+    expect(compass).toHaveAttribute("data-visible", "true");
+
+    fireEvent.click(compass);
+    expect(host.northResets).toBe(1);
+    // The double eases north like the real map, so the hidden state follows.
+    expect(screen.getByTestId("map-compass")).toHaveAttribute("data-visible", "false");
+  });
+
+  it("hides the compass while the map is north-up and keeps it out of the tab order", async () => {
+    const { factory } = await renderMap();
+    act(() => {
+      hostOf(factory).reportCamera({ bearing: 0, zoom: 12, minZoom: 0, maxZoom: 22, metersPerPixel: 38 });
+    });
+
+    const compass = screen.getByTestId("map-compass");
+    expect(compass).toHaveAttribute("data-visible", "false");
+    expect(compass).toHaveAttribute("aria-hidden", "true");
+    expect(compass).toHaveAttribute("tabindex", "-1");
+    // Hidden from assistive tech, so it is not a control a rider can find.
+    expect(screen.queryByRole("button", { name: /Face north/ })).toBeNull();
+  });
+
+  it("zooms one level per press, and says when the renderer's limit is reached", async () => {
+    const { factory } = await renderMap();
+    const host = hostOf(factory);
+
+    // Before the camera arrives nothing claims a limit: unknown is not "at the end".
+    expect(screen.getByRole("button", { name: "Zoom in" })).not.toHaveAttribute("aria-disabled");
+
+    fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+    fireEvent.click(screen.getByRole("button", { name: "Zoom out" }));
+    expect(host.zooms).toEqual([1, -1]);
+
+    act(() => {
+      host.reportCamera({
+        bearing: 0,
+        zoom: 22,
+        minZoom: 0,
+        maxZoom: 22,
+        metersPerPixel: 0.02,
+      });
+    });
+    const zoomIn = screen.getByRole("button", { name: "Zoom in" });
+    expect(zoomIn).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(zoomIn);
+    // Disabled means no further zoom, not a silent extra level.
+    expect(host.zooms).toEqual([1, -1]);
+  });
+
+  it("draws the scale rule from the camera's metres per pixel", async () => {
+    const { factory } = await renderMap();
+    act(() => {
+      hostOf(factory).reportCamera({ bearing: 0, zoom: 15, minZoom: 0, maxZoom: 22, metersPerPixel: 4.8 });
+    });
+
+    // 88 px at 4.8 m/px is 422 m (~1,386 ft); the largest 1-2-5 step that fits
+    // is 1,000 ft, which draws 63.5 px wide.
+    const scale = screen.getByTestId("map-scale");
+    expect(scale).toHaveAccessibleName("Map scale: 1,000 ft");
+    expect(scale.style.getPropertyValue("--og-scale-width")).toBe("63.5px");
+  });
+
+  it("draws no scale rule while the camera's scale is unknown", async () => {
+    const { factory } = await renderMap();
+    act(() => {
+      hostOf(factory).reportCamera({
+        bearing: 0,
+        zoom: 12,
+        minZoom: 0,
+        maxZoom: 22,
+        metersPerPixel: Number.NaN,
+      });
+    });
+
+    expect(screen.queryByTestId("map-scale")).toBeNull();
+  });
 });

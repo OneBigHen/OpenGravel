@@ -130,7 +130,7 @@ export function PrimaryNav({ current, items = PRIMARY_NAV_ITEMS }: PrimaryNavPro
                 ·
               </span>
             )}
-            <Link href={item.href} aria-current={item.href === current ? "page" : undefined}>
+            <Link href={item.href} prefetch={false} aria-current={item.href === current ? "page" : undefined}>
               <NavIcon href={item.href} />
               <span className="og-nav__label">{item.label}</span>
             </Link>
@@ -140,6 +140,7 @@ export function PrimaryNav({ current, items = PRIMARY_NAV_ITEMS }: PrimaryNavPro
       <Link
         className="og-planner__settings-link"
         href="/settings"
+        prefetch={false}
         aria-label="Settings"
         aria-current={current === "/settings" ? "page" : undefined}
       >

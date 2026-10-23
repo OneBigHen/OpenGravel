@@ -115,6 +115,26 @@ export interface MapHostOptions {
   readonly basemapLook?: "map" | "night";
 }
 
+/**
+ * The camera as the rider's map instruments need it (05 §9).
+ *
+ * Published by the renderer rather than derived in the UI, because the bearing
+ * and the zoom are the renderer's own state: a compass that guessed at them
+ * would disagree with the map under the rider's finger. `metersPerPixel` is
+ * computed at the map's centre for the scale rule; it is a distance per CSS
+ * pixel, never a promise that a road is a given width.
+ */
+export interface MapCameraState {
+  /** Degrees clockwise from north, `-180..180`, as MapLibre reports it. */
+  readonly bearing: number;
+  readonly zoom: number;
+  /** The renderer's own zoom limits, so a zoom button can say when it is done. */
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  /** Metres one CSS pixel covers at the map's centre; `NaN` when unknown. */
+  readonly metersPerPixel: number;
+}
+
 /** Renderer acknowledgement, separate from successful provider transport. */
 export interface MapLayerDrawStatus {
   readonly layerId: MapLayerId;
@@ -192,6 +212,30 @@ export interface MapHost {
    * flat again. A no-op before the style loads; applied when it does.
    */
   setTerrain3d?(on: boolean): void;
+  /**
+   * Subscribe to the camera's bearing and zoom (05 §9); returns the unsubscribe
+   * function.
+   *
+   * Reported as the camera moves — the rider's drag, a pinch, and the host's own
+   * eased moves alike — so the compass follows the map instead of catching up
+   * after it stops. A host that has a camera reports its current state at
+   * subscription time, like `onStatus`. Optional, so a test double without a
+   * camera simply has no compass.
+   */
+  onCamera?(listener: (camera: MapCameraState) => void): () => void;
+  /**
+   * Zooms by `delta` zoom levels, clamped to the renderer's limits (05 §9).
+   *
+   * A rider gesture, so it also takes the camera away from automatic fits, just
+   * as a wheel or double-tap zoom does. A no-op before the map exists.
+   */
+  zoomBy?(delta: number): void;
+  /**
+   * Turns the map back to north-up (05 §9). The renderer decides how long that
+   * takes (nothing under `prefers-reduced-motion`); a rider gesture like a
+   * rotate, so it also takes the camera away from automatic fits.
+   */
+  faceNorth?(): void;
   /**
    * Subscribe to the visible extent (OGV-D-274); returns the unsubscribe function.
    *
