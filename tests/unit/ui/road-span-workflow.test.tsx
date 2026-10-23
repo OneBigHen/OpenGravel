@@ -279,12 +279,12 @@ function historyLength(workspace: RenderedWorkspace): number {
 }
 
 /** Arms the tool, drags from one vertex to another, and returns when settled. */
-function dragSpan(
+async function dragSpan(
   workspace: RenderedWorkspace,
   from: Coordinate,
   to: Coordinate,
-): void {
-  fireEvent.click(screen.getByTestId("select-road-span"));
+): Promise<void> {
+  fireEvent.click(await screen.findByTestId("select-road-span"));
   workspace.emit({ type: "pointer-down", pointerId: 1, coordinate: from, ref: null });
   workspace.emit({ type: "pointer-move", pointerId: 1, coordinate: to });
 }
@@ -297,7 +297,7 @@ afterEach(() => {
 describe("selecting a span", () => {
   it("arms the pointer tool and previews without authoring anything", async () => {
     const workspace = await renderWorkspace();
-    fireEvent.click(screen.getByTestId("select-road-span"));
+    fireEvent.click(await screen.findByTestId("select-road-span"));
 
     expect(workspace.plannerUiStore.getState().activeTool).toBe("road-span-select");
 
@@ -318,7 +318,7 @@ describe("selecting a span", () => {
 
   it("tracks the draft's endpoints as the pointer moves", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[0]!, ROUTE_LINE[2]!);
+    await dragSpan(workspace, ROUTE_LINE[0]!, ROUTE_LINE[2]!);
     expect(workspace.plannerUiStore.getState().roadSpanDraft).toEqual({
       routeId: workspace.session.routeId,
       startIndex: 0,
@@ -334,7 +334,7 @@ describe("selecting a span", () => {
 
   it("Escape cancels the draft and disarms the tool", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
+    await dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() =>
       expect(workspace.plannerUiStore.getState().roadSpanDraft).toBeNull(),
@@ -349,7 +349,7 @@ describe("committing a span", () => {
     const workspace = await renderWorkspace();
     const revisions = revisionOf(workspace);
     const entries = historyLength(workspace);
-    dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
+    await dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
     fireEvent.click(screen.getByTestId("commit-keep"));
 
     await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
@@ -388,7 +388,7 @@ describe("committing a span", () => {
       { testId: "commit-avoid", mode: "avoid", label: "Avoided this road" },
     ] as const) {
       const workspace = await renderWorkspace();
-      dragSpan(workspace, ROUTE_LINE[0]!, ROUTE_LINE[2]!);
+      await dragSpan(workspace, ROUTE_LINE[0]!, ROUTE_LINE[2]!);
       fireEvent.click(screen.getByTestId(action.testId));
       await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
       expect(roadSpans(workspace)[0]?.mode).toBe(action.mode);
@@ -401,7 +401,7 @@ describe("committing a span", () => {
 
   it("declares reverse only when the rider drags against the route's order", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[3]!, ROUTE_LINE[1]!);
+    await dragSpan(workspace, ROUTE_LINE[3]!, ROUTE_LINE[1]!);
     // The draft runs end→start, so its own line is reversed; the route walks the
     // anchors the other way, which is exactly what `reverse` declares.
     expect(workspace.host().lastScene()?.roadSpanPreview?.direction).toBe("reverse");
@@ -443,7 +443,7 @@ describe("committing a span", () => {
 describe("editing a span", () => {
   it("flips Keep to Prefer and back, one command each", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
+    await dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
     fireEvent.click(screen.getByTestId("commit-keep"));
     await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
 
@@ -462,7 +462,7 @@ describe("editing a span", () => {
 
   it("removes a span, and undo brings it back", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
+    await dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
     fireEvent.click(screen.getByTestId("commit-keep"));
     await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
     const spanId: RoadSpanId = roadSpans(workspace)[0]!.id;
@@ -477,7 +477,7 @@ describe("editing a span", () => {
 
   it("shows the measured verdict for the committed span", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
+    await dragSpan(workspace, ROUTE_LINE[1]!, ROUTE_LINE[3]!);
     fireEvent.click(screen.getByTestId("commit-keep"));
     await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
 
@@ -503,7 +503,7 @@ async function spanPayload(
 describe("the stored span", () => {
   it("keeps the reviewer's own anchors, and its line is the drafted one", async () => {
     const workspace = await renderWorkspace();
-    dragSpan(workspace, ROUTE_LINE[2]!, ROUTE_LINE[4]!);
+    await dragSpan(workspace, ROUTE_LINE[2]!, ROUTE_LINE[4]!);
     fireEvent.click(screen.getByTestId("commit-avoid"));
     await waitFor(() => expect(roadSpans(workspace)).toHaveLength(1));
     const span = roadSpans(workspace)[0]!;

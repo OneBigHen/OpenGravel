@@ -1578,22 +1578,209 @@ h3,
   }
 }
 
-/* The explicit camera hand-back (05 §8): a small control on the map surface. */
-.og-map__whole-ride {
+/* One map-control column (05 §9): the rider's instruments on the map's right
+   edge — compass, zoom in, zoom out — and then whatever the surface adds below
+   them (Locate, Show whole ride). One flex column instead of a set of
+   hand-placed absolute tops, so adding a control cannot collide with the one
+   under it, and the compass leaving the column closes the gap by itself.
+
+   Pointer events live on the buttons alone: an overlay near the canvas edge
+   that swallowed drags would turn the map's right edge into a dead zone. */
+.og-map__cluster {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: calc(64px + var(--og-safe-top));
+  right: calc(12px + var(--og-safe-right));
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.og-map__cluster > * {
+  pointer-events: auto;
+}
+
+/* The round glass button every control in the column wears: 44 px on the
+   smallest phone, the app's one focus ring, and the Day/Night glass tokens. */
+.og-map__compass,
+.og-map__zoom,
+.og-map__locate,
+.og-map__whole-ride {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   min-height: 44px;
-  padding: 10px 14px;
+  padding: 0;
   font: inherit;
   font-size: 13px;
   cursor: pointer;
-  border: 1px solid var(--og-sandstone);
-  border-radius: var(--og-radius-control);
-  background: color-mix(in srgb, var(--og-paper) 92%, transparent);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: 999px;
+  background: var(--og-glass-bg);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
   color: var(--og-ink);
-  backdrop-filter: blur(6px);
+}
+
+.og-map__compass:focus-visible,
+.og-map__zoom:focus-visible,
+.og-map__locate:focus-visible,
+.og-map__whole-ride:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The compass only exists while the map is turned: on a north-up map it would be
+   a decoration, and a button with nothing to do should not sit in the tab order.
+   It fades rather than pops, and the fade is removed under reduced motion. Its
+   44 px box is kept, so zooming and turning the map never slides the buttons
+   under the rider's finger. */
+.og-map__compass {
+  transition: opacity 120ms ease-out, visibility 0s linear 0s;
+}
+
+.og-map__compass[data-visible="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 120ms ease-out, visibility 0s linear 120ms;
+}
+
+/* The needle points north against the map's own rotation. Its tail is the theme
+   ink, which is dark on the Day glass and light on the Night glass, so it reads
+   on either; the ember tip is the same in both, like the route's own colour. */
+.og-map__compass-needle {
+  transform: rotate(calc(var(--og-bearing, 0) * -1deg));
+}
+
+.og-map__compass-tip {
+  fill: var(--og-ember);
+}
+
+.og-map__compass-tail {
+  fill: var(--og-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-map__compass,
+  .og-map__compass[data-visible="false"] {
+    transition: none;
+  }
+}
+
+/* A limit the zoom has reached is said, not hidden: the button stays focusable
+   and tells assistive tech it is disabled. */
+.og-map__zoom[data-disabled="true"] {
+  color: var(--og-slate-text);
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* The column is icon-only at every width, so it cannot widen the map's right
+   edge; each label stays in the DOM as its button's accessible name. */
+.og-map__cluster .og-map__ctl-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The scale rule: a 1 px line with 4 px end ticks and the distance it spans,
+   measured at the map's centre (05 §9). It is offset by the measured camera
+   insets, so it sits at the bottom-left of the map the rider can see rather
+   than under the sheet, whichever detent the sheet is at. */
+.og-map__scale {
+  position: absolute;
+  left: calc(var(--og-map-inset-left, 0px) + 12px);
+  bottom: calc(var(--og-map-inset-bottom, 0px) + 10px);
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 5px 8px 4px;
+  border: 1px solid var(--og-glass-edge);
+  /* A small rectangle in both themes: the chip radius token is a pill at night. */
+  border-radius: 10px;
+  background: var(--og-glass-bg);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  box-shadow: var(--og-glass-shadow);
+  color: var(--og-ink);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.og-map__scale-rule {
+  position: relative;
+  display: block;
+  width: var(--og-scale-width, 64px);
+  height: 1px;
+  background: currentColor;
+}
+
+.og-map__scale-rule::before,
+.og-map__scale-rule::after {
+  content: "";
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 4px;
+  background: currentColor;
+}
+
+.og-map__scale-rule::before {
+  left: 0;
+}
+
+.og-map__scale-rule::after {
+  right: 0;
+}
+
+.og-map__scale-label {
+  line-height: 1;
+}
+
+/* Ride Focus has its own instrument HUD, and its follow camera owns the zoom and
+   the rotation; the planner's column would only fight it. */
+.og-ride__map .og-map__cluster,
+.og-ride__map .og-map__scale {
+  display: none;
+}
+
+/* Short landscape: the map is the left column and the rail the right one, so
+   the column starts at the map's own top edge instead of under a header that is
+   not above it. Same column, same order. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+  .og-map__cluster {
+    top: calc(8px + var(--og-safe-top));
+  }
+}
+
+/* The short phone (iPhone SE and its kind): the sheet leaves roughly 170 px of
+   map, which is not five 44 px buttons in one column. The same controls in the
+   same order wrap into two columns at the top-right — still one group, still 44
+   px targets, and nothing hidden under the sheet. */
+@media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
+  .og-map__cluster {
+    top: calc(8px + var(--og-safe-top));
+    flex-flow: row wrap;
+    justify-content: flex-end;
+    width: calc(44px * 2 + 6px);
+    gap: 6px;
+  }
+
+  /* The sheet reaches this high, so a note under the wrapped column would land
+     behind it; beside the column it stays on the strip of map that is left. */
+  .og-map__cluster .og-map__locate-failure {
+    top: 0;
+    right: calc(100% + 8px);
+    max-width: min(240px, calc(100vw - 148px));
+  }
 }
 
 /* A recovery in flight (4.0s): the map is rebuilding its renderer, so the honest
@@ -1938,7 +2125,8 @@ h3,
 .og-map__hint {
   position: absolute;
   left: 12px;
-  bottom: 12px;
+  /* Above the scale rule, which owns the map's bottom-left corner. */
+  bottom: 56px;
   max-width: calc(100% - 24px);
   padding: 8px 12px;
   border: 1px dashed color-mix(in srgb, var(--og-paper) 60%, transparent);
@@ -4885,17 +5073,8 @@ h3,
     outline-offset: var(--og-focus-offset);
   }
 
-  /* The camera hand-back sits at the top of the map on a phone: the bottom edge
-     belongs to the sheet and the attribution, which is exactly where the first
-     screenshot review found the two fighting for the same corner. */
-  .og-map__whole-ride {
-    top: calc(68px + var(--og-safe-top));
-    right: 12px;
-    bottom: auto;
-  }
-
   .og-map__layer-toggle {
-    top: calc(68px + var(--og-safe-top));
+    top: calc(116px + var(--og-safe-top));
     left: 12px;
   }
 }
@@ -5062,7 +5241,7 @@ h3,
   position: relative;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   column-gap: 14px;
   align-items: center;
   align-content: center;
@@ -5134,9 +5313,19 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
-.og-ride__maneuver-glyph {
+/* The glyph owns the icon column for the two instruction rows; the "then" row
+   starts below them. */
+.og-ride__maneuver-symbol {
   grid-row: 1 / span 2;
   grid-column: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+}
+
+.og-ride__maneuver-glyph {
   width: 64px;
   height: 64px;
   color: var(--og-paper);
@@ -5178,12 +5367,98 @@ h3,
   font-weight: 700;
 }
 
+/* A roundabout exit the provider stated: a paper disc with an ink ring at the
+   glyph's lower-right. No number means no badge — never a guessed exit. */
+.og-ride__maneuver-exit {
+  position: absolute;
+  right: -6px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--og-paper);
+  box-shadow: 0 0 0 2px #07100c;
+  color: #07100c;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The "then" row: two turns in quick succession are the classic missed turn.
+   It spans both columns, and the card only reserves its height when the row
+   exists (`data-then`), so a distant next maneuver never adds clutter. */
+.og-ride__maneuver-then {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 30px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 16%);
+  color: color-mix(in srgb, var(--og-paper) 86%, transparent);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.og-ride__maneuver-then-label {
+  flex: 0 0 auto;
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  /* Night draws the whole second line at 86% paper; the glyph belongs to it. */
+  color: inherit;
+}
+
+.og-ride__maneuver-then .og-ride__maneuver-glyph--then path {
+  stroke-width: 3.6;
+}
+
+.og-ride__maneuver-then-action {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.og-ride__maneuver-then-road {
+  font-weight: 700;
+}
+
+/* Only a card that really carries a "then" row is taller. Injection: the map's
+   ResizeObserver re-insets as the card grows or shrinks. */
+.og-ride__maneuver[data-then="true"] {
+  min-height: 126px;
+}
+
 .og-ride__maneuver[data-kind="suspended"],
 .og-ride__maneuver[data-kind="waiting"] {
   grid-template-columns: minmax(0, 1fr);
   min-height: 64px;
   background: var(--og-ride-glass);
   backdrop-filter: blur(10px);
+}
+
+/* Off the line the card also carries the recovery (DV-10): the sentence, the
+   measured offset, and two 56 px controls. A taller fixed box, so the way back
+   is under the thumb that is already there and the layout never jumps. */
+.og-ride__maneuver[data-kind="suspended"] {
+  row-gap: 6px;
+  min-height: 124px;
 }
 
 .og-ride__maneuver-suspended {
@@ -5203,6 +5478,29 @@ h3,
 .og-ride__maneuver .og-ride__maneuver-suspended {
   font-size: 17px;
   color: var(--og-paper);
+}
+
+/* "220 ft off route": the engine's own measurement, muted, one line. The right
+   padding is the GPS badge's; a poor fix shows it over this corner. */
+.og-ride__off-route-distance {
+  grid-column: 1 / -1;
+  padding-right: 48px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--og-ride-muted);
+}
+
+/* Side by side, glove-sized: the recovery is one thumb, not a menu. */
+.og-ride__off-route-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__off-route-actions .og-ride__off-route-action {
+  flex: 1 1 132px;
+  /* Narrow landscape columns: the label keeps its line instead of wrapping. */
+  padding-inline: 10px;
 }
 
 /* A small warning, only while the fix is bad (DV-10): no GPS text on screen. */
@@ -5588,6 +5886,18 @@ h3,
 
   .og-ride__maneuver {
     min-height: 84px;
+  }
+
+  /* Landscape has the height to spare and the width it does not; the off-route
+     card keeps its two controls side by side at 116 px. */
+  .og-ride__maneuver[data-kind="suspended"] {
+    min-height: 116px;
+  }
+
+  /* The "then" row is a second line, not a second card: landscape buys it the
+     same 116 px so the primary maneuver never loses its distance. */
+  .og-ride__maneuver[data-then="true"] {
+    min-height: 116px;
   }
 
   .og-ride__maneuver-distance {
@@ -7211,19 +7521,11 @@ h3,
   }
 
   .og-map__layer-toggle {
-    top: calc(12px + var(--og-safe-top));
-  }
-
-  /* The advisor owns the top right on a phone, so the camera hand-back sits
-     under the layer toggle on the left. */
-  .og-map__whole-ride {
-    top: calc(64px + var(--og-safe-top));
-    left: 12px;
-    right: auto;
+    top: calc(116px + var(--og-safe-top));
   }
 
   .og-map__hint {
-    top: calc(116px + var(--og-safe-top));
+    top: calc(168px + var(--og-safe-top));
   }
 
 
@@ -7597,15 +7899,11 @@ h3,
 }
 
 /* Phone portrait with the tab-bar shell: the Places pill takes the slot under
-   the layer toggle, "Show whole ride" and the map hint step down one row, and a
-   place card is a sheet above the tab bar, over the planner's own sheet. */
+   the layer toggle and the map hint steps down one row, while a place card is a
+   sheet above the tab bar, over the planner's own sheet. */
 @media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-places-overlay--planner .og-places-control {
     top: calc(64px + var(--og-safe-top));
-  }
-
-  .og-map__whole-ride {
-    top: calc(116px + var(--og-safe-top));
   }
 
   .og-map__hint {
@@ -8256,25 +8554,13 @@ h3,
     left: var(--og-float-left);
   }
 
-  .og-planner__map-slot .og-map__whole-ride {
+  /* The control column joins the right column the sheet's inspector leaves
+     open, above the attribution: anchoring it at the map's top-right would put
+     it under the floating inspector card. It stacks upward from there. */
+  .og-planner__map-slot .og-map__cluster {
     top: auto;
     bottom: 40px;
     right: var(--og-float-right);
-  }
-
-  /* "Center on me" joins that right column rather than keeping its 12 px window
-     offset, where the floating inspector covered all but a sliver of it: the
-     same right edge as Show whole ride, stacked one button above it (40 px
-     bottom + 44 px tall + 8 px gap). Its failure note steps to the button's
-     left, as it does at the window edge on the other tiers. */
-  .og-planner__map-slot .og-map__locate {
-    right: var(--og-float-right);
-    bottom: 92px;
-  }
-
-  .og-planner__map-slot .og-map__locate-failure {
-    right: calc(var(--og-float-right) + 52px);
-    bottom: 92px;
   }
 
   .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
@@ -8351,11 +8637,10 @@ h3,
   }
 }
 
-/* Map controls carry an icon; on a phone they are icon-only round buttons in one
-   cluster on the right, so the map's top-left is geography again. The label
-   stays in the DOM as each button's accessible name. */
-.og-map__layer-toggle,
-.og-map__whole-ride {
+/* The map's controls carry an icon; on a phone the layer button is an icon-only
+   round button in the top-left, so the map's geography stays the map's. Its
+   label stays in the DOM as the button's accessible name. */
+.og-map__layer-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8367,10 +8652,7 @@ h3,
 }
 
 @media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
-  .og-map__layer-toggle,
-  .og-map__whole-ride {
-    left: auto;
-    right: 12px;
+  .og-map__layer-toggle {
     width: 44px;
     height: 44px;
     padding: 0;
@@ -8380,16 +8662,7 @@ h3,
     box-shadow: 0 1px 6px rgb(22 29 28 / 16%);
   }
 
-  .og-map__layer-toggle {
-    top: calc(64px + var(--og-safe-top));
-  }
-
-  .og-map__whole-ride {
-    top: calc(116px + var(--og-safe-top));
-  }
-
-  .og-map__layer-toggle .og-map__ctl-label,
-  .og-map__whole-ride .og-map__ctl-label {
+  .og-map__layer-toggle .og-map__ctl-label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -8399,7 +8672,7 @@ h3,
   }
 
   .og-map__hint {
-    top: calc(116px + var(--og-safe-top));
+    top: calc(168px + var(--og-safe-top));
   }
 }
 
@@ -8990,13 +9263,23 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-/* Phone: the Layers button joins the round icon cluster on the right, and the
-   panel and the card become sheets above the tab bar. */
+/* Compact: the Layers button sits with the basemap button on the left, directly
+   under the Along-ride pill and its filter chip. The right edge belongs to the
+   instrument column alone. The panel and the card become sheets above the tab
+   bar. */
 @media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-layers {
-    top: calc(168px + var(--og-safe-top));
-    left: auto;
-    right: 12px;
+    top: calc(116px + var(--og-safe-top));
+    left: calc(12px + 44px + 8px);
+    right: auto;
+  }
+
+  /* The filter panel opens directly under the Along-ride row, where these two
+     sit. While it is open they step up into the free strip above the row, so
+     neither control is buried under the panel. */
+  .og-planner__map-slot:has(.og-places-control__panel) .og-map__layer-toggle,
+  .og-planner__map-slot:has(.og-places-control__panel) .og-layers {
+    top: calc(12px + var(--og-safe-top));
   }
 
   .og-layers__button {
@@ -9485,15 +9768,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   .og-map__veil-label { animation: none; }
 }
 
-/* ML-01: on a short phone (iPhone SE) the sheet starts ~180 px down, and the
-   third round control of the right-hand column sat under it. Layers moves
-   beside Satellite so the whole cluster stays on the exposed map. */
-@media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
-  .og-layers {
-    top: calc(64px + var(--og-safe-top));
-    right: 64px;
-  }
-}
+/* The short phone needs no Layers exception any more: Layers and the basemap
+   share the compact left control row, so the wrapped instrument column keeps
+   the whole right edge. */
 
 /* EX-03: route detail's main action is pinned on a phone. */
 @media (max-width: 760px) {
@@ -9828,7 +10105,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
+  width: 56px;
   height: 56px;
   padding: 0;
   border: 0;
@@ -9836,6 +10113,52 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   background: transparent;
   color: var(--og-ride-muted);
   cursor: pointer;
+}
+
+/*
+  Recording, from the map screen (a mounted phone's "is it recording?"): the
+  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a 9 px
+  REC caption and the elapsed time, stacked in two lines. No pulse and no
+  animation in either theme: a dot beside a counting clock is enough, and
+  nothing moves at 60 mph (and nothing to stop for reduced motion).
+*/
+.og-ride-metrics__toggle[data-recording="true"] {
+  gap: 1px;
+  border: 1px solid var(--og-ride-border);
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  line-height: 1;
+}
+
+.og-ride-metrics__rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.og-ride-metrics__rec-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--og-danger);
+}
+
+.og-ride-metrics__rec-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.og-ride-metrics__toggle .og-ride-metrics__rec-chevron {
+  width: 10px;
+  height: 10px;
+}
+
+.og-ride-metrics__rec-time {
+  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+  font-size: 12px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
 }
 
 .og-ride-metrics__toggle[data-held="true"] {
@@ -10343,7 +10666,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
   /* The map's round controls wear the same glass as the tab bar. */
   .og-map__layer-toggle,
-  .og-map__whole-ride,
   .og-layers__button {
     border: 1px solid var(--og-glass-edge);
     background: var(--og-glass-bg);
@@ -10361,30 +10683,11 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   }
 }
 
-/* "Center on me" (owner request, like Google Maps): bottom right on the wide
-   tiers, clear of the attribution; on a phone it joins the round cluster. */
+/* "Center on me": the button itself is one of the control column's (the shared
+   round glass above); its own behaviour is the tool's colour and the locating
+   pulse. */
 .og-map__locate {
-  position: absolute;
-  right: 12px;
-  bottom: 48px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  cursor: pointer;
-  border: 1px solid var(--og-sandstone);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--og-paper) 92%, transparent);
   color: var(--og-signal-strong);
-  box-shadow: 0 1px 6px rgb(22 29 28 / 16%);
-  backdrop-filter: blur(6px);
-}
-
-.og-map__locate:focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
 }
 
 .og-map__locate[data-locating="true"] .og-map__ctl-icon {
@@ -10399,49 +10702,22 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   .og-map__locate[data-locating="true"] .og-map__ctl-icon { animation: none; opacity: 0.6; }
 }
 
-.og-map__locate-failure {
+/* Why the locate failed: a status note under the column, aligned with its right
+   edge, taking no pointer events — a message, not a control, and never over the
+   button it explains. */
+.og-map__cluster .og-map__locate-failure {
   position: absolute;
-  right: 64px;
-  bottom: 48px;
-  z-index: 2;
-  max-width: min(280px, calc(100% - 88px));
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1;
+  max-width: min(280px, calc(100vw - 88px));
   margin: 0;
   padding: 8px 12px;
   font-size: 13px;
   border-radius: var(--og-radius-control);
   background: var(--og-ink);
   color: var(--og-paper);
-}
-
-@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
-  .og-map__locate {
-    top: calc(220px + var(--og-safe-top));
-    bottom: auto;
-    border: 1px solid var(--og-glass-edge);
-    background: var(--og-glass-bg);
-    -webkit-backdrop-filter: var(--og-glass-blur);
-    backdrop-filter: var(--og-glass-blur);
-    box-shadow: var(--og-glass-shadow);
-  }
-
-  .og-map__locate-failure {
-    top: calc(220px + var(--og-safe-top));
-    bottom: auto;
-  }
-}
-
-/* The short phone (ML-01): Layers moved beside Satellite, so "center on me"
-   sits beside "Show whole ride", above the sheet. */
-@media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
-  .og-map__locate {
-    top: calc(116px + var(--og-safe-top));
-    right: 64px;
-  }
-
-  .og-map__locate-failure {
-    top: calc(168px + var(--og-safe-top));
-    right: 12px;
-  }
+  pointer-events: none;
 }
 
 /* The glance strip: the live ride summary over the map. One pill, one sentence —
@@ -10653,16 +10929,12 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   }
 }
 
-/* The short landscape's map column keeps the strip in its lower band, above the
-   corner controls, where the window is too short to spend a top row on it; the
-   one control down there — Center on me — steps up above it. */
+/* The short landscape's map column keeps the strip in its lower band, where the
+   window is too short to spend a top row on it. The control column lives at the
+   map's top-right, so the strip and the controls no longer share the corner. */
 @media (orientation: landscape) and (max-height: 500px) and (min-width: 760px) {
   .og-glance--map {
     bottom: 60px;
-  }
-
-  .og-planner__map-slot:has(> .og-glance) .og-map__locate {
-    bottom: 116px;
   }
 
   .og-planner__map-slot:has(.og-places-card) .og-glance--map {

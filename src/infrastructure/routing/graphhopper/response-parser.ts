@@ -156,6 +156,13 @@ export interface GraphHopperInstruction {
   readonly text?: string;
   readonly street_name?: string;
   readonly interval?: readonly [number, number];
+  /**
+   * The roundabout exit GraphHopper computed for a `sign: 6` instruction. It is
+   * carried only when the engine actually sends it: the deployed engine version
+   * was not exercised for this field from here, so a missing value stays missing
+   * and the rider sees "Enter the roundabout" instead of a guessed exit.
+   */
+  readonly exit_number?: number;
 }
 
 /** One `[from, to, value]` interval of a requested route detail. */
@@ -210,6 +217,10 @@ const INSTRUCTION_TYPES: Readonly<Record<number, string>> = {
   5: "via",
   6: "roundabout",
   7: "keep-left",
+  // GraphHopper 11 documents keep-right as 8; -7 is kept because earlier
+  // OpenGravel builds mapped it that way. Either sign yields one kind, so a
+  // fork can never fall through to "no instruction" on an engine difference.
+  8: "keep-right",
   "-7": "keep-right",
 };
 
@@ -266,10 +277,18 @@ export function createRouteFingerprint(
   return `${profile}-${index + 1}-${(hash >>> 0).toString(36)}`;
 }
 
+function roundaboutExitNumber(exitNumber: number | undefined): number | undefined {
+  if (exitNumber === undefined) return undefined;
+  if (!Number.isInteger(exitNumber) || exitNumber < 1 || exitNumber > 20) return undefined;
+  return exitNumber;
+}
+
 function toInstructions(path: GraphHopperPath): readonly ProviderInstruction[] {
   return (path.instructions ?? []).map((instruction) => {
     const maneuver = instructionManeuver(instruction.sign);
     const geometryIndex = instruction.interval?.[0];
+    const exitNumber =
+      instruction.sign === 6 ? roundaboutExitNumber(instruction.exit_number) : undefined;
     return {
       // The adapter never authors rider copy: a missing engine text stays empty
       // rather than becoming an invented English sentence.
@@ -282,6 +301,7 @@ function toInstructions(path: GraphHopperPath): readonly ProviderInstruction[] {
         ? {}
         : { roadName: instruction.street_name }),
       ...(geometryIndex === undefined ? {} : { geometryIndex }),
+      ...(exitNumber === undefined ? {} : { exitNumber }),
     };
   });
 }

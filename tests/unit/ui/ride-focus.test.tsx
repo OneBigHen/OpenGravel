@@ -39,14 +39,18 @@ import type {
 } from "@/domain/ride/ids";
 import { newRideId, newStopId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
-import type { RideSessionId } from "@/domain/ride-session/ids";
+import type { RideSessionId, SessionInstructionId } from "@/domain/ride-session/ids";
+import { asSessionInstructionId } from "@/domain/ride-session/ids";
+import type { SessionNavigationState } from "@/domain/ride-session/navigation";
 import {
   instructionIssuedEvent,
-  newSessionInstruction,
   offRouteChangedEvent,
   positionUpdatedEvent,
 } from "@/domain/ride-session/create";
 import { asRouteCandidateId } from "@/domain/route/ids";
+import { asRecordingId } from "@/domain/recording/ids";
+import type { GuidedReroutePlanner, GuidedRerouteResult } from "@/application/ride-session/guided-reroute";
+import { buildRideFocusViewModel } from "@/application/ride-session/ride-focus-view-model";
 import {
   createRideSessionController,
   type RideSessionController,
@@ -59,6 +63,7 @@ import {
   type RiderSettings,
   type RiderSettingsStoragePort,
 } from "@/application/ride-metrics/rider-settings";
+import type { RideFocusTelemetryProvider } from "@/application/ride-session/ride-focus-view-model";
 import { RideFocus } from "@/ui/ride/RideFocus";
 
 import { createStubMapHostFactory } from "../support/stub-map-host";
@@ -187,6 +192,17 @@ interface Harness {
   readonly hosts: ReturnType<typeof createStubMapHostFactory>;
   readonly sessionId: RideSessionId;
   readonly databaseName: string;
+  /** The store's own 1 Hz refresh, as the ride screen runs it on a mounted phone. */
+  readonly tick: () => void;
+  /** The identity of the issued maneuver, when the fixture issued one. */
+  readonly instructionId: SessionInstructionId | null;
+}
+
+/** A deterministic identity per issued fixture maneuver (the journal validates the prefix). */
+let instructionSequence = 0;
+function nextInstructionId(): SessionInstructionId {
+  instructionSequence += 1;
+  return asSessionInstructionId(`instr_ride_focus_${instructionSequence}`);
 }
 
 const RIDE_FOCUS_PLACE: NearbyPlace = {
@@ -221,8 +237,8 @@ const RIDE_FOCUS_PLACE: NearbyPlace = {
  * puts the ride back (8 §13).
  */
 async function harness(options: {
-  readonly position?: "fresh" | "stale" | "none";
-  readonly instruction?: "turn" | "nameless";
+  readonly position?: "fresh" | "poor" | "stale" | "none";
+  readonly instruction?: "turn" | "nameless" | "roundabout" | "roundabout-known-exit";
   readonly environment?: Partial<RideFocusEnvironmentSnapshot>;
   readonly pointerAt?: "session" | "nothing";
   readonly databaseName?: string;
@@ -230,6 +246,13 @@ async function harness(options: {
   readonly placesSource?: PlacesSource;
   readonly autoResume?: boolean;
   readonly riderSettings?: RiderSettingsStoragePort;
+  readonly reroutePlanner?: GuidedReroutePlanner;
+  /** The engine's telemetry provider: lateral offset, live maneuver distance and the "then" pair. */
+  readonly telemetry?: RideFocusTelemetryProvider;
+  /** A fixed identity for the issued maneuver, so telemetry can name it. */
+  readonly instructionId?: SessionInstructionId;
+  /** The matcher's continuity verdict for a positioned ride; defaults to "on-route". */
+  readonly offRoute?: Parameters<typeof offRouteChangedEvent>[0];
 } = {}): Promise<Harness> {
   const databaseName = options.databaseName ?? freshDatabaseName();
   const repository = createRideSessionRepository({ databaseName });
@@ -254,6 +277,7 @@ async function harness(options: {
   };
   const environment = environmentDouble(options.environment);
   const pointer = pointerDouble(target);
+  let tickHandler: (() => void) | null = null;
   const store = createRideFocusStore({
     controller,
     environment: () => environment.port,
@@ -261,8 +285,13 @@ async function harness(options: {
     readRouteLine: async () => LINE,
     now: () => NOW,
     ...(options.riderSettings === undefined ? {} : { riderSettings: options.riderSettings }),
+    ...(options.reroutePlanner === undefined ? {} : { reroutePlanner: options.reroutePlanner }),
+    ...(options.telemetry === undefined ? {} : { telemetry: options.telemetry }),
     // The store's own clock is the surface's freshness, not the test's business.
-    setInterval: () => 0,
+    setInterval: (handler) => {
+      tickHandler = handler;
+      return 1;
+    },
     clearInterval: () => undefined,
   });
   await store.getState().start();
@@ -278,6 +307,21 @@ async function harness(options: {
           coordinate: { lon: -75.4385, lat: 40.1385 },
           observedAt: NOW,
           accuracyMeters: 6,
+          headingDegrees: 212,
+          speedMps: 14.2,
+        },
+        NOW,
+      ),
+    );
+  }
+  if (options.position === "poor") {
+    // A current fix the device measured badly: usable, but not fresh-good.
+    await controller.dispatch(
+      positionUpdatedEvent(
+        {
+          coordinate: { lon: -75.4385, lat: 40.1385 },
+          observedAt: NOW,
+          accuracyMeters: 120,
           headingDegrees: 212,
           speedMps: 14.2,
         },
@@ -302,23 +346,37 @@ async function harness(options: {
       ),
     );
   }
-  if (options.position === "fresh" || options.position === "stale") {
-    await controller.dispatch(offRouteChangedEvent("on-route", NOW));
+  if (options.position === "fresh" || options.position === "poor" || options.position === "stale") {
+    await controller.dispatch(offRouteChangedEvent(options.offRoute ?? "on-route", NOW));
   }
   if (options.instruction !== undefined) {
+    const roundabout = options.instruction.startsWith("roundabout");
+    const instructionId = options.instructionId ?? nextInstructionId();
     await controller.dispatch(
       instructionIssuedEvent(
-        newSessionInstruction({
-          kind: "turn",
-          maneuver: "left",
-          roadName: options.instruction === "turn" ? "Gravel Pike" : "  ",
-          distanceMeters: 120,
-          targetStopId: null,
-        }),
+        roundabout
+          ? {
+              instructionId,
+              kind: "roundabout",
+              maneuver: null,
+              roadName: options.instruction === "roundabout" ? null : "PA-23",
+              distanceMeters: 120,
+              targetStopId: null,
+              ...(options.instruction === "roundabout-known-exit" ? { exitNumber: 2 } : {}),
+            }
+          : {
+              instructionId,
+              kind: "turn",
+              maneuver: "left",
+              roadName: options.instruction === "turn" ? "Gravel Pike" : "  ",
+              distanceMeters: 120,
+              targetStopId: null,
+            },
         NOW,
       ),
     );
   }
+  const issuedInstructionId = controller.navigationState()?.instruction?.instructionId ?? null;
   await store.getState().setMapReady(true);
 
   const hosts = createStubMapHostFactory();
@@ -334,7 +392,11 @@ async function harness(options: {
     hosts.hosts[0]?.reportStatus({ state: "ready", reason: null });
   });
 
-  return { store, controller, environment, pointer, hosts, sessionId, databaseName };
+  return {
+    store, controller, environment, pointer, hosts, sessionId, databaseName,
+    tick: () => tickHandler?.(),
+    instructionId: issuedInstructionId,
+  };
 }
 
 afterEach(() => {
@@ -425,6 +487,128 @@ describe("dark chrome and honest states", () => {
     expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Turn left");
   });
 
+  it("adds a quiet then row when the following maneuver is within a mile", async () => {
+    const instructionId = asSessionInstructionId("instr_then_near");
+    await harness({
+      position: "fresh",
+      instruction: "turn",
+      instructionId,
+      telemetry: () => ({
+        routeProgress: 0.4,
+        remainingDistanceMeters: 8_000,
+        remainingDurationSeconds: 900,
+        etaIso: null,
+        followingManeuver: {
+          afterInstructionId: instructionId,
+          kind: "keep-right",
+          maneuver: null,
+          roadName: "Ridge Road",
+          distanceFromCurrentMeters: 640,
+        },
+      }),
+    });
+
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-then", "true");
+    const then = screen.getByTestId("ride-maneuver-then");
+    expect(then).toHaveTextContent("Then");
+    expect(then).toHaveTextContent("Keep right onto Ridge Road");
+    expect(screen.getByTestId("ride-maneuver-then-glyph")).toHaveAttribute(
+      "data-glyph",
+      "keep-right",
+    );
+    // A glance, not a second instruction: the row is hidden from assistive tech
+    // and creates no second live region inside the 1 Hz card.
+    expect(then).toHaveAttribute("aria-hidden", "true");
+    expect(then).not.toHaveAttribute("aria-live");
+    expect(screen.getByTestId("ride-maneuver-then")).not.toHaveAttribute("role");
+  });
+
+  it("keeps the then row out of the card when it is far or unknown", async () => {
+    const instructionId = asSessionInstructionId("instr_then_far");
+    const telemetry = (gapMeters: number | null): RideFocusTelemetryProvider => () => ({
+      routeProgress: 0.4,
+      remainingDistanceMeters: 8_000,
+      remainingDurationSeconds: 900,
+      etaIso: null,
+      followingManeuver:
+        gapMeters === null
+          ? null
+          : {
+              afterInstructionId: instructionId,
+              kind: "turn",
+              maneuver: "right",
+              roadName: "Ridge Road",
+              distanceFromCurrentMeters: gapMeters,
+            },
+    });
+
+    await harness({ position: "fresh", instruction: "turn", instructionId, telemetry: telemetry(3_000) });
+    expect(screen.queryByTestId("ride-maneuver-then")).toBeNull();
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-then", "false");
+
+    cleanup();
+    await harness({ position: "fresh", instruction: "turn", instructionId, telemetry: telemetry(null) });
+    expect(screen.queryByTestId("ride-maneuver-then")).toBeNull();
+  });
+
+  it("badges a provider-stated roundabout exit and never invents one", async () => {
+    await harness({ position: "fresh", instruction: "roundabout-known-exit" });
+    expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Take the 2nd exit");
+    expect(screen.getByTestId("ride-maneuver-glyph")).toHaveAttribute("data-glyph", "roundabout");
+    expect(screen.getByTestId("ride-maneuver-exit")).toHaveTextContent("2");
+
+    cleanup();
+    await harness({ position: "fresh", instruction: "roundabout" });
+    expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Enter the roundabout");
+    expect(screen.queryByTestId("ride-maneuver-exit")).toBeNull();
+  });
+
+  it("declares the then row and the exit badge in the stylesheet", () => {
+    const read = (file: string): string =>
+      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
+    const ruleIn = (css: string, selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+
+    const globals = read("globals.css");
+    const then = ruleIn(globals, ".og-ride__maneuver-then");
+    // Third grid row under the action line, spanning the icon column too.
+    expect(then).toMatch(/grid-column:\s*1 \/ -1/);
+    expect(then).toMatch(/border-top:\s*1px solid/);
+    expect(then).toMatch(/padding-top:\s*8px/);
+    expect(then).toMatch(/min-height:\s*30px/);
+    expect(then).toMatch(/font-size:\s*15px/);
+    expect(then).toMatch(/font-weight:\s*600/);
+    // Reduced motion has nothing to stop: the row appears instantly, always.
+    expect(then).not.toMatch(/(animation|transition)[\w-]*\s*:/);
+    // One line, ellipsised rather than wrapping the card.
+    expect(ruleIn(globals, ".og-ride__maneuver-then-action")).toMatch(
+      /text-overflow:\s*ellipsis/,
+    );
+    expect(ruleIn(globals, '.og-ride__maneuver[data-then="true"]')).toMatch(/min-height:\s*126px/);
+
+    const exit = ruleIn(globals, ".og-ride__maneuver-exit");
+    expect(exit).toMatch(/width:\s*24px/);
+    expect(exit).toMatch(/height:\s*24px/);
+    expect(exit).toMatch(/font-size:\s*13px/);
+    expect(exit).toMatch(/font-weight:\s*800/);
+    expect(exit).toMatch(/font-variant-numeric:\s*tabular-nums/);
+
+    const glass = read("theme-glass.css");
+    expect(
+      ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver[data-then="true"]'),
+    ).toMatch(/min-height:\s*138px/);
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-then')).toMatch(
+      /border-top-color:\s*rgb\(255 255 255 \/ 24%\)/,
+    );
+    // Day badging: white disc, green numeral and ring; Night keeps paper/ink.
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-exit')).toMatch(
+      /box-shadow:\s*0 0 0 2px #0b6b35/,
+    );
+  });
+
   it("draws the route line and the rider position into the map scene", async () => {
     const { hosts } = await harness({ position: "fresh" });
 
@@ -505,6 +689,191 @@ describe("dark chrome and honest states", () => {
     expect(screen.queryByTestId("places-control")).not.toBeInTheDocument();
     expect(screen.queryByTestId("place-card")).not.toBeInTheDocument();
     expect(hosts.hosts[0]?.lastScene()?.places).toBeUndefined();
+  });
+});
+
+/**
+ * Off the line: a guided ride with a real instruction, a fix the device
+ * accepted, and the matcher's own lateral offset (67 m ≈ 200 ft).
+ */
+async function offRouteHarness(options: {
+  readonly position?: "fresh" | "poor";
+  readonly reroutePlanner?: GuidedReroutePlanner;
+} = {}): Promise<Harness> {
+  const harnessed = await harness({
+    position: options.position ?? "fresh",
+    instruction: "turn",
+    telemetry: () => ({
+      routeProgress: null,
+      remainingDistanceMeters: null,
+      remainingDurationSeconds: null,
+      etaIso: null,
+      distanceFromRouteMeters: 67,
+    }),
+    ...(options.reroutePlanner === undefined ? {} : { reroutePlanner: options.reroutePlanner }),
+  });
+  await act(async () => {
+    await harnessed.controller.dispatch(offRouteChangedEvent("off-route", NOW));
+    // The ride screen re-derives its frame once a second (the store's own tick).
+    harnessed.tick();
+  });
+  return harnessed;
+}
+
+describe("off the route: the recovery is on the card (DV-10)", () => {
+  it("shows how far off the line, plus Reroute now and Details, and reroutes once", async () => {
+    const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
+    const { store } = await offRouteHarness({ reroutePlanner: { plan } });
+
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
+    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("Off the route");
+    // The engine's own measurement, in the maneuver card's feet/mile rule.
+    expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("200 ft off route");
+
+    const reroute = screen.getByTestId("ride-reroute-now");
+    expect(reroute).toHaveTextContent("Reroute now");
+    expect(reroute).toBeEnabled();
+    expect(reroute).toHaveClass("og-ride__action", "og-ride__action--primary");
+    expect(screen.getByTestId("ride-off-route-details")).toHaveTextContent("Details");
+    // The sheet is not needed to recover.
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+
+    await act(async () => {
+      fireEvent.click(reroute);
+    });
+    await waitFor(() => expect(plan).toHaveBeenCalledTimes(1));
+    // It is the store's own reroute, so its failure is the store's own copy.
+    expect(store.getState().rerouteError).toContain("Keep riding toward the line");
+    expect(screen.getByTestId("ride-toast")).toHaveTextContent("Keep riding toward the line");
+
+    fireEvent.click(screen.getByTestId("ride-off-route-details"));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+  });
+
+  it("refuses the reroute on a fix that is not fresh-good, with the reason on the button", async () => {
+    const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "gps" as const }));
+    await offRouteHarness({ position: "poor", reroutePlanner: { plan } });
+
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-gps", "fresh-poor");
+    const reroute = screen.getByTestId("ride-reroute-now");
+    expect(reroute).toBeDisabled();
+    expect(reroute).toHaveAttribute("title", "Rerouting needs a fresh, accurate GPS fix.");
+
+    fireEvent.click(reroute);
+    await waitFor(() => expect(reroute).toBeDisabled());
+    expect(plan).not.toHaveBeenCalled();
+  });
+
+  it("keeps the card in place while a reroute is in flight, and never sends two", async () => {
+    let settle: ((result: GuidedRerouteResult) => void) | null = null;
+    const plan = vi.fn(() => new Promise<GuidedRerouteResult>((resolve) => {
+      settle = resolve;
+    }));
+    const { store } = await offRouteHarness({ reroutePlanner: { plan } });
+
+    fireEvent.click(screen.getByTestId("ride-reroute-now"));
+    await waitFor(() => expect(store.getState().rerouteBusy).toBe(true));
+
+    const reroute = screen.getByTestId("ride-reroute-now");
+    expect(reroute).toHaveTextContent("Routing…");
+    expect(reroute).toBeDisabled();
+    expect(reroute).toHaveAttribute("aria-busy", "true");
+
+    fireEvent.click(reroute);
+    expect(plan).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      settle?.({ status: "unavailable", reason: "no-route" });
+    });
+    await waitFor(() => expect(screen.getByTestId("ride-reroute-now")).toHaveTextContent("Reroute now"));
+  });
+
+  it("offers the distance but no recovery controls when the ride cannot reroute at all", async () => {
+    await offRouteHarness();
+
+    expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("200 ft off route");
+    expect(screen.queryByTestId("ride-off-route-actions")).toBeNull();
+  });
+
+  it("adds neither the distance nor the controls to a different suspension", async () => {
+    await harness({ autoResume: false, telemetry: () => ({
+      routeProgress: null,
+      remainingDistanceMeters: null,
+      remainingDurationSeconds: null,
+      etaIso: null,
+      distanceFromRouteMeters: 67,
+    }) });
+
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
+    expect(screen.queryByTestId("ride-off-route-distance")).toBeNull();
+    expect(screen.queryByTestId("ride-off-route-actions")).toBeNull();
+  });
+});
+
+describe("recording from the map screen", () => {
+  /** The real projection of a recording session, so the surface sees what the app produces. */
+  function recordingViewModel(
+    store: ReturnType<typeof createRideFocusStore>,
+    overrides: Partial<SessionNavigationState> = {},
+  ) {
+    const navigation = {
+      ...store.getState().navigation!,
+      recordingId: asRecordingId("rec_indicator"),
+      ...overrides,
+    };
+    return {
+      navigation,
+      viewModel: buildRideFocusViewModel({
+        navigation,
+        environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
+        recordingSummary: { distanceMeters: 12_874, elapsedSeconds: 1_872, movingSeconds: 1_440, pointCount: 640 },
+        now: NOW,
+      }),
+    };
+  }
+
+  it("turns the sheet toggle into a recording indicator with a spoken elapsed time", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = recordingViewModel(store);
+    act(() => store.setState({ navigation, viewModel }));
+
+    const toggle = screen.getByTestId("ride-strip");
+    expect(toggle).toHaveAttribute("data-recording", "true");
+    // The elapsed time is visible text, and it is also what a screen reader hears.
+    expect(screen.getByTestId("ride-rec-time")).toHaveTextContent("31:12");
+    expect(toggle).toHaveTextContent("REC");
+    expect(toggle).toHaveAccessibleName("Recording, 31 minutes 12 seconds. Show ride controls.");
+
+    // Still the sheet toggle it always was.
+    fireEvent.click(toggle);
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    expect(toggle).toHaveAccessibleName("Recording, 31 minutes 12 seconds. Hide ride controls.");
+  });
+
+  it("keeps the plain chevron when nothing is being recorded", async () => {
+    await harness({ position: "fresh" });
+
+    const toggle = screen.getByTestId("ride-strip");
+    expect(toggle).not.toHaveAttribute("data-recording");
+    expect(toggle).toHaveAccessibleName("Show ride controls");
+    expect(toggle).not.toHaveTextContent("REC");
+    expect(screen.queryByTestId("ride-rec-time")).toBeNull();
+  });
+
+  it("returns to the finished ride's summary once the ride is terminal", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = recordingViewModel(store, {
+      activity: "completed",
+      endedAt: NOW,
+      endReason: "completed",
+    });
+    act(() => store.setState({ navigation, viewModel }));
+
+    expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Recorded ride saved");
+    const strip = screen.getByTestId("ride-strip");
+    expect(strip).toHaveClass("og-ride__strip-summary");
+    expect(strip).toHaveTextContent("Recorded ride saved");
+    expect(screen.queryByTestId("ride-rec-time")).toBeNull();
   });
 });
 
@@ -760,6 +1129,45 @@ describe("camera (08 §2, DV-10)", () => {
   });
 });
 
+describe("route progress on the map (08 §5)", () => {
+  const progress = (routeProgress: number): RideFocusTelemetryProvider => () => ({
+    routeProgress,
+    remainingDistanceMeters: 1_200,
+    remainingDurationSeconds: 240,
+    etaIso: null,
+  });
+
+  it("dims the part of the line already ridden and keeps the road ahead bright", async () => {
+    const { hosts } = await harness({ position: "fresh", telemetry: progress(0.5) });
+
+    await waitFor(() => {
+      const scene = hosts.hosts[0]?.lastScene();
+      expect(scene?.routes.map((route) => route.state)).toEqual(["selected", "travelled"]);
+    });
+    const routes = hosts.hosts[0]?.lastScene()?.routes ?? [];
+    const ridden = routes.find((route) => route.state === "travelled")?.geometry ?? [];
+    const ahead = routes.find((route) => route.state === "selected")?.geometry ?? [];
+    // Half of the fixture line, and the two halves meet where the rider is.
+    expect(ridden[0]).toEqual(LINE[0]);
+    expect(ridden.at(-1)?.lon).toBeCloseTo(-75.43, 3);
+    expect(ahead[0]).toEqual(ridden.at(-1));
+    expect(ahead.at(-1)).toEqual(LINE.at(-1));
+  });
+
+  it("never splits on a progress answer the matcher is not standing behind", async () => {
+    // A stale fix has no current progress to draw: the whole line stays ahead.
+    const stale = await harness({ position: "stale", telemetry: progress(0.5) });
+    await waitFor(() => expect(stale.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(stale.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+
+    // The same fraction with the matcher off the line is not progress along it.
+    const off = await harness({ position: "fresh", telemetry: progress(0.5), offRoute: "off-route" });
+    await waitFor(() => expect(off.hosts.hosts[0]?.lastScene()).not.toBeNull());
+    expect(off.hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1);
+    expect(off.hosts.hosts[0]?.lastScene()?.routes[0]?.state).toBe("selected");
+  });
+});
+
 describe("12 §10 touch targets", () => {
   it("gives every primary control the 56 px hit-area class", async () => {
     await harness({ position: "fresh" });
@@ -798,6 +1206,39 @@ describe("12 §10 touch targets", () => {
     expect(ride).toMatch(/background:\s*var\(--og-ink\)/);
     expect(ride).toMatch(/color:\s*var\(--og-paper\)/);
     expect(ride).not.toMatch(/prefers-color-scheme/);
+  });
+
+  it("gives the off-route card and the recording indicator their own fixed geometry", () => {
+    const css = readFileSync(
+      path.join(process.cwd(), "src", "app", "globals.css"),
+      "utf8",
+    );
+    const rule = (selector: string, from = 0): string => {
+      const start = css.indexOf(`${selector} {`, from);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+
+    // The suspended card grew a row of recovery controls; the box stays fixed
+    // so nothing re-lays out under a thumb at speed.
+    const suspended = rule('.og-ride__maneuver[data-kind="suspended"]');
+    expect(suspended).toMatch(/min-height:\s*124px/);
+    // Landscape: the same row at 116 px.
+    const landscape = rule('.og-ride__maneuver[data-kind="suspended"]', css.lastIndexOf('.og-ride__maneuver[data-kind="suspended"] {'));
+    expect(landscape).toMatch(/min-height:\s*116px/);
+
+    // Both recovery controls are 56 px, side by side.
+    const row = rule(".og-ride__off-route-actions");
+    expect(row).toMatch(/display:\s*flex/);
+    // The recording indicator keeps the sheet toggle's 56×56 target.
+    const toggle = rule(".og-ride-metrics__toggle");
+    expect(toggle).toMatch(/width:\s*56px/);
+    expect(toggle).toMatch(/height:\s*56px/);
+    // No pulse in either theme: a dot beside a counting clock is the signal, so
+    // there is nothing for `prefers-reduced-motion` to stop.
+    const recording = rule('.og-ride-metrics__toggle[data-recording="true"]');
+    expect(recording).not.toMatch(/animation|transition/);
+    expect(rule(".og-ride__off-route-distance")).toMatch(/font-size:\s*15px/);
   });
 });
 

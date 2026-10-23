@@ -86,6 +86,71 @@ export function PlannerWorkspaceFrame({
     armedTool !== null && armedTool !== missingTarget && !(armedTool === "stop" && editBar !== undefined)
       ? TOOL_HINTS[armedTool]
       : null;
+  /*
+    The surface's own two camera controls join the map's one control column,
+    under the compass and the zoom buttons (`PlannerMap` renders the column).
+    They keep their test ids and their labels; only their place moved, so the
+    right edge of the map is a single instrument instead of two stacks.
+  */
+  const clusterControls = (
+    <>
+      {locateMe === undefined ? null : (
+        <button
+          type="button"
+          className="og-map__locate"
+          data-testid="map-locate-me"
+          aria-label={locateMe.locating ? "Finding your location" : "Center on my location"}
+          aria-busy={locateMe.locating}
+          data-locating={locateMe.locating ? "true" : "false"}
+          onClick={locateMe.onLocate}
+        >
+          <svg
+            className="og-map__ctl-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="6.5" />
+            <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
+          </svg>
+        </button>
+      )}
+      {hasDrawnRoute ? (
+        <button
+          type="button"
+          className="og-map__whole-ride"
+          data-testid="show-whole-ride"
+          onClick={onShowWholeRide}
+        >
+          <svg
+            className="og-map__ctl-icon"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
+          <span className="og-map__ctl-label">Show whole ride</span>
+        </button>
+      ) : null}
+      {locateMe === undefined || locateMe.failure === null ? null : (
+        <p className="og-map__locate-failure" data-testid="map-locate-failure" role="status">
+          {locateMe.failure}
+        </p>
+      )}
+    </>
+  );
   return (
     <main id="main" className="og-planner">
       <header className="og-planner__header" ref={headerRef}>
@@ -108,7 +173,14 @@ export function PlannerWorkspaceFrame({
 
       <div className="og-planner__body">
         <div className="og-planner__map-slot" ref={mapSlotRef}>
-          <PlannerPlacesMap {...map} scene={scene} hint={hint} places={places} layers={layers} />
+          <PlannerPlacesMap
+            {...map}
+            scene={scene}
+            hint={hint}
+            places={places}
+            layers={layers}
+            clusterControls={clusterControls}
+          />
           {glance}
           {editBar === undefined ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
@@ -116,63 +188,6 @@ export function PlannerWorkspaceFrame({
               Retrying the map…
             </span>
           ) : null}
-          {hasDrawnRoute ? (
-            <button
-              type="button"
-              className="og-map__whole-ride"
-              data-testid="show-whole-ride"
-              onClick={onShowWholeRide}
-            >
-              <svg
-                className="og-map__ctl-icon"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-              </svg>
-              <span className="og-map__ctl-label">Show whole ride</span>
-            </button>
-          ) : null}
-          {locateMe === undefined ? null : (
-            <>
-              <button
-                type="button"
-                className="og-map__locate"
-                data-testid="map-locate-me"
-                aria-label={locateMe.locating ? "Finding your location" : "Center on my location"}
-                aria-busy={locateMe.locating}
-                data-locating={locateMe.locating ? "true" : "false"}
-                onClick={locateMe.onLocate}
-              >
-                <svg
-                  className="og-map__ctl-icon"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                >
-                  <circle cx="12" cy="12" r="6.5" />
-                  <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
-                  <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" />
-                </svg>
-              </button>
-              {locateMe.failure === null ? null : (
-                <p className="og-map__locate-failure" data-testid="map-locate-failure" role="status">
-                  {locateMe.failure}
-                </p>
-              )}
-            </>
-          )}
         </div>
         {children}
       </div>

@@ -26,6 +26,7 @@ import {
   formatSpeed,
   permissionLabel,
   spokenManeuver,
+  type RideFocusTelemetryInput,
 } from "@/application/ride-session/ride-focus-view-model";
 import type { RideFocusEnvironmentSnapshot } from "@/application/ride-session/ports/ride-focus-environment";
 import type {
@@ -328,12 +329,35 @@ describe("maneuver copy (08 §2, §6)", () => {
       distanceText: "1 mi",
       movingTimeText: "1:42",
       elapsedTimeText: "2:05",
+      // The map screen's recording dot is read aloud, so the timer has words.
+      elapsedTimeSpoken: "2 minutes 5 seconds",
       currentSpeedText: "32 mph",
       averageSpeedText: "35 mph",
       waitingForFix: false,
       saveWarningText: null,
       canRetrySave: false,
     });
+  });
+
+  it("speaks the recording's elapsed time in hours, minutes and seconds", () => {
+    const recordingId = asRecordingId("rec_spoken_hours");
+    const { recording } = view({
+      navigation: navigation({
+        activity: "free",
+        plan: { rideId: newRideId(), rideRevision: 0, route: null },
+        recordingId,
+      }),
+      recordingSummary: {
+        distanceMeters: 42_000,
+        elapsedSeconds: 4_512,
+        movingSeconds: 3_900,
+        pointCount: 900,
+      },
+      now: NOW,
+    });
+
+    expect(recording?.elapsedTimeText).toBe("1:15:12");
+    expect(recording?.elapsedTimeSpoken).toBe("1 hour 15 minutes 12 seconds");
   });
 
   it("keeps recorded durations and average speed at the last accepted fix when GPS is stale", () => {
@@ -529,6 +553,142 @@ describe("maneuver copy (08 §2, §6)", () => {
   });
 });
 
+describe("then row and junction guidance (08 §2, §6)", () => {
+  type Telemetry = RideFocusTelemetryInput | null | undefined;
+  const HEAD = instruction();
+
+  function telemetryWithFollowing(
+    gapMeters: number | null,
+    following: Partial<NonNullable<RideFocusTelemetryInput["followingManeuver"]>> = {},
+  ): RideFocusTelemetryInput {
+    return {
+      routeProgress: 0.4,
+      remainingDistanceMeters: 8_000,
+      remainingDurationSeconds: 900,
+      etaIso: null,
+      followingManeuver:
+        gapMeters === null
+          ? null
+          : {
+              afterInstructionId: HEAD.instructionId,
+              kind: "roundabout",
+              maneuver: null,
+              roadName: "PA-23",
+              exitNumber: 2,
+              distanceFromCurrentMeters: gapMeters,
+              ...following,
+            },
+    };
+  }
+
+  function card(telemetry: Telemetry, head: SessionInstruction = HEAD) {
+    const { guidance } = view({
+      navigation: navigation({ instruction: head }),
+      telemetry,
+    });
+    if (guidance.kind !== "maneuver") throw new Error("expected a maneuver");
+    return guidance.maneuver;
+  }
+
+  it("shows the following maneuver when it belongs to this card and is within a mile", () => {
+    expect(card(telemetryWithFollowing(900)).then).toEqual({
+      glyph: "roundabout",
+      actionText: "Take the 2nd exit",
+      roadName: "PA-23",
+      roadPreposition: "onto",
+    });
+  });
+
+  it("hides the then row beyond a mile, without a following maneuver, or without a gap", () => {
+    expect(card(telemetryWithFollowing(1_610)).then).toBeNull();
+    expect(card(telemetryWithFollowing(null)).then).toBeNull();
+    // A following maneuver the matcher could not place is not a placement.
+    expect(
+      card({ ...telemetryWithFollowing(400), followingManeuver: undefined }).then,
+    ).toBeNull();
+  });
+
+  it("never pairs the then row with an instruction the frame already left", () => {
+    const stale = telemetryWithFollowing(400, {
+      afterInstructionId: asSessionInstructionId("ins_other"),
+    });
+    expect(card(stale).then).toBeNull();
+  });
+
+  it("produces no then row at all while ahead guidance is suspended", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "paused",
+        resumeActivity: "guided",
+        aheadGuidanceSuspended: true,
+        instruction: HEAD,
+      }),
+      telemetry: telemetryWithFollowing(300),
+    });
+
+    expect(guidance.kind).toBe("suspended");
+  });
+
+  it("names a roundabout exit only when the provider stated the number", () => {
+    const known = card(null, instruction({ kind: "roundabout", maneuver: null, roadName: "PA-23", exitNumber: 2 }));
+    expect(known.actionText).toBe("Take the 2nd exit");
+    expect(known.exitNumber).toBe(2);
+    expect(known.glyph).toBe("roundabout");
+    expect(known.label).toBe("Take the 2nd exit onto PA-23 in 400 ft");
+
+    const eleventh = card(
+      null,
+      instruction({ kind: "roundabout", maneuver: null, roadName: null, exitNumber: 11 }),
+    );
+    expect(eleventh.actionText).toBe("Take the 11th exit");
+    expect(eleventh.label).toBe("Take the 11th exit in 400 ft");
+
+    const unknown = card(null, instruction({ kind: "roundabout", maneuver: null, roadName: null }));
+    expect(unknown.actionText).toBe("Enter the roundabout");
+    expect(unknown.exitNumber).toBeNull();
+    expect(unknown.label).toBe("Enter the roundabout in 400 ft");
+  });
+
+  it("keeps left and right forks as guidance, with the road the rider takes", () => {
+    const left = card(null, instruction({ kind: "keep-left", maneuver: null, roadName: "PA-23" }));
+    expect(left.actionText).toBe("Keep left");
+    expect(left.glyph).toBe("keep-left");
+    expect(left.label).toBe("Keep left onto PA-23 in 400 ft");
+
+    const right = card(null, instruction({ kind: "keep-right", maneuver: null, roadName: null }));
+    expect(right.actionText).toBe("Keep right");
+    expect(right.glyph).toBe("keep-right");
+    expect(right.roadName).toBeNull();
+  });
+
+  it("speaks a roundabout and a fork in the same words the card shows", () => {
+    expect(
+      spokenManeuver(
+        instruction({ kind: "roundabout", maneuver: null, roadName: "PA-23", exitNumber: 2 }),
+        200,
+      ),
+    ).toBe("In 650 feet, take the 2nd exit onto PA-23.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "roundabout", maneuver: null, roadName: null }),
+        200,
+      ),
+    ).toBe("In 650 feet, enter the roundabout.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "keep-left", maneuver: null, roadName: "PA-23" }),
+        200,
+      ),
+    ).toBe("In 650 feet, keep left onto PA-23.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "keep-right", maneuver: null, roadName: null }),
+        200,
+      ),
+    ).toBe("In 650 feet, keep right.");
+  });
+});
+
 describe("suspended ahead guidance (OGV-RID-005, 8 §15)", () => {
   it("produces no maneuver content while the ride is not moving", () => {
     const { guidance } = view({
@@ -560,6 +720,83 @@ describe("suspended ahead guidance (OGV-RID-005, 8 §15)", () => {
     if (guidance.kind !== "suspended") throw new Error("expected suspension");
     expect(guidance.reason).toBe("off-route");
     expect(guidance.text).toContain("Off the route");
+  });
+
+  it("puts the engine's own off-route distance on the card, in the maneuver card's units", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 67,
+      },
+    });
+
+    if (guidance.kind !== "suspended") throw new Error("expected suspension");
+    // 67 m ≈ 220 ft: the same feet/mile rule the maneuver card uses.
+    expect(guidance.offRouteDistanceText).toBe("200 ft off route");
+  });
+
+  it("says miles, not feet, once the rider is a mile off the line", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 2_800,
+      },
+    });
+
+    if (guidance.kind !== "suspended") throw new Error("expected suspension");
+    expect(guidance.offRouteDistanceText).toBe("1.7 mi off route");
+  });
+
+  it("shows no off-route distance the matcher did not measure, and none for other suspensions", () => {
+    const offRoute = view({
+      navigation: navigation({
+        activity: "guided",
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: null,
+      },
+    });
+    if (offRoute.guidance.kind !== "suspended") throw new Error("expected suspension");
+    expect(offRoute.guidance.offRouteDistanceText).toBeNull();
+
+    const stale = view({
+      navigation: navigation({
+        aheadGuidanceSuspended: true,
+        position: { ...HEALTHY_POSITION, speedMps: null, headingDegrees: null, quality: "stale" },
+      }),
+      telemetry: {
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 67,
+      },
+    });
+    if (stale.guidance.kind !== "suspended") throw new Error("expected suspension");
+    // A stale fix is a different suspension: no distance claim rides along.
+    expect(stale.guidance.offRouteDistanceText).toBeNull();
   });
 
   it("suspends for a stale fix, with the reason the rider can act on", () => {

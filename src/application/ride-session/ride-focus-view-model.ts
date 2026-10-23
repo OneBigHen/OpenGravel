@@ -25,6 +25,10 @@
  *   matcher measured one, and falls back to the issued value only when it did
  *   not (DV-06). A live measurement of the *next* maneuver is never printed
  *   against the previous instruction.
+ * - **The second maneuver is the matcher's, never a guess.** `then` exists only
+ *   when the engine's own ordered maneuver list has a next entry for the same
+ *   instruction the card is showing, and only within a mile — a provider's
+ *   prose is never parsed into a second instruction.
  * - **Suspended ahead guidance is respected** (OGV-RID-005): while the session
  *   is not moving, or the fix is stale/unavailable, no ahead content is
  *   produced at all — not dimmed, not greyed, absent — and the reason is stated.
@@ -77,6 +81,13 @@ const MPH_PER_MPS = 2.2369362920544;
 /** Under this many feet a maneuver distance reads as an immediate action. */
 const IMMEDIATE_MANEUVER_METERS = 25;
 
+/**
+ * The farthest apart two maneuvers may be and still share the card ("then"):
+ * one mile. Farther than that the second line is permanent clutter, not
+ * something to set up for.
+ */
+export const THEN_ROW_MAX_GAP_METERS = 1_609.344;
+
 /** `6480 → "1 h 48 min"`; unknown stays unknown. Shared with the planner. */
 export { UNKNOWN_VALUE };
 
@@ -104,9 +115,32 @@ export interface RideFocusManeuver {
     | "straight"
     | "uturn"
     | "continue"
-    | "arrive";
+    | "arrive"
+    | "roundabout"
+    | "keep-left"
+    | "keep-right";
+  /** The provider-stated roundabout exit, or `null`; never a count of our own. */
+  readonly exitNumber: number | null;
+  /**
+   * The maneuver after this one, shown as the card's "then" line. `null` when
+   * it is unknown, farther than {@link THEN_ROW_MAX_GAP_METERS}, or when the
+   * card is not a maneuver at all.
+   */
+  readonly then: RideFocusThenManeuver | null;
   /** The whole instruction as one sentence: what the visual card also reads. */
   readonly label: string;
+}
+
+/**
+ * The second maneuver on the card: enough to say "then bear right onto X" and
+ * nothing else. It is display-only (the row is `aria-hidden`) and it carries no
+ * distance of its own — the gap only decides whether it is shown.
+ */
+export interface RideFocusThenManeuver {
+  readonly glyph: RideFocusManeuver["glyph"];
+  readonly actionText: string;
+  readonly roadName: string | null;
+  readonly roadPreposition: "onto" | "on" | null;
 }
 
 export type RideFocusGuidance =
@@ -115,6 +149,12 @@ export type RideFocusGuidance =
       readonly kind: "suspended";
       readonly reason: GuidanceSuspendReason;
       readonly text: string;
+      /**
+       * "220 ft off route" from the engine's own lateral offset, only while the
+       * rider is off the line. `null` when the matcher measured nothing: a
+       * guessed distance would be worse than none (12 §16).
+       */
+      readonly offRouteDistanceText: string | null;
     }
   | { readonly kind: "waiting"; readonly text: string };
 
@@ -180,6 +220,8 @@ export interface RideFocusRecordingHud {
   readonly distanceText: string;
   readonly movingTimeText: string;
   readonly elapsedTimeText: string;
+  /** The elapsed time as a sentence ("12 minutes 34 seconds"), for the map screen's accessible name. */
+  readonly elapsedTimeSpoken: string;
   readonly currentSpeedText: string;
   readonly averageSpeedText: string;
   readonly waitingForFix: boolean;
@@ -253,6 +295,22 @@ export interface LiveManeuverDistance {
 }
 
 /**
+ * The maneuver after the one the engine is measuring, when the matcher knows
+ * both. `afterInstructionId` is the current maneuver's identity, so a "then"
+ * line can never be drawn under a card that has already moved on.
+ */
+export interface FollowingManeuverMeasurement {
+  readonly afterInstructionId: SessionInstructionId;
+  readonly kind: SessionInstruction["kind"];
+  readonly maneuver: SessionInstruction["maneuver"];
+  readonly roadName: string | null;
+  /** The provider's stated exit for a roundabout; absent when it stated none. */
+  readonly exitNumber?: number | null;
+  /** The gap between the two maneuvers along the route, as the matcher measured it. */
+  readonly distanceFromCurrentMeters: number;
+}
+
+/**
  * Everything the 8.2 engine will answer and this surface must not invent.
  *
  * `null` is the honest value today: the matching engine is a parallel lane, so
@@ -268,6 +326,13 @@ export interface RideFocusTelemetryInput {
   readonly speedLimitKmh?: number | null;
   /** The engine's live distance to the maneuver ahead (see {@link LiveManeuverDistance}). */
   readonly liveManeuver?: LiveManeuverDistance | null;
+  /**
+   * How far the rider is from the line, as the matcher projected it
+   * (`ProgressFrame.distanceFromRouteMeters`). Absent = not measured.
+   */
+  readonly distanceFromRouteMeters?: number | null;
+  /** The maneuver after that one and the gap to it (see {@link FollowingManeuverMeasurement}). */
+  readonly followingManeuver?: FollowingManeuverMeasurement | null;
 }
 
 export type RideFocusTelemetryProvider = (now: string) => RideFocusTelemetryInput | null;
@@ -350,10 +415,13 @@ function formatAccuracy(meters: number | null): string | null {
 }
 
 /** `"   "` is not a road name. */
-function roadNameOf(instruction: SessionInstruction): string | null {
+function roadNameOf(instruction: { readonly roadName: string | null }): string | null {
   const name = instruction.roadName?.trim() ?? "";
   return name.length === 0 ? null : name;
 }
+
+/** The fields a rider sentence is built from, shared by the card and its "then" line. */
+type ManeuverFacts = Pick<SessionInstruction, "kind" | "maneuver" | "exitNumber" | "targetStopId">;
 
 const MANEUVER_ACTION: Readonly<
   Record<NonNullable<SessionInstruction["maneuver"]>, string>
@@ -366,13 +434,30 @@ const MANEUVER_ACTION: Readonly<
   uturn: "Make a U-turn",
 };
 
+/** `1 → "1st"`, `2 → "2nd"`, `11 → "11th"`, `22 → "22nd"`. */
+function ordinal(value: number): string {
+  const tens = value % 100;
+  if (tens >= 11 && tens <= 13) return `${value}th`;
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
 /**
  * The rider sentence for one issued maneuver (8 §6: the domain states the
  * maneuver, the surface owns the sentence — VNX-007). A `turn` always names its
- * direction; a `continue` never claims one.
+ * direction; a `continue` never claims one; a roundabout names an exit only
+ * when the provider stated the number.
  */
 function maneuverCopy(
-  instruction: SessionInstruction,
+  instruction: ManeuverFacts,
 ): { actionText: string; roadPreposition: "onto" | "on" | null } {
   switch (instruction.kind) {
     case "arrive":
@@ -383,6 +468,18 @@ function maneuverCopy(
       };
     case "continue":
       return { actionText: "Continue", roadPreposition: "on" };
+    case "roundabout": {
+      const exit = instruction.exitNumber;
+      const known = typeof exit === "number" && Number.isInteger(exit) && exit >= 1;
+      return {
+        actionText: known ? `Take the ${ordinal(exit)} exit` : "Enter the roundabout",
+        roadPreposition: "onto",
+      };
+    }
+    case "keep-left":
+      return { actionText: "Keep left", roadPreposition: "onto" };
+    case "keep-right":
+      return { actionText: "Keep right", roadPreposition: "onto" };
     case "turn": {
       const action =
         instruction.maneuver === null
@@ -391,6 +488,83 @@ function maneuverCopy(
       return { actionText: action, roadPreposition: "onto" };
     }
   }
+}
+
+/** The one glyph the card draws for a maneuver fact set. */
+function glyphOf(
+  instruction: Pick<SessionInstruction, "kind" | "maneuver">,
+): RideFocusManeuver["glyph"] {
+  switch (instruction.kind) {
+    case "arrive":
+      return "arrive";
+    case "continue":
+      return "continue";
+    case "roundabout":
+      return "roundabout";
+    case "keep-left":
+      return "keep-left";
+    case "keep-right":
+      return "keep-right";
+    case "turn":
+      return instruction.maneuver ?? "straight";
+  }
+}
+
+/**
+ * The engine's following maneuver for this frame, or `null` when the matcher
+ * knows no second maneuver. Like {@link liveManeuverOf} it reports the engine's
+ * own answer only: the gap is the matcher's pair distance, never a subtraction
+ * performed from instruction issue-time values.
+ */
+export function followingManeuverOf(
+  frame: ProgressFrame | null | undefined,
+): FollowingManeuverMeasurement | null {
+  const current = frame?.nextManeuver ?? null;
+  const following = frame?.followingManeuver ?? null;
+  const gap = frame?.distanceToFollowingManeuverMeters ?? null;
+  if (current === null || following === null || gap === null) return null;
+  if (!isKnownMeasurement(gap)) return null;
+  return {
+    afterInstructionId: current.instructionId,
+    kind: following.kind,
+    maneuver: following.maneuver,
+    roadName: following.roadName,
+    ...(following.exitNumber === undefined || following.exitNumber === null
+      ? {}
+      : { exitNumber: following.exitNumber }),
+    distanceFromCurrentMeters: gap,
+  };
+}
+
+/**
+ * The "then" line, only when the second maneuver belongs to *this* card and is
+ * close enough to set up for. Anything else — a stale identity, an unmeasured
+ * gap, a maneuver more than a mile on — is `null`, because a permanent second
+ * instruction is clutter, not guidance.
+ */
+function thenOf(
+  instruction: SessionInstruction,
+  telemetry: RideFocusTelemetryInput | null,
+): RideFocusThenManeuver | null {
+  const following = telemetry?.followingManeuver ?? null;
+  if (following === null) return null;
+  if (following.afterInstructionId !== instruction.instructionId) return null;
+  if (!isKnownMeasurement(following.distanceFromCurrentMeters)) return null;
+  if (following.distanceFromCurrentMeters > THEN_ROW_MAX_GAP_METERS) return null;
+  const facts: ManeuverFacts = {
+    kind: following.kind,
+    maneuver: following.maneuver,
+    exitNumber: following.exitNumber,
+    targetStopId: null,
+  };
+  const copy = maneuverCopy(facts);
+  const roadName = roadNameOf(following);
+  return {
+    glyph: glyphOf(facts),
+    actionText: copy.actionText,
+    roadName,
+    roadPreposition: roadName === null ? null : copy.roadPreposition,
+  };
 }
 
 /**
@@ -436,6 +610,7 @@ export function spokenManeuver(
 function maneuverOf(
   instruction: SessionInstruction,
   liveDistanceMeters: number | null,
+  telemetry: RideFocusTelemetryInput | null,
 ): RideFocusManeuver {
   const copy = maneuverCopy(instruction);
   const roadName = roadNameOf(instruction);
@@ -445,17 +620,19 @@ function maneuverOf(
   const distanceText = immediate ? "Now" : formatted;
   const road = roadName === null ? "" : ` ${copy.roadPreposition ?? "on"} ${roadName}`;
   const distance = immediate ? " now" : formatted === UNKNOWN_VALUE ? "" : ` in ${formatted}`;
+  const exitNumber =
+    instruction.kind === "roundabout" && typeof instruction.exitNumber === "number"
+      ? instruction.exitNumber
+      : null;
   return {
     actionText: copy.actionText,
     roadName,
     roadPreposition: roadName === null ? null : copy.roadPreposition,
     distanceText,
     distanceMeters,
-    glyph: instruction.kind === "arrive"
-      ? "arrive"
-      : instruction.kind === "continue"
-        ? "continue"
-        : instruction.maneuver ?? "straight",
+    glyph: glyphOf(instruction),
+    exitNumber,
+    then: thenOf(instruction, telemetry),
     label: `${copy.actionText}${road}${distance}`,
   };
 }
@@ -481,6 +658,23 @@ function timerText(seconds: number): string {
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+/**
+ * `1872 → "31 minutes 12 seconds"`: the recording's elapsed time the way it is
+ * spoken, because the map screen's dot and figures are read aloud too.
+ */
+function durationWords(seconds: number): string {
+  const value = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(value / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  const remainder = value % 60;
+  const part = (count: number, unit: string): string => `${count} ${unit}${count === 1 ? "" : "s"}`;
+  const parts: string[] = [];
+  if (hours > 0) parts.push(part(hours, "hour"));
+  if (minutes > 0) parts.push(part(minutes, "minute"));
+  if (remainder > 0 || parts.length === 0) parts.push(part(remainder, "second"));
+  return parts.join(" ");
 }
 
 function recordingOf(
@@ -515,6 +709,7 @@ function recordingOf(
       distanceText: UNKNOWN_VALUE,
       movingTimeText: "0:00",
       elapsedTimeText: "0:00",
+      elapsedTimeSpoken: "0 seconds",
       currentSpeedText: position.speedText ?? "—",
       averageSpeedText: "—",
       waitingForFix: true,
@@ -531,6 +726,7 @@ function recordingOf(
     distanceText: formatDistance(summary.distanceMeters),
     movingTimeText: timerText(movingSeconds),
     elapsedTimeText: timerText(summary.elapsedSeconds),
+    elapsedTimeSpoken: durationWords(summary.elapsedSeconds),
     currentSpeedText: position.speedText ?? "—",
     averageSpeedText: averageMps === null ? "—" : (formatSpeed(averageMps) ?? "—"),
     waitingForFix: false,
@@ -576,6 +772,20 @@ function positionOf(position: NavigationPosition): RideFocusPosition {
   };
 }
 
+/**
+ * "220 ft off route" from the matcher's own lateral offset, in the same
+ * feet/mile rule as the maneuver card. Below the immediate-action threshold
+ * the card's word is "now", which describes a maneuver, not a distance, so the
+ * line is simply absent rather than reworded into a claim.
+ */
+function offRouteDistanceTextOf(telemetry: RideFocusTelemetryInput | null): string | null {
+  const meters = telemetry?.distanceFromRouteMeters ?? null;
+  if (meters === null || !isKnownMeasurement(meters) || meters <= 0) return null;
+  const formatted = formatManeuverDistance(meters);
+  if (formatted === "now" || formatted === UNKNOWN_VALUE) return null;
+  return `${formatted} off route`;
+}
+
 function guidanceOf(
   navigation: SessionNavigationState,
   telemetry: RideFocusTelemetryInput | null,
@@ -602,7 +812,12 @@ function guidanceOf(
       "gps-stale": "GPS is stale. Waiting for a fresh fix…",
       "gps-unavailable": "No GPS fix yet. Looking…",
     };
-    return { kind: "suspended", reason, text: text[reason] };
+    return {
+      kind: "suspended",
+      reason,
+      text: text[reason],
+      offRouteDistanceText: reason === "off-route" ? offRouteDistanceTextOf(telemetry) : null,
+    };
   }
   const instruction = navigation.instruction;
   if (instruction === null) {
@@ -612,7 +827,7 @@ function guidanceOf(
   }
   return {
     kind: "maneuver",
-    maneuver: maneuverOf(instruction, liveDistanceFor(instruction, telemetry)),
+    maneuver: maneuverOf(instruction, liveDistanceFor(instruction, telemetry), telemetry),
   };
 }
 

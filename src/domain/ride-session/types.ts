@@ -131,11 +131,18 @@ export interface SessionPlan {
  * One issued maneuver (8 §6). There is no rider copy here: the domain states the
  * maneuver, the road name and the distance, and the UI owns the sentence
  * (VNX-007). `maneuver` is present exactly for a `turn` and `null` otherwise —
- * a `continue` has no turn direction, and an `arrive` names the stop it targets.
+ * a `continue` has no turn direction, an `arrive` names the stop it targets, and
+ * a roundabout or a fork is its own kind rather than a turn guess.
  */
 export interface SessionInstruction {
   readonly instructionId: SessionInstructionId;
-  readonly kind: "turn" | "continue" | "arrive";
+  readonly kind:
+    | "turn"
+    | "continue"
+    | "arrive"
+    | "roundabout"
+    | "keep-left"
+    | "keep-right";
   readonly maneuver:
     | "left"
     | "right"
@@ -145,6 +152,13 @@ export interface SessionInstruction {
     | "uturn"
     | null;
   readonly roadName: string | null;
+  /**
+   * The exit the provider stated for a `roundabout`, and nothing else. Absent
+   * when the engine sent no number (or for every other kind): OpenGravel never
+   * counts exits itself, and a rider is never told "take the 2nd exit" from a
+   * guess.
+   */
+  readonly exitNumber?: number | null;
   /**
    * The distance to the maneuver **at the instant it was issued** (8 §6). It is
    * not the current distance and a surface must not print it as one: the live

@@ -23,14 +23,12 @@ import {
   type ReactNode,
 } from "react";
 
-import {
-  advisorRequestForDocument,
-  advisorRiderState,
-  buildAdvisorProposal,
-  type AdvisorDraftResult,
-  type AdvisorProposalClient,
-  type AdvisorRecovery,
-  type ReadyAdvisorProposal,
+import { advisorRiderState } from "@/application/advisor/advisor-errors";
+import type {
+  AdvisorDraftResult,
+  AdvisorProposalClient,
+  AdvisorRecovery,
+  ReadyAdvisorProposal,
 } from "@/application/advisor";
 import type { AdvisorProposalChange } from "@/application/advisor/advisor-proposal-commands";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
@@ -112,10 +110,16 @@ export function RideAdvisorProvider({ enabled, store, client, onApplied, childre
       setMessage(null);
       setMessageIsError(false);
       setRecovery("none");
+      const requestedDocument = store.getState().document;
       void (async () => {
         try {
+          const [{ advisorRequestForDocument }, { buildAdvisorProposal }] = await Promise.all([
+            import("@/application/advisor/advisor-proposal"),
+            import("@/application/advisor/advisor-proposal-commands"),
+          ]);
+          if (controller.signal.aborted || generation !== requestGeneration.current) return;
           const result: AdvisorDraftResult = await client.request(
-            advisorRequestForDocument(store.getState().document, text),
+            advisorRequestForDocument(requestedDocument, text),
             controller.signal,
           );
           if (generation !== requestGeneration.current) return;

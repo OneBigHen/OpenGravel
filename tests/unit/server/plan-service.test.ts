@@ -407,6 +407,53 @@ describe("planRide — hard eligibility before scoring", () => {
   });
 });
 
+describe("planRide — optional lane failures", () => {
+  const provider: RouteCandidateProvider = {
+    ...stubProvider(),
+    capabilities: () => ({ ...CAPABILITIES, profiles: ["motorcycle_fastest", "motorcycle_twisty"] }),
+    candidates: async request => {
+      if (request.profile === "motorcycle_twisty") throw new GraphHopperProviderError("No route.", "no-route");
+      return { candidates: [candidate()] };
+    },
+  };
+
+  it("does not let an optional refusal speak for an empty baseline answer", async () => {
+    const result = await planRide(input(), { env: {}, provider: {
+      ...provider,
+      candidates: async request => {
+        if (request.profile === "motorcycle_twisty") throw new GraphHopperProviderError("No route.", "no-route");
+        return { candidates: [] };
+      },
+    } });
+    expect(result).toMatchObject({ ok: false, error: { code: "provider-unavailable", recoverable: true } });
+  });
+
+  it("retains the baseline rejection when only an optional lane returned unusable candidates", async () => {
+    const result = await planRide(input(), { env: {}, provider: {
+      ...provider,
+      candidates: async request => {
+        if (request.profile === "motorcycle_fastest") throw new GraphHopperProviderError("No route.", "no-route");
+        return { candidates: [candidate({ durationSeconds: Number.NaN })] };
+      },
+    } });
+    expect(result).toMatchObject({ ok: false, error: { code: "no-route", recoverable: false } });
+  });
+
+  it.each(["avoid", "span"] as const)("preserves the %s constraint diagnosis when an optional lane rejects", async kind => {
+    const anchors = [{ lon: -75, lat: 40.6 }, { lon: -74.9, lat: 40.6 }];
+    const request: ProviderRouteRequest = {
+      ...REQUEST,
+      ...(kind === "avoid" ? { avoidPolygons: [[
+        { lon: -76, lat: 39 }, { lon: -74, lat: 39 }, { lon: -74, lat: 41 },
+        { lon: -76, lat: 41 }, { lon: -76, lat: 39 },
+      ]] } : { roadSpans: [{ id: "required", mode: "must", direction: "forward", anchors, corridor: anchors }] }),
+    };
+    const result = await planRide(input({ request }), { provider, env: {} });
+    expect(result).toMatchObject({ ok: false, error: { code: "constraint-conflict", recoverable: true } });
+    if (!result.ok && kind === "span") expect(result.error.message).toContain("1 road span");
+  });
+});
+
 describe("planRide — failure normalization", () => {
   it("carries the engine's normalized taxonomy and rider copy", async () => {
     const provider = stubProvider({
@@ -732,6 +779,24 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.message).toContain("Every route to this destination is blocked.");
+    expect(result.error.message).toContain("Ridge Road is closed: Bridge out.");
+  });
+
+  it("preserves the closed-road diagnosis when an optional lane rejects", async () => {
+    const roadAuthority = await coordinatorWith({
+      status: "fresh", fetchedAt: "2026-09-27T12:00:00.000Z", reason: null, records: [closedRoad], covered: feedInfo.coverage,
+    });
+    const provider: RouteCandidateProvider = {
+      ...stubProvider(),
+      capabilities: () => ({ ...CAPABILITIES, profiles: ["motorcycle_fastest", "motorcycle_twisty"] }),
+      candidates: async request => {
+        if (request.profile === "motorcycle_twisty") throw new GraphHopperProviderError("No route.", "no-route");
+        return { candidates: [candidate()] };
+      },
+    };
+    const result = await planRide(input(), { provider, env: {}, roadAuthority });
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Closed route must be refused");
     expect(result.error.message).toContain("Ridge Road is closed: Bridge out.");
   });
 

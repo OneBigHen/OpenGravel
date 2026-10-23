@@ -49,15 +49,24 @@ export type MapMode = "plan" | "ride" | "explore";
  * but readable route a replan keeps on screen, and `proposed` is the dashed,
  * clearly-secondary treatment an AI proposal uses until it is applied.
  *
- * The projection emits `selected`/`alternative` today; the renderer styles all
- * five so the waves that author the others do not need a cartography change.
+ * `travelled` is the ridden part of the ride's own answer: the same line as the
+ * selected one, split at the matcher's progress point, and drawn dim through
+ * Topo Sage with no casing. It is deliberately its own state rather than a
+ * `previous` route — `previous` means "the answer a replan replaced", and
+ * painting the road behind the rider in that treatment would say the line was
+ * abandoned. Only Ride Focus emits it, and only while progress is known.
+ *
+ * The projection emits `selected`/`alternative`/`travelled` today; the renderer
+ * styles the others so the waves that author them do not need a cartography
+ * change.
  */
 export type RouteSceneState =
   | "selected"
   | "alternative"
   | "preview"
   | "previous"
-  | "proposed";
+  | "proposed"
+  | "travelled";
 
 /**
  * Where one surface was measured along the line, as shares of its own length
@@ -90,7 +99,14 @@ export const ROUTE_SURFACE_FEATURE_STATE = "surface";
 /** One route line plus the role the bundle assigned it. */
 export interface RouteScene {
   readonly id: RouteCandidateId;
-  /** `null` when the bundle claims no role for this candidate (OGV-D-148). */
+  /**
+   * `null` when the bundle claims no role for this candidate (OGV-D-148).
+   *
+   * A ride scene may carry the same id twice: the `selected` line ahead of the
+   * rider and the `travelled` one behind them are one answer drawn in two
+   * treatments, and the id is what says so. The `selected` half is emitted
+   * first, so a lookup by id lands on the line being followed.
+   */
   readonly role: RouteRole | null;
   /** Full-resolution line, in travel order; empty when unresolvable. */
   readonly geometry: readonly Coordinate[];
