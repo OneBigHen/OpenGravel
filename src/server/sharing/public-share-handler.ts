@@ -1,10 +1,16 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { ShareSnapshot } from "@/domain/sharing/types";
-import { serializeShareSnapshot } from "@/domain/sharing/snapshot";
+import { SHARE_SNAPSHOT_MAX_BYTES, serializeShareSnapshot } from "@/domain/sharing/snapshot";
 import { routeDistanceMeters } from "@/domain/sharing/privacy";
 import type { SQLitePublicShareStore } from "./public-share-store";
 
-const MAX_BYTES = 256 * 1024;
+/**
+ * The body cap for one publish. It sits above `SHARE_SNAPSHOT_MAX_BYTES` by the
+ * room the share identity and JSON keys need, so the sheet's own budget (the
+ * snapshot the rider reviews) can never be refused here after the review.
+ */
+export const MAX_SHARE_BODY_BYTES = SHARE_SNAPSHOT_MAX_BYTES + 56 * 1024;
+const MAX_BYTES = MAX_SHARE_BODY_BYTES;
 const COOKIE = "og-share-owner";
 const headers = { "cache-control": "no-store", "referrer-policy": "no-referrer", "x-robots-tag": "noindex, nofollow" };
 const reply = (status: number, message: string, extra: Readonly<Record<string, string>> = {}) =>

@@ -242,3 +242,39 @@ describe("ShareSheet — the phone's share sheet (IO-01)", () => {
     expect(screen.getByTestId("share-copy").className).toBe("og-primary");
   });
 });
+
+
+describe("ShareSheet — the size a link can carry", () => {
+  /** A long imported track: the shape that used to fail only after review. */
+  function longSource(): ShareSource {
+    return {
+      ...source(),
+      title: "Long imported track",
+      route: {
+        segments: [Array.from({ length: 10_000 }, (_, index) => ({
+          lon: -75.43 + index * 0.00001,
+          lat: 40.13 + index * 0.00002,
+        }))],
+      },
+    };
+  }
+
+  it("refuses to preview a route the publish endpoint would reject, with a specific reason", async () => {
+    render(<ShareSheet service={service()} source={longSource()} onClose={() => {}} />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/too many points/i);
+    expect(alert.textContent).toMatch(/shorter/i);
+    expect((screen.getByTestId("share-publish") as HTMLButtonElement).disabled).toBe(true);
+    // The oversized payload is not mounted in the dialog either.
+    expect(screen.queryByTestId("share-preview-payload")).toBeNull();
+  });
+
+  it("still publishes a route inside the budget", async () => {
+    render(<ShareSheet service={service()} source={source()} onClose={() => {}} />);
+    await previewText();
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.click(screen.getByTestId("share-publish"));
+    await waitFor(() => expect(screen.getByTestId("share-link")).toBeDefined());
+  });
+});

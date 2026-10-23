@@ -3,11 +3,11 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { newShareId, newShareToken } from "@/domain/sharing/ids";
-import { buildShareSnapshot, serializeShareSnapshot } from "@/domain/sharing/snapshot";
+import { SHARE_SNAPSHOT_MAX_BYTES, buildShareSnapshot, serializeShareSnapshot, snapshotBytes } from "@/domain/sharing/snapshot";
 import { defaultPrivacyTrim } from "@/domain/sharing/privacy";
 import type { ShareRecord } from "@/application/sharing/ports/share-repository";
 import { SQLitePublicShareStore } from "@/server/sharing/public-share-store";
-import { handlePublishShare, handleRevokeShare } from "@/server/sharing/public-share-handler";
+import { MAX_SHARE_BODY_BYTES, handlePublishShare, handleRevokeShare } from "@/server/sharing/public-share-handler";
 
 const stores: SQLitePublicShareStore[] = [];
 const record = (): ShareRecord => ({
@@ -91,5 +91,25 @@ describe("public share boundary",()=>{
   expect((await handlePublishShare(request("POST","/api/shares",dirty),s)).status).toBe(201);
   const resolved=s.resolve(r.token); expect(JSON.stringify(resolved)).not.toContain("private");
   expect((await handlePublishShare(request("POST","/api/shares",{...record(),snapshot:{...r.snapshot,route:{segments:[[{lon:400,lat:900},{lon:0,lat:0}]]}}}),s)).status).toBe(400);
+ });
+
+ it("accepts a snapshot at the rider-facing size budget instead of refusing it after review",async()=>{
+  const s=store();
+  const points = Array.from({length: 5_000}, (_, index) => ({ lon: -75.4, lat: 40.1 + index * 0.00002 }));
+  const snapshot = buildShareSnapshot({
+    sourceRevision: 1,
+    title: "A long imported track",
+    route: { segments: [points] },
+    summary: { distanceMeters: null, durationSeconds: null },
+    surface: { preference: "mixed", unknownSurfacePolicy: "allow-with-warning" },
+    provenance: "import",
+    authorPseudonym: null,
+  }, defaultPrivacyTrim());
+  const output = serializeShareSnapshot(snapshot);
+  // The sheet's budget is what a rider reviews; the endpoint's cap must sit above it.
+  expect(MAX_SHARE_BODY_BYTES).toBeGreaterThan(SHARE_SNAPSHOT_MAX_BYTES);
+  expect(snapshotBytes(output)).toBeLessThanOrEqual(SHARE_SNAPSHOT_MAX_BYTES);
+  const r = {...record(), snapshot};
+  expect((await handlePublishShare(request("POST","/api/shares",r),s)).status).toBe(201);
  });
 });

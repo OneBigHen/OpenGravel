@@ -103,3 +103,17 @@ export function buildShareSnapshot(
 export function serializeShareSnapshot(snapshot: ShareSnapshot): string {
   return JSON.stringify(snapshot);
 }
+
+/**
+ * The largest canonical snapshot a link may carry. The publish endpoint refuses
+ * request bodies over `MAX_SHARE_BODY_BYTES`, which leaves room for the share
+ * identity around this budget, so a preview that fits here always reaches the
+ * server. A six-decimal coordinate pair costs about 35 bytes, so this is a few
+ * thousand points — a long imported track has to be shared in pieces.
+ */
+export const SHARE_SNAPSHOT_MAX_BYTES = 200 * 1024;
+
+/** UTF-8 size of the canonical bytes, the unit the size budget is written in. */
+export function snapshotBytes(output: string): number {
+  return new TextEncoder().encode(output).byteLength;
+}

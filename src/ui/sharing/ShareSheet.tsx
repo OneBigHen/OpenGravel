@@ -14,6 +14,7 @@ import {
   defaultPrivacyTrim,
   type PrivacyTrimSettings,
 } from "@/domain/sharing/privacy";
+import { SHARE_SNAPSHOT_MAX_BYTES, snapshotBytes } from "@/domain/sharing/snapshot";
 import type { ShareSnapshot, ShareSource } from "@/domain/sharing/types";
 import { canShareNatively, shareNatively } from "@/ui/sharing/native-share";
 
@@ -74,7 +75,12 @@ function formatDuration(seconds: number | null): string {
 interface PreviewState {
   readonly snapshot: ShareSnapshot;
   readonly output: string;
+  /** UTF-8 size of the canonical bytes; the server refuses what does not fit. */
+  readonly bytes: number;
 }
+
+/** Riders think in the route they can share, so the copy names the budget, not bytes. */
+const OVER_BUDGET_MESSAGE = `This route has too many points to share: a share link holds about ${Math.round(SHARE_SNAPSHOT_MAX_BYTES / 1024)} KB of coordinates. Share a shorter piece of the ride.`;
 
 export interface ShareSheetProps {
   readonly service: ShareServicePort;
@@ -127,7 +133,7 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
       .then((result: ShareCommandResult) => {
         if (previewSequence.current !== sequence) return;
         if (result.ok && result.kind === "preview") {
-          setPreview({ snapshot: result.snapshot, output: result.output });
+          setPreview({ snapshot: result.snapshot, output: result.output, bytes: snapshotBytes(result.output) });
           setPreviewError(null);
         } else if (!result.ok) {
           setPreview(null);
@@ -205,6 +211,10 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
   }, [published, service]);
 
   const snapshot = preview?.snapshot ?? null;
+  // The publish endpoint refuses this payload, so the sheet stops before the
+  // rider spends a privacy review on a link that cannot exist.
+  const overBudget = preview !== null && preview.bytes > SHARE_SNAPSHOT_MAX_BYTES;
+  const publishable = preview !== null && !overBudget;
 
   return (
     <div className="og-share__backdrop">
@@ -319,6 +329,11 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
               {previewError}
             </p>
           ) : null}
+          {overBudget ? (
+            <p className="og-planner__error" role="alert" data-testid="share-preview-too-large">
+              {OVER_BUDGET_MESSAGE}
+            </p>
+          ) : null}
           {snapshot !== null ? (
             <>
               <dl className="og-share-sheet__facts">
@@ -358,9 +373,11 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
                   </dd>
                 </div>
               </dl>
-              <pre className="og-share-sheet__payload" data-testid="share-preview-payload">
-                {preview === null ? "" : preview.output}
-              </pre>
+              {preview !== null && !overBudget ? (
+                <pre className="og-share-sheet__payload" data-testid="share-preview-payload">
+                  {preview.output}
+                </pre>
+              ) : null}
             </>
           ) : null}
         </section>
@@ -380,7 +397,7 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
               type="button"
               className="og-primary"
               data-testid="share-reissue"
-              disabled={busy || preview === null}
+              disabled={busy || !publishable}
               onClick={() => {
                 void handlePublish();
               }}
@@ -451,8 +468,8 @@ export function ShareSheet({ service, source, onClose }: ShareSheetProps) {
             type="button"
             className="og-primary"
             data-testid="share-publish"
-            disabled={busy || preview === null}
-            title={preview === null ? "A shareable route is required." : "Create the share link."}
+            disabled={busy || !publishable}
+            title={preview === null ? "A shareable route is required." : overBudget ? "This route is too long to fit in one link." : "Create the share link."}
             onClick={() => {
               void handlePublish();
             }}
