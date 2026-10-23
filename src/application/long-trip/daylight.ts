@@ -83,3 +83,35 @@ export function calculateSunset(
     sourceRef: `daylight:solar:${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}:${String(coordinate.lat)}:${String(coordinate.lon)}`,
   };
 }
+
+/**
+ * The sunset of the rider's own day at `coordinate`.
+ *
+ * `calculateSunset` works on the UTC calendar date, which for the Americas is
+ * the *previous* evening for a morning departure (a 10 AM EDT start got last
+ * night's sunset, and every western long ride then looked like it finished in
+ * the dark). The departure's solar-local day is found from longitude, and of
+ * the sunsets computed for the neighbouring UTC dates the one nearest that
+ * day's late afternoon wins.
+ */
+export function sunsetOnDepartureDay(
+  coordinate: Coordinate,
+  departureAt: string,
+): LongTripDaylightFact | null {
+  const departure = Date.parse(departureAt);
+  if (!Number.isFinite(departure)) return null;
+  const offsetMs = (coordinate.lon / 15) * 3_600_000;
+  const solarLocal = new Date(departure + offsetMs);
+  const solarNoonUtc =
+    Date.UTC(solarLocal.getUTCFullYear(), solarLocal.getUTCMonth(), solarLocal.getUTCDate(), 12) - offsetMs;
+  const target = solarNoonUtc + 6 * 3_600_000;
+  let best: LongTripDaylightFact | null = null;
+  for (const shiftHours of [-24, 0, 24]) {
+    const fact = calculateSunset(coordinate, new Date(solarNoonUtc + shiftHours * 3_600_000).toISOString());
+    if (fact === null) continue;
+    if (best === null || Math.abs(Date.parse(fact.sunset) - target) < Math.abs(Date.parse(best.sunset) - target)) {
+      best = fact;
+    }
+  }
+  return best;
+}
