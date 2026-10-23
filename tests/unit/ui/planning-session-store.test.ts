@@ -345,7 +345,7 @@ describe("createPlanningSessionStore — one attempt through the real client pat
     expect(store.getState().snapshot.selectedRouteId).toBe(chosen.id);
   });
 
-  it("keeps the selection inside the bundle it can see after a replan", async () => {
+  it("keeps the rider's route selected across a replan", async () => {
     const { fetcher } = successFetcher();
     const service = createClientPlanningService({ fetcher, now });
     const store = createPlanningSessionStore({ service });
@@ -365,20 +365,17 @@ describe("createPlanningSessionStore — one attempt through the real client pat
       intent: plannedIntent(),
     });
 
-    // Known limitation, recorded as OGV-D-182: the placeholder pipeline mints a
-    // fresh candidate id per generation, so a reference to a candidate that is
-    // really the same route does not survive a replan and the automatic rule
-    // takes over. What must hold regardless is that a bundle only ever selects a
-    // route it contains (OGV-D-148/OGV-D-171) — Wave 3's real pipeline derives a
-    // stable candidate identity from the provider fingerprint.
+    // The placeholder pipeline mints a fresh candidate id per generation, but
+    // the provider fingerprint is stable (OGV-D-182). The rider's route is found
+    // again by that fingerprint, and the bundle still only ever selects a route
+    // it contains (OGV-D-148/OGV-D-171).
     const snapshot = store.getState().snapshot;
     expect(snapshot.identity.planningGeneration).toBe(2);
-    expect(snapshot.selectionSource).toBe("automatic");
-    expect(
-      snapshot.committedBundle?.candidates.some(
-        (candidate) => candidate.id === snapshot.selectedRouteId,
-      ),
-    ).toBe(true);
+    expect(snapshot.selectionSource).toBe("rider");
+    const selected = snapshot.committedBundle?.candidates.find(
+      (candidate) => candidate.id === snapshot.selectedRouteId,
+    );
+    expect(selected?.fingerprint).toBe(chosen.fingerprint);
   });
 
   it("reports a provider answer the engine refused as a session error", async () => {
