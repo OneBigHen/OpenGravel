@@ -6,7 +6,8 @@
  * summary names the current choices.
  */
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createRideDocument } from "@/domain/ride/create";
@@ -14,6 +15,7 @@ import { applyRideCommand } from "@/domain/ride/reducer";
 import type { RideDocument } from "@/domain/ride/types";
 import {
   formatRideTime,
+  LOOP_MAX_MINUTES,
   LoopTimeRow,
   RideShapeSwitch,
   RideStylePanel,
@@ -153,6 +155,108 @@ describe("traffic chips", () => {
     expect(callbacks.setTraffic).toHaveBeenCalledWith("minimize-delay");
     const document = createRideDocument();
     expect(applied(document, trafficPreferenceCommand(document, "minimize-delay")).intent.traffic).toBe("minimize-delay");
+  });
+});
+
+/** Jim Thorpe, PA: sunsets at 22:11Z on 2026-10-23, i.e. 18:11 EDT. */
+const JIM_THORPE = { lat: 40.8676, lon: -75.7327 };
+
+function loopRow(overrides: Partial<RideStyleView>, now?: Date): ReturnType<typeof actions> {
+  const spy = actions();
+  render(
+    <LoopTimeRow
+      model={{ view: { ...VIEW, shape: "loop", startCoordinate: JIM_THORPE, ...overrides }, actions: spy }}
+      {...(now === undefined ? {} : { now })}
+    />,
+  );
+  return spy;
+}
+
+/** The row with the authored loop time actually applied, as the store does. */
+function AuthoredLoopRow({ initialMinutes, now }: { readonly initialMinutes: number; readonly now: Date }) {
+  const [loopMinutes, setLoopMinutes] = useState(initialMinutes);
+  return (
+    <LoopTimeRow
+      model={{
+        view: { ...VIEW, shape: "loop", startCoordinate: JIM_THORPE, loopMinutes },
+        actions: { ...actions(), setLoopMinutes },
+      }}
+      now={now}
+    />
+  );
+}
+
+describe("back by sunset", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("offers the daylight left at the start point, first in the row", () => {
+    // 13:00 EDT: just over six hours of light, less the 20-minute margin.
+    const spy = loopRow({}, new Date("2026-10-23T17:00:00.000Z"));
+    const chips = screen.getByTestId("loop-time").querySelectorAll("input");
+
+    expect(screen.getByTestId("loop-time-sunset")).toBeInTheDocument();
+    expect(chips[0]).toBe(screen.getByTestId("loop-time-sunset"));
+    expect(screen.getByTestId("loop-time-sunset").closest("label")).toHaveTextContent("Until sunset · 4 h 50 min");
+    fireEvent.click(screen.getByTestId("loop-time-sunset"));
+    expect(spy.setLoopMinutes).toHaveBeenCalledWith(290);
+  });
+
+  it("shows the sunset chip as chosen instead of a plain chip with the same minutes", () => {
+    // 10:30 EDT: more light than the longest loop, so the value is the 6 h cap.
+    render(<AuthoredLoopRow initialMinutes={240} now={new Date("2026-10-23T14:30:00.000Z")} />);
+    const sunset = screen.getByTestId("loop-time-sunset");
+
+    expect(screen.getByText(`Until sunset · ${formatRideTime(LOOP_MAX_MINUTES)}`)).toBeInTheDocument();
+    fireEvent.click(sunset);
+    expect(sunset).toBeChecked();
+    expect(screen.getByTestId(`loop-time-${LOOP_MAX_MINUTES}`)).not.toBeChecked();
+
+    // A plain chip takes the highlight back with the same minutes state.
+    fireEvent.click(screen.getByTestId("loop-time-240"));
+    expect(sunset).not.toBeChecked();
+    expect(screen.getByTestId("loop-time-240")).toBeChecked();
+  });
+
+  it("hides the chip when there is no start point or no useful daylight", () => {
+    loopRow({ startCoordinate: null }, new Date("2026-10-23T17:00:00.000Z"));
+    expect(screen.queryByTestId("loop-time-sunset")).not.toBeInTheDocument();
+    cleanup();
+
+    // 17:40 EDT: half an hour of light is not a loop.
+    loopRow({ loopMinutes: 60 }, new Date("2026-10-23T21:40:00.000Z"));
+    expect(screen.queryByTestId("loop-time-sunset")).not.toBeInTheDocument();
+    expect(screen.getByTestId("loop-time-60")).toBeChecked();
+    cleanup();
+
+    // Nor does the sun set at all on a far-north midsummer day.
+    loopRow({ startCoordinate: { lat: 78, lon: 15 } }, new Date("2026-06-21T12:00:00.000Z"));
+    expect(screen.queryByTestId("loop-time-sunset")).not.toBeInTheDocument();
+  });
+
+  it("recomputes once a minute while the row is shown", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-23T16:00:00.000Z"));
+    loopRow({ loopMinutes: 120 });
+    expect(screen.getByTestId("loop-time-sunset").closest("label")).toHaveTextContent("Until sunset · 5 h 50 min");
+
+    act(() => {
+      vi.advanceTimersByTime(5 * 60_000);
+    });
+
+    expect(screen.getByTestId("loop-time-sunset").closest("label")).toHaveTextContent("Until sunset · 5 h 45 min");
+  });
+
+  it("runs a clock only while the loop row is shown", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-23T16:00:00.000Z"));
+    render(<RideShapeSwitch model={{ view: VIEW, actions: actions() }} />);
+    expect(vi.getTimerCount()).toBe(0);
+    cleanup();
+
+    loopRow({});
+    expect(vi.getTimerCount()).toBe(1);
   });
 });
 
