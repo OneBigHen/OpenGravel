@@ -307,7 +307,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     name: "Public land",
     category: "access",
     kind: "features",
-    legend: "Parks, forests and game lands",
+    legend: "Parks, forests and game lands open to visit",
     source: "USGS PAD-US (OpenStreetMap fallback)",
     caveat: "Includes private protected land. Protection and general public access do not grant motorized access. Boundaries are generalized; survey dates vary. If PAD-US fails, OSM centres are explicitly labeled as fallback. Online only.",
     minZoom: 9,
