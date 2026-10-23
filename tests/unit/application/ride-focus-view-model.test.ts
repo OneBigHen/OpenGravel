@@ -1050,6 +1050,36 @@ describe("the finish summary", () => {
     }).terminal;
     expect(discarded).not.toHaveProperty("stats");
   });
+
+  it("adds stopped time only when the recording knows both clocks", () => {
+    const recorded = (recordingSummary: RecordingSummary | null) => {
+      const terminal = buildRideFocusViewModel({
+        navigation: navigation({ activity: "completed", endReason: "completed", endedAt: NOW }),
+        environment: environment(),
+        telemetry: null,
+        recordingTelemetry: RIDE,
+        recordingSummary,
+        now: NOW,
+      }).terminal;
+      return terminal?.reason === "completed" ? terminal.stats ?? [] : [];
+    };
+
+    // 45 minutes on the move out of an hour: a quarter of the ride stood still.
+    const withRecording = recorded({
+      distanceMeters: 16_093,
+      elapsedSeconds: 60 * 60,
+      movingSeconds: 45 * 60,
+      pointCount: 640,
+    });
+    expect(withRecording.map((stat) => [stat.id, stat.label, stat.value, stat.unit])).toContainEqual([
+      "stopped",
+      "Stopped",
+      "15",
+      "min",
+    ]);
+    // No recording, no elapsed clock: the stat is absent rather than assumed.
+    expect(recorded(null).map((stat) => stat.id)).not.toContain("stopped");
+  });
 });
 
 describe("the posted speed limit (NV-04)", () => {

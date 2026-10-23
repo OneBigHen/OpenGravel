@@ -2057,8 +2057,10 @@ html .og-ride {
 }
 
 /* --------------------------------------------------------------------------
-   The finish summary: the ride in five numbers, big enough to read standing
-   next to the bike.
+   The finish summary: the ride in five or six numbers, big enough to read
+   standing next to the bike. The grid auto-fits: a recorded ride adds
+   "Stopped" (elapsed − moving) and the row simply reflows, and the sketch
+   above the stats takes no part in it.
    -------------------------------------------------------------------------- */
 
 .og-ride__summary {
