@@ -85,7 +85,15 @@ export type NewSessionInstructionInput =
       readonly targetStopId?: StopId | null;
     }
   | {
-      readonly kind: "continue" | "arrive";
+      readonly kind: "roundabout";
+      /** The provider's stated exit; omit it when the engine sent none. */
+      readonly exitNumber?: number | null;
+      readonly distanceMeters: number;
+      readonly roadName?: string | null;
+      readonly targetStopId?: StopId | null;
+    }
+  | {
+      readonly kind: "continue" | "arrive" | "keep-left" | "keep-right";
       readonly distanceMeters: number;
       readonly roadName?: string | null;
       readonly targetStopId?: StopId | null;
@@ -95,6 +103,10 @@ export type NewSessionInstructionInput =
 export function newSessionInstruction(
   input: NewSessionInstructionInput,
 ): SessionInstruction {
+  const exitNumber =
+    input.kind === "roundabout" && typeof input.exitNumber === "number"
+      ? input.exitNumber
+      : null;
   return deepFreeze<SessionInstruction>({
     instructionId: newSessionInstructionId(),
     kind: input.kind,
@@ -102,6 +114,10 @@ export function newSessionInstruction(
     roadName: input.roadName ?? null,
     distanceMeters: input.distanceMeters,
     targetStopId: input.targetStopId ?? null,
+    // Absent rather than `null` outside a roundabout: the field only means
+    // something where the provider stated an exit. A null here is "no number",
+    // never "the first exit".
+    ...(input.kind === "roundabout" ? { exitNumber } : {}),
   });
 }
 

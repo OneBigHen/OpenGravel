@@ -25,6 +25,8 @@ export interface SpeechCue {
   readonly kind: SessionInstruction["kind"];
   readonly maneuver: SessionInstruction["maneuver"];
   readonly roadName: string | null;
+  /** The provider-stated exit for a roundabout; absent when it stated none. */
+  readonly exitNumber?: number | null;
   readonly distanceMeters: number;
   readonly targetStopId: StopId | null;
 }

@@ -5,7 +5,13 @@ export const NATIVE_NAVIGATION_SCHEMA_VERSION = 1 as const;
 export const MAX_NATIVE_NAVIGATION_COORDINATES = 50_000;
 export const MAX_NATIVE_NAVIGATION_MANEUVERS = 1_024;
 
-export type NativeNavigationManeuverKind = "turn" | "continue" | "arrive";
+export type NativeNavigationManeuverKind =
+  | "turn"
+  | "continue"
+  | "arrive"
+  | "roundabout"
+  | "keep-left"
+  | "keep-right";
 export type NativeNavigationTurn =
   | "left"
   | "right"
@@ -26,6 +32,11 @@ export interface NativeNavigationManeuver {
   readonly maneuver: NativeNavigationTurn;
   readonly roadName: string | null;
   readonly atDistanceMeters: number;
+  /**
+   * The provider-stated roundabout exit, when there was one. Omitted otherwise:
+   * a native surface must never infer an exit count.
+   */
+  readonly exitNumber?: number;
 }
 
 export interface NativeNavigationRouteMetadata {
@@ -122,6 +133,9 @@ export function buildNativeNavigationPayload(
       maneuver: maneuver.maneuver,
       roadName: maneuver.roadName,
       atDistanceMeters: maneuver.atDistanceMeters,
+      ...(maneuver.exitNumber === undefined || maneuver.exitNumber === null
+        ? {}
+        : { exitNumber: maneuver.exitNumber }),
     } satisfies NativeNavigationManeuver;
   });
 

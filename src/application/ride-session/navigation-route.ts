@@ -44,6 +44,32 @@ function normalizedManeuver(
       atDistanceMeters,
     };
   }
+  // Roundabouts and forks are their own instruction kinds, not opaque turns:
+  // without them a rider gets no card at all exactly where the decision is
+  // hardest. The exit number is carried only when the provider stated one (8 §6).
+  if (instruction.type === "roundabout") {
+    return {
+      instructionId,
+      kind: "roundabout",
+      maneuver: null,
+      roadName: instruction.roadName ?? null,
+      targetStopId: null,
+      atDistanceMeters,
+      ...(instruction.exitNumber === undefined
+        ? {}
+        : { exitNumber: instruction.exitNumber }),
+    };
+  }
+  if (instruction.type === "keep-left" || instruction.type === "keep-right") {
+    return {
+      instructionId,
+      kind: instruction.type,
+      maneuver: null,
+      roadName: instruction.roadName ?? null,
+      targetStopId: null,
+      atDistanceMeters,
+    };
+  }
   if (instruction.maneuver === undefined || instruction.maneuver === "straight") {
     return null;
   }

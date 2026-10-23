@@ -52,6 +52,12 @@ export interface RouteManeuver {
   readonly roadName: string | null;
   readonly targetStopId: StopId | null;
   readonly atDistanceMeters: number;
+  /**
+   * The roundabout exit the provider stated, when it stated one (8 §6). Absent
+   * for every other maneuver and absent when the engine sent no number: an exit
+   * count is never inferred from instruction prose or from the ring's shape.
+   */
+  readonly exitNumber?: number | null;
 }
 
 /** Resolved route data. Track mode may carry maneuvers, but never emits them. */
@@ -93,6 +99,19 @@ export interface ProgressFrame {
   readonly routeProgress: number;
   readonly nextManeuver: RouteManeuver | null;
   readonly distanceToManeuverMeters: number | null;
+  /**
+   * The maneuver after {@link nextManeuver} on the same route list, or `null`
+   * when the route has none left or the frame is a track. It is the same
+   * `RouteManeuver` list the current card uses — never inferred from provider
+   * text — so "then" can be shown without inventing a second instruction.
+   */
+  readonly followingManeuver: RouteManeuver | null;
+  /**
+   * The gap between the two maneuvers along the route (`following.atDistance`
+   * minus `next.atDistance`), not the distance from the rider. `null` exactly
+   * when there is no following maneuver.
+   */
+  readonly distanceToFollowingManeuverMeters: number | null;
   readonly trackFollowing: boolean;
   readonly offRouteState: OffRouteState;
   readonly deviatingFixCount: number;
@@ -390,6 +409,24 @@ function nextManeuver(
   );
 }
 
+/**
+ * The pair a rider has to think about at once: the maneuver ahead and the one
+ * after it. Both come from the model's own ordered maneuver list, so the second
+ * entry is never a guess at what the provider meant.
+ */
+function maneuverPair(
+  model: ProgressModel,
+  distanceAlongMeters: number,
+): { readonly current: RouteManeuver | null; readonly following: RouteManeuver | null } {
+  const current = nextManeuver(model, distanceAlongMeters);
+  if (model.mode === "track" || current === null) return { current, following: null };
+  const index = model.maneuvers.findIndex(
+    (maneuver) => maneuver.instructionId === current.instructionId,
+  );
+  const following = index < 0 ? null : model.maneuvers[index + 1] ?? null;
+  return { current, following };
+}
+
 function offRouteState(
   deviating: boolean,
   ambiguous: boolean,
@@ -443,7 +480,7 @@ export function matchRouteProgress(
     previous,
     options.rerouting ?? false,
   );
-  const maneuver = nextManeuver(model, distanceAlongMeters);
+  const { current: maneuver, following } = maneuverPair(model, distanceAlongMeters);
   return {
     rawPosition: { ...fix.coordinate },
     onRoutePosition: { ...projection.coordinate },
@@ -458,6 +495,11 @@ export function matchRouteProgress(
     nextManeuver: maneuver,
     distanceToManeuverMeters:
       maneuver === null ? null : Math.max(0, maneuver.atDistanceMeters - distanceAlongMeters),
+    followingManeuver: following,
+    distanceToFollowingManeuverMeters:
+      maneuver === null || following === null
+        ? null
+        : Math.max(0, following.atDistanceMeters - maneuver.atDistanceMeters),
     trackFollowing: model.mode === "track",
     offRouteState: offRoute.state,
     deviatingFixCount: offRoute.count,

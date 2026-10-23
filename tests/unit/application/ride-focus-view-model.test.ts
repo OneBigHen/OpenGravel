@@ -26,6 +26,7 @@ import {
   formatSpeed,
   permissionLabel,
   spokenManeuver,
+  type RideFocusTelemetryInput,
 } from "@/application/ride-session/ride-focus-view-model";
 import type { RideFocusEnvironmentSnapshot } from "@/application/ride-session/ports/ride-focus-environment";
 import type {
@@ -549,6 +550,142 @@ describe("maneuver copy (08 §2, §6)", () => {
     expect(formatManeuverDistance(200)).toBe("650 ft");
     expect(formatManeuverDistance(500)).toBe("0.3 mi");
     expect(formatManeuverDistance(4_800)).toBe("3 mi");
+  });
+});
+
+describe("then row and junction guidance (08 §2, §6)", () => {
+  type Telemetry = RideFocusTelemetryInput | null | undefined;
+  const HEAD = instruction();
+
+  function telemetryWithFollowing(
+    gapMeters: number | null,
+    following: Partial<NonNullable<RideFocusTelemetryInput["followingManeuver"]>> = {},
+  ): RideFocusTelemetryInput {
+    return {
+      routeProgress: 0.4,
+      remainingDistanceMeters: 8_000,
+      remainingDurationSeconds: 900,
+      etaIso: null,
+      followingManeuver:
+        gapMeters === null
+          ? null
+          : {
+              afterInstructionId: HEAD.instructionId,
+              kind: "roundabout",
+              maneuver: null,
+              roadName: "PA-23",
+              exitNumber: 2,
+              distanceFromCurrentMeters: gapMeters,
+              ...following,
+            },
+    };
+  }
+
+  function card(telemetry: Telemetry, head: SessionInstruction = HEAD) {
+    const { guidance } = view({
+      navigation: navigation({ instruction: head }),
+      telemetry,
+    });
+    if (guidance.kind !== "maneuver") throw new Error("expected a maneuver");
+    return guidance.maneuver;
+  }
+
+  it("shows the following maneuver when it belongs to this card and is within a mile", () => {
+    expect(card(telemetryWithFollowing(900)).then).toEqual({
+      glyph: "roundabout",
+      actionText: "Take the 2nd exit",
+      roadName: "PA-23",
+      roadPreposition: "onto",
+    });
+  });
+
+  it("hides the then row beyond a mile, without a following maneuver, or without a gap", () => {
+    expect(card(telemetryWithFollowing(1_610)).then).toBeNull();
+    expect(card(telemetryWithFollowing(null)).then).toBeNull();
+    // A following maneuver the matcher could not place is not a placement.
+    expect(
+      card({ ...telemetryWithFollowing(400), followingManeuver: undefined }).then,
+    ).toBeNull();
+  });
+
+  it("never pairs the then row with an instruction the frame already left", () => {
+    const stale = telemetryWithFollowing(400, {
+      afterInstructionId: asSessionInstructionId("ins_other"),
+    });
+    expect(card(stale).then).toBeNull();
+  });
+
+  it("produces no then row at all while ahead guidance is suspended", () => {
+    const { guidance } = view({
+      navigation: navigation({
+        activity: "paused",
+        resumeActivity: "guided",
+        aheadGuidanceSuspended: true,
+        instruction: HEAD,
+      }),
+      telemetry: telemetryWithFollowing(300),
+    });
+
+    expect(guidance.kind).toBe("suspended");
+  });
+
+  it("names a roundabout exit only when the provider stated the number", () => {
+    const known = card(null, instruction({ kind: "roundabout", maneuver: null, roadName: "PA-23", exitNumber: 2 }));
+    expect(known.actionText).toBe("Take the 2nd exit");
+    expect(known.exitNumber).toBe(2);
+    expect(known.glyph).toBe("roundabout");
+    expect(known.label).toBe("Take the 2nd exit onto PA-23 in 400 ft");
+
+    const eleventh = card(
+      null,
+      instruction({ kind: "roundabout", maneuver: null, roadName: null, exitNumber: 11 }),
+    );
+    expect(eleventh.actionText).toBe("Take the 11th exit");
+    expect(eleventh.label).toBe("Take the 11th exit in 400 ft");
+
+    const unknown = card(null, instruction({ kind: "roundabout", maneuver: null, roadName: null }));
+    expect(unknown.actionText).toBe("Enter the roundabout");
+    expect(unknown.exitNumber).toBeNull();
+    expect(unknown.label).toBe("Enter the roundabout in 400 ft");
+  });
+
+  it("keeps left and right forks as guidance, with the road the rider takes", () => {
+    const left = card(null, instruction({ kind: "keep-left", maneuver: null, roadName: "PA-23" }));
+    expect(left.actionText).toBe("Keep left");
+    expect(left.glyph).toBe("keep-left");
+    expect(left.label).toBe("Keep left onto PA-23 in 400 ft");
+
+    const right = card(null, instruction({ kind: "keep-right", maneuver: null, roadName: null }));
+    expect(right.actionText).toBe("Keep right");
+    expect(right.glyph).toBe("keep-right");
+    expect(right.roadName).toBeNull();
+  });
+
+  it("speaks a roundabout and a fork in the same words the card shows", () => {
+    expect(
+      spokenManeuver(
+        instruction({ kind: "roundabout", maneuver: null, roadName: "PA-23", exitNumber: 2 }),
+        200,
+      ),
+    ).toBe("In 650 feet, take the 2nd exit onto PA-23.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "roundabout", maneuver: null, roadName: null }),
+        200,
+      ),
+    ).toBe("In 650 feet, enter the roundabout.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "keep-left", maneuver: null, roadName: "PA-23" }),
+        200,
+      ),
+    ).toBe("In 650 feet, keep left onto PA-23.");
+    expect(
+      spokenManeuver(
+        instruction({ kind: "keep-right", maneuver: null, roadName: null }),
+        200,
+      ),
+    ).toBe("In 650 feet, keep right.");
   });
 });
 

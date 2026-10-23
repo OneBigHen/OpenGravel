@@ -1691,6 +1691,38 @@ html .og-ride {
   background: #0b6b35;
 }
 
+/* The "then" row already accounts for itself; the Day card grows the same way. */
+:root[data-theme="day"] .og-ride__maneuver[data-then="true"] {
+  min-height: 138px;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-symbol {
+  width: 72px;
+  height: 72px;
+}
+
+/* Day: the second line is white too, one step quieter than the action above it,
+   and its hairline is slightly stronger to survive glare. */
+:root[data-theme="day"] .og-ride__maneuver-then {
+  border-top-color: rgb(255 255 255 / 24%);
+  color: var(--og-paper);
+}
+
+:root[data-theme="day"] .og-ride__maneuver-then .og-ride__maneuver-glyph--then {
+  width: 24px;
+  height: 24px;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-then .og-ride__maneuver-glyph--then path {
+  stroke-width: 3.6;
+}
+
+:root[data-theme="day"] .og-ride__maneuver-exit {
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #0b6b35;
+  color: #0b6b35;
+}
+
 :root[data-theme="day"] .og-ride__maneuver-glyph {
   width: 72px;
   height: 72px;

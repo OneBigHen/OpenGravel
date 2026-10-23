@@ -39,11 +39,11 @@ import type {
 } from "@/domain/ride/ids";
 import { newRideId, newStopId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
+import type { RideSessionId, SessionInstructionId } from "@/domain/ride-session/ids";
+import { asSessionInstructionId } from "@/domain/ride-session/ids";
 import type { SessionNavigationState } from "@/domain/ride-session/navigation";
-import type { RideSessionId } from "@/domain/ride-session/ids";
 import {
   instructionIssuedEvent,
-  newSessionInstruction,
   offRouteChangedEvent,
   positionUpdatedEvent,
 } from "@/domain/ride-session/create";
@@ -63,6 +63,7 @@ import {
   type RiderSettings,
   type RiderSettingsStoragePort,
 } from "@/application/ride-metrics/rider-settings";
+import type { RideFocusTelemetryProvider } from "@/application/ride-session/ride-focus-view-model";
 import { RideFocus } from "@/ui/ride/RideFocus";
 
 import { createStubMapHostFactory } from "../support/stub-map-host";
@@ -193,6 +194,15 @@ interface Harness {
   readonly databaseName: string;
   /** The store's own 1 Hz refresh, as the ride screen runs it on a mounted phone. */
   readonly tick: () => void;
+  /** The identity of the issued maneuver, when the fixture issued one. */
+  readonly instructionId: SessionInstructionId | null;
+}
+
+/** A deterministic identity per issued fixture maneuver (the journal validates the prefix). */
+let instructionSequence = 0;
+function nextInstructionId(): SessionInstructionId {
+  instructionSequence += 1;
+  return asSessionInstructionId(`instr_ride_focus_${instructionSequence}`);
 }
 
 const RIDE_FOCUS_PLACE: NearbyPlace = {
@@ -228,7 +238,7 @@ const RIDE_FOCUS_PLACE: NearbyPlace = {
  */
 async function harness(options: {
   readonly position?: "fresh" | "poor" | "stale" | "none";
-  readonly instruction?: "turn" | "nameless";
+  readonly instruction?: "turn" | "nameless" | "roundabout" | "roundabout-known-exit";
   readonly environment?: Partial<RideFocusEnvironmentSnapshot>;
   readonly pointerAt?: "session" | "nothing";
   readonly databaseName?: string;
@@ -237,13 +247,10 @@ async function harness(options: {
   readonly autoResume?: boolean;
   readonly riderSettings?: RiderSettingsStoragePort;
   readonly reroutePlanner?: GuidedReroutePlanner;
-  readonly telemetry?: (now: string) => {
-    readonly routeProgress: number | null;
-    readonly remainingDistanceMeters: number | null;
-    readonly remainingDurationSeconds: number | null;
-    readonly etaIso: string | null;
-    readonly distanceFromRouteMeters?: number | null;
-  } | null;
+  /** The engine's telemetry provider: lateral offset, live maneuver distance and the "then" pair. */
+  readonly telemetry?: RideFocusTelemetryProvider;
+  /** A fixed identity for the issued maneuver, so telemetry can name it. */
+  readonly instructionId?: SessionInstructionId;
 } = {}): Promise<Harness> {
   const databaseName = options.databaseName ?? freshDatabaseName();
   const repository = createRideSessionRepository({ databaseName });
@@ -341,19 +348,33 @@ async function harness(options: {
     await controller.dispatch(offRouteChangedEvent("on-route", NOW));
   }
   if (options.instruction !== undefined) {
+    const roundabout = options.instruction.startsWith("roundabout");
+    const instructionId = options.instructionId ?? nextInstructionId();
     await controller.dispatch(
       instructionIssuedEvent(
-        newSessionInstruction({
-          kind: "turn",
-          maneuver: "left",
-          roadName: options.instruction === "turn" ? "Gravel Pike" : "  ",
-          distanceMeters: 120,
-          targetStopId: null,
-        }),
+        roundabout
+          ? {
+              instructionId,
+              kind: "roundabout",
+              maneuver: null,
+              roadName: options.instruction === "roundabout" ? null : "PA-23",
+              distanceMeters: 120,
+              targetStopId: null,
+              ...(options.instruction === "roundabout-known-exit" ? { exitNumber: 2 } : {}),
+            }
+          : {
+              instructionId,
+              kind: "turn",
+              maneuver: "left",
+              roadName: options.instruction === "turn" ? "Gravel Pike" : "  ",
+              distanceMeters: 120,
+              targetStopId: null,
+            },
         NOW,
       ),
     );
   }
+  const issuedInstructionId = controller.navigationState()?.instruction?.instructionId ?? null;
   await store.getState().setMapReady(true);
 
   const hosts = createStubMapHostFactory();
@@ -369,7 +390,11 @@ async function harness(options: {
     hosts.hosts[0]?.reportStatus({ state: "ready", reason: null });
   });
 
-  return { store, controller, environment, pointer, hosts, sessionId, databaseName, tick: () => tickHandler?.() };
+  return {
+    store, controller, environment, pointer, hosts, sessionId, databaseName,
+    tick: () => tickHandler?.(),
+    instructionId: issuedInstructionId,
+  };
 }
 
 afterEach(() => {
@@ -458,6 +483,128 @@ describe("dark chrome and honest states", () => {
     await harness({ position: "fresh", instruction: "nameless" });
     expect(screen.queryByTestId("ride-maneuver-road")).not.toBeInTheDocument();
     expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Turn left");
+  });
+
+  it("adds a quiet then row when the following maneuver is within a mile", async () => {
+    const instructionId = asSessionInstructionId("instr_then_near");
+    await harness({
+      position: "fresh",
+      instruction: "turn",
+      instructionId,
+      telemetry: () => ({
+        routeProgress: 0.4,
+        remainingDistanceMeters: 8_000,
+        remainingDurationSeconds: 900,
+        etaIso: null,
+        followingManeuver: {
+          afterInstructionId: instructionId,
+          kind: "keep-right",
+          maneuver: null,
+          roadName: "Ridge Road",
+          distanceFromCurrentMeters: 640,
+        },
+      }),
+    });
+
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-then", "true");
+    const then = screen.getByTestId("ride-maneuver-then");
+    expect(then).toHaveTextContent("Then");
+    expect(then).toHaveTextContent("Keep right onto Ridge Road");
+    expect(screen.getByTestId("ride-maneuver-then-glyph")).toHaveAttribute(
+      "data-glyph",
+      "keep-right",
+    );
+    // A glance, not a second instruction: the row is hidden from assistive tech
+    // and creates no second live region inside the 1 Hz card.
+    expect(then).toHaveAttribute("aria-hidden", "true");
+    expect(then).not.toHaveAttribute("aria-live");
+    expect(screen.getByTestId("ride-maneuver-then")).not.toHaveAttribute("role");
+  });
+
+  it("keeps the then row out of the card when it is far or unknown", async () => {
+    const instructionId = asSessionInstructionId("instr_then_far");
+    const telemetry = (gapMeters: number | null): RideFocusTelemetryProvider => () => ({
+      routeProgress: 0.4,
+      remainingDistanceMeters: 8_000,
+      remainingDurationSeconds: 900,
+      etaIso: null,
+      followingManeuver:
+        gapMeters === null
+          ? null
+          : {
+              afterInstructionId: instructionId,
+              kind: "turn",
+              maneuver: "right",
+              roadName: "Ridge Road",
+              distanceFromCurrentMeters: gapMeters,
+            },
+    });
+
+    await harness({ position: "fresh", instruction: "turn", instructionId, telemetry: telemetry(3_000) });
+    expect(screen.queryByTestId("ride-maneuver-then")).toBeNull();
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-then", "false");
+
+    cleanup();
+    await harness({ position: "fresh", instruction: "turn", instructionId, telemetry: telemetry(null) });
+    expect(screen.queryByTestId("ride-maneuver-then")).toBeNull();
+  });
+
+  it("badges a provider-stated roundabout exit and never invents one", async () => {
+    await harness({ position: "fresh", instruction: "roundabout-known-exit" });
+    expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Take the 2nd exit");
+    expect(screen.getByTestId("ride-maneuver-glyph")).toHaveAttribute("data-glyph", "roundabout");
+    expect(screen.getByTestId("ride-maneuver-exit")).toHaveTextContent("2");
+
+    cleanup();
+    await harness({ position: "fresh", instruction: "roundabout" });
+    expect(screen.getByTestId("ride-maneuver")).toHaveTextContent("Enter the roundabout");
+    expect(screen.queryByTestId("ride-maneuver-exit")).toBeNull();
+  });
+
+  it("declares the then row and the exit badge in the stylesheet", () => {
+    const read = (file: string): string =>
+      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
+    const ruleIn = (css: string, selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+
+    const globals = read("globals.css");
+    const then = ruleIn(globals, ".og-ride__maneuver-then");
+    // Third grid row under the action line, spanning the icon column too.
+    expect(then).toMatch(/grid-column:\s*1 \/ -1/);
+    expect(then).toMatch(/border-top:\s*1px solid/);
+    expect(then).toMatch(/padding-top:\s*8px/);
+    expect(then).toMatch(/min-height:\s*30px/);
+    expect(then).toMatch(/font-size:\s*15px/);
+    expect(then).toMatch(/font-weight:\s*600/);
+    // Reduced motion has nothing to stop: the row appears instantly, always.
+    expect(then).not.toMatch(/(animation|transition)[\w-]*\s*:/);
+    // One line, ellipsised rather than wrapping the card.
+    expect(ruleIn(globals, ".og-ride__maneuver-then-action")).toMatch(
+      /text-overflow:\s*ellipsis/,
+    );
+    expect(ruleIn(globals, '.og-ride__maneuver[data-then="true"]')).toMatch(/min-height:\s*126px/);
+
+    const exit = ruleIn(globals, ".og-ride__maneuver-exit");
+    expect(exit).toMatch(/width:\s*24px/);
+    expect(exit).toMatch(/height:\s*24px/);
+    expect(exit).toMatch(/font-size:\s*13px/);
+    expect(exit).toMatch(/font-weight:\s*800/);
+    expect(exit).toMatch(/font-variant-numeric:\s*tabular-nums/);
+
+    const glass = read("theme-glass.css");
+    expect(
+      ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver[data-then="true"]'),
+    ).toMatch(/min-height:\s*138px/);
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-then')).toMatch(
+      /border-top-color:\s*rgb\(255 255 255 \/ 24%\)/,
+    );
+    // Day badging: white disc, green numeral and ring; Night keeps paper/ink.
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-exit')).toMatch(
+      /box-shadow:\s*0 0 0 2px #0b6b35/,
+    );
   });
 
   it("draws the route line and the rider position into the map scene", async () => {
