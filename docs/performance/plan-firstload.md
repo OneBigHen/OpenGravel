@@ -52,8 +52,19 @@ and 44 KB on Explore; this task does not claim CSS parsing savings.
 - Load advisor proposal construction/request serialization and its API client on
   ask. Preserve the original document snapshot, pending state, abort/generation
   protection, and existing request-error handling.
-- Load elevation sampling, fetch hook and chart only for a selected route; keep
-  briefing code behind the route boundary. Clear traffic state when a route clears.
+- Load the elevation chart and its waypoint projection only for a selected route,
+  through `PlannerElevationProfile`; keep briefing code behind the route boundary.
+  Clear traffic state when a route clears.
+- After the elevation chart rework landed on main, the chart also receives the
+  authored waypoints, the planned line, the sheet's expanded detent and the
+  selected card's tint through that same lazy wrapper: the ride intent is turned
+  into notches inside it, so the panel itself passes only the intent. The
+  sampling/fetch hook (`useElevationProfile`) is shared with the map's glance
+  strip, which mounts with the sheet rather than behind the route boundary — one
+  request answers both surfaces, and the hook therefore stays in the first
+  bundle while the chart, the waypoint projection and the route-scrub store do
+  not. `tests/unit/ui/planner-result-panel.test.tsx` pins that the lazy boundary
+  still hands the chart everything the ride gives it.
 - Load sharing, selected map-feature details, and stop/road/drawing refinement
   controls when opened. Loading indicators provide local Suspense boundaries.
 - Load Explore route details and their preparation providers only on the detail
