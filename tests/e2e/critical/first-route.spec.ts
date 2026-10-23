@@ -20,6 +20,7 @@ import {
   readMapErrorKinds,
   settledExtent,
   type Coordinate,
+  pressPlan,
 } from "./map-helpers";
 
 /**
@@ -111,7 +112,7 @@ async function placeBothEndpoints(page: import("@playwright/test").Page): Promis
 /** Places both endpoints and plans the ride the fixture answers. */
 async function planFixtureRide(page: import("@playwright/test").Page): Promise<void> {
   await placeBothEndpoints(page);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page)).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 }
@@ -192,11 +193,14 @@ test("placing a start and a destination records exactly the clicked coordinates"
   await expectPointValue(page, "finish-value", destination);
   await expectDrawnScene(page, { points: "2" });
 
-  const plan = page.getByTestId("compose-create");
-  await expect(plan).toBeEnabled();
-  await expect(plan).toHaveText("Create ride");
+  // The destination completed the ride, so that pick already asked for it (04 §8):
+  // there is no commitment control to press, and the status says what is happening
+  // rather than asking for a second confirmation.
+  await expect(page.getByTestId("compose-create")).toHaveCount(0);
   await expect(page.getByTestId("plan-disabled-reason")).toHaveCount(0);
-  await expect(page.getByTestId("status-line")).toHaveText("Ready to plan.");
+  await expect(page.getByTestId("status-line")).toHaveText(
+    /^(Finding your ride…|Ride ready\.)$/,
+  );
 
   // With both points authored nothing blocks planning, so an armed tool is what
   // the map instructs — as a note over the surface, never as a control, and in
@@ -232,12 +236,12 @@ test("dragging the map pans it and never places a point", async ({ page }) => {
 
 test("planning shows a route the rider can see and select", async ({ page }) => {
   await placeBothEndpoints(page);
-  // Armed before the press that starts the first plan: the press's own `click` call
-  // can outlast the fixture's window under CPU load (see `map-helpers.ts`).
+  // Armed as the destination is placed, because that pick is what starts the plan
+  // (04 §8) — the fixture's latency window is what makes the state observable.
   const firstPlanInFlight = expect(page.getByTestId("status-line")).toHaveText(
     "Finding your ride…",
   );
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await firstPlanInFlight;
 
   // The in-flight state is visible while the fixture latency window is open.
@@ -349,8 +353,8 @@ test("cancelling inside the latency window keeps the last route on screen", asyn
   const inFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
   await inFlight;
-  const plan = page.getByTestId("compose-create");
-  await expect(plan).toHaveText("Update ride");
+  // The edit asked for itself, so there is nothing to press while it runs.
+  await expect(page.getByTestId("compose-create")).toHaveCount(0);
 
   // The edit itself asks again (04 §21): a ride whose revision moved past the
   // answer on screen is replanned by the workspace, so the rider does not have to
@@ -369,6 +373,10 @@ test("cancelling inside the latency window keeps the last route on screen", asyn
   await expect(page.getByTestId("cancel-planning")).toHaveCount(0);
   await expect(routeCards(page)).toHaveCount(2);
   await expectDrawnScene(page, { routes: "2" });
+  // A cancel is the rider stopping an attempt, so the planner does not start it
+  // again behind their back: the press that can resume it comes back, labelled for
+  // the ride it would update.
+  const plan = page.getByTestId("compose-create");
   await expect(plan).toBeEnabled();
   await expect(plan).toHaveText("Update ride");
 });

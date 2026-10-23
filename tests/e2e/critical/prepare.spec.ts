@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /**
  * The route briefing (MVP parity M4, OGV-D-266): once a route is chosen the
@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
 });
 

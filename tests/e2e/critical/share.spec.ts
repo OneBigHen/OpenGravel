@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, settledExtent, type Coordinate } from "./map-helpers";
+import {
+  clickMapAtCoordinate,
+  plannerMap,
+  pressPlan,
+  settledExtent,
+  type Coordinate,
+} from "./map-helpers";
 
 /**
  * Critical browser workflow (Task 11.1): the share flow, end to end.
@@ -34,7 +40,7 @@ async function selectFixtureRoute(page: Page): Promise<void> {
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page)).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await routeCards(page).first().click();

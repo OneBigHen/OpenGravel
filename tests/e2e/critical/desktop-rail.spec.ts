@@ -6,6 +6,7 @@ import {
   plannerMap,
   settledExtent,
   type Coordinate,
+  pressPlan,
 } from "./map-helpers";
 
 /**
@@ -35,7 +36,7 @@ const DESTINATION_COORDINATE: Coordinate = { lon: -75.4335, lat: 40.1325 };
 async function fillRail(page: import("@playwright/test").Page): Promise<void> {
   await clickMapAtCoordinate(page, START_COORDINATE);
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 }

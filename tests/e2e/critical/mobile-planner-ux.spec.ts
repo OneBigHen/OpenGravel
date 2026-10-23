@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /** Layout evidence uses the labeled geocoder/router fixtures. It does not
  * establish real-road quality or physical-phone acceptance. */
@@ -65,7 +65,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
   });
 }
 
-test("small-phone ride style has a named entry and planning stays visible while editing", async ({ page }) => {
+test("small-phone ride style has a named entry and the plan stays visible while editing", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await chooseEndpoints(page);
   const handle = page.getByTestId("sheet-handle");
@@ -75,9 +75,11 @@ test("small-phone ride style has a named entry and planning stays visible while 
   await page.getByTestId("road-character-curvy").check();
   const sheetBody = page.getByTestId("sheet-scroll");
   await sheetBody.evaluate((element) => { element.scrollTop = 0; });
-  await expect.soft(page.getByTestId("compose-create")).toBeInViewport({ ratio: 1 });
-  await page.getByTestId("compose-create").click();
-  await expect(page.getByTestId("cancel-planning")).toBeInViewport({ ratio: 1 });
+  // The style change plans by itself once the rider stops changing it (04 §21), so
+  // what has to stay visible in the edited sheet is the plan itself — its status
+  // line and the ride it produces — rather than a commitment button the pick
+  // already pressed.
+  await expect.soft(page.getByTestId("status-line")).toBeInViewport({ ratio: 1 });
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
 });
@@ -85,7 +87,7 @@ test("small-phone ride style has a named entry and planning stays visible while 
 test("320px comparison fits its sheet and keeps the header controls on one row", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await chooseEndpoints(page);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await page.getByTestId("sheet-handle").click();
   const head = page.getByTestId("sheet-head");
@@ -119,7 +121,7 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
 test("200 percent text keeps navigation labels and the planner sheet separate", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await chooseEndpoints(page);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await page.getByTestId("sheet-handle").click();
   await doubleTextSize(page);

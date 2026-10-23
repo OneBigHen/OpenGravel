@@ -7,6 +7,7 @@ import {
   pointLabel,
   settledExtent,
   type Coordinate,
+  pressPlan,
 } from "./map-helpers";
 
 /**
@@ -53,7 +54,7 @@ test("search a town and a place, then plan the ride", async ({ page }) => {
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
   await expect(page.getByTestId("finish-value")).toHaveAttribute("data-coordinate", pointLabel(HAWK_MOUNTAIN));
 
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
   // A search pick is a normal authored edit: one undo step, labelled.
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

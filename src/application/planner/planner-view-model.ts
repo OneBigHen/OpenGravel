@@ -205,9 +205,26 @@ export interface PlannerViewModel {
    * offered beside it (owner review 2026-09-17).
    */
   readonly failed: boolean;
-  /** `Create ride` / `Update ride` / `Plan again` — never a success claim on
-   * top of an error. */
+  /** `Create ride` / `Update ride` / `Make my loop` / `Plan again` — never a
+   * success claim on top of an error. */
   readonly planLabel: string;
+  /**
+   * Whether the commitment control is offered at all (04 §8).
+   *
+   * A ride with a destination plans itself: the pick that completes it, and every
+   * later change to its style or its ends, asks the router without a press. So the
+   * control is hidden where a press would only ask the same question twice. It
+   * stays for the cases where a tap is still the rider's own:
+   *
+   * - **a loop**, whose shape and ride time the rider accepts by pressing
+   *   `Make my loop`;
+   * - **a failure**, where `Plan again` is a deliberate retry;
+   * - **a cancel**, where the rider stopped the attempt and the planner must not
+   *   start it again behind their back;
+   * - **a ride with no destination** (including one a sketch supplies), whose
+   *   disabled state carries the single instruction that says what is missing.
+   */
+  readonly showPlanAction: boolean;
   /**
    * True when the routes on screen were planned from the current ride revision,
    * so planning again would change nothing. The plan button steps back to a
@@ -438,6 +455,7 @@ const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point."
 /** The commitment label per phase (04 §8, §29): never a success claim on error. */
 export const PLAN_LABEL_CREATE = "Create ride";
 export const PLAN_LABEL_UPDATE = "Update ride";
+export const PLAN_LABEL_LOOP = "Make my loop";
 export const PLAN_LABEL_RETRY = "Plan again";
 
 /** Phases in which an attempt is still running (04 §8, §9). */
@@ -1004,6 +1022,9 @@ export function buildPlannerViewModel(
   const rows = pointRows(document, input.placeNameFor);
   const itinerary = itineraryLegs(rows.itinerary, input.routeLine ?? null, document);
   const failed = session.phase === "failed";
+  // A cancel is the rider stopping a plan, not the planner finishing one: nothing
+  // is on screen to accept, so the press that can resume it stays available.
+  const cancelled = session.phase === "cancelled";
   return {
     phase: session.phase,
     statusMessage: statusFor(session.phase, document, session, derived),
@@ -1048,9 +1069,18 @@ export function buildPlannerViewModel(
     failed,
     planLabel: failed
       ? PLAN_LABEL_RETRY
-      : (bundle?.candidates.length ?? 0) > 0
-        ? PLAN_LABEL_UPDATE
-        : PLAN_LABEL_CREATE,
+      : document.intent.shape === "loop"
+        ? PLAN_LABEL_LOOP
+        : (bundle?.candidates.length ?? 0) > 0
+          ? PLAN_LABEL_UPDATE
+          : PLAN_LABEL_CREATE,
+    // A loop, a failure and a cancel still need the press; a destination that is
+    // being planned does not.
+    showPlanAction:
+      failed ||
+      cancelled ||
+      document.intent.shape === "loop" ||
+      document.intent.finish === null,
     planIsCurrent:
       !failed &&
       bundle !== null &&

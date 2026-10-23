@@ -391,6 +391,23 @@ export async function clickMapAtCoordinate(
 }
 
 /**
+ * Presses the planner's commitment control, when the planner still offers one.
+ *
+ * A ride with a destination plans itself the moment the destination completes it,
+ * so the control is absent and the press this helper replaces has nothing to do;
+ * a loop (`Make my loop`), a retry after a failure (`Plan again`) and a ride with
+ * no destination still need the press, and this helper makes it. Specs therefore
+ * state "plan the ride" without needing to know which of the two happened, and the
+ * assertions that follow the call (the route cards, `Ride ready.`) stay the proof
+ * that a plan was actually asked for.
+ */
+export async function pressPlan(page: Page): Promise<void> {
+  const plan = page.getByTestId("compose-create");
+  if (await plan.count() === 0) return;
+  await plan.click();
+}
+
+/**
  * Drags the map by `(dx, dy)` CSS pixels from `fraction` of its box.
  *
  * 05 §4: a drag is a camera gesture, and it must not place a point — which is

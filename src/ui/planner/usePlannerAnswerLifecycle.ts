@@ -26,8 +26,13 @@ export interface PlannerAnswerLifecycle {
   markRevisionAttempted(revision: number): void;
 }
 
-/** How long an edit waits for the next one before the ride is planned again. */
-export const REPLAN_SETTLE_MS = 600;
+/**
+ * How long an edit waits for the next one before the ride is planned again.
+ *
+ * A burst of Ride style taps (or a swap) settles first, so the ride is planned
+ * once for the combination rather than once per control.
+ */
+export const REPLAN_SETTLE_MS = 700;
 
 /**
  * Owns the lifecycle of an answered plan without becoming another state authority.
@@ -93,6 +98,9 @@ export function usePlannerAnswerLifecycle(input: {
     // A burst of preference taps settles first, so it plans once for the
     // combination rather than once per tap (PQ-03); a newer revision cancels this.
     const timer = setTimeout(() => {
+      // An attempt already spent on this revision — the pick that authored it, or
+      // the rider's own press — is not spent again by the settle window.
+      if (attemptedRevisionRef.current === document.revision) return;
       attemptedRevisionRef.current = document.revision;
       void planningSessionStore.getState().begin({
         rideId: document.rideId,

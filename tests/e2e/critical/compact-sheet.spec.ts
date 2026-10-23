@@ -6,6 +6,7 @@ import {
   expectHealthyMap,
   plannerMap,
   settledExtent,
+  pressPlan,
 } from "./map-helpers";
 
 /**
@@ -131,7 +132,7 @@ test("the sheet has a peek detent and an expanded one", async ({ page }) => {
   await expect(sheet).not.toHaveAttribute("data-idle", "true");
   await expect(handle).toBeVisible();
   await expect(handle).toHaveAttribute("aria-expanded", "false");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
 
   const cards = page.locator('[data-testid^="route-card-"]');
   await expect(cards).toHaveCount(2);
