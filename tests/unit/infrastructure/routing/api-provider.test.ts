@@ -379,6 +379,16 @@ describe("createApiRouteProvider — failures", () => {
     expect(sent.request.options.includeAlternatives).toBe(false);
   });
 
+  it("keeps a guard 429 distinguishable and recoverable without retrying", async () => {
+    const { fetcher, probe } = recordingFetcher(response(false, 429, { error: { code: "rate-limit", message: "The service is busy right now. Try again in a moment." } }));
+    const provider = createApiRouteProvider({ fetcher });
+    provider.beginAttempt(IDENTITY);
+    await expect(provider.candidates(REQUEST, new AbortController().signal)).rejects.toMatchObject({
+      code: "rate-limit", recoverable: true, httpStatus: 429, message: "The route planner is busy. Wait a moment and try again.",
+    });
+    expect(probe.calls).toHaveLength(1);
+  });
+
   it("does not retry a real answer such as no-route", async () => {
     const { fetcher, probe } = recordingFetcher(response(false, 422, { error: { code: "no-route", message: "No route.", recoverable: false } }));
     const provider = createApiRouteProvider({ fetcher });
@@ -478,6 +488,56 @@ describe("createApiRouteProvider — a request that never settles", () => {
       const settled = expect(result).rejects.toMatchObject({ code: "provider-unavailable", recoverable: true });
       await vi.advanceTimersByTimeAsync(PLAN_REQUEST_CEILING_MS + 1);
       await settled;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("also bounds a body stream that ignores cancellation", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => new Promise(() => undefined) }) as unknown as typeof fetch;
+      const provider = createApiRouteProvider({ fetcher });
+      provider.beginAttempt(IDENTITY);
+      const result = expect(provider.candidates(REQUEST, new AbortController().signal)).rejects.toMatchObject({ timedOut: true });
+      await vi.advanceTimersByTimeAsync(PLAN_REQUEST_CEILING_MS + 1);
+      await result;
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("includes the retry delay in the ceiling and never starts a retry after it expires", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi.fn(() => new Promise<Response>(resolve => setTimeout(() => resolve(response(false, 503, {})), PLAN_REQUEST_CEILING_MS - 500))) as unknown as typeof fetch;
+      const provider = createApiRouteProvider({ fetcher });
+      provider.beginAttempt(IDENTITY);
+      const result = expect(provider.candidates(REQUEST, new AbortController().signal)).rejects.toMatchObject({ timedOut: true });
+      await vi.advanceTimersByTimeAsync(PLAN_REQUEST_CEILING_MS + 1);
+      await result;
+      expect(fetcher).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("shares the ceiling across a slow 502 and a hung retry", async () => {
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      const fetcher = vi.fn((_path: string, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
+        calls += 1;
+        if (calls === 1) setTimeout(() => resolve(response(false, 502, {})), 60_000);
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+      })) as unknown as typeof fetch;
+      const provider = createApiRouteProvider({ fetcher });
+      provider.beginAttempt(IDENTITY);
+      let failure: unknown;
+      void provider.candidates(REQUEST, new AbortController().signal).catch(error => { failure = error; });
+      await vi.advanceTimersByTimeAsync(PLAN_REQUEST_CEILING_MS + 1);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      expect(failure).toMatchObject({ code: "provider-unavailable", recoverable: true, timedOut: true });
+      expect(vi.getTimerCount()).toBe(0);
     } finally {
       vi.useRealTimers();
     }

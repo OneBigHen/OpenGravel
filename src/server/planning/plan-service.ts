@@ -32,9 +32,10 @@ import { riderTrafficSampler } from "./rider-traffic";
  * the attempt without an answer (06 §28).
  */
 
-import { boundingBoxOf, padBox } from "@/application/route-intelligence/match";
+import { requestRoadAssessments } from "./road-assessments";
+import { memoizedKnownRoadEvidence } from "./known-road-evidence";
+import { boundedRouteProvider } from "@/infrastructure/routing/concurrency";
 import type {
-  RoadAuthorityAssessment,
   RoadAuthorityCoordinator,
   RoadAuthorityVerdict,
 } from "@/application/route-intelligence/coordinator";
@@ -111,7 +112,7 @@ import {
 } from "@/application/planner/pipeline";
 import type { ConstraintContext } from "@/domain/route/eligibility";
 import { engineRoadEvidence } from "@/application/roads/engine-road-evidence";
-import { knownRoadEvidence, type KnownRoadsPort } from "@/application/roads/known-roads";
+import type { KnownRoadsPort } from "@/application/roads/known-roads";
 import { knownRoadsFromEnv } from "@/server/roads/known-roads-db";
 import type { PipelineIntent } from "@/domain/route/intent";
 import {
@@ -777,7 +778,16 @@ function seeksDirt(options: ProviderRouteRequest["options"]): boolean {
   return options.surfacePreference === "dirt-preferred" || (options.targetUnpavedShare ?? 0) > 0 || options.bike?.category === "dual-sport";
 }
 
-export async function planRide(
+export async function planRide(input: PlanRideInput, deps: PlanServiceDeps = {}): Promise<PlanServiceResult> {
+  const signal = deps.signal ?? new AbortController().signal;
+  try {
+    return await planRideAttempt(input, { ...deps, signal });
+  } catch (error) {
+    return { ok: false, error: normalizePlanFailure(error, signal.aborted) };
+  }
+}
+
+async function planRideAttempt(
   input: PlanRideInput,
   deps: PlanServiceDeps = {},
 ): Promise<PlanServiceResult> {
@@ -785,7 +795,7 @@ export async function planRide(
   if (!parsed.ok) return { ok: false, error: validationFailure(parsed.issues) };
 
   const versions = deps.versions ?? DEFAULT_PLAN_VERSIONS;
-  const provider = deps.provider ?? graphHopperProviderFromEnv(deps.env ?? process.env);
+  const provider = boundedRouteProvider(deps.provider ?? graphHopperProviderFromEnv(deps.env ?? process.env));
   const knownRoads = deps.knownRoads ?? knownRoadsFromEnv(deps.env ?? process.env);
   const signal = deps.signal ?? new AbortController().signal;
   const fixture =
@@ -793,17 +803,18 @@ export async function planRide(
       ? fixturePlanModeFromEnv(deps.env ?? process.env)
       : null;
 
+  const includeAlternatives = parsed.value.options?.includeAlternatives ?? parsed.value.request.options.includeAlternatives;
+  // No alternatives is the progressive first answer: one lane and canonical gates.
+  const fullPlan = includeAlternatives;
   const intent = pipelineIntentFromRequest(parsed.value.request);
   const source = await candidateSource({
     fixture,
     provider,
-    request: parsed.value.request,
+    request: { ...parsed.value.request, options: { ...parsed.value.request.options, includeAlternatives } },
     intent,
     // An explicit request-level option wins; the provider-level flag is the
     // fallback because that is the one the browser sets today (`OGV-D-211`).
-    includeAlternatives:
-      parsed.value.options?.includeAlternatives ??
-      parsed.value.request.options.includeAlternatives,
+    includeAlternatives,
     signal,
   });
   if (!source.ok) return { ok: false, error: source.error };
@@ -836,23 +847,22 @@ export async function planRide(
   const roadAuthority = deps.roadAuthority === undefined
     ? roadAuthorityFromEnv(deps.env ?? process.env)
     : deps.roadAuthority;
-  const assessRoads = async (from: readonly ProviderCandidate[], runSignal: AbortSignal = signal): Promise<RoadAuthorityAssessment | null> => {
-    if (roadAuthority === null || roadAuthority.sources.length === 0) return null;
-    const points = from.flatMap((candidate) => candidate.geometry);
-    if (points.length === 0) return null;
-    return roadAuthority.assess(padBox(boundingBoxOf(points), 500), runSignal);
-  };
+  const assessRoads = requestRoadAssessments(roadAuthority, signal);
   let roads = await assessRoads(candidates);
-  const verdicts = new WeakMap<ProviderCandidate, RoadAuthorityVerdict>();
+  if (signal.aborted) throw signal.reason;
+  // Verdicts depend on the current assessment as its corridor grows. The
+  // pipeline copies candidates, so cache by the actual line within a snapshot.
+  const verdicts = new WeakMap<NonNullable<typeof roads>, Map<string, RoadAuthorityVerdict>>();
   const roadVerdict = (candidate: ProviderCandidate): RoadAuthorityVerdict | null => {
     if (roads === null) return null;
-    let verdict = verdicts.get(candidate);
-    if (verdict === undefined) {
-      verdict = roads.evaluate(candidate.geometry);
-      verdicts.set(candidate, verdict);
-    }
+    let byLine = verdicts.get(roads);
+    if (byLine === undefined) { byLine = new Map(); verdicts.set(roads, byLine); }
+    const key = JSON.stringify(candidate.geometry);
+    let verdict = byLine.get(key);
+    if (verdict === undefined) { verdict = roads.evaluate(candidate.geometry); byLine.set(key, verdict); }
     return verdict;
   };
+  const catalogueEvidence = memoizedKnownRoadEvidence(knownRoads);
 
   const formulaFor = (evidence: RouteEvidence, source: ProviderCandidate, fastestSeconds: number) => {
     const request = parsed.value.request;
@@ -893,7 +903,7 @@ export async function planRide(
       const verdict = verdictFor(candidate);
       return {
         ...engineRoadEvidence(candidate.roadSummary, intent.surface?.preference ?? "mixed"),
-        ...knownRoadEvidence(candidate.geometry, knownRoads),
+        ...catalogueEvidence(candidate.geometry),
         ...(verdict === null ? {} : { closures: verdict.evidence.closures, access: verdict.evidence.access }),
       };
     },
@@ -928,8 +938,14 @@ export async function planRide(
           },
         }),
   });
+  const eligibleFrom = (from: readonly ProviderCandidate[], checked = rank(from)): ProviderCandidate[] => {
+    const dropped = new Set(checked.diagnostics.flatMap(entry =>
+      entry.candidateIndex !== null && (entry.stage === "normalize" || entry.stage === "eligibility") ? [entry.candidateIndex] : [],
+    ));
+    return from.filter((_candidate, index) => !dropped.has(index));
+  };
   let pipeline = rank(candidates);
-  if (riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
+  if (fullPlan && riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
     const request = parsed.value.request;
     const wantsDirt = request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
     const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
@@ -1007,8 +1023,8 @@ export async function planRide(
     const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
     return merged.candidates.length > 0 ? merged : null;
   };
-  if (riderEnabled && pipeline.candidates.length > 0) {
-    const eligible = candidates.filter(candidate => rank([candidate]).candidates.length > 0);
+  if (fullPlan && riderEnabled && pipeline.candidates.length > 0) {
+    const eligible = eligibleFrom(candidates, pipeline);
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
     const options = parsed.value.request.options;
     const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred" && riderEnv["OGV_CURVY_SEARCH"] !== "off";
@@ -1021,7 +1037,7 @@ export async function planRide(
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
         roads = own;
-        return proposed.filter(candidate => rank([candidate], value => own?.evaluate(value.geometry) ?? null).candidates.length > 0);
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
       },
     }) : await searchRiderEnvelope({
       request: parsed.value.request,
@@ -1033,7 +1049,7 @@ export async function planRide(
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
         roads = own;
-        return proposed.filter(candidate => rank([candidate], value => own?.evaluate(value.geometry) ?? null).candidates.length > 0);
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
       },
     });
     riderCalls += result.calls;
@@ -1070,7 +1086,7 @@ export async function planRide(
   // The fun-route generator family (routing research Phase 7). Off by default;
   // in shadow it runs after the answer and cannot touch the bundle.
   const funSettings = { ...configuredFunSettings, budget: { ...configuredFunSettings.budget, maxProviderCalls: Math.max(0, configuredFunSettings.budget.maxProviderCalls - riderCalls) } };
-  if (funSettings.mode !== "off" && fixture === null && pipeline.candidates.length > 0) {
+  if (fullPlan && funSettings.mode !== "off" && fixture === null && pipeline.candidates.length > 0) {
     const report = (mode: FunGeneratorMode) => (result: FunGeneratorReport): void => {
       if (deps.onFunGeneratorReport !== undefined) deps.onFunGeneratorReport(result, mode);
       else console.info(funGeneratorLogLine(mode, parsed.value.request.requestId, result));
@@ -1134,7 +1150,7 @@ export async function planRide(
     }
   }
 
-  if (riderEnabled && riderEnv["OGV_TRAFFIC_LIVE_AVOID"] !== "off" && pipeline.candidates.length > 0) {
+  if (fullPlan && riderEnabled && riderEnv["OGV_TRAFFIC_LIVE_AVOID"] !== "off" && pipeline.candidates.length > 0) {
     const index = pipeline.roles["best-ride"] ?? 0;
     const chosen = pipeline.candidates[index]!;
     const refined = await refineRiderTraffic({ request: { ...parsed.value.request, profile: chosen.provider.profile, options: { ...parsed.value.request.options, riderModeFactor: riderFactor } }, candidate: { ...chosen, providerId: chosen.provider.providerId, profile: chosen.provider.profile }, provider, sample: riderTrafficSampler(riderEnv), signal });
@@ -1147,16 +1163,13 @@ export async function planRide(
   }
 
   if (pipeline.candidates.length === 0) {
-    // A lane that could not answer at all is the more informative failure: it
-    // says *why* there is nothing to rank, and it carries the §3 taxonomy code
-    // the provider reported (`no-route`, `provider-timeout`, …). Otherwise the
-    // adapter already normalized a zero-path answer, so an empty result *here*
-    // means every candidate it returned was unusable or ineligible: a broken
-    // engine or an unsatisfiable constraint, never a durable "no route here".
-    const laneFailure = laneDiagnostics.find((lane) => lane.failure !== null)?.failure;
-    if (laneFailure !== undefined && laneFailure !== null) {
-      return { ok: false, error: laneFailure };
-    }
+    // Candidates the engine returned own their eligibility diagnosis. An
+    // optional lane's refusal cannot explain why another lane's line was dropped.
+    const baseline = laneDiagnostics.find(lane => lane.laneId === "baseline-efficient");
+    const allLanesFailed = laneDiagnostics.every(lane => lane.outcome !== "ok" && lane.outcome !== "capped");
+    const laneFailure = baseline?.failure
+      ?? (allLanesFailed ? laneDiagnostics.find(lane => lane.failure !== null)?.failure : null);
+    if (laneFailure !== undefined && laneFailure !== null) return { ok: false, error: laneFailure };
     return {
       ok: false,
       error: pipelineFailure({
@@ -1320,6 +1333,7 @@ export async function planRide(
     }
   }
 
+  if (signal.aborted) throw signal.reason;
   return {
     ok: true,
     identity: parsed.value.identity,
