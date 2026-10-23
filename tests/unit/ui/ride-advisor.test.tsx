@@ -5,6 +5,7 @@ import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
+import { newCommandId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
@@ -160,6 +161,35 @@ describe("one box for where to and describe a ride", () => {
     expect(onApplied).toHaveBeenCalledOnce();
     expect(store.getState().document.intent.shape).toBe("loop");
     await waitFor(() => expect(screen.queryByTestId("advisor-inline")).toBeNull());
+  });
+
+  it("refreshes a stale proposal against the ride as it is now, without asking the model again", async () => {
+    const { store, client } = setup();
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2h of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByTestId("advisor-proposal");
+
+    // The rider taps a ride-style control before pressing Plan it.
+    const before = store.getState().document;
+    store.getState().dispatch({
+      type: "roadCharacter.set",
+      commandId: newCommandId(),
+      rideId: before.rideId,
+      baseRevision: before.revision,
+      source: "rider",
+      label: "Set road character",
+      roadCharacter: "efficient",
+    });
+
+    expect(await screen.findByTestId("advisor-refresh")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Plan it" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Plan it" }));
+    expect(client.request).toHaveBeenCalledOnce();
+    expect(store.getState().document.intent.shape).toBe("loop");
+    expect(store.getState().document.intent.roadCharacter).toBe("backroads");
   });
 
   it("names the point still missing after applying", async () => {

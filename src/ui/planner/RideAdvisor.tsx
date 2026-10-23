@@ -30,6 +30,7 @@ import { cachedElevationClimb } from "./useElevationProfile";
 import { advisorRiderState } from "@/application/advisor/advisor-errors";
 import { RIDE_DESCRIPTION_MAX_LENGTH } from "@/application/advisor/ride-description";
 import type {
+  AdvisorDraft,
   AdvisorDraftResult,
   AdvisorProposalClient,
   AdvisorRecovery,
@@ -65,6 +66,8 @@ export interface RideAdvisor {
   apply(): void;
   dismiss(): void;
   retry(): void;
+  /** Re-validates the last draft against the ride as it is now; no model call. */
+  refresh(): void;
 }
 
 const AdvisorContext = createContext<RideAdvisor | null>(null);
@@ -106,6 +109,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
   const [recovery, setRecovery] = useState<AdvisorRecovery>("none");
+  const [lastDraft, setLastDraft] = useState<AdvisorDraft | null>(null);
   const requestController = useRef<AbortController | null>(null);
   const requestGeneration = useRef(0);
   const onAppliedRef = useRef(onApplied);
@@ -133,6 +137,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       setSurface(from);
       setPending(true);
       setProposal(null);
+      setLastDraft(null);
       setMessage(null);
       setMessageIsError(false);
       setRecovery("none");
@@ -161,6 +166,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
             fail(result.message, result.recovery);
             return;
           }
+          setLastDraft(result.draft);
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status !== "error") {
             const reply = built.status === "ready" ? `Suggested: ${built.changes.map(changeChip).join(" · ")}.` : built.message;
@@ -203,6 +209,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     }
     const result = store.getState().dispatch(proposal.command);
     setProposal(null);
+    setLastDraft(null);
     if (result.outcome === "applied") {
       emitTelemetry("advisor_proposal_applied", { source: "advisor" });
       setRecovery("none");
@@ -223,6 +230,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     requestGeneration.current += 1;
     setPending(false);
     setProposal(null);
+    setLastDraft(null);
     setMessage(null);
     setRecovery("none");
     setPrompt("");
@@ -232,9 +240,33 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
 
   const retry = useCallback(() => ask(prompt, surface), [ask, prompt, surface]);
 
+  const refresh = useCallback(() => {
+    if (lastDraft === null) return;
+    const generation = ++requestGeneration.current;
+    void (async () => {
+      const { refreshAdvisorProposal } = await import("@/application/advisor/advisor-proposal-commands");
+      if (generation !== requestGeneration.current) return;
+      const built = refreshAdvisorProposal(store.getState().document, lastDraft);
+      if (built.status === "ready") {
+        setProposal(built);
+        setMessage(null);
+        setMessageIsError(false);
+        setRecovery("none");
+        return;
+      }
+      if (built.status === "error") {
+        fail(built.message, built.recovery);
+        return;
+      }
+      setMessage(built.message);
+      setMessageIsError(false);
+      setRecovery("none");
+    })();
+  }, [lastDraft, store, fail]);
+
   const value = useMemo<RideAdvisor>(
-    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry }),
-    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry],
+    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh }),
+    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh],
   );
   return <AdvisorContext.Provider value={enabled ? value : null}>{children}</AdvisorContext.Provider>;
 }
@@ -285,7 +317,7 @@ export function changeChip(change: AdvisorProposalChange): string {
 
 function recoveryLabel(recovery: AdvisorRecovery): string | null {
   if (recovery === "retry") return "Try again";
-  if (recovery === "refresh") return "Ask again";
+  if (recovery === "refresh") return "Refresh";
   return null;
 }
 
@@ -404,9 +436,15 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             </p>
           ) : null}
           <div className="og-advisor__actions">
-            <button type="button" className="og-primary" data-testid="advisor-apply" disabled={proposalIsStale} onClick={advisor.apply}>
-              Plan it
-            </button>
+            {proposalIsStale ? (
+              <button type="button" className="og-primary" data-testid="advisor-refresh" onClick={advisor.refresh}>
+                Refresh
+              </button>
+            ) : (
+              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={advisor.apply}>
+                Plan it
+              </button>
+            )}
             <button type="button" className="og-secondary" data-testid="advisor-dismiss" onClick={advisor.dismiss}>
               Not this
             </button>
@@ -418,7 +456,11 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         <div className={messageIsError ? "og-advisor__error" : "og-advisor__notice"} role={messageIsError ? "alert" : "status"}>
           <p>{messageIsError ? null : <AdvisorMark />} {message}</p>
           {recoveryLabel(recovery) === null ? null : (
-            <button type="button" className="og-advisor__retry" onClick={advisor.retry}>
+            <button
+              type="button"
+              className="og-advisor__retry"
+              onClick={recovery === "refresh" ? advisor.refresh : advisor.retry}
+            >
               {recoveryLabel(recovery)}
             </button>
           )}

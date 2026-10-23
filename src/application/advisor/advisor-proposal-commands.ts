@@ -197,6 +197,21 @@ function changesFor(before: RideIntent, after: RideIntent, timeZone: string): Ad
   return changes;
 }
 
+/**
+ * Re-validates a draft the server already returned against the ride as it is
+ * now, so a stale proposal can be refreshed without another model call, more
+ * latency or more of the shared daily budget. The model's intent does not
+ * change; only the revision it is applied to moves forward.
+ */
+export function refreshAdvisorProposal(
+  document: RideDocument,
+  draft: AdvisorDraft,
+  options: { readonly now?: string } = {},
+): AdvisorProposalBuildResult {
+  if (document.rideId !== draft.rideId) return failure("stale-revision");
+  return buildAdvisorProposal(document, { ...draft, baseRevision: document.revision }, options);
+}
+
 /** Builds a revision-fenced proposal and dry-runs it through the domain reducer. */
 export function buildAdvisorProposal(
   document: RideDocument,

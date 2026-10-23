@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildAdvisorProposal,
+  refreshAdvisorProposal,
 } from "@/application/advisor/advisor-proposal-commands";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
 import { createRideDocument } from "@/domain/ride/create";
@@ -159,6 +160,31 @@ describe("advisor proposal commands", () => {
       { now: NOW },
     );
     expect(ungrounded).toMatchObject({ status: "error", errorClass: "grounding-failed" });
+  });
+
+  it("rebuilds a stale draft against the current revision when the rider refreshes it", () => {
+    const document = createRideDocument({ rideId: RIDE_ID, now: NOW });
+    const edited = applyRideCommand(document, {
+      type: "roadCharacter.set",
+      commandId: "cmd_edit" as never,
+      rideId: document.rideId,
+      baseRevision: document.revision,
+      source: "rider",
+      label: "Set road character",
+      roadCharacter: "efficient",
+    }, { now: NOW });
+    expect(edited.outcome).toBe("applied");
+    if (edited.outcome !== "applied") return;
+
+    expect(buildAdvisorProposal(edited.document, draft(), { now: NOW })).toMatchObject({
+      status: "error",
+      errorClass: "stale-revision",
+    });
+    const refreshed = refreshAdvisorProposal(edited.document, draft(), { now: NOW });
+    expect(refreshed.status).toBe("ready");
+    if (refreshed.status !== "ready") return;
+    expect(refreshed.command.baseRevision).toBe(edited.document.revision);
+    expect(refreshed.changes.map((change) => change.field)).toContain("roadCharacter");
   });
 
   it("turns unclear or unsupported requests into honest non-applying states", () => {
