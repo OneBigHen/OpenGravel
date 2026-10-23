@@ -143,6 +143,9 @@ const REROUTE_MESSAGE_MS = 10_000;
 const EXCURSION_END_METERS = 40;
 /** …having first been at least this far from it. */
 const EXCURSION_ARM_METERS = 80;
+/** The command applied here, but the journal write failed: say so, in rider copy. */
+const JOURNAL_WRITE_FAILED =
+  "The ride was updated on this device but could not be saved. Free device storage, then retry.";
 
 export type RideFocusStoreStatus =
   | "loading"
@@ -406,6 +409,18 @@ const NO_COORDINATES: readonly Coordinate[] = [];
 
 function movingActivity(state: SessionNavigationState): boolean {
   return state.activity === "guided" || state.activity === "free" || state.activity === "track";
+}
+
+/**
+ * What the navigation engine is built from: the activity, the bound route and
+ * the line it will follow. The line is part of the identity because the engine
+ * cannot guide (or even start) without geometry, and a line that arrives late
+ * or is corrected has to rebuild it (08 §2, §5).
+ */
+function routeLineFingerprint(line: readonly Coordinate[]): string {
+  const vertex = (point: Coordinate | undefined): string =>
+    point === undefined ? "-" : `${point.lon.toFixed(5)},${point.lat.toFixed(5)}`;
+  return `${line.length}:${vertex(line[0])}:${vertex(line[line.length - 1])}`;
 }
 
 export function createRideFocusStore(
@@ -1244,16 +1259,24 @@ export function createRideFocusStore(
       abortPendingReturn();
       const result = await controller.dispatch(event);
       if (!running) return false;
+      // The event applied to the live session, but a failed journal write means
+      // the durable state is behind it (ride-session-controller.ts:216-219).
+      // Saying nothing would let "Ride finished" stand for a ride that comes
+      // back as still-running after a reload, so the warning is rider copy.
+      const applied = result.outcome === "applied";
+      const unsaved = applied && result.persistence === "failed";
       set({
         lastError:
           result.outcome === "rejected"
             ? (result.message ?? "The ride could not be updated.")
             : null,
-        statusMessage: result.outcome === "applied" ? null : get().statusMessage,
+        statusMessage: unsaved
+          ? JOURNAL_WRITE_FAILED
+          : applied ? null : get().statusMessage,
       });
       await syncNavigationEngine(result.state);
       refresh();
-      return result.outcome === "applied" && result.persistence === "durable";
+      return applied && result.persistence === "durable";
     }
 
     function abortPendingReturn(): void {
@@ -1468,18 +1491,57 @@ export function createRideFocusStore(
         }
         return;
       }
-      const desiredKey = JSON.stringify({ activity: state.activity, route: state.plan.route });
+      let line = get().routeLine;
+      const activity = state.activity === "paused" ? state.resumeActivity : state.activity;
+      // A guided engine built without its line fails its own binding check and
+      // never reaches the position pipeline (navigation-engine.ts:237-292): the
+      // arrow freezes and no turn guidance exists. Ask storage once more from
+      // the pointer this session owns, so a later sync self-heals when the line
+      // was only slow to read; then either build with it or do not build at all.
+      if ((activity === "guided" || activity === "track") && line.length < 2) {
+        const read = pointer.read();
+        const ref = read.status === "found" && read.pointer.sessionId === state.sessionId
+          ? read.pointer.routeGeometryRef
+          : null;
+        const retried = await resolveRouteLine(ref);
+        if (!running) return;
+        if (retried !== null && retried.length >= 2) {
+          set({ routeLine: retried, routeLineAvailable: true });
+          line = retried;
+        }
+      }
+      if ((activity === "guided" || activity === "track") && line.length < 2) {
+        if (navigationEngine !== null) {
+          await navigationEngine.stop();
+          navigationEngine = null;
+          navigationEngineKey = null;
+        }
+        return;
+      }
+      const desiredKey = JSON.stringify({
+        activity: state.activity,
+        route: state.plan.route,
+        line: routeLineFingerprint(line),
+      });
       if (navigationEngine !== null && navigationEngineKey !== desiredKey) {
         await navigationEngine.stop();
         navigationEngine = null;
         navigationEngineKey = null;
       }
       if (navigationEngine === null) {
-        navigationEngine = createNavigationEngine(state, get().routeLine);
+        const engine = createNavigationEngine(state, line);
+        navigationEngine = engine;
         navigationEngineKey = desiredKey;
-        const started = await navigationEngine.start();
+        const started = await engine.start();
         if (!started) {
-          set({ lastError: navigationEngine.snapshot().message ?? "Location tracking could not start." });
+          // Keep no dead engine: the next sync retries instead of reusing a
+          // position pipeline that never started.
+          await engine.stop();
+          if (navigationEngine === engine) {
+            navigationEngine = null;
+            navigationEngineKey = null;
+          }
+          set({ lastError: engine.snapshot().message ?? "Location tracking could not start." });
         }
       } else {
         await navigationEngine.syncLifecycle();
@@ -1741,10 +1803,6 @@ export function createRideFocusStore(
         shownOffer = null;
         offerEndedAtMs = Date.parse(now());
         set({ rideOffer: null, suggestionPreviewLine: NO_COORDINATES });
-        if (candidate.kind === "home") {
-          await get().headHome();
-          return;
-        }
         abortPendingReturn();
         const at = now();
         const applied = await controller.dispatch(modeChangedEvent("guided", at, plan.route));
@@ -1760,8 +1818,16 @@ export function createRideFocusStore(
           ...(plan.instructions === undefined ? {} : { instructions: plan.instructions }),
           updatedAt: at,
         });
-        // Every offer so far ends back here: Free Ride picks up when it does.
-        const end = line.at(-1);
+        // The line must be in the store before the engine is built: a guided
+        // engine created without geometry never starts. Re-read the offered
+        // plan's line so a corrected one wins, and keep the line the card was
+        // drawn from when storage cannot answer now.
+        const resolved = await resolveRouteLine(plan.routeGeometryRef);
+        if (!running) return;
+        const routeLine = resolved !== null && resolved.length >= 2 ? resolved : line;
+        set({ routeLine, routeLineAvailable: routeLine.length > 0 });
+        // Every offer ends where its line ends: Free Ride picks up there.
+        const end = routeLine.at(-1);
         excursion = end === undefined ? null : { sessionId: applied.state.sessionId, end, armed: false };
         await syncNavigationEngine(applied.state);
         const accepted = controller.snapshot();
@@ -1772,18 +1838,20 @@ export function createRideFocusStore(
           accepted.plan.route?.routeId !== plan.route.routeId
         ) return;
         feelOpportunity?.("accepted");
-        const title = candidate.kind === "catalog" ? candidate.route.name : "your loop";
+        const title = candidate.kind === "catalog"
+          ? candidate.route.name
+          : candidate.kind === "home" ? "your saved Home" : "your loop";
         set({
-          routeLine: line,
-          routeLineAvailable: true,
-          freeRideStatusMessage: `Riding ${title}. Free Ride picks up back here.`,
+          freeRideStatusMessage: candidate.kind === "home"
+            ? "Riding to your saved Home. Free Ride picks up there."
+            : `Riding ${title}. Free Ride picks up back here.`,
           freeRideError: null,
         });
         refresh();
         const bound = controller.navigationState() ?? deriveSessionNavigation(applied.state, { now: now() });
         requestRideFit(buildRideScene({
           routeId: bound.plan.route?.routeId ?? null,
-          routeLine: line,
+          routeLine,
           position: { coordinate: bound.position.coordinate, quality: bound.position.quality },
         }), get().follow);
       },
@@ -1811,6 +1879,30 @@ export function createRideFocusStore(
           !running || state === null || state.activity !== "free" || state.recordingId !== null || state.suggestions !== "on" ||
           suggestion === null || navigation?.position.quality !== "fresh-good"
         ) return;
+        // Bind only a ride the surface can actually follow. The preview line is
+        // the geometry the card was drawn from; if storage cannot answer a
+        // second time, that line is still the honest one to ride.
+        const preview = get().suggestionPreviewLine;
+        const resolved = await resolveRouteLine(suggestion.routeGeometryRef ?? null);
+        const current = controller.snapshot();
+        if (
+          !running || current?.sessionId !== state.sessionId || current.activity !== "free" ||
+          current.recordingId !== null || get().liveSuggestion?.id !== suggestion.id
+        ) return;
+        const segment = resolved !== null && resolved.length >= 2
+          ? resolved
+          : preview.length >= 2 ? preview : null;
+        if (segment === null) {
+          set({
+            freeRideError: "That road's line could not be loaded. Keep riding.",
+            freeRideStatusMessage: null,
+            liveSuggestion: null,
+            liveSuggestionDistanceMeters: null,
+            suggestionPreviewLine: NO_COORDINATES,
+            suggestionBusy: false,
+          });
+          return;
+        }
         const at = now();
         const applied = await controller.dispatch(modeChangedEvent("guided", at, suggestion.route));
         if (applied.outcome !== "applied" || applied.state === null || applied.persistence !== "durable") {
@@ -1825,8 +1917,10 @@ export function createRideFocusStore(
           ...(suggestion.instructions === undefined ? {} : { instructions: suggestion.instructions }),
           updatedAt: at,
         });
-        const segment = await loadRouteLine(suggestion.routeGeometryRef ?? null);
-        const end = segment?.at(-1) ?? get().suggestionPreviewLine.at(-1);
+        // Publish the line before the engine is built, so guidance is bound to
+        // geometry that exists rather than failing after the card is gone.
+        set({ routeLine: segment, routeLineAvailable: true });
+        const end = segment.at(-1);
         excursion = end === undefined ? null : { sessionId: applied.state.sessionId, end, armed: false };
         shownOpportunity = null;
         await syncNavigationEngine(applied.state);

@@ -162,6 +162,13 @@ test("320px library sort remains usable with 200 percent text", async ({ page })
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/rides");
   await expect(page.getByRole("heading", { name: "Your library is ready for its first ride." })).toBeVisible();
+  // An empty library has nothing to sort, so the sort card is hidden until there is a ride.
+  await expect(page.locator(".og-library__sort select")).toHaveCount(0);
+  await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "short.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from('<gpx version="1.0"><name>Short ride</name><rte><rtept lon="-75" lat="40"/><rtept lon="-74.9" lat="40.1"/></rte></gpx>') });
+  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
+  await page.getByRole("button", { name: "Import separately" }).click();
+  await page.getByRole("button", { name: "Import selected tracks" }).click();
+  await expect(page.getByRole("textbox", { name: "Rename Short ride" })).toBeVisible();
   await doubleTextSize(page);
   const sort = page.locator(".og-library__sort select");
   await sort.scrollIntoViewIfNeeded();

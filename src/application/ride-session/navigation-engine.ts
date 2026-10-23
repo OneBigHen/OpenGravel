@@ -3,8 +3,11 @@
  *
  * The engine owns no physical-activity state. It reads the existing controller,
  * dispatches ordinary position/instruction events through it, and keeps only
- * replaceable projections and resource status. A resolved route must match the
- * session's revision-fenced binding before any GPS watch starts.
+ * replaceable projections and resource status. Tracking and guidance are
+ * separate: a resolved route must match the session's revision-fenced binding
+ * before the engine issues any maneuver, but the position pipeline that moves
+ * and records the ride starts even when the route is missing or unusable, and
+ * the engine then says guidance is off rather than failing the ride.
  */
 
 import {
@@ -30,6 +33,7 @@ import {
 import {
   createSpeechCoordinator,
   type SpeechCoordinator,
+  type SpeechCue,
   type SpeechPort,
   type SpeechState,
 } from "./speech";
@@ -66,6 +70,14 @@ export interface RideNavigationEngineOptions {
 export interface RideNavigationEngineState {
   readonly status: "idle" | "active" | "paused" | "stopped" | "failed";
   readonly message: string | null;
+  /**
+   * True when this engine can match the session's route. `false` means the ride
+   * still tracks (position, recording, map, progress) but turn-by-turn guidance
+   * is off, and {@link guidanceMessage} says why in rider words. A missing or
+   * unusable route is not a failed ride (8 §3, §13).
+   */
+  readonly guidanceAvailable: boolean;
+  readonly guidanceMessage: string | null;
   readonly position: PositionPipelineState;
   readonly frame: ProgressFrame | null;
   readonly speech: SpeechState;
@@ -125,6 +137,8 @@ export function createRideNavigationEngine(
   let frame: ProgressFrame | null = null;
   let status: RideNavigationEngineState["status"] = "idle";
   let message: string | null = null;
+  /** Why turn guidance is off while the ride keeps tracking; `null` when usable. */
+  let guidanceMessage: string | null = null;
   let chain: Promise<unknown> = Promise.resolve();
   // null means this source is plain GPS and the web matcher owns deviation.
   // Once a native navigator reports deviation, its verdict is authoritative
@@ -172,7 +186,9 @@ export function createRideNavigationEngine(
     ) {
       return;
     }
-    if (model === null) return;
+    // A route this engine may not guide by is not matched at all: matching it
+    // would let a foreign line decide the ride's off-route state.
+    if (model === null || guidanceMessage !== null) return;
 
     const matchedFrame = matchRouteProgress(model, fix, frame ?? undefined);
     frame = sourceOffRoute === null
@@ -192,26 +208,34 @@ export function createRideNavigationEngine(
       maneuver === null ||
       options.route?.mode !== "guided" ||
       navigation.activity !== "guided" ||
-      frame.offRouteState !== "on-route" ||
-      issuedInstructions.has(maneuver.instructionId)
+      frame.offRouteState !== "on-route"
     ) {
       return;
     }
 
-    const instruction = {
+    // The matcher's own measurement of this frame, never a stored snapshot: a
+    // card or a sentence built from the distance at issue time freezes at the
+    // leg's first length (8 §6, DV-06).
+    const distanceMeters = frame.distanceToManeuverMeters;
+    if (distanceMeters === null) return;
+    const cue: SpeechCue = {
       instructionId: maneuver.instructionId,
       kind: maneuver.kind,
       maneuver: maneuver.maneuver,
       roadName: maneuver.roadName,
-      distanceMeters: frame.distanceToManeuverMeters ?? 0,
+      distanceMeters,
       targetStopId: maneuver.targetStopId,
     };
-    const issued = await options.session.dispatch(
-      instructionIssuedEvent(instruction, eventAt),
-    );
-    if (issued.outcome !== "applied") return;
-    issuedInstructions.add(maneuver.instructionId);
-    await speech.announce(instruction);
+    if (!issuedInstructions.has(maneuver.instructionId)) {
+      const issued = await options.session.dispatch(
+        instructionIssuedEvent(cue, eventAt),
+      );
+      if (issued.outcome !== "applied") return;
+      issuedInstructions.add(maneuver.instructionId);
+    }
+    // Offered on every fix; the coordinator speaks one maneuver once per
+    // distance band (2 mi, 0.5 mi, 100 m) and nothing after it is passed.
+    await speech.announce(cue);
   }
 
   const position: PositionPipeline = createPositionPipeline({
@@ -234,31 +258,34 @@ export function createRideNavigationEngine(
     },
   });
 
-  function routeMatchesSession(): boolean {
+  /**
+   * Whether this engine may produce turn-by-turn guidance for the session. A
+   * route that is missing, unusable, or bound to another answer turns guidance
+   * off; it never stops the position pipeline that moves and records the ride.
+   */
+  function guidanceFailure(): string | null {
     const navigation = options.session.navigationState();
-    if (navigation === null) {
-      message = "There is no active RideSession to navigate.";
-      return false;
-    }
-    if (navigation.activity === "guided" || navigation.resumeActivity === "guided") {
-      if (options.route?.mode !== "guided" || !sameBinding(navigation.plan.route, options.route.binding)) {
-        message = "The resolved route does not match the RideSession binding.";
-        return false;
+    if (navigation === null) return "There is no active RideSession to navigate.";
+    const activity =
+      navigation.activity === "paused" ? navigation.resumeActivity : navigation.activity;
+    if (activity === "guided") {
+      if (options.route === null) {
+        return "The route line isn't available, so turn-by-turn guidance is off. Your ride is still tracking.";
+      }
+      if (
+        options.route.mode !== "guided" ||
+        !sameBinding(navigation.plan.route, options.route.binding)
+      ) {
+        return "The resolved route does not match the RideSession binding, so turn-by-turn guidance is off. Your ride is still tracking.";
       }
     }
-    if (navigation.activity === "track" || navigation.resumeActivity === "track") {
-      if (options.route?.mode !== "track") {
-        message = "The resolved track does not match the RideSession activity.";
-        return false;
-      }
+    if (activity === "track" && options.route?.mode !== "track") {
+      return "The resolved track does not match the RideSession activity, so track guidance is off. Your ride is still tracking.";
     }
-    if (navigation.activity === "free" || navigation.resumeActivity === "free") {
-      if (options.route !== null) {
-        message = "Free Ride cannot be driven by a bound navigation route.";
-        return false;
-      }
+    if (activity === "free" && options.route !== null) {
+      return "Free Ride cannot be driven by a bound navigation route, so turn-by-turn guidance is off. Your ride is still tracking.";
     }
-    return true;
+    return routeFailure;
   }
 
   async function activate(): Promise<void> {
@@ -276,6 +303,8 @@ export function createRideNavigationEngine(
       return {
         status,
         message,
+        guidanceAvailable: guidanceMessage === null,
+        guidanceMessage,
         position: positionState,
         frame,
         speech: speech.snapshot(),
@@ -286,15 +315,13 @@ export function createRideNavigationEngine(
     },
 
     async start(): Promise<boolean> {
-      if (!routeMatchesSession()) {
+      if (options.session.navigationState() === null) {
         status = "failed";
+        message = "There is no active RideSession to navigate.";
         return false;
       }
-      if (routeFailure !== null) {
-        status = "failed";
-        message = routeFailure;
-        return false;
-      }
+      // Tracking and guidance are separate promises: a guided ride whose line
+      // did not resolve still records, moves and draws, with turn guidance off.
       await this.syncLifecycle();
       return true;
     },
@@ -304,9 +331,11 @@ export function createRideNavigationEngine(
       if (navigation === null) {
         status = "failed";
         message = "There is no active RideSession to navigate.";
+        guidanceMessage = message;
         await Promise.all([position.stop(), wakeLock.release()]);
         return;
       }
+      guidanceMessage = guidanceFailure();
       if (navigation.activity === "paused") {
         status = "paused";
         await Promise.all([position.stop(), wakeLock.release()]);

@@ -5,8 +5,20 @@ import type { SessionInstructionId } from "@/domain/ride-session/ids";
 import type { SessionInstruction } from "@/domain/ride-session/types";
 
 /**
+ * The distance bands (metres) one maneuver is announced in, farthest first: two
+ * miles (3 218 m), half a mile (805 m) and hundred metres. A rider hears the
+ * turn on the first measurement inside each band — so a turn that only becomes
+ * next inside a band is still announced once, at the distance it really is — and
+ * hears nothing after passing it. Announcements come from the *live* distance,
+ * so the words always match where the rider actually is.
+ */
+export const SPEECH_STAGES_METERS: readonly number[] = [3_218, 805, 100];
+
+/**
  * Structured guidance only. A browser/native adapter owns localization and
  * spoken copy; the navigation engine never fabricates a provider instruction.
+ * `distanceMeters` is the distance measured on the frame that offered the cue,
+ * not the distance the instruction was issued at.
  */
 export interface SpeechCue {
   readonly instructionId: SessionInstructionId;
@@ -35,13 +47,21 @@ export interface SpeechState {
 
 export interface SpeechCoordinator {
   snapshot(): SpeechState;
-  /** True only when this call successfully spoke a previously unseen identity. */
+  /**
+   * Offers one maneuver measurement to the coordinator. True only when this
+   * call actually spoke: the first measurement inside a band, or the first one
+   * inside a nearer band than anything already spoken for this instruction.
+   * A repeated call in the same band is silent, and a new instruction identity
+   * starts the bands over.
+   */
   announce(cue: SpeechCue): Promise<boolean>;
   reset(): Promise<void>;
 }
 
 export function createSpeechCoordinator(port: SpeechPort | null): SpeechCoordinator {
-  const attempted = new Set<SessionInstructionId>();
+  // Per maneuver, the bands already announced. Keyed by identity so the next
+  // turn is announced even at a distance the previous one already covered.
+  let bands: { instructionId: SessionInstructionId; spoken: Set<number> } | null = null;
   let state: SpeechState = {
     status: port === null ? "unsupported" : "idle",
     lastInstructionId: null,
@@ -55,10 +75,18 @@ export function createSpeechCoordinator(port: SpeechPort | null): SpeechCoordina
 
     async announce(cue: SpeechCue): Promise<boolean> {
       if (port === null) return false;
-      if (attempted.has(cue.instructionId)) return false;
-      // Fence before awaiting: two fixes cannot race the same instruction into
-      // the speech queue, and a failing adapter cannot retry-spam every second.
-      attempted.add(cue.instructionId);
+      if (bands === null || bands.instructionId !== cue.instructionId) {
+        bands = { instructionId: cue.instructionId, spoken: new Set() };
+      }
+      const current = bands;
+      const crossed = SPEECH_STAGES_METERS.filter(
+        (threshold) => cue.distanceMeters <= threshold,
+      );
+      if (crossed.every((threshold) => current.spoken.has(threshold))) return false;
+      // Fence every crossed band before awaiting: two fixes cannot race the same
+      // band into the speech queue, a jump across several bands speaks once, and
+      // a failing adapter cannot retry-spam every second.
+      for (const threshold of crossed) current.spoken.add(threshold);
       state = {
         status: "speaking",
         lastInstructionId: cue.instructionId,
@@ -83,7 +111,7 @@ export function createSpeechCoordinator(port: SpeechPort | null): SpeechCoordina
     },
 
     async reset(): Promise<void> {
-      attempted.clear();
+      bands = null;
       if (port === null) return;
       try {
         await port.cancel?.();
