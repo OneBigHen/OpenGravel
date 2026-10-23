@@ -42,8 +42,7 @@ import {
 } from "@/infrastructure/ride/native-shell";
 import { createBrowserRideEnvironment } from "@/infrastructure/ride/browser-ride-environment";
 import { createBrowserLeanMotion } from "@/infrastructure/motion/browser-lean-motion";
-import { createLiveShareSession } from "@/application/live/live-share";
-import { createRideSafety } from "@/application/safety/ride-safety";
+import { createBrowserRideSafety } from "@/infrastructure/live/browser-ride-safety";
 import { createFixturePositionSource } from "@/infrastructure/ride/fixture-position-source";
 import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -226,34 +225,9 @@ export function RideClient({
     })();
     // Live location sharing and crash detection (Follow my ride). The saved
     // link is restored after mount (the server render cannot see it).
-    let battery: { level: number } | null = null;
-    const safety = createRideSafety({
-      live: createLiveShareSession({
-        fetch: (input, init) => fetch(input, init),
-        now: () => Date.now(),
-        setInterval: (work, ms) => window.setInterval(work, ms),
-        clearInterval: (handle) => window.clearInterval(handle as number),
-        storage: {
-          read: () => { try { return window.localStorage.getItem("og.live.session"); } catch { return null; } },
-          write: (value) => {
-            try {
-              if (value === null) window.localStorage.removeItem("og.live.session");
-              else window.localStorage.setItem("og.live.session", value);
-            } catch { /* private window: the link lasts this page only */ }
-          },
-        },
-        battery: () => {
-          if (battery === null && typeof navigator !== "undefined") {
-            const nav = navigator as Navigator & { getBattery?: () => Promise<{ level: number }> };
-            void nav.getBattery?.().then((value) => { battery = value; }).catch(() => undefined);
-          }
-          return battery?.level ?? null;
-        },
-      }),
-      announce: (text) => {
-        void opportunityVoice?.speakText?.(text);
-        haptic("heavy");
-      },
+    const safety = createBrowserRideSafety((text) => {
+      void opportunityVoice?.speakText?.(text);
+      haptic("heavy");
     });
     const store = createRideFocusStore({
       controller: sessions,
