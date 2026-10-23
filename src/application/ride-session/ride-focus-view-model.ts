@@ -916,7 +916,7 @@ function warningsOf(
     warnings.push({
       id: "gps-stale",
       severity: "caution",
-      text: `Weak GPS signal (${position.ageText ?? "no recent fix"}). Speed and turn distances resume when it is back.`,
+      text: `Weak GPS signal (${position.ageText ?? "no recent fix"}). Speed, heading and route estimates are paused.`,
     });
   }
   if (environment.locationPermission === "denied") {

@@ -479,7 +479,7 @@ describe("dark chrome and honest states", () => {
 
     expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
     expect(screen.queryByTestId("ride-maneuver-road")).not.toBeInTheDocument();
-    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("stale");
+    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("Waiting for a GPS fix");
   });
 
   it("shows the issued maneuver, and no road line when the session named no road", async () => {
