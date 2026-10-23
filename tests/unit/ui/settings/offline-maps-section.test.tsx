@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { InstalledOfflineRegion, OfflineRegionOffer, OfflineRegionsPort } from "@/application/offline/offline-regions";
@@ -23,7 +23,37 @@ function port(): OfflineRegionsPort {
   };
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+describe("offline areas app restart disclosure", () => {
+  it("warns that reopening needs signal until a worker controls this page", async () => {
+    const worker = Object.assign(new EventTarget(), { controller: null as object | null });
+    vi.stubGlobal("navigator", { serviceWorker: worker });
+    render(<OfflineMapsSection regions={port()} />);
+
+    expect(await screen.findByTestId("offline-shell-disclosure")).toHaveTextContent("Keep OpenGravel open");
+    expect(screen.getByTestId("offline-shell-disclosure")).toHaveTextContent("Reopening the app still needs signal");
+    act(() => {
+      worker.controller = {};
+      worker.dispatchEvent(new Event("controllerchange"));
+    });
+    expect(screen.getByTestId("offline-shell-disclosure")).toHaveTextContent("reopen OpenGravel without signal");
+    act(() => {
+      worker.controller = null;
+      worker.dispatchEvent(new Event("controllerchange"));
+    });
+    expect(screen.getByTestId("offline-shell-disclosure")).toHaveTextContent("Keep OpenGravel open");
+  });
+
+  it("does not promise an offline restart in a browser without service workers", async () => {
+    vi.stubGlobal("navigator", {});
+    render(<OfflineMapsSection regions={port()} />);
+    expect(await screen.findByTestId("offline-shell-disclosure")).toHaveTextContent("Reopening the app still needs signal");
+  });
+});
 
 describe("offline areas device storage recovery", () => {
   it("shows an unknown device state after a failed read and retries without permitting mutations", async () => {

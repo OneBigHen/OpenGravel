@@ -10,6 +10,7 @@ function setOnline(value: boolean): void {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("OfflineNavGuard", () => {
@@ -44,5 +45,24 @@ describe("OfflineNavGuard", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "My rides" }));
     expect(reached).toHaveBeenCalled();
+  });
+
+  it("allows a cached shell route offline when a worker controls the page", () => {
+    vi.stubGlobal("navigator", { onLine: false, serviceWorker: { controller: {} } });
+    const reached = vi.fn((event: { preventDefault(): void }) => event.preventDefault());
+    render(<div onClick={reached}><OfflineNavGuard /><a href="/rides">My rides</a><a href="/community">Community</a></div>);
+    fireEvent.click(screen.getByRole("link", { name: "My rides" }));
+    expect(reached).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("link", { name: "Community" }));
+    expect(reached).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("status")).toHaveTextContent("Community opens when you're back online");
+  });
+
+  it("allows shell links under the runtime deployment prefix passed by the server", () => {
+    vi.stubGlobal("navigator", { onLine: false, serviceWorker: { controller: {} } });
+    const reached = vi.fn((event: { preventDefault(): void }) => event.preventDefault());
+    render(<div onClick={reached}><OfflineNavGuard assetBasePath="/ogv" /><a href="/ogv/rides">My rides</a></div>);
+    fireEvent.click(screen.getByRole("link", { name: "My rides" }));
+    expect(reached).toHaveBeenCalledOnce();
   });
 });

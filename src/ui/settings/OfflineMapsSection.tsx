@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import {
   formatBytes,
@@ -38,7 +38,18 @@ const STATE_LABEL = {
   "offline-only": "On this device",
 } as const;
 
+function subscribeToController(onChange: () => void): () => void {
+  const worker = navigator.serviceWorker;
+  worker?.addEventListener("controllerchange", onChange);
+  return () => worker?.removeEventListener("controllerchange", onChange);
+}
+
+function hasController(): boolean {
+  return navigator.serviceWorker?.controller != null;
+}
+
 export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegionsPort }) {
+  const canReopenOffline = useSyncExternalStore(subscribeToController, hasController, () => false);
   const [offers, setOffers] = useState<OfflineRegionOffer[] | null>(null);
   const [offersFailed, setOffersFailed] = useState(false);
   const [device, setDevice] = useState<DeviceState>({ status: "checking" });
@@ -135,6 +146,11 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
       </div>
       <p className="og-settings__section-copy">
         Download an area and OpenGravel can still draw its map and plan a ride inside it when you lose signal.
+      </p>
+      <p className="og-settings__section-copy" data-testid="offline-shell-disclosure">
+        {canReopenOffline
+          ? "This device can reopen OpenGravel without signal. Download an area before leaving coverage."
+          : "Keep OpenGravel open when you lose signal. Reopening the app still needs signal until it has been saved on this device."}
       </p>
       {offers === null && !offersFailed && rows.length === 0 ? <p className="og-settings__section-copy">Checking which areas are available…</p> : null}
       {offersFailed ? <p className="og-settings__section-copy">The list of areas needs signal.{device.status === "ready" ? " Areas already on this device still work." : ""}</p> : null}
