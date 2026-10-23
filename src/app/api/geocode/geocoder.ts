@@ -9,12 +9,6 @@ import { createDeploymentGeocoder } from "@/server/geocoding/fallback-geocoder";
  * cannot. With no configured hint, Photon ranks without a location.
  */
 const photon = createDeploymentGeocoder();
-// TomTom answers when Photon is down (the public instance refused every
-// connection for a while on 2026-10-23 and search went dark).
-const photon = withFallback(
-  createPhotonGeocoder({ baseUrl: process.env.PHOTON_URL ?? PHOTON_DEFAULT_URL }),
-  tomtomKey === "" ? null : createTomTomGeocoder({ apiKey: tomtomKey }),
-);
 
 function configuredBias(): { lat: number; lon: number } | undefined {
   const configured = process.env.OGV_GEOCODER_BIAS?.trim();
