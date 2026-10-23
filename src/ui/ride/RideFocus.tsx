@@ -55,6 +55,7 @@ import { asRouteCandidateId } from "@/domain/route/ids";
 import { computeInsets, toRect, type MapInsets } from "@/application/map/insets";
 import { formatDistance } from "@/application/planner/measurements";
 import { RideOfferCard } from "@/ui/ride/RideOfferCard";
+import { RideRouteSketch } from "@/ui/ride/RideRouteSketch";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
@@ -324,6 +325,19 @@ export function RideFocus({
 
   const terminal = viewModel?.terminal ?? null;
   const recordingHud = viewModel?.recording ?? null;
+  /**
+   * The finish card's sketch is described with the summary's own distance, so
+   * the picture and the numbers say the same thing. A ride too short to sum up
+   * has no distance stat and the sketch simply says less.
+   */
+  const summaryDistance =
+    terminal?.reason === "completed" ? terminal.stats?.find((stat) => stat.id === "distance") ?? null : null;
+  const summaryDistanceText =
+    summaryDistance === null
+      ? null
+      : summaryDistance.unit === null
+        ? summaryDistance.value
+        : `${summaryDistance.value} ${summaryDistance.unit}`;
   /**
    * States that keep the sheet open whatever the rider did: a ride that ended,
    * the stop question, a pause (the rider is stopped and wants Resume), and a
@@ -944,9 +958,21 @@ export function RideFocus({
         hidden={!sheetVisible}
       >
         {terminal === null ? null : (
-          <div className="og-ride__terminal" data-testid="ride-terminal" role="status">
-            <h2 className="og-ride__terminal-title">{terminal.title}</h2>
-            <p className="og-ride__terminal-text">{terminal.text}</p>
+          <div className="og-ride__terminal" data-testid="ride-terminal">
+            {/* The headline and the one sentence are the live region; the
+                summary and the two ways onward stay outside it, so a change to
+                the card never re-reads the whole screen to a rider. */}
+            <div className="og-ride__terminal-head" role="status">
+              <h2 className="og-ride__terminal-title">{terminal.title}</h2>
+              <p className="og-ride__terminal-text">{terminal.text}</p>
+            </div>
+            {terminal.reason !== "completed" ? null : (
+              <RideRouteSketch
+                routeLine={availableRouteLine}
+                fraction={progress.fraction}
+                distanceText={summaryDistanceText}
+              />
+            )}
             {terminal.reason !== "completed" || terminal.stats === undefined ? null : (
               <dl className="og-ride__summary" data-testid="ride-summary" aria-label="This ride">
                 {terminal.stats.map((stat) => (
@@ -960,6 +986,23 @@ export function RideFocus({
                 ))}
               </dl>
             )}
+            {/* One obvious next action, and the way back to the planner. My
+                rides has something to open only once the recording landed
+                there, so the link exists only when it does. */}
+            <div className="og-ride__actions og-ride__terminal-actions">
+              {terminal.reason !== "completed" || navigation?.recordingId == null ? null : (
+                <Link
+                  className="og-ride__action og-ride__action--primary"
+                  data-testid="ride-summary-rides"
+                  href="/rides"
+                >
+                  View in My rides
+                </Link>
+              )}
+              <a className="og-ride__action og-ride__action--link" data-testid="ride-exit" href={exitHref}>
+                Back to the planner
+              </a>
+            </div>
           </div>
         )}
 
@@ -1391,9 +1434,13 @@ export function RideFocus({
           </p>
         )}
 
-        <a className="og-ride__action og-ride__action--link" data-testid="ride-exit" href={exitHref}>
-          Back to the planner
-        </a>
+        {/* The way out lives on the finish card itself; a running ride keeps it
+            at the end of the sheet's own content. */}
+        {terminal === null ? (
+          <a className="og-ride__action og-ride__action--link" data-testid="ride-exit" href={exitHref}>
+            Back to the planner
+          </a>
+        ) : null}
       </section>
 
       {pickerSlot === null || terminal !== null ? null : (

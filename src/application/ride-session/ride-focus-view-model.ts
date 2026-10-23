@@ -250,7 +250,7 @@ export type RideFocusTerminal =
       readonly reason: "completed";
       readonly title: string;
       readonly text: string;
-      /** The ride in numbers (distance, moving time, speeds, climb); empty for a ride too short to sum up. */
+      /** The ride in numbers (distance, moving time, speeds, climb, stopped); empty for a ride too short to sum up. */
       readonly stats?: readonly RideSummaryStat[];
     }
   | {
@@ -1066,9 +1066,10 @@ function withSummary(
   terminal: RideFocusTerminal | null,
   telemetry: RecordingTelemetry | null,
   units: "imperial" | "metric",
+  recordingSummary: RecordingSummary | null,
 ): RideFocusTerminal | null {
   if (terminal === null || terminal.reason !== "completed") return terminal;
-  const stats = rideSummaryStats(telemetry, units);
+  const stats = rideSummaryStats(telemetry, units, recordingSummary);
   return stats.length === 0 ? terminal : { ...terminal, stats };
 }
 
@@ -1118,6 +1119,7 @@ export function buildRideFocusViewModel(
       terminalOf(navigation, input.recordingStatus ?? null),
       input.recordingTelemetry ?? input.liveTelemetry ?? null,
       input.riderSettings?.units ?? "imperial",
+      input.recordingSummary ?? null,
     ),
     speedLimit,
     mapPosition:

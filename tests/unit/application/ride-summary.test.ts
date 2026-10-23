@@ -38,4 +38,24 @@ describe("the finish summary", () => {
     expect(rideSummaryStats({ ...RIDE, acceptedDistanceMeters: 16_045 })[0]?.value).toBe("10");
     expect(rideSummaryStats({ ...RIDE, acceptedDistanceMeters: 6_856 })[0]?.value).toBe("4.3");
   });
+
+  it("states stopped time from the recording's two clocks, and only from them", () => {
+    const summary = { distanceMeters: 80_467, elapsedSeconds: 120 * 60, movingSeconds: 90 * 60, pointCount: 900 };
+    const withStopped = rideSummaryStats(RIDE, "imperial", summary);
+    expect(withStopped.map((stat) => [stat.id, stat.value, stat.unit])).toEqual([
+      ["distance", "50", "mi"],
+      ["moving", "1:30", "h"],
+      ["average", "33", "mph"],
+      ["max", "60", "mph"],
+      ["climb", "3,000", "ft"],
+      ["stopped", "30", "min"],
+    ]);
+    // A ride that never stood still for a minute is not given a "Stopped 0".
+    expect(
+      rideSummaryStats(RIDE, "imperial", { ...summary, elapsedSeconds: 90 * 60 + 20 })
+        .map((stat) => stat.id),
+    ).not.toContain("stopped");
+    // Without the summary there is no elapsed clock, so no stopped time.
+    expect(rideSummaryStats(RIDE).map((stat) => stat.id)).not.toContain("stopped");
+  });
 });

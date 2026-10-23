@@ -6112,6 +6112,11 @@ h3,
   background: var(--og-ink);
 }
 
+.og-ride__terminal-head {
+  display: grid;
+  gap: 4px;
+}
+
 .og-ride__terminal-title {
   font-size: 20px;
 }
@@ -6119,6 +6124,45 @@ h3,
 .og-ride__terminal-text {
   font-size: 14px;
   color: var(--og-ride-muted);
+}
+
+/* The finish card's route sketch (08 §13): the shape of the ride, drawn from
+   the route's own coordinates — no map, no tiles, no token, no motion. Ember is
+   what was ridden, Topo Sage at 45% what was not; with progress unknown the line
+   is drawn in the muted stroke alone, claiming nothing about how far the rider
+   got. Drawn at its natural 320×120 on a phone, never blown up on a wide one. */
+.og-ride__sketch {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  margin: 8px 0 0;
+  overflow: visible;
+}
+
+.og-ride__sketch-line {
+  fill: none;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.og-ride__sketch-line--remaining {
+  stroke: color-mix(in srgb, var(--og-topo-sage) 45%, transparent);
+}
+
+.og-ride__sketch-line--travelled {
+  stroke: var(--og-ember);
+}
+
+.og-ride__sketch-dot {
+  fill: var(--og-topo-sage);
+  stroke: none;
+}
+
+/* The summary's two ways onward: My rides, then back to the planner. */
+.og-ride__terminal-actions {
+  margin-top: 10px;
 }
 
 /* Route changes mid-ride: off-route replan, recovery choices and fuel.

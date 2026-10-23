@@ -49,6 +49,10 @@ import {
 } from "@/domain/ride-session/create";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import { asRecordingId } from "@/domain/recording/ids";
+import {
+  EMPTY_RECORDING_TELEMETRY,
+  type RecordingTelemetry,
+} from "@/domain/recording/telemetry";
 import type { GuidedReroutePlanner, GuidedRerouteResult } from "@/application/ride-session/guided-reroute";
 import { buildRideFocusViewModel } from "@/application/ride-session/ride-focus-view-model";
 import {
@@ -63,7 +67,10 @@ import {
   type RiderSettings,
   type RiderSettingsStoragePort,
 } from "@/application/ride-metrics/rider-settings";
-import type { RideFocusTelemetryProvider } from "@/application/ride-session/ride-focus-view-model";
+import type {
+  RideFocusTelemetryInput,
+  RideFocusTelemetryProvider,
+} from "@/application/ride-session/ride-focus-view-model";
 import { RideFocus } from "@/ui/ride/RideFocus";
 
 import { createStubMapHostFactory } from "../support/stub-map-host";
@@ -808,27 +815,34 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
   });
 });
 
-describe("recording from the map screen", () => {
-  /** The real projection of a recording session, so the surface sees what the app produces. */
-  function recordingViewModel(
-    store: ReturnType<typeof createRideFocusStore>,
-    overrides: Partial<SessionNavigationState> = {},
-  ) {
-    const navigation = {
-      ...store.getState().navigation!,
-      recordingId: asRecordingId("rec_indicator"),
-      ...overrides,
-    };
-    return {
+/** The real projection of a recording session, so the surface sees what the app produces. */
+function recordingViewModel(
+  store: ReturnType<typeof createRideFocusStore>,
+  overrides: Partial<SessionNavigationState> = {},
+  input: {
+    readonly telemetry?: RideFocusTelemetryInput | null;
+    readonly recordingTelemetry?: RecordingTelemetry | null;
+  } = {},
+) {
+  const navigation = {
+    ...store.getState().navigation!,
+    recordingId: asRecordingId("rec_indicator"),
+    ...overrides,
+  };
+  return {
+    navigation,
+    viewModel: buildRideFocusViewModel({
       navigation,
-      viewModel: buildRideFocusViewModel({
-        navigation,
-        environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
-        recordingSummary: { distanceMeters: 12_874, elapsedSeconds: 1_872, movingSeconds: 1_440, pointCount: 640 },
-        now: NOW,
-      }),
-    };
-  }
+      environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
+      telemetry: input.telemetry ?? null,
+      recordingSummary: { distanceMeters: 12_874, elapsedSeconds: 1_872, movingSeconds: 1_440, pointCount: 640 },
+      recordingTelemetry: input.recordingTelemetry ?? null,
+      now: NOW,
+    }),
+  };
+}
+
+describe("recording from the map screen", () => {
 
   it("turns the sheet toggle into a recording indicator with a spoken elapsed time", async () => {
     const { store } = await harness({ position: "fresh" });
@@ -872,6 +886,120 @@ describe("recording from the map screen", () => {
     expect(strip).toHaveClass("og-ride__strip-summary");
     expect(strip).toHaveTextContent("Recorded ride saved");
     expect(screen.queryByTestId("ride-rec-time")).toBeNull();
+  });
+});
+
+describe("the post-ride summary (08 §13)", () => {
+  const RIDE: RecordingTelemetry = {
+    ...EMPTY_RECORDING_TELEMETRY,
+    acceptedDistanceMeters: 12_874,
+    movingMs: 24 * 60_000,
+    maxSpeedMps: 22.352,
+    elevation: { currentMeters: 120, sampledAtMs: 0, gainMeters: 300, lossMeters: 280, sampleCount: 200 },
+  };
+
+  function finishedRecording(store: ReturnType<typeof createRideFocusStore>, fraction: number | null) {
+    return recordingViewModel(
+      store,
+      { activity: "completed", endedAt: NOW, endReason: "completed" },
+      {
+        telemetry: {
+          routeProgress: fraction,
+          remainingDistanceMeters: null,
+          remainingDurationSeconds: null,
+          etaIso: null,
+        },
+        recordingTelemetry: RIDE,
+      },
+    );
+  }
+
+  it("shows the ride's shape above its numbers, and one obvious next action", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = finishedRecording(store, 0.5);
+    act(() => store.setState({ navigation, viewModel }));
+
+    const card = screen.getByTestId("ride-terminal");
+    const sketch = screen.getByTestId("ride-route-sketch");
+    expect(card).toContainElement(sketch);
+    expect(sketch).toHaveAttribute("role", "img");
+    expect(sketch).toHaveAttribute("data-split", "known");
+    // The label says what is known: the ridden distance and how far along the
+    // route the engine placed the rider. The route's total is not on this
+    // surface, so it is not invented for the sentence.
+    expect(sketch).toHaveAccessibleName("Route sketch: 8.0 mi ridden, 50% along the route.");
+
+    // The sketch is above the stats, and the stats keep their own grid.
+    const summary = screen.getByTestId("ride-summary");
+    expect(sketch.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 432 s of standing still is a sixth stat, from the summary's two clocks.
+    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("Stopped");
+    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("7");
+    expect(summary.querySelectorAll(".og-ride__summary-stat")).toHaveLength(6);
+
+    // My rides leads, and the way back to the planner is the surface's own link.
+    const rides = screen.getByTestId("ride-summary-rides");
+    expect(rides).toHaveAttribute("href", "/rides");
+    expect(rides).toHaveClass("og-ride__action");
+    expect(rides).toHaveTextContent("View in My rides");
+    const exits = screen.getAllByTestId("ride-exit");
+    expect(exits).toHaveLength(1);
+    expect(exits[0]).toHaveClass("og-ride__action");
+    expect(exits[0]).toHaveTextContent("Back to the planner");
+  });
+
+  it("draws the route alone when the engine never said how far along the rider got", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = finishedRecording(store, null);
+    act(() => store.setState({ navigation, viewModel }));
+
+    const sketch = screen.getByTestId("ride-route-sketch");
+    expect(sketch).toHaveAttribute("data-split", "unknown");
+    expect(sketch.querySelectorAll(".og-ride__sketch-line--travelled")).toHaveLength(0);
+    expect(sketch).toHaveAccessibleName("Route sketch: 8.0 mi ridden.");
+  });
+
+  it("omits the sketch, and only the sketch, when there is no route line", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = finishedRecording(store, 0.5);
+    act(() => store.setState({ navigation, viewModel, routeLine: [], routeLineAvailable: false }));
+
+    expect(screen.queryByTestId("ride-route-sketch")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ride-summary")).toBeInTheDocument();
+    expect(screen.queryByTestId("ride-line-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("offers My rides only when the recording actually landed there", async () => {
+    // A guided ride finished without a recording: nothing is in My rides, so the
+    // card does not send the rider to an empty library.
+    await harness({ position: "fresh" });
+    fireEvent.click(screen.getByTestId("ride-stop"));
+    fireEvent.click(screen.getByTestId("ride-finish"));
+    await waitFor(() => expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Ride finished"));
+
+    expect(screen.queryByTestId("ride-summary-rides")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("ride-exit")).toHaveLength(1);
+    // The route line is still there, so the shape of the ride is drawn; nothing
+    // is claimed about how much of it was covered.
+    expect(screen.getByTestId("ride-route-sketch")).toHaveAttribute("data-split", "unknown");
+    expect(screen.queryByTestId("ride-summary")).not.toBeInTheDocument();
+  });
+
+  it("draws the sketch in the ride's own tokens, at the size it was designed, with no motion", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const rule = (selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+    expect(rule(".og-ride__sketch")).toMatch(/max-width:\s*320px/);
+    expect(rule(".og-ride__sketch-line")).toMatch(/stroke-width:\s*4/);
+    expect(rule(".og-ride__sketch-line--travelled")).toMatch(/stroke:\s*var\(--og-ember\)/);
+    expect(rule(".og-ride__sketch-line--remaining")).toMatch(
+      /color-mix\(in srgb, var\(--og-topo-sage\) 45%, transparent\)/,
+    );
+    // The sketch appears with the card and never animates (12 §15).
+    expect(css).not.toMatch(/\.og-ride__sketch[^{]*\{[^}]*(animation|transition)/);
   });
 });
 
