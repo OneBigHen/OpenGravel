@@ -1534,3 +1534,35 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(block).not.toMatch(/^\s*(animation|transition)[\w-]*\s*:/m);
   });
 });
+
+
+describe("Free Ride recording controls", () => {
+  it("keeps the Free Ride sheet controls available during a recording without opening the sheet", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store, { activity: "free", plan: { ...store.getState().navigation!.plan, route: null } });
+    act(() => store.setState({ ...projected, suggestions: "on" }));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+    expect(screen.getByTestId("free-ride-controls")).not.toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Recording,.*Show ride controls/ }));
+    expect(screen.getByTestId("free-ride-controls")).toBeVisible();
+    expect(screen.getByTestId("free-ride-suggestions-toggle")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Head Home" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Loop from here" })).toBeVisible();
+    expect(screen.getByTestId("free-ride-recording-toggle")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("offers to save an unrecorded summary and links to My rides after saving", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const finish = vi.fn(async () => undefined);
+    act(() => store.setState({ canSaveFreeRideSummary: true, stopConfirm: true, finish }));
+    fireEvent.click(screen.getByRole("button", { name: "Save summary & finish" }));
+    expect(finish).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Finish without saving" }));
+    expect(finish).toHaveBeenLastCalledWith(false);
+    const navigation = { ...store.getState().navigation!, activity: "completed" as const, endedAt: NOW, endReason: "completed" as const };
+    const viewModel = buildRideFocusViewModel({ navigation, environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" }, now: NOW });
+    act(() => store.setState({ navigation, viewModel, savedSummaryRideId: RIDE_ID }));
+    expect(screen.getByText("Free Ride summary saved")).toBeVisible();
+    expect(screen.getByRole("link", { name: "View in My rides" })).toHaveAttribute("href", "/rides");
+  });
+});

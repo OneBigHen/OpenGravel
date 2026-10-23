@@ -176,8 +176,8 @@ export function sessionAbandonedEvent(at: string): RideSessionEvent {
 }
 
 /** `recording.discarded` — records that the separate trace was intentionally removed. */
-export function recordingDiscardedEvent(at: string): RideSessionEvent {
-  return { type: "recording.discarded", at };
+export function recordingDiscardedEvent(at: string, recordingId?: RecordingId): RideSessionEvent {
+  return { type: "recording.discarded", at, ...(recordingId === undefined ? {} : { recordingId }) };
 }
 
 /** `suggestions.changed` — explicitly enables or suppresses route-free queries. */
@@ -203,4 +203,9 @@ export function rideRevisedEvent(input: RideRevisedInput, at: string): RideSessi
     route: input.route,
     remainingStopIds: [...(input.remainingStopIds ?? [])],
   });
+}
+
+/** Attaches a new trace to the existing physical ride. */
+export function recordingStartedEvent(recordingId: RecordingId, at: string): RideSessionEvent {
+  return deepFreeze<RideSessionEvent>({ type: "recording.started", recordingId, at });
 }

@@ -18,6 +18,7 @@ import type { Coordinate } from "@/domain/ride/types";
 import type { ImportedTrackData, ImportRideData } from "@/application/import/types";
 import type { CorridorPackManifest } from "@/domain/offline/capabilities";
 import type { RecordingId } from "@/domain/recording/ids";
+import type { RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { RecordingSummary } from "@/domain/recording/types";
 import { createRideDocument } from "@/domain/ride/create";
 
@@ -94,6 +95,13 @@ export interface RideExportSource {
     readonly timestamps: readonly string[];
     readonly summary: RecordingSummary;
   } | null;
+}
+
+export interface SaveFreeRideSummaryInput {
+  readonly document: RideDocument;
+  readonly sessionId: string;
+  readonly telemetry: RecordingTelemetry | null;
+  readonly acceptedGeometryRefs: readonly GeometryRef[];
 }
 
 export interface SaveRecordedRideInput {
@@ -234,6 +242,9 @@ function summary(record: RideRecord): RideSummary {
     durationSeconds: record.bundleSummary?.durationSeconds ?? null,
     sourceId: record.derivedFrom?.sourceId ?? record.document.provenance.sourceId ?? null,
     offlinePack: record.offlinePack === undefined ? "not-present" : "present",
+    ...(record.freeRideSummary === undefined ? {} : {
+      importNotes: ["Summary only. Accepted suggestions are planned lines, not a recorded track."],
+    }),
     ...(record.importData?.warnings === undefined || record.importData.warnings.length === 0
       ? {}
       : { importNotes: record.importData.warnings }),
@@ -331,6 +342,31 @@ export class LibraryService implements LibraryServicePort {
       record.importData?.sourceContentHash === hash,
     );
     return match === undefined ? null : { title: match.document.title };
+  }
+
+  async saveFreeRideSummary(input: SaveFreeRideSummaryInput): Promise<RideId> {
+    const rideId = (`ride_summary_${input.sessionId}`) as RideId;
+    if ((await this.repository.loadRideRecord(rideId))?.savedAt !== undefined) return rideId;
+    const savedAt = this.now();
+    const acceptedGeometryRefs = [...new Set(input.acceptedGeometryRefs)];
+    for (const ref of acceptedGeometryRefs) {
+      const stored = await this.geometryStore?.get(ref);
+      if (stored?.payload.kind !== "line") throw new Error("An accepted suggestion line is unavailable.");
+    }
+    const document = withIdentity(input.document, {
+      rideId, now: savedAt, title: "Free Ride summary",
+      provenance: { type: "derived", sourceId: input.document.rideId },
+    });
+    await this.repository.saveLibraryRide(document, {
+      writerToken: `summary-${input.sessionId}`, savedAt,
+      derivedFrom: { kind: "ride", sourceId: input.document.rideId },
+      freeRideSummary: { telemetry: input.telemetry, acceptedGeometryRefs },
+      ...(input.telemetry === null ? {} : { bundleSummary: {
+        distanceMeters: input.telemetry.acceptedDistanceMeters,
+        durationSeconds: input.telemetry.movingMs / 1000,
+      } }),
+    });
+    return rideId;
   }
 
   async saveRecorded(input: SaveRecordedRideInput): Promise<SavedRecordedRide> {
@@ -445,6 +481,7 @@ export class LibraryService implements LibraryServicePort {
       ...(record.area === undefined ? {} : { area: record.area }),
       ...(record.bundleSummary === undefined ? {} : { bundleSummary: record.bundleSummary }),
       ...(record.recordedTrack === undefined ? {} : { recordedTrack: record.recordedTrack }),
+      ...(record.freeRideSummary === undefined ? {} : { freeRideSummary: record.freeRideSummary }),
       ...(record.offlinePack === undefined ? {} : { offlinePack: record.offlinePack }),
       ...(record.importData === undefined ? {} : { importData: record.importData }),
     });
@@ -492,6 +529,12 @@ export class LibraryService implements LibraryServicePort {
         return { ...item, mapPreview: { line: previewLine(stored.payload.coordinates), pins: [] } };
       }
     }
+    const acceptedRef = record.freeRideSummary?.acceptedGeometryRefs[0];
+    if (acceptedRef !== undefined && this.geometryStore !== undefined) {
+      const stored = await this.geometryStore.get(acceptedRef);
+      if (stored?.payload.kind === "line") return { ...item, mapPreview: { line: previewLine(stored.payload.coordinates), pins: [] } };
+    }
+    if (record.freeRideSummary !== undefined) return item;
     const intent = record.document.intent;
     const pins = [intent.start, ...intent.stops, intent.finish]
       .filter((point) => point !== null)

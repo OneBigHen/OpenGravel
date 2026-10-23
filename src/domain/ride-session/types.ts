@@ -197,7 +197,7 @@ export type RideSessionEvent =
       readonly itinerary: readonly StopId[];
       /** The separate recording authority's id (8 §11), referenced, never owned. */
       readonly recordingId: RecordingId | null;
-      /** Explicit route-free query policy: recording starts off, Free Ride starts on. */
+      /** Route-free query policy, independent of the recording reference. */
       readonly suggestions: SessionSuggestions;
     })
   | (RideSessionEventBase<"position.updated"> & { readonly position: PositionFix })
@@ -222,7 +222,8 @@ export type RideSessionEvent =
   | (RideSessionEventBase<"session.resumed"> & Record<never, never>)
   | (RideSessionEventBase<"session.completed"> & Record<never, never>)
   | (RideSessionEventBase<"session.abandoned"> & Record<never, never>)
-  | (RideSessionEventBase<"recording.discarded"> & Record<never, never>)
+  | (RideSessionEventBase<"recording.started"> & { readonly recordingId: RecordingId })
+  | (RideSessionEventBase<"recording.discarded"> & { readonly recordingId?: RecordingId })
   | (RideSessionEventBase<"suggestions.changed"> & {
       readonly suggestions: SessionSuggestions;
     })

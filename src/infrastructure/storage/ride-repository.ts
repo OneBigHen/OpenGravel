@@ -191,8 +191,35 @@ function isRideRecord(value: unknown): value is RideRecord {
     (value.uniqueKey === undefined || (isString(value.uniqueKey) && value.uniqueKey.length > 0)) &&
     hasValidImportContentHash(value) &&
     (value.recordedTrack === undefined || isRecordedTrackEnvelope(value.recordedTrack)) &&
+    (value.freeRideSummary === undefined || isFreeRideSummary(value.freeRideSummary)) &&
     (value.offlinePack === undefined || corridorPackManifestIsValid(value.offlinePack))
   );
+}
+
+function isNonNegativeFinite(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function isNullableFinite(value: unknown): boolean {
+  return value === null || (typeof value === "number" && Number.isFinite(value));
+}
+
+function isFreeRideSummary(value: unknown): boolean {
+  if (!isRecord(value) || !Array.isArray(value.acceptedGeometryRefs) ||
+    value.acceptedGeometryRefs.some((ref) => !isString(ref) || !ref.startsWith("geo_"))) return false;
+  const telemetry = value.telemetry;
+  if (telemetry === null) return true;
+  if (!isRecord(telemetry) || !isRecord(telemetry.elevation) || !isRecord(telemetry.rejected)) return false;
+  const rejected = telemetry.rejected;
+  return isNonNegativeFinite(telemetry.acceptedDistanceMeters) &&
+    isNonNegativeFinite(telemetry.movingMs) &&
+    (telemetry.maxSpeedMps === null || isNonNegativeFinite(telemetry.maxSpeedMps)) &&
+    (telemetry.movement === "moving" || telemetry.movement === "stopped") &&
+    isNullableFinite(telemetry.movingSinceMs) && isNullableFinite(telemetry.lastSampleAtMs) &&
+    isNullableFinite(telemetry.elevation.currentMeters) && isNullableFinite(telemetry.elevation.sampledAtMs) &&
+    isNonNegativeFinite(telemetry.elevation.gainMeters) && isNonNegativeFinite(telemetry.elevation.lossMeters) &&
+    isNonNegativeInteger(telemetry.elevation.sampleCount) &&
+    ["poorAccuracy", "jumps", "speedSpikes", "verticalJumps"].every((key) => isNonNegativeInteger(rejected[key]));
 }
 
 function isRecordedTrackEnvelope(value: unknown): value is RecordedTrackEnvelope {
@@ -437,6 +464,7 @@ function referencedGeometryRefs(records: readonly StoredRideRecord[]): Set<Geome
     collectGeometryRefs(record.document, refs);
     if (record.importData !== undefined) collectGeometryRefs(record.importData, refs);
     if (record.recordedTrack !== undefined) refs.add(record.recordedTrack.geometryRef);
+    for (const ref of record.freeRideSummary?.acceptedGeometryRefs ?? []) refs.add(ref);
   }
   return refs;
 }
@@ -540,6 +568,7 @@ export class RideRepository implements RideRepositoryPort, RideLibraryRepository
               ? {}
               : { originalsRef: previous.originalsRef }),
             ...(previous?.area === undefined ? {} : { area: previous.area }),
+            ...(previous?.freeRideSummary === undefined ? {} : { freeRideSummary: previous.freeRideSummary }),
             ...(previous?.bundleSummary === undefined
               ? {}
               : { bundleSummary: previous.bundleSummary }),
@@ -617,6 +646,7 @@ export class RideRepository implements RideRepositoryPort, RideLibraryRepository
       ...(options.uniqueKey === undefined ? {} : { uniqueKey: options.uniqueKey }),
       ...(options.originalsRef === undefined ? {} : { originalsRef: options.originalsRef }),
       ...(options.area === undefined ? {} : { area: options.area }),
+      ...(options.freeRideSummary === undefined ? {} : { freeRideSummary: options.freeRideSummary }),
       ...(options.bundleSummary === undefined ? {} : { bundleSummary: options.bundleSummary }),
       ...(options.offlinePack === undefined ? {} : { offlinePack: options.offlinePack }),
       ...(options.importData === undefined ? {} : { importData: options.importData }),

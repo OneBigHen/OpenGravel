@@ -284,6 +284,9 @@ export function validateRideSessionEvent(value: unknown): readonly string[] {
       }
       if (value.route !== undefined) issues.push(...validateSessionRouteBinding(value.route));
       break;
+    case "recording.started":
+      if (!isBrandedId(value.recordingId, "rec_")) issues.push("recording.started.recordingId must be a rec_ identifier");
+      break;
     case "session.paused":
       if (!isMember(value.reason, SESSION_PAUSE_REASONS)) {
         issues.push(`session.paused.reason must be one of ${SESSION_PAUSE_REASONS.join(", ")}`);
@@ -292,7 +295,11 @@ export function validateRideSessionEvent(value: unknown): readonly string[] {
     case "session.resumed":
     case "session.completed":
     case "session.abandoned":
+      break;
     case "recording.discarded":
+      if (value.recordingId !== undefined && !isBrandedId(value.recordingId, "rec_")) {
+        issues.push("recording.discarded.recordingId must be a rec_ identifier");
+      }
       break;
     case "suggestions.changed":
       if (value.suggestions !== "on" && value.suggestions !== "off") {

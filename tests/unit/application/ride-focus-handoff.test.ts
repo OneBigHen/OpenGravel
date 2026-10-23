@@ -1,3 +1,4 @@
+import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
 /**
  * The Active Ride handoff (04-PLANNER-AND-WORKSPACE-UX §28;
  * 08-RIDE-NAVIGATION-AND-FREE-RIDE §1, §13; 17-IMPLEMENTATION-PLAN Task 8.5).
@@ -307,10 +308,16 @@ describe("startRideFromHandoff", () => {
       rides: { saveRide } as never,
       writerToken: "free-ride-test-writer",
       now: NOW,
+      recording: createRideRecordingWorkflow({
+        session: controller, pointer: port,
+        recordings: { load: async (recordingId: string) => ({ recordingId, status: "open", lastBatchSeq: 0, pointCount: 0, summary: null }), create: async () => { order.push("recording"); return { ok: true }; }, delete: async () => ({ ok: true }) } as never,
+        library: {} as never,
+      }),
     });
 
     expect(outcome.outcome).toBe("started");
-    expect(order[0]).toBe("ride");
+    expect(order.slice(0, 2)).toEqual(["ride", "recording"]);
+    expect(controller.snapshot()?.recordingId).toMatch(/^rec_/);
     expect(saveRide).toHaveBeenCalledWith(ride, { writerToken: "free-ride-test-writer", baseRevision: 7 });
     expect(controller.snapshot()).toMatchObject({
       activity: "free",
@@ -339,6 +346,36 @@ describe("startRideFromHandoff", () => {
     expect(outcome).toMatchObject({ outcome: "rejected", message: "The ride could not be saved, so Free Ride was not started." });
     expect(controller.snapshot()).toBeNull();
     expect(port.writes).toEqual([]);
+  });
+
+  it("does not start or publish Free Ride when default recording creation fails", async () => {
+    const controller = createRideSessionController({ repository: journalSpy([]), now: () => NOW });
+    const port = pointer();
+    const outcome = await startFreeRideFromPlanner({
+      controller, pointer: port, document: document(),
+      rides: { saveRide: async () => ({ ok: true }) } as never,
+      writerToken: "free-ride-test-writer", now: NOW,
+      recording: createRideRecordingWorkflow({
+        session: controller, pointer: port,
+        recordings: { create: async () => ({ ok: false, reason: "quota" }) } as never,
+        library: {} as never,
+      }),
+    });
+    expect(outcome.outcome).toBe("rejected");
+    expect(controller.snapshot()).toBeNull();
+    expect(port.writes).toEqual([]);
+  });
+
+  it("supports an explicit recording opt-out while keeping suggestions on", async () => {
+    const controller = createRideSessionController({ repository: journalSpy([]), now: () => NOW });
+    const port = pointer();
+    const outcome = await startFreeRideFromPlanner({
+      controller, pointer: port, document: document(),
+      rides: { saveRide: async () => ({ ok: true }) } as never,
+      writerToken: "free-ride-test-writer", now: NOW, record: false,
+    });
+    expect(outcome.outcome).toBe("started");
+    expect(controller.snapshot()).toMatchObject({ activity: "free", suggestions: "on", recordingId: null });
   });
 
   const request = (() => {

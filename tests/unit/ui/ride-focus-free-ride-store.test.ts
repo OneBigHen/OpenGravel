@@ -1,6 +1,12 @@
 import "fake-indexeddb/auto";
 
 import { describe, expect, it, vi } from "vitest";
+import { createFreeRideTelemetry, type FreeRideTelemetry } from "@/application/ride-session/free-ride-telemetry";
+import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
+import { createRecordingRepository } from "@/infrastructure/storage/recording-repository";
+import { createRideRepository } from "@/infrastructure/storage/ride-repository";
+import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
+import { createLibraryService } from "@/application/library/library-service";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import type { ReturnPlanResult } from "@/application/free-ride/return-plan";
 import type { GuidedReroutePlanner } from "@/application/ride-session/guided-reroute";
@@ -10,7 +16,7 @@ import { UI_TELEMETRY_INTENT_EVENT } from "@/ui/telemetry/emit-telemetry";
 import type { LiveSuggestionResult } from "@/application/free-ride/live-suggestions";
 import type { RideFocusPointerPort, RideFocusPointerRead } from "@/application/persistence/ride-focus-pointer";
 import { createRideSessionRepository } from "@/infrastructure/storage/ride-session-repository";
-import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
+import { createRideFocusStore, type RideFocusStoreOptions } from "@/ui/stores/ride-focus-store";
 import { rideRevisedEvent, suggestionsChangedEvent } from "@/domain/ride-session/create";
 import { newRideId, type GeometryRef } from "@/domain/ride/ids";
 import { asRouteCandidateId } from "@/domain/route/ids";
@@ -64,6 +70,10 @@ function engineDouble(): {
 
 async function makeRide(input: {
   readonly suggestions: "on" | "off";
+  readonly record?: boolean;
+  readonly freeRideTelemetry?: FreeRideTelemetry;
+  readonly saveSuggestionLine?: RideFocusStoreOptions["saveSuggestionLine"];
+  readonly saveFreeRideSummary?: RideFocusStoreOptions["saveFreeRideSummary"];
   readonly evaluateLiveSuggestion?: () => Promise<LiveSuggestionResult>;
   readonly readSavedHome?: () => typeof SAVED_HOME | null;
   readonly readRouteLine?: (ref: GeometryRef) => Promise<readonly { readonly lon: number; readonly lat: number }[] | null>;
@@ -135,11 +145,18 @@ async function makeRide(input: {
     },
     clear: () => { pointerValue = { status: "absent" }; },
   };
+  const library = createLibraryService(createRideRepository({ database }), { geometryStore: createIndexedDbGeometryStore({ databaseName: database.name }) });
+  const recordings = createRecordingRepository({ database });
+  const recording = createRideRecordingWorkflow({ session: controller, pointer, recordings, library, now: () => new Date(clock).toISOString() });
   const evaluate = input.evaluateLiveSuggestion === undefined
     ? undefined
     : vi.fn(input.evaluateLiveSuggestion);
   const store = createRideFocusStore({
     controller,
+    recording,
+    ...(input.saveSuggestionLine === undefined ? {} : { saveSuggestionLine: input.saveSuggestionLine }),
+    ...(input.freeRideTelemetry === undefined ? {} : { freeRideTelemetry: input.freeRideTelemetry }),
+    ...(input.saveFreeRideSummary === undefined ? {} : { saveFreeRideSummary: input.saveFreeRideSummary }),
     environment,
     pointer,
     readRouteLine: input.readRouteLine ?? (async () => LINE),
@@ -157,6 +174,7 @@ async function makeRide(input: {
   });
   await store.getState().start();
   await store.getState().resume();
+  if (input.record) await store.getState().startRecording(RIDE_ID, 0);
   clock += 1_000;
   const observedAt = new Date(clock).toISOString();
   await controller.dispatch({
@@ -186,6 +204,9 @@ async function makeRide(input: {
   };
   return {
     controller,
+    recording,
+    recordings,
+    library,
     database,
     evaluate,
     pointer,
@@ -1214,4 +1235,208 @@ describe("Ride Focus journal write failures", () => {
     ride.store.getState().stop();
     ride.database.close();
   });
+});
+
+
+describe("Free Ride recording and smarts", () => {
+  it("starts recording mid-ride without replacing the session, keeps suggestions, and saves to My rides", async () => {
+    const ride = await makeRide({ suggestions: "on", evaluateLiveSuggestion: async () => ({ status: "quiet", reason: "none-ahead" }) });
+    const sessionId = ride.controller.snapshot()?.sessionId;
+    await ride.store.getState().startRecording(RIDE_ID, 0);
+    expect(ride.controller.snapshot()).toMatchObject({ sessionId, activity: "free", suggestions: "on" });
+    expect(ride.controller.snapshot()?.recordingId).toMatch(/^rec_/);
+    ride.advance(31_000);
+    await ride.moveTo(SESSION_START);
+    ride.tick();
+    await vi.waitFor(() => expect(ride.evaluate?.mock.calls.length).toBeGreaterThan(1));
+    await ride.store.getState().setSuggestions(false);
+    expect(ride.controller.snapshot()?.suggestions).toBe("off");
+    await ride.store.getState().setSuggestions(true);
+    expect(ride.controller.snapshot()?.suggestions).toBe("on");
+    await ride.recording.append({ coordinate: SESSION_START, observedAt: new Date(BASE + 40_000).toISOString(), accuracyMeters: 5 });
+    await ride.recording.append({ coordinate: LINE[1], observedAt: new Date(BASE + 50_000).toISOString(), accuracyMeters: 5 });
+    ride.advance(60_000);
+    await ride.store.getState().finish();
+    expect(ride.controller.snapshot()?.activity).toBe("completed");
+    expect(await ride.library.listRides()).toHaveLength(1);
+    expect(ride.pointer.read().status).toBe("absent");
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("plans Head Home and resumes Free Ride while recording", async () => {
+    const plan = vi.fn(async () => ({ status: "planned" as const, route: { planningGeneration: 42, routeId: asRouteCandidateId("route_record_home") }, routeGeometryRef: "geo_home" as GeometryRef, durationSeconds: 300, distanceMeters: 2000 }));
+    const ride = await makeRide({ suggestions: "off", readSavedHome: () => SAVED_HOME, returnPlanner: { plan } });
+    await ride.store.getState().startRecording(RIDE_ID, 0);
+    const id = ride.controller.snapshot()?.recordingId;
+    expect(id).toMatch(/^rec_/);
+    await ride.store.getState().headHome();
+    expect(plan).toHaveBeenCalledOnce();
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "guided", recordingId: id });
+    ride.advance();
+    await ride.store.getState().continueFreeRide();
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "free", recordingId: id });
+    await ride.recording.discard(new Date(BASE + 90_000).toISOString());
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+});
+
+
+describe("Free Ride opt-out and summary finishing", () => {
+  it("turns off recording without ending the ride or its suggestions, and can start again", async () => {
+    const ride = await makeRide({ suggestions: "on", record: true });
+    const sessionId = ride.controller.snapshot()?.sessionId;
+    const previousId = ride.controller.snapshot()?.recordingId;
+    expect(previousId).toMatch(/^rec_/);
+    await ride.store.getState().stopRecording();
+    expect(ride.controller.snapshot()).toMatchObject({ sessionId, activity: "free", suggestions: "on", recordingId: null });
+    expect(ride.recording.snapshot()).toBeNull();
+    ride.advance();
+    await ride.store.getState().startRecording(RIDE_ID, 0);
+    expect(ride.controller.snapshot()?.recordingId).toMatch(/^rec_/);
+    expect(ride.controller.snapshot()?.recordingId).not.toBe(previousId);
+    await ride.recording.discard(new Date(BASE + 90_000).toISOString());
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("keeps an unrecorded ride recoverable when summary saving fails, and retries before completing", async () => {
+    const save = vi.fn().mockRejectedValueOnce(new Error("full")).mockResolvedValue(RIDE_ID);
+    const ride = await makeRide({ suggestions: "off", saveFreeRideSummary: save });
+    await ride.store.getState().finish();
+    expect(ride.controller.snapshot()?.activity).toBe("free");
+    expect(ride.pointer.read().status).toBe("found");
+    expect(ride.store.getState().savedSummaryRideId).toBeNull();
+    ride.advance();
+    await ride.store.getState().finish();
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(ride.controller.snapshot()?.activity).toBe("completed");
+    expect(ride.store.getState().savedSummaryRideId).toBe(RIDE_ID);
+    expect(ride.pointer.read().status).toBe("absent");
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("finishes without saving when explicitly requested", async () => {
+    const save = vi.fn();
+    const ride = await makeRide({ suggestions: "off", saveFreeRideSummary: save });
+    await ride.store.getState().finish(false);
+    expect(save).not.toHaveBeenCalled();
+    expect(ride.controller.snapshot()?.activity).toBe("completed");
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
+  it("offers and accepts a loop while recording, retaining the trace and accepted line through Free Ride", async () => {
+    const plan = vi.fn(async () => ({ status: "planned" as const, route: { planningGeneration: 44, routeId: asRouteCandidateId("route_record_loop") }, routeGeometryRef: "geo_record_loop" as GeometryRef, durationSeconds: 2700, distanceMeters: 40_000 }));
+    const save = vi.fn(async () => RIDE_ID);
+    const ride = await makeRide({ suggestions: "on", record: true, rideOffers: true, returnPlanner: { plan }, saveFreeRideSummary: save });
+    const recordingId = ride.controller.snapshot()?.recordingId;
+    await ride.settleOfferAttention();
+    await vi.waitFor(() => expect(ride.store.getState().rideOffer).not.toBeNull());
+    await ride.store.getState().acceptRideOffer();
+    expect(ride.controller.snapshot()).toMatchObject({ activity: "guided", recordingId });
+    ride.advance();
+    await ride.store.getState().continueFreeRide();
+    await ride.store.getState().stopRecording();
+    await ride.store.getState().finish();
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ acceptedGeometryRefs: ["geo_record_loop"] }));
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+});
+
+
+it("retries failed opt-out cleanup before permitting another recording or finish", async () => {
+  const ride = await makeRide({ suggestions: "on", record: true });
+  const remove = vi.spyOn(ride.recordings, "delete").mockResolvedValueOnce({ ok: false, reason: "write-failed" });
+  await ride.store.getState().stopRecording();
+  expect(ride.store.getState().recordingCleanupPending).toBe(true);
+  await ride.store.getState().startRecording(RIDE_ID, 0);
+  await ride.store.getState().finish();
+  await ride.store.getState().discard();
+  expect(ride.controller.snapshot()?.activity).toBe("free");
+  expect(ride.recording.snapshot()).not.toBeNull();
+  ride.advance();
+  await ride.store.getState().stopRecording();
+  expect(remove).toHaveBeenCalledTimes(2);
+  expect(ride.store.getState().recordingCleanupPending).toBe(false);
+  expect(ride.recording.snapshot()).toBeNull();
+  ride.store.getState().stop();
+  ride.database.close();
+});
+
+
+it("adopts recording telemetry only once when the opt-out toggle is double tapped", async () => {
+  const telemetry = createFreeRideTelemetry();
+  const adopt = vi.spyOn(telemetry, "adoptRecording");
+  const ride = await makeRide({ suggestions: "on", record: true, freeRideTelemetry: telemetry });
+  await Promise.all([ride.store.getState().stopRecording(), ride.store.getState().stopRecording()]);
+  expect(adopt).toHaveBeenCalledOnce();
+  ride.store.getState().stop();
+  ride.database.close();
+});
+
+it("journals opt-out again after an initial write failure before deleting the trace", async () => {
+  const journal = { failed: false };
+  const ride = await makeRide({ suggestions: "on", record: true, failingJournal: journal });
+  const sessionId = ride.controller.snapshot()!.sessionId;
+  const recordingId = ride.controller.snapshot()!.recordingId!;
+  journal.failed = true;
+  await ride.store.getState().stopRecording();
+  expect(ride.store.getState().recordingCleanupPending).toBe(true);
+  expect(await ride.recordings.load(recordingId)).not.toBeNull();
+  journal.failed = false;
+  ride.advance();
+  await ride.store.getState().stopRecording();
+  expect(ride.store.getState().recordingCleanupPending).toBe(false);
+  const restored = createRideSessionController({ repository: createRideSessionRepository({ database: ride.database }), now: () => new Date(BASE + 90_000).toISOString() });
+  await restored.resume(sessionId);
+  expect(restored.snapshot()?.recordingId).toBeNull();
+  expect(await ride.recordings.load(recordingId)).toBeNull();
+  ride.store.getState().stop();
+  ride.database.close();
+});
+
+
+it("persists an accepted preview line that arrived without a geometry reference", async () => {
+  const saveLine = vi.fn(async () => "geo_preserved_preview" as GeometryRef);
+  const save = vi.fn(async () => RIDE_ID);
+  const ride = await makeRide({ suggestions: "on", saveSuggestionLine: saveLine, saveFreeRideSummary: save });
+  ride.store.setState({ liveSuggestion: { id: "preview-only", label: "Oak Road", route: { planningGeneration: 50, routeId: asRouteCandidateId("route_preview_only") }, entry: LINE[0], distanceToDecisionMeters: 500, distanceMeters: 1000, headingDeltaDegrees: 0, requiresUTurn: false }, suggestionPreviewLine: LINE });
+  await ride.store.getState().acceptLiveSuggestion();
+  expect(saveLine).toHaveBeenCalledWith(LINE);
+  expect(ride.controller.snapshot()?.activity).toBe("guided");
+  ride.advance();
+  await ride.store.getState().continueFreeRide();
+  await ride.store.getState().finish();
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ acceptedGeometryRefs: ["geo_preserved_preview"] }));
+  ride.store.getState().stop();
+  ride.database.close();
+});
+
+
+it("recovers pending opt-out trace cleanup after a reload", async () => {
+  const ride = await makeRide({ suggestions: "on", record: true });
+  const id = ride.controller.snapshot()!.recordingId!;
+  vi.spyOn(ride.recordings, "delete").mockResolvedValueOnce({ ok: false, reason: "write-failed" });
+  await ride.store.getState().stopRecording();
+  expect(ride.pointer.read()).toMatchObject({ status: "found", pointer: { pendingRecordingDiscardId: id } });
+  ride.store.getState().stop();
+  const controller = createRideSessionController({ repository: createRideSessionRepository({ database: ride.database }), now: () => new Date(BASE + 90_000).toISOString() });
+  const recording = createRideRecordingWorkflow({ session: controller, pointer: ride.pointer, recordings: ride.recordings, library: ride.library });
+  const store = createRideFocusStore({ controller, recording, pointer: ride.pointer, environment, now: () => new Date(BASE + 90_000).toISOString(), setInterval: () => 1, clearInterval: () => undefined });
+  await store.getState().start();
+  expect(store.getState().recordingCleanupPending).toBe(true);
+  expect(controller.snapshot()?.activity).toBe("paused");
+  await store.getState().discard();
+  expect(ride.pointer.read().status).toBe("found");
+  await store.getState().stopRecording();
+  expect(store.getState().recordingCleanupPending).toBe(false);
+  expect(await ride.recordings.load(id)).toBeNull();
+  const pointed = ride.pointer.read();
+  expect(pointed.status === "found" && pointed.pointer.pendingRecordingDiscardId).toBeUndefined();
+  store.getState().stop();
+  ride.database.close();
 });

@@ -5,10 +5,13 @@ import type { RecordingRepositoryPort } from "@/application/persistence/recordin
 import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import type { RecordingId } from "@/domain/recording/ids";
 import { newRecordingId } from "@/domain/recording/ids";
+import type { RecordingTelemetryState } from "@/domain/recording/telemetry";
 import type { RecordingPosition, RecordingSummary } from "@/domain/recording/types";
 import type { RideId } from "@/domain/ride/ids";
+import type { SessionSuggestions } from "@/domain/ride-session/types";
 import type { Coordinate } from "@/domain/ride/types";
 import {
+  recordingStartedEvent,
   sessionAbandonedEvent,
   sessionCompletedEvent,
   sessionPausedEvent,
@@ -50,9 +53,14 @@ export interface RideRecordingWorkflowSnapshot extends RecordingControllerSnapsh
   readonly sourceDeleted: boolean;
 }
 
+export type RecordingStopResult = RecordingDiscardResult & {
+  readonly telemetryState?: RecordingTelemetryState;
+};
+
 export interface RideRecordingWorkflow {
   snapshot(): RideRecordingWorkflowSnapshot | null;
-  start(rideId: RideId, rideRevision: number, at: string): Promise<RecordingStartResult>;
+  start(rideId: RideId, rideRevision: number, at: string, suggestions?: SessionSuggestions): Promise<RecordingStartResult>;
+  stop(at: string): Promise<RecordingStopResult>;
   recover(recordingId: RecordingId): Promise<RecordingRecoveryOutcome>;
   append(position: RecordingPosition): Promise<RecordingAppendResult>;
   retry(): Promise<RecordingAppendResult>;
@@ -143,29 +151,47 @@ export function createRideRecordingWorkflow(
         : { ...snapshot, libraryCommitted, sourceDeleted };
     },
 
-    async start(rideId, rideRevision, at): Promise<RecordingStartResult> {
+    async start(rideId, rideRevision, at, suggestions = "off"): Promise<RecordingStartResult> {
       const pointed = options.pointer.read();
-      if (pointed.status !== "absent") {
+      const current = options.session.snapshot();
+      const attaching = pointed.status === "found" && current !== null &&
+        pointed.pointer.sessionId === current.sessionId && current.plan.rideId === rideId &&
+        current.plan.rideRevision === rideRevision && current.recordingId === null &&
+        (current.activity === "free" || (current.activity === "paused" && current.resumeActivity === "free"));
+      if ((pointed.status !== "absent" && !attaching) ||
+        (pointed.status === "found" && pointed.pointer.pendingRecordingDiscardId !== undefined)) {
         return { outcome: "failed", reason: "write-failed" };
       }
       const id = newRecordingId();
       const nextRecording = controllerFor(id);
       const created = await nextRecording.start();
       if (created.outcome !== "started") return created;
-      const started = await options.session.start({
-        activity: "free",
-        suggestions: "off",
-        rideId,
-        rideRevision,
-        itinerary: [],
-        recordingId: id,
-        at,
-      });
+      const started = attaching
+        ? await options.session.dispatch(recordingStartedEvent(id, sessionInstantAtOrAfter(current.updatedAt, at)))
+        : await options.session.start({
+            activity: "free",
+            suggestions,
+            rideId,
+            rideRevision,
+            itinerary: [],
+            recordingId: id,
+            at,
+          });
       if (
         started.outcome !== "applied" ||
         started.state === null ||
         started.persistence !== "durable"
       ) {
+        if (attaching && started.outcome === "applied") {
+          // An append failure leaves the controller ahead of its journal. Restore
+          // before deleting the new trace so no later checkpoint can reference it.
+          const restored = await options.session.resume(current.sessionId);
+          if (restored.status !== "restored" || restored.state.recordingId === id) {
+            recording = nextRecording;
+            recordingId = id;
+            return { outcome: "failed", reason: "write-failed" };
+          }
+        }
         await options.recordings.delete(id);
         return { outcome: "failed", reason: "write-failed" };
       }
@@ -175,13 +201,36 @@ export function createRideRecordingWorkflow(
       sourceDeleted = false;
       savedRide = null;
       savedSummary = null;
-      options.pointer.write({
+      if (!attaching) options.pointer.write({
         sessionId: started.state.sessionId,
         rideId,
         routeGeometryRef: null,
         updatedAt: at,
       });
       return { outcome: "started" };
+    },
+
+    async stop(at): Promise<RecordingStopResult> {
+      if (recording === null || libraryCommitted) return { outcome: "failed", reason: "session-mismatch" };
+      const pointed = options.pointer.read();
+      if (pointed.status !== "found" || recordingId === null) return { outcome: "failed", reason: "session-mismatch" };
+      options.pointer.write({ ...pointed.pointer, pendingRecordingDiscardId: recordingId });
+      const marked = options.pointer.read();
+      if (marked.status !== "found" || marked.pointer.pendingRecordingDiscardId !== recordingId) {
+        return { outcome: "failed", reason: "session-write-failed" };
+      }
+      const result = await recording.discard(at);
+      if (result.outcome !== "discarded") return result;
+      const latest = options.pointer.read();
+      if (latest.status === "found" && latest.pointer.sessionId === marked.pointer.sessionId) {
+        const { pendingRecordingDiscardId: _discardedId, ...retained } = latest.pointer;
+        void _discardedId;
+        options.pointer.write(retained);
+      }
+      const telemetryState = recording.snapshot().telemetryState;
+      recording = null;
+      recordingId = null;
+      return { ...result, ...(telemetryState === undefined ? {} : { telemetryState }) };
     },
 
     async recover(id): Promise<RecordingRecoveryOutcome> {
