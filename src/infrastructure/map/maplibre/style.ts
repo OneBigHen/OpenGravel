@@ -27,7 +27,8 @@
 import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
 import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
 import { PUCK_IMAGE_ID } from "./puck-image";
-import { MARKER_IMAGE_IDS } from "./marker-images";
+import { MARKER_IMAGE_IDS, ROUTE_ARROW_IMAGE_ID } from "./marker-images";
+import { ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 
 /** The tokens the cartography uses, as literal CSS colour values. */
 export interface MapPalette {
@@ -150,6 +151,8 @@ export const MAP_LAYER_IDS = {
   routeProposed: "ogv-route-proposed",
   routeCasing: "ogv-route-casing",
   routeSelected: "ogv-route-selected",
+  routeSurface: "ogv-route-surface",
+  routeArrow: "ogv-route-arrow",
   routeLabel: "ogv-route-label",
   changedSpan: "ogv-changed-span",
   pointShaping: "ogv-point-shaping",
@@ -268,10 +271,36 @@ function tintColor(palette: MapPalette, strong: boolean): unknown {
 }
 
 /**
+ * The surface band's colour per measured run (05 §11, 12 §9).
+ *
+ * The three hues are the route card's own surface strip
+ * (`.og-route-card__strip[data-surface]`), so the map and the card name the same
+ * surface with the same colour. The last stop is **transparent, not paved**: an
+ * unknown run must never acquire a surface colour, and a band feature for an
+ * unknown stretch is one the projection never emits in the first place. This is
+ * the belt to that braces — if an unknown ever reached the paint, it would draw
+ * nothing rather than a lie.
+ */
+function surfaceBandColor(palette: MapPalette): unknown {
+  return [
+    "match",
+    ["get", "surface"],
+    "paved",
+    palette.topoSage,
+    "gravel",
+    palette.goldenHour,
+    "dirt",
+    palette.trailBrown,
+    "rgba(0,0,0,0)",
+  ];
+}
+
+/**
  * Route layers, drawn in ascending weight: the previous route, the alternatives,
- * the preview, the proposal, then the selected line's casing and core. The
- * selected route is last for the same reason it is heaviest: it must never be
- * overdrawn by something the rider did not choose (05 §11).
+ * the preview, the proposal, then the selected line's casing and core, then the
+ * surface band and the direction arrows it carries. The selected route is last
+ * for the same reason it is heaviest: it must never be overdrawn by something
+ * the rider did not choose (05 §11).
  */
 export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
   const dashed = { "line-dasharray": [2, 2] } as const;
@@ -361,6 +390,47 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         "line-color": tintColor(palette, false),
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 15, 8 * emphasisOf(palette), 17, 13 * emphasisOf(palette)],
+      },
+    },
+    {
+      // Where the surface changes along the chosen line: a band inside the line's
+      // own width, one feature per measured run, in the same three hues as the
+      // route card's surface strip. Only the selected route carries one — the
+      // alternatives are compared by colour and time, not read surface by
+      // surface — and an unmeasured stretch draws nothing at all, so the line
+      // keeps the route colour there (CLAUDE.md: unknown is never paved).
+      id: MAP_LAYER_IDS.routeSurface,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", ROUTE_SURFACE_FEATURE_STATE),
+      layout: LINE_LAYOUT,
+      paint: {
+        "line-color": surfaceBandColor(palette),
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 15, 3.5, 17, 4.5],
+        "line-opacity": 0.95,
+      },
+    },
+    {
+      // Which way to go, without opening anything: chevrons laid along the
+      // selected line by MapLibre's own line placement, so they follow a bend
+      // instead of pointing at a bearing the geometry left behind. The spacing
+      // is in screen pixels, so the arrows thin out as the rider zooms in and a
+      // 300 km route never becomes a caterpillar of icons.
+      id: MAP_LAYER_IDS.routeArrow,
+      type: "symbol",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", "selected"),
+      layout: {
+        "symbol-placement": "line",
+        "symbol-spacing": ["interpolate", ["linear"], ["zoom"], 12, 180, 14, 120, 17, 72],
+        "icon-image": ROUTE_ARROW_IMAGE_ID,
+        "icon-size": 1,
+        // Line placement already turns the icon to the line's direction; the
+        // image points up, so no extra rotation is ever wanted.
+        "icon-rotate": 0,
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "symbol-sort-key": 0,
       },
     },
     {

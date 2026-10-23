@@ -59,6 +59,34 @@ export type RouteSceneState =
   | "previous"
   | "proposed";
 
+/**
+ * Where one surface was measured along the line, as shares of its own length
+ * (05 §11 "the line says which way and what surface").
+ *
+ * `unknown` is carried, not dropped, on purpose: the projection reports what the
+ * engine did and did not measure, and the renderer is the place that decides an
+ * unknown run has nothing to draw (CLAUDE.md: unknown never becomes paved).
+ */
+export interface RouteSurfaceRunScene {
+  readonly kind: "paved" | "gravel" | "dirt" | "unknown";
+  /** Start of the run as a share of the line's length, `0..1`, inclusive. */
+  readonly from: number;
+  /** End of the run as a share of the line's length, `0..1`, inclusive. */
+  readonly to: number;
+}
+
+/**
+ * The feature `state` the surface band's sub-lines carry.
+ *
+ * It is deliberately **not** a {@link RouteSceneState}: the band is a second
+ * reading of the selected line, so its sub-lines must not be picked up by the
+ * route treatments (a casing or a core drawn twice would drown the band they
+ * are meant to sit under), by the arrow layer (one set of arrows per route), or
+ * by hit-testing (a tap on the band is a tap on the route beneath it). A state
+ * no other layer matches is the one way to guarantee all three.
+ */
+export const ROUTE_SURFACE_FEATURE_STATE = "surface";
+
 /** One route line plus the role the bundle assigned it. */
 export interface RouteScene {
   readonly id: RouteCandidateId;
@@ -79,6 +107,12 @@ export interface RouteScene {
    * the other choices. Present only when the rider has choices to tell apart.
    */
   readonly label?: { readonly text: string; readonly at: Coordinate };
+  /**
+   * The measured surface along the line, in travel order (05 §11). Present only
+   * for the rider's selected route and only when the engine measured it; absent
+   * means "not measured here", never "paved".
+   */
+  readonly surface?: readonly RouteSurfaceRunScene[];
 }
 
 /**
