@@ -2,8 +2,10 @@
  * Wires the Free Ride route-query services from application ports.
  *
  * The provider factory comes from the existing browser route-planning
- * composition root. Keep the two provider instances separate because each
- * holds its own active `/api/route-plan` attempt identity.
+ * composition root, so it already carries the offline fallback: a detour or
+ * head-home plan uses the downloaded road graph when the planner is
+ * unreachable. Keep the two provider instances separate because each holds its
+ * own active `/api/route-plan` attempt identity.
  */
 
 import { createLiveSuggestionQuery } from "@/application/free-ride/live-suggestion-query";
