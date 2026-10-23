@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 
 /**
  * What a rider does with a planned ride: ride it, keep it, share it.
@@ -30,8 +31,9 @@ import { ExportMenu } from "@/ui/rides/ExportMenu";
 import type { ShareServicePort } from "@/application/sharing/share-commands";
 import type { RideDocument } from "@/domain/ride/types";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
-import type {
-  PlannerRideActions,
+import {
+  RIDE_FOCUS_PATH,
+  type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
 import { shareSourceFromRide } from "@/domain/sharing/from-ride";
 
@@ -91,6 +93,8 @@ export function RideActions({
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [freeRideState, setFreeRideState] = useState<"idle" | "starting">("idle");
   const [freeRideError, setFreeRideError] = useState<string | null>(null);
+  // A ride that was never ended blocks a new one; the way out is to open it.
+  const [unfinishedRide, setUnfinishedRide] = useState(false);
   // Start, stops and finish are the route's waypoints; unnamed points stay unnamed.
   const waypoints = useMemo(() => waypointsFromIntent(document.intent), [document.intent]);
   const exportTitle = rideExportTitle(document.title);
@@ -163,10 +167,12 @@ export function RideActions({
     if (rideActions?.freeRide === undefined || recordingState === "starting" || freeRideState === "starting") return;
     setFreeRideState("starting");
     setFreeRideError(null);
+    setUnfinishedRide(false);
     try {
       const result = await rideActions.freeRide(document);
       if (result.outcome === "rejected") {
-        setFreeRideError(result.message);
+        if (result.sessionId !== null) setUnfinishedRide(true);
+        else setFreeRideError(result.message);
         setFreeRideState("idle");
       }
     } catch {
@@ -240,6 +246,19 @@ export function RideActions({
           {recordingError}
         </p>
       )}
+      {!unfinishedRide ? null : (
+        <div className="og-plan-actions__unfinished" data-testid="just-ride-unfinished" role="alert">
+          <p>You have a ride that was never ended. Finish or discard it, then start Free Ride.</p>
+          <Link className="og-primary" href={RIDE_FOCUS_PATH} data-testid="just-ride-open-unfinished">
+            Open that ride
+          </Link>
+        </div>
+      )}
+      {freeRideError === null ? null : (
+        <p className="og-planner__error" data-testid="just-ride-error" role="alert">
+          {freeRideError}
+        </p>
+      )}
 
       {hasRide && document.title !== null ? (
         <p className="og-plan-actions__ride-name" data-testid="planner-ride-name">
@@ -305,11 +324,6 @@ export function RideActions({
               : { onShare: () => setShareOpen(true) })}
           />
         </div>
-      )}
-      {freeRideError === null ? null : (
-        <p className="og-planner__error" data-testid="just-ride-error" role="alert">
-          {freeRideError}
-        </p>
       )}
       {saveState === "saved" ? (
         <p className="og-named-save__status" role="status">

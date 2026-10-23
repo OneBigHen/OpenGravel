@@ -2285,6 +2285,21 @@ h3,
   gap: 10px;
 }
 
+.og-plan-actions__unfinished {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-object);
+  background: var(--og-well);
+}
+
+.og-plan-actions__unfinished p {
+  margin: 0;
+  color: var(--og-ink);
+}
+
 .og-plan-actions__record-row {
   display: flex;
   flex-wrap: wrap;
