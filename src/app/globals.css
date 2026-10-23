@@ -10936,6 +10936,174 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   }
 }
 
+/* Crash check (issue #12 follower safety): the one screen that takes over a
+   ride. Full-bleed Ink with Paper text, the seconds in the largest type in the
+   app, and an "I'm OK" button that fills at least 40 % of the viewport height
+   so a gloved hand or a bystander cannot miss it. Everything scrolls rather
+   than clips on a short phone; only the countdown's unit pulses, and
+   `prefers-reduced-motion` removes even that. */
+.og-ride-crash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, var(--og-safe-top)) max(16px, var(--og-safe-right))
+    max(16px, var(--og-safe-bottom)) max(16px, var(--og-safe-left));
+  background: var(--og-ink);
+  color: var(--og-paper);
+}
+
+.og-ride-crash__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.og-ride-crash__eyebrow {
+  margin: 0;
+  font-size: var(--og-text-eyebrow);
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--og-danger-light);
+}
+
+.og-ride-crash__title {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 48px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__digits {
+  font-size: clamp(72px, 22vh, 160px);
+  font-weight: 800;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-crash__unit {
+  font-size: clamp(24px, 6vh, 40px);
+  font-weight: 700;
+  color: var(--og-paper);
+  animation: og-crash-pulse 2s ease-in-out infinite;
+}
+
+@keyframes og-crash-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.og-ride-crash__line {
+  margin: 0;
+  font-size: clamp(17px, 2.4vh, 21px);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* The glove target: 40 % of the viewport height, never a tiny corner button. */
+.og-ride-crash__ok {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 40vh;
+  min-height: 40dvh;
+  padding: 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--og-success);
+  color: var(--og-paper);
+  font: inherit;
+  font-size: clamp(30px, 7vh, 52px);
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.og-ride-crash__alert,
+.og-ride-crash__call {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--og-radius-control);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__alert {
+  border: 1px solid var(--og-border-dark);
+  background: transparent;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__call {
+  border: 0;
+  background: var(--og-ember-strong);
+  color: var(--og-paper);
+}
+
+.og-ride-crash :is(button, a):focus-visible {
+  outline: 3px solid var(--og-golden-hour);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-ride-crash__unit {
+    animation: none;
+  }
+}
+
+/* Phone landscape: the digit block would push the button off-screen, so the
+   seconds shrink and everything still scrolls inside the panel. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride-crash__digits {
+    font-size: clamp(44px, 16vh, 84px);
+  }
+
+  .og-ride-crash__title {
+    font-size: clamp(24px, 7vh, 34px);
+  }
+}
+
 /* The right-hand rail (Google Maps layout, OpenGravel colours): round Paper
    buttons with Deep Spruce glyphs; a pressed mute turns Ember. */
 .og-ride__float-end {
