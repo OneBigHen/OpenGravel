@@ -116,3 +116,9 @@ export function useElevationProfile(
   if (cached !== undefined) return cached;
   return answer?.key === key ? answer.state : LOADING;
 }
+
+/** Read an already measured climb without fetching or copying profile coordinates. */
+export function cachedElevationClimb(routeId: string, pointCount: number): number | null {
+  const state = cache.get(`${routeId}:${pointCount}`);
+  return state?.status === "ready" ? state.profile.climbMeters : null;
+}

@@ -1,0 +1,54 @@
+.og-advisor__conversation {
+  display: grid;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.og-advisor__rider,
+.og-advisor__reply {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border-radius: var(--og-radius-object);
+  color: var(--og-ink);
+  background: var(--og-paper);
+}
+
+.og-advisor__rider {
+  margin-left: auto;
+  border: 1px solid var(--og-sandstone);
+}
+
+.og-advisor .og-advisor__form {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.og-advisor__form input,
+.og-advisor__form button {
+  min-height: 44px;
+  min-width: 0;
+}
+
+.og-advisor :is(input, button):focus-visible {
+  outline: 2px solid var(--og-ember-text);
+  outline-offset: 2px;
+}
+
+.og-advisor__notice,
+.og-advisor__error {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+
+.og-advisor__notice p,
+.og-advisor__error p {
+  flex-basis: 70%;
+}
