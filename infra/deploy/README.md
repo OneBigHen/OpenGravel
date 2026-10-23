@@ -22,6 +22,8 @@ Captured from the running host on 2026-10-03. Secrets live only in the environme
 ```bash
 infra/deploy/release.sh origin/main   # build, candidate smoke on :3299, promote, smoke, auto-rollback on failure
 infra/deploy/rollback.sh              # back to /var/lib/opengravel/previous-release, no rebuild
+DRY_RUN=1 infra/deploy/prune.sh         # list old releases it would delete (release.sh runs it before and after each deploy;
+                                      # keeps live, rollback, in-use and KEEP_EXTRA_RELEASES=1 newest; MIN_FREE_GB=3 guard)
 infra/deploy/smoke.sh https://opengravel.henning.rodeo
 ```
 
