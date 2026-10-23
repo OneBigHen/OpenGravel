@@ -17,9 +17,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
 import type { RoutePlanIdentityWire } from "@/application/planner/ports/route-plan-contract";
+import { createRideDocument } from "@/domain/ride/create";
+import { applyRideCommand } from "@/domain/ride/reducer";
 import type { RouteScoreComponents } from "@/domain/route/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
-import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
+import type { RideRepositoryPort } from "@/infrastructure/storage/ride-repository";
+import {
+  createRideDocumentStore,
+  placeStartCommand,
+} from "@/ui/stores/ride-document-store";
+import { RESTORE_ANNOUNCEMENT_MS } from "@/ui/planner/hooks/useRestoreAnnouncement";
 import { createPlanningSessionStore } from "@/ui/stores/planning-session-store";
 import { createPlannerUiStore } from "@/ui/stores/planner-ui-store";
 import { PlannerWorkspace } from "@/ui/planner/PlannerWorkspace";
@@ -242,6 +249,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -1223,5 +1231,67 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
 
     // And the surface itself is never claimed as known.
     expect(screen.getByTestId("route-unknowns-note")).toHaveTextContent(/surface/);
+  });
+});
+
+/**
+ * A restored draft's confirmation (04 §20).
+ *
+ * The boot restore says "Restored your draft", and only a ride command clears
+ * that store status. The status line must therefore treat it as a one-shot
+ * announcement: once the plan has something to say, that is what the line
+ * reports, instead of repeating the restore for the rest of the session.
+ */
+describe("PlannerWorkspace — a restored draft", () => {
+  it("shows the restore confirmation once, then the plan status", async () => {
+    const created = createRideDocument({ now: FIXED });
+    const placed = applyRideCommand(
+      created,
+      placeStartCommand(created, ORIGIN, now),
+    );
+    if (placed.outcome !== "applied") throw new Error(placed.outcome);
+    const restored = placed.document;
+    const repository: RideRepositoryPort = {
+      saveRide: vi.fn().mockResolvedValue({ ok: true }),
+      loadRide: vi.fn().mockResolvedValue({ ok: true, document: restored }),
+      loadDraftPointer: vi.fn().mockResolvedValue({
+        id: "active",
+        rideId: restored.rideId,
+        updatedAt: restored.updatedAt,
+      }),
+      deleteRide: vi.fn().mockResolvedValue(undefined),
+      readRideRevision: vi.fn().mockResolvedValue(null),
+    };
+    const rideDocumentStore = createRideDocumentStore({ now, repository });
+    await waitFor(() => {
+      expect(rideDocumentStore.getState().restoreStatus.state).toBe("restored");
+    });
+
+    // The announcement's countdown is the hook's timer, not a plan request.
+    vi.useFakeTimers();
+    const planningSessionStore = createPlanningSessionStore({
+      service: createClientPlanningService({ fetcher: unfetched(), now }),
+    });
+    const plannerUiStore = createPlannerUiStore();
+    const mapFactory = createStubMapHostFactory();
+    render(
+      <PlannerWorkspace
+        rideDocumentStore={rideDocumentStore}
+        planningSessionStore={planningSessionStore}
+        plannerUiStore={plannerUiStore}
+        mapHostFactory={mapFactory.factory}
+      />,
+    );
+
+    // The first frame after the restore still confirms it.
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Restored your draft");
+
+    act(() => {
+      vi.advanceTimersByTime(RESTORE_ANNOUNCEMENT_MS);
+    });
+
+    // The ride has a start and no destination, so the plan's own status is the
+    // honest line once the confirmation has been made.
+    expect(screen.getByTestId("status-line")).toHaveTextContent("No plan yet.");
   });
 });
