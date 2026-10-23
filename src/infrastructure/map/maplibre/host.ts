@@ -282,6 +282,16 @@ export const TILE_STARVATION_MS = 8_000;
  */
 export const MAX_AUTOMATIC_RETRIES = 1;
 
+/**
+ * Basemap tile failures before the map treats the connection as gone.
+ *
+ * `navigator.onLine` is a claim about a link, not about the internet: a captive
+ * portal, a dead roaming profile and an edge-of-coverage cell all report online
+ * while every tile fails. Three failures with no tile arriving in between is the
+ * evidence the claim is wrong; one bad tile on a working map never reaches it.
+ */
+export const OFFLINE_TILE_FAILURE_LIMIT = 3;
+
 /** Minimal structural views of the MapLibre API this adapter uses. */
 interface MapLibreLayerSpec {
   readonly id: string;
@@ -899,6 +909,10 @@ export async function createMapLibreHost(
   }
   /** True when the map draws the rider's downloaded basemap (Lane A2). */
   let drawingOfflineBasemap = false;
+  /** Consecutive basemap tile failures with no tile arriving; see the limit above. */
+  let offlineTileFailures = 0;
+  /** The switch already in flight, so a second trigger cannot start another. */
+  let switchingToOfflineBasemap: Promise<void> | null = null;
 
   // --- The published state ------------------------------------------------
 
@@ -2250,6 +2264,8 @@ export async function createMapLibreHost(
     // is never re-armed, which is what keeps a slow-but-working load from being
     // declared failed.
     clearWatchdog(current);
+    // Tiles are arriving, so the link works after all.
+    offlineTileFailures = 0;
     markReady(current);
   }
 
@@ -2257,6 +2273,7 @@ export async function createMapLibreHost(
     const current = attempt;
     if (disposed || current === null || !current.styleReady) return;
     clearWatchdog(current);
+    offlineTileFailures = 0;
     markReady(current);
     markPainted(current);
     // A settled map with a loaded DEM has drawn the relief.
@@ -2297,6 +2314,45 @@ export async function createMapLibreHost(
     startAttempt();
   }
 
+  /**
+   * Rebuilds the running map on the rider's downloaded basemap (Lane A2).
+   *
+   * The archive is a file on the phone, so a map that loses coverage keeps
+   * drawing without a byte of network. This only changes what is *drawn*: it
+   * never claims the plan, the roads or the traffic are offline-ready — the
+   * route engine's own fallback answers for those separately.
+   *
+   * Two triggers both mean "the hosted basemap is not drawing": the browser's
+   * `offline` event, and repeated basemap tile failures on a connection that
+   * still claims to be up. Nothing downloaded means nothing to switch to, and
+   * the failure channel keeps saying what is wrong.
+   */
+  function switchToOfflineBasemap(): void {
+    if (disposed || drawingOfflineBasemap || renderer === null || switchingToOfflineBasemap !== null) return;
+    const offlineRenderer = renderer;
+    switchingToOfflineBasemap = import("@/infrastructure/map/offline-basemap")
+      .then(({ prepareOfflineBasemap }) => prepareOfflineBasemap(offlineRenderer))
+      .catch(() => null)
+      .then((prepared) => {
+        switchingToOfflineBasemap = null;
+        if (prepared === null || disposed || drawingOfflineBasemap) return;
+        style = prepared as unknown as MapStyleSpec;
+        drawingOfflineBasemap = true;
+        container.setAttribute(MAP_BASEMAP_ATTRIBUTE, "offline");
+        const current = attempt;
+        // A map that is already drawing swaps its style in place, and the
+        // `style.load` that follows redraws the ride on it. One that never got
+        // that far is rebuilt on the downloaded style instead.
+        if (current !== null && current.styleReady) current.map.setStyle?.(style, { diff: false });
+        else startAttempt();
+      });
+  }
+
+  /** The browser says the link is gone. */
+  function onDeviceOffline(): void {
+    switchToOfflineBasemap();
+  }
+
   /** The renderer's own `error` event, classified and never swallowed. */
   function onMapError(payload: unknown): void {
     if (disposed) return;
@@ -2306,6 +2362,13 @@ export async function createMapLibreHost(
     if (activeBasemap === "mapbox" && isMapboxRefusal(payload)) {
       fallBackFromMapbox();
       return;
+    }
+    // A basemap tile that failed while the browser still claims a network is
+    // the other shape of "no signal". Any tile that does arrive clears the
+    // count, so a slow-but-working load is never mistaken for a dead link.
+    if (error.kind === "tile" && !drawingOfflineBasemap) {
+      offlineTileFailures += 1;
+      if (offlineTileFailures >= OFFLINE_TILE_FAILURE_LIMIT) switchToOfflineBasemap();
     }
     const current = attempt;
     // A failure *before* the map has drawn is a load failure: the load is not
@@ -2682,6 +2745,7 @@ export async function createMapLibreHost(
       cameraListeners.clear();
       errorListeners.clear();
       statusListeners.clear();
+      window.removeEventListener("offline", onDeviceOffline);
       const current = attempt;
       attempt = null;
       teardownAttempt(current);
@@ -2717,6 +2781,9 @@ export async function createMapLibreHost(
       container.setAttribute(MAP_BASEMAP_ATTRIBUTE, "offline");
     }
   }
+  // Connectivity is a live fact, not a start-up one: the map is built once and
+  // has to survive the signal disappearing underneath it.
+  window.addEventListener("offline", onDeviceOffline);
   // Two independent StrictMode creates can both be past the first claim sweep;
   // sweeping again after the await keeps "one host per container" true whichever
   // one resolves last.

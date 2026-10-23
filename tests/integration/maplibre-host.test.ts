@@ -72,6 +72,8 @@ interface FakeRenderer {
     terrainCalls: unknown[];
     /** Camera animations requested by the host. */
     easeCalls: Record<string, unknown>[];
+    /** Every style passed to `setStyle`, in order. */
+    styles: unknown[];
   };
   readonly Map: new (options: Record<string, unknown>) => FakeMapInstance;
   setWorkerUrl(url: string): void;
@@ -115,6 +117,7 @@ const fake = vi.hoisted((): FakeRenderer => {
     imageAdds: [],
     terrainCalls: [],
     easeCalls: [],
+    styles: [],
   };
 
   class FakeMap implements FakeMapInstance {
@@ -259,6 +262,14 @@ const fake = vi.hoisted((): FakeRenderer => {
       this.fits.push({ bounds, options });
     }
 
+    // Like the real renderer: the style's own sources and layers go, and
+    // `style.load` follows so the host can redraw the ride on it.
+    setStyle(style: unknown): void {
+      state.styles.push(style);
+      this.resetStyle();
+      this.fire("style.load");
+    }
+
     remove(): void {
       state.removals += 1;
     }
@@ -276,6 +287,19 @@ const fake = vi.hoisted((): FakeRenderer => {
 vi.mock("maplibre-gl", () => ({
   Map: fake.Map,
   setWorkerUrl: fake.setWorkerUrl,
+}));
+
+/**
+ * The downloaded basemap lives behind an IndexedDB/OPFS read, so the host's
+ * connectivity reaction is exercised through this seam: `null` (nothing
+ * downloaded) unless a test supplies a style.
+ */
+const offlineBasemap = vi.hoisted(() => ({
+  prepare: vi.fn<() => Promise<Record<string, unknown> | null>>(async () => null),
+}));
+
+vi.mock("@/infrastructure/map/offline-basemap", () => ({
+  prepareOfflineBasemap: offlineBasemap.prepare,
 }));
 
 const OPTIONS = {
@@ -376,6 +400,9 @@ afterEach(() => {
   fake.state.terrainCalls = [];
   fake.state.sourceLoaded = false;
   fake.state.easeCalls = [];
+  fake.state.styles.length = 0;
+  offlineBasemap.prepare.mockReset();
+  offlineBasemap.prepare.mockResolvedValue(null);
   document.body.innerHTML = "";
 });
 
@@ -1694,4 +1721,73 @@ it("does not arm a scoped route drag when another finger lands during a consumed
   canvas.dispatchEvent(pointerEvent("pointerup", { x: 80, y: 80, pointerId: 4 }));
   expect(intents.filter((intent) => intent.type === "pointer-down" || intent.type === "gesture-commit")).toHaveLength(0);
   host.dispose();
+});
+
+/**
+ * Losing signal mid-ride is the ordinary case, not a cold start: the map was
+ * built on the hosted basemap, and the archive on the phone has to take over
+ * while the rider is already riding.
+ */
+describe("MapLibreHost — signal lost mid-ride", () => {
+  const OFFLINE_STYLE = {
+    version: 8,
+    sources: { "ogv-offline-0": { type: "vector", url: "pmtiles://ogv-pa" } },
+    layers: [],
+  };
+
+  it("swaps in the downloaded basemap when the device goes offline, keeping the ride drawn", async () => {
+    offlineBasemap.prepare.mockResolvedValue(OFFLINE_STYLE);
+    const element = container();
+    const host = await createMapLibreHost(element, OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    host.applyScene(scene());
+    expect(element.getAttribute(MAP_BASEMAP_ATTRIBUTE)).toBe("empty");
+    expect(map.layers.has(MAP_LAYER_IDS.routeSelected)).toBe(true);
+    fake.state.dataWrites.length = 0;
+
+    window.dispatchEvent(new Event("offline"));
+
+    await vi.waitFor(() => expect(fake.state.styles).toHaveLength(1));
+    expect(fake.state.styles[0]).toEqual(OFFLINE_STYLE);
+    // The gate reads this attribute to know which basemap is on screen.
+    expect(element.getAttribute(MAP_BASEMAP_ATTRIBUTE)).toBe("offline");
+    // The style swap drops every layer; the rider's own line is put back, not
+    // left blank.
+    expect(map.layers.has(MAP_LAYER_IDS.routeSelected)).toBe(true);
+    expect(map.sources.has(MAP_SOURCE_IDS.routes)).toBe(true);
+    host.dispose();
+  });
+
+  it("treats repeated basemap tile failures as effectively offline when the browser still claims a network", async () => {
+    offlineBasemap.prepare.mockResolvedValue(OFFLINE_STYLE);
+    const element = container();
+    const host = await createMapLibreHost(element, OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+
+    for (let failure = 0; failure < 3; failure += 1) {
+      map.fire("error", { sourceId: "osm-raster", tile: { z: 10 }, error: new Error("Failed to fetch") });
+    }
+
+    await vi.waitFor(() => expect(fake.state.styles).toHaveLength(1));
+    expect(element.getAttribute(MAP_BASEMAP_ATTRIBUTE)).toBe("offline");
+    host.dispose();
+  });
+
+  it("keeps the configured basemap when nothing is downloaded, and stops listening once disposed", async () => {
+    const element = container();
+    const host = await createMapLibreHost(element, OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+
+    window.dispatchEvent(new Event("offline"));
+    await vi.waitFor(() => expect(offlineBasemap.prepare).toHaveBeenCalledTimes(1));
+    expect(fake.state.styles).toHaveLength(0);
+    expect(element.getAttribute(MAP_BASEMAP_ATTRIBUTE)).toBe("empty");
+
+    host.dispose();
+    window.dispatchEvent(new Event("offline"));
+    expect(offlineBasemap.prepare).toHaveBeenCalledTimes(1);
+  });
 });
