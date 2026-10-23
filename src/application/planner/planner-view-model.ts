@@ -123,6 +123,8 @@ export const DISABLED_IN_FLIGHT = "Your ride is on its way — one moment.";
 /** One route choice (04 §11). */
 export interface RouteCardVm {
   readonly routeId: RouteCandidateId;
+  /** Important plan consequences, carried from the server's warning channel. */
+  readonly notices?: readonly string[];
   /**
    * The role behind the label, as a stable token (`best-ride`, `alternative`,
    * …). Stable identity rather than display copy: it is what a hook, a test or
@@ -644,6 +646,7 @@ function routeCards(
     const runs = surfaceRuns(candidate.evidence["surfaceMix"]);
     return {
       routeId: candidate.id,
+      notices: candidate.warnings.filter(warning => warning.code === "destination-final-approach").map(warning => warning.message),
       tint: bundle.candidates.indexOf(candidate),
       ...(curviness === null ? {} : { curviness: { level: curviness, label: CURVINESS_LABELS[curviness - 1] ?? "Curvy" } }),
       ...(strip === null ? {} : { surfaceStrip: strip }),

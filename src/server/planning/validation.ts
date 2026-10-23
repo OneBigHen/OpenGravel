@@ -370,6 +370,10 @@ function roadSpanGeometryIssues(
 function requestGeometryIssues(value: Record<string, unknown>, issues: ValidationIssue[]): void {
   coordinateIssues(value["origin"], "request.origin", issues);
   coordinateIssues(value["destination"], "request.destination", issues);
+  const label = value["destinationLabel"];
+  if (label !== undefined && (typeof label !== "string" || label.length > 200 || label.trim().length === 0 || /[\u0000-\u001f\u007f]/.test(label))) {
+    issues.push(issue("invalid-value", "request.destinationLabel", "must be a non-empty destination name of at most 200 characters"));
+  }
   coordinateListIssues(value["stops"], "request.stops", MAX_STOPS, issues, "stops");  coordinateListIssues(
     value["shaping"],
     "request.shaping",
@@ -823,6 +827,7 @@ export function parseRoutePlanRequestBody(
     requestId: requestSource["requestId"] as string,
     origin: toCoordinate(requestSource["origin"]),
     destination: toCoordinate(requestSource["destination"]),
+    ...(typeof requestSource["destinationLabel"] === "string" ? { destinationLabel: requestSource["destinationLabel"].trim() } : {}),
     stops: toCoordinateList(requestSource["stops"]),
     shaping: toCoordinateList(requestSource["shaping"]),
     profile: requestSource["profile"] as string,

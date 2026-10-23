@@ -247,6 +247,13 @@ function expectInvalid(result: PlanRequestResult): Extract<PlanRequestResult, { 
 }
 
 describe("buildProviderRequest — mapping (06-ROUTING-AND-DECISION-ENGINE §6)", () => {
+  it("normalizes destination copy so a label cannot invalidate an otherwise routable request", async () => {
+    const intent = fullIntent();
+    const finishPoint = { ...intent.finish!, label: "  Mountain\nPark  " };
+    const result = expectOk(await buildProviderRequest({ ...intent, finish: finishPoint }, contextWith(resolverSpy(new Map([["geo_avoid_1", AVOID_POLYGON]])))));
+    expect(result.request.destinationLabel).toBe("Mountain Park");
+  });
+
   it("maps a fully populated intent onto the provider request", async () => {
     const spy = resolverSpy(new Map([["geo_avoid_1", AVOID_POLYGON]]));
 
@@ -264,6 +271,7 @@ describe("buildProviderRequest — mapping (06-ROUTING-AND-DECISION-ENGINE §6)"
     expect(result.request.requestId).toBe("req_fixed");
     expect(result.request.origin).toEqual(origin);
     expect(result.request.destination).toEqual(finish);
+    expect(result.request.destinationLabel).toBe("Cabin");
     expect(result.request.stops).toEqual([firstStop, secondStop]);
     expect(result.request.shaping).toEqual([firstShaping, secondShaping]);
     expect(result.profile).toBe("curvy-gravel");

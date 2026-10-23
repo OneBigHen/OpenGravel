@@ -132,6 +132,15 @@ describe("RouteDecisionCard", () => {
     expect(screen.queryByText("Traffic clear", { exact: true })).not.toBeInTheDocument();
   });
 
+  it("shows the selected route's final-approach warning in the existing notes", () => {
+    const message = "Ends 0.6 mi before Hawk Mountain Sanctuary — the last stretch isn't open to motorcycles.";
+    const selected = card({ notices: [message] });
+    const { rerender } = render(<RouteChoices cards={[selected]}><span /></RouteChoices>);
+    expect(screen.getByTestId("route-plan-notice")).toHaveTextContent(message);
+    rerender(<RouteChoices cards={[{ ...selected, isSelected: false }]}><span /></RouteChoices>);
+    expect(screen.queryByTestId("route-plan-notice")).not.toBeInTheDocument();
+  });
+
   it("does not call traffic unknown when the selected ride has it", () => {
     render(
       <RouteChoices cards={[card({ trafficLabel: "+5–8 min in traffic" }), card({ routeId: ALT_ID })]}>

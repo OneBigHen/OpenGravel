@@ -386,6 +386,15 @@ describe("buildPlannerViewModel — failure and cancellation copy", () => {
 });
 
 describe("buildPlannerViewModel — route cards", () => {
+  it("projects the final-approach warning onto the route choices notice", () => {
+    const message = "Ends 0.6 mi before Mountain Park — the last stretch isn't open to motorcycles.";
+    const route = { ...BEST, warnings: [{ id: "approach", code: "destination-final-approach", severity: "warning" as const, message }] };
+    const vm = buildPlannerViewModel(input({ session: session("ready", {
+      committedBundle: bundle([route], BEST_ID), selectedRouteId: BEST_ID,
+    }) }));
+    expect(vm.routeCards[0]!.notices).toEqual([message]);
+  });
+
   const ready = (): PlanningSessionSnapshot =>
     session("ready", {
       committedBundle: bundle([BEST, FAST], BEST_ID, {

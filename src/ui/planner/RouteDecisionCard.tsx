@@ -94,6 +94,11 @@ export function RouteChoices({
       <ul className="og-route-list" data-testid="route-list">
         {children}
       </ul>
+      {cards.find(card => card.isSelected)?.notices?.map(message => (
+        <p className="og-route-choices__note" role="status" data-testid="route-plan-notice" key={message}>
+          {message}
+        </p>
+      ))}
       {unknowns.length === 0 ? null : (
         <p className="og-route-choices__note" data-testid="route-unknowns-note">
           {`Not yet known for these rides: ${unknowns.join(" and ")}.`}
