@@ -143,7 +143,10 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
     return {
       kind: "alert",
       title: isEmergency(snapshot.alert.reason) ? `${name} may need help` : `${name} ended the ride`,
-      detail: last === null ? banner : `${banner} · updated ${ageText(now - last.t)} ago`,
+      // The red banner already says what happened; the card says how fresh it is.
+      detail: last === null
+        ? "No location was shared before the alert."
+        : `Last location ${ageText(now - last.t)} ago${batteryText(last.battery) === null ? "" : ` · battery ${batteryText(last.battery)}`}`,
       alert: { text: banner, emergency: isEmergency(snapshot.alert.reason), at: snapshot.alert.at },
     };
   }

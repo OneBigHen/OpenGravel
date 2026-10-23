@@ -137,8 +137,10 @@ describe("follower card", () => {
     expect(card.alert).not.toBeNull();
     expect(card.alert?.emergency).toBe(true);
     expect(card.alert?.text).toMatch(/^Possible crash detected at \d{1,2}:\d{2}\s(?:AM|PM) — last known location$/);
-    // The stale rule does not replace the alert that is the reason for the visit.
-    expect(card.detail).toContain("updated 9 min ago");
+    // The stale rule does not replace the alert that is the reason for the visit,
+    // and the card does not repeat the banner's sentence.
+    expect(card.detail).toContain("Last location 9 min ago");
+    expect(card.detail).not.toContain("Possible crash");
   });
 
   it("treats an SOS as an emergency and a cancelled ride as not one", () => {
