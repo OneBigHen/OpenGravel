@@ -99,13 +99,15 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
  * budget, so a request with no forwarded address is left to the origin guard,
  * which also declines to act without one.
  */
+/**
+ * A per-address budget for endpoints whose writes are permanent. Every key is
+ * metered — private, loopback and header-less ("anonymous") ones included —
+ * because the key comes from a header a client can write: exempting
+ * "10.0.0.1" would exempt anyone who sends it. A test server lifts budgets
+ * with OGV_RATE_LIMIT_UNLIMITED instead.
+ */
 export function createAddressRateLimiter(options: RateLimitOptions): RateLimiter {
-  const limiter = createRateLimiter(options);
-  return {
-    check(request) {
-      return actionableAddress(clientKey(request, options.env)) === null ? null : limiter.check(request);
-    },
-  };
+  return createRateLimiter(options);
 }
 
 /** Caps how many expensive requests run at once, so a burst queues at the client, not in the router. */
