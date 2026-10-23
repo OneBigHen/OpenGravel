@@ -79,6 +79,18 @@ describe("security guard", () => {
     expect(guard.inspect(request(address), "/api/shares")).toMatchObject({ status: 429 });
   });
 
+  it("does not meter an address when the browser gate lifts the caps", () => {
+    const guard = createGuard({
+      env: { ...ENV, OGV_RATE_LIMIT_UNLIMITED: "1" },
+      now: () => 0,
+      readBlocklist: () => new Set(),
+      meteredPerMinute: 1,
+    });
+    for (let index = 0; index < 10; index += 1) {
+      expect(guard.inspect(request(), "/api/route-plan")).toEqual({ action: "pass" });
+    }
+  });
+
   it("never acts on private, loopback or unknown addresses", () => {
     for (const key of ["anonymous", "127.0.0.1", "192.168.1.61", "172.23.0.1", "10.0.0.4", "::1", "fd00::2", "100.100.1.1"]) {
       expect(actionableAddress(key), key).toBeNull();
