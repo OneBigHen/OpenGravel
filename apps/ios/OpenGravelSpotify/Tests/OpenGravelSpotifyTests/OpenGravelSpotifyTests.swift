@@ -2,6 +2,26 @@ import XCTest
 @testable import OpenGravelSpotify
 
 final class OpenGravelSpotifyTests: XCTestCase {
+    func testCallbackErrorBecomesARiderMessage() {
+        let refused = URL(string: "opengravel://spotify-callback?error=unknown_error&error_description=An%20unknown%20error%20has%20occured")!
+        XCTAssertEqual(
+            OpenGravelSpotifyCallback.errorMessage(from: refused),
+            "Spotify turned down the connection (unknown_error). Tap Connect to try again."
+        )
+        let cancelled = URL(string: "opengravel://spotify-callback?error=access_denied")!
+        XCTAssertEqual(OpenGravelSpotifyCallback.errorMessage(from: cancelled), "Spotify sign-in was cancelled. Tap Connect to try again.")
+        XCTAssertNil(OpenGravelSpotifyCallback.errorMessage(from: URL(string: "opengravel://spotify-callback?code=abc")!))
+        XCTAssertNil(OpenGravelSpotifyCallback.errorMessage(from: URL(string: "opengravel://spotify-callback")!))
+    }
+
+    func testFailedAttemptLetsConnectStartAgain() {
+        var lifecycle = OpenGravelSpotifyLifecycle(pendingAuthorization: true)
+        XCTAssertNil(lifecycle.beginConnection())
+        XCTAssertTrue(lifecycle.connectionFailed())
+        XCTAssertFalse(lifecycle.authorizationPending)
+        XCTAssertNotNil(lifecycle.beginConnection())
+    }
+
     func testConfigurationRequiresClientIDAndRedirectURL() {
         XCTAssertNil(OpenGravelSpotifyConfiguration(clientID: nil, redirectURL: "opengravel://spotify-callback"))
         XCTAssertNil(OpenGravelSpotifyConfiguration(clientID: "client", redirectURL: nil))
