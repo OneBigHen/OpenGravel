@@ -9470,8 +9470,9 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-layers__lens[data-on="true"] {
   border-color: var(--og-deep-spruce);
-  background: var(--og-deep-spruce);
-  color: var(--og-on-fill);
+  box-shadow: inset 0 0 0 1px var(--og-deep-spruce);
+  background: color-mix(in srgb, var(--og-deep-spruce) 14%, var(--og-paper));
+  color: var(--og-deep-spruce);
 }
 
 .og-layers__lens-glyph {
