@@ -163,9 +163,11 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
 
       <form onSubmit={(event) => { event.preventDefault(); void postRating(); }}>
         <label>Rate this ride
-          <select aria-label="Your rating" value={rating} onChange={(event) => setRating(Number(event.target.value))}>
-            {[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} {value === 1 ? "star" : "stars"}</option>)}
-          </select>
+          <span className="og-select">
+            <select aria-label="Your rating" value={rating} onChange={(event) => setRating(Number(event.target.value))}>
+              {[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} {value === 1 ? "star" : "stars"}</option>)}
+            </select>
+          </span>
         </label>
         <button type="submit" className="og-secondary" disabled={busy}>Save rating</button>
       </form>
@@ -180,12 +182,14 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
 
       <form onSubmit={(event) => void report(event)}>
         <label>Report a road condition
-          <select aria-label="Road condition" value={condition} onChange={(event) => setCondition(event.target.value)}>
-            <option value="closed">Closed</option>
-            <option value="rough">Rough</option>
-            <option value="gravel">Gravel</option>
-            <option value="hazard">Hazard</option>
-          </select>
+          <span className="og-select">
+            <select aria-label="Road condition" value={condition} onChange={(event) => setCondition(event.target.value)}>
+              <option value="closed">Closed</option>
+              <option value="rough">Rough</option>
+              <option value="gravel">Gravel</option>
+              <option value="hazard">Hazard</option>
+            </select>
+          </span>
         </label>
         <label htmlFor="road-condition-note">Optional note
           <textarea id="road-condition-note" maxLength={CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH} value={reportNote} onChange={(event) => setReportNote(event.target.value)} placeholder="Where on the route? What did you see?" />

@@ -88,20 +88,22 @@ export function ThingsFeed() {
       <div className="og-explore__row">
         <label>
           Riding radius{" "}
-          <select
-            aria-label="Riding radius"
-            value={radius}
-            onChange={(event) => {
-              generation.current++;
-              controller.current?.abort();
-              setRadius(event.target.value);
-              setState({ kind: "idle" });
-            }}
-          >
-            <option value="50">50 mi</option>
-            <option value="100">100 mi</option>
-            <option value="125">125 mi</option>
-          </select>
+          <span className="og-select">
+            <select
+              aria-label="Riding radius"
+              value={radius}
+              onChange={(event) => {
+                generation.current++;
+                controller.current?.abort();
+                setRadius(event.target.value);
+                setState({ kind: "idle" });
+              }}
+            >
+              <option value="50">50 mi</option>
+              <option value="100">100 mi</option>
+              <option value="125">125 mi</option>
+            </select>
+          </span>
         </label>
         <button type="button" className="og-primary" onClick={load}>
           {state.kind === "ready"
