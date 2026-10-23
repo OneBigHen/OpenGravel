@@ -24,6 +24,7 @@
  * thing the ride surface needs to find it again: the bootstrap pointer.
  */
 
+import type { SketchEndpoints } from "@/domain/sketch/types";
 import type { GeometryRef, RideId, StopId } from "@/domain/ride/ids";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import type { RouteBundle, RouteCandidate, RouteInstruction, SpeedLimitSpan } from "@/domain/route/types";
@@ -91,6 +92,8 @@ export interface RideHandoffInput {
    * does not describe it.
    */
   readonly sketchPreview?: boolean;
+  /** Resolved from the committed trace, as in the planner composer. */
+  readonly sketchDerivedEndpoints?: SketchEndpoints | null;
 }
 
 /** The non-empty stop list the session takes as its pending objective (§13). */
@@ -110,12 +113,13 @@ export function buildRideHandoff(input: RideHandoffInput): RideHandoffOutcome {
   if (input.sketchPreview === true) {
     return { outcome: "refused", code: "sketch-preview", message: SKETCH_PREVIEW_RIDE_REFUSAL };
   }
-  if (document.intent.start === null) {
+  const hasSketchEndpoints = document.intent.sketch !== null && input.sketchDerivedEndpoints != null;
+  if (document.intent.start === null && !hasSketchEndpoints) {
     return { outcome: "refused", code: "no-start", message: "Set a start point first." };
   }
   // A loop ends where it started, so it needs no finish (UX rework 2: every
   // "2-hour loop from here" used to stop here, planned but unstartable).
-  if (document.intent.shape !== "loop" && document.intent.finish === null && document.intent.stops.length === 0) {
+  if (document.intent.shape !== "loop" && document.intent.finish === null && document.intent.stops.length === 0 && !hasSketchEndpoints) {
     return {
       outcome: "refused",
       code: "no-destination",

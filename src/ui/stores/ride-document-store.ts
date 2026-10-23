@@ -987,7 +987,8 @@ export const CLEAR_RIDE_LABEL = "Clear route";
 
 /**
  * Builds `ride.clear`: every authored point goes (start, destination, stops,
- * shaping); preferences, avoid areas and road spans stay. One undo restores it.
+ * shaping) along with its sketch; preferences, avoid areas and road spans stay.
+ * One undo restores it.
  */
 export function clearRideCommand(document: RideDocument): ClearRideCommand {
   return { ...commandBase(document, "rider", CLEAR_RIDE_LABEL), type: "ride.clear" };

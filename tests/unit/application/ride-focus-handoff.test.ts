@@ -25,7 +25,7 @@ import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-
 import type { RideSessionRepositoryPort } from "@/application/persistence/ride-session-repository";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import { createRideDocument } from "@/domain/ride/create";
-import { newPointId, newStopId, newRideId, type GeometryRef, type RideId } from "@/domain/ride/ids";
+import { newPointId, newStopId, newRideId, newSketchId, type GeometryRef, type RideId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 import type { RouteBundle, RouteCandidate } from "@/domain/route/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
@@ -152,6 +152,35 @@ describe("buildRideHandoff", () => {
     expect(outcome.request.routeGeometryRef).toBe(GEOMETRY_REF);
     expect(outcome.request.itinerary).toHaveLength(1);
     expect(outcome.request.instructions).toEqual(guidance);
+  });
+
+  it("accepts resolved sketch endpoints without asking for an already-visible start", () => {
+    const ride = document();
+    const input = {
+      document: {
+        ...ride,
+        intent: {
+          ...ride.intent,
+          start: null,
+          finish: null,
+          stops: [],
+          sketch: {
+            id: newSketchId(),
+            rawStrokeRefs: [GEOMETRY_REF],
+            corridorRef: GEOMETRY_REF,
+            topologyHints: [],
+            endpointPolicy: "derive" as const,
+          },
+        },
+      },
+      bundle: bundle(),
+      selectedCandidate: candidate(),
+      hasRouteLine: true,
+      sketchDerivedEndpoints: { start: { lon: -75.44, lat: 40.13 }, finish: { lon: -75.4, lat: 40.1 } },
+    };
+    expect(buildRideHandoff(input).outcome).toBe("ready");
+    expect(buildRideHandoff({ ...input, sketchDerivedEndpoints: null })).toMatchObject({ code: "no-start" });
+    expect(buildRideHandoff({ ...input, sketchPreview: true })).toMatchObject({ code: "sketch-preview" });
   });
 
   it("refuses without a plan, a start, a destination, a selection or a line", () => {

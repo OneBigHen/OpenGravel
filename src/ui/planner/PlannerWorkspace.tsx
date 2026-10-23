@@ -404,8 +404,9 @@ export function PlannerWorkspace({
         selectedCandidate,
         hasRouteLine: activeRoute !== null,
         sketchPreview: showingSketchPreview,
+        sketchDerivedEndpoints,
       }),
-    [document, session, selectedCandidate, activeRoute, showingSketchPreview],
+    [document, session, selectedCandidate, activeRoute, showingSketchPreview, sketchDerivedEndpoints],
   );
 
   const routeCardCount = viewModel.routeCards.length;
@@ -662,7 +663,7 @@ export function PlannerWorkspace({
   const sheetActions = usePlannerSheetActions(plannerUiStore, planningSessionStore);
 
   /** 04 §20 undo/redo and OW-01 Clear route, for the sheet. */
-  const history = usePlannerHistoryActions({ document, rideDocumentStore, plannerUiStore });
+  const history = usePlannerHistoryActions({ document, rideDocumentStore, plannerUiStore, planningSessionStore, clearUpdateHighlight });
 
   // --- Failed-update recovery (04 §21) --------------------------------------
 
