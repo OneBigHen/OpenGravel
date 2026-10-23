@@ -15,6 +15,7 @@ import {
   itineraryRefFor,
   legLabel,
   mapRefForItineraryRef,
+  placeFieldLines,
   type PlannerViewModelInput,
   type RowLegVm,
   visiblePlanningSession,
@@ -204,6 +205,31 @@ function session(
 function input(overrides: Partial<PlannerViewModelInput> = {}): PlannerViewModelInput {
   return { document: READY_DOCUMENT, session: session("idle"), ...overrides };
 }
+
+describe("placeFieldLines — what a place field shows", () => {
+  it("names a place and drops its coordinate line", () => {
+    expect(placeFieldLines("Hawk Mountain Sanctuary, Albany, PA", "40.6288, -75.9772")).toEqual({
+      label: "Hawk Mountain Sanctuary, Albany, PA",
+      coordinate: null,
+    });
+    expect(placeFieldLines("Home", "39.9500, -75.2000")).toEqual({
+      label: "Home",
+      coordinate: null,
+    });
+  });
+
+  it("keeps the coordinate as the second line of a dropped pin", () => {
+    expect(placeFieldLines("Dropped pin", "40.6288, -75.9772")).toEqual({
+      label: "Dropped pin",
+      coordinate: "40.6288, -75.9772",
+    });
+    // Nothing to show as a second line when there is no coordinate.
+    expect(placeFieldLines("Dropped pin", null)).toEqual({
+      label: "Dropped pin",
+      coordinate: null,
+    });
+  });
+});
 
 describe("buildPlannerViewModel — plan commitment and disabled reasons", () => {
   it("asks for a start when none is authored", () => {

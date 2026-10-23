@@ -465,6 +465,29 @@ export function isPlanningInFlight(
  */
 export const DROPPED_PIN_LABEL = "Dropped pin";
 
+/** The one line a place field shows, and its optional secondary detail line. */
+export interface PlaceFieldLines {
+  /** The point's name: the rider's own, a resolved place, or "Dropped pin". */
+  readonly label: string;
+  /**
+   * The coordinate line, only for a point that has no name at all.
+   *
+   * A named place is the whole answer; repeating its coordinate underneath is
+   * machine detail a rider does not need. A dropped pin is different: "Dropped
+   * pin" alone would not say which pin, so the coordinate stays as small
+   * secondary text.
+   */
+  readonly coordinate: string | null;
+}
+
+/**
+ * What a place field shows for one point: a named place reads as its name, and
+ * only a dropped pin carries the coordinate as a second line.
+ */
+export function placeFieldLines(label: string, coordinate: string | null): PlaceFieldLines {
+  return { label, coordinate: label === DROPPED_PIN_LABEL ? coordinate : null };
+}
+
 /**
  * A placed point's label: its authored name, else the place a geocoder found at
  * its coordinate, else "Your location" for an unnamed GPS start, else

@@ -28,7 +28,8 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
     };
     await route.fulfill({ response, json: enriched });
   });
-  await page.goto("/");
+  // The comparison is developer detail, shown only on the explicit debug page.
+  await page.goto("/?debug=routing");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
   await page.getByTestId("start-search").fill("Jim Thorpe");

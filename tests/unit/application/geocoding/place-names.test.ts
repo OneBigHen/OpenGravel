@@ -4,6 +4,9 @@ import { locateOnce } from "@/application/geocoding/locate-once";
 import { createPlaceNameCache, placeNameKey } from "@/application/geocoding/place-names";
 import {
   createHttpPlaceSearch,
+  dedupePlaces,
+  normalizedPlaceName,
+  PLACE_NAME_DUPLICATE_RADIUS_METERS,
   PLACE_SEARCH_UNAVAILABLE,
   type PlaceMatch,
   type PlaceSearchPort,
@@ -17,6 +20,15 @@ const JIM_THORPE: PlaceMatch = {
   context: "Carbon County, PA",
   coordinate: { lat: 40.8757, lon: -75.7324 },
   provider: "fixture",
+};
+
+const HAWK_MOUNTAIN: PlaceMatch = {
+  id: "photon:hawk-mountain",
+  label: "Hawk Mountain Sanctuary, Albany, PA",
+  name: "Hawk Mountain Sanctuary",
+  context: "Albany Township, Berks County, PA",
+  coordinate: { lat: 40.6288, lon: -75.9772 },
+  provider: "photon",
 };
 
 function port(reverse: PlaceSearchPort["reverse"]): PlaceSearchPort {
@@ -111,6 +123,38 @@ describe("HTTP place search client", () => {
       const outcome = await createHttpPlaceSearch({ fetcher }).search("Easton");
       expect(outcome).toEqual({ status: "unavailable", reason: PLACE_SEARCH_UNAVAILABLE });
     }
+  });
+
+  it("keeps one answer for a place the geocoder repeated", async () => {
+    const repeated = [
+      HAWK_MOUNTAIN,
+      { ...HAWK_MOUNTAIN, id: "photon:hawk-2", context: "Albany, PA" },
+      // The same name with punctuation/case noise and a few metres of drift.
+      { ...HAWK_MOUNTAIN, id: "photon:hawk-3", name: "hawk mountain sanctuary!", coordinate: { lat: 40.62885, lon: -75.97725 } },
+      // A namesake well outside the radius is a different place.
+      { ...HAWK_MOUNTAIN, id: "photon:hawk-brewery", coordinate: { lat: 40.6557, lon: -75.4942 } },
+    ];
+    const outcome = await createHttpPlaceSearch({ fetcher: vi.fn(async () => Response.json({ places: repeated })) }).search("hawk mountain");
+    expect(outcome).toEqual({
+      status: "ok",
+      places: [HAWK_MOUNTAIN, repeated[3]],
+    });
+  });
+
+  it("normalizes names before treating them as the same place", () => {
+    expect(normalizedPlaceName("  Hawk Mountain Sanctuary, PA ")).toBe("hawk mountain sanctuary pa");
+    expect(normalizedPlaceName("Hawk  Mountain Sanctuary, PA")).toBe("hawk mountain sanctuary pa");
+    expect(PLACE_NAME_DUPLICATE_RADIUS_METERS).toBe(400);
+
+    // Same name, different part of the state: both stay.
+    const far: PlaceMatch = { ...HAWK_MOUNTAIN, id: "photon:far", coordinate: { lat: 41.2, lon: -75.9772 } };
+    expect(dedupePlaces([HAWK_MOUNTAIN, far]).map((place) => place.id)).toEqual([
+      HAWK_MOUNTAIN.id,
+      far.id,
+    ]);
+    // An unnamed answer is never folded into another.
+    const unnamed: PlaceMatch = { ...HAWK_MOUNTAIN, id: "photon:unnamed", name: "" };
+    expect(dedupePlaces([unnamed, { ...unnamed, id: "photon:unnamed-2" }])).toHaveLength(2);
   });
 
   it("does not ask for queries shorter than two characters", async () => {

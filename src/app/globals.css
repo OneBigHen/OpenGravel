@@ -3454,15 +3454,22 @@ h3,
   min-width: 0;
 }
 
-/* Fixed label column, flexible value cell, right-aligned action: both rows are
-   the same height whatever the value's length (OGV-D-215). */
+/* Fixed label column, flexible value cell, right-aligned action (OGV-D-215).
+   The row grows with its value, so a long name or a second coordinate line
+   makes its own row taller rather than spilling into the next one. */
 .og-composer__row {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr) auto;
   grid-template-areas: "label value action";
+  grid-template-rows: auto;
   align-items: center;
+  align-content: start;
   column-gap: 8px;
   row-gap: 6px;
+  /* Tracks are content-sized, never clamped to the 44 px target: a value that
+     wraps to a second line makes its own row taller and pushes the next row
+     down, so two fields can never overlap at a narrow phone width. */
+  grid-auto-rows: minmax(min-content, max-content);
   min-height: 44px;
 }
 
@@ -3492,7 +3499,9 @@ h3,
   position: relative;
   grid-template-columns: 14px minmax(0, 1fr) auto;
   grid-template-areas: "dot main action";
+  grid-template-rows: auto;
   align-items: start;
+  align-content: start;
   column-gap: 12px;
 }
 
@@ -3597,6 +3606,11 @@ h3,
   width: 100%;
   min-width: 0;
   min-height: 48px;
+  /* Its own content sets the height: a wrapped name and a dropped pin's
+     coordinate line stay inside the button instead of painting into the row
+     below. */
+  height: auto;
+  overflow: visible;
   padding: 6px 12px;
   border: 0;
   border-radius: var(--og-radius-control);

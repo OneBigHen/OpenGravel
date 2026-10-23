@@ -32,6 +32,7 @@ import {
   DISABLED_MISSING_START,
   NO_FINISH_LABEL,
   NO_START_LABEL,
+  placeFieldLines,
 } from "@/application/planner/planner-view-model";
 
 /** Stable id for the disabled-reason description (one composer per page). */
@@ -139,10 +140,11 @@ function ChipLabel({ iconic, children }: { readonly iconic: boolean; readonly ch
 }
 
 /**
- * A point's value cell: its name over the coordinate (04 §3, §5). A dropped pin
- * says "Dropped pin" (the app never invents a place name), and the coordinate
- * is machine-readable on `data-coordinate` so the browser gate can assert the
- * exact point the rider placed.
+ * A point's value cell (04 §3, §5). A named place reads as its name alone; a
+ * dropped pin says "Dropped pin" (the app never invents a place name) with the
+ * coordinate as small secondary text. The coordinate is also machine-readable
+ * on `data-coordinate` whichever line it is on, so the browser gate can assert
+ * the exact point the rider placed.
  */
 function PointValue({
   slot,
@@ -155,16 +157,17 @@ function PointValue({
   readonly coordinate: string | null;
   readonly hidden: boolean;
 }) {
+  const lines = placeFieldLines(label, coordinate);
   return (
     <span
       className={hidden ? "og-composer__value og-visually-hidden" : "og-composer__value"}
       data-testid={`${slot}-value`}
       {...(coordinate === null ? {} : { "data-coordinate": coordinate })}
     >
-      <span className="og-composer__value-label">{label}</span>
-      {coordinate === null ? null : (
+      <span className="og-composer__value-label">{lines.label}</span>
+      {lines.coordinate === null ? null : (
         <span className="og-composer__coordinate" data-testid={`${slot}-coordinate`}>
-          {coordinate}
+          {lines.coordinate}
         </span>
       )}
     </span>

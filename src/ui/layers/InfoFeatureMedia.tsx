@@ -56,7 +56,7 @@ function LiveCamera({ url, preview, name, sourceHref }: {
     let closed = false;
     let player: { destroy(): void } | null = null;
     const unavailable = () => {
-      if (!closed) setError("Live camera is unavailable. Try the provider camera.");
+      if (!closed) setError("Live camera is unavailable. Try the camera preview.");
     };
     let mseStarted = false;
     const startMse = () => {
@@ -113,6 +113,6 @@ function LiveCamera({ url, preview, name, sourceHref }: {
       aria-label={`Live traffic camera: ${name}`} />
     {!requested && <button type="button" className="og-button" onClick={() => setRequested(true)}>Play live camera</button>}
     {error !== null && <p role="status">{error}</p>}
-    {sourceHref !== null && <a href={sourceHref} target="_blank" rel="noopener noreferrer">Open provider camera</a>}
+    {sourceHref !== null && <a href={sourceHref} target="_blank" rel="noopener noreferrer">Open live camera</a>}
   </>;
 }
