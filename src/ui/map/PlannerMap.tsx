@@ -49,6 +49,7 @@
  * what failed — without reading pixels it cannot parse.
  */
 
+import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Coordinate } from "@/domain/ride/types";
 import { MAP_LAYERS } from "@/application/map-layers/catalog";
@@ -718,8 +719,6 @@ function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason,
     const menu = ref.current;
     const map = container.current;
     if (menu === null || map === null) return;
-    const previous = document.activeElement;
-    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus({ preventScroll: true });
     const position = (): void => {
       const bounds = map.getBoundingClientRect();
       const compact = window.matchMedia?.("(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))").matches ?? window.innerWidth <= 1180;
@@ -749,9 +748,11 @@ function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason,
       observer?.disconnect();
       window.removeEventListener("resize", position);
       window.visualViewport?.removeEventListener("resize", position);
-      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
     };
   }, [container, intent, insets]);
+
+  // Focus enters the first row, Tab stays inside, Escape closes, and focus returns to the map (12 §20).
+  useDialogFocus(ref, onClose);
 
   useEffect(() => {
     const outside = (event: PointerEvent): void => {
@@ -763,15 +764,7 @@ function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason,
 
   return (
     <div ref={ref} className="og-map-point-menu" role="dialog" aria-modal="true" aria-label="Plan here"
-      data-testid="map-point-menu" onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-        if (event.key !== "Tab") return;
-        const buttons = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
-        const first = buttons[0];
-        const last = buttons.at(-1);
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }}>
+      data-testid="map-point-menu">
       {POINT_ROWS.map((row) => {
         const reason = row.action === "stop" ? addStopDisabledReason : null;
         return <button key={row.action} type="button" className="og-map-point-menu__row"
