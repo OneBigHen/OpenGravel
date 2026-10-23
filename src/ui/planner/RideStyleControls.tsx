@@ -15,10 +15,11 @@
  * has room for exactly one more line, 04 §2); from 761 px up it is always open.
  */
 
-import { useId, useState } from "react";
+import { useId, useState, useSyncExternalStore } from "react";
 
 import type { ArrivalTarget } from "@/application/planner/arrive-by";
-import type { BikeConstraintSnapshot, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
+import { loopMinutesUntilSunset } from "@/application/planner/loop-until-sunset";
+import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -28,6 +29,8 @@ export interface RideStyleView {
   readonly shape: RideShapeChoice;
   /** The loop's ride time in minutes (the default when none was chosen). */
   readonly loopMinutes: number;
+  /** Where a loop starts; the sunset chip needs it, and hides without it. */
+  readonly startCoordinate?: Coordinate | null;
   readonly roadCharacter: RoadCharacterIntent;
   readonly noveltyPreference: NoveltyPreference;
   readonly surface: SurfaceChoice;
@@ -61,6 +64,9 @@ export interface RideStyleControlsModel {
 
 /** Short escapes first, with longer loops still available. */
 export const LOOP_MINUTE_CHOICES: readonly number[] = [45, 60, 90, 120, 180, 240, 360];
+
+/** The longest loop the picker offers; the sunset chip never exceeds it. */
+export const LOOP_MAX_MINUTES = Math.max(...LOOP_MINUTE_CHOICES);
 
 export const ROAD_CHARACTER_LABELS: Readonly<Record<RoadCharacterIntent, string>> = {
   efficient: "Fast",
@@ -177,23 +183,112 @@ export function RideShapeSwitch({ model }: { readonly model: RideStyleControlsMo
   );
 }
 
+/**
+ * The minute clock the sunset chip reads.
+ *
+ * One shared interval serves every mounted loop row and stops when the last
+ * one goes away, so a destination ride — or any surface without the picker —
+ * runs no timer at all. The snapshot is the `Date` of the last tick, which is
+ * all the chip needs: it recomputes at most once a minute.
+ */
+const minuteClockListeners = new Set<() => void>();
+let minuteClockNow: Date | null = null;
+let minuteClockTimer: number | null = null;
+
+function subscribeMinuteClock(listener: () => void): () => void {
+  minuteClockListeners.add(listener);
+  if (minuteClockTimer === null) {
+    minuteClockNow = new Date();
+    minuteClockTimer = window.setInterval(() => {
+      minuteClockNow = new Date();
+      for (const each of minuteClockListeners) each();
+    }, 60_000);
+  }
+  return () => {
+    minuteClockListeners.delete(listener);
+    if (minuteClockListeners.size === 0 && minuteClockTimer !== null) {
+      window.clearInterval(minuteClockTimer);
+      minuteClockTimer = null;
+    }
+  };
+}
+
+function readMinuteClock(): Date | null {
+  return minuteClockNow;
+}
+
+/** Null on the server, so the chip never disagrees with the markup it hydrates. */
+function readServerMinuteClock(): null {
+  return null;
+}
+
+/** Now, at most once a minute; `fixed` pins it for tests and snapshots. */
+function useMinuteClock(fixed: Date | undefined): Date | null {
+  const ticked = useSyncExternalStore(subscribeMinuteClock, readMinuteClock, readServerMinuteClock);
+  return fixed ?? ticked;
+}
+
+export interface LoopTimeRowProps {
+  readonly model: RideStyleControlsModel;
+  /** The clock the sunset chip reads; tests pin it instead of waiting. */
+  readonly now?: Date;
+}
+
 /** A loop's ride time, in the row the destination occupies on a one-way ride. */
-export function LoopTimeRow({ model }: { readonly model: RideStyleControlsModel }) {
+export function LoopTimeRow({ model, now }: LoopTimeRowProps) {
   const name = useId();
+  const clock = useMinuteClock(now);
+  const sunsetMinutes = clock === null
+    ? null
+    : loopMinutesUntilSunset({
+        coordinate: model.view.startCoordinate ?? null,
+        now: clock,
+        maxMinutes: LOOP_MAX_MINUTES,
+      });
+  /**
+   * The sunset chip writes the same minutes a plain chip would, so it can only
+   * be told apart by remembering the choice; it stays chosen while that value
+   * is still the ride time it would set.
+   */
+  const [chosenSunsetMinutes, setChosenSunsetMinutes] = useState<number | null>(null);
+  const sunsetChosen = sunsetMinutes !== null
+    && chosenSunsetMinutes === sunsetMinutes
+    && sunsetMinutes === model.view.loopMinutes;
+  const chooseSunset = (minutes: number): void => {
+    setChosenSunsetMinutes(minutes);
+    model.actions.setLoopMinutes(minutes);
+  };
+  const choosePlain = (minutes: number): void => {
+    setChosenSunsetMinutes(null);
+    model.actions.setLoopMinutes(minutes);
+  };
   return (
     <div className="og-composer__row og-composer__row--loop">
       <span className="og-composer__label" id={`${name}-label`}>
         Ride time
       </span>
       <div className="og-style__loop" role="radiogroup" aria-labelledby={`${name}-label`} data-testid="loop-time">
+        {sunsetMinutes === null ? null : (
+          <label className="og-style__chip">
+            <input
+              type="radio"
+              name={name}
+              value="sunset"
+              checked={sunsetChosen}
+              onChange={() => chooseSunset(sunsetMinutes)}
+              data-testid="loop-time-sunset"
+            />
+            <span>Until sunset · {formatRideTime(sunsetMinutes)}</span>
+          </label>
+        )}
         {LOOP_MINUTE_CHOICES.map((minutes) => (
           <label key={minutes} className="og-style__chip">
             <input
               type="radio"
               name={name}
               value={minutes}
-              checked={minutes === model.view.loopMinutes}
-              onChange={() => model.actions.setLoopMinutes(minutes)}
+              checked={minutes === model.view.loopMinutes && !sunsetChosen}
+              onChange={() => choosePlain(minutes)}
               data-testid={`loop-time-${minutes}`}
             />
             <span>{formatRideTime(minutes)}</span>
