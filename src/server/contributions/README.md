@@ -45,9 +45,13 @@ a road/span reference and evidence; it does not accept a full ride trace or raw
 route geometry.
 
 `GET /api/contributions?roadRef=road_<id>/span_<id>&limit=100` returns at most
-100 records for that exact road/span. Responses are marked `private, no-store`
-to prevent shared caching. Contribution submission remains anonymous and
-bounded; moderation access is restricted as described above.
+100 *accepted* records for that exact road/span, as `{id, kind, value,
+observedAt, receivedAt, state, decidedAt}`. Pending and rejected submissions are
+never returned here — they exist only in the moderation queue — and the
+reporter's device pseudonym is not part of the public shape, because it links
+every note one device ever wrote. Responses are marked `private, no-store` to
+prevent shared caching. Contribution submission remains anonymous and bounded;
+moderation access is restricted as described above.
 
 `GET /api/contributions/moderation?limit=100` lists at most 100 pending
 submissions for the moderation queue when authorized. `POST

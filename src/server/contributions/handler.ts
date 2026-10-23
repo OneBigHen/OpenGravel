@@ -41,8 +41,23 @@ export interface ContributionSuccessBody {
 }
 
 export interface ContributionListBody {
-  readonly contributions: readonly StoredContribution[];
+  readonly contributions: readonly PublicContribution[];
   readonly limit: number;
+}
+
+/**
+ * What any caller of the public read may see about an approved note: the note
+ * itself, never its reporter. The device pseudo id is a stable handle across
+ * every route a rider ever reviewed, so it stays behind the moderation token.
+ */
+export interface PublicContribution {
+  readonly id: string;
+  readonly kind: StoredContribution["envelope"]["kind"];
+  readonly value: StoredContribution["envelope"]["value"];
+  readonly observedAt: string;
+  readonly receivedAt: string;
+  readonly state: "accepted";
+  readonly decidedAt: string | null;
 }
 
 export interface ContributionModerationQueueBody {
@@ -181,6 +196,18 @@ export async function handleContributionPost(
   }
 }
 
+function publicContribution(record: StoredContribution): PublicContribution {
+  return {
+    id: record.id,
+    kind: record.envelope.kind,
+    value: record.envelope.value,
+    observedAt: record.envelope.observedAt,
+    receivedAt: record.receivedAt,
+    state: "accepted",
+    decidedAt: record.decidedAt,
+  };
+}
+
 export async function handleContributionGet(
   query: ContributionGetQuery,
   dependencies: ContributionGetDependencies,
@@ -190,8 +217,10 @@ export async function handleContributionGet(
   const limit = parsedLimit(query.limit, CONTRIBUTION_STORE_MAX_RESULTS);
   if (limit === null) return validationFailure("limit must be a non-negative integer.");
   try {
+    // Moderation decides what the public reads: pending and rejected notes are
+    // the moderator's queue, not a rider-facing list.
     return handlerResult(200, {
-      contributions: dependencies.store.list(roadRef, limit),
+      contributions: dependencies.store.listAccepted(roadRef, limit).map(publicContribution),
       limit,
     });
   } catch {
