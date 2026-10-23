@@ -21,8 +21,10 @@ export interface RouteRemovalRow {
 
 /**
  * Riders' shared routes and the soft removals of any catalog route. A removal
- * hides a route; it never deletes the bytes, so the owner can restore it from
- * the email link. Every removal and restore is kept in an append-only log.
+ * hides a route; it never deletes the bytes, so the sharer can have it restored
+ * from the owner's email link. Every removal and restore is kept in an
+ * append-only log. A shared route also carries the hash of the removal secret
+ * minted for the device that shared it (see `removal.ts`).
  */
 export class CommunityRouteStore {
   private readonly database: DatabaseSync;
@@ -34,7 +36,8 @@ export class CommunityRouteStore {
       CREATE TABLE IF NOT EXISTS community_routes (
         id TEXT PRIMARY KEY,
         raw_json TEXT NOT NULL,
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        owner_token_hash TEXT
       );
       CREATE TABLE IF NOT EXISTS community_route_photos (
         route_id TEXT NOT NULL,
@@ -57,7 +60,14 @@ export class CommunityRouteStore {
         reason TEXT NOT NULL
       );
     `);
+    const routeColumns = this.database.prepare("PRAGMA table_info(community_routes)").all() as unknown as readonly { readonly name: string }[];
+    if (!routeColumns.some((column) => column.name === "owner_token_hash")) {
+      this.database.exec("ALTER TABLE community_routes ADD COLUMN owner_token_hash TEXT");
+    }
   }
+
+  /** Releases the SQLite file handle (tests and one-shot tools). */
+  public close(): void { this.database.close(); }
 
   /** Changes whenever the visible catalog could have: a cache key. */
   public version(): string {
@@ -66,12 +76,12 @@ export class CommunityRouteStore {
     return `${shared.n}:${shared.m}:${removed.n}:${removed.m}`;
   }
 
-  public addRoute(id: string, raw: Record<string, unknown>, now: string, photos: readonly PublicRoutePhoto[] = [], maximum = 2000): boolean {
+  public addRoute(id: string, raw: Record<string, unknown>, now: string, photos: readonly PublicRoutePhoto[] = [], maximum = 2000, ownerTokenHash: string | null = null): boolean {
     if (!Number.isSafeInteger(maximum) || maximum <= 0) throw new Error("Invalid shared-route capacity.");
     this.database.exec("BEGIN IMMEDIATE");
     try {
       if (this.routeCount() >= maximum) { this.database.exec("ROLLBACK"); return false; }
-      this.database.prepare("INSERT INTO community_routes (id, raw_json, created_at) VALUES (?, ?, ?)").run(id, JSON.stringify(raw), now);
+      this.database.prepare("INSERT INTO community_routes (id, raw_json, created_at, owner_token_hash) VALUES (?, ?, ?, ?)").run(id, JSON.stringify(raw), now, ownerTokenHash);
       const insert = this.database.prepare("INSERT INTO community_route_photos (route_id, photo_index, bytes, width, height) VALUES (?, ?, ?, ?, ?)");
       photos.forEach((photo, index) => insert.run(id, index, photo.bytes, photo.width, photo.height));
       this.database.exec("COMMIT");
@@ -102,6 +112,11 @@ export class CommunityRouteStore {
   public removal(routeId: string): RouteRemovalRow | null {
     const row = this.database.prepare("SELECT route_id, removed_at, reason FROM route_removals WHERE route_id = ?").get(routeId) as { route_id: string; removed_at: string; reason: string } | undefined;
     return row === undefined ? null : { routeId: row.route_id, removedAt: row.removed_at, reason: row.reason };
+  }
+
+  public ownerTokenHash(routeId: string): string | null {
+    const row = this.database.prepare("SELECT owner_token_hash FROM community_routes WHERE id = ?").get(routeId) as { readonly owner_token_hash: string | null } | undefined;
+    return row?.owner_token_hash ?? null;
   }
 
   /** Hides a route. Returns false when it was already hidden. */

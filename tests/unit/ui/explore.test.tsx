@@ -31,7 +31,7 @@ const entry: CatalogEntry = {
   provenanceDetail: "Geometry was produced from real road data between two anchor points.",
 };
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.history.replaceState({}, "", "/explore"); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); window.history.replaceState({}, "", "/explore"); });
 
 describe("Explore UI", () => {
   it("draws all matching routes and keeps the camera steady when a card is highlighted", async () => {
@@ -656,5 +656,43 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("heading", { name: "Worth riding" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Ready-made rides" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /road details/i })).not.toBeInTheDocument();
+  });
+
+  it("offers a built-in catalog route only a local hide, never a removal for everyone", () => {
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: "Remove this route" })).toBeNull();
+    expect(screen.queryByText(/until Oct 19/i)).toBeNull();
+    expect(screen.getByText(/stays on Explore for everyone/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide from my Explore" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Hidden on this device.");
+    expect(JSON.parse(window.localStorage.getItem("opengravel.explore.hidden-routes") ?? "[]")).toEqual(["route-1"]);
+    fireEvent.click(screen.getByRole("button", { name: "Show on my Explore" }));
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem("opengravel.explore.hidden-routes") ?? "[]")).toEqual([]);
+  });
+
+  it("lets only the sharing device remove its own shared route, and says so", async () => {
+    const ownerToken = "owner-token-for-this-device-0123456789abcdef";
+    window.localStorage.setItem("opengravel.community.owner.route-1", ownerToken);
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json({ removed: true });
+      void input;
+      return Response.json({ ratingAverage: null, ratingCount: 0, comments: [] });
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Hide from my Explore" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove this route" }));
+    expect(screen.getByText(/hides it for everyone on Explore/i)).toBeInTheDocument();
+    expect(screen.getByText(/will come off Explore for everyone straight away/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Remove for everyone" }));
+
+    expect(await screen.findByText(/Removed from Explore for everyone/)).toBeInTheDocument();
+    const posts = fetcher.mock.calls.filter((call) => call[1]?.method === "POST");
+    expect(posts).toHaveLength(1);
+    expect(JSON.parse(String(posts[0]?.[1]?.body))).toMatchObject({ ownerToken });
   });
 });
