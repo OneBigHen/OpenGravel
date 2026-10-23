@@ -408,9 +408,9 @@ export function knownRoadsProvider(roads: KnownRoadsPort, atlas?: GravelAtlasPor
       // The routing atlas covers the whole region the router knows; the older
       // surveyed catalogue only fills in when that atlas is not installed.
       if (layers.includes("gravel") && atlas?.availability().available === true) {
-        const corridors = [...atlas.corridorsNear(bounds, "dirt", MAX_ROAD_FEATURES), ...atlas.corridorsNear(bounds, "backroad", MAX_ROAD_FEATURES / 2)]
-          .sort((first, second) => second.quality - first.quality)
-          .slice(0, MAX_ROAD_FEATURES);
+        // Only true dirt corridors: "back roads" in the atlas are mostly paved,
+        // and a layer named dirt must not lead to a ride that comes out paved.
+        const corridors = atlas.corridorsNear(bounds, "dirt", MAX_ROAD_FEATURES);
         for (const corridor of corridors) {
           features.push({
             id: `gravel:${corridor.id}`,
