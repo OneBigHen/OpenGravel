@@ -98,6 +98,7 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
           cameraRouteAvailable={view.cameraRouteAvailable}
           onToggleCameraRouteOnly={view.toggleCameraRouteOnly}
           onToggle={view.toggle}
+          onToggleLens={view.toggleSet}
           onClearAll={view.clearAll}
         />
         {view.selected === null ? null : (

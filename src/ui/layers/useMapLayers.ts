@@ -48,6 +48,8 @@ export interface MapLayersView {
   readonly cameraRouteAvailable: boolean;
   readonly toggleCameraRouteOnly: () => void;
   readonly toggle: (id: MapLayerId) => void;
+  /** Turns a whole set on, or off when every one of them is already on. */
+  readonly toggleSet: (ids: readonly MapLayerId[]) => void;
   readonly clearAll: () => void;
   readonly select: (id: string | null) => void;
   readonly onViewport: (extent: MapExtent) => void;
@@ -223,6 +225,12 @@ export function useMapLayers(
     setEnabledNow(current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
   }, []);
 
+  const toggleSet = useCallback((ids: readonly MapLayerId[]): void => {
+    const current = enabledNow();
+    const allOn = ids.every((id) => current.includes(id));
+    setEnabledNow(allOn ? current.filter((entry) => !ids.includes(entry)) : [...current, ...ids.filter((id) => !current.includes(id))]);
+  }, []);
+
   const clearAll = useCallback((): void => {
     setEnabledNow([]);
     setSelectedId(null);
@@ -353,6 +361,7 @@ export function useMapLayers(
     cameraRouteAvailable,
     toggleCameraRouteOnly,
     toggle,
+    toggleSet,
     clearAll,
     select: setSelectedId,
     onViewport,

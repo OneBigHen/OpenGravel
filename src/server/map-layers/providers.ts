@@ -24,6 +24,7 @@ import type {
   MapLayerBounds,
   MapLayerId,
 } from "@/application/map-layers";
+import type { GravelAtlasCorridor, GravelAtlasPort } from "@/application/roads/gravel-atlas";
 import { MIN_GREAT_ROAD_RATING, type KnownRoadsPort } from "@/application/roads/known-roads";
 import { nwsUserAgentFromEnv } from "@/infrastructure/weather/config";
 
@@ -372,7 +373,15 @@ function miles(line: readonly { readonly lon: number; readonly lat: number }[]):
   return `${value < 10 ? value.toFixed(1) : Math.round(value)} mi`;
 }
 
-export function knownRoadsProvider(roads: KnownRoadsPort): LayerProvider {
+/** How much gravel the atlas corridor carries, in a rider's words. */
+function atlasGravelWords(corridor: GravelAtlasCorridor): string {
+  const dirtMiles = corridor.longestDirtRunMeters / 1609.344;
+  const dirt = `${dirtMiles < 10 ? dirtMiles.toFixed(1) : Math.round(dirtMiles)} mi of dirt`;
+  const bends = corridor.curvaturePerKm >= 0.9 ? " · twisty" : corridor.bendShare >= 0.25 ? " · some bends" : "";
+  return corridor.kind === "dirt" ? `${dirt}${bends}` : `Back road · ${dirt}${bends}`;
+}
+
+export function knownRoadsProvider(roads: KnownRoadsPort, atlas?: GravelAtlasPort): LayerProvider {
   return {
     id: "roads",
     layers: ["great-roads", "gravel"],
@@ -396,7 +405,23 @@ export function knownRoadsProvider(roads: KnownRoadsPort): LayerProvider {
           });
         }
       }
-      if (layers.includes("gravel")) {
+      // The routing atlas covers the whole region the router knows; the older
+      // surveyed catalogue only fills in when that atlas is not installed.
+      if (layers.includes("gravel") && atlas?.availability().available === true) {
+        const corridors = [...atlas.corridorsNear(bounds, "dirt", MAX_ROAD_FEATURES), ...atlas.corridorsNear(bounds, "backroad", MAX_ROAD_FEATURES / 2)]
+          .sort((first, second) => second.quality - first.quality)
+          .slice(0, MAX_ROAD_FEATURES);
+        for (const corridor of corridors) {
+          features.push({
+            id: `gravel:${corridor.id}`,
+            layerId: "gravel",
+            name: corridor.kind === "dirt" ? "Dirt road" : "Back road with dirt",
+            detail: atlasGravelWords(corridor),
+            weight: corridor.quality,
+            geometry: { type: "LineString", coordinates: corridor.geometry.map((point) => [round(point.lon), round(point.lat)] as const) },
+          });
+        }
+      } else if (layers.includes("gravel")) {
         for (const corridor of roads.gravelCorridorsNear(bounds).slice(0, MAX_ROAD_FEATURES)) {
           features.push({
             id: `gravel:${corridor.id}`,

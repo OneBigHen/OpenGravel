@@ -12,6 +12,9 @@ import type { MapScene } from "@/application/map/types";
 
 import type { MapLayerSpec, MapPalette } from "./style";
 
+
+/** Dirt evidence draws dashed, like a dirt road on a paper map. */
+const DASHED_LINE_LAYERS = ["gravel", "road-surface"];
 export const INFO_SOURCE_ID = "ogv-info";
 export const TRAFFIC_FLOW_SOURCE_ID = "ogv-traffic-flow";
 
@@ -111,7 +114,7 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       id: INFO_LAYER_IDS.line,
       type: "line",
       source: INFO_SOURCE_ID,
-      filter: ["all", isLine, ["!=", ["get", "layerId"], "road-surface"]],
+      filter: ["all", isLine, ["!", ["in", ["get", "layerId"], ["literal", DASHED_LINE_LAYERS]]]],
       layout: { "line-join": "round", "line-cap": "round" },
       paint: {
         // Terrain and access use the active Day/Night palette.
@@ -137,8 +140,9 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
     },
     {
       id: "ogv-info-surface", type: "line", source: INFO_SOURCE_ID,
-      filter: ["all", isLine, ["==", ["get", "layerId"], "road-surface"]],
-      paint: { "line-color": palette.trailBrown, "line-width": ["interpolate", ["linear"], ["get", "weight"], 0, 2, 1, 5], "line-dasharray": [3, 2] },
+      filter: ["all", isLine, ["in", ["get", "layerId"], ["literal", DASHED_LINE_LAYERS]]],
+      layout: { "line-join": "round", "line-cap": "butt" },
+      paint: { "line-color": palette.trailBrown, "line-width": ["interpolate", ["linear"], ["zoom"], 8, ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 0, 1.5, 1, 3], 14, ["interpolate", ["linear"], ["coalesce", ["get", "weight"], 0], 0, 3, 1, 6]], "line-dasharray": [2, 1.2], "line-opacity": 0.92 },
     },
     {
       id: INFO_LAYER_IDS.point,

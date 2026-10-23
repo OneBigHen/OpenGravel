@@ -9,6 +9,7 @@
  * every provider is replaced by a small deterministic set for browser gates.
  */
 
+import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import {
   clampLayerBounds,
   isMapLayerId,
@@ -156,7 +157,7 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     tomtomIncidentsProvider,
     trafficCamerasProvider,
     nwsAlertsProvider,
-    knownRoadsProvider(knownRoadsFromEnv(env)),
+    knownRoadsProvider(knownRoadsFromEnv(env), gravelAtlasFromEnv(env)),
     overpassProvider,
   ];
 }
