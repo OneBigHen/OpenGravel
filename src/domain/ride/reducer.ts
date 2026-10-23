@@ -246,7 +246,8 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
     }
 
     case "ride.clear": {
-      // Keeps preferences, constraints and the sketch; only authored points go.
+      // Clear the sketch too: otherwise it derives new endpoints and replans
+      // the route the rider just removed. History retains it for Undo clear.
       // Where the rider *is* (a GPS fix) or a saved place such as Home is not
       // part of the ride they are clearing, so it stays: clearing lands on the
       // calm "From <here> / Where to?" screen, not an empty two-field form
@@ -259,7 +260,7 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
         intent.start !== null &&
         (intent.start.provenance.type === "gps" || intent.start.provenance.type === "saved");
       return applyChange(
-        { ...intent, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [] },
+        { ...intent, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [], sketch: null },
         true,
       );
     }

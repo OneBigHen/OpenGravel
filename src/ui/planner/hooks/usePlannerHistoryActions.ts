@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 
 import type { RideDocument } from "@/domain/ride/types";
+import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 import { clearRideCommand, type RideDocumentStore } from "@/ui/stores/ride-document-store";
 
@@ -21,8 +22,10 @@ export function usePlannerHistoryActions(input: {
   readonly document: RideDocument;
   readonly rideDocumentStore: RideDocumentStore;
   readonly plannerUiStore: PlannerUiStore;
+  readonly planningSessionStore: PlanningSessionStore;
+  readonly clearUpdateHighlight: () => void;
 }): PlannerHistoryActions {
-  const { document, rideDocumentStore, plannerUiStore } = input;
+  const { document, rideDocumentStore, plannerUiStore, planningSessionStore, clearUpdateHighlight } = input;
   const { intent } = document;
 
   const onUndo = useCallback((): void => {
@@ -34,17 +37,22 @@ export function usePlannerHistoryActions(input: {
   }, [rideDocumentStore]);
 
   const onClearRide = useCallback((): void => {
+    // Cancel through the session owner so late provider answers cannot revive
+    // the cleared ride. Retain last-good history for an undo/replan.
+    planningSessionStore.getState().cancel();
+    plannerUiStore.getState().setSketchTool(false);
+    clearUpdateHighlight();
     rideDocumentStore.getState().dispatch(clearRideCommand(document));
     // With no ride left, the sheet is the composer again, not an empty ride row.
     plannerUiStore.getState().setSheetDetent("peek");
-  }, [document, plannerUiStore, rideDocumentStore]);
+  }, [document, plannerUiStore, rideDocumentStore, planningSessionStore, clearUpdateHighlight]);
 
   return {
     onUndo,
     onRedo,
     // Anything authored can be cleared, a lone From included: the first tap
     // keeps the rider's own location behind a destination, the next clears it.
-    canClear: intent.start !== null || intent.finish !== null || intent.stops.length > 0 || intent.shaping.length > 0,
+    canClear: intent.start !== null || intent.finish !== null || intent.stops.length > 0 || intent.shaping.length > 0 || intent.sketch !== null,
     onClearRide,
   };
 }

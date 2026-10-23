@@ -15,6 +15,9 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
+import { authorSketch } from "@/application/planner/sketch-authoring";
+import { REPLAN_SETTLE_MS } from "@/ui/planner/usePlannerAnswerLifecycle";
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
 import type { RoutePlanIdentityWire } from "@/application/planner/ports/route-plan-contract";
 import { createRideDocument } from "@/domain/ride/create";
@@ -142,6 +145,8 @@ const START_COORDINATE = { lon: -75.2, lat: 39.95 };
 interface RenderedWorkspace {
   readonly rideDocumentStore: ReturnType<typeof createRideDocumentStore>;
   readonly plannerUiStore: ReturnType<typeof createPlannerUiStore>;
+  readonly geometryStore: ReturnType<typeof createMemoryGeometryStore>;
+  readonly planningSessionStore: ReturnType<typeof createPlanningSessionStore>;
   readonly mapFactory: StubMapHostFactory;
   readonly posts: RoutePlanIdentityWire[];
 }
@@ -163,15 +168,17 @@ async function renderWorkspace(fetcher: typeof fetch): Promise<RenderedWorkspace
     return fetcher(input, init);
   }) as typeof fetch;
 
+  const geometryStore = createMemoryGeometryStore();
   const rideDocumentStore = createRideDocumentStore({ now });
   const planningSessionStore = createPlanningSessionStore({
-    service: createClientPlanningService({ fetcher: recording, now }),
+    service: createClientPlanningService({ fetcher: recording, now, geometryStore }),
   });
   const plannerUiStore = createPlannerUiStore();
   const mapFactory = createStubMapHostFactory();
 
   render(
     <PlannerWorkspace
+      geometryStore={geometryStore}
       rideDocumentStore={rideDocumentStore}
       planningSessionStore={planningSessionStore}
       plannerUiStore={plannerUiStore}
@@ -185,7 +192,7 @@ async function renderWorkspace(fetcher: typeof fetch): Promise<RenderedWorkspace
   mapFactoryRef.current = mapFactory;
   await flushHostSubscription();
 
-  return { rideDocumentStore, plannerUiStore, mapFactory, posts };
+  return { rideDocumentStore, plannerUiStore, mapFactory, posts, geometryStore, planningSessionStore };
 }
 
 /**
@@ -843,6 +850,54 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(rideDocumentStore.getState().document.intent.finish).not.toBeNull();
     expect(screen.queryByTestId("undo-clear")).not.toBeInTheDocument();
     expect(screen.getByTestId("clear-ride")).toBeInTheDocument();
+  });
+
+  it.each([[false, true], [true, true], [false, false]])("clears a planned sketch and retires drawing/planning work (pending alternatives: %s, authored endpoints: %s)", async (pending, authoredEndpoints) => {
+    let release: (() => void) | undefined;
+    let calls = 0;
+    const workspace = await renderWorkspace((async (_input, init) => {
+      const { identity } = JSON.parse(String(init?.body)) as { identity: RoutePlanIdentityWire };
+      calls += 1;
+      if (pending && calls === 2) await new Promise<void>((resolve) => { release = resolve; });
+      return jsonResponse(successBody(identity));
+    }) as typeof fetch);
+    const { rideDocumentStore, plannerUiStore, planningSessionStore, geometryStore, posts, mapFactory } = workspace;
+    if (authoredEndpoints) await placeBothPoints();
+    await act(async () => {
+      const result = await authorSketch({
+        document: rideDocumentStore.getState().document,
+        strokes: [[ORIGIN, MIDPOINT, DESTINATION]],
+        endpointPolicy: "derive",
+        geometryStore,
+        dispatch: (command) => rideDocumentStore.getState().dispatch(command),
+      });
+      expect(result.outcome).toBe("applied");
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
+    await waitFor(() => expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2));
+    await waitFor(() => expect(posts).toHaveLength(2));
+    const before = rideDocumentStore.getState().document.intent;
+    // A draft/preview timer must not bring the ride back after clearing either.
+    act(() => {
+      plannerUiStore.getState().setSketchTool(true);
+      plannerUiStore.getState().setSketchDraft({ strokes: [[ORIGIN, DESTINATION]], active: null, undone: [] });
+    });
+    emitIntent({ type: "pointer-up", coordinate: DESTINATION, pointerId: 1 });
+    fireEvent.click(screen.getByTestId("clear-ride"));
+    expect(rideDocumentStore.getState().document.intent).toMatchObject({ start: null, finish: null, sketch: null });
+    expect(plannerUiStore.getState().activeTool).toBe("pan");
+    expect(plannerUiStore.getState().sketchDraft.strokes).toHaveLength(0);
+    await act(async () => {
+      release?.();
+      await new Promise((resolve) => setTimeout(resolve, REPLAN_SETTLE_MS + 100));
+    });
+    expect(posts).toHaveLength(2);
+    expect(screen.queryAllByTestId(/^route-card-/)).toHaveLength(0);
+    expect(mapFactory.hosts[0]?.lastScene()?.routes).toHaveLength(0);
+    expect(screen.queryByText("Finding other roads…")).not.toBeInTheDocument();
+    expect(planningSessionStore.getState().snapshot.phase).not.toBe("alternatives-loading");
+    fireEvent.click(screen.getByTestId("undo-clear"));
+    expect(rideDocumentStore.getState().document.intent).toEqual(before);
   });
 
   it("refuses to plan without a destination and says why", async () => {

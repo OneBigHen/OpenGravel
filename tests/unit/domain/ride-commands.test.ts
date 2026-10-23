@@ -1240,7 +1240,7 @@ describe("ride.reverse", () => {
 });
 
 describe("ride.clear and ride.create", () => {
-  it("clears authored points but keeps preferences, constraints and sketch", () => {
+  it("clears authored points and sketch but keeps preferences and constraints", () => {
     const document = fixture({
       start: startPoint(),
       finish: finishPoint(),
@@ -1261,7 +1261,7 @@ describe("ride.clear and ride.create", () => {
     expect(result.document.intent.shaping).toEqual([]);
     expect(result.document.intent.avoidAreas).toEqual(document.intent.avoidAreas);
     expect(result.document.intent.roadSpans).toEqual(document.intent.roadSpans);
-    expect(result.document.intent.sketch).toEqual(document.intent.sketch);
+    expect(result.document.intent.sketch).toBeNull();
     expect(result.document.intent.roadCharacter).toBe("curvy");
     expect(result.document.history.entries.at(-1)?.label).toBe("Cleared points");
   });
