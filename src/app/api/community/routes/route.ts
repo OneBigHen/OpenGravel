@@ -28,12 +28,12 @@ export async function POST(request: Request): Promise<Response> {
     const store = sharedCommunityRouteStore();
     const configuredMax = Number(process.env["OGV_COMMUNITY_MAX_ROUTES"] ?? "2000");
     const max = Number.isSafeInteger(configuredMax) && configuredMax > 0 ? Math.min(configuredMax, 2000) : 2000;
-    if (store.routeCount() >= max) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
+    if (store.liveRouteCount() >= max) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
     let photos;
     try { photos = await prepareRoutePhotos((upload.body as Record<string, unknown>)["photos"]); }
     catch (error) { return Response.json({ error: error instanceof Error ? error.message : "The photos could not be read." }, { status: 400, headers: HEADERS }); }
     // The async image boundary can let another upload consume the last slot.
-    if (store.routeCount() >= max) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
+    if (store.liveRouteCount() >= max) return Response.json({ error: "The shared bucket is full right now." }, { status: 503, headers: HEADERS });
     const story = built.raw["story"] as Record<string, unknown>;
     const raw = { ...built.raw, story: { ...story, photos: photos.map((photo, index) => ({ src: `/api/community/routes/${built.id}/photos/${index}`, width: photo.width, height: photo.height })) } };
     // The device that shared the route gets the only proof that can remove it.
