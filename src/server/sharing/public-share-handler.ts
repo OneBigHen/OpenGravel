@@ -7,7 +7,8 @@ import type { SQLitePublicShareStore } from "./public-share-store";
 const MAX_BYTES = 256 * 1024;
 const COOKIE = "og-share-owner";
 const headers = { "cache-control": "no-store", "referrer-policy": "no-referrer", "x-robots-tag": "noindex, nofollow" };
-const reply = (status: number, message: string) => Response.json({ message }, { status, headers });
+const reply = (status: number, message: string, extra: Readonly<Record<string, string>> = {}) =>
+  Response.json({ message }, { status, headers: { ...headers, ...extra } });
 const object = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const amount = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
 const aggregate = (v: unknown) => v === null || amount(v);
@@ -83,8 +84,13 @@ export async function handlePublishShare(request: Request, store: SQLitePublicSh
   if (!clean) return reply(400, "The snapshot is invalid.");
   const owner = ownerCookie(request) ?? randomBytes(32).toString("hex");
   const result = store.publish(body.shareId, body.token, hash(owner), serializeShareSnapshot(clean));
-  if (result === "exists") return reply(409, "This link has already been issued.");
-  if (result === "limited") return reply(429, "Sharing is temporarily at capacity. Try again later.");
+  if (result.state === "exists") return reply(409, "This link has already been issued.");
+  if (result.state === "limited") {
+    // Two different budgets fail this way, and waiting only helps one of them.
+    return result.reason === "owner-hourly"
+      ? reply(429, "This browser has created too many share links in the last hour. Try again later.", { "retry-after": "3600" })
+      : reply(429, "Sharing is paused: the shared link store is full right now.");
+  }
   const response = reply(201, "Share published.");
   response.headers.set("set-cookie", `${COOKIE}=${owner}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${externalProtocol(request) === "https:" ? "; Secure" : ""}`);
   return response;
