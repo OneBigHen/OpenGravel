@@ -152,6 +152,7 @@ describe("handleMapLayersRequest", () => {
     expect(parseLayers("fuel,nonsense")).toBeTypeOf("string");
     expect(parseLayers("traffic-flow")).toBeTypeOf("string");
     expect(parseLayers("fuel,traffic-flow,fuel")).toEqual(["fuel"]);
+    expect(parseLayers("fuel,cell-towers,road-surface")).toEqual(["fuel"]);
   });
 
   it("clips a huge view to the served span around its centre", () => {
