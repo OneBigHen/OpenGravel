@@ -20,6 +20,8 @@ describe("PostHog privacy policy", () => {
     expect(config.autocapture).toMatchObject({ dom_event_allowlist: ["click", "change", "submit"], capture_copied_text: false });
     expect(config.session_recording).toMatchObject({ maskAllInputs: true, maskTextSelector: "*", recordHeaders: false, recordBody: false, captureCanvas: { recordCanvas: false } });
     expect(config.enable_recording_console_log).toBe(false);
+    // Replay is started lazily by the runtime, never during init.
+    expect(config.disable_session_recording).toBe(true);
     expect(config.persistence).toBe("memory");
     expect(config.capture_exceptions).toBeTruthy();
   });
