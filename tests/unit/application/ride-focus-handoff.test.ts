@@ -325,6 +325,34 @@ describe("startRideFromHandoff", () => {
     });
   });
 
+  it("ends a ride left open (not recording) and starts Free Ride anyway", async () => {
+    const controller = createRideSessionController({ now: () => NOW });
+    const base = pointer();
+    let found = true;
+    const port = {
+      ...base,
+      get writes() { return base.writes; },
+      get cleared() { return base.cleared; },
+      read: () => (found
+        ? { status: "found" as const, pointer: { version: 1, sessionId: "session_left_open", rideId: RIDE_ID, routeGeometryRef: null, updatedAt: NOW } }
+        : { status: "absent" as const }),
+      clear: () => { found = false; base.clear(); },
+    } as unknown as ReturnType<typeof pointer>;
+
+    const outcome = await startFreeRideFromPlanner({
+      controller,
+      pointer: port,
+      document: document(),
+      rides: { saveRide: vi.fn(async () => ({ ok: true as const })) } as never,
+      writerToken: "free-ride-test-writer",
+      now: NOW,
+    });
+
+    expect(outcome.outcome).toBe("started");
+    expect(port.cleared).toBe(1);
+    expect(controller.snapshot()).toMatchObject({ activity: "free" });
+  });
+
   it("does not start or publish a session when the RideDocument cannot be persisted", async () => {
     const controller = createRideSessionController({ now: () => NOW });
     const port = pointer();
