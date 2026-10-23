@@ -100,8 +100,10 @@ async function renderWorkspace(): Promise<Rendered> {
       mapHostFactory={mapFactory.factory}
     />,
   );
-  // The shaping tools live behind the "Refine route" disclosure.
+  // The shaping tools live behind the "Refine route" disclosure, and the panel
+  // itself is code-split, so wait for the controls to arrive before driving them.
   fireEvent.click(screen.getByTestId("refine-toggle"));
+  await screen.findByTestId("stops-panel");
   // The host subscribes to intents once the async factory resolves.
   await Promise.resolve();
   await Promise.resolve();
@@ -137,6 +139,14 @@ async function addStop(x: number, y: number): Promise<StopId> {
   return added.id;
 }
 
+/**
+ * Opens a row's action sheet. Every per-row action lives there now, so the list
+ * stays one reading (pin, place, leg) and one control instead of a toolbar.
+ */
+function openPointMenu(key: string): void {
+  fireEvent.click(screen.getByTestId(`more-${key}`));
+}
+
 function stopsOf(): readonly StopPoint[] {
   return current?.rideDocumentStore.getState().document.intent.stops ?? [];
 }
@@ -165,6 +175,7 @@ describe("the object list drives one command per press", () => {
 
     const before = rideDocumentStore.getState().document.revision;
     const beforeHistory = historyLength();
+    openPointMenu("stop-2");
     fireEvent.click(screen.getByTestId("move-up-stop-2"));
 
     const document = rideDocumentStore.getState().document;
@@ -186,6 +197,7 @@ describe("the object list drives one command per press", () => {
     const before = rideDocumentStore.getState().document.revision;
     const beforeHistory = historyLength();
     const authored = stopsOf()[0]?.coordinate;
+    openPointMenu("stop-1");
     fireEvent.click(screen.getByTestId("convert-stop-1"));
 
     const document = rideDocumentStore.getState().document;
@@ -198,6 +210,7 @@ describe("the object list drives one command per press", () => {
 
     // The anchor is now a list row of its own, and converting it back restores a
     // stop — one more revision, one more history unit.
+    openPointMenu("shape-1");
     fireEvent.click(screen.getByTestId("convert-shape-1"));
     const restored = rideDocumentStore.getState().document;
     expect(restored.intent.stops).toHaveLength(1);
@@ -210,6 +223,7 @@ describe("the object list drives one command per press", () => {
     await placeBothEndpoints();
     const stopId = await addStop(300, 300);
 
+    openPointMenu("stop-1");
     fireEvent.click(screen.getByTestId("remove-stop-1"));
     expect(stopsOf()).toHaveLength(0);
 
@@ -389,6 +403,7 @@ describe("placing a stop and replacing a place", () => {
     const stopId = await addStop(300, 300);
     const before = rideDocumentStore.getState().document.revision;
 
+    openPointMenu("stop-1");
     fireEvent.click(screen.getByTestId("replace-stop-1"));
     const coordinate = tapMap(700, 700);
 
@@ -405,6 +420,7 @@ describe("placing a stop and replacing a place", () => {
     await placeBothEndpoints();
     await addStop(300, 300);
 
+    openPointMenu("stop-1");
     fireEvent.click(screen.getByTestId("convert-stop-1"));
 
     const itinerary = screen.getByTestId("stops-list");
@@ -427,6 +443,7 @@ describe("zoom to (04 §15)", () => {
 
     // ...and asks for one object explicitly, which is the one gesture that still
     // moves the camera.
+    openPointMenu("start");
     fireEvent.click(screen.getByTestId("zoom-start"));
 
     expect(host.fits).toHaveLength(1);
@@ -449,6 +466,7 @@ describe("zoom to (04 §15)", () => {
     const host = mapFactory.hosts[0];
     if (host === undefined) throw new Error("expected a map host");
 
+    openPointMenu("start");
     fireEvent.click(screen.getByTestId("zoom-start"));
     const firstToken = plannerUiStore.getState().fitRequest?.token ?? 0;
     const firstFits = host.fits.length;
@@ -456,6 +474,7 @@ describe("zoom to (04 §15)", () => {
     // A request is one gesture, not a camera mode: asking for the same object a
     // second time must move the camera a second time, which is what the token is
     // for (a key equal to the previous one would be reconciled away).
+    openPointMenu("start");
     fireEvent.click(screen.getByTestId("zoom-start"));
 
     expect(plannerUiStore.getState().fitRequest?.token).toBe(firstToken + 1);

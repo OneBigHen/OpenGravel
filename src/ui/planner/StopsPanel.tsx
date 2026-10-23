@@ -10,6 +10,12 @@
  * real `<button>`, and the numeric inspector is the accessible way to move a point
  * to an exact position.
  *
+ * Each row states the leg that ends at it ("34 mi · ~48 min from previous"), so
+ * the list reads as the ride briefing rather than as a set of pins. The legs are
+ * projected by the view model from the selected route's own line; this component
+ * only prints what it was given, and prints words where the line measured
+ * nothing.
+ *
  * It renders and it calls back; it never dispatches. The workspace owns the
  * authorities (04 §2), so "one gesture = one command = one undo unit" (03 §27) is
  * enforced in one place — here a button press is one intent, whatever the command
@@ -27,11 +33,12 @@
  *   reducer would refuse.
  */
 
-import { useState } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 
 import {
   canMoveStopDown,
   canMoveStopUp,
+  reorderTargetFor,
 } from "@/application/planner/stop-insertion";
 import type {
   ItineraryRef,
@@ -41,26 +48,12 @@ import type {
 import type { StopId } from "@/domain/ride/ids";
 import type { Coordinate, StopArrivalIntent } from "@/domain/ride/types";
 import type { PlacementTool } from "@/ui/stores/planner-ui-store";
+import { ARRIVAL_INTENT_LABELS, ARRIVAL_INTENTS } from "@/ui/planner/arrival-intent";
+import { PointActionSheet, type PointSheetAction } from "@/ui/planner/PointActionSheet";
+import { PointRow, rowKey, rowName } from "@/ui/planner/PointRow";
+import { stopShiftFor, useStopReorder } from "@/ui/planner/useStopReorder";
 
-/** The rider-facing arrival intents (03 §4), in menu order. */
-export const ARRIVAL_INTENT_LABELS: Readonly<Record<StopArrivalIntent, string>> = {
-  visit: "Visit",
-  fuel: "Fuel",
-  food: "Food",
-  lodging: "Lodging",
-  scenic: "Scenic",
-  other: "Other",
-};
-
-/** Declaration order for the selector; `""` is the cleared option. */
-export const ARRIVAL_INTENTS: readonly StopArrivalIntent[] = [
-  "visit",
-  "fuel",
-  "food",
-  "lodging",
-  "scenic",
-  "other",
-];
+export { ARRIVAL_INTENTS, ARRIVAL_INTENT_LABELS } from "@/ui/planner/arrival-intent";
 
 export interface StopsPanelProps {
   readonly viewModel: PlannerViewModel;
@@ -74,6 +67,12 @@ export interface StopsPanelProps {
   readonly onZoomTo: (ref: ItineraryRef) => void;
   readonly onReplacePlace: (ref: ItineraryRef) => void;
   readonly onMoveStop: (stopId: StopId, direction: "up" | "down") => void;
+  /**
+   * Places a dragged stop in front of a named neighbour — the reducer's own
+   * `stop.reorder` vocabulary, so one drag is one command (03 §27).
+   * `undefined` appends, which is where the last slot ends up.
+   */
+  readonly onReorder: (stopId: StopId, beforeStopId: StopId | undefined) => void;
   readonly onRemove: (ref: ItineraryRef) => void;
   readonly onConvert: (ref: ItineraryRef) => void;
   readonly onAddStop: () => void;
@@ -84,35 +83,15 @@ export interface StopsPanelProps {
   ) => void;
 }
 
-/** A stable, human-readable key for one row's test hooks and React key. */
-function rowKey(row: PointRowVm, index: number): string {
-  switch (row.ref.kind) {
-    case "start":
-      return "start";
-    case "finish":
-      return "finish";
-    case "stop":
-      return `stop-${row.position ?? 0}`;
-    case "shaping":
-      // Anchors have no position in the itinerary, so their list index is the
-      // stable handle a test (or a rider) can name them by.
-      return `shape-${index + 1}`;
-  }
-}
-
-/** The row's own name: the ordinal for stops, the role for everything else. */
-function rowName(row: PointRowVm, index: number): string {
-  switch (row.ref.kind) {
-    case "start":
-      return "Start";
-    case "finish":
-      return "Finish";
-    case "stop":
-      return `Stop ${row.position ?? 0}`;
-    case "shaping":
-      return `Shaping ${index + 1}`;
-  }
-}
+/** The 24 px glyph shared by the sheet's actions, in the map menu's language. */
+const ACTION_PATHS = {
+  show: "M12 21s-7-5.7-7-11a7 7 0 1 1 14 0c0 5.3-7 11-7 11zM12 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5",
+  replace: "M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
+  up: "M12 19V5M5 12l7-7 7 7",
+  down: "M12 5v14M5 12l7 7 7-7",
+  convert: "M4 8h13l-3-3M20 16H7l3 3",
+  remove: "M5 7h14M10 7V5h4v2M7 7l1 13h8l1-13",
+} as const;
 
 function sameRef(left: ItineraryRef | null, right: ItineraryRef): boolean {
   if (left === null || left.kind !== right.kind) return false;
@@ -159,13 +138,21 @@ export function StopsPanel({
   onZoomTo,
   onReplacePlace,
   onMoveStop,
+  onReorder,
   onRemove,
   onConvert,
   onAddStop,
   onEditCoordinate,
   onSetArrivalIntent,
 }: StopsPanelProps) {
-  const stopCount = viewModel.itinerary.filter((row) => row.ref.kind === "stop").length;
+  /** The stops in ride order; the itinerary also holds the two endpoints. */
+  const stopIds = useMemo(
+    () =>
+      viewModel.itinerary.flatMap((row) => (row.ref.kind === "stop" ? [row.ref.stopId] : [])),
+    [viewModel.itinerary],
+  );
+  const stopCount = stopIds.length;
+
   const selectedRow =
     viewModel.itinerary.find((row) => sameRef(selectedRef, row.ref)) ??
     viewModel.shapingPoints.find((row) => sameRef(selectedRef, row.ref)) ??
@@ -219,134 +206,123 @@ export function StopsPanel({
     onEditCoordinate(selectedRow.ref, validation.coordinate);
   };
 
-  const renderRow = (row: PointRowVm, index: number) => {
-    const key = rowKey(row, index);
-    const selected = sameRef(selectedRef, row.ref);
-    const isStop = row.ref.kind === "stop";
-    // The reorder bounds are the stop's own ordinal among the stops (04 §15): the
-    // itinerary index counts the start row too, so it is not the position.
-    const stopIndex = (row.position ?? 1) - 1;
-    const armed =
-      armedTool === "place-stop" &&
-      row.ref.kind === "stop" &&
-      armedStopId === row.ref.stopId;
-    return (
-      <li
-        key={key}
-        className="og-point"
-        data-testid={`point-row-${key}`}
-        data-selected={selected ? "true" : "false"}
-        data-armed={armed ? "true" : "false"}
-      >
-        <div className="og-point__head">
-          <button
-            type="button"
-            className="og-point__select"
-            data-testid={`select-${key}`}
-            aria-pressed={selected}
-            onClick={(): void => onSelect(row.ref)}
-          >
-            <span className="og-point__name">{rowName(row, index)}</span>
-            {/*
-              The row's value is the point's name — the rider's own, or
-              `Dropped pin` — with its coordinate as the secondary line (04 §15,
-              defect: a raw coordinate is not a place). The coordinate stays
-              machine-readable on `data-coordinate`, which is what the browser
-              gate reads to prove the app recorded the point the rider placed.
-            */}
-            <span
-              className="og-point__value"
-              data-testid={`label-${key}`}
-              data-coordinate={row.coordinateLabel}
-            >
-              <span className="og-point__value-name">{row.label}</span>
-              <span className="og-point__coordinate" data-testid={`coordinate-${key}`}>
-                {row.coordinateLabel}
-              </span>
-            </span>
-          </button>
-          {row.arrivalIntent === null ? null : (
-            <span className="og-point__intent" data-testid={`intent-${key}`}>
-              {ARRIVAL_INTENT_LABELS[row.arrivalIntent]}
-            </span>
-          )}
-        </div>
+  /** The row whose action sheet is open, or `null` when it is closed. */
+  const [menuRef, setMenuRef] = useState<ItineraryRef | null>(null);
+  const menuPlace = useMemo((): { readonly row: PointRowVm; readonly index: number } | null => {
+    if (menuRef === null) return null;
+    const itineraryIndex = viewModel.itinerary.findIndex((row) => sameRef(menuRef, row.ref));
+    const itineraryRow = viewModel.itinerary[itineraryIndex];
+    if (itineraryRow !== undefined) return { row: itineraryRow, index: itineraryIndex };
+    const shapingIndex = viewModel.shapingPoints.findIndex((row) => sameRef(menuRef, row.ref));
+    const shapingRow = viewModel.shapingPoints[shapingIndex];
+    if (shapingRow !== undefined) return { row: shapingRow, index: shapingIndex };
+    return null;
+  }, [menuRef, viewModel.itinerary, viewModel.shapingPoints]);
 
-        <div className="og-point__actions">
-          <button
-            type="button"
-            className="og-point__action"
-            data-testid={`zoom-${key}`}
-            onClick={(): void => onZoomTo(row.ref)}
-          >
-            Zoom to
-          </button>
-          <button
-            type="button"
-            className="og-point__action"
-            data-testid={`replace-${key}`}
-            data-armed={armed ? "true" : "false"}
-            onClick={(): void => onReplacePlace(row.ref)}
-          >
-            Replace place
-          </button>
-          {isStop ? (
-            <>
-              <button
-                type="button"
-                className="og-point__action"
-                data-testid={`move-up-${key}`}
-                disabled={!canMoveStopUp(stopIndex)}
-                onClick={(): void => {
-                  if (row.ref.kind === "stop") onMoveStop(row.ref.stopId, "up");
-                }}
-              >
-                Move up
-              </button>
-              <button
-                type="button"
-                className="og-point__action"
-                data-testid={`move-down-${key}`}
-                disabled={!canMoveStopDown(stopIndex, stopCount)}
-                onClick={(): void => {
-                  if (row.ref.kind === "stop") onMoveStop(row.ref.stopId, "down");
-                }}
-              >
-                Move down
-              </button>
-            </>
-          ) : null}
-          {row.ref.kind === "shaping" ? (
-            <button
-              type="button"
-              className="og-point__action"
-              data-testid={`convert-${key}`}
-              onClick={(): void => onConvert(row.ref)}
-            >
-              Make a stop
-            </button>
-          ) : null}
-          {isStop ? (
-            <button
-              type="button"
-              className="og-point__action"
-              data-testid={`convert-${key}`}
-              onClick={(): void => onConvert(row.ref)}
-            >
-              Make a shaping point
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="og-point__action og-point__action--remove"
-            data-testid={`remove-${key}`}
-            onClick={(): void => onRemove(row.ref)}
-          >
-            Remove
-          </button>
-        </div>
-      </li>
+  /**
+   * A drag asks the pure ordering rule which neighbour the drop lands before, so
+   * the drag and the sheet's Move up/Move down share one vocabulary and one
+   * command shape.
+   */
+  const commitReorder = useCallback(
+    (stopId: StopId, fromIndex: number, toIndex: number): void => {
+      const target = reorderTargetFor(stopIds, fromIndex, toIndex);
+      if (target === null) return;
+      onReorder(stopId, target.beforeStopId);
+    },
+    [onReorder, stopIds],
+  );
+  const reorder = useStopReorder({ stopCount, onReorder: commitReorder });
+
+  const renderRow = (row: PointRowVm, index: number): ReactElement => {
+    const key = rowKey(row, index);
+    const stopIndex = row.ref.kind === "stop" ? (row.position ?? 1) - 1 : -1;
+    const shift =
+      reorder.drag === null || stopIndex < 0 ? null : stopShiftFor(stopIndex, reorder.drag);
+    return (
+      <PointRow
+        key={key}
+        row={row}
+        index={index}
+        selected={sameRef(selectedRef, row.ref)}
+        armed={
+          armedTool === "place-stop" &&
+          row.ref.kind === "stop" &&
+          armedStopId === row.ref.stopId
+        }
+        menuOpen={menuRef !== null && sameRef(menuRef, row.ref)}
+        drag={reorder.drag}
+        shift={shift}
+        onSelect={onSelect}
+        onOpenMenu={setMenuRef}
+        onGrabPointerDown={reorder.beginDrag}
+        onGrabPointerMove={reorder.moveDrag}
+        onGrabPointerUp={reorder.endDrag}
+        onGrabPointerCancel={reorder.cancelDrag}
+      />
     );
+  };
+
+  /** The sheet's actions for one row, in the order a rider is likely to want. */
+  const sheetActions = (row: PointRowVm, index: number): readonly PointSheetAction[] => {
+    const key = rowKey(row, index);
+    const ref = row.ref;
+    const isStop = ref.kind === "stop";
+    const stopIndex = isStop ? (row.position ?? 1) - 1 : -1;
+    const actions: PointSheetAction[] = [
+      {
+        testId: `zoom-${key}`,
+        label: "Show on map",
+        path: ACTION_PATHS.show,
+        onSelect: () => onZoomTo(ref),
+      },
+      {
+        testId: `replace-${key}`,
+        label: "Replace place",
+        path: ACTION_PATHS.replace,
+        armed:
+          armedTool === "place-stop" && ref.kind === "stop" && armedStopId === ref.stopId,
+        onSelect: () => onReplacePlace(ref),
+      },
+    ];
+    if (isStop && ref.kind === "stop") {
+      const stopId = ref.stopId;
+      actions.push(
+        {
+          testId: `move-up-${key}`,
+          label: "Move up",
+          path: ACTION_PATHS.up,
+          disabled: !canMoveStopUp(stopIndex),
+          onSelect: () => onMoveStop(stopId, "up"),
+        },
+        {
+          testId: `move-down-${key}`,
+          label: "Move down",
+          path: ACTION_PATHS.down,
+          disabled: !canMoveStopDown(stopIndex, stopCount),
+          onSelect: () => onMoveStop(stopId, "down"),
+        },
+      );
+    }
+    // The endpoints are not convertible (04 §15 offers convert only between a
+    // stop and a shaping point), so the arrow is absent rather than a button the
+    // workspace would ignore.
+    if (ref.kind === "stop" || ref.kind === "shaping") {
+      actions.push({
+        testId: `convert-${key}`,
+        label: ref.kind === "shaping" ? "Make a stop" : "Make a shaping point",
+        path: ACTION_PATHS.convert,
+        onSelect: () => onConvert(ref),
+      });
+    }
+    actions.push({
+      testId: `remove-${key}`,
+      label: "Remove",
+      path: ACTION_PATHS.remove,
+      danger: true,
+      onSelect: () => onRemove(ref),
+    });
+    return actions;
   };
 
   return (
@@ -464,6 +440,15 @@ export function StopsPanel({
             </label>
           ) : null}
         </div>
+      )}
+
+      {menuPlace === null ? null : (
+        <PointActionSheet
+          title={rowName(menuPlace.row, menuPlace.index)}
+          subtitle={menuPlace.row.label}
+          actions={sheetActions(menuPlace.row, menuPlace.index)}
+          onClose={() => setMenuRef(null)}
+        />
       )}
     </section>
   );

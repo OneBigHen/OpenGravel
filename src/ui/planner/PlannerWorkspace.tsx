@@ -94,6 +94,7 @@ import {
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
+  usePlannerActiveRoute,
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
@@ -298,7 +299,22 @@ export function PlannerWorkspace({
     return buildSketchCorridor(sketchStrokeGeometry).derivedEndpoints;
   }, [document.intent.sketch, sketchStrokeGeometry]);
 
-  const { viewModel, setRouteTraffic } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor });
+  /**
+   * The line of the route the rider is looking at, resolved from the session's own
+   * geometry cache. The span draft indexes into this line, the itinerary measures
+   * its legs on it, and the preview is part of the scene, so it is read **before**
+   * the projection runs. The candidate itself comes with it because the handoff
+   * (04 §28) needs the `geometryRef` the line lives under.
+   */
+  const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
+
+  const { viewModel, setRouteTraffic } = usePlannerViewModel({
+    document,
+    session,
+    sketchDerivedEndpoints,
+    placeNameFor,
+    routeLine: activeRoute,
+  });
 
   /**
    * The deterministic explanation of the route on screen (04 §13, Wave-3 task
@@ -332,28 +348,6 @@ export function PlannerWorkspace({
     });
   }, [session, document.intent]);
 
-  /**
-   * The line of the route the rider is looking at, resolved from the session's own
-   * geometry cache. The span draft indexes into this line, and the preview is part
-   * of the scene, so it has to be read **before** the projection runs.
-   */
-  const activeRoute = useMemo(() => {
-    const bundle = session.committedBundle ?? session.lastGoodBundle;
-    if (bundle === null) return null;
-    const candidate = bundle.candidates.find(
-      (entry) => entry.id === bundle.selectedRouteId,
-    );
-    if (candidate === undefined) return null;
-    const payload = geometry[candidate.geometryRef];
-    if (payload === undefined || payload.kind !== "line") return null;
-    return {
-      routeId: candidate.id,
-      geometry: payload.coordinates,
-      distanceMeters: candidate.distanceMeters,
-      durationSeconds: candidate.durationSeconds,
-      instructions: candidate.instructions,
-    };
-  }, [session, geometry]);
   const activeRouteLine = activeRoute?.geometry ?? NO_COORDINATES;
   const roadSpanAuthoring = usePlannerRoadSpans({
     document,
@@ -377,20 +371,6 @@ export function PlannerWorkspace({
     previewPointerMove: previewRoadSpanPointerMove,
     commitGesture: commitRoadSpanGesture,
   } = roadSpanAuthoring;
-
-  /**
-   * The candidate the session selected, with the handle its line lives under.
-   *
-   * `activeRoute` above carries the resolved line; the handoff (04 §28) also
-   * needs the candidate's `geometryRef`, because the Ride Focus surface must be
-   * able to re-read the same line after a reload — the bundle itself is per-tab
-   * and gone by then.
-   */
-  const selectedCandidate = useMemo(() => {
-    const bundle = session.committedBundle ?? session.lastGoodBundle;
-    if (bundle === null) return null;
-    return bundle.candidates.find((entry) => entry.id === bundle.selectedRouteId) ?? null;
-  }, [session]);
 
   /**
    * Whether this ride can start right now, and with which identity. Pure, so the
