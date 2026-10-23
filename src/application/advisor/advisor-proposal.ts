@@ -1,6 +1,7 @@
 /** Natural-language request and strict structured-output boundary for M8. */
 
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
+import { haversine } from "@/domain/geometry/analysis";
 import type { RideId } from "@/domain/ride/ids";
 import type { DepartureIntent, RideDocument, RideIntent, TimeIntent } from "@/domain/ride/types";
 import { relativeAdvisorTime } from "./advisor-relative-time";
@@ -606,12 +607,19 @@ async function resolvePlace(
     if (result.status !== "ok") return { status: "unavailable" };
     // A geocoder returns its nearest namesake even when the business is not in
     // its index ("Turkey Hill, Doylestown" came back as "Mercer Hill at
-    // Doylestown"). The match must carry every word of the name the rider gave,
-    // or the advisor asks instead of guessing.
+    // Doylestown"). The match must carry every word of the name the rider gave
+    // *and* the town or postcode that qualifies it, or the advisor asks instead
+    // of guessing; `bias` only ranks, it never rejects.
     const words = nameWords(query);
+    if (words.length === 0) return { status: "not-found" };
+    const qualifiers = qualifierWords(query);
+    const nearby = qualifiers.length === 0 ? undefined : near;
     const place = result.places.find((candidate) => {
-      const label = `${candidate.name} ${candidate.label}`.toLowerCase();
-      return words.every((word) => label.includes(word));
+      const label = `${candidate.name} ${candidate.label} ${candidate.context}`.toLowerCase();
+      if (!words.every((word) => label.includes(word))) return false;
+      if (!qualifiers.every((word) => label.includes(word))) return false;
+      if (nearby === undefined) return true;
+      return haversine(candidate.coordinate, nearby) <= MAX_NEARBY_PLACE_METERS;
     });
     return place === undefined ? { status: "not-found" } : { status: "found", place };
   } catch {
@@ -620,19 +628,54 @@ async function resolvePlace(
 }
 
 const NAME_STOPWORDS = new Set(["the", "and", "of", "at", "in", "on", "near", "a"]);
+/** Postal abbreviations riders add after a town; they are not part of the name to match. */
+const STATE_ABBREVIATIONS = new Set([
+  "ala", "ariz", "ark", "calif", "colo", "conn", "del", "fla", "ga", "ill", "ind", "kan", "ky", "la", "md",
+  "mass", "mich", "minn", "miss", "mo", "mont", "neb", "nev", "okla", "ore", "penn", "tenn", "tex", "va", "vt",
+  "wash", "wis", "wyo",
+]);
+/** A place named with a town/state qualifier must resolve near the ride (~150 km). */
+const MAX_NEARBY_PLACE_METERS = 150_000;
+
+function queryWords(text: string): readonly string[] {
+  return text
+    .split(/[^\p{L}\p{N}']+/u)
+    .filter((word) =>
+      word.length >= 3 &&
+      !/^\d+$/.test(word) &&
+      !NAME_STOPWORDS.has(word.toLowerCase()) &&
+      !STATE_ABBREVIATIONS.has(word.toLowerCase()),
+    )
+    .map((word) => word.toLowerCase());
+}
 
 /**
  * The proper-name words of a query's name part (before the first comma): the
  * capitalised ones. "Turkey Hill, Doylestown" must match Turkey and Hill; a
  * category search like "coffee shop in Jim Thorpe" only has to land in Jim
- * Thorpe, because any café there answers it.
+ * Thorpe, because any café there answers it. A model that lowercases the whole
+ * query still has its name words checked instead of matching the first hit.
  */
 function nameWords(query: string): readonly string[] {
   const name = query.split(",")[0] ?? query;
-  return name
+  const capitalised = name
     .split(/[^\p{L}\p{N}']+/u)
-    .filter((word) => word.length >= 3 && /^\p{Lu}/u.test(word) && !NAME_STOPWORDS.has(word.toLowerCase()))
+    .filter((word) => word.length >= 3 && /^\p{Lu}/u.test(word) && queryWords(word).length > 0)
     .map((word) => word.toLowerCase());
+  return capitalised.length > 0 ? capitalised : queryWords(name);
+}
+
+/**
+ * The locality words after the first comma ("Doylestown", "PA 18360"): state
+ * abbreviations and postcodes identify nothing (postcodes are numeric, states
+ * are filtered by {@link queryWords}), because the geocoder's label may carry
+ * the state but never the rider's county.
+ */
+function qualifierWords(query: string): readonly string[] {
+  return query
+    .split(",")
+    .slice(1)
+    .flatMap((segment) => queryWords(segment));
 }
 
 /** Within ~1.5 km: a stop there is the destination itself, not a stop on the way. */

@@ -101,6 +101,63 @@ describe("advisor traffic preference and place bias", () => {
     expect(result.errorClass).toBe("grounding-failed");
   });
 
+  it("rejects a same-name place whose label carries the wrong town", async () => {
+    const result = await requestAdvisorDraft(
+      { prompt: "gas at Turkey Hill, Doylestown, PA", rideId: document.rideId, baseRevision: document.revision, context },
+      {
+        transport: transportWith({}),
+        places: {
+          search: async () => ({
+            status: "ok" as const,
+            places: [{ id: "indiana", label: "Turkey Hill, Indiana, PA", name: "Turkey Hill", context: "Indiana County, PA", provider: "test", coordinate: { lon: -79.15, lat: 40.6 } }],
+          }),
+          reverse: async () => null,
+        },
+      },
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errorClass).toBe("grounding-failed");
+  });
+
+  it("rejects a namesake that carries the rider's town but sits far from the ride", async () => {
+    const result = await requestAdvisorDraft(
+      { prompt: "gas at Turkey Hill, Doylestown, PA", rideId: document.rideId, baseRevision: document.revision, context },
+      {
+        transport: transportWith({}),
+        places: {
+          search: async () => ({
+            status: "ok" as const,
+            places: [{ id: "far", label: "Turkey Hill, Doylestown, PA", name: "Turkey Hill", context: "Doylestown, PA", provider: "test", coordinate: { lon: -80.5, lat: 41.9 } }],
+          }),
+          reverse: async () => null,
+        },
+      },
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errorClass).toBe("grounding-failed");
+  });
+
+  it("does not resolve a lowercase query to an arbitrary first hit", async () => {
+    const result = await requestAdvisorDraft(
+      { prompt: "gas at Turkey Hill, Doylestown, PA", rideId: document.rideId, baseRevision: document.revision, context },
+      {
+        transport: transportWith({ stopPlace: "turkey hill, doylestown, pa" }),
+        places: {
+          search: async () => ({
+            status: "ok" as const,
+            places: [{ id: "indiana", label: "Turkey Hill, Indiana, PA", name: "Turkey Hill", context: "Indiana County, PA", provider: "test", coordinate: { lon: -79.15, lat: 40.6 } }],
+          }),
+          reverse: async () => null,
+        },
+      },
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errorClass).toBe("grounding-failed");
+  });
+
   it("drops a stop that is the destination itself and says how to add one", async () => {
     const result = await requestAdvisorDraft(
       { prompt: "Ride to Lambertville, lunch along the way", rideId: document.rideId, baseRevision: document.revision, context },
