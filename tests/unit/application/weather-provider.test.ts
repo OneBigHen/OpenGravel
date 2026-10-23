@@ -178,6 +178,57 @@ describe("NWS preparation provider", () => {
     });
   });
 
+  it("briefs the forecast period that covers the trip window, not today's", async () => {
+    const futureSnapshot: WeatherSnapshot = {
+      fetchedAt: "2026-09-17T14:32:00.000Z",
+      source: "nws",
+      alerts: [],
+      forecast: [
+        {
+          name: "Today",
+          startTime: "2026-09-17T14:00:00.000Z",
+          endTime: "2026-09-17T22:00:00.000Z",
+          temperatureF: 80,
+          shortForecast: "Sunny",
+        },
+        {
+          name: "Tomorrow",
+          startTime: "2026-09-18T06:00:00.000Z",
+          endTime: "2026-09-18T18:00:00.000Z",
+          temperatureF: 50,
+          precipChance: 90,
+          shortForecast: "Heavy rain",
+        },
+      ],
+    };
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot: futureSnapshot }),
+      now: () => Date.parse("2026-09-17T15:00:00.000Z"),
+    });
+    const tripWindow = { start: "2026-09-18T08:00:00.000Z", end: "2026-09-18T16:00:00.000Z" };
+    await provider.refresh(context(tripWindow));
+
+    const result = provider.getWeather(context(tripWindow));
+    // Planning tomorrow must not read today's sunshine as tomorrow's ride weather.
+    expect(result.data?.display).toContain("Heavy rain");
+    expect(result.data?.display).not.toContain("Sunny");
+    expect(result.data?.maxPrecipChance).toBe(90);
+  });
+
+  it("says no forecast covers the trip window rather than showing an unrelated period", async () => {
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot }),
+      now: () => Date.parse("2026-09-17T14:44:00.000Z"),
+    });
+    const tripWindow = { start: "2026-10-02T12:00:00.000Z", end: "2026-10-02T18:00:00.000Z" };
+    await provider.refresh(context(tripWindow));
+
+    const result = provider.getWeather(context(tripWindow));
+    expect(result.data?.display).toBe("No forecast covers this trip window.");
+    expect(result.data?.display).not.toContain("Sunny");
+    expect(result.reason.toLowerCase()).toContain("no forecast covers this trip window");
+  });
+
   it.each([
     ["before", { start: "2026-09-17T16:00:00.000Z", end: "2026-09-17T16:59:00.000Z" }, false],
     ["during", { start: "2026-09-17T18:00:00.000Z", end: "2026-09-17T19:00:00.000Z" }, true],
