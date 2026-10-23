@@ -10,10 +10,10 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { LIVE_RIDER_NAME_STORAGE_KEY as NAME_KEY } from "@/application/live/storage-keys";
 import type { RideSafety, RideSafetySnapshot } from "@/application/safety/ride-safety";
 import { CrashCheckOverlay } from "@/ui/safety/CrashCheckOverlay";
 
-const NAME_KEY = "og.live.riderName";
 
 /** The saved name never changes under the panel; there is nothing to watch. */
 function subscribeNothing(): () => void {

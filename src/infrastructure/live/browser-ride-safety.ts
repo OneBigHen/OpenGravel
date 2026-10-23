@@ -5,9 +5,9 @@
  */
 
 import { createLiveShareSession } from "@/application/live/live-share";
+import { LIVE_SESSION_STORAGE_KEY as STORAGE_KEY } from "@/application/live/storage-keys";
 import { createRideSafety, type RideSafety } from "@/application/safety/ride-safety";
 
-const STORAGE_KEY = "og.live.session";
 
 interface BatteryLike {
   readonly level: number;
