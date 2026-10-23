@@ -5074,7 +5074,7 @@ h3,
   }
 
   .og-map__layer-toggle {
-    top: calc(68px + var(--og-safe-top));
+    top: calc(116px + var(--og-safe-top));
     left: 12px;
   }
 }
@@ -7521,11 +7521,11 @@ h3,
   }
 
   .og-map__layer-toggle {
-    top: calc(12px + var(--og-safe-top));
+    top: calc(116px + var(--og-safe-top));
   }
 
   .og-map__hint {
-    top: calc(116px + var(--og-safe-top));
+    top: calc(168px + var(--og-safe-top));
   }
 
 
@@ -8672,7 +8672,7 @@ h3,
   }
 
   .og-map__hint {
-    top: calc(116px + var(--og-safe-top));
+    top: calc(168px + var(--og-safe-top));
   }
 }
 
@@ -9263,13 +9263,23 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-/* Phone: the Layers button joins the round icon cluster on the right, and the
-   panel and the card become sheets above the tab bar. */
+/* Compact: the Layers button sits with the basemap button on the left, directly
+   under the Along-ride pill and its filter chip. The right edge belongs to the
+   instrument column alone. The panel and the card become sheets above the tab
+   bar. */
 @media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-layers {
-    top: calc(168px + var(--og-safe-top));
-    left: auto;
-    right: 12px;
+    top: calc(116px + var(--og-safe-top));
+    left: calc(12px + 44px + 8px);
+    right: auto;
+  }
+
+  /* The filter panel opens directly under the Along-ride row, where these two
+     sit. While it is open they step up into the free strip above the row, so
+     neither control is buried under the panel. */
+  .og-planner__map-slot:has(.og-places-control__panel) .og-map__layer-toggle,
+  .og-planner__map-slot:has(.og-places-control__panel) .og-layers {
+    top: calc(12px + var(--og-safe-top));
   }
 
   .og-layers__button {
@@ -9758,15 +9768,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   .og-map__veil-label { animation: none; }
 }
 
-/* ML-01: on a short phone (iPhone SE) the sheet starts ~180 px down, and the
-   third round control of the right-hand column sat under it. Layers moves
-   beside Satellite so the whole cluster stays on the exposed map. */
-@media (max-width: 760px) and (max-height: 700px) and (orientation: portrait) {
-  .og-layers {
-    top: calc(64px + var(--og-safe-top));
-    right: 64px;
-  }
-}
+/* The short phone needs no Layers exception any more: Layers and the basemap
+   share the compact left control row, so the wrapped instrument column keeps
+   the whole right edge. */
 
 /* EX-03: route detail's main action is pinned on a phone. */
 @media (max-width: 760px) {
