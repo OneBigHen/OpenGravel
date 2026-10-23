@@ -39,7 +39,9 @@ describe("readQuery: a ride or a place?", () => {
   });
 
   it("keeps the advisor after the places when a ride word and a town are both present", () => {
-    expect(readQuery("twisty loop near Jim Thorpe, PA")).toBe("maybe");
+    expect(readQuery("twisty roads, Jim Thorpe, PA")).toBe("maybe");
+    // A ride phrase ("loop near …") is a ride however the town is spelled.
+    expect(readQuery("twisty loop near Jim Thorpe, PA")).toBe("ride");
   });
 
   it.each(["coffee shop, Jim Thorpe PA", "coffee shop Jim Thorpe"])(
