@@ -25,7 +25,8 @@ import {
   isDrawableSketchDraft,
   isDrawableRoute,
 } from "@/application/map/drawable";
-import type { MapObjectRef, MapScene, PointScene } from "@/application/map/types";
+import type { MapObjectRef, MapScene, PointScene, RouteScene } from "@/application/map/types";
+import { ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 import type { PlaceScene } from "@/application/places/place-scene";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -91,6 +92,7 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
     // finding 10): what the projection refuses to draw must not frame the camera
     // either, and one predicate is the only way the two stay in agreement.
     if (!isDrawableRoute(route)) return;
+    const surface = unambiguousSurface(route);
     features.push({
       type: "Feature",
       id: index,
@@ -100,6 +102,7 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
         role: route.role,
         tint: route.tint ?? 0,
         selected: isSelected(scene.selectedObject, { kind: "route", routeId: route.id }),
+        ...(surface === null ? {} : { surface }),
       },
       geometry: { type: "LineString", coordinates: line(route.geometry) },
     });
@@ -115,7 +118,147 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
       geometry: { type: "Point", coordinates: [route.label.at.lon, route.label.at.lat] },
     });
   });
+  // The surface band rides in the same source as the line it annotates, under a
+  // `state` no route treatment matches: the band is a second reading of the same
+  // geometry, so one upload keeps it on the route, and the casing/core/arrow
+  // layers pass over it (they filter on `selected`, never `surface`).
+  const bandId = scene.routes.length * 2;
+  surfaceBandFeatures(scene).forEach((feature, offset) => {
+    features.push({ ...feature, id: bandId + offset });
+  });
   return features.length === 0 ? EMPTY : { type: "FeatureCollection", features };
+}
+
+/**
+ * The one surface kind that covers the whole line, or `null` when the mix is
+ * ambiguous — or unknown.
+ *
+ * A property that names one surface is only honest when there is one surface to
+ * name: a mixed line gets no property at all, and its band is drawn from the
+ * per-run sub-lines below. `unknown` never produces a value either, because the
+ * property means "this is what the line is painted as" and an unknown stretch is
+ * painted as nothing (CLAUDE.md: unknown is never shown as paved).
+ */
+function unambiguousSurface(route: RouteScene): string | null {
+  const runs = route.surface;
+  if (runs === undefined || runs.length === 0) return null;
+  const kinds = new Set(runs.map((run) => run.kind));
+  const [only] = [...kinds];
+  return kinds.size === 1 && only !== undefined && only !== "unknown" ? only : null;
+}
+
+/** Planar ground distance between two positions, longitude scaled by latitude. */
+function planarDistance(from: Coordinate, to: Coordinate): number {
+  const scale = Math.cos((((from.lat + to.lat) / 2) * Math.PI) / 180) || 1;
+  return Math.hypot((to.lon - from.lon) * scale, to.lat - from.lat);
+}
+
+/** Cumulative length at each position, in the same unprojected unit as its parts. */
+function cumulativeLengths(geometry: readonly Coordinate[]): readonly number[] {
+  const at = [0];
+  let total = 0;
+  for (let index = 1; index < geometry.length; index += 1) {
+    total += planarDistance(geometry[index - 1]!, geometry[index]!);
+    at.push(total);
+  }
+  return at;
+}
+
+/** The position `distance` along the line; the line's own ends outside it. */
+function coordinateAlong(
+  geometry: readonly Coordinate[],
+  at: readonly number[],
+  distance: number,
+): Coordinate | null {
+  if (geometry.length < 2) return null;
+  if (distance <= 0) return geometry[0] ?? null;
+  const last = at.length - 1;
+  if (distance >= at[last]!) return geometry[last] ?? null;
+  let low = 0;
+  let high = last;
+  while (low + 1 < high) {
+    const middle = (low + high) >> 1;
+    if (at[middle]! <= distance) low = middle;
+    else high = middle;
+  }
+  const span = at[low + 1]! - at[low]!;
+  const share = span > 0 ? (distance - at[low]!) / span : 0;
+  const from = geometry[low]!;
+  const to = geometry[low + 1]!;
+  return {
+    lon: from.lon + (to.lon - from.lon) * share,
+    lat: from.lat + (to.lat - from.lat) * share,
+  };
+}
+
+/**
+ * The stretch between two shares of the line's length, cut at the runs' own
+ * boundaries.
+ *
+ * The provider measures metres and the drawn geometry is a different (denser or
+ * sparser) sampling of the same road, so a run is mapped **proportionally** onto
+ * the line. That is the honest reading of "this share of the ride is gravel": it
+ * cannot place the boundary more precisely than the geometry allows, and it never
+ * invents a boundary the engine did not report.
+ */
+function stretchBetween(
+  geometry: readonly Coordinate[],
+  at: readonly number[],
+  from: number,
+  to: number,
+): readonly Coordinate[] {
+  const total = at[at.length - 1] ?? 0;
+  if (!(total > 0) || geometry.length < 2) return [];
+  const start = coordinateAlong(geometry, at, from * total);
+  const end = coordinateAlong(geometry, at, to * total);
+  if (start === null || end === null) return [];
+  const stretch: Coordinate[] = [start];
+  const startMeters = from * total;
+  const endMeters = to * total;
+  // A vertex that lands on a boundary is already one of the stretch's ends; the
+  // tolerance keeps float noise from drawing the same position twice.
+  const epsilon = total * 1e-9;
+  for (let index = 1; index < geometry.length - 1; index += 1) {
+    const meters = at[index]!;
+    if (meters <= startMeters + epsilon || meters >= endMeters - epsilon) continue;
+    stretch.push(geometry[index]!);
+  }
+  stretch.push(end);
+  return stretch;
+}
+
+/**
+ * The selected line's band: one sub-line per **known** surface run (05 §11).
+ *
+ * An `unknown` run produces no feature at all, which is the whole invariant: the
+ * core line keeps the route colour there, so a stretch the engine did not measure
+ * can never acquire the paved stroke. A run too short to draw produces nothing
+ * either, rather than a one-position LineString the renderer would reject.
+ */
+function surfaceBandFeatures(scene: MapScene): readonly GeoJsonFeature[] {
+  const features: GeoJsonFeature[] = [];
+  for (const route of scene.routes) {
+    if (route.state !== "selected" || !isDrawableRoute(route)) continue;
+    const runs = route.surface;
+    if (runs === undefined || runs.length === 0) continue;
+    const at = cumulativeLengths(route.geometry);
+    for (const run of runs) {
+      if (run.kind === "unknown") continue;
+      const stretch = stretchBetween(route.geometry, at, run.from, run.to);
+      if (!isDrawableLine(stretch)) continue;
+      features.push({
+        type: "Feature",
+        id: 0,
+        properties: {
+          id: route.id,
+          state: ROUTE_SURFACE_FEATURE_STATE,
+          surface: run.kind,
+        },
+        geometry: { type: "LineString", coordinates: line(stretch) },
+      });
+    }
+  }
+  return features;
 }
 
 /** The object ref a point scene selects by (a stop is its own brand). */

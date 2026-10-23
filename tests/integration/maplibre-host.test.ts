@@ -415,8 +415,9 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     const map = currentMap();
     map.fire("load");
 
-    // Eight pill images, the rider's heading arrow and the three ride pins.
-    expect(map.images.size).toBe(12);
+    // Eight pill images, the rider's heading arrow, the three ride pins and the
+    // route's direction arrow (05 §11).
+    expect(map.images.size).toBe(13);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.placeSelected)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.riderHeading)).toBe(true);
@@ -426,7 +427,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     map.fire("style.load");
 
     expect(fake.state.imageAdds).toHaveLength(firstImageAdds * 2);
-    expect(map.images.size).toBe(12);
+    expect(map.images.size).toBe(13);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     host.dispose();
   });
