@@ -4,10 +4,18 @@ priority: P0
 executors:
   chromium:
     kind: playwright
-    spec: "tests/e2e/critical/ride-focus.spec.ts"
+    spec:
+      - tests/e2e/critical/ride-focus.spec.ts
+      - tests/e2e/critical/compact-sheet.spec.ts
+      - tests/e2e/critical/mobile-planner-ux.spec.ts
+      - tests/e2e/critical/desktop-rail.spec.ts
   webkit:
     kind: playwright
-    spec: "tests/e2e/critical/ride-focus.spec.ts"
+    spec:
+      - tests/e2e/critical/ride-focus.spec.ts
+      - tests/e2e/critical/compact-sheet.spec.ts
+      - tests/e2e/critical/mobile-planner-ux.spec.ts
+      - tests/e2e/critical/desktop-rail.spec.ts
   iphone:
     kind: maestro
     flow: ".maestro/M11-plan-and-start.yaml"

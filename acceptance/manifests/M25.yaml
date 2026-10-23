@@ -4,10 +4,14 @@ priority: P2
 executors:
   chromium:
     kind: playwright
-    spec: "tests/e2e/critical/settings.spec.ts"
+    spec:
+      - tests/e2e/critical/settings.spec.ts
+      - tests/e2e/critical/telemetry.spec.ts
   webkit:
     kind: playwright
-    spec: "tests/e2e/critical/settings.spec.ts"
+    spec:
+      - tests/e2e/critical/settings.spec.ts
+      - tests/e2e/critical/telemetry.spec.ts
   iphone:
     kind: maestro
     flow: planned

@@ -19,8 +19,24 @@ function aggregate(report: unknown, attestation = true, maestro?: string, physic
     const result = spawnSync(process.execPath, [resolve("scripts/qa/aggregate.mjs"), "--playwright", reportPath,
       "--sha", SHA, "--out", scratch, ...(attestation ? ["--preflight", preflight] : []), ...(maestro ? ["--maestro", maestroPath] : []), ...(appium ? ["--appium", appiumPath] : [])], { encoding: "utf8" });
     expect(result.status, result.stderr).toBe(0);
-    return { ...JSON.parse(readFileSync(join(scratch, "M01.result.json"), "utf8")), mobile: JSON.parse(readFileSync(join(scratch, "M11.result.json"), "utf8")) };
+    return {
+      ...JSON.parse(readFileSync(join(scratch, "M01.result.json"), "utf8")),
+      mobile: JSON.parse(readFileSync(join(scratch, "M11.result.json"), "utf8")),
+      rideStyle: JSON.parse(readFileSync(join(scratch, "M07.result.json"), "utf8")),
+    };
   } finally { rmSync(scratch, { recursive: true, force: true }); }
+}
+function specResults(file: string, results: { projectName: string; status: string }[]) {
+  return {
+    file, ok: true,
+    tests: results.map(({ projectName, status }) => ({ projectName, expectedStatus: "passed", results: [{ status }] })),
+  };
+}
+function multiReport(specs: { file: string; results: { projectName: string; status: string }[] }[]) {
+  return {
+    config: { projects: [{ name: "critical-chromium" }, { name: "critical-webkit" }] },
+    suites: [{ specs: specs.map(({ file, results }) => specResults(file, results)) }],
+  };
 }
 function report(results: { projectName: string; status: string }[]) {
   return { config: { projects: [{ name: "critical-chromium" }, { name: "critical-webkit" }] }, suites: [{ specs: [{
@@ -65,5 +81,25 @@ describe("acceptance campaign evidence", () => {
   });
   it("blocks passing evidence without a matching SHA attestation", () => {
     expect(aggregate(report([{ projectName: "critical-chromium", status: "passed" }]), false).executors.chromium.status).toBe("blocked");
+  });
+  it("passes a multi-spec mission only when every claimed spec passes", () => {
+    const input = multiReport([
+      { file: "tests/e2e/critical/ride-style.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+      { file: "tests/e2e/critical/routing-method-comparison.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+    ]);
+    expect(aggregate(input).rideStyle.executors.chromium.status).toBe("pass");
+  });
+  it("fails a multi-spec mission when any claimed spec fails", () => {
+    const input = multiReport([
+      { file: "tests/e2e/critical/ride-style.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+      { file: "tests/e2e/critical/routing-method-comparison.spec.ts", results: [{ projectName: "critical-chromium", status: "failed" }] },
+    ]);
+    expect(aggregate(input).rideStyle.executors.chromium.status).toBe("fail");
+  });
+  it("leaves a multi-spec mission not_run when none of its specs appear in the report", () => {
+    const input = multiReport([
+      { file: "tests/e2e/critical/first-route.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+    ]);
+    expect(aggregate(input).rideStyle.executors.chromium.status).toBe("not_run");
   });
 });

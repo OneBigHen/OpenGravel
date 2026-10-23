@@ -58,34 +58,52 @@ const MANIFEST_DIR = join(REPO, "acceptance", "manifests");
 // The manifests use no arrays, no anchors, no multiline scalars by construction.
 function parseYaml(text, source) {
   const root = {};
-  const stack = [{ indent: -1, obj: root }];
+  const stack = [{ indent: -1, obj: root, key: null }];
   const lines = text.split("\n");
+  const unquote = (value) => {
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      return value.slice(1, -1);
+    }
+    if (value === "null" || value === "~") return null;
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return value;
+  };
   for (let i = 0; i < lines.length; i += 1) {
     const raw = lines[i];
     if (raw.trim() === "" || raw.trim().startsWith("#")) continue;
     const indent = raw.length - raw.trimStart().length;
     const line = raw.trim();
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+    const frame = stack[stack.length - 1];
+    if (line.startsWith("- ")) {
+      // Block-sequence item: the `key:` above becomes an array.
+      const parent = frame.obj;
+      let arr;
+      if (Array.isArray(parent)) {
+        arr = parent;
+      } else if (frame.key !== null && parent !== null && typeof parent === "object" && Object.keys(parent).length === 0) {
+        arr = [];
+        stack[stack.length - 2].obj[frame.key] = arr;
+        frame.obj = arr;
+      } else {
+        throw new Error(`${source}:${i + 1}: unexpected list item`);
+      }
+      arr.push(unquote(line.slice(2).trim()));
+      continue;
+    }
     const colon = line.indexOf(":");
     if (colon === -1) throw new Error(`${source}:${i + 1}: expected "key: value"`);
     const key = line.slice(0, colon).trim();
-    let value = line.slice(colon + 1).trim();
-    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
-    const parent = stack[stack.length - 1].obj;
+    const value = line.slice(colon + 1).trim();
+    const parent = frame.obj;
+    if (Array.isArray(parent)) throw new Error(`${source}:${i + 1}: expected list item`);
     if (value === "") {
       const child = {};
       parent[key] = child;
-      stack.push({ indent, obj: child });
+      stack.push({ indent, obj: child, key });
     } else {
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      } else if (value === "null" || value === "~") {
-        value = null;
-      } else if (value === "true") {
-        value = true;
-      } else if (value === "false") {
-        value = false;
-      }
-      parent[key] = value;
+      parent[key] = unquote(value);
     }
   }
   return root;
@@ -108,9 +126,12 @@ function validateManifest(m, source, problems) {
     req(ex && typeof ex === "object", `executors.${lane} missing`);
     req(ex?.kind === EXECUTOR_KINDS[lane], `executors.${lane}.kind must be ${EXECUTOR_KINDS[lane]}`);
     const target = lane === "chromium" || lane === "webkit" ? ex?.spec : ex?.flow;
-    req(target === "planned" || target === null || typeof target === "string", `executors.${lane} target must be a path, null, or "planned"`);
-    if (typeof target === "string" && target !== "planned") {
-      req(existsSync(join(REPO, target)), `executors.${lane} references missing file: ${target}`);
+    const isSpecList = Array.isArray(target) && target.length > 0 && target.every((t) => typeof t === "string");
+    req(target === "planned" || target === null || typeof target === "string" || isSpecList,
+      `executors.${lane} target must be a path, a non-empty list of paths, null, or "planned"`);
+    const paths = typeof target === "string" && target !== "planned" ? [target] : isSpecList ? target : [];
+    for (const p of paths) {
+      req(existsSync(join(REPO, p)), `executors.${lane} references missing file: ${p}`);
     }
   }
   req(m.preflight && typeof m.preflight === "object", "preflight missing");
@@ -232,6 +253,23 @@ function main() {
       const expected = manifests.filter((x) => x.id === m.id);
       if (expected.length > 1) problems.push(`acceptance/manifests/${m.id}.yaml: duplicate mission id`);
     }
+    // Every Playwright spec must be claimed by at least one manifest, otherwise
+    // it runs but never rolls up to a mission (invisible to the campaign).
+    const specDir = join(REPO, "tests", "e2e", "critical");
+    const claimedSpecs = new Set();
+    for (const m of manifests) {
+      for (const lane of ["chromium", "webkit"]) {
+        const spec = m.executors?.[lane]?.spec;
+        for (const s of Array.isArray(spec) ? spec : [spec]) {
+          if (typeof s === "string" && s !== "planned") claimedSpecs.add(s.split("/").pop());
+        }
+      }
+    }
+    if (existsSync(specDir)) {
+      for (const f of readdirSync(specDir).filter((x) => x.endsWith(".spec.ts")).sort()) {
+        if (!claimedSpecs.has(f)) problems.push(`tests/e2e/critical/${f}: no manifest claims this spec`);
+      }
+    }
     if (problems.length > 0) {
       console.error(`acceptance validation FAILED (${problems.length} problems):`);
       for (const p of problems) console.error(`  - ${p}`);
@@ -293,8 +331,9 @@ function main() {
       const lane = laneOf[project];
       for (const m of manifests) {
         const want = m.executors[lane]?.spec;
-        if (typeof want !== "string" || want === "planned") continue;
-        const hits = specs.filter((s) => typeof s.file === "string" && (s.file === want || s.file.endsWith("/" + want) || s.file.endsWith(want)));
+        const wants = Array.isArray(want) ? want : [want];
+        if (wants.length === 0 || wants.some((w) => typeof w !== "string" || w === "planned")) continue;
+        const hits = specs.filter((s) => typeof s.file === "string" && wants.some((w) => s.file === w || s.file.endsWith("/" + w) || s.file.endsWith(w)));
         if (hits.length === 0) continue;
         const verified = hits.map((hit) => attest(hit.report, lane, hit));
         const status = ["fail", "blocked", "not_run"].find((st) => verified.some((hit) => hit.status === st)) ?? "pass";
