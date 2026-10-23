@@ -96,9 +96,20 @@ export function RideSpotifyPlayer({ player }: RideSpotifyPlayerProps) {
       </div>
       <div className="og-ride__spotify-actions">
         {connected ? (
-          <button type="button" className="og-ride__spotify-link" data-testid="spotify-disconnect" onClick={() => run(() => player.disconnect())}>
-            Disconnect
-          </button>
+          <>
+            <button type="button" className="og-ride__spotify-link" data-testid="spotify-disconnect" onClick={() => run(() => player.disconnect())}>
+              Disconnect
+            </button>
+            {/* Connected without a playing device: the way to fix it stays here. */}
+            {snapshot.errorMessage === null ? null : (
+              <>
+                <button type="button" className="og-ride__spotify-link" data-testid="spotify-open" onClick={() => run(() => player.openSpotify())}>
+                  Open Spotify
+                </button>
+                <a href="/settings#spotify" className="og-ride__spotify-link">Spotify setup</a>
+              </>
+            )}
+          </>
         ) : connecting ? (
           <button type="button" className="og-ride__spotify-link" data-testid="spotify-disconnect" onClick={() => run(() => player.disconnect())}>
             Cancel
