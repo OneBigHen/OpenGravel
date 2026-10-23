@@ -107,8 +107,10 @@ function view(input: {
   readonly now?: string;
   readonly mapReady?: boolean;
   readonly routeWarnings?: Parameters<typeof buildRideFocusViewModel>[0]["routeWarnings"];
+  readonly suggestions?: "on" | "off";
 } = {}) {
   return buildRideFocusViewModel({
+    ...(input.suggestions === undefined ? {} : { suggestions: input.suggestions }),
     navigation: input.navigation ?? navigation(),
     environment: input.environment ?? environment(),
     telemetry: input.telemetry ?? null,
@@ -147,6 +149,17 @@ describe("recording activity label", () => {
     });
 
     expect(result.activityLabel).toBe("Recording");
+  });
+
+  it("names the mode, not the recording, when a recorded ride has suggestions or a route", () => {
+    const recordingId = asRecordingId("rec_mode_label");
+    const free = view({
+      navigation: navigation({ activity: "free", plan: { rideId: newRideId(), rideRevision: 0, route: null }, recordingId }),
+      suggestions: "on",
+    });
+    expect(free.activityLabel).toBe("Free ride");
+    const guided = view({ navigation: navigation({ activity: "guided", recordingId }), suggestions: "on" });
+    expect(guided.activityLabel).toBe("Guided ride");
   });
 
   it("keeps the recording context in the terminal message after discard clears its reference", () => {

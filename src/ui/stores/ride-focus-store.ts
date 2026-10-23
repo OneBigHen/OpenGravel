@@ -800,6 +800,7 @@ export function createRideFocusStore(
               routeWarnings: routeWarnings(),
               mapReady: current.mapReady,
               riderSettings: current.riderSettings,
+              suggestions: state?.suggestions ?? "off",
             });
       set({
         navigation,
