@@ -341,6 +341,7 @@ export function RideClient({
               : new Date(Date.parse(instant) + remainingDurationSeconds * 1_000).toISOString(),
           speedLimitKmh,
           liveManeuver: liveManeuverOf(frame),
+          distanceFromRouteMeters: frame.distanceFromRouteMeters,
         };
       },
     });

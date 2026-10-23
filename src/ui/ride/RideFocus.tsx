@@ -24,6 +24,11 @@
  *   and no readout already shows it),
  *   Re-center (after the rider pans away; it also snaps back by itself), the
  *   "Head to the start" question (DV-07), and one alert chip.
+ * - **Where the rider is looking**: when the line is lost, the suspended card
+ *   carries the recovery itself — how far off route the engine measured, then
+ *   "Reroute now" and "Details", both 56 px — so one thumb fixes it without the
+ *   sheet. The strip's sheet toggle doubles as the recording indicator (a dot,
+ *   REC and the elapsed time), so "is it recording?" is answerable at a glance.
  *
  * "Stable" still has its mechanical meaning: the overlays are anchored to the
  * viewport edges, and a new maneuver, warning or lost fix changes text inside a
@@ -160,6 +165,9 @@ const LOOP_LENGTHS = [60, 120, 180] as const;
 
 /** The sheet closes by itself this long after the rider last touched it (DV-10). */
 const SHEET_AUTO_CLOSE_MS = 8_000;
+
+/** Why "Reroute now" is unavailable: the store's own rule, said the same way. */
+const REROUTE_FIX_REASON = "Rerouting needs a fresh, accurate GPS fix.";
 
 /** Phone landscape: the card and strip share a left column, the map the rest. */
 const LANDSCAPE_QUERY = "(orientation: landscape) and (max-height: 500px)";
@@ -542,6 +550,28 @@ export function RideFocus({
     else openSheet();
   };
 
+  /*
+    DV-10: while the rider is off the line the recovery sits on the card they
+    are already looking at, so it is one thumb away without the sheet. The
+    button calls the store's own reroute — the same action the automatic
+    reroute uses, with the same freshness rule and cooldown — so it is an
+    override, never a second loop.
+  */
+  const offRouteActionsShown =
+    terminal === null &&
+    guidance.kind === "suspended" &&
+    guidance.reason === "off-route" &&
+    rerouteAvailable;
+  const rerouteFixGood = position.quality === "fresh-good";
+
+  /*
+    Is it recording? A mounted phone can answer that without the sheet: the
+    strip's own sheet toggle carries the ride's state — a dot, REC and the
+    elapsed time — for as long as a recording is bound and the ride is live.
+    No pulse: a dot and a counting clock are enough, and nothing moves at speed.
+  */
+  const recordingIndicator = terminal === null && (navigation?.recordingId ?? null) !== null ? recording : null;
+
   return (
     <main
       id="main"
@@ -592,9 +622,44 @@ export function RideFocus({
                 </p>
               </>
             ) : (
-              <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
-                <span data-testid={gpsUnavailable ? "ride-warning-gps-unavailable" : undefined}>{guidance.text}</span>
-              </p>
+              <>
+                <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
+                  <span data-testid={gpsUnavailable ? "ride-warning-gps-unavailable" : undefined}>{guidance.text}</span>
+                </p>
+                {guidance.kind === "suspended" && guidance.offRouteDistanceText !== null ? (
+                  <p className="og-ride__off-route-distance" data-testid="ride-off-route-distance">
+                    {guidance.offRouteDistanceText}
+                  </p>
+                ) : null}
+                {/*
+                  A reroute already in flight is shown, not hidden: the card
+                  keeps its shape and the rider can see why nothing more will
+                  happen (the store refuses the second call).
+                */}
+                {offRouteActionsShown ? (
+                  <div className="og-ride__off-route-actions" data-testid="ride-off-route-actions">
+                    <button
+                      type="button"
+                      className="og-ride__action og-ride__action--primary og-ride__off-route-action"
+                      data-testid="ride-reroute-now"
+                      disabled={rerouteBusy || !rerouteFixGood}
+                      aria-busy={rerouteBusy ? "true" : undefined}
+                      title={rerouteBusy || rerouteFixGood ? undefined : REROUTE_FIX_REASON}
+                      onClick={(): void => { void store.getState().reroute(); }}
+                    >
+                      {rerouteBusy ? "Routing…" : "Reroute now"}
+                    </button>
+                    <button
+                      type="button"
+                      className="og-ride__action og-ride__off-route-action"
+                      data-testid="ride-off-route-details"
+                      onClick={openSheet}
+                    >
+                      Details
+                    </button>
+                  </div>
+                ) : null}
+              </>
             )}
             {position.tone === "good" || terminal !== null ? null : (
               <button
@@ -1324,14 +1389,35 @@ export function RideFocus({
               className="og-ride-metrics__toggle"
               data-testid="ride-strip"
               data-held={sheetHeld ? "true" : undefined}
+              data-recording={recordingIndicator === null ? undefined : "true"}
               aria-expanded={sheetVisible}
               aria-controls="og-ride-sheet"
+              aria-label={recordingIndicator === null
+                ? undefined
+                : `Recording, ${recordingIndicator.elapsedTimeSpoken}. ${sheetVisible ? "Hide" : "Show"} ride controls.`}
               onClick={toggleSheet}
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
-              </svg>
-              <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
+              {recordingIndicator === null ? (
+                <>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
+                  </svg>
+                  <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
+                </>
+              ) : (
+                <>
+                  <span className="og-ride-metrics__rec" aria-hidden="true">
+                    <span className="og-ride-metrics__rec-dot" />
+                    <span className="og-ride-metrics__rec-label">REC</span>
+                    <svg className="og-ride-metrics__rec-chevron" viewBox="0 0 24 24">
+                      <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
+                    </svg>
+                  </span>
+                  <span className="og-ride-metrics__rec-time" aria-hidden="true" data-testid="ride-rec-time">
+                    {recordingIndicator.elapsedTimeText}
+                  </span>
+                </>
+              )}
             </button>
           </>
         )}
