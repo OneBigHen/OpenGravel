@@ -10,6 +10,7 @@
 import { createTtlCache, type CacheRead } from "@/application/route-intelligence/cache-policy";
 import type { RoadAuthoritySource } from "@/application/route-intelligence/road-authority-source";
 import type {
+  AuthorityFeedSnapshot,
   BoundingBox,
   RoadAuthorityGeometry,
   RoadAuthorityRecord,
@@ -89,6 +90,11 @@ export interface WzdxSourceOptions {
   readonly userAgent?: string;
   /** The feed's local time zone, for schedules stated in its descriptions. */
   readonly timeZone?: string;
+  /** Optional persistence so a restart does not need a live fetch to answer. */
+  readonly store?: {
+    read(key: string): Promise<AuthorityFeedSnapshot | null>;
+    write(key: string, value: AuthorityFeedSnapshot): Promise<void>;
+  };
 }
 
 const BUDGET: SourceBudget = {
@@ -104,11 +110,6 @@ const BUDGET: SourceBudget = {
 };
 
 const MAX_DESCRIPTION = 200;
-
-interface Feed {
-  readonly fetchedAt: string;
-  readonly records: readonly RoadAuthorityRecord[];
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -221,9 +222,13 @@ export function createWzdxSource(options: WzdxSourceOptions): RoadAuthoritySourc
   const doFetch = options.fetch ?? fetch;
   const now = options.now ?? Date.now;
   const info: RoadAuthoritySourceInfo = { ...options.info, family: "road-authority", facet: "closures" };
-  const cache = createTtlCache<"feed", Feed>({ ttlMs: BUDGET.cacheTtlMs, serveStaleMs: BUDGET.serveStaleMs, now });
+  const cache = createTtlCache<"feed", AuthorityFeedSnapshot>({ ttlMs: BUDGET.cacheTtlMs, serveStaleMs: BUDGET.serveStaleMs, now });
 
-  async function load(): Promise<Feed> {
+  async function load(): Promise<AuthorityFeedSnapshot> {
+    // A persisted snapshot inside its freshness window answers for a restart
+    // without a network call; past it, a closure feed is fetched again.
+    const persisted = await options.store?.read("feed").catch(() => null) ?? null;
+    if (persisted !== null && now() - Date.parse(persisted.fetchedAt) <= BUDGET.cacheTtlMs) return persisted;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), BUDGET.timeoutMs);
     try {
@@ -232,13 +237,18 @@ export function createWzdxSource(options: WzdxSourceOptions): RoadAuthoritySourc
         headers: { accept: "application/geo+json, application/json", ...(options.userAgent === undefined ? {} : { "user-agent": options.userAgent }) },
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return { fetchedAt: new Date(now()).toISOString(), records: parseWzdxFeed(decodeFeedBody(await response.json()), info.id, options.timeZone) };
+      const value: AuthorityFeedSnapshot = {
+        fetchedAt: new Date(now()).toISOString(),
+        records: parseWzdxFeed(decodeFeedBody(await response.json()), info.id, options.timeZone),
+      };
+      await options.store?.write("feed", value).catch(() => undefined);
+      return value;
     } finally {
       clearTimeout(timer);
     }
   }
 
-  function answer(read: Exclude<CacheRead<Feed>, { state: "miss" }>, corridor: BoundingBox, reason: string | null): RoadAuthoritySnapshot {
+  function answer(read: Exclude<CacheRead<AuthorityFeedSnapshot>, { state: "miss" }>, corridor: BoundingBox, reason: string | null): RoadAuthoritySnapshot {
     return {
       status: read.state,
       fetchedAt: read.value.fetchedAt,
