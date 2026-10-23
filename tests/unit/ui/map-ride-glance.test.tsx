@@ -113,6 +113,19 @@ describe("MapRideGlance", () => {
     );
   });
 
+  it("counts dirt and gravel together when the ride has both", () => {
+    render(
+      glance({
+        summary: rideGlanceSummary(
+          card({ surfaceStrip: { paved: 0.55, gravel: 0.35, dirt: 0.08, unknown: 0.02 } }),
+          CLIMB_METERS,
+        ),
+      }),
+    );
+
+    expect(screen.getByTestId("ride-glance-surface")).toHaveTextContent("43% dirt & gravel");
+  });
+
   it("treats a strip that is entirely unknown as no usable surface", () => {
     render(
       glance({

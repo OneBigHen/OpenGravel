@@ -79,6 +79,11 @@ const SURFACE_KINDS = ["dirt", "gravel", "paved"] as const;
 export function rideGlanceSurface(card: RouteCardVm): RideGlanceSurface {
   const strip = card.surfaceStrip;
   if (strip === undefined) return { label: "surface unknown", known: false };
+  // A ride with both is read for all of its unpaved riding: "8% dirt" on a loop
+  // that is also 35% gravel undersold a 43% dirt-and-gravel ride by five times.
+  if (strip.dirt > 0 && strip.gravel > 0) {
+    return { label: `${Math.round((strip.dirt + strip.gravel) * 100)}% dirt & gravel`, known: true };
+  }
   for (const kind of SURFACE_KINDS) {
     const share = strip[kind];
     if (share > 0) return { label: `${Math.round(share * 100)}% ${kind}`, known: true };
