@@ -54,8 +54,40 @@ export interface SettingsSurfaceProps {
   readonly onExport?: () => void;
   readonly onDeleteAll?: () => void;
   readonly statusMessage?: string | null;
+  /** The last delete's outcome, shown in the danger zone where the rider acted. */
+  readonly deleteResult?: DeleteResult | null;
+  /** Bumped after a successful wipe: sections remount and re-read device storage. */
+  readonly localDataEpoch?: number;
   /** Offline areas; the section is hidden where the device cannot store them. */
   readonly offlineRegions?: OfflineRegionsPort | null;
+}
+
+export interface DeleteResult {
+  readonly ok: boolean;
+  readonly message: string;
+}
+
+/**
+ * The destructive control keeps its own confirmation state so a successful wipe
+ * (which bumps `localDataEpoch` and remounts the settings layout) returns to
+ * the plain "Delete all data" button instead of leaving Confirm armed.
+ */
+function DangerZone({
+  onDeleteAll,
+  deleteResult,
+}: {
+  readonly onDeleteAll?: (() => void) | undefined;
+  readonly deleteResult: DeleteResult | null;
+}) {
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+
+  return (
+    <div className="og-settings__danger-zone"><h3>Delete local data</h3><p>This removes saved rides, drafts, saved places, garage settings and preferences from this device.</p>
+      {deleteResult !== null && <p className="og-settings__section-copy" role={deleteResult.ok ? "status" : "alert"}>{deleteResult.message}</p>}
+      {onDeleteAll !== undefined && <>{confirmationOpen ? <><label htmlFor="settings-delete-confirm">Type DELETE to confirm</label><input id="settings-delete-confirm" aria-label="Type DELETE to confirm" autoComplete="off" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /><button className="og-settings__button og-settings__button--danger" type="button" disabled={confirmation !== "DELETE"} onClick={onDeleteAll}>Confirm delete</button></> : <button className="og-settings__button og-settings__button--danger" type="button" onClick={() => setConfirmationOpen(true)}>Delete all data</button>}</>}
+    </div>
+  );
 }
 
 export function SettingsSurface({
@@ -78,14 +110,14 @@ export function SettingsSurface({
   onExport,
   onDeleteAll,
   statusMessage,
+  deleteResult = null,
+  localDataEpoch = 0,
   offlineRegions = null,
 }: SettingsSurfaceProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [form, setForm] = useState<BikeForm>(NEW_BIKE);
   const [formError, setFormError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState("");
-  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const [bikeToDelete, setBikeToDelete] = useState<string | null>(null);
 
   function beginAdd(): void {
@@ -151,7 +183,7 @@ export function SettingsSurface({
         </div>
       </header>
 
-      <div className="og-settings__layout">
+      <div className="og-settings__layout" key={`local-data-${localDataEpoch}`}>
         <AppearanceSection />
         {showNavScreen ? <NavScreenSection /> : null}
         <InstallSection />
@@ -253,9 +285,7 @@ export function SettingsSurface({
           <p>Rides are stored on this device. Export to keep a copy. Your export also includes your garage and device preferences.</p>
           <button className="og-settings__button og-settings__button--quiet" type="button" onClick={onExport}>Export all data</button>
           {statusMessage && <p className="og-settings__section-copy" role="status">{statusMessage}</p>}
-          <div className="og-settings__danger-zone"><h3>Delete local data</h3><p>This removes saved rides, drafts, garage settings and preferences from this device.</p>
-            {onDeleteAll !== undefined && <>{deleteConfirmationOpen ? <><label htmlFor="settings-delete-confirm">Type DELETE to confirm</label><input id="settings-delete-confirm" aria-label="Type DELETE to confirm" autoComplete="off" value={confirmDelete} onChange={(event) => setConfirmDelete(event.target.value)} /><button className="og-settings__button og-settings__button--danger" type="button" disabled={confirmDelete !== "DELETE"} onClick={onDeleteAll}>Confirm delete</button></> : <button className="og-settings__button og-settings__button--danger" type="button" onClick={() => setDeleteConfirmationOpen(true)}>Delete all data</button>}</>}
-          </div>
+          <DangerZone onDeleteAll={onDeleteAll} deleteResult={deleteResult} />
         </section>
       </div>
     </main>

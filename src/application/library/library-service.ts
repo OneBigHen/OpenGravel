@@ -529,6 +529,13 @@ export class LibraryService implements LibraryServicePort {
     if (record === null || record.savedAt === undefined) throw new Error("Ride not found");
     const importData = record.importData;
     const trackGeometry: Record<string, readonly Coordinate[]> = {};
+    const hasTrackGeometry = importData?.tracks.some((track) => track.segments.length > 0) ?? false;
+    if (hasTrackGeometry && this.geometryStore === undefined) {
+      throw new Error("Imported ride geometry storage is unavailable.");
+    }
+    if (record.originalsRef !== undefined && this.blobStore === undefined) {
+      throw new Error("The original import file storage is unavailable.");
+    }
     if (importData !== undefined && this.geometryStore !== undefined) {
       for (const track of importData.tracks) {
         for (const segment of track.segments) {
