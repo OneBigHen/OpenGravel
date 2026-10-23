@@ -7,18 +7,22 @@
  * what happened in OpenGravel's own words — never a vendor name, never a raw
  * model message (VNX-007 / Rule E).
  *
- * The seven classes are the contract 10 §13 names. A transport can only produce
- * a subset of them (`unavailable`, `timeout`, `rate-limit`, `invalid-request`,
- * `unsupported-action`): `grounding-failed` (10 §8) and `stale-revision` (10 §6)
- * are raised by the proposal/validation layer above the transport. All seven are
- * mapped here so the surface has one place that turns a class into copy and a
- * single recovery affordance.
+ * The classes the surface distinguishes are the ones 10 §13 names, plus
+ * `quota-exhausted`: a shared daily budget that cannot answer again for hours is
+ * not the same state as a busy minute, so it gets its own copy and no Retry. A
+ * transport can only produce a subset of them (`unavailable`, `timeout`,
+ * `rate-limit`, `invalid-request`, `unsupported-action`); `quota-exhausted`
+ * comes from the server's usage cap, and `grounding-failed` (10 §8) and
+ * `stale-revision` (10 §6) are raised by the proposal/validation layer above the
+ * transport. All of them are mapped here so the surface has one place that
+ * turns a class into copy and a single recovery affordance.
  */
 
 export const ADVISOR_ERROR_CLASSES = [
   "unavailable",
   "timeout",
   "rate-limit",
+  "quota-exhausted",
   "invalid-request",
   "unsupported-action",
   "grounding-failed",
@@ -63,6 +67,12 @@ const RIDER_STATES: RiderStateByClass = {
   "rate-limit": {
     recovery: "retry",
     message: "The advisor is busy. Try again in a moment.",
+  },
+  // The shared free-tier budget for the UTC day is gone. Nothing the rider does
+  // can succeed before it resets, so no Retry is offered.
+  "quota-exhausted": {
+    recovery: "none",
+    message: "The advisor has used up today's limit. Everything else works without it.",
   },
   "invalid-request": {
     recovery: "none",

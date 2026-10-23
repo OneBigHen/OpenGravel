@@ -72,7 +72,8 @@ async function readBoundedBody(request: Request): Promise<BodyRead> {
 
 function statusFor(errorClass: AdvisorErrorClass): number {
   switch (errorClass) {
-    case "rate-limit": return 429;
+    case "rate-limit":
+    case "quota-exhausted": return 429;
     case "timeout": return 504;
     case "invalid-request": return 400;
     case "unsupported-action":
@@ -120,7 +121,9 @@ export async function handleAdvisorRequest(
   const transport = dependencies.transport;
   if (transport === null) return errorResponse("unavailable");
   const capRetry = dependencies.dailyCap?.take() ?? null;
-  if (capRetry !== null) return errorResponse("rate-limit", capRetry);
+  // The shared daily budget is a different truth from a busy minute: a rider
+  // told to "try again in a moment" would retry into the same wall all day.
+  if (capRetry !== null) return errorResponse("quota-exhausted", capRetry);
 
   // The turn is bounded as a whole: the transport's timeout plus a fallback's
   // timeout plus geocoding must not add up to a minute of "Reading …".

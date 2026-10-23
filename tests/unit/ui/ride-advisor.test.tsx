@@ -416,6 +416,25 @@ describe("waiting for the advisor", () => {
     expect(requested?.aborted).toBe(true);
   });
 
+  it("does not offer Retry once the shared daily allowance is spent", async () => {
+    setup({
+      client: {
+        request: async () => ({
+          ok: false as const,
+          errorClass: "quota-exhausted" as const,
+          message: "The advisor has used up today's limit. Everything else works without it.",
+          recovery: "none" as const,
+        }),
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    expect(await screen.findByText(/used up today's limit/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
   it("says what it is still doing after a few seconds", async () => {
     vi.useFakeTimers();
     try {

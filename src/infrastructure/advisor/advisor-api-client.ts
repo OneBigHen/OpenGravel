@@ -92,6 +92,11 @@ export function createAdvisorApiClient(options: AdvisorApiClientOptions = {}): A
               : null;
             const state = advisorRiderState(serverClass ?? errorForStatus(response.status));
             const retryAfter = retryAfterSeconds(response);
+            // A wait measured in hours is not "busy, try again in a moment": an
+            // exhausted shared budget gets the honest state and no Retry.
+            if (state.recovery === "retry" && retryAfter !== null && retryAfter > 300) {
+              return { ok: false, ...advisorRiderState("quota-exhausted"), retryAfterSeconds: retryAfter };
+            }
             return { ok: false, ...state, ...(retryAfter === null ? {} : { retryAfterSeconds: retryAfter }) };
           }
           const draft = isRecord(body) ? parseAdvisorDraftReply(body["draft"]) : null;

@@ -203,6 +203,21 @@ describe("advisor HTTP handler", () => {
     expect(body.error?.class).toBe("timeout");
   });
 
+  it("tells the rider the shared daily allowance is spent, not that the advisor is busy", async () => {
+    const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
+    const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };
+    await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const response = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), deps);
+    const body = await response.json() as { error?: { class?: string; message?: string } };
+
+    expect(response.status).toBe(429);
+    expect(body.error?.class).toBe("quota-exhausted");
+    expect(body.error?.message).toBe("The advisor has used up today's limit. Everything else works without it.");
+    // The wait is the rest of the UTC day, not "a moment".
+    expect(Number(response.headers.get("retry-after"))).toBeGreaterThan(3_600);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it("stops calling the model once the daily budget is spent, for every client", async () => {
     const send = vi.fn(async () => ({ ok: true as const, text: FIXTURE_OUTPUT }));
     const deps = { ...dependencies({ transport: { send } }), dailyCap: createDailyCap(1, () => 0) };
