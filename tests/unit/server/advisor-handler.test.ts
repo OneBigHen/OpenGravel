@@ -133,6 +133,39 @@ describe("advisor HTTP handler", () => {
     expect(capturedMessages.join(" ")).not.toContain(DOCUMENT.rideId);
   });
 
+  it("gives the model the ride's rough area, and nothing when the ride has no point", async () => {
+    const started = {
+      ...DOCUMENT,
+      intent: {
+        ...DOCUMENT.intent,
+        start: {
+          id: "point_start",
+          kind: "start",
+          coordinate: { lon: -75.13, lat: 40.31 },
+          label: "Doylestown",
+          provenance: { type: "map", selectedAt: "2026-09-24T12:00:00.000Z" },
+        },
+      },
+    } as unknown as typeof DOCUMENT;
+    const userMessage = (): Record<string, unknown> => {
+      const messages = JSON.parse(capturedMessages[0] ?? "[]") as { role: string; content: string }[];
+      return JSON.parse(messages[1]?.content ?? "{}") as Record<string, unknown>;
+    };
+
+    capturedMessages = [];
+    const withArea = await handleAdvisorRequest(
+      makeRequest(JSON.stringify({ ...INPUT, context: advisorContextFromDocument(started, { now: new Date("2026-09-24T12:00:00.000Z"), timeZone: "America/New_York" }) })),
+      dependencies(),
+    );
+    expect(withArea.status).toBe(200);
+    expect(userMessage()["rideArea"]).toEqual({ lat: 40.31, lon: -75.13 });
+
+    capturedMessages = [];
+    const withoutArea = await handleAdvisorRequest(makeRequest(JSON.stringify(INPUT)), dependencies());
+    expect(withoutArea.status).toBe(200);
+    expect(userMessage()).not.toHaveProperty("rideArea");
+  });
+
   it("keeps the advisor honestly unavailable without a configured key", async () => {
     capturedMessages = [];
     const response = await handleAdvisorRequest(

@@ -199,7 +199,7 @@ Riders describe rides in their own words. Map them to settings with this glossar
 - trafficPreference: "avoid traffic", "no jams", "stay off busy roads", "quiet roads" -> protect-ride. "beat traffic", "fastest through traffic", "in a hurry" -> minimize-delay. Avoiding traffic is not the same as avoiding highways; set avoidHighways only when highways, interstates or freeways are named.
 - shape: "loop", "round trip", "and back", "then home", "back home", "back by <time>" from where the ride starts -> loop. "to <place>", "ride to" -> destination with finishPlace. A loop through a named stop ("to X for gas then home") is a loop with that stop.
 - A bike model alone ("KTM 890", "GS", "Harley") is not a setting; mention it in unmappedDetails unless the rider also says how they want to ride.
-Write place queries the way a map search expects them: "Name, Town, State" for a business ("Turkey Hill, Doylestown, PA"), the official name for an airport ("Philadelphia International Airport"), and for a region name its main town ("the Poconos" -> "Stroudsburg, PA"). Use the place names the rider gave; never invent a business. Never set stopPlace to the destination itself: for a vague stop such as "lunch somewhere along the way", leave stopPlace null and put it in unmappedDetails.
+Write place queries the way a map search expects them: "Name, Town, State" for a business ("Turkey Hill, Doylestown, PA"), the official name for an airport ("Philadelphia International Airport"), and for a region name its main town ("the Poconos" -> "Stroudsburg, PA"). Use the place names the rider gave; never invent a business. When the user message includes rideArea (the ride's coarse position), use it only to choose the right vicinity and town for a place query; it is not a place the rider named, so never restate it, never describe it as an address, and never output coordinates. Never set stopPlace to the destination itself: for a vague stop such as "lunch somewhere along the way", leave stopPlace null and put it in unmappedDetails.
 Map requests for roads the rider has not ridden, "new roads", or "new to me" to noveltyPreference "prefer-new-to-me". Map requests to stay on known/familiar roads to "prefer-familiar". Do not infer novelty from generic words such as fun, scenic, adventure, surprise, or different.
 Keep dependent fields consistent: a budget requires rideTimeMinutes and null ride-time date/time; returnBy or arriveBy requires a local time and null minutes; none or unchanged requires null ride-time minutes/date/time. A two-hour request is budget with 120 minutes, not none. A future departure requires a local time; include its date when the rider names a future day, otherwise leave the date null so OpenGravel uses riderLocalDate for today. Now or unchanged requires both departure fields to be null. A stop place requires an arrival intent, and no stop place requires a null arrival intent.
 When outcome is "clarification", set a non-null clarification reason; other outcomes require null clarification.
@@ -582,6 +582,9 @@ function messagesFor(request: AdvisorRequest): readonly AdvisorMessage[] {
         riderRequest: redactPrivateText(request.prompt),
         currentRide: current,
         ...(context.plannedRide === undefined ? {} : { plannedRide: context.plannedRide }),
+        // The ride's coarse position, as data the model may only use to pick the
+        // vicinity of a place query; it is not a place the rider named.
+        ...(context.near === undefined ? {} : { rideArea: { lat: context.near.lat, lon: context.near.lon } }),
         riderLocalDate: context.localDate,
         riderTimeZone: context.timeZone,
       }),
