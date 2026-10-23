@@ -2914,6 +2914,17 @@ h3,
   cursor: pointer;
 }
 
+.og-import__dropzone:hover {
+  background: color-mix(in srgb, var(--og-signal-blue) 10%, var(--og-paper));
+}
+
+/* The visible control is the drop zone; keyboard focus lives on the visually
+   hidden native input, so the ring is drawn on the zone it belongs to. */
+.og-import__dropzone:focus-within {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
 .og-import__dropzone > * {
   min-width: 0;
   max-width: 100%;
@@ -2931,10 +2942,9 @@ h3,
   color: var(--og-trail-brown);
 }
 
-.og-import__dropzone input {
-  min-height: 44px;
-  margin-top: 4px;
-  font: inherit;
+.og-import__dropzone .og-import__file-name {
+  color: var(--og-ink);
+  overflow-wrap: anywhere;
 }
 
 .og-import__error,
@@ -9100,6 +9110,55 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-library__imports {
   display: grid;
   gap: 16px;
+}
+
+/* Advanced import is a native disclosure, styled like the app's other
+   secondary rows instead of the browser's default triangle. */
+.og-library__advanced > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--og-sandstone);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+  color: var(--og-slate-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.og-library__advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-library__advanced > summary::after {
+  content: "\2304";
+  color: var(--og-moss-text);
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.og-library__advanced[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.og-library__advanced > summary:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-library__advanced[open] > summary {
+  margin-bottom: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-library__advanced > summary::after {
+    transition: none;
+  }
 }
 
 @media (min-width: 1100px) {
