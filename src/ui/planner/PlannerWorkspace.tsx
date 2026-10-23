@@ -106,6 +106,7 @@ import {
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
+  useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
   usePlannerViewModel, usePlannerVisibleSession,
@@ -229,7 +230,7 @@ export function PlannerWorkspace({
   const cameraUserOwned = useStore(plannerUiStore, (state) => state.cameraUserOwned);
   const saveStatus = useStore(rideDocumentStore, (state) => state.saveStatus);
   const restoreStatus = useStore(rideDocumentStore, (state) => state.restoreStatus);
-  const restoreMessage = restoreStatus.message;
+  const restoreAnnouncement = useRestoreAnnouncement({ restoreStatus });
   const conflict = useStore(rideDocumentStore, (state) => state.conflict);
   const reloadLatest = useStore(rideDocumentStore, (state) => state.reloadLatest);
   const keepMyCopy = useStore(rideDocumentStore, (state) => state.keepMyCopy);
@@ -771,6 +772,9 @@ export function PlannerWorkspace({
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene,
+        onPointAction: stopAuthoring.onMapPointAction,
+        longPressEnabled: placementTool === "idle" && activeTool === "pan",
+        addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,
         onIntent: handleIntent,
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
@@ -795,7 +799,7 @@ export function PlannerWorkspace({
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{
-            statusMessage: restoreMessage ?? viewModel.statusMessage,
+            statusMessage: restoreAnnouncement ?? viewModel.statusMessage,
             saveStatus,
             updateHighlight,
             updateRecovery,

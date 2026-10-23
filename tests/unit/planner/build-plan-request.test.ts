@@ -34,6 +34,7 @@ import type {
   ProviderRouteRequest,
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
+import { parseRoutePlanRequestBody } from "@/server/planning/validation";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import {
   asGeometryRef,
@@ -225,6 +226,14 @@ function contextWith(
   return { resolveGeometry: spy.resolveGeometry, ...extra };
 }
 
+/** The wire body the server validates for a built provider request. */
+function parsedBody(request: ProviderRouteRequest) {
+  return parseRoutePlanRequestBody({
+    identity: { rideId: "ride_loop", rideRevision: 1, planningGeneration: 1 },
+    request,
+  });
+}
+
 function expectOk(result: PlanRequestResult): Extract<PlanRequestResult, { ok: true }> {
   if (!result.ok) {
     throw new Error(`expected a built request, got issues: ${result.issues.join(" | ")}`);
@@ -398,10 +407,79 @@ describe("buildProviderRequest — trip shape (03-DOMAIN-MODEL §3)", () => {
 
     expect(result.request.origin).toEqual(origin);
     expect(result.request.destination).toEqual(origin);
-    expect(result.request.discovery).toEqual({
-      targetMinutes: 180,
-      toleranceMinutes: 20,
-    });
+    // The fixture also visits stops and shaping points, and discovery is only
+    // for a bare round trip: the server refuses a timebox alongside waypoints.
+    expect(result.request.discovery).toBeUndefined();
+  });
+
+  it("does not ask for loop discovery when a drawn loop ends where the pen stopped", async () => {
+    const base = fullIntent();
+    const sketch = base.sketch;
+    if (sketch === null) throw new Error("the fixture needs a sketch");
+    const spy = resolverSpy(new Map());
+
+    const result = expectOk(
+      await buildProviderRequest(
+        {
+          ...base,
+          shape: "loop",
+          finish: null,
+          stops: [],
+          shaping: [],
+          roadSpans: [],
+          sketch: { ...sketch, endpointPolicy: "derive" },
+        },
+        contextWith(spy),
+      ),
+    );
+
+    // Under `derive` the trace's own endpoints are the ride's: this loop ends
+    // where the pen stopped, so it is a point-to-point request with no timebox.
+    expect(result.request.origin).not.toEqual(result.request.destination);
+    expect(result.request.discovery).toBeUndefined();
+    expect(parsedBody(result.request).ok).toBe(true);
+  });
+
+  it("sends discovery only when the resolved request is a bare round trip", async () => {
+    const base = fullIntent();
+    const sketch = base.sketch;
+    if (sketch === null) throw new Error("the fixture needs a sketch");
+    const shapes = ["destination", "loop", "open"] as const;
+    const policies = ["derive", "preserve-existing"] as const;
+    const times: readonly RideIntent["time"][] = [
+      { kind: "none" },
+      { kind: "budget", targetMinutes: 180, toleranceMinutes: 20 },
+    ];
+
+    for (const shape of shapes) {
+      for (const sketchPresent of [false, true]) {
+        for (const endpointPolicy of policies) {
+          for (const time of times) {
+            const intent: RideIntent = {
+              ...base,
+              shape,
+              finish: shape === "loop" ? null : base.finish,
+              stops: [],
+              shaping: [],
+              roadSpans: [],
+              time,
+              ...(sketchPresent ? { sketch: { ...sketch, endpointPolicy } } : { sketch: null }),
+            };
+            const result = await buildProviderRequest(intent, contextWith(resolverSpy(new Map())));
+            // A shape that cannot be planned here is not the subject: every
+            // request this module does build must survive the server contract.
+            if (!result.ok) continue;
+            const { origin: requestOrigin, destination, discovery } = result.request;
+            if (discovery !== undefined) {
+              expect(requestOrigin).toEqual(destination);
+              expect(result.request.stops).toHaveLength(0);
+              expect(result.request.shaping).toHaveLength(0);
+            }
+            expect(parsedBody(result.request).ok).toBe(true);
+          }
+        }
+      }
+    }
   });
 
   it("does not send loop-discovery metadata for a non-loop or unbudgeted ride", async () => {

@@ -397,6 +397,13 @@ interface InternalState {
   lastGood: RouteBundle | null;
   selectionSource: RouteSelectionSource;
   selectedRouteId: RouteCandidateId | null;
+  /**
+   * The chosen route's stable provider fingerprint (profile + geometry hash).
+   * Candidate ids are minted per attempt, so the id alone cannot carry a rider's
+   * choice across a replan: the fingerprint is what identifies "their route"
+   * when the identical line comes back under a new id.
+   */
+  selectedRouteFingerprint: string | null;
   error: PlanningError | null;
   /** Keyed by provider id; rendered in provider (priority) order. */
   diagnostics: Map<string, ProviderDiagnostic>;
@@ -506,6 +513,7 @@ class PlanningSessionController implements PlanningController {
       lastGood: null,
       selectionSource: empty.selectionSource,
       selectedRouteId: empty.selectedRouteId,
+      selectedRouteFingerprint: null,
       error: null,
       diagnostics: new Map<string, ProviderDiagnostic>(),
       startedAt: empty.startedAt,
@@ -553,6 +561,7 @@ class PlanningSessionController implements PlanningController {
     const retainedLastGood = this.state.lastGood;
     const retainedSelectionSource = this.state.selectionSource;
     const retainedSelectedRouteId = this.state.selectedRouteId;
+    const retainedSelectedRouteFingerprint = this.state.selectedRouteFingerprint;
     // (a) Ownership moves first and synchronously: the new generation is the
     // owner before anything else happens, so nothing can observe a window in
     // which the old attempt still owns the session.
@@ -566,6 +575,7 @@ class PlanningSessionController implements PlanningController {
       lastGood: retainedLastGood,
       selectionSource: retainedSelectionSource,
       selectedRouteId: retainedSelectedRouteId,
+      selectedRouteFingerprint: retainedSelectedRouteFingerprint,
       phase: "validating",
       committed: null,
       error: null,
@@ -627,6 +637,7 @@ class PlanningSessionController implements PlanningController {
     // A selection names a route the rider can actually see; an unknown id is a
     // stale UI handle, not an instruction.
     if (!target.candidates.some((candidate) => candidate.id === routeId)) return;
+    const chosen = target.candidates.find((candidate) => candidate.id === routeId);
     const updated = deepFreeze<RouteBundle>({
       ...target,
       selectedRouteId: routeId,
@@ -634,6 +645,7 @@ class PlanningSessionController implements PlanningController {
     });
     this.state.selectionSource = "rider";
     this.state.selectedRouteId = routeId;
+    this.state.selectedRouteFingerprint = chosen?.fingerprint ?? null;
     if (this.state.committed !== null) this.state.committed = updated;
     if (this.state.lastGood === target) this.state.lastGood = updated;
     this.emit();
@@ -987,6 +999,16 @@ class PlanningSessionController implements PlanningController {
     if (this.state.selectionSource === "rider" && sticky !== null) {
       const chosen = run.candidates.find((candidate) => candidate.id === sticky);
       if (chosen !== undefined) return { id: chosen.id, source: "rider" };
+      // A replan mints fresh candidate ids, so the id is only the fast path: the
+      // route the rider chose is the one with their fingerprint, even when it
+      // comes back under a new id.
+      const remembered = this.state.selectedRouteFingerprint;
+      if (remembered !== null) {
+        const sameRoute = run.candidates.find(
+          (candidate) => candidate.fingerprint === remembered,
+        );
+        if (sameRoute !== undefined) return { id: sameRoute.id, source: "rider" };
+      }
       // The rider's route is not part of this revision: a bundle must select a
       // route it contains, so the automatic rule decides and says so.
     }

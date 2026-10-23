@@ -242,6 +242,33 @@ function loopDiscovery(time: RideIntent["time"]): {
   };
 }
 
+/**
+ * Whether the *resolved* request is a closed loop a provider may timebox.
+ *
+ * The server requires all three conditions (validation.ts, `discoveryIssues`):
+ * one endpoint repeated as origin and destination, with no stops or shaping
+ * points to visit. Reading them from the authored shape alone sent discovery on
+ * requests the server rejects — most visibly a drawn Loop with a ride time,
+ * whose `derive` endpoints are the trace's own start and finish, so the request
+ * was point-to-point and every attempt came back "no legal route". Under
+ * `derive` a loop that ends where the pen stopped is that point-to-point ride;
+ * only a trace that closes on its origin (or an authored round trip) is a
+ * discovery loop.
+ */
+function wantsLoopDiscovery(
+  intent: RideIntent,
+  origin: Coordinate,
+  destination: Coordinate,
+): boolean {
+  return (
+    intent.shape === "loop" &&
+    intent.stops.length === 0 &&
+    intent.shaping.length === 0 &&
+    origin.lon === destination.lon &&
+    origin.lat === destination.lat
+  );
+}
+
 /** The sketch's resolved contribution to one request. */
 interface SketchResolution {
   /** The wire projection, or `null` when there is nothing to send. */
@@ -413,11 +440,7 @@ export async function buildProviderRequest(
     avoidPolygons,
     roadSpans,
     ...(sketchResolution.sketch === null ? {} : { sketch: sketchResolution.sketch }),
-    ...(intent.shape === "loop" &&
-    (intent.time.kind === "budget" ||
-      (sketchResolution.sketch === null &&
-        intent.stops.length === 0 &&
-        intent.shaping.length === 0))
+    ...(wantsLoopDiscovery(intent, origin, destination)
       ? { discovery: loopDiscovery(intent.time) }
       : {}),
     options,

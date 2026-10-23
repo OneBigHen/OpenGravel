@@ -9,6 +9,7 @@ export { usePlannerItineraryActions } from "./usePlannerItineraryActions";
 export { usePlannerMapIntentController } from "./hooks/usePlannerMapIntentController";
 export { usePlannerPlaces, type PlannerPlaceServices } from "./usePlannerPlaces";
 export { usePlannerRoadSpans } from "./hooks/usePlannerRoadSpans";
+export { useRestoreAnnouncement } from "./hooks/useRestoreAnnouncement";
 export { usePlannerRideStyle } from "./usePlannerRideStyle";
 export { usePlannerSketch } from "./hooks/usePlannerSketch";
 export { usePlannerVisibleSession } from "./hooks/usePlannerVisibleSession";

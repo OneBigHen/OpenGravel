@@ -430,3 +430,96 @@ describe("an incomplete gesture cancels without commit", () => {
     expect(nextDown.state.lastCancel).toBeNull();
   });
 });
+
+describe("long press arbitration", () => {
+  const hold: InteractionEvent = { type: "hold-timeout", pointerId: 1, elapsedMs: 450 };
+
+  it("fires once at 450 ms, keeps the press coordinate, and consumes release", () => {
+    expect(effects([DOWN, { ...hold, elapsedMs: 449 }]).effects).toEqual([]);
+    const result = effects([DOWN, hold, hold, UP_AT_ORIGIN]);
+    expect(result.effects).toEqual([{
+      type: "long-press", coordinate: DOWN.coordinate, pixel: DOWN.pixel,
+    }]);
+  });
+
+  it("never fires after a drag, even when the pointer returns", () => {
+    expect(effects([DOWN, MOVE, { ...MOVE, pixel: DOWN.pixel }, hold, UP_AT_ORIGIN]).effects).toEqual([]);
+  });
+});
+
+
+describe("long press cancellation paths", () => {
+  const hold: InteractionEvent = { type: "hold-timeout", pointerId: 1, elapsedMs: 450 };
+  const cancellations: InteractionEvent[] = [
+    { type: "pointer-cancel", pointerId: 1 },
+    { type: "lost-capture", pointerId: 1 },
+    { type: "escape" },
+    { type: "tool-change", tool: "sketch" },
+    { type: "ride-revision-change", revision: 8 },
+    { type: "long-press-enabled", enabled: false },
+  ];
+  it.each(cancellations)("never fires after $type", (cancel) => {
+    expect(effects([DOWN, cancel, hold, UP_AT_ORIGIN, { type: "context-menu", coordinate: DOWN.coordinate, pixel: DOWN.pixel }]).effects).toEqual([]);
+  });
+  it.each(DRAWING_TOOLS)("never holds with %s armed", (tool) => {
+    expect(effects([DOWN, hold, UP_AT_ORIGIN], tool).effects).toEqual([]);
+  });
+  it("allows a sub-threshold tremor, but cancels at exactly 10 px", () => {
+    const move = { ...MOVE, pixel: { x: 109, y: 100 } };
+    expect(effects([DOWN, move, hold]).effects).toHaveLength(1);
+    expect(effects([DOWN, { ...move, pixel: { x: 110, y: 100 } }, hold, UP_AT_ORIGIN]).effects).toEqual([]);
+  });
+  it("consumes a pinch without either a hold or a release tap", () => {
+    expect(effects([DOWN, { ...DOWN, pointerId: 2 }, hold, UP_AT_ORIGIN]).effects).toEqual([]);
+  });
+  it("ignores a foreign timeout and a timeout after release", () => {
+    expect(effects([DOWN, { ...hold, pointerId: 2 }]).effects).toEqual([]);
+    expect(effects([DOWN, UP_AT_ORIGIN, hold]).effects).toEqual([
+      { type: "tap", pointerId: 1, coordinate: DOWN.coordinate },
+    ]);
+  });
+  it("never holds while a placement is armed, even after enabling it again", () => {
+    expect(effects([{ type: "long-press-enabled", enabled: false }, DOWN, hold]).effects).toEqual([]);
+    expect(effects([DOWN, { type: "long-press-enabled", enabled: false }, { type: "long-press-enabled", enabled: true }, hold]).effects).toEqual([]);
+  });
+  it("routes right click through the same effect and respects tool and placement arbitration", () => {
+    const context: InteractionEvent = { type: "context-menu", coordinate: DOWN.coordinate, pixel: DOWN.pixel };
+    expect(effects([context]).effects).toEqual([{ type: "long-press", coordinate: DOWN.coordinate, pixel: DOWN.pixel }]);
+    for (const tool of DRAWING_TOOLS) expect(effects([context], tool).effects).toEqual([]);
+    expect(effects([{ type: "long-press-enabled", enabled: false }, context]).effects).toEqual([]);
+    expect(effects([DOWN, MOVE, context]).effects).toEqual([]);
+    expect(effects([DOWN, hold, context, UP_AT_ORIGIN]).effects).toHaveLength(1);
+  });
+});
+
+
+it("keeps a pinch consumed until all fingers have lifted", () => {
+  const hold: InteractionEvent = { type: "hold-timeout", pointerId: 3, elapsedMs: 450 };
+  expect(effects([
+    DOWN, { ...DOWN, pointerId: 2 }, UP_AT_ORIGIN,
+    { ...DOWN, pointerId: 3 }, hold, { ...UP_AT_ORIGIN, pointerId: 2 },
+    { ...UP_AT_ORIGIN, pointerId: 3 },
+  ]).effects).toEqual([]);
+  expect(effects([
+    DOWN, { ...DOWN, pointerId: 2 }, UP_AT_ORIGIN, { ...UP_AT_ORIGIN, pointerId: 2 },
+    { ...DOWN, pointerId: 3 }, hold,
+  ]).effects).toHaveLength(1);
+});
+
+
+it("cancels a temporarily grabbed route on pinch without committing a stop", () => {
+  const down = { ...DOWN, routePress: true };
+  expect(effects([down, { ...DOWN, pointerId: 2 }, UP_AT_ORIGIN], "point-drag").effects).toEqual([]);
+});
+
+
+it("consumes right-button release and accepts a fresh right-click after cancellation", () => {
+  const context: InteractionEvent = { type: "context-menu", coordinate: DOWN.coordinate, pixel: DOWN.pixel };
+  expect(effects([{ ...DOWN, button: 2 }, UP_AT_ORIGIN]).effects).toEqual([]);
+  expect(effects([DOWN, { type: "escape" }, UP_AT_ORIGIN, context]).effects).toEqual([]);
+  expect(effects([DOWN, { type: "escape" }, UP_AT_ORIGIN, { ...DOWN, button: 2 }, UP_AT_ORIGIN, context]).effects).toEqual([
+    { type: "long-press", coordinate: DOWN.coordinate, pixel: DOWN.pixel },
+  ]);
+  const down = reduceInteraction(initialInteractionState(), DOWN);
+  expect(reduceInteraction(down.state, { type: "long-press-enabled", enabled: false }).state.lastCancel).toBe("placement-change");
+});

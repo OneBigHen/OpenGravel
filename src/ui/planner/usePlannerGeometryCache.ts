@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
@@ -33,6 +33,14 @@ export function usePlannerGeometryCache(input: {
     Readonly<Record<string, GeometryPayload>>
   >({});
 
+  /**
+   * Handles this cache has already asked the store for. A `null` answer is a
+   * normal absence (the handle was reclaimed), not a reason to ask again on the
+   * next render: without this, an unresolved handle made the load effect retry
+   * itself forever, because each attempt wrote a fresh state object.
+   */
+  const requestedRefs = useRef<Set<GeometryRef>>(new Set());
+
   const refs = useMemo(() => {
     const sketch = input.document.intent.sketch;
     return [
@@ -45,20 +53,37 @@ export function usePlannerGeometryCache(input: {
   }, [input.document]);
 
   useEffect(() => {
-    const missing = refs.filter((ref) => authoredGeometry[ref] === undefined);
+    // A different document (or its refs) is a new question: a handle that was
+    // absent before may resolve now, so answers are not remembered across it.
+    requestedRefs.current = new Set();
+  }, [refs]);
+
+  useEffect(() => {
+    const missing = refs.filter(
+      (ref) => authoredGeometry[ref] === undefined && !requestedRefs.current.has(ref),
+    );
     if (missing.length === 0) return;
+    for (const ref of missing) requestedRefs.current.add(ref);
 
     let cancelled = false;
     void Promise.all(
       missing.map(async (ref) => [ref, await store.get(ref)] as const),
     ).then((resolved) => {
       if (cancelled) return;
+      const found = resolved.filter((entry) => entry[1] !== null);
+      // Nothing resolved: keep the previous state object, so React bails out of
+      // the render and this effect is not asked the same question again.
+      if (found.length === 0) return;
       setAuthoredGeometry((current) => {
+        let changed = false;
         const next: Record<string, GeometryPayload> = { ...current };
-        for (const [ref, record] of resolved) {
-          if (record !== null) next[ref] = record.payload;
+        for (const [ref, record] of found) {
+          if (record !== null && current[ref] !== record.payload) {
+            next[ref] = record.payload;
+            changed = true;
+          }
         }
-        return next;
+        return changed ? next : current;
       });
     });
 

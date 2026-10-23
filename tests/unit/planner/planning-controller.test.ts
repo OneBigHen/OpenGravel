@@ -871,6 +871,44 @@ describe("selection", () => {
     expect(controller.snapshot().selectionSource).toBe("automatic");
   });
 
+  it("keeps the rider's route across a replan even though ids are minted fresh", async () => {
+    const alpha = fakeProvider("alpha");
+    const pipeline = mappingPipeline(({ identity, providerId, candidates }) =>
+      candidates.map((_candidate, index) => ({
+        ...routeCandidate(`g${identity.planningGeneration}-${providerId}-${index}`, providerId),
+        // The identical line comes back with a new id: the fingerprint is what
+        // still identifies the route the rider chose.
+        fingerprint: `stable-${providerId}-${index}`,
+      })),
+    );
+    const controller = buildController({
+      providers: [alpha.provider],
+      pipeline: pipeline.pipeline,
+      now: FIXED_CLOCK,
+    });
+
+    void begin(controller, 1);
+    await flush();
+    alpha.settle(0, [rawCandidate("alpha"), rawCandidate("alpha")]);
+    await flush();
+    controller.selectRoute(asRouteCandidateId("g1-alpha-1"));
+    expect(controller.snapshot().selectionSource).toBe("rider");
+
+    const settled = begin(controller, 2);
+    await flush();
+    alpha.settle(1, [rawCandidate("alpha"), rawCandidate("alpha")]);
+    await flush();
+
+    const snapshot = controller.snapshot();
+    expect(snapshot.selectedRouteId).toBe("g2-alpha-1");
+    expect(snapshot.selectionSource).toBe("rider");
+    const selected = snapshot.committedBundle?.candidates.find(
+      (candidate) => candidate.id === snapshot.selectedRouteId,
+    );
+    expect(selected?.fingerprint).toBe("stable-alpha-1");
+    await expect(settled).resolves.toBeUndefined();
+  });
+
   it("falls back to automatic when a new revision lacks the rider's route", async () => {
     const alpha = fakeProvider("alpha");
     const pipeline = mappingPipeline(({ identity, providerId, candidates }) =>
