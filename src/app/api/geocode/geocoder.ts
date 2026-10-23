@@ -1,6 +1,5 @@
 import type { GeocodeDependencies } from "@/server/geocoding/handler";
-import { createPhotonGeocoder, PHOTON_DEFAULT_URL } from "@/infrastructure/geocoding/photon";
-import { createTomTomGeocoder, withFallback } from "@/infrastructure/geocoding/tomtom";
+import { createDeploymentGeocoder } from "@/server/geocoding/fallback-geocoder";
 
 /**
  * The deployment's geocoder, composed once per server process. `PHOTON_URL`
@@ -9,7 +8,7 @@ import { createTomTomGeocoder, withFallback } from "@/infrastructure/geocoding/t
  * by the operator. With `TOMTOM_API_KEY` set, TomTom answers whenever Photon
  * cannot. With no configured hint, Photon ranks without a location.
  */
-const tomtomKey = (process.env.TOMTOM_API_KEY ?? process.env.TOMTOM_TRAFFIC_API_KEY ?? "").trim();
+const photon = createDeploymentGeocoder();
 // TomTom answers when Photon is down (the public instance refused every
 // connection for a while on 2026-10-23 and search went dark).
 const photon = withFallback(
