@@ -39,6 +39,9 @@ describe("browser offline runtime", () => {
   });
 
   it("knows a downloaded road graph lets the planner answer with no signal", async () => {
+    // Planning offline also needs an app that reopens without signal.
+    vi.stubGlobal("navigator", { onLine: false, serviceWorker: { controller: { scriptURL: "https://opengravel.test/sw.js" }, getRegistrations: async () => [{}] } });
+    vi.stubGlobal("caches", { match: vi.fn(async () => new Response("shell", { headers: { "x-og-cached-at": "2026-09-18T11:55:00.000Z" } })) });
     const snapshot = await readBrowserOfflineRuntime({ now: "2026-09-18T12:00:00.000Z", installedAreas: 2 });
 
     expect(snapshot.installedAreas).toBe(2);
