@@ -117,7 +117,7 @@ describe("NWS preparation provider", () => {
     expect(result.provenance).toContain("updated 23:32 GMT+9");
   });
 
-  it("shows forecast only without a trip window, even when alerts exist", async () => {
+  it("surfaces an active alert as area information when the route has no trip window", async () => {
     const provider = createNwsWeatherProvider({
       fetcher: async () => Response.json({ snapshot }),
       now: () => Date.parse("2026-09-17T14:44:00.000Z"),
@@ -125,9 +125,30 @@ describe("NWS preparation provider", () => {
     await provider.refresh(context(null));
 
     const result = provider.getWeather(context(null));
+    // The forecast is still shown, but an active alert in the start area is not
+    // hidden merely because the ride has no window yet.
     expect(result.data?.display).toContain("Sunny");
+    expect(result.data?.display).toContain("Severe Thunderstorm Watch");
+    expect(result.data?.display.toLowerCase()).toContain("nearby");
+    // It is area information, not a claim that it covers the ride window.
     expect(result.data).not.toHaveProperty("primaryAlert");
-    expect(result.data?.display).not.toContain("Thunderstorm");
+    expect(result.data?.tripWindowScoped).toBe(false);
+    expect(result.data?.tripAlerts).toBeUndefined();
+    expect(result.reason.toLowerCase()).toContain("area");
+    expect(result.reason).not.toContain("covers your trip window");
+  });
+
+  it("shows the forecast alone when the route has no trip window and no alert", async () => {
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot: { ...snapshot, alerts: [] } }),
+      now: () => Date.parse("2026-09-17T14:44:00.000Z"),
+    });
+    await provider.refresh(context(null));
+
+    const result = provider.getWeather(context(null));
+    expect(result.data?.display).toContain("Sunny");
+    expect(result.reason).toBe("Forecast received for the selected route.");
+    expect(result.data).not.toHaveProperty("primaryAlert");
   });
 
   it("scopes long-trip weather metrics and alerts to the trip window", async () => {

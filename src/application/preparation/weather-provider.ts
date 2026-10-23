@@ -173,6 +173,9 @@ function dataForSnapshot(snapshot: WeatherSnapshot, context: RoutePreparationCon
     ? snapshot.forecast.filter((period) => forecastOverlapsTripWindow(period, context.tripWindow))
     : snapshot.forecast;
   const alert = primaryAlert(overlapping);
+  // Without a departure there is no trip window to test alerts against, so an
+  // active alert is reported as area information instead of being dropped.
+  const areaAlert = tripWindowScoped ? undefined : primaryAlert(snapshot.alerts);
   const firstForecast = snapshot.forecast[0];
   const age = formatUpdatedAge(snapshot.fetchedAt, now);
   let display = firstForecast === undefined ? "Forecast is unavailable." : formatForecast(firstForecast);
@@ -196,6 +199,13 @@ function dataForSnapshot(snapshot: WeatherSnapshot, context: RoutePreparationCon
       display = `${display} · Active alert timing unavailable`;
       reason = `${reason} Active alert timing is unavailable; check before you ride.`;
     }
+  } else if (areaAlert !== undefined) {
+    // No trip window yet: name the alert for the start area and say plainly
+    // that the ride window has not been checked, rather than showing sun.
+    display = `${display} · Active alert nearby: ${areaAlert.event}`;
+    reason = stale
+      ? "An active weather alert covers this area, but the weather data is stale; check before you ride."
+      : "An active weather alert covers this area; set a departure to check your trip window.";
   }
 
   const validUntil = snapshot.forecast.at(-1)?.endTime;
