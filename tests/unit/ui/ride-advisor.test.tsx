@@ -200,7 +200,8 @@ describe("ask about this ride", () => {
     expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("Make this ride about 30 minutes shorter");
     expect(screen.getAllByTestId("advisor-proposal")).toHaveLength(1);
     expect(screen.getByTestId("advisor-ride-ask")).toContainElement(screen.getByTestId("advisor-proposal"));
-    expect(screen.getByText("Here's a ride that fits. Tap Plan it to see it on the map.")).toBeInTheDocument();
+    // The card already shows the chips; the matching reply waits for history.
+    expect(screen.queryByText(/^Suggested:/)).toBeNull();
   });
 
   it("asks a typed question about the planned ride", async () => {

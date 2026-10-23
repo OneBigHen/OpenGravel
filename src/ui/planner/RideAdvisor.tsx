@@ -162,7 +162,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
           }
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status !== "error") {
-            const reply = built.status === "ready" ? "Here's a ride that fits. Tap Plan it to see it on the map." : built.message;
+            const reply = built.status === "ready" ? `Suggested: ${built.changes.map(changeChip).join(" · ")}.` : built.message;
             const exchanges = appendAdvisorExchange(history, { riderRequest: text, reply, outcome: built.status === "ready" ? "proposal" : built.status });
             conversationRef.current = { rideId: requestedDocument.rideId, exchanges };
             setConversation(exchanges);
@@ -341,7 +341,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
           {advisor.conversation.map((exchange, index) => (
             <li key={`${index}-${exchange.riderRequest}`}>
               <p className="og-advisor__rider"><span className="og-visually-hidden">You: </span>{exchange.riderRequest}</p>
-              {index < advisor.conversation.length - 1 || exchange.riderRequest !== advisor.prompt || (message === null && !pending) ? <p className="og-advisor__reply"><AdvisorMark /> {exchange.reply}</p> : null}
+              {index < advisor.conversation.length - 1 || exchange.riderRequest !== advisor.prompt || (message === null && !pending && proposal === null) ? <p className="og-advisor__reply"><AdvisorMark /> {exchange.reply}</p> : null}
             </li>
           ))}
           {advisor.prompt !== "" && advisor.conversation.at(-1)?.riderRequest !== advisor.prompt ? <li><p className="og-advisor__rider"><span className="og-visually-hidden">You: </span>{advisor.prompt}</p></li> : null}
@@ -392,7 +392,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
 
       {message !== null && !idle ? (
         <div className={messageIsError ? "og-advisor__error" : "og-advisor__notice"} role={messageIsError ? "alert" : "status"}>
-          <p>{message}</p>
+          <p>{messageIsError ? null : <AdvisorMark />} {message}</p>
           {recoveryLabel(recovery) === null ? null : (
             <button type="button" className="og-advisor__retry" onClick={advisor.retry}>
               {recoveryLabel(recovery)}
@@ -414,7 +414,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
           <AdvisorMark />
           <input
             type="text"
-            className="og-place-search__input"
+            className="og-place-search__input og-advisor__input"
             data-testid="advisor-prompt"
             aria-label="Describe your ride"
             placeholder="2 h of twisty backroads, no highways"
@@ -473,7 +473,7 @@ export function AdvisorRideAsk() {
         <form className="og-advisor-ask__form" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
           <input
             type="text"
-            className="og-place-search__input"
+            className="og-place-search__input og-advisor__input"
             data-testid="advisor-ride-prompt"
             aria-label="Ask about this ride"
             placeholder="Ask or change anything: “lunch stop in Jim Thorpe”"

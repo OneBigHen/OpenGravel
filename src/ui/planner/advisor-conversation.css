@@ -164,3 +164,36 @@
     transition: none;
   }
 }
+
+/* A chat box, not a search: no magnifier, a little more room. */
+.og-advisor .og-advisor__input,
+.og-advisor-ask .og-advisor__input {
+  padding-left: 14px;
+  background-image: none;
+}
+
+/* The advisor's latest answer sits in the conversation like any reply. */
+.og-advisor__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--og-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.og-advisor__notice p {
+  flex: 1 1 auto;
+  margin: 0;
+  padding-top: 2px;
+}
+
+.og-advisor__notice .og-advisor__mark {
+  margin-right: 4px;
+}
+
+.og-advisor__notice .og-advisor__close {
+  flex: none;
+  align-self: flex-start;
+  margin: -10px -10px 0 0;
+}
