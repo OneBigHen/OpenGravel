@@ -8,6 +8,8 @@
  * firewalled to Cloudflare. Single-process only, which is what `ogv.service` is.
  */
 
+import { isIP } from "node:net";
+
 export interface RateLimiter {
   /** `null` when the request may proceed; otherwise seconds until it may. */
   check(request: Request): number | null;
@@ -35,6 +37,17 @@ export function clientKey(request: Request, env: Readonly<Record<string, string 
   return "anonymous";
 }
 
+/** A public address we may act on; private, loopback and unknown keys never are. */
+export function actionableAddress(key: string): string | null {
+  const bare = key.replace(/^\[|\]$/g, "");
+  if (isIP(bare) === 0) return null;
+  if (bare === "::1" || /^127\./.test(bare) || /^10\./.test(bare) || /^192\.168\./.test(bare) ||
+    /^172\.(?:1[6-9]|2\d|3[01])\./.test(bare) || /^(?:fc|fd|fe80)/i.test(bare) || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(bare)) {
+    return null;
+  }
+  return bare;
+}
+
 export function createRateLimiter(options: RateLimitOptions): RateLimiter {
   const now = options.now ?? Date.now;
   const hitsByKey = new Map<string, number[]>();
@@ -58,6 +71,21 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
       hits.push(time);
       hitsByKey.set(key, hits);
       return null;
+    },
+  };
+}
+
+/**
+ * A limiter that only meters requests the reverse proxy attributed an address
+ * to. A budget keyed on a key the client can choose freely (or omit) is not a
+ * budget, so a request with no forwarded address is left to the origin guard,
+ * which also declines to act without one.
+ */
+export function createAddressRateLimiter(options: RateLimitOptions): RateLimiter {
+  const limiter = createRateLimiter(options);
+  return {
+    check(request) {
+      return actionableAddress(clientKey(request, options.env)) === null ? null : limiter.check(request);
     },
   };
 }

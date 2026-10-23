@@ -58,6 +58,14 @@ describe("security guard", () => {
     expect(guard.inspect(request(), "/api/route-plan")).toEqual({ action: "pass" });
   });
 
+  it("meters share creation and resolution like the other engine routes", () => {
+    const guard = createGuard({ env: ENV, now: () => 0, readBlocklist: () => new Set(), meteredPerMinute: 2 });
+    const address = "203.0.113.19";
+    expect(guard.inspect(request(address), "/api/shares")).toEqual({ action: "pass" });
+    expect(guard.inspect(request(address), `/api/shares/resolve/${"a".repeat(64)}`)).toEqual({ action: "pass" });
+    expect(guard.inspect(request(address), "/api/shares")).toMatchObject({ status: 429 });
+  });
+
   it("never acts on private, loopback or unknown addresses", () => {
     for (const key of ["anonymous", "127.0.0.1", "192.168.1.61", "172.23.0.1", "10.0.0.4", "::1", "fd00::2", "100.100.1.1"]) {
       expect(actionableAddress(key), key).toBeNull();
