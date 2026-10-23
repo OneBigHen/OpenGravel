@@ -9,6 +9,7 @@
  * every provider is replaced by a small deterministic set for browser gates.
  */
 
+import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import {
   clampLayerBounds,
   isMapLayerId,
@@ -27,7 +28,6 @@ import {
   fetchPinnedCameraUrl,
 } from "@/server/traffic-cameras/url-security";
 
-import { surfaceProvider } from "./surface";
 import { authorityProvider } from "./authority";
 import { publicLandProvider } from "./public-land";
 import { fireProvider } from "./fire";
@@ -37,7 +37,6 @@ import { trafficCamerasProvider } from "./traffic-cameras";
 import {
   knownRoadsProvider,
   nwsAlertsProvider,
-  overpassProvider,
   tomtomIncidentsProvider,
   tomtomStopsProvider,
   type LayerProvider,
@@ -86,8 +85,11 @@ export function parseBounds(raw: string | null): MapLayerBounds | string {
   return clampLayerBounds({ west, south, east, north });
 }
 
+const RETIRED_LAYER_IDS = new Set(["road-surface", "forest-roads", "cell-towers", "closures"]);
+
 export function parseLayers(raw: string | null): readonly MapLayerId[] | string {
-  const ids = [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter((id) => id !== ""))];
+  // Pages loaded before a layer was retired still ask for it; drop those quietly.
+  const ids = [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter((id) => id !== "" && !RETIRED_LAYER_IDS.has(id)))];
   if (ids.length === 0) return "layers is required.";
   if (!ids.every(isMapLayerId)) return "layers names an unknown layer.";
   const features = ids.filter((id) => mapLayer(id).kind === "features");
@@ -137,7 +139,7 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
       name: `${definition.name} (fixture)`,
       detail: definition.legend,
       weight: 5,
-      geometry: layerId === "great-roads" || layerId === "gravel" || layerId === "forest-roads"
+      geometry: layerId === "great-roads" || layerId === "gravel"
         ? { type: "LineString", coordinates: [[lon - dx, lat + offset * dy], [lon + dx, lat + offset * dy]] }
         : { type: "Point", coordinates: [lon + offset * dx, lat - dy] },
     };
@@ -151,13 +153,11 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     fireProvider,
     publicLandProvider,
     authorityProvider,
-    surfaceProvider,
     tomtomStopsProvider,
     tomtomIncidentsProvider,
     trafficCamerasProvider,
     nwsAlertsProvider,
-    knownRoadsProvider(knownRoadsFromEnv(env)),
-    overpassProvider,
+    knownRoadsProvider(knownRoadsFromEnv(env), gravelAtlasFromEnv(env)),
   ];
 }
 

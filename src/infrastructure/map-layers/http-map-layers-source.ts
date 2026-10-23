@@ -24,7 +24,7 @@ export interface HttpMapLayersSourceOptions {
   readonly origin?: string;
 }
 
-const ALL_PROVIDERS: readonly InfoProvider[] = ["osm", "tomtom", "nws", "roads", "traffic-cameras", "terrain", "hillshade", "radar", "firms", "padus", "authority", "surface"];
+const ALL_PROVIDERS: readonly InfoProvider[] = ["osm", "tomtom", "nws", "roads", "traffic-cameras", "terrain", "hillshade", "radar", "firms", "padus", "authority"];
 
 function isResult(value: unknown): value is MapLayersResult {
   if (typeof value !== "object" || value === null) return false;

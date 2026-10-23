@@ -12,6 +12,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   MAP_LAYER_CATEGORIES,
+  MAP_LAYER_LENSES,
   MAP_LAYERS,
   type LayerFreshness,
   type MapLayerDefinition,
@@ -29,6 +30,8 @@ export interface MapLayersPanelProps {
   readonly cameraRouteAvailable: boolean;
   readonly onToggleCameraRouteOnly: () => void;
   readonly onToggle: (id: MapLayerId) => void;
+  /** Turns a lens's whole set of layers on or off together. */
+  readonly onToggleLens?: (ids: readonly MapLayerId[]) => void;
   readonly onClearAll: () => void;
 }
 
@@ -43,9 +46,9 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
     case "unavailable":
       return "Unavailable";
     case "stale":
-      return "Stale";
+      return "Out of date";
     case "ready":
-      return (layer.kind !== "features" || layer.id === "weather-radar" || layer.id === "hillshade") ? "On" : count === 0 ? (["mvum", "work-zones", "road-surface"].includes(layer.id) ? "No records · gaps unknown" : "None here") : String(count);
+      return (layer.kind !== "features" || layer.id === "weather-radar" || layer.id === "hillshade") ? "On" : count === 0 ? "None here" : String(count);
   }
 }
 
@@ -105,10 +108,11 @@ function LayerRow({
       {about ? (
         <p className="og-layers__caveat">
           <strong>{layer.source}.</strong> {layer.caveat}
+          {freshness === undefined ? null : <> {freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}</>}
         </p>
       ) : null}
-      {on && freshness !== undefined ? <p className="og-layers__caveat">
-        {freshness.stale ? "Stale · " : ""}{freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}
+      {on && freshness !== undefined && !about ? <p className="og-layers__caveat">
+        {freshness.stale ? "May be out of date · " : ""}Updated {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
       </p> : null}
       {extra}
     </li>
@@ -124,6 +128,7 @@ export function MapLayersPanel({
   cameraRouteAvailable,
   onToggleCameraRouteOnly,
   onToggle,
+  onToggleLens,
   onClearAll,
 }: MapLayersPanelProps) {
   const [open, setOpen] = useState(false);
@@ -175,6 +180,30 @@ export function MapLayersPanel({
             </button>
           </header>
           <div className="og-layers__body">
+            {onToggleLens === undefined ? null : (
+              <ul className="og-layers__lenses" aria-label="Quick layer sets">
+                {MAP_LAYER_LENSES.map((lens) => {
+                  const on = lens.layers.every((id) => enabled.includes(id));
+                  return (
+                    <li key={lens.id}>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={on}
+                        className="og-layers__lens"
+                        data-on={on ? "true" : "false"}
+                        data-testid={`map-lens-${lens.id}`}
+                        onClick={() => onToggleLens(lens.layers)}
+                      >
+                        <span className="og-layers__lens-glyph" aria-hidden="true">{lens.glyph}</span>
+                        <span className="og-layers__lens-name">{lens.name}</span>
+                        <span className="og-layers__lens-hint">{lens.hint}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             {MAP_LAYER_CATEGORIES.map((category) => (
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>

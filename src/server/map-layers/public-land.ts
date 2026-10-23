@@ -1,6 +1,13 @@
 import type { InfoFeature, LngLat } from "@/application/map-layers";
 import { overpassProvider, type LayerProvider } from "@/server/map-layers/providers";
 
+/**
+ * Land a rider can actually visit: open or restricted public access, not
+ * conservation easements on private farms, and big enough to see. The full
+ * set was ten thousand polygons (4 MB) for one county-sized view.
+ */
+export const PUBLIC_LAND_WHERE = "Pub_Access IN ('OA','RA') AND Category <> 'Easement' AND GIS_Acres >= 40";
+
 const SERVICE = "https://services.arcgis.com/v01gqwM5QqNysAAi/arcgis/rest/services/PADUS_Public_Access/FeatureServer/0";
 function record(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
@@ -35,7 +42,7 @@ export const publicLandProvider: LayerProvider = {
     const fetchedAt = new Date((context.now ?? Date.now)()).toISOString();
     try {
       if (bounds.west < -180 || bounds.east > -60 || bounds.south < 18 || bounds.north > 72) throw new Error("Outside US");
-      const params = new URLSearchParams({ f: "geojson", where: "1=1", geometry: JSON.stringify({ xmin: bounds.west, ymin: bounds.south, xmax: bounds.east, ymax: bounds.north, spatialReference: { wkid: 4326 } }), geometryType: "esriGeometryEnvelope", inSR: "4326", outSR: "4326", spatialRel: "esriSpatialRelIntersects", outFields: "OBJECTID,Unit_Nm,Pub_Access,MngNm_Desc,Category", returnGeometry: "true", maxAllowableOffset: "0.0005", geometryPrecision: "5", resultRecordCount: "1000" });
+      const params = new URLSearchParams({ f: "geojson", where: PUBLIC_LAND_WHERE, geometry: JSON.stringify({ xmin: bounds.west, ymin: bounds.south, xmax: bounds.east, ymax: bounds.north, spatialReference: { wkid: 4326 } }), geometryType: "esriGeometryEnvelope", inSR: "4326", outSR: "4326", spatialRel: "esriSpatialRelIntersects", outFields: "OBJECTID,Unit_Nm,Pub_Access,MngNm_Desc,Category", returnGeometry: "true", maxAllowableOffset: "0.0005", geometryPrecision: "5", resultRecordCount: "1000" });
       const signal = context.signal === undefined ? AbortSignal.timeout(8_000) : AbortSignal.any([context.signal, AbortSignal.timeout(8_000)]);
       const pages: unknown[] = [];
       let complete = false;

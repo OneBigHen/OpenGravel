@@ -167,4 +167,75 @@ describe("WZDx registry (every keyless state feed)", () => {
     const source = createWzdxRegistrySource({ fetch: (async () => { throw new Error("down"); }) as unknown as typeof fetch });
     expect((await source.snapshot(corridor, signal)).status).toBe("unavailable");
   });
+
+  it("keeps the listing and its feed snapshots for the next process", async () => {
+    const newYork = { west: -77.65, south: 43.1, east: -77.55, north: 43.2 };
+    const stored = { type: "FeatureCollection", features: [{ id: "z1", type: "Feature",
+      properties: { core_details: { event_type: "work-zone" }, vehicle_impact: "some-lanes-closed" },
+      geometry: { type: "LineString", coordinates: [[-77.6, 43.15], [-77.58, 43.16]] } }] };
+    const files = new Map<string, unknown>();
+    const store = {
+      readRegistry: async () => (files.get("registry") ?? null) as never,
+      writeRegistry: async (value: unknown) => { files.set("registry", value); },
+      readFeed: async (id: string) => (files.get(`feed-${id}`) ?? null) as never,
+      writeFeed: async (id: string, value: unknown) => { files.set(`feed-${id}`, value); },
+    };
+    const online = createWzdxRegistrySource({
+      registryUrl: "https://datahub.test/registry",
+      fetch: (vi.fn(async (url: string) => (url.includes("datahub") ? json(registry) : json(stored))) as unknown as typeof fetch),
+      store,
+    });
+    await online.snapshot(newYork, signal);
+    expect([...files.keys()]).toEqual(expect.arrayContaining(["registry", "feed-wzdx-nysdot"]));
+
+    // A restart with the network down: the stored listing still names the
+    // feeds, and a stored feed inside its freshness window still answers.
+    const restarted = createWzdxRegistrySource({
+      registryUrl: "https://datahub.test/registry",
+      fetch: (async () => { throw new Error("down"); }) as unknown as typeof fetch,
+      store,
+    });
+    const snapshot = await restarted.snapshot(newYork, signal);
+    expect(snapshot.status).toBe("fresh");
+    expect(snapshot.records[0]).toMatchObject({ sourceRecordId: "wzdx-nysdot:z1" });
+  });
+
+  it("does not serve a stored closure feed once its freshness window has passed", async () => {
+    const newYork = { west: -77.65, south: 43.1, east: -77.55, north: 43.2 };
+    const stored = { type: "FeatureCollection", features: [{ id: "z1", type: "Feature",
+      properties: { core_details: { event_type: "work-zone" }, vehicle_impact: "some-lanes-closed" },
+      geometry: { type: "LineString", coordinates: [[-77.6, 43.15], [-77.58, 43.16]] } }] };
+    const files = new Map<string, unknown>();
+    const store = {
+      readRegistry: async () => (files.get("registry") ?? null) as never,
+      writeRegistry: async (value: unknown) => { files.set("registry", value); },
+      readFeed: async (id: string) => (files.get(`feed-${id}`) ?? null) as never,
+      writeFeed: async (id: string, value: unknown) => { files.set(`feed-${id}`, value); },
+    };
+    let clock = Date.parse("2026-10-03T12:00:00.000Z");
+    const options = { registryUrl: "https://datahub.test/registry", now: () => clock, store };
+    const online = createWzdxRegistrySource({ ...options, fetch: (vi.fn(async (url: string) => (url.includes("datahub") ? json(registry) : json(stored))) as unknown as typeof fetch) });
+    await online.snapshot(newYork, signal);
+
+    clock += 6 * 60_000;
+    const offline = createWzdxRegistrySource({ ...options, fetch: (async () => { throw new Error("down"); }) as unknown as typeof fetch });
+    const snapshot = await offline.snapshot(newYork, signal);
+    // The stored feed is too old to speak for a closure: unavailable, not clear.
+    expect(snapshot.status).not.toBe("fresh");
+    expect(snapshot.records).toEqual([]);
+  });
+
+  it("a view whose own state has no keyless feed is not failed by a neighbour", async () => {
+    // New York's coarse box reaches across Pennsylvania; the keyed Turnpike
+    // feed is the only Pennsylvania one, so nothing configured failed here.
+    const fetcher = vi.fn(async (url: string) => (url.includes("datahub") ? json(registry) : Promise.reject(new Error("down"))));
+    const source = createWzdxRegistrySource({ registryUrl: "https://datahub.test/registry", fetch: fetcher as unknown as typeof fetch });
+    const pennsylvania = await source.snapshot({ west: -75.85, south: 40.8, east: -75.65, north: 40.92 }, signal);
+    expect(pennsylvania.status).toBe("fresh");
+    expect(pennsylvania.records).toEqual([]);
+    expect(pennsylvania.reason).toMatch(/did not answer/);
+    // The same failure inside New York's own view is a genuine gap.
+    const newYork = await source.snapshot({ west: -77.65, south: 43.1, east: -77.55, north: 43.2 }, signal);
+    expect(newYork.status).toBe("unavailable");
+  });
 });

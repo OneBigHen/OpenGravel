@@ -88,21 +88,21 @@ describe("provider payloads", () => {
     expect(features[0]).toMatchObject({ layerId: "weather", name: "Flood Watch" });
   });
 
-  it("asks Overpass only for the layers it serves, lines with geometry and points by centre", () => {
+  it("asks Overpass only for the public-land fallback and keeps other OSM tags out", () => {
     expect(overpassQuery(VIEW, ["fuel"])).toBeNull();
-    const query = overpassQuery(VIEW, ["forest-roads", "cell-towers"]);
-    expect(query).toContain("out geom");
+    const query = overpassQuery(VIEW, ["public-land"]);
     expect(query).toContain("out center");
+    expect(query).not.toContain("out geom");
     const features = parseOverpass({
       elements: [
-        { type: "way", id: 1, tags: { highway: "track", ref: "FS 123", surface: "gravel" }, geometry: [{ lat: 40, lon: -75.5 }, { lat: 40.01, lon: -75.49 }] },
-        { type: "node", id: 2, lat: 40.05, lon: -75.3, tags: { man_made: "mast", "tower:type": "communication", operator: "Verizon" } },
+        { type: "way", id: 1, center: { lat: 40.05, lon: -75.3 }, tags: { boundary: "protected_area", name: "State Game Lands", operator: "PA Game Commission" } },
+        { type: "way", id: 2, center: { lat: 40.06, lon: -75.4 }, tags: { highway: "track", ref: "FS 123", surface: "gravel" } },
       ],
-    }, ["forest-roads", "cell-towers"]);
+    }, ["public-land"]);
     expect(features.map((feature) => [feature.layerId, feature.name, feature.detail])).toEqual([
-      ["forest-roads", "FS 123", "FS 123 · gravel"],
-      ["cell-towers", "Cell tower", "Verizon"],
+      ["public-land", "State Game Lands", "PA Game Commission"],
     ]);
+    expect(features[0]?.geometry).toEqual({ type: "Point", coordinates: [-75.3, 40.05] });
   });
 
   it("serves great roads twistiest first from the local catalogue", async () => {
@@ -116,6 +116,30 @@ describe("provider payloads", () => {
     const features = await provider.load(VIEW, ["great-roads"], { fetch, env: {} });
     expect(features.map((feature) => feature.name)).toEqual(["Decker Road", "Twisty road"]);
   });
+
+  it("draws gravel from the routing Gravel Atlas when it is installed", async () => {
+    const corridor = (id: string, kind: "dirt" | "backroad", quality: number) => ({
+      id, kind, quality, geometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40 }],
+      lengthMeters: 4_000, longestDirtRunMeters: 3_219, bendShare: 0.3, francoScore: 0, curvaturePerKm: 1.2,
+      reversible: false, gradeMix: {}, maxTrackGrade: null, legalConfidence: 1,
+      access: { legal: true, unknownRestrictionFlags: [], sandShare: 0 },
+      seasonal: { closed: false, seasonalClosed: false, flags: [] },
+      sourceIds: [], areaHints: [], entryLinks: 1, exitLinks: 1,
+    });
+    const old = vi.fn(() => []);
+    const provider = knownRoadsProvider(
+      { curvyRoadsNear: () => [], gravelCorridorsNear: old },
+      {
+        availability: () => ({ available: true, path: "x", schemaVersion: 3, corridorCount: 2 }),
+        corridorsNear: (_bounds: unknown, kind: string) => kind === "dirt" ? [corridor("d", "dirt", 0.4)] : [corridor("b", "backroad", 0.9)],
+      } as never,
+    );
+    const features = await provider.load(VIEW, ["gravel"], { fetch, env: {} });
+    expect(features.map((feature) => [feature.name, feature.detail])).toEqual([
+      ["Dirt road", "2.5 mi of dirt · twisty"],
+    ]);
+    expect(old).not.toHaveBeenCalled();
+  });
 });
 
 describe("handleMapLayersRequest", () => {
@@ -127,6 +151,7 @@ describe("handleMapLayersRequest", () => {
     expect(parseLayers("fuel,nonsense")).toBeTypeOf("string");
     expect(parseLayers("traffic-flow")).toBeTypeOf("string");
     expect(parseLayers("fuel,traffic-flow,fuel")).toEqual(["fuel"]);
+    expect(parseLayers("fuel,cell-towers,road-surface")).toEqual(["fuel"]);
   });
 
   it("clips a huge view to the served span around its centre", () => {

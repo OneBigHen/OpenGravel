@@ -45,7 +45,7 @@ export interface InfoFeature {
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority" | "surface";
+export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority";
 
 export interface LayerFreshness {
   readonly layerId: MapLayerId;

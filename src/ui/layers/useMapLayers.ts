@@ -48,6 +48,8 @@ export interface MapLayersView {
   readonly cameraRouteAvailable: boolean;
   readonly toggleCameraRouteOnly: () => void;
   readonly toggle: (id: MapLayerId) => void;
+  /** Turns a whole set on, or off when every one of them is already on. */
+  readonly toggleSet: (ids: readonly MapLayerId[]) => void;
   readonly clearAll: () => void;
   readonly select: (id: string | null) => void;
   readonly onViewport: (extent: MapExtent) => void;
@@ -67,10 +69,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   weather: "nws",
   "weather-radar": "radar",
   "active-fire": "firms",
-  closures: "osm",
   "great-roads": "roads",
   gravel: "roads",
-  "road-surface": "surface",
   "road-history": "road-history",
   fuel: "tomtom",
   food: "tomtom",
@@ -80,10 +80,8 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   repair: "tomtom",
   viewpoints: "tomtom",
   "public-land": "padus",
-  "forest-roads": "osm",
   mvum: "authority",
   "work-zones": "authority",
-  "cell-towers": "osm",
 };
 
 /** The enabled-layer choice as an external store, so SSR and hydration agree. */
@@ -223,6 +221,12 @@ export function useMapLayers(
     setEnabledNow(current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]);
   }, []);
 
+  const toggleSet = useCallback((ids: readonly MapLayerId[]): void => {
+    const current = enabledNow();
+    const allOn = ids.every((id) => current.includes(id));
+    setEnabledNow(allOn ? current.filter((entry) => !ids.includes(entry)) : [...current, ...ids.filter((id) => !current.includes(id))]);
+  }, []);
+
   const clearAll = useCallback((): void => {
     setEnabledNow([]);
     setSelectedId(null);
@@ -353,6 +357,7 @@ export function useMapLayers(
     cameraRouteAvailable,
     toggleCameraRouteOnly,
     toggle,
+    toggleSet,
     clearAll,
     select: setSelectedId,
     onViewport,

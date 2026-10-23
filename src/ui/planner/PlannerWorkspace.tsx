@@ -729,6 +729,15 @@ export function PlannerWorkspace({
 
   const planning = isPlanningInFlight(session.phase);
 
+  /**
+   * Where the rider is coming from, so a tapped road is entered at the near end:
+   * the last stop before the destination, or the start when there are no stops
+   * yet. `null` when the ride has neither, and the road is then taken in the
+   * order it is drawn.
+   */
+  const rideRoadReference =
+    document.intent.stops.at(-1)?.coordinate ?? document.intent.start?.coordinate ?? null;
+
   /** The ride summary over the map: built once, mounted in the map slot and above the sheet (CSS shows one). */
   const glance = useRideGlance({
     cards: viewModel.routeCards, route: activeRoute,
@@ -745,7 +754,12 @@ export function PlannerWorkspace({
       missingTarget={missingTarget}
       retryingMap={mapLoadStatus.state === "retrying"}
       places={preparationProviders?.places && { source: preparationProviders.places, onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name) }}
-      layers={preparationProviders?.mapLayers && { source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt }}
+      layers={preparationProviders?.mapLayers && {
+        source: preparationProviders.mapLayers,
+        onAddStop: stopAuthoring.addStopAt,
+        rideRoadReference,
+        onRideRoad: stopAuthoring.addRideRoad,
+      }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
       glance={glance.map}

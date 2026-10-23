@@ -57,7 +57,12 @@ export interface RoadAuthorityAssessment {
 export interface RoadAuthorityCoordinator {
   /** Sources whose probe says they are configured. */
   readonly sources: readonly RoadAuthoritySource[];
-  assess(corridor: BoundingBox, signal: AbortSignal): Promise<RoadAuthorityAssessment>;
+  /**
+   * `deadlineMs` overrides how long one source may take for this caller. A plan
+   * keeps the tight `ROAD_AUTHORITY_DEADLINE_MS`; a map view, which no rider is
+   * waiting on, can let a source use more of its own budget.
+   */
+  assess(corridor: BoundingBox, signal: AbortSignal, options?: { readonly deadlineMs?: number }): Promise<RoadAuthorityAssessment>;
 }
 
 function unavailable(reason: string): RoadAuthoritySnapshot {
@@ -282,11 +287,12 @@ export function createRoadAuthorityCoordinator(deps: {
   const now = deps.now ?? (() => new Date().toISOString());
   return {
     sources,
-    async assess(corridor, signal) {
+    async assess(corridor, signal, options) {
       const at = now();
+      const waitMs = options?.deadlineMs ?? deadlineMs;
       const outcomes = await Promise.all(sources.map(async (source) => ({
         info: source.info,
-        snapshot: signal.aborted ? unavailable("The plan was cancelled.") : await withDeadline(source, corridor, signal, deadlineMs),
+        snapshot: signal.aborted ? unavailable("The plan was cancelled.") : await withDeadline(source, corridor, signal, waitMs),
       })));
       return createAssessment(at, outcomes);
     },

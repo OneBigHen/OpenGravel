@@ -30,8 +30,8 @@ it.each(["mvum", "work-zones"])("exposes canonical %s authority separately from 
   expect(layer).toBeDefined();
   expect(layer?.caveat).toContain("unknown");
 });
-it("offers scoped canonical surface evidence with confidence and unknown gaps", () => {
-  const layer = MAP_LAYERS.find((entry) => entry.id === "road-surface");
+it("offers gravel from the Gravel Atlas and keeps undrawn roads unknown", () => {
+  const layer = MAP_LAYERS.find((entry) => entry.id === "gravel");
   expect(layer?.source).toContain("Gravel Atlas");
   expect(layer?.caveat).toContain("unknown");
 });
