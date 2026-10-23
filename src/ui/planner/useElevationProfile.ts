@@ -12,6 +12,11 @@ import type { Coordinate } from "@/domain/ride/types";
 
 export type ElevationProfileState =
   | { readonly status: "loading" }
+  /**
+   * Ready carries everything the chart reads: each sample's own distance along
+   * the ride, the surface-friendly coordinate, and `steepestGradeShare` — where
+   * the steepest sustained grade sits — so a surface never re-derives them.
+   */
   | { readonly status: "ready"; readonly profile: ElevationProfile }
   | { readonly status: "unavailable"; readonly reason: string };
 
@@ -19,6 +24,13 @@ const LOADING: ElevationProfileState = { status: "loading" };
 const CACHE_MAX = 24;
 /** Profiles by route id: switching between alternates never refetches. */
 const cache = new Map<string, ElevationProfileState>();
+/**
+ * Requests in flight by key. More than one surface shows the same route's
+ * profile — the elevation chart and the map's glance strip mount together — and
+ * one request answers both. A profile that lands is cached, so a surface that
+ * arrives after the answer reads it from there.
+ */
+const requests = new Map<string, Promise<ElevationProfileState>>();
 
 function remember(key: string, state: ElevationProfileState): void {
   cache.set(key, state);
@@ -27,6 +39,44 @@ function remember(key: string, state: ElevationProfileState): void {
     if (oldest === undefined) break;
     cache.delete(oldest);
   }
+}
+
+/** The shared request for one route's profile, or `null` when the line has no samples. */
+function requestProfile(
+  source: ElevationSource,
+  key: string,
+  line: readonly Coordinate[],
+): Promise<ElevationProfileState> | null {
+  const inFlight = requests.get(key);
+  if (inFlight !== undefined) return inFlight;
+  const samples = sampleLine(line);
+  if (samples.length === 0) return null;
+  const request = source
+    .elevations(samples.map((sample) => sample.coordinate))
+    .then((result) => {
+      const profile = result.availability === "available" ? buildElevationProfile(samples, result.elevationsMeters) : null;
+      const state: ElevationProfileState =
+        profile !== null
+          ? { status: "ready", profile }
+          : {
+              status: "unavailable",
+              reason: result.availability === "unavailable" ? result.reason : "Elevation data is not available right now.",
+            };
+      // Only a real answer is cached; an outage is retried on the next plan.
+      if (state.status === "ready") remember(key, state);
+      return state;
+    })
+    .catch(
+      (): ElevationProfileState => ({
+        status: "unavailable",
+        reason: "Elevation data is not available right now.",
+      }),
+    )
+    .finally(() => {
+      requests.delete(key);
+    });
+  requests.set(key, request);
+  return request;
 }
 
 /** The elevation profile of one route line, fetched once per route id. */
@@ -47,30 +97,18 @@ export function useElevationProfile(
 
   useEffect(() => {
     if (source === undefined || key === null || cache.has(key)) return;
-    const samples = sampleLine(lineRef.current);
-    if (samples.length === 0) return;
-    const controller = new AbortController();
-    void source
-      .elevations(samples.map((sample) => sample.coordinate), controller.signal)
-      .then((result) => {
-        if (controller.signal.aborted) return;
-        const profile = result.availability === "available" ? buildElevationProfile(samples, result.elevationsMeters) : null;
-        const state: ElevationProfileState =
-          profile !== null
-            ? { status: "ready", profile }
-            : {
-                status: "unavailable",
-                reason: result.availability === "unavailable" ? result.reason : "Elevation data is not available right now.",
-              };
-        // Only a real answer is cached; an outage is retried on the next plan.
-        if (state.status === "ready") remember(key, state);
-        setAnswer({ key, state });
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        setAnswer({ key, state: { status: "unavailable", reason: "Elevation data is not available right now." } });
-      });
-    return () => controller.abort();
+    const request = requestProfile(source, key, lineRef.current);
+    if (request === null) return;
+    // Leaving does not cancel the shared request: another surface may be reading
+    // it, and its answer is worth keeping. It only stops this subscriber from
+    // setting state after it is gone.
+    let cancelled = false;
+    void request.then((state) => {
+      if (!cancelled) setAnswer({ key, state });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [source, key]);
 
   if (source === undefined || key === null || line.length < 2) return null;

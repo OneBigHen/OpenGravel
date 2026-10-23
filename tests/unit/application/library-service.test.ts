@@ -173,6 +173,30 @@ describe("LibraryService", () => {
     });
   });
 
+  it("reports a missing store instead of exporting geometry as if there were none", async () => {
+    const repository = createRideRepository({ database: database() });
+    const writer = createLibraryService(repository, { now: () => LATER });
+    const importData = {
+      originalRef: "geo_original_missing-store" as never,
+      tracks: [{
+        name: "Planned",
+        segments: [{ geometryRef: "geo_missing-store" as never, timestamps: [null, null], elevation: [null, null] }],
+      }],
+      waypoints: [],
+    } as const;
+    const named = await writer.saveNamed(createRideDocument({ now: NOW }), {
+      title: "Imported without stores",
+      importData,
+      originalsRef: importData.originalRef,
+    });
+
+    const withoutStores = createLibraryService(repository, { now: () => LATER });
+
+    await expect(withoutStores.loadExportSource(named.document.rideId)).rejects.toThrow(
+      "Imported ride geometry storage is unavailable.",
+    );
+  });
+
   it("renames, filters, and deletes a named ride without touching another record", async () => {
     const repository = createRideRepository({ database: database() });
     const service = createLibraryService(repository, { now: () => LATER });

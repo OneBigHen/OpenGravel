@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { createLibraryService } from "@/application/library/library-service";
+import { createSettingsLibraryService } from "@/app/settings-library";
 import { SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
 import { createGarage, type Garage } from "@/application/garage/garage-model";
 import type { TelemetryConsentState } from "@/application/telemetry/consent";
@@ -19,7 +19,8 @@ import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-poin
 import { clearAllLocalData } from "@/infrastructure/storage/clear-all-local-data";
 import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
-import { SettingsSurface } from "@/ui/settings/SettingsSurface";
+import { SettingsSurface, type DeleteResult } from "@/ui/settings/SettingsSurface";
+import { setAppearanceMode } from "@/ui/appearance/appearance";
 import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
 import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
 import { SpotifySetupSection } from "@/ui/settings/SpotifySetupSection";
@@ -61,7 +62,7 @@ export function SettingsClient() {
     }),
     [rideFocusPointer],
   );
-  const library = useMemo(() => createLibraryService(repository), [repository]);
+  const library = useMemo(() => createSettingsLibraryService(repository), [repository]);
   const [garage, setGarage] = useState<Garage>(createGarage);
   const [consent, setConsent] = useState<TelemetryConsentState>({ status: "unacknowledged" });
   const [satellitePreferred, setSatellitePreferred] = useState(false);
@@ -71,6 +72,8 @@ export function SettingsClient() {
   const [homeBusy, setHomeBusy] = useState(false);
   const [homeFeedback, setHomeFeedback] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [deleteResult, setDeleteResult] = useState<DeleteResult | null>(null);
+  const [localDataEpoch, setLocalDataEpoch] = useState(0);
   const [offlineRegions, setOfflineRegions] = useState<OfflineRegionsPort | null>(null);
   // The server render never knows it is inside the app.
   const inApp = useSyncExternalStore(noSubscription, () => nativeNavigationBridge() !== undefined, () => false);
@@ -128,6 +131,7 @@ export function SettingsClient() {
 
   async function exportAllData(): Promise<void> {
     setStatusMessage(null);
+    setDeleteResult(null);
     try {
       const summaries = await library.listRides();
       const rides = await Promise.all(summaries.map(async (summary) => {
@@ -168,6 +172,7 @@ export function SettingsClient() {
   async function deleteAllData(): Promise<void> {
     setStatusMessage(null);
     setHomeFeedback(null);
+    setDeleteResult(null);
     try {
       consentStore.clear();
       await clearAllLocalData();
@@ -176,9 +181,19 @@ export function SettingsClient() {
       setSatellitePreferred(false);
       setHomeSaved(false);
       setHomeLabel(null);
-      setStatusMessage("Deleted this device's OpenGravel data: rides, route geometry, sessions, recordings, imports, road and share records, bikes, Home, map and telemetry preferences, saved place names, and ride pointers.");
+      // The stored choice is gone; put the page back on Auto instead of showing
+      // a Day/Night theme the device no longer has.
+      setAppearanceMode("auto");
+      // Remount the sections that cache device storage (offline areas, Day /
+      // Night) and re-arm the danger zone instead of leaving a destructive
+      // Confirm button hot after the wipe.
+      setLocalDataEpoch((epoch) => epoch + 1);
+      setDeleteResult({
+        ok: true,
+        message: "Deleted this device's OpenGravel data: rides, route geometry, sessions, recordings, imports, road and share records, bikes, Home, map and telemetry preferences, saved place names, and ride pointers. Saved places, map layers and display preferences were also removed.",
+      });
     } catch {
-      setStatusMessage("Could not delete all local data. Some data may remain on this device.");
+      setDeleteResult({ ok: false, message: "Could not delete all local data. Some data may remain on this device." });
     }
   }
 
@@ -252,6 +267,8 @@ export function SettingsClient() {
     onExport={() => void exportAllData()}
     onDeleteAll={() => void deleteAllData()}
     statusMessage={statusMessage}
+    deleteResult={deleteResult}
+    localDataEpoch={localDataEpoch}
     offlineRegions={offlineRegions}
   />;
 }

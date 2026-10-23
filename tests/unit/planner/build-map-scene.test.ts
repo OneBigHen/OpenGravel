@@ -182,6 +182,35 @@ function sessionWith(
   return { ...emptyPlanningSession(RIDE_ID), ...overrides };
 }
 
+/**
+ * An engine surface mix with positional runs, in the shape GraphHopper's road
+ * details produce: `[metres, class]` in travel order, already classified.
+ */
+function surfaceEvidence(
+  runs: readonly (readonly [number, "paved" | "gravel" | "dirt" | "unknown"])[],
+): RouteCandidate["evidence"] {
+  const total = runs.reduce((sum, [meters]) => sum + meters, 0);
+  return {
+    surfaceMix: {
+      value: {
+        surface: "gravel",
+        pavedMeters: total / 2,
+        inferredPavedMeters: 0,
+        gravelMeters: total / 2,
+        dirtMeters: 0,
+        unknownMeters: 0,
+        unit: 1,
+        unpavedShare: 0.5,
+        runs,
+      },
+      status: "estimated",
+      confidence: 0.8,
+      coverage: 1,
+      provenance: [],
+    },
+  };
+}
+
 const GEOMETRY: Readonly<Record<string, GeometryPayload>> = {
   [START_REF]: { kind: "line", coordinates: [ORIGIN, MIDPOINT] },
   [FINISH_REF]: { kind: "line", coordinates: [DESTINATION] },
@@ -274,6 +303,73 @@ describe("buildMapScene — projection from document, session and UI selection",
     expect(required(scene.routes[1]).state).toBe("alternative");
     expect(required(scene.routes[1]).role).toBeNull();
     expect(scene.selectedRouteId).toBe(ROUTE_A_ID);
+  });
+
+  it("carries the engine's measured surface on the selected line only (05 §11)", () => {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A, {
+      evidence: surfaceEvidence([[100, "paved"], [100, "gravel"]]),
+    });
+    const b = candidate(ROUTE_B_ID, ROUTE_REF_B, {
+      evidence: surfaceEvidence([[200, "gravel"]]),
+    });
+    const scene = buildMapScene(
+      sceneInput({
+        session: sessionWith({
+          phase: "ready",
+          committedBundle: bundle([a, b], ROUTE_A_ID),
+          lastGoodBundle: bundle([a, b], ROUTE_A_ID),
+          selectedRouteId: ROUTE_A_ID,
+        }),
+      }),
+    );
+
+    // The provider measures metres in travel order; the projection reports shares
+    // of the line, so the renderer can cut the band at the run boundaries.
+    expect(required(scene.routes[0]).surface).toEqual([
+      { kind: "paved", from: 0, to: 0.5 },
+      { kind: "gravel", from: 0.5, to: 1 },
+    ]);
+    // An alternative is compared by colour and time, never read surface by surface.
+    expect(required(scene.routes[1]).surface).toBeUndefined();
+  });
+
+  it("says nothing about surface when the answer measured none", () => {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A);
+    const scene = buildMapScene(
+      sceneInput({
+        session: sessionWith({ committedBundle: bundle([a], ROUTE_A_ID), selectedRouteId: ROUTE_A_ID }),
+      }),
+    );
+
+    // Absence is not "paved": there is no runs list to draw a band from.
+    expect(required(scene.routes[0]).surface).toBeUndefined();
+  });
+
+  it("carries an unrecognised surface class as unknown, never as a surface", () => {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A, {
+      // A reader that hands back an unclassified tag is not a licence to paint.
+      evidence: surfaceEvidence([[200, "asphalt|primary" as "paved"]]),
+    });
+    const scene = buildMapScene(
+      sceneInput({
+        session: sessionWith({ committedBundle: bundle([a], ROUTE_A_ID), selectedRouteId: ROUTE_A_ID }),
+      }),
+    );
+
+    expect(required(scene.routes[0]).surface).toEqual([{ kind: "unknown", from: 0, to: 1 }]);
+  });
+
+  it("drops the surface from an answer that no longer addresses the document", () => {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A, {
+      evidence: surfaceEvidence([[200, "paved"]]),
+    });
+    const answeredEarlier = { ...bundle([a], ROUTE_A_ID), rideRevision: 2 };
+    const scene = buildMapScene(
+      sceneInput({ session: sessionWith({ committedBundle: answeredEarlier, selectedRouteId: ROUTE_A_ID }) }),
+    );
+
+    expect(required(scene.routes[0]).state).toBe("previous");
+    expect(required(scene.routes[0]).surface).toBeUndefined();
   });
 
   it("reads the role from the bundle's role record, not from array order", () => {

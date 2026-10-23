@@ -57,6 +57,7 @@ import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCol
 import {
   gestureControlsPointer,
   initialInteractionState,
+  isDrawingTool,
   exceedsTapThreshold,
   reduceInteraction,
   type InteractionEffect,
@@ -115,7 +116,7 @@ import {
 } from "@/infrastructure/map/maplibre/geojson";
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
-import { createMarkerImages } from "@/infrastructure/map/maplibre/marker-images";
+import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { planSceneSync, type SceneFingerprints } from "@/infrastructure/map/maplibre/scene-diff";
 import {
   HIT_LAYER_IDS,
@@ -282,6 +283,8 @@ interface MapLibreMap {
   getSource(id: string): { setData(data: unknown): void } | undefined;
   addLayer(layer: unknown, beforeId?: string): void;
   addImage(id: string, image: PlacePillImage["data"], options: PlacePillImage["options"]): void;
+  updateImage?(id: string, image: PlacePillImage["data"]): void;
+  removeImage?(id: string): void;
   hasImage(id: string): boolean;
   getLayer(id: string): unknown;
   getStyle?():
@@ -347,7 +350,29 @@ const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
   MAP_LAYER_IDS.routeProposed,
   MAP_LAYER_IDS.routeCasing,
   MAP_LAYER_IDS.routeSelected,
+  MAP_LAYER_IDS.routeSurface,
 ]);
+
+/**
+ * The route's two look-only details (05 §11): where the surface changes, and
+ * which way the line goes.
+ */
+const ROUTE_DETAIL_LAYER_IDS: readonly string[] = [
+  MAP_LAYER_IDS.routeSurface,
+  MAP_LAYER_IDS.routeArrow,
+];
+
+/**
+ * Whether the surface band and the direction arrows show for a pointer tool.
+ *
+ * They belong to *looking*, not to editing: while a drawing tool owns the
+ * pointer (a point drag, a span selection, a sketch stroke, a polygon edit) the
+ * rider is authoring the line, and an annotation drawn along the answer already
+ * on screen is noise under the finger. `pan` — the neutral tool — keeps them.
+ */
+export function routeDetailVisible(tool: PointerTool): boolean {
+  return !isDrawingTool(tool);
+}
 
 /** The basemap's first label layer (never one of ours), or `undefined`. */
 function firstBasemapLabelId(map: MapLibreMap): string | undefined {
@@ -767,6 +792,15 @@ export async function createMapLibreHost(
   const puckImage = createPuckImage(palette);
   const markerImages = createMarkerImages();
   /**
+   * Which tone the route arrow image in the current renderer was drawn in.
+   *
+   * A style reset drops every image, and Night contrast is a different style, so
+   * the arrow is re-drawn per style load — in the tone the basemap behind it
+   * needs. Tracking the tone is what keeps a switch to Night from leaving a dark
+   * arrow on a dark map.
+   */
+  let arrowToneDrawn: RouteArrowTone | null = null;
+  /**
    * The basemap in use. It starts as the requested one and drops from `mapbox` to
    * `openfreemap` for good if Mapbox refuses us (free-tier quota spent, token
    * revoked): a deployment without a payment method on Mapbox goes dark at its
@@ -982,6 +1016,7 @@ export async function createMapLibreHost(
     preview: 0,
     changedSpan: 0,
     position: "none",
+    surface: 0,
   };
 
   function writeSceneAttribute(): void {
@@ -999,6 +1034,7 @@ export async function createMapLibreHost(
         `preview:${sceneReport.preview}`,
         `changedSpan:${sceneReport.changedSpan}`,
         `position:${sceneReport.position}`,
+        `surface:${sceneReport.surface}`,
       ].join(","),
     );
   }
@@ -1024,6 +1060,10 @@ export async function createMapLibreHost(
       sketchDraft: draftStrokes,
       preview: scene.preview === null ? 0 : 1,
       changedSpan: span !== null && isDrawableLine(span.coordinates) ? 1 : 0,
+      // 05 §11: how many surface stretches the selected line names, so a browser
+      // gate can assert the band without reading pixels. An `unknown` run draws
+      // nothing, so it is not counted as drawn.
+      surface: selected?.surface?.filter((run) => run.kind !== "unknown").length ?? 0,
       // 08 §2/§4: whether a present position is drawn, and how much of it the
       // renderer is willing to call current. A browser gate asserts the ride
       // surface's own mark without reading pixels.
@@ -1118,9 +1158,44 @@ export async function createMapLibreHost(
         recordError({ kind: "renderer", detail: `image:${image.id}` });
       }
     }
+    // The direction chevrons (05 §11): Paper on Ink by day, Ink on Paper at
+    // night, so the arrow holds on the paper basemap, over satellite imagery and
+    // on Night contrast. Without the image the route still draws, just without
+    // arrows — the line itself is never withheld for a missing decoration.
+    const arrowTone: RouteArrowTone = basemapLook === "night" ? "night" : "day";
+    const arrowImage = createRouteArrowImage(palette, arrowTone);
+    const arrowPresent = map.hasImage(arrowImage.id);
+    let arrowReady = arrowPresent && arrowToneDrawn === arrowTone;
+    if (arrowPresent && !arrowReady) {
+      try {
+        // A style reset drops images, but a switch between the Day and Night
+        // looks does not always: replace the one already there rather than
+        // stacking a second image under the same id.
+        if (map.updateImage !== undefined) {
+          map.updateImage(arrowImage.id, arrowImage.data);
+          arrowReady = true;
+          arrowToneDrawn = arrowTone;
+        } else if (map.removeImage !== undefined) {
+          map.removeImage(arrowImage.id);
+        }
+      } catch {
+        // A renderer that cannot replace an image falls through to a fresh add.
+        arrowReady = false;
+      }
+    }
+    if (!arrowReady) {
+      try {
+        map.addImage(arrowImage.id, arrowImage.data, arrowImage.options as PlacePillImage["options"]);
+        arrowReady = true;
+        arrowToneDrawn = arrowTone;
+      } catch {
+        recordError({ kind: "renderer", detail: `image:${arrowImage.id}` });
+      }
+    }
     for (const layer of overlayLayers(palette)) {
       if (isPlaceSymbolLayer(layer.id) && !placeImagesReady) continue;
       if (layer.id === MAP_LAYER_IDS.pointPin && !pinsReady) continue;
+      if (layer.id === MAP_LAYER_IDS.routeArrow && !arrowReady) continue;
       if (layer.id === MAP_LAYER_IDS.riderHeading && !puckReady) continue;
       // Info labels need the basemap's glyphs; without them the dots still draw.
       if ((layer.id === INFO_LAYER_IDS.label || layer.id === MAP_LAYER_IDS.routeLabel) && fonts === null) continue;
@@ -1164,6 +1239,9 @@ export async function createMapLibreHost(
     } else {
       container.setAttribute(MAP_LAYER_ERROR_ATTRIBUTE, failed.join(","));
     }
+    // A new style starts every layer visible; a tool already in the rider's hand
+    // says otherwise.
+    syncRouteDetailVisibility(map);
   }
 
   /**
@@ -1396,6 +1474,7 @@ export async function createMapLibreHost(
     const canvas = map.getCanvas();
     canvas.style.cursor = native ? "" : "crosshair";
     map.getCanvasContainer().setAttribute("data-og-drawing", native ? "false" : "true");
+    syncRouteDetailVisibility(map);
     if (native) {
       map.dragPan?.enable();
       map.boxZoom?.enable();
@@ -1404,6 +1483,26 @@ export async function createMapLibreHost(
       map.dragPan?.disable();
       map.boxZoom?.disable();
       map.doubleClickZoom?.disable();
+    }
+  }
+
+  /**
+   * Shows or hides the route's surface band and direction arrows for the tool in
+   * the rider's hand (see {@link routeDetailVisible}).
+   *
+   * Cosmetic and independent of the scene: a renderer that refuses the property
+   * change leaves the annotation drawn, which is better than the map failing, so
+   * the failure is not reported as a layer error.
+   */
+  function syncRouteDetailVisibility(map: MapLibreMap): void {
+    const visible = routeDetailVisible(interaction.activeTool);
+    for (const layerId of ROUTE_DETAIL_LAYER_IDS) {
+      if (map.getLayer(layerId) === undefined) continue;
+      try {
+        map.setLayoutProperty?.(layerId, "visibility", visible ? "visible" : "none");
+      } catch {
+        // Cosmetic only; the rider still has the route line.
+      }
     }
   }
 

@@ -14,6 +14,7 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type RefObject,
 } from "react";
 
@@ -53,6 +54,13 @@ export interface PlannerWorkspaceDockProps {
   readonly onCancelPlanning: () => void;
   readonly results: ComponentProps<typeof PlannerResultPanel>;
   readonly refine: ComponentProps<typeof PlannerRefineWorkspace>;
+  /**
+   * The glance strip, when the dock lies over the map: it sits directly above the
+   * sheet (`MapRideGlance`), so the summary stays readable while the sheet is
+   * folded. On the tiers where the dock is a sibling column the strip is drawn in
+   * the map slot instead and this node is hidden by CSS.
+   */
+  readonly glance?: ReactNode;
 }
 
 function overlapChoiceKey(ref: MapObjectRef, index: number): string {
@@ -118,6 +126,7 @@ export function PlannerWorkspaceDock({
   onCancelPlanning,
   results,
   refine,
+  glance,
 }: PlannerWorkspaceDockProps) {
   const hasChoices = viewModel.routeCards.length > 0;
   // Nothing asked for yet: the phone sheet shrinks to "Where to?" and a row of
@@ -178,6 +187,7 @@ export function PlannerWorkspaceDock({
       data-detent={sheetDetent}
       ref={dockRef}
     >
+      {glance}
       <section
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"

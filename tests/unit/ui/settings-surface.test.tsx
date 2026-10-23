@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createGarage } from "@/application/garage/garage-model";
+import type { InstalledOfflineRegion, OfflineRegionOffer, OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 
 afterEach(() => cleanup());
@@ -67,5 +68,63 @@ describe("settings surface", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(onUseCurrentLocationAsHome).toHaveBeenCalledOnce();
     expect(onClearHome).toHaveBeenCalledOnce();
+  });
+
+  it("re-arms the danger zone instead of leaving Confirm armed after a wipe", () => {
+    const onDeleteAll = vi.fn();
+    const base = { garage: createGarage(), onGarageChange: vi.fn(), onDeleteAll };
+    const { rerender } = render(<SettingsSurface {...base} />);
+    fireEvent.click(screen.getByRole("button", { name: "Delete all data" }));
+    fireEvent.change(screen.getByLabelText("Type DELETE to confirm"), { target: { value: "DELETE" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    expect(onDeleteAll).toHaveBeenCalledOnce();
+
+    rerender(<SettingsSurface
+      {...base}
+      localDataEpoch={1}
+      deleteResult={{ ok: true, message: "Deleted this device's OpenGravel data: saved places too." }}
+    />);
+
+    expect(screen.queryByLabelText("Type DELETE to confirm")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm delete" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete all data" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Deleted this device's OpenGravel data");
+  });
+
+  it("re-reads offline device storage after a wipe", async () => {
+    const offer: OfflineRegionOffer = {
+      regionId: "test-region", regionName: "Test area", version: "1",
+      bounds: { minLon: -76, minLat: 40, maxLon: -75, maxLat: 41 },
+      tileCount: 1, tileByteTotal: 2_000_000, sourceDataDate: "2026-09-01",
+    };
+    const installed: InstalledOfflineRegion = { ...offer, byteSize: 2_000_000, downloadedAt: "2026-10-01" };
+    let onDevice: InstalledOfflineRegion[] = [installed];
+    let bytes = 2_000_000;
+    const regions: OfflineRegionsPort = {
+      offers: vi.fn(async () => [offer]),
+      installed: vi.fn(async () => onDevice),
+      storedBytes: vi.fn(async () => bytes),
+      download: vi.fn(async () => installed),
+      remove: vi.fn(async () => undefined),
+    };
+    const base = { garage: createGarage(), onGarageChange: vi.fn(), offlineRegions: regions };
+    const { rerender } = render(<SettingsSurface {...base} />);
+    expect(await screen.findByText("2 MB used")).toBeInTheDocument();
+    expect(await screen.findByText("On this device")).toBeInTheDocument();
+
+    // The wipe deleted the offline databases on the device.
+    onDevice = [];
+    bytes = 0;
+    rerender(<SettingsSurface
+      {...base}
+      localDataEpoch={1}
+      deleteResult={{ ok: true, message: "Deleted this device's OpenGravel data." }}
+    />);
+
+    expect(await screen.findByText("None yet")).toBeInTheDocument();
+    expect(screen.queryByText("2 MB used")).not.toBeInTheDocument();
+    expect(screen.queryByText("On this device")).not.toBeInTheDocument();
+    expect(regions.installed).toHaveBeenCalledTimes(2);
+    expect(regions.storedBytes).toHaveBeenCalledTimes(2);
   });
 });

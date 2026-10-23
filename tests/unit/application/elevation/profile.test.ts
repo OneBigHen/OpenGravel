@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildElevationProfile, sampleLine } from "@/application/elevation/profile";
+import { buildElevationProfile, pointAtShare, sampleLine } from "@/application/elevation/profile";
 
 const LINE = [
   { lon: -75.7, lat: 40.8 },
@@ -39,6 +39,25 @@ describe("buildElevationProfile", () => {
   it("measures the steepest sustained uphill grade", () => {
     const profile = buildElevationProfile(samples, [100, 100, 100, 150, 150, 150]);
     expect(profile?.steepestGradePercent).toBeGreaterThan(0);
+  });
+
+  it("says where along the ride the steepest run sits, so the chart can annotate it", () => {
+    const profile = buildElevationProfile(samples, [100, 100, 100, 150, 150, 150]);
+    // Samples are evenly spaced; only the third→fourth climb is steep enough.
+    expect(profile?.steepestGradeShare).toBeCloseTo(0.5, 6);
+  });
+
+  it("reads the nearest sample to a share of the ride", () => {
+    const profile = buildElevationProfile(samples, [100, 110, 120, 130, 140, 150])!;
+    expect(pointAtShare(profile, 0)?.distanceMeters).toBe(0);
+    expect(pointAtShare(profile, 1)?.distanceMeters).toBeCloseTo(profile.totalMeters, 6);
+    const half = pointAtShare(profile, 0.5);
+    const step = profile.totalMeters / (profile.points.length - 1);
+    expect(Math.abs((half?.distanceMeters ?? 0) - profile.totalMeters / 2)).toBeLessThanOrEqual(step / 2 + 1e-6);
+    // Out-of-range and unreadable shares are bounded or refused, never invented.
+    expect(pointAtShare(profile, -1)?.distanceMeters).toBe(0);
+    expect(pointAtShare(profile, 2)?.distanceMeters).toBeCloseTo(profile.totalMeters, 6);
+    expect(pointAtShare(profile, Number.NaN)).toBeNull();
   });
 
   it("never draws a profile from a mismatched or non-finite answer", () => {

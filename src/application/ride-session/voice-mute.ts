@@ -5,16 +5,17 @@
  * still fire while muted; only the spoken words stop.
  */
 
+import { VOICE_MUTED_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+
 import type { SpeechPort } from "./speech";
 
-const KEY = "ogv.ride.voiceMuted";
 const listeners = new Set<() => void>();
 let muted: boolean | null = null;
 
 export function isVoiceMuted(): boolean {
   if (muted === null) {
     try {
-      muted = globalThis.localStorage?.getItem(KEY) === "1";
+      muted = globalThis.localStorage?.getItem(VOICE_MUTED_STORAGE_KEY) === "1";
     } catch {
       muted = false;
     }
@@ -25,7 +26,7 @@ export function isVoiceMuted(): boolean {
 export function setVoiceMuted(next: boolean): void {
   muted = next;
   try {
-    globalThis.localStorage?.setItem(KEY, next ? "1" : "0");
+    globalThis.localStorage?.setItem(VOICE_MUTED_STORAGE_KEY, next ? "1" : "0");
   } catch {
     // Private mode: the choice lasts this page only.
   }

@@ -8,10 +8,13 @@
  * script before first paint, so a Day rider never sees a dark flash.
  */
 
+import { APPEARANCE_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+
 export type AppearanceMode = "auto" | "day" | "night";
 export type ResolvedTheme = "day" | "night";
 
-export const APPEARANCE_STORAGE_KEY = "og-appearance";
+/** Registry-owned so a device wipe removes the rider's choice too. */
+export { APPEARANCE_STORAGE_KEY };
 export const APPEARANCE_CHANGE_EVENT = "og-appearance-change";
 
 /** The browser chrome colour for each theme (status bar, PWA title bar). */

@@ -59,10 +59,14 @@ export interface PlannerResultPanelProps {
   };
   readonly actions: RideActionsProps;
   readonly briefing: PlannerRouteBriefingProps;
+  /** The sheet is at its expanded detent: the elevation chart opens expanded. */
+  readonly sheetExpanded?: boolean;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
+  // No route on screen means no traffic claim about one: the caller clears it,
+  // and that has to survive the briefing (and its provider tree) being deferred.
   const { route, onRouteTraffic } = briefing;
   useEffect(() => {
     if (route === null) onRouteTraffic?.(null);
@@ -85,7 +89,14 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing }: Pl
       )}
       {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {briefing.route === null || briefing.providers?.elevationProfile === undefined || choices.cards.length === 0 ? null : (
-        <PlannerElevationProfile route={briefing.route} source={briefing.providers.elevationProfile} tint={tint} surface={selectedCard?.surfaceRuns} />
+        <PlannerElevationProfile
+          route={briefing.route}
+          source={briefing.providers.elevationProfile}
+          intent={briefing.ride.intent}
+          tint={tint}
+          surface={selectedCard?.surfaceRuns}
+          expandedBySheet={sheetExpanded}
+        />
       )}
       <RideActions {...actions} />
       {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
