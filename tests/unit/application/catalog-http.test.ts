@@ -33,6 +33,50 @@ describe("catalog HTTP queries", () => {
     expect(handleCatalogDetail("missing", [entry]).status).toBe(404);
   });
 
+  it("sends a card-sized, metre-precision preview line instead of the build preview", () => {
+    const points = Array.from({ length: 200 }, (_, index) => ({
+      lat: 40 + index / 10_000 + index / 1_000_000,
+      lon: -75 - index / 10_000 - index / 1_000_000,
+    }));
+    const longEntry = { ...entry, geometry: points, previewGeometry: points };
+    const list = handleCatalogList(new URL("http://localhost/api/catalog"), [longEntry]);
+    const preview = (list.body.routes as readonly Record<string, unknown>[])[0]!["preview"] as readonly { lat: number; lon: number }[];
+
+    expect(preview).toHaveLength(80);
+    expect(preview[0]).toEqual({ lat: 40, lon: -75 });
+    expect(preview.at(-1)).toEqual({
+      lat: Math.round(points.at(-1)!.lat * 1e5) / 1e5,
+      lon: Math.round(points.at(-1)!.lon * 1e5) / 1e5,
+    });
+    for (const point of preview) {
+      expect(point.lat).toBe(Math.round(point.lat * 1e5) / 1e5);
+      expect(point.lon).toBe(Math.round(point.lon * 1e5) / 1e5);
+    }
+    // The route page still gets the untouched line from the detail endpoint.
+    expect(handleCatalogDetail("route-1", [longEntry]).body).toEqual({ route: longEntry });
+  });
+
+  it("keeps a large catalog list within a measured payload budget", () => {
+    const points = (offset: number) => Array.from({ length: 200 }, (_, index) => ({
+      lat: 40 + index / 10_000 + offset,
+      lon: -75 - index / 10_000 - offset,
+    }));
+    const routes = Array.from({ length: 112 }, (_, index) => ({
+      ...entry,
+      id: `route-${index}`,
+      name: `River loop ${index}`,
+      geometry: points(index / 1000),
+      previewGeometry: points(index / 1000),
+    }));
+
+    const list = handleCatalogList(new URL("http://localhost/api/catalog"), routes);
+    const bytes = new TextEncoder().encode(JSON.stringify(list.body)).length;
+
+    // Before the preview was bounded this fixture was ~700 KB; the budget fails
+    // loudly if a future change puts the whole build preview back on the list.
+    expect(bytes).toBeLessThan(480_000);
+  });
+
   it("serves one representative per catalog group and lists distinct tracks on detail", () => {
     const original = { ...entry, id: "ride-export-1--t1", name: "Pine Ridge Loop", catalogGroupId: "group-pine", trackGroupId: "track-one", sourceFile: "pine.gpx" };
     const repeatedExport = { ...original, id: "ride-export-2--t1", trackGroupId: "track-one", name: "Pine Ridge Loop 06-2025" };
