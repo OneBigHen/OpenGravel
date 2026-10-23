@@ -26,6 +26,7 @@ import type {
   RideRevision,
   RideRecord,
   SaveLibraryRideResult,
+  PlannedRouteEnvelope,
   RecordedTrackEnvelope,
   SaveResult,
   SaveRideOptions,
@@ -191,6 +192,7 @@ function isRideRecord(value: unknown): value is RideRecord {
     (value.uniqueKey === undefined || (isString(value.uniqueKey) && value.uniqueKey.length > 0)) &&
     hasValidImportContentHash(value) &&
     (value.recordedTrack === undefined || isRecordedTrackEnvelope(value.recordedTrack)) &&
+    (value.plannedRoute === undefined || isPlannedRouteEnvelope(value.plannedRoute)) &&
     (value.offlinePack === undefined || corridorPackManifestIsValid(value.offlinePack))
   );
 }
@@ -208,6 +210,11 @@ function isRecordedTrackEnvelope(value: unknown): value is RecordedTrackEnvelope
     value.summary.pointCount === value.timestamps.length &&
     value.timestamps.length >= 2
   );
+}
+
+function isPlannedRouteEnvelope(value: unknown): value is PlannedRouteEnvelope {
+  if (!isRecord(value)) return false;
+  return isString(value.geometryRef) && value.geometryRef.startsWith("geo_");
 }
 
 function isQuotaError(error: unknown): boolean {
@@ -437,6 +444,9 @@ function referencedGeometryRefs(records: readonly StoredRideRecord[]): Set<Geome
     collectGeometryRefs(record.document, refs);
     if (record.importData !== undefined) collectGeometryRefs(record.importData, refs);
     if (record.recordedTrack !== undefined) refs.add(record.recordedTrack.geometryRef);
+    // A saved planned ride's line is live for as long as its row is: without
+    // this the startup sweep reclaims every planned ride's geometry.
+    if (record.plannedRoute !== undefined) refs.add(record.plannedRoute.geometryRef);
   }
   return refs;
 }
@@ -552,6 +562,9 @@ export class RideRepository implements RideRepositoryPort, RideLibraryRepository
             ...(previous?.recordedTrack === undefined
               ? {}
               : { recordedTrack: previous.recordedTrack }),
+            ...(previous?.plannedRoute === undefined
+              ? {}
+              : { plannedRoute: previous.plannedRoute }),
           };
           await this.database.rides.put(record);
           await this.database.draft.put(pointer);
@@ -621,6 +634,7 @@ export class RideRepository implements RideRepositoryPort, RideLibraryRepository
       ...(options.offlinePack === undefined ? {} : { offlinePack: options.offlinePack }),
       ...(options.importData === undefined ? {} : { importData: options.importData }),
       ...(options.recordedTrack === undefined ? {} : { recordedTrack: options.recordedTrack }),
+      ...(options.plannedRoute === undefined ? {} : { plannedRoute: options.plannedRoute }),
     };
     let result: SaveLibraryRideResult = { status: "saved" };
     const uniqueKey = options.uniqueKey;

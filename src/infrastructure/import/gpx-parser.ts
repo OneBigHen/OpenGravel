@@ -1,5 +1,6 @@
 import { type ImportLimitsOverride, resolveImportLimits } from "@/application/import/limits";
 import { boundedName, checkCancelled, coordinateFromAttributes, ensureTrackHasGeometry, fileFallbackName, finalProgress, makeParseState, parseElevation, parseTimestamp, pointSeen, segmentSeen, trackSeen, type ParseState } from "./helpers";
+import type { Coordinate } from "@/domain/ride/types";
 import type { ImportParseOptions, ParsedImport, ParsedImportTrack, ParsedImportWaypoint } from "./types";
 import { parseXmlDocument, childText, directChild, type XmlElement } from "./xml";
 
@@ -96,6 +97,39 @@ function metadataDescription(root: XmlElement): string | undefined {
   return bounded === undefined || bounded.length === 0 ? undefined : bounded;
 }
 
+function sameLine(left: readonly Coordinate[], right: readonly Coordinate[]): boolean {
+  return left.length === right.length && left.every((coordinate, index) => {
+    const other = right[index];
+    return other !== undefined && other.lon === coordinate.lon && other.lat === coordinate.lat;
+  });
+}
+
+/**
+ * Exporters that write one line as both `<rte>` and `<trk>` mean one ride. The
+ * dense track is kept and the identical route is dropped, so our own older
+ * exports (and files from tools with the same habit) import as a single track
+ * instead of asking the rider to choose between two identical lines.
+ */
+function withoutDuplicateRoutes(tracks: readonly ParsedImportTrack[], state: ParseState): ParsedImportTrack[] {
+  const kept = [...tracks];
+  for (const route of tracks) {
+    if (route.sourceKind !== "route") continue;
+    const routeLine = route.segments.length === 1 ? route.segments[0] : undefined;
+    if (routeLine === undefined) continue;
+    const twin = tracks.find((candidate) =>
+      candidate.sourceKind === "track" &&
+      candidate.name === route.name &&
+      candidate.segments.length === 1 &&
+      sameLine(candidate.segments[0] ?? [], routeLine),
+    );
+    if (twin === undefined) continue;
+    const index = kept.indexOf(route);
+    if (index >= 0) kept.splice(index, 1);
+    state.warnings.push(`Ignored route "${route.name}" because the same line is already present as a track.`);
+  }
+  return kept;
+}
+
 /** Parse GPX 1.1 tracks and routes without joining source segments. */
 export function parseGpx(xml: string, options: GpxParseOptions = {}): ParsedImport {
   const filename = options.filename ?? "import.gpx";
@@ -133,6 +167,7 @@ export function parseGpx(xml: string, options: GpxParseOptions = {}): ParsedImpo
     const parsed = parseTrack(element, "route", sourceName, state, limits);
     if (parsed !== null) parsedTracks.push(parsed);
   }
+  const uniqueTracks = withoutDuplicateRoutes(parsedTracks, state);
 
   const waypoints = root.children.filter((child) => child.localName === "wpt");
   let validWaypoints = 0;
@@ -153,13 +188,13 @@ export function parseGpx(xml: string, options: GpxParseOptions = {}): ParsedImpo
   if (waypoints.length > 0) {
     state.warnings.push(`Preserved ${validWaypoints} GPX waypoint${validWaypoints === 1 ? "" : "s"} as metadata; they are not merged into the source track geometry.`);
   }
-  if (parsedTracks.length === 0 && waypoints.length === 0) {
+  if (uniqueTracks.length === 0 && waypoints.length === 0) {
     throw new SyntaxError("The GPX file contains no track, route, or waypoint geometry.");
   }
   finalProgress(state);
   const sourceDescription = metadataDescription(root);
   return {
-    tracks: parsedTracks,
+    tracks: uniqueTracks,
     warnings: state.warnings,
     waypoints: parsedWaypoints,
     ...(sourceDescription === undefined ? {} : { sourceDescription }),

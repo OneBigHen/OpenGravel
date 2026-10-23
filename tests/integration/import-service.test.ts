@@ -3,7 +3,7 @@ import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vitest";
 
 import { createImportService } from "@/application/import/import-service";
-import { buildTrackGpx, exportFilename, originalFileBytes } from "@/application/export/gpx-export";
+import { buildPlannedRouteGpx, buildPlannedTrackGpx, buildTrackGpx, exportFilename, originalFileBytes } from "@/application/export/gpx-export";
 import { createLibraryService } from "@/application/library/library-service";
 import { ImportCancelledError, type ImportFile } from "@/application/import/import-artifact";
 import { parseImportBytes } from "@/infrastructure/import/import-bytes";
@@ -140,5 +140,73 @@ describe("import service with durable adapters", () => {
     expect(source?.originalMime).toBe("application/vnd.google-earth.kmz");
     expect(exportFilename(source?.title ?? "", "original", { extension: "kmz" })).toMatch(/\.kmz$/);
     expect(Array.from(originalFileBytes(source?.originalBytes ?? new Uint8Array()))).toEqual(Array.from(original));
+  });
+});
+
+describe("GPX export round trips through the importer", () => {
+  function fileFor(xml: string): ImportFile {
+    const bytes = new TextEncoder().encode(xml);
+    return {
+      name: "opengravel-ride.gpx",
+      type: "application/gpx+xml",
+      size: bytes.byteLength,
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    };
+  }
+
+  function service() {
+    sequence += 1;
+    const database = new VNextDatabase(`opengravel-export-round-trip-${sequence}`);
+    const blobStore = createIndexedDbImportBlobStore({ database });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: database.name });
+    const repository = createRideRepository({ database });
+    const library = createLibraryService(repository, {
+      now: () => "2026-10-07T12:00:00.000Z",
+      blobStore,
+      geometryStore,
+    });
+    const imports = createImportService({
+      blobStore,
+      geometryStore,
+      libraryService: library,
+      parse: { parse: (bytes, filename, options) => parseImportBytes(bytes, filename, options) },
+      now: () => "2026-10-07T12:00:00.000Z",
+    });
+    return { library, imports };
+  }
+
+  const line = [
+    { lon: -75, lat: 40 },
+    { lon: -75.05, lat: 40.05 },
+    { lon: -75.1, lat: 40.1 },
+    { lon: -75.15, lat: 40.15 },
+  ];
+  const waypoints = [
+    { name: "Start", coordinate: line[0]! },
+    { name: "Fuel", coordinate: line[2]! },
+    { name: "Finish", coordinate: line[3]! },
+  ];
+
+  it("imports the GPX track export as one ride with the whole line", async () => {
+    const { library, imports } = service();
+    const xml = buildPlannedTrackGpx({ title: "Sunday loop", geometry: line, waypoints });
+    const outcome = await imports.importFile(fileFor(xml), { trackRoute: "follow" });
+
+    expect(outcome.namedRide.document.title).toBe("Sunday loop");
+    const source = await library.loadExportSource(outcome.namedRide.document.rideId);
+    expect(source?.plannedRoute?.geometry).toEqual(line);
+    expect((await library.listRides())).toHaveLength(1);
+  });
+
+  it("imports the GPX route export as one ride without a chooser", async () => {
+    const { library, imports } = service();
+    const xml = buildPlannedRouteGpx({ title: "Sunday loop", geometry: line, waypoints });
+    const outcome = await imports.importFile(fileFor(xml), { trackRoute: "follow" });
+
+    expect((await library.listRides())).toHaveLength(1);
+    const source = await library.loadExportSource(outcome.namedRide.document.rideId);
+    expect(source?.plannedRoute?.geometry[0]).toEqual(line[0]);
+    expect(source?.plannedRoute?.geometry.at(-1)).toEqual(line.at(-1));
+    expect(source?.plannedRoute?.geometry.length).toBeLessThanOrEqual(line.length);
   });
 });

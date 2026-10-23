@@ -264,3 +264,134 @@ describe("LibraryService", () => {
     );
   });
 });
+
+describe("LibraryService planned-route geometry", () => {
+  const geometry = [
+    { lon: -75.5, lat: 40 },
+    { lon: -75.4, lat: 40.1 },
+    { lon: -75.3, lat: 40.2 },
+  ] as const;
+
+  it("saves the selected route line so My rides can export it later", async () => {
+    const name = `opengravel-vnext-planned-route-${crypto.randomUUID()}`;
+    const db = new VNextDatabase(name);
+    const repository = createRideRepository({ database: db });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: name });
+    const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+
+    const named = await service.saveNamed(createRideDocument({ now: NOW }), {
+      title: "Pine Barrens Sunday",
+      plannedRoute: { geometry },
+    });
+
+    const [listed] = await service.listRides();
+    const exported = await service.loadExportSource(named.document.rideId);
+
+    expect(listed?.exportCapabilities?.plannedRoute).toBe(true);
+    expect(exported.plannedRoute?.geometry).toEqual(geometry);
+    expect(listed?.mapPreview?.line.length).toBeGreaterThan(1);
+  });
+
+  it("keeps the planned route through a rename and a geometry sweep", async () => {
+    const name = `opengravel-vnext-planned-route-sweep-${crypto.randomUUID()}`;
+    const db = new VNextDatabase(name);
+    const repository = createRideRepository({ database: db });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: name });
+    const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+
+    const named = await service.saveNamed(createRideDocument({ now: NOW }), {
+      title: "Pine Loop",
+      plannedRoute: { geometry },
+    });
+    await service.renameRide(named.document.rideId, "Pine Loop Renamed");
+    await repository.sweepUnreferencedGeometry();
+
+    const exported = await service.loadExportSource(named.document.rideId);
+    expect(exported.title).toBe("Pine Loop Renamed");
+    expect(exported.plannedRoute?.geometry).toEqual(geometry);
+  });
+
+  it("rebuilds planned-route waypoints from the ride intent", async () => {
+    const name = `opengravel-vnext-planned-route-waypoints-${crypto.randomUUID()}`;
+    const db = new VNextDatabase(name);
+    const repository = createRideRepository({ database: db });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: name });
+    const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+    const base = createRideDocument({ now: NOW });
+    const document = {
+      ...base,
+      intent: {
+        ...base.intent,
+        start: {
+          id: "pt_start" as never,
+          kind: "start" as const,
+          coordinate: geometry[0],
+          label: "Ranger station",
+          provenance: { type: "search" as const, provider: "test", query: "ranger" },
+        },
+        stops: [{
+          id: "stop_fuel" as never,
+          kind: "stop" as const,
+          coordinate: geometry[1],
+          label: "Fuel",
+          provenance: { type: "search" as const, provider: "test", query: "fuel" },
+        }],
+        finish: {
+          id: "pt_finish" as never,
+          kind: "finish" as const,
+          coordinate: geometry[2],
+          provenance: { type: "map" as const, selectedAt: NOW },
+        },
+      },
+    };
+
+    const named = await service.saveNamed(document, { title: "Waypoint ride", plannedRoute: { geometry } });
+    const exported = await service.loadExportSource(named.document.rideId);
+
+    expect(exported.plannedRoute?.waypoints).toEqual([
+      { name: "Ranger station", coordinate: geometry[0] },
+      { name: "Fuel", coordinate: geometry[1] },
+      { name: null, coordinate: geometry[2] },
+    ]);
+  });
+
+  it("reports missing planned-route storage instead of pretending there is no line", async () => {
+    const name = `opengravel-vnext-planned-route-no-store-${crypto.randomUUID()}`;
+    const db = new VNextDatabase(name);
+    const repository = createRideRepository({ database: db });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: name });
+    const writer = createLibraryService(repository, { now: () => LATER, geometryStore });
+    const named = await writer.saveNamed(createRideDocument({ now: NOW }), {
+      title: "Stored line",
+      plannedRoute: { geometry },
+    });
+
+    const withoutStore = createLibraryService(repository, { now: () => LATER });
+    await expect(withoutStore.loadExportSource(named.document.rideId)).rejects.toThrow(
+      "Planned route geometry storage is unavailable.",
+    );
+  });
+
+  it("refuses a planned route shorter than two points", async () => {
+    const repository = createRideRepository({ database: database() });
+    const service = createLibraryService(repository, { now: () => LATER });
+
+    await expect(service.saveNamed(createRideDocument({ now: NOW }), {
+      title: "No line",
+      plannedRoute: { geometry: [{ lon: -75, lat: 40 }] },
+    })).rejects.toThrow(/at least two/i);
+  });
+
+  it("keeps older rows without a planned route readable", async () => {
+    const repository = createRideRepository({ database: database() });
+    const service = createLibraryService(repository, { now: () => LATER });
+    const named = await service.saveNamed(createRideDocument({ now: NOW }), { title: "Old row" });
+
+    const record = await repository.loadRideRecord(named.document.rideId);
+    const [listed] = await service.listRides();
+
+    expect(record?.plannedRoute).toBeUndefined();
+    expect(listed?.exportCapabilities?.plannedRoute).toBe(false);
+    expect(listed?.title).toBe("Old row");
+  });
+});

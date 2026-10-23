@@ -14,6 +14,7 @@ import {
 import { DRAFT_DIRTY_STORAGE_KEY } from "@/application/persistence/local-data-keys";
 import {
   buildPlannedRouteGpx,
+  buildPlannedTrackGpx,
   buildTrackGpx,
   downloadExport,
   exportFilename,
@@ -42,6 +43,24 @@ const TYPE_FILTERS: readonly { readonly value: LibraryRideType | null; readonly 
   { value: "catalog-derivative", label: "Catalog derivative" },
   { value: "shared-derivative", label: "Shared derivative" },
 ];
+
+const NO_EXPORT_CAPABILITIES = {
+  plannedRoute: false,
+  track: false,
+  original: false,
+  recordedRide: false,
+} as const;
+
+/** A menu whose every entry is disabled is not an offered action (garage-1). */
+function hasExportable(ride: RideSummary): boolean {
+  const capabilities = ride.exportCapabilities;
+  return capabilities !== undefined && (
+    capabilities.plannedRoute ||
+    capabilities.track ||
+    capabilities.original ||
+    capabilities.recordedRide === true
+  );
+}
 
 export interface RidesLibraryProps {
   readonly service: LibraryServicePort;
@@ -239,9 +258,12 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     if (library.loadExportSource === undefined) throw new Error("Export is not available for this ride.");
     const source = await library.loadExportSource(ride.rideId);
     let bytes: Uint8Array;
-    if (mode === "planned-route") {
-      if (source.plannedRoute === null) throw new Error("This imported track has disconnected segments and cannot be exported as one route.");
-      bytes = new TextEncoder().encode(buildPlannedRouteGpx({ ...source.plannedRoute, title: source.title }));
+    if (mode === "planned-route" || mode === "planned-track") {
+      if (source.plannedRoute === null) throw new Error("This ride has no saved route line to export.");
+      const planned = { ...source.plannedRoute, title: source.title, createdTime: source.createdTime };
+      bytes = new TextEncoder().encode(
+        mode === "planned-route" ? buildPlannedRouteGpx(planned) : buildPlannedTrackGpx(planned),
+      );
     } else if (mode === "track") {
       const tracks: ExportTrack[] = source.tracks.map((track) => ({
         name: track.name,
@@ -251,7 +273,12 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           return { coordinates, timestamps: segment.timestamps, elevation: segment.elevation };
         }),
       }));
-      bytes = new TextEncoder().encode(buildTrackGpx({ title: source.title, tracks, waypoints: source.waypoints }));
+      bytes = new TextEncoder().encode(buildTrackGpx({
+        title: source.title,
+        tracks,
+        waypoints: source.waypoints,
+        createdTime: source.createdTime,
+      }));
     } else if (mode === "original") {
       if (source.originalBytes === null) throw new Error("The original file is not available.");
       bytes = originalFileBytes(source.originalBytes);
@@ -259,6 +286,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
       if (source.recordedTrack === null) throw new Error("The recorded track is not available.");
       bytes = new TextEncoder().encode(buildTrackGpx({
         title: source.title,
+        createdTime: source.createdTime,
         tracks: [{
           name: source.title,
           segments: [{
@@ -624,11 +652,13 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   {library.loadExportSource !== undefined && (ride.exportCapabilities?.track || ride.exportCapabilities?.recordedRide) ? (
                     <SavedRideGroupShare ride={ride} loadSource={library.loadExportSource.bind(library)} />
                   ) : null}
-                  <ExportMenu
-                    title={ride.title}
-                    capabilities={ride.exportCapabilities ?? { plannedRoute: false, track: false, original: false, recordedRide: false }}
-                    onExport={(mode) => exportRide(ride, mode)}
-                  />
+                  {hasExportable(ride) ? (
+                    <ExportMenu
+                      title={ride.title}
+                      capabilities={ride.exportCapabilities ?? NO_EXPORT_CAPABILITIES}
+                      onExport={(mode) => exportRide(ride, mode)}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     className="og-secondary"

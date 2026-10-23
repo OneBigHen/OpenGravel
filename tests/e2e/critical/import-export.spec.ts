@@ -32,11 +32,16 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   const exportMenu = page.getByRole("button", { name: "Export North Track" });
   await exportMenu.click();
   const plannedDownloadPromise = page.waitForEvent("download");
-  await page.getByRole("menuitem", { name: "Planned route GPX" }).click();
+  await page.getByRole("menuitem", { name: "GPX route" }).click();
   const plannedDownload = await plannedDownloadPromise;
   expect(plannedDownload.suggestedFilename()).toBe("opengravel-north-track-planned-route.gpx");
   const plannedBytes = await readFile((await plannedDownload.path())!);
-  expect(plannedBytes.toString("utf8")).toContain("<rte>");
+  const plannedXml = plannedBytes.toString("utf8");
+  expect(plannedXml).toContain("<rte>");
+  // The line is written once. A route file that also carried the same <trk>
+  // re-imported as two identical tracks and forced a chooser between them.
+  expect(plannedXml).not.toContain("<trk>");
+  expect(plannedXml.match(/<rtept[\s>/]/g)?.length ?? 0).toBeLessThanOrEqual(250);
 
   await page.getByRole("textbox", { name: /Rename North Track/ }).fill("Original multi-track-gap");
   await page.getByRole("textbox", { name: /Rename North Track/ }).press("Enter");
@@ -49,11 +54,8 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   });
   await expect(page.getByRole("heading", { name: "Choose tracks" })).toBeVisible();
   await expect(page.getByText("North Track").first()).toBeVisible();
-  await page.getByRole("button", { name: "Select none" }).click();
   const reimportTracks = page.getByRole("checkbox", { name: /Select North Track/ });
-  await expect(reimportTracks).toHaveCount(2);
-  await reimportTracks.first().check();
-  await expect(page.locator(".og-import__tracks input[type=checkbox]:checked")).toHaveCount(1);
+  await expect(reimportTracks).toHaveCount(1);
   await page.getByRole("button", { name: /import separately/i }).click();
   await page.getByRole("button", { name: "Import selected tracks" }).click();
   await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
