@@ -531,22 +531,26 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         <section className="og-explore__controls" aria-label="Road filters">
           <label>
             <span>Surface band</span>
-            <select aria-label="Filter roads by surface" value={roadSurface} onChange={(event) => setRoadSurface(event.target.value as RoadSurfaceFilter)}>
-              <option value="any">Any surface</option>
-              <option value="gravel">Gravel</option>
-              <option value="unknown">Unknown surface</option>
-            </select>
+            <span className="og-select">
+              <select aria-label="Filter roads by surface" value={roadSurface} onChange={(event) => setRoadSurface(event.target.value as RoadSurfaceFilter)}>
+                <option value="any">Any surface</option>
+                <option value="gravel">Gravel</option>
+                <option value="unknown">Unknown surface</option>
+              </select>
+            </span>
           </label>
           <label>
             <span>Distance</span>
-            <select aria-label="Filter roads by distance" value={roadNearMe ? "near" : "any"} onChange={(event) => {
-              const near = event.target.value === "near";
-              setRoadNearMe(near);
-              if (near && roadOrigin === undefined) setRoadLocationNote("Tap Use my location to apply the near-me filter.");
-            }}>
-              <option value="any">Any distance</option>
-              <option value="near">Near me (within 30 mi)</option>
-            </select>
+            <span className="og-select">
+              <select aria-label="Filter roads by distance" value={roadNearMe ? "near" : "any"} onChange={(event) => {
+                const near = event.target.value === "near";
+                setRoadNearMe(near);
+                if (near && roadOrigin === undefined) setRoadLocationNote("Tap Use my location to apply the near-me filter.");
+              }}>
+                <option value="any">Any distance</option>
+                <option value="near">Near me (within 30 mi)</option>
+              </select>
+            </span>
           </label>
           <button type="button" className="og-secondary" onClick={filterRoadsByLocation}>Use my location for road distance</button>
           {roadNearMe && roadOrigin !== undefined ? <button type="button" className="og-secondary" onClick={() => { setRoadNearMe(false); setRoadOrigin(undefined); }}>Clear near-me filter</button> : null}
@@ -602,37 +606,43 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </div>
         <label>
           <span>Source</span>
-          <select
-            aria-label="Filter by source"
-            value={query.source ?? "all"}
-            onChange={(event) => updateQuery({ source: event.target.value === "all" ? undefined : event.target.value as CatalogSource })}
-          >
-            <option value="all">All sources</option>
-            <option value="catalog">Catalog</option>
-            <option value="personal">Yours</option>
-            <option value="import">Imported</option>
-          </select>
+          <span className="og-select">
+            <select
+              aria-label="Filter by source"
+              value={query.source ?? "all"}
+              onChange={(event) => updateQuery({ source: event.target.value === "all" ? undefined : event.target.value as CatalogSource })}
+            >
+              <option value="all">All sources</option>
+              <option value="catalog">Catalog</option>
+              <option value="personal">Yours</option>
+              <option value="import">Imported</option>
+            </select>
+          </span>
         </label>
         <label>
           <span>Distance</span>
-          <select
-            aria-label="Filter by distance"
-            value={query.distance ?? "all"}
-            onChange={(event) => updateQuery({ distance: event.target.value === "all" ? undefined : event.target.value as DistanceBucket })}
-          >
-            <option value="all">Any distance</option>
-            <option value="short">Up to 30 mi</option>
-            <option value="medium">30–90 mi</option>
-            <option value="long">Over 90 mi</option>
-          </select>
+          <span className="og-select">
+            <select
+              aria-label="Filter by distance"
+              value={query.distance ?? "all"}
+              onChange={(event) => updateQuery({ distance: event.target.value === "all" ? undefined : event.target.value as DistanceBucket })}
+            >
+              <option value="all">Any distance</option>
+              <option value="short">Up to 30 mi</option>
+              <option value="medium">30–90 mi</option>
+              <option value="long">Over 90 mi</option>
+            </select>
+          </span>
         </label>
         <label>
           <span>Surface</span>
-          <select aria-label="Filter by surface" value={query.surface ?? "all"} disabled={!hasSurfaceEvidence} title={!hasSurfaceEvidence ? "Surface evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ surface: event.target.value === "all" ? undefined : event.target.value as "paved" | "gravel" })}>
-            <option value="all">Any surface</option>
-            <option value="paved">Paved</option>
-            <option value="gravel">Gravel or unpaved</option>
-          </select>
+          <span className="og-select">
+            <select aria-label="Filter by surface" value={query.surface ?? "all"} disabled={!hasSurfaceEvidence} title={!hasSurfaceEvidence ? "Surface evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ surface: event.target.value === "all" ? undefined : event.target.value as "paved" | "gravel" })}>
+              <option value="all">Any surface</option>
+              <option value="paved">Paved</option>
+              <option value="gravel">Gravel or unpaved</option>
+            </select>
+          </span>
         </label>
         <label className="og-explore__check">
           <input aria-label="Curvy routes only" type="checkbox" checked={query.curvy === true} disabled={!hasCurvatureEvidence} title={!hasCurvatureEvidence ? "Curvature evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ curvy: event.target.checked || undefined })} />
@@ -650,22 +660,24 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </label>
         <label>
           <span>Sort</span>
-          <select
-            aria-label="Sort routes"
-            value={query.sort}
-            onChange={(event) => {
-              if (event.target.value === "near") {
-                if (origin === undefined) sortByLocation();
-                else updateQuery({ sort: "near" });
-              } else updateQuery({ sort: event.target.value as ExploreSort });
-            }}
-          >
-            <option value="recommended">Recommended</option>
-            <option value="near">Nearest to me</option>
-            <option value="name">Name</option>
-            <option value="distance-asc">Distance, shortest first</option>
-            <option value="distance-desc">Distance, longest first</option>
-          </select>
+          <span className="og-select">
+            <select
+              aria-label="Sort routes"
+              value={query.sort}
+              onChange={(event) => {
+                if (event.target.value === "near") {
+                  if (origin === undefined) sortByLocation();
+                  else updateQuery({ sort: "near" });
+                } else updateQuery({ sort: event.target.value as ExploreSort });
+              }}
+            >
+              <option value="recommended">Recommended</option>
+              <option value="near">Nearest to me</option>
+              <option value="name">Name</option>
+              <option value="distance-asc">Distance, shortest first</option>
+              <option value="distance-desc">Distance, longest first</option>
+            </select>
+          </span>
         </label>
         <button type="button" className="og-secondary og-explore__near" aria-label="Sort by distance from me" onClick={sortByLocation}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -682,20 +694,24 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
 
       {lens === "ride" ? (
         <section className="og-explore__areas" aria-label="Browse riding regions">
-          <label>
+          <label htmlFor="og-explore-region-picker">
             <span>Region</span>
-            <select aria-label="Browse region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
-              <option value="">All regions</option>
-              {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
-              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
-            </select>
+            <span className="og-select">
+              <select id="og-explore-region-picker" aria-label="Browse region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
+                <option value="">All regions</option>
+                {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
+                {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+              </select>
+            </span>
           </label>
-          <label>
+          <label htmlFor="og-explore-area-picker">
             <span>PA riding area</span>
-            <select aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
-              <option value="">All riding areas</option>
-              {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
-            </select>
+            <span className="og-select">
+              <select id="og-explore-area-picker" aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
+                <option value="">All riding areas</option>
+                {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
+              </select>
+            </span>
           </label>
           <p>Areas include nearby border towns and show where routes start. Expand the map to see full paths.</p>
         </section>

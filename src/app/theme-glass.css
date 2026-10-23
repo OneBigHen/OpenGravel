@@ -1320,7 +1320,9 @@ html .og-ride {
     text-transform: uppercase;
   }
 
-  .og-explore__controls[data-open="true"] label > span {
+  /* The caption alone is revealed; `.og-select` keeps its relative position
+     so the chevron stays pinned to its select. */
+  .og-explore__controls[data-open="true"] label > span:not(.og-select) {
     position: static;
     width: auto;
     height: auto;
@@ -1340,6 +1342,11 @@ html .og-ride {
     font-size: 16px;
     letter-spacing: 0;
     text-transform: none;
+  }
+
+  /* A select's value stays clear of the .og-select chevron. */
+  .og-explore__controls[data-open="true"] select {
+    padding-right: 40px;
   }
 
   .og-explore__controls[data-open="true"] .og-explore__check {

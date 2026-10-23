@@ -7574,16 +7574,20 @@ h3,
 }
 
 .og-explore__areas {
-  display: flex;
+  display: grid;
+  /* Region and PA riding area share one row from 360px up (a 390px phone puts
+     them side by side); below that they stack rather than squash. */
+  grid-template-columns: minmax(0, 1fr);
   align-items: end;
-  flex-wrap: wrap;
-  gap: 12px 24px;
+  gap: 12px 16px;
   margin: 16px 0;
 }
-.og-explore__areas label { display: grid; gap: 8px; flex: 1 1 240px; }
-.og-explore__areas label > span { font-weight: 650; font-size: var(--og-text-meta); }
-.og-explore__areas select { width: 100%; min-height: 44px; }
-.og-explore__areas p { flex: 1 1 280px; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
+@media (min-width: 360px) {
+  .og-explore__areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.og-explore__areas label { display: grid; gap: 6px; min-width: 0; }
+.og-explore__areas label > span:not(.og-select) { font-weight: 650; font-size: var(--og-text-meta); }
+.og-explore__areas p { grid-column: 1 / -1; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 
 .og-explore-map-dialog {
   position: fixed;
@@ -7759,7 +7763,7 @@ h3,
     min-width: 0;
   }
 
-  .og-explore__controls label > span {
+  .og-explore__controls label > span:not(.og-select) {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -11761,3 +11765,60 @@ a.og-secondary {
 .og-community-action textarea { resize: vertical; }
 .og-public-photos { display: grid; gap: 12px; min-width: 0; }
 .og-public-photos input[type="file"] { width: 100%; min-width: 0; }
+
+/* --------------------------------------------------------------------------
+   Native selects, dressed once. The control stays a real <select> — the phone's
+   own picker, keyboard support and screen-reader semantics stay intact — but it
+   wears the same pill, hairline and paper as the Explore search field and chips
+   instead of the browser's square default. `.og-select` is only the chevron
+   carrier: a select is a replaced element, so its own ::after never paints.
+   Everything below reads the palette tokens, so Day and Night both hold.
+   -------------------------------------------------------------------------- */
+.og-select {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.og-select > select {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  /* 40px on the right keeps the value clear of the chevron. */
+  padding: 0 40px 0 16px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 999px;
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  /* WebKit can paint a long value outside its box; clip it, the popup still
+     lists every option in full. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.og-select > select:disabled {
+  background: var(--og-well);
+  color: var(--og-slate-text);
+  cursor: not-allowed;
+}
+
+/* Two borders on a turned square: muted text ink, so it reads in both themes. */
+.og-select::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 6px);
+  right: 18px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--og-slate-text);
+  border-bottom: 2px solid var(--og-slate-text);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
