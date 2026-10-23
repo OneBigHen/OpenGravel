@@ -116,6 +116,31 @@ describe("provider payloads", () => {
     const features = await provider.load(VIEW, ["great-roads"], { fetch, env: {} });
     expect(features.map((feature) => feature.name)).toEqual(["Decker Road", "Twisty road"]);
   });
+
+  it("draws gravel from the routing Gravel Atlas when it is installed", async () => {
+    const corridor = (id: string, kind: "dirt" | "backroad", quality: number) => ({
+      id, kind, quality, geometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40 }],
+      lengthMeters: 4_000, longestDirtRunMeters: 3_219, bendShare: 0.3, francoScore: 0, curvaturePerKm: 1.2,
+      reversible: false, gradeMix: {}, maxTrackGrade: null, legalConfidence: 1,
+      access: { legal: true, unknownRestrictionFlags: [], sandShare: 0 },
+      seasonal: { closed: false, seasonalClosed: false, flags: [] },
+      sourceIds: [], areaHints: [], entryLinks: 1, exitLinks: 1,
+    });
+    const old = vi.fn(() => []);
+    const provider = knownRoadsProvider(
+      { curvyRoadsNear: () => [], gravelCorridorsNear: old },
+      {
+        availability: () => ({ available: true, path: "x", schemaVersion: 3, corridorCount: 2 }),
+        corridorsNear: (_bounds, kind) => kind === "dirt" ? [corridor("d", "dirt", 0.4)] : [corridor("b", "backroad", 0.9)],
+      } as never,
+    );
+    const features = await provider.load(VIEW, ["gravel"], { fetch, env: {} });
+    expect(features.map((feature) => [feature.name, feature.detail])).toEqual([
+      ["Back road with dirt", "Back road · 2.0 mi of dirt · twisty"],
+      ["Dirt road", "2.0 mi of dirt · twisty"],
+    ]);
+    expect(old).not.toHaveBeenCalled();
+  });
 });
 
 describe("handleMapLayersRequest", () => {
