@@ -257,6 +257,33 @@ describe("the object list drives one command per press", () => {
   });
 });
 
+describe("tapping an object selects it (05 §4)", () => {
+  it("selects an existing stop instead of authoring the missing start", async () => {
+    const { rideDocumentStore, plannerUiStore } = await renderWorkspace();
+    await placeBothEndpoints();
+    const stopId = await addStop(300, 300);
+    fireEvent.click(screen.getByTestId("remove-start"));
+
+    const before = rideDocumentStore.getState().document;
+    // The ride has a stop but no start, so the unarmed placement rule has a
+    // point to author — but this tap is on an object, not on the open surface.
+    expect(before.intent.start).toBeNull();
+    const stop = stopsOf()[0];
+    if (stop === undefined) throw new Error("the stop was not authored");
+
+    emitIntent({
+      type: "object-click",
+      ref: { kind: "stop", stopId },
+      coordinate: stop.coordinate,
+    });
+
+    const after = rideDocumentStore.getState().document;
+    expect(after.intent.start).toBeNull();
+    expect(after.revision).toBe(before.revision);
+    expect(plannerUiStore.getState().selectedObject).toEqual({ kind: "stop", stopId });
+  });
+});
+
 describe("a point drag is one gesture and one command (05 §4)", () => {
   it("previews locally and commits exactly once on release", async () => {
     const { rideDocumentStore, plannerUiStore, mapFactory } = await renderWorkspace();

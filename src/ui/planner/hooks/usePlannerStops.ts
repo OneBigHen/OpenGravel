@@ -58,7 +58,16 @@ export interface PlannerStopsAuthoring {
   previewPointDrag(coordinate: Coordinate): void;
   commitPointDrag(coordinate: Coordinate | undefined): void;
   cancelPointDrag(): void;
-  placeFromMap(coordinate: Coordinate): boolean;
+  /**
+   * Places the current placement target at `coordinate`. With no tool armed,
+   * `implicitTarget` decides whether the composer's missing point may be
+   * authored by this tap: true for the open map surface, false for a tap that
+   * resolved to an object and therefore means "select that object".
+   */
+  placeFromMap(
+    coordinate: Coordinate,
+    options?: { readonly implicitTarget?: boolean },
+  ): boolean;
 }
 
 function armedToolFor(placementTool: PlacementTool): ArmedPlacementTool {
@@ -255,7 +264,10 @@ export function usePlannerStops(input: {
   }, [plannerUiStore]);
 
   const placeFromMap = useCallback(
-    (coordinate: Coordinate): boolean => {
+    (
+      coordinate: Coordinate,
+      options?: { readonly implicitTarget?: boolean },
+    ): boolean => {
       const ui = plannerUiStore.getState();
       if (placementTool === "place-stop") {
         if (placementStopId === null) {
@@ -280,7 +292,8 @@ export function usePlannerStops(input: {
       }
 
       const armedTarget: PlacementTarget = armedTool === "stop" ? null : armedTool;
-      const target = armedTarget ?? missingTarget;
+      const implicitTarget = options?.implicitTarget ?? true;
+      const target = armedTarget ?? (implicitTarget ? missingTarget : null);
       if (target !== "start" && target !== "finish") return false;
       rideDocumentStore
         .getState()
