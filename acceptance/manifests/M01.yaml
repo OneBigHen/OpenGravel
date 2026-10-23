@@ -10,10 +10,10 @@ executors:
     spec: "tests/e2e/critical/first-route.spec.ts"
   iphone:
     kind: maestro
-    flow: planned
+    flow: ".maestro/M01-plan-first-route.yaml"
   ipad:
     kind: maestro
-    flow: planned
+    flow: ".maestro/M01-plan-first-route.yaml"
 preflight:
   require_matching_sha: true
   require_real_device_session: true

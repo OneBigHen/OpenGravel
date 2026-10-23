@@ -1,0 +1,47 @@
+# M10 — pre-ride preparation (iOS).
+# Plans a route, opens the "Before you ride" preparation panel, and verifies
+# the departure summary ("Leaving now") and the honest offline-readiness
+# statement ("Offline readiness", "online only for now") are shown. The panel
+# starts closed on the phone, so the flow taps its header to open it.
+#
+# Weather and traffic verdicts depend on live providers and the fixture the
+# deployment serves; their deterministic assertions live in the Playwright
+# lane (tests/e2e/critical/prepare.spec.ts, weather.spec.ts, traffic.spec.ts).
+# See M01 for the UI grounding of the planning steps below.
+appId: org.onebighen.opengravel
+name: M10 pre-ride preparation
+properties:
+  missionId: "M10"
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "No plan yet."
+    timeout: 45000
+- takeScreenshot: 01-first-screen
+- tapOn: "Starting point"
+- inputText: "Phoenixville"
+- extendedWaitUntil:
+    visible: "Phoenixville.*"
+    timeout: 20000
+- pressKey: Enter
+- tapOn: "Where to, or a ride idea"
+- inputText: "Pottstown"
+- extendedWaitUntil:
+    visible: "Pottstown.*"
+    timeout: 20000
+- pressKey: Enter
+- tapOn: "Create ride"
+- extendedWaitUntil:
+    visible: "Ride ready.*"
+    timeout: 60000
+- takeScreenshot: 02-ride-ready
+- tapOn: "Compare rides|Ride choices"
+- tapOn: "Before you ride"
+- extendedWaitUntil:
+    visible: "Leaving now"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Offline readiness"
+    timeout: 30000
+- takeScreenshot: 03-preparation-open

@@ -106,7 +106,7 @@ claimed by any manifest, so new specs cannot silently slip out of the campaign.
 
 | Mission | Feature | P | Playwright spec | iOS flow |
 |---|---|---|---|---|
-| M01 | plan-first-route | P0 | first-route.spec.ts | planned |
+| M01 | plan-first-route | P0 | first-route.spec.ts | ✅ M01 |
 | M02 | place-search | P1 | place-search.spec.ts, places.spec.ts | planned |
 | M03 | stops | P1 | stops.spec.ts | planned |
 | M04 | avoid-area | P1 | avoid-area.spec.ts | planned |
@@ -115,7 +115,7 @@ claimed by any manifest, so new specs cannot silently slip out of the campaign.
 | M07 | ride-style | P1 | ride-style.spec.ts, routing-method-comparison.spec.ts | planned |
 | M08 | long-trip | P1 | long-trip.spec.ts | planned |
 | M09 | advisor | P2 | advisor.spec.ts | planned |
-| M10 | prepare | P1 | prepare.spec.ts, weather.spec.ts, traffic.spec.ts | planned |
+| M10 | prepare | P1 | prepare.spec.ts, weather.spec.ts, traffic.spec.ts | ✅ M10 |
 | M11 | plan-and-start | P0 | ride-focus, compact-sheet, mobile-planner-ux, desktop-rail | ✅ M11 |
 | M12 | free-ride | P0 | free-ride.spec.ts, ride-offers.spec.ts | ✅ M12 |
 | M13 | record | P0 | record.spec.ts | ✅ M13 |
