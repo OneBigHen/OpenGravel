@@ -616,6 +616,33 @@ describe("dark chrome and honest states", () => {
     );
   });
 
+  it("keeps a disabled ride action's label readable in the day theme", () => {
+    const read = (file: string): string =>
+      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
+    const ruleIn = (css: string, selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+
+    const glass = read("theme-glass.css");
+    // Day paints the ride white, and the primary action's text with it. Both are
+    // kept above the disabled rule on purpose: that pair is what made a disabled
+    // "Reroute now" / "Routing…" an empty white pill beside "Details".
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action--primary')).toMatch(
+      /color:\s*#ffffff/,
+    );
+    const disabled = ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action:disabled');
+    expect(disabled).toMatch(/color:\s*var\(--og-ride-muted\)/);
+    expect(disabled).toMatch(/background:\s*var\(--og-ride-surface\)/);
+    // Day declares those two as ink-ish text on the white ride surface, so the
+    // label is painted, not white on white.
+    const dayBlock = glass.slice(glass.indexOf(':root[data-theme="day"] .og-ride {'));
+    const day = dayBlock.slice(0, dayBlock.indexOf("}"));
+    expect(day).toMatch(/--og-ride-muted:\s*#3a4540/);
+    expect(day).toMatch(/--og-raised-dark:\s*#ffffff/);
+  });
+
   it("draws the route line and the rider position into the map scene", async () => {
     const { hosts } = await harness({ position: "fresh" });
 
@@ -764,6 +791,9 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-gps", "fresh-poor");
     const reroute = screen.getByTestId("ride-reroute-now");
     expect(reroute).toBeDisabled();
+    // Disabled is not blank: the label stays, and the day theme paints it (see
+    // the stylesheet test below) instead of white on the white disabled pill.
+    expect(reroute).toHaveTextContent("Reroute now");
     expect(reroute).toHaveAttribute("title", "Rerouting needs a fresh, accurate GPS fix.");
 
     fireEvent.click(reroute);
@@ -1404,6 +1434,29 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(screen.getByTestId("ride-metric-slot-0")).toHaveAccessibleName(
       "Speed, 32 miles per hour. Show ride controls.",
     );
+  });
+
+  it("keeps showing a dash, not 0 left, when off the route reads the ride's finish", async () => {
+    // Off the line the matcher projects onto the nearest point of a loop, which
+    // can be the closing miles: the strip showed "0.0 mi / 0 min" 900 ft off
+    // route on a ride that was nowhere near done.
+    await harness({
+      position: "fresh",
+      offRoute: "off-route",
+      telemetry: () => ({
+        routeProgress: 1,
+        remainingDistanceMeters: 0,
+        remainingDurationSeconds: 0,
+        etaIso: NOW,
+        distanceFromRouteMeters: 275,
+      }),
+    });
+
+    expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("900 ft off route");
+    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("—");
+    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-state", "waiting");
+    expect(screen.getByTestId("ride-metric-value-2")).toHaveTextContent("—");
+    expect(screen.getByTestId("ride-remaining")).toHaveTextContent("Unknown");
   });
 
   it("drops the speed bubble while a readout shows speed, and keeps it otherwise", async () => {

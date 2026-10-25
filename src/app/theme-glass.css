@@ -1168,6 +1168,17 @@ html .og-ride {
   color: #ffffff;
 }
 
+/* A disabled action still has to be readable. Day paints the ride white, and
+   the primary rule above forces white text for the ember fill; without this,
+   every disabled primary ("Routing…" while a reroute is in flight, "Reroute
+   now" on a fix that is not fresh-good) landed as white on the white disabled
+   surface: an empty pill beside "Details". */
+:root[data-theme="day"] .og-ride .og-ride__action:disabled {
+  color: var(--og-ride-muted);
+  background: var(--og-ride-surface);
+  border-color: var(--og-ride-border);
+}
+
 /* The GPS warning on the green turn card: amber on green is lost in glare. */
 .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) .og-ride__gps-badge {
   color: #ffd76a;
