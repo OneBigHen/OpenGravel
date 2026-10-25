@@ -177,3 +177,36 @@
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {
   .og-planner .og-planner__sheet { transition: none; }
 }
+
+/* Loop ride time and "Which way?" on a phone: the label sits above one row of
+   chips that scrolls sideways, so the two rows stay above "Make my loop"
+   instead of wrapping into three. */
+@media (max-width: 760px) {
+  .og-composer__row--loop,
+  .og-composer__row--direction {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--og-space-1);
+    min-width: 0;
+  }
+
+  .og-composer__row--loop > .og-style__loop,
+  .og-composer__row--direction > .og-style__way {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
+  }
+
+  .og-composer__row--loop > .og-style__loop::-webkit-scrollbar,
+  .og-composer__row--direction > .og-style__way::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-composer__row--loop .og-style__chip,
+  .og-composer__row--direction .og-style__chip {
+    flex: none;
+  }
+}
