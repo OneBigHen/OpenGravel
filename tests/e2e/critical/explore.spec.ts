@@ -55,9 +55,8 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
     /GraphHopper|motorcycle_scenic|routing engine|TomTom|NWS/,
   );
   await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
-  await expect(page.getByTestId("weather-freshness")).toHaveText("Fresh");
-  await expect(page.getByText(/Source: (National Weather Service|weather service) · updated/)).toBeVisible();
+  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
+  await expect(page.getByText("Weather from the National Weather Service")).toBeVisible();
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
 
@@ -67,7 +66,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByTestId("active-ride-provenance")).toContainText("catalog");
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
-  await expect(page.getByText("Riding: Trail bike · 60 mi range")).toBeVisible();
+  await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 50 mi range");
 
   await page.getByRole("link", { name: "Explore" }).click();
   await expect(page).toHaveURL(/\/explore$/);
@@ -105,8 +104,7 @@ test("labels missing road evidence clearly and without console errors", async ({
 
   await page.goto("/explore/sample-ridge-loop");
   await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
-  await expect(page.getByTestId("weather-freshness")).toHaveText("Fresh");
+  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roads on this ride" })).toBeVisible();

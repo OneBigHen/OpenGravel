@@ -30,8 +30,9 @@ const baseContext: RoutePreparationContext = {
   congestedWindows: [],
   routeTouchesMappedCorridor: false,
   fuelRangeKm: 200,
+  sunrise: "2026-09-17T10:56:00.000Z",
   sunset: "2026-09-17T19:00:00.000Z",
-  remainingDaylightMinutes: 180,
+  riderTimeZone: "America/New_York",
   multiDay: false,
   providers: {},
 };
@@ -85,8 +86,9 @@ describe("preparation relevance rules", () => {
     ["fuel is shown at 120.1 km", "fuel", { distanceKm: 120.1 }, true],
     ["fuel is shown for a short usable range", "fuel", { distanceKm: 46, fuelRangeKm: 80 }, true],
     ["fuel is shown when range is unknown", "fuel", { distanceKm: 20, fuelRangeKm: null }, true],
-    ["daylight needs sunset and duration", "daylight", { sunset: undefined }, false],
-    ["daylight is shown when sunset is known", "daylight", { sunset: baseContext.sunset }, true],
+    ["daylight needs a crossing and a duration", "daylight", { sunset: undefined, sunrise: undefined }, false],
+    ["daylight is shown when sunset is known", "daylight", { sunset: baseContext.sunset, sunrise: undefined }, true],
+    ["daylight is shown from a sunrise alone", "daylight", { sunset: undefined, sunrise: baseContext.sunrise }, true],
     ["lodging is hidden at 150 km", "lodging", { distanceKm: 150, multiDay: false }, false],
     ["lodging is shown above 150 km", "lodging", { distanceKm: 150.1, multiDay: false }, true],
     ["lodging is shown for a multi-day ride", "lodging", { distanceKm: 20, multiDay: true }, true],
@@ -127,6 +129,8 @@ describe("prepareRoute", () => {
     ]);
     expect(preparation.items[0]).toMatchObject({ kind: "weather", state: "ready", relevance: "conditional" });
     expect(preparation.items[1]).toMatchObject({ kind: "traffic", state: "stale", relevance: "conditional" });
+    // 08:00Z is before the 10:56Z sunrise: the briefing says when it gets light.
+    expect(preparation.items[3]).toMatchObject({ kind: "daylight", data: { display: "Dark until 6:56 am" } });
     expect(preparation.items.find((item) => item.kind === "lodging")).toBeUndefined();
   });
 

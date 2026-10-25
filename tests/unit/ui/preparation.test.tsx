@@ -81,7 +81,7 @@ describe("RoutePreparationSection", () => {
     expect(screen.queryByText("Offline ready")).not.toBeInTheDocument();
   });
 
-  it("renders an alert-primary weather row with freshness and source details", () => {
+  it("renders an alert's own words, with its age in words instead of a status chip", () => {
     render(<RoutePreparationSection preparation={{
       registeredProviderCount: 1,
       capabilities: [],
@@ -94,15 +94,53 @@ describe("RoutePreparationSection", () => {
         data: {
           display: "Severe Thunderstorm Watch — through 8:00 PM (updated 12 min ago)",
           freshnessLabel: "Stale",
+          ageMinutes: 185,
           primaryAlert: { severity: "Severe" },
         },
       }],
     }} />);
 
-    expect(screen.getByText("Severe Thunderstorm Watch — through 8:00 PM (updated 12 min ago)")).toBeInTheDocument();
-    expect(screen.getByTestId("weather-severity")).toHaveTextContent("Severe");
-    expect(screen.getByTestId("weather-freshness")).toHaveTextContent("Stale");
-    expect(screen.getByText("Source: weather service · updated 14:32")).toBeInTheDocument();
+    expect(screen.getByTestId("preparation-value-weather")).toHaveTextContent(
+      "Severe Thunderstorm Watch — through 8:00 PM (updated 12 min ago)",
+    );
+    // Old enough to matter, and said so in words: no Ready/Stale chip, no
+    // provider sentence, and the agency credited once in small print.
+    expect(screen.getByText("Forecast is 3 h old")).toBeInTheDocument();
+    expect(screen.queryByTestId("weather-freshness")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("weather-severity")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Source:/)).not.toBeInTheDocument();
+    expect(screen.getByText("Weather from the National Weather Service")).toBeInTheDocument();
+  });
+
+  it("does not wear a status chip when the check is current", () => {
+    render(<RoutePreparationSection preparation={{
+      registeredProviderCount: 1,
+      capabilities: [],
+      items: [{
+        kind: "weather",
+        state: "ready",
+        relevance: "conditional",
+        reason: "Forecast received for the selected route.",
+        provenance: "Source: weather service · updated 14:32",
+        data: { display: "Clear · 36°F", freshnessLabel: "Fresh", ageMinutes: 0 },
+      }],
+    }} />);
+
+    expect(screen.getByTestId("preparation-value-weather")).toHaveTextContent("Clear · 36°F");
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fresh")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Forecast is/)).not.toBeInTheDocument();
+  });
+
+  it("can drop its own heading where the surrounding disclosure already says it", () => {
+    render(<RoutePreparationSection heading={false} preparation={preparation} omit={["weather", "daylight"]} />);
+
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Before you ride" })).toBeInTheDocument();
+    // Weather and daylight have their own line in the planner's briefing line.
+    expect(screen.queryByTestId("preparation-value-weather")).not.toBeInTheDocument();
+    expect(screen.queryByText("Daylight", { selector: "dt" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("preparation-value-surface")).toHaveTextContent("Some gravel");
   });
 
   it("renders absent traffic as nothing at all, never as clear", () => {
@@ -131,7 +169,8 @@ describe("RoutePreparationSection", () => {
     expect(screen.getByTestId("long-trip-consideration-fuel")).toHaveAttribute("data-severity", "critical");
     expect(screen.getByTestId("long-trip-consideration-fuel")).toHaveTextContent("Plan a fuel stop before the range gap.");
     expect(screen.getByTestId("long-trip-consideration-weather")).toHaveTextContent("70% precipitation chance");
-    expect(screen.getByText("Sources: ride:distance, assumption:conservative-fuel-range")).toBeInTheDocument();
+    // Evidence references stay in the model; they are not read out to a rider.
+    expect(screen.queryByText(/Sources:/)).not.toBeInTheDocument();
   });
 
   it("renders no long-trip disclosure for a short ride", () => {

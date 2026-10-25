@@ -122,30 +122,6 @@ export function formatForecast(periods: readonly WeatherForecastPeriod[]): strin
   return parts.join(" · ");
 }
 
-/** A clock time the way a rider says it, without a zone label on a one-line brief. */
-function formatRiderClock(value: string, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone,
-  }).format(new Date(value)).replace(/\s?(AM|PM)$/i, (suffix) => suffix.toLowerCase());
-}
-
-/**
- * `Dark by 6:12 pm` when the ride outlasts the sunset at its start, or `null`
- * when it finishes in daylight or either end of the comparison is unknown.
- *
- * The sunset is a solar calculation for the departure day, not a promise that
- * the road is safe at night; the line only tells the rider to bring lights.
- */
-export function darkByLabel(context: RoutePreparationContext): string | null {
-  const sunset = instant(context.sunset);
-  const rideEnd = instant(context.tripWindow?.end);
-  if (sunset === null || rideEnd === null || rideEnd <= sunset) return null;
-  return `Dark by ${formatRiderClock(new Date(sunset).toISOString(), context.riderTimeZone ?? "UTC")}`;
-}
-
 function forecastOverlapsTripWindow(
   period: WeatherForecastPeriod,
   tripWindow: OverlapWindow | null | undefined,

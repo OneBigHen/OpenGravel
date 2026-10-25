@@ -11,11 +11,11 @@
  *   `LIVE_TRAFFIC_WINDOW_MINUTES`; a later departure says so instead;
  * - **fuel** compares the bike's usable range (range minus reserve) with the
  *   route's length;
- * - **daylight** compares the ride with the sunset at the start, on the
- *   departure day.
+ * - **daylight** compares the ride with sunrise and sunset at the start, on the
+ *   departure day, so a briefing can say when the light comes or goes.
  */
 
-import { sunsetOnDepartureDay } from "@/application/long-trip";
+import { sunriseOnDepartureDay, sunsetOnDepartureDay } from "@/application/long-trip";
 import type { Coordinate, DepartureIntent, BikeConstraintSnapshot } from "@/domain/ride/types";
 
 import type { RoutePreparationContext } from "./prepare-route";
@@ -68,9 +68,8 @@ export function plannerPreparationContext(input: PlannerPreparationInput): Route
   const durationMinutes = Number.isFinite(route.durationSeconds) ? route.durationSeconds / 60 : null;
   const end =
     durationMinutes === null ? null : new Date(Date.parse(departAt) + durationMinutes * 60_000).toISOString();
+  const sunrise = start === undefined ? null : sunriseOnDepartureDay(start, departAt);
   const sunset = start === undefined ? null : sunsetOnDepartureDay(start, departAt)?.sunset ?? null;
-  const remainingDaylightMinutes =
-    sunset === null ? null : Math.round((Date.parse(sunset) - Date.parse(departAt)) / 60_000);
   const usableRangeMiles = Math.max(0, bike.fuelRangeMiles - bike.reserveMiles);
   const live = departureIsLive(input.departure, input.now);
 
@@ -84,7 +83,8 @@ export function plannerPreparationContext(input: PlannerPreparationInput): Route
     routeTouchesMappedCorridor: live,
     ...(live ? { trafficCorridor: thinLine(route.geometry, TRAFFIC_CORRIDOR_POINTS) } : {}),
     fuelRangeKm: usableRangeMiles * KM_PER_MILE,
-    ...(sunset === null ? {} : { sunset, remainingDaylightMinutes }),
+    ...(sunrise === null ? {} : { sunrise }),
+    ...(sunset === null ? {} : { sunset }),
     weatherLocation: start === undefined ? null : { lat: start.lat, lon: start.lon },
     ...(input.riderTimeZone === undefined ? {} : { riderTimeZone: input.riderTimeZone }),
   };
