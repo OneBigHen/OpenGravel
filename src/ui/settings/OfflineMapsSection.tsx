@@ -10,6 +10,7 @@ import {
   type OfflineRegionOffer,
   type OfflineRegionsPort,
 } from "@/application/offline/offline-regions";
+import { SettingsGroup } from "./SettingsGroup";
 
 interface ActiveDownload {
   readonly regionId: string;
@@ -142,91 +143,84 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
       : device.storedBytes > 0 ? `${formatBytes(device.storedBytes)} used` : "None yet";
 
   return (
-    <section className="og-settings__section og-settings__section--offline" aria-labelledby="settings-offline-title" data-testid="offline-maps">
-      <div className="og-settings__section-heading">
-        <div>
-          <h2 id="settings-offline-title">Offline areas</h2>
-        </div>
-        <span className="og-settings__hint">{storageLabel}</span>
-      </div>
-      <p className="og-settings__section-copy" data-testid="offline-shell-disclosure">
-        {canReopenOffline
-          ? "This device can reopen OpenGravel without signal."
-          : "Keep OpenGravel open when you lose signal. Reopening the app still needs signal until it has been saved on this device."}
-      </p>
-      {offers === null && !offersFailed && rows.length === 0 ? <p className="og-settings__section-copy">Checking which areas are available…</p> : null}
-      {offersFailed ? <p className="og-settings__section-copy">The list of areas needs signal.{device.status === "ready" ? " Areas already on this device still work." : ""}</p> : null}
+    <SettingsGroup
+      id="settings-offline-title"
+      label="Offline areas"
+      aside={storageLabel}
+      testId="offline-maps"
+      hint={<span data-testid="offline-shell-disclosure">{canReopenOffline
+        ? "This device can reopen OpenGravel without signal."
+        : "Keep OpenGravel open when you lose signal. Reopening the app still needs signal until it has been saved on this device."}</span>}
+    >
+      {offers === null && !offersFailed && rows.length === 0 ? <p className="og-settings__card-block og-settings__note">Checking which areas are available…</p> : null}
+      {offersFailed ? <p className="og-settings__card-block og-settings__note">The list of areas needs signal.{device.status === "ready" ? " Areas already on this device still work." : ""}</p> : null}
       {device.status === "failed" ? (
-        <>
-          <p className="og-settings__section-copy" role="alert">
+        <div className="og-settings__card-block og-settings__stack">
+          <p className="og-settings__note" role="alert">
             Device storage could not be checked. Saved areas cannot be verified right now. Retry before downloading or removing an area.
           </p>
           <button className="og-settings__button og-settings__button--quiet" type="button" aria-label="Retry device storage" onClick={() => { setDevice({ status: "checking" }); void refreshLocal(); }}>
             Retry
           </button>
-        </>
+        </div>
       ) : null}
-      <ul className="og-offline-areas__list">
-        {rows.map((row) => {
-          const downloading = active?.regionId === row.regionId;
-          const percent =
-            downloading && active.progress !== null && active.progress.totalBytes > 0
-              ? Math.floor((active.progress.completedBytes / active.progress.totalBytes) * 100)
-              : 0;
-          const label = STATE_LABEL[row.state];
-          return (
-            <li className="og-offline-areas__row" key={row.regionId} data-testid={`offline-region-${row.regionId}`}>
-              <div className="og-offline-areas__main">
-                <div>
-                  <h3>{row.name}</h3>
-                  <p>
-                    {row.sizeLabel} · {row.dataLabel}
-                  </p>
-                </div>
-                {label !== null ? <span className="og-settings__hint">{label}</span> : null}
+      {rows.map((row) => {
+        const downloading = active?.regionId === row.regionId;
+        const percent =
+          downloading && active.progress !== null && active.progress.totalBytes > 0
+            ? Math.floor((active.progress.completedBytes / active.progress.totalBytes) * 100)
+            : 0;
+        const label = STATE_LABEL[row.state];
+        return (
+          <div className="og-settings__row" key={row.regionId} data-testid={`offline-region-${row.regionId}`}>
+            <span className="og-settings__row-text">
+              <span className="og-settings__row-label">{row.name}</span>
+              <span className="og-settings__row-meta">
+                {row.sizeLabel} · {row.dataLabel}
+              </span>
+              {label !== null ? <span className="og-settings__row-note">{label}</span> : null}
+            </span>
+            {downloading ? (
+              <div className="og-settings__progress">
+                <progress max={100} value={percent} aria-label={`${row.name} download progress`} />
+                <span className="og-settings__progress-value" role="status">{percent}%</span>
+                <button className="og-settings__row-action" type="button" onClick={() => active.controller.abort()}>
+                  Pause
+                </button>
               </div>
-              {downloading ? (
-                <div className="og-offline-areas__progress">
-                  <progress max={100} value={percent} aria-label={`${row.name} download progress`} />
-                  <span role="status">{percent}%</span>
-                  <button className="og-settings__text-button" type="button" onClick={() => active.controller.abort()}>
-                    Pause
+            ) : (
+              <div className="og-settings__row-actions">
+                {row.state === "available" || row.state === "update" ? (
+                  <button
+                    className="og-settings__row-action"
+                    type="button"
+                    disabled={mutationsDisabled}
+                    onClick={() => void download(row.regionId, row.name)}
+                  >
+                    {row.state === "update" ? "Update" : "Download"}
                   </button>
-                </div>
-              ) : (
-                <div className="og-offline-areas__actions">
-                  {row.state === "available" || row.state === "update" ? (
-                    <button
-                      className="og-settings__button og-settings__button--quiet"
-                      type="button"
-                      disabled={mutationsDisabled}
-                      onClick={() => void download(row.regionId, row.name)}
-                    >
-                      {row.state === "update" ? "Update" : "Download"}
-                    </button>
-                  ) : null}
-                  {row.state !== "available" ? (
-                    <button
-                      className="og-settings__text-button og-settings__text-button--danger"
-                      type="button"
-                      disabled={mutationsDisabled}
-                      onClick={() => void remove(row.regionId, row.name)}
-                    >
-                      Remove
-                    </button>
-                  ) : null}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                ) : null}
+                {row.state !== "available" ? (
+                  <button
+                    className="og-settings__row-action og-settings__row-action--danger"
+                    type="button"
+                    disabled={mutationsDisabled}
+                    onClick={() => void remove(row.regionId, row.name)}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            )}
+          </div>
+        );
+      })}
       {message !== null ? (
-        <p className="og-settings__section-copy" role="status" data-testid="offline-maps-message">
+        <p className="og-settings__card-block og-settings__note" role="status" data-testid="offline-maps-message">
           {message}
         </p>
       ) : null}
-      <p className="og-settings__section-copy">Map and road data © OpenStreetMap contributors, ODbL 1.0; map tiles by Protomaps.</p>
-    </section>
+      <p className="og-settings__card-block og-settings__note">Map and road data © OpenStreetMap contributors, ODbL 1.0; map tiles by Protomaps.</p>
+    </SettingsGroup>
   );
 }

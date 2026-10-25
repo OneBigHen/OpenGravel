@@ -12,7 +12,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       if (request.method() === "POST" && request.url().endsWith("/api/community/routes")) shares.push(request.postDataJSON());
     });
     await page.goto("/rides");
-    await expect(page.getByRole("heading", { name: "Upload your GPX ride" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "No saved rides yet" })).toBeVisible();
     await expect(page.getByText("Import from SwitchBack")).toHaveCount(0);
     await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "weekend.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from(gpx) });
     await page.getByRole("heading", { name: "Choose tracks" }).waitFor();

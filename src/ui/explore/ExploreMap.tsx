@@ -158,12 +158,25 @@ function ExpandedExploreMap({ props, onClose }: { readonly props: ExploreMapProp
 
 export function ExploreMap(props: ExploreMapProps) {
   const [expanded, setExpanded] = useState(false);
+  // The map owns the corner it is drawn in: expanding it is a small control on
+  // that corner, not a pill above the map taking a row of its own (§3 chrome).
   return (
     <div className="og-explore-map-panel">
-      <div className="og-explore-map-panel__head">
-        <button type="button" className="og-secondary" onClick={() => setExpanded(true)}>Expand map</button>
-      </div>
-      {expanded ? null : <ExploreMapCanvas {...props} />}
+      {expanded ? null : (
+        <div className="og-explore-map-panel__frame">
+          <ExploreMapCanvas {...props} />
+          <button
+            type="button"
+            className="og-explore-map-panel__expand"
+            aria-label="Expand map"
+            onClick={() => setExpanded(true)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 4H5a1 1 0 0 0-1 1v4M15 4h4a1 1 0 0 1 1 1v4M9 20H5a1 1 0 0 1-1-1v-4M15 20h4a1 1 0 0 0 1-1v-4" />
+            </svg>
+          </button>
+        </div>
+      )}
       {expanded ? <ExpandedExploreMap props={props} onClose={() => setExpanded(false)} /> : null}
     </div>
   );

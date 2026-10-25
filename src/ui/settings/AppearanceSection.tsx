@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Settings → Display: Auto, Day or Night. Day is the high-visibility bright
- * theme for riding in sunlight; Night is Trail Glass dark; Auto follows the
- * phone. One tap applies it everywhere (src/ui/appearance/appearance.ts).
+ * Settings → Display: Auto, Day or Night as a three-way segmented control in
+ * its own row. Day is the high-visibility bright theme for riding in sunlight;
+ * Night is Trail Glass dark; Auto follows the phone. One tap applies it
+ * everywhere (src/ui/appearance/appearance.ts).
  */
 
 import { useSyncExternalStore } from "react";
@@ -26,24 +27,22 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener(APPEARANCE_CHANGE_EVENT, onChange);
 }
 
-export function AppearanceSection() {
+export function AppearanceRow() {
   const mode = useSyncExternalStore<AppearanceMode>(subscribe, readAppearanceMode, () => "auto");
 
   return (
-    <section className="og-settings__section" aria-labelledby="settings-appearance-title">
-      <div className="og-settings__section-heading">
-        <div>
-          <h2 id="settings-appearance-title">Day / Night</h2>
-        </div>
-      </div>
-      <div className="og-appearance" role="radiogroup" aria-labelledby="settings-appearance-title">
+    <div className="og-settings__row">
+      <span className="og-settings__row-text">
+        <span className="og-settings__row-label">Day / Night</span>
+      </span>
+      <div className="og-settings__segmented" role="radiogroup" aria-label="Day / Night">
         {CHOICES.map((choice) => (
           <button
             key={choice.mode}
             type="button"
             role="radio"
             aria-checked={mode === choice.mode}
-            className="og-appearance__choice"
+            className="og-settings__segment"
             data-testid={`appearance-${choice.mode}`}
             onClick={() => setAppearanceMode(choice.mode)}
           >
@@ -51,9 +50,6 @@ export function AppearanceSection() {
           </button>
         ))}
       </div>
-      <p className="og-settings__section-copy">
-        Auto follows your phone, and the sun during a ride.
-      </p>
-    </section>
+    </div>
   );
 }

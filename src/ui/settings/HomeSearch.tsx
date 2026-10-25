@@ -42,7 +42,7 @@ export function HomeSearch({
         void search();
       }}
     >
-      <label>
+      <label className="og-settings__field">
         Or find it by name
         <span className="og-settings__home-search-row">
           <input
@@ -58,7 +58,7 @@ export function HomeSearch({
         </span>
       </label>
       {results === null ? null : results.length === 0 ? (
-        <p className="og-settings__section-copy" role="status">No places found. Try a town name.</p>
+        <p className="og-settings__note" role="status">No places found. Try a town name.</p>
       ) : (
         <ul className="og-settings__home-results" aria-label="Places to use as Home">
           {results.map((place) => (

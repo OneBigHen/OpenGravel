@@ -6,6 +6,7 @@
  */
 
 import { useState, type FormEvent } from "react";
+import { SettingsGroup } from "./SettingsGroup";
 
 type SendState = "idle" | "sending" | "sent" | "failed";
 
@@ -42,13 +43,8 @@ export function FeedbackSection() {
   };
 
   return (
-    <section className="og-settings__section" aria-labelledby="settings-feedback-title">
-      <div className="og-settings__section-heading">
-        <div>
-          <h2 id="settings-feedback-title">Send feedback</h2>
-        </div>
-      </div>
-      <form className="og-feedback" onSubmit={(event) => void send(event)}>
+    <SettingsGroup id="settings-feedback-title" label="Feedback">
+      <form className="og-feedback og-settings__card-block" onSubmit={(event) => void send(event)}>
         <label className="og-feedback__field">
           <span>What happened, or what would make it better?</span>
           <textarea
@@ -72,6 +68,6 @@ export function FeedbackSection() {
         {state === "sent" ? <p className="og-feedback__status" role="status" data-testid="feedback-sent">Thanks, it’s on its way.</p> : null}
         {error === null ? null : <p className="og-planner__error" role="alert">{error}</p>}
       </form>
-    </section>
+    </SettingsGroup>
   );
 }

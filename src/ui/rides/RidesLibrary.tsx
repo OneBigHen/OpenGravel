@@ -192,6 +192,11 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   // rider with no rides yet starts by bringing some in; everyone else sees
   // their rides first (UX rework phase 5).
   const [importsFirst, setImportsFirst] = useState<boolean | null>(null);
+  // The empty library offers the two ways in itself, so it owns the file it
+  // picked or dropped and hands it to the import flow below (§7 simple copy).
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const importFileInput = useRef<HTMLInputElement | null>(null);
 
   function cancelRoadProgress(rideId: RideSummary["rideId"]): void {
     roadProgressRequests.current.get(rideId)?.controller.abort();
@@ -432,20 +437,23 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   const libraryIsEmpty = status === "ready" && sortedRides.length === 0 && !search && type === null;
   const showFilters = status === "ready" && !libraryIsEmpty;
 
+  // The upload card's own heading and drop zone only make sense when the page
+  // has rides to show; the empty library and the loading state offer the file
+  // picker themselves, so the flow opens without a second card (§7).
+  const importIsQuiet = status !== "ready" || libraryIsEmpty;
+
   const importPanels = importService !== undefined ? (
     <div className="og-library__imports">
       <ImportPanel
         service={importService}
+        {...(importIsQuiet ? { chrome: "quiet" as const } : {})}
+        {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
         onImported={() => load()}
         onOpenInPlanner={async (outcome: ImportOutcome) => {
           await library.openRide(outcome.namedRide.document.rideId);
           router.push("/");
         }}
       />
-      <details className="og-library__advanced">
-        <summary>Import older saved rides (advanced)</summary>
-        <SwitchBackImportPanel service={importService} onImported={() => load()} />
-      </details>
     </div>
   ) : null;
 
@@ -456,25 +464,57 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
         <div>
           <h1>My rides</h1>
           <p className="og-library__intro">
-            Keep your rides here, upload your own GPX files, and choose which rides to share with everyone on Explore. Saved rides stay in this browser until you share them.
+            Saved rides stay in this browser until you share them.
           </p>
         </div>
       </header>
 
-      {/* The empty library leads with its invitation, before the import panels,
-          so the first thing a new rider meets is the next step (VISUAL-OVERHAUL). */}
-      {status === "ready" && sortedRides.length === 0 && !search && type === null ? (
-        <section className="og-library__state og-empty-state og-empty-state--hero">
-          <div className="og-empty-state__body">
-            <h2>Your library is ready for its first ride.</h2>
-            <p>
-              Plan a ride, import a route, or use a catalog ride to create a named copy here.
-            </p>
-            <div className="og-empty-state__actions">
-              <Link className="og-primary og-library__cta" href="/">Plan a ride</Link>
-              <Link className="og-secondary" href="/explore">Browse Explore</Link>
-            </div>
+      {/* An empty library is one quiet card: what is true, then the two ways to
+          leave it (small-screen design system v2 §7). */}
+      {libraryIsEmpty ? (
+        <section
+          className="og-library__empty"
+          data-drop-target={dragActive ? "true" : "false"}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={(event) => {
+            // Moving onto a child of the card is not leaving the card.
+            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+            setDragActive(false);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragActive(false);
+            const dropped = event.dataTransfer.files[0];
+            if (dropped !== undefined) setDroppedFile(dropped);
+          }}
+        >
+          <h2>No saved rides yet</h2>
+          <div className="og-library__empty-actions">
+            <Link className="og-primary" href="/">Plan a ride</Link>
+            <button
+              type="button"
+              className="og-secondary"
+              onClick={() => importFileInput.current?.click()}
+            >
+              Import GPX
+            </button>
           </div>
+          <input
+            ref={importFileInput}
+            className="sr-only"
+            type="file"
+            aria-label="Import GPX, KML, or KMZ"
+            accept=".gpx,.kml,.kmz"
+            onChange={(event) => {
+              const picked = event.target.files?.[0];
+              event.target.value = "";
+              if (picked !== undefined) setDroppedFile(picked);
+            }}
+          />
+          <p className="og-library__empty-hint">You can also drop a GPX, KML, or KMZ file here.</p>
         </section>
       ) : null}
 
@@ -715,6 +755,14 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
         <p className="og-explore__attribution">Map images © Mapbox © OpenStreetMap</p>
       ) : null}
       {importsFirst === false ? importPanels : null}
+      {/* The older SwitchBack import is a quiet way out of the page, not a
+          third card beside the two real ways in. */}
+      {importService === undefined ? null : (
+        <details className="og-library__legacy">
+          <summary>Import from an older version</summary>
+          <SwitchBackImportPanel service={importService} onImported={() => load()} />
+        </details>
+      )}
     </main>
   );
 }

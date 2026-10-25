@@ -20,6 +20,36 @@ describe("Spotify setup", () => {
     expect(nativePlayer.connect).toHaveBeenCalledOnce();
   });
 
+  it("is one Spotify row, with the Premium note only while it is not connected", () => {
+    const nativePlayer: SpotifyPlayerPort = {
+      snapshot: () => ({ connection: "disconnected", isPlaying: false, track: null, errorMessage: null }),
+      subscribe: () => () => undefined,
+      dispose: vi.fn(), connect: vi.fn(async () => undefined), disconnect: vi.fn(async () => undefined),
+      togglePlayPause: vi.fn(async () => undefined), skipToPrevious: vi.fn(async () => undefined),
+      skipToNext: vi.fn(async () => undefined), openSpotify: vi.fn(async () => undefined),
+    };
+    render(<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} nativePlayer={nativePlayer} />);
+    const connect = screen.getByRole("button", { name: "Connect Spotify" });
+    expect(connect).toHaveTextContent("Connect");
+    expect(connect.closest(".og-settings__row")).toHaveTextContent("Spotify");
+    expect(screen.getByText("Playback controls need Spotify Premium.")).toBeInTheDocument();
+    // The own-app setup is a disclosure row, not the first thing on the page.
+    expect(screen.getByText("Use your own Spotify app").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("drops the Premium note once the iPhone's player is connected", () => {
+    const nativePlayer: SpotifyPlayerPort = {
+      snapshot: () => ({ connection: "connected", isPlaying: false, track: null, errorMessage: null }),
+      subscribe: () => () => undefined,
+      dispose: vi.fn(), connect: vi.fn(async () => undefined), disconnect: vi.fn(async () => undefined),
+      togglePlayPause: vi.fn(async () => undefined), skipToPrevious: vi.fn(async () => undefined),
+      skipToNext: vi.fn(async () => undefined), openSpotify: vi.fn(async () => undefined),
+    };
+    render(<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} nativePlayer={nativePlayer} />);
+    expect(screen.getByRole("button", { name: "Disconnect Spotify" })).toBeInTheDocument();
+    expect(screen.queryByText("Playback controls need Spotify Premium.")).not.toBeInTheDocument();
+  });
+
   it("stores only a valid public client ID and shows the current callback", async () => {
     render(<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} />);
     const input = await screen.findByTestId("spotify-client-id");

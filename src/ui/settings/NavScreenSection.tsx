@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Settings → Navigation screen (app only): OpenGravel's Ride Focus, or the
+ * Settings → Display → Ride screen (app only): OpenGravel's Ride Focus, or the
  * native Ferrostar screen. Takes effect on the next ride or Resume.
  */
 
@@ -25,24 +25,23 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener(NAV_SCREEN_CHANGE_EVENT, onChange);
 }
 
-export function NavScreenSection() {
+export function NavScreenRow() {
   const screen = useSyncExternalStore<NavScreen>(subscribe, readNavScreen, () => DEFAULT_NAV_SCREEN);
 
   return (
-    <section className="og-settings__section" aria-labelledby="settings-nav-screen-title">
-      <div className="og-settings__section-heading">
-        <div>
-          <h2 id="settings-nav-screen-title">Ride screen</h2>
-        </div>
-      </div>
-      <div className="og-appearance" role="radiogroup" aria-labelledby="settings-nav-screen-title">
+    <div className="og-settings__row">
+      <span className="og-settings__row-text">
+        <span className="og-settings__row-label">Ride screen</span>
+        <span className="og-settings__row-meta">Leaves out your stats and Fuel ahead. Applies from the next ride.</span>
+      </span>
+      <div className="og-settings__segmented" role="radiogroup" aria-label="Ride screen">
         {CHOICES.map((choice) => (
           <button
             key={choice.screen}
             type="button"
             role="radio"
             aria-checked={screen === choice.screen}
-            className="og-appearance__choice"
+            className="og-settings__segment"
             data-testid={`nav-screen-${choice.screen}`}
             onClick={() => setNavScreen(choice.screen)}
           >
@@ -50,9 +49,6 @@ export function NavScreenSection() {
           </button>
         ))}
       </div>
-      <p className="og-settings__section-copy">
-        Turn-by-turn leaves out your stats and Fuel ahead. Applies from the next ride.
-      </p>
-    </section>
+    </div>
   );
 }

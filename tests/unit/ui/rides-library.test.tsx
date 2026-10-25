@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RidesLibrary } from "@/ui/rides/RidesLibrary";
 import type { LibraryServicePort, RideSummary } from "@/application/library/library-service";
+import type { ImportServicePort } from "@/application/import/import-service";
+import type { ParsedImport } from "@/application/import/types";
 import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 
 vi.mock("next/navigation", () => ({
@@ -41,6 +43,25 @@ function service(overrides: Partial<LibraryServicePort> = {}): LibraryServicePor
     openRide: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
+}
+
+const PARSED_IMPORT = {
+  tracks: [
+    { name: "Weekend GPX", segments: [[{ lon: -75, lat: 40 }, { lon: -75.001, lat: 40.001 }]], timestamps: [[null, null]], elevation: [[null, null]] },
+  ],
+  warnings: [],
+} as const satisfies ParsedImport;
+
+function importService(): ImportServicePort {
+  return {
+    previewFile: vi.fn(async () => ({ parsed: PARSED_IMPORT, sizeBytes: 42 })),
+    importFile: vi.fn(),
+    importSwitchBackBatch: vi.fn().mockResolvedValue({ totalCount: 0, importedCount: 0, files: [] }),
+    evaluateTrackSelection: vi.fn(() => ({
+      canCombine: false,
+      reason: "Select at least two tracks to combine them into one ride.",
+    })),
+  } as unknown as ImportServicePort;
 }
 
 afterEach(() => cleanup());
@@ -287,10 +308,42 @@ describe("RidesLibrary", () => {
   it("hides the search, filter, and sort card when the library has no rides", async () => {
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} />);
 
-    expect(await screen.findByRole("heading", { name: "Your library is ready for its first ride." })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "No saved rides yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("button", { name: "Import GPX" })).toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Search rides" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    // The upload card's own heading is gone: the empty state is the invitation.
+    expect(screen.queryByRole("heading", { name: "Upload your GPX ride" })).not.toBeInTheDocument();
+  });
+
+  it("opens the file picker from the empty state and keeps the older import quiet", async () => {
+    const click = vi.spyOn(HTMLInputElement.prototype, "click");
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={importService()} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Import GPX" }));
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText("Import GPX, KML, or KMZ")).toBeInTheDocument();
+
+    // The SwitchBack import is a link at the foot of the page, not a third card.
+    const legacy = screen.getByText("Import from an older version");
+    expect(legacy.closest("details")).not.toBeNull();
+    click.mockRestore();
+  });
+
+  it("starts the import flow with a file dropped on the empty state", async () => {
+    const imports = importService();
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={imports} />);
+
+    const heading = await screen.findByRole("heading", { name: "No saved rides yet" });
+    const emptyState = heading.closest("section");
+    expect(emptyState).not.toBeNull();
+    const file = new File([new TextEncoder().encode("gpx")], "weekend.gpx", { type: "application/gpx+xml" });
+    fireEvent.drop(emptyState!, { dataTransfer: { files: [file] } });
+
+    expect(await screen.findByRole("heading", { name: "Choose tracks" })).toBeInTheDocument();
+    expect(imports.previewFile).toHaveBeenCalledWith(file, expect.anything());
   });
 
   it("disables an empty inline rename and requires confirmation before delete", async () => {

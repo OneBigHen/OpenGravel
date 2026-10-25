@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistance as formatMiles } from "@/application/planner/measurements";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MAX_FILE_BYTES } from "@/application/import/limits";
 import {
@@ -20,6 +20,17 @@ export interface ImportPanelProps {
   readonly onImported?: (outcome: ImportOutcome) => Promise<void> | void;
   readonly onOpenInPlanner?: (outcome: ImportOutcome) => Promise<void> | void;
   readonly gapToleranceMeters?: number;
+  /**
+   * `quiet` drops the card's own heading and drop zone: the page that hosts it
+   * already offers the words and the button, so only the flow is left here.
+   */
+  readonly chrome?: "full" | "quiet";
+  /**
+   * A file the page picked or dropped itself. It starts the flow once; the page
+   * clears it again through `onInitialFileHandled`.
+   */
+  readonly initialFile?: File | null;
+  readonly onInitialFileHandled?: () => void;
 }
 
 type ImportPanelPhase = "idle" | "parsing" | "chooser" | "options" | "importing" | "success";
@@ -128,7 +139,16 @@ function TrackPreview({ track, tracks, selected, onToggle }: {
   );
 }
 
-export function ImportPanel({ service, onImported, onOpenInPlanner, gapToleranceMeters = 25 }: ImportPanelProps) {
+export function ImportPanel({
+  service,
+  onImported,
+  onOpenInPlanner,
+  gapToleranceMeters = 25,
+  chrome = "full",
+  initialFile,
+  onInitialFileHandled,
+}: ImportPanelProps) {
+  const quiet = chrome === "quiet";
   const [phase, setPhase] = useState<ImportPanelPhase>("idle");
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedImport | null>(null);
@@ -142,6 +162,7 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
   const controllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const operationRef = useRef(0);
+  const handledInitialFile = useRef<File | null>(null);
 
   const selectedTracks = useMemo(
     () => parsed === null ? [] : parsed.tracks.filter((_, index) => selected.has(index)),
@@ -209,6 +230,18 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
     }
   }
 
+  // A file chosen or dropped by the hosting page starts the same preview a
+  // choice in the drop zone would. Keyed on the file, never on a render.
+  useEffect(() => {
+    if (initialFile === null || initialFile === undefined) return;
+    if (handledInitialFile.current === initialFile) return;
+    handledInitialFile.current = initialFile;
+    void previewFile(initialFile);
+    onInitialFileHandled?.();
+    // previewFile is redefined on every render; this runs for a new file only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile, onInitialFileHandled]);
+
   function setSelection(index: number, value: boolean): void {
     setSelected((current) => {
       const next = new Set(current);
@@ -264,53 +297,67 @@ export function ImportPanel({ service, onImported, onOpenInPlanner, gapTolerance
   }
 
   return (
-    <section className="og-import" aria-labelledby="og-import-title">
-      <div className="og-import__header">
-        <div>
-          <p className="og-eyebrow">OpenGravel / Bring a ride</p>
-          <h2 id="og-import-title">Upload your GPX ride</h2>
-          <p>Choose a GPX from any route planner or GPS device. KML and KMZ work too. Rides are saved privately in this browser; sharing with the group is a separate choice.</p>
+    <section
+      className={quiet ? "og-import og-import--quiet" : "og-import"}
+      aria-labelledby={quiet ? undefined : "og-import-title"}
+    >
+      {quiet ? (
+        // During a parse or a save the flow already offers the way out below.
+        phase === "idle" || phase === "parsing" || phase === "importing" ? null : (
+          <div className="og-import__quiet-head">
+            <button type="button" className="og-secondary" onClick={reset}>Start over</button>
+          </div>
+        )
+      ) : (
+        <div className="og-import__header">
+          <div>
+            <p className="og-eyebrow">OpenGravel / Bring a ride</p>
+            <h2 id="og-import-title">Upload your GPX ride</h2>
+            <p>Choose a GPX from any route planner or GPS device. KML and KMZ work too. Rides are saved privately in this browser; sharing with the group is a separate choice.</p>
+          </div>
+          {phase !== "idle" ? <button type="button" className="og-secondary" onClick={reset}>Start over</button> : null}
         </div>
-        {phase !== "idle" ? <button type="button" className="og-secondary" onClick={reset}>Start over</button> : null}
-      </div>
+      )}
 
-      <label
-        className="og-import__dropzone"
-        htmlFor="og-import-file"
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={(event) => {
-          event.preventDefault();
-          const dropped = event.dataTransfer.files[0];
-          if (dropped !== undefined) void previewFile(dropped);
-        }}
-      >
-        <input
-          ref={fileInputRef}
-          id="og-import-file"
-          className="sr-only"
-          type="file"
-          aria-label="Import GPX, KML, or KMZ"
-          accept=".gpx,.kml,.kmz"
-          onChange={(event) => {
-            const nextFile = event.target.files?.[0];
-            if (nextFile !== undefined) void previewFile(nextFile);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            // A native file input already opens the picker on Enter/Space;
-            // prevent that so the dialog never opens twice.
+      {quiet ? null : (
+        <label
+          className="og-import__dropzone"
+          htmlFor="og-import-file"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
             event.preventDefault();
-            fileInputRef.current?.click();
+            const dropped = event.dataTransfer.files[0];
+            if (dropped !== undefined) void previewFile(dropped);
           }}
-        />
-        <span>Choose a GPX, KML, or KMZ file</span>
-        <small>or drop it here · max {MAX_FILE_BYTES / (1024 * 1024)} MB</small>
-        {file === null ? null : (
-          <small className="og-import__file-name" data-testid="import-file-name">
-            Selected file: <strong>{file.name}</strong>
-          </small>
-        )}
-      </label>
+        >
+          <input
+            ref={fileInputRef}
+            id="og-import-file"
+            className="sr-only"
+            type="file"
+            aria-label="Import GPX, KML, or KMZ"
+            accept=".gpx,.kml,.kmz"
+            onChange={(event) => {
+              const nextFile = event.target.files?.[0];
+              if (nextFile !== undefined) void previewFile(nextFile);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              // A native file input already opens the picker on Enter/Space;
+              // prevent that so the dialog never opens twice.
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }}
+          />
+          <span>Choose a GPX, KML, or KMZ file</span>
+          <small>or drop it here · max {MAX_FILE_BYTES / (1024 * 1024)} MB</small>
+          {file === null ? null : (
+            <small className="og-import__file-name" data-testid="import-file-name">
+              Selected file: <strong>{file.name}</strong>
+            </small>
+          )}
+        </label>
+      )}
 
       {error !== null ? (
         <section className="og-import__error" role="alert" data-error-code={error.code}>
