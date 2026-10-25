@@ -3,8 +3,9 @@
 /**
  * The planner's route briefing (MVP parity M4, OGV-D-266): when to leave, and
  * what that means for the selected route — weather over the ride's window,
- * live traffic when leaving now, fuel range against the distance, daylight —
- * plus the offline readiness disclosure the workspace used to own.
+ * heavy traffic when leaving now, fuel against the distance, daylight — plus
+ * the offline readiness disclosure the workspace used to own. What could not
+ * be checked is left out rather than listed.
  *
  * It owns no ride state: the departure is authored through `onDepartureChange`
  * (one `departure.set` command), and the checks are read-only projections of
@@ -38,7 +39,7 @@ import {
 } from "@/application/planner/arrive-by";
 import { snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
 import { OfflineDisclosure } from "@/ui/preparation/OfflineDisclosure";
-import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
+import { RoutePreparationSection, trafficWarning } from "@/ui/preparation/RoutePreparationSection";
 import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
@@ -533,13 +534,15 @@ function glanceParts(
 ): readonly string[] {
   const ready = (kind: string) => preparation.items.find((item) => item.kind === kind && item.state === "ready");
   const parts: string[] = [];
+  // Traffic only when it is worth changing the plan for; a checked-and-quiet
+  // route says nothing here.
+  const traffic = trafficWarning(preparation.items);
+  if (traffic !== null) parts.push(traffic);
   const weather = ready("weather");
   const weatherData = weather?.data;
   if (typeof weatherData === "object" && weatherData !== null && "display" in weatherData && typeof weatherData.display === "string") {
     parts.push(weatherData.display);
   }
-  const fuel = ready("fuel");
-  if (fuel !== undefined) parts.push(/does not cover/.test(fuel.reason) ? "Fuel stop needed" : "Range covers it");
   const darkBy = darkByLabel(context);
   if (darkBy !== null) parts.push(darkBy);
   return parts;

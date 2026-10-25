@@ -42,8 +42,36 @@ function stateLabel(state: RoutePreparationItem["state"]): string {
   return state === "unavailable" ? "Unknown" : state.charAt(0).toUpperCase() + state.slice(1);
 }
 
+/**
+ * A delay this long is worth changing the plan for; anything shorter is noise
+ * on a backroads ride that already has the rider's attention.
+ */
+export const TRAFFIC_WARNING_MINUTES = 10;
+
+/**
+ * The one line traffic earns, or `null` when it says nothing a rider should act
+ * on. A closure always counts; a small delay and an unchecked route do not — an
+ * unknown route is not a quiet one, it is simply not shown.
+ */
+export function trafficWarning(items: readonly RoutePreparationItem[]): string | null {
+  const item = items.find((candidate) => candidate.kind === "traffic");
+  if (item === undefined) return null;
+  const data = objectData(item);
+  if (data === null) return null;
+  if (data["roadClosure"] === true) return "Road closure reported on this route";
+  // A delay band older than its freshness window no longer speaks for today.
+  if (item.state !== "ready") return null;
+  const band = data["delayBand"];
+  const maxMinutes = typeof band === "object" && band !== null
+    ? (band as { readonly maxMinutes?: unknown }).maxMinutes
+    : null;
+  if (typeof maxMinutes !== "number" || !Number.isFinite(maxMinutes) || maxMinutes < TRAFFIC_WARNING_MINUTES) {
+    return null;
+  }
+  return typeof data["display"] === "string" ? data["display"] : `+${Math.round(maxMinutes)} min in traffic`;
+}
+
 function displayValue(item: RoutePreparationItem): string {
-  if (item.kind === "traffic" && item.state === "unavailable") return "Traffic unknown";
   const data = item.data;
   if (typeof data === "string" || typeof data === "number") return String(data);
   if (data !== undefined && typeof data.display === "string") return data.display;
@@ -113,13 +141,23 @@ function ConsiderationList({ items }: { readonly items: readonly Consideration[]
 
 export function RoutePreparationSection({ preparation, offline }: RoutePreparationSectionProps) {
   const [showAll, setShowAll] = useState(false);
-  const usefulItems = preparation.items.filter((item) => item.state !== "unavailable");
-  const unavailableItems = preparation.items.filter((item) => item.state === "unavailable");
+  // What could not be checked is not a row: an unknown route is never drawn as
+  // clear, and a list of "not available yet" is not something a rider reads
+  // before a ride. Traffic speaks once, as a warning, in the briefing line.
+  const usefulItems = preparation.items.filter(
+    (item) =>
+      item.state !== "unavailable" &&
+      item.kind !== "traffic" &&
+      // Fuel is the one line under this list, and the bike's range is already
+      // under the departure chips: no third reading of the same tank.
+      item.kind !== "fuel",
+  );
   const visibleItems = showAll ? usefulItems : usefulItems.slice(0, MAX_DEFAULT_ITEMS);
   const hasMore = usefulItems.length > MAX_DEFAULT_ITEMS;
   const noProviders = preparation.registeredProviderCount === 0;
-  const weatherUnavailable = unavailableItems.some((item) => item.kind === "weather");
-  const trafficUnavailable = unavailableItems.some((item) => item.kind === "traffic");
+  const considerations = preparation.considerations ?? [];
+  const hasContent = noProviders || visibleItems.length > 0 || considerations.length > 0 || offline !== undefined;
+  if (!hasContent) return null;
 
   return (
     <section
@@ -157,15 +195,7 @@ export function RoutePreparationSection({ preparation, offline }: RoutePreparati
         </dl>
       ) : null}
 
-      {!noProviders && unavailableItems.length > 0 ? (
-        <details className="og-preparation__unavailable" open={weatherUnavailable || trafficUnavailable}>
-          <summary>Not available yet</summary>
-          <dl className="og-preparation__list" aria-label="Unavailable preparation checks">
-            {unavailableItems.map((item) => <PreparationRow key={item.kind} item={item} />)}
-          </dl>
-        </details>
-      ) : null}
-      <ConsiderationList items={preparation.considerations ?? []} />
+      <ConsiderationList items={considerations} />
       {/* Offline mechanics are a detail a rider opens, not a wall under the briefing. */}
       {offline === undefined ? null : (
         <details className="og-preparation__offline">

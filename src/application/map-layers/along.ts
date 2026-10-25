@@ -128,6 +128,35 @@ export function gapSummary(
 }
 
 /**
+ * The stops at either end of one dry stretch: where to fill up before it, and
+ * where the next gas is. Empty when no stop was found at all.
+ */
+export function gapBoundingStops(
+  stops: readonly AlongStop[],
+  gapStartMeters: number,
+  gapMeters: number,
+): readonly AlongStop[] {
+  const gapEndMeters = gapStartMeters + gapMeters;
+  // One metre of slack so a stop that defines the start or the end counts as
+  // part of the gap rather than as a rounding casualty.
+  const nearest = (candidates: readonly AlongStop[], closer: (candidate: AlongStop, best: AlongStop) => boolean) =>
+    candidates.reduce<AlongStop | null>(
+      (best, stop) => (best === null || closer(stop, best) ? stop : best),
+      null,
+    );
+  const bounds = [
+    nearest(stops.filter((stop) => stop.alongMeters <= gapStartMeters + 1), (stop, best) => stop.alongMeters > best.alongMeters),
+    nearest(stops.filter((stop) => stop.alongMeters >= gapEndMeters - 1), (stop, best) => stop.alongMeters < best.alongMeters),
+  ].filter((stop): stop is AlongStop => stop !== null);
+  const seen = new Set<string>();
+  return bounds.filter((stop) => {
+    if (seen.has(stop.feature.id)) return false;
+    seen.add(stop.feature.id);
+    return true;
+  });
+}
+
+/**
  * A short, spread-out list: the stop closest to the route in each band of
  * `bandMeters`, in route order, so a list of eight covers the whole ride
  * instead of eight stations at the start.

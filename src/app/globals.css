@@ -1124,25 +1124,6 @@ h3,
   font-size: 13px;
 }
 
-.og-preparation__unavailable {
-  border-top: 1px solid var(--og-sandstone);
-  color: var(--og-deep-spruce);
-}
-
-.og-preparation__unavailable summary {
-  width: fit-content;
-  min-height: 40px;
-  padding: 9px 0;
-  cursor: pointer;
-  color: var(--og-slate-text);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.og-preparation__unavailable[open] .og-preparation__list {
-  padding-top: 4px;
-}
-
 .og-preparation__considerations {
   width: min(100%, 760px);
   margin-top: 12px;
@@ -10040,9 +10021,9 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-/* Fuel on the way (phase 8): a strip the length of the ride with a tick per
-   station and the longest dry stretch shaded, a verdict against the bike's
-   range, and the next stations with Add. */
+/* Fuel on the way (phase 8): one line while the bike's range covers every dry
+   stretch. Only a gap longer than that range opens up, with the stations at
+   either end of it — the rest of the stations live in "Along this ride". */
 .og-fuel {
   display: flex;
   flex-direction: column;
@@ -10052,89 +10033,14 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   background: color-mix(in srgb, var(--og-sandstone) 18%, var(--og-paper));
 }
 
-.og-fuel__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.og-fuel__head h3 {
-  flex: 1;
-  font-size: 15px;
-}
-
-.og-fuel__icon {
-  font-size: 16px;
-}
-
-.og-fuel__verdict {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--og-success);
-  background: color-mix(in srgb, var(--og-success) 14%, var(--og-paper));
-}
-
-.og-fuel__verdict[data-tone="tight"] {
-  color: var(--og-trail-brown);
-  background: color-mix(in srgb, var(--og-golden-hour) 22%, var(--og-paper));
-}
-
-.og-fuel__verdict[data-tone="bad"] {
-  color: var(--og-danger);
-  background: color-mix(in srgb, var(--og-danger) 12%, var(--og-paper));
-}
-
-.og-fuel__strip {
-  position: relative;
-  height: 14px;
-  margin-top: 4px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--og-sandstone) 55%, var(--og-paper));
-  overflow: hidden;
-}
-
-.og-fuel__gap {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--og-golden-hour) 55%, transparent) 0 4px,
-    transparent 4px 8px
-  );
-}
-
-.og-fuel__gap[data-over="true"] {
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--og-danger) 55%, transparent) 0 4px,
-    transparent 4px 8px
-  );
-}
-
-.og-fuel__tick {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  width: 3px;
-  margin-left: -1.5px;
-  border-radius: 2px;
-  background: #0f766e;
-}
-
-.og-fuel__scale {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
+.og-fuel__line {
+  margin: 0;
   color: var(--og-slate-text);
-  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.og-fuel__summary,
-.og-fuel__status {
-  font-size: 13px;
+.og-fuel__line--warn {
   color: var(--og-ink);
 }
 
@@ -10193,11 +10099,6 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-fuel__add:disabled {
   cursor: default;
   opacity: 0.6;
-}
-
-.og-fuel__source {
-  font-size: 11.5px;
-  color: var(--og-slate-text);
 }
 
 /* The shared app bar (UX rework phase 9): Explore, My rides and Settings wear
@@ -11294,9 +11195,10 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
     text-align: center;
   }
 
-  /* Places on the map: one small glass capsule — dot, count, filters. The words
-     stay the button's name; an empty count says nothing, so it is not drawn. */
-  .og-places-overlay--planner .og-places-control__label {
+  /* Places on the map: one small glass capsule. A pill that carries a number
+     keeps it as its only visible content; without one the words stay, so the
+     Along-ride pill still has a name. */
+  .og-places-overlay--planner .og-places-control__toggle:has(.og-places-control__count) .og-places-control__label {
     position: absolute;
     width: 1px;
     height: 1px;

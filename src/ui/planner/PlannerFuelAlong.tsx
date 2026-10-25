@@ -1,19 +1,20 @@
 "use client";
 
 /**
- * Fuel on the way (UX rework phase 8): the gas stations within about a mile of
- * the chosen route, drawn as ticks on a strip the length of the ride, with the
- * longest stretch without fuel measured against the bike's usable range. The
- * answer to "can I make it?" in one glance, and a stop one tap away.
+ * Fuel on the way (UX rework phase 8): the longest stretch of the chosen route
+ * with no gas against the bike's usable range. In range that is one line — the
+ * stations themselves belong to "Along this ride", not here. Out of range it
+ * says so and lists only the stations at either end of the dry stretch, so the
+ * rider can fill up before it.
  */
 
 import { useEffect, useMemo, useState } from "react";
 
 import {
   METERS_PER_MILE,
+  gapBoundingStops,
   gapSummary,
   lineLengthMeters,
-  spreadStops,
   type AlongStop,
   type LngLat,
   type MapLayersSource,
@@ -33,9 +34,16 @@ type FuelState =
   | { readonly routeId: string; readonly status: "unavailable" }
   | { readonly routeId: string; readonly status: "ready"; readonly stops: readonly AlongStop[] };
 
-function miles(meters: number): string {
-  const value = meters / METERS_PER_MILE;
-  return value < 10 ? value.toFixed(1) : String(Math.round(value));
+/** Rider miles: whole miles, and never a dry stretch that reads as zero. */
+function riderMiles(meters: number): number {
+  return Math.max(1, Math.round(meters / METERS_PER_MILE));
+}
+
+/** How far off the route a stop is, in miles, when it is not on it. */
+function offRouteLabel(offMeters: number): string {
+  if (offMeters < 160) return "On your route";
+  const miles = offMeters / METERS_PER_MILE;
+  return `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi off`;
 }
 
 export function PlannerFuelAlong({ route, source, usableRangeMiles, onAddStop }: PlannerFuelAlongProps) {
@@ -64,94 +72,73 @@ export function PlannerFuelAlong({ route, source, usableRangeMiles, onAddStop }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeId, source]);
 
+  // Unknown stays off the screen: no stations found or no answer yet says
+  // nothing a rider can act on, and never reads as "you are fine".
   if (route === null || source?.along === undefined) return null;
   const current = state?.routeId === routeId ? state : null;
-  const total = lineLengthMeters(line);
-  const rangeMeters = usableRangeMiles === null ? null : usableRangeMiles * METERS_PER_MILE;
-  const summary = current?.status === "ready" ? gapSummary(current.stops, total, rangeMeters) : null;
-  const tight = summary !== null && rangeMeters !== null && summary.longestGapMeters > rangeMeters * 0.8;
-  const over = summary !== null && summary.gapsOverRange > 0;
+  if (current === null || current.status !== "ready") return null;
 
+  const totalMeters = lineLengthMeters(line);
+  // A bike with no usable range left is a garage problem, not a fuel verdict.
+  const usableMiles =
+    usableRangeMiles === null || !Number.isFinite(usableRangeMiles) ? 0 : Math.round(usableRangeMiles);
+  const rangeMiles = usableMiles > 0 ? usableMiles : null;
+  const summary = gapSummary(current.stops, totalMeters, rangeMiles === null ? null : rangeMiles * METERS_PER_MILE);
+  const overRange = rangeMiles !== null && summary.gapsOverRange > 0;
+
+  if (current.stops.length === 0) {
+    return (
+      <p className="og-fuel__line" data-testid="fuel-line">
+        No gas within a mile of this {riderMiles(totalMeters)} mi ride
+      </p>
+    );
+  }
+
+  if (!overRange || rangeMiles === null) {
+    return (
+      <p className="og-fuel__line" data-testid="fuel-line">
+        Gas every ~{riderMiles(summary.longestGapMeters)} mi{rangeMiles === null ? "" : " — you're fine"}
+      </p>
+    );
+  }
+
+  const dryMiles = riderMiles(summary.longestGapMeters);
   return (
     <section className="og-fuel" data-testid="fuel-along" aria-label="Fuel on the way">
-      <header className="og-fuel__head">
-        <span className="og-fuel__icon" aria-hidden="true">⛽</span>
-        <h3>Fuel on the way</h3>
-        {summary === null ? null : (
-          <span className="og-fuel__verdict" data-tone={over ? "bad" : tight ? "tight" : "good"} data-testid="fuel-verdict">
-            {over ? "Plan a fuel stop" : tight ? "Tight on range" : usableRangeMiles === null ? "Stations en route" : "In range"}
-          </span>
-        )}
-      </header>
-      {current === null || current.status === "loading" ? (
-        <p className="og-fuel__status" role="status">Finding gas stations along your route…</p>
-      ) : current.status === "unavailable" ? (
-        <p className="og-fuel__status" role="status">Fuel stops are unavailable right now.</p>
-      ) : (
-        <>
-          <div className="og-fuel__strip" aria-hidden="true">
-            {summary === null || total === 0 ? null : (
-              <span
-                className="og-fuel__gap"
-                data-over={over ? "true" : "false"}
-                style={{
-                  left: `${(summary.longestGapStartMeters / total) * 100}%`,
-                  width: `${(summary.longestGapMeters / total) * 100}%`,
-                }}
-              />
-            )}
-            {current.stops.map((stop) => (
-              <span
-                key={stop.feature.id}
-                className="og-fuel__tick"
-                style={{ left: `${(stop.alongMeters / Math.max(1, total)) * 100}%` }}
-              />
-            ))}
-          </div>
-          <div className="og-fuel__scale" aria-hidden="true">
-            <span>Start</span>
-            <span>{miles(total)} mi</span>
-          </div>
-          <p className="og-fuel__summary" data-testid="fuel-summary">
-            {current.stops.length === 0
-              ? `No gas stations within a mile of this ${miles(total)} mi route.`
-              : `${current.stops.length} ${current.stops.length === 1 ? "station" : "stations"} within a mile · longest stretch without gas ${miles(summary?.longestGapMeters ?? 0)} mi`}
-            {usableRangeMiles === null ? "" : ` · your usable range ${Math.round(usableRangeMiles)} mi (range minus reserve)`}
-          </p>
-          {current.stops.length === 0 ? null : (
-            <ul className="og-fuel__list" aria-label="Gas stations along your ride">
-              {spreadStops(current.stops, 10 * METERS_PER_MILE, 8).map((stop) => {
-                const point = stop.feature.geometry.type === "Point" ? stop.feature.geometry.coordinates : null;
-                const isAdded = added.has(stop.feature.id);
-                return (
-                  <li key={stop.feature.id} className="og-fuel__row">
-                    <span className="og-fuel__mile">Mile {Math.round(stop.alongMeters / METERS_PER_MILE)}</span>
-                    <span className="og-fuel__name">
-                      {stop.feature.name}
-                      <small>{stop.offMeters < 160 ? "On your route" : `${miles(stop.offMeters)} mi off`}</small>
-                    </span>
-                    {onAddStop === undefined || point === null ? null : (
-                      <button
-                        type="button"
-                        className="og-fuel__add"
-                        disabled={isAdded}
-                        aria-label={isAdded ? `Added ${stop.feature.name} as a stop` : `Add ${stop.feature.name} as a stop`}
-                        onClick={() => {
-                          onAddStop({ lon: point[0], lat: point[1] }, stop.feature.name);
-                          setAdded((previous) => new Set(previous).add(stop.feature.id));
-                        }}
-                      >
-                        {isAdded ? "Added" : "Add"}
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <p className="og-fuel__source">TomTom points of interest. Hours and ethanol-free pumps are not checked.</p>
-        </>
-      )}
+      <p className="og-fuel__line og-fuel__line--warn" data-testid="fuel-line">
+        No gas for {dryMiles} mi — your range is {rangeMiles} mi
+      </p>
+      {/* Only the stations that bound the dry stretch: the rest live in
+          "Along this ride". */}
+      <ul className="og-fuel__list" aria-label="Gas around the dry stretch">
+        {gapBoundingStops(current.stops, summary.longestGapStartMeters, summary.longestGapMeters).map((stop) => {
+          const point = stop.feature.geometry.type === "Point" ? stop.feature.geometry.coordinates : null;
+          const isAdded = added.has(stop.feature.id);
+          return (
+            <li key={stop.feature.id} className="og-fuel__row">
+              <span className="og-fuel__mile">Mile {Math.round(stop.alongMeters / METERS_PER_MILE)}</span>
+              <span className="og-fuel__name">
+                {stop.feature.name}
+                <small>{offRouteLabel(stop.offMeters)}</small>
+              </span>
+              {onAddStop === undefined || point === null ? null : (
+                <button
+                  type="button"
+                  className="og-fuel__add"
+                  disabled={isAdded}
+                  aria-label={isAdded ? `Added ${stop.feature.name} as a stop` : `Add ${stop.feature.name} as a stop`}
+                  onClick={() => {
+                    onAddStop({ lon: point[0], lat: point[1] }, stop.feature.name);
+                    setAdded((previous) => new Set(previous).add(stop.feature.id));
+                  }}
+                >
+                  {isAdded ? "Added" : "Add"}
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

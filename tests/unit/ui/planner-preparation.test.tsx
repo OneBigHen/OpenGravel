@@ -133,7 +133,7 @@ describe("PlannerPreparation", () => {
     }));
   });
 
-  function providers(): PreparationProviderRegistry & {
+  function providers(traffic: ProviderResult<TrafficData> | null = null): PreparationProviderRegistry & {
     readonly weatherRefresh: ReturnType<typeof vi.fn>;
     readonly trafficRefresh: ReturnType<typeof vi.fn>;
   } {
@@ -143,7 +143,7 @@ describe("PlannerPreparation", () => {
       provenance: "National Weather Service",
       data: { display: "72°F, dry" } as WeatherData,
     };
-    const trafficResult: ProviderResult<TrafficData> = {
+    const trafficResult: ProviderResult<TrafficData> = traffic ?? {
       state: "ready",
       reason: "Traffic matched to this route.",
       provenance: "Live traffic feed",
@@ -201,6 +201,51 @@ describe("PlannerPreparation", () => {
     expect(onDepartureChange).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "future" }));
     fireEvent.click(screen.getByTestId("departure-custom"));
     expect(screen.getByTestId("departure-time")).toBeInTheDocument();
+  });
+
+  it("puts a heavy delay on the briefing line and keeps a quiet route's traffic off it", async () => {
+    const heavy: ProviderResult<TrafficData> = {
+      state: "ready",
+      reason: "Traffic matched to this route.",
+      provenance: "Live traffic feed",
+      data: { display: "+11–18 min in traffic", delayBand: { minMinutes: 11, maxMinutes: 18 } } as TrafficData,
+    };
+    const { unmount } = render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        providers={providers(heavy)}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("prepare-glance")).toHaveTextContent("+11–18 min in traffic");
+    unmount();
+
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        providers={providers()}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("prepare-glance")).not.toHaveTextContent("Light traffic");
+    // Nothing checked-and-quiet, and nothing unchecked, becomes a row either.
+    expect(screen.queryByText("Traffic", { selector: "dt" })).not.toBeInTheDocument();
   });
 
   it("ends the briefing line with the time it gets dark, not a sunset sentence", async () => {

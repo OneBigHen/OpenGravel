@@ -218,6 +218,26 @@ describe("PlacesControl", () => {
     expect(setKinds).toHaveBeenCalledWith(["happy_hour", "event"]);
   });
 
+  it("drops the count along a ride, where the Along-this-ride list counts other stops", () => {
+    render(
+      <PlacesControl
+        enabled
+        status="ready"
+        reason={null}
+        count={0}
+        scope="route"
+        query={QUERY}
+        onToggle={vi.fn()}
+        setWindow={vi.fn()}
+        setKinds={vi.fn()}
+        collapsible
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Along ride" })).toBeInTheDocument();
+    expect(screen.queryByTestId("places-count")).not.toBeInTheDocument();
+  });
+
   it.each([
     ["zoom-in", null, "Zoom in to see places"],
     ["unavailable", "The provider is not configured.", "Places unavailable — The provider is not configured."],
