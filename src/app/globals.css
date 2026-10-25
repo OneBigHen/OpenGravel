@@ -9250,6 +9250,20 @@ h3,
   margin-left: auto;
 }
 
+/* The desktop edit tools (Edit + undo/redo) and the clear button share the
+   status line instead of each taking a row of their own. */
+.og-sheet__head > .og-sheet__tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--og-space-2);
+  margin-left: auto;
+}
+
+.og-sheet__head > .og-sheet__clear {
+  flex: none;
+}
+
 /* The Settings link is an icon on every tier. Phase 1 hid the nav icons above
    the phone tier, which left the desktop link an empty ring; the gear stays. */
 .og-planner__settings-link .og-nav__icon {
