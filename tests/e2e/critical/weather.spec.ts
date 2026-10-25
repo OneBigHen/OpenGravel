@@ -21,7 +21,7 @@ test("renders fixture weather and its freshness", async ({ page }) => {
   await page.goto("/explore/sample-ridge-loop");
   await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
   await expect(page.getByTestId("weather-freshness")).toHaveText("Fresh");
-  await expect(page.getByText("Sunny · 72°F · 10 mph wind · 10% precip")).toBeVisible();
+  await expect(page.getByText("Sunny · 72°F")).toBeVisible();
   await expect(page.getByText(/Source: (National Weather Service|weather service) · updated/)).toBeVisible();
 });
 

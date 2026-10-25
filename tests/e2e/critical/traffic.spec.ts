@@ -33,10 +33,11 @@ test("no TomTom key keeps preparation and route traffic surfaces unknown", async
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
   await pressPlan(page);
-  // Unknown traffic is stated once for the list, never implied per card.
+  // Unknown traffic is left off the cards instead of being implied or turned
+  // into a status paragraph under the list.
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("route-traffic-status")).toHaveCount(0);
-  await expect(page.getByTestId("route-unknowns-note")).toContainText("live traffic");
+  await expect(page.getByTestId("route-unknowns-note")).toHaveCount(0);
   await expect(page.getByText("Traffic clear", { exact: true })).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });

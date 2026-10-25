@@ -30,7 +30,6 @@ function card(overrides: Partial<RouteCardVm> = {}): RouteCardVm {
     distanceLabel: "84 mi",
     addedTimeLabel: null,
     badges: [],
-    confidenceLabel: "Surface confirmed",
     unknownSurfaceMi: 0,
     whyKey: `why-${BEST_ID}`,
     isSelected: true,
@@ -98,7 +97,7 @@ describe("MapRideGlance", () => {
     render(
       glance({
         summary: rideGlanceSummary(
-          card({ surfaceStrip: undefined, confidenceLabel: "Unknown", unknownSurfaceMi: 84 }),
+          card({ surfaceStrip: undefined, unknownSurfaceMi: 84 }),
           CLIMB_METERS,
         ),
       }),

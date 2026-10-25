@@ -25,10 +25,9 @@ import type {
 } from "@/application/planner/planning-session";
 import {
   aggregateRouteSurface,
-  surfaceBandLabel,
   unverifiedSurfaceMeters,
 } from "@/application/roads/surface-evidence";
-import type { SurfaceBand } from "@/domain/roads/surface";
+import type { SurfaceAssessment, SurfaceClass } from "@/domain/roads/surface";
 import {
   CURVINESS_LABELS,
   curvatureLabel,
@@ -87,27 +86,34 @@ export const ALTERNATIVE_LABEL = "Alternative";
 /** Evidence-driven badge: generated routes have no surface evidence. */
 export const UNVERIFIED_SURFACE_BADGE = "Surface unknown";
 
-/**
- * The 07 §5 rider vocabulary for surface confidence. The bands come from the
- * surface aggregation, so a band a rider sees here can never be more confident
- * than the evidence that produced it (07 §7 lowers a conflicting or stale
- * winner one band or more). The words name what is uncertain (the surface) rather than an abstract
- * "confidence" (UX rework 2). No numeric confidence is ever shown: 07 §5 says not
- * to expose false precision, so the band is the whole claim.
- */
-export type RouteConfidenceLabel =
-  | "Surface confirmed"
-  | "Surface mostly known"
-  | "Surface partly guessed"
-  | "Unknown";
-
-/** The 07 §5 band names, in the aggregation's own vocabulary. */
-export const CONFIDENCE_LABELS: Readonly<Record<SurfaceBand, RouteConfidenceLabel>> = {
-  confirmed: "Surface confirmed",
-  likely: "Surface mostly known",
-  possible: "Surface partly guessed",
-  unknown: "Unknown",
+/** The one-word badge for a surface class the evidence actually names. */
+const SURFACE_BADGE_WORDS: Readonly<Record<Exclude<SurfaceClass, "unknown">, string>> = {
+  paved: "Paved",
+  gravel: "Gravel",
+  dirt: "Dirt",
 };
+
+/**
+ * The surface badge, with the 07 §5 band folded into it (no separate confidence
+ * line). A confirmed or mostly-known surface is stated plainly; a partly-guessed
+ * one asks a question instead of claiming a surface the evidence cannot carry
+ * (07 §5, 07 §7). Only a band with names to show gets a word at all.
+ */
+function surfaceBadgeLabel(
+  surface: SurfaceAssessment,
+  evidence: Parameters<typeof surfaceMixLabel>[0],
+): string {
+  const value = surface.value;
+  if (surface.band === "unknown" || value === "unknown") return UNVERIFIED_SURFACE_BADGE;
+  const mix = surfaceMixLabel(evidence);
+  if (mix !== null) {
+    return surface.band === "possible" && !/\bunknown\b/i.test(mix) ? `${mix}?` : mix;
+  }
+  const word = SURFACE_BADGE_WORDS[value];
+  if (surface.band === "confirmed") return word;
+  if (surface.band === "likely") return `Likely ${word.toLowerCase()}`;
+  return `Maybe ${word.toLowerCase()}`;
+}
 
 /** 04 §11: at most three meaningful choices. */
 export const MAX_ROUTE_CARDS = 3;
@@ -151,12 +157,6 @@ export interface RouteCardVm {
   /** Where each surface is along the line, for the strip under the elevation profile. */
   readonly surfaceRuns?: readonly SurfaceRun[];
 
-  /**
-   * The 07 §5 surface-confidence band (04 §11's "confidence summary"), or
-   * `null` for a card whose route has no measurable metric at all: a band on a
-   * line we cannot measure would be a claim about nothing (`OGV-D-251`).
-   */
-  readonly confidenceLabel: RouteConfidenceLabel | null;
   /**
    * Miles of this route whose surface no usable evidence covers, from the
    * evidence's own coverage share. `null` when that share is not measurable —
@@ -672,12 +672,6 @@ function routeCards(
     const surface = aggregateRouteSurface(candidate.evidence["surfaceMix"]);
     const curves = curvatureLabel(candidate.evidence["curvature"]);
     const ownTraffic = trafficLabelFor(candidate);
-    // A card with no measurable metric describes nothing a band could qualify,
-    // so it makes no confidence claim (OGV-D-251); every other card carries the
-    // 07 §5 band itself, never a numeric confidence.
-    const measurable =
-      isKnownMeasurement(candidate.distanceMeters) ||
-      isKnownMeasurement(candidate.durationSeconds);
     const unverifiedMeters = unverifiedSurfaceMeters(
       candidate.evidence["surfaceMix"],
       candidate.distanceMeters,
@@ -701,14 +695,11 @@ function routeCards(
           ? null
           : formatAddedTime(candidate.durationSeconds, reference.durationSeconds),
       badges: [
-        surface.band === "unknown"
-          ? UNVERIFIED_SURFACE_BADGE
-          : surfaceMixLabel(candidate.evidence["surfaceMix"]) ?? surfaceBandLabel(surface.band),
+        surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]),
         ...(curves === null ? [] : [curves]),
         ...(candidate.warnings.some((warning) => warning.code === "basic-routing") ? [BASIC_ROUTING_BADGE] : []),
         ...(candidate.warnings.some((warning) => warning.code === "offline-routing") ? [OFFLINE_ROUTING_BADGE] : []),
       ],
-      confidenceLabel: measurable ? CONFIDENCE_LABELS[surface.band] : null,
       unknownSurfaceMi:
         unverifiedMeters === null
           ? null

@@ -203,6 +203,35 @@ describe("PlannerPreparation", () => {
     expect(screen.getByTestId("departure-time")).toBeInTheDocument();
   });
 
+  it("ends the briefing line with the time it gets dark, not a sunset sentence", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 5, 21, 12, 0));
+    try {
+      const registry = providers();
+      render(
+        <PlannerPreparation
+          route={{ routeId: "route_a", ...ROUTE, durationSeconds: 12 * 60 * 60 }}
+          departure={{ kind: "now" }}
+          bike={DEFAULT_BIKE}
+          providers={registry}
+          offlineRoute={null}
+          onDepartureChange={vi.fn()}
+          onBikeChange={vi.fn()}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      const glance = screen.getByTestId("prepare-glance");
+      expect(glance).toHaveTextContent(/Dark by \d{1,2}:\d{2} (am|pm)/);
+      expect(glance).not.toHaveTextContent("Ends after sunset");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("arrives by a time: the briefing leaves early enough, and a quick choice clears it (NV-09)", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 5, 21, 10, 0));

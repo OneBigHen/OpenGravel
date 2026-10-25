@@ -541,7 +541,7 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(required(vm.routeCards[0]).badges).toEqual(["Surface unknown"]);
   });
 
-  it("drops the badge once surface evidence is usable", () => {
+  it("names the surface plainly once evidence supports it", () => {
     const known = candidate(BEST_ID, {
       evidence: {
         surfaceMix: knownEvidence(
@@ -560,7 +560,7 @@ describe("buildPlannerViewModel — route cards", () => {
       }),
     );
 
-    expect(required(vm.routeCards[0]).badges).toEqual(["Surface likely"]);
+    expect(required(vm.routeCards[0]).badges).toEqual(["Likely paved"]);
   });
 
   it("keeps unknown metrics unknown rather than printing zero", () => {
@@ -865,13 +865,13 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
 
   const SURFACE_SOURCE = { id: "official", label: "State survey", category: "survey" } as const;
 
-  const bandCases: readonly { readonly label: string; readonly confidence: number }[] = [
-    { label: "Surface confirmed", confidence: 0.9 },
-    { label: "Surface mostly known", confidence: 0.6 },
-    { label: "Surface partly guessed", confidence: 0.2 },
+  const bandCases: readonly { readonly badge: string; readonly confidence: number }[] = [
+    { badge: "Paved", confidence: 0.9 },
+    { badge: "Likely paved", confidence: 0.6 },
+    { badge: "Maybe paved", confidence: 0.2 },
   ];
 
-  it.each(bandCases)("shows $label for a $confidence confidence report", ({ label, confidence }) => {
+  it.each(bandCases)("folds a $badge confidence report into the surface badge", ({ badge, confidence }) => {
     const verified = candidate(BEST_ID, {
       evidence: {
         surfaceMix: knownEvidence("paved", SURFACE_SOURCE, confidence),
@@ -887,10 +887,39 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     );
 
     const card = required(vm.routeCards[0]);
-    expect(card.confidenceLabel).toBe(label);
+    expect(card.badges).toEqual([badge]);
     // The report states no coverage share, so how much of the line it verifies
     // is not measurable — never rounded to "all of it".
     expect(card.unknownSurfaceMi).toBeNull();
+  });
+
+  it("asks a question on a partly-guessed surface mix instead of adding a line", () => {
+    const mixed = candidate(BEST_ID, {
+      evidence: {
+        surfaceMix: {
+          value: {
+            surface: "paved",
+            pavedMeters: 100_000,
+            gravelMeters: 0,
+            dirtMeters: 0,
+            unknownMeters: 0,
+          },
+          status: "known",
+          confidence: 0.2,
+          provenance: [SURFACE_SOURCE],
+        },
+      },
+    });
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("ready", {
+          committedBundle: bundle([mixed], BEST_ID, { "best-ride": BEST_ID }),
+          selectedRouteId: BEST_ID,
+        }),
+      }),
+    );
+
+    expect(required(vm.routeCards[0]).badges).toEqual(["Paved?"]);
   });
 
   it("reports no unverified mileage when the evidence covers the whole line", () => {
@@ -917,11 +946,10 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).unknownSurfaceMi).toBe(0);
   });
 
-  it("keeps an unknown surface visible as Unknown confidence, not as a number", () => {
+  it("keeps an unknown surface visible as an unknown badge, not as a number", () => {
     const vm = buildPlannerViewModel(input({ session: ready() }));
     const card = required(vm.routeCards[0]);
 
-    expect(card.confidenceLabel).toBe("Unknown");
     expect(card.badges).toEqual(["Surface unknown"]);
     // 125 529 m of unverified line, measured from the evidence that is absent.
     expect(card.unknownSurfaceMi).toBe(78);
@@ -968,7 +996,7 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).unknownSurfaceMi).toBeNull();
   });
 
-  it("makes no confidence claim for a route with no measurable metric", () => {
+  it("claims no unverified mileage for a route with no measurable metric", () => {
     const broken = candidate(BEST_ID, {
       durationSeconds: Number.NaN,
       distanceMeters: Number.NaN,
@@ -983,7 +1011,6 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     );
 
     const card = required(vm.routeCards[0]);
-    expect(card.confidenceLabel).toBeNull();
     expect(card.unknownSurfaceMi).toBeNull();
   });
 

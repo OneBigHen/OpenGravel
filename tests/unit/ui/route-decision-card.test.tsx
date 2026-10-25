@@ -26,7 +26,6 @@ function card(overrides: Partial<RouteCardVm> = {}): RouteCardVm {
     distanceLabel: "78 mi",
     addedTimeLabel: "+12 min vs Fastest",
     badges: ["Surface unknown"],
-    confidenceLabel: "Unknown",
     unknownSurfaceMi: 78,
     whyKey: `why-${BEST_ID}`,
     isSelected: true,
@@ -71,8 +70,8 @@ describe("RouteDecisionCard", () => {
     expect(screen.getByTestId("route-added-time")).toHaveTextContent(
       "+12 min vs Fastest",
     );
-    // An unknown surface is stated once under the list, not on every card.
-    expect(screen.queryByTestId("route-badge")).not.toBeInTheDocument();
+    // An unknown surface is stated on the card itself, not in a footer note.
+    expect(screen.getByTestId("route-badge")).toHaveTextContent("Surface unknown");
   });
 
   it("shows a known surface badge on the card", () => {
@@ -118,17 +117,16 @@ describe("RouteDecisionCard", () => {
     );
   });
 
-  it("states unknown surface and traffic once for the whole list", () => {
+  it("states an unknown surface on its card and leaves unknown traffic off", () => {
     render(
       <RouteChoices cards={[card(), card({ routeId: ALT_ID })]}>
         <RouteDecisionCard card={card()} onSelect={vi.fn()} />
       </RouteChoices>,
     );
 
+    expect(screen.getByTestId("route-badge")).toHaveTextContent("Surface unknown");
     expect(screen.queryByTestId("route-traffic-status")).not.toBeInTheDocument();
-    expect(screen.getByTestId("route-unknowns-note")).toHaveTextContent(
-      "Not yet known for these rides: surface and live traffic.",
-    );
+    expect(screen.queryByTestId("route-unknowns-note")).not.toBeInTheDocument();
     expect(screen.queryByText("Traffic clear", { exact: true })).not.toBeInTheDocument();
   });
 
@@ -148,7 +146,7 @@ describe("RouteDecisionCard", () => {
       </RouteChoices>,
     );
 
-    expect(screen.getByTestId("route-unknowns-note")).not.toHaveTextContent("live traffic");
+    expect(screen.queryByTestId("route-unknowns-note")).not.toBeInTheDocument();
     expect(screen.getByTestId("route-traffic-note")).toHaveTextContent("Live traffic is checked for the selected ride");
   });
 
@@ -169,15 +167,10 @@ afterEach(() => {
 });
 
 describe("RouteDecisionCard — evidence and explanation (04 §11, §13)", () => {
-  it("renders the surface confidence band beside the badge", () => {
-    render(<RouteDecisionCard card={card({ confidenceLabel: "Surface mostly known" })} onSelect={vi.fn()} />);
+  it("reads the surface from one badge instead of a separate confidence line", () => {
+    render(<RouteDecisionCard card={card({ badges: ["Mostly paved"] })} onSelect={vi.fn()} />);
 
-    expect(screen.getByTestId("route-confidence")).toHaveTextContent("Surface mostly known");
-  });
-
-  it("makes no confidence claim when the route has no measurable metric", () => {
-    render(<RouteDecisionCard card={card({ confidenceLabel: null })} onSelect={vi.fn()} />);
-
+    expect(screen.getByTestId("route-badge")).toHaveTextContent("Mostly paved");
     expect(screen.queryByTestId("route-confidence")).not.toBeInTheDocument();
   });
 

@@ -25,6 +25,7 @@ import {
   type PlannerPreparationRoute,
 } from "@/application/preparation/planner-context";
 import { prepareRoute, type RoutePreparationContext } from "@/application/preparation/prepare-route";
+import { darkByLabel } from "@/application/preparation/weather-provider";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
 import type { BikeConstraintSnapshot, Coordinate, DepartureIntent } from "@/domain/ride/types";
 import {
@@ -423,7 +424,7 @@ export function PlannerPreparation({
 
   const current = briefing !== null && briefing.key === briefingKey ? briefing : null;
   const preparation = current === null ? null : prepareRoute({ ...current.context, providers: providers ?? {} });
-  const glance = preparation === null ? [] : glanceParts(preparation);
+  const glance = preparation === null || current === null ? [] : glanceParts(preparation, current.context);
 
   return (
     <>
@@ -526,7 +527,10 @@ export function offlineSummaryNote(snapshot: OfflineRuntimeSnapshot | null): str
 }
 
 /** The briefing's verdicts a rider needs before Start, in a few words each (FT-03). */
-function glanceParts(preparation: ReturnType<typeof prepareRoute>): readonly string[] {
+function glanceParts(
+  preparation: ReturnType<typeof prepareRoute>,
+  context: RoutePreparationContext,
+): readonly string[] {
   const ready = (kind: string) => preparation.items.find((item) => item.kind === kind && item.state === "ready");
   const parts: string[] = [];
   const weather = ready("weather");
@@ -536,7 +540,7 @@ function glanceParts(preparation: ReturnType<typeof prepareRoute>): readonly str
   }
   const fuel = ready("fuel");
   if (fuel !== undefined) parts.push(/does not cover/.test(fuel.reason) ? "Fuel stop needed" : "Range covers it");
-  const daylight = ready("daylight");
-  if (daylight !== undefined && /after sunset/.test(daylight.reason)) parts.push("Ends after sunset");
+  const darkBy = darkByLabel(context);
+  if (darkBy !== null) parts.push(darkBy);
   return parts;
 }

@@ -4877,14 +4877,6 @@ h3,
   color: var(--og-ink);
 }
 
-/* The 07 §5 confidence band: a summary line under the metrics, never a number. */
-.og-route-card__confidence {
-  margin: 0;
-  padding: 0 14px;
-  font-size: 12px;
-  color: var(--og-trail-brown);
-}
-
 /* `Why this ride?` (04 §13): a disclosure, quiet enough to sit under the card. */
 .og-route-card__why-toggle {
   margin: 0 14px 10px;
@@ -5245,8 +5237,7 @@ h3,
     padding-block: 10px;
   }
 
-  .og-route-card[data-selected="false"] :is(.og-route-card__badges, .og-route-card__traits, .og-route-card__traffic),
-  .og-route-card[data-selected="false"] .og-route-card__confidence {
+  .og-route-card[data-selected="false"] :is(.og-route-card__badges, .og-route-card__traits, .og-route-card__traffic) {
     display: none;
   }
 
@@ -5391,7 +5382,6 @@ h3,
   .og-planner__sheet[data-detent="ride"] .og-route-card[data-selected="true"] :is(
     .og-route-card__badges,
     .og-route-card__traffic,
-    .og-route-card__confidence,
     .og-route-card__strip
   ) {
     display: none;
@@ -11236,11 +11226,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   order: 3;
 }
 
-/* The briefing's one line stays one line; the details are behind the handle. */
+/* The briefing's line wraps on a narrow phone instead of cutting a word in half. */
 .og-prepare__glance {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 /* Phone portrait, compact sheet (OW-02): with a ride chosen, the collapsed sheet

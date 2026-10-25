@@ -8,9 +8,9 @@
  * (12 §9, 05 §25). `aria-pressed` is the correct state for a toggle button;
  * `aria-selected` would be a lie about the element's role. The card shows what
  * the view model proved: role, duration, distance, added time versus fastest
- * when that is an honest comparison, the 07 §5 confidence band, and the
- * evidence badges — an unverified surface says so instead of implying a
- * surface.
+ * when that is an honest comparison, and the evidence badges — with the 07 §5
+ * surface band folded into the surface badge, so an uncertain surface asks a
+ * question instead of claiming one.
  *
  * `Why this ride?` is the deterministic explanation of the route on screen
  * (04 §13). It is a disclosure: a second real button with `aria-expanded` that
@@ -58,14 +58,14 @@ export interface RouteDecisionCardProps {
   readonly explanation?: RouteExplanation | null;
 }
 
-/** A badge or status that only says "we don't know" — shown once per list, not per card. */
+/** A traffic status that only says "we don't know" — not drawn as a card status. */
 function isUnknownLabel(label: string | null | undefined): boolean {
   return label == null || /\bunknown\b/i.test(label);
 }
 
 /**
- * The route list. Unknown surface/traffic facts are stated once under the list
- * instead of repeated on every card, so the cards carry only what differs.
+ * The route list. Surface uncertainty is on each card's own badge; the only
+ * list-wide note is why traffic is shown for the selected ride alone.
  */
 export function RouteChoices({
   cards,
@@ -74,16 +74,11 @@ export function RouteChoices({
   readonly cards: readonly RouteCardVm[];
   readonly children: ReactNode;
 }) {
-  const unknownSurface = cards.some((card) => card.badges.some(isUnknownLabel));
-  const unknownTraffic = cards.some((card) => isUnknownLabel(card.trafficLabel));
   // Live traffic is checked for the selected ride; when that one has it, the
   // others are unchecked, not unknowable, and the note must not contradict the
   // delay the selected card shows (PT-03).
+  const unknownTraffic = cards.some((card) => isUnknownLabel(card.trafficLabel));
   const someTrafficKnown = cards.some((card) => !isUnknownLabel(card.trafficLabel));
-  const unknowns = [
-    unknownSurface ? "surface" : null,
-    unknownTraffic && !someTrafficKnown ? "live traffic" : null,
-  ].filter((entry) => entry !== null);
   const trafficNote = unknownTraffic && someTrafficKnown
     ? "Live traffic is checked for the selected ride; pick another to check its traffic."
     : null;
@@ -99,11 +94,6 @@ export function RouteChoices({
           {message}
         </p>
       ))}
-      {unknowns.length === 0 ? null : (
-        <p className="og-route-choices__note" data-testid="route-unknowns-note">
-          {`Not yet known for these rides: ${unknowns.join(" and ")}.`}
-        </p>
-      )}
       {trafficNote === null ? null : (
         <p className="og-route-choices__note" data-testid="route-traffic-note">
           {trafficNote}
@@ -115,10 +105,10 @@ export function RouteChoices({
 
 const STEPS = [1, 2, 3, 4, 5] as const;
 
-/** Badges worth a chip: known ones, minus the curves the meter already says. */
+/** Badges worth a chip, minus the curves the meter already says. */
 function shownBadges(card: RouteCardVm): readonly string[] {
   return card.badges.filter(
-    (badge) => !isUnknownLabel(badge) && !(card.curviness !== undefined && isCurvesBadge(badge)),
+    (badge) => !(card.curviness !== undefined && isCurvesBadge(badge)),
   );
 }
 
@@ -241,11 +231,6 @@ export function RouteDecisionCard({
           </span>
         )}
       </button>
-      {isUnknownLabel(card.confidenceLabel) ? null : (
-        <p className="og-route-card__confidence" data-testid="route-confidence">
-          {card.confidenceLabel}
-        </p>
-      )}
       {explanation === null ? null : (
         <>
           <button

@@ -263,9 +263,9 @@ test("planning shows a route the rider can see and select", async ({ page }) => 
   await expect(page.getByTestId("route-card-alternative")).toContainText(
     "+2 min vs Fastest",
   );
-  // An unverified surface is stated once under the list, not badged per card.
-  await expect(page.getByTestId("route-badge")).toHaveCount(0);
-  await expect(page.getByTestId("route-unknowns-note")).toContainText("surface");
+  // An unverified surface is stated on the card's badge, not in a footer note.
+  await expect(selectedCard.getByTestId("route-badge")).toContainText("Surface unknown");
+  await expect(page.getByTestId("route-unknowns-note")).toHaveCount(0);
 
   // The renderer was given two routes and selected one of them (05 §11), and the
   // camera framed it: this is the auto-fit of 05 §8, which the rider has not

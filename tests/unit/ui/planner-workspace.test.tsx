@@ -1343,8 +1343,12 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
     expect(bulletText).toContain("Traffic is unknown for this route, so no delay is claimed.");
     expect(bulletText).not.toMatch(/graphhopper|valhalla|tomtom/i);
 
-    // And the surface itself is never claimed as known.
-    expect(screen.getByTestId("route-unknowns-note")).toHaveTextContent(/surface/);
+    // And the surface itself is never claimed as known: the uncertainty is on
+    // the card's own badge, with no status paragraph under the list.
+    expect(screen.getAllByTestId("route-badge").map((badge) => badge.textContent)).toContain(
+      "Surface unknown",
+    );
+    expect(screen.queryByTestId("route-unknowns-note")).not.toBeInTheDocument();
   });
 });
 
