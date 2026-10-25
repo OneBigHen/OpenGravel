@@ -16,6 +16,9 @@ interface WebStateResponse {
   readonly retryAfterSeconds?: number;
 }
 
+/** Shown by the ride music row when the account cannot play remotely. */
+export const PREMIUM_MESSAGE = "Spotify Premium is needed for playback.";
+
 const DISCONNECTED: SpotifyPlayerSnapshot = {
   connection: "disconnected",
   isPlaying: false,
@@ -225,7 +228,8 @@ function mapResponse(response: WebStateResponse, previous: SpotifyPlayerSnapshot
       errorMessage: response.errorMessage ?? null,
     };
   }
-  if (response.code === "premium_required") return { ...previous, connection: "error", errorMessage: "Spotify playback is restricted. Check Premium and this app's tester access in Spotify setup." };
+  if (response.code === "premium_required") return { ...previous, connection: "error", errorMessage: PREMIUM_MESSAGE };
+  if (response.code === "playback_restricted") return { ...previous, connection: "error", errorMessage: "Spotify would not play. Check Spotify setup in Settings." };
   if (response.code === "no_device") return { ...previous, connection: "connected", errorMessage: "Open Spotify on a device and start playback first." };
   if (response.code === "reauthorize") return { ...DISCONNECTED, errorMessage: "Connect Spotify again." };
   if (response.code === "network" || response.code === "spotify_unavailable") return { ...previous, connection: "error", errorMessage: response.message ?? "Spotify is temporarily unavailable." };

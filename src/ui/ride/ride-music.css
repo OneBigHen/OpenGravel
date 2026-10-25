@@ -1,0 +1,169 @@
+/* One 64 px row for music on the ride sheet. Targets are 56 px. */
+.og-ride-music {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  max-height: 64px;
+  padding: 4px 8px 4px 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+}
+
+.og-ride-music--connect {
+  display: flex;
+  flex-wrap: wrap;
+  max-height: none;
+  padding: 4px;
+}
+
+.og-ride-music__art {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--og-ride-surface);
+  color: var(--og-ride-muted);
+}
+
+.og-ride-music__line {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--og-text-body);
+}
+
+.og-ride-music__line--wrap {
+  grid-column: 1 / 4;
+  white-space: normal;
+  font-size: var(--og-text-meta);
+}
+
+.og-ride-music__button,
+.og-ride-music__text-button,
+.og-ride-music__connect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 56px;
+  min-height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.og-ride-music__text-button {
+  padding: 0 12px;
+  font-size: var(--og-text-body);
+}
+
+.og-ride-music__connect {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+  padding: 0 12px;
+  border-radius: var(--og-radius-object);
+  font-size: var(--og-text-body);
+}
+
+.og-ride-music__connect:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.og-ride-music__note {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0 12px 8px;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+}
+
+.og-ride-music__button:focus-visible,
+.og-ride-music__text-button:focus-visible,
+.og-ride-music__connect:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
+.og-ride-install-hint {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px 8px 16px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+  color: inherit;
+}
+
+.og-ride-install-hint p {
+  flex: 1;
+  margin: 0;
+  font-size: var(--og-text-meta);
+}
+
+.og-ride-install-hint__close {
+  min-width: 56px;
+  min-height: 56px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: var(--og-text-headline);
+  cursor: pointer;
+}
+
+.og-ride-install-hint__close:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
+/* Connected: the now-playing row sits on the map right above the strip, the
+   strip's own width, under the sheet and never near the top card. */
+.og-ride-music[data-placement="map"] {
+  position: absolute;
+  z-index: 8;
+  left: max(var(--og-ride-gap), var(--og-safe-left));
+  right: max(var(--og-ride-gap), var(--og-safe-right));
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
+  background: var(--og-ride-glass);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+/* The right-hand column and the speed sign rise above the row. */
+.og-ride[data-music="true"] .og-ride__float {
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px + 64px + 12px);
+}
+
+@media (min-width: 700px) {
+  .og-ride-music[data-placement="map"] {
+    right: auto;
+    width: 440px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride-music[data-placement="map"] {
+    right: auto;
+    width: min(360px, 44vw);
+  }
+
+  .og-ride[data-music="true"] .og-ride__float {
+    bottom: max(10px, var(--og-safe-bottom));
+  }
+}

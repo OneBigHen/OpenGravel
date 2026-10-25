@@ -19,7 +19,7 @@ export interface SpotifySession {
 
 export interface SpotifyApiError {
   readonly status: number;
-  readonly code: "reauthorize" | "premium_required" | "no_device" | "rate_limited" | "spotify_unavailable";
+  readonly code: "reauthorize" | "premium_required" | "playback_restricted" | "no_device" | "rate_limited" | "spotify_unavailable";
   readonly retryAfterSeconds?: number;
 }
 

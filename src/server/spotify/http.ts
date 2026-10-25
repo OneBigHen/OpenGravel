@@ -12,8 +12,10 @@ export function jsonResponse(body: unknown, status = 200, cookies: readonly stri
 
 export function apiErrorResponse(error: SpotifyApiError, cookie?: string): Response {
   const message = error.code === "premium_required"
-    ? "Spotify playback is restricted. Check Premium and this app's tester access in Spotify setup."
-    : error.code === "no_device"
+    ? "Spotify Premium is needed for playback."
+    : error.code === "playback_restricted"
+      ? "Spotify would not play. Check Spotify setup in Settings."
+      : error.code === "no_device"
       ? "Open Spotify on a device and start playback first."
       : error.code === "rate_limited"
         ? "Spotify is rate limited. Try again shortly."

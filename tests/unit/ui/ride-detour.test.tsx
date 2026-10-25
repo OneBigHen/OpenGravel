@@ -54,6 +54,7 @@ describe("RideDetour", () => {
         onTurnAround={vi.fn()}
       />,
     );
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
     fireEvent.click(screen.getByTestId("ride-fuel-ahead"));
     const list = await screen.findByTestId("ride-fuel-list");
     expect(list.textContent).not.toContain("Behind Gas");
@@ -65,13 +66,24 @@ describe("RideDetour", () => {
     expect(onReroute).toHaveBeenCalledWith({ coordinate: { lon: -75.0, lat: 40.1 }, label: "Near Fuel" });
   });
 
-  it("offers a reroute now when off the line, and holds it without a good fix", () => {
+  it("asks the same along-route source for food when the rider picks Food", async () => {
+    const src = source();
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood source={src} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    fireEvent.click(screen.getByTestId("ride-food-ahead"));
+    await screen.findByTestId("ride-fuel-list");
+    expect(src.along).toHaveBeenCalledWith(expect.anything(), "food");
+  });
+
+  it("offers a new route from here when off the line, and holds it without a good fix", () => {
     const onReroute = vi.fn();
     const { rerender } = render(
       <RideDetour offRoute busy={false} message={null} error={null} routeLine={LINE} position={null} fixGood={false} onReroute={onReroute} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
     );
     const button = screen.getByTestId("ride-reroute");
-    expect(button.textContent).toBe("Reroute now");
+    expect(button.textContent).toBe("New route from here");
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByTestId("ride-reroute-status")).toBeNull();
 

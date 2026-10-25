@@ -44,6 +44,8 @@ export const LOCAL_DATA_STORAGE_KEYS = [
   // A live link being shared, with its write secret, and the name on it.
   LIVE_SESSION_STORAGE_KEY,
   LIVE_RIDER_NAME_STORAGE_KEY,
+  "og.ride.install-hint-dismissed",
+  "og.ride.spotify-return",
 ] as const;
 
 export interface LocalDataStorage {

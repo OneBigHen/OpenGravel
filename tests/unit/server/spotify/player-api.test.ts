@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readPlayerState } from "@/server/spotify/player-api";
+import { chooseDevice, readPlayerState, sendPlayerCommand } from "@/server/spotify/player-api";
 import { sealJson } from "@/server/spotify/crypto";
 
 const KEY = "d".repeat(64);
@@ -45,9 +45,45 @@ describe("Spotify player server adapter", () => {
   it("maps Premium and rate-limit responses without exposing tokens", async () => {
     process.env.OGV_PUBLIC_ORIGIN = ORIGIN;
     process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 403 })));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { status: 403, reason: "PREMIUM_REQUIRED" } }), { status: 403 })));
     const result = await readPlayerState(requestWithSession(Date.now() + 60_000, "old-access", CLIENT_ID, "refresh-retry"));
     expect(result).toMatchObject({ ok: false, error: { status: 403, code: "premium_required" } });
+  });
+
+  it("does not call a non-Premium 403 a Premium problem", async () => {
+    process.env.OGV_PUBLIC_ORIGIN = ORIGIN;
+    process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 403 })));
+    const result = await readPlayerState(requestWithSession(Date.now() + 60_000, "old-access", CLIENT_ID, "refresh-other"));
+    expect(result).toMatchObject({ ok: false, error: { status: 403, code: "playback_restricted" } });
+  });
+
+  it("moves playback to the phone when nothing is playing, then plays", async () => {
+    process.env.OGV_PUBLIC_ORIGIN = ORIGIN;
+    process.env.OGV_SPOTIFY_SESSION_KEY = KEY;
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? "GET"} ${url.replace("https://api.spotify.com/v1", "")}`);
+      if (url.endsWith("/me/player/play")) return new Response("", { status: 404 });
+      if (url.endsWith("/me/player/devices")) return new Response(JSON.stringify({ devices: [{ id: "tv", type: "TV", is_active: false }, { id: "phone", type: "Smartphone", is_active: false }] }), { status: 200 });
+      if (url.endsWith("/me/player") && init?.method === "PUT") {
+        expect(JSON.parse(String(init.body))).toEqual({ device_ids: ["phone"], play: true });
+        return new Response(null, { status: 204 });
+      }
+      return new Response(JSON.stringify({ is_playing: true, item: { uri: "spotify:track:1", name: "Road", artists: [{ name: "Rider" }] } }), { status: 200 });
+    }));
+    const result = await sendPlayerCommand(requestWithSession(Date.now() + 60_000, "old-access", CLIENT_ID, "refresh-transfer"), "play");
+    expect(result.ok).toBe(true);
+    expect(calls).toContain("PUT /me/player");
+    expect(result.value?.isPlaying).toBe(true);
+  });
+
+  it("chooses an active device, then a phone, and skips restricted ones", () => {
+    expect(chooseDevice([{ id: "a", type: "Computer" }, { id: "b", type: "Computer", is_active: true }])).toBe("b");
+    expect(chooseDevice([{ id: "a", type: "Computer" }, { id: "p", type: "Smartphone" }])).toBe("p");
+    expect(chooseDevice([{ id: "r", type: "Smartphone", is_restricted: true }])).toBeNull();
+    expect(chooseDevice([])).toBeNull();
   });
 
   it("retries one expired access token through the serialized refresh path", async () => {

@@ -11519,15 +11519,15 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   pointer-events: none;
 }
 
-/* Two lines on a phone (the number, then its unit) so a reading stays whole at
-   320 px; one line with the unit beside it as soon as there is room. Never
-   `overflow: hidden` and never an ellipsis: §5's 24 px number is not clipped. */
+/* One line, always: the number with its small unit beside it ("47 mph",
+   "10:12 AM"), never stacked. Never `overflow: hidden` and never an ellipsis:
+   §5's 24 px number is not clipped. */
 .og-ride-metrics__reading {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: baseline;
   justify-content: center;
-  gap: 0;
+  gap: 3px;
   max-width: 100%;
   overflow: visible;
   white-space: nowrap;
@@ -11566,17 +11566,8 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   letter-spacing: 0.02em;
   line-height: 1.15;
   text-align: center;
-  text-transform: uppercase;
-  white-space: normal;
+  white-space: nowrap;
   color: var(--og-ride-muted);
-}
-
-@media (min-width: 640px) {
-  .og-ride-metrics__reading {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 3px;
-  }
 }
 
 /* A held reading is dimmed, not shouted; its accessible name says it is stale. */
@@ -11744,7 +11735,10 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 /* The right-hand rail (Google Maps layout, OpenGravel colours): round Paper
-   buttons with Deep Spruce glyphs; a pressed mute turns Ember. */
+   buttons with Deep Spruce glyphs; a pressed mute turns Ember. At most three:
+   the compass (only while the map is turned), the whole route or Re-center,
+   and the voice. There is no zoom pair (pinch) and no End: both are in the
+   sheet. */
 .og-ride__float-end {
   display: flex;
   flex-direction: column;
@@ -11791,46 +11785,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 3px;
 }
 
-/* Zoom is one instrument, not two buttons: a 112 x 56 pill of two 56 px
-   halves, so a gloved thumb reads "in / out" from one shape and still cannot
-   hit both. It lies on its side because the column also carries End ride and
-   Re-center: six 56 px rows with the pill upright ran into the turn card on a
-   640 px phone. Each half keeps the rail's own glass and edge; only the round
-   outer corners are clipped. */
-.og-ride__rail-zoom {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 56px;
-  border-radius: 999px;
-  overflow: hidden;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
-}
-
-.og-ride__rail-zoom .og-ride__rail-button {
-  width: 56px;
-  height: 56px;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-/* End ride: the one destructive control, in the column with the rest. It is a
-   glyph with a spoken name and a title, and the sheet still asks before the
-   ride is thrown away. */
-.og-ride__rail-button--end {
-  color: var(--og-danger-light);
-}
-
-.og-ride__rail-button--end:disabled {
-  color: var(--og-ride-muted);
-  cursor: not-allowed;
-}
-
-/* At a limit the button says so and stays focusable, like the planner's. */
-.og-ride__rail-button[data-disabled="true"] {
-  color: var(--og-ride-muted);
-  cursor: default;
-}
-
 /* The compass needle is the map's own rotation, drawn against it. The tail is
    the theme ink so it reads on Day's white disc and Night's dark glass; the tip
    is Ember in both, the way the map's own compass is. It snaps rather than
@@ -11854,8 +11808,8 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 /* Landscape has the width and not the height, so the rail turns on its side:
-   the same five 56 px targets plus the zoom pair in one row that wraps rather
-   than a column that would run into the maneuver card. */
+   the same three 56 px targets in one row that wraps rather than a column
+   that would run into the maneuver card. */
 @media (orientation: landscape) and (max-height: 500px) {
   .og-ride__float-end {
     flex-direction: row-reverse;
@@ -14470,4 +14424,189 @@ a.og-secondary {
     max-width: none;
     min-width: 0;
   }
+}
+
+/* =====================================================================
+   Ride overhaul (2026-10-25): ONE top card, always the next action.
+   Off the line it is the same card: the way back in 20 px / 700, the measured
+   offset under it, and one 56 px action. About 130 px on a 375 x 667 screen,
+   which is under a fifth of it, so the map stays the picture.
+   ===================================================================== */
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] {
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 6px;
+  min-height: 0;
+  padding: 10px 14px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-symbol {
+  grid-row: 1 / span 2;
+  width: 48px;
+  height: 48px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-glyph {
+  width: 48px;
+  height: 48px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-suspended {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  /* Room for the GPS badge, which only shows over a bad fix. */
+  padding-right: 0;
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-distance {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  padding-right: 0;
+  font-size: var(--og-text-meta);
+  line-height: 1.25;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-actions {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-action {
+  flex: 1 1 100%;
+  min-height: 56px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__gps-badge {
+  top: 0;
+  right: 0;
+}
+
+/* ---- The ride sheet: plain 56 px rows ------------------------------------ */
+.og-ride__sheet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.og-ride__sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 16px;
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  font: inherit;
+  text-align: left;
+  list-style: none;
+  cursor: pointer;
+}
+
+.og-ride__sheet-row::-webkit-details-marker {
+  display: none;
+}
+
+.og-ride__sheet-row:disabled {
+  color: var(--og-ride-muted);
+  cursor: not-allowed;
+}
+
+.og-ride__sheet-row--danger {
+  border-color: var(--og-danger);
+}
+
+.og-ride__sheet-row:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-ride__sheet-row-label {
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+.og-ride__sheet-row-hint {
+  font-size: var(--og-text-meta);
+  color: var(--og-ride-muted);
+  text-align: right;
+}
+
+/* The quiet "a newer version is ready" row: a sentence and one link, never a
+   banner and never red. */
+.og-ride__newer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 4px 0 16px;
+  border-radius: 16px;
+  background: var(--og-ride-surface);
+  border: 1px solid var(--og-ride-border);
+  font-size: var(--og-text-meta);
+  color: var(--og-paper);
+}
+
+.og-ride__newer-switch {
+  display: inline-flex;
+  align-items: center;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0 14px;
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  color: var(--og-paper);
+  text-decoration: underline;
+}
+
+.og-ride__newer-switch:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-ride__style[open] > .og-ride__sheet-row {
+  margin-bottom: 8px;
+}
+
+/* The sheet's menu button names itself: a chevron alone was a mystery. */
+.og-ride-metrics__toggle-label {
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.og-ride-metrics__toggle {
+  align-content: center;
+  gap: 2px;
+}
+
+/* Every suspended state is the same compact card: a title, one small line, and
+   at most one 56 px action. No fixed tall box, so "Ride paused" is never an
+   empty quarter of the screen. Without a glyph (paused, GPS) it is one column. */
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__maneuver-suspended,
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__off-route-distance {
+  grid-column: 1;
+  grid-row: auto;
+  padding-right: 48px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__off-route-actions {
+  grid-column: 1;
+  grid-row: auto;
 }

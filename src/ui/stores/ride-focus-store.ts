@@ -119,6 +119,7 @@ import {
   type LeanTelemetryState,
   type Vector3,
 } from "@/domain/motion/lean";
+import { routeLengthMeters } from "@/domain/offline/capabilities";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /**
@@ -200,6 +201,11 @@ export interface RideFocusStoreState {
   readonly rerouteMessage: string | null;
   /** Why the last reroute failed, in rider copy. */
   readonly rerouteError: string | null;
+  /**
+   * The ride was edited on another screen after this ride started. The rider
+   * keeps riding the loaded version; the sheet offers the newer one quietly.
+   */
+  readonly newerVersionReady: boolean;
   readonly environment: RideFocusEnvironmentSnapshot;
   readonly viewModel: RideFocusViewModel | null;
   /** The route line the session is following; empty when it did not resolve. */
@@ -825,6 +831,9 @@ export function createRideFocusStore(
       void motion.requestPermission().then(() => refresh());
     }
 
+    /** The last on-route distance and time left of the current route. */
+    let heldRoute: { readonly routeId: unknown; readonly telemetry: RideFocusTelemetryInput } | null = null;
+
     function refresh(): void {
       if (!running) return;
       ensureMotionSubscribed();
@@ -835,16 +844,50 @@ export function createRideFocusStore(
       const current = get();
       const recordingSnapshot = recording?.snapshot() ?? null;
       const liveTelemetry = liveTelemetryFor(state);
+      const routeTelemetry =
+        navigation === null
+          ? null
+          : navigationEngine !== null && telemetryFromEngine !== undefined
+            ? telemetryFromEngine(navigationEngine, instant)
+            : telemetry?.(instant) ?? null;
+      // The last distance and time left while the matcher held the rider on the
+      // line, so the strip never blanks while a route exists (off route,
+      // rerouting). A different route starts again from nothing.
+      const heldRouteId = navigation?.plan.route?.routeId ?? null;
+      if (heldRoute !== null && heldRoute.routeId !== heldRouteId) heldRoute = null;
+      if (
+        heldRouteId !== null &&
+        routeTelemetry !== null &&
+        navigation?.offRouteState === "on-route" &&
+        routeTelemetry.remainingDistanceMeters !== null &&
+        navigation.position.quality !== "stale" &&
+        navigation.position.quality !== "unavailable"
+      ) {
+        heldRoute = { routeId: heldRouteId, telemetry: routeTelemetry };
+      }
+      // Before the rider is first matched on the line (a ride that starts off the
+      // route), the whole route's distance and time are the honest numbers left.
+      if (heldRouteId !== null && heldRoute === null && current.routeLine.length >= 2) {
+        const read = pointer.read();
+        const duration = read.status === "found" ? read.pointer.routeDurationSeconds ?? null : null;
+        heldRoute = {
+          routeId: heldRouteId,
+          telemetry: {
+            routeProgress: null,
+            remainingDistanceMeters: routeLengthMeters(current.routeLine),
+            remainingDurationSeconds: duration,
+            etaIso: null,
+          },
+        };
+      }
       const viewModel =
         navigation === null
           ? null
           : buildRideFocusViewModel({
               navigation,
               environment: snapshot,
-              telemetry:
-                navigationEngine !== null && telemetryFromEngine !== undefined
-                  ? telemetryFromEngine(navigationEngine, instant)
-                  : telemetry?.(instant) ?? null,
+              telemetry: routeTelemetry,
+              heldRouteTelemetry: heldRoute?.telemetry ?? null,
               recordingSummary: recordingSnapshot?.summary ?? null,
               recordingTelemetry: recordingSnapshot?.telemetry ?? null,
               liveTelemetry,
@@ -1494,13 +1537,14 @@ export function createRideFocusStore(
           ? "Return routing needs a fresh, accurate GPS fix."
           : plan.reason === "no-lower-workload-route"
             ? "No lower-workload return was found. Your current route is unchanged."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed while the return was planning. Go back to Plan and try again."
-              : "A return route could not be found right now. Your current ride is unchanged.";
+            : "A return route could not be found right now. Your current ride is unchanged.";
+        // An edit on another screen is not an alarm: keep riding this version
+        // and let the sheet offer the newer one.
+        const newer = plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {};
         if (guided) {
-          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message });
+          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message, ...newer });
         } else {
-          set({ returnBusy: false, freeRideStatusMessage: null, freeRideError: message });
+          set({ returnBusy: false, freeRideStatusMessage: null, freeRideError: message, ...newer });
         }
         return;
       }
@@ -1797,6 +1841,7 @@ export function createRideFocusStore(
       rerouteBusy: false,
       rerouteMessage: null,
       rerouteError: null,
+      newerVersionReady: false,
       environment: EMPTY_ENVIRONMENT,
       viewModel: null,
       routeLine: NO_COORDINATES,
@@ -2147,10 +2192,13 @@ export function createRideFocusStore(
         if (plan.status !== "planned") {
           const message = plan.reason === "gps"
             ? "Head Home needs a fresh, accurate GPS fix. Check location and try again."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed and its return could not be planned. Resume from the planner and try again."
-              : "A return route could not be found right now. Keep riding or try again later.";
-          set({ returnBusy: false, freeRideError: message, freeRideStatusMessage: null });
+            : "A return route could not be found right now. Keep riding or try again later.";
+          set({
+            returnBusy: false,
+            freeRideError: message,
+            freeRideStatusMessage: null,
+            ...(plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {}),
+          });
           return;
         }
         const at = now();
@@ -2266,12 +2314,16 @@ export function createRideFocusStore(
         if (plan.status !== "planned") {
           const message = plan.reason === "gps"
             ? "Rerouting needs a fresh, accurate GPS fix."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed on another screen. Return to Plan to update it."
-              : detour === undefined
-                ? "A new route couldn't be found right now. Keep riding toward the line."
-                : `A route via ${detour.label} couldn't be found right now.`;
-          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message });
+            : detour === undefined
+              ? "A new route couldn't be found right now. Keep riding toward the line."
+              : `A route via ${detour.label} couldn't be found right now.`;
+          set({
+            rerouteBusy: false,
+            rerouteMessage: null,
+            rerouteError: message,
+            // Edited elsewhere: keep riding this version, offer the newer one in the sheet.
+            ...(plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {}),
+          });
           return;
         }
         const at = now();

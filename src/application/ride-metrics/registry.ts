@@ -995,7 +995,7 @@ export function resolveRideMetric(id: RideMetricId, context: RideMetricContext):
  *   instruments that work from the very first fix.
  */
 const MODE_DEFAULTS: Readonly<Record<RideMetricMode, RideMetricSlots>> = {
-  guided: ["speed.current", "route.distanceRemaining", "route.timeRemaining"],
+  guided: ["speed.current", "route.distanceRemaining", "route.eta"],
   recording: ["speed.current", "distance.recorded", "time.moving"],
   "free-ride": ["speed.current", "heading", "gps.accuracy"],
 };
@@ -1014,7 +1014,7 @@ export interface RideMetricPreset {
 
 /** Templates over the three IDs; never persisted as a separate object. */
 export const RIDE_METRIC_PRESETS: readonly RideMetricPreset[] = [
-  { id: "navigate", label: "Navigate", slots: ["speed.current", "route.distanceRemaining", "route.timeRemaining"] },
+  { id: "navigate", label: "Navigate", slots: ["speed.current", "route.distanceRemaining", "route.eta"] },
   { id: "explore", label: "Explore", slots: ["speed.current", "elevation.current", "context.smart"] },
   { id: "tour", label: "Tour", slots: ["speed.current", "time.moving", "context.daylightRemaining"] },
   { id: "off-road", label: "Off-road", slots: ["speed.current", "terrain.grade", "context.smart"] },

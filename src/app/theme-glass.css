@@ -1026,21 +1026,6 @@ html .og-ride {
   backdrop-filter: blur(18px);
 }
 
-/* End ride keeps its warning colour in both themes: the day rail is white with
-   ink glyphs, the night rail dark glass with paper ones. */
-:root[data-theme="day"] .og-ride__rail-button--end {
-  color: #b3261e;
-}
-
-:root[data-theme="night"] .og-ride__rail-button--end {
-  color: #ff9b91;
-}
-
-:root[data-theme="day"] .og-ride__rail-button--end:disabled,
-:root[data-theme="night"] .og-ride__rail-button--end:disabled {
-  color: var(--og-ride-muted);
-}
-
 :root[data-theme="night"] .og-ride__recenter svg {
   color: #6fe3a3;
 }
@@ -1746,25 +1731,27 @@ html .og-ride {
    rider's arrow grows with it (read by the map from these tokens, style.ts).
    -------------------------------------------------------------------------- */
 
-:root[data-theme="day"] .og-ride .og-map {
-  --og-map-route-casing: #1d0b05;
-  --og-map-emphasis: 1.25;
+/* The followed line is plum with a white casing in both themes, drawn heavier
+   than the planner's (ride overhaul, 2026-10-25). The ridden part dims. */
+.og-ride .og-map {
+  --og-map-route-casing: #ffffff;
+  --og-map-emphasis: 1.4;
 }
 
 :root[data-theme="day"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
-  grid-template-columns: 72px minmax(0, 1fr);
-  min-height: 96px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  min-height: 88px;
   background: #0b6b35;
 }
 
 /* The "then" row already accounts for itself; the Day card grows the same way. */
 :root[data-theme="day"] .og-ride__maneuver[data-then="true"] {
-  min-height: 138px;
+  min-height: 126px;
 }
 
 :root[data-theme="day"] .og-ride__maneuver-symbol {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
 }
 
 /* Day: the second line is white too, one step quieter than the action above it,
@@ -1790,8 +1777,14 @@ html .og-ride {
 }
 
 :root[data-theme="day"] .og-ride__maneuver-glyph {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
+}
+
+/* The off-route card is the same card, a size smaller (about 130 px tall). */
+:root[data-theme="day"] .og-ride__maneuver[data-reason="off-route"] :is(.og-ride__maneuver-symbol, .og-ride__maneuver-glyph) {
+  width: 48px;
+  height: 48px;
 }
 
 :root[data-theme="day"] .og-ride__maneuver-glyph path {

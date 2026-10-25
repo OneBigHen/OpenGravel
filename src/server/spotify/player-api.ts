@@ -64,11 +64,55 @@ export async function sendPlayerCommand(
     access = retryAccess;
     commandResponse = await spotifyFetch(access.session, paths[command].path, paths[command].method);
   }
+  // Nothing is playing anywhere: hand playback to the rider's own device (the
+  // phone's Spotify app when it is open) and send the command again.
+  if (commandResponse.status === 404 && command !== "pause") {
+    const transferred = await transferPlayback(access.session, command === "play");
+    if (transferred) {
+      commandResponse = command === "play"
+        ? new Response(null, { status: 204 })
+        : await spotifyFetch(access.session, paths[command].path, paths[command].method);
+    }
+  }
   if (!commandResponse.ok && commandResponse.status !== 204) return withError(commandResponse, access.setCookie);
   const state = await readPlayerState(requestWithCookie(request, access.session, access.setCookie));
   return state.setCookie === undefined && access.setCookie !== undefined
     ? { ...state, setCookie: access.setCookie }
     : state;
+}
+
+interface SpotifyDevice {
+  readonly id?: unknown;
+  readonly type?: unknown;
+  readonly is_active?: unknown;
+  readonly is_restricted?: unknown;
+}
+
+/** Picks the device to play on: active, else a phone, else the first usable one. */
+export function chooseDevice(devices: readonly SpotifyDevice[]): string | null {
+  const usable = devices.filter(
+    (device) => typeof device.id === "string" && device.id.length > 0 && device.is_restricted !== true,
+  );
+  const pick =
+    usable.find((device) => device.is_active === true) ??
+    usable.find((device) => typeof device.type === "string" && device.type.toLowerCase() === "smartphone") ??
+    usable[0];
+  return pick === undefined ? null : (pick.id as string);
+}
+
+async function transferPlayback(session: SpotifySession, play: boolean): Promise<boolean> {
+  const list = await spotifyFetch(session, "/me/player/devices");
+  if (!list.ok) return false;
+  let deviceId: string | null;
+  try {
+    const body = await list.json() as { devices?: unknown };
+    deviceId = chooseDevice(Array.isArray(body.devices) ? body.devices as SpotifyDevice[] : []);
+  } catch {
+    return false;
+  }
+  if (deviceId === null) return false;
+  const moved = await spotifyFetch(session, "/me/player", "PUT", { device_ids: [deviceId], play });
+  return moved.ok || moved.status === 204;
 }
 
 export function readSession(request: Request): SpotifySession | null {
@@ -140,11 +184,20 @@ function sessionAccessResult(request: Request, session: SpotifySession): AccessR
   };
 }
 
-async function spotifyFetch(session: SpotifySession, path: string, method: "GET" | "PUT" | "POST" = "GET"): Promise<Response> {
+async function spotifyFetch(
+  session: SpotifySession,
+  path: string,
+  method: "GET" | "PUT" | "POST" = "GET",
+  json?: unknown,
+): Promise<Response> {
   try {
     return await fetch(`${API_URL}${path}`, {
       method,
-      headers: { authorization: `Bearer ${session.accessToken}` },
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        ...(json === undefined ? {} : { "content-type": "application/json" }),
+      },
+      ...(json === undefined ? {} : { body: JSON.stringify(json) }),
       signal: AbortSignal.timeout(10_000),
     });
   } catch {
@@ -167,7 +220,21 @@ function requestWithCookie(request: Request, session: SpotifySession, setCookie:
 
 async function withError(response: Response, setCookie?: string): Promise<PlayerApiResult<never>> {
   if (response.status === 401) return { ok: false, error: { status: 401, code: "reauthorize" }, setCookie };
-  if (response.status === 403) return { ok: false, error: { status: 403, code: "premium_required" }, setCookie };
+  if (response.status === 403) {
+    // Spotify names the reason; only a real PREMIUM_REQUIRED says "Premium".
+    let reason = "";
+    try {
+      const body = await response.json() as { error?: { reason?: unknown } };
+      reason = typeof body.error?.reason === "string" ? body.error.reason : "";
+    } catch {
+      reason = "";
+    }
+    return {
+      ok: false,
+      error: { status: 403, code: reason === "PREMIUM_REQUIRED" ? "premium_required" : "playback_restricted" },
+      setCookie,
+    };
+  }
   if (response.status === 404) return { ok: false, error: { status: 404, code: "no_device" }, setCookie };
   if (response.status === 429) {
     const header = response.headers.get("retry-after");
