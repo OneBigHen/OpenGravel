@@ -13,6 +13,7 @@
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
+import { US_STATE_CODES, US_STATE_NAMES, US_STATES, usStateCode } from "@/application/geocoding/us-states";
 
 export const PHOTON_DEFAULT_URL = "https://photon.komoot.io/api/";
 export const PHOTON_TIMEOUT_MS = 6_000;
@@ -61,21 +62,6 @@ interface PhotonFeature {
   readonly properties?: PhotonProperties;
 }
 
-const US_STATES: Readonly<Record<string, string>> = {
-  Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA",
-  Colorado: "CO", Connecticut: "CT", Delaware: "DE", "District of Columbia": "DC",
-  Florida: "FL", Georgia: "GA", Hawaii: "HI", Idaho: "ID", Illinois: "IL",
-  Indiana: "IN", Iowa: "IA", Kansas: "KS", Kentucky: "KY", Louisiana: "LA",
-  Maine: "ME", Maryland: "MD", Massachusetts: "MA", Michigan: "MI", Minnesota: "MN",
-  Mississippi: "MS", Missouri: "MO", Montana: "MT", Nebraska: "NE", Nevada: "NV",
-  "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
-  "North Carolina": "NC", "North Dakota": "ND", Ohio: "OH", Oklahoma: "OK",
-  Oregon: "OR", Pennsylvania: "PA", "Rhode Island": "RI", "South Carolina": "SC",
-  "South Dakota": "SD", Tennessee: "TN", Texas: "TX", Utah: "UT", Vermont: "VT",
-  Virginia: "VA", Washington: "WA", "West Virginia": "WV", Wisconsin: "WI",
-  Wyoming: "WY", "Puerto Rico": "PR",
-};
-
 /** Feature classes whose `name` is a road, a building or an area, not a destination. */
 const UNNAMEABLE_KEYS = new Set(["highway", "building", "landuse", "boundary", "place", "railway"]);
 
@@ -90,7 +76,7 @@ function isUs(properties: PhotonProperties): boolean {
 
 function regionLabel(properties: PhotonProperties): string {
   const state = properties.state ?? "";
-  if (isUs(properties)) return US_STATES[state] ?? state;
+  if (isUs(properties)) return usStateCode(state);
   return [state, properties.country].filter(Boolean).join(", ");
 }
 
@@ -195,14 +181,6 @@ export function placeFromReverseFeature(
     provider: "photon",
   };
 }
-
-const US_STATE_NAMES: ReadonlyMap<string, string> = new Map(
-  Object.entries(US_STATES)
-    // Longest first, so "West Virginia" is not read as "Virginia".
-    .sort(([left], [right]) => right.length - left.length)
-    .map(([name, code]) => [name.toLowerCase(), code]),
-);
-const US_STATE_CODES: ReadonlySet<string> = new Set(Object.values(US_STATES));
 
 /**
  * The US state a query names at its end ("Denver, CO", "Moab Utah"), as its
