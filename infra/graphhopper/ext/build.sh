@@ -10,6 +10,7 @@ mkdir "$build_dir/classes" "$build_dir/test-classes"
 javac --release 17 -cp "$jar_path" -d "$build_dir/classes" $(find src/main/java -name '*.java' | sort)
 javac --release 17 -cp "$jar_path:$build_dir/classes" -d "$build_dir/test-classes" $(find src/test/java -name '*.java' | sort)
 java -ea -cp "$jar_path:$build_dir/classes:$build_dir/test-classes" rodeo.opengravel.graphhopper.CurveTest fixtures/franco.json
+java -ea -cp "$jar_path:$build_dir/classes:$build_dir/test-classes" rodeo.opengravel.graphhopper.DistributionTest
 if [[ -n "${OG_CURVE_TEST_CONFIG:-}" ]]; then
   java -ea -Xmx1g -XX:ActiveProcessorCount=2 -cp "$jar_path:$build_dir/classes:$build_dir/test-classes" rodeo.opengravel.graphhopper.IntegrationTest "$OG_CURVE_TEST_CONFIG"
 fi

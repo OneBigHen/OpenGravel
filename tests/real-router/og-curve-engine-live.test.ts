@@ -9,7 +9,7 @@ const pairs = [
 ];
 
 live("og_curve baked landmarks and request penalties", () => {
-  for (const profile of ["motorcycle_twisty", "motorcycle_scenic"]) {
+  for (const profile of ["motorcycle_twisty", "motorcycle_scenic", "motorcycle_adventure"]) {
     for (const [index, points] of pairs.entries()) {
       it(`${profile} pair ${index}: LM equals flexible`, { timeout: 60_000 }, async () => {
         const answers = [];
@@ -33,5 +33,28 @@ live("og_curve baked landmarks and request penalties", () => {
         expect(answers[0].time).toBeCloseTo(answers[1].time, 0);
       });
     }
+  }
+});
+
+const controlUrl = process.env.OGV_CURVE_CONTROL_URL;
+const compareFastest = url && controlUrl ? describe : describe.skip;
+compareFastest("og_curve leaves the Fastest model unchanged", () => {
+  for (const [index, points] of pairs.entries()) {
+    it(`Fastest pair ${index}: control equals treatment`, { timeout: 60_000 }, async () => {
+      const answers = [];
+      for (const baseUrl of [controlUrl, url]) {
+        const response = await fetch(`${baseUrl}/route`, {
+          method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(30_000),
+          body: JSON.stringify({ profile: "motorcycle_fastest", points, points_encoded: false, instructions: false }),
+        });
+        const body = await response.json();
+        expect(response.ok, JSON.stringify(body)).toBe(true);
+        expect(body.paths).toHaveLength(1);
+        answers.push(body.paths[0]);
+      }
+      expect(answers[0].weight).toBeCloseTo(answers[1].weight, 4);
+      expect(answers[0].time).toBe(answers[1].time);
+      expect(answers[0].points).toEqual(answers[1].points);
+    });
   }
 });

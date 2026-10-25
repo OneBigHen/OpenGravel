@@ -46,13 +46,29 @@ this task's scope.
 ## Models and serving
 
 The baked `prefer-curvature.json` is shared by scenic and twisty lanes, used by
-both Balanced and Curvy app modes. Curve preference only multiplies priorities
-by values at most one; urban and residential/service penalties apply separately.
-Access, speed, fastest/adventure models and the app time/exposure gates retain
-their existing behavior. Landmarks must be rebuilt with the new models. The
-candidate config retains the current LM setup and empty CH profile list.
-Penalty-only edge weights are suitable for CH preparation too; CH operation
-is not claimed from this LM-only deployment.
+both Balanced and Curvy app modes. The PA/NJ length-weighted calibration has
+p50=0, p75=0, p90=1/15 and p97=0.4 (p97 is descriptive, not a third cutoff). Inclusive cutoffs handle the large zero tie:
+`og_curve <= 0` multiplies priority by 0.5, and `og_curve <= 1/15` by 0.75.
+Independent rules compose: zero gets 0.375, the first positive bin gets 0.75,
+and values above p90 get 1. Urban and residential/service penalties still apply
+separately, with the existing motorway exemption on the first curve rule.
+
+Adventure adds those same two curve rules only on secondary/tertiary/unclassified
+roads with paved or missing surface tags (`MISSING`, `PAVED`, `ASPHALT`,
+`CONCRETE`, `PAVING_STONES`, `COBBLESTONE`). Missing means surface-unknown,
+not proven pavement. These are the
+Adventure candidates used by Balanced/Mixed; other requests to that profile
+also inherit its paved-connector preference. Known unpaved, unrecognized (`OTHER`) surfaces and
+residential, service, living-street, trunk and motorway edges are excluded from
+these additions. Existing dirt rewards, access and speed rules are retained;
+all **new curve multipliers** are at most one. The Fastest model is unchanged.
+
+Landmarks must be rebuilt with the new models, even though encoded values need
+no reprocessing. Use a new graph directory with the existing prepared PBF;
+never load old landmarks against different baked models. The candidate config
+retains the current LM setup and empty CH profile list. Penalty-only edge weights
+are suitable for CH preparation too; CH operation is not claimed from this
+LM-only experiment.
 
 The stock GH 11 server loads the serialized built-in `DecimalEncodedValueImpl`;
 it needs no extension on its runtime classpath. Keep the matching jar, graph,
@@ -77,6 +93,19 @@ The persisted tiny graph checks stock loading and flexible/LM/CH equivalence:
 
 ```sh
 infra/graphhopper/ext/test-import.sh ~/ghbuild/graphhopper-web-11.0.jar ./curve-venv/bin/python
+```
+
+The read-only distribution command counts each physical, accessible road edge
+once, weighted by its stored length. It excludes private/no access and
+residential/service/living-street/OTHER classes, and reports zero shares, raw
+16-bin meter totals, full-population and positive-only percentile ranks. The
+known-paved subset (PAVED/ASPHALT/CONCRETE) and Adventure-eligible subset
+separate documented surfaces from the exact model guard above.
+
+```sh
+java -Xmx6g -XX:ActiveProcessorCount=4 \
+  -cp infra/graphhopper/ext/target/og-curve-gh11.jar:../ghbuild/graphhopper-web-11.0.jar \
+  rodeo.opengravel.graphhopper.Distribution config-window.yml distribution.json
 ```
 
 The pre-pass records source, output and algorithm hashes and uses a 24 GiB

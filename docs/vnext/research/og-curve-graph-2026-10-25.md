@@ -1,33 +1,122 @@
 # Local `og_curve` graph — 2026-10-25
 
-Columns are **curvy miles / Franco per km / minutes** from the app's selected Best Ride.
-HTTP attempts count actual requests, including loop calibration and retries.
+Latest calibrated candidate; columns are **curvy miles / Franco per km / minutes**
+from the app's selected Best Ride. Δ minutes is treatment minus control.
 
-| Ride | Mode | Current graph | `og_curve` graph | HTTP attempts current / new |
-| --- | --- | --- | --- | --- |
-| Jim Thorpe → Hawk Mountain | Balanced | 3.22 / 37.34 / 51.86 | 3.22 / 37.34 / 51.86 | 6 / 6 |
-| Jim Thorpe → Hawk Mountain | Curvy | 3.22 / 37.34 / 51.86 | 3.22 / 37.34 / 51.86 | 10 / 10 |
-| Jim Thorpe 120-minute loop | Balanced | 6.68 / 102.16 / 117.14 | 6.68 / 102.16 / 117.14 | 52 / 53 |
-| Jim Thorpe 120-minute loop | Curvy | 6.68 / 102.16 / 117.14 | 6.68 / 102.16 / 117.14 | 35 / 35 |
-| Allentown → Stroudsburg | Balanced | 3.56 / 32.83 / 63.57 | 4.49 / 60.13 / 67.71 | 6 / 6 |
-| Allentown → Stroudsburg | Curvy | 5.14 / 114.39 / 84.24 | 4.49 / 60.13 / 67.71 | 10 / 10 |
-| Doylestown → New Hope | Balanced | 0.91 / 38.14 / 29.08 | 0.85 / 39.94 / 25.65 | 6 / 6 |
-| Doylestown → New Hope | Curvy | 0.85 / 60.59 / 25.83 | 1.09 / 50.54 / 26.24 | 10 / 10 |
-| Reading → Jim Thorpe | Balanced | 10.19 / 76.30 / 116.16 | 8.67 / 52.04 / 113.16 | 6 / 6 |
-| Reading → Jim Thorpe | Curvy | 10.19 / 76.30 / 116.16 | 8.67 / 52.04 / 113.16 | 10 / 10 |
-| Bethlehem → Delaware Water Gap | Balanced | 5.09 / 72.15 / 70.93 | 4.36 / 53.80 / 67.67 | 6 / 6 |
-| Bethlehem → Delaware Water Gap | Curvy | 4.84 / 87.84 / 72.49 | 4.36 / 53.80 / 67.67 | 10 / 10 |
+| Ride | Mode | Current graph | Calibrated `og_curve` | Δ minutes | HTTP attempts current / new |
+| --- | --- | --- | --- | --- | --- |
+| Jim Thorpe → Hawk Mountain | Balanced | 3.22 / 37.34 / 51.86 | 2.94 / 17.65 / 52.88 | +1.01 | 6 / 6 |
+| Jim Thorpe → Hawk Mountain | Curvy | 3.22 / 37.34 / 51.86 | 2.94 / 17.65 / 52.88 | +1.01 | 10 / 10 |
+| Jim Thorpe 120-minute loop | Balanced | 6.68 / 102.16 / 117.14 | 6.46 / 93.05 / 125.49 | +8.35 | 52 / 52 |
+| Jim Thorpe 120-minute loop | Curvy | 6.68 / 102.16 / 117.14 | 6.46 / 93.05 / 125.49 | +8.35 | 35 / 34 |
+| Allentown → Stroudsburg | Balanced | 3.56 / 32.83 / 63.57 | 4.49 / 60.13 / 67.71 | +4.14 | 6 / 6 |
+| Allentown → Stroudsburg | Curvy | 5.14 / 114.39 / 84.24 | 4.49 / 60.13 / 67.71 | -16.53 | 10 / 10 |
+| Doylestown → New Hope | Balanced | 0.91 / 38.14 / 29.08 | 0.85 / 39.94 / 25.65 | -3.44 | 6 / 6 |
+| Doylestown → New Hope | Curvy | 0.85 / 60.59 / 25.83 | 1.00 / 105.79 / 35.33 | +9.50 | 10 / 10 |
+| Reading → Jim Thorpe | Balanced | 10.19 / 76.30 / 116.16 | 8.99 / 43.88 / 115.94 | -0.22 | 6 / 6 |
+| Reading → Jim Thorpe | Curvy | 10.19 / 76.30 / 116.16 | 8.67 / 52.04 / 113.16 | -3.00 | 10 / 10 |
+| Bethlehem → Delaware Water Gap | Balanced | 5.09 / 72.15 / 70.93 | 4.36 / 53.80 / 67.67 | -3.25 | 6 / 6 |
+| Bethlehem → Delaware Water Gap | Curvy | 4.84 / 87.84 / 72.49 | 4.15 / 58.70 / 59.29 | -13.20 | 10 / 10 |
 
-**Verdict: HOLD for rollout.** The durable encoded-value/import path works, but this
-model does not improve either target Jim Thorpe ride. Balanced Allentown gains
-26% bend miles and 83% Franco/km for 4.14 extra minutes; Reading and Bethlehem
-lose both bend miles and density. Curvy Allentown's density falls from 114.39 to
-60.13. No general route-quality improvement or rider preference is established.
-The Balanced loop spent 52 versus 53 HTTP attempts and is not an equal-spend
-quality trial. All other pairs spent equal attempts. These are measurements,
-not promotion acceptance; no live graph or deployment changed.
+**Verdict: HOLD for rollout.** Calibration reaches the winning candidate pool:
+both Jim Thorpe Best Rides now change, but both become worse. The destination
+loses 8.7% curvy miles and 52.7% Franco/km for **1.01 extra minutes**; the loop
+loses 3.3% curvy miles and 8.9% Franco/km for **8.35 extra minutes**. Balanced
+Allentown gains 26% bend miles and 83% Franco/km for 4.14 minutes; Curvy
+Doylestown gains 17% bend miles and 75% Franco/km for 9.50 minutes. Reading and
+Bethlehem still regress. No general route-quality improvement is established.
+The Curvy loop spent 35 versus 34 HTTP attempts, so that pair is not an equal-spend
+quality trial; all other pairs, including the Balanced loop, spent equal attempts.
+Passing validity/timebox checks is not promotion acceptance. Live router untouched;
+nothing deployed.
 
-## Request-wiring follow-up
+## Calibration and cost
+
+The read-only physical-edge scan weights each edge once by stored distance,
+regardless of direction. It includes car-accessible non-residential road edges
+with positive length, excludes OTHER/RESIDENTIAL/SERVICE/LIVING_STREET and
+PRIVATE/NO access, and includes motorways. This is the provided PA/NJ extract,
+not legal-clearance evidence. Quantiles are the first 1/15 bin reaching the
+specified cumulative fraction of eligible length; zero-valued edges stay in
+the denominator.
+
+| Population | Edges | Length km | Zero length share | p50 | p75 | p90 | p97 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| All eligible non-residential roads — cutoff source | 978,210 | 160,453.25 | 89.52% | 0 | 0 | 0.066667 | 0.4 |
+| Known PAVED/ASPHALT/CONCRETE secondary/tertiary/unclassified | 261,792 | 36,408.46 | 96.77% | 0 | 0 | 0 | 0.066667 |
+| Adventure-eligible paved-or-unknown backroads | 614,728 | 89,152.30 | 95.63% | 0 | 0 | 0 | 0.066667 |
+
+The **all-non-residential population**, not a positive-only or Adventure subset,
+supplies the cutoffs. Its positive-only p50/p75/p90/p97 are 0.2/0.466667/0.8/1;
+using those would discard the zero-inflation problem. p97 is descriptive and
+is not a third model cutoff. Because p50 is tied at zero, `< p50` penalizes
+nothing; use inclusive comparisons:
+
+- `og_curve <= 0` × 0.5, retaining the existing motorway exemption.
+- `og_curve <= 1/15` × 0.75.
+- Above p90: no curve penalty (× 1). The independent rules compose to 0.375
+  at zero and 0.75 at the first positive bin on non-motorway roads.
+
+Scenic/Twisty keep their urban and residential/service penalties. Adventure now
+uses these same two curve rules on SECONDARY/TERTIARY/UNCLASSIFIED with surface
+MISSING/PAVED/ASPHALT/CONCRETE/PAVING_STONES/COBBLESTONE. Residential, service,
+living-street, primary, trunk, motorway, known unpaved and OTHER-surface edges
+are outside the new Adventure guard. Existing dirt rewards, access, speed,
+bike constraints and app time/exposure caps stay unchanged. Every **added curve
+multiplier** is <=1; existing Adventure dirt rewards of 1.45/1.25 remain baked.
+Fastest's model bytes are unchanged, and direct Fastest geometry, time and
+weight match control for all three engine-test pairs.
+
+**Scope assumption:** missing surface on a backroad is included as a backroad
+heuristic for Mixed, never reclassified as paved. The app's evidence semantics
+are unchanged. The shared Adventure model also affects paved-or-unknown connectors
+for other Adventure callers; it cannot condition on an app mode. No rule is added
+to the Fastest profile, and no app dispatch or score is changed.
+
+The encoded values/pre-pass are unchanged. New baked models require matching
+landmarks, so the prepared PBF was imported into a fresh cache:
+`~/ghbuild-curve/graph-cache-og-curve-calibrated-backroads`, with
+`config-calibrated-backroads.yml` and `custom-models-calibrated-backroads/`.
+That import took **3m37.87s**, peak RSS **12.20 GiB**, heap ceiling 16 GiB,
+six active CPUs and four LM preparation threads. A superseded known-paved-only
+model import took 3m40.33s; it was not served or benchmarked after source
+inspection showed the missing-surface exemption. Both caches are preserved.
+No repeat PBF pre-pass was needed.
+
+The final 24-case benchmark took **11.89s wall time**. Summed app-plan elapsed
+time was 4.31s control and 5.17s treatment across 12 plans each. This single run
+includes startup/JIT and is descriptive, not a general latency claim. Engine
+checks took 0.92s. The unchanged control remained on :8989; only the isolated
+old :8991 process was stopped and replaced. Its graph/models remain preserved.
+
+[Full calibrated benchmark, distributions, hashes and timing evidence](og-curve-calibration-2026-10-25.json).
+The pre-calibration [benchmark](og-curve-graph-2026-10-25.json) and
+[wiring probes](og-curve-wiring-2026-10-25.json) remain historical evidence.
+
+## Surface exposure in the calibrated benchmark
+
+Raw missing/OTHER tag share is not the same as app unknown-surface share: the
+existing app infers some pavement from road class. Both are recorded below;
+missing UNCLASSIFIED remains unknown in the app. Unknown exposure rises on the
+Jim Thorpe destination and Reading, another reason to HOLD. No missing tag is
+proof of pavement, gravel, safety or legal access.
+
+| Ride | Mode | Raw missing/OTHER % current / new | App unknown surface km current / new |
+| --- | --- | --- | --- |
+| Jim Thorpe → Hawk Mountain | Balanced | 44.22% / 46.32% | 0.180 / 1.480 |
+| Jim Thorpe → Hawk Mountain | Curvy | 44.22% / 46.32% | 0.180 / 1.480 |
+| Jim Thorpe 120-minute loop | Balanced | 72.21% / 66.02% | 18.586 / 13.974 |
+| Jim Thorpe 120-minute loop | Curvy | 72.21% / 66.02% | 18.586 / 13.974 |
+| Allentown → Stroudsburg | Balanced | 70.57% / 70.43% | 0.143 / 0.044 |
+| Allentown → Stroudsburg | Curvy | 70.47% / 70.43% | 0.367 / 0.044 |
+| Doylestown → New Hope | Balanced | 92.98% / 95.18% | 0.000 / 0.000 |
+| Doylestown → New Hope | Curvy | 95.17% / 83.05% | 0.131 / 0.247 |
+| Reading → Jim Thorpe | Balanced | 52.62% / 43.55% | 2.281 / 4.199 |
+| Reading → Jim Thorpe | Curvy | 52.62% / 43.06% | 2.281 / 6.323 |
+| Bethlehem → Delaware Water Gap | Balanced | 73.05% / 84.70% | 0.227 / 0.000 |
+| Bethlehem → Delaware Water Gap | Curvy | 71.92% / 76.47% | 0.137 / 0.000 |
+
+## Historical request-wiring follow-up — before calibration
 
 Identical Best Rides were traced to the unchanged Adventure candidates, not an
 ignored encoded value. All eight Jim Thorpe plans (two graphs × two styles ×
@@ -78,9 +167,10 @@ ambiguous repeated-coordinate occurrences earn zero. One long GH edge retains
 one length-weighted average, not a maximum propagated over straight miles.
 
 The shared scenic/twisty model penalizes dull edges, non-rural areas and
-residential/service roads; every new multiplier is at most one. Balanced and
-Curvy use these lanes through the existing app pipeline. Fastest/adventure
-model bytes, speeds, access checks, time/exposure caps and scores are unchanged.
+residential/service roads; every added curve multiplier is at most one. Balanced
+and Curvy use these lanes through the existing app pipeline. Adventure now has
+the guarded calibrated rules described above. Fastest model bytes, speeds, access
+checks, time/exposure caps and scores are unchanged.
 No new app policy is promoted. Regional preparation remains LM; a persisted
 small fixture additionally verifies CH/flexible weight equivalence.
 
@@ -90,8 +180,9 @@ GraphHopper builds, regional preprocessing/import and app gates ran only on
 powerplex (`ssh windows-zac`, WSL Ubuntu user `zachary`).
 `~/ghbuild-curve` resolves to `/mnt/wsl/ogv-data/home-zachary/ghbuild-curve`.
 The existing `~/ghbuild` graph/models/config were copied into `control` and
-served on WSL loopback `:8989`; treatment is `graph-cache-og-curve-window`,
-`config-window.yml`, served on `:8991`. Neither is the live router.
+served on WSL loopback `:8989`. The original `graph-cache-og-curve-window` /
+`config-window.yml` treatment is preserved; :8991 now serves the calibrated
+cache/config/models identified above. Neither server is the live router.
 
 - Runtime jar SHA-256: `b59c024afe172ec6ec85b6327006c3138ec58c7d0bcd26253d0e42853f613def`.
 - Original extract SHA-256: `bcf75b9308da24ab6942afc9fdbfa1abbd4e464f7cf20e426e594b1910dbc76a`.
@@ -100,9 +191,10 @@ served on WSL loopback `:8989`; treatment is `graph-cache-og-curve-window`,
 - Both graphs: 3,625,018 nodes, 4,514,563 edges, 60,360 turn-cost entries.
   Node, geometry and turn-cost files are byte-identical (hashes in JSON evidence).
 - Pre-pass: 2,141,605 ways, 2,050,912 collections, 6m46s wall time, 3.51 GiB peak
-  RSS, 24 GiB address-space ceiling. Import completed at 02:08; its original
-  streaming log was interrupted by quota exhaustion, so no final import timing
-  is claimed. Runtime reload and prepared LM queries verified the finished graph.
+  RSS, 24 GiB address-space ceiling. The historical pre-calibration import
+  completed at 02:08; its streaming log was interrupted by quota exhaustion,
+  so its elapsed import time is unknown. The calibrated import timing is
+  recorded above. Runtime reload and prepared LM queries verified both caches.
 
 The app benchmark checks version/region/profiles/data date, uses identical
 source/options/fixed request IDs, and captures canonical scores and paired
@@ -118,33 +210,38 @@ atlas-assisted docker-dev result. These are not paved-only or current legal
 clearance results. The adapter's environment key is `GRAPHHOPPER_URL`; this
 comparison supplies both URLs directly to its factory.
 
-[Full machine evidence](og-curve-graph-2026-10-25.json) ·
+[Original pre-calibration machine evidence](og-curve-graph-2026-10-25.json) ·
 [Build/pre-pass reproduction](../../../infra/graphhopper/ext/README.md).
 
 ```sh
 # In the isolated app checkout on powerplex, with both servers running:
 OGV_CURVE_BENCHMARK=1 OGV_CURVE_CONTROL_URL=http://127.0.0.1:8989 \
 OGV_CURVE_TREATMENT_URL=http://127.0.0.1:8991 \
-OGV_CURVE_EVIDENCE=../benchmark-final.json \
+OGV_CURVE_EVIDENCE=../benchmark-calibrated.json \
 npm run test:real-router -- tests/real-router/og-curve-benchmark-live.test.ts
+OGV_CURVE_CONTROL_URL=http://127.0.0.1:8989 \
 OGV_CURVE_ENGINE_URL=http://127.0.0.1:8991 \
 npm run test:real-router -- tests/real-router/og-curve-engine-live.test.ts
 ```
 
 ## Verification
 
-- 24/24 app benchmark cases passed validity/timebox/cap checks; six regional
-  LM/flexible queries with penalty-only request models returned equal weights/times.
-- Full graph audit: all 3,489,430 residential/service/living-street edges have
+- Calibrated 24/24 app benchmark cases passed validity/timebox/cap checks. Nine
+  regional LM/flexible comparisons across Twisty/Scenic/Adventure returned equal
+  weights/times with request penalties. Three Fastest control/treatment pairs
+  returned identical geometry, weights and times.
+- Calibrated full graph audit: all 3,489,430 residential/service/living-street edges have
   zero curve credit; every encoded value is finite and bounded.
-- Nine Python/PBF tests passed, including shared Franco fixtures, reversed-way
+- Eight Python/PBF tests plus ten subtests passed again, including shared Franco fixtures, reversed-way
   continuity, local straight tails, controls, chunk limits and unchanged
-  nodes/way references/restriction members. Ten Java parser fixtures passed.
+  nodes/way references/restriction members. Ten Java parser fixtures and the new percentile/access/class/surface guard
+  assertions passed. Distribution before/after matches exactly in all three populations.
 - Small real import/persist/reload: stock loader, LM and CH weights agree with
   flexible routing (674.9026462222223); overwriting an existing graph is refused.
-- Final app gates passed: environment audit, lint (one existing unused-variable
+- Original implementation app gates passed (not rerun in full for calibration): environment audit, lint (one existing unused-variable
   warning), typecheck, 5,248 tests with three existing skips, 149 architecture
-  checks, and production build. No browser/on-road or live-deployment claim.
+  checks, and production build. Calibration reran TypeScript and focused ESLint
+  successfully on powerplex. No browser/on-road or live-deployment claim.
 
 ## Future rollout and rollback — not executed
 

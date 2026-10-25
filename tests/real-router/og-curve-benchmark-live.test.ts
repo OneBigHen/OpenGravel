@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
 import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from "@/application/planner/route-provider";
@@ -63,10 +64,15 @@ live("og_curve graph comparison through planRide", () => {
             return response;
           } });
           const calls: unknown[] = [];
+          const sourceRoads = new Map<string, unknown>();
+          const geometryHash = (geometry: ProviderCandidate["geometry"]) => createHash("sha256").update(JSON.stringify(geometry)).digest("hex");
           const provider: RouteCandidateProvider = {
             id: inner.id, capabilities: () => inner.capabilities(),
             async candidates(request, signal) {
               const result = await inner.candidates(request, signal);
+              for (const candidate of result.candidates) {
+                if (candidate.roadSummary) sourceRoads.set(geometryHash(candidate.geometry), candidate.roadSummary.surfaceByRoadClassMeters);
+              }
               calls.push({ profile: request.profile, candidates: result.candidates.map(c => measure(c)) });
               return result;
             },
@@ -89,7 +95,7 @@ live("og_curve graph comparison through planRide", () => {
             expect(best.durationSeconds / 60).toBeGreaterThanOrEqual(105);
             expect(best.durationSeconds / 60).toBeLessThanOrEqual(135);
           }
-          const row = { graph, trip: trip.id, label: trip.label, style, httpAttempts, transport, canonicalScore: best?.score.total, elapsedMs: performance.now() - started, best: best && measure(best), fastest: fastest && measure(fastest), calls, diagnostics: result.diagnostics };
+          const row = { bestSurfaceEvidence: best?.evidence.surfaceMix ?? null, bestRawSurfaceByRoadClassMeters: best ? sourceRoads.get(geometryHash(best.geometry)) ?? null : null, graph, trip: trip.id, label: trip.label, style, httpAttempts, transport, canonicalScore: best?.score.total, elapsedMs: performance.now() - started, best: best && measure(best), fastest: fastest && measure(fastest), calls, diagnostics: result.diagnostics };
           rows.push(row);
           console.log(JSON.stringify({ graph, trip: trip.id, style, best: row.best }));
           writeEvidence();

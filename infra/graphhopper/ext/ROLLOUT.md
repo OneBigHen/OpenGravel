@@ -92,11 +92,25 @@ A successful import or test suite alone does not authorize promotion.
    `OGV_POLICY_VERSION` environment override is not a policy release.
 
 5. **Verify after the swap.** Check health and public app/router provenance,
-   `og_curve` availability, exact graph/model/runtime hashes, the six-case
-   Balanced/Curvy benchmark, LM constraints and the requested planning path from
+   `og_curve` availability, exact graph/model/runtime hashes, the six-trip ×
+   two-style × two-graph benchmark (24 cases total), LM constraints and the requested planning path from
    a fresh app session. Keep closure/access and physical/on-road acceptance
    separate. Restore immediately on failed health, fingerprint, eligibility or
-   route-quality gates.
+   route-quality gates. From the qualified app checkout, compare the preserved
+   control against the promoted router using their verified URLs (future step;
+   not executed by this experiment):
+
+   ```sh
+   OGV_CURVE_BENCHMARK=1 \
+   OGV_CURVE_CONTROL_URL="$qualified_control_url" \
+   OGV_CURVE_TREATMENT_URL="$promoted_router_url" \
+   OGV_CURVE_EVIDENCE="$post_swap_evidence" \
+   npm run test:real-router -- tests/real-router/og-curve-benchmark-live.test.ts
+   ```
+
+   Expect 24 passing cases and review all 12 paired quality/time deltas, including
+   HTTP-attempt parity and unknown-surface exposure; a green test alone is not
+   route-quality acceptance.
 
 6. **Rollback without rebuilding.** Stop the newly promoted router/container,
    move the failed graph aside, move `graph-cache-rollback-<artifact-id>` back

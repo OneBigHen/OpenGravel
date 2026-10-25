@@ -28,22 +28,22 @@ supplied surface rules.
 
 `motorcycle-base.json` is the shared access/roughness base the profile models
 are authored against, and `prefer-curvature.json` is an optional curvature
-preference model. The shared access base is preserved; the preference model now requires the
+preference model. The shared access base is preserved; the preference and Adventure models now require the
 `og_curve` graph extension described in `../ext/README.md`.
 
 ## Integrity
 
 | File | SHA-256 (identical in the baseline unless marked changed) |
 | --- | --- |
-| `motorcycle-adventure.json` | `45637ee2c081d3ffbaefaace2c823c476c449ffd1d1e07127b1f5a083e20a674` (changed 2026-10-04) |
+| `motorcycle-adventure.json` | `5bd87f82eae835dbd9652e9ffe99eee2b45042a2b7c856b6a41f6c4b11bb3986` (calibrated 2026-10-25; requires og_curve graph) |
 | `motorcycle-base.json` | `14438caaacd94f7431d4e86db77fe6f8cdd8d76483c4d104d25204b4c58dbbea` (changed 2026-10-04) |
 | `motorcycle-fastest.json` | `dc0e507b1469a8c68736d55de8f8e9d10abfbc89a8f83aac730d6e261fc87d2c` |
 | `motorcycle-scenic.json` | `e8455809dfdfc10490122624c60a2e01f367e5c3975595c4127cd52edcbeff29` |
 | `motorcycle-twisty.json` | `8c92480a971446a485b67c3997aab88fe5a3dea24e69c86491fce5f408204e47` |
-| `prefer-curvature.json` | `e820c0c47453ff9ea46af00690fbda6c19459df2c5d9a547364909628a0384be` (changed 2026-10-25; requires og_curve graph) |
+| `prefer-curvature.json` | `da47a5468e5310882f001ed4947a942aeee49e1be1d064cd344fd979967ec57f` (calibrated 2026-10-25; requires og_curve graph) |
 
 These files now describe the opt-in `og_curve` candidate graph. The current live
-graph uses the parent revision's `prefer-curvature.json` and must keep its matching
+graph uses its existing models and must keep its matching
 models until an explicitly authorized graph promotion. App code continues to
 work with either graph; do not replace the live model file independently.
 

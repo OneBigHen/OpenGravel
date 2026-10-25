@@ -9,6 +9,8 @@
     { "if": "track_type == GRADE1 || track_type == GRADE2", "multiply_by": "1.25" },
     { "if": "track_type.ordinal() > 2", "multiply_by": "0.4" },
     { "if": "surface == SAND", "multiply_by": "0.15" },
+    { "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve <= 0", "multiply_by": "0.5" },
+    { "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve <= 0.06666666666666667", "multiply_by": "0.75" },
     { "if": "true", "multiply_by": "0.82" }
   ],
   "speed": [
