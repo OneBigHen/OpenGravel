@@ -25,8 +25,17 @@ public final class Import {
             throw new IllegalArgumentException("graph.location must be a NEW directory: " + graph);
         Path source=Path.of(config.getString("datareader.file",""));
         JsonNode manifest=new ObjectMapper().readTree(Path.of(source+".json").toFile());
-        if (!manifest.path("version").asText().equals("og-curve-window-v1"))
+        if (!manifest.path("version").asText().equals("og-curve-heading-v3"))
             throw new IllegalArgumentException("Missing/unsupported completed curvature pre-pass manifest");
+        JsonNode signal=manifest.required("signal");
+        String[] fields={"windowMeters","sampleMeters","degreesPerKmAtFullCredit","maxTurnDegreesPerSample","noiseWindowMeters","shortEdgeMeters","fullEdgeCreditMeters"};
+        int[] expected={1000,20,360,30,200,60,600};
+        for(int i=0;i<fields.length;i++)
+            if(signal.required(fields[i]).asDouble()!=expected[i]) throw new IllegalArgumentException("Unexpected heading signal parameter: "+fields[i]);
+        if(signal.required("minDirectionalCoherence").asDouble()!=.5
+                || Math.abs(signal.required("shortEdgeMaxCredit").asDouble()-1d/15)>1e-12
+                || !manifest.required("algorithmSha256").asText().equals("a7f78312f683007b6adf762a4c92328356d588c5a2505dc1b7074b2bb7fd641c"))
+            throw new IllegalArgumentException("Invalid heading provenance/cap");
         MessageDigest digest=MessageDigest.getInstance("SHA-256");
         try (var input=Files.newInputStream(source)) {
             byte[] buffer=new byte[1024*1024];

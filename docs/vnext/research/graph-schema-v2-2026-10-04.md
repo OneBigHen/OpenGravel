@@ -4,6 +4,33 @@ Step 4 of `routing-stack-decision-2026-10-04.md`. Freeze every graph-level field
 rebuild so it happens once. Live config: `switchback/infra/graphhopper/config.yml` (GraphHopper 11,
 LM on `motorcycle_fastest`/`twisty`/…; no CH).
 
+## 2026-10-25 amendment: implemented `og_curve` contract
+
+The Franco/400 m/split-way proposal and numeric profile examples below are
+**historical and superseded for `og_curve`** by the isolated heading-v3 candidate.
+The other proposed fields remain outside this implementation. This amendment is
+not rollout approval: the [measured candidate is HOLD](og-curve-graph-2026-10-25.md).
+
+The frozen signal uses approximately 20 m private samples, absolute heading change
+per km in a centred 1 km window, 30 m junction/control suppression, and a nominal
+200 m directional-coherence noise guard (sample centres within ±100 m, ratio >=0.5).
+Cap turns at 30°/sample and normalize by 360°/km. Cap original-edge credit at 1/15
+through 60 m, ramping to 1 at 600 m. Residential/service/living-street credit is zero.
+Keep four-bit `og_curve` plumbing, but preserve every OSM node/way/relation instead
+of splitting ways: compressed local integrals let the TagParser score actual GH
+edges. Import requires the heading-v3 manifest, fixed parameters, pinned algorithm
+SHA and matching prepared-PBF hash. Old signal graphs are incompatible artifacts.
+
+Baked curve rules now use measured p40=1/15 (`<`, ×0.5) and p80=4/15 (`<=`, ×0.75),
+with no added multiplier above one. Keep existing exclusions and the motorway
+exemption. Adventure applies the preference to paved-or-unknown backroads;
+Fastest is unchanged. Rebuild matching landmarks in a new cache. Regional serving
+remains LM-only; the small persisted fixture verifies CH compatibility.
+The app's existing Franco evaluator and scores are unchanged.
+
+See the [implementation/reproduction contract](../../../infra/graphhopper/ext/README.md)
+and [complete distributions, benchmark and artifact hashes](og-curve-heading-2026-10-25.json).
+
 ## Today
 
 `graph.encoded_values: car_access, car_average_speed, road_access, road_class, road_environment,
@@ -17,7 +44,7 @@ Smoothness and track type are already in the graph, yet the custom models do not
 
 | Value | Kind | Source | Why |
 |---|---|---|---|
-| `og_curve` | decimal 0–1, 4 bits | **New TagParser** reading `og:curve` written by a PBF pre-pass | Franco-local curvature per edge (below). Replaces `curvature` (beeline/length) in the profiles. |
+| `og_curve` | decimal 0–1, 4 bits | **New TagParser** reading `og:curve` written by a PBF pre-pass | Heading-v3 local credit per edge (amendment above). Replaces `curvature` (beeline/length) in the profiles. |
 | `og_access` | enum: KNOWN_OK, AMBIGUOUS, SEASONAL_CLOSED, PROHIBITED | **New TagParser** reading `og:access` from the pre-pass | Gravel Atlas, forest-road calendars, closure evidence. Unknown stays AMBIGUOUS (never "safe"). |
 | `average_slope`, `max_slope` | built-in | `graph.elevation.provider: srtm` (or the Terrarium tiles we already serve) | Elevation interest and steep-dirt difficulty. |
 | `lanes` | built-in | OSM `lanes` | Separates real backroads from wide secondaries in road character. |
@@ -26,7 +53,7 @@ Smoothness and track type are already in the graph, yet the custom models do not
 Drop `path` from `ignored_highways` only behind `motorcycle=yes|designated` access. A separate
 `og:access` pass handles that, so footpaths never become routable.
 
-## The `og:curve` pre-pass
+## Historical `og:curve` pre-pass proposal — superseded
 
 Runs offline (Python, osmium) on the PA/NJ extract, after the existing Gravel Atlas extraction:
 
@@ -40,7 +67,7 @@ Runs offline (Python, osmium) on the PA/NJ extract, after the existing Gravel At
    half a mile of switchbacks between straight miles lights up only around the switchbacks.
 4. Write `og:curve=<0..1>` (quantised to 1/15), splitting ways where the value changes by ≥ 2 steps.
 
-## Profiles (LM constraint)
+## Historical profile examples — superseded for `og_curve`
 
 LM clamps request-time priority above 1, and LM weights are prepared per profile. So curves are
 expressed in the **baked** profile by *penalising dull edges*:

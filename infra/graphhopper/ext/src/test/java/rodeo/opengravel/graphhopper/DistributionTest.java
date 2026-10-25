@@ -9,6 +9,8 @@ public final class DistributionTest {
     public static void main(String[] args) {
         double[] bins = new double[16];
         bins[0] = 89; bins[1] = 2; bins[6] = 6; bins[15] = 3;
+        assert Distribution.quantile(bins, .4, false) == 0;
+        assert Distribution.quantile(bins, .8, false) == 0;
         assert Distribution.quantile(bins, .5, false) == 0;
         assert Distribution.quantile(bins, .75, false) == 0;
         assert Distribution.quantile(bins, .9, false) == 1d / 15;
@@ -16,6 +18,9 @@ public final class DistributionTest {
         assert Distribution.quantile(bins, .5, true) == .4;
         assert Distribution.quantile(bins, .9, true) == 1;
         assert Distribution.quantile(new double[16], .5, false) == null;
+        bins = new double[16]; bins[0]=30; bins[2]=20; bins[6]=30; bins[15]=20;
+        assert Distribution.quantile(bins,.4,false)==2d/15;
+        assert Distribution.quantile(bins,.8,false)==.4;
         bins = new double[16]; bins[0] = 100;
         assert Distribution.quantile(bins, .5, false) == 0;
         assert Distribution.quantile(bins, .5, true) == null;

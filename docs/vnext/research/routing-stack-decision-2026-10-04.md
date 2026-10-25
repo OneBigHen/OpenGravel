@@ -1,5 +1,13 @@
 # Routing stack decision (2026-10-04)
 
+**2026-10-25 implementation amendment:** the graph signal now uses heading-v3
+(centred 1 km heading change after 20 m resampling), replacing the Franco/400 m
+graph proposal. The app's Franco evaluator remains unchanged. The authoritative
+[graph contract amendment](graph-schema-v2-2026-10-04.md) and
+[isolated benchmark report](og-curve-graph-2026-10-25.md) supersede that part of this
+historical decision. Candidate verdict is HOLD; nothing is deployed.
+
+
 The owner asked whether OpenGravel was reinventing the wheel, and wanted the stack defended before more
 work. Two outside reviews ran (a ChatGPT critique, then a Codex rebuttal). Every claim below was
 checked against the code on `main` (aebe24a).

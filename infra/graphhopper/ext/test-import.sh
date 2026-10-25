@@ -28,3 +28,17 @@ if java -Xmx1g -cp "$assets/target/og-curve-gh11.jar:$jar_path" rodeo.opengravel
   echo 'FAIL: importer accepted an existing graph' >&2; exit 1
 fi
 echo 'PASS: existing graph overwrite refused'
+# A completed PBF alone cannot authorize an incompatible signal definition.
+"$python_path" - "$tmp" <<'PY'
+from pathlib import Path
+import json,sys
+root=Path(sys.argv[1]);manifest=root/'curve.osm.pbf.json'
+x=json.loads(manifest.read_text());x['signal']['windowMeters']=2000
+manifest.write_text(json.dumps(x))
+(root/'bad-signal.yml').write_text((root/'config.yml').read_text().replace(str(root/'graph'),str(root/'bad-signal-graph')))
+PY
+if java -Xmx1g -cp "$assets/target/og-curve-gh11.jar:$jar_path" rodeo.opengravel.graphhopper.Import "$tmp/bad-signal.yml" > "$tmp/bad-signal.log" 2>&1; then
+  echo 'FAIL: importer accepted incompatible heading parameters' >&2; exit 1
+fi
+grep -q 'Unexpected heading signal parameter' "$tmp/bad-signal.log"
+echo 'PASS: incompatible heading manifest rejected before graph creation'

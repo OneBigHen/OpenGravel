@@ -88,7 +88,7 @@ public final class Distribution {
         out.put("zeroShare",length>0?bins[0]/length:null);
         Map<String,Double> percentiles=new LinkedHashMap<>();
         Map<String,Double> positivePercentiles=new LinkedHashMap<>();
-        for(int p:new int[]{50,75,90,97}) {
+        for(int p:new int[]{40,50,75,80,90,97}) {
             percentiles.put("p"+p,quantile(bins,p/100d,false));
             positivePercentiles.put("p"+p,quantile(bins,p/100d,true));
         }

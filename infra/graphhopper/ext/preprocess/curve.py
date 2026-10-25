@@ -1,6 +1,7 @@
-"""Local Franco-v1 curvature pre-pass. No OSM IDs, nodes, ways or relations are split.
+"""Local sweep-friendly heading-change pre-pass. No OSM IDs, nodes, ways or relations are split.
 
-Adds og:curve=v1;<latE7>:<lonE7>:<distance_mm>:<curve_area_mm>;... to road ways.
+Heading-v3 manifest; unchanged v1 compressed/chunked wire envelope:
+adds local integrals v1;<latE7>:<lonE7>:<distance_mm>:<curve_area_mm>;... to road ways.
 The cumulative windowed curve area lets a TagParser integrate exactly over each GH
 edge's two endpoints even after GH simplifies the interior geometry. Not a road score.
 """
@@ -101,64 +102,73 @@ def masked_integral(positions, density, control_positions):
 
 
 def window_integrals(line, controls=()):
-    """400 m centred window of weighted curve metres/metre, capped at one.
+    """Absolute heading change/km, 20m samples, centred 1km window.
 
-    Clip the window at collection ends, rather than manufacturing 400 m of straight
-    road. Suppress all curve vertices within 30 m of a junction/control along the
-    collection. Symmetric noise rejection makes source way direction irrelevant.
+    Private resampling never changes OSM nodes/topology. Uniform samples include
+    both ends, making phase and scores direction independent. A 30-degree cap
+    per sample and 360-degree/km ceiling bound zig-zags; the importer separately
+    caps credit on edges shorter than 60m. Junction/control turns earn no credit.
     """
-    fw, lengths = vertex_weights(line)
-    rw, _ = vertex_weights(line[::-1])
-    weights = [min(a,b) for a,b in zip(fw,rw[::-1])]
     positions = [0.0]
-    for length in lengths:
-        positions.append(positions[-1]+length)
-    # O(n) nearest-control suppression along the collection, no all-pairs geometry scan.
-    last = -math.inf
-    controls = set(controls)
-    for i in range(len(line)):
-        if i in controls:
-            last = positions[i]
-        if positions[i]-last <= 30:
-            weights[i] = 0
-    last = math.inf
-    for i in range(len(line)-1,-1,-1):
-        if i in controls:
-            last = positions[i]
-        if last-positions[i] <= 30:
-            weights[i] = 0
-    # Also catch a tight bend that comes physically back near the junction after
-    # travelling more than 30 m. Use a local spatial grid, then the app's haversine.
-    if controls:
-        lon_scale = 111320*max(.01,math.cos(math.radians(line[0][0])))
-        buckets = defaultdict(list)
-        def cell(point):
-            return (math.floor(point[0]*110540/60),math.floor(point[1]*lon_scale/60))
-        for i in controls:
-            buckets[cell(line[i])].append(line[i])
-        for i,weight in enumerate(weights):
-            if not weight:
-                continue
-            row,col = cell(line[i])
-            if any(distance(line[i],control) <= 30
-                   for dr in (-1,0,1) for dc in (-1,0,1)
-                   for control in buckets.get((row+dr,col+dc),())):
-                weights[i] = 0
-    density = [max(weights[i],weights[i+1]) for i in range(len(lengths))]
-    knots,raw_density,raw_area = masked_integral(positions,density,[positions[i] for i in controls])
-
-    def area_at(position):
-        if position >= knots[-1]:
-            return raw_area[-1]
-        i = min(len(raw_density)-1,max(0,bisect_right(knots,position)-1))
-        return raw_area[i]+(position-knots[i])*raw_density[i]
-
-    smooth_area = [0.0]
-    for i,length in enumerate(lengths):
-        midpoint = (positions[i]+positions[i+1])/2
-        left, right = max(0,midpoint-200), min(positions[-1],midpoint+200)
-        value = min(1,max(0,(area_at(right)-area_at(left))/(right-left))) if right>left else 0
-        smooth_area.append(smooth_area[-1]+length*value)
+    for a,b in zip(line,line[1:]): positions.append(positions[-1]+distance(a,b))
+    total=positions[-1]
+    if total<=0: return positions,[0.0]*len(line)
+    count=max(1,math.ceil(total/20))
+    samples=[total*i/count for i in range(count+1)]
+    points=[]
+    for pos in samples:
+        i=min(len(line)-2,max(0,bisect_right(positions,pos)-1))
+        span=positions[i+1]-positions[i]
+        f=(pos-positions[i])/span if span>0 else 0
+        points.append(tuple(a+(b-a)*f for a,b in zip(line[i],line[i+1])))
+    lon_scale=math.cos(math.radians(sum(p[0] for p in line)/len(line)))
+    # A fixed local projection avoids mistaking meridian convergence for bends.
+    headings=[math.atan2((b[1]-a[1])*lon_scale,b[0]-a[0]) for a,b in zip(points,points[1:])]
+    signed=[0.0]+[math.degrees((b-a+math.pi*3)%(math.pi*2)-math.pi) for a,b in zip(headings,headings[1:])]+[0.0]
+    turns=[min(30,abs(value)) for value in signed]
+    control_positions=sorted(positions[i] for i in controls)
+    buckets=defaultdict(list)
+    def cell(point):
+        return (math.floor(point[0]*110540/60),math.floor(point[1]*111320*lon_scale/60))
+    for i in controls: buckets[cell(line[i])].append(line[i])
+    for i,pos in enumerate(samples):
+        near=bisect_right(control_positions,pos)
+        if ((near and pos-control_positions[near-1]<=30)
+                or (near<len(control_positions) and control_positions[near]-pos<=30)):
+            turns[i]=0
+        if turns[i] and buckets:
+            row,col=cell(points[i])
+            if any(distance(points[i],control)<=30 for dr in (-1,0,1) for dc in (-1,0,1)
+                   for control in buckets.get((row+dr,col+dc),())): turns[i]=0
+    # Reject rapid alternating turns: broad sweeps have coherent signed turn,
+    # while a sawtooth's signed change cancels inside a centred 200m window.
+    # Prefix sums are computed before rejection so traversal order is irrelevant.
+    signed_sum=[0.0];absolute_sum=[0.0]
+    for value,turn in zip(signed,turns):
+        signed_sum.append(signed_sum[-1]+math.copysign(turn,value))
+        absolute_sum.append(absolute_sum[-1]+turn)
+    reach=math.floor(100/(total/count)+1e-9)
+    for i,pos in enumerate(samples):
+        lo=max(0,i-reach)
+        hi=min(len(samples),i+reach+1)
+        total_turn=absolute_sum[hi]-absolute_sum[lo]
+        coherence=abs(signed_sum[hi]-signed_sum[lo])/total_turn if total_turn>0 else 0
+        if coherence<.5: turns[i]=0
+    # Spread each vertex turn over its centred sample cell, then integrate.
+    cells=[0.0]+[(a+b)/2 for a,b in zip(samples,samples[1:])]+[total]
+    density=[turn/(b-a) if b>a else 0 for turn,a,b in zip(turns,cells,cells[1:])]
+    knots,raw_density,raw_area=masked_integral(cells,density,control_positions)
+    def area_at(pos):
+        if pos>=knots[-1]: return raw_area[-1]
+        i=min(len(raw_density)-1,max(0,bisect_right(knots,pos)-1))
+        return raw_area[i]+(pos-knots[i])*raw_density[i]
+    smooth_area=[0.0]
+    for a,b in zip(positions,positions[1:]):
+        mid=(a+b)/2
+        left,right=max(0,mid-500),min(total,mid+500)
+        degrees_per_km=1000*(area_at(right)-area_at(left))/(right-left) if right>left else 0
+        value=min(1,max(0,degrees_per_km/360))
+        smooth_area.append(smooth_area[-1]+(b-a)*value)
     return positions,smooth_area
 
 
@@ -318,7 +328,7 @@ def main():
                 controls.add(node.id)
         def way(self,way):
             highway=way.tags.get("highway")
-            if "og:curve" in way.tags:
+            if any(tag.k=="og:curve" or tag.k.startswith("og:curve:") for tag in way.tags):
                 raise ValueError("Input already has og:curve tags; use the original extract")
             if not highway or highway in IGNORED or len(way.nodes)<2:
                 return
@@ -348,7 +358,7 @@ def main():
         db.close()
     with args.output.open("rb") as generated:
         output_sha=hashlib.file_digest(generated,"sha256").hexdigest()
-    metadata={"inputSha256":input_sha,"outputSha256":output_sha,"algorithmSha256":algorithm_sha,"version":"og-curve-window-v1","ways":count,"collections":collections,"seconds":time.monotonic()-start,"input":str(args.input.resolve()),"output":str(args.output.resolve())}
+    metadata={"inputSha256":input_sha,"outputSha256":output_sha,"algorithmSha256":algorithm_sha,"version":"og-curve-heading-v3","signal":{"windowMeters":1000,"sampleMeters":20,"degreesPerKmAtFullCredit":360,"maxTurnDegreesPerSample":30,"noiseWindowMeters":200,"minDirectionalCoherence":0.5,"shortEdgeMeters":60,"fullEdgeCreditMeters":600,"shortEdgeMaxCredit":1/15},"ways":count,"collections":collections,"seconds":time.monotonic()-start,"input":str(args.input.resolve()),"output":str(args.output.resolve())}
     Path(str(args.output)+".json").write_text(json.dumps(metadata,indent=2)+"\n")
     print(json.dumps(metadata),flush=True)
 

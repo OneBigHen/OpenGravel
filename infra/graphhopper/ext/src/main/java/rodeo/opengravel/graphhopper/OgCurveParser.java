@@ -108,12 +108,12 @@ public final class OgCurveParser implements TagParser {
             List<Integral> starts = byCoordinate.get(key(points,0));
             List<Integral> ends = byCoordinate.get(key(points,points.size()-1));
             if (starts == null || ends == null) throw new IllegalArgumentException("GH edge endpoint missing from og:curve pre-pass");
-            double bestError = Double.POSITIVE_INFINITY, result = 0;
+            double bestError = Double.POSITIVE_INFINITY, result = 0, selectedLength = 0;
             boolean ambiguous=false;
             // Unique endpoint coordinates identify the edge independently of GH's interior simplification.
             if (starts.size()==1 && ends.size()==1) {
                 double length=Math.abs(ends.get(0).distanceMm-starts.get(0).distanceMm);
-                return length>0 ? Math.max(0,Math.min(1,Math.abs(ends.get(0).areaMm-starts.get(0).areaMm)/length)) : 0;
+                return length>0 ? bounded(Math.abs(ends.get(0).areaMm-starts.get(0).areaMm)/length,length/1000) : 0;
             }
             for (Integral start : starts) for (Integral end : ends) {
                 double lengthMm = Math.abs(end.distanceMm-start.distanceMm);
@@ -123,6 +123,7 @@ public final class OgCurveParser implements TagParser {
                 if (error < bestError-0.001) {
                     bestError = error;
                     result = ratio;
+                    selectedLength = lengthMm / 1000;
                     ambiguous=false;
                 } else if (Math.abs(error-bestError)<=0.001 && Math.abs(ratio-result)>1e-6) {
                     ambiguous=true;
@@ -130,7 +131,12 @@ public final class OgCurveParser implements TagParser {
             }
             // Repeated coordinates are disambiguated by the edge's real length, not first occurrence.
             if (ambiguous || bestError > Math.max(5,edgeDistance*.05)) return 0; // do not invent credit for an unresolved occurrence
-            return Math.max(0,Math.min(1,result));
+            return bounded(result,selectedLength);
+        }
+        private static double bounded(double score,double originalLength) {
+            // Use pre-simplification length: GH geometry simplification must not change credit.
+            double cap=Math.min(1,1d/15+Math.max(0,originalLength-60)*(14d/15)/540);
+            return Math.max(0,Math.min(cap,score));
         }
         private static long key(PointList points,int i) { return key((int)Math.round(points.getLat(i)*1e7),(int)Math.round(points.getLon(i)*1e7)); }
         private static long key(int lat,int lon) { return ((long)lat << 32) ^ (lon & 0xffffffffL); }

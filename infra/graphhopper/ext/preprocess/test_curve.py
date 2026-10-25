@@ -17,6 +17,42 @@ def table(tag):
 
 
 class CurveTests(unittest.TestCase):
+    def test_flowing_sweep_survives_without_tight_radius_credit(self):
+        line=[(40.8+1000*math.sin(i*.02)/110540,
+               -75.7+1000*math.cos(i*.02)/(111320*math.cos(math.radians(40.8)))) for i in range(101)]
+        self.assertEqual(raw_measure(line),0)
+        positions,areas=window_integrals(line)
+        self.assertGreater(areas[-1]/positions[-1],.12)  # ~57 deg/km / 360
+        self.assertLess(areas[-1]/positions[-1],.18)
+        rp,ra=window_integrals(line[::-1])
+        self.assertAlmostEqual(positions[-1],rp[-1],places=6)
+        self.assertAlmostEqual(areas[-1],ra[-1],places=5)
+        _,controlled=window_integrals(line,{30,75})
+        _,reversed_controlled=window_integrals(line[::-1],{70,25})
+        self.assertAlmostEqual(controlled[-1],reversed_controlled[-1],places=5)
+        for i in range(len(line)):
+            self.assertAlmostEqual(controlled[i],reversed_controlled[-1]-reversed_controlled[-1-i],delta=1e-5)
+        coarse=line[::4]
+        cp,ca=window_integrals(coarse)
+        self.assertAlmostEqual(areas[-1]/positions[-1],ca[-1]/cp[-1],delta=.01)
+
+    def test_broad_s_bends_and_controls_are_direction_independent(self):
+        line=[(40.8+100*math.sin(i/20)/110540,-75.7+i*20/(111320*math.cos(math.radians(40.8)))) for i in range(201)]
+        positions,areas=window_integrals(line,{45,130})
+        _,reverse=window_integrals(line[::-1],{155,70})
+        self.assertGreater(areas[-1],0)
+        for i in range(len(line)):
+            self.assertAlmostEqual(areas[i],reverse[-1]-reverse[-1-i],delta=1e-5)
+
+    def test_straight_stays_zero_and_zigzags_are_rejected(self):
+        straight=[(40.8,-75.7+i*.001) for i in range(31)]
+        _,area=window_integrals(straight)
+        self.assertAlmostEqual(area[-1],0,places=8)
+        zigzag=[(40.8+(i%2)*.0004,-75.7+i*.0003) for i in range(51)]
+        positions,areas=window_integrals(zigzag)
+        self.assertTrue(all(0<=b-a<=q-p+1e-8 for a,b,p,q in zip(areas,areas[1:],positions,positions[1:])))
+        self.assertLess(areas[-1]/positions[-1],.2)
+
     def test_shared_franco_primitive(self):
         fixtures=json.loads((Path(__file__).parents[1]/"fixtures/franco.json").read_text())
         for fixture in fixtures:
@@ -48,6 +84,15 @@ class CurveTests(unittest.TestCase):
         left,right=table(out[1]),table(out[2])
         self.assertLessEqual(abs(left[-1][3]+right[-1][3]-expected[-1][3]),1)  # independently rounded millimetres
         self.assertGreater(right[-1][3],0)
+        # Check each emitted local integral, not only totals, with a control at the join.
+        out={};score_roads(whole,degree,{nodes[20]},lambda wid,tag:out.update({wid:tag}))
+        expected=table(out[1]);out={}
+        score_roads(split,degree,{nodes[20]},lambda wid,tag:out.update({wid:tag}))
+        left,right=table(out[1]),table(out[2])
+        for actual,want in zip(left,expected[:21]):
+            self.assertLessEqual(abs(actual[3]-want[3]),1)
+        for actual,want in zip(right,expected[20:][::-1]):
+            self.assertLessEqual(abs(actual[3]-(expected[-1][3]-want[3])),1)
 
     def test_junction_corner_and_street_farming(self):
         line=[(40.8,-75.7),(40.8001,-75.7),(40.8001,-75.6999)]

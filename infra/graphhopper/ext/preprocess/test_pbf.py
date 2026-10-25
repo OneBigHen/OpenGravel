@@ -10,6 +10,16 @@ import unittest
 
 @unittest.skipUnless(importlib.util.find_spec("osmium"),"pyosmium PBF round-trip runs in powerplex curve-venv")
 class PbfTests(unittest.TestCase):
+    def test_orphaned_curve_chunks_are_rejected(self):
+        here=Path(__file__).parent
+        text=(here.parent/"fixtures/tiny.osm").read_text()
+        with tempfile.TemporaryDirectory() as tmp:
+            source=Path(tmp)/"orphan.osm"
+            source.write_text(text.replace('<tag k="highway"', '<tag k="og:curve:0" v="stale"/><tag k="highway"',1))
+            result=subprocess.run([sys.executable,str(here/"curve.py"),str(source),str(Path(tmp)/"out.osm.pbf")],capture_output=True,text=True)
+            self.assertNotEqual(result.returncode,0)
+            self.assertIn("already has og:curve",result.stderr)
+
     def test_only_curvature_tags_change_and_tag_values_fit_osm(self):
         import osmium
         here=Path(__file__).parent

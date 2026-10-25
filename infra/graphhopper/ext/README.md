@@ -8,22 +8,33 @@ GraphHopper core/web classes are patched or replaced.
 ## Local geometry and continuity
 
 `preprocess/curve.py` joins matching named/ref road ways only at degree-two
-endpoints. It applies the app's Franco-v1 radius bands (175/100/60/30 m), weights
-(1/1.3/1.6/2), and 3–7 segment noise filter. The same geometry/weighted-metre
-fixtures run against the unchanged app implementation and the Python port.
-Forward/reverse minimum vertex weights remove source direction bias. Junction
-and control vertices suppress curve credit within 30 m along the road.
+endpoints. It resamples the private scoring geometry at approximately 20 m,
+including both ends with a direction-independent phase. Original OSM nodes and
+way geometry are preserved. Heading uses a fixed local projection, so meridian
+convergence on a straight road cannot manufacture curvature.
 
-A centred 400 m moving window measures weighted bend metres per metre, clipped
-at collection ends and clamped to `[0,1]`. Short edges inherit the surrounding
-continuous road signal instead of dividing their own tiny curve metres by an
-invented 400 m of straight road. Residential/service/living-street shapes earn
-zero credit, including `_link` variants.
+The signal is total absolute heading change per kilometre inside a centred
+1 km window, clipped at collection ends. It replaces the tight-radius Franco
+primitive for graph import; the app's Franco evaluation/scoring stays unchanged.
+No sinuosity blend is used. Junction/control credit is suppressed within 30 m
+both along the collection and by physical distance, with exact segment clipping.
+Rapid alternating turns are rejected when signed/absolute heading coherence
+among sample centres within 100 m on either side is below 0.5 (a nominal
+200 m neighbourhood, clipped at collection ends). Broad sweeps and S-bends
+survive without a minimum-radius cutoff; a repeated sawtooth is a negative fixture.
+
+Per-sample absolute turn is capped at 30 degrees and window credit at 360 degrees/km.
+The normalized value is `min(1, degrees_per_km / 360)`. The parser further caps
+short-edge credit at 1/15 through 60 m, then ramps continuously to 1 at 600 m.
+This uses original local-integral length, so GH geometry simplification cannot
+change the cap. Residential/service/living-street (including `_link`) credit
+remains zero. Bounds reduce farming incentives; they do not establish rider
+preference or on-road safety.
 
 The pre-pass preserves **all original IDs, nodes, way node lists, relation
 members and tags**. It adds only local `og:curve` metadata on routable road ways, split into
 ASCII chunks below OSM's 255-byte tag-value limit. The payload contains zlib/base64-encoded coordinates, cumulative distance and
-cumulative windowed curve area (integer millimetres). This is a private import
+cumulative normalized heading integral (integer millimetres). This is a private import
 artifact, not data to upload to OSM. Structured local integrals avoid the
 schema draft's way-splitting approach, which would require rewriting via-way
 and other relation references.
@@ -46,12 +57,13 @@ this task's scope.
 ## Models and serving
 
 The baked `prefer-curvature.json` is shared by scenic and twisty lanes, used by
-both Balanced and Curvy app modes. The PA/NJ length-weighted calibration has
-p50=0, p75=0, p90=1/15 and p97=0.4 (p97 is descriptive, not a third cutoff). Inclusive cutoffs handle the large zero tie:
-`og_curve <= 0` multiplies priority by 0.5, and `og_curve <= 1/15` by 0.75.
-Independent rules compose: zero gets 0.375, the first positive bin gets 0.75,
-and values above p90 get 1. Urban and residential/service penalties still apply
-separately, with the existing motorway exemption on the first curve rule.
+both Balanced and Curvy app modes. The current heading graph's length-weighted
+p40=1/15 and p80=4/15 cutoffs come from all eligible non-residential road length
+(zero share 28.93%; p50=1/15). Details are in the dated research report.
+The two independent curve rules multiply priority by 0.5 on dull edges and by
+0.75 through p80. Values above p80 receive no curve penalty. Urban and
+residential/service penalties remain separate, as does the existing motorway
+exemption on the first curve rule. All added multipliers are at most one.
 
 Adventure adds those same two curve rules only on secondary/tertiary/unclassified
 roads with paved or missing surface tags (`MISSING`, `PAVED`, `ASPHALT`,
@@ -105,12 +117,15 @@ separate documented surfaces from the exact model guard above.
 ```sh
 java -Xmx6g -XX:ActiveProcessorCount=4 \
   -cp infra/graphhopper/ext/target/og-curve-gh11.jar:../ghbuild/graphhopper-web-11.0.jar \
-  rodeo.opengravel.graphhopper.Distribution config-window.yml distribution.json
+  rodeo.opengravel.graphhopper.Distribution config-heading-v3.yml distribution.json
 ```
 
-The pre-pass records source, output and algorithm hashes and uses a 24 GiB
-address-space ceiling. The importer requires the completed output manifest and
-verifies the PBF hash. Do not run PA/NJ preprocessing/import on docker-dev.
+The heading-v3 manifest records fixed signal parameters and source/output/algorithm
+hashes. Import validates those parameters, the pinned algorithm digest and the
+prepared PBF hash; prior signal manifests are rejected. The compressed/chunked
+payload retains its v1 envelope, now carrying normalized heading integrals.
+The pre-pass uses a 24 GiB address-space ceiling. Do not run PA/NJ
+preprocessing/import on docker-dev.
 
 Run in the app checkout on powerplex with both isolated servers running:
 

@@ -88,6 +88,17 @@ public final class CurveTest {
         setTag(simplified,mixed.required("curveTag").asText());
         parser.handleWayTags(9,access,simplified,null);
         near(curve.getDecimal(false,2,access),curve.getDecimal(false,9,access),0,"Interior simplification preserves the same endpoint integral");
+        ReaderWay shortEdge=new ReaderWay(1004);shortEdge.setTag("highway","unclassified");
+        shortEdge.setTag("point_list",ab);
+        setTag(shortEdge,pack("v1;408000000:-757000000:0:0;408001000:-757000000:100000:100000"));
+        for(double meters:new double[]{0,11,59.99,60,60.01,330,600}) {
+            shortEdge.removeTag("_og_curve_index");
+            long mm=Math.round(meters*1000);
+            setTag(shortEdge,pack("v1;408000000:-757000000:0:0;408001000:-757000000:"+mm+":"+mm));
+            shortEdge.setTag("edge_distance",meters);
+            parser.handleWayTags(10,access,shortEdge,null);
+            near(meters<.01?0:Math.round(Math.min(1,1d/15+Math.max(0,meters-60)*(14d/15)/540)*15)/15d,curve.getDecimal(false,10,access),1e-8,"Short-edge cap boundary "+meters);
+        }
         System.out.println("PASS: "+fixtures.size()+" pre-pass fixtures; quantization, reversal, per-edge locality, street/link guards, missing pre-pass rejection");
     }
     private static String pack(String text) throws Exception {

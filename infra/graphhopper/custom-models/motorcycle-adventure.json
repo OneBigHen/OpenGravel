@@ -1,22 +1,67 @@
 {
   "distance_influence": 58,
   "priority": [
-    { "if": "!car_access", "multiply_by": "0" },
-    { "if": "road_access == PRIVATE", "multiply_by": "0" },
-    { "if": "road_class == MOTORWAY || road_class == TRUNK", "multiply_by": "0.06" },
-    { "if": "toll == ALL", "multiply_by": "0.2" },
-    { "if": "surface == GRAVEL || surface == GROUND || surface == DIRT || surface == COMPACTED || surface == FINE_GRAVEL", "multiply_by": "1.45" },
-    { "if": "track_type == GRADE1 || track_type == GRADE2", "multiply_by": "1.25" },
-    { "if": "track_type.ordinal() > 2", "multiply_by": "0.4" },
-    { "if": "surface == SAND", "multiply_by": "0.15" },
-    { "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve <= 0", "multiply_by": "0.5" },
-    { "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve <= 0.06666666666666667", "multiply_by": "0.75" },
-    { "if": "true", "multiply_by": "0.82" }
+    {
+      "if": "!car_access",
+      "multiply_by": "0"
+    },
+    {
+      "if": "road_access == PRIVATE",
+      "multiply_by": "0"
+    },
+    {
+      "if": "road_class == MOTORWAY || road_class == TRUNK",
+      "multiply_by": "0.06"
+    },
+    {
+      "if": "toll == ALL",
+      "multiply_by": "0.2"
+    },
+    {
+      "if": "surface == GRAVEL || surface == GROUND || surface == DIRT || surface == COMPACTED || surface == FINE_GRAVEL",
+      "multiply_by": "1.45"
+    },
+    {
+      "if": "track_type == GRADE1 || track_type == GRADE2",
+      "multiply_by": "1.25"
+    },
+    {
+      "if": "track_type.ordinal() > 2",
+      "multiply_by": "0.4"
+    },
+    {
+      "if": "surface == SAND",
+      "multiply_by": "0.15"
+    },
+    {
+      "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve < 0.06666666666666667",
+      "multiply_by": "0.5"
+    },
+    {
+      "if": "(road_class == SECONDARY || road_class == TERTIARY || road_class == UNCLASSIFIED) && (surface == MISSING || surface == PAVED || surface == ASPHALT || surface == CONCRETE || surface == PAVING_STONES || surface == COBBLESTONE) && og_curve <= 0.26666666666666666",
+      "multiply_by": "0.75"
+    },
+    {
+      "if": "true",
+      "multiply_by": "0.82"
+    }
   ],
   "speed": [
-    { "if": "true", "limit_to": "car_average_speed" },
-    { "if": "surface == GRAVEL || surface == GROUND || surface == DIRT || surface == COMPACTED || surface == FINE_GRAVEL", "limit_to": "45" },
-    { "if": "surface == SAND", "limit_to": "18" },
-    { "if": "true", "limit_to": "100" }
+    {
+      "if": "true",
+      "limit_to": "car_average_speed"
+    },
+    {
+      "if": "surface == GRAVEL || surface == GROUND || surface == DIRT || surface == COMPACTED || surface == FINE_GRAVEL",
+      "limit_to": "45"
+    },
+    {
+      "if": "surface == SAND",
+      "limit_to": "18"
+    },
+    {
+      "if": "true",
+      "limit_to": "100"
+    }
   ]
 }
