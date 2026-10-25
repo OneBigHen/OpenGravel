@@ -87,9 +87,9 @@ export function SpotifySetupSection({ readClientId, saveClientId, clearClientId,
   return (
     <section id="spotify" className="og-settings__section" aria-labelledby="settings-spotify-title">
       <div className="og-settings__section-heading">
-        <div><p className="og-settings__eyebrow">OPTIONAL MUSIC</p><h2 id="settings-spotify-title">Spotify</h2></div>
+        <div><h2 id="settings-spotify-title">Spotify</h2></div>
       </div>
-      <p className="og-settings__section-copy">Control your music from the ride screen. OpenGravel never sees your Spotify password. Playback controls need Spotify Premium.</p>
+      <p className="og-settings__section-copy">Playback controls need Spotify Premium.</p>
       <div className="og-settings__editor-actions">
         {nativeSnapshot?.connection === "connected" || nativeSnapshot?.connection === "connecting" ? (
           <button className="og-settings__button" type="button" onClick={() => void nativePlayer?.disconnect()}>{nativeSnapshot.connection === "connecting" ? "Cancel" : "Disconnect Spotify"}</button>

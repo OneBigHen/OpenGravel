@@ -17,7 +17,7 @@ import {
 
 const CHOICES: readonly { readonly screen: NavScreen; readonly label: string }[] = [
   { screen: "opengravel", label: "OpenGravel" },
-  { screen: "native", label: "Native" },
+  { screen: "native", label: "Turn-by-turn" },
 ];
 
 function subscribe(onChange: () => void): () => void {
@@ -32,8 +32,7 @@ export function NavScreenSection() {
     <section className="og-settings__section" aria-labelledby="settings-nav-screen-title">
       <div className="og-settings__section-heading">
         <div>
-          <p className="og-settings__eyebrow">RIDING</p>
-          <h2 id="settings-nav-screen-title">Navigation screen</h2>
+          <h2 id="settings-nav-screen-title">Ride screen</h2>
         </div>
       </div>
       <div className="og-appearance" role="radiogroup" aria-labelledby="settings-nav-screen-title">
@@ -52,10 +51,7 @@ export function NavScreenSection() {
         ))}
       </div>
       <p className="og-settings__section-copy">
-        {screen === "opengravel"
-          ? "Our ride screen: your three stats, Places and Fuel ahead. Voice, GPS and the Lock Screen still run natively."
-          : "The built-in turn-by-turn screen. Your stats, Places and Fuel ahead are not shown on it."}
-        {" "}Applies from the next ride or Resume.
+        Turn-by-turn leaves out your stats and Fuel ahead. Applies from the next ride.
       </p>
     </section>
   );

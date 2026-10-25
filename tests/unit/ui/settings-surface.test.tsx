@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createGarage } from "@/application/garage/garage-model";
+import { addBike, createGarage } from "@/application/garage/garage-model";
 import type { InstalledOfflineRegion, OfflineRegionOffer, OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 
@@ -38,9 +38,10 @@ describe("settings surface", () => {
     const onExport = vi.fn();
     const onDelete = vi.fn();
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} onExport={onExport} onDeleteAll={onDelete} />);
-    expect(screen.getByLabelText("Distance units")).toHaveValue("miles");
-    expect(screen.getByLabelText("Distance units")).toBeDisabled();
-    expect(screen.getByText(/Rides are stored on this device\. Export to keep a copy\./)).toBeInTheDocument();
+    expect(screen.getByTestId("settings-units")).toHaveTextContent("Distance: miles");
+    // Miles are the only unit, so the page states the fact instead of offering dead controls.
+    expect(screen.queryByLabelText("Distance units")).not.toBeInTheDocument();
+    expect(screen.getByText(/Rides stay on this device\. Export includes your garage and preferences\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Export all data" }));
     expect(onExport).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "Delete all data" }));
@@ -64,10 +65,33 @@ describe("settings surface", () => {
     );
 
     expect(screen.getByText("Saved on this device")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Use my current location as Home" }));
+    fireEvent.click(screen.getByRole("button", { name: "Use current location" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear" }));
     expect(onUseCurrentLocationAsHome).toHaveBeenCalledOnce();
     expect(onClearHome).toHaveBeenCalledOnce();
+  });
+
+  it("shows no bike picker or delete for a garage with one bike", () => {
+    render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Use for new rides" })).not.toBeInTheDocument();
+    expect(screen.queryByText("New rides use this bike")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/only bike/i)).not.toBeInTheDocument();
+  });
+
+  it("names the bike new rides use once there is a choice", () => {
+    const onGarageChange = vi.fn();
+    const garage = addBike(createGarage(), {
+      ...createGarage().bikes[0]!,
+      id: "bike_trail",
+      name: "Trail bike",
+      unknownSurface: "avoid-when-possible",
+    });
+    render(<SettingsSurface garage={garage} onGarageChange={onGarageChange} />);
+    expect(screen.getByText("New rides use this bike")).toBeInTheDocument();
+    expect(screen.getByText(/Unknown surface: avoid if possible/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Use for new rides" }));
+    expect(onGarageChange).toHaveBeenCalledWith({ ...garage, activeBikeId: "bike_trail" });
   });
 
   it("re-arms the danger zone instead of leaving Confirm armed after a wipe", () => {
