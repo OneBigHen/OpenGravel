@@ -35,6 +35,17 @@ describe("RideMusicEntry", () => {
     expect(model.skipToNext).toHaveBeenCalledOnce();
   });
 
+  it("splits by placement: now-playing on the map, Connect Spotify in the sheet, never both", () => {
+    const connected = player({ connection: "connected", isPlaying: true, track: { uri: "u", title: "Open Road", artist: "Fixture Artist", artworkDataUrl: null }, errorMessage: null });
+    const { unmount } = render(<><RideMusicEntry player={connected} placement="map" /><RideMusicEntry player={connected} placement="sheet" /></>);
+    expect(screen.getAllByTestId("ride-music")).toHaveLength(1);
+    expect(screen.getByTestId("ride-music")).toHaveAttribute("data-placement", "map");
+    unmount();
+    render(<><RideMusicEntry player={player(idle)} placement="map" /><RideMusicEntry player={player(idle)} placement="sheet" /></>);
+    expect(screen.getAllByTestId("ride-music")).toHaveLength(1);
+    expect(screen.getByTestId("ride-music-connect")).toBeInTheDocument();
+  });
+
   it("offers Play on this phone when connected with nothing playing", () => {
     const model = player({ connection: "connected", isPlaying: false, track: null, errorMessage: "No active Spotify device." });
     render(<RideMusicEntry player={model} />);

@@ -475,7 +475,9 @@ describe("dark chrome and honest states", () => {
     expect(screen.getByTestId("ride-heading")).toHaveTextContent("SW");
     // 8 §2/§5: the engine has not answered, so progress and ETA say so.
     expect(screen.getByTestId("ride-eta")).toHaveTextContent("Unknown");
-    expect(screen.getByTestId("ride-remaining")).toHaveTextContent("Unknown");
+    // Before the first on-route fix the whole route's length is what is left: a
+    // number, never "Unknown" while a route exists.
+    expect(screen.getByTestId("ride-remaining")).not.toHaveTextContent("Unknown");
     // 8 §5: the matcher has not answered, so the *known* objective is the stop
     // list and the bar stays dashed rather than claiming a fraction.
     expect(screen.getByTestId("ride-progress-text")).toHaveTextContent("Stop 0 of 1");
@@ -940,7 +942,7 @@ describe("recording from the map screen", () => {
     expect(strip.querySelectorAll(".og-ride-metrics__slot")).toHaveLength(3);
 
     // And the chevron is still the sheet toggle it always was.
-    const toggle = screen.getByTestId("ride-strip");
+    const toggle = screen.getByTestId("ride-menu");
     expect(toggle).toHaveAccessibleName("Show ride controls");
     fireEvent.click(toggle);
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
@@ -952,7 +954,7 @@ describe("recording from the map screen", () => {
 
     expect(screen.getByTestId("ride-focus")).not.toHaveAttribute("data-recording");
     const strip = screen.getByTestId("ride-strip-bar");
-    const toggle = screen.getByTestId("ride-strip");
+    const toggle = screen.getByTestId("ride-menu");
     expect(strip).not.toHaveAttribute("data-recording");
     expect(toggle).toHaveAccessibleName("Show ride controls");
     expect(screen.queryByTestId("ride-recording-state")).toBeNull();
@@ -1420,6 +1422,45 @@ describe("camera (08 §2, DV-10)", () => {
   });
 });
 
+describe("round 2: starting off route, the paused card, music, the menu button", () => {
+  it("shows the whole route's distance and arrival while the ride starts off the line, never a dash", async () => {
+    await harness({
+      position: "fresh",
+      instruction: "turn",
+      offRoute: "off-route",
+      telemetry: () => ({
+        routeProgress: null,
+        remainingDistanceMeters: null,
+        remainingDurationSeconds: null,
+        etaIso: null,
+        distanceFromRouteMeters: 67,
+      }),
+    });
+    await waitFor(() => expect(screen.getByTestId("ride-metric-value-1").textContent).not.toBe("—"));
+    expect(screen.getByTestId("ride-metric-value-1").textContent).toMatch(/^\d/);
+  });
+
+  it("opens the sheet from the Menu button, found by its test id", async () => {
+    await harness({ position: "fresh" });
+    const menu = screen.getByTestId("ride-menu");
+    expect(menu).toHaveTextContent("Menu");
+    fireEvent.click(menu);
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+  });
+
+  it("a paused ride is one compact card with Resume, and no second status pill", async () => {
+    const { store } = await harness({ position: "fresh", instruction: "turn" });
+    await act(async () => {
+      await store.getState().pause();
+    });
+    await waitFor(() => expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended"));
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-compact", "true");
+    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("Ride paused");
+    expect(screen.getByTestId("ride-card-resume")).toHaveTextContent("Resume");
+    expect(screen.queryByTestId("ride-toast")).toBeNull();
+  });
+});
+
 describe("the strip and the sheet while riding a route (ride overhaul)", () => {
   const HELD = {
     routeProgress: 0.5,
@@ -1454,7 +1495,7 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
 
   it("End ride in the sheet goes to the finish question; Keep riding comes back", async () => {
     const { store } = await harness({ position: "fresh" });
-    fireEvent.click(screen.getByTestId("ride-strip"));
+    fireEvent.click(screen.getByTestId("ride-menu"));
     const end = screen.getByTestId("ride-stop");
     expect(end).toHaveTextContent("End ride");
     expect(end).toBeVisible();
@@ -1469,7 +1510,7 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
   it("Cancel route keeps riding as Free Ride on the same session", async () => {
     const { store, controller } = await harness({ position: "fresh" });
     const sessionId = controller.snapshot()?.sessionId;
-    fireEvent.click(screen.getByTestId("ride-strip"));
+    fireEvent.click(screen.getByTestId("ride-menu"));
     const cancel = screen.getByTestId("continue-free-ride");
     expect(cancel).toHaveTextContent("Cancel route");
     expect(cancel).toHaveTextContent("Keep riding as Free Ride");
@@ -1499,12 +1540,12 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
       expect(start).toBeGreaterThan(-1);
       return css.slice(start, css.indexOf("}", start));
     };
-    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__off-route-action')).toMatch(/min-height:\s*56px/);
+    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-action')).toMatch(/min-height:\s*56px/);
     // Title is the page's 20 px headline, 700; the card has no fixed tall minimum.
-    const title = rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__maneuver-suspended');
+    const title = rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-suspended');
     expect(title).toMatch(/font-size:\s*var\(--og-text-headline\)/);
     expect(title).toMatch(/font-weight:\s*700/);
-    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"]')).toMatch(/min-height:\s*0/);
+    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"]')).toMatch(/min-height:\s*0/);
   });
 });
 
@@ -1710,15 +1751,16 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(strip).toHaveAttribute("data-preset", "navigate");
     expect(screen.getByTestId("ride-metric-slot-0")).toHaveAttribute("data-metric", "speed.current");
     expect(screen.getByTestId("ride-metric-value-0")).toHaveTextContent("32");
-    // The fixture engine has not answered, so the route readouts wait: a dash, never 0.
-    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("—");
-    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-state", "waiting");
+    // The fixture engine has not answered, so the distance left is the whole
+    // route's length (never a dash, never 0).
+    expect(screen.getByTestId("ride-metric-value-1")).not.toHaveTextContent("—");
+    expect(screen.getByTestId("ride-metric-value-1").textContent).toMatch(/^\d/);
     expect(screen.getByTestId("ride-metric-slot-0")).toHaveAccessibleName(
       "Speed, 32 miles per hour. Show ride controls.",
     );
   });
 
-  it("keeps showing a dash, not 0 left, when off the route reads the ride's finish", async () => {
+  it("shows the whole route's length, not 0 left, when off the route reads the ride's finish", async () => {
     // Off the line the matcher projects onto the nearest point of a loop, which
     // can be the closing miles: the strip showed "0.0 mi / 0 min" 900 ft off
     // route on a ride that was nowhere near done.
@@ -1735,10 +1777,10 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     });
 
     expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("900 ft off route");
-    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("—");
-    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-state", "waiting");
-    expect(screen.getByTestId("ride-metric-value-2")).toHaveTextContent("—");
-    expect(screen.getByTestId("ride-remaining")).toHaveTextContent("Unknown");
+    // Not "0.0" (the finish the matcher projected) and not a dash: the route's own length.
+    expect(screen.getByTestId("ride-metric-value-1").textContent).toMatch(/^\d/);
+    expect(screen.getByTestId("ride-metric-value-1")).not.toHaveTextContent(/^0(\.0)?$/);
+    expect(screen.getByTestId("ride-remaining")).not.toHaveTextContent("Unknown");
   });
 
   it("drops the speed bubble while a readout shows speed, and keeps it otherwise", async () => {
@@ -2009,11 +2051,11 @@ describe("the ride screen's number scale and controls (small-screen design syste
     expect(screen.getByTestId("ride-stop")).toHaveTextContent("End ride");
     // The strip holds readouts and the labelled menu button only; nothing beside
     // them squeezes a 24 px reading below the width it needs.
-    const strip = screen.getByTestId("ride-strip").closest(".og-ride__strip");
+    const strip = screen.getByTestId("ride-menu").closest(".og-ride__strip");
     expect(strip).not.toBeNull();
     expect(strip?.querySelectorAll(".og-ride-metrics__slot")).toHaveLength(3);
     expect(strip?.querySelector(".og-ride__strip-end")).toBeNull();
-    expect(screen.getByTestId("ride-strip")).toHaveTextContent("Menu");
+    expect(screen.getByTestId("ride-menu")).toHaveTextContent("Menu");
   });
 
   it("leaves the map full-bleed, with the card and the strip floating over it", () => {

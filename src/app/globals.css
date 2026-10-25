@@ -14432,7 +14432,7 @@ a.og-secondary {
    offset under it, and one 56 px action. About 130 px on a 375 x 667 screen,
    which is under a fifth of it, so the map stays the picture.
    ===================================================================== */
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] {
   grid-template-columns: 48px minmax(0, 1fr);
   grid-template-rows: auto auto auto;
   align-items: center;
@@ -14442,18 +14442,18 @@ a.og-secondary {
   padding: 10px 14px;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__maneuver-symbol {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-symbol {
   grid-row: 1 / span 2;
   width: 48px;
   height: 48px;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__maneuver-glyph {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-glyph {
   width: 48px;
   height: 48px;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__maneuver-suspended {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-suspended {
   grid-column: 2;
   grid-row: 1;
   align-self: end;
@@ -14465,7 +14465,7 @@ a.og-secondary {
   overflow-wrap: anywhere;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__off-route-distance {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-distance {
   grid-column: 2;
   grid-row: 2;
   align-self: start;
@@ -14474,17 +14474,17 @@ a.og-secondary {
   line-height: 1.25;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__off-route-actions {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-actions {
   grid-column: 1 / -1;
   grid-row: 3;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__off-route-action {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-action {
   flex: 1 1 100%;
   min-height: 56px;
 }
 
-.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__gps-badge {
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__gps-badge {
   top: 0;
   right: 0;
 }
@@ -14590,4 +14590,23 @@ a.og-secondary {
 .og-ride-metrics__toggle {
   align-content: center;
   gap: 2px;
+}
+
+/* Every suspended state is the same compact card: a title, one small line, and
+   at most one 56 px action. No fixed tall box, so "Ride paused" is never an
+   empty quarter of the screen. Without a glyph (paused, GPS) it is one column. */
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__maneuver-suspended,
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__off-route-distance {
+  grid-column: 1;
+  grid-row: auto;
+  padding-right: 48px;
+}
+
+.og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__off-route-actions {
+  grid-column: 1;
+  grid-row: auto;
 }

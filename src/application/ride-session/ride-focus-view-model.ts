@@ -820,6 +820,14 @@ function guidanceOf(
             : onRouteActivity && navigation.offRouteState === "uncertain"
               ? "locating"
               : "not-moving";
+    // Stopped (not paused) with a maneuver already issued: the card shows that
+    // maneuver, with its live distance, instead of an empty "Ride paused".
+    if (reason === "not-moving" && navigation.activity !== "paused" && navigation.instruction !== null) {
+      return {
+        kind: "maneuver",
+        maneuver: maneuverOf(navigation.instruction, liveDistanceFor(navigation.instruction, telemetry), telemetry),
+      };
+    }
     // One short line a glance can take (DV-10); the sheet has the detail.
     const text: Readonly<Record<GuidanceSuspendReason, string>> = {
       "not-moving": "Ride paused",

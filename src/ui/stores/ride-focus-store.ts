@@ -119,6 +119,7 @@ import {
   type LeanTelemetryState,
   type Vector3,
 } from "@/domain/motion/lean";
+import { routeLengthMeters } from "@/domain/offline/capabilities";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /**
@@ -863,6 +864,21 @@ export function createRideFocusStore(
         navigation.position.quality !== "unavailable"
       ) {
         heldRoute = { routeId: heldRouteId, telemetry: routeTelemetry };
+      }
+      // Before the rider is first matched on the line (a ride that starts off the
+      // route), the whole route's distance and time are the honest numbers left.
+      if (heldRouteId !== null && heldRoute === null && current.routeLine.length >= 2) {
+        const read = pointer.read();
+        const duration = read.status === "found" ? read.pointer.routeDurationSeconds ?? null : null;
+        heldRoute = {
+          routeId: heldRouteId,
+          telemetry: {
+            routeProgress: null,
+            remainingDistanceMeters: routeLengthMeters(current.routeLine),
+            remainingDurationSeconds: duration,
+            etaIso: null,
+          },
+        };
       }
       const viewModel =
         navigation === null

@@ -297,6 +297,15 @@ export function RideFocus({
   const newerVersionReady = useStore(store, (state) => state.newerVersionReady);
   const riderSettings = useStore(store, (state) => state.riderSettings);
   const surfaceReady = status === "ready" && viewModel !== null;
+  const subscribeMusic = useCallback(
+    (listener: () => void): (() => void) => spotifyPlayer?.subscribe(listener) ?? ((): void => undefined),
+    [spotifyPlayer],
+  );
+  const musicConnected = useSyncExternalStore(
+    subscribeMusic,
+    () => spotifyPlayer?.snapshot().connection === "connected",
+    () => false,
+  );
   const rootRef = useRef<HTMLElement | null>(null);
   const mapSlotRef = useRef<HTMLDivElement | null>(null);
   const topRef = useRef<HTMLElement | null>(null);
@@ -685,6 +694,7 @@ export function RideFocus({
   const alerts = critical.filter((warning) => warning.id !== "gps-unavailable");
   const alert = alerts[0] ?? null;
   const toast = rerouteError ?? rerouteMessage;
+  const musicShown = musicConnected && terminal === null;
   const recenterShown = terminal === null && !follow && controls.recenter.enabled;
   const openSheet = (): void => {
     setSheetOpen(true);
@@ -725,6 +735,8 @@ export function RideFocus({
     offRouteHere && navigation?.position.coordinate != null
       ? headBackDirection(availableRouteLine, navigation.position.coordinate, navigation.position.headingDegrees)
       : null;
+  // The reroute's own status lives inside the card as one small line (never a pill).
+  const cardNote = rerouteError ?? rerouteMessage;
   const headBackRoad = navigation?.instruction?.roadName ?? null;
   const headBackText =
     headBack?.glyph === "uturn"
@@ -758,6 +770,7 @@ export function RideFocus({
       data-gps={position.quality}
       data-follow={follow ? "true" : "false"}
       data-sheet={sheetVisible ? "open" : "closed"}
+      data-music={musicShown ? "true" : undefined}
       /* The strip grows one 20 px line while a recording runs; its own height
          and everything stacked above it read that state from this attribute. */
       data-recording={recordingIndicator === null ? undefined : "true"}
@@ -777,6 +790,7 @@ export function RideFocus({
             data-testid="ride-maneuver"
             data-kind={guidance.kind}
             data-reason={guidance.kind === "suspended" ? guidance.reason : undefined}
+            data-compact={guidance.kind === "suspended" ? "true" : undefined}
             /*
               The card only reserves the extra row when there really is a
               second maneuver inside a mile, so it never grows for a guess
@@ -861,9 +875,9 @@ export function RideFocus({
                 <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
                   {headBackText}
                 </p>
-                {(rerouteError ?? guidance.offRouteDistanceText) === null ? null : (
+                {(cardNote ?? guidance.offRouteDistanceText) === null ? null : (
                   <p className="og-ride__off-route-distance" data-testid="ride-off-route-distance">
-                    {rerouteError ?? guidance.offRouteDistanceText}
+                    {cardNote ?? guidance.offRouteDistanceText}
                   </p>
                 )}
                 {offRouteActionsShown ? (
@@ -887,6 +901,24 @@ export function RideFocus({
                 <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
                   <span data-testid={gpsUnavailable ? "ride-warning-gps-unavailable" : undefined}>{guidance.text}</span>
                 </p>
+                {/* One small line, never a second pill: what the ride is doing right now. */}
+                {cardNote === null ? null : (
+                  <p className="og-ride__off-route-distance" data-testid="ride-card-note">{cardNote}</p>
+                )}
+                {guidance.kind === "suspended" && guidance.reason === "not-moving" && navigation?.activity === "paused" ? (
+                  <div className="og-ride__off-route-actions">
+                    <button
+                      type="button"
+                      className="og-ride__action og-ride__action--primary og-ride__off-route-action"
+                      data-testid="ride-card-resume"
+                      disabled={!controls.resume.enabled}
+                      title={controls.resume.reason ?? undefined}
+                      onClick={(): void => { void store.getState().resume(); }}
+                    >
+                      Resume
+                    </button>
+                  </div>
+                ) : null}
               </>
             )}
             {position.tone === "good" || terminal !== null ? null : (
@@ -934,7 +966,7 @@ export function RideFocus({
           </div>
         )}
 
-        {toast === null || terminal !== null || offRouteHere ? null : (
+        {toast === null || terminal !== null || guidance.kind === "suspended" ? null : (
           <p
             className="og-ride__toast"
             data-testid="ride-toast"
@@ -1194,7 +1226,7 @@ export function RideFocus({
           </div>
         )}
 
-        {spotifyPlayer === undefined ? null : <RideMusicEntry player={spotifyPlayer} />}
+        {spotifyPlayer === undefined ? null : <RideMusicEntry player={spotifyPlayer} placement="sheet" />}
 
         {/*
           `Stop ride` is two steps (8 §11): Finish / Discard / Keep riding, in
@@ -1781,6 +1813,10 @@ export function RideFocus({
         toggle, plus one line naming the recording while one runs. Tapping a
         readout while moving opens the sheet.
       */}
+      {/* Connected music is one 64 px row on the map, right above the strip. */}
+      {spotifyPlayer === undefined || terminal !== null ? null : (
+        <RideMusicEntry player={spotifyPlayer} placement="map" />
+      )}
       <footer
         ref={stripRef}
         className="og-ride__strip"
@@ -1821,7 +1857,7 @@ export function RideFocus({
             <button
               type="button"
               className="og-ride-metrics__toggle"
-              data-testid="ride-strip"
+              data-testid="ride-menu"
               data-held={sheetHeld ? "true" : undefined}
               aria-expanded={sheetVisible}
               aria-controls="og-ride-sheet"

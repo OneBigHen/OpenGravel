@@ -40,7 +40,7 @@ export async function openRideSheet(page: Page): Promise<void> {
   // The sheet also opens and closes by itself (a pause holds it, Resume lets
   // it go), so settle on "open" rather than trusting one read.
   await expect(async () => {
-    if ((await focus.getAttribute("data-sheet")) !== "open") await page.getByTestId("ride-strip").click();
+    if ((await focus.getAttribute("data-sheet")) !== "open") await page.getByTestId("ride-menu").click();
     await expect(focus).toHaveAttribute("data-sheet", "open", { timeout: 1_500 });
   }).toPass({ timeout: 15_000 });
 }

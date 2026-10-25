@@ -30,6 +30,13 @@ import {
 
 export interface RideMusicEntryProps {
   readonly player: SpotifyPlayerPort;
+  /**
+   * Where this copy lives. `map`: the connected now-playing row, on the map
+   * surface above the strip (nothing at all when not connected). `sheet`: the
+   * "Connect Spotify" row and its notes (nothing when connected, because the
+   * map already shows it). Absent: everything, in one place.
+   */
+  readonly placement?: "map" | "sheet";
 }
 
 function Icon({ name }: { readonly name: "note" | "play" | "pause" | "next" }) {
@@ -52,7 +59,7 @@ function outcomeText(outcome: SpotifyOutcome | null): string | null {
   return null;
 }
 
-export function RideMusicEntry({ player }: RideMusicEntryProps) {
+export function RideMusicEntry({ player, placement }: RideMusicEntryProps) {
   const [snapshot, setSnapshot] = useState<SpotifyPlayerSnapshot>(() => player.snapshot());
   const [outcome, setOutcome] = useState<SpotifyOutcome | null>(null);
 
@@ -60,6 +67,8 @@ export function RideMusicEntry({ player }: RideMusicEntryProps) {
 
   // Back from Spotify's sign-in page: read the one-shot result, tidy the URL.
   useEffect(() => {
+    // The map copy never reads the one-shot result: the sheet's copy owns the note.
+    if (placement === "map") return;
     const found = spotifyOutcomeOf(window.location.search);
     if (found === null) return;
     window.history.replaceState(
@@ -69,7 +78,7 @@ export function RideMusicEntry({ player }: RideMusicEntryProps) {
     );
     clearRideReturn();
     queueMicrotask(() => setOutcome(found));
-  }, []);
+  }, [placement]);
 
   const run = (action: () => Promise<void>): void => { void action(); };
   const connect = (): void => {
@@ -78,13 +87,15 @@ export function RideMusicEntry({ player }: RideMusicEntryProps) {
   };
 
   const { connection, track, isPlaying, errorMessage } = snapshot;
+  if (placement === "map" && connection !== "connected") return null;
+  if (placement === "sheet" && connection === "connected") return null;
 
   if (connection === "connected") {
     const line = track === null
       ? (errorMessage === null ? "Spotify" : "Play on this phone")
       : `${track.title} · ${track.artist}`;
     return (
-      <section className="og-ride-music" data-testid="ride-music" data-state="connected" aria-label="Music">
+      <section className="og-ride-music" data-testid="ride-music" data-state="connected" data-placement={placement} aria-label="Music">
         {track?.artworkDataUrl === null || track?.artworkDataUrl === undefined ? (
           <span className="og-ride-music__art" aria-hidden="true"><Icon name="note" /></span>
         ) : (

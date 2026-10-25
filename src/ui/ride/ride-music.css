@@ -132,3 +132,38 @@
   outline: 2px solid var(--og-signal-blue);
   outline-offset: 2px;
 }
+
+/* Connected: the now-playing row sits on the map right above the strip, the
+   strip's own width, under the sheet and never near the top card. */
+.og-ride-music[data-placement="map"] {
+  position: absolute;
+  z-index: 8;
+  left: max(var(--og-ride-gap), var(--og-safe-left));
+  right: max(var(--og-ride-gap), var(--og-safe-right));
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
+  background: var(--og-ride-glass);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+/* The right-hand column and the speed sign rise above the row. */
+.og-ride[data-music="true"] .og-ride__float {
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px + 64px + 12px);
+}
+
+@media (min-width: 700px) {
+  .og-ride-music[data-placement="map"] {
+    right: auto;
+    width: 440px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride-music[data-placement="map"] {
+    right: auto;
+    width: min(360px, 44vw);
+  }
+
+  .og-ride[data-music="true"] .og-ride__float {
+    bottom: max(10px, var(--og-safe-bottom));
+  }
+}
