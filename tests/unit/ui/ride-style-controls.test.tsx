@@ -16,6 +16,7 @@ import type { RideDocument } from "@/domain/ride/types";
 import {
   formatRideTime,
   LOOP_MAX_MINUTES,
+  LoopDirectionRow,
   LoopTimeRow,
   RideShapeSwitch,
   RideStylePanel,
@@ -25,6 +26,7 @@ import {
 } from "@/ui/planner/RideStyleControls";
 import {
   highwayPolicyCommand,
+  loopHeadingCommand,
   loopTimeCommand,
   rideShapeCommand,
   roadCharacterCommand,
@@ -39,6 +41,7 @@ afterEach(() => cleanup());
 const VIEW: RideStyleView = {
   shape: "destination",
   loopMinutes: 120,
+  loopHeading: "any",
   roadCharacter: "balanced",
   noveltyPreference: "balanced",
   surface: "mixed",
@@ -52,6 +55,7 @@ function actions() {
     setBike: vi.fn(),
     setShape: vi.fn<RideStyleActions["setShape"]>(),
     setLoopMinutes: vi.fn<RideStyleActions["setLoopMinutes"]>(),
+    setLoopHeading: vi.fn<RideStyleActions["setLoopHeading"]>(),
     setRoadCharacter: vi.fn<RideStyleActions["setRoadCharacter"]>(),
     setNoveltyPreference: vi.fn<RideStyleActions["setNoveltyPreference"]>(),
     setTraffic: vi.fn<RideStyleActions["setTraffic"]>(),
@@ -107,6 +111,35 @@ describe("ride style controls", () => {
     expect(screen.getByText("3 h")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("loop-time-240"));
     expect(spy.setLoopMinutes).toHaveBeenCalledWith(240);
+  });
+
+  it("the direction row offers any way and the four compass directions", () => {
+    const spy = actions();
+    render(<LoopDirectionRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
+
+    // Any way is the default the engine starts from; nothing else is chosen.
+    expect(screen.getByTestId("loop-heading-any")).toBeChecked();
+    expect(screen.getByTestId("loop-heading-north")).not.toBeChecked();
+    expect(screen.getByRole("radiogroup", { name: "Which way?" }).querySelectorAll("input")).toHaveLength(5);
+    expect(screen.getByText("North")).toBeInTheDocument();
+    expect(screen.getByText("West")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("loop-heading-north"));
+    expect(spy.setLoopHeading).toHaveBeenCalledWith("north");
+  });
+
+  it("shows the authored heading as the chosen chip and applies it as one command", () => {
+    let document = createRideDocument();
+    document = applied(document, loopHeadingCommand(document, "south"));
+    expect(document.intent.loopHeading).toBe("south");
+
+    render(
+      <LoopDirectionRow
+        model={{ view: { ...VIEW, shape: "loop", loopHeading: document.intent.loopHeading ?? "any" }, actions: actions() }}
+      />,
+    );
+    expect(screen.getByTestId("loop-heading-south")).toBeChecked();
+    expect(screen.getByTestId("loop-heading-any")).not.toBeChecked();
   });
 
   it("the panel sets road character, surface, highways and tolls", () => {

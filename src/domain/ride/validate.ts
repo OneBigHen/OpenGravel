@@ -62,6 +62,14 @@ const NOVELTY_PREFERENCES = [
   "prefer-familiar",
 ] as const;
 
+const LOOP_HEADINGS: readonly NonNullable<RideIntent["loopHeading"]>[] = [
+  "any",
+  "north",
+  "east",
+  "south",
+  "west",
+];
+
 const TERRAIN_LEVELS: readonly RideIntent["terrain"]["level"][] = [
   "known-easy-only",
   "moderate",
@@ -408,6 +416,9 @@ export function validateRideIntent(intent: RideIntent): string[] {
     ...(intent.noveltyPreference === undefined
       ? []
       : [["noveltyPreference", intent.noveltyPreference, NOVELTY_PREFERENCES] as const]),
+    ...(intent.loopHeading === undefined
+      ? []
+      : [["loopHeading", intent.loopHeading, LOOP_HEADINGS] as const]),
     ["terrain.level", intent.terrain.level, TERRAIN_LEVELS],
     ["traffic", intent.traffic, TRAFFIC_PREFERENCES],
     ["tollPolicy", intent.tollPolicy, TOLL_POLICIES],

@@ -67,6 +67,7 @@ const DOCUMENTED_COMMAND_TYPES: readonly string[] = [
   "time.set",
   "departure.set",
   "roadCharacter.set",
+  "loopHeading.set",
   "noveltyPreference.set",
   "surface.set",
   "terrain.set",
@@ -247,7 +248,11 @@ describe("RideCommand union (03-DOMAIN-MODEL §26, 02-ARCHITECTURE-CONTRACT §5)
     expect(Object.keys(RIDE_COMMAND_TYPES).sort()).toEqual(
       [...DOCUMENTED_COMMAND_TYPES].sort(),
     );
-    expect(Object.keys(RIDE_COMMAND_TYPES)).toHaveLength(37);
+    // The count follows the documented list above; the equality assertion is
+    // what pins the set, so adding a command cannot pass by editing one number.
+    expect(Object.keys(RIDE_COMMAND_TYPES)).toHaveLength(
+      DOCUMENTED_COMMAND_TYPES.length,
+    );
   });
 
   it("exposes no generic patch or setState mutation member", () => {

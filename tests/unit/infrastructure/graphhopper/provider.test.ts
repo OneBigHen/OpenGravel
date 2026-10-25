@@ -131,6 +131,46 @@ describe("GraphHopper provider", () => {
     expect(answer.candidates).toHaveLength(3);
   });
 
+  it("asks every round-trip seed for the rider's heading", async () => {
+    const { calls, fetcher } = stubFetch([
+      () => jsonResponse(RESPONSE_FIXTURE),
+      () => jsonResponse(RESPONSE_FIXTURE),
+      () => jsonResponse(RESPONSE_FIXTURE),
+    ]);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+    const request: ProviderRouteRequest = {
+      ...REQUEST,
+      destination: HARRISBURG,
+      discovery: {
+        targetMinutes: 75,
+        toleranceMinutes: 15,
+        headingDegrees: 270,
+      },
+    };
+
+    await provider.candidates(request, new AbortController().signal);
+
+    expect(calls.map(({ body }) => body["headings"])).toEqual(Array(3).fill([270]));
+  });
+
+  it("lets the engine choose when the rider asked for any way", async () => {
+    const { calls, fetcher } = stubFetch([
+      () => jsonResponse(RESPONSE_FIXTURE),
+      () => jsonResponse(RESPONSE_FIXTURE),
+      () => jsonResponse(RESPONSE_FIXTURE),
+    ]);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+    const request: ProviderRouteRequest = {
+      ...REQUEST,
+      destination: HARRISBURG,
+      discovery: { targetMinutes: 75, toleranceMinutes: 15 },
+    };
+
+    await provider.candidates(request, new AbortController().signal);
+
+    expect(calls.every(({ body }) => body["headings"] === undefined)).toBe(true);
+  });
+
   it("keeps successful loop seeds when one optional round-trip attempt has no path", async () => {
     const { fetcher } = stubFetch([
       () => jsonResponse(RESPONSE_FIXTURE),

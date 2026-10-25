@@ -9988,6 +9988,45 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   box-shadow: 0 1px 3px rgb(22 29 28 / 22%);
 }
 
+/* A loop's "Which way?": the label on its own line, then five equal chips in
+   one track. Five short words fit even a 320 px phone, so the direction stays
+   one row instead of wrapping into a list; 48 px is the gloved-thumb target. */
+.og-composer__row--direction {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "label"
+    "value";
+  row-gap: 6px;
+}
+
+.og-composer__row--direction > .og-composer__label {
+  grid-area: label;
+}
+
+.og-style__way {
+  grid-area: value;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--og-sandstone) 30%, var(--og-canvas));
+}
+
+.og-style__way .og-style__chip span {
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 4px;
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+  font-size: var(--og-text-meta);
+  /* All five words fit one line at 320 px; if a wider font ever did not, the
+     chip grows a line instead of clipping the word. */
+  white-space: normal;
+}
+
 /* Explore's Rides/Roads lens matches the planner's segmented controls, and
    links inside notices use the app's link colour, not the browser default. */
 .og-explore__lens {

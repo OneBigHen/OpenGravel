@@ -275,3 +275,63 @@ it("preserves an in-budget candidate through near-duplicate suppression", () => 
   const best = result.candidates[result.roles["best-ride"] ?? result.selectedIndex ?? 0];
   expect(best?.durationSeconds).toBe(900);
 });
+
+describe("loop heading preference", () => {
+  /** A small square loop whose centre sits `latOffset` degrees from the origin. */
+  function loop(latOffset: number, durationSeconds: number, fingerprint: string): ProviderCandidate {
+    return providerCandidate({
+      geometry: [
+        ORIGIN,
+        { lon: ORIGIN.lon - 0.04, lat: ORIGIN.lat + latOffset - 0.02 },
+        { lon: ORIGIN.lon + 0.04, lat: ORIGIN.lat + latOffset - 0.02 },
+        { lon: ORIGIN.lon + 0.04, lat: ORIGIN.lat + latOffset + 0.02 },
+        { lon: ORIGIN.lon - 0.04, lat: ORIGIN.lat + latOffset + 0.02 },
+        ORIGIN,
+      ],
+      durationSeconds,
+      providerMetadata: { fingerprint },
+    });
+  }
+
+  it("recommends the loop heading the asked-for way over a faster one heading away", () => {
+    const north = loop(0.15, 7_200, "fp_north");
+    const south = loop(-0.15, 6_600, "fp_south");
+    const result = runCandidatePipeline({
+      candidates: [south, north],
+      intent: { shape: "loop" },
+      policy: POLICY,
+      loopHeading: { origin: ORIGIN, headingDegrees: 0 },
+    });
+
+    // Both stay legal choices; the heading decides which one leads.
+    expect(result.candidates).toHaveLength(2);
+    const best = result.candidates[result.roles["best-ride"] ?? result.selectedIndex ?? 0];
+    expect(best?.fingerprint).toBe("fp_north");
+  });
+
+  it("keeps a legal loop when nothing heads the asked-for way", () => {
+    const south = loop(-0.15, 6_600, "fp_south");
+    const result = runCandidatePipeline({
+      candidates: [south],
+      intent: { shape: "loop" },
+      policy: POLICY,
+      loopHeading: { origin: ORIGIN, headingDegrees: 0 },
+    });
+
+    expect(result.candidates).toHaveLength(1);
+    expect(result.roles["best-ride"]).toBe(0);
+  });
+
+  it("leaves selection alone when the rider asked for any way", () => {
+    const north = loop(0.15, 7_200, "fp_north");
+    const south = loop(-0.15, 6_600, "fp_south");
+    const result = runCandidatePipeline({
+      candidates: [south, north],
+      intent: { shape: "loop" },
+      policy: POLICY,
+    });
+
+    const best = result.candidates[result.roles["best-ride"] ?? result.selectedIndex ?? 0];
+    expect(best?.fingerprint).toBe("fp_south");
+  });
+});

@@ -30,7 +30,7 @@
  *
  * | `false` (metadata only)                        | `true` |
  * | ---------------------------------------------- | ------ |
- * | `longTrip.set` (no routing consumer until 7.5) | `bike.set`, `tollPolicy.set` (eligibility/cost), `departure.set`, `time.set` (traffic + time budget), `ride.reverse`, `ride.clear`, `ride.create`, `point.convert` (the request moves between stops and shaping) |
+ * | `longTrip.set` (no routing consumer until 7.5) | `bike.set`, `tollPolicy.set` (eligibility/cost), `departure.set`, `time.set` (traffic + time budget), `loopHeading.set` (which way the loop is asked to go), `ride.reverse`, `ride.clear`, `ride.create`, `point.convert` (the request moves between stops and shaping) |
  * | `stop.arrivalIntent.set` (no routing consumer yet; the itinerary wave owns it) | `proposal.apply` with any inner `true` |
  * | `avoidArea.update` changing only `name`        | |
  * | a `proposal.apply` whose inner ops all say `false` | |
@@ -59,6 +59,7 @@ import type {
   AvoidArea,
   LocationProvenance,
   LongTripIntent,
+  LoopHeading,
   NoveltyPreference,
   RideDocument,
   RideIntent,
@@ -86,6 +87,7 @@ const NOVELTY_PREFERENCES: readonly NoveltyPreference[] = [
   "balanced",
   "prefer-familiar",
 ];
+const LOOP_HEADINGS: readonly LoopHeading[] = ["any", "north", "east", "south", "west"];
 const TERRAIN_LEVELS: readonly TerrainIntent["level"][] = [
   "known-easy-only",
   "moderate",
@@ -605,6 +607,18 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
         );
       }
       return applyChange({ ...intent, roadCharacter: command.roadCharacter }, true);
+    }
+
+    case "loopHeading.set": {
+      if (!LOOP_HEADINGS.includes(command.loopHeading)) {
+        return fail(
+          "invalid-loop-heading",
+          `loop heading "${command.loopHeading}" is not a known direction`,
+        );
+      }
+      // A heading changes the loop the engine is asked for, so the answer on
+      // screen no longer answers this ride.
+      return applyChange({ ...intent, loopHeading: command.loopHeading }, true);
     }
 
     case "noveltyPreference.set": {

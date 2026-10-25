@@ -5,7 +5,7 @@ import {
   defaultLoopToleranceMinutes,
 } from "@/application/planner/build-plan-request";
 import type { RideCommand } from "@/domain/ride/commands";
-import type { RideDocument } from "@/domain/ride/types";
+import type { LoopHeading, RideDocument } from "@/domain/ride/types";
 import {
   shapeChoice,
   type RideStyleControlsModel,
@@ -17,6 +17,7 @@ import {
   reverseRideCommand,
   bikeCommand,
   highwayPolicyCommand,
+  loopHeadingCommand,
   loopTimeCommand,
   rideShapeCommand,
   roadCharacterCommand,
@@ -36,7 +37,7 @@ export function usePlannerRideStyle(input: {
   readonly rideDocumentStore: RideDocumentStore;
 }): RideStyleControlsModel {
   const { document, rideDocumentStore } = input;
-  const { shape, start, time, roadCharacter, noveltyPreference, surface, avoidHighways, tollPolicy, traffic } = document.intent;
+  const { shape, start, time, roadCharacter, noveltyPreference, loopHeading, surface, avoidHighways, tollPolicy, traffic } = document.intent;
 
   const actions = useMemo(() => {
     const dispatch = (build: (current: RideDocument) => RideCommand): void => {
@@ -52,6 +53,8 @@ export function usePlannerRideStyle(input: {
         dispatch((current) =>
           loopTimeCommand(current, minutes, defaultLoopToleranceMinutes(minutes)),
         ),
+      setLoopHeading: (heading: LoopHeading): void =>
+        dispatch((current) => loopHeadingCommand(current, heading)),
       setRoadCharacter: (next: RideDocument["intent"]["roadCharacter"]): void =>
         dispatch((current) => roadCharacterCommand(current, next)),
       setNoveltyPreference: (next: NonNullable<RideDocument["intent"]["noveltyPreference"]>): void =>
@@ -79,6 +82,7 @@ export function usePlannerRideStyle(input: {
     () => ({
       shape: shapeChoice(shape),
       loopMinutes: time.kind === "budget" ? time.targetMinutes : DEFAULT_LOOP_MINUTES,
+      loopHeading: loopHeading ?? "any",
       startCoordinate: start?.coordinate ?? null,
       roadCharacter,
       noveltyPreference: noveltyPreference ?? "balanced",
@@ -87,7 +91,7 @@ export function usePlannerRideStyle(input: {
       avoidHighways,
       avoidTolls: tollPolicy === "avoid",
     }),
-    [shape, start, time, roadCharacter, noveltyPreference, surface.preference, avoidHighways, tollPolicy, traffic],
+    [shape, start, time, roadCharacter, noveltyPreference, loopHeading, surface.preference, avoidHighways, tollPolicy, traffic],
   );
 
   return useMemo(() => ({ view, actions }), [view, actions]);

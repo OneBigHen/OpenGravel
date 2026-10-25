@@ -227,6 +227,14 @@ export interface ProviderRouteRequest {
   readonly discovery?: {
     readonly targetMinutes: number;
     readonly toleranceMinutes: number;
+    /**
+     * The bearing the loop should head from its start, in degrees clockwise of
+     * north. Absent means "let the engine choose", which is what a rider who
+     * chose "Any way" asked for. A provider may use it to bias the loop; the
+     * returned line is measured against it afterwards, so it never proves the
+     * answer went that way.
+     */
+    readonly headingDegrees?: number;
   };
 }
 

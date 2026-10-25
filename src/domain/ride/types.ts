@@ -119,6 +119,17 @@ export type NoveltyPreference =
   | "balanced"
   | "prefer-familiar";
 
+/**
+ * Which way a loop should head from its start (04 §3).
+ *
+ * `any` is the default and leaves the choice to the engine, so a ride authored
+ * before this preference existed plans exactly as it did. The four compass
+ * words are a preference, not a promise: the returned loop is measured against
+ * the bearing before it is recommended, and a legal loop that heads another way
+ * is still a legal loop.
+ */
+export type LoopHeading = "any" | "north" | "east" | "south" | "west";
+
 /** Surface preference (§8). A target is an envelope, not a promise. */
 export interface SurfaceIntent {
   readonly preference: "pavement" | "mostly-pavement" | "mixed" | "dirt-preferred";
@@ -319,6 +330,11 @@ export interface RideIntent {
    * persisted v1 rides; absence has the same meaning as "balanced".
    */
   readonly noveltyPreference?: NoveltyPreference;
+  /**
+   * Which way a loop should head. Optional only for backward-compatible
+   * persisted rides; absence has the same meaning as "any".
+   */
+  readonly loopHeading?: LoopHeading;
   readonly surface: SurfaceIntent;
   readonly terrain: TerrainIntent;
   readonly traffic: TrafficPreference;
