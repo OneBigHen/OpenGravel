@@ -357,13 +357,10 @@ function refineRepresentativeSet<T>(
  * Chooses at most `maxResults` Pareto-surviving routes using deterministic
  * regret minimization.
  *
- * OpenGravel currently caps the raw candidate pool at six routes. At that
- * scale, exact subset enumeration is cheaper and more reliable than accepting
- * a known greedy/local-exchange miss: six candidates and three visible results
- * means only 20 size-three subsets. Exact enumeration is therefore used for
- * bounded frontiers up to {@link MAX_EXACT_REPRESENTATIVE_FRONTIER}; the
- * existing deterministic greedy + one-exchange approximation remains only as
- * a safety fallback if a future caller bypasses today's small candidate cap.
+ * Exact subset enumeration avoids known greedy/local-exchange misses on
+ * bounded frontiers up to {@link MAX_EXACT_REPRESENTATIVE_FRONTIER}. Twelve
+ * candidates and three visible results require only 220 size-three subsets.
+ * Larger pools use the deterministic greedy + one-exchange approximation.
  */
 export function selectLowRegretRepresentatives<T>(
   candidates: readonly FrontierCandidate<T>[],

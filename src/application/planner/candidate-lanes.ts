@@ -124,7 +124,9 @@ export const DEFAULT_LANES: readonly CandidateLane[] = [
 export const MAX_CONCURRENT_LANES = 2;
 
 /** Total candidates a lane run may return, across every lane (`OGV-D-206`). */
-export const MAX_TOTAL_CANDIDATES = 6;
+// Four served character lanes each return three seeded loops. A six-path
+// cap discarded the entire twisty/adventure lanes before scoring.
+export const MAX_TOTAL_CANDIDATES = 12;
 
 /** The surface preferences that prefer non-paved riding (`06 §21`). */
 const NON_PAVED_PREFERENCES: ReadonlySet<string> = new Set(["mixed", "dirt-preferred"]);
