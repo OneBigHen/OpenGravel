@@ -1,3 +1,4 @@
+import { geometryFunRecommendation } from "@/application/planner/geometry-fun";
 import { loopDirtTarget } from "@/application/planner/atlas-dirt-loops";
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
 import { corridorsInReachableEllipse, type GravelAtlasCorridor, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
@@ -840,6 +841,16 @@ async function planRideAttempt(
   const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
   const formulaMode = riderEnabled ? parseRideFormulaMode(riderEnv["OGV_RIDE_FORMULA"]) : "off";
   const balancedFun = riderEnabled && parsed.value.request.options.roadCharacter === "balanced" && !seeksDirt(parsed.value.request.options);
+  const requestOptions = parsed.value.request.options;
+  // Geometry fun selection is Curvy-only. In the 2026-10-25 benchmark it
+  // regressed Balanced (Jim Thorpe loop 9.48 -> 5.89 curvy mi, Bethlehem
+  // 5.09 -> 4.11, Reading 10.19 -> 8.92), so Balanced and Fast keep the
+  // previous Best Ride selection. Authored/dirt modes keep their objectives.
+  // Jev supplies labels, never this choice.
+  const geometryFun = riderEnabled && requestOptions.roadCharacter === "curvy" &&
+    !seeksDirt(requestOptions) && requestOptions.bike?.category !== "dual-sport" &&
+    parsed.value.request.sketch === undefined && parsed.value.request.shaping.length === 0 &&
+    parsed.value.request.stops.length === 0 && (parsed.value.request.roadSpans?.length ?? 0) === 0;
   let riderCalls = 0;
   let riderFactor: number | undefined;
   let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
@@ -903,6 +914,12 @@ async function planRideAttempt(
           ...(seeksDirt(parsed.value.request.options) ? { recommendationDetourCap: DIRT_DETOUR_CAP } : {}),
           ...(balancedFun ? {} : { recommendationProfile: parsed.value.request.profile }),
         }),
+    ...(geometryFun ? {
+      candidateValueFor: (_candidate, source, fastestSeconds, reference) => geometryFunRecommendation(source, fastestSeconds, reference, requestOptions.traffic === "protect-ride"),
+      recommendationDetourCap: 1.35,
+      // Curvy uses the actual fastest eligible ETA, across lanes.
+      recommendationProfile: undefined,
+    } : {}),
     // What the engine knows about the roads under each line: surface mix, the
     // backroad share and curvature (M3, OGV-D-263).
     evidenceFor: (candidate) => {
@@ -1028,7 +1045,7 @@ async function planRideAttempt(
     others: readonly ProviderCandidate[],
     verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
   ): typeof pipeline | null => {
-    if (formulaMode !== "on") return preferBestRide(preferred, others, verdictFor);
+    if (formulaMode !== "on" && !geometryFun) return preferBestRide(preferred, others, verdictFor);
     const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
     return merged.candidates.length > 0 ? merged : null;
   };
@@ -1052,7 +1069,7 @@ async function planRideAttempt(
       request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, sweepCalls: CURVY_SWEEP.length, deadlineMs: riderBudget.deadlineMs, signal,
+      provider, sweepCalls: Math.min(CURVY_SWEEP.length, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -1299,7 +1316,7 @@ async function planRideAttempt(
   // eligible, in-budget candidates becomes Best Ride; every other outcome —
   // including any failure here — keeps the deterministic roles.
   const env = deps.env ?? process.env;
-  const funJudgeMode = parseFunJudgeMode(env["OGV_JEV_FUN_JUDGE"]);
+  const funJudgeMode = geometryFun ? "off" : parseFunJudgeMode(env["OGV_JEV_FUN_JUDGE"]);
   let judged: FunJudgeSelection = {
     roles: pipeline.roles,
     selectedIndex: pipeline.selectedIndex,

@@ -184,7 +184,7 @@ export interface CandidatePipelineInput {
    */
   readonly discoveryTimebox?: DiscoveryTimebox;
   /** Optional measured recommendation value; canonical evidence and RouteScore stay intact. */
-  readonly candidateValueFor?: (candidate: PipelineCandidate, source: ProviderCandidate, fastestSeconds: number) => number | null;
+  readonly candidateValueFor?: (candidate: PipelineCandidate, source: ProviderCandidate, fastestSeconds: number, reference: ProviderCandidate) => number | null;
   /** How far past the fastest eligible ETA a candidate may still be recommended (default 1.35). */
   readonly recommendationDetourCap?: number;
   /**
@@ -615,8 +615,17 @@ export function runCandidatePipeline(
     enrichCandidate(entry, input, baselineDurationSeconds),
   );
 
+  const referenceTimebox = input.candidateValueFor === undefined ? null : timeboxPreferredIndexes(candidates, input.discoveryTimebox);
+  const referenceIndex = input.candidateValueFor === undefined ? 0 : candidates.map((candidate, index) => ({ candidate, index }))
+    .filter(({ candidate, index }) => referenceTimebox === null
+      ? candidate.durationSeconds <= baselineDurationSeconds * (input.recommendationDetourCap ?? 1.35)
+      : referenceTimebox.has(index))
+    .sort((a, b) => b.candidate.score.total - a.candidate.score.total || a.candidate.durationSeconds - b.candidate.durationSeconds)[0]?.index ?? 0;
+  const recommendationReference = eligible[referenceIndex] === undefined ? undefined : input.candidates[eligible[referenceIndex]!.index];
+  // Sources already passed normalization/eligibility; keep their original
+  // identity so repeated screens/ranks can reuse immutable geometry analysis.
   const recommendationValues = candidates.map((candidate, index) => {
-    const value = input.candidateValueFor?.(candidate, eligible[index]!.candidate, baselineDurationSeconds);
+    const value = input.candidateValueFor?.(candidate, input.candidates[eligible[index]!.index]!, baselineDurationSeconds, recommendationReference!);
     return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
   });
   const ownProfileSeconds = Math.min(...eligible.filter(entry => entry.candidate.profile === input.recommendationProfile).map(entry => entry.candidate.durationSeconds));
@@ -771,7 +780,7 @@ export function runCandidatePipeline(
   );
 
   const scoreSelection = roles["best-ride"] ?? roles.fastest;
-  const selectedIndex = selectTimeboxedCandidate(
+  const selectedIndex = hasRecommendation && scoreSelection !== null && (keptInBox === null || keptInBox.has(scoreSelection)) ? scoreSelection : selectTimeboxedCandidate(
     kept,
     input.discoveryTimebox,
     scoreSelection,

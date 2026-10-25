@@ -1,0 +1,1763 @@
+{
+  "schema": 1,
+  "verdict": "HOLD",
+  "baselineSha": "e9c6644319120fe5271abbf2ed995affa692e16a",
+  "sourceSha256": {
+    "src/application/planner/balanced-search.ts": "b05be89f508a8ccdd729b8959cb2b5c4f26b049ca23715cc0af579543e0d5eb3",
+    "src/application/planner/curvy-search.ts": "eb2978bd175e9a6affd8653fd2ad8a5fa53b5684181c0b3ed01f327ea25f08a3",
+    "src/application/planner/geometry-fun.ts": "48c6625d08e1a81e8669806e7d804b31a100db2772c189d31f6f084304c527e1",
+    "src/application/planner/pipeline.ts": "fad359bd5524b21b42845da7a500475a17b147e8e5438a5dcdc01f5bb8952845",
+    "src/domain/geometry/heading-fun.ts": "49e1b7284b460da1b0c0911b549a376b02516fb98ff48dc0b4c69efd600baf15",
+    "src/server/planning/plan-service.ts": "d55da74efcf4fdb6de16287e39e5506124522c98c831a152f04a3004ff1f98e6",
+    "tests/real-router/fun-selection-live.test.ts": "a97c3754189c61801ff2abcb384e00adc4b41513f42b588e92c5025259a08264",
+    "tests/unit/application/balanced-search.test.ts": "34204438fbc2ed91c68e7033e4a710fc086c788212b55a2251626d70cf30efc4",
+    "tests/unit/application/curvy-search.test.ts": "4e3186b5b5f6e121d0511aea72fcbd23e7b51ebf39f16d8a113cc3abbfe31080",
+    "tests/unit/application/geometry-fun-selection.test.ts": "37c2ad8e3bf8a6a12635195af8320388b4c522c8190c4d4bc1a3853ac8408520",
+    "tests/unit/domain/heading-fun.test.ts": "ecbb37a11011f35c2a8a121d0380360ccf215f81f5a0789ecbd79b2497f90cad",
+    "tests/unit/server/plan-service.test.ts": "7294883b1ebff8c1507368c8caaf11c101b569b9b3d04020c6391f534f05301e"
+  },
+  "router": "http://127.0.0.1:8989",
+  "graphInfo": {
+    "control": {
+      "version": "11.0",
+      "profiles": [
+        {
+          "name": "motorcycle_fastest"
+        },
+        {
+          "name": "motorcycle_twisty"
+        },
+        {
+          "name": "motorcycle_scenic"
+        },
+        {
+          "name": "motorcycle_adventure"
+        }
+      ],
+      "bbox": [
+        -80.588779,
+        38.782374,
+        -73.90647,
+        42.281185
+      ],
+      "data_date": "1970-01-01T00:00:00Z"
+    }
+  },
+  "latency": {
+    "before": {
+      "pooled": {
+        "samples": 36,
+        "p50Ms": 1313.5139439999984,
+        "p95Ms": 4065.0246559999996
+      },
+      "balanced": {
+        "samples": 18,
+        "p50Ms": 1061.451825,
+        "p95Ms": 3489.900952
+      },
+      "curvy": {
+        "samples": 18,
+        "p50Ms": 2411.512973000001,
+        "p95Ms": 4191.968083
+      }
+    },
+    "after": {
+      "pooled": {
+        "samples": 36,
+        "p50Ms": 963.8174750000001,
+        "p95Ms": 3390.764733
+      },
+      "balanced": {
+        "samples": 18,
+        "p50Ms": 376.53522899999916,
+        "p95Ms": 3178.8938019999996
+      },
+      "curvy": {
+        "samples": 18,
+        "p50Ms": 2423.7837839999993,
+        "p95Ms": 5044.821982999998
+      }
+    }
+  },
+  "fastParity": "6/6 identical selected geometry hashes, metrics and Fastest metrics",
+  "pairs": [
+    {
+      "trip": "fun-best-destination",
+      "label": "Jim Thorpe \u2192 Hawk Mountain",
+      "style": "balanced",
+      "before": {
+        "minutes": 51.864333333333335,
+        "miles": 31.775209029269067,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599,
+        "headingDegreesPerKm": 58.51667241646042,
+        "funScore": 23.56823224231975
+      },
+      "after": {
+        "minutes": 51.864333333333335,
+        "miles": 31.775209029269067,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599,
+        "headingDegreesPerKm": 58.51667241646042,
+        "funScore": 23.56823224231975
+      },
+      "beforeHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "afterHttpAttempts": [
+        4,
+        4,
+        4
+      ],
+      "beforeExposure": {
+        "funScore": 23.56823224231975,
+        "headingDegreesPerKm": 58.51667241646042,
+        "bendMeters": 30746.408240314195,
+        "francoPerKm": 5.715393210953625,
+        "busyShare": 0.00034833511602271825,
+        "residentialShare": 0.08415292849007079,
+        "dullMeters": 9593.617517342958
+      },
+      "afterExposure": {
+        "funScore": 23.56823224231975,
+        "headingDegreesPerKm": 58.51667241646042,
+        "bendMeters": 30746.408240314195,
+        "francoPerKm": 5.715393210953625,
+        "busyShare": 0.00034833511602271825,
+        "residentialShare": 0.08415292849007079,
+        "dullMeters": 9593.617517342958
+      }
+    },
+    {
+      "trip": "fun-best-destination",
+      "label": "Jim Thorpe \u2192 Hawk Mountain",
+      "style": "curvy",
+      "before": {
+        "minutes": 51.864333333333335,
+        "miles": 31.775209029269067,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599,
+        "headingDegreesPerKm": 58.51667241646042,
+        "funScore": 23.56823224231975
+      },
+      "after": {
+        "minutes": 53.03895,
+        "miles": 31.640438588642326,
+        "curvyMiles": 3.403516468326938,
+        "francoPerKm": 37.39340735981281,
+        "headingDegreesPerKm": 62.47165055610669,
+        "funScore": 25.17732839740542
+      },
+      "beforeHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "afterHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "beforeExposure": {
+        "funScore": 23.56823224231975,
+        "headingDegreesPerKm": 58.51667241646042,
+        "bendMeters": 30746.408240314195,
+        "francoPerKm": 5.715393210953625,
+        "busyShare": 0.00034833511602271825,
+        "residentialShare": 0.08415292849007079,
+        "dullMeters": 9593.617517342958
+      },
+      "afterExposure": {
+        "funScore": 25.17732839740542,
+        "headingDegreesPerKm": 62.47165055610669,
+        "bendMeters": 32494.432582806494,
+        "francoPerKm": 5.749427473295364,
+        "busyShare": 0.0003498182755195544,
+        "residentialShare": 0.08573175153562745,
+        "dullMeters": 7971.392450133518
+      }
+    },
+    {
+      "trip": "fun-best-loop-120",
+      "label": "Jim Thorpe 120-minute loop",
+      "style": "balanced",
+      "before": {
+        "minutes": 114.604,
+        "miles": 52.06870439135449,
+        "curvyMiles": 9.477011086755333,
+        "francoPerKm": 80.42054207399205,
+        "headingDegreesPerKm": 64.85430340848849,
+        "funScore": 21.66967257615849
+      },
+      "after": {
+        "minutes": 122.0027,
+        "miles": 74.52941757635409,
+        "curvyMiles": 5.886518951236259,
+        "francoPerKm": 27.522807574903556,
+        "headingDegreesPerKm": 45.54438704880311,
+        "funScore": 36.60416451191218
+      },
+      "beforeHttpAttempts": [
+        45,
+        45,
+        45
+      ],
+      "afterHttpAttempts": [
+        37,
+        37,
+        37
+      ],
+      "beforeExposure": {
+        "funScore": 21.66967257615849,
+        "headingDegreesPerKm": 64.85430340848849,
+        "bendMeters": 42602.72665718554,
+        "francoPerKm": 9.024353876962945,
+        "busyShare": 0.10179807346083215,
+        "residentialShare": 0.32147177346340855,
+        "dullMeters": 8019.686741070658
+      },
+      "afterExposure": {
+        "funScore": 36.60416451191218,
+        "headingDegreesPerKm": 45.54438704880311,
+        "bendMeters": 58113.65002631154,
+        "francoPerKm": 5.0795616505116445,
+        "busyShare": 0.05775407900559135,
+        "residentialShare": 0.11002390278095234,
+        "dullMeters": 32507.99228310711
+      }
+    },
+    {
+      "trip": "fun-best-loop-120",
+      "label": "Jim Thorpe 120-minute loop",
+      "style": "curvy",
+      "before": {
+        "minutes": 117.1403,
+        "miles": 45.14583022647737,
+        "curvyMiles": 6.681068316642122,
+        "francoPerKm": 102.16109403765319,
+        "headingDegreesPerKm": 49.29046303889476,
+        "funScore": 12.153768315531872
+      },
+      "after": {
+        "minutes": 121.61063333333333,
+        "miles": 51.53890715720194,
+        "curvyMiles": 10.68700132151769,
+        "francoPerKm": 82.51333663796468,
+        "headingDegreesPerKm": 90.97689386169647,
+        "funScore": 46.42649305522055
+      },
+      "beforeHttpAttempts": [
+        36,
+        36,
+        36
+      ],
+      "afterHttpAttempts": [
+        36,
+        36,
+        36
+      ],
+      "beforeExposure": {
+        "funScore": 12.153768315531872,
+        "headingDegreesPerKm": 49.29046303889476,
+        "bendMeters": 27852.880515612553,
+        "francoPerKm": 13.901364776337381,
+        "busyShare": 0.013532305489388729,
+        "residentialShare": 0.3685405606501307,
+        "dullMeters": 12092.537473723438
+      },
+      "afterExposure": {
+        "funScore": 46.42649305522055,
+        "headingDegreesPerKm": 90.97689386169647,
+        "bendMeters": 56232.689433820706,
+        "francoPerKm": 30.691687793995424,
+        "busyShare": 0,
+        "residentialShare": 0.13188132425186322,
+        "dullMeters": 10797.98628908771
+      }
+    },
+    {
+      "trip": "og-curve:allentown-stroudsburg",
+      "label": "Allentown \u2192 Stroudsburg",
+      "style": "balanced",
+      "before": {
+        "minutes": 63.567233333333334,
+        "miles": 37.73262335460908,
+        "curvyMiles": 3.5586764435871885,
+        "francoPerKm": 32.83237467662846,
+        "headingDegreesPerKm": 60.88961243599142,
+        "funScore": 4.775302574057549
+      },
+      "after": {
+        "minutes": 63.567233333333334,
+        "miles": 37.73262335460908,
+        "curvyMiles": 3.5586764435871885,
+        "francoPerKm": 32.83237467662846,
+        "headingDegreesPerKm": 60.88961243599142,
+        "funScore": 4.775302574057549
+      },
+      "beforeHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "afterHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "beforeExposure": {
+        "funScore": 4.775302574057549,
+        "headingDegreesPerKm": 60.88961243599142,
+        "bendMeters": 21508.315294402448,
+        "francoPerKm": 15.658042575144147,
+        "busyShare": 0.2663819498083426,
+        "residentialShare": 0.3960635639759635,
+        "dullMeters": 10893.275563417676
+      },
+      "afterExposure": {
+        "funScore": 4.775302574057549,
+        "headingDegreesPerKm": 60.88961243599142,
+        "bendMeters": 21508.315294402448,
+        "francoPerKm": 15.658042575144147,
+        "busyShare": 0.2663819498083426,
+        "residentialShare": 0.3960635639759635,
+        "dullMeters": 10893.275563417676
+      }
+    },
+    {
+      "trip": "og-curve:allentown-stroudsburg",
+      "label": "Allentown \u2192 Stroudsburg",
+      "style": "curvy",
+      "before": {
+        "minutes": 84.23875,
+        "miles": 39.06596849399507,
+        "curvyMiles": 5.144490103506931,
+        "francoPerKm": 114.38569787795224,
+        "headingDegreesPerKm": 80.36463263322109,
+        "funScore": 10.618118394095141
+      },
+      "after": {
+        "minutes": 71.71546666666667,
+        "miles": 39.999834715262864,
+        "curvyMiles": 5.407438061945854,
+        "francoPerKm": 62.9652214939251,
+        "headingDegreesPerKm": 69.26232082276319,
+        "funScore": 20.331052524803855
+      },
+      "beforeHttpAttempts": [
+        12,
+        12,
+        12
+      ],
+      "afterHttpAttempts": [
+        12,
+        12,
+        12
+      ],
+      "beforeExposure": {
+        "funScore": 10.618118394095141,
+        "headingDegreesPerKm": 80.36463263322109,
+        "bendMeters": 25290.89492123,
+        "francoPerKm": 20.91548848524097,
+        "busyShare": 0.03491004743716066,
+        "residentialShare": 0.5028066237517171,
+        "dullMeters": 2699.96221096101
+      },
+      "afterExposure": {
+        "funScore": 20.331052524803855,
+        "headingDegreesPerKm": 69.26232082276319,
+        "bendMeters": 35331.54099565604,
+        "francoPerKm": 14.668565035619876,
+        "busyShare": 0.21574442832771093,
+        "residentialShare": 0.24613384931039248,
+        "dullMeters": 8168.106064518677
+      }
+    },
+    {
+      "trip": "og-curve:doylestown-new-hope",
+      "label": "Doylestown \u2192 New Hope",
+      "style": "balanced",
+      "before": {
+        "minutes": 29.084349999999997,
+        "miles": 13.052490331464249,
+        "curvyMiles": 0.9135889949842317,
+        "francoPerKm": 38.136874924528406,
+        "headingDegreesPerKm": 34.61588195624058,
+        "funScore": -0.47671232688870874
+      },
+      "after": {
+        "minutes": 25.832633333333334,
+        "miles": 14.290491653742144,
+        "curvyMiles": 0.8510567975812853,
+        "francoPerKm": 60.586452474717824,
+        "headingDegreesPerKm": 26.73174776156186,
+        "funScore": 1.9572282759010236
+      },
+      "beforeHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "afterHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "beforeExposure": {
+        "funScore": -0.47671232688870874,
+        "headingDegreesPerKm": 34.61588195624058,
+        "bendMeters": 5627.997367597762,
+        "francoPerKm": 10.026847809182803,
+        "busyShare": 0.09135356054807671,
+        "residentialShare": 0.5244279147496291,
+        "dullMeters": 2388.6432340325223
+      },
+      "afterExposure": {
+        "funScore": 1.9572282759010236,
+        "headingDegreesPerKm": 26.73174776156186,
+        "bendMeters": 6909.724030904815,
+        "francoPerKm": 3.1906694299521594,
+        "busyShare": 0.0098629021040806,
+        "residentialShare": 0.2952726037887022,
+        "dullMeters": 7310.691578314532
+      }
+    },
+    {
+      "trip": "og-curve:doylestown-new-hope",
+      "label": "Doylestown \u2192 New Hope",
+      "style": "curvy",
+      "before": {
+        "minutes": 25.832633333333334,
+        "miles": 14.290491653742144,
+        "curvyMiles": 0.8510567975812853,
+        "francoPerKm": 60.586452474717824,
+        "headingDegreesPerKm": 26.73174776156186,
+        "funScore": 1.9572282759010236
+      },
+      "after": {
+        "minutes": 25.832633333333334,
+        "miles": 14.290491653742144,
+        "curvyMiles": 0.8510567975812853,
+        "francoPerKm": 60.586452474717824,
+        "headingDegreesPerKm": 26.73174776156186,
+        "funScore": 1.9572282759010236
+      },
+      "beforeHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "afterHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "beforeExposure": {
+        "funScore": 1.9572282759010236,
+        "headingDegreesPerKm": 26.73174776156186,
+        "bendMeters": 6909.724030904815,
+        "francoPerKm": 3.1906694299521594,
+        "busyShare": 0.0098629021040806,
+        "residentialShare": 0.2952726037887022,
+        "dullMeters": 7310.691578314532
+      },
+      "afterExposure": {
+        "funScore": 1.9572282759010236,
+        "headingDegreesPerKm": 26.73174776156186,
+        "bendMeters": 6909.724030904815,
+        "francoPerKm": 3.1906694299521594,
+        "busyShare": 0.0098629021040806,
+        "residentialShare": 0.2952726037887022,
+        "dullMeters": 7310.691578314532
+      }
+    },
+    {
+      "trip": "og-curve:reading-jim-thorpe",
+      "label": "Reading \u2192 Jim Thorpe",
+      "style": "balanced",
+      "before": {
+        "minutes": 116.15885,
+        "miles": 60.43195736896524,
+        "curvyMiles": 10.19190439204856,
+        "francoPerKm": 76.30283716073367,
+        "headingDegreesPerKm": 69.46107402362838,
+        "funScore": 35.27021671138822
+      },
+      "after": {
+        "minutes": 109.88765,
+        "miles": 58.09875763043824,
+        "curvyMiles": 8.921359306361014,
+        "francoPerKm": 54.443204043287984,
+        "headingDegreesPerKm": 65.8982768530396,
+        "funScore": 32.19640660651959
+      },
+      "beforeHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "afterHttpAttempts": [
+        4,
+        4,
+        4
+      ],
+      "beforeExposure": {
+        "funScore": 35.27021671138822,
+        "headingDegreesPerKm": 69.46107402362838,
+        "bendMeters": 53251.6462287654,
+        "francoPerKm": 12.702657863865449,
+        "busyShare": 0.01688513891189675,
+        "residentialShare": 0.24941833521842083,
+        "dullMeters": 13144.068618977593
+      },
+      "afterExposure": {
+        "funScore": 32.19640660651959,
+        "headingDegreesPerKm": 65.8982768530396,
+        "bendMeters": 49695.769844137125,
+        "francoPerKm": 11.108002158749134,
+        "busyShare": 0.0441996840159331,
+        "residentialShare": 0.2422828399954796,
+        "dullMeters": 13548.534724466806
+      }
+    },
+    {
+      "trip": "og-curve:reading-jim-thorpe",
+      "label": "Reading \u2192 Jim Thorpe",
+      "style": "curvy",
+      "before": {
+        "minutes": 116.15885,
+        "miles": 60.43195736896524,
+        "curvyMiles": 10.19190439204856,
+        "francoPerKm": 76.30283716073367,
+        "headingDegreesPerKm": 69.46107402362838,
+        "funScore": 35.27021671138822
+      },
+      "after": {
+        "minutes": 115.23726666666667,
+        "miles": 61.849868642129955,
+        "curvyMiles": 9.436877595608356,
+        "francoPerKm": 58.28906954534944,
+        "headingDegreesPerKm": 70.97938090184394,
+        "funScore": 45.424235989199985
+      },
+      "beforeHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "afterHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "beforeExposure": {
+        "funScore": 35.27021671138822,
+        "headingDegreesPerKm": 69.46107402362838,
+        "bendMeters": 53251.6462287654,
+        "francoPerKm": 12.702657863865449,
+        "busyShare": 0.01688513891189675,
+        "residentialShare": 0.24941833521842083,
+        "dullMeters": 13144.068618977593
+      },
+      "afterExposure": {
+        "funScore": 45.424235989199985,
+        "headingDegreesPerKm": 70.97938090184394,
+        "bendMeters": 65664.07817282701,
+        "francoPerKm": 20.2700153418852,
+        "busyShare": 0.0600573381346686,
+        "residentialShare": 0.14393111036577025,
+        "dullMeters": 11995.69330687367
+      }
+    },
+    {
+      "trip": "og-curve:bethlehem-delaware-water-gap",
+      "label": "Bethlehem \u2192 Delaware Water Gap",
+      "style": "balanced",
+      "before": {
+        "minutes": 70.9251,
+        "miles": 37.77335485763143,
+        "curvyMiles": 5.086338262833739,
+        "francoPerKm": 72.1527897657548,
+        "headingDegreesPerKm": 77.06632498875877,
+        "funScore": 18.13938934637199
+      },
+      "after": {
+        "minutes": 59.64305,
+        "miles": 35.432310929173624,
+        "curvyMiles": 4.1139267583139185,
+        "francoPerKm": 54.983525753244585,
+        "headingDegreesPerKm": 76.50156262815392,
+        "funScore": 13.02992756310609
+      },
+      "beforeHttpAttempts": [
+        6,
+        6,
+        6
+      ],
+      "afterHttpAttempts": [
+        4,
+        4,
+        4
+      ],
+      "beforeExposure": {
+        "funScore": 18.13938934637199,
+        "headingDegreesPerKm": 77.06632498875877,
+        "bendMeters": 30724.727113072317,
+        "francoPerKm": 19.02358952521016,
+        "busyShare": 0.004125024016780046,
+        "residentialShare": 0.36155662991805915,
+        "dullMeters": 4451.048331485035
+      },
+      "afterExposure": {
+        "funScore": 13.02992756310609,
+        "headingDegreesPerKm": 76.50156262815392,
+        "bendMeters": 30101.81992094427,
+        "francoPerKm": 19.33234651037151,
+        "busyShare": 0.24839198488777928,
+        "residentialShare": 0.3366006102567037,
+        "dullMeters": 4978.27335884704
+      }
+    },
+    {
+      "trip": "og-curve:bethlehem-delaware-water-gap",
+      "label": "Bethlehem \u2192 Delaware Water Gap",
+      "style": "curvy",
+      "before": {
+        "minutes": 72.48601666666667,
+        "miles": 34.5516856557703,
+        "curvyMiles": 4.843229921524896,
+        "francoPerKm": 87.83553335847577,
+        "headingDegreesPerKm": 79.05001332782274,
+        "funScore": 13.428429313173055
+      },
+      "after": {
+        "minutes": 68.00371666666666,
+        "miles": 37.47241981826136,
+        "curvyMiles": 4.340104158358276,
+        "francoPerKm": 52.93208216695928,
+        "headingDegreesPerKm": 75.0719726244006,
+        "funScore": 23.82816242651391
+      },
+      "beforeHttpAttempts": [
+        11,
+        11,
+        11
+      ],
+      "afterHttpAttempts": [
+        12,
+        12,
+        12
+      ],
+      "beforeExposure": {
+        "funScore": 13.428429313173055,
+        "headingDegreesPerKm": 79.05001332782274,
+        "bendMeters": 24499.011773803635,
+        "francoPerKm": 23.37033436652506,
+        "busyShare": 0.016234710714932894,
+        "residentialShare": 0.41027475841210426,
+        "dullMeters": 5293.639078936603
+      },
+      "afterExposure": {
+        "funScore": 23.82816242651391,
+        "headingDegreesPerKm": 75.0719726244006,
+        "bendMeters": 36346.98702946646,
+        "francoPerKm": 12.996288393689126,
+        "busyShare": 0.1320612176301038,
+        "residentialShare": 0.23106952792934984,
+        "dullMeters": 7524.211743675167
+      }
+    }
+  ],
+  "runs": {
+    "before": [
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 264.6272670000001,
+        "httpAttempts": 6,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 339.2887370000001,
+        "httpAttempts": 11,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 2903.425105,
+        "httpAttempts": 45,
+        "bestGeometryHash": "2d4ea76da9e802ee13fb245e9792460b6e2d2d64f2e18a2893c4e6b8169ab6d4",
+        "best": {
+          "minutes": 114.604,
+          "miles": 52.06870439135449,
+          "curvyMiles": 9.477011086755333,
+          "francoPerKm": 80.42054207399205,
+          "headingDegreesPerKm": 64.85430340848849,
+          "funScore": 21.66967257615849
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 2829.0083970000005,
+        "httpAttempts": 36,
+        "bestGeometryHash": "83f92848032ac902697fb9fe2666cc8120effd41ebfbf848fa795cdc74e32323",
+        "best": {
+          "minutes": 117.1403,
+          "miles": 45.14583022647737,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319,
+          "headingDegreesPerKm": 49.29046303889476,
+          "funScore": 12.153768315531872
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 1755.611441000001,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 4191.968083,
+        "httpAttempts": 12,
+        "bestGeometryHash": "ba607d4122cabec912454a5a43c374acef41c6edbd1d585bb1c0bb45472e537e",
+        "best": {
+          "minutes": 84.23875,
+          "miles": 39.06596849399507,
+          "curvyMiles": 5.144490103506931,
+          "francoPerKm": 114.38569787795224,
+          "headingDegreesPerKm": 80.36463263322109,
+          "funScore": 10.618118394095141
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 252.94820400000026,
+        "httpAttempts": 6,
+        "bestGeometryHash": "83640133e794e48ba62e0d39f78c24177f9fbe138aa2bf3a6e9ddc00289563f0",
+        "best": {
+          "minutes": 29.084349999999997,
+          "miles": 13.052490331464249,
+          "curvyMiles": 0.9135889949842317,
+          "francoPerKm": 38.136874924528406,
+          "headingDegreesPerKm": 34.61588195624058,
+          "funScore": -0.47671232688870874
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 486.9957599999998,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 1436.9616220000007,
+        "httpAttempts": 6,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 4065.0246559999996,
+        "httpAttempts": 11,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 1061.451825,
+        "httpAttempts": 6,
+        "bestGeometryHash": "59f930cdf4dd55ebc0944acd601687422f9d8813af21dd2598191e7c46ab285d",
+        "best": {
+          "minutes": 70.9251,
+          "miles": 37.77335485763143,
+          "curvyMiles": 5.086338262833739,
+          "francoPerKm": 72.1527897657548,
+          "headingDegreesPerKm": 77.06632498875877,
+          "funScore": 18.13938934637199
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 3510.8476010000013,
+        "httpAttempts": 11,
+        "bestGeometryHash": "e17642e71d144b10939b852a1b6f764d123d6409df08ec2771c040fafd9b4ffe",
+        "best": {
+          "minutes": 72.48601666666667,
+          "miles": 34.5516856557703,
+          "curvyMiles": 4.843229921524896,
+          "francoPerKm": 87.83553335847577,
+          "headingDegreesPerKm": 79.05001332782274,
+          "funScore": 13.428429313173055
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 358.88438199999996,
+        "httpAttempts": 6,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 416.8019260000001,
+        "httpAttempts": 11,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 3489.900952,
+        "httpAttempts": 45,
+        "bestGeometryHash": "2d4ea76da9e802ee13fb245e9792460b6e2d2d64f2e18a2893c4e6b8169ab6d4",
+        "best": {
+          "minutes": 114.604,
+          "miles": 52.06870439135449,
+          "curvyMiles": 9.477011086755333,
+          "francoPerKm": 80.42054207399205,
+          "headingDegreesPerKm": 64.85430340848849,
+          "funScore": 21.66967257615849
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 2881.762036000001,
+        "httpAttempts": 36,
+        "bestGeometryHash": "83f92848032ac902697fb9fe2666cc8120effd41ebfbf848fa795cdc74e32323",
+        "best": {
+          "minutes": 117.1403,
+          "miles": 45.14583022647737,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319,
+          "headingDegreesPerKm": 49.29046303889476,
+          "funScore": 12.153768315531872
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 1313.5139439999984,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 3221.805007000001,
+        "httpAttempts": 12,
+        "bestGeometryHash": "ba607d4122cabec912454a5a43c374acef41c6edbd1d585bb1c0bb45472e537e",
+        "best": {
+          "minutes": 84.23875,
+          "miles": 39.06596849399507,
+          "curvyMiles": 5.144490103506931,
+          "francoPerKm": 114.38569787795224,
+          "headingDegreesPerKm": 80.36463263322109,
+          "funScore": 10.618118394095141
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 164.58115800000087,
+        "httpAttempts": 6,
+        "bestGeometryHash": "83640133e794e48ba62e0d39f78c24177f9fbe138aa2bf3a6e9ddc00289563f0",
+        "best": {
+          "minutes": 29.084349999999997,
+          "miles": 13.052490331464249,
+          "curvyMiles": 0.9135889949842317,
+          "francoPerKm": 38.136874924528406,
+          "headingDegreesPerKm": 34.61588195624058,
+          "funScore": -0.47671232688870874
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 444.5925789999983,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 1244.1729179999984,
+        "httpAttempts": 6,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 2837.070543,
+        "httpAttempts": 11,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 895.2863719999987,
+        "httpAttempts": 6,
+        "bestGeometryHash": "59f930cdf4dd55ebc0944acd601687422f9d8813af21dd2598191e7c46ab285d",
+        "best": {
+          "minutes": 70.9251,
+          "miles": 37.77335485763143,
+          "curvyMiles": 5.086338262833739,
+          "francoPerKm": 72.1527897657548,
+          "headingDegreesPerKm": 77.06632498875877,
+          "funScore": 18.13938934637199
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 2129.433551000002,
+        "httpAttempts": 11,
+        "bestGeometryHash": "e17642e71d144b10939b852a1b6f764d123d6409df08ec2771c040fafd9b4ffe",
+        "best": {
+          "minutes": 72.48601666666667,
+          "miles": 34.5516856557703,
+          "curvyMiles": 4.843229921524896,
+          "francoPerKm": 87.83553335847577,
+          "headingDegreesPerKm": 79.05001332782274,
+          "funScore": 13.428429313173055
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 277.2552250000001,
+        "httpAttempts": 6,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 366.04144299999984,
+        "httpAttempts": 11,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 2505.901094,
+        "httpAttempts": 45,
+        "bestGeometryHash": "2d4ea76da9e802ee13fb245e9792460b6e2d2d64f2e18a2893c4e6b8169ab6d4",
+        "best": {
+          "minutes": 114.604,
+          "miles": 52.06870439135449,
+          "curvyMiles": 9.477011086755333,
+          "francoPerKm": 80.42054207399205,
+          "headingDegreesPerKm": 64.85430340848849,
+          "funScore": 21.66967257615849
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 2360.4899989999994,
+        "httpAttempts": 36,
+        "bestGeometryHash": "83f92848032ac902697fb9fe2666cc8120effd41ebfbf848fa795cdc74e32323",
+        "best": {
+          "minutes": 117.1403,
+          "miles": 45.14583022647737,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319,
+          "headingDegreesPerKm": 49.29046303889476,
+          "funScore": 12.153768315531872
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 1530.1801529999993,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 3762.564571000001,
+        "httpAttempts": 12,
+        "bestGeometryHash": "ba607d4122cabec912454a5a43c374acef41c6edbd1d585bb1c0bb45472e537e",
+        "best": {
+          "minutes": 84.23875,
+          "miles": 39.06596849399507,
+          "curvyMiles": 5.144490103506931,
+          "francoPerKm": 114.38569787795224,
+          "headingDegreesPerKm": 80.36463263322109,
+          "funScore": 10.618118394095141
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 197.28059199999916,
+        "httpAttempts": 6,
+        "bestGeometryHash": "83640133e794e48ba62e0d39f78c24177f9fbe138aa2bf3a6e9ddc00289563f0",
+        "best": {
+          "minutes": 29.084349999999997,
+          "miles": 13.052490331464249,
+          "curvyMiles": 0.9135889949842317,
+          "francoPerKm": 38.136874924528406,
+          "headingDegreesPerKm": 34.61588195624058,
+          "funScore": -0.47671232688870874
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 428.11897000000135,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 1181.1362119999994,
+        "httpAttempts": 6,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 3544.4657949999983,
+        "httpAttempts": 11,
+        "bestGeometryHash": "b1904ed7e9735cab3f989e77bf4c1ffe763bfff8215c2aca6eb5363216925562",
+        "best": {
+          "minutes": 116.15885,
+          "miles": 60.43195736896524,
+          "curvyMiles": 10.19190439204856,
+          "francoPerKm": 76.30283716073367,
+          "headingDegreesPerKm": 69.46107402362838,
+          "funScore": 35.27021671138822
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 888.8484329999992,
+        "httpAttempts": 6,
+        "bestGeometryHash": "59f930cdf4dd55ebc0944acd601687422f9d8813af21dd2598191e7c46ab285d",
+        "best": {
+          "minutes": 70.9251,
+          "miles": 37.77335485763143,
+          "curvyMiles": 5.086338262833739,
+          "francoPerKm": 72.1527897657548,
+          "headingDegreesPerKm": 77.06632498875877,
+          "funScore": 18.13938934637199
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 2411.512973000001,
+        "httpAttempts": 11,
+        "bestGeometryHash": "e17642e71d144b10939b852a1b6f764d123d6409df08ec2771c040fafd9b4ffe",
+        "best": {
+          "minutes": 72.48601666666667,
+          "miles": 34.5516856557703,
+          "curvyMiles": 4.843229921524896,
+          "francoPerKm": 87.83553335847577,
+          "headingDegreesPerKm": 79.05001332782274,
+          "funScore": 13.428429313173055
+        }
+      }
+    ],
+    "after": [
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 380.916704,
+        "httpAttempts": 4,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 963.8174750000001,
+        "httpAttempts": 11,
+        "bestGeometryHash": "0ad3a4f63b891e3888e17d011fd8d8e081e1eb0f1c1eb3b32fcfe97dc5643f56",
+        "best": {
+          "minutes": 53.03895,
+          "miles": 31.640438588642326,
+          "curvyMiles": 3.403516468326938,
+          "francoPerKm": 37.39340735981281,
+          "headingDegreesPerKm": 62.47165055610669,
+          "funScore": 25.17732839740542
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 3178.8938019999996,
+        "httpAttempts": 37,
+        "bestGeometryHash": "8686b7d2449499459fea13622af33e7cb71916d6fc7b84dabe23045c0b63c1dd",
+        "best": {
+          "minutes": 122.0027,
+          "miles": 74.52941757635409,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556,
+          "headingDegreesPerKm": 45.54438704880311,
+          "funScore": 36.60416451191218
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 3390.764733,
+        "httpAttempts": 36,
+        "bestGeometryHash": "5380cda5266539def86dd1b3174bc6c90ba043e57b2dde57385bf36f4d6a2630",
+        "best": {
+          "minutes": 121.61063333333333,
+          "miles": 51.53890715720194,
+          "curvyMiles": 10.68700132151769,
+          "francoPerKm": 82.51333663796468,
+          "headingDegreesPerKm": 90.97689386169647,
+          "funScore": 46.42649305522055
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 2101.879017000001,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 5044.821982999998,
+        "httpAttempts": 12,
+        "bestGeometryHash": "37a64e2cdce991981bbf1b4ad811a01b70202f189e2a4967e19bdf5d92ddf535",
+        "best": {
+          "minutes": 71.71546666666667,
+          "miles": 39.999834715262864,
+          "curvyMiles": 5.407438061945854,
+          "francoPerKm": 62.9652214939251,
+          "headingDegreesPerKm": 69.26232082276319,
+          "funScore": 20.331052524803855
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 219.59085600000253,
+        "httpAttempts": 6,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 461.86707300000126,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 449.1010639999986,
+        "httpAttempts": 4,
+        "bestGeometryHash": "1fe859ed6392d0f6f2c474df98f742c64ef3d23edf7f28ba513029cf520048bf",
+        "best": {
+          "minutes": 109.88765,
+          "miles": 58.09875763043824,
+          "curvyMiles": 8.921359306361014,
+          "francoPerKm": 54.443204043287984,
+          "headingDegreesPerKm": 65.8982768530396,
+          "funScore": 32.19640660651959
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 2935.9398040000015,
+        "httpAttempts": 11,
+        "bestGeometryHash": "edba95b38371c3552528c52332932164421137be1d87ddf1f8b80f0db918be1d",
+        "best": {
+          "minutes": 115.23726666666667,
+          "miles": 61.849868642129955,
+          "curvyMiles": 9.436877595608356,
+          "francoPerKm": 58.28906954534944,
+          "headingDegreesPerKm": 70.97938090184394,
+          "funScore": 45.424235989199985
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 343.1444940000001,
+        "httpAttempts": 4,
+        "bestGeometryHash": "0f33587f16b85a44079ea2b997a73455018fcac273bd2b3c6371830beb3c5e41",
+        "best": {
+          "minutes": 59.64305,
+          "miles": 35.432310929173624,
+          "curvyMiles": 4.1139267583139185,
+          "francoPerKm": 54.983525753244585,
+          "headingDegreesPerKm": 76.50156262815392,
+          "funScore": 13.02992756310609
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 3205.887069999997,
+        "httpAttempts": 12,
+        "bestGeometryHash": "3cbeaac6f2fd8aedad9f301cf68b7d5953f6b8018d41341c812b16914fb5f39c",
+        "best": {
+          "minutes": 68.00371666666666,
+          "miles": 37.47241981826136,
+          "curvyMiles": 4.340104158358276,
+          "francoPerKm": 52.93208216695928,
+          "headingDegreesPerKm": 75.0719726244006,
+          "funScore": 23.82816242651391
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 275.73337800000013,
+        "httpAttempts": 4,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 757.0606659999999,
+        "httpAttempts": 11,
+        "bestGeometryHash": "0ad3a4f63b891e3888e17d011fd8d8e081e1eb0f1c1eb3b32fcfe97dc5643f56",
+        "best": {
+          "minutes": 53.03895,
+          "miles": 31.640438588642326,
+          "curvyMiles": 3.403516468326938,
+          "francoPerKm": 37.39340735981281,
+          "headingDegreesPerKm": 62.47165055610669,
+          "funScore": 25.17732839740542
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 2857.1175450000005,
+        "httpAttempts": 37,
+        "bestGeometryHash": "8686b7d2449499459fea13622af33e7cb71916d6fc7b84dabe23045c0b63c1dd",
+        "best": {
+          "minutes": 122.0027,
+          "miles": 74.52941757635409,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556,
+          "headingDegreesPerKm": 45.54438704880311,
+          "funScore": 36.60416451191218
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 2165.9051980000004,
+        "httpAttempts": 36,
+        "bestGeometryHash": "5380cda5266539def86dd1b3174bc6c90ba043e57b2dde57385bf36f4d6a2630",
+        "best": {
+          "minutes": 121.61063333333333,
+          "miles": 51.53890715720194,
+          "curvyMiles": 10.68700132151769,
+          "francoPerKm": 82.51333663796468,
+          "headingDegreesPerKm": 90.97689386169647,
+          "funScore": 46.42649305522055
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 1290.4443889999993,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 3044.732677,
+        "httpAttempts": 12,
+        "bestGeometryHash": "37a64e2cdce991981bbf1b4ad811a01b70202f189e2a4967e19bdf5d92ddf535",
+        "best": {
+          "minutes": 71.71546666666667,
+          "miles": 39.999834715262864,
+          "curvyMiles": 5.407438061945854,
+          "francoPerKm": 62.9652214939251,
+          "headingDegreesPerKm": 69.26232082276319,
+          "funScore": 20.331052524803855
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 203.730587,
+        "httpAttempts": 6,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 487.76830399999926,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 376.53522899999916,
+        "httpAttempts": 4,
+        "bestGeometryHash": "1fe859ed6392d0f6f2c474df98f742c64ef3d23edf7f28ba513029cf520048bf",
+        "best": {
+          "minutes": 109.88765,
+          "miles": 58.09875763043824,
+          "curvyMiles": 8.921359306361014,
+          "francoPerKm": 54.443204043287984,
+          "headingDegreesPerKm": 65.8982768530396,
+          "funScore": 32.19640660651959
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 3337.2454359999992,
+        "httpAttempts": 11,
+        "bestGeometryHash": "edba95b38371c3552528c52332932164421137be1d87ddf1f8b80f0db918be1d",
+        "best": {
+          "minutes": 115.23726666666667,
+          "miles": 61.849868642129955,
+          "curvyMiles": 9.436877595608356,
+          "francoPerKm": 58.28906954534944,
+          "headingDegreesPerKm": 70.97938090184394,
+          "funScore": 45.424235989199985
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 336.2650880000019,
+        "httpAttempts": 4,
+        "bestGeometryHash": "0f33587f16b85a44079ea2b997a73455018fcac273bd2b3c6371830beb3c5e41",
+        "best": {
+          "minutes": 59.64305,
+          "miles": 35.432310929173624,
+          "curvyMiles": 4.1139267583139185,
+          "francoPerKm": 54.983525753244585,
+          "headingDegreesPerKm": 76.50156262815392,
+          "funScore": 13.02992756310609
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 2489.0764689999996,
+        "httpAttempts": 12,
+        "bestGeometryHash": "3cbeaac6f2fd8aedad9f301cf68b7d5953f6b8018d41341c812b16914fb5f39c",
+        "best": {
+          "minutes": 68.00371666666666,
+          "miles": 37.47241981826136,
+          "curvyMiles": 4.340104158358276,
+          "francoPerKm": 52.93208216695928,
+          "headingDegreesPerKm": 75.0719726244006,
+          "funScore": 23.82816242651391
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "balanced",
+        "elapsedMs": 525.4855929999999,
+        "httpAttempts": 4,
+        "bestGeometryHash": "74c4c4553c001e157031dae52c5e160aef1dcc0199af527e3529c887f7353507",
+        "best": {
+          "minutes": 51.864333333333335,
+          "miles": 31.775209029269067,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599,
+          "headingDegreesPerKm": 58.51667241646042,
+          "funScore": 23.56823224231975
+        }
+      },
+      {
+        "trip": "fun-best-destination",
+        "style": "curvy",
+        "elapsedMs": 548.5962530000002,
+        "httpAttempts": 11,
+        "bestGeometryHash": "0ad3a4f63b891e3888e17d011fd8d8e081e1eb0f1c1eb3b32fcfe97dc5643f56",
+        "best": {
+          "minutes": 53.03895,
+          "miles": 31.640438588642326,
+          "curvyMiles": 3.403516468326938,
+          "francoPerKm": 37.39340735981281,
+          "headingDegreesPerKm": 62.47165055610669,
+          "funScore": 25.17732839740542
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "balanced",
+        "elapsedMs": 2570.815883,
+        "httpAttempts": 37,
+        "bestGeometryHash": "8686b7d2449499459fea13622af33e7cb71916d6fc7b84dabe23045c0b63c1dd",
+        "best": {
+          "minutes": 122.0027,
+          "miles": 74.52941757635409,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556,
+          "headingDegreesPerKm": 45.54438704880311,
+          "funScore": 36.60416451191218
+        }
+      },
+      {
+        "trip": "fun-best-loop-120",
+        "style": "curvy",
+        "elapsedMs": 2423.7837839999993,
+        "httpAttempts": 36,
+        "bestGeometryHash": "5380cda5266539def86dd1b3174bc6c90ba043e57b2dde57385bf36f4d6a2630",
+        "best": {
+          "minutes": 121.61063333333333,
+          "miles": 51.53890715720194,
+          "curvyMiles": 10.68700132151769,
+          "francoPerKm": 82.51333663796468,
+          "headingDegreesPerKm": 90.97689386169647,
+          "funScore": 46.42649305522055
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "balanced",
+        "elapsedMs": 1399.0673030000007,
+        "httpAttempts": 6,
+        "bestGeometryHash": "bff8ae053cd907afc330d73b981d361e3ce1b85f813ee854f1705d9ede4bc791",
+        "best": {
+          "minutes": 63.567233333333334,
+          "miles": 37.73262335460908,
+          "curvyMiles": 3.5586764435871885,
+          "francoPerKm": 32.83237467662846,
+          "headingDegreesPerKm": 60.88961243599142,
+          "funScore": 4.775302574057549
+        }
+      },
+      {
+        "trip": "og-curve:allentown-stroudsburg",
+        "style": "curvy",
+        "elapsedMs": 3056.4165649999995,
+        "httpAttempts": 12,
+        "bestGeometryHash": "37a64e2cdce991981bbf1b4ad811a01b70202f189e2a4967e19bdf5d92ddf535",
+        "best": {
+          "minutes": 71.71546666666667,
+          "miles": 39.999834715262864,
+          "curvyMiles": 5.407438061945854,
+          "francoPerKm": 62.9652214939251,
+          "headingDegreesPerKm": 69.26232082276319,
+          "funScore": 20.331052524803855
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "balanced",
+        "elapsedMs": 261.09925400000066,
+        "httpAttempts": 6,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:doylestown-new-hope",
+        "style": "curvy",
+        "elapsedMs": 429.1731060000002,
+        "httpAttempts": 11,
+        "bestGeometryHash": "f9805baa52f3c0996c61f478219fb7481feba2222ab7c8f5a2d960d14920da3d",
+        "best": {
+          "minutes": 25.832633333333334,
+          "miles": 14.290491653742144,
+          "curvyMiles": 0.8510567975812853,
+          "francoPerKm": 60.586452474717824,
+          "headingDegreesPerKm": 26.73174776156186,
+          "funScore": 1.9572282759010236
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "balanced",
+        "elapsedMs": 366.6382300000005,
+        "httpAttempts": 4,
+        "bestGeometryHash": "1fe859ed6392d0f6f2c474df98f742c64ef3d23edf7f28ba513029cf520048bf",
+        "best": {
+          "minutes": 109.88765,
+          "miles": 58.09875763043824,
+          "curvyMiles": 8.921359306361014,
+          "francoPerKm": 54.443204043287984,
+          "headingDegreesPerKm": 65.8982768530396,
+          "funScore": 32.19640660651959
+        }
+      },
+      {
+        "trip": "og-curve:reading-jim-thorpe",
+        "style": "curvy",
+        "elapsedMs": 3358.257424999998,
+        "httpAttempts": 11,
+        "bestGeometryHash": "edba95b38371c3552528c52332932164421137be1d87ddf1f8b80f0db918be1d",
+        "best": {
+          "minutes": 115.23726666666667,
+          "miles": 61.849868642129955,
+          "curvyMiles": 9.436877595608356,
+          "francoPerKm": 58.28906954534944,
+          "headingDegreesPerKm": 70.97938090184394,
+          "funScore": 45.424235989199985
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "balanced",
+        "elapsedMs": 355.25320999999894,
+        "httpAttempts": 4,
+        "bestGeometryHash": "0f33587f16b85a44079ea2b997a73455018fcac273bd2b3c6371830beb3c5e41",
+        "best": {
+          "minutes": 59.64305,
+          "miles": 35.432310929173624,
+          "curvyMiles": 4.1139267583139185,
+          "francoPerKm": 54.983525753244585,
+          "headingDegreesPerKm": 76.50156262815392,
+          "funScore": 13.02992756310609
+        }
+      },
+      {
+        "trip": "og-curve:bethlehem-delaware-water-gap",
+        "style": "curvy",
+        "elapsedMs": 2373.925621000002,
+        "httpAttempts": 12,
+        "bestGeometryHash": "3cbeaac6f2fd8aedad9f301cf68b7d5953f6b8018d41341c812b16914fb5f39c",
+        "best": {
+          "minutes": 68.00371666666666,
+          "miles": 37.47241981826136,
+          "curvyMiles": 4.340104158358276,
+          "francoPerKm": 52.93208216695928,
+          "headingDegreesPerKm": 75.0719726244006,
+          "funScore": 23.82816242651391
+        }
+      }
+    ]
+  },
+  "holdReasons": [
+    "Mixed ride quality: Balanced Jim Thorpe loop loses tight bend miles and eligible-road heading density while adding time.",
+    "Curvy p95 latency is 20.4% higher in 18 samples per revision; no per-mode no-slowdown acceptance."
+  ]
+}
