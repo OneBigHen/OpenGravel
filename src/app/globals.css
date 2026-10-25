@@ -13786,11 +13786,12 @@ a.og-secondary {
 
 .og-explore-card__fact {
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
-.og-explore-card__fact + .og-explore-card__fact::before {
-  margin-right: var(--og-space-1);
+/* The separator trails each fact, so a wrapped line never starts with "·". */
+.og-explore-card__fact:not(:last-child)::after {
+  margin-left: var(--og-space-1);
   color: var(--og-slate-text);
   content: "·";
 }

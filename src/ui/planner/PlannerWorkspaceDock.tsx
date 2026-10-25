@@ -144,7 +144,8 @@ export function PlannerWorkspaceDock({
   const destinationLine =
     placeLabel === NO_FINISH_LABEL || placeLabel === NO_START_LABEL || placeLabel === "From your sketch" || placeLabel === ""
       ? null
-      : `${loopRide ? "Loop from" : "To"} ${placeLabel}`;
+      : // The place name a rider says ("Hawk Mountain Sanctuary"), not its full address.
+        `${loopRide ? "Loop from" : "To"} ${placeLabel.split(",")[0]?.trim() || placeLabel}`;
 
   const historyHidden =
     (viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null);
