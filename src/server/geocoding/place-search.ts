@@ -185,7 +185,9 @@ async function poiRows(
     signal,
   };
   const places = await tomtom.search(request);
-  if (places.length > 0 || target.town === null) return places;
+  if (target.town === null) return places;
+  // Around a town the rider named, the nearest branch is the one they want.
+  if (places.length > 0) return nearestFrom(target.center, places);
   return nearestFrom(
     target.center,
     await tomtom.search({ ...request, radiusMeters: PLACE_NEAREST_REACH_METERS }),
@@ -292,6 +294,7 @@ function rankSplitAnswer(
 
 /** One answer as the rider sees it: merged, and ordered when it used a split. */
 function answerRows(
+  query: string,
   answer: PoiAnswer,
   photonPlaces: readonly PlaceMatch[],
   bias: Coordinate | undefined,
@@ -301,9 +304,36 @@ function answerRows(
     secondaryRows(answer.town, photonPlaces),
     bias,
   );
-  return answer.splitTerm === null
+  const ranked = answer.splitTerm === null
     ? places
     : rankSplitAnswer(answer.splitTerm, answer, places);
+  return placeNamedExactlyFirst(query, ranked, answer.places);
+}
+
+/** Words of a name with case, accents and punctuation set aside. */
+function nameWords(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * A place (not a business) named exactly what the rider typed leads the list:
+ * "Jim Thorpe" is the town before "The Inn at Jim Thorpe", even though business
+ * answers usually lead.
+ */
+function placeNamedExactlyFirst(
+  query: string,
+  places: readonly PlaceMatch[],
+  businesses: readonly PlaceMatch[],
+): PlaceMatch[] {
+  const typed = nameWords(withoutTrailingUsState(query));
+  if (typed === "") return [...places];
+  const exact = places.find((place) => !businesses.includes(place) && nameWords(place.name) === typed);
+  return exact === undefined ? [...places] : [exact, ...places.filter((place) => place !== exact)];
 }
 
 async function settled<T>(work: Promise<T>, fallback: T): Promise<T> {
@@ -334,7 +364,7 @@ export function createPlaceSearchEngine(options: PlaceSearchEngineOptions): Plac
       // Nothing answered. The handler turns this into one fixed "unavailable".
       throw new Error("Place search is unavailable");
     }
-    const places = answerRows(poi, photonPlaces ?? [], bias);
+    const places = answerRows(query, poi, photonPlaces ?? [], bias);
     if (places.length > 0 || tomtom === undefined) return places;
     // Both sources answered nothing for the query as typed. That is the only
     // moment a two-word brand-and-town split is worth asking for. An unexpected
@@ -342,6 +372,6 @@ export function createPlaceSearchEngine(options: PlaceSearchEngineOptions): Plac
     const retried = await trailingTownRetry(photon, tomtom, parsed, bias, signal)
       .catch(() => NO_POI_ANSWER);
     if (retried.places.length === 0 && retried.town === null) return places;
-    return answerRows(retried, photonPlaces ?? [], bias);
+    return answerRows(query, retried, photonPlaces ?? [], bias);
   };
 }

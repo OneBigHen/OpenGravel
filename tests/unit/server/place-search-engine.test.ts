@@ -401,6 +401,23 @@ describe("place search engine", () => {
     expect(tomtomUrls.map(tomtomQuery)).toEqual(["Lehighton"]);
   });
 
+  it("puts the town named exactly as typed above businesses that carry its name", async () => {
+    const inn = {
+      id: "inn-jim-thorpe",
+      poi: { name: "The Inn at Jim Thorpe" },
+      address: { streetName: "Broadway", municipality: "Jim Thorpe", countrySubdivisionCode: "PA", countryCode: "US" },
+      position: { lat: 40.8762, lon: -75.7325 },
+    };
+    const { fetcher } = stub(
+      (query) => (query === "Jim Thorpe" ? [JIM_THORPE_TOWN] : []),
+      () => ({ results: [inn] }),
+    );
+    const places = await engine(fetcher)("Jim Thorpe", JIM_THORPE, signal());
+
+    expect(places[0]?.label).toBe("Jim Thorpe, PA");
+    expect(places.map((place) => place.name)).toContain("The Inn at Jim Thorpe");
+  });
+
   it("does not split a two-word town's own name into a brand and a fragment", async () => {
     const { fetcher, photonQueries, tomtomUrls } = stub(
       (query) => (query === "Jim Thorpe" ? [JIM_THORPE_TOWN] : []),
