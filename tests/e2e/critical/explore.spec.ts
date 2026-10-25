@@ -126,7 +126,9 @@ test("shows the Roads empty state when no rider evidence is present", async ({ p
   await page.goto("/explore");
   await page.getByRole("tab", { name: "Ride", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Worth riding", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
+  // The rides lead the screen; the search field and the list are the first content.
+  await expect(page.getByRole("searchbox", { name: "Search routes" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Explore routes" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });
@@ -134,6 +136,6 @@ test("shows the Roads empty state when no rider evidence is present", async ({ p
 test("shows the honest Roads empty state when road data is unavailable", async ({ page }) => {
   await page.goto("/explore?roads=empty");
   await page.getByRole("tab", { name: "Ride", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search routes" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
 });
