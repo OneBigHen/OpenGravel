@@ -13,6 +13,7 @@ import { LayeredMap, type MapLayersProps } from "@/ui/layers/LayeredMap";
 
 import { PlaceCard } from "./PlaceCard";
 import { PlacesControl } from "./PlacesControl";
+import { PlacesSheetRows } from "./PlacesSheetRows";
 import { usePlacesOverlay } from "./usePlacesOverlay";
 
 /** Planning is for later today as often as for now, so the planner opens on today. */
@@ -41,7 +42,7 @@ export function PlannerPlacesMap({
   readonly places?: PlannerPlacesProps | undefined;
   readonly layers?: MapLayersProps | undefined;
 }) {
-  if (places === undefined) return <LayeredMap {...map} layers={layers} />;
+  if (places === undefined) return <LayeredMap {...map} layers={layers} mapStyleInSheet />;
   return <PlannerMapWithPlaces map={map} places={places} layers={layers} />;
 }
 
@@ -86,7 +87,27 @@ function PlannerMapWithPlaces({
 
   return (
     <>
-      <LayeredMap {...map} scene={scene} onIntent={intercept} onViewport={places.onViewport} layers={layers} />
+      <LayeredMap
+        {...map}
+        scene={scene}
+        onIntent={intercept}
+        onViewport={places.onViewport}
+        layers={layers}
+        mapStyleInSheet
+        panelSettings={
+          <PlacesSheetRows
+            enabled={places.enabled}
+            status={places.status}
+            reason={places.reason}
+            count={places.count}
+            scope={places.scope}
+            query={places.query}
+            onToggle={places.toggle}
+            setWindow={places.setWindow}
+            setKinds={places.setKinds}
+          />
+        }
+      />
       <div className="og-places-overlay og-places-overlay--planner" data-testid="places-overlay">
         <PlacesControl
           enabled={places.enabled}

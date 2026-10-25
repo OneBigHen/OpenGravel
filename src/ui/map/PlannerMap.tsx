@@ -55,7 +55,7 @@
  */
 
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coordinate } from "@/domain/ride/types";
 import { MAP_LAYERS } from "@/application/map-layers/catalog";
 
@@ -79,7 +79,13 @@ import {
   type MapScaleBar as MapScaleBarReading,
 } from "@/application/map/scale";
 import type { MapIntent, MapPointAction, MapScene } from "@/application/map/types";
-import { BASEMAP_LOOK_PREFERENCE_KEY, SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
+import {
+  LOOK_LABEL,
+  LOOK_NOTE,
+  readLookChoice,
+  writeLookChoice,
+  type BasemapLook,
+} from "@/ui/map/basemap-look";
 import { MapCompass, MapScaleBar, MapZoomControls } from "@/ui/map/MapControls";
 
 /**
@@ -234,6 +240,19 @@ export interface PlannerMapProps {
    */
   readonly clusterControls?: ReactNode;
   /**
+   * The basemap look the layers sheet owns, when the sheet is the control on
+   * this screen. Supplying it (with `onLookChange`) makes this surface's look
+   * controlled; omitting both leaves the map's own button in charge.
+   */
+  readonly look?: BasemapLook;
+  /** The rider's choice from the sheet, applied and reflected by the map. */
+  readonly onLookChange?: (look: BasemapLook) => void;
+  /**
+   * The looks this host can actually draw, reported once the renderer is known.
+   * A sheet must not offer Satellite on a host that cannot draw it.
+   */
+  readonly onLookOptions?: (looks: readonly BasemapLook[]) => void;
+  /**
    * The rider's request for one more recovery attempt, as a token the workspace
    * bumps (05 §8's fit pattern). Only a *change* asks for a retry, so the mount
    * itself never spends one; the one live host is asked, never a new surface.
@@ -314,6 +333,9 @@ export function PlannerMap({
   onCamera,
   forcedLook,
   basemap = "empty",
+  look: controlledLook,
+  onLookChange,
+  onLookOptions,
   onEscape,
   onRenderError,
   onLoadStatus,
@@ -363,7 +385,17 @@ export function PlannerMap({
   /** The night look (Night contrast, or the host's own dark scrim). */
   const [nightAvailable, setNightAvailable] = useState(false);
   /** The rider's basemap look; one of Map / Night / Satellite. */
-  const [look, setLook] = useState<BasemapLook>(forcedLook ?? "map");
+  const [ownLook, setOwnLook] = useState<BasemapLook>(forcedLook ?? "map");
+  const controlled = controlledLook !== undefined && onLookChange !== undefined;
+  const look = controlled ? controlledLook : ownLook;
+  const controlledLookRef = useRef(controlledLook);
+  useEffect(() => {
+    controlledLookRef.current = controlledLook;
+  }, [controlledLook]);
+  const setLook = useCallback((next: BasemapLook): void => {
+    if (controlled) onLookChange(next);
+    else setOwnLook(next);
+  }, [controlled, onLookChange]);
   const [lookMenuOpen, setLookMenuOpen] = useState(false);
   const lookMenuRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef(scene);
@@ -435,8 +467,10 @@ export function PlannerMap({
 
     void (async () => {
       // A surface that insists on a look (the ride follows Day/Night) neither
-      // reads nor writes the rider's planner preference.
-      const openedWith = forcedLook ?? readLookChoice();
+      // reads nor writes the rider's planner preference. When a sheet owns the
+      // choice, its value is the opening look; the stored value is only read by
+      // an uncontrolled surface.
+      const openedWith = forcedLook ?? controlledLookRef.current ?? readLookChoice();
       const host = await hostFactory(container, {
         basemap,
         ...(openedWith === "night" ? { basemapLook: "night" as const } : {}),
@@ -456,12 +490,20 @@ export function PlannerMap({
       if (terrainRef.current) host.setTerrain3d?.(true);
       if (host.supportsSatellite === true) setSatelliteAvailable(true);
       if (host.supportsNightLook === true) setNightAvailable(true);
-      if (openedWith === "satellite" && host.supportsSatellite === true) {
-        host.setSatellite?.(true);
-        setLook("satellite");
-      } else if (openedWith === "night" && host.supportsNightLook === true) {
-        setLook("night");
-      }
+      // Re-read a sheet-owned choice: it may have arrived from storage while
+      // the renderer was starting. A look the host cannot draw falls back to
+      // the map, so the sheet never claims an imagery mode that is not showing.
+      const desired = forcedLook ?? controlledLookRef.current ?? openedWith;
+      const resolved = desired === "satellite" && host.supportsSatellite !== true
+        ? "map"
+        : desired === "night" && host.supportsNightLook !== true
+          ? "map"
+          : desired;
+      if (resolved === "satellite") host.setSatellite?.(true);
+      else if (resolved === "night") host.setBasemapLook?.("night");
+      // A sheet-owned surface already holds this value; only its fallback (an
+      // unsupported remembered look) needs to travel back up.
+      if (!controlled || controlledLookRef.current !== resolved) setLook(resolved);
       unsubscribe = host.onIntent((intent) => {
         if (intent.type === "map-long-press") {
           if (longPressEnabledRef.current && activeToolRef.current === "pan") setPointMenu(intent);
@@ -610,15 +652,26 @@ export function PlannerMap({
     const host = hostRef.current;
     host?.setSatellite?.(next === "satellite");
     host?.setBasemapLook?.(next === "night" ? "night" : "map");
-    setLook(next);
   }, []);
 
   /** The rider's own pick: it is remembered, and it closes the menu. */
   const chooseLook = useCallback((next: BasemapLook): void => {
     applyLook(next);
+    setLook(next);
     setLookMenuOpen(false);
     writeLookChoice(next);
-  }, [applyLook]);
+  }, [applyLook, setLook]);
+
+  // A sheet-owned choice arrives as a prop: apply it whenever it changes, but
+  // not on the first render — the host creation effect already opened with it.
+  const appliedLook = useRef<BasemapLook | null>(null);
+  useEffect(() => {
+    if (!controlled || controlledLook === undefined) return;
+    if (appliedLook.current === controlledLook) return;
+    appliedLook.current = controlledLook;
+    if (hostRef.current === null) return;
+    applyLook(controlledLook);
+  }, [applyLook, controlled, controlledLook]);
 
   /*
     The look this surface insists on, re-applied only when it *changes*: a
@@ -632,7 +685,8 @@ export function PlannerMap({
   useEffect(() => {
     if (forcedLookSeen === null || hostRef.current === null) return;
     applyLook(forcedLookSeen);
-  }, [forcedLookSeen, applyLook]);
+    setLook(forcedLookSeen);
+  }, [forcedLookSeen, applyLook, setLook]);
 
   /**
    * The style button sits in a different corner per tier and surface, so the
@@ -674,11 +728,17 @@ export function PlannerMap({
     };
   }, [lookMenuOpen]);
 
-  const looks: readonly BasemapLook[] = [
-    "map",
-    ...(nightAvailable ? (["night"] as const) : []),
-    ...(satelliteAvailable ? (["satellite"] as const) : []),
-  ];
+  const looks = useMemo<readonly BasemapLook[]>(
+    () => [
+      "map",
+      ...(nightAvailable ? (["night"] as const) : []),
+      ...(satelliteAvailable ? (["satellite"] as const) : []),
+    ],
+    [nightAvailable, satelliteAvailable],
+  );
+  useEffect(() => {
+    onLookOptions?.(looks);
+  }, [looks, onLookOptions]);
 
   const handleContextMenu = useCallback((event: React.MouseEvent): void => {
     // The host feeds contextmenu through the same reducer as a timed hold.
@@ -830,41 +890,6 @@ export function PlannerMap({
   );
 }
 
-
-type BasemapLook = "map" | "night" | "satellite";
-
-const LOOK_LABEL: Readonly<Record<BasemapLook, string>> = {
-  map: "Map",
-  night: "Night",
-  satellite: "Satellite",
-};
-
-const LOOK_NOTE: Readonly<Record<BasemapLook, string>> = {
-  map: "Terrain, trails and roads",
-  night: "Dark, for night riding",
-  satellite: "Aerial imagery",
-};
-
-/** The rider's last basemap look; a per-device convenience only. */
-function readLookChoice(): BasemapLook {
-  try {
-    const stored = window.localStorage.getItem(BASEMAP_LOOK_PREFERENCE_KEY);
-    if (stored === "map" || stored === "night" || stored === "satellite") return stored;
-    // The older Map/Satellite toggle's choice carries over.
-    return window.localStorage.getItem(SATELLITE_PREFERENCE_KEY) === "1" ? "satellite" : "map";
-  } catch {
-    return "map";
-  }
-}
-
-function writeLookChoice(look: BasemapLook): void {
-  try {
-    window.localStorage.setItem(BASEMAP_LOOK_PREFERENCE_KEY, look);
-    window.localStorage.setItem(SATELLITE_PREFERENCE_KEY, look === "satellite" ? "1" : "0");
-  } catch {
-    // Storage may be unavailable (private mode); the choice simply is not kept.
-  }
-}
 
 /** The baseline region, re-exported so the E2E's documented default stays one value. */
 export { DEFAULT_MAP_EXTENT };

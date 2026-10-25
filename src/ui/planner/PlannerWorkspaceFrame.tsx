@@ -172,7 +172,14 @@ export function PlannerWorkspaceFrame({
       </header>
 
       <div className="og-planner__body">
-        <div className="og-planner__map-slot" ref={mapSlotRef}>
+        <div
+          className="og-planner__map-slot"
+          ref={mapSlotRef}
+          // The layers sheet can own these controls only when it exists: no
+          // layer source means no sheet, so the map keeps its own buttons.
+          data-map-style-sheet={layers === undefined ? "false" : "true"}
+          data-places-sheet={places === undefined || layers === undefined ? "false" : "true"}
+        >
           <PlannerPlacesMap
             {...map}
             scene={scene}

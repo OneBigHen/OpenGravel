@@ -33,7 +33,7 @@ const KINDS: readonly { readonly value: PlaceKind; readonly label: string }[] = 
   { value: "event", label: "Events" },
 ];
 
-function statusMessage(status: PlacesOverlayStatus, reason: string | null, count: number, scope: "view" | "route"): string | null {
+export function placesStatusMessage(status: PlacesOverlayStatus, reason: string | null, count: number, scope: "view" | "route"): string | null {
   if (status === "zoom-in") return "Zoom in to see places";
   if (status === "unavailable") return `Places unavailable — ${reason ?? "the source gave no reason."}`;
   if (status === "loading") return "Finding places…";
@@ -65,7 +65,7 @@ export function PlacesControl({
   setKinds,
   collapsible = false,
 }: PlacesControlProps) {
-  const message = enabled ? statusMessage(status, reason, count, scope) : null;
+  const message = enabled ? placesStatusMessage(status, reason, count, scope) : null;
   const badge = enabled ? badgeFor(status, count, scope) : null;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const showFilters = enabled && (!collapsible || filtersOpen);

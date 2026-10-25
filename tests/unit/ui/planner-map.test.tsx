@@ -633,6 +633,43 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
   });
 });
 
+describe("a look the layers sheet owns", () => {
+  it("reports the looks the host can draw and applies the chosen one", async () => {
+    const base = createStubMapHostFactory();
+    const setSatellite = vi.fn();
+    const setBasemapLook = vi.fn();
+    const onLookOptions = vi.fn();
+    const onLookChange = vi.fn();
+    const factory = (container: HTMLElement, options: Parameters<typeof base.factory>[1]) =>
+      Object.assign(base.factory(container, options), {
+        supportsSatellite: true,
+        supportsNightLook: true,
+        setSatellite,
+        setBasemapLook,
+      });
+    const props = {
+      scene: scene(),
+      onIntent: (() => undefined) as never,
+      activeTool: "pan" as const,
+      hostFactory: factory as never,
+      onLookOptions,
+      onLookChange,
+    };
+    const view = render(<PlannerMap {...props} look="map" />);
+    await act(settle);
+    expect(onLookOptions).toHaveBeenLastCalledWith(["map", "night", "satellite"]);
+    expect(onLookChange).not.toHaveBeenCalled();
+
+    view.rerender(<PlannerMap {...props} look="night" />);
+    await act(settle);
+    expect(setBasemapLook).toHaveBeenLastCalledWith("night");
+    expect(setSatellite).toHaveBeenLastCalledWith(false);
+    // A sheet-owned choice is not written back as the rider's preference here.
+    expect(window.localStorage.getItem("opengravel-basemap-look")).toBeNull();
+    view.unmount();
+  });
+});
+
 describe("a surface that insists on a look (the ride follows Day/Night)", () => {
   const props = {
     scene: scene(),

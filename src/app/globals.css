@@ -67,12 +67,24 @@
   --og-dur-fast: 140ms;
   --og-dur-base: 220ms;
 
-  /* Editorial type scale (12 §4). */
-  --og-text-eyebrow: 11px;
-  --og-text-meta: 13px;
-  --og-text-body: 15px;
-  --og-text-title: clamp(20px, 1.2vw + 15px, 24px);
+  /* Editorial type scale (12 §4; small-screen design system v2 in
+     docs/vnext/design/small-screen-v2.md). Five rider-facing sizes, nothing
+     below 12px. Eyebrow and page are legacy aliases kept for existing screens. */
+  --og-text-caption: 12px;
+  --og-text-meta: 14px;
+  --og-text-body: 16px;
+  --og-text-headline: 20px;
+  --og-text-title: 28px;
+  --og-text-eyebrow: 12px;
   --og-text-page: clamp(32px, 3.2vw + 20px, 48px);
+
+  /* Spacing scale: 4 · 8 · 12 · 16 · 24 · 32. Screen gutter 16, section gap 24. */
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-5: 24px;
+  --og-space-6: 32px;
 
   /* The device safe-area insets as readable custom properties (12 §12): the
      camera fit insets are computed in JS (05 §9) and the stylesheet is the one
@@ -9512,6 +9524,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-layers__lens {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: auto auto;
@@ -9519,7 +9532,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   align-items: center;
   width: 100%;
   min-height: 60px;
-  padding: 10px 12px;
+  padding: 10px 48px 10px 12px;
   border: 1px solid var(--og-hairline-strong);
   border-radius: var(--og-radius-object);
   background: var(--og-well);
@@ -9539,6 +9552,12 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   box-shadow: inset 0 0 0 1px var(--og-deep-spruce);
   background: color-mix(in srgb, var(--og-deep-spruce) 14%, var(--og-paper));
   color: var(--og-deep-spruce);
+}
+
+.og-layers__lens .og-layers__toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .og-layers__lens-glyph {
@@ -9564,6 +9583,13 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   .og-layers__lens {
     transition: none;
   }
+}
+
+/* The sheet only owns the basemap and Places on a phone; desktop keeps the
+   map's own style button and the Places pill. */
+.og-layers__group--style,
+.og-layers__group--places {
+  display: none;
 }
 
 .og-layers__group h3 {
@@ -9691,6 +9717,94 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-layers__row[data-on="true"] .og-layers__toggle::after {
   transform: translateX(14px);
+}
+
+/* A lens is also a switch, but its tile has no row wrapper: state it directly. */
+.og-layers__lens[data-on="true"] .og-layers__toggle {
+  background: var(--og-deep-spruce);
+}
+
+.og-layers__lens[data-on="true"] .og-layers__toggle::after {
+  transform: translateX(14px);
+}
+
+/* Map style is a radio group: one basemap at a time, so a check not a toggle. */
+.og-layers__switch--choice {
+  grid-template-columns: 34px minmax(0, 1fr) 28px;
+}
+
+.og-layers__switch--plain {
+  grid-template-columns: 34px minmax(0, 1fr) 36px;
+  align-items: start;
+}
+
+.og-layers__check {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--og-hairline-strong);
+  border-radius: 50%;
+  color: var(--og-paper);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.og-layers__row[data-on="true"] .og-layers__check {
+  border-color: var(--og-deep-spruce);
+  background: var(--og-deep-spruce);
+}
+
+.og-layers__group--style .og-layers__swatch {
+  --og-layer-color: var(--og-slate);
+}
+
+.og-layers__group--places .og-layers__swatch {
+  --og-layer-color: var(--og-golden-hour);
+}
+
+/* Places opens its time and kind filters as plain chips under the row. */
+.og-layers__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 8px 10px 52px;
+}
+
+.og-layers__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.og-layers__option {
+  min-height: 40px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  color: var(--og-ink);
+  cursor: pointer;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: 999px;
+  background: var(--og-paper);
+}
+
+.og-layers__option[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--og-golden-hour) 70%, var(--og-ink));
+  background: color-mix(in srgb, var(--og-golden-hour) 26%, var(--og-paper));
+}
+
+.og-layers__option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.og-layers__option:focus-visible,
+.og-layers__check:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
 }
 
 .og-layers__about {
@@ -9973,6 +10087,198 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   .og-planner:has(.og-info-card) .og-planner__header,
   .og-planner:has(.og-places-card) .og-planner__header {
     z-index: 6;
+  }
+}
+
+/* Phone panel rows (docs/vnext/design/small-screen-v2.md §6): 56 px rows with a
+   24 px icon, a body-size title and a meta line that wraps instead of being cut
+   off. The per-row "i" buttons only repeated the source text, so a phone gets
+   one short meta line and the full caveat stays on the wider layout. The map
+   style and Places controls live in this sheet too, which is why the globe
+   button and the Places pill leave the phone map. */
+@media (max-width: 760px) {
+  [data-map-style-sheet="true"] .og-map__look,
+  [data-places-sheet="true"] .og-places-overlay--planner .og-places-control {
+    display: none;
+  }
+
+  .og-layers__panel {
+    max-height: 72dvh;
+    border-radius: var(--og-radius-sheet);
+  }
+
+  .og-layers__head {
+    padding: 8px 8px 8px 16px;
+  }
+
+  .og-layers__head h2 {
+    font-size: var(--og-text-headline);
+    line-height: 1.25;
+    font-weight: 700;
+  }
+
+  .og-layers__clear,
+  .og-layers__close {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .og-layers__body {
+    padding: 4px 16px 16px;
+  }
+
+  .og-layers__group--style,
+  .og-layers__group--places {
+    display: block;
+  }
+
+  .og-layers__group h3 {
+    margin: 16px 0 4px;
+    font-size: var(--og-text-caption);
+    line-height: 1.3;
+  }
+
+  .og-layers__switch {
+    grid-template-columns: 24px minmax(0, 1fr) auto 44px;
+    gap: 12px;
+    min-height: 56px;
+    padding: 4px 0;
+  }
+
+  .og-layers__switch--choice {
+    grid-template-columns: 24px minmax(0, 1fr) 24px;
+  }
+
+  .og-layers__switch--plain {
+    grid-template-columns: 24px minmax(0, 1fr) 44px;
+    align-items: center;
+  }
+
+  .og-layers__swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .og-layers__name {
+    font-size: var(--og-text-body);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .og-layers__legend {
+    font-size: var(--og-text-meta);
+    line-height: 1.35;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .og-layers__status {
+    font-size: var(--og-text-caption);
+  }
+
+  .og-layers__about,
+  .og-layers__caveat {
+    display: none;
+  }
+
+  .og-layers__toggle {
+    width: 44px;
+    height: 26px;
+  }
+
+  .og-layers__toggle::after {
+    width: 22px;
+    height: 22px;
+  }
+
+  .og-layers__row[data-on="true"] .og-layers__toggle::after,
+  .og-layers__lens[data-on="true"] .og-layers__toggle::after {
+    transform: translateX(18px);
+  }
+
+  .og-layers__subswitch {
+    margin: 0 0 8px;
+    min-height: 48px;
+  }
+
+  .og-layers__filters {
+    margin: 4px 0 12px 36px;
+  }
+
+  .og-layers__option {
+    min-height: 48px;
+  }
+}
+
+/* A phone-width layer sheet uses rows, not a two-column tile grid. */
+@media (max-width: 479px) {
+  .og-layers__lenses {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin: 4px 0;
+  }
+
+  .og-layers__lenses > li {
+    border-bottom: 1px solid var(--og-hairline);
+  }
+
+  .og-layers__lenses > li:last-child {
+    border-bottom: 0;
+  }
+
+  .og-layers__lens {
+    grid-template-columns: 24px minmax(0, 1fr) 44px;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 1px;
+    min-height: 56px;
+    padding: 7px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .og-layers__lens[data-on="true"] {
+    background: transparent;
+    box-shadow: none;
+    color: var(--og-ink);
+  }
+
+  .og-layers__lens-glyph {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    width: 24px;
+    font-size: 20px;
+    text-align: center;
+  }
+
+  .og-layers__lens-name {
+    grid-column: 2;
+    font-size: var(--og-text-body);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .og-layers__lens-hint {
+    grid-column: 2;
+    font-size: var(--og-text-meta);
+    line-height: 1.35;
+    opacity: 1;
+    color: var(--og-slate-text);
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .og-layers__lens .og-layers__toggle {
+    position: static;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+    justify-self: end;
   }
 }
 

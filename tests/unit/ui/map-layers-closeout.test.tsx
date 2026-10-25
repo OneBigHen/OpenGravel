@@ -33,6 +33,15 @@ describe("closeout layers sheet", () => {
     expect(screen.getByText(/OpenStreetMap fallback · Retrieved/)).toBeInTheDocument();
     expect(screen.getByText("None here")).toBeInTheDocument();
   });
+  it("puts the basemap style in the sheet when the map does not own it", () => {
+    const onChoose = vi.fn();
+    render(<MapLayersPanel enabled={[]} status={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onClearAll={vi.fn()} mapStyle={{ look: "map", options: ["map", "night", "satellite"], onChoose }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+    expect(screen.getByTestId("sheet-map-style-map")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("sheet-map-style-night")).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(screen.getByTestId("sheet-map-style-night"));
+    expect(onChoose).toHaveBeenCalledWith("night");
+  });
   it("discloses fire limits and returns keyboard focus after Escape", () => {
     panel();
     const control = screen.getByRole("button", { name: "Layers" });

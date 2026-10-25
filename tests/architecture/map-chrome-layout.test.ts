@@ -16,6 +16,8 @@ const COMPACT =
   "(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))";
 const SHORT_PHONE =
   "(max-width: 760px) and (max-height: 700px) and (orientation: portrait)";
+const PHONE = "(max-width: 760px)";
+const PHONE_ROWS = "(max-width: 479px)";
 
 function sourceOf(file: (typeof FILES)[number]): string {
   return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(
@@ -94,6 +96,27 @@ describe("compact map chrome", () => {
 
     // The hint follows both rows instead of sitting on top of the second one.
     expect(hint["top"]).toBe("calc(168px + var(--og-safe-top))");
+  });
+
+  it("moves map style and places off the phone map, where the layers sheet owns them", () => {
+    const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
+    expect(declarationsFor(blocks, '[data-map-style-sheet="true"] .og-map__look')["display"]).toBe("none");
+    expect(declarationsFor(blocks, '[data-places-sheet="true"] .og-places-overlay--planner .og-places-control')["display"]).toBe("none");
+  });
+
+  it("gives a phone sheet 56 px rows with a 24 px icon and a wrapping meta line", () => {
+    const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
+    expect(declarationsFor(blocks, ".og-layers__switch")["min-height"]).toBe("56px");
+    expect(declarationsFor(blocks, ".og-layers__swatch")["width"]).toBe("24px");
+    expect(declarationsFor(blocks, ".og-layers__legend")["white-space"]).toBe("normal");
+    expect(declarationsFor(blocks, ".og-layers__about")["display"]).toBe("none");
+
+    const rowBlocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE_ROWS));
+    expect(declarationsFor(rowBlocks, ".og-layers__lenses")["grid-template-columns"]).toBe("minmax(0, 1fr)");
+    expect(declarationsFor(rowBlocks, ".og-layers__lens")["min-height"]).toBe("56px");
+    expect(declarationsFor(rowBlocks, ".og-layers__lens-glyph")["width"]).toBe("24px");
+    expect(declarationsFor(rowBlocks, ".og-layers__lens-hint")["white-space"]).toBe("normal");
+    expect(declarationsFor(rowBlocks, ".og-layers__lens .og-layers__toggle")["grid-column"]).toBe("3");
   });
 
   it("leaves the short phone's right edge to the wrapped instrument column", () => {
