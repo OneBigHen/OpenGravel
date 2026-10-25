@@ -7,7 +7,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   departureIsLive,
@@ -24,31 +24,10 @@ import type {
 import { DEFAULT_BIKE } from "@/domain/ride/create";
 import { createGarage } from "@/application/garage/garage-model";
 import type { Coordinate } from "@/domain/ride/types";
-import { departureFor, departureSummary, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
+import { departureFor, departureValue, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
 import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
 afterEach(() => cleanup());
-
-/**
- * A device whose app shell reopens offline: a controlling service worker and a
- * fresh cached shell. "Plan offline" needs that as well as a downloaded area.
- */
-function withOfflineShell(): () => void {
-  const previous = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
-  Object.defineProperty(navigator, "serviceWorker", {
-    configurable: true,
-    value: { controller: { scriptURL: "https://opengravel.test/sw.js" }, getRegistrations: async () => [{}] },
-  });
-  vi.stubGlobal("caches", {
-    match: vi.fn(async () => new Response("shell", { headers: { "x-og-cached-at": new Date().toISOString() } })),
-  });
-  return () => {
-    if (previous === undefined) delete (navigator as { serviceWorker?: unknown }).serviceWorker;
-    else Object.defineProperty(navigator, "serviceWorker", previous);
-    vi.unstubAllGlobals();
-  };
-}
-
 
 const NOW = "2026-06-21T14:00:00.000Z";
 const LINE: Coordinate[] = Array.from({ length: 400 }, (_, index) => ({ lon: -75.7 + index * 0.001, lat: 40.86 }));
@@ -98,9 +77,9 @@ describe("departure choices", () => {
     expect(departureFor("in-1h", from)).toEqual({ kind: "future", at: "2026-06-21T15:00:00.000Z" });
     const tomorrow = departureFor("tomorrow-8", from);
     expect(tomorrow.kind === "future" && new Date(tomorrow.at).getHours()).toBe(8);
-    expect(departureSummary({ kind: "now" })).toBe("Leaving now");
-    expect(departureSummary({ kind: "future", at: "2026-06-21T15:00:00.000Z" }, "America/New_York")).toBe(
-      "Leaving Sun 11:00 AM",
+    expect(departureValue({ kind: "now" })).toBe("Now");
+    expect(departureValue({ kind: "future", at: "2026-06-21T15:00:00.000Z" }, "America/New_York")).toBe(
+      "Sun 11:00 AM",
     );
   });
 });
@@ -201,7 +180,7 @@ describe("PlannerPreparation", () => {
     // else to check grows no list under them.
     expect(screen.queryByTestId("preparation-section")).toBeNull();
     expect(screen.getByTestId("prepare-glance")).toHaveTextContent("72°F, dry");
-    expect(screen.getByTestId("departure-summary")).toHaveTextContent("Leaving now");
+    expect(screen.getByTestId("departure-summary")).toHaveTextContent("Now");
 
     fireEvent.click(screen.getByTestId("departure-in-1h"));
     expect(onDepartureChange).toHaveBeenLastCalledWith(expect.objectContaining({ kind: "future" }));
@@ -285,9 +264,9 @@ describe("PlannerPreparation", () => {
       await Promise.resolve();
     });
 
-    // The disclosure's own summary says it; the panel underneath does not
-    // repeat the name as a second heading.
-    expect(screen.getAllByText("Before you ride")).toHaveLength(1);
+    // The departure row names the check panel's subject; the panel underneath
+    // does not repeat it as a second heading.
+    expect(screen.getByTestId("prepare-toggle")).toHaveTextContent(/^Leaving/);
     expect(screen.queryByRole("heading", { name: "Before you ride" })).toBeNull();
     const value = screen.getByTestId("preparation-value-offline-route");
     expect(value).toHaveTextContent("Installed for this area");
@@ -394,7 +373,7 @@ describe("PlannerPreparation", () => {
       // 90 min ride → leave 4:30 PM; the weather window is that ride, not now.
       const context = registry.weatherRefresh.mock.lastCall?.[0] as { tripWindow?: { start: string } };
       expect(context.tripWindow?.start).toBe(new Date(2026, 5, 21, 16, 30).toISOString());
-      expect(screen.getByTestId("departure-summary").textContent).toMatch(/^Leave Sun 4:30 PM to arrive by 6:00 PM$/);
+      expect(screen.getByTestId("departure-summary").textContent).toMatch(/^Sun 4:30 PM to arrive by 6:00 PM$/);
       expect(screen.getByTestId("departure-arrive")).toBeChecked();
 
       fireEvent.click(screen.getByTestId("departure-in-1h"));
@@ -429,7 +408,7 @@ describe("PlannerPreparation", () => {
       });
       expect(registry.trafficRefresh).toHaveBeenCalledTimes(1);
       expect(screen.getByTestId("departure-summary").textContent).toBe(
-        "Leave now · arrive Sun 7:00 PM, after 6:00 PM",
+        "Now · arrive Sun 7:00 PM, after 6:00 PM",
       );
     } finally {
       vi.useRealTimers();
@@ -450,9 +429,7 @@ describe("PlannerPreparation", () => {
     expect(screen.queryByTestId("departure-arrive")).toBeNull();
   });
 
-  it("says the downloaded area plans rides offline instead of 'online only for now'", async () => {
-    const restore = withOfflineShell();
-    onTestFinished(restore);
+  it("shows no offline status row when the phone already holds downloaded areas", async () => {
     const offlineRegions = {
       installed: vi.fn(async () => [{ regionId: "pennsylvania" }, { regionId: "maryland" }]),
     };
@@ -474,18 +451,16 @@ describe("PlannerPreparation", () => {
       await Promise.resolve();
     });
 
-    const note = screen.getByTestId("offline-summary-note");
-    expect(note).toHaveTextContent("2 areas ready · plan offline");
-    expect(note).not.toHaveTextContent("online only for now");
-    // The disclosure underneath agrees with the line above it.
-    expect(screen.getByTestId("offline-state-plan.route")).not.toHaveTextContent("Needs network");
+    // A ride that already works offline needs no row about it, and the old
+    // dotted status line never comes back.
+    expect(screen.queryByTestId("offline-save-area")).toBeNull();
+    expect(screen.queryByTestId("offline-summary-note")).toBeNull();
+    expect(screen.queryByText(/online only/)).toBeNull();
   });
 
-  it("reads the areas the composition root provided when no prop is given", async () => {
-    const restore = withOfflineShell();
-    onTestFinished(restore);
+  it("reads the installed areas the composition root provided", async () => {
     render(
-      <InstalledOfflineAreasProvider regions={{ installed: async () => [{ regionId: "pennsylvania" }] as never }}>
+      <InstalledOfflineAreasProvider regions={{ installed: async () => [] as never }}>
         <PlannerPreparation
           route={{ routeId: "route_a", ...ROUTE }}
           departure={{ kind: "now" }}
@@ -503,10 +478,11 @@ describe("PlannerPreparation", () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByTestId("offline-summary-note")).toHaveTextContent("1 area ready · plan offline");
+    // The provider's answer (no area) is what makes the action row appear.
+    expect(screen.getByTestId("offline-save-area")).toHaveTextContent("Save this area for offline");
   });
 
-  it("says so plainly when this device holds no downloaded area", async () => {
+  it("offers one plain row to save the area instead of an offline status line", async () => {
     const offlineRegions = { installed: vi.fn(async () => []) };
     render(
       <PlannerPreparation
@@ -526,9 +502,12 @@ describe("PlannerPreparation", () => {
       await Promise.resolve();
     });
 
-    const note = screen.getByTestId("offline-summary-note");
-    expect(note).toHaveTextContent("no downloaded area · online only");
-    expect(note).not.toHaveTextContent("online only for now");
+    const row = screen.getByTestId("offline-save-area");
+    expect(row).toHaveTextContent("Save this area for offline");
+    // It is the real download path in Settings, not a dead end.
+    expect(row).toHaveAttribute("href", "/settings#settings-offline-title");
+    expect(screen.queryByText(/online only/)).toBeNull();
+    expect(screen.queryByTestId("offline-summary-note")).toBeNull();
   });
 
   it("shows nothing before there is a route", () => {
@@ -543,6 +522,6 @@ describe("PlannerPreparation", () => {
       />,
     );
     expect(screen.queryByTestId("prepare")).toBeNull();
-    expect(screen.queryByTestId("offline-toggle")).toBeNull();
+    expect(screen.queryByTestId("offline-save-area")).toBeNull();
   });
 });

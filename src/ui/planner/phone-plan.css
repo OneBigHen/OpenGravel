@@ -58,16 +58,70 @@
   .og-phone-summary .og-primary { width: 100%; min-height: 52px; padding: var(--og-space-2); font-size: var(--og-text-body); line-height: 1.4; border-radius: 12px; }
   .og-phone-summary__compare { min-height: 48px; width: 100%; background: none; border: 0; color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); text-align: left; text-decoration: underline; text-underline-offset: 4px; }
   .og-phone-summary__weather { white-space: normal; }
-  .og-phone-alternatives { display: flex; gap: var(--og-space-2); overflow-x: auto; scroll-snap-type: x mandatory; }
-  .og-phone-alternatives button { display: flex; flex-direction: column; flex: 0 0 85%; min-height: 64px; scroll-snap-align: start; text-align: left; padding: 0 var(--og-space-2); background: transparent; color: var(--og-ink); border: 0; border-left: 3px solid var(--og-route-plum); font-size: var(--og-text-meta); }
-  .og-phone-alternatives button[aria-pressed="true"] { background: var(--og-well); }
-  .og-phone-alternatives strong { font-size: var(--og-text-headline); }
+  /* The options (small-screen v2 §3): one 64px row each, never a sideways
+     strip — a rider sees all three choices without swiping. The row carries the
+     colour of its own map line, the role, the numbers, the one character word
+     it earns and what it costs against the quickest. */
+  .og-phone-alternatives { display: flex; flex-direction: column; gap: var(--og-space-2); margin: 0 0 var(--og-space-1); padding: 0; list-style: none; }
+  .og-phone-choice {
+    --og-choice-tint: var(--og-slate);
+    font: inherit;
+    display: flex; align-items: center; gap: var(--og-space-3);
+    width: 100%; min-height: 64px; padding: var(--og-space-2) var(--og-space-3);
+    border: 1px solid var(--og-hairline); border-radius: var(--og-radius-control);
+    background: transparent; color: var(--og-ink); text-align: left; cursor: pointer;
+  }
+  /* Route colours match the map lines (style.ts `tintColor`), exactly as the
+     desktop cards and the elevation slot do. */
+  .og-phone-choice[data-tint="0"] { --og-choice-tint: var(--og-ember); }
+  .og-phone-choice[data-tint="1"] { --og-choice-tint: var(--og-route-plum); }
+  .og-phone-choice[data-tint="2"] { --og-choice-tint: var(--og-deep-spruce); }
+  .og-phone-choice[data-selected="true"] {
+    border-color: color-mix(in srgb, var(--og-choice-tint) 50%, var(--og-hairline));
+    background: color-mix(in srgb, var(--og-choice-tint) 12%, transparent);
+  }
+  .og-phone-choice:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
+  .og-phone-choice__swatch { flex: none; width: 6px; height: 40px; border-radius: 999px; background: var(--og-choice-tint); }
+  .og-phone-choice__body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 2px; min-width: 0; }
+  .og-phone-choice__role { font-size: var(--og-text-body); font-weight: 500; line-height: 1.25; }
+  .og-phone-choice__meta { font-size: var(--og-text-meta); font-weight: 500; line-height: 1.35; color: var(--og-slate-text); font-variant-numeric: tabular-nums; }
+  .og-phone-choice__word { color: var(--og-ink); }
+  .og-phone-choice__delta { flex: none; font-size: var(--og-text-meta); line-height: 1.35; color: var(--og-slate-text); font-variant-numeric: tabular-nums; }
+  /* The tick sits in the same place in every row, chosen or not, so the rows do
+     not reflow when a tap moves the selection. */
+  .og-phone-choice__check { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--og-choice-tint); }
+  /* The short ride style (small-screen v2 §3): two one-tap segments under the
+     options, editing the composer's own ride style. The track scrolls inside
+     itself at 320px; the page never does. */
+  .og-phone-style { display: flex; flex-direction: column; gap: var(--og-space-3); margin-top: var(--og-space-3); }
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-style { display: none; }
+  /* The label sits above its track so the four words get the full sheet width —
+     they fit in one line at 375px, and the track scrolls inside itself at 320. */
+  .og-phone-style__row { display: flex; flex-direction: column; gap: var(--og-space-1); min-width: 0; }
+  .og-phone-style__label { font-size: var(--og-text-caption); font-weight: 600; line-height: 1.3; color: var(--og-slate-text); }
+  .og-phone-style__track {
+    display: flex; gap: 2px; min-width: 0; padding: 2px;
+    border-radius: 12px; background: var(--og-well);
+    overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  }
+  .og-phone-style__track::-webkit-scrollbar { display: none; }
+  .og-phone-style__chip { position: relative; display: inline-flex; flex: 0 0 auto; }
+  .og-phone-style__chip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .og-phone-style__chip span {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 48px; min-height: 48px; padding: 0 var(--og-space-3);
+    border-radius: 10px; background: transparent; color: var(--og-ink);
+    font-size: var(--og-text-meta); font-weight: 500; line-height: 1.35; white-space: nowrap;
+  }
+  .og-phone-style__chip input:checked + span { background: var(--og-deep-spruce); color: var(--og-paper); }
+  /* Inset, so the ring is not cut off by the scrolling track's padding box. */
+  .og-phone-style__chip input:focus-visible + span { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: -2px; }
   .og-planner .og-result-choices { display: none; }
   .og-planner .og-phone-edit { flex: none; min-height: 48px; text-align: left; background: transparent; color: var(--og-ink); border: 0; border-bottom: 1px solid var(--og-hairline); font-size: var(--og-text-body); }
   .og-planner .og-refine { order: 2; }
   .og-planner .og-composer { order: 3; }
   .og-planner .og-sheet__body > :not(.og-phone-summary, .og-phone-tools, .og-refine, .og-composer) { order: 4; }
-  .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-offline-details, .og-elevation, .og-point-row, .og-refine__body > section) { border: 0; border-bottom: 1px solid var(--og-hairline); border-radius: 0; background: transparent; box-shadow: none; padding: var(--og-space-2) 0; }
+  .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-prepare__row, .og-elevation, .og-point-row, .og-refine__body > section) { border: 0; border-bottom: 1px solid var(--og-hairline); border-radius: 0; background: transparent; box-shadow: none; padding: var(--og-space-2) 0; }
   .og-planner .og-planner__sheet :is(input, select, button, summary, label) { font-size: var(--og-text-body); }
   .og-planner .og-planner__sheet :is(button, summary, input, select) { min-height: 48px; }
   .og-planner .og-planner__sheet :is(p, .og-composer__value, .og-composer__coordinate, .og-refine__summary) { font-size: var(--og-text-meta); line-height: 1.35; }
@@ -104,5 +158,4 @@
 }
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {
   .og-planner .og-planner__sheet { transition: none; }
-  .og-phone-alternatives { scroll-behavior: auto; }
 }

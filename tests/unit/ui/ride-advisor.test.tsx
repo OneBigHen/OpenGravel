@@ -308,6 +308,21 @@ describe("ask about this ride", () => {
     expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("add a coffee stop in Jim Thorpe");
   });
 
+  it("keeps the field and its send button on one row", () => {
+    setupRide();
+    const input = screen.getByTestId("advisor-ride-prompt");
+    const field = input.closest(".og-advisor-ask__field");
+    expect(field).not.toBeNull();
+    // The send button lives inside the field, so a 320 px sheet cannot wrap the
+    // field and the button onto two lines.
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(field).toContainElement(send);
+    expect(send).toHaveAttribute("type", "submit");
+    expect(send).toBeDisabled();
+    fireEvent.change(input, { target: { value: "more dirt" } });
+    expect(send).toBeEnabled();
+  });
+
   it("lets the rider cancel an ask that came from the ride sheet", async () => {
     let requested: AbortSignal | undefined;
     const store = createRideDocumentStore({ document: createRideDocument() });

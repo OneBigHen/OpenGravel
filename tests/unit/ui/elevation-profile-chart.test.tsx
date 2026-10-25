@@ -100,7 +100,32 @@ describe("ElevationProfileChart", () => {
     // The steepest sustained grade is annotated where it happens.
     const pin = screen.getByTestId("elevation-grade-pin");
     expect(pin).toHaveTextContent(/^max \d+%$/);
-    expect(pin.style.left).toMatch(/%$/);
+    // The chart hands the stylesheet a share, and the stylesheet clamps the tag
+    // inside the drawing so it cannot be clipped at a phone's right edge.
+    const share = Number.parseFloat(pin.style.getPropertyValue("--og-elevation-pin-share"));
+    expect(share).toBeGreaterThan(0);
+    expect(share).toBeLessThan(100);
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toMatch(/\.og-elevation__grade-pin \{[^}]*left: clamp\(/);
+    // The feet get their own gutter, and the drawing starts after it.
+    expect(css).toMatch(/\.og-elevation__plot \{[^}]*padding-inline-start: var\(--og-elevation-gutter\)/);
+  });
+
+  it("keeps the axis labels out of the drawing box so they cannot be cut off", () => {
+    const { chart } = renderChart();
+    expand(chart);
+    const plot = chart.querySelector(".og-elevation__plot");
+    const frame = plot?.querySelector(".og-elevation__frame");
+    const yaxis = plot?.querySelector(".og-elevation__yaxis");
+    expect(plot).not.toBeNull();
+    expect(frame).not.toBeNull();
+    expect(yaxis).not.toBeNull();
+    // The feet live in the plot's reserved gutter; the line, the notches and the
+    // grade tag share the drawing box, so a percentage means one thing there.
+    expect(frame).not.toContainElement(yaxis as HTMLElement);
+    expect(frame).toContainElement(screen.getByRole("application"));
+    expect(frame).toContainElement(screen.getByTestId("elevation-waypoints"));
+    expect(frame).toContainElement(screen.getByTestId("elevation-grade-pin"));
   });
 
   it("collapses back to the compact density", () => {

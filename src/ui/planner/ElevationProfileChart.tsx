@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react";
 
 import { pointAtShare, type ElevationProfile } from "@/application/elevation/profile";
 import { waypointNotches, type ElevationWaypoint } from "@/application/elevation/waypoints";
@@ -302,6 +302,8 @@ function ReadyProfile({
         </div>
       </div>
       <div className="og-elevation__plot" id={plotId} data-density={expanded ? "expanded" : "compact"}>
+        {/* The feet sit in the plot's left gutter, which the plot reserves for
+            them, so the drawing starts clear of the labels at 320 px. */}
         {expanded ? (
           <div className="og-elevation__yaxis" aria-hidden="true">
             {marks.labels.map((value, index) => (
@@ -315,95 +317,98 @@ function ReadyProfile({
             ))}
           </div>
         ) : null}
-        <svg
-          className="og-elevation__svg"
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          preserveAspectRatio="none"
-          role="application"
-          tabIndex={0}
-          aria-label={summary}
-          aria-describedby={instructionsId}
-          data-density={expanded ? "expanded" : "compact"}
-          onKeyDown={onKeyDown}
-          onPointerMove={onPointer}
-          onPointerDown={onPointer}
-          onPointerLeave={endScrub}
-          onPointerCancel={endScrub}
-        >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" className="og-elevation__fill-top" />
-              <stop offset="100%" className="og-elevation__fill-bottom" />
-            </linearGradient>
-          </defs>
-          {expanded
-            ? marks.gridlines.map((value) => (
-                <line
-                  key={value}
-                  className="og-elevation__grid"
-                  x1={0}
-                  x2={WIDTH}
-                  y1={shape.y(value)}
-                  y2={shape.y(value)}
-                  vectorEffect="non-scaling-stroke"
-                  data-testid="elevation-gridline"
-                />
-              ))
-            : null}
-          <path d={shape.area} fill={`url(#${gradientId})`} />
-          <path d={shape.line} className="og-elevation__line" vectorEffect="non-scaling-stroke" />
-          {scrubbed === null ? null : (
-            <line
-              className="og-elevation__cursor"
-              x1={shape.x(scrubbed.distanceMeters)}
-              x2={shape.x(scrubbed.distanceMeters)}
-              y1={0}
-              y2={HEIGHT}
-              vectorEffect="non-scaling-stroke"
-            />
+        <div className="og-elevation__frame">
+          <svg
+            className="og-elevation__svg"
+            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+            preserveAspectRatio="none"
+            role="application"
+            tabIndex={0}
+            aria-label={summary}
+            aria-describedby={instructionsId}
+            data-density={expanded ? "expanded" : "compact"}
+            onKeyDown={onKeyDown}
+            onPointerMove={onPointer}
+            onPointerDown={onPointer}
+            onPointerLeave={endScrub}
+            onPointerCancel={endScrub}
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" className="og-elevation__fill-top" />
+                <stop offset="100%" className="og-elevation__fill-bottom" />
+              </linearGradient>
+            </defs>
+            {expanded
+              ? marks.gridlines.map((value) => (
+                  <line
+                    key={value}
+                    className="og-elevation__grid"
+                    x1={0}
+                    x2={WIDTH}
+                    y1={shape.y(value)}
+                    y2={shape.y(value)}
+                    vectorEffect="non-scaling-stroke"
+                    data-testid="elevation-gridline"
+                  />
+                ))
+              : null}
+            <path d={shape.area} fill={`url(#${gradientId})`} />
+            <path d={shape.line} className="og-elevation__line" vectorEffect="non-scaling-stroke" />
+            {scrubbed === null ? null : (
+              <line
+                className="og-elevation__cursor"
+                x1={shape.x(scrubbed.distanceMeters)}
+                x2={shape.x(scrubbed.distanceMeters)}
+                y1={0}
+                y2={HEIGHT}
+                vectorEffect="non-scaling-stroke"
+              />
+            )}
+          </svg>
+          {expanded && notches.length > 0 ? (
+            <div className="og-elevation__waypoints" data-testid="elevation-waypoints" aria-hidden="true">
+              {notches.map((notch) => (
+                <span
+                  key={notch.position}
+                  className="og-elevation__waypoint"
+                  data-testid="elevation-waypoint"
+                  data-position={notch.position}
+                  title={notch.label}
+                  style={{ left: `${notch.share * 100}%` }}
+                >
+                  <span className="og-elevation__waypoint-index">{notch.position}</span>
+                  <span className="og-elevation__waypoint-bar" />
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {gradePin === null || gradePercent === null ? null : (
+            <span
+              className="og-elevation__grade-pin"
+              data-testid="elevation-grade-pin"
+              /* The share is data; the stylesheet clamps it inside the drawing. */
+              style={{ "--og-elevation-pin-share": `${gradePin.share * 100}%`, top: `${gradePin.top}%` } as CSSProperties}
+            >
+              max {Math.round(gradePercent)}%
+            </span>
           )}
-        </svg>
-        {expanded && notches.length > 0 ? (
-          <div className="og-elevation__waypoints" data-testid="elevation-waypoints" aria-hidden="true">
-            {notches.map((notch) => (
-              <span
-                key={notch.position}
-                className="og-elevation__waypoint"
-                data-testid="elevation-waypoint"
-                data-position={notch.position}
-                title={notch.label}
-                style={{ left: `${notch.share * 100}%` }}
-              >
-                <span className="og-elevation__waypoint-index">{notch.position}</span>
-                <span className="og-elevation__waypoint-bar" />
-              </span>
-            ))}
-          </div>
-        ) : null}
-        {gradePin === null || gradePercent === null ? null : (
-          <span
-            className="og-elevation__grade-pin"
-            data-testid="elevation-grade-pin"
-            style={{ left: `${gradePin.share * 100}%`, top: `${gradePin.top}%` }}
-          >
-            max {Math.round(gradePercent)}%
-          </span>
-        )}
-        {expanded ? null : (
-          <>
-            <span className="og-elevation__axis og-elevation__axis--max" aria-hidden="true">{feet(profile.maxMeters)}</span>
-            <span className="og-elevation__axis og-elevation__axis--min" aria-hidden="true">{feet(profile.minMeters)}</span>
-          </>
-        )}
-        {readout === null || scrubbed === null ? null : (
-          <span
-            className="og-elevation__readout"
-            data-testid="elevation-readout"
-            style={{ left: `${(scrubbed.distanceMeters / profile.totalMeters) * 100}%` }}
-          >
-            {readout}
-          </span>
-        )}
+          {expanded ? null : (
+            <>
+              <span className="og-elevation__axis og-elevation__axis--max" aria-hidden="true">{feet(profile.maxMeters)}</span>
+              <span className="og-elevation__axis og-elevation__axis--min" aria-hidden="true">{feet(profile.minMeters)}</span>
+            </>
+          )}
+          {readout === null || scrubbed === null ? null : (
+            <span
+              className="og-elevation__readout"
+              data-testid="elevation-readout"
+              style={{ left: `${(scrubbed.distanceMeters / profile.totalMeters) * 100}%` }}
+            >
+              {readout}
+            </span>
+          )}
+        </div>
       </div>
       <p className="og-visually-hidden" role="status" aria-live="polite" data-testid="elevation-announcement">
         {spoken}

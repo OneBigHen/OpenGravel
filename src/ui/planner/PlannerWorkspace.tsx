@@ -842,6 +842,7 @@ export function PlannerWorkspace({
           onCancelPlanning={handleCancel}
           results={{
             inspector: inspectorNode,
+            rideStyle,
             choices: {
               cards: viewModel.routeCards,
               explanation: routeExplanation,

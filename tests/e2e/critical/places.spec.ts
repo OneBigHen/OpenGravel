@@ -115,7 +115,7 @@ test("Along this ride lazily adds a fixture destination to the itinerary", async
   await planFixtureRide(page);
   expect(opportunityRequests).toBe(0);
   const along = page.getByRole("region", { name: "Route opportunities" });
-  await along.getByRole("button", { name: "Along this ride" }).click();
+  await along.getByRole("button", { name: /^Along this ride/ }).click();
   const firstRow = along.locator("li.og-opp").filter({ has: page.getByRole("button", { name: /^Add stop/ }) }).first();
   await expect(firstRow).toBeVisible();
   await expect(firstRow).toContainText(/Mile/);

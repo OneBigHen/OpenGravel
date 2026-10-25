@@ -65,9 +65,16 @@ Bottom sheet — three detents: **peek** (≈ 30 % height), **half**, **full**. 
 - *Ride planned* (peek): one summary block — `53 min · 33 mi` at headline size, one meta
   line (`Curvy 3 mi · 3% gravel · ↗ 2,850 ft`), the full-width primary **Start ride**
   button (52px), and a single line of weather if it matters. "Compare rides (3)" is a quiet
-  text button that switches the block into a swipeable list of the alternatives.
-  **Remove the floating summary pill over the map** when the sheet shows this block.
-- *Half/full*: stops, ride style, along this ride, briefing — as plain grouped rows, not
+  text button that switches the block into a vertical list of the options — one 64px row
+  each, with the colour of that option's line on the map, its role, `53 min · 33 mi`, one
+  character word it earns (Twistiest · Quickest · Most dirt) and what it costs against the
+  quickest (`+3 min`); the chosen row carries a tick and a tint, and tapping a row selects
+  it and highlights its line. Nothing scrolls sideways, nothing is covered by the next
+  option. **Remove the floating summary pill over the map** when the sheet shows this block.
+- *Half/full*: directly under the summary (and under the options list while comparing), one
+  row of one-tap ride style — Roads `Fast · Balanced · Curvy · Backroads` and Surface
+  `Paved · Mixed · Dirt OK` — editing the same ride style as the full controls and re-planning
+  with it. Then stops, ride style, along this ride, briefing — as plain grouped rows, not
   cards inside cards.
 - Route labels on the map ("Best Ride · 53 min") stay small (14px) and never cover the line's
   start/finish markers.
