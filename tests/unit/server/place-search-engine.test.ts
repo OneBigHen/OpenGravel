@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import type { Coordinate } from "@/domain/ride/types";
 import { createPhotonGeocoder } from "@/infrastructure/geocoding/photon";
-import { createTomTomPlaceSearch, TOMTOM_PLACE_RADIUS_METERS } from "@/infrastructure/geocoding/tomtom";
+import { createTomTomGeocoder, createTomTomPlaceSearch, TOMTOM_PLACE_RADIUS_METERS, withFallback } from "@/infrastructure/geocoding/tomtom";
 import {
   createPlaceSearchEngine,
   nameMatchesTypedText,
@@ -211,6 +211,108 @@ function engine(fetcher: typeof fetch, withTomTom = true) {
 
 const signal = (): AbortSignal => new AbortController().signal;
 
+/**
+ * The deployment's composition (`src/app/api/geocode/geocoder.ts`): Photon for
+ * places, TomTom answering whenever Photon cannot, plus TomTom POI search.
+ */
+function deploymentEngine(fetcher: typeof fetch) {
+  return createPlaceSearchEngine({
+    photon: withFallback(
+      createPhotonGeocoder({ baseUrl: PHOTON_BASE, fetcher }),
+      createTomTomGeocoder({ apiKey: "test-key", fetcher }),
+    ),
+    tomtom: createTomTomPlaceSearch({ apiKey: "test-key", fetcher }),
+  });
+}
+
+/**
+ * Photon is down, so every one of its answers is an outage and the deployment
+ * geocoder falls through to TomTom — the measured production state.
+ */
+function photonDownStub(tomtom: TomTomPayload): Stub {
+  const photonQueries: string[] = [];
+  const tomtomUrls: URL[] = [];
+  const fetcher = (async (input: string | URL | Request) => {
+    const url = input instanceof URL ? input : new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname === "photon.test") {
+      photonQueries.push(url.searchParams.get("q") ?? "");
+      return jsonResponse({ error: "down" }, 503);
+    }
+    tomtomUrls.push(url);
+    return jsonResponse(tomtom(url));
+  }) as unknown as typeof fetch;
+  return { fetcher, photonQueries, tomtomUrls };
+}
+
+/** A TomTom place-search answer: the town itself, as the fallback geocoder sends it. */
+function tomtomTown(name: string, coordinate: Coordinate): unknown {
+  return {
+    id: `town-${name.replace(/\s+/g, "-").toLowerCase()}`,
+    type: "Municipality",
+    address: { municipality: name, countrySubdivisionCode: "PA", countryCode: "US" },
+    position: coordinate,
+  };
+}
+
+/** A TomTom POI answer: one branch of a brand, in its own town. */
+function tomtomPoi(id: string, brand: string, municipality: string, coordinate: Coordinate): unknown {
+  return {
+    id,
+    poi: { name: brand, brands: [{ name: brand }] },
+    address: { municipality, countrySubdivisionCode: "PA", countryCode: "US" },
+    position: coordinate,
+  };
+}
+
+/** A point `km` from `center` on `bearingDegrees`, so a measured distance is geometry. */
+function reachFrom(center: Coordinate, km: number, bearingDegrees: number): Coordinate {
+  const angular = km / 6371;
+  const bearing = (bearingDegrees * Math.PI) / 180;
+  const lat = (center.lat * Math.PI) / 180;
+  const lon = (center.lon * Math.PI) / 180;
+  const toLat = Math.asin(
+    Math.sin(lat) * Math.cos(angular) + Math.cos(lat) * Math.sin(angular) * Math.cos(bearing),
+  );
+  const toLon =
+    lon +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angular) * Math.cos(lat),
+      Math.cos(angular) - Math.sin(lat) * Math.sin(toLat),
+    );
+  return { lat: (toLat * 180) / Math.PI, lon: (toLon * 180) / Math.PI };
+}
+
+/** The text a TomTom place (geocoder) search is looking for. */
+function tomtomPlaceQuery(url: URL): string {
+  return /\/search\/2\/search\/(.+)\.json$/.exec(decodeURIComponent(url.pathname))?.[1] ?? "";
+}
+
+function isPoiSearch(url: URL): boolean {
+  return url.pathname.includes("/fuzzySearch/");
+}
+
+function searchRadius(url: URL): number {
+  return Number(url.searchParams.get("radius") ?? "0");
+}
+
+/**
+ * The nearest Sheetz to Lehighton, in the order and at the distances measured on
+ * production: Whitehall 24.4 km, Weisenberg 27.9 km, Hazle 28.7 km, Bethlehem
+ * 31.8 km.
+ */
+const SHEETZ_NEAR_LEHIGHTON = [
+  tomtomPoi("sheetz-whitehall", "Sheetz", "Whitehall", reachFrom(LEHIGHTON, 24.4, 100)),
+  tomtomPoi("sheetz-weisenberg", "Sheetz", "Weisenberg", reachFrom(LEHIGHTON, 27.9, 155)),
+  tomtomPoi("sheetz-hazle", "Sheetz", "Hazle Township", reachFrom(LEHIGHTON, 28.7, 340)),
+  tomtomPoi("sheetz-bethlehem", "Sheetz", "Bethlehem", reachFrom(LEHIGHTON, 31.8, 210)),
+];
+
+/** Wawa branches beyond Jim Thorpe's own neighbourhood; the distances are fixtures. */
+const WAWA_NEAR_JIM_THORPE = [
+  tomtomPoi("wawa-lehighton", "Wawa", "Lehighton", reachFrom(JIM_THORPE, 33.5, 300)),
+  tomtomPoi("wawa-allentown", "Wawa", "Allentown", reachFrom(JIM_THORPE, 41.2, 190)),
+];
+
 describe("place search engine", () => {
   it("finds the Wawa in Jim Thorpe, not only the town", async () => {
     // Photon sees the town and nothing else, as measured on production.
@@ -225,8 +327,9 @@ describe("place search engine", () => {
       "Jim Thorpe, PA",
     ]);
     expect(places[0]?.provider).toBe("tomtom");
-    // The town the rider typed is resolved, and only its name is sent to TomTom.
-    expect(photonQueries).toContain("Jim Thorpe");
+    // The whole-query answer already holds the town, so it is not geocoded again;
+    // only the brand is sent to TomTom, aimed at the town's own coordinate.
+    expect(photonQueries).toEqual(["Wawa Jim Thorpe"]);
     expect(tomtomUrls[0]?.pathname).toBe(`/search/2/fuzzySearch/${encodeURIComponent("Wawa")}.json`);
     expect(tomtomUrls[0]?.searchParams.get("lat")).toBe("40.87570");
     expect(tomtomUrls[0]?.searchParams.get("lon")).toBe("-75.73240");
@@ -466,7 +569,10 @@ describe("place search engine", () => {
       "Hawk Mountain, Kempton, PA",
       "Sanctuary, TX",
     ]);
-    expect(photonQueries).toEqual(["Hawk Mountain Sanctuary", "Mountain Sanctuary", "Sanctuary"]);
+    // "Mountain Sanctuary" is not a place; "Sanctuary" is already a row of the
+    // whole-query answer, so the Texas town is the split's centre without another
+    // geocode. It still ranks below the ridge the query was actually about.
+    expect(photonQueries).toEqual(["Hawk Mountain Sanctuary", "Mountain Sanctuary"]);
   });
 
   it("never ranks the guessed town above the brand, even when the brand is farther", async () => {
@@ -505,6 +611,96 @@ describe("place search engine", () => {
     // were geocoded as a town.
     expect(photonQueries).toEqual(["Blue Mountain Resort"]);
     expect(tomtomUrls.map(tomtomQuery)).toEqual(["Blue Mountain Resort"]);
+  });
+});
+
+describe("place search behind the deployment geocoder", () => {
+  it("answers 'Sheetz Lehighton' with the nearest Sheetz when the geocoder only finds the town", async () => {
+    // Measured on production: Photon is down, the deployment's TomTom fallback
+    // answers the whole query with "Lehighton, PA", and a Sheetz search only
+    // reaches the branches in the wide nearest-reach band. The stub answers the
+    // two measured bands (8 km: nothing, 80 km: four branches) and treats the
+    // narrow town neighbourhood as empty, so the widened search is the one that
+    // answers.
+    const { fetcher, photonQueries, tomtomUrls } = photonDownStub((url) => {
+      if (isPoiSearch(url)) {
+        return searchRadius(url) >= PLACE_NEAREST_REACH_METERS
+          ? { results: SHEETZ_NEAR_LEHIGHTON }
+          : { results: [] };
+      }
+      return {
+        results:
+          tomtomPlaceQuery(url) === "Sheetz Lehighton" ? [tomtomTown("Lehighton", LEHIGHTON)] : [],
+      };
+    });
+    const places = await deploymentEngine(fetcher)("Sheetz Lehighton", undefined, signal());
+
+    // The town half of the query was the whole list; the brand had never been
+    // looked for. Nearest first, then the town the rider typed.
+    expect(places.map((place) => place.label)).toEqual([
+      "Sheetz, Whitehall, PA",
+      "Sheetz, Weisenberg, PA",
+      "Sheetz, Hazle Township, PA",
+      "Sheetz, Bethlehem, PA",
+      "Lehighton, PA",
+    ]);
+    // The town the answer already holds is the centre of the search, and it is
+    // not geocoded a second time.
+    expect(photonQueries).toEqual(["Sheetz Lehighton"]);
+    const poiSearches = tomtomUrls.filter(isPoiSearch);
+    expect(poiSearches.map(tomtomQuery)).toEqual(["Sheetz", "Sheetz"]);
+    expect(searchRadius(poiSearches[0]!)).toBe(TOMTOM_PLACE_RADIUS_METERS);
+    const widened = poiSearches[1]!;
+    expect(searchRadius(widened)).toBe(PLACE_NEAREST_REACH_METERS);
+    expect(widened.searchParams.get("lat")).toBe("40.83370");
+    expect(widened.searchParams.get("lon")).toBe("-75.71380");
+  });
+
+  it("answers 'Wawa Jim Thorpe' with the nearest Wawa when only the town is in the answer", async () => {
+    // Measured on production: the same fallback answers "Jim Thorpe, PA" and no
+    // Wawa appears. Resolving the town again answers with nothing that names it,
+    // so the split has to use the town row the answer already holds.
+    const { fetcher, photonQueries, tomtomUrls } = photonDownStub((url) => {
+      if (isPoiSearch(url)) {
+        return searchRadius(url) >= PLACE_NEAREST_REACH_METERS
+          ? { results: WAWA_NEAR_JIM_THORPE }
+          : { results: [] };
+      }
+      return {
+        results:
+          tomtomPlaceQuery(url) === "Wawa Jim Thorpe" ? [tomtomTown("Jim Thorpe", JIM_THORPE)] : [],
+      };
+    });
+    const places = await deploymentEngine(fetcher)("Wawa Jim Thorpe", undefined, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Wawa, Lehighton, PA",
+      "Wawa, Allentown, PA",
+      "Jim Thorpe, PA",
+    ]);
+    expect(photonQueries).toEqual(["Wawa Jim Thorpe"]);
+    const widened = tomtomUrls
+      .filter(isPoiSearch)
+      .find((url) => searchRadius(url) === PLACE_NEAREST_REACH_METERS);
+    expect(widened?.searchParams.get("lat")).toBe("40.87000");
+  });
+
+  it("never re-asks for a brand the list already holds", async () => {
+    // The whole-query answer is a Sheetz itself, so the list answers the brand;
+    // no trailing-town split is worth a second search.
+    const { fetcher, tomtomUrls } = photonDownStub((url) => {
+      if (isPoiSearch(url)) return { results: [] };
+      return {
+        results:
+          tomtomPlaceQuery(url) === "Sheetz Lehighton"
+            ? [tomtomPoi("sheetz-answer", "Sheetz", "Lehighton", LEHIGHTON)]
+            : [],
+      };
+    });
+    const places = await deploymentEngine(fetcher)("Sheetz Lehighton", undefined, signal());
+
+    expect(places.map((place) => place.label)).toEqual(["Sheetz, Lehighton, PA"]);
+    expect(tomtomUrls.filter(isPoiSearch)).toEqual([]);
   });
 });
 

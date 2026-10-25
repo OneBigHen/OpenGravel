@@ -12,9 +12,11 @@
  * Two rider expectations shape the edges of that: the town the rider named
  * stays a row of its own even when no business answers, and a brand is looked
  * for around the town first but then for the nearest branch anywhere, because
- * the closest Wawa or Sheetz is often in the next town. A two-word query that
- * matches nothing as typed ("Sheetz Lehighton") is retried once with its
- * trailing word as the town, so two real words never answer with an empty list.
+ * the closest Wawa or Sheetz is often in the next town. A query whose answer is
+ * only the town half of it ("Sheetz Lehighton" answered with "Lehighton, PA"
+ * because the geocoder has no Sheetz in its index) is retried once with its
+ * trailing words as the town, so two real words never answer with a list that
+ * never looked for the brand.
  *
  * The other edge is the query that is already a place's whole name. "Hawk
  * Mountain Sanctuary" is not "Hawk Mountain" near a town called "Sanctuary":
@@ -31,7 +33,7 @@
 
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { mergePlaceResults } from "@/application/geocoding/place-merge";
-import { parsePlaceQuery, PLACE_CATEGORIES, matchesWholeQuery, type ParsedPlaceQuery } from "@/application/geocoding/place-query";
+import { parsePlaceQuery, PLACE_CATEGORIES, matchesWholeQuery, type ParsedPlaceQuery, type PlaceCandidate } from "@/application/geocoding/place-query";
 import { withoutTrailingUsState } from "@/application/geocoding/us-states";
 import type { Coordinate } from "@/domain/ride/types";
 import { haversine } from "@/domain/geometry/analysis";
@@ -90,13 +92,24 @@ function nearest(places: readonly PlaceMatch[], bias: Coordinate | undefined): P
  * a place. A name that does not match is not used: the search then happens
  * around the rider, which is what they meant by typing it. The resolved place
  * is also kept as a row, so the town the rider named is never lost.
+ *
+ * `known` is the answer to the query as typed. When it already names the town,
+ * that row is the town: asking the geocoder again costs a provider call and can
+ * only answer with something *inside* the town (a business, a street) that does
+ * not name it.
  */
 async function resolvePlace(
   photon: Pick<PhotonGeocoder, "search">,
   text: string,
   bias: Coordinate | undefined,
   signal: AbortSignal,
+  known: readonly PlaceMatch[] = [],
 ): Promise<PlaceMatch | null> {
+  const inAnswer = nearest(
+    known.filter((place) => matchesWholeQuery(text, place.name)),
+    bias,
+  );
+  if (inAnswer !== null) return inAnswer;
   const places = await photon.search(text, {
     limit: PLACE_RESOLUTION_LIMIT,
     ...(bias === undefined ? {} : { bias }),
@@ -146,7 +159,11 @@ async function centerFor(
       const answeredAsWhole = whole.some((place) => matchesWholeQuery(parsed.query, place.name));
       if (!answeredAsWhole) {
         for (const candidate of parsed.placeCandidates) {
-          const resolved = await resolvePlace(photon, candidate.place, bias, signal);
+          // The answer to the whole query often already holds the town (a
+          // fallback geocoder matches its trailing words). That row is the town:
+          // geocoding it again is a provider call that can fail or answer with a
+          // business inside it instead of its name.
+          const resolved = await resolvePlace(photon, candidate.place, bias, signal, whole);
           if (resolved !== null) {
             return { center: resolved.coordinate, term: candidate.term, town: resolved, split: true };
           }
@@ -225,38 +242,76 @@ async function tomtomPlaces(
 }
 
 /**
- * "Sheetz Lehighton" is a brand and the town to look around, but a two-word
- * query is also the shape of a town's own name ("Jim Thorpe") — which is why
- * the whole text is asked first and the trailing word becomes a town only when
- * that found nothing at all. The split costs one geocode and one POI search,
- * and the town it resolves stays in the list beside the brand's locations, so a
- * rider who typed two real words never gets an empty answer.
+ * The splits a brand-and-town query can mean, longest trailing town first:
+ * "Wawa Jim Thorpe" is "Wawa" around "Jim Thorpe", then "Wawa Jim" around
+ * "Thorpe"; a two-word query has only its last word as a possible town. A town
+ * named with "near"/"in" is the rider's own split, not a guess, so it is never
+ * a retry target.
+ */
+function splitTargets(parsed: ParsedPlaceQuery): readonly PlaceCandidate[] {
+  if (parsed.place !== null) return [];
+  if (parsed.placeCandidates.length > 0) return parsed.placeCandidates;
+  const parts = parsed.query.split(" ").filter((word) => word !== "");
+  return parts.length === 2 ? [{ term: parts[0]!, place: parts[1]! }] : [];
+}
+
+/** The leading words of a split: what has to find rows for the query to be answered. */
+function splitTerm(parsed: ParsedPlaceQuery): string | null {
+  return splitTargets(parsed)[0]?.term ?? null;
+}
+
+/**
+ * Does the list hold an answer to what the rider typed, rather than only the
+ * town half of it?
+ *
+ * A geocoder with no brand in its index answers "Sheetz Lehighton" with
+ * "Lehighton, PA": the town is a real row, but no Sheetz is, so the list looks
+ * answered while the brand was never looked for. A row that names the query, or
+ * the brand part of it, is an answer; the town alone is not.
+ */
+function answersTypedQuery(parsed: ParsedPlaceQuery, places: readonly PlaceMatch[]): boolean {
+  const term = splitTerm(parsed);
+  return places.some(
+    (place) =>
+      matchesWholeQuery(parsed.query, place.name) ||
+      (term !== null && matchesWholeQuery(term, place.name)),
+  );
+}
+
+/**
+ * "Sheetz Lehighton" is a brand and the town to look around, but a query like it
+ * is also the shape of a town's own name ("Jim Thorpe") — which is why the text
+ * as typed is asked first and the trailing words become a town only when
+ * nothing answered the brand. The town already in that answer is the town to
+ * search around; the split costs one POI search, and the town it resolved stays
+ * in the list beside the brand's locations, so a rider who typed two real words
+ * never gets an empty or town-only answer.
  */
 async function trailingTownRetry(
   photon: Pick<PhotonGeocoder, "search">,
   tomtom: TomTomPlaceSearch,
   parsed: ParsedPlaceQuery,
+  knownPlaces: readonly PlaceMatch[],
   bias: Coordinate | undefined,
   signal: AbortSignal,
 ): Promise<PoiAnswer> {
-  if (parsed.place !== null || parsed.placeCandidates.length > 0) return NO_POI_ANSWER;
-  const parts = parsed.query.split(" ").filter((word) => word !== "");
-  if (parts.length !== 2) return NO_POI_ANSWER;
-  const term = parts[0]!;
-  const place = parts[1]!;
-  let town: PlaceMatch | null;
-  try {
-    town = await resolvePlace(photon, place, bias, signal);
-  } catch {
-    return NO_POI_ANSWER;
+  for (const candidate of splitTargets(parsed)) {
+    const { term, place } = candidate;
+    let town: PlaceMatch | null;
+    try {
+      town = await resolvePlace(photon, place, bias, signal, knownPlaces);
+    } catch {
+      continue;
+    }
+    if (town === null) continue;
+    const target: PoiTarget = { center: town.coordinate, term, town, split: true };
+    const places = await settled(
+      poiRows(tomtom, target, PLACE_CATEGORIES.get(term.toLowerCase()) ?? null, signal),
+      [] as PlaceMatch[],
+    );
+    return { places, town, splitTerm: term };
   }
-  if (town === null) return NO_POI_ANSWER;
-  const target: PoiTarget = { center: town.coordinate, term, town, split: true };
-  const places = await settled(
-    poiRows(tomtom, target, PLACE_CATEGORIES.get(term.toLowerCase()) ?? null, signal),
-    [] as PlaceMatch[],
-  );
-  return { places, town, splitTerm: term };
+  return NO_POI_ANSWER;
 }
 
 /** POI rows lead; the town the answer resolved and the place answers follow. */
@@ -335,11 +390,22 @@ export function createPlaceSearchEngine(options: PlaceSearchEngineOptions): Plac
       throw new Error("Place search is unavailable");
     }
     const places = answerRows(poi, photonPlaces ?? [], bias);
-    if (places.length > 0 || tomtom === undefined) return places;
-    // Both sources answered nothing for the query as typed. That is the only
-    // moment a two-word brand-and-town split is worth asking for. An unexpected
-    // failure there leaves the empty answer as it is rather than becoming a 503.
-    const retried = await trailingTownRetry(photon, tomtom, parsed, bias, signal)
+    // A brand-and-town query is answered only when the brand found rows. When
+    // the geocoder has no brand in its index it answers the town half instead
+    // ("Lehighton, PA" for "Sheetz Lehighton"): that is a row, not an answer,
+    // so the town becomes the centre of one town-scoped POI search (widened to
+    // the nearest branch anywhere when the town has none). A split that already
+    // ran keeps its town even when it found no rows. An unexpected failure
+    // leaves the answer as it is rather than becoming a 503.
+    if (
+      tomtom === undefined ||
+      poi.places.length > 0 ||
+      poi.town !== null ||
+      answersTypedQuery(parsed, places)
+    ) {
+      return places;
+    }
+    const retried = await trailingTownRetry(photon, tomtom, parsed, photonPlaces ?? [], bias, signal)
       .catch(() => NO_POI_ANSWER);
     if (retried.places.length === 0 && retried.town === null) return places;
     return answerRows(retried, photonPlaces ?? [], bias);
