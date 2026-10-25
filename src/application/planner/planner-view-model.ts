@@ -55,6 +55,7 @@ import type {
   RouteRoles,
 } from "@/domain/route/types";
 import {
+  addedMinutes as addedMinutesBetween,
   formatAddedTime,
   formatDistance,
   formatDuration,
@@ -158,6 +159,12 @@ export interface RouteCardVm {
   readonly durationLabel: string;
   readonly distanceLabel: string;
   readonly addedTimeLabel: string | null;
+  /**
+   * The same delta {@link addedTimeLabel} prints, as whole minutes (`0` for the
+   * fastest option itself). Absent or `null` is unmeasured, so a comparison
+   * between options never orders an unknown as if it were a number.
+   */
+  readonly addedMinutes?: number | null;
   readonly badges: readonly string[];
   /** Optional for compatibility with injected view models; absent is unknown. */
   readonly trafficLabel?: string;
@@ -710,6 +717,9 @@ function routeCards(
         reference === null
           ? null
           : formatAddedTime(candidate.durationSeconds, reference.durationSeconds),
+      ...(reference === null
+        ? {}
+        : { addedMinutes: addedMinutesBetween(candidate.durationSeconds, reference.durationSeconds) }),
       badges: [
         surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]),
         ...(curves === null ? [] : [curves]),

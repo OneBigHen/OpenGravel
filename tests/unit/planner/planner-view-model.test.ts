@@ -444,12 +444,16 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(best.durationLabel).toBe("1 h 48 min");
     expect(best.distanceLabel).toBe("78 mi");
     expect(best.addedTimeLabel).toBe("+12 min vs Fastest");
+    // The same delta as a number, so a comparison can order the options
+    // without reading the sentence back.
+    expect(best.addedMinutes).toBe(12);
     expect(best.isSelected).toBe(true);
 
     const fast = required(vm.routeCards[1]);
     expect(fast.roleLabel).toBe("Fastest");
     expect(fast.durationLabel).toBe("1 h 36 min");
     expect(fast.addedTimeLabel).toBeNull();
+    expect(fast.addedMinutes).toBe(0);
     expect(fast.isSelected).toBe(false);
   });
 

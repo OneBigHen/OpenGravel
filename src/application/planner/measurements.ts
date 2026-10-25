@@ -39,14 +39,31 @@ export function formatDistance(meters: number): string {
   return `${miles >= 10 ? Math.round(miles) : Number(miles.toFixed(1))} mi`;
 }
 
+/**
+ * The added time over the fastest route, in whole minutes: `0` for the fastest
+ * itself, `null` when either duration is unmeasured.
+ *
+ * It exists beside the label so a surface that *compares* two routes (which of
+ * these is quickest) reads the same number the label prints, instead of
+ * parsing the sentence back into a quantity.
+ */
+export function addedMinutes(
+  seconds: number,
+  fastestSeconds: number,
+): number | null {
+  if (!isKnownMeasurement(seconds) || !isKnownMeasurement(fastestSeconds)) {
+    return null;
+  }
+  return Math.max(0, Math.round((seconds - fastestSeconds) / 60));
+}
+
 /** `+12 min vs Fastest`, or `null` when there is no honest delta to show. */
 export function formatAddedTime(
   seconds: number,
   fastestSeconds: number,
 ): string | null {
-  if (!isKnownMeasurement(seconds) || !isKnownMeasurement(fastestSeconds)) {
-    return null;
-  }
-  const deltaMinutes = Math.round((seconds - fastestSeconds) / 60);
-  return deltaMinutes > 0 ? `+${deltaMinutes} min vs Fastest` : null;
+  const deltaMinutes = addedMinutes(seconds, fastestSeconds);
+  return deltaMinutes === null || deltaMinutes === 0
+    ? null
+    : `+${deltaMinutes} min vs Fastest`;
 }

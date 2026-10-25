@@ -10,6 +10,7 @@ import type { RouteCandidateId } from "@/domain/route/ids";
 import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
+import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
 import { usePhonePlanner } from "./usePhonePlanner";
 import { PhoneRideSummary } from "./PhoneRideSummary";
@@ -66,9 +67,14 @@ export interface PlannerResultPanelProps {
   readonly sheetExpanded?: boolean;
   /** Phone peek: where the ride goes ("To Hawk Mountain", "Loop from Jim Thorpe"). */
   readonly destinationLine?: string | null;
+  /**
+   * The composer's ride style, handed to the phone summary so the ride can be
+   * reshaped from under the options with the same state the full controls edit.
+   */
+  readonly rideStyle?: RideStyleControlsModel;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const [comparing, setComparing] = useState(false);
@@ -83,7 +89,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
   const tint = selectedCard?.tint ?? 0;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => setComparing(!comparing)} onSelect={choices.onSelect} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
+      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => setComparing(!comparing)} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
       {choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
