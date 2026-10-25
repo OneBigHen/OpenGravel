@@ -1,0 +1,61 @@
+graphhopper:
+  datareader.file: pa-nj-og-curve.osm.pbf
+  graph.location: graph-cache-og-curve
+  custom_models.directory: custom-models
+
+  profiles:
+    - name: motorcycle_fastest
+      custom_model_files: [motorcycle-fastest.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_twisty
+      custom_model_files: [motorcycle-base.json, prefer-curvature.json, motorcycle-twisty.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_scenic
+      custom_model_files: [motorcycle-base.json, prefer-curvature.json, motorcycle-scenic.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+    - name: motorcycle_adventure
+      custom_model_files: [motorcycle-adventure.json]
+      turn_costs:
+        vehicle_types: [motorcycle, motor_vehicle]
+        u_turn_costs: 60
+
+  profiles_ch: []
+  profiles_lm:
+    - profile: motorcycle_fastest
+    - profile: motorcycle_twisty
+    - profile: motorcycle_scenic
+    - profile: motorcycle_adventure
+
+  graph.encoded_values: car_access,car_average_speed,road_access,road_class,road_environment,curvature,og_curve,toll,max_speed,surface,smoothness,track_type,urban_density,country
+  graph.urban_density.threads: 4
+  max_speed_calculator.enabled: true
+  prepare.lm.threads: 4
+  prepare.min_network_size: 100
+  prepare.subnetworks.threads: 4
+  routing.snap_preventions_default: tunnel,bridge,ferry
+  routing.non_ch.max_waypoint_distance: 1000000
+  routing.timeout_ms: 30000
+  import.osm.ignored_highways: footway,construction,cycleway,path,steps
+
+server:
+  application_connectors:
+    - type: http
+      port: 8991
+      bind_host: 127.0.0.1
+  request_log:
+    appenders: []
+  admin_connectors:
+    - type: http
+      port: 8992
+      bind_host: 127.0.0.1
+
+logging:
+  level: INFO
+  appenders:
+    - type: console

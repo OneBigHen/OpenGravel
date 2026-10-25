@@ -28,8 +28,8 @@ supplied surface rules.
 
 `motorcycle-base.json` is the shared access/roughness base the profile models
 are authored against, and `prefer-curvature.json` is an optional curvature
-preference model. Both are carried unchanged so the deployment can be rebuilt
-identically.
+preference model. The shared access base is preserved; the preference model now requires the
+`og_curve` graph extension described in `../ext/README.md`.
 
 ## Integrity
 
@@ -40,10 +40,12 @@ identically.
 | `motorcycle-fastest.json` | `dc0e507b1469a8c68736d55de8f8e9d10abfbc89a8f83aac730d6e261fc87d2c` |
 | `motorcycle-scenic.json` | `e8455809dfdfc10490122624c60a2e01f367e5c3975595c4127cd52edcbeff29` |
 | `motorcycle-twisty.json` | `8c92480a971446a485b67c3997aab88fe5a3dea24e69c86491fce5f408204e47` |
-| `prefer-curvature.json` | `b1611dd890d2a9e737892cd568b0e49f58e278f0e5e9606d8335986582ed07ff` |
+| `prefer-curvature.json` | `e820c0c47453ff9ea46af00690fbda6c19459df2c5d9a547364909628a0384be` (changed 2026-10-25; requires og_curve graph) |
 
-The live verification in `tests/real-router/graphhopper-live.test.ts` runs
-against a router loaded with exactly these models over the Pennsylvania graph.
+These files now describe the opt-in `og_curve` candidate graph. The current live
+graph uses the parent revision's `prefer-curvature.json` and must keep its matching
+models until an explicitly authorized graph promotion. App code continues to
+work with either graph; do not replace the live model file independently.
 
 ## Honest speeds (2026-10-04)
 
