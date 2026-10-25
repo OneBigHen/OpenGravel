@@ -62,10 +62,10 @@ describe("plannerPreparationContext", () => {
     expect(context.tripWindow).toEqual({ start: NOW, end: "2026-06-21T15:30:00.000Z" });
     // 150 mi range less the 30 mi reserve.
     expect(context.fuelRangeKm).toBeCloseTo(120 * 1.609344, 5);
-    // Jim Thorpe on the solstice: sunset ≈ 8:40 PM EDT (00:40Z), ~10.6 h after a 10 AM start.
+    // Jim Thorpe on the solstice: sunset ≈ 8:40 PM EDT (00:40Z), and the
+    // sunrise that morning ≈ 5:30 EDT (09:30Z).
     expect(context.sunset?.startsWith("2026-06-22T00:")).toBe(true);
-    expect(context.remainingDaylightMinutes).toBeGreaterThan(600);
-    expect(context.remainingDaylightMinutes).toBeLessThan(660);
+    expect(context.sunrise?.startsWith("2026-06-21T09:")).toBe(true);
     expect(context.trafficCorridor).toHaveLength(TRAFFIC_CORRIDOR_POINTS);
     expect(context.weatherLocation).toEqual({ lat: 40.86, lon: -75.7 });
   });
@@ -133,11 +133,14 @@ describe("PlannerPreparation", () => {
     }));
   });
 
-  function providers(traffic: ProviderResult<TrafficData> | null = null): PreparationProviderRegistry & {
+  function providers(
+    traffic: ProviderResult<TrafficData> | null = null,
+    weather: ProviderResult<WeatherData> | null = null,
+  ): PreparationProviderRegistry & {
     readonly weatherRefresh: ReturnType<typeof vi.fn>;
     readonly trafficRefresh: ReturnType<typeof vi.fn>;
   } {
-    const weatherResult: ProviderResult<WeatherData> = {
+    const weatherResult: ProviderResult<WeatherData> = weather ?? {
       state: "ready",
       reason: "Weather for the ride window.",
       provenance: "National Weather Service",
@@ -194,7 +197,10 @@ describe("PlannerPreparation", () => {
     expect(registry.weatherRefresh).toHaveBeenCalledTimes(1);
     expect(registry.trafficRefresh).toHaveBeenCalledTimes(1);
     expect(onRouteTraffic).toHaveBeenLastCalledWith({ routeId: "route_a", label: "Light traffic" });
-    expect(screen.getByTestId("preparation-section")).toBeInTheDocument();
+    // Weather and daylight are the one line under Start; a ride with nothing
+    // else to check grows no list under them.
+    expect(screen.queryByTestId("preparation-section")).toBeNull();
+    expect(screen.getByTestId("prepare-glance")).toHaveTextContent("72°F, dry");
     expect(screen.getByTestId("departure-summary")).toHaveTextContent("Leaving now");
 
     fireEvent.click(screen.getByTestId("departure-in-1h"));
@@ -246,6 +252,83 @@ describe("PlannerPreparation", () => {
     expect(screen.getByTestId("prepare-glance")).not.toHaveTextContent("Light traffic");
     // Nothing checked-and-quiet, and nothing unchecked, becomes a row either.
     expect(screen.queryByText("Traffic", { selector: "dt" })).not.toBeInTheDocument();
+  });
+
+  it("names the checks panel once, and keeps a check's row free of status chips", async () => {
+    const registry = {
+      ...providers(),
+      offlineRoute: {
+        id: "offline-route-test",
+        kind: "offline-route" as const,
+        capabilities: () => ({ kind: "offline-route" as const, availability: "available" as const, freshness: "time-bound" as const, reason: null, provenance: "test" }),
+        getOfflineRoute: () => ({
+          state: "ready" as const,
+          reason: "A route graph for this area is installed.",
+          provenance: "Installed areas",
+          data: { display: "Installed for this area" },
+        }),
+      },
+    };
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        providers={registry}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // The disclosure's own summary says it; the panel underneath does not
+    // repeat the name as a second heading.
+    expect(screen.getAllByText("Before you ride")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Before you ride" })).toBeNull();
+    const value = screen.getByTestId("preparation-value-offline-route");
+    expect(value).toHaveTextContent("Installed for this area");
+    expect(screen.queryByText("Ready")).toBeNull();
+    expect(screen.queryByText("Installed areas")).toBeNull();
+  });
+
+  it("says the weather once, in words, and credits the service in small print", async () => {
+    const registry = providers(null, {
+      state: "stale",
+      reason: "Weather data is older than 45 minutes; check before you ride.",
+      provenance: "Source: National Weather Service · updated 01:42",
+      data: { display: "Clear · 36°F", freshnessLabel: "Stale", ageMinutes: 185 } as WeatherData,
+    });
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        providers={registry}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const glance = screen.getByTestId("prepare-glance");
+    expect(glance).toHaveTextContent("Clear · 36°F");
+    // Old enough to matter, said in words: no Ready/Stale chip, no provider
+    // sentence, and never a minute count.
+    expect(glance).toHaveTextContent("Forecast is 3 h old");
+    expect(glance).not.toHaveTextContent(/min remaining/);
+    expect(screen.getByTestId("prepare-weather-credit")).toHaveTextContent("National Weather Service");
+
+    expect(screen.queryByTestId("preparation-value-weather")).toBeNull();
+    expect(screen.queryByText("Stale")).toBeNull();
+    expect(screen.queryByText(/Source:/)).toBeNull();
   });
 
   it("ends the briefing line with the time it gets dark, not a sunset sentence", async () => {

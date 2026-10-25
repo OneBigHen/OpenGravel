@@ -44,9 +44,10 @@ export function fuelIsRelevant(context: RoutePreparationContext): boolean {
     || context.fuelRangeKm === undefined;
 }
 
-/** Compare a known ride duration with daylight when a sunset is known. */
+/** Compare a known ride duration with daylight when either crossing is known. */
 export function daylightIsRelevant(context: RoutePreparationContext): boolean {
-  return instant(context.sunset) !== null && finite(context.rideDurationMinutes);
+  return (instant(context.sunset) !== null || instant(context.sunrise) !== null)
+    && finite(context.rideDurationMinutes);
 }
 
 /** Long-trip reference checks are not useful for ordinary short rides. */

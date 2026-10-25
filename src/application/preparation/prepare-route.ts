@@ -37,6 +37,7 @@ import type {
 import type { ProviderCapability } from "./providers";
 import type { Coordinate } from "@/domain/ride/types";
 import type { Consideration } from "@/application/long-trip";
+import { daylightLine } from "./daylight-line";
 
 export type {
   PreparationData,
@@ -57,8 +58,8 @@ export interface RoutePreparationContext {
   readonly congestedWindows?: readonly TimeWindow[];
   readonly routeTouchesMappedCorridor?: boolean;
   readonly fuelRangeKm?: number | null;
+  readonly sunrise?: string | null;
   readonly sunset?: string | null;
-  readonly remainingDaylightMinutes?: number | null;
   readonly multiDay?: boolean;
   /** Optional base facts from route/evidence read models. */
   readonly routeCharacter?: RoutePreparationFact | null;
@@ -212,21 +213,22 @@ function fuelItem(context: RoutePreparationContext): RoutePreparationItem {
   };
 }
 
-function daylightItem(context: RoutePreparationContext): RoutePreparationItem {
-  if (!finite(context.remainingDaylightMinutes)) return absentItem("daylight", CONDITIONAL);
-  const remaining = context.remainingDaylightMinutes;
-  const duration = context.rideDurationMinutes;
-  if (!finite(duration)) return absentItem("daylight", CONDITIONAL);
-  const fits = duration <= remaining;
+/**
+ * The ride's relationship to daylight, or no item at all.
+ *
+ * A ride that sits inside daylight has nothing to say; a ride that starts or
+ * finishes in the dark says when the light comes or goes, never a minute count.
+ */
+function daylightItem(context: RoutePreparationContext): RoutePreparationItem | null {
+  const display = daylightLine(context);
+  if (display === null) return null;
   return {
     kind: "daylight",
     state: "ready",
     relevance: CONDITIONAL,
-    reason: fits
-      ? "This ride fits within the remaining daylight."
-      : "This ride may finish after sunset.",
-    provenance: "Sunset calculation",
-    data: { display: `${Math.max(0, Math.round(remaining))} min remaining` },
+    reason: "Compared with sunrise and sunset at the start of this ride.",
+    provenance: "Sunrise and sunset calculation",
+    data: { display },
   };
 }
 
@@ -260,7 +262,10 @@ export function prepareRoute(
     items.push(providerItem("traffic", safeProviderResult(byKind.traffic, "traffic", context), CONDITIONAL));
   }
   if (fuelIsRelevant(context)) items.push(fuelItem(context));
-  if (daylightIsRelevant(context)) items.push(daylightItem(context));
+  if (daylightIsRelevant(context)) {
+    const daylight = daylightItem(context);
+    if (daylight !== null) items.push(daylight);
+  }
 
   // Offline routing is always a separate capability: a saved route never proves
   // that a route-specific graph is installed.

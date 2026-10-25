@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   alertOverlapsTripWindow,
   createNwsWeatherProvider,
-  darkByLabel,
 } from "@/application/preparation/weather-provider";
 import { prepareRoute } from "@/application/preparation/prepare-route";
 import type { RoutePreparationContext } from "@/application/preparation/prepare-route";
@@ -96,20 +95,6 @@ describe("weather briefing line", () => {
       { ...clear.forecast[0]!, name: "Start", temperatureF: 38 },
       { ...clear.forecast[0]!, name: "End", startTime: "2026-09-17T19:00:00.000Z", endTime: "2026-09-17T21:00:00.000Z", temperatureF: 52 },
     ])).toBe("Clear · 38–52°F");
-  });
-
-  it("says when it gets dark instead of leaving a sunset sentence for the rider to decode", () => {
-    expect(darkByLabel({
-      sunset: "2026-09-17T22:12:00.000Z",
-      tripWindow: { start: "2026-09-17T21:00:00.000Z", end: "2026-09-17T23:00:00.000Z" },
-      riderTimeZone: "America/New_York",
-    })).toBe("Dark by 6:12 pm");
-    expect(darkByLabel({
-      sunset: "2026-09-17T22:12:00.000Z",
-      tripWindow: { start: "2026-09-17T18:00:00.000Z", end: "2026-09-17T19:00:00.000Z" },
-      riderTimeZone: "America/New_York",
-    })).toBeNull();
-    expect(darkByLabel({ tripWindow: { start: "2026-09-17T18:00:00.000Z", end: "2026-09-17T19:00:00.000Z" } })).toBeNull();
   });
 });
 
