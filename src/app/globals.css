@@ -14329,6 +14329,7 @@ a.og-secondary {
     display: flex;
     flex-direction: column;
     gap: 0;
+    min-width: 0;
   }
 
   /* The picture leads the card, the way Explore's list reads. */
