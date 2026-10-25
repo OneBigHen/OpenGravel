@@ -145,6 +145,7 @@ import {
   type HostedStyleLayer,
 } from "@/infrastructure/map/maplibre/visual-detail";
 import type { MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
+import { declutterTargets, gasOnlyFilter } from "@/infrastructure/map/maplibre/ride-declutter";
 import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
 
 /** The default location of the vendored worker module (see the header). */
@@ -329,6 +330,7 @@ interface MapLibreMap {
       }
     | undefined;
   setLayoutProperty?(layerId: string, name: string, value: unknown): void;
+  setFilter?(layerId: string, filter: unknown): void;
   setPaintProperty?(layerId: string, name: string, value: unknown): void;
   isSourceLoaded?(sourceId: string): boolean;
   getPitch?(): number;
@@ -1530,7 +1532,37 @@ export async function createMapLibreHost(
     }
   }
 
+  /**
+   * While riding, the basemap's own POI labels are hidden except gas stations;
+   * leaving the ride (or a style reset) puts the style's filters back. Applied
+   * only when the answer changes, so the 1 Hz ride scene does not walk the style.
+   */
+  let rideDeclutterApplied: boolean | null = null;
+  const rideDeclutterOriginals = new Map<string, unknown>();
+  function syncRideDeclutter(current: HostAttempt, ride: boolean): void {
+    if (rideDeclutterApplied === ride) return;
+    const { map } = current;
+    if (map.setFilter === undefined) return;
+    try {
+      if (ride) {
+        for (const target of declutterTargets(map.getStyle?.()?.layers ?? [])) {
+          if (!rideDeclutterOriginals.has(target.id)) rideDeclutterOriginals.set(target.id, target.original);
+          map.setFilter(target.id, gasOnlyFilter(rideDeclutterOriginals.get(target.id)));
+        }
+      } else {
+        for (const [id, original] of rideDeclutterOriginals) {
+          if (map.getLayer(id) !== undefined) map.setFilter(id, original);
+        }
+        rideDeclutterOriginals.clear();
+      }
+      rideDeclutterApplied = ride;
+    } catch {
+      // A basemap whose labels cannot be filtered keeps them: clutter, not a failure.
+    }
+  }
+
   function syncScene(current: HostAttempt, scene: MapScene): void {
+    syncRideDeclutter(current, scene.mode === "ride");
     const plan = planSceneSync(current.fingerprints, scene);
     current.fingerprints = plan.fingerprints;
     // Guarded exactly like the layer table: a renderer failure here is reported
@@ -2267,6 +2299,9 @@ export async function createMapLibreHost(
   function restoreStyle(current: HostAttempt): void {
     if (disposed || attempt !== current) return;
     current.fingerprints = null;
+    // A new style carries its own filters: forget what was hidden in the old one.
+    rideDeclutterApplied = null;
+    rideDeclutterOriginals.clear();
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);

@@ -64,7 +64,7 @@ test.describe("recorded rides", () => {
       .poll(async () => distanceMiles(await page.getByTestId("recording-distance").innerText()))
       .toBeGreaterThan(0.5);
     await page.getByTestId("ride-resume").click();
-    await page.getByTestId("ride-end").click();
+    await clickInRideSheet(page, "ride-stop", "ride-stop-confirm");
     await page.getByTestId("ride-finish").click();
     await expect(page.getByTestId("ride-terminal")).toContainText("Recorded ride saved");
 
@@ -124,7 +124,7 @@ test.describe("recorded rides", () => {
     await page.goto("/");
     await page.getByTestId("record-a-ride").click();
     await expect(page.getByTestId("ride-activity")).toHaveText("Recording");
-    await page.getByTestId("ride-end").click();
+    await clickInRideSheet(page, "ride-stop", "ride-stop-confirm");
     await page.getByTestId("ride-discard").click();
     await expect(page.getByTestId("ride-terminal")).toContainText("Recording discarded");
     await page.reload();

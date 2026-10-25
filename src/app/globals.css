@@ -14567,7 +14567,7 @@ a.og-secondary {
   padding: 0 14px;
   font-size: var(--og-text-body);
   font-weight: 700;
-  color: var(--og-ember-text);
+  color: var(--og-paper);
   text-decoration: underline;
 }
 

@@ -1731,9 +1731,11 @@ html .og-ride {
    rider's arrow grows with it (read by the map from these tokens, style.ts).
    -------------------------------------------------------------------------- */
 
-:root[data-theme="day"] .og-ride .og-map {
-  --og-map-route-casing: #1d0b05;
-  --og-map-emphasis: 1.25;
+/* The followed line is plum with a white casing in both themes, drawn heavier
+   than the planner's (ride overhaul, 2026-10-25). The ridden part dims. */
+.og-ride .og-map {
+  --og-map-route-casing: #ffffff;
+  --og-map-emphasis: 1.4;
 }
 
 :root[data-theme="day"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {

@@ -221,7 +221,7 @@ function followedRoutes(
       ? splitRouteAtProgress(routeLine, input.progressFraction ?? null)
       : null;
   if (split === null) {
-    const whole = { id: routeId, role: null, geometry: routeLine, state: "selected" as const };
+    const whole = { id: routeId, role: null, tint: RIDE_ROUTE_TINT, geometry: routeLine, state: "selected" as const };
     return isDrawableRoute(whole) ? [whole] : [];
   }
   // The rider has ridden the part behind them; what is left is the answer still
@@ -231,10 +231,17 @@ function followedRoutes(
   // carry measured runs today, and runs measured against the whole line would
   // not line up on a truncated one without being re-cut.
   return [
-    { id: routeId, role: null, geometry: split.ahead, state: "selected" as const },
+    { id: routeId, role: null, tint: RIDE_ROUTE_TINT, geometry: split.ahead, state: "selected" as const },
     { id: routeId, role: null, geometry: split.travelled, state: "travelled" as const },
   ];
 }
+
+/**
+ * The followed line is plum (route colour 1) in both themes: it is the one
+ * colour on the ride map that is neither a road nor a label, and with the white
+ * casing the ride palette gives it, it reads from a bar mount in sun or dark.
+ */
+const RIDE_ROUTE_TINT = 1;
 
 /** Projects the ride surface's active route, optional candidate preview and position. */
 export function buildRideScene(input: RideSceneInput): MapScene {

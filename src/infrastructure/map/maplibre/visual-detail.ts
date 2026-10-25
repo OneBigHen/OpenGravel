@@ -28,6 +28,7 @@ export interface HostedStyleLayer {
   readonly source?: string;
   readonly "source-layer"?: string;
   readonly layout?: Readonly<Record<string, unknown>>;
+  readonly filter?: unknown;
 }
 
 export interface BuildingInsertion {

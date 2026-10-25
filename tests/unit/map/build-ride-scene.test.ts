@@ -127,6 +127,8 @@ describe("buildRideScene splits the followed line at the matcher's progress poin
     expect(scene.routes).toEqual([{
       id: ROUTE_ID,
       role: null,
+      // The followed line is plum (route colour 1) on the ride map.
+      tint: 1,
       geometry: LINE,
       state: "selected",
     }]);
