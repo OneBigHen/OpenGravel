@@ -169,7 +169,7 @@ test.describe("ride focus", () => {
 
   test("stops the ride in two steps, and clears the pointer when it ends", async ({ page }) => {
     await resumeAndFix(page);
-    // The strip's ✕ is the one way to end a ride from the map (DV-10).
+    // The right column's ✕ is the one way to end a ride from the map (DV-10).
     await page.getByTestId("ride-end").click();
 
     // The confirmation is in place (not a modal), and the way out is explicit.

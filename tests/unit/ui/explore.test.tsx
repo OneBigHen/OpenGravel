@@ -114,7 +114,7 @@ describe("Explore UI", () => {
     expect(window.location.search).toContain("area=eastern-pa");
   });
 
-  it("leads with the ride cards and folds the date, region and area pickers into the filters sheet", () => {
+  it("leads with the ride cards and folds the date, region and area pickers into the filters panel", () => {
     const twisty = { ...entry, id: "twisty", surfaceSummary: "Mixed", curvatureSummary: "Twisty" };
     render(<ExplorePanel entries={[twisty]} mapboxToken="public-test" />);
     const list = screen.getByRole("list", { name: "Explore routes" });
@@ -123,10 +123,10 @@ describe("Explore UI", () => {
       (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
     // One row of chips: the near-me sort and the three distance buckets. Curvy
-    // and gravel stay reachable, as options in the sheet.
+    // and gravel stay reachable, as options in the panel.
     expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent))
       .toEqual(["Near me", "Under 30 mi", "30–90 mi", "90+ mi"]);
-    // The date chips and both pickers live in the sheet, not above the list.
+    // The date chips and both pickers live in the panel, not above the list.
     expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "Filter by region" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "PA riding area" }));
@@ -138,6 +138,49 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("heading", { name: "Ready-made rides" })).toBeNull();
     expect(screen.queryByText(/Areas include nearby border towns/)).toBeNull();
     expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
+  });
+
+  it("keeps the search, the distance chips and one Filters button in the toolbar, with every other filter inside filters", () => {
+    // Desktop used to spend its first two rows on six selects, an unlabelled
+    // checkbox and the date chips. The toolbar is now the phone's calm row at
+    // every width, and nothing was dropped on the way into Filters.
+    const twisty = { ...entry, id: "twisty", surfaceSummary: "Mixed", curvatureSummary: "Twisty" };
+    render(<ExplorePanel entries={[twisty]} />);
+    const toolbar = screen.getByRole("searchbox", { name: "Search routes" }).closest(".og-explore__toolbar");
+    expect(toolbar).not.toBeNull();
+    const filters = screen.getByRole("region", { name: "Explore filters" });
+
+    // The chip row and the button that opens the rest share the toolbar, so the
+    // stylesheet can put them on one line.
+    expect(toolbar).toContainElement(screen.getByRole("group", { name: "Quick filters" }));
+    expect(toolbar).toContainElement(screen.getByRole("button", { name: /^Filters/ }));
+    expect(toolbar).toContainElement(filters);
+
+    // Every remaining filter is reachable from the panel, in one grid.
+    for (const name of ["Filter by source", "Filter by distance", "Filter by surface", "Sort routes"]) {
+      expect(filters).toContainElement(screen.getByRole("combobox", { name }));
+    }
+    expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
+
+    // The checkbox is named by the words beside it, not by an invisible label.
+    const curvy = within(filters).getByRole("checkbox", { name: "Curvy routes only" });
+    expect(curvy.closest("label")?.textContent).toBe("Curvy routes only");
+
+    // The panel is shut until the button says otherwise; closing it hands focus
+    // back to that button.
+    expect(filters).toHaveAttribute("data-open", "false");
+    fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
+    expect(filters).toHaveAttribute("data-open", "true");
+    fireEvent.click(within(filters).getByRole("button", { name: /^Show \d+ route/ }));
+    expect(filters).toHaveAttribute("data-open", "false");
+    expect(screen.getByRole("button", { name: /^Filters/ })).toHaveFocus();
+  });
+
+  it("leads the page with its title, not a second line above it", () => {
+    render(<ExplorePanel entries={[entry]} />);
+    expect(screen.getByRole("heading", { name: "Explore", level: 1 })).toBeInTheDocument();
+    expect(document.querySelector(".og-explore__heading .og-eyebrow")).toBeNull();
+    expect(screen.queryByText(/Find your next ride/i)).toBeNull();
   });
 
   it("draws a ride card as its map, the name and one line of plain facts", () => {

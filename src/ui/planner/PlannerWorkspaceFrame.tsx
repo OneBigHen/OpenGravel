@@ -17,6 +17,7 @@ import { PlannerPlacesMap, type PlannerPlacesProps } from "@/ui/places/PlannerPl
 import { PrimaryNav } from "@/ui/nav/PrimaryNav";
 import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import type { PlannerLocateMe } from "@/ui/planner/usePlannerPlaces";
+import { useDesktopPlanner } from "@/ui/planner/usePhonePlanner";
 import { useRouteScrub } from "@/ui/stores/route-scrub-store";
 
 type PlannerMapProps = ComponentProps<typeof PlannerMap>;
@@ -76,6 +77,9 @@ export function PlannerWorkspaceFrame({
   children,
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
+  // The desktop rail owns the edit tools (beside undo/redo); every other tier
+  // keeps them over the map, where the sheet can fold over them.
+  const desktop = useDesktopPlanner();
   useSnapBackAfterKeyboard();
   // The elevation profile's scrub point, drawn on the route (UX rework phase 3).
   const scrub = useRouteScrub();
@@ -188,7 +192,7 @@ export function PlannerWorkspaceFrame({
             clusterControls={clusterControls}
           />
           {glance}
-          {editBar === undefined ? null : <PlannerMapEditBar {...editBar} />}
+          {editBar === undefined || desktop ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
             <span className="og-map__retrying" data-testid="map-retry-chip" role="status">
               Retrying the map…

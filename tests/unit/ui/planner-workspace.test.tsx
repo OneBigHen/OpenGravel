@@ -1740,3 +1740,45 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(begins(posts)).toBe(1);
   });
 });
+
+/**
+ * The desktop plan (≥ 1181 px) composes the surface as columns: a planning rail,
+ * the map, and the ride inspector. The map there carries one control (Layers) and
+ * its instruments, so the route's edit tools belong to the panel beside undo/redo
+ * rather than to a floating bar over the geography.
+ */
+describe("PlannerWorkspace — the desktop plan", () => {
+  /** A viewport where only the desktop plan query matches. */
+  function stubTier(desktop: boolean): void {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: desktop && query.includes("(min-width: 1181px)"),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+  }
+
+  it("puts the edit tools in the planning panel instead of over the map", async () => {
+    stubTier(true);
+    await renderWorkspace(unfetched());
+
+    const bar = screen.getByTestId("map-edit-bar");
+    // Not in the map slot: the map is left to Layers and its instrument column.
+    expect(bar.closest(".og-planner__map-slot")).toBeNull();
+    // In the sheet's head, beside undo/redo, which is where the ride is edited.
+    expect(bar.closest(".og-planner__sheet")).not.toBeNull();
+    expect(screen.getByTestId("sheet-edit-tools")).toContainElement(bar);
+  });
+
+  it("keeps them on the map below the desktop tier", async () => {
+    stubTier(false);
+    await renderWorkspace(unfetched());
+
+    expect(screen.getByTestId("map-edit-bar").closest(".og-planner__map-slot")).not.toBeNull();
+    expect(screen.queryByTestId("sheet-edit-tools")).toBeNull();
+  });
+});

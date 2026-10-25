@@ -23,10 +23,11 @@ import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
-import { usePhonePlanner } from "./usePhonePlanner";
+import { useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
 import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
+import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
 import { PlannerResultPanel } from "@/ui/planner/PlannerResultPanel";
 import { PlannerWorkspaceStatus } from "@/ui/planner/PlannerWorkspaceStatus";
@@ -52,6 +53,12 @@ export interface PlannerWorkspaceDockProps {
   readonly canClear: boolean;
   readonly onClearRide: () => void;
   readonly composer: ComponentProps<typeof IntentComposer>;
+  /**
+   * The route-editing tools, when the dock owns them (the desktop rail): they sit
+   * in the sheet's head beside undo/redo, next to the route they edit, instead of
+   * floating over the map. Absent on the tiers where the map slot renders them.
+   */
+  readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly planning: boolean;
   readonly onCancelPlanning: () => void;
   readonly results: ComponentProps<typeof PlannerResultPanel>;
@@ -124,6 +131,7 @@ export function PlannerWorkspaceDock({
   canClear,
   onClearRide,
   composer,
+  editBar,
   planning,
   onCancelPlanning,
   results,
@@ -187,6 +195,10 @@ export function PlannerWorkspaceDock({
             </div>
   );
   const phone = usePhonePlanner();
+  // The desktop rail is the only tier that puts the edit tools in the panel; the
+  // frame renders them over the map everywhere else (the two checks are the same
+  // query, so they can never both render the bar).
+  const desktop = useDesktopPlanner();
   const detent = phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const swipe = useRef<{ y: number; id: number; height: number } | null>(null);
@@ -404,9 +416,18 @@ export function PlannerWorkspaceDock({
             </button>
           ) : null}
 
-          {/* The first screen is From / Where to? only (owner 2026-10-04), unless
-              the rider just undid back to it and Redo is the way forward. */}
-          {phone ? null : history}
+          {/*
+            The first screen is From / Where to? only (owner 2026-10-04), unless
+            the rider just undid back to it and Redo is the way forward. On the
+            desktop rail the edit tools join undo/redo here, so the map carries no
+            floating bar and the route is edited from the panel that holds it.
+          */}
+          {phone ? null : editBar === undefined || !desktop ? history : (
+            <div className="og-sheet__tools" data-testid="sheet-edit-tools">
+              <PlannerMapEditBar {...editBar} />
+              {history}
+            </div>
+          )}
         </div>
 
         <div

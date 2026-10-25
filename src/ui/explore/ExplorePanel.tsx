@@ -320,8 +320,10 @@ function activeFilterCount(query: ExploreQuery): number {
 
 export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken }: ExplorePanelProps) {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
-  // Phone: search stays, the rest folds behind a Filters button (UX rework).
+  // Search, the distance chips and one Filters button; every other filter is
+  // one press away in the sheet (phone) or popover (desktop).
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersToggleRef = useRef<HTMLButtonElement | null>(null);
   const [lens, setLens] = useState<"ride" | "things">("ride");
   const [timeLens, setTimeLens] = useState<TimeLens>("now");
   const [rideDate, setRideDate] = useState(() => localDateValue(new Date()));
@@ -409,11 +411,20 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     };
   }, []);
 
-  // The phone's filter sheet closes on Escape, like any sheet.
+  /** Closing the filters puts the rider back on the button that opened them. */
+  function closeFilters(): void {
+    setFiltersOpen(false);
+    filtersToggleRef.current?.focus();
+  }
+
+  // The filter sheet/popover closes on Escape, like any sheet, and the rider
+  // lands back on the button that opened it.
   useEffect(() => {
     if (!filtersOpen) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") setFiltersOpen(false);
+      if (event.key !== "Escape") return;
+      setFiltersOpen(false);
+      filtersToggleRef.current?.focus();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -466,7 +477,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
       <AppBar current="/explore" />
       <header className="og-explore__header">
         <div className="og-explore__heading">
-          <p className="og-eyebrow">Find your next ride</p>
           <h1>Explore</h1>
         </div>
         {/* AQ-06, AQ-07: a real tab list — arrow keys move, one tab stop, and
@@ -515,7 +525,23 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           <span className="og-visually-hidden">Search</span>
           <input aria-label="Search routes" type="search" value={query.search ?? ""} onChange={(event) => updateQuery({ search: event.target.value || undefined })} placeholder="Search routes" />
         </label>
+        {/* One chip row at every width (design system v2 §4): Near me sorts by
+            distance, the three buckets filter it, and the rest is one press
+            away in Filters. */}
+        <div className="og-explore__quick" role="group" aria-label="Quick filters">
+          <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
+            if (query.sort === "near") updateQuery({ sort: "recommended" });
+            else if (origin === undefined) sortByLocation();
+            else updateQuery({ sort: "near" });
+          }}>Near me</button>
+          {DISTANCE_CHIPS.map((chip) => (
+            <button key={chip.value} type="button" className="og-explore__quick-chip" aria-pressed={query.distance === chip.value} onClick={() => updateQuery({ distance: query.distance === chip.value ? undefined : chip.value })}>
+              {chip.label}
+            </button>
+          ))}
+        </div>
         <button
+          ref={filtersToggleRef}
           type="button"
           className="og-secondary og-explore__filters-toggle"
           aria-expanded={filtersOpen}
@@ -532,7 +558,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
         </button>
         {filtersOpen ? (
-          <button type="button" className="og-explore__backdrop" aria-label="Close filters" tabIndex={-1} onClick={() => setFiltersOpen(false)} />
+          <button type="button" className="og-explore__backdrop" aria-label="Close filters" tabIndex={-1} onClick={closeFilters} />
         ) : null}
       <section className="og-explore__controls" id="og-explore-filters" data-open={filtersOpen} aria-label="Explore filters">
         <div className="og-explore__sheet-head">
@@ -579,29 +605,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             </select>
           </span>
         </label>
-        <label className="og-explore__check">
-          <input aria-label="Curvy routes only" type="checkbox" checked={query.curvy === true} disabled={!hasCurvatureEvidence} title={!hasCurvatureEvidence ? "Curvature evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ curvy: event.target.checked || undefined })} />
-          <span>Curvy only</span>
-        </label>
-        <label htmlFor="og-explore-region-picker">
-          <span>Region</span>
-          <span className="og-select">
-            <select id="og-explore-region-picker" aria-label="Filter by region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
-              <option value="">All regions</option>
-              {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
-              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
-            </select>
-          </span>
-        </label>
-        <label htmlFor="og-explore-area-picker">
-          <span>PA riding area</span>
-          <span className="og-select">
-            <select id="og-explore-area-picker" aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
-              <option value="">All riding areas</option>
-              {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
-            </select>
-          </span>
-        </label>
         <label>
           <span>Sort</span>
           <span className="og-select">
@@ -623,6 +626,31 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             </select>
           </span>
         </label>
+        <label htmlFor="og-explore-region-picker">
+          <span>Region</span>
+          <span className="og-select">
+            <select id="og-explore-region-picker" aria-label="Filter by region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
+              <option value="">All regions</option>
+              {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
+              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+            </select>
+          </span>
+        </label>
+        <label htmlFor="og-explore-area-picker">
+          <span>PA riding area</span>
+          <span className="og-select">
+            <select id="og-explore-area-picker" aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
+              <option value="">All riding areas</option>
+              {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
+            </select>
+          </span>
+        </label>
+        {/* The checkbox is a row of its own, with the words that name it: a
+            control a rider cannot name is a control they cannot use. */}
+        <label className="og-explore__check">
+          <input type="checkbox" checked={query.curvy === true} disabled={!hasCurvatureEvidence} title={!hasCurvatureEvidence ? "Curvature evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ curvy: event.target.checked || undefined })} />
+          <span>Curvy routes only</span>
+        </label>
         <RideTimeLens value={timeLens} date={rideDate} onChange={setTimeLens} onDateChange={setRideDate} />
         <button type="button" className="og-secondary og-explore__near" aria-label="Sort by distance from me" onClick={sortByLocation}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -631,26 +659,11 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           </svg>
           Near me
         </button>
-        <button type="button" className="og-primary og-explore__sheet-done" onClick={() => setFiltersOpen(false)}>
+        <button type="button" className="og-primary og-explore__sheet-done" onClick={closeFilters}>
           {visibleEntries.length === 1 ? "Show 1 route" : `Show ${visibleEntries.length} routes`}
         </button>
       </section>
       </div> : null}
-
-      {lens === "ride" ? (
-        <div className="og-explore__quick" role="group" aria-label="Quick filters">
-          <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
-            if (query.sort === "near") updateQuery({ sort: "recommended" });
-            else if (origin === undefined) sortByLocation();
-            else updateQuery({ sort: "near" });
-          }}>Near me</button>
-          {DISTANCE_CHIPS.map((chip) => (
-            <button key={chip.value} type="button" className="og-explore__quick-chip" aria-pressed={query.distance === chip.value} onClick={() => updateQuery({ distance: query.distance === chip.value ? undefined : chip.value })}>
-              {chip.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {lens === "ride" ? <>
         {locationNote !== null ? <p className="og-explore__note" role="status">{locationNote}</p> : null}

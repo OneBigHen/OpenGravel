@@ -290,7 +290,6 @@ function ExploreLoading() {
       <AppBar current="/explore" />
       <header className="og-explore__header">
         <div className="og-explore__heading">
-          <p className="og-eyebrow">Ride library</p>
           <h1>Explore</h1>
         </div>
       </header>

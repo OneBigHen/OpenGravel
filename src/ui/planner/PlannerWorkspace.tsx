@@ -792,6 +792,7 @@ export function PlannerWorkspace({
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
           glance={glance.dock}
+          editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{

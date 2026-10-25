@@ -1019,10 +1019,6 @@ html .og-ride {
   color: #ffffff;
 }
 
-:root[data-theme="day"] .og-ride__strip-end:not(.og-ride__strip-end--exit) {
-  color: #ffffff;
-}
-
 :root[data-theme="day"] .og-ride__strip-end--exit {
   border: 1px solid rgb(7 16 12 / 16%);
   color: #07100c;
@@ -1084,6 +1080,21 @@ html .og-ride {
   backdrop-filter: blur(18px);
 }
 
+/* End ride keeps its warning colour in both themes: the day rail is white with
+   ink glyphs, the night rail dark glass with paper ones. */
+:root[data-theme="day"] .og-ride__rail-button--end {
+  color: #b3261e;
+}
+
+:root[data-theme="night"] .og-ride__rail-button--end {
+  color: #ff9b91;
+}
+
+:root[data-theme="day"] .og-ride__rail-button--end:disabled,
+:root[data-theme="night"] .og-ride__rail-button--end:disabled {
+  color: var(--og-ride-muted);
+}
+
 :root[data-theme="night"] .og-ride__recenter svg {
   color: #6fe3a3;
 }
@@ -1126,20 +1137,25 @@ html .og-ride {
 }
 
 /* --------------------------------------------------------------------------
-   Explore filters (2026-09-28): search and a Filters button in one row, a row
-   of one-tap chips under it, and on a phone the full filters in a bottom
-   sheet. On wider screens the toolbar is one row of every control.
+   Explore filters: one toolbar — search, the distance chips, and a Filters
+   button for everything else — at every width. What the button opens is a
+   bottom sheet on a phone and a popover beside it on a wide screen, so no
+   filter is ever more than one press away and no row of controls is dropped.
    -------------------------------------------------------------------------- */
 
 .og-explore__toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "search filters"
+    "quick quick";
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
 }
 
 .og-explore__search {
-  flex: 1 1 220px;
+  grid-area: search;
   min-width: 0;
 }
 
@@ -1160,15 +1176,21 @@ html .og-ride {
 }
 
 .og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
-  display: none;
+  display: inline-flex;
+  grid-area: filters;
   flex: none;
   align-items: center;
+  justify-self: end;
   gap: 6px;
   min-height: 48px;
   margin: 0;
   padding: 0 16px;
   border-radius: 999px;
   font-size: var(--og-text-body);
+}
+
+.og-explore .og-explore__filters-toggle[aria-expanded="true"] {
+  border-color: var(--og-go);
 }
 
 .og-explore__filters-count {
@@ -1186,41 +1208,185 @@ html .og-ride {
 
 .og-explore__sheet-head,
 .og-explore__sheet-done,
-.og-explore__backdrop,
-.og-explore__quick {
+.og-explore__backdrop {
   display: none;
 }
 
+/* The chips are a row at every width, not a phone-only extra. */
+.og-explore__toolbar > .og-explore__quick {
+  display: flex;
+  grid-area: quick;
+  min-width: 0;
+}
+
 @media (min-width: 761px) {
-  /* One toolbar row: search then every control, in one floating box. */
+  /* One floating box: search, the chips, Filters — one line once there is room
+     for it (a wide screen), two calm lines below that. */
   .og-explore .og-explore__toolbar {
-    flex-wrap: wrap;
+    position: relative;
+    z-index: 20;
+    gap: 10px;
     padding: 10px;
     border: 1px solid var(--og-hairline);
-    border-radius: 20px;
+    border-radius: var(--og-radius-panel);
     background: var(--og-paper);
     box-shadow: var(--og-shadow-1);
   }
 
-  .og-explore .og-explore__toolbar > .og-explore__controls {
-    display: contents;
+  .og-explore__toolbar > .og-explore__quick {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  /* On the wide toolbar the ride-date chips join the same row as the selects. */
+  /* The filters open over the list beside the button, not as a second and
+     third row of controls above the rides. */
+  .og-explore .og-explore__toolbar > .og-explore__controls {
+    position: absolute;
+    z-index: 60;
+    top: calc(100% + 8px);
+    right: 0;
+    display: grid;
+    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    width: min(560px, calc(100vw - 40px));
+    max-height: min(72dvh, 620px);
+    margin: 0;
+    padding: var(--og-space-4);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--og-hairline);
+    border-radius: var(--og-radius-panel);
+    background: var(--og-paper);
+    box-shadow: var(--og-shadow-2);
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls[data-open="false"] {
+    display: none;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls > * {
+    min-width: 0;
+  }
+
+  /* Every field keeps its caption: one press opened this panel, so the words
+     that name each filter have to be here. */
+  .og-explore .og-explore__toolbar > .og-explore__controls label {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    color: var(--og-slate-text);
+    font-size: var(--og-text-caption);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls :is(select, input:not([type="checkbox"])) {
+    width: 100%;
+    min-height: 48px;
+    border-radius: var(--og-radius-control);
+    background-color: var(--og-canvas);
+    color: var(--og-ink);
+    font-size: var(--og-text-body);
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-select > select {
+    border-radius: var(--og-radius-control);
+  }
+
+  /* Ordered, not defaulted: an order is a sort, and this is a filter. */
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-explore__check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--og-hairline-strong);
+    border-radius: var(--og-radius-control);
+    color: var(--og-ink);
+    font-size: var(--og-text-body);
+    font-weight: 600;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-explore__check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--og-go);
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls > :is(.og-explore__sheet-head, .og-explore__check, .og-explore__row, .og-explore__sheet-done) {
+    grid-column: 1 / -1;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls > .og-explore__sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls > .og-explore__sheet-head h2 {
+    margin: 0;
+    font-size: var(--og-text-headline);
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-explore__sheet-reset {
+    min-height: 44px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: var(--og-go-text);
+    font: inherit;
+    font-size: var(--og-text-body);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-explore__sheet-reset:disabled {
+    color: var(--og-slate-text);
+    cursor: default;
+  }
+
+  /* The ride date is a row of chips, not a field. */
   .og-explore .og-explore__toolbar > .og-explore__controls > .og-explore__row {
+    flex-wrap: wrap;
+    gap: 8px;
     padding-block: 0;
+  }
+
+  .og-explore .og-explore__toolbar > .og-explore__controls .og-explore__sheet-done {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    border-radius: var(--og-radius-control);
+    font-size: var(--og-text-body);
+  }
+
+  /* A click anywhere else closes the popover; it does not dim the page. */
+  .og-explore .og-explore__toolbar > .og-explore__backdrop {
+    position: fixed;
+    z-index: 59;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: transparent;
+    cursor: default;
+  }
+}
+
+@media (min-width: 1181px) {
+  /* Wide enough for one row: search, the chips, Filters. */
+  .og-explore .og-explore__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "search quick filters";
+    gap: var(--og-space-3);
   }
 }
 
 @media (max-width: 760px) {
-  .og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
-    display: inline-flex;
-  }
-
-  .og-explore .og-explore__filters-toggle[aria-expanded="true"] {
-    border-color: var(--og-go);
-  }
-
   /* One-tap chips: a single scrolling row, edge to edge. The row is wider than
      the screen on purpose, so the next chip is half visible — that is the hint
      that it scrolls (§2, §4). */
@@ -1298,7 +1464,9 @@ html .og-ride {
     min-width: 0;
   }
 
-  .og-explore__controls[data-open="true"] > :is(.og-explore__sheet-head, .og-explore__sheet-done, .og-explore__near) {
+  /* The checkbox names itself on a row of its own (design system v2 §6: rows,
+     not tiles), so its words are never clipped at 320px. */
+  .og-explore__controls[data-open="true"] > :is(.og-explore__sheet-head, .og-explore__sheet-done, .og-explore__near, .og-explore__check) {
     grid-column: 1 / -1;
   }
 
@@ -1352,13 +1520,12 @@ html .og-ride {
     display: flex;
     align-items: center;
     gap: 10px;
-    align-self: end;
-    min-height: 46px;
-    padding: 0 12px;
+    min-height: 48px;
+    padding: 0 13px;
     border: 1px solid var(--og-hairline-strong);
-    border-radius: 14px;
+    border-radius: var(--og-radius-control);
     color: var(--og-ink);
-    font-size: 15px;
+    font-size: var(--og-text-body);
     font-weight: 600;
     letter-spacing: 0;
     text-transform: none;
@@ -1660,7 +1827,7 @@ html .og-ride {
 
 :root[data-theme="day"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
   grid-template-columns: 72px minmax(0, 1fr);
-  min-height: 104px;
+  min-height: 96px;
   background: #0b6b35;
 }
 
@@ -1705,15 +1872,11 @@ html .og-ride {
   stroke-width: 5.5;
 }
 
+/* Type is the ride's spec scale in both themes (v2 §5: 34 px distance, 20 px
+   street). Sunlight is answered by weight, colour and the solid green card,
+   not by a size the rider has to relearn when the sun goes down. */
 :root[data-theme="day"] .og-ride__maneuver-distance {
-  font-size: 44px;
-  font-weight: 800;
   letter-spacing: -0.01em;
-}
-
-:root[data-theme="day"] .og-ride__maneuver-action {
-  font-size: 21px;
-  font-weight: 700;
 }
 
 :root[data-theme="day"] .og-ride__maneuver-road {
@@ -1721,7 +1884,6 @@ html .og-ride {
 }
 
 :root[data-theme="day"] .og-ride__maneuver .og-ride__maneuver-suspended {
-  font-size: 19px;
   font-weight: 700;
 }
 
@@ -1744,12 +1906,6 @@ html .og-ride {
 :root[data-theme="day"] .og-ride :is(.og-ride__notice, .og-ride__metrics-hint, .og-ride__progress-text, .og-ride__gps, .og-ride__off-route-distance) {
   color: #26302c;
   font-weight: 600;
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  :root[data-theme="day"] .og-ride__maneuver-distance {
-    font-size: 36px;
-  }
 }
 
 /* --------------------------------------------------------------------------
@@ -2387,6 +2543,53 @@ html .og-ride {
 
 /* Ride Focus and fullscreen keep the map bare. */
 .og-ride .og-editbar { display: none; }
+
+/* Desktop: the edit tools live in the planning rail, in the sheet's head beside
+   undo/redo, so the map over the route keeps its one control (Layers) and the
+   instruments on the right. The bar is the same component and the same modes;
+   only its place changes, from a floating pill over the map to a row in the
+   panel that holds the ride. */
+@media (min-width: 1181px) {
+  .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--og-space-2, 8px);
+    margin-left: auto;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    justify-items: end;
+    gap: var(--og-space-1, 4px);
+    transform: none;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    border-radius: var(--og-radius-control);
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__btn {
+    min-height: 44px;
+    padding: 0 var(--og-space-3, 12px);
+    font-size: var(--og-text-meta, 14px);
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__status,
+  .og-planner__sheet .og-sheet__head .og-editbar__tip {
+    max-width: 100%;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-sheet__tools .og-history {
+    margin: 0;
+  }
+}
 
 /* ── Along this ride + opportunity cards (owner review 2026-10-04) ──────── */
 .og-along { display: grid; gap: 8px; margin-top: 4px; }
