@@ -27,6 +27,37 @@ The Balanced loop spent 52 versus 53 HTTP attempts and is not an equal-spend
 quality trial. All other pairs spent equal attempts. These are measurements,
 not promotion acceptance; no live graph or deployment changed.
 
+## Request-wiring follow-up
+
+Identical Best Rides were traced to the unchanged Adventure candidates, not an
+ignored encoded value. All eight Jim Thorpe plans (two graphs × two styles ×
+destination/loop) were traced again and their selected geometry hashes matched
+provider-source candidates. The destination's old graph has the same line from
+both Twisty and Adventure; on the new graph, only Adventure supplies that winner.
+Both loops select Adventure on both graphs.
+
+| Check | Direct evidence |
+| --- | --- |
+| Actual app request | `motorcycle_twisty`, exact public endpoints, request `custom_model.priority` for traffic/surface/access/tolls. The same initial Twisty body is sent by Balanced and Curvy to both graphs. |
+| Baked model ignored? | No. GH 11's `DefaultWeightingFactory` calls `CustomModel.merge(profile.getCustomModel(), queryCustomModel)`; it copies the baked model and appends request priority rules. Requests contain no distance/speed replacement or `ch.disable`/`lm.disable` flags. Profiles retain LM preparation and no regional CH. |
+| Exact-wire replay, :8989 → :8991 | **3.22 / 37.34 / 51.86 → 2.94 / 17.65 / 52.88** (curvy mi / Franco/km / min); geometry hashes differ. Adding only the `og_curve` detail leaves the treatment geometry and weight identical to the exact-wire replay. |
+| `og_curve` path details on new Twisty line | `[0,11,0]`, `[11,17,0.067]`, `[17,849,0]`; the nonzero interval is **145.51 m**. Start/end coordinates and full interval dump are in the evidence. |
+| Strong request penalty: `og_curve < 0.001` × `0.01` | Geometry changes again; **55.01 min / 3.01 curvy mi / 12.56 Franco/km**, weight **11,100.38 → 836,143.30**. |
+| Strong penalty at `<0.15` or `<0.4` | Geometry stays unchanged, but weight rises to **844,295.46**. Every edge on this returned path is below both cutoffs, so these tests mostly impose a uniform time penalty. |
+| Same `og_curve` expression against :8989 | HTTP **400**, explicitly `'og_curve' not available`; the expression is not silently discarded. |
+
+**Interpretation:** wiring is active, but the returned Twisty line has too little
+encoded signal to distinguish edges at the baked 0.15/0.4 thresholds. Its new
+line is worse under the unchanged geometry measurements, and the app retains
+Adventure's identical winner. HOLD therefore remains a **signal/profile-quality**
+result. No adapter/profile-dispatch repair was warranted, and the original
+six-ride comparison was not replaced with a different experiment.
+
+[Exact request, selected-source hashes, path-detail dump and penalty probes](og-curve-wiring-2026-10-25.json).
+The opt-in `og-curve-wiring-live.test.ts` passed on powerplex; TypeScript and
+focused ESLint passed. No product-routing code, graph, or baked model was changed
+by this follow-up, and no live router was contacted or deployment performed.
+
 ## What changed
 
 Branch `feat/og-curve-graph` continues the explicitly requested

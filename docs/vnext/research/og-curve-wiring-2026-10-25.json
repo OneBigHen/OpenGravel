@@ -1,0 +1,2523 @@
+{
+  "schema": 1,
+  "plans": [
+    {
+      "graph": "control",
+      "style": "balanced",
+      "loop": false,
+      "best": {
+        "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+        "minutes": 51.864333333333335,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_twisty",
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "172770eaaf2953cb72fa318e36006664b6fb62239c8437a94ae5e7ff842645d4",
+          "minutes": 53.03856666666666,
+          "curvyMiles": 2.951501826084716,
+          "francoPerKm": 23.245877401761373
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "91c7471e56937ece23a472fadfeb26e7d9bf917da5970769bad9c481c7c226d5",
+          "minutes": 53.03895,
+          "curvyMiles": 3.403516468326938,
+          "francoPerKm": 37.39340735981281
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b44a9072dc86d33259b7da838cc0c659ee3b6c41a5f17eb297cea24992d373c1",
+          "minutes": 62.382266666666666,
+          "curvyMiles": 3.4023154779019134,
+          "francoPerKm": 40.20528259772451
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "afa11f335a11c4ee38d43b33471cece208534b762e5f7d2262d7c93ce246a346"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "000cdfe0ff25357c3c74cc445b4d0f578f672ff27b64ce9fbe003179e085f0c8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "03a472c0d50db796c3473fa074e13f558448794043cedd0067c778e01a9fa078"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "33e384475df49c87739af1168d62cfcc63ab8dec407d56c27850fb6313a291f9"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c0d3136b3b3ea64b079cc8032da4b1e48a07657fad2c1d3c5ce2510ed660b719"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6bbf9e4a0d4e64b0031d19f8a216ddb8580f7c7b5609164dca004f3b8b37c4cf"
+        }
+      ]
+    },
+    {
+      "graph": "control",
+      "style": "balanced",
+      "loop": true,
+      "best": {
+        "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+        "minutes": 117.1403,
+        "curvyMiles": 6.681068316642122,
+        "francoPerKm": 102.16109403765319
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "13750dd3f06e701fb6e625c55040446f6627c042b9569a072c1cb1864c46aeec",
+          "minutes": 154.4155,
+          "curvyMiles": 8.378893697528587,
+          "francoPerKm": 45.64039149800143
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "65bf678d0663a05177ecb6f13847c195713c0212cb9783b58729b03131f3ebec",
+          "minutes": 173.56216666666666,
+          "curvyMiles": 10.638128455912936,
+          "francoPerKm": 64.50085977789475
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "3f456cb85cb8903d8a24a5c708deaa8fb5d5ac3859e687fb6c243faa21aa1a56",
+          "minutes": 181.15528333333333,
+          "curvyMiles": 10.707453942169932,
+          "francoPerKm": 50.136952148262786
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "f97e65379b4a54df33a81bfee202c01ea416f4875864a9164010abef44c295c0",
+          "minutes": 122.15643333333334,
+          "curvyMiles": 7.708767819403924,
+          "francoPerKm": 49.57435136165579
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "9f0262f6df9baf38c3e1d9932b504d12c5642c928022a37b7b51f96bf9296fbd",
+          "minutes": 101.56788333333334,
+          "curvyMiles": 4.832450153999519,
+          "francoPerKm": 51.760716545493615
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "1366290f0469d9653c8cc062edd16307b6299921e0042f421ec51bbaf6adfacf",
+          "minutes": 138.89919999999998,
+          "curvyMiles": 5.156361856379634,
+          "francoPerKm": 19.940081297615066
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "604a3ea9ab3968248e695fc6f47337ffbee6a860e8bbe17530575ff09d293f3c",
+          "minutes": 170.16266666666667,
+          "curvyMiles": 9.888340429439157,
+          "francoPerKm": 65.7638371996532
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "29b674500d47d5ebf6b65a7c41c17f7078b4c6860d300bc7419b48b82659ea4b",
+          "minutes": 112.17243333333333,
+          "curvyMiles": 6.394328716888219,
+          "francoPerKm": 93.21918649672116
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "40badeb4135c3c17d956ccbaab044531263faa6a3841b134931449323481a8b9",
+          "minutes": 148.82173333333333,
+          "curvyMiles": 8.790941479558576,
+          "francoPerKm": 46.73364412178973
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "0c45af13cc1098d43d36f9f98c48132cd954537be6fce0698a7e7d3234ac8d32",
+          "minutes": 122.0027,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+          "minutes": 117.1403,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "e5b6fa7474447d0bed8d6c611669022e1312749311245d00a1a02962ceb7b4e0",
+          "minutes": 76.80888333333334,
+          "curvyMiles": 3.7612197202912045,
+          "francoPerKm": 40.10260850091879
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "ee2d639b65fd01876832e29b5387bdf8c2f31fc7dcbd5b5631d836afbd087672",
+          "minutes": 119.56723333333333,
+          "curvyMiles": 6.09520725661135,
+          "francoPerKm": 41.79446832569396
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "588a8a119bc24ec71384237a6a9fbce925646ee944cb35a86b9be1349a3aa296",
+          "minutes": 131.67913333333334,
+          "curvyMiles": 5.974656209877745,
+          "francoPerKm": 57.33526593098843
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "30365233d04d97699dd171a6b9ee958c36ae175b8ce6e120bf486dc39a317909",
+          "minutes": 145.48725000000002,
+          "curvyMiles": 8.503037844884862,
+          "francoPerKm": 49.65611490805613
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "fee00daa80b7c5fdd4323a8eed87cd1ac433bd4a259fb39cff7a3c9f6655a205",
+          "minutes": 143.06118333333333,
+          "curvyMiles": 7.972483828365966,
+          "francoPerKm": 42.15160347320556
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "65f3b6b2fa4324b37955c667eb59c601281bc37a551b0c4d39dcc2528423eef8",
+          "minutes": 146.7321,
+          "curvyMiles": 8.507075717486059,
+          "francoPerKm": 39.06295610239321
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "229fe07cbbd103a1e0b3e7c881fb052ee9960bb862dde750d95cf025b0217c2b",
+          "minutes": 146.59993333333333,
+          "curvyMiles": 8.274275509718846,
+          "francoPerKm": 47.566089563670545
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "9e3be5ba815e693a01a213d4149a44dec55ed8f5b6e20a77222f2c6472205809"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c87b0b8d683a0ef3764c4dee8fd514869656f393d105f49a84db8c0b2c922c0d"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3c4b81f4a4e80716317a18293bcf6c84cbb9dd5ef9ec469ce2e3565c5a28421c"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e27a76240c18f41eb2464042bfab846dd83821d514b3d8ef8eed7bd414e4ef37"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e20c57cc48f658dbb1cfa45b4d765b2b01b396637551db296eb10e1beafdd326"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1d4a74fe8b863f1210d86457fa6522577564a1c428a9aa72aab4817fbb3f385b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "0373b676d0a2918bc5b775383869b88556e797852c27a36c41b00be67ca48a8a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "45b0bb5c2ca97a64fb24943f107c9e012a944f87d5ec8c5cca0489448e0b4617"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "de4d307a2d609e2da23587a99c7c76c4af91a6248c532adca2c320731bf38ed3"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c8a2afbf87a3603d7092c9625a73f6d07ae530f1da4d1fff62e61eded7654fcd"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2c77f93f25690a983d81ed730757771692265242cac8e89618a68b40c6cb672a"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "d9300068157cc51b080653c3598a4587de94cb68d907a917420821f351847b23"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e2ebd200c68635515e171e9f87d566e4965a620b2b544315908c28d370ad664f"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "92ec660862737254ce6575f2b83d0f4393d232d202119213724a49df704bed9c"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b3a804326f42efb0d7fe397b7de73262118600dfc76c208769eb64f95076c0f8"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "007659f1244c07a8cd2a0b9ea24a7762b864a05373490d8ce431aa359a255628"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "171ee2b113441191a8cac9f8b9a42f060d8eb0349d42ebe77847e29af64c64d6"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b612adb5e112a94a7c134f3b40493751ac1406e3b246534a00dd8a17136165db"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "18c931b71c88438f7a8b9b48d60b810887f2e63ae94852949de9226d14483ef9"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e5f73d0f5d5a39fd8fa132a4ab0d0e12cbc5bc448fa9fd4f7955038304b108e8"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "93fc7aa7a1663dca333a9b1cad0af37e660b392bf517c75c9ea9a9d34ac1344d"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c2c9e84ee12e23f2021529ff0e2881100a531e146ca8b20982de076e417e3396"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f1615a34f6dbdcc00cccdc48ff7d25e3bd807f8adb0a49262016298fce6f1b89"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "5aa3cf88925aa6d3cf50ada3c52f045dbd2f9428a35efe2fdaa3fcf98b0bc2ae"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b72a5419d98a65578fa8ad83fdf16f2fd3d8d0d87754f12ddf0625b96fe72f4b"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "7de5dc7119e340a33c10e93aa8a6964719fbc631f614fbec61d60feaad61a429"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ae490b43a9d9878e9f48804435922a95f46d294f53daae360e3c7fb3f7600fe"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6467176848fef8e00f6c285f9bdb330bd2c0b6b8757a3b0528a27e7dd2de7c0e"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "095f882073093e12f3730b7d09b8633b12d6e2d55ee4bfc5fc3397d5c582b697"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1b7bcd7db925e625751d663045d76388469816e08a2f17883c2ea00d5f9bc675"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "27b4b0e7a89f4e5862a78bbe5ca591567bdb45a1a81e4c465720c472f3edd17f"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "158d6c144e592259dd3d6417650d471a1763f111caad37162c87e6f4fccaf1c1"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "bc773cabce8d025c7cb2e94805eb15a0cd16b40d0cfc45e6e7e9713904940e10"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b4e43bad4562b61f86aa38eefe37933140cb7de789261df0078b1a4ff91bf623"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e87ed2b37236ae32ec81ba0b8476bda0dc84c8ec5bf4b6e1b3f16c43e690fd21"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "fb0fd4393109f730b61c538976f29c242ca42fe0e4338a2f4d7b081a90df72d8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "85956a619bcf01580fb24963ba3621583e1574cd2deb9ae0e9f41809afc677a3"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f4c7c6a7fb469db81ab280f774935b22c868946009b7fe57221424212465f062"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ccd6445890ca6aa120a8799fb01c1a28f8abd6a8d415bca40c8c13a2191ce1f"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f7dba17e529621c25246008ddbf17b97ec6d10466bc728ba1ce9552d05614bad"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "909528112a23c1b17df24a61dc354a7fab3a30852bddea7946185d847f7d5439"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "ebf6be3ca2e6586d05b052e19933f269a6fe71db0a7e74b3ad2e96bc6ba0ead5"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "869d4d8af3e1a8bfd52132d1e93221a104ebfb47ac3efddf4ef9fcd5d38227d4"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "99947538f2cca945c7f209734c464ab323b6762cdf5112787ca6f7fc7d9a3868"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "183ec0828d9fdb45242583081fd33175464b781dcee9d7345b8c1769f02d3cc5"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "5c6747f56bb7d23bb40620456f2a17db98b79143a772192e2b91257ff00cded5"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b64fe539c3db75b01fb112f7eabee920aa5b7a5b85e0cddbe47a3ae945458b4e"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "373637828e5c4dea3bfd435c33a6defe10ff2fa0251b826fb364b0006a8ede41"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "dbe5f64bf4b961bca1630d0421020aa4efb357f1c9e4214539e07f277f89ee6b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2c01b724c41718336fa5368c9a83b39ca6a2acf5a513d114480f5c71a8f59f62"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "37bb24d600e519a0058dc414c8e416ad70f7d3e138decca9ec273c42d40cf7c5"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "378bd0b2bb879a7956b56a25073bc2b027521e6923d689703d7973d15965764c"
+        }
+      ]
+    },
+    {
+      "graph": "control",
+      "style": "curvy",
+      "loop": false,
+      "best": {
+        "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+        "minutes": 51.864333333333335,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_twisty",
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "172770eaaf2953cb72fa318e36006664b6fb62239c8437a94ae5e7ff842645d4",
+          "minutes": 53.03856666666666,
+          "curvyMiles": 2.951501826084716,
+          "francoPerKm": 23.245877401761373
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "172770eaaf2953cb72fa318e36006664b6fb62239c8437a94ae5e7ff842645d4",
+          "minutes": 53.03856666666666,
+          "curvyMiles": 2.951501826084716,
+          "francoPerKm": 23.245877401761373
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b44a9072dc86d33259b7da838cc0c659ee3b6c41a5f17eb297cea24992d373c1",
+          "minutes": 62.382266666666666,
+          "curvyMiles": 3.4023154779019134,
+          "francoPerKm": 40.20528259772451
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b44a9072dc86d33259b7da838cc0c659ee3b6c41a5f17eb297cea24992d373c1",
+          "minutes": 62.382266666666666,
+          "curvyMiles": 3.4023154779019134,
+          "francoPerKm": 40.20528259772451
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "e3ef37b0d52e23154f554360c949cbad728dcb91ddfe770eae2043c6bb308acc",
+          "minutes": 59.22268333333333,
+          "curvyMiles": 3.1464541482345365,
+          "francoPerKm": 38.38990131111651
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "91c7471e56937ece23a472fadfeb26e7d9bf917da5970769bad9c481c7c226d5",
+          "minutes": 53.03895,
+          "curvyMiles": 3.403516468326938,
+          "francoPerKm": 37.39340735981281
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "afa11f335a11c4ee38d43b33471cece208534b762e5f7d2262d7c93ce246a346"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "000cdfe0ff25357c3c74cc445b4d0f578f672ff27b64ce9fbe003179e085f0c8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "03a472c0d50db796c3473fa074e13f558448794043cedd0067c778e01a9fa078"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "33e384475df49c87739af1168d62cfcc63ab8dec407d56c27850fb6313a291f9"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c247fe8c3ae11be8c8331b477c4b9d2174e35b2d12491a2bf161299ed9d97a21"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "10c85074f7dbdda8ab4657594272aa1cc0e4c94d7470ad7ab0dbd79213c2e02f"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c0d3136b3b3ea64b079cc8032da4b1e48a07657fad2c1d3c5ce2510ed660b719"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "470f58fdb9f0943c3dcebc553779934e1965c0c58111a393178b536ece75cd2a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "a7df3ebed04c9ce3cb419b5f6de9eddc60cc88470cb22b3abfff528693c547a0"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6bbf9e4a0d4e64b0031d19f8a216ddb8580f7c7b5609164dca004f3b8b37c4cf"
+        }
+      ]
+    },
+    {
+      "graph": "control",
+      "style": "curvy",
+      "loop": true,
+      "best": {
+        "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+        "minutes": 117.1403,
+        "curvyMiles": 6.681068316642122,
+        "francoPerKm": 102.16109403765319
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "f97e65379b4a54df33a81bfee202c01ea416f4875864a9164010abef44c295c0",
+          "minutes": 122.15643333333334,
+          "curvyMiles": 7.708767819403924,
+          "francoPerKm": 49.57435136165579
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "9f0262f6df9baf38c3e1d9932b504d12c5642c928022a37b7b51f96bf9296fbd",
+          "minutes": 101.56788333333334,
+          "curvyMiles": 4.832450153999519,
+          "francoPerKm": 51.760716545493615
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "1366290f0469d9653c8cc062edd16307b6299921e0042f421ec51bbaf6adfacf",
+          "minutes": 138.89919999999998,
+          "curvyMiles": 5.156361856379634,
+          "francoPerKm": 19.940081297615066
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "604a3ea9ab3968248e695fc6f47337ffbee6a860e8bbe17530575ff09d293f3c",
+          "minutes": 170.16266666666667,
+          "curvyMiles": 9.888340429439157,
+          "francoPerKm": 65.7638371996532
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "29b674500d47d5ebf6b65a7c41c17f7078b4c6860d300bc7419b48b82659ea4b",
+          "minutes": 112.17243333333333,
+          "curvyMiles": 6.394328716888219,
+          "francoPerKm": 93.21918649672116
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "40badeb4135c3c17d956ccbaab044531263faa6a3841b134931449323481a8b9",
+          "minutes": 148.82173333333333,
+          "curvyMiles": 8.790941479558576,
+          "francoPerKm": 46.73364412178973
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "13750dd3f06e701fb6e625c55040446f6627c042b9569a072c1cb1864c46aeec",
+          "minutes": 154.4155,
+          "curvyMiles": 8.378893697528587,
+          "francoPerKm": 45.64039149800143
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "65bf678d0663a05177ecb6f13847c195713c0212cb9783b58729b03131f3ebec",
+          "minutes": 173.56216666666666,
+          "curvyMiles": 10.638128455912936,
+          "francoPerKm": 64.50085977789475
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "3f456cb85cb8903d8a24a5c708deaa8fb5d5ac3859e687fb6c243faa21aa1a56",
+          "minutes": 181.15528333333333,
+          "curvyMiles": 10.707453942169932,
+          "francoPerKm": 50.136952148262786
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "0c45af13cc1098d43d36f9f98c48132cd954537be6fce0698a7e7d3234ac8d32",
+          "minutes": 122.0027,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+          "minutes": 117.1403,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "e5b6fa7474447d0bed8d6c611669022e1312749311245d00a1a02962ceb7b4e0",
+          "minutes": 76.80888333333334,
+          "curvyMiles": 3.7612197202912045,
+          "francoPerKm": 40.10260850091879
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "9e3be5ba815e693a01a213d4149a44dec55ed8f5b6e20a77222f2c6472205809"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c87b0b8d683a0ef3764c4dee8fd514869656f393d105f49a84db8c0b2c922c0d"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3c4b81f4a4e80716317a18293bcf6c84cbb9dd5ef9ec469ce2e3565c5a28421c"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e27a76240c18f41eb2464042bfab846dd83821d514b3d8ef8eed7bd414e4ef37"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e20c57cc48f658dbb1cfa45b4d765b2b01b396637551db296eb10e1beafdd326"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1d4a74fe8b863f1210d86457fa6522577564a1c428a9aa72aab4817fbb3f385b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "0373b676d0a2918bc5b775383869b88556e797852c27a36c41b00be67ca48a8a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "45b0bb5c2ca97a64fb24943f107c9e012a944f87d5ec8c5cca0489448e0b4617"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "de4d307a2d609e2da23587a99c7c76c4af91a6248c532adca2c320731bf38ed3"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c8a2afbf87a3603d7092c9625a73f6d07ae530f1da4d1fff62e61eded7654fcd"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2c77f93f25690a983d81ed730757771692265242cac8e89618a68b40c6cb672a"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e2ebd200c68635515e171e9f87d566e4965a620b2b544315908c28d370ad664f"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "d9300068157cc51b080653c3598a4587de94cb68d907a917420821f351847b23"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "92ec660862737254ce6575f2b83d0f4393d232d202119213724a49df704bed9c"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b3a804326f42efb0d7fe397b7de73262118600dfc76c208769eb64f95076c0f8"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "007659f1244c07a8cd2a0b9ea24a7762b864a05373490d8ce431aa359a255628"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b612adb5e112a94a7c134f3b40493751ac1406e3b246534a00dd8a17136165db"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "171ee2b113441191a8cac9f8b9a42f060d8eb0349d42ebe77847e29af64c64d6"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e5f73d0f5d5a39fd8fa132a4ab0d0e12cbc5bc448fa9fd4f7955038304b108e8"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "93fc7aa7a1663dca333a9b1cad0af37e660b392bf517c75c9ea9a9d34ac1344d"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f1615a34f6dbdcc00cccdc48ff7d25e3bd807f8adb0a49262016298fce6f1b89"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c2c9e84ee12e23f2021529ff0e2881100a531e146ca8b20982de076e417e3396"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "5aa3cf88925aa6d3cf50ada3c52f045dbd2f9428a35efe2fdaa3fcf98b0bc2ae"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b72a5419d98a65578fa8ad83fdf16f2fd3d8d0d87754f12ddf0625b96fe72f4b"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "18c931b71c88438f7a8b9b48d60b810887f2e63ae94852949de9226d14483ef9"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "095f882073093e12f3730b7d09b8633b12d6e2d55ee4bfc5fc3397d5c582b697"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "7de5dc7119e340a33c10e93aa8a6964719fbc631f614fbec61d60feaad61a429"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ae490b43a9d9878e9f48804435922a95f46d294f53daae360e3c7fb3f7600fe"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6467176848fef8e00f6c285f9bdb330bd2c0b6b8757a3b0528a27e7dd2de7c0e"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1b7bcd7db925e625751d663045d76388469816e08a2f17883c2ea00d5f9bc675"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "27b4b0e7a89f4e5862a78bbe5ca591567bdb45a1a81e4c465720c472f3edd17f"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "bc773cabce8d025c7cb2e94805eb15a0cd16b40d0cfc45e6e7e9713904940e10"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "158d6c144e592259dd3d6417650d471a1763f111caad37162c87e6f4fccaf1c1"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b4e43bad4562b61f86aa38eefe37933140cb7de789261df0078b1a4ff91bf623"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e87ed2b37236ae32ec81ba0b8476bda0dc84c8ec5bf4b6e1b3f16c43e690fd21"
+        }
+      ]
+    },
+    {
+      "graph": "og_curve",
+      "style": "balanced",
+      "loop": false,
+      "best": {
+        "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+        "minutes": 51.864333333333335,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "4a8d7c1f46c4b73af7c2608f99dae9c00cee4e50b08c661813437beb91188553",
+          "minutes": 55.005116666666666,
+          "curvyMiles": 3.0080594103503335,
+          "francoPerKm": 12.560587317367474
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "afa11f335a11c4ee38d43b33471cece208534b762e5f7d2262d7c93ce246a346"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "000cdfe0ff25357c3c74cc445b4d0f578f672ff27b64ce9fbe003179e085f0c8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "03a472c0d50db796c3473fa074e13f558448794043cedd0067c778e01a9fa078"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "33e384475df49c87739af1168d62cfcc63ab8dec407d56c27850fb6313a291f9"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c0d3136b3b3ea64b079cc8032da4b1e48a07657fad2c1d3c5ce2510ed660b719"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6bbf9e4a0d4e64b0031d19f8a216ddb8580f7c7b5609164dca004f3b8b37c4cf"
+        }
+      ]
+    },
+    {
+      "graph": "og_curve",
+      "style": "balanced",
+      "loop": true,
+      "best": {
+        "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+        "minutes": 117.1403,
+        "curvyMiles": 6.681068316642122,
+        "francoPerKm": 102.16109403765319
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "2f8b6393589258c834f962ab57098cc2570881a07e9d2a0b24d170e5e768bed7",
+          "minutes": 156.779,
+          "curvyMiles": 8.217427682530031,
+          "francoPerKm": 34.593603236363556
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "b0210e08be4a592671daa44f70a6ec5bbc2757c69d560d9651f280d7e078094e",
+          "minutes": 181.10833333333332,
+          "curvyMiles": 10.613100575065046,
+          "francoPerKm": 59.050325828509116
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "82a5ac51db1cfb0a20d05b84b2d7c6616c823a81f5217c99b22fe9578838e205",
+          "minutes": 183.40776666666667,
+          "curvyMiles": 10.136141362695966,
+          "francoPerKm": 38.6550059440797
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "f97e65379b4a54df33a81bfee202c01ea416f4875864a9164010abef44c295c0",
+          "minutes": 122.15643333333334,
+          "curvyMiles": 7.708767819403924,
+          "francoPerKm": 49.57435136165579
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "9f0262f6df9baf38c3e1d9932b504d12c5642c928022a37b7b51f96bf9296fbd",
+          "minutes": 101.56788333333334,
+          "curvyMiles": 4.832450153999519,
+          "francoPerKm": 51.760716545493615
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "1366290f0469d9653c8cc062edd16307b6299921e0042f421ec51bbaf6adfacf",
+          "minutes": 138.89919999999998,
+          "curvyMiles": 5.156361856379634,
+          "francoPerKm": 19.940081297615066
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "9811106dbff82cc6a7ce45e704372716d6db1f3181385b7093d37d0f121ac025",
+          "minutes": 128.1256,
+          "curvyMiles": 6.969340148236794,
+          "francoPerKm": 30.402670904453874
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "14d45ce03d4122e3c74fe711bcb72398a241ce49c6ef10819fced2e50658d126",
+          "minutes": 138.77046666666666,
+          "curvyMiles": 9.0407835230526,
+          "francoPerKm": 98.96864444483353
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d1cef8fc4c3fa0be2f2aa38163fe2f0c489da6a2bf97fe33f750566a0c0d063e",
+          "minutes": 135.30798333333334,
+          "curvyMiles": 7.194751193877706,
+          "francoPerKm": 37.49029259378545
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "0c45af13cc1098d43d36f9f98c48132cd954537be6fce0698a7e7d3234ac8d32",
+          "minutes": 122.0027,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+          "minutes": 117.1403,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "e5b6fa7474447d0bed8d6c611669022e1312749311245d00a1a02962ceb7b4e0",
+          "minutes": 76.80888333333334,
+          "curvyMiles": 3.7612197202912045,
+          "francoPerKm": 40.10260850091879
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "f861d9bf55be12cda72f03558b0dc4b3835d016aa3470fce59d4b7f22cb2fbf2",
+          "minutes": 121.82896666666667,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.50499037418824
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "4f89eaec753b4232585d6cb2ceea04f7c2b82a74c64547ea2f576a186efd36c6",
+          "minutes": 149.35285000000002,
+          "curvyMiles": 6.701451408975096,
+          "francoPerKm": 26.601693928879687
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "2a3f0b7d46975747da1a8053b4ddcdcde79e9a150bb839102ecf3ff89a58f388",
+          "minutes": 160.18456666666668,
+          "curvyMiles": 9.008787710816643,
+          "francoPerKm": 43.587168025172225
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "c135cfeea34b20a30af1dc4a07a4155e777b7e4e1474d3f68f0425d3d4b05f79",
+          "minutes": 120.75829999999999,
+          "curvyMiles": 5.176703659243504,
+          "francoPerKm": 30.244702707820444
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "5f56eb0aa10754b78ffeccf5131276674fc230e68ebf70ead70bcd8e2edb5362",
+          "minutes": 123.85138333333333,
+          "curvyMiles": 5.3216026693003275,
+          "francoPerKm": 23.80454727993316
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "8eddc8813f896277dbf349ab814c0a8d0e29b64da7748554088b776c1cef3144",
+          "minutes": 159.01913333333331,
+          "curvyMiles": 8.514111799261716,
+          "francoPerKm": 36.80191798817699
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "9e3be5ba815e693a01a213d4149a44dec55ed8f5b6e20a77222f2c6472205809"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c87b0b8d683a0ef3764c4dee8fd514869656f393d105f49a84db8c0b2c922c0d"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3c4b81f4a4e80716317a18293bcf6c84cbb9dd5ef9ec469ce2e3565c5a28421c"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e27a76240c18f41eb2464042bfab846dd83821d514b3d8ef8eed7bd414e4ef37"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e20c57cc48f658dbb1cfa45b4d765b2b01b396637551db296eb10e1beafdd326"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1d4a74fe8b863f1210d86457fa6522577564a1c428a9aa72aab4817fbb3f385b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "0373b676d0a2918bc5b775383869b88556e797852c27a36c41b00be67ca48a8a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "45b0bb5c2ca97a64fb24943f107c9e012a944f87d5ec8c5cca0489448e0b4617"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "de4d307a2d609e2da23587a99c7c76c4af91a6248c532adca2c320731bf38ed3"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2c77f93f25690a983d81ed730757771692265242cac8e89618a68b40c6cb672a"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "475473ae2ac57b2da3582693e1a98958f4c1597b82875727f9995dc59a3fbcee"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e2ebd200c68635515e171e9f87d566e4965a620b2b544315908c28d370ad664f"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "817b8f2cfd491bcfdef7010ef29025ad876d61d653877938485db8470e1640fb"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "405502dbb724a14d426aff7c314d891fe5e83143bf73bccae723e22da79db527"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b3a804326f42efb0d7fe397b7de73262118600dfc76c208769eb64f95076c0f8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "af24ca0ed41f5f28f18152a2a4100c69da318899b111b486e2107c85ee597af9"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3299d68812606ef3895bdc328d465aa17e647952de5109577962b8e64902e315"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b9192e7c75de7b32c12a4defb216baf19c532fc9b98282a9008f253b30d2febc"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "8689fdaa5119e80274d3e5d0a5ff6fd57445ea6ca193d5ba4a4ce0f5559f497a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "4828f6afaa2fc145e163c9c8cd4f46a6015ee3e193ff4a0b886c906f21e421f1"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "949c56fc975db01dc8893cbd7b7ea2b84720a8aed79c3725161f6afc2c620780"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "76d7a2de33040b37f16b89a38158b54cf8f41d918b19190a066c3d5d3cd2d374"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "931ce6353f57a2c23930d59d44617ba1359de1aef655266941533491f6a06581"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "7de5dc7119e340a33c10e93aa8a6964719fbc631f614fbec61d60feaad61a429"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ae490b43a9d9878e9f48804435922a95f46d294f53daae360e3c7fb3f7600fe"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6467176848fef8e00f6c285f9bdb330bd2c0b6b8757a3b0528a27e7dd2de7c0e"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "5aa3cf88925aa6d3cf50ada3c52f045dbd2f9428a35efe2fdaa3fcf98b0bc2ae"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b72a5419d98a65578fa8ad83fdf16f2fd3d8d0d87754f12ddf0625b96fe72f4b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "87ddb6efd04100631ed8d35de9944dd20e305034a66af17e1b8b6806e7588fc8"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1b7bcd7db925e625751d663045d76388469816e08a2f17883c2ea00d5f9bc675"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "bc773cabce8d025c7cb2e94805eb15a0cd16b40d0cfc45e6e7e9713904940e10"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "27b4b0e7a89f4e5862a78bbe5ca591567bdb45a1a81e4c465720c472f3edd17f"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "158d6c144e592259dd3d6417650d471a1763f111caad37162c87e6f4fccaf1c1"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b4e43bad4562b61f86aa38eefe37933140cb7de789261df0078b1a4ff91bf623"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e87ed2b37236ae32ec81ba0b8476bda0dc84c8ec5bf4b6e1b3f16c43e690fd21"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "fb0fd4393109f730b61c538976f29c242ca42fe0e4338a2f4d7b081a90df72d8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "85956a619bcf01580fb24963ba3621583e1574cd2deb9ae0e9f41809afc677a3"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f4c7c6a7fb469db81ab280f774935b22c868946009b7fe57221424212465f062"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ccd6445890ca6aa120a8799fb01c1a28f8abd6a8d415bca40c8c13a2191ce1f"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f7dba17e529621c25246008ddbf17b97ec6d10466bc728ba1ce9552d05614bad"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "909528112a23c1b17df24a61dc354a7fab3a30852bddea7946185d847f7d5439"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3f98942e95c8c7db23b0bba9ae3ba9256e040b6d3cae2fde51d9cb6b3cc9a3a6"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "f07462e6866530c171f158d04f24e71ea9ed3b131377f22294415617a772ff70"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e8f37b764ce9fe1175c078ff6082bf17d61c131f35d4fabcf3fddd6ab2f45c18"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2bcd385fb2f909d7b4b483a942109369d2670fdf132f13722b75aa20b5755493"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e057800799b001f066e4efff0c1cc24c456642d70470c98ed828e508dc3c49d5"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1765bbe4db42f885ec0927ce2a796d69abcc98b7a6330e23961623864d2f53fe"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "61e7232be5a9e997dcebcb51a6b88fda6ae5540a8b5d8a4133e970ead2355a08"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "74551f4d19f17446ad595106922b6eec034a69c5d3c7b39df2b491bd62f659af"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3a33c02fe8c8c6964c849a062525865846b6e86503b9b5d936bf7df4f86abed9"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "74cb7e64c2cb517db630d49b3f134933f940ed1a94ffaf23c90808c498e69ef4"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "22b5ce3476a413a30f51855a36369ac4a54f9b69dbed923d0ec9657e6d5be72e"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "92a4dfac06afa86ea8c4718325bbcdc3e905190437ceb1d51de87900c3adf3f5"
+        }
+      ]
+    },
+    {
+      "graph": "og_curve",
+      "style": "curvy",
+      "loop": false,
+      "best": {
+        "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+        "minutes": 51.864333333333335,
+        "curvyMiles": 3.222101076121703,
+        "francoPerKm": 37.3419725033599
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "4a8d7c1f46c4b73af7c2608f99dae9c00cee4e50b08c661813437beb91188553",
+          "minutes": 55.005116666666666,
+          "curvyMiles": 3.0080594103503335,
+          "francoPerKm": 12.560587317367474
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+          "minutes": 51.864333333333335,
+          "curvyMiles": 3.222101076121703,
+          "francoPerKm": 37.3419725033599
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "99166663881be55f274dea2b738821ae06d4b2a74a69be4a19ac686c72ee2485",
+          "minutes": 47.758316666666666,
+          "curvyMiles": 1.6625153183776777,
+          "francoPerKm": 14.27899510955489
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "4a8d7c1f46c4b73af7c2608f99dae9c00cee4e50b08c661813437beb91188553",
+          "minutes": 55.005116666666666,
+          "curvyMiles": 3.0080594103503335,
+          "francoPerKm": 12.560587317367474
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+          "minutes": 52.875766666666664,
+          "curvyMiles": 2.9421185645804715,
+          "francoPerKm": 17.654797046187
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "afa11f335a11c4ee38d43b33471cece208534b762e5f7d2262d7c93ce246a346"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "000cdfe0ff25357c3c74cc445b4d0f578f672ff27b64ce9fbe003179e085f0c8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "03a472c0d50db796c3473fa074e13f558448794043cedd0067c778e01a9fa078"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "33e384475df49c87739af1168d62cfcc63ab8dec407d56c27850fb6313a291f9"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c247fe8c3ae11be8c8331b477c4b9d2174e35b2d12491a2bf161299ed9d97a21"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": null,
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "10c85074f7dbdda8ab4657594272aa1cc0e4c94d7470ad7ab0dbd79213c2e02f"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c0d3136b3b3ea64b079cc8032da4b1e48a07657fad2c1d3c5ce2510ed660b719"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "470f58fdb9f0943c3dcebc553779934e1965c0c58111a393178b536ece75cd2a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "a7df3ebed04c9ce3cb419b5f6de9eddc60cc88470cb22b3abfff528693c547a0"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "alternative_route",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6bbf9e4a0d4e64b0031d19f8a216ddb8580f7c7b5609164dca004f3b8b37c4cf"
+        }
+      ]
+    },
+    {
+      "graph": "og_curve",
+      "style": "curvy",
+      "loop": true,
+      "best": {
+        "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+        "minutes": 117.1403,
+        "curvyMiles": 6.681068316642122,
+        "francoPerKm": 102.16109403765319
+      },
+      "matchingSourceProfiles": [
+        "motorcycle_adventure"
+      ],
+      "pool": [
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "2f8b6393589258c834f962ab57098cc2570881a07e9d2a0b24d170e5e768bed7",
+          "minutes": 156.779,
+          "curvyMiles": 8.217427682530031,
+          "francoPerKm": 34.593603236363556
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "b0210e08be4a592671daa44f70a6ec5bbc2757c69d560d9651f280d7e078094e",
+          "minutes": 181.10833333333332,
+          "curvyMiles": 10.613100575065046,
+          "francoPerKm": 59.050325828509116
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "geometrySha256": "82a5ac51db1cfb0a20d05b84b2d7c6616c823a81f5217c99b22fe9578838e205",
+          "minutes": 183.40776666666667,
+          "curvyMiles": 10.136141362695966,
+          "francoPerKm": 38.6550059440797
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "f97e65379b4a54df33a81bfee202c01ea416f4875864a9164010abef44c295c0",
+          "minutes": 122.15643333333334,
+          "curvyMiles": 7.708767819403924,
+          "francoPerKm": 49.57435136165579
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "9f0262f6df9baf38c3e1d9932b504d12c5642c928022a37b7b51f96bf9296fbd",
+          "minutes": 101.56788333333334,
+          "curvyMiles": 4.832450153999519,
+          "francoPerKm": 51.760716545493615
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "geometrySha256": "1366290f0469d9653c8cc062edd16307b6299921e0042f421ec51bbaf6adfacf",
+          "minutes": 138.89919999999998,
+          "curvyMiles": 5.156361856379634,
+          "francoPerKm": 19.940081297615066
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "9811106dbff82cc6a7ce45e704372716d6db1f3181385b7093d37d0f121ac025",
+          "minutes": 128.1256,
+          "curvyMiles": 6.969340148236794,
+          "francoPerKm": 30.402670904453874
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "14d45ce03d4122e3c74fe711bcb72398a241ce49c6ef10819fced2e50658d126",
+          "minutes": 138.77046666666666,
+          "curvyMiles": 9.0407835230526,
+          "francoPerKm": 98.96864444483353
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "geometrySha256": "d1cef8fc4c3fa0be2f2aa38163fe2f0c489da6a2bf97fe33f750566a0c0d063e",
+          "minutes": 135.30798333333334,
+          "curvyMiles": 7.194751193877706,
+          "francoPerKm": 37.49029259378545
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "0c45af13cc1098d43d36f9f98c48132cd954537be6fce0698a7e7d3234ac8d32",
+          "minutes": 122.0027,
+          "curvyMiles": 5.886518951236259,
+          "francoPerKm": 27.522807574903556
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "38e75d280f76807c845e19b81ce937899abfa3bb13509190487511afd064996a",
+          "minutes": 117.1403,
+          "curvyMiles": 6.681068316642122,
+          "francoPerKm": 102.16109403765319
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "geometrySha256": "e5b6fa7474447d0bed8d6c611669022e1312749311245d00a1a02962ceb7b4e0",
+          "minutes": 76.80888333333334,
+          "curvyMiles": 3.7612197202912045,
+          "francoPerKm": 40.10260850091879
+        }
+      ],
+      "wire": [
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "9e3be5ba815e693a01a213d4149a44dec55ed8f5b6e20a77222f2c6472205809"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "c87b0b8d683a0ef3764c4dee8fd514869656f393d105f49a84db8c0b2c922c0d"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3c4b81f4a4e80716317a18293bcf6c84cbb9dd5ef9ec469ce2e3565c5a28421c"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e27a76240c18f41eb2464042bfab846dd83821d514b3d8ef8eed7bd414e4ef37"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e20c57cc48f658dbb1cfa45b4d765b2b01b396637551db296eb10e1beafdd326"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1d4a74fe8b863f1210d86457fa6522577564a1c428a9aa72aab4817fbb3f385b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "0373b676d0a2918bc5b775383869b88556e797852c27a36c41b00be67ca48a8a"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "45b0bb5c2ca97a64fb24943f107c9e012a944f87d5ec8c5cca0489448e0b4617"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "de4d307a2d609e2da23587a99c7c76c4af91a6248c532adca2c320731bf38ed3"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "2c77f93f25690a983d81ed730757771692265242cac8e89618a68b40c6cb672a"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "475473ae2ac57b2da3582693e1a98958f4c1597b82875727f9995dc59a3fbcee"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e2ebd200c68635515e171e9f87d566e4965a620b2b544315908c28d370ad664f"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b3a804326f42efb0d7fe397b7de73262118600dfc76c208769eb64f95076c0f8"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "405502dbb724a14d426aff7c314d891fe5e83143bf73bccae723e22da79db527"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "af24ca0ed41f5f28f18152a2a4100c69da318899b111b486e2107c85ee597af9"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3299d68812606ef3895bdc328d465aa17e647952de5109577962b8e64902e315"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "817b8f2cfd491bcfdef7010ef29025ad876d61d653877938485db8470e1640fb"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "76d7a2de33040b37f16b89a38158b54cf8f41d918b19190a066c3d5d3cd2d374"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "4828f6afaa2fc145e163c9c8cd4f46a6015ee3e193ff4a0b886c906f21e421f1"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "8689fdaa5119e80274d3e5d0a5ff6fd57445ea6ca193d5ba4a4ce0f5559f497a"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "931ce6353f57a2c23930d59d44617ba1359de1aef655266941533491f6a06581"
+        },
+        {
+          "profile": "motorcycle_scenic",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b9192e7c75de7b32c12a4defb216baf19c532fc9b98282a9008f253b30d2febc"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "949c56fc975db01dc8893cbd7b7ea2b84720a8aed79c3725161f6afc2c620780"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "7de5dc7119e340a33c10e93aa8a6964719fbc631f614fbec61d60feaad61a429"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "3ae490b43a9d9878e9f48804435922a95f46d294f53daae360e3c7fb3f7600fe"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "6467176848fef8e00f6c285f9bdb330bd2c0b6b8757a3b0528a27e7dd2de7c0e"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "5aa3cf88925aa6d3cf50ada3c52f045dbd2f9428a35efe2fdaa3fcf98b0bc2ae"
+        },
+        {
+          "profile": "motorcycle_fastest",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b72a5419d98a65578fa8ad83fdf16f2fd3d8d0d87754f12ddf0625b96fe72f4b"
+        },
+        {
+          "profile": "motorcycle_twisty",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "87ddb6efd04100631ed8d35de9944dd20e305034a66af17e1b8b6806e7588fc8"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "1b7bcd7db925e625751d663045d76388469816e08a2f17883c2ea00d5f9bc675"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "27b4b0e7a89f4e5862a78bbe5ca591567bdb45a1a81e4c465720c472f3edd17f"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "bc773cabce8d025c7cb2e94805eb15a0cd16b40d0cfc45e6e7e9713904940e10"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "158d6c144e592259dd3d6417650d471a1763f111caad37162c87e6f4fccaf1c1"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "b4e43bad4562b61f86aa38eefe37933140cb7de789261df0078b1a4ff91bf623"
+        },
+        {
+          "profile": "motorcycle_adventure",
+          "algorithm": "round_trip",
+          "chDisable": null,
+          "lmDisable": null,
+          "bodySha256": "e87ed2b37236ae32ec81ba0b8476bda0dc84c8ec5bf4b6e1b3f16c43e690fd21"
+        }
+      ]
+    }
+  ],
+  "appTwistyWire": {
+    "profile": "motorcycle_twisty",
+    "points": [
+      [
+        -75.7387,
+        40.8636
+      ],
+      [
+        -75.9832,
+        40.6364
+      ]
+    ],
+    "points_encoded": false,
+    "instructions": true,
+    "calc_points": true,
+    "elevation": false,
+    "locale": "en-US",
+    "details": [
+      "road_class",
+      "surface",
+      "track_type",
+      "max_speed",
+      "max_speed_estimated",
+      "toll",
+      "road_environment",
+      "urban_density",
+      "curvature",
+      "time",
+      "smoothness",
+      "road_class_link",
+      "roundabout",
+      "car_access",
+      "road_access"
+    ],
+    "custom_model": {
+      "priority": [
+        {
+          "if": "road_class == MOTORWAY || road_class == TRUNK",
+          "multiply_by": "0.65"
+        },
+        {
+          "if": "road_class == PRIMARY",
+          "multiply_by": "0.8"
+        },
+        {
+          "if": "road_class_link",
+          "multiply_by": "0.85"
+        },
+        {
+          "if": "urban_density == CITY",
+          "multiply_by": "0.65"
+        },
+        {
+          "if": "urban_density == RESIDENTIAL",
+          "multiply_by": "0.95"
+        },
+        {
+          "if": "max_speed >= 80 && (road_class == PRIMARY || road_class == SECONDARY)",
+          "multiply_by": "0.9"
+        },
+        {
+          "if": "surface == SAND || road_access == PRIVATE || !car_access",
+          "multiply_by": "0"
+        },
+        {
+          "if": "track_type == GRADE3 || track_type == GRADE4 || track_type == GRADE5",
+          "multiply_by": "0"
+        },
+        {
+          "if": "smoothness == BAD || smoothness == VERY_BAD || smoothness == HORRIBLE || smoothness == VERY_HORRIBLE || smoothness == IMPASSABLE",
+          "multiply_by": "0"
+        },
+        {
+          "if": "toll == ALL",
+          "multiply_by": "0"
+        }
+      ]
+    }
+  },
+  "directControl": {
+    "geometrySha256": "d0cf7ade9418df1d3de56bf7747db8b9a3dde8942ba3b465889b9f58d720534e",
+    "minutes": 51.864333333333335,
+    "curvyMiles": 3.222101076121703,
+    "francoPerKm": 37.3419725033599,
+    "weight": 8941.704164,
+    "debugInfo": {
+      "copyrights": [
+        "GraphHopper",
+        "OpenStreetMap contributors"
+      ],
+      "took": 5,
+      "road_data_timestamp": "1970-01-01T00:00:00Z"
+    }
+  },
+  "directTreatment": {
+    "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+    "minutes": 52.875766666666664,
+    "curvyMiles": 2.9421185645804715,
+    "francoPerKm": 17.654797046187,
+    "weight": 11100.38216,
+    "debugInfo": {
+      "copyrights": [
+        "GraphHopper",
+        "OpenStreetMap contributors"
+      ],
+      "took": 3,
+      "road_data_timestamp": "1970-01-01T00:00:00Z"
+    }
+  },
+  "pathDetailsDoNotChangeRoute": true,
+  "ogCurveDetails": [
+    [
+      0,
+      11,
+      0
+    ],
+    [
+      11,
+      17,
+      0.067
+    ],
+    [
+      17,
+      849,
+      0
+    ]
+  ],
+  "nonzeroIntervals": [
+    {
+      "from": 11,
+      "to": 17,
+      "value": 0.067,
+      "meters": 145.50887256386847,
+      "start": {
+        "lon": -75.741797,
+        "lat": 40.864115
+      },
+      "end": {
+        "lon": -75.743311,
+        "lat": 40.864457
+      }
+    }
+  ],
+  "nonzeroMeters": 145.50887256386847,
+  "probes": [
+    {
+      "rule": {
+        "if": "og_curve < 0.001",
+        "multiply_by": "0.01"
+      },
+      "geometrySha256": "4a8d7c1f46c4b73af7c2608f99dae9c00cee4e50b08c661813437beb91188553",
+      "minutes": 55.005116666666666,
+      "curvyMiles": 3.0080594103503335,
+      "francoPerKm": 12.560587317367474,
+      "weight": 836143.303152,
+      "debugInfo": {
+        "copyrights": [
+          "GraphHopper",
+          "OpenStreetMap contributors"
+        ],
+        "took": 16,
+        "road_data_timestamp": "1970-01-01T00:00:00Z"
+      },
+      "changedGeometry": true
+    },
+    {
+      "rule": {
+        "if": "og_curve < 0.15",
+        "multiply_by": "0.01"
+      },
+      "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+      "minutes": 52.875766666666664,
+      "curvyMiles": 2.9421185645804715,
+      "francoPerKm": 17.654797046187,
+      "weight": 844295.456521,
+      "debugInfo": {
+        "copyrights": [
+          "GraphHopper",
+          "OpenStreetMap contributors"
+        ],
+        "took": 15,
+        "road_data_timestamp": "1970-01-01T00:00:00Z"
+      },
+      "changedGeometry": false
+    },
+    {
+      "rule": {
+        "if": "og_curve < 0.4",
+        "multiply_by": "0.01"
+      },
+      "geometrySha256": "b98e6eecbdf8a44920d1b587853398b68395316c47a9cc83d4322fec6ab7cbe7",
+      "minutes": 52.875766666666664,
+      "curvyMiles": 2.9421185645804715,
+      "francoPerKm": 17.654797046187,
+      "weight": 844295.456521,
+      "debugInfo": {
+        "copyrights": [
+          "GraphHopper",
+          "OpenStreetMap contributors"
+        ],
+        "took": 15,
+        "road_data_timestamp": "1970-01-01T00:00:00Z"
+      },
+      "changedGeometry": false
+    }
+  ],
+  "controlOgCurveExpressionStatus": 400,
+  "controlOgCurveExpressionError": {
+    "message": "Cannot compile expression: priority entry invalid condition \"og_curve < 0.15\": 'og_curve' not available",
+    "hints": [
+      {
+        "message": "Cannot compile expression: priority entry invalid condition \"og_curve < 0.15\": 'og_curve' not available",
+        "details": "java.lang.IllegalArgumentException"
+      }
+    ]
+  }
+}
