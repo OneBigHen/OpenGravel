@@ -101,7 +101,7 @@ export function pointerToolForAvoidArea(tool: AvoidAreaTool): PointerTool {
  * planned ride at a glance (the chosen route in one line and Start ride) so
  * the map keeps most of the screen; `expanded` is everything, scrolling.
  */
-export type SheetDetent = "mini" | "peek" | "ride" | "expanded";
+export type SheetDetent = "mini" | "peek" | "ride" | "half" | "expanded";
 
 /** A tap on the selected route: which route, and where on the map. */
 export interface RouteTap {

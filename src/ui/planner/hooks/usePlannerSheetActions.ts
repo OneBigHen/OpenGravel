@@ -17,12 +17,21 @@ export function usePlannerSheetActions(
   }, [planningSessionStore]);
 
   const onToggleSheet = useCallback((): void => {
-    plannerUiStore.getState().toggleSheet(hasRide());
+    const state = plannerUiStore.getState();
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      state.setSheetDetent(state.sheetDetent === "expanded" ? "peek" : state.sheetDetent === "half" ? "expanded" : "half");
+    } else state.toggleSheet(hasRide());
   }, [hasRide, plannerUiStore]);
 
   const onStepSheet = useCallback(
     (direction: "up" | "down"): void => {
-      plannerUiStore.getState().stepSheet(direction, hasRide());
+      const state = plannerUiStore.getState();
+      if (window.matchMedia("(max-width: 760px)").matches) {
+        const current = state.sheetDetent;
+        state.setSheetDetent(direction === "up"
+          ? current === "half" || current === "expanded" ? "expanded" : "half"
+          : current === "expanded" ? "half" : "peek");
+      } else state.stepSheet(direction, hasRide());
     },
     [hasRide, plannerUiStore],
   );

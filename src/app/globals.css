@@ -68,10 +68,18 @@
   --og-dur-base: 220ms;
 
   /* Editorial type scale (12 §4). */
-  --og-text-eyebrow: 11px;
-  --og-text-meta: 13px;
-  --og-text-body: 15px;
-  --og-text-title: clamp(20px, 1.2vw + 15px, 24px);
+  --og-text-caption: 12px;
+  --og-text-eyebrow: var(--og-text-caption);
+  --og-text-meta: 14px;
+  --og-text-body: 16px;
+  --og-text-headline: 20px;
+  --og-text-title: 28px;
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-5: 24px;
+  --og-space-6: 32px;
   --og-text-page: clamp(32px, 3.2vw + 20px, 48px);
 
   /* The device safe-area insets as readable custom properties (12 §12): the

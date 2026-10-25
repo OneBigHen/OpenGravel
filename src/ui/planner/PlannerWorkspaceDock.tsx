@@ -10,6 +10,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
@@ -22,6 +23,7 @@ import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
+import { usePhonePlanner } from "./usePhonePlanner";
 import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
@@ -137,33 +139,41 @@ export function PlannerWorkspaceDock({
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
     composer.rideStyle?.view.shape !== "loop";
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  // Swipe the sheet's head up to open it, down to fold it (owner 2026-09-28:
-  // the sheet "doesn't move easily"). A swipe swallows the click it ends in,
-  // so the handle does not toggle a second time.
-  const swipe = useRef<{ y: number; id: number } | null>(null);
+  const phone = usePhonePlanner();
+  const detent = phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const swipe = useRef<{ y: number; id: number; height: number } | null>(null);
   const swallowClick = useRef(false);
   const swipeHandlers = {
     onPointerDown: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      if (event.pointerType === "mouse") return;
-      swipe.current = { y: event.clientY, id: event.pointerId };
+      if (!(event.target instanceof Element) || !event.target.closest(".og-sheet__handle")) return;
+      const height = event.currentTarget.parentElement?.getBoundingClientRect().height ?? 0;
+      swipe.current = { y: event.clientY, id: event.pointerId, height };
+      (event.target.closest(".og-sheet__handle") as HTMLElement).setPointerCapture(event.pointerId);
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLDivElement>): void => {
+      const start = swipe.current;
+      if (start === null || start.id !== event.pointerId) return;
+      const dy = event.clientY - start.y;
+      if (Math.abs(dy) > 4) swallowClick.current = true;
+      if (phone) setDragHeight(Math.max(120, Math.min(window.innerHeight - 72, start.height - dy)));
     },
     onPointerUp: (event: ReactPointerEvent<HTMLDivElement>): void => {
       const start = swipe.current;
       swipe.current = null;
+      setDragHeight(null);
       if (start === null || start.id !== event.pointerId) return;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       const dy = event.clientY - start.y;
-      if (Math.abs(dy) < SWIPE_PX) return;
-      const direction = dy < 0 ? "up" : "down";
-      // Nothing above the full sheet, nothing below the thin bar.
-      if ((direction === "up" && sheetDetent === "expanded") || (direction === "down" && sheetDetent === "mini")) return;
-      swallowClick.current = true;
-      window.setTimeout(() => {
-        swallowClick.current = false;
-      }, 400);
-      onStepSheet(direction);
+      if (Math.abs(dy) >= SWIPE_PX) onStepSheet(dy < 0 ? "up" : "down");
+      // Pointer-generated clicks are synchronous with release. Keyboard taps
+      // after this gesture must still work.
+      window.setTimeout(() => { swallowClick.current = false; }, 0);
     },
     onPointerCancel: (): void => {
       swipe.current = null;
+      swallowClick.current = false;
+      setDragHeight(null);
     },
     onClickCapture: (event: ReactMouseEvent<HTMLDivElement>): void => {
       if (!swallowClick.current) return;
@@ -184,17 +194,19 @@ export function PlannerWorkspaceDock({
     <div
       className="og-planner__dock"
       data-testid="planner-dock"
-      data-detent={sheetDetent}
+      data-detent={detent}
       ref={dockRef}
     >
       {glance}
       <section
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"
-        data-detent={sheetDetent}
+        data-detent={detent}
         data-idle={idle ? "true" : undefined}
+        data-has-ride={hasChoices ? "true" : "false"}
+        data-dragging={dragHeight !== null ? "true" : undefined}
         aria-label="Ride planning"
-        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px` } as CSSProperties}
+        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px`, ...(dragHeight === null ? {} : { height: dragHeight, maxHeight: dragHeight }) } as CSSProperties}
       >
         <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...swipeHandlers}>
           <PlannerWorkspaceStatus {...status} />
@@ -274,16 +286,25 @@ export function PlannerWorkspaceDock({
             type="button"
             className="og-sheet__handle"
             data-testid="sheet-handle"
-            data-detent={sheetDetent}
-            aria-expanded={sheetDetent === "expanded"}
+            data-detent={detent}
+            aria-expanded={phone ? detent !== "peek" : sheetDetent === "expanded"}
             aria-controls="og-sheet-body"
-            aria-label={
+            aria-label={phone ? `Planner: ${detent}. ${detent === "full" ? "Collapse to peek" : detent === "half" ? "Expand fully" : "Expand to half"}` :
               sheetDetent === "mini"
                 ? "Show planner"
                 : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
                     viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
                   }`
             }
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                event.preventDefault();
+                onStepSheet(event.key === "ArrowUp" ? "up" : "down");
+              } else if (event.key === "Home" && phone) {
+                event.preventDefault();
+                onStepSheet("down");
+              }
+            }}
             onClick={onToggleSheet}
           >
             <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
@@ -389,6 +410,10 @@ export function PlannerWorkspaceDock({
             the wide tier the result portals to the inspector either way.
           */}
           {hasChoices ? <PlannerResultPanel {...results} /> : null}
+          {phone && hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {
+            bodyRef.current?.querySelector(".og-composer")?.scrollIntoView({ block: "start" });
+            bodyRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+          }}>Edit route</button> : null}
           <IntentComposer {...composer} {...(planning ? { onCancelPlanning } : {})} />
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           <PlannerRefineWorkspace {...refine} />
