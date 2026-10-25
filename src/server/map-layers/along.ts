@@ -23,7 +23,9 @@ import { TOMTOM_STOP_CATEGORIES, parseTomTomStops, tomtomSearch } from "./provid
 
 const SAMPLE_SPACING_METERS = 14_000;
 const MAX_SAMPLES = 30;
-const SEARCH_RADIUS_METERS = 4_500;
+// Half the sample spacing, so consecutive searches meet and no stretch of the
+// route is left unsearched between two samples.
+const SEARCH_RADIUS_METERS = 7_000;
 /** A stop further off the route than this is not "on the way". */
 export const MAX_OFF_ROUTE_METERS = 1_900;
 const MAX_LINE_POINTS = 6_000;

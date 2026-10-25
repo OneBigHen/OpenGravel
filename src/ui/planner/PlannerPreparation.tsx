@@ -480,7 +480,7 @@ export function PlannerPreparation({
         </details>
       )}
 
-      <PlannerAlongOpportunities route={route} departure={effectiveDeparture} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
+      <PlannerAlongOpportunities route={route} departure={effectiveDeparture} source={providers?.mapLayers} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
 
       {/* Nothing to be offline-ready for until there is a route. */}
       {route === null ? null : (

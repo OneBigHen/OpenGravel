@@ -5,11 +5,13 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
 import type { RiderOpportunity } from "@/application/discover/rider-opportunities";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
+import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
 
 const route = {
   routeId: "route-1",
@@ -142,7 +144,7 @@ describe("Along this ride", () => {
     fireEvent.click(screen.getByText("Along this ride"));
     await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
   });
-  it("caps mixed suggestions at five, caps events at three, and excludes timing misses", async () => {
+  it("caps mixed suggestions at six, caps events at three, and excludes timing misses", async () => {
     const stops = Array.from({ length: 10 }, (_, index) => ({
       ...place,
       id: `stop-${index}`,
@@ -177,7 +179,7 @@ describe("Along this ride", () => {
     const list = await screen.findByRole("list", {
       name: "Along this ride suggestions",
     });
-    expect(list.children).toHaveLength(5);
+    expect(list.children).toHaveLength(6);
     expect(screen.getAllByText("Event")).toHaveLength(3);
     expect(screen.queryByText("Ended before arrival")).not.toBeInTheDocument();
     expect(screen.getByText("Destination 5")).toBeInTheDocument();
@@ -279,5 +281,103 @@ describe("Along this ride", () => {
     expect(screen.getByRole("button", { name: /Adding road/ })).toBeDisabled();
     await act(async () => resolve());
     expect(screen.getByRole("button", { name: /Added/ })).toBeDisabled();
+  });
+});
+
+const MILE = 1609.344;
+
+/** TomTom-shaped along stops, per layer, served through a stubbed fetch. */
+function alongSource(unavailableLayers: readonly string[] = []) {
+  const along = (layer: string, id: string, name: string, mile: number, offMiles: number, detail: string | null = null) => ({
+    feature: {
+      id,
+      layerId: layer,
+      name,
+      detail,
+      weight: null,
+      geometry: { type: "Point", coordinates: [route.geometry[0]!.lon + mile / 100, route.geometry[0]!.lat] },
+    },
+    alongMeters: mile * MILE,
+    offMeters: offMiles * MILE,
+  });
+  const byLayer: Record<string, readonly unknown[]> = {
+    fuel: [along("fuel", "tomtom:sheetz", "Sheetz", 14, 0.3, "Main St, Lehighton")],
+    food: [along("food", "tomtom:diner", "Diner", 5, 0.2)],
+    coffee: [along("coffee", "tomtom:cafe", "Café", 9, 0.1)],
+    viewpoints: [along("viewpoints", "tomtom:hawk", "Hawk Mountain", 26, 1.2)],
+  };
+  const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/api/road-openings"))
+      return Response.json({ events: [], undated: [], sources: [], truncated: false });
+    if (url.includes("/api/rider-opportunities"))
+      return Response.json({ mode: "route", opportunities: [], sources: [], searchedRadiusMiles: null });
+    if (url.includes("/api/map-layers/along")) {
+      const body = JSON.parse(String(init?.body)) as { layer: string };
+      const available = !unavailableLayers.includes(body.layer);
+      return Response.json({ stops: available ? byLayer[body.layer] ?? [] : [], available });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  });
+  vi.stubGlobal("fetch", fetcher);
+  return { fetcher, source: createHttpMapLayersSource({ fetch: fetcher as unknown as typeof fetch }) };
+}
+
+describe("Along this ride stops", () => {
+  it("lists gas, food, coffee and overlooks by mile with how far off route they are", async () => {
+    const { source } = alongSource();
+    const onAddStop = vi.fn();
+    render(
+      <PlannerAlongOpportunities
+        route={route}
+        departure={departure}
+        source={source}
+        onAddStop={onAddStop}
+      />,
+    );
+    fireEvent.click(screen.getByText("Along this ride"));
+    const list = await screen.findByRole("list", { name: "Along this ride suggestions" });
+    expect(
+      within(list)
+        .getAllByRole("button", { name: /as a stop/ })
+        .map((button) => button.getAttribute("aria-label")),
+    ).toEqual([
+      "Add Diner as a stop",
+      "Add Café as a stop",
+      "Add Sheetz as a stop",
+      "Add Hawk Mountain as a stop",
+    ]);
+    expect(within(list).getByText("Mile 14")).toBeInTheDocument();
+    expect(within(list).getByText("0.3 mi off route · Gas · Main St, Lehighton")).toBeInTheDocument();
+    expect(screen.getByText(/Stops from TomTom/)).toBeInTheDocument();
+    const sheetz = within(list).getByText("Sheetz").closest("li");
+    fireEvent.click(within(sheetz!).getByRole("button", { name: "Add Sheetz as a stop" }));
+    expect(onAddStop).toHaveBeenCalledWith(
+      { lon: route.geometry[0]!.lon + 0.14, lat: route.geometry[0]!.lat },
+      "Sheetz",
+    );
+    expect(within(sheetz!).getByRole("button", { name: /Added Sheetz/ })).toBeDisabled();
+  });
+
+  it("keeps the stops that answered when one provider layer fails", async () => {
+    const { source } = alongSource(["coffee"]);
+    render(<PlannerAlongOpportunities route={route} departure={departure} source={source} />);
+    fireEvent.click(screen.getByText("Along this ride"));
+    expect(await screen.findByText("Sheetz")).toBeInTheDocument();
+    expect(screen.queryByText("Café")).not.toBeInTheDocument();
+    expect(screen.getByText("Coffee stops could not be checked.")).toBeInTheDocument();
+  });
+
+  it("says nothing was checked rather than nothing is there when every provider fails", async () => {
+    const { source } = alongSource(["fuel", "food", "coffee", "viewpoints"]);
+    render(<PlannerAlongOpportunities route={route} departure={departure} source={source} />);
+    fireEvent.click(screen.getByText("Along this ride"));
+    expect(
+      await screen.findByText("No stops could be checked along this ride."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Gas, food and overlooks could not be checked."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Stops from TomTom/)).not.toBeInTheDocument();
   });
 });
