@@ -902,6 +902,55 @@ describe("progress and telemetry (08 §2, §5)", () => {
     expect(result.secondary.etaText).toBe("Unknown");
     expect(result.warnings.find((warning) => warning.id === "gps-stale")?.text).toContain("route estimates are paused");
   });
+
+  it("withholds miles and time left off the line instead of printing 0 left", () => {
+    // Off the route, the matcher answers from the nearest point on the line, and
+    // on a loop that point can be the closing miles: a projection that reads
+    // "0.0 mi left" is not the rider's remaining ride, so it is not printed.
+    const result = view({
+      navigation: navigation({
+        aheadGuidanceSuspended: true,
+        offRouteState: "off-route",
+      }),
+      telemetry: {
+        routeProgress: 1,
+        remainingDistanceMeters: 0,
+        remainingDurationSeconds: 0,
+        etaIso: NOW,
+        distanceFromRouteMeters: 275,
+      },
+    });
+
+    expect(result.secondary.remainingText).toBe("Unknown");
+    expect(result.secondary.distanceLeftText).toBeNull();
+    expect(result.secondary.timeLeftText).toBeNull();
+    expect(result.progress.fraction).toBeNull();
+    const [, distanceSlot, timeSlot] = result.metrics.slots;
+    expect(distanceSlot?.reading.id).toBe("route.distanceRemaining");
+    expect(distanceSlot?.reading.displayValue).toBe("—");
+    expect(timeSlot?.reading.id).toBe("route.timeRemaining");
+    expect(timeSlot?.reading.displayValue).toBe("—");
+    // What the engine did measure — how far off the line — is still said.
+    expect(result.guidance.kind).toBe("suspended");
+    if (result.guidance.kind !== "suspended") throw new Error("expected suspension");
+    expect(result.guidance.offRouteDistanceText).toBe("900 ft off route");
+  });
+
+  it("shows the numbers again once the matcher holds the rider on the line", () => {
+    const result = view({
+      navigation: navigation({ offRouteState: "on-route" }),
+      telemetry: {
+        routeProgress: 0.5,
+        remainingDistanceMeters: 4_800,
+        remainingDurationSeconds: 600,
+        etaIso: "2026-09-21T14:10:00.000Z",
+      },
+    });
+
+    expect(result.secondary.distanceLeftText).toBe("3 mi");
+    expect(result.secondary.timeLeftText).toBe("10 min");
+    expect(result.metrics.slots[1]?.reading.displayValue).toBe("3.0");
+  });
 });
 
 describe("critical conditions (08 §3, §7, §8, §24)", () => {
