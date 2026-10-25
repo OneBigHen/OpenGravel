@@ -23,6 +23,7 @@ export interface PlannerRouteBriefingProps {
   readonly onAddStopAt?: (coordinate: Coordinate, name: string) => void;
   readonly offlineRoute: SelectedOfflineRoute | null;
   readonly actions: Pick<RideStyleActions, "setBike" | "setDeparture" | "setArriveBy">;
+  readonly onWeatherLine?: (line: string | null) => void;
   readonly onRouteTraffic: (traffic: RouteTrafficLabel | null) => void;
 }
 
@@ -38,6 +39,7 @@ export function PlannerRouteBriefing({
   offlineRoute,
   actions,
   onRouteTraffic,
+  onWeatherLine,
 }: PlannerRouteBriefingProps) {
   return (
     <PlannerPreparation
@@ -55,6 +57,7 @@ export function PlannerRouteBriefing({
       onArrivalChange={ride.intent.shape === "destination" ? actions.setArriveBy : undefined}
       onBikeChange={actions.setBike}
       onRouteTraffic={onRouteTraffic}
+      onWeatherLine={onWeatherLine}
     />
   );
 }

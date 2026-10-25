@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
@@ -11,6 +11,8 @@ import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefin
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
 import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
+import { usePhonePlanner } from "./usePhonePlanner";
+import { PhoneRideSummary } from "./PhoneRideSummary";
 import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 
 // No route means there is no briefing or chart to draw. Keep their dependency
@@ -66,6 +68,9 @@ export interface PlannerResultPanelProps {
 
 export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
+  const phone = usePhonePlanner();
+  const [comparing, setComparing] = useState(false);
+  const [weatherLine, setWeatherLine] = useState<string | null>(null);
   // No route on screen means no traffic claim about one: the caller clears it,
   // and that has to survive the briefing (and its provider tree) being deferred.
   const { route, onRouteTraffic } = briefing;
@@ -76,8 +81,9 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
   const tint = selectedCard?.tint ?? 0;
   const result = (
     <>
+      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => setComparing(!comparing)} onSelect={choices.onSelect} weatherLine={weatherLine} /> : null}
       {choices.cards.length === 0 ? null : (
-        <RouteChoices cards={choices.cards}>
+        <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
             <RouteDecisionCard
               key={card.routeId}
@@ -86,7 +92,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
               explanation={card.isSelected ? choices.explanation : null}
             />
           ))}
-        </RouteChoices>
+        </RouteChoices></div>
       )}
       {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {briefing.route === null || briefing.providers?.elevationProfile === undefined || choices.cards.length === 0 ? null : (
@@ -99,9 +105,9 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
           expandedBySheet={sheetExpanded}
         />
       )}
-      <RideActions {...actions} />
+      <RideActions {...actions} start={phone && selectedCard !== undefined ? null : actions.start} />
       {choices.cards.length === 0 ? null : <AdvisorRideAsk />}
-      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
+      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}
     </>
   );
   if (!wide || inspector === null || choices.cards.length === 0) return result;

@@ -74,6 +74,7 @@ export interface PlannerPreparationProps {
   /** Absent where arrive-by does not apply (loops keep their time budget). */
   readonly onArrivalChange?: (arrival: ArrivalTarget | null) => void;
   readonly onBikeChange: (bike: BikeConstraintSnapshot) => void;
+  readonly onWeatherLine?: (line: string | null) => void;
   readonly onRouteTraffic?: (traffic: RouteTrafficLabel | null) => void;
   readonly opportunityMap?: ExploreMapConfig | undefined;
   readonly onRouteThrough?: ((road: RoadOpeningSummary) => void | Promise<void>) | undefined;
@@ -334,6 +335,7 @@ export function PlannerPreparation({
   onArrivalChange,
   onBikeChange,
   onRouteTraffic,
+  onWeatherLine,
   onAddStopAt,
   onRouteThrough,
   opportunityMap,
@@ -446,6 +448,15 @@ export function PlannerPreparation({
   const glance = preparation === null || current === null ? [] : glanceParts(preparation, current.context);
   const weatherShown = preparation !== null
     && preparation.items.some((item) => item.kind === "weather" && item.state !== "unavailable");
+
+  const weatherItem = preparation?.items.find((item) => item.kind === "weather");
+  const weatherData = weatherItem?.data as import("@/application/preparation/providers").WeatherData | undefined;
+  const warningWeather = weatherData !== undefined && (
+    (weatherData.tripAlerts?.length ?? weatherData.alerts?.length ?? 0) > 0 ||
+    (weatherData.maxPrecipChance ?? 0) >= 30 || (weatherData.maxWindMph ?? 0) >= 20 ||
+    /rain|snow|storm|ice|freez|fog/i.test(weatherData.display)
+  ) ? weatherData.display : null;
+  useEffect(() => { onWeatherLine?.(warningWeather); }, [onWeatherLine, warningWeather]);
 
   return (
     <>
