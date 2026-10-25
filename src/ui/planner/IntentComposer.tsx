@@ -29,6 +29,7 @@ import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { AdvisorInline, useRideAdvisor } from "@/ui/planner/RideAdvisor";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import {
+  LoopDirectionRow,
   LoopTimeRow,
   RideShapeSwitch,
   RideStylePanel,
@@ -392,7 +393,10 @@ export function IntentComposer({
       </div>
 
       {loop && rideStyle !== undefined ? (
-        <LoopTimeRow model={rideStyle} />
+        <>
+          <LoopTimeRow model={rideStyle} />
+          <LoopDirectionRow model={rideStyle} />
+        </>
       ) : (
         <div className={rowClass}>
           <span className="og-composer__dot og-composer__dot--finish" aria-hidden="true" />

@@ -457,6 +457,58 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(fast.isSelected).toBe(false);
   });
 
+  it("projects the measured quantities the phone's one-word choice reads", () => {
+    const source = { id: "osm", label: "OpenStreetMap road tags", category: "osm" } as const;
+    const measuredRoute = candidate("route_measured", {
+      evidence: {
+        curvature: {
+          value: { curvyMeters: 16_000, totalMeters: 120_000, unit: 0.7 },
+          status: "estimated",
+          confidence: 0.7,
+          provenance: [source],
+        },
+        surfaceMix: {
+          value: {
+            surface: "paved",
+            pavedMeters: 95_000,
+            inferredPavedMeters: 0,
+            gravelMeters: 5_000,
+            dirtMeters: 20_000,
+            unknownMeters: 0,
+            unit: 1,
+            unpavedShare: 0.2,
+          },
+          status: "estimated",
+          confidence: 0.8,
+          provenance: [source],
+        },
+        busyRoads: { value: 0.12, status: "estimated", confidence: 0.7, provenance: [source] },
+      },
+    });
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("ready", {
+          committedBundle: bundle([measuredRoute, FAST], measuredRoute.id, { "best-ride": measuredRoute.id }),
+          selectedRouteId: measuredRoute.id,
+        }),
+      }),
+    );
+
+    // Miles to the tenth the card prints, and the share as measured — the phone
+    // compares these, it does not re-derive them from labels.
+    expect(required(vm.routeCards[0]).measurements).toEqual({
+      curvyMi: 9.9,
+      unpavedMi: 15.5,
+      busyShare: 0.12,
+    });
+    // No evidence means no measurement, never a zero that would win a comparison.
+    expect(required(vm.routeCards[1]).measurements).toEqual({
+      curvyMi: null,
+      unpavedMi: null,
+      busyShare: null,
+    });
+  });
+
   it("marks the automatically selected, unroled candidate as the placeholder Best Ride", () => {
     const vm = buildPlannerViewModel(
       input({

@@ -16,6 +16,7 @@ import type { RideDocument } from "@/domain/ride/types";
 import {
   formatRideTime,
   LOOP_MAX_MINUTES,
+  LoopDirectionRow,
   LoopTimeRow,
   RideShapeSwitch,
   RideStylePanel,
@@ -25,6 +26,7 @@ import {
 } from "@/ui/planner/RideStyleControls";
 import {
   highwayPolicyCommand,
+  loopHeadingCommand,
   loopTimeCommand,
   rideShapeCommand,
   roadCharacterCommand,
@@ -39,6 +41,7 @@ afterEach(() => cleanup());
 const VIEW: RideStyleView = {
   shape: "destination",
   loopMinutes: 120,
+  loopHeading: "any",
   roadCharacter: "balanced",
   noveltyPreference: "balanced",
   surface: "mixed",
@@ -52,6 +55,7 @@ function actions() {
     setBike: vi.fn(),
     setShape: vi.fn<RideStyleActions["setShape"]>(),
     setLoopMinutes: vi.fn<RideStyleActions["setLoopMinutes"]>(),
+    setLoopHeading: vi.fn<RideStyleActions["setLoopHeading"]>(),
     setRoadCharacter: vi.fn<RideStyleActions["setRoadCharacter"]>(),
     setNoveltyPreference: vi.fn<RideStyleActions["setNoveltyPreference"]>(),
     setTraffic: vi.fn<RideStyleActions["setTraffic"]>(),
@@ -109,6 +113,35 @@ describe("ride style controls", () => {
     expect(spy.setLoopMinutes).toHaveBeenCalledWith(240);
   });
 
+  it("the direction row offers any way and the four compass directions", () => {
+    const spy = actions();
+    render(<LoopDirectionRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
+
+    // Any way is the default the engine starts from; nothing else is chosen.
+    expect(screen.getByTestId("loop-heading-any")).toBeChecked();
+    expect(screen.getByTestId("loop-heading-north")).not.toBeChecked();
+    expect(screen.getByRole("radiogroup", { name: "Which way?" }).querySelectorAll("input")).toHaveLength(5);
+    expect(screen.getByText("North")).toBeInTheDocument();
+    expect(screen.getByText("West")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("loop-heading-north"));
+    expect(spy.setLoopHeading).toHaveBeenCalledWith("north");
+  });
+
+  it("shows the authored heading as the chosen chip and applies it as one command", () => {
+    let document = createRideDocument();
+    document = applied(document, loopHeadingCommand(document, "south"));
+    expect(document.intent.loopHeading).toBe("south");
+
+    render(
+      <LoopDirectionRow
+        model={{ view: { ...VIEW, shape: "loop", loopHeading: document.intent.loopHeading ?? "any" }, actions: actions() }}
+      />,
+    );
+    expect(screen.getByTestId("loop-heading-south")).toBeChecked();
+    expect(screen.getByTestId("loop-heading-any")).not.toBeChecked();
+  });
+
   it("the panel sets road character, surface, highways and tolls", () => {
     const spy = actions();
     render(<RideStylePanel model={{ view: VIEW, actions: spy }} />);
@@ -132,7 +165,9 @@ describe("ride style controls", () => {
       />,
     );
     const toggle = screen.getByTestId("ride-style-toggle");
-    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · New to me · Paved · Avoid busy roads · No tolls");
+    // The row carries a short value — the road and the surface. The rest of the
+    // panel's choices are inside it, where the chips already show their state.
+    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · Paved");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -143,7 +178,8 @@ describe("ride style controls", () => {
     expect(formatRideTime(60)).toBe("1 h");
     expect(formatRideTime(90)).toBe("1 h 30 min");
     expect(formatRideTime(45)).toBe("45 min");
-    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed · Avoid busy roads · No highways");
+    // Highways and tolls live inside the panel, so they never lengthen the row.
+    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed");
   });
 });
 
@@ -260,6 +296,9 @@ describe("back by sunset", () => {
   });
 });
 
-it("shows the active traffic choice in the collapsed style summary", () => {
-  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toContain("Fastest");
+it("leaves the traffic and toll choices inside the collapsed row", () => {
+  // The row is `Ride style` … `Balanced · Mixed ›`: it names where the ride goes
+  // by shape, not by repeating every switch, so it stays one line at 320 px.
+  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toBe("Balanced · Mixed");
+  expect(rideStyleSummary({ ...VIEW, avoidTolls: true })).toBe("Balanced · Mixed");
 });

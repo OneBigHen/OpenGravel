@@ -15,7 +15,9 @@
  *
  * The short ride style sits directly under whichever block is showing (and under
  * the Compare list when comparing), so the ride can be reshaped without leaving
- * the options. It is hidden at the peek detent, where only the summary fits.
+ * the options. It is hidden at the peek detent, where only the summary fits,
+ * unless the rider is comparing — and there it stays in view while the options
+ * scroll, because reshaping the ride is the point of looking at the options.
  */
 
 import { useMemo } from "react";
@@ -107,7 +109,7 @@ export function PhoneRideSummary({ card, cards, start, route, elevationSource, c
   const words = useMemo(() => routeChoiceWords(cards), [cards]);
   const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label, rideGlanceSurface(card).label];
   if (elevation?.status === "ready") meta.push(`↗ ${Math.round(elevation.profile.climbMeters * 3.28084).toLocaleString("en-US")} ft`);
-  return <section className="og-phone-summary" data-testid="phone-ride-summary" aria-label="Your ride">
+  return <section className="og-phone-summary" data-testid="phone-ride-summary" data-comparing={comparing ? "true" : "false"} aria-label="Your ride">
     {comparing ? <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
       {cards.map((choice) => <OptionRow key={choice.routeId} choice={choice} word={words[choice.routeId]} onSelect={onSelect} />)}
     </ul> : <div>

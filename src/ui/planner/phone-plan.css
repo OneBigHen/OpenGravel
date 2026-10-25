@@ -39,7 +39,10 @@
     background: var(--og-paper); box-shadow: none; backdrop-filter: none; overflow: visible;
     transition: height 180ms ease;
   }
-  .og-planner .og-planner__sheet[data-detent="half"] { height: 50dvh; max-height: none; }
+  /* Half is the detent that shows the summary and the one-tap ride style under
+     it, so it takes the height both need at 375x667; a shorter half left the
+     quiet Compare rides switch clipped on the smallest phone. */
+  .og-planner .og-planner__sheet[data-detent="half"] { height: 60dvh; max-height: none; }
   .og-planner .og-planner__sheet[data-detent="full"] { max-height: none; height: calc(100dvh - var(--og-tabbar-h) - 48px - var(--og-safe-top)); }
   .og-planner .og-planner__sheet[data-dragging="true"] { transition: none; height: var(--og-sheet-drag-h); max-height: var(--og-sheet-drag-h); }
   .og-planner .og-planner__sheet .og-sheet__head { display: block; position: relative; flex: 0 0 24px; min-height: 24px; padding: 0; touch-action: auto; }
@@ -91,16 +94,28 @@
      not reflow when a tap moves the selection. */
   .og-phone-choice__check { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--og-choice-tint); }
   /* The short ride style (small-screen v2 §3): two one-tap segments under the
-     options, editing the composer's own ride style. The track scrolls inside
-     itself at 320px; the page never does. */
-  .og-phone-style { display: flex; flex-direction: column; gap: var(--og-space-3); margin-top: var(--og-space-3); }
-  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-style { display: none; }
-  /* The label sits above its track so the four words get the full sheet width —
-     they fit in one line at 375px, and the track scrolls inside itself at 320. */
-  .og-phone-style__row { display: flex; flex-direction: column; gap: var(--og-space-1); min-width: 0; }
-  .og-phone-style__label { font-size: var(--og-text-caption); font-weight: 600; line-height: 1.3; color: var(--og-slate-text); }
+     options, editing the composer's own ride style. It stays at the bottom of
+     the sheet while the options scroll above it, so the one control a rider
+     needs while comparing is never below the fold. Each segment is one row —
+     `Roads` then its chips — which keeps the whole row on screen under the
+     summary; the track scrolls inside itself at 320px and the page never does. */
+  .og-phone-style {
+    position: sticky; bottom: 0; z-index: 1; flex: none;
+    display: flex; flex-direction: column; gap: var(--og-space-2);
+    /* The gap above the row lives inside the box, so when the row is pinned over
+       the scrolling options no stripe of them shows through it. */
+    padding-top: var(--og-space-3);
+    min-width: 0; max-width: 100%; background: var(--og-paper);
+  }
+  /* The options scroll under it, so the boundary is drawn rather than implied. */
+  .og-phone-summary[data-comparing="true"] .og-phone-style { border-top: 1px solid var(--og-hairline); }
+  /* At the peek detent the block is the summary alone — unless the rider is
+     comparing, where the style row is what they came for. */
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary[data-comparing="false"] .og-phone-style { display: none; }
+  .og-phone-style__row { display: flex; align-items: center; gap: var(--og-space-2); min-width: 0; }
+  .og-phone-style__label { flex: none; font-size: var(--og-text-meta); font-weight: 500; line-height: 1.35; color: var(--og-slate-text); }
   .og-phone-style__track {
-    display: flex; gap: 2px; min-width: 0; padding: 2px;
+    display: flex; flex: 1 1 auto; gap: 2px; min-width: 0; padding: 2px;
     border-radius: 12px; background: var(--og-well);
     overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
   }
@@ -109,7 +124,7 @@
   .og-phone-style__chip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
   .og-phone-style__chip span {
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 48px; min-height: 48px; padding: 0 var(--og-space-3);
+    min-width: 48px; min-height: 48px; padding: 0 var(--og-space-2);
     border-radius: 10px; background: transparent; color: var(--og-ink);
     font-size: var(--og-text-meta); font-weight: 500; line-height: 1.35; white-space: nowrap;
   }
@@ -124,6 +139,9 @@
   .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-prepare__row, .og-elevation, .og-point-row, .og-refine__body > section) { border: 0; border-bottom: 1px solid var(--og-hairline); border-radius: 0; background: transparent; box-shadow: none; padding: var(--og-space-2) 0; }
   .og-planner .og-planner__sheet :is(input, select, button, summary, label) { font-size: var(--og-text-body); }
   .og-planner .og-planner__sheet :is(button, summary, input, select) { min-height: 48px; }
+  /* The ride-style disclosure is one 56px row: body-size label, short value,
+     chevron. The rest of its choices are inside it. */
+  .og-planner .og-planner__sheet .og-style__toggle { min-height: 56px; }
   .og-planner .og-planner__sheet :is(p, .og-composer__value, .og-composer__coordinate, .og-refine__summary) { font-size: var(--og-text-meta); line-height: 1.35; }
   .og-planner .og-prepare__glance, .og-planner .og-prepare__credit { display: none; }
   /* The idle peek contains exactly one search and three equal actions. */
@@ -158,4 +176,37 @@
 }
 @media (max-width: 760px) and (prefers-reduced-motion: reduce) {
   .og-planner .og-planner__sheet { transition: none; }
+}
+
+/* Loop ride time and "Which way?" on a phone: the label sits above one row of
+   chips that scrolls sideways, so the two rows stay above "Make my loop"
+   instead of wrapping into three. */
+@media (max-width: 760px) {
+  .og-composer__row--loop,
+  .og-composer__row--direction {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--og-space-1);
+    min-width: 0;
+  }
+
+  .og-composer__row--loop > .og-style__loop,
+  .og-composer__row--direction > .og-style__way {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
+  }
+
+  .og-composer__row--loop > .og-style__loop::-webkit-scrollbar,
+  .og-composer__row--direction > .og-style__way::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-composer__row--loop .og-style__chip,
+  .og-composer__row--direction .og-style__chip {
+    flex: none;
+  }
 }

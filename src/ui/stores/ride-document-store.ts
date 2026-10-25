@@ -1094,6 +1094,21 @@ export function roadCharacterCommand(
   };
 }
 
+export function loopHeadingCommand(
+  document: RideDocument,
+  loopHeading: NonNullable<RideDocument["intent"]["loopHeading"]>,
+): Extract<RideCommand, { type: "loopHeading.set" }> {
+  return {
+    ...commandBase(
+      document,
+      "rider",
+      loopHeading === "any" ? "Any way for the loop" : `Loop heads ${loopHeading}`,
+    ),
+    type: "loopHeading.set",
+    loopHeading,
+  };
+}
+
 export function noveltyPreferenceCommand(
   document: RideDocument,
   noveltyPreference: NonNullable<RideDocument["intent"]["noveltyPreference"]>,

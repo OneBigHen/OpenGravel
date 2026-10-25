@@ -131,6 +131,7 @@ describe("IntentComposer", () => {
           view: {
             shape: "loop",
             loopMinutes: 120,
+            loopHeading: "any",
             roadCharacter: "balanced",
             noveltyPreference: "balanced",
             surface: "mixed",
@@ -142,6 +143,7 @@ describe("IntentComposer", () => {
             setBike: vi.fn(),
             setShape: vi.fn(),
             setLoopMinutes: vi.fn(),
+            setLoopHeading: vi.fn(),
             setRoadCharacter: vi.fn(),
             setNoveltyPreference: vi.fn(),
             setTraffic: vi.fn(),

@@ -1,25 +1,28 @@
 "use client";
 
 /**
- * Ride style (MVP parity M2): the shape of the ride, a loop's ride time, and the
- * road/surface/highway/toll envelope — every one of them a control that changes
- * what the router answers (OGV-D-262; `tests/real-router/ride-style-live.test.ts`).
+ * Ride style (MVP parity M2): the shape of the ride, a loop's ride time, which
+ * way a loop heads, and the road/surface/highway/toll envelope — every one of
+ * them a control that changes what the router answers (OGV-D-262;
+ * `tests/real-router/ride-style-live.test.ts`).
  *
  * The controls are native radios and checkboxes styled as chips and switches,
  * so keyboard and screen-reader behavior are the platform's own. Each change is
  * one typed command through `onChange`; this module owns no ride state.
  *
- * Layout: the shape switch and the loop's ride time sit in the composer's own
- * rows; the envelope lives behind one "Ride style" row that shows the current
- * choices as its summary. On a phone that row is a disclosure (the peek detent
- * has room for exactly one more line, 04 §2); from 761 px up it is always open.
+ * Layout: the shape switch, the loop's ride time and its "Which way?" row sit in the composer's own
+ * rows; the envelope lives behind one "Ride style" row whose short value is the
+ * road and the surface (`Balanced · Mixed`), the two choices that change the
+ * shape of a ride most, with the rest of the envelope inside. On a phone that
+ * row is a disclosure (the peek detent has room for exactly one more line,
+ * 04 §2); from 761 px up it is always open.
  */
 
 import { useId, useState, useSyncExternalStore } from "react";
 
 import type { ArrivalTarget } from "@/application/planner/arrive-by";
 import { loopMinutesUntilSunset } from "@/application/planner/loop-until-sunset";
-import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
+import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, LoopHeading, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -29,6 +32,8 @@ export interface RideStyleView {
   readonly shape: RideShapeChoice;
   /** The loop's ride time in minutes (the default when none was chosen). */
   readonly loopMinutes: number;
+  /** Which way the loop should head; `any` leaves it to the engine. */
+  readonly loopHeading: LoopHeading;
   /** Where a loop starts; the sunset chip needs it, and hides without it. */
   readonly startCoordinate?: Coordinate | null;
   readonly roadCharacter: RoadCharacterIntent;
@@ -43,6 +48,7 @@ export interface RideStyleActions {
   readonly setBike: (bike: BikeConstraintSnapshot) => void;
   readonly setShape: (shape: RideShapeChoice) => void;
   readonly setLoopMinutes: (minutes: number) => void;
+  readonly setLoopHeading: (heading: LoopHeading) => void;
   readonly setRoadCharacter: (character: RoadCharacterIntent) => void;
   readonly setNoveltyPreference: (preference: NoveltyPreference) => void;
   readonly setTraffic: (traffic: TrafficPreference) => void;
@@ -75,6 +81,24 @@ export const ROAD_CHARACTER_LABELS: Readonly<Record<RoadCharacterIntent, string>
   backroads: "Backroads",
 };
 
+/**
+ * The one row under a loop's ride time: which way it should head.
+ *
+ * The words are plain ("Any", "North", …) because a mounted rider reads them at
+ * a glance; five short words fit a 320 px phone, so no letters-only variant is
+ * needed. The choice is a preference the engine is asked for and the answer is
+ * measured against, never a claim about the roads.
+ */
+export const LOOP_HEADING_LABELS: Readonly<Record<LoopHeading, string>> = {
+  any: "Any",
+  north: "North",
+  east: "East",
+  south: "South",
+  west: "West",
+};
+
+const LOOP_HEADINGS: readonly LoopHeading[] = ["any", "north", "east", "south", "west"];
+
 export const SURFACE_LABELS: Readonly<Record<SurfaceChoice, string>> = {
   pavement: "Paved",
   "mostly-pavement": "Mostly paved",
@@ -105,16 +129,14 @@ export function formatRideTime(minutes: number): string {
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
 
-/** The one-line summary the collapsed row shows: `Curvy · Paved · No tolls`. */
+/**
+ * The short value the collapsed `Ride style` row shows: `Balanced · Mixed`.
+ * Everything else the panel holds — familiarity, traffic, highways, tolls — is
+ * inside it, so the row keeps one value that reads at a glance instead of a
+ * sentence that wraps beside an eyebrow.
+ */
 export function rideStyleSummary(view: RideStyleView): string {
-  return [
-    ROAD_CHARACTER_LABELS[view.roadCharacter],
-    ...(view.noveltyPreference === "balanced" ? [] : [NOVELTY_LABELS[view.noveltyPreference]]),
-    SURFACE_LABELS[view.surface],
-    TRAFFIC_LABELS[view.traffic],
-    ...(view.avoidHighways ? ["No highways"] : []),
-    ...(view.avoidTolls ? ["No tolls"] : []),
-  ].join(" · ");
+  return [ROAD_CHARACTER_LABELS[view.roadCharacter], SURFACE_LABELS[view.surface]].join(" · ");
 }
 
 /** The authored shape as a composer choice: an open ride plans like a destination. */
@@ -299,6 +321,45 @@ export function LoopTimeRow({ model, now }: LoopTimeRowProps) {
   );
 }
 
+/**
+ * "Which way?" for a loop, under its ride time.
+ *
+ * One native radio group, the same as every other ride-style row, so keyboard
+ * and screen-reader behaviour are the platform's own and each choice is one
+ * typed command. The row is full width: five chips on one line is the only
+ * shape that reads as one decision, and it is what fits a 320 px phone.
+ */
+export function LoopDirectionRow({ model }: { readonly model: RideStyleControlsModel }) {
+  const name = useId();
+  return (
+    <div className="og-composer__row og-composer__row--direction">
+      <span className="og-composer__label" id={`${name}-label`}>
+        Which way?
+      </span>
+      <div
+        className="og-style__way"
+        role="radiogroup"
+        aria-labelledby={`${name}-label`}
+        data-testid="loop-heading"
+      >
+        {LOOP_HEADINGS.map((heading) => (
+          <label key={heading} className="og-style__chip">
+            <input
+              type="radio"
+              name={name}
+              value={heading}
+              checked={heading === model.view.loopHeading}
+              onChange={() => model.actions.setLoopHeading(heading)}
+              data-testid={`loop-heading-${heading}`}
+            />
+            <span>{LOOP_HEADING_LABELS[heading]}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Road character, surface, highways and tolls behind one summary row. */
 export function RideStylePanel({ model }: { readonly model: RideStyleControlsModel }) {
   const [open, setOpen] = useState(false);
@@ -323,12 +384,14 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
         data-testid="ride-style-toggle"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="og-composer__label">Ride style</span>
+        <span className="og-composer__label og-style__toggle-label">Ride style</span>
         <span className="og-style__summary" data-testid="ride-style-summary">
           {rideStyleSummary(view)}
         </span>
+        {/* A disclosure row points at what it opens: right when closed, down
+            when open. */}
         <span aria-hidden="true" className="og-style__chevron">
-          {open ? "⌃" : "⌄"}
+          {open ? "⌄" : "›"}
         </span>
       </button>
       <div id={panelId} className="og-style__panel" data-open={open ? "true" : "false"}>

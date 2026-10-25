@@ -441,8 +441,17 @@ export function PlannerWorkspaceDock({
             route cards, profile and Start — and the itinerary follows to edit.
             DOM order, not CSS order, so focus order matches what is seen. On
             the wide tier the result portals to the inspector either way.
+            At the peek detent the summary offers Compare rides, and the options
+            plus the one-tap ride style need more room than the peek block has,
+            so that tap steps the sheet up once instead of hiding its own list.
           */}
-          {hasChoices ? <PlannerResultPanel {...results} destinationLine={destinationLine} /> : null}
+          {hasChoices ? (
+            <PlannerResultPanel
+              {...results}
+              destinationLine={destinationLine}
+              {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
+            />
+          ) : null}
           {phone && (hasChoices || history !== null) ? (
             <div className="og-phone-tools" data-testid="phone-tools">
               {hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {

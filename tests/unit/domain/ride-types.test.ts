@@ -299,6 +299,7 @@ describe("defaultRideIntent (03-DOMAIN-MODEL §3)", () => {
       departure: { kind: "now" },
       roadCharacter: "balanced",
       noveltyPreference: "balanced",
+      loopHeading: "any",
       surface: { preference: "mixed", unknownSurfacePolicy: "allow-with-warning" },
       terrain: { level: "moderate" },
       traffic: "protect-ride",

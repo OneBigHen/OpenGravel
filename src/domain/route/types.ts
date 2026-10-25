@@ -219,6 +219,14 @@ export type RouteEvidenceKey =
   | "fuelGap"
   | "knownRoadConfidence"
   /**
+   * The share of the line on a busy road, from the engine's ordered road runs
+   * (see `engineBusyRoads`). Like `sketchAdherence` it is deliberately **not** a
+   * member of {@link ROUTE_EVIDENCE_KEYS}: an answer that carried no road runs
+   * did not measure it, and counting that as a missing axis would penalize the
+   * route for a fact the provider never sent.
+   */
+  | "busyRoads"
+  /**
    * How much of a committed sketch's drawn trace the returned route covers
    * (06 §18, Task 4.4). Deliberately **not** a member of
    * {@link ROUTE_EVIDENCE_KEYS}: a ride without a sketch is not missing this
