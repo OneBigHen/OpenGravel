@@ -84,6 +84,11 @@ describe("PhoneRideSummary", () => {
     expect(screen.queryByTestId("phone-weather")).toBeNull();
   });
 
+  it("says where the ride goes above the headline", () => {
+    render(<PhoneRideSummary {...base} comparing={false} onCompare={vi.fn()} destinationLine="To Hawk Mountain Sanctuary" />);
+    expect(screen.getByTestId("phone-destination").textContent).toBe("To Hawk Mountain Sanctuary");
+  });
+
   it("lists the alternatives while comparing and selects one", () => {
     const onSelect = vi.fn();
     render(<PhoneRideSummary {...base} comparing onCompare={vi.fn()} onSelect={onSelect} weatherLine="Rain after 3 pm" />);

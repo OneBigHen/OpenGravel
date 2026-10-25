@@ -9,7 +9,7 @@ import { rideGlanceSurface } from "./MapRideGlance";
 import { useElevationProfile } from "./useElevationProfile";
 
 const NO_LINE: readonly Coordinate[] = [];
-export function PhoneRideSummary({ card, cards, start, route, elevationSource, comparing, onCompare, onSelect, weatherLine }: {
+export function PhoneRideSummary({ card, cards, start, route, elevationSource, comparing, onCompare, onSelect, weatherLine, destinationLine = null }: {
   readonly card: RouteCardVm;
   readonly cards: readonly RouteCardVm[];
   readonly start: RideActionsProps["start"];
@@ -19,6 +19,7 @@ export function PhoneRideSummary({ card, cards, start, route, elevationSource, c
   readonly onCompare: () => void;
   readonly onSelect: (id: RouteCandidateId) => void;
   readonly weatherLine: string | null;
+  readonly destinationLine?: string | null;
 }) {
   const elevation = useElevationProfile(elevationSource, route?.routeId ?? null, route?.geometry ?? NO_LINE);
   const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label, rideGlanceSurface(card).label];
@@ -31,6 +32,7 @@ export function PhoneRideSummary({ card, cards, start, route, elevationSource, c
         <span>{rideGlanceSurface(choice).label}</span>
       </button>)}
     </div> : <div>
+      {destinationLine === null ? null : <p className="og-phone-summary__where" data-testid="phone-destination">{destinationLine}</p>}
       <h2>{card.durationLabel} · {card.distanceLabel}</h2>
       <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
     </div>}
