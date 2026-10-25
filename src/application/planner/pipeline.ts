@@ -646,13 +646,16 @@ export function runCandidatePipeline(
       }),
     }));
 
-  // A timebox is preserved through the diversity cap: an in-box route (or the
-  // closest valid route when none fit) must not be discarded merely because
-  // three less useful discovery routes have higher fun scores.
+  // Preserve a timebox or explicit recommendation cap through diversity.
+  // Otherwise dedupe can remove every in-budget line and role assignment's
+  // no-matching-candidate fallback would restore an over-budget Best Ride.
   const timeboxPreferred = timeboxPreferredIndexes(
     candidates,
     input.discoveryTimebox,
   );
+  const budgetPreferred = input.recommendationDetourCap === undefined || input.discoveryTimebox !== undefined ? null :
+    new Set(candidates.flatMap((candidate, index) => candidate.durationSeconds <= recommendationBaseline * input.recommendationDetourCap! ? [index] : []));
+  const selectionPreferred = timeboxPreferred ?? budgetPreferred;
   const maximumScore = candidates.reduce(
     (maximum, candidate) => Math.max(maximum, rankingValue(candidates.indexOf(candidate))),
     0,
@@ -670,7 +673,7 @@ export function runCandidatePipeline(
       durationSeconds: candidate.durationSeconds,
       surfaceMix: unitEvidenceValue(candidate.evidence.surfaceMix),
       score: {
-        total: timeboxPreferred?.has(index)
+        total: selectionPreferred?.has(index)
           ? maximumScore + 1 + rankingValue(index)
           : rankingValue(index),
       },
@@ -758,7 +761,13 @@ export function runCandidatePipeline(
     })),
     input.policy,
     undefined,
-    (candidate) => recommendationPick === undefined ? keptInBox === null || keptInBox.has(candidate.id) : candidate.id === recommendationPick,
+    (candidate) => {
+      // An explicit cap also applies when formula readings are unavailable and
+      // canonical scores choose Best Ride. Discovery has its own timebox.
+      if (input.recommendationDetourCap !== undefined && input.discoveryTimebox === undefined &&
+        candidate.durationSeconds > recommendationBaseline * input.recommendationDetourCap) return false;
+      return recommendationPick === undefined ? keptInBox === null || keptInBox.has(candidate.id) : candidate.id === recommendationPick;
+    },
   );
 
   const scoreSelection = roles["best-ride"] ?? roles.fastest;
