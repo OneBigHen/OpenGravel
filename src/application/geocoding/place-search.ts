@@ -17,7 +17,8 @@
  * a reverse lookup that fails leaves the point reading "Dropped pin".
  *
  * The HTTP client below talks to OpenGravel's own `/api/geocode` routes; which
- * upstream answers them (Photon today) is a server concern the UI never sees.
+ * upstreams answer them (a place geocoder and, when configured, a POI search)
+ * is a server concern the UI never sees.
  */
 
 import { haversine } from "@/domain/geometry/analysis";
@@ -34,7 +35,7 @@ export interface PlaceMatch {
   /** The secondary line under the name: `Carbon County, PA`. May be empty. */
   readonly context: string;
   readonly coordinate: Coordinate;
-  /** Which upstream answered (`photon`, `fixture`). */
+  /** Which upstream answered (`photon`, `tomtom`, `fixture`). */
   readonly provider: string;
 }
 
