@@ -11065,6 +11065,93 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 3px;
 }
 
+/* Zoom is one instrument, not two buttons: a 56 x 112 pill of two 56 px halves,
+   so a gloved thumb reads "in / out" from one shape and still cannot hit both.
+   Each half keeps the rail's own glass and its own 1 px edge, which is the line
+   between them; only the round outer corners are clipped. */
+.og-ride__rail-zoom {
+  display: grid;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+}
+
+.og-ride__rail-zoom .og-ride__rail-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* At a limit the button says so and stays focusable, like the planner's. */
+.og-ride__rail-button[data-disabled="true"] {
+  color: var(--og-ride-muted);
+  cursor: default;
+}
+
+/* The compass needle is the map's own rotation, drawn against it. The tail is
+   the theme ink so it reads on Day's white disc and Night's dark glass; the tip
+   is Ember in both, the way the map's own compass is. It snaps rather than
+   eases: a needle that lags is wrong for a moment, and there is no motion to
+   remove under prefers-reduced-motion. */
+.og-ride__rail-compass svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.og-ride__compass-needle {
+  transform: rotate(calc(var(--og-bearing, 0) * -1deg));
+}
+
+.og-ride__compass-tip {
+  fill: var(--og-ember-text);
+}
+
+.og-ride__compass-tail {
+  fill: currentColor;
+}
+
+/* Landscape has the width and not the height, so the rail turns on its side:
+   the same five 56 px targets plus the zoom pair in one row that wraps rather
+   than a column that would run into the maneuver card. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride__float-end {
+    flex-direction: row-reverse;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .og-ride__rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .og-ride__rail-zoom {
+    grid-auto-flow: column;
+    grid-auto-columns: 56px;
+  }
+}
+
+/* Day / Night where the rider is: three sheet buttons in a row, the same
+   words Settings uses. The chosen one is ringed rather than recoloured, so the
+   answer survives glare and the sheet's own theme. */
+.og-ride__display {
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__display-option {
+  flex: 1 1 0;
+}
+
+.og-ride__display-option[aria-pressed="true"] {
+  border-color: var(--og-ember);
+  box-shadow: inset 0 0 0 1px var(--og-ember);
+}
+
 /* EX-11: the size of the list, quietly, above it. */
 .og-road-discovery__title {
   margin-top: 8px;

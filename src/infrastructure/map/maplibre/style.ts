@@ -134,6 +134,7 @@ export const MAP_SOURCE_IDS = {
 export const MAP_LAYER_IDS = {
   background: "ogv-background",
   basemapRaster: "ogv-basemap-raster",
+  nightScrim: "ogv-night-scrim",
   sketchLine: "ogv-sketch-line",
   sketchDraftLine: "ogv-sketch-draft-line",
   avoidFill: "ogv-avoid-fill",
@@ -916,6 +917,32 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       },
     },
   ];
+}
+
+/**
+ * Night over the rider's own basemap, for a deployment with no dark style.
+ *
+ * A background layer paints the whole viewport, so one flat fill darkens every
+ * basemap layer beneath it and nothing else: the route, the pins and the labels
+ * are drawn above it and keep their colour. It is a *dimmer*, not a claim that
+ * the map is the Night contrast cartography, which is why it is one translucent
+ * fill and not a palette of its own.
+ *
+ * Not a CSS `filter` on the canvas: that would dim the route with the map and
+ * cost a full-screen composite on exactly the cheap phones a night rider is
+ * most likely to be holding.
+ */
+export function nightScrimLayer(): MapLayerSpec {
+  return {
+    id: MAP_LAYER_IDS.nightScrim,
+    type: "background",
+    paint: {
+      // The Night contrast land colour, thinned out so the road network and the
+      // place names under it stay readable rather than disappearing.
+      "background-color": "#07100c",
+      "background-opacity": 0.38,
+    },
+  };
 }
 
 /** Every non-basemap layer, in draw order. */

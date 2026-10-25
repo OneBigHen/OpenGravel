@@ -41,6 +41,7 @@ import { buildRideScene, recenterExtent } from "@/application/map/build-ride-sce
 import { sceneExtent } from "@/application/map/build-map-scene";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
+import { sunState, type SunState } from "@/application/long-trip";
 import { haversine } from "@/domain/geometry/analysis";
 import { nearestOnLine, rideCameraFor, type RideCamera } from "@/application/map/ride-camera";
 import type { Coordinate } from "@/domain/ride/types";
@@ -131,6 +132,13 @@ import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 const FOLLOW_STEP_METERS = 30;
 /** A rider who panned away is brought back after this long (DV-10). */
 const SNAP_BACK_MS = 10_000;
+/**
+ * How long a zoom the rider pressed stays put before the camera's speed zoom
+ * takes over again (the "pause after manual zoom" rule). Long enough to zoom
+ * out and look ahead through a junction, short enough that the ride view comes
+ * back by itself without a second tap.
+ */
+const ZOOM_HOLD_MS = 20_000;
 /** Further than this from the route at the start: offer "Head to the start" (DV-07). */
 const FAR_FROM_START_METERS = 500;
 /** No fix for this long: restart the position source by itself (DV-10). */
@@ -221,6 +229,29 @@ export interface RideFocusStoreState {
    */
   readonly rideCamera: { readonly token: number; readonly camera: RideCamera } | null;
   /**
+   * The direction the rider is travelling, in map degrees: the follow camera's
+   * own bearing, kept separate from the map's rotation so a north-up map still
+   * points the rider's arrow up the road. `null` while nothing follows.
+   */
+  readonly rideBearing: number | null;
+  /**
+   * A zoom level the rider pressed on the map rail, held for a few seconds
+   * (`ZOOM_HOLD_MS`). Without it the follow camera's speed zoom would undo the
+   * press on the next fix, which is exactly when a glove needs the button.
+   */
+  readonly zoomHold: { readonly zoom: number; readonly untilMs: number } | null;
+  /** North-up instead of heading-up: the map rail's compass toggle. */
+  readonly northUp: boolean;
+  /**
+   * Whether the sun is up at the rider's own fix, from the store's clock.
+   *
+   * The one place the app knows where the rider is, so "is it dark out?" is a
+   * derived fact here rather than a guess in the view. `null` when there is no
+   * fix or the solar calculation cannot answer (a polar day) — a surface then
+   * keeps the device's own display setting, because unknown is not daylight.
+   */
+  readonly sunlight: SunState | null;
+  /**
    * The rider is far from a guided ride's start (DV-07): the surface asks
    * whether to head there, instead of silently re-planning from here.
    */
@@ -249,6 +280,13 @@ export interface RideFocusStoreActions {
   overview(): void;
   /** Toggle follow; turning it on frames the rider. */
   setFollow(follow: boolean): void;
+  /**
+   * The map rail's zoom buttons: hold `zoom` (the level the host has already
+   * moved to) for a few seconds, then hand zoom back to the ride camera.
+   */
+  zoomTo(zoom: number): void;
+  /** The map rail's compass: north-up, or heading-up following the road. */
+  setNorthUp(northUp: boolean): void;
   pause(): Promise<void>;
   resume(): Promise<void>;
   /** Starts a route-free recording in the existing RideSession authority. */
@@ -589,6 +627,7 @@ export function createRideFocusStore(
     let lastBearing: number | null = null;
     let lastCameraKey: string | null = null;
     let snapBackTimer: ReturnType<typeof setTimeout> | null = null;
+    let zoomHoldTimer: ReturnType<typeof setTimeout> | null = null;
     /** DV-07: the start question is asked once, until answered or the rider joins the line. */
     let farFromStartSettled = false;
     let farFromStartDismissed = false;
@@ -598,6 +637,13 @@ export function createRideFocusStore(
     function clearSnapBack(): void {
       if (snapBackTimer !== null) clearTimeout(snapBackTimer);
       snapBackTimer = null;
+    }
+
+    /** Drops the rider's zoom hold without touching the camera. */
+    function clearZoomHold(): void {
+      if (zoomHoldTimer !== null) clearTimeout(zoomHoldTimer);
+      zoomHoldTimer = null;
+      if (get().zoomHold !== null) set({ zoomHold: null });
     }
 
     /**
@@ -630,18 +676,30 @@ export function createRideFocusStore(
         previousBearing: lastBearing,
       });
       lastBearing = camera.bearing;
+      // Two rider choices outlive a single fix: a zoom they pressed (until it
+      // goes stale) and a north-up map. Both are applied here, in the one place
+      // a follow frame is decided, so nothing can disagree about them.
+      const heldZoom =
+        current.zoomHold !== null && current.zoomHold.untilMs > Date.parse(now())
+          ? current.zoomHold.zoom
+          : camera.zoom;
+      const bearing = current.northUp ? 0 : camera.bearing;
       const key = [
         camera.center.lon.toFixed(6),
         camera.center.lat.toFixed(6),
-        camera.bearing === null ? "-" : Math.round(camera.bearing),
-        camera.zoom.toFixed(1),
+        bearing === null ? "-" : Math.round(bearing),
+        heldZoom.toFixed(1),
       ].join(",");
       if (!force && key === lastCameraKey && current.follow && current.rideCamera !== null) return;
       lastCameraKey = key;
       set({
         follow: true,
         cameraHeld: false,
-        rideCamera: { token: (current.rideCamera?.token ?? current.cameraToken) + 1, camera },
+        rideBearing: camera.bearing,
+        rideCamera: {
+          token: (current.rideCamera?.token ?? current.cameraToken) + 1,
+          camera: { ...camera, zoom: heldZoom, bearing },
+        },
       });
     }
 
@@ -779,8 +837,10 @@ export function createRideFocusStore(
               mapReady: current.mapReady,
               riderSettings: current.riderSettings,
             });
+      const fix = navigation?.position.coordinate ?? null;
       set({
         navigation,
+        sunlight: fix === null ? null : sunState(fix, Date.parse(instant)),
         suggestions: state?.suggestions ?? "off",
         ...(!state || navigation?.activity !== "free" || state.recordingId !== null || state.suggestions !== "on"
           ? { liveSuggestion: null, suggestionPreviewLine: NO_COORDINATES, suggestionBusy: false }
@@ -1581,7 +1641,9 @@ export function createRideFocusStore(
         cameraHeld: false,
         cameraExtent: sceneExtent(scene),
         rideCamera: null,
+        rideBearing: null,
       });
+      clearZoomHold();
     }
 
     /** Recovers the session the pointer names, or states why it cannot (8 §13). */
@@ -1711,6 +1773,10 @@ export function createRideFocusStore(
       cameraExtent: null,
       stopConfirm: false,
       rideCamera: null,
+      rideBearing: null,
+      zoomHold: null,
+      northUp: false,
+      sunlight: null,
       farFromStart: null,
       riderSettings: riderSettingsStorage?.read() ?? createRiderSettings(),
 
@@ -2250,6 +2316,7 @@ export function createRideFocusStore(
         rerouteAbort?.abort();
         rerouteAbort = null;
         clearSnapBack();
+        clearZoomHold();
       },
 
       async retryRecovery(): Promise<void> {
@@ -2276,7 +2343,7 @@ export function createRideFocusStore(
           state.recenter();
         }, SNAP_BACK_MS);
         if (!get().follow && get().cameraHeld) return;
-        set({ follow: false, cameraHeld: true, rideCamera: null });
+        set({ follow: false, cameraHeld: true, rideCamera: null, rideBearing: null });
       },
 
       recenter(): void {
@@ -2287,6 +2354,10 @@ export function createRideFocusStore(
         clearSnapBack();
         followedAt = null;
         lastCameraKey = null;
+        // The rider asked for the ride's own view: zoom goes back to the ride
+        // camera's own. A north-up map they chose stays — that is orientation,
+        // not framing.
+        clearZoomHold();
         set({
           follow: true,
           cameraToken: get().cameraToken + 1,
@@ -2308,6 +2379,7 @@ export function createRideFocusStore(
         });
         if (scene.routes.length === 0) return;
         clearSnapBack();
+        clearZoomHold();
         lastCameraKey = null;
         set({
           follow: false,
@@ -2315,6 +2387,7 @@ export function createRideFocusStore(
           cameraHeld: false,
           cameraExtent: sceneExtent(scene),
           rideCamera: null,
+          rideBearing: null,
         });
       },
 
@@ -2324,6 +2397,32 @@ export function createRideFocusStore(
           return;
         }
         set({ follow: false });
+      },
+
+      zoomTo(zoom: number): void {
+        if (!Number.isFinite(zoom)) return;
+        // The store's own clock, like every other age on this screen.
+        const untilMs = Date.parse(now()) + ZOOM_HOLD_MS;
+        set({ zoomHold: { zoom, untilMs } });
+        if (zoomHoldTimer !== null) clearTimeout(zoomHoldTimer);
+        // When the hold ends the ride view comes back on its own: a rider who
+        // zoomed out to read a junction should not have to press anything after
+        // it, and a stale hold would silently disable the speed zoom all ride.
+        zoomHoldTimer = setTimeout(() => {
+          zoomHoldTimer = null;
+          if (get().zoomHold === null) return;
+          set({ zoomHold: null });
+          followRider(get().viewModel, true);
+        }, ZOOM_HOLD_MS);
+      },
+
+      setNorthUp(northUp: boolean): void {
+        if (get().northUp === northUp) return;
+        set({ northUp });
+        // The direction lives in the follow frame, so it has to be re-issued.
+        // A map the rider has panned is theirs until they ask for the ride
+        // view back; the next follow frame turns north-up by itself.
+        if (get().follow) followRider(get().viewModel, true);
       },
 
       async pause(): Promise<void> {

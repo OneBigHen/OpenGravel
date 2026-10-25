@@ -180,6 +180,28 @@ export interface PlannerMapProps {
    * render, so a following ride is never snapped back to an overview.
    */
   readonly followCamera?: { readonly key: string; readonly camera: RideCamera } | null;
+  /**
+   * The live renderer, once it exists and `null` when it is disposed.
+   *
+   * A surface with its own map controls (the ride's 56 px zoom and compass)
+   * sends them through the same port the map's own column uses, instead of
+   * growing a second way to move the camera. Optional: a surface that shows no
+   * controls needs no handle.
+   */
+  readonly onHost?: (host: MapHost | null) => void;
+  /**
+   * The camera as the rider's own controls need it: bearing, zoom and the
+   * renderer's limits, rounded so a continuous easement does not re-render the
+   * surface per frame. Reported only when it changes.
+   */
+  readonly onCamera?: (camera: CameraView) => void;
+  /**
+   * The basemap look this surface insists on, ignoring the rider's remembered
+   * planner choice (the ride map follows Day/Night). Applied whenever it
+   * changes; a look the rider picks afterwards wins until this prop changes
+   * again, and a forced look is never written back as their preference.
+   */
+  readonly forcedLook?: "map" | "night";
   /** The basemap mode; `empty` in tests, OpenFreeMap in a real deployment. */
   readonly basemap?: BasemapMode;
   /**
@@ -231,7 +253,7 @@ const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
  * hundredth of a zoom level, and comparing the derived scale, means React only
  * hears about a change a rider could actually see.
  */
-interface CameraView {
+export interface CameraView {
   readonly bearing: number;
   readonly zoom: number;
   readonly minZoom: number;
@@ -288,6 +310,9 @@ export function PlannerMap({
   fitKey = null,
   fitExtent = null,
   followCamera = null,
+  onHost,
+  onCamera,
+  forcedLook,
   basemap = "empty",
   onEscape,
   onRenderError,
@@ -321,12 +346,24 @@ export function PlannerMap({
     const next = cameraViewOf(camera);
     setCameraView((previous) => (sameCameraView(previous, next) ? previous : next));
   }, []);
+  /** The surface's own controls hear the same reading the map's column does. */
+  const cameraOutRef = useRef(onCamera);
+  useEffect(() => {
+    cameraOutRef.current = onCamera;
+  }, [onCamera]);
+  const hostOutRef = useRef(onHost);
+  useEffect(() => {
+    hostOutRef.current = onHost;
+  }, [onHost]);
+  useEffect(() => {
+    if (cameraView !== null) cameraOutRef.current?.(cameraView);
+  }, [cameraView]);
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
-  /** Night contrast, when the host can draw it. */
+  /** The night look (Night contrast, or the host's own dark scrim). */
   const [nightAvailable, setNightAvailable] = useState(false);
   /** The rider's basemap look; one of Map / Night / Satellite. */
-  const [look, setLook] = useState<BasemapLook>("map");
+  const [look, setLook] = useState<BasemapLook>(forcedLook ?? "map");
   const [lookMenuOpen, setLookMenuOpen] = useState(false);
   const lookMenuRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef(scene);
@@ -397,10 +434,12 @@ export function PlannerMap({
     let unsubscribeCamera: (() => void) | null = null;
 
     void (async () => {
-      const rememberedLook = readLookChoice();
+      // A surface that insists on a look (the ride follows Day/Night) neither
+      // reads nor writes the rider's planner preference.
+      const openedWith = forcedLook ?? readLookChoice();
       const host = await hostFactory(container, {
         basemap,
-        ...(rememberedLook === "night" ? { basemapLook: "night" as const } : {}),
+        ...(openedWith === "night" ? { basemapLook: "night" as const } : {}),
         initialExtent: sceneExtent(sceneRef.current),
         reducedMotion: prefersReducedMotion(),
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
@@ -412,14 +451,15 @@ export function PlannerMap({
         return;
       }
       hostRef.current = host;
+      hostOutRef.current?.(host);
       unsubscribeLayerStatus = host.onLayerStatus?.((status) => layerStatusRef.current?.(status)) ?? null;
       if (terrainRef.current) host.setTerrain3d?.(true);
       if (host.supportsSatellite === true) setSatelliteAvailable(true);
-      if (host.supportsNightContrast === true) setNightAvailable(true);
-      if (rememberedLook === "satellite" && host.supportsSatellite === true) {
+      if (host.supportsNightLook === true) setNightAvailable(true);
+      if (openedWith === "satellite" && host.supportsSatellite === true) {
         host.setSatellite?.(true);
         setLook("satellite");
-      } else if (rememberedLook === "night" && host.supportsNightContrast === true) {
+      } else if (openedWith === "night" && host.supportsNightLook === true) {
         setLook("night");
       }
       unsubscribe = host.onIntent((intent) => {
@@ -466,6 +506,7 @@ export function PlannerMap({
       unsubscribeCamera?.();
       hostRef.current?.dispose();
       hostRef.current = null;
+      hostOutRef.current?.(null);
     };
     // The host is created once for the surface's lifetime (05 §2): the initial
     // basemap, the asset prefix and the factory are creation-time inputs by
@@ -561,15 +602,37 @@ export function PlannerMap({
     hostRef.current?.followCamera?.(follow.camera, insets);
   }, [followKey, insets]);
 
-  /** One look at a time: satellite draws over Map, Night swaps the basemap. */
-  const chooseLook = useCallback((next: BasemapLook): void => {
+  /**
+   * One look at a time: satellite draws over Map, Night swaps the basemap (or
+   * dims it, on a host with no dark style of its own).
+   */
+  const applyLook = useCallback((next: BasemapLook): void => {
     const host = hostRef.current;
     host?.setSatellite?.(next === "satellite");
     host?.setBasemapLook?.(next === "night" ? "night" : "map");
     setLook(next);
+  }, []);
+
+  /** The rider's own pick: it is remembered, and it closes the menu. */
+  const chooseLook = useCallback((next: BasemapLook): void => {
+    applyLook(next);
     setLookMenuOpen(false);
     writeLookChoice(next);
-  }, []);
+  }, [applyLook]);
+
+  /*
+    The look this surface insists on, re-applied only when it *changes*: a
+    Day/Night switch mid-ride turns the map with the chrome, while a look the
+    rider picked in the sheet afterwards stays until the next switch.
+  */
+  const [forcedLookSeen, setForcedLookSeen] = useState<"map" | "night" | null>(forcedLook ?? null);
+  // Derived during render, so the map turns in the same commit as the chrome
+  // that flipped the theme (the same pattern the point menu above uses).
+  if (forcedLook !== undefined && forcedLookSeen !== forcedLook) setForcedLookSeen(forcedLook);
+  useEffect(() => {
+    if (forcedLookSeen === null || hostRef.current === null) return;
+    applyLook(forcedLookSeen);
+  }, [forcedLookSeen, applyLook]);
 
   /**
    * The style button sits in a different corner per tier and surface, so the
@@ -778,7 +841,7 @@ const LOOK_LABEL: Readonly<Record<BasemapLook, string>> = {
 
 const LOOK_NOTE: Readonly<Record<BasemapLook, string>> = {
   map: "Terrain, trails and roads",
-  night: "Dark gray, high contrast",
+  night: "Dark, for night riding",
   satellite: "Aerial imagery",
 };
 

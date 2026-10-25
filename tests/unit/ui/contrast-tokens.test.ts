@@ -150,6 +150,10 @@ const SCAN_EXEMPT_SELECTORS = [
   // inactive controls: WCAG 1.4.3 exception (covered by the disabled pair rows)
   ":disabled",
   ".og-import__disabled-option",
+  // The rail's zoom buttons say "as far as it goes" through aria-disabled, so
+  // they stay focusable and in the tab order; §1.4.3 exempts the state either
+  // way.
+  '[data-disabled="true"]',
 ] as const;
 
 describe("contrast — AA text variants (12 §3, §15)", () => {

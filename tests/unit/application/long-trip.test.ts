@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calculateSunrise,
   calculateSunset,
   LONG_TRIP_DISTANCE_KM,
   LONG_TRIP_DURATION_MINUTES,
   longTripConsiderations,
+  sunState,
   type LongTripFacts,
   type LongTripRide,
 } from "@/application/long-trip";
@@ -188,6 +190,37 @@ describe("longTripConsiderations", () => {
     const second = longTripConsiderations(baseRide, baseFacts);
 
     expect(second).toEqual(first);
+  });
+});
+
+describe("the sun at the rider's own coordinate", () => {
+  // A backroads start near Philadelphia: sunrise ~11:00Z, sunset ~23:30Z on
+  // 2026-09-21, so each case sits well clear of the horizon crossing.
+  const coordinate = { lat: 40.6, lon: -75.4 };
+
+  it("puts sunrise in the morning and sunset in the evening of the same day", () => {
+    const sunrise = calculateSunrise(coordinate, "2026-09-21T12:00:00.000Z");
+    const sunset = calculateSunset(coordinate, "2026-09-21T12:00:00.000Z");
+    if (sunrise === null) throw new Error("expected a sunrise for the fixture coordinate");
+    if (sunset === null) throw new Error("expected a sunset for the fixture coordinate");
+    expect(Date.parse(sunrise)).toBeLessThan(Date.parse(sunset.sunset));
+    expect(Date.parse(sunrise)).toBeGreaterThan(Date.parse("2026-09-21T08:00:00.000Z"));
+    expect(Date.parse(sunrise)).toBeLessThan(Date.parse("2026-09-21T13:00:00.000Z"));
+  });
+
+  it("reads day and night from the horizon crossings, not from the clock hour", () => {
+    expect(sunState(coordinate, Date.parse("2026-09-21T16:00:00.000Z"))).toBe("day");
+    // Same evening, after the sun is down.
+    expect(sunState(coordinate, Date.parse("2026-09-22T02:00:00.000Z"))).toBe("night");
+    // The next morning, before it is up: a ride at 4 AM is still a night ride.
+    expect(sunState(coordinate, Date.parse("2026-09-21T08:00:00.000Z"))).toBe("night");
+  });
+
+  it("says unknown — never day — where the calculation cannot answer", () => {
+    // Polar day: the sun never sets, so there is no crossing to compare against.
+    expect(sunState({ lat: 78, lon: 15 }, Date.parse("2026-06-21T12:00:00.000Z"))).toBeNull();
+    expect(sunState({ lat: Number.NaN, lon: -75.4 }, Date.parse("2026-09-21T16:00:00.000Z"))).toBeNull();
+    expect(sunState(coordinate, Number.NaN)).toBeNull();
   });
 });
 
