@@ -1420,6 +1420,94 @@ describe("camera (08 §2, DV-10)", () => {
   });
 });
 
+describe("the strip and the sheet while riding a route (ride overhaul)", () => {
+  const HELD = {
+    routeProgress: 0.5,
+    remainingDistanceMeters: 4_800,
+    remainingDurationSeconds: 600,
+    etaIso: "2026-09-21T14:10:00.000Z",
+  };
+
+  it("keeps the last known distance left and arrival while off the route, never a dash", async () => {
+    let offset: number | null = null;
+    const { tick, controller } = await harness({
+      position: "fresh",
+      instruction: "turn",
+      telemetry: () => ({ ...HELD, distanceFromRouteMeters: offset }),
+    });
+    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-metric", "route.distanceRemaining");
+    expect(screen.getByTestId("ride-metric-slot-2")).toHaveAttribute("data-metric", "route.eta");
+    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("3.0");
+    const arrival = screen.getByTestId("ride-metric-value-2").textContent;
+    expect(arrival).toMatch(/^\d{1,2}:\d{2}$/);
+
+    offset = 67;
+    await act(async () => {
+      await controller.dispatch(offRouteChangedEvent("off-route", NOW));
+      tick();
+    });
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
+    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("3.0");
+    expect(screen.getByTestId("ride-metric-value-2").textContent).not.toBe("—");
+    expect(screen.getByTestId("ride-metric-value-2").textContent).toMatch(/^\d{1,2}:\d{2}$/);
+  });
+
+  it("End ride in the sheet goes to the finish question; Keep riding comes back", async () => {
+    const { store } = await harness({ position: "fresh" });
+    fireEvent.click(screen.getByTestId("ride-strip"));
+    const end = screen.getByTestId("ride-stop");
+    expect(end).toHaveTextContent("End ride");
+    expect(end).toBeVisible();
+    fireEvent.click(end);
+    expect(store.getState().stopConfirm).toBe(true);
+    expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
+    expect(screen.getByTestId("ride-finish")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("ride-keep-riding"));
+    expect(store.getState().stopConfirm).toBe(false);
+  });
+
+  it("Cancel route keeps riding as Free Ride on the same session", async () => {
+    const { store, controller } = await harness({ position: "fresh" });
+    const sessionId = controller.snapshot()?.sessionId;
+    fireEvent.click(screen.getByTestId("ride-strip"));
+    const cancel = screen.getByTestId("continue-free-ride");
+    expect(cancel).toHaveTextContent("Cancel route");
+    expect(cancel).toHaveTextContent("Keep riding as Free Ride");
+    await act(async () => {
+      fireEvent.click(cancel);
+    });
+    await waitFor(() => expect(store.getState().navigation?.activity).toBe("free"));
+    // Same session, nothing thrown away; there is no route left to cancel.
+    expect(controller.snapshot()?.sessionId).toBe(sessionId);
+    expect(screen.queryByTestId("continue-free-ride")).toBeNull();
+  });
+
+  it("offers Cancel route only on a guided ride, never on Free Ride", async () => {
+    const { store } = await harness({ position: "fresh" });
+    await act(async () => {
+      await store.getState().continueFreeRide();
+    });
+    await waitFor(() => expect(store.getState().navigation?.activity).toBe("free"));
+    expect(screen.queryByTestId("continue-free-ride")).toBeNull();
+    expect(screen.getByTestId("ride-stop")).toHaveTextContent("End ride");
+  });
+
+  it("keeps the off-route card compact with one 56 px action", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const rule = (selector: string): string => {
+      const start = css.lastIndexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__off-route-action')).toMatch(/min-height:\s*56px/);
+    // Title is the page's 20 px headline, 700; the card has no fixed tall minimum.
+    const title = rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"] .og-ride__maneuver-suspended');
+    expect(title).toMatch(/font-size:\s*var\(--og-text-headline\)/);
+    expect(title).toMatch(/font-weight:\s*700/);
+    expect(rule('.og-ride__maneuver[data-kind="suspended"][data-reason="off-route"]')).toMatch(/min-height:\s*0/);
+  });
+});
+
 describe("route progress on the map (08 §5)", () => {
   const progress = (routeProgress: number): RideFocusTelemetryProvider => () => ({
     routeProgress,
