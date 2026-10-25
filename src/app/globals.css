@@ -5660,7 +5660,13 @@ h3,
   --og-ride-muted: var(--og-topo-sage);
   --og-ride-glass: color-mix(in srgb, var(--og-ink) 84%, transparent);
   --og-ride-gap: 8px;
-  --og-ride-strip-h: 64px;
+  /* Readouts plus the sheet toggle: 56 + 10 padding + 2 border. */
+  --og-ride-strip-h: 68px;
+  /* The ride's own number scale (small-screen design system v2 §5). The page
+     scale above is right for words; a glance at 50 mph needs these instead,
+     and they are tokens so no ride rule invents a sixth size. */
+  --og-ride-text-maneuver: 34px;
+  --og-ride-text-readout: 24px;
   /* The left column in phone landscape; 0 elsewhere (set on the root by JS). */
   --og-ride-col: 0px;
 
@@ -5734,7 +5740,7 @@ h3,
 /* Micro category markers are the one uppercase use (12 §4). */
 .og-ride__activity {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 13px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5742,7 +5748,7 @@ h3,
 }
 
 .og-ride__gps {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -5769,7 +5775,7 @@ h3,
 
 .og-ride__telemetry dt {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5778,7 +5784,7 @@ h3,
 
 .og-ride__telemetry dd {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-variant-numeric: tabular-nums;
 }
 
@@ -5808,27 +5814,27 @@ h3,
   stroke-linejoin: round;
 }
 
-/* The distance is the biggest thing on the screen: it is what a glance is for. */
+/* The distance is the biggest thing on the screen: it is what a glance is for.
+   §5's 34 px / 700 is the scale for the one number that is read at speed. */
 .og-ride__maneuver-distance {
   grid-column: 2;
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 34px;
-  font-weight: 750;
+  font-size: var(--og-ride-text-maneuver);
+  font-weight: 700;
   line-height: 1.05;
   color: var(--og-paper);
   font-variant-numeric: tabular-nums;
 }
 
+/* The street name is the second line and is allowed to wrap: a long road name
+   is read, not clipped to two lines that end in an ellipsis. */
 .og-ride__maneuver-action {
   grid-column: 2;
-  font-size: 19px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--og-paper);
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 
 .og-ride__maneuver-road {
@@ -5852,7 +5858,7 @@ h3,
   box-shadow: 0 0 0 2px #07100c;
   color: #07100c;
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 13px;
+  font-size: var(--og-text-caption);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -5871,15 +5877,15 @@ h3,
   padding-top: 8px;
   border-top: 1px solid rgb(255 255 255 / 16%);
   color: color-mix(in srgb, var(--og-paper) 86%, transparent);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .og-ride__maneuver-then-label {
   flex: 0 0 auto;
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5933,19 +5939,20 @@ h3,
 .og-ride__maneuver-suspended {
   grid-column: 1 / -1;
   padding-right: 48px;
-  font-size: 16px;
+  font-size: var(--og-text-body);
   font-weight: 600;
   color: var(--og-paper);
 }
 
 .og-ride__maneuver-suspended,
 .og-ride__notice {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
 }
 
 .og-ride__maneuver .og-ride__maneuver-suspended {
-  font-size: 17px;
+  font-size: var(--og-text-headline);
+  font-weight: 700;
   color: var(--og-paper);
 }
 
@@ -5954,7 +5961,7 @@ h3,
 .og-ride__off-route-distance {
   grid-column: 1 / -1;
   padding-right: 48px;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-variant-numeric: tabular-nums;
   color: var(--og-ride-muted);
 }
@@ -6022,7 +6029,7 @@ h3,
 }
 
 .og-ride__card-text {
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 600;
 }
 
@@ -6035,7 +6042,7 @@ h3,
   background: var(--og-ride-glass);
   backdrop-filter: blur(10px);
   color: var(--og-paper);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
 }
@@ -6045,10 +6052,10 @@ h3,
 }
 
 .og-ride__alert {
-  min-height: 48px;
+  min-height: 56px;
   border: 1px solid var(--og-danger);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -6091,12 +6098,12 @@ h3,
 }
 
 .og-ride__speed strong {
-  font-size: 24px;
+  font-size: var(--og-ride-text-readout);
   font-weight: 800;
 }
 
 .og-ride__speed span {
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
 }
 
@@ -6129,13 +6136,13 @@ h3,
 }
 
 .og-ride__limit span {
-  font-size: 9px;
+  font-size: var(--og-text-caption);
   font-weight: 800;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
 }
 
 .og-ride__limit strong {
-  font-size: 22px;
+  font-size: var(--og-ride-text-readout);
   font-weight: 800;
 }
 
@@ -6150,7 +6157,7 @@ h3,
   background: var(--og-deep-spruce);
   color: var(--og-paper);
   font: inherit;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 700;
   box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
   cursor: pointer;
@@ -6208,7 +6215,7 @@ h3,
 }
 
 .og-ride__strip-main {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
@@ -6216,7 +6223,7 @@ h3,
 .og-ride__strip-part {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 17px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -6342,7 +6349,8 @@ h3,
 @media (orientation: landscape) and (max-height: 500px) {
   .og-ride {
     --og-ride-gap: 6px;
-    --og-ride-strip-h: 60px;
+    /* A 56 px readout or toggle plus the strip's own padding and border. */
+    --og-ride-strip-h: 68px;
   }
 
   .og-ride__top,
@@ -6367,10 +6375,6 @@ h3,
      same 116 px so the primary maneuver never loses its distance. */
   .og-ride__maneuver[data-then="true"] {
     min-height: 116px;
-  }
-
-  .og-ride__maneuver-distance {
-    font-size: 30px;
   }
 
   .og-ride__sheet {
@@ -6798,7 +6802,7 @@ h3,
   min-height: 56px;
   padding: 12px 16px;
   font: inherit;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -10682,16 +10686,12 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 /* =====================================================================
-   Ride strip, laid out like Google Maps (owner reference, 2026-09-26) but in
-   OpenGravel's own colours, per the owner: a warm canvas card, time left big
-   in deep spruce, miles · arrival beneath, an ember Exit pill.
+   Ride strip (small-screen design system v2 §5): the live strip is three
+   readouts and the sheet toggle, and a finished ride keeps the warm canvas
+   card with its summary and the way back to the planner.
    ===================================================================== */
-.og-ride {
-  --og-ride-strip-h: 76px;
-}
-
 .og-ride__strip {
-  padding: 6px 8px 6px 6px;
+  padding: 5px 6px 5px 5px;
   border-radius: 24px;
   background: var(--og-canvas);
   backdrop-filter: none;
@@ -10699,7 +10699,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride__strip-summary {
-  height: 64px;
+  height: 56px;
   line-height: normal;
   color: var(--og-ink);
 }
@@ -10712,15 +10712,15 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
 .og-ride__strip-main {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 28px;
+  font-size: var(--og-text-headline);
   font-weight: 750;
-  line-height: 1.05;
+  line-height: 1.15;
   color: var(--og-deep-spruce);
 }
 
 .og-ride__strip-part {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 17px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-slate-text);
 }
@@ -10729,16 +10729,19 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   color: var(--og-slate-text);
 }
 
+/* The finished ride's way out is one 56 px ✕, like the live ride's End ride in
+   the right column. The named 92 px Exit pill is gone: on a 320 px phone its
+   width is what forced the readouts to shrink below §5's 24 px. */
 .og-ride__strip-end {
-  width: auto;
-  min-width: 92px;
+  width: 56px;
+  min-width: 56px;
   height: 56px;
-  padding: 0 22px;
+  padding: 0;
   border-radius: 999px;
   background: var(--og-ember-strong);
   color: var(--og-paper);
   font: inherit;
-  font-size: 19px;
+  font-size: var(--og-text-body);
   font-weight: 750;
 }
 
@@ -10754,16 +10757,8 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .og-ride {
-    --og-ride-strip-h: 68px;
-  }
-
   .og-ride__strip-summary {
     height: 56px;
-  }
-
-  .og-ride__strip-main {
-    font-size: 24px;
   }
 }
 
@@ -10771,8 +10766,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
    Ride instrument strip (RIDE-INSTRUMENT-STRIP §2.1, §2.4, §12, §15).
    While a ride is live the strip is smoked motorcycle instrument glass: an
    opaque Ink base, a 1 px tonal border, Paper figures in tabular numerals,
-   exactly three slots split by hairlines, and the Ember Exit pill. A finished
-   ride keeps the canvas card above. No animation, so nothing moves at speed.
+   exactly three slots split by hairlines, and the sheet toggle at the end. A
+   finished ride keeps the canvas card above. No animation, so nothing moves at
+   speed.
    ===================================================================== */
 .og-ride__strip:has(> .og-ride-metrics) {
   gap: 2px;
@@ -10801,7 +10797,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   min-width: 0;
   position: relative;
   min-height: 56px;
-  padding: 0 4px;
+  padding: 0 2px;
   border: 0;
   border-radius: 14px;
   background: transparent;
@@ -10823,47 +10819,64 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   pointer-events: none;
 }
 
+/* Two lines on a phone (the number, then its unit) so a reading stays whole at
+   320 px; one line with the unit beside it as soon as there is room. Never
+   `overflow: hidden` and never an ellipsis: §5's 24 px number is not clipped. */
 .og-ride-metrics__reading {
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
   line-height: 1;
 }
 
 .og-ride-metrics__value {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 27px;
+  font-size: var(--og-ride-text-readout);
   font-weight: 750;
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -0.01em;
   color: var(--og-paper);
 }
 
+/* A seven-character clock ("1:02:05") cannot fit a third of a 320 px strip at
+   24 px beside the sheet toggle, so it steps down to the page's headline size
+   rather than being clipped to something a rider cannot read. */
 .og-ride-metrics__reading[data-long="true"] .og-ride-metrics__value {
-  font-size: 21px;
+  font-size: var(--og-text-headline);
 }
 
 .og-ride-metrics__unit {
-  font-size: 13px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   color: var(--og-ride-muted);
 }
 
+/* The caption wraps instead of truncating: "SINCE STOP" is two short words,
+   and an ellipsis under a number is exactly what the redesign removed. A
+   tight tracking keeps those words on one line in a third of a 320 px strip. */
 .og-ride-metrics__caption {
   max-width: 100%;
-  overflow: hidden;
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 750;
-  letter-spacing: 0.07em;
-  line-height: 1.1;
-  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-align: center;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
   color: var(--og-ride-muted);
+}
+
+@media (min-width: 640px) {
+  .og-ride-metrics__reading {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 3px;
+  }
 }
 
 /* A held reading is dimmed, not shouted; its accessible name says it is stale. */
@@ -10897,7 +10910,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
 /*
   Recording, from the map screen (a mounted phone's "is it recording?"): the
-  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a 9 px
+  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a
   REC caption and the elapsed time, stacked in two lines. No pulse and no
   animation in either theme: a dot beside a counting clock is enough, and
   nothing moves at 60 mph (and nothing to stop for reduced motion).
@@ -10924,9 +10937,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride-metrics__rec-label {
-  font-size: 9px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
 }
 
 .og-ride-metrics__toggle .og-ride-metrics__rec-chevron {
@@ -10936,7 +10949,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
 .og-ride-metrics__rec-time {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
@@ -10959,7 +10972,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride__metrics-hint {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
 }
 
@@ -10991,7 +11004,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride-metric-picker__title {
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   font-weight: 750;
   color: var(--og-paper);
 }
@@ -11008,7 +11021,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride-metric-picker__label {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 750;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -11027,14 +11040,14 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  min-height: 52px;
+  min-height: 56px;
   padding: 8px 12px;
   border: 1px solid var(--og-ride-border);
   border-radius: 14px;
   background: transparent;
   color: var(--og-paper);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -11046,7 +11059,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 .og-ride-metric-picker__detail {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 550;
   color: var(--og-ride-muted);
 }
@@ -11054,26 +11067,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-ride-metric-picker__option:focus-visible {
   outline: var(--og-focus-width) solid var(--og-golden-hour);
   outline-offset: var(--og-focus-offset);
-}
-
-/* 390 px phones: three slots share ~74 px each beside the toggle and Exit. */
-@media (max-width: 420px) {
-  .og-ride-metrics__value {
-    font-size: 24px;
-  }
-
-  .og-ride-metrics__reading[data-long="true"] .og-ride-metrics__value {
-    font-size: 18px;
-  }
-
-  .og-ride-metrics__unit {
-    font-size: 12px;
-  }
-
-  .og-ride-metrics__caption {
-    font-size: 10px;
-    letter-spacing: 0.05em;
-  }
 }
 
 @media (min-width: 700px) {
@@ -11089,18 +11082,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
     right: auto;
     width: min(360px, 44vw);
     max-height: none;
-  }
-
-  .og-ride-metrics__value {
-    font-size: 23px;
-  }
-
-  .og-ride-metrics__reading[data-long="true"] .og-ride-metrics__value {
-    font-size: 18px;
-  }
-
-  .og-ride-metrics__caption {
-    font-size: 10px;
   }
 }
 
@@ -11152,12 +11133,16 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 3px;
 }
 
-/* Zoom is one instrument, not two buttons: a 56 x 112 pill of two 56 px halves,
-   so a gloved thumb reads "in / out" from one shape and still cannot hit both.
-   Each half keeps the rail's own glass and its own 1 px edge, which is the line
-   between them; only the round outer corners are clipped. */
+/* Zoom is one instrument, not two buttons: a 112 x 56 pill of two 56 px
+   halves, so a gloved thumb reads "in / out" from one shape and still cannot
+   hit both. It lies on its side because the column also carries End ride and
+   Re-center: six 56 px rows with the pill upright ran into the turn card on a
+   640 px phone. Each half keeps the rail's own glass and edge; only the round
+   outer corners are clipped. */
 .og-ride__rail-zoom {
   display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 56px;
   border-radius: 999px;
   overflow: hidden;
   box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
@@ -11168,6 +11153,18 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   height: 56px;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* End ride: the one destructive control, in the column with the rest. It is a
+   glyph with a spoken name and a title, and the sheet still asks before the
+   ride is thrown away. */
+.og-ride__rail-button--end {
+  color: var(--og-danger-light);
+}
+
+.og-ride__rail-button--end:disabled {
+  color: var(--og-ride-muted);
+  cursor: not-allowed;
 }
 
 /* At a limit the button says so and stays focusable, like the planner's. */
@@ -11214,11 +11211,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 8px;
-  }
-
-  .og-ride__rail-zoom {
-    grid-auto-flow: column;
-    grid-auto-columns: 56px;
   }
 }
 
@@ -13716,17 +13708,6 @@ a.og-secondary {
   }
 }
 
-
-/* Readout utilities: keep every digit and unit visible in narrow ride strips. */
-.og-ride-metrics .overflow-visible { overflow: visible; }
-.og-ride-metrics .shrink-0 { flex-shrink: 0; }
-.og-ride-metrics .tabular-nums { font-variant-numeric: tabular-nums; }
-@media (width < 640px) {
-  .og-ride-metrics .max-sm\:flex-col {
-    flex-direction: column;
-    align-items: center;
-  }
-}
 
 
 /* --------------------------------------------------------------------------

@@ -1019,10 +1019,6 @@ html .og-ride {
   color: #ffffff;
 }
 
-:root[data-theme="day"] .og-ride__strip-end:not(.og-ride__strip-end--exit) {
-  color: #ffffff;
-}
-
 :root[data-theme="day"] .og-ride__strip-end--exit {
   border: 1px solid rgb(7 16 12 / 16%);
   color: #07100c;
@@ -1082,6 +1078,21 @@ html .og-ride {
   color: #ecf1ee;
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
+}
+
+/* End ride keeps its warning colour in both themes: the day rail is white with
+   ink glyphs, the night rail dark glass with paper ones. */
+:root[data-theme="day"] .og-ride__rail-button--end {
+  color: #b3261e;
+}
+
+:root[data-theme="night"] .og-ride__rail-button--end {
+  color: #ff9b91;
+}
+
+:root[data-theme="day"] .og-ride__rail-button--end:disabled,
+:root[data-theme="night"] .og-ride__rail-button--end:disabled {
+  color: var(--og-ride-muted);
 }
 
 :root[data-theme="night"] .og-ride__recenter svg {
@@ -1816,7 +1827,7 @@ html .og-ride {
 
 :root[data-theme="day"] .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
   grid-template-columns: 72px minmax(0, 1fr);
-  min-height: 104px;
+  min-height: 96px;
   background: #0b6b35;
 }
 
@@ -1861,15 +1872,11 @@ html .og-ride {
   stroke-width: 5.5;
 }
 
+/* Type is the ride's spec scale in both themes (v2 §5: 34 px distance, 20 px
+   street). Sunlight is answered by weight, colour and the solid green card,
+   not by a size the rider has to relearn when the sun goes down. */
 :root[data-theme="day"] .og-ride__maneuver-distance {
-  font-size: 44px;
-  font-weight: 800;
   letter-spacing: -0.01em;
-}
-
-:root[data-theme="day"] .og-ride__maneuver-action {
-  font-size: 21px;
-  font-weight: 700;
 }
 
 :root[data-theme="day"] .og-ride__maneuver-road {
@@ -1877,7 +1884,6 @@ html .og-ride {
 }
 
 :root[data-theme="day"] .og-ride__maneuver .og-ride__maneuver-suspended {
-  font-size: 19px;
   font-weight: 700;
 }
 
@@ -1900,12 +1906,6 @@ html .og-ride {
 :root[data-theme="day"] .og-ride :is(.og-ride__notice, .og-ride__metrics-hint, .og-ride__progress-text, .og-ride__gps, .og-ride__off-route-distance) {
   color: #26302c;
   font-weight: 600;
-}
-
-@media (orientation: landscape) and (max-height: 500px) {
-  :root[data-theme="day"] .og-ride__maneuver-distance {
-    font-size: 36px;
-  }
 }
 
 /* --------------------------------------------------------------------------

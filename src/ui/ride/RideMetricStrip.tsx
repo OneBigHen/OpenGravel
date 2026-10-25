@@ -58,15 +58,15 @@ export function RideMetricStrip({ model, onShowControls, onChooseSlot, slotRef }
             }}
           >
             <span
-              className="og-ride-metrics__reading overflow-visible max-sm:flex-col"
+              className="og-ride-metrics__reading"
               aria-hidden="true"
               data-long={reading.displayValue.length > 5 ? "true" : undefined}
             >
-              <span className="og-ride-metrics__value shrink-0 tabular-nums" data-testid={`ride-metric-value-${slot.index}`}>
+              <span className="og-ride-metrics__value" data-testid={`ride-metric-value-${slot.index}`}>
                 {reading.displayValue}
               </span>
               {reading.unit === null ? null : (
-                <span className="og-ride-metrics__unit shrink-0">{reading.unit}</span>
+                <span className="og-ride-metrics__unit">{reading.unit}</span>
               )}
             </span>
             <span className="og-ride-metrics__caption" aria-hidden="true">{slot.caption}</span>

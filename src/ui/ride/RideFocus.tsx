@@ -16,9 +16,10 @@
  *   `aria-hidden`: one card reads one instruction). A roundabout carries its
  *   exit badge only when the engine stated the number.
  * - **The bottom is one slim strip**: three instrument readouts (speed, miles
- *   left, time left by default; RIDE-INSTRUMENT-STRIP), the sheet toggle, and
- *   a single Exit. While moving, tapping a readout opens the sheet; while
- *   stopped or paused it opens the readout picker instead.
+ *   left, time left by default; RIDE-INSTRUMENT-STRIP) and the sheet toggle.
+ *   While moving, tapping a readout opens the sheet; while stopped or paused it
+ *   opens the readout picker instead. The strip holds numbers only, so a
+ *   five-character reading still fits its slot at 320 px.
  * - **Everything else lives in the sheet**: Pause, Fuel ahead, reroutes, the
  *   map's places and layers controls, GPS details, progress, Stop, and the way
  *   back to the planner. Nothing was dropped; it is hidden until asked for. The
@@ -28,9 +29,11 @@
  *   and no readout already shows it),
  *   Re-center (after the rider pans away; it also snaps back by itself), the
  *   "Head to the start" question (DV-07), and one alert chip.
- * - **The map rail is glove-sized**: a compass that swaps heading-up for
- *   north-up, a 56 x 112 zoom pill (pinch is unreliable in a glove), the whole
- *   route, and the voice. Every half is 56 px with a divider between them.
+ * - **The map rail is glove-sized and is the one control column**: a compass
+ *   that swaps heading-up for north-up, a two-halves zoom pill (pinch is
+ *   unreliable in a glove), the whole route, the voice, and End ride. Every
+ *   target is 56 px with 12 px between them, and the zoom halves sit side by
+ *   side so the column still clears the maneuver card on a 640 px phone.
  * - **Night means night.** The chrome is already dark; the map follows it, with
  *   the dark basemap where the deployment has one and a dark scrim where it does
  *   not. On Auto the screen also follows the sun at the rider's own coordinate,
@@ -1031,101 +1034,124 @@ export function RideFocus({
             </button>
           ) : null}
           {terminal !== null ? null : (
-            <div className="og-ride__rail" role="group" aria-label="Map and voice">
-              {/*
-                The compass is the map's own rotation: the needle turns with it,
-                and one press swaps heading-up for north-up and back. It is a
-                toggle rather than "face north" because a rider who turned the
-                map north to read a junction wants the road-up view back.
-              */}
-              <button
-                type="button"
-                className="og-ride__rail-button og-ride__rail-compass"
-                data-testid="ride-compass"
-                aria-pressed={northUp}
-                // One name, one state: pressed means the map is north-up. The
-                // needle says which way north is in either case.
-                aria-label="North up"
-                title={northUp ? "North up" : "Heading up"}
-                style={{ "--og-bearing": String(camera?.bearing ?? 0) } as CSSProperties}
-                onClick={(): void => {
-                  const next = !northUp;
-                  store.getState().setNorthUp(next);
-                  // A map the rider has panned has no follow frame to turn, so
-                  // the press is carried out on the map they are looking at.
-                  if (next && !follow) hostRef.current?.faceNorth?.();
-                }}
-              >
-                <svg className="og-ride__compass-needle" viewBox="0 0 24 24" aria-hidden="true">
-                  <path className="og-ride__compass-tip" d="M12 2.5 16.5 12h-9z" />
-                  <path className="og-ride__compass-tail" d="M12 21.5 7.5 12h9z" />
-                </svg>
-              </button>
-              {/*
-                Zoom for a gloved thumb: two 56 px halves of one pill, so the
-                pair reads as one instrument and neither press is a pinch. The
-                controls stay focusable at a limit and say so instead of
-                disappearing.
-              */}
-              <div className="og-ride__rail-zoom" role="group" aria-label="Zoom">
+            <>
+              <div className="og-ride__rail" role="group" aria-label="Map and voice">
+                {/*
+                  The compass is the map's own rotation: the needle turns with it,
+                  and one press swaps heading-up for north-up and back. It is a
+                  toggle rather than "face north" because a rider who turned the
+                  map north to read a junction wants the road-up view back.
+                */}
                 <button
                   type="button"
-                  className="og-ride__rail-button"
-                  data-testid="ride-zoom-in"
-                  data-disabled={atMaxZoom ? "true" : "false"}
-                  aria-label="Zoom in"
-                  aria-disabled={atMaxZoom ? true : undefined}
-                  onClick={atMaxZoom ? undefined : (): void => zoomStepBy(1)}
+                  className="og-ride__rail-button og-ride__rail-compass"
+                  data-testid="ride-compass"
+                  aria-pressed={northUp}
+                  // One name, one state: pressed means the map is north-up. The
+                  // needle says which way north is in either case.
+                  aria-label="North up"
+                  title={northUp ? "North up" : "Heading up"}
+                  style={{ "--og-bearing": String(camera?.bearing ?? 0) } as CSSProperties}
+                  onClick={(): void => {
+                    const next = !northUp;
+                    store.getState().setNorthUp(next);
+                    // A map the rider has panned has no follow frame to turn, so
+                    // the press is carried out on the map they are looking at.
+                    if (next && !follow) hostRef.current?.faceNorth?.();
+                  }}
                 >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 6v12M6 12h12" />
+                  <svg className="og-ride__compass-needle" viewBox="0 0 24 24" aria-hidden="true">
+                    <path className="og-ride__compass-tip" d="M12 2.5 16.5 12h-9z" />
+                    <path className="og-ride__compass-tail" d="M12 21.5 7.5 12h9z" />
                   </svg>
                 </button>
+                {/*
+                  Zoom for a gloved thumb: two 56 px halves of one pill, so the
+                  pair reads as one instrument and neither press is a pinch. The
+                  controls stay focusable at a limit and say so instead of
+                  disappearing.
+                */}
+                <div className="og-ride__rail-zoom" role="group" aria-label="Zoom">
+                  <button
+                    type="button"
+                    className="og-ride__rail-button"
+                    data-testid="ride-zoom-in"
+                    data-disabled={atMaxZoom ? "true" : "false"}
+                    aria-label="Zoom in"
+                    aria-disabled={atMaxZoom ? true : undefined}
+                    onClick={atMaxZoom ? undefined : (): void => zoomStepBy(1)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 6v12M6 12h12" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="og-ride__rail-button"
+                    data-testid="ride-zoom-out"
+                    data-disabled={atMinZoom ? "true" : "false"}
+                    aria-label="Zoom out"
+                    aria-disabled={atMinZoom ? true : undefined}
+                    onClick={atMinZoom ? undefined : (): void => zoomStepBy(-1)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 12h12" />
+                    </svg>
+                  </button>
+                </div>
+                {routeless ? null : (
+                  <button
+                    type="button"
+                    className="og-ride__rail-button"
+                    data-testid="ride-overview"
+                    aria-label="Show the whole route"
+                    title="Show the whole route"
+                    onClick={(): void => store.getState().overview()}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="6" cy="18" r="2.2" />
+                      <circle cx="18" cy="6" r="2.2" />
+                      <path d="M8 17c5-1 3-6 8-9" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="og-ride__rail-button"
-                  data-testid="ride-zoom-out"
-                  data-disabled={atMinZoom ? "true" : "false"}
-                  aria-label="Zoom out"
-                  aria-disabled={atMinZoom ? true : undefined}
-                  onClick={atMinZoom ? undefined : (): void => zoomStepBy(-1)}
+                  data-testid="ride-mute"
+                  aria-label="Mute voice guidance"
+                  aria-pressed={voiceMuted}
+                  title={voiceMuted ? "Voice is off" : "Voice is on"}
+                  onClick={(): void => setVoiceMuted(!voiceMuted)}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M6 12h12" />
+                    <path d="M4 9h4l5-4v14l-5-4H4z" />
+                    {voiceMuted ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
                   </svg>
                 </button>
               </div>
-              {routeless ? null : (
-                <button
-                  type="button"
-                  className="og-ride__rail-button"
-                  data-testid="ride-overview"
-                  aria-label="Show the whole route"
-                  title="Show the whole route"
-                  onClick={(): void => store.getState().overview()}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="6" cy="18" r="2.2" />
-                    <circle cx="18" cy="6" r="2.2" />
-                    <path d="M8 17c5-1 3-6 8-9" />
-                  </svg>
-                </button>
-              )}
+              {/*
+                Ending the ride is a control, so it lives in the one right
+                column with the rest: the strip keeps the readouts and the
+                sheet toggle, which is what its width has to hold at 320 px.
+                The confirmation still asks before anything is thrown away.
+                It sits after the map/voice group, not inside it.
+              */}
               <button
                 type="button"
-                className="og-ride__rail-button"
-                data-testid="ride-mute"
-                aria-label="Mute voice guidance"
-                aria-pressed={voiceMuted}
-                title={voiceMuted ? "Voice is off" : "Voice is on"}
-                onClick={(): void => setVoiceMuted(!voiceMuted)}
+                className="og-ride__rail-button og-ride__rail-button--end"
+                data-testid="ride-end"
+                aria-label="End this ride"
+                title="End this ride"
+                disabled={!controls.finish.enabled && !controls.discard.enabled}
+                onClick={(): void => {
+                  store.getState().beginStop();
+                  setSheetOpen(true);
+                }}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 9h4l5-4v14l-5-4H4z" />
-                  {voiceMuted ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
-                </svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
               </button>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -1700,8 +1726,8 @@ export function RideFocus({
       <p className="og-visually-hidden" role="status" data-testid="ride-metric-announcement">{metricAnnouncement}</p>
 
       {/*
-        DV-10: the bottom is one slim strip — the three readouts, the sheet
-        toggle and one Exit. Tapping a readout while moving opens the sheet.
+        DV-10: the bottom is one slim strip — the three readouts and the sheet
+        toggle. Tapping a readout while moving opens the sheet.
       */}
       <footer ref={stripRef} className="og-ride__strip">
         {terminal !== null ? (
@@ -1765,23 +1791,10 @@ export function RideFocus({
             </button>
           </>
         )}
-        {terminal !== null ? (
+        {terminal === null ? null : (
           <a className="og-ride__strip-end og-ride__strip-end--exit" data-testid="ride-strip-exit" href={exitHref} aria-label="Back to the planner">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
           </a>
-        ) : (
-          <button
-            type="button"
-            className="og-ride__strip-end"
-            data-testid="ride-end"
-            disabled={!controls.finish.enabled && !controls.discard.enabled}
-            onClick={(): void => {
-              store.getState().beginStop();
-              setSheetOpen(true);
-            }}
-          >
-            Exit
-          </button>
         )}
       </footer>
       {safety === undefined ? null : <RideSafetyOverlay safety={safety} />}
