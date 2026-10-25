@@ -16,6 +16,13 @@
  * matches nothing as typed ("Sheetz Lehighton") is retried once with its
  * trailing word as the town, so two real words never answer with an empty list.
  *
+ * The other edge is the query that is already a place's whole name. "Hawk
+ * Mountain Sanctuary" is not "Hawk Mountain" near a town called "Sanctuary":
+ * when the whole query comes back as a place's own name, no trailing words are
+ * geocoded as a town at all, so the sanctuary cannot be ranked under a
+ * namesake town on the other side of the country. The guessed town, when one is
+ * used, is only ever a hint after the rows the rider's term actually found.
+ *
  * The providers fail independently: TomTom failing or timing out leaves the
  * Photon answers exactly as they were, and Photon failing still returns POI
  * answers when TomTom has them. Only when both fail does the handler report
@@ -24,7 +31,7 @@
 
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { mergePlaceResults } from "@/application/geocoding/place-merge";
-import { parsePlaceQuery, PLACE_CATEGORIES, type ParsedPlaceQuery } from "@/application/geocoding/place-query";
+import { parsePlaceQuery, PLACE_CATEGORIES, matchesWholeQuery, type ParsedPlaceQuery } from "@/application/geocoding/place-query";
 import { withoutTrailingUsState } from "@/application/geocoding/us-states";
 import type { Coordinate } from "@/domain/ride/types";
 import { haversine } from "@/domain/geometry/analysis";
@@ -105,11 +112,17 @@ interface PoiTarget {
   readonly term: string;
   /** The place the rider named, when it resolved: it stays a row of its own. */
   readonly town: PlaceMatch | null;
+  /** Was the town guessed from the query's trailing words rather than named? */
+  readonly split: boolean;
 }
+
+/** The whole-query answers, or `null` when that provider failed. */
+type WholeQueryAnswer = Promise<readonly PlaceMatch[] | null>;
 
 async function centerFor(
   photon: Pick<PhotonGeocoder, "search">,
   parsed: ParsedPlaceQuery,
+  wholeQueryAnswer: WholeQueryAnswer,
   bias: Coordinate | undefined,
   signal: AbortSignal,
 ): Promise<PoiTarget | null> {
@@ -118,16 +131,32 @@ async function centerFor(
   try {
     if (parsed.place !== null) {
       const named = await resolvePlace(photon, parsed.place, bias, signal);
-      if (named !== null) return { center: named.coordinate, term: parsed.term, town: named };
+      if (named !== null) {
+        return { center: named.coordinate, term: parsed.term, town: named, split: false };
+      }
     }
-    for (const candidate of parsed.placeCandidates) {
-      const resolved = await resolvePlace(photon, candidate.place, bias, signal);
-      if (resolved !== null) return { center: resolved.coordinate, term: candidate.term, town: resolved };
+    // "Hawk Mountain Sanctuary" is a place's own name, and the whole-query
+    // search already said so. Only then are the trailing words worth a geocode
+    // as a town: otherwise the last word of every place name in the world is a
+    // town called "Sanctuary", and it answers first. This is the one case that
+    // waits for the whole-query answer; every other query asks both sources at
+    // once.
+    if (parsed.placeCandidates.length > 0) {
+      const whole = (await wholeQueryAnswer) ?? [];
+      const answeredAsWhole = whole.some((place) => matchesWholeQuery(parsed.query, place.name));
+      if (!answeredAsWhole) {
+        for (const candidate of parsed.placeCandidates) {
+          const resolved = await resolvePlace(photon, candidate.place, bias, signal);
+          if (resolved !== null) {
+            return { center: resolved.coordinate, term: candidate.term, town: resolved, split: true };
+          }
+        }
+      }
     }
   } catch {
     // Fall through to the rider's own point.
   }
-  return bias === undefined ? null : { center: bias, term: parsed.term, town: null };
+  return bias === undefined ? null : { center: bias, term: parsed.term, town: null, split: false };
 }
 
 /** Nearest first: a widened search answers in relevance order, not distance order. */
@@ -165,20 +194,26 @@ async function poiRows(
 
 interface PoiAnswer {
   readonly places: readonly PlaceMatch[];
-  /** The town the rider named, kept as a row even when no business answered. */
+  /**
+   * The town the answer resolved — the place the rider named, or the one a
+   * split guessed — kept as a row even when no business answered.
+   */
   readonly town: PlaceMatch | null;
+  /** The term the query was reduced to by a trailing-town guess, or `null`. */
+  readonly splitTerm: string | null;
 }
 
-const NO_POI_ANSWER: PoiAnswer = { places: [], town: null };
+const NO_POI_ANSWER: PoiAnswer = { places: [], town: null, splitTerm: null };
 
 async function tomtomPlaces(
   photon: Pick<PhotonGeocoder, "search">,
   tomtom: TomTomPlaceSearch,
   parsed: ParsedPlaceQuery,
+  wholeQueryAnswer: WholeQueryAnswer,
   bias: Coordinate | undefined,
   signal: AbortSignal,
 ): Promise<PoiAnswer> {
-  const target = await centerFor(photon, parsed, bias, signal);
+  const target = await centerFor(photon, parsed, wholeQueryAnswer, bias, signal);
   if (target === null) return NO_POI_ANSWER;
   // A trailing town can leave a category behind ("gas Lehighton"), which is
   // then looked up as that category rather than as a text search.
@@ -186,7 +221,7 @@ async function tomtomPlaces(
   // A POI outage is this provider's own empty answer; the town the rider named
   // is still a row, because Photon is what resolved it.
   const places = await settled(poiRows(tomtom, target, category, signal), [] as PlaceMatch[]);
-  return { places, town: target.town };
+  return { places, town: target.town, splitTerm: target.split ? target.term : null };
 }
 
 /**
@@ -216,17 +251,59 @@ async function trailingTownRetry(
     return NO_POI_ANSWER;
   }
   if (town === null) return NO_POI_ANSWER;
-  const target: PoiTarget = { center: town.coordinate, term, town };
+  const target: PoiTarget = { center: town.coordinate, term, town, split: true };
   const places = await settled(
     poiRows(tomtom, target, PLACE_CATEGORIES.get(term.toLowerCase()) ?? null, signal),
     [] as PlaceMatch[],
   );
-  return { places, town };
+  return { places, town, splitTerm: term };
 }
 
-/** POI rows lead; the town the rider named and the place answers follow. */
+/** POI rows lead; the town the answer resolved and the place answers follow. */
 function secondaryRows(town: PlaceMatch | null, photonPlaces: readonly PlaceMatch[]): PlaceMatch[] {
   return town === null ? [...photonPlaces] : [town, ...photonPlaces];
+}
+
+/**
+ * A split answer's order: the rows the rider's own term found, the places named
+ * after that term, then the town the parser guessed, then everything else.
+ *
+ * The town here was made up out of the query's last words ("Sanctuary" out of
+ * "Hawk Mountain Sanctuary"), so it is a hint, not the answer: it is offered,
+ * but never above the rows that answer the term the rider actually typed, and
+ * the nearest-first distance bands must not lift it over them either.
+ */
+function rankSplitAnswer(
+  term: string,
+  answer: PoiAnswer,
+  places: readonly PlaceMatch[],
+): PlaceMatch[] {
+  const tier = (place: PlaceMatch): number => {
+    if (answer.places.includes(place)) return 0;
+    if (matchesWholeQuery(term, place.name)) return 1;
+    if (place === answer.town) return 2;
+    return 3;
+  };
+  return places
+    .map((place, index) => ({ place, index, tier: tier(place) }))
+    .sort((left, right) => left.tier - right.tier || left.index - right.index)
+    .map(({ place }) => place);
+}
+
+/** One answer as the rider sees it: merged, and ordered when it used a split. */
+function answerRows(
+  answer: PoiAnswer,
+  photonPlaces: readonly PlaceMatch[],
+  bias: Coordinate | undefined,
+): PlaceMatch[] {
+  const places = mergePlaceResults(
+    answer.places,
+    secondaryRows(answer.town, photonPlaces),
+    bias,
+  );
+  return answer.splitTerm === null
+    ? places
+    : rankSplitAnswer(answer.splitTerm, answer, places);
 }
 
 async function settled<T>(work: Promise<T>, fallback: T): Promise<T> {
@@ -251,17 +328,13 @@ export function createPlaceSearchEngine(options: PlaceSearchEngineOptions): Plac
     );
     const poiAnswer = tomtom === undefined
       ? Promise.resolve(NO_POI_ANSWER)
-      : settled(tomtomPlaces(photon, tomtom, parsed, bias, signal), NO_POI_ANSWER);
+      : settled(tomtomPlaces(photon, tomtom, parsed, photonAnswer, bias, signal), NO_POI_ANSWER);
     const [photonPlaces, poi] = await Promise.all([photonAnswer, poiAnswer]);
     if (photonPlaces === null && poi.places.length === 0 && poi.town === null) {
       // Nothing answered. The handler turns this into one fixed "unavailable".
       throw new Error("Place search is unavailable");
     }
-    const places = mergePlaceResults(
-      poi.places,
-      secondaryRows(poi.town, photonPlaces ?? []),
-      bias,
-    );
+    const places = answerRows(poi, photonPlaces ?? [], bias);
     if (places.length > 0 || tomtom === undefined) return places;
     // Both sources answered nothing for the query as typed. That is the only
     // moment a two-word brand-and-town split is worth asking for. An unexpected
@@ -269,10 +342,6 @@ export function createPlaceSearchEngine(options: PlaceSearchEngineOptions): Plac
     const retried = await trailingTownRetry(photon, tomtom, parsed, bias, signal)
       .catch(() => NO_POI_ANSWER);
     if (retried.places.length === 0 && retried.town === null) return places;
-    return mergePlaceResults(
-      retried.places,
-      secondaryRows(retried.town, photonPlaces ?? []),
-      bias,
-    );
+    return answerRows(retried, photonPlaces ?? [], bias);
   };
 }

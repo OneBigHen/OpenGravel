@@ -68,6 +68,35 @@ const PA_BLUE_MOUNTAIN = photonFeature(
   { lat: 40.82, lon: -75.6 },
   { city: "Palmerton", county: "Carbon" },
 );
+/** The sanctuary itself: one place whose own name is the whole query. */
+const HAWK_MOUNTAIN_SANCTUARY = photonFeature(
+  "Hawk Mountain Sanctuary",
+  { lat: 40.6348, lon: -75.9913 },
+  { osm_key: "tourism", osm_value: "attraction", city: "Albany Township", county: "Berks" },
+);
+/** The ridge, when only that and the town of the same last word answer. */
+const HAWK_MOUNTAIN_RIDGE = photonFeature(
+  "Hawk Mountain",
+  { lat: 40.6209, lon: -75.9834 },
+  { osm_key: "natural", osm_value: "peak", city: "Kempton", county: "Berks" },
+);
+/** A real town whose name is also the last word of the sanctuary's. */
+const SANCTUARY_TX = photonFeature(
+  "Sanctuary",
+  { lat: 32.6243, lon: -97.6886 },
+  { city: "Sanctuary", county: "Parker", state: "Texas" },
+);
+const BLUE_MOUNTAIN_RESORT = photonFeature(
+  "Blue Mountain Resort",
+  { lat: 40.8216, lon: -75.6064 },
+  { osm_key: "tourism", osm_value: "resort", city: "Palmerton", county: "Carbon" },
+);
+/** What the parser can turn the query's last two words into when it splits. */
+const MOUNTAIN_RESORT_ID = photonFeature(
+  "Mountain Resort",
+  { lat: 48.5, lon: -116.85 },
+  { osm_key: "tourism", osm_value: "resort", city: "Coolin", county: "Bonner", state: "Idaho" },
+);
 
 const WAWA_POI = {
   id: "wawa-jim-thorpe",
@@ -135,6 +164,19 @@ const WAWA_ALLENTOWN = {
     countryCode: "US",
   },
   position: { lat: 40.6, lon: -75.49 },
+};
+
+/** A Sheetz ~85 km from Jim Thorpe and ~75 km from Lehighton: a farther band. */
+const SHEETZ_HONESDALE = {
+  id: "sheetz-honesdale",
+  poi: { name: "Sheetz", brands: [{ name: "Sheetz" }] },
+  address: {
+    streetName: "Main St",
+    municipality: "Honesdale",
+    countrySubdivisionCode: "PA",
+    countryCode: "US",
+  },
+  position: { lat: 41.5737, lon: -75.2571 },
 };
 
 /** The text a TomTom fuzzy search is looking for, decoded from its path. */
@@ -369,6 +411,100 @@ describe("place search engine", () => {
     expect(places.map((place) => place.label)).toEqual(["Jim Thorpe, PA"]);
     expect(photonQueries).toEqual(["Jim Thorpe"]);
     expect(tomtomUrls.map(tomtomQuery)).toEqual(["Jim Thorpe"]);
+  });
+
+  it("keeps a plain two-word town whole when the rider has no location", async () => {
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => (query === "Jim Thorpe" ? [JIM_THORPE_TOWN] : []),
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Jim Thorpe", undefined, signal());
+
+    expect(places.map((place) => place.label)).toEqual(["Jim Thorpe, PA"]);
+    // Nothing was geocoded as "Thorpe", and no POI search asked for "Jim" there.
+    expect(photonQueries).toEqual(["Jim Thorpe"]);
+    expect(tomtomUrls).toEqual([]);
+  });
+
+  it("answers 'Hawk Mountain Sanctuary' with the sanctuary, not a town called Sanctuary", async () => {
+    // Production: no rider location, no server bias, and the last word of the
+    // place's own name is also a town in Texas.
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => {
+        if (query === "Hawk Mountain Sanctuary") return [HAWK_MOUNTAIN_SANCTUARY, SANCTUARY_TX];
+        if (query === "Sanctuary") return [SANCTUARY_TX];
+        return [];
+      },
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Hawk Mountain Sanctuary", undefined, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Hawk Mountain Sanctuary, Albany Township, PA",
+      "Sanctuary, TX",
+    ]);
+    // The query is a place's own name: its trailing words were never geocoded
+    // as a town, so no search was ever aimed at Texas.
+    expect(photonQueries).toEqual(["Hawk Mountain Sanctuary"]);
+    expect(tomtomUrls).toEqual([]);
+  });
+
+  it("keeps a term match above the town a split guessed", async () => {
+    // The sanctuary is not in the answers, so the split runs — but the ridge
+    // that matches the remaining term still outranks the guessed town.
+    const { fetcher, photonQueries } = stub(
+      (query) => {
+        if (query === "Hawk Mountain Sanctuary") return [HAWK_MOUNTAIN_RIDGE, SANCTUARY_TX];
+        if (query === "Sanctuary") return [SANCTUARY_TX];
+        return [];
+      },
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Hawk Mountain Sanctuary", undefined, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Hawk Mountain, Kempton, PA",
+      "Sanctuary, TX",
+    ]);
+    expect(photonQueries).toEqual(["Hawk Mountain Sanctuary", "Mountain Sanctuary", "Sanctuary"]);
+  });
+
+  it("never ranks the guessed town above the brand, even when the brand is farther", async () => {
+    // The town has no Sheetz; the nearest one is ~85 km from the rider, in a
+    // farther distance band than the town itself.
+    const { fetcher } = stub(
+      (query) => (query === "Lehighton" ? [LEHIGHTON_TOWN] : []),
+      (url) => {
+        if (tomtomQuery(url) !== "Sheetz") return { results: [] };
+        return url.searchParams.get("radius") === String(TOMTOM_PLACE_RADIUS_METERS)
+          ? { results: [] }
+          : { results: [SHEETZ_HONESDALE] };
+      },
+    );
+    const places = await engine(fetcher)("Sheetz Lehighton", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Sheetz, Honesdale, PA",
+      "Lehighton, PA",
+    ]);
+  });
+
+  it("answers 'Blue Mountain Resort' as one place name, not 'Blue' around a resort", async () => {
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => {
+        if (query === "Blue Mountain Resort") return [BLUE_MOUNTAIN_RESORT, UTAH_BLUE_MOUNTAIN];
+        if (query === "Mountain Resort") return [MOUNTAIN_RESORT_ID];
+        return [];
+      },
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Blue Mountain Resort", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual(["Blue Mountain Resort, Palmerton, PA"]);
+    // The whole name answered, so neither its last two words nor its last word
+    // were geocoded as a town.
+    expect(photonQueries).toEqual(["Blue Mountain Resort"]);
+    expect(tomtomUrls.map(tomtomQuery)).toEqual(["Blue Mountain Resort"]);
   });
 });
 
