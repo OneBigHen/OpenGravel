@@ -54,11 +54,16 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.locator(".og-route-detail__provenance-detail")).not.toContainText(
     /GraphHopper|motorcycle_scenic|routing engine|TomTom|NWS/,
   );
-  await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
-  await expect(page.getByText("Weather from the National Weather Service")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Before you ride" })).toHaveCount(0);
+  // One line of weather at the start: no state badge, no freshness badge and no
+  // provider provenance on the route page.
+  await expect(page.getByTestId("route-conditions")).toContainText("at the start");
+  await expect(page.getByTestId("route-conditions")).not.toContainText(/Source:|Fresh|Ready/);
+  // The per-check briefing rows belong to the planner, never to this page.
+  await expect(page.getByTestId("preparation-value-weather")).toHaveCount(0);
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Offline readiness", { exact: true })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Plan this ride" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -87,7 +92,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.locator(".og-explore-card__source").filter({ hasText: "Yours" })).toBeVisible();
 });
 
-test("labels missing road evidence clearly and without console errors", async ({ page }) => {
+test("leaves the road section out when no road evidence is matched, without console errors", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -103,15 +108,15 @@ test("labels missing road evidence clearly and without console errors", async ({
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 
   await page.goto("/explore/sample-ridge-loop");
-  await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
+  // No matched road data means no road section at all: a heading plus an
+  // explanation of an absence is longer than the fact it reports.
+  await expect(page.getByRole("heading", { name: "Roads on this ride" })).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Roads on this ride" })).toHaveCount(0);
+  await expect(page.getByTestId("route-conditions")).toContainText("at the start");
+  await expect(page.getByRole("heading", { name: "Before you ride" })).toHaveCount(0);
+  await expect(page.getByTestId("preparation-value-weather")).toHaveCount(0);
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Roads on this ride" })).toBeVisible();
-  await expect(page.getByTestId("roads-none-matched")).toContainText(
-    "No roads on this ride are matched to our road data yet",
-  );
-  await expect(page.getByRole("list", { name: "Roads on this ride" })).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });
 

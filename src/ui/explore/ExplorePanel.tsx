@@ -13,6 +13,8 @@ import { ThingsFeed } from "@/ui/explore/ThingsFeed";
 import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
+import { useRiderOrigin } from "@/ui/hooks/use-rider-origin";
+import { awayLabel } from "@/ui/explore/rider-distance";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
 import { formatDistance } from "@/application/planner/measurements";
@@ -113,14 +115,6 @@ function surfaceTone(summary: string | undefined): "paved" | "mixed" | "unpaved"
   if (/^paved/i.test(summary)) return "paved";
   if (/^mostly paved/i.test(summary)) return "mixed";
   return "unpaved";
-}
-
-/** "12 mi away" to where the route starts, rounded the way a rider says it. */
-function awayLabel(km: number): string | null {
-  if (!Number.isFinite(km)) return null;
-  const miles = km / 1.609344;
-  if (miles < 1) return "Starts near you";
-  return `${miles < 10 ? miles.toFixed(0) : Math.round(miles / 5) * 5} mi away`;
 }
 
 function RouteCard({
@@ -341,7 +335,11 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   const readUrlOnMount = useRef(initialQuery === undefined);
   /** A discrete filter change is a history entry; typing replaces (EX-12). */
   const pushNext = useRef(false);
-  const [origin, setOrigin] = useState<readonly [number, number] | undefined>();
+  // A rider who already let OpenGravel see their location gets "N mi away" on
+  // every card and nearest-first Recommended, without being asked again. No
+  // permission yet: nothing happens until they tap Near me. The read itself
+  // lives in useRiderOrigin, shared with the route page.
+  const { origin, setOrigin } = useRiderOrigin();
   const [locationNote, setLocationNote] = useState<string | null>(null);
   const [roadSurface, setRoadSurface] = useState<RoadSurfaceFilter>("any");
   const [roadOrigin, setRoadOrigin] = useState<readonly [number, number] | undefined>();
@@ -399,27 +397,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     ...area,
     count: filterAndSortCatalog(entries, { ...query, region: undefined, area: area.id }).length,
   })), [entries, query]);
-
-  // A rider who already let OpenGravel see their location gets "N mi away" on
-  // every card and nearest-first Recommended, without being asked again. No
-  // permission yet: nothing happens until they tap Near me.
-  useEffect(() => {
-    if (typeof navigator === "undefined" || navigator.permissions?.query === undefined || !navigator.geolocation) return;
-    let cancelled = false;
-    navigator.permissions.query({ name: "geolocation" as PermissionName }).then((status) => {
-      if (cancelled || status.state !== "granted") return;
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          if (!cancelled) setOrigin((current) => current ?? [position.coords.longitude, position.coords.latitude]);
-        },
-        () => undefined,
-        { enableHighAccuracy: false, maximumAge: 600_000, timeout: 10_000 },
-      );
-    }).catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // The phone's filter sheet closes on Escape, like any sheet.
   useEffect(() => {

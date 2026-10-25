@@ -1836,6 +1836,12 @@ html .og-ride {
   display: none;
 }
 
+/* Conditions at the start are one line, so the card is a strip and not a panel. */
+.og-route-detail .og-preparation--brief {
+  gap: 6px;
+  padding: 12px 16px;
+}
+
 .og-preparation__offline > summary {
   min-height: 44px;
   display: flex;
@@ -1879,6 +1885,12 @@ html .og-ride {
   .og-route-detail .og-route-detail__provenance-detail summary {
     min-height: 36px;
     font-size: 13px;
+  }
+
+  /* The start distance reads before the source credit under the title. */
+  .og-route-detail .og-route-detail__title > .og-route-detail__away {
+    margin: 2px 0 0;
+    font-size: 14px;
   }
 
   /* The map, edge to edge. */

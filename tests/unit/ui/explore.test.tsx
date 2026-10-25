@@ -8,7 +8,7 @@ import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import { TRAFFIC_CORRIDOR_POINTS } from "@/application/preparation/planner-context";
 import type { RoutePreparationContext } from "@/application/preparation/prepare-route";
-import type { PreparationProviderRegistry, ProviderResult, TrafficData } from "@/application/preparation/providers";
+import type { PreparationProviderRegistry, ProviderResult, TrafficData, WeatherData } from "@/application/preparation/providers";
 import { discoverRoads } from "@/application/roads/discovery";
 import { createRoadEntity } from "@/domain/roads/road-entity";
 import { asRoadEntityId } from "@/domain/ride/ids";
@@ -286,6 +286,76 @@ describe("Explore UI", () => {
     expect(screen.getByRole("region", { name: "Catalog variants and tracks" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Lehigh sample route.*3 exports/i })).toHaveAttribute("href", "/explore/route-1");
     expect(screen.getByRole("link", { name: /track 2/i })).toBeInTheDocument();
+  });
+
+  it("says how far the start is from a rider who already allowed location, and asks nobody else", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    expect(await screen.findByTestId("route-start-distance")).toHaveTextContent(/^Starts 7 mi from you$/);
+  });
+
+  it("shows no start distance on the route page without location permission", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "prompt" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled());
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("route-start-distance")).toBeNull();
+  });
+
+  it("draws one route with a way back to its line instead of a count", async () => {
+    const hosts = createStubMapHostFactory();
+    render(<RouteDetail entry={entry} onUse={vi.fn()} map={{ hostFactory: hosts.factory, basemap: "empty" }} />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1));
+
+    expect(screen.queryByText(/1 mapped/)).toBeNull();
+    const fits = hosts.hosts[0]!.fits.length;
+    fireEvent.click(screen.getByRole("button", { name: "Recenter" }));
+    await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
+  });
+
+  it("leaves roads, planning mechanics and the briefing off the page when there is nothing to say", () => {
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    // No matched roads is no section, not a paragraph explaining an absence.
+    expect(screen.queryByRole("heading", { name: "Roads on this ride" })).toBeNull();
+    expect(screen.queryByTestId("roads-none-matched")).toBeNull();
+    expect(screen.queryByText(/Planning follows this line/)).toBeNull();
+    // No weather provider means no weather line, never a badge or a source line.
+    expect(screen.queryByRole("heading", { name: "Before you ride" })).toBeNull();
+    expect(screen.queryByTestId("route-conditions")).toBeNull();
+    expect(screen.queryByText("Offline readiness")).toBeNull();
+  });
+
+  it("reduces the briefing to one line of weather at the start", () => {
+    const ready: ProviderResult<WeatherData> = {
+      state: "ready",
+      reason: "Forecast received for the selected route.",
+      provenance: "Source: weather service · updated 14:32",
+      data: { display: "Sunny · 72°F", freshnessLabel: "Fresh" },
+    };
+    const weather: PreparationProviderRegistry["weather"] = {
+      id: "weather-test",
+      kind: "weather",
+      capabilities: () => ({ kind: "weather", availability: "available", freshness: "time-bound", reason: null, provenance: "test" }),
+      getWeather: () => ready,
+    };
+    render(<RouteDetail entry={entry} onUse={vi.fn()} preparationProviders={{ weather }} />);
+
+    const line = screen.getByTestId("route-conditions");
+    expect(line).toHaveTextContent(/^Sunny · 72°F at the start$/);
+    expect(line).not.toHaveTextContent(/Source|Fresh|Ready/);
   });
 
   it("uses the route and keeps unknown metrics as an accessible em dash", () => {

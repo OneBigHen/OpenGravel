@@ -19,7 +19,9 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await expect(page.getByRole("heading", { name: ROUTE_NAME })).toBeVisible();
   await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toContainText("2 exports");
-  await expect(page.getByTestId("roads-none-matched")).toContainText("no road-by-road surface");
+  // With no road matched to our data there is no road-by-road surface, so the
+  // section is absent rather than heading an explanation of its own absence.
+  await expect(page.getByRole("heading", { name: "Roads on this ride" })).toHaveCount(0);
   await expect(page.getByLabel("Curvature not computed")).toHaveText("—");
   await expect(page.getByText("Posted from this device. No account is required.")).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
@@ -36,7 +38,8 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await page.getByRole("button", { name: "Send report" }).click();
   await expect(page.getByRole("status")).toContainText("Road condition report sent for review.");
 
-  await expect(page.getByText("Planning follows this line through a few checkpoints, so the road route may differ. GPX export keeps the full line.")).toBeVisible();
+  // Planning mechanics are not something a rider reads before a ride.
+  await expect(page.getByText(/Planning follows this line/)).toHaveCount(0);
   const planRequest = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/api/route-plan"));
   await page.getByRole("button", { name: "Plan this ride" }).click();
   await expect(page).toHaveURL(/\/$/);

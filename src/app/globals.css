@@ -575,6 +575,15 @@ h3,
   margin: 0;
 }
 
+/* How far the start is from the rider, when the device already knows: the first
+   thing a rider checks before deciding to ride somewhere. */
+.og-route-detail__away {
+  margin: 0;
+  color: var(--og-ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .og-explore h1,
 .og-route-detail h1 {
   font-size: clamp(24px, 4vw, 34px);
@@ -1090,6 +1099,18 @@ h3,
   max-width: 62ch;
   color: var(--og-deep-spruce);
   font-size: 13px;
+}
+
+/* The route page's briefing: conditions at the start, one line, no badges. */
+.og-preparation__weather-line {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.og-preparation__warning-line {
+  color: var(--og-ember-text);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .og-preparation__considerations {
@@ -8582,6 +8603,7 @@ h3,
 }
 
 .og-explore-map__tools > * { pointer-events: auto; }
+.og-explore-map__tools > button { margin-left: auto; }
 .og-explore-map__tools span {
   padding: 8px;
   border-radius: var(--og-radius-chip);

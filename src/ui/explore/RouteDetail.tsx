@@ -31,7 +31,9 @@ import { enrichRoutePreparationForLongTrip } from "@/application/explore/long-tr
 import type { LongTripBike } from "@/application/long-trip";
 import type { PreparationProviderRegistry, RegisteredPreparationProviders } from "@/application/preparation/providers";
 import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
-import { readBrowserOfflineRuntime, type OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
+import { useRiderOrigin } from "@/ui/hooks/use-rider-origin";
+import { distanceToStartKm } from "@/application/explore/query";
+import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
@@ -282,7 +284,9 @@ export function RouteDetail({
   const [selectedRoad, setSelectedRoad] = useState<CatalogRoadDetail | null>(null);
   const [, setWeatherRefresh] = useState(0);
   const [, setTrafficRefresh] = useState(0);
-  const [offlineSnapshot, setOfflineSnapshot] = useState<OfflineRuntimeSnapshot | null>(null);
+  // A rider who already let OpenGravel see their location does not get asked
+  // again; without it the start distance is simply absent.
+  const { origin: riderOrigin } = useRiderOrigin();
   const riderTimeZone = useSyncExternalStore(
     subscribeToDeviceTimeZone,
     deviceTimeZone,
@@ -361,22 +365,7 @@ export function RouteDetail({
     return () => { active = false; };
   }, [preparationContext, providedPreparation, trafficProvider]);
 
-  useEffect(() => {
-    let active = true;
-    void readBrowserOfflineRuntime({
-      route: {
-        rideId: entry.id,
-        routeRevision: 0,
-        geometry: entry.geometry,
-      },
-    }).then((snapshot) => {
-      if (active) setOfflineSnapshot(snapshot);
-    }).catch(() => {
-      // An unavailable observation leaves the disclosure absent; it never becomes
-      // an invented ready state.
-    });
-    return () => { active = false; };
-  }, [entry.id, entry.geometry]);
+  const startDistance = riderOrigin === undefined ? null : startDistanceLabel(distanceToStartKm(riderOrigin, entry));
 
   const basePreparation = providedPreparation ?? prepareRoute({
     ...preparationContext,
@@ -420,6 +409,9 @@ export function RouteDetail({
         <div className="og-route-detail__title">
           <p className="og-eyebrow">{entry.source === "catalog" ? "Catalog route" : entry.source === "import" ? "Imported route" : "Your ride"}</p>
           <h1>{entry.name}</h1>
+          {startDistance === null ? null : (
+            <p className="og-route-detail__away" data-testid="route-start-distance">{startDistance}</p>
+          )}
           {/* Keep the route's source concise, with source mechanics behind a disclosure (09 §6 step 8). */}
           <p className="og-route-detail__provenance">{provenanceSummary(entry.provenance)}</p>
           {entry.provenanceDetail === undefined && !entry.provenance.includes(" · ") ? null : (
@@ -439,7 +431,7 @@ export function RouteDetail({
       <section className="og-route-detail__map" aria-label="Map preview">
         {/* The route where it is: a live map to pan, else a map image. */}
         {map !== undefined ? (
-          <ExploreMap {...map} entries={[entry]} highlightedId={entry.id} onOpen={() => undefined} />
+          <ExploreMap {...map} entries={[entry]} highlightedId={entry.id} onOpen={() => undefined} tools="recentre" />
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
           <img className="og-route-detail__map-image" src={staticMapUrl} alt={`${entry.name} on a map`} width={640} height={400} />
@@ -489,14 +481,7 @@ export function RouteDetail({
         </section>
       ) : null}
 
-      <RoutePreparationSection
-        preparation={preparation}
-        offline={offlineSnapshot === null ? undefined : {
-          matrix: offlineSnapshot.matrix,
-          readiness: offlineSnapshot.readiness,
-          packPresence: "not-present",
-        }}
-      />
+      <RoutePreparationSection variant="brief" preparation={preparation} />
 
       {entry.stats?.elevationProfile !== undefined ? (
         <section className="og-route-detail__elevation" aria-label="Elevation profile">
@@ -505,62 +490,47 @@ export function RouteDetail({
         </section>
       ) : null}
 
-      <section className="og-route-detail__roads" aria-labelledby="roads-on-this-ride-title">
+      {noMatchedRoads ? null : (
+        <section className="og-route-detail__roads" aria-labelledby="roads-on-this-ride-title">
           <div className="og-route-detail__roads-head">
             <div>
               <h2 id="roads-on-this-ride-title">Roads on this ride</h2>
-              {entry.roadSummary === undefined ? (
-                <p className="og-route-detail__coverage" aria-label="Road coverage not computed">—</p>
-              ) : (
+              {entry.roadSummary === undefined ? null : (
                 <p className="og-route-detail__coverage">{routeRoadCoverageLabel(entry.roadSummary)}</p>
               )}
-              {noMatchedRoads ? null : (
-                <p className="og-route-detail__surface-summary">{routeSurfaceLabel(entry.roadSummary ?? {
-                  roads: [],
-                  totalKm: 0,
-                  matchedKm: 0,
-                  unmatchedKm: 0,
-                  coveragePercent: 0,
-                  unverifiedRoadCount: 0,
-                })}</p>
-              )}
+              <p className="og-route-detail__surface-summary">{routeSurfaceLabel(entry.roadSummary ?? {
+                roads: [],
+                totalKm: 0,
+                matchedKm: 0,
+                unmatchedKm: 0,
+                coveragePercent: 0,
+                unverifiedRoadCount: 0,
+              })}</p>
             </div>
           </div>
-          {noMatchedRoads ? (
-            // EX-07: "unknown" here must not read as retracting the estimate above.
-            <p className="og-route-detail__coverage" data-testid="roads-none-matched">
-              No roads on this ride are matched to our road data yet, so there is no road-by-road surface.
-              {entry.surfaceSummary === undefined ? "" : " The surface above is the route service's estimate."}
-            </p>
-          ) : (
-            <ul className="og-route-detail__roads-list" aria-label="Roads on this ride">
-              {entry.roadDetails.map((road) => (
-                <li key={road.entity.id} className="og-route-detail__road-row">
-                  <button
-                    type="button"
-                    className="og-route-detail__road-open"
-                    onClick={() => setSelectedRoad(road)}
-                    aria-label={`Open ${road.entity.name} road details`}
-                  >
-                    <span>
-                      <strong>{road.entity.name}</strong>
-                      <span className="og-route-detail__road-meta">
-                        {formatMiles(road.summary.distanceKm * 1000)} · {road.summary.percentage.toFixed(0)}% of route
-                      </span>
+          <ul className="og-route-detail__roads-list" aria-label="Roads on this ride">
+            {entry.roadDetails.map((road) => (
+              <li key={road.entity.id} className="og-route-detail__road-row">
+                <button
+                  type="button"
+                  className="og-route-detail__road-open"
+                  onClick={() => setSelectedRoad(road)}
+                  aria-label={`Open ${road.entity.name} road details`}
+                >
+                  <span>
+                    <strong>{road.entity.name}</strong>
+                    <span className="og-route-detail__road-meta">
+                      {formatMiles(road.summary.distanceKm * 1000)} · {road.summary.percentage.toFixed(0)}% of route
                     </span>
-                    {surfaceChip(road.summary.surfaceAssessment ?? surfaceAssessmentForRoad(road))}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-      </section>
+                  </span>
+                  {surfaceChip(road.summary.surfaceAssessment ?? surfaceAssessmentForRoad(road))}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      {entry.source === "catalog" ? (
-        <p className="og-route-detail__planning-note">
-          Planning follows this line through a few checkpoints, so the road route may differ. GPX export keeps the full line.
-        </p>
-      ) : null}
       {entry.source === "catalog" ? <RouteCommunity routeId={entry.id} /> : null}
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
       <p className="og-route-detail__summary">{entry.summary}</p>
