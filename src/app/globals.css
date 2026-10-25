@@ -8811,60 +8811,6 @@ h3,
     width: 132px;
     height: 88px;
   }
-
-  /* One toolbar row: each option names itself ("All sources", "Any
-     distance"), so the field captions become screen-reader text. */
-  .og-explore__controls {
-    align-items: center;
-    gap: 8px;
-    padding: 10px;
-    border-color: transparent;
-    box-shadow: var(--og-shadow-float);
-  }
-
-  .og-explore__controls label {
-    min-width: 0;
-  }
-
-  .og-explore__controls label > span:not(.og-select) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-
-  .og-explore__controls label:first-child {
-    flex: 1 1 220px;
-  }
-
-  .og-explore__controls .og-explore__check > span {
-    position: static;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-  }
-
-  .og-explore__controls select,
-  .og-explore__controls input[type="search"] {
-    min-height: 44px;
-    border-radius: 999px;
-    padding-inline: 14px;
-  }
-
-  .og-explore__controls .og-explore__check {
-    min-height: 44px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--og-sandstone) 30%, var(--og-paper));
-  }
-
-  .og-explore__controls button {
-    min-height: 44px;
-    border-radius: 999px;
-  }
 }
 
 /* Visual system refresh (UX rework phase 4): elevation by shadow, not borders.
@@ -8910,24 +8856,15 @@ h3,
   }
 }
 
-/* Explore on a phone (UX rework phase 5): the search stays, the other filters
-   fold behind one button, and the header gives the list the screen. */
+/* Explore's toolbar folds every filter behind one button at every width; what
+   the button opens is a bottom sheet on a phone and a popover on a wide screen
+   (theme-glass.css owns both). */
 .og-explore__filters-toggle {
-  display: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 @media (max-width: 760px) {
-  .og-explore__filters-toggle {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    justify-self: start;
-    width: auto;
-    min-height: 44px;
-    margin: 8px 0 0;
-    padding: 8px 16px;
-    border-radius: 999px;
-  }
 
   .og-explore__controls label:first-child,
   .og-explore__controls label:first-child input {

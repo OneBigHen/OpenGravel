@@ -18,15 +18,16 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.goto("/explore");
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(32);
     await expect(page.getByTestId("explore-map")).toContainText("32 mapped");
-    // The area picker lives in the Filters sheet on a phone.
-    if (viewport.width <= 760) await page.getByRole("button", { name: /^Filters/ }).click();
+    // The area picker lives in the Filters panel at every width: a bottom sheet
+    // on a phone, a popover under the toolbar on a wide screen.
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await page.getByRole("combobox", { name: "PA riding area" }).selectOption("eastern-pa");
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(31);
     await expect(page).toHaveURL(/area=eastern-pa/);
     await page.reload();
-    if (viewport.width <= 760) await page.getByRole("button", { name: /^Filters/ }).click();
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await expect(page.getByRole("combobox", { name: "PA riding area" })).toHaveValue("eastern-pa");
-    if (viewport.width <= 760) await page.getByRole("button", { name: /^Show \d+ routes$/ }).click();
+    await page.getByRole("button", { name: /^Show \d+ routes$/ }).click();
     await page.getByRole("button", { name: "Expand map" }).click();
     const dialog = page.getByRole("dialog", { name: "Explore route map" });
     await expect(dialog).toBeVisible();
