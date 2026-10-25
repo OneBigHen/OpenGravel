@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import type { Coordinate } from "@/domain/ride/types";
 import { createPhotonGeocoder } from "@/infrastructure/geocoding/photon";
-import { createTomTomPlaceSearch } from "@/infrastructure/geocoding/tomtom";
-import { createPlaceSearchEngine, nameMatchesTypedText } from "@/server/geocoding/place-search";
+import { createTomTomPlaceSearch, TOMTOM_PLACE_RADIUS_METERS } from "@/infrastructure/geocoding/tomtom";
+import {
+  createPlaceSearchEngine,
+  nameMatchesTypedText,
+  PLACE_NEAREST_REACH_METERS,
+} from "@/server/geocoding/place-search";
 
 /** Searching from Jim Thorpe, PA — the production measurement in the task. */
 const JIM_THORPE: Coordinate = { lat: 40.87, lon: -75.73 };
@@ -95,6 +99,48 @@ const GAS_STATIONS = {
     },
   ],
 };
+
+/** A Sheetz in Lehighton itself, and the nearest one when the town has none (~35 km). */
+const SHEETZ_LEHIGHTON = {
+  id: "sheetz-lehighton",
+  poi: { name: "Sheetz", brands: [{ name: "Sheetz" }] },
+  address: {
+    streetName: "Blakeslee Blvd",
+    municipality: "Lehighton",
+    countrySubdivisionCode: "PA",
+    countryCode: "US",
+  },
+  position: { lat: 40.8332, lon: -75.714 },
+};
+const SHEETZ_KUTZTOWN = {
+  id: "sheetz-kutztown",
+  poi: { name: "Sheetz", brands: [{ name: "Sheetz" }] },
+  address: {
+    streetName: "Kutztown Rd",
+    municipality: "Kutztown",
+    countrySubdivisionCode: "PA",
+    countryCode: "US",
+  },
+  position: { lat: 40.52, lon: -75.78 },
+};
+
+/** A Wawa in Allentown, ~37 km from Jim Thorpe: outside the town's own radius. */
+const WAWA_ALLENTOWN = {
+  id: "wawa-allentown",
+  poi: { name: "Wawa", brands: [{ name: "Wawa" }] },
+  address: {
+    streetName: "Hamilton Blvd",
+    municipality: "Allentown",
+    countrySubdivisionCode: "PA",
+    countryCode: "US",
+  },
+  position: { lat: 40.6, lon: -75.49 },
+};
+
+/** The text a TomTom fuzzy search is looking for, decoded from its path. */
+function tomtomQuery(url: URL): string {
+  return /\/fuzzySearch\/(.+)\.json$/.exec(decodeURIComponent(url.pathname))?.[1] ?? "";
+}
 
 function stub(photon: PhotonFeatures, tomtom: TomTomPayload | "fail"): Stub {
   const photonQueries: string[] = [];
@@ -221,6 +267,108 @@ describe("place search engine", () => {
     expect(places).toHaveLength(2);
     expect(tomtomUrls[0]?.searchParams.get("categorySet")).toBe("9376");
     expect(tomtomUrls[0]?.searchParams.get("lat")).toBe("40.87000");
+  });
+
+  it("answers 'Sheetz Lehighton' with the nearest Sheetz and the town, never empty", async () => {
+    // The town has no Sheetz of its own, and the text as typed names no place.
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => (query === "Lehighton" ? [LEHIGHTON_TOWN] : []),
+      (url) => {
+        if (tomtomQuery(url) !== "Sheetz") return { results: [] };
+        return url.searchParams.get("radius") === String(TOMTOM_PLACE_RADIUS_METERS)
+          ? { results: [] }
+          : { results: [SHEETZ_KUTZTOWN] };
+      },
+    );
+    const places = await engine(fetcher)("Sheetz Lehighton", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Sheetz, Kutztown, PA",
+      "Lehighton, PA",
+    ]);
+    expect(places.map((place) => place.provider)).toEqual(["tomtom", "photon"]);
+    // The words as typed are asked first; the split happens only once that is empty.
+    expect(photonQueries).toEqual(["Sheetz Lehighton", "Lehighton"]);
+    expect(tomtomUrls.map(tomtomQuery)).toEqual(["Sheetz Lehighton", "Sheetz", "Sheetz"]);
+    // The brand is looked for around Lehighton, then once for the nearest anywhere.
+    const widened = tomtomUrls[2]!;
+    expect(widened.searchParams.get("radius")).toBe(String(PLACE_NEAREST_REACH_METERS));
+    expect(widened.searchParams.get("lat")).toBe("40.83370");
+    expect(widened.searchParams.get("lon")).toBe("-75.71380");
+  });
+
+  it("leads with the Sheetz in Lehighton, one town-scoped search, when the town has one", async () => {
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => (query === "Lehighton" ? [LEHIGHTON_TOWN] : []),
+      (url) => (tomtomQuery(url) === "Sheetz" ? { results: [SHEETZ_LEHIGHTON] } : { results: [] }),
+    );
+    const places = await engine(fetcher)("Sheetz Lehighton", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Sheetz, Lehighton, PA",
+      "Lehighton, PA",
+    ]);
+    expect(photonQueries).toEqual(["Sheetz Lehighton", "Lehighton"]);
+    // The town's own Sheetz answered, so nothing was widened.
+    expect(tomtomUrls.map(tomtomQuery)).toEqual(["Sheetz Lehighton", "Sheetz"]);
+    expect(tomtomUrls[1]?.searchParams.get("radius")).toBe(String(TOMTOM_PLACE_RADIUS_METERS));
+  });
+
+  it("offers the town on its own when the brand answers nowhere near it", async () => {
+    const { fetcher } = stub(
+      (query) => (query === "Lehighton" ? [LEHIGHTON_TOWN] : []),
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Sheetz Lehighton", JIM_THORPE, signal());
+    // Neither source found a Sheetz, but the town the rider named is still an answer.
+    expect(places.map((place) => place.label)).toEqual(["Lehighton, PA"]);
+  });
+
+  it("finds the nearest Wawa when the named town has none of its own", async () => {
+    // Production returned only the town: the Wawa nearest Jim Thorpe is ~25 mi out.
+    const { fetcher, tomtomUrls } = stub(
+      (query) => (query.toLowerCase().includes("jim thorpe") ? [JIM_THORPE_TOWN] : []),
+      (url) => {
+        if (tomtomQuery(url) !== "Wawa") return { results: [] };
+        return url.searchParams.get("radius") === String(TOMTOM_PLACE_RADIUS_METERS)
+          ? { results: [] }
+          : { results: [WAWA_ALLENTOWN] };
+      },
+    );
+    const places = await engine(fetcher)("Wawa Jim Thorpe", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual([
+      "Wawa, Allentown, PA",
+      "Jim Thorpe, PA",
+    ]);
+    const widened = tomtomUrls.find(
+      (url) => url.searchParams.get("radius") === String(PLACE_NEAREST_REACH_METERS),
+    );
+    expect(widened?.searchParams.get("lat")).toBe("40.87570");
+  });
+
+  it("leaves a plain town name exactly as it was", async () => {
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => (query === "Lehighton" ? [LEHIGHTON_TOWN] : []),
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Lehighton", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual(["Lehighton, PA"]);
+    expect(photonQueries).toEqual(["Lehighton"]);
+    expect(tomtomUrls.map(tomtomQuery)).toEqual(["Lehighton"]);
+  });
+
+  it("does not split a two-word town's own name into a brand and a fragment", async () => {
+    const { fetcher, photonQueries, tomtomUrls } = stub(
+      (query) => (query === "Jim Thorpe" ? [JIM_THORPE_TOWN] : []),
+      () => ({ results: [] }),
+    );
+    const places = await engine(fetcher)("Jim Thorpe", JIM_THORPE, signal());
+
+    expect(places.map((place) => place.label)).toEqual(["Jim Thorpe, PA"]);
+    expect(photonQueries).toEqual(["Jim Thorpe"]);
+    expect(tomtomUrls.map(tomtomQuery)).toEqual(["Jim Thorpe"]);
   });
 });
 
