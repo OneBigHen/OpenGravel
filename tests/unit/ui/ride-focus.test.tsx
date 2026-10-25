@@ -895,32 +895,46 @@ function recordingViewModel(
 }
 
 describe("recording from the map screen", () => {
-  it("turns the sheet toggle into a recording indicator with a spoken elapsed time", async () => {
+  it("names the recording on one line above the readouts, and speaks the elapsed time", async () => {
     const { store } = await harness({ position: "fresh" });
     const { navigation, viewModel } = recordingViewModel(store);
     act(() => store.setState({ navigation, viewModel }));
 
-    const toggle = screen.getByTestId("ride-strip");
-    expect(toggle).toHaveAttribute("data-recording", "true");
-    // The elapsed time is visible text, and it is also what a screen reader hears.
-    expect(screen.getByTestId("ride-rec-time")).toHaveTextContent("31:12");
-    expect(toggle).toHaveTextContent("REC");
-    expect(toggle).toHaveAccessibleName("Recording, 31 minutes 12 seconds. Show ride controls.");
+    // The screen itself carries the state, so the strip's size follows it.
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-recording", "true");
+    const strip = screen.getByTestId("ride-strip-bar");
+    expect(strip).toHaveAttribute("data-recording", "true");
 
-    // Still the sheet toggle it always was.
+    // One line: a small danger dot and the word. No badge, no second clock.
+    const state = screen.getByTestId("ride-recording-state");
+    expect(state).toHaveTextContent("Recording");
+    expect(state.querySelector(".og-ride__recording-state-dot")).not.toBeNull();
+    expect(state).not.toHaveTextContent("REC");
+    // The elapsed time is not a second number on screen; it is what a screen
+    // reader hears after the word.
+    expect(state).toHaveTextContent("31 minutes 12 seconds");
+    expect(screen.queryByTestId("ride-rec-time")).toBeNull();
+
+    // The readouts keep their own row, so nothing squeezes a 24 px figure.
+    expect(strip.querySelectorAll(".og-ride-metrics__slot")).toHaveLength(3);
+
+    // And the chevron is still the sheet toggle it always was.
+    const toggle = screen.getByTestId("ride-strip");
+    expect(toggle).toHaveAccessibleName("Show ride controls");
     fireEvent.click(toggle);
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
-    expect(toggle).toHaveAccessibleName("Recording, 31 minutes 12 seconds. Hide ride controls.");
+    expect(toggle).toHaveAccessibleName("Hide ride controls");
   });
 
-  it("keeps the plain chevron when nothing is being recorded", async () => {
+  it("says nothing about recording when nothing is being recorded", async () => {
     await harness({ position: "fresh" });
 
+    expect(screen.getByTestId("ride-focus")).not.toHaveAttribute("data-recording");
+    const strip = screen.getByTestId("ride-strip-bar");
     const toggle = screen.getByTestId("ride-strip");
-    expect(toggle).not.toHaveAttribute("data-recording");
+    expect(strip).not.toHaveAttribute("data-recording");
     expect(toggle).toHaveAccessibleName("Show ride controls");
-    expect(toggle).not.toHaveTextContent("REC");
-    expect(screen.queryByTestId("ride-rec-time")).toBeNull();
+    expect(screen.queryByTestId("ride-recording-state")).toBeNull();
   });
 
   it("returns to the finished ride's summary once the ride is terminal", async () => {
@@ -936,7 +950,8 @@ describe("recording from the map screen", () => {
     const strip = screen.getByTestId("ride-strip");
     expect(strip).toHaveClass("og-ride__strip-summary");
     expect(strip).toHaveTextContent("Recorded ride saved");
-    expect(screen.queryByTestId("ride-rec-time")).toBeNull();
+    // The recording is over: the state line goes with the readouts.
+    expect(screen.queryByTestId("ride-recording-state")).toBeNull();
   });
 });
 
@@ -983,10 +998,20 @@ describe("the post-ride summary (08 §13)", () => {
     // The sketch is above the stats, and the stats keep their own grid.
     const summary = screen.getByTestId("ride-summary");
     expect(sketch.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // 432 s of standing still is a sixth stat, from the summary's two clocks.
+    // Four headline numbers, in the order a rider says them: distance, time,
+    // top speed, climb. They are the card; nothing else competes with them.
+    expect(summary.querySelectorAll(".og-ride__summary-stat")).toHaveLength(4);
+    expect(
+      Array.from(summary.querySelectorAll(".og-ride__summary dt")).map((label) => label.textContent),
+    ).toEqual(["Distance", "Moving time", "Top speed", "Climb"]);
+    expect(screen.getByTestId("ride-summary-max")).toHaveTextContent("50");
+    expect(screen.getByTestId("ride-summary-climb")).toHaveTextContent("984");
+    // 432 s of standing still, and the average, are one quiet line under them —
+    // both still from the summary's own clocks, never invented.
+    const meta = screen.getByTestId("ride-summary-meta");
+    expect(meta).toHaveTextContent("Avg speed 20 mph");
     expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("Stopped");
     expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("7");
-    expect(summary.querySelectorAll(".og-ride__summary-stat")).toHaveLength(6);
 
     // My rides leads, and the way back to the planner is the surface's own link.
     const rides = screen.getByTestId("ride-summary-rides");
@@ -1528,14 +1553,21 @@ describe("12 §10 touch targets", () => {
     // Both recovery controls are 56 px, side by side.
     const row = rule(".og-ride__off-route-actions");
     expect(row).toMatch(/display:\s*flex/);
-    // The recording indicator keeps the sheet toggle's 56×56 target.
+    // The sheet toggle keeps its 56×56 target.
     const toggle = rule(".og-ride-metrics__toggle");
     expect(toggle).toMatch(/width:\s*56px/);
     expect(toggle).toMatch(/height:\s*56px/);
-    // No pulse in either theme: a dot beside a counting clock is the signal, so
-    // there is nothing for `prefers-reduced-motion` to stop.
-    const recording = rule('.og-ride-metrics__toggle[data-recording="true"]');
-    expect(recording).not.toMatch(/animation|transition/);
+    // Recording is one line above the readouts, and the strip is taller by
+    // exactly that line so nothing stacked over it moves onto it.
+    expect(rule('.og-ride[data-recording="true"]')).toMatch(
+      /--og-ride-strip-live-h:\s*calc\(var\(--og-ride-strip-h\)\s*\+\s*20px\)/,
+    );
+    expect(rule(".og-ride__strip")).toMatch(/height:\s*var\(--og-ride-strip-live-h\)/);
+    expect(rule(".og-ride__recording-state")).toMatch(/height:\s*18px/);
+    expect(rule(".og-ride__recording-state-dot")).toMatch(/background:\s*var\(--og-danger-light\)/);
+    // No pulse in either theme: a dot beside a word is the signal, so there is
+    // nothing for `prefers-reduced-motion` to stop.
+    expect(rule(".og-ride__recording-state")).not.toMatch(/animation|transition/);
     // The measured offset is the page's body size (design system v2 §1).
     expect(rule(".og-ride__off-route-distance")).toMatch(/font-size:\s*var\(--og-text-body\)/);
   });
@@ -1739,19 +1771,50 @@ describe("Free Ride recording controls", () => {
     act(() => store.setState({ ...projected, suggestions: "on" }));
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
     expect(screen.getByTestId("free-ride-controls")).not.toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /Recording,.*Show ride controls/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
     expect(screen.getByTestId("free-ride-controls")).toBeVisible();
     expect(screen.getByTestId("free-ride-suggestions-toggle")).toBeVisible();
     expect(screen.getByRole("button", { name: "Head Home" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Loop from here" })).toBeVisible();
-    expect(screen.getByTestId("free-ride-recording-toggle")).toHaveAttribute("aria-pressed", "true");
+    // The recording row says what the press does; its switch says it is on.
+    const recordingToggle = screen.getByTestId("free-ride-recording-toggle");
+    expect(recordingToggle).toHaveTextContent("Stop recording");
+    expect(recordingToggle.querySelector(".og-ride__switch")).toHaveAttribute("data-on", "true");
+    // No sentence explains the controls; the one line left is the consequence
+    // of turning the track off.
+    expect(screen.getByText("Turning recording off discards the track.")).toBeVisible();
+  });
+
+  it("says what a press does when nothing is being recorded, and hides the discard note", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const base = store.getState().navigation!;
+    const navigation = { ...base, activity: "free" as const, plan: { ...base.plan, route: null } };
+    const viewModel = buildRideFocusViewModel({
+      navigation,
+      environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
+      suggestions: "on",
+      now: NOW,
+    });
+    act(() => store.setState({ navigation, viewModel, suggestions: "on" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
+
+    const recordingToggle = screen.getByTestId("free-ride-recording-toggle");
+    expect(recordingToggle).toHaveTextContent("Record this ride");
+    expect(recordingToggle.querySelector(".og-ride__switch")).toHaveAttribute("data-on", "false");
+    // The suggestions switch still reports its own state to assistive tech.
+    expect(screen.getByTestId("free-ride-suggestions-toggle")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText("Turning recording off discards the track.")).not.toBeInTheDocument();
   });
 
   it("offers to save an unrecorded summary and links to My rides after saving", async () => {
     const { store } = await harness({ position: "fresh" });
     const finish = vi.fn(async () => undefined);
     act(() => store.setState({ canSaveFreeRideSummary: true, stopConfirm: true, finish }));
-    fireEvent.click(screen.getByRole("button", { name: "Save summary & finish" }));
+    // Save is the card's one obvious action.
+    const save = screen.getByTestId("ride-finish");
+    expect(save).toHaveTextContent("Save summary");
+    expect(save).toHaveClass("og-ride__action--primary");
+    fireEvent.click(save);
     expect(finish).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "Finish without saving" }));
     expect(finish).toHaveBeenLastCalledWith(false);

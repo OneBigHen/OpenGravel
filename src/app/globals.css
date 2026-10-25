@@ -5662,6 +5662,10 @@ h3,
   --og-ride-gap: 8px;
   /* Readouts plus the sheet toggle: 56 + 10 padding + 2 border. */
   --og-ride-strip-h: 68px;
+  /* What the strip actually occupies right now: the same 68 px, plus the
+     20 px recording line while one is running. Everything stacked above the
+     strip reads this, so a state line never hides under the rail. */
+  --og-ride-strip-live-h: var(--og-ride-strip-h);
   /* The ride's own number scale (small-screen design system v2 §5). The page
      scale above is right for words; a glance at 50 mph needs these instead,
      and they are tokens so no ride rule invents a sixth size. */
@@ -5677,6 +5681,13 @@ h3,
   overflow: hidden;
   background: var(--og-ink);
   color: var(--og-paper);
+}
+
+/* A recording adds one line to the strip: the dot and the word above the
+   numbers. Derived in one place, so the strip, the rail, the sheet and the
+   metric picker agree on what the strip takes up. */
+.og-ride[data-recording="true"] {
+  --og-ride-strip-live-h: calc(var(--og-ride-strip-h) + 20px);
 }
 
 /* DV-10: the map is full-bleed; every piece of chrome floats over it. */
@@ -6071,7 +6082,7 @@ h3,
   z-index: 7;
   left: max(12px, var(--og-safe-left));
   right: max(12px, var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 12px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 12px);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -6174,7 +6185,7 @@ h3,
   z-index: 7;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 92px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 92px);
 }
 
 /* ---- Bottom: one slim translucent strip ------------------------------ */
@@ -6187,12 +6198,42 @@ h3,
   display: flex;
   align-items: center;
   gap: 4px;
-  height: var(--og-ride-strip-h);
+  height: var(--og-ride-strip-live-h);
   padding: 4px;
   border-radius: 22px;
   background: var(--og-ride-glass);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
+}
+
+/* Recording: one 20 px line above the readings — a small danger dot and the
+   word — then the same 56 px row of numbers. The line takes the whole width
+   (it wraps above them) so no 24 px reading loses a pixel to it, and nothing
+   pulses, so there is no motion to stop for reduced motion. */
+.og-ride__strip[data-recording="true"] {
+  flex-wrap: wrap;
+  align-content: center;
+  row-gap: 0;
+}
+
+.og-ride__recording-state {
+  display: flex;
+  flex: 1 0 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 18px;
+  color: var(--og-paper);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.og-ride__recording-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--og-danger-light);
 }
 
 .og-ride__strip-summary {
@@ -6278,11 +6319,11 @@ h3,
   z-index: 9;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-h) - 40px));
+  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-live-h) - 40px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px;
@@ -6383,7 +6424,7 @@ h3,
   }
 
   .og-ride__floating-card {
-    bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+    bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   }
 
   .og-ride__float {
@@ -6427,11 +6468,14 @@ h3,
 .og-ride__recording span {
   color: var(--og-ride-muted);
   font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .og-ride__recording strong {
   font-size: var(--og-text-body);
+  font-variant-numeric: tabular-nums;
 }
 
 .og-ride__recording p {
@@ -6526,11 +6570,7 @@ h3,
 .og-ride__free-ride {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  background: var(--og-ride-surface);
-  border: 1px solid var(--og-ride-border);
-  border-radius: var(--og-radius-object);
+  gap: var(--og-space-3);
 }
 
 .og-ride__safety {
@@ -6708,40 +6748,88 @@ h3,
   cursor: pointer;
 }
 
-.og-ride__free-ride-heading {
+/*
+  Free Ride's switches are rows, not chips: 56 px each, the label at body size
+  on the left and the switch on the right. The row says what a press does; the
+  switch says whether it is on. Nothing here truncates at 320 px.
+*/
+.og-ride__switch-rows {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  border-top: 1px solid var(--og-ride-border);
+}
+
+.og-ride__switch-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--og-space-3);
+  min-height: 56px;
+  padding: 0 var(--og-space-1);
+  border: 0;
+  border-bottom: 1px solid var(--og-ride-border);
+  background: transparent;
+  color: var(--og-paper);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
 
-.og-ride__free-ride-heading h2 { font-size: var(--og-text-body); }
-
-/* UX rework 2 (#19): the suggestions switch is a chip beside its one-line
-   state, and the rarer ways back sit behind "More ways back". */
-.og-ride__free-ride-heading {
-  justify-content: flex-start;
+.og-ride__switch-row-label {
+  min-width: 0;
 }
 
-.og-ride__free-ride-heading [data-testid="free-ride-suggestions-toggle"] {
-  min-height: 44px;
-  padding-inline: 14px;
+.og-ride__switch-row:disabled {
+  color: var(--og-ride-muted);
+  cursor: not-allowed;
+}
+
+.og-ride__switch-row:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+.og-ride__switch {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-ride-muted) 30%, transparent);
+}
+
+.og-ride__switch[data-on="true"] {
+  border-color: var(--og-ember-strong);
+  background: var(--og-ember-strong);
+}
+
+.og-ride__switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--og-paper);
+  transition: transform var(--og-dur-fast) var(--og-ease);
+}
+
+.og-ride__switch[data-on="true"] .og-ride__switch-knob {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-ride__switch-knob {
+    transition: none;
+  }
+}
+
+.og-ride__free-ride-note {
+  color: var(--og-ride-muted);
   font-size: var(--og-text-meta);
-}
-
-/* Head Home and Loop from here share a row; everything else spans it. */
-.og-ride__free-ride:has(> [data-testid="free-ride-loop"]) {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.og-ride__free-ride > * {
-  grid-column: 1 / -1;
-}
-
-.og-ride__free-ride > :is([data-testid="head-home"], [data-testid="free-ride-loop"]) {
-  grid-column: auto;
 }
 
 .og-ride__more > summary {
@@ -6759,8 +6847,11 @@ h3,
 .og-ride__more[open] > summary {
   margin-bottom: 8px;
 }
-.og-ride__free-ride-heading p,
-.og-ride__free-ride-copy,
+.og-ride__free-ride-status {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+}
+
 .og-ride__suggestion p {
   color: var(--og-ride-muted);
   font-size: var(--og-text-meta);
@@ -6848,7 +6939,13 @@ h3,
 .og-ride__confirm {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--og-space-3);
+}
+
+/* Save is the finish card's one obvious action, so it keeps a row of its own and
+   the ways out share the row under it. */
+.og-ride__confirm .og-ride__action--primary {
+  flex-basis: 100%;
 }
 
 /* The way out sits at the end of the panel's own content, and at the bottom of
@@ -6859,31 +6956,23 @@ h3,
 
 .og-ride__confirm-text {
   font-size: var(--og-text-body);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .og-ride__terminal {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
+  gap: var(--og-space-3);
+  padding: var(--og-space-4);
   border: 1px solid var(--og-success);
   border-radius: var(--og-radius-object);
   background: var(--og-ink);
 }
 
-.og-ride__terminal-head {
-  display: grid;
-  gap: 4px;
-}
-
 .og-ride__terminal-title {
   font-size: var(--og-text-headline);
-}
-
-.og-ride__terminal-text {
-  font-size: var(--og-text-meta);
-  color: var(--og-ride-muted);
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 /* The finish card's route sketch (08 §13): the shape of the ride, drawn from
@@ -10931,51 +11020,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 /*
-  Recording, from the map screen (a mounted phone's "is it recording?"): the
-  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a
-  REC caption and the elapsed time, stacked in two lines. No pulse and no
-  animation in either theme: a dot beside a counting clock is enough, and
-  nothing moves at 60 mph (and nothing to stop for reduced motion).
+  Is it recording? The strip answers that on its own line (above), so the sheet
+  toggle stays what it always was: the chevron that opens the controls.
 */
-.og-ride-metrics__toggle[data-recording="true"] {
-  gap: 1px;
-  border: 1px solid var(--og-ride-border);
-  background: var(--og-ride-surface);
-  color: var(--og-paper);
-  line-height: 1;
-}
-
-.og-ride-metrics__rec {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.og-ride-metrics__rec-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--og-danger);
-}
-
-.og-ride-metrics__rec-label {
-  font-size: var(--og-text-caption);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.og-ride-metrics__toggle .og-ride-metrics__rec-chevron {
-  width: 10px;
-  height: 10px;
-}
-
-.og-ride-metrics__rec-time {
-  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: var(--og-text-caption);
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-}
-
 .og-ride-metrics__toggle[data-held="true"] {
   display: none;
 }
@@ -11004,11 +11051,11 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   z-index: 10;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-h) - 40px));
+  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-live-h) - 40px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px;

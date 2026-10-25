@@ -69,6 +69,7 @@ import { RideRouteSketch } from "@/ui/ride/RideRouteSketch";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
+import type { RideSummaryStat } from "@/application/ride-metrics/ride-summary";
 import type { PlacesSource } from "@/application/places";
 import type { BasemapMode, MapHost, MapHostFactory, MapLoadStatus } from "@/application/map/map-host";
 import type { MapIntent } from "@/application/map/types";
@@ -144,6 +145,9 @@ const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /** Zoom changes below this are rounding noise, not a limit the button is at. */
 const ZOOM_LIMIT_EPSILON = 0.01;
+
+/** The four numbers the finish card leads with; the rest become its one meta line. */
+const SUMMARY_HEADLINE_IDS: readonly RideSummaryStat["id"][] = ["distance", "moving", "max", "climb"];
 
 /** The three display choices, in the rider's words. */
 const DISPLAY_CHOICES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [
@@ -267,7 +271,6 @@ export function RideFocus({
   const rideOfferBusy = useStore(store, (state) => state.rideOfferBusy);
   const rideOffersAvailable = useStore(store, (state) => state.rideOffersAvailable);
   const liveSuggestionDistance = useStore(store, (state) => state.liveSuggestionDistanceMeters);
-  const suggestionBusy = useStore(store, (state) => state.suggestionBusy);
   const returnBusy = useStore(store, (state) => state.returnBusy);
   const freeRideStatusMessage = useStore(store, (state) => state.freeRideStatusMessage);
   const freeRideError = useStore(store, (state) => state.freeRideError);
@@ -415,6 +418,15 @@ export function RideFocus({
       : summaryDistance.unit === null
         ? summaryDistance.value
         : `${summaryDistance.value} ${summaryDistance.unit}`;
+  /*
+    The summary leads with the four numbers a rider says out loud after a ride —
+    distance, time, top speed, climb — and the rest (average, stopped) is one
+    quiet line under them, so the card is read at a glance instead of scanned
+    across six tiles.
+  */
+  const summaryStats = terminal?.reason === "completed" ? terminal.stats ?? [] : [];
+  const summaryHeadline = summaryStats.filter((stat) => SUMMARY_HEADLINE_IDS.includes(stat.id));
+  const summaryExtra = summaryStats.filter((stat) => !SUMMARY_HEADLINE_IDS.includes(stat.id));
   /**
    * States that keep the sheet open whatever the rider did: a ride that ended,
    * the stop question, a pause (the rider is stopped and wants Resume), and a
@@ -720,11 +732,17 @@ export function RideFocus({
 
   /*
     Is it recording? A mounted phone can answer that without the sheet: the
-    strip's own sheet toggle carries the ride's state — a dot, REC and the
-    elapsed time — for as long as a recording is bound and the ride is live.
-    No pulse: a dot and a counting clock are enough, and nothing moves at speed.
+    strip carries one small red dot and the word "Recording" above its readings
+    for as long as a recording is bound and the ride is live. Nothing pulses and
+    nothing counts up beside it: the moving time is already one of the readings,
+    and a rider glancing at a phone at 50 mph needs one word, not a badge.
   */
-  const recordingIndicator = terminal === null && (navigation?.recordingId ?? null) !== null ? recording : null;
+  const recordingIndicator =
+    terminal === null &&
+    (navigation?.recordingId ?? null) !== null &&
+    navigation?.activity !== "paused"
+      ? recording
+      : null;
 
   return (
     <main
@@ -737,6 +755,9 @@ export function RideFocus({
       data-gps={position.quality}
       data-follow={follow ? "true" : "false"}
       data-sheet={sheetVisible ? "open" : "closed"}
+      /* The strip grows one 20 px line while a recording runs; its own height
+         and everything stacked above it read that state from this attribute. */
+      data-recording={recordingIndicator === null ? undefined : "true"}
       onPointerDown={noteTouch}
       onKeyDown={noteTouch}
     >
@@ -1165,13 +1186,13 @@ export function RideFocus({
       >
         {terminal === null ? null : (
           <div className="og-ride__terminal" data-testid="ride-terminal">
-            {/* The headline and the one sentence are the live region; the
-                summary and the two ways onward stay outside it, so a change to
-                the card never re-reads the whole screen to a rider. */}
-            <div className="og-ride__terminal-head" role="status">
-              <h2 className="og-ride__terminal-title">{savedSummaryRideId !== null ? "Free Ride summary saved" : terminal.title}</h2>
-              <p className="og-ride__terminal-text">{savedSummaryRideId !== null ? "Your ride summary is in My rides." : terminal.text}</p>
-            </div>
+            {/* The headline is the live region; the numbers and the two ways
+                onward stay outside it, so the card never re-reads itself to a
+                rider. No sentence: the title says what happened and the
+                numbers say what the ride was. */}
+            <h2 className="og-ride__terminal-title" role="status">
+              {savedSummaryRideId !== null ? "Free Ride summary saved" : terminal.title}
+            </h2>
             {terminal.reason !== "completed" ? null : (
               <RideRouteSketch
                 routeLine={availableRouteLine}
@@ -1179,9 +1200,9 @@ export function RideFocus({
                 distanceText={summaryDistanceText}
               />
             )}
-            {terminal.reason !== "completed" || terminal.stats === undefined ? null : (
+            {summaryHeadline.length === 0 ? null : (
               <dl className="og-ride__summary" data-testid="ride-summary" aria-label="This ride">
-                {terminal.stats.map((stat) => (
+                {summaryHeadline.map((stat) => (
                   <div key={stat.id} className="og-ride__summary-stat" data-testid={`ride-summary-${stat.id}`}>
                     <dt>{stat.label}</dt>
                     <dd>
@@ -1191,6 +1212,17 @@ export function RideFocus({
                   </div>
                 ))}
               </dl>
+            )}
+            {summaryExtra.length === 0 ? null : (
+              <p className="og-ride__summary-meta" data-testid="ride-summary-meta">
+                {summaryExtra.map((stat, index) => (
+                  <span key={stat.id} data-testid={`ride-summary-${stat.id}`}>
+                    {index === 0 ? "" : " · "}
+                    {stat.label} {stat.value}
+                    {stat.unit === null ? null : ` ${stat.unit}`}
+                  </span>
+                ))}
+              </p>
             )}
             {/* One obvious next action, and the way back to the planner. My
                 rides has something to open only once the recording landed
@@ -1223,9 +1255,14 @@ export function RideFocus({
         */}
         {terminal !== null || !stopConfirm ? null : (
           <div className="og-ride__confirm" data-testid="ride-stop-confirm">
-            <p className="og-ride__confirm-text">End this ride?</p>
-            {navigation?.recordingId == null && canSaveFreeRideSummary ? <p>Save your distance, moving time, elevation and accepted suggestions as a ride summary. No GPS track was retained.</p> : null}
+            <p className="og-ride__confirm-text">Finish this ride?</p>
             <div className="og-ride__actions">
+              {/*
+                The one obvious action, on its own row: saving is what keeps
+                the ride, so it leads and the ways out sit under it. A ride with
+                no recording still has a summary, and that is what "Save
+                summary" keeps — no paragraph explains it.
+              */}
               <button
                 type="button"
                 className="og-ride__action og-ride__action--primary"
@@ -1236,11 +1273,12 @@ export function RideFocus({
                   void store.getState().finish();
                 }}
               >
-                {navigation?.recordingId == null && canSaveFreeRideSummary ? "Save summary & finish" : "Finish ride"}
+                {navigation?.recordingId == null
+                  ? canSaveFreeRideSummary
+                    ? "Save summary"
+                    : "Finish ride"
+                  : "Save ride"}
               </button>
-              {navigation?.recordingId == null && canSaveFreeRideSummary ? (
-                <button type="button" className="og-ride__action" onClick={(): void => { void store.getState().finish(false); }}>Finish without saving</button>
-              ) : null}
               <button
                 type="button"
                 className="og-ride__action"
@@ -1261,6 +1299,16 @@ export function RideFocus({
               >
                 Keep riding
               </button>
+              {navigation?.recordingId == null && canSaveFreeRideSummary ? (
+                <button
+                  type="button"
+                  className="og-ride__action og-ride__action--link"
+                  data-testid="ride-finish-without-saving"
+                  onClick={(): void => { void store.getState().finish(false); }}
+                >
+                  Finish without saving
+                </button>
+              ) : null}
             </div>
           </div>
         )}
@@ -1315,38 +1363,56 @@ export function RideFocus({
 
         {terminal !== null ? null : navigation?.activity === "free" ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
-            <div className="og-ride__free-ride-heading">
-              <h2 className="og-visually-hidden">Free Ride</h2>
+            <h2 className="og-visually-hidden">Free Ride</h2>
+            {/*
+              Two rows, one switch each: recording and the suggestions that
+              find roads. The row says what the press does ("Record this ride" /
+              "Stop recording"); the switch beside it says whether it is on, so
+              the sheet never explains itself in a sentence.
+            */}
+            <div className="og-ride__switch-rows">
               <button
                 type="button"
-                className="og-ride__action"
+                className="og-ride__switch-row"
                 data-testid="free-ride-recording-toggle"
                 disabled={recordingToggleBusy}
-                aria-pressed={navigation.recordingId !== null}
-                aria-describedby="free-ride-recording-help"
                 onClick={(): void => {
                   if (recordingCleanupPending || navigation.recordingId !== null) void store.getState().stopRecording();
                   else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
                 }}
               >
-                {recordingCleanupPending ? "Retry turning recording off" : navigation.recordingId === null ? "Not recording · tap to record" : "Recording · tap to turn off"}
+                <span className="og-ride__switch-row-label">
+                  {recordingCleanupPending
+                    ? "Retry turning recording off"
+                    : navigation.recordingId === null
+                      ? "Record this ride"
+                      : "Stop recording"}
+                </span>
+                <span
+                  className="og-ride__switch"
+                  aria-hidden="true"
+                  data-on={navigation.recordingId === null ? "false" : "true"}
+                >
+                  <span className="og-ride__switch-knob" />
+                </span>
               </button>
-              <p id="free-ride-recording-help" className="og-ride__free-ride-copy">Turning recording off discards the track. Your ride summary can still be saved.</p>
               <button
                 type="button"
-                className="og-ride__action"
+                className="og-ride__switch-row"
                 data-testid="free-ride-suggestions-toggle"
                 aria-pressed={suggestions === "on"}
                 onClick={(): void => { void store.getState().setSuggestions(suggestions !== "on"); }}
               >
-                Suggestions {suggestions === "on" ? "on" : "off"}
+                <span className="og-ride__switch-row-label">Road suggestions</span>
+                <span className="og-ride__switch" aria-hidden="true" data-on={suggestions === "on" ? "true" : "false"}>
+                  <span className="og-ride__switch-knob" />
+                </span>
               </button>
-              {liveSuggestion === null && suggestions === "on" ? (
-                <p className="og-ride__free-ride-copy" data-testid="free-ride-suggestion-state">
-                  {suggestionBusy ? "Looking ahead…" : "Watching for a good road"}
-                </p>
-              ) : null}
             </div>
+            {/* One short line, and only while there is a track to lose. */}
+            {navigation.recordingId === null ? null : (
+              <p className="og-ride__free-ride-note">Turning recording off discards the track.</p>
+            )}
             {suggestions === "on" && rideOffersAvailable ? (
               <button
                 type="button"
@@ -1432,7 +1498,7 @@ export function RideFocus({
               </div>
             </details>
             {freeRideStatusMessage === null ? null : (
-              <p className="og-ride__free-ride-copy" data-testid="free-ride-status" role="status">
+              <p className="og-ride__free-ride-status" data-testid="free-ride-status" role="status">
                 {freeRideStatusMessage}
               </p>
             )}
@@ -1444,9 +1510,9 @@ export function RideFocus({
           </section>
         ) : navigation?.activity === "guided" && (suggestions === "on" || freeRideStatusMessage !== null) ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
-            {freeRideStatusMessage === null
-              ? <p className="og-ride__free-ride-copy">Following a suggested route segment.</p>
-              : <p className="og-ride__free-ride-copy" data-testid="free-ride-status" role="status">{freeRideStatusMessage}</p>}
+            {freeRideStatusMessage === null ? null : (
+              <p className="og-ride__free-ride-status" data-testid="free-ride-status" role="status">{freeRideStatusMessage}</p>
+            )}
             <button
               type="button"
               className="og-ride__action"
@@ -1727,9 +1793,15 @@ export function RideFocus({
 
       {/*
         DV-10: the bottom is one slim strip — the three readouts and the sheet
-        toggle. Tapping a readout while moving opens the sheet.
+        toggle, plus one line naming the recording while one runs. Tapping a
+        readout while moving opens the sheet.
       */}
-      <footer ref={stripRef} className="og-ride__strip">
+      <footer
+        ref={stripRef}
+        className="og-ride__strip"
+        data-testid="ride-strip-bar"
+        data-recording={recordingIndicator === null ? undefined : "true"}
+      >
         {terminal !== null ? (
           <button
             type="button"
@@ -1744,6 +1816,13 @@ export function RideFocus({
           </button>
         ) : (
           <>
+            {recordingIndicator === null ? null : (
+              <p className="og-ride__recording-state" data-testid="ride-recording-state">
+                <span className="og-ride__recording-state-dot" aria-hidden="true" />
+                Recording
+                <span className="og-visually-hidden">, {recordingIndicator.elapsedTimeSpoken}</span>
+              </p>
+            )}
             <RideMetricStrip
               model={metrics}
               slotRef={slotRef}
@@ -1759,35 +1838,14 @@ export function RideFocus({
               className="og-ride-metrics__toggle"
               data-testid="ride-strip"
               data-held={sheetHeld ? "true" : undefined}
-              data-recording={recordingIndicator === null ? undefined : "true"}
               aria-expanded={sheetVisible}
               aria-controls="og-ride-sheet"
-              aria-label={recordingIndicator === null
-                ? undefined
-                : `Recording, ${recordingIndicator.elapsedTimeSpoken}. ${sheetVisible ? "Hide" : "Show"} ride controls.`}
               onClick={toggleSheet}
             >
-              {recordingIndicator === null ? (
-                <>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
-                  </svg>
-                  <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
-                </>
-              ) : (
-                <>
-                  <span className="og-ride-metrics__rec" aria-hidden="true">
-                    <span className="og-ride-metrics__rec-dot" />
-                    <span className="og-ride-metrics__rec-label">REC</span>
-                    <svg className="og-ride-metrics__rec-chevron" viewBox="0 0 24 24">
-                      <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
-                    </svg>
-                  </span>
-                  <span className="og-ride-metrics__rec-time" aria-hidden="true" data-testid="ride-rec-time">
-                    {recordingIndicator.elapsedTimeText}
-                  </span>
-                </>
-              )}
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
+              </svg>
+              <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
             </button>
           </>
         )}

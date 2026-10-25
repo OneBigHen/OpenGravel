@@ -1043,23 +1043,6 @@ html .og-ride {
   box-shadow: 0 6px 20px rgb(7 16 12 / 18%), 0 1px 3px rgb(7 16 12 / 20%);
 }
 
-/* Recording from the map screen: a white pill with ink type in Day (the strip
-   is already white there), ink glass with paper type at Night. The dot is the
-   same danger red in both themes; the elapsed figures carry the meaning. */
-:root[data-theme="day"] .og-ride-metrics__toggle[data-recording="true"] {
-  border-color: rgb(7 16 12 / 18%);
-  background: #ffffff;
-  color: #07100c;
-}
-
-:root[data-theme="night"] .og-ride-metrics__toggle[data-recording="true"] {
-  border-color: rgb(255 255 255 / 14%);
-  background: rgb(16 22 20 / 92%);
-  color: #ecf1ee;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
 :root[data-theme="day"] .og-ride__rail-button {
   border: 1px solid rgb(7 16 12 / 12%);
   background: #ffffff;
@@ -2192,36 +2175,43 @@ html .og-ride {
 }
 
 /* --------------------------------------------------------------------------
-   The finish summary: the ride in five or six numbers, big enough to read
-   standing next to the bike. The grid auto-fits: a recorded ride adds
-   "Stopped" (elapsed − moving) and the row simply reflows, and the sketch
-   above the stats takes no part in it.
+   The finish summary: the ride in four headline numbers — distance, time, top
+   speed, climb — big enough to read standing next to the bike. Two columns on
+   a phone (a 320 px sheet cannot hold four), four as soon as there is room. The
+   average and the stopped time are one quiet line under the grid, and the
+   sketch above the stats takes no part in it.
    -------------------------------------------------------------------------- */
 
 .og-ride__summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
-  margin: 12px 0 0;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--og-ride-border);
-  border-radius: 16px;
+  border-radius: var(--og-radius-object);
   background: var(--og-ride-border);
+}
+
+@media (min-width: 480px) {
+  .og-ride__summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .og-ride__summary-stat {
   display: grid;
   gap: 2px;
-  padding: 10px 12px;
+  min-width: 0;
+  padding: var(--og-space-3);
   background: var(--og-ride-surface);
 }
 
 .og-ride__summary dt {
   color: var(--og-ride-muted);
   font-size: var(--og-text-caption);
-  font-weight: 750;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .og-ride__summary dd {
@@ -2232,12 +2222,24 @@ html .og-ride {
   font-weight: 750;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
+  /* A headline number is never cut in half; the two columns are wide enough
+     for the widest stat at 320 px. */
+  white-space: nowrap;
 }
 
 .og-ride__summary-unit {
   color: var(--og-ride-muted);
-  font-size: var(--og-text-meta);
+  font-size: var(--og-text-caption);
   font-weight: 700;
+}
+
+/* Average and stopped: the same numbers, said on one line, so the four
+   headline figures keep the whole card. */
+.og-ride__summary-meta {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
 }
 
 /* "12 mi away": where the ride starts, from the rider (Explore cards). */
