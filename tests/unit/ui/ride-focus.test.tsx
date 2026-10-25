@@ -605,7 +605,8 @@ describe("dark chrome and honest states", () => {
     expect(then).toMatch(/border-top:\s*1px solid/);
     expect(then).toMatch(/padding-top:\s*8px/);
     expect(then).toMatch(/min-height:\s*30px/);
-    expect(then).toMatch(/font-size:\s*15px/);
+    // v2 §1: the ride's second line is the page's body size, not a sixth size.
+    expect(then).toMatch(/font-size:\s*var\(--og-text-body\)/);
     expect(then).toMatch(/font-weight:\s*600/);
     // Reduced motion has nothing to stop: the row appears instantly, always.
     expect(then).not.toMatch(/(animation|transition)[\w-]*\s*:/);
@@ -618,7 +619,7 @@ describe("dark chrome and honest states", () => {
     const exit = ruleIn(globals, ".og-ride__maneuver-exit");
     expect(exit).toMatch(/width:\s*24px/);
     expect(exit).toMatch(/height:\s*24px/);
-    expect(exit).toMatch(/font-size:\s*13px/);
+    expect(exit).toMatch(/font-size:\s*var\(--og-text-caption\)/);
     expect(exit).toMatch(/font-weight:\s*800/);
     expect(exit).toMatch(/font-variant-numeric:\s*tabular-nums/);
 
@@ -1437,6 +1438,8 @@ describe("12 §10 touch targets", () => {
     const action = rule(".og-ride__action");
     expect(action).toMatch(/min-height:\s*56px/);
     expect(action).toMatch(/min-width:\s*56px/);
+    // The off-route recovery's labels are the page's body size, not 15 px.
+    expect(action).toMatch(/font-size:\s*var\(--og-text-body\)/);
     // DV-10: the strip's end button and Re-center are glove-sized too.
     const end = rule(".og-ride__strip-end");
     expect(end).toMatch(/width:\s*56px/);
@@ -1533,7 +1536,8 @@ describe("12 §10 touch targets", () => {
     // there is nothing for `prefers-reduced-motion` to stop.
     const recording = rule('.og-ride-metrics__toggle[data-recording="true"]');
     expect(recording).not.toMatch(/animation|transition/);
-    expect(rule(".og-ride__off-route-distance")).toMatch(/font-size:\s*15px/);
+    // The measured offset is the page's body size (design system v2 §1).
+    expect(rule(".og-ride__off-route-distance")).toMatch(/font-size:\s*var\(--og-text-body\)/);
   });
 });
 
@@ -1718,7 +1722,8 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     };
     expect(rule(".og-ride-metrics__slot")).toMatch(/min-height:\s*56px/);
     expect(rule(".og-ride-metrics__toggle")).toMatch(/height:\s*56px/);
-    expect(rule(".og-ride-metric-picker__option")).toMatch(/min-height:\s*52px/);
+    // The ride tier is 56 px (12 §10); the picker is part of the ride.
+    expect(rule(".og-ride-metric-picker__option")).toMatch(/min-height:\s*56px/);
     expect(rule(".og-ride-metrics__value")).toMatch(/tabular-nums/);
     // §2.4: no animation on the strip at all, so reduced motion has nothing to stop.
     const block = css.slice(css.indexOf("Ride instrument strip"), css.indexOf("The right-hand rail"));
@@ -1755,5 +1760,94 @@ describe("Free Ride recording controls", () => {
     act(() => store.setState({ navigation, viewModel, savedSummaryRideId: RIDE_ID }));
     expect(screen.getByText("Free Ride summary saved")).toBeVisible();
     expect(screen.getByRole("link", { name: "View in My rides" })).toHaveAttribute("href", "/rides");
+  });
+});
+
+describe("the ride screen's number scale and controls (small-screen design system v2 §5)", () => {
+  const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+  const rule = (selector: string): string => {
+    const start = css.indexOf(`${selector} {`);
+    expect(start).toBeGreaterThan(-1);
+    return css.slice(start, css.indexOf("}", start));
+  };
+
+  it("reads the maneuver and the street at their own sizes, not a sixth guess", () => {
+    const root = rule(".og-ride");
+    // The ride scale lives once, on the ride root: 34 px for the distance and
+    // 24 px for a readout, with the unit on the page's 12 px caption size.
+    expect(root).toMatch(/--og-ride-text-maneuver:\s*34px/);
+    expect(root).toMatch(/--og-ride-text-readout:\s*24px/);
+
+    const distance = rule(".og-ride__maneuver-distance");
+    expect(distance).toMatch(/font-size:\s*var\(--og-ride-text-maneuver\)/);
+    expect(distance).toMatch(/font-weight:\s*700/);
+    expect(distance).toMatch(/tabular-nums/);
+
+    const street = rule(".og-ride__maneuver-action");
+    expect(street).toMatch(/font-size:\s*var\(--og-text-headline\)/);
+    expect(street).toMatch(/font-weight:\s*700/);
+    // A long road name wraps instead of being clamped away.
+    expect(street).not.toMatch(/-webkit-line-clamp/);
+    expect(street).not.toMatch(/text-overflow/);
+
+    expect(rule(".og-ride-metrics__value")).toMatch(/font-size:\s*var\(--og-ride-text-readout\)/);
+    expect(rule(".og-ride-metrics__value")).toMatch(/font-variant-numeric:\s*tabular-nums/);
+    expect(rule(".og-ride-metrics__unit")).toMatch(/font-size:\s*var\(--og-text-caption\)/);
+  });
+
+  it("never clips a readout: the value is shown whole, the caption wraps", () => {
+    const reading = rule(".og-ride-metrics__reading");
+    expect(reading).toMatch(/overflow:\s*visible/);
+    expect(reading).not.toMatch(/text-overflow/);
+
+    const caption = rule(".og-ride-metrics__caption");
+    expect(caption).toMatch(/white-space:\s*normal/);
+    expect(caption).not.toMatch(/text-overflow/);
+
+    // The only step-down is the seven-character clock, and it lands on the page
+    // headline size rather than a number nobody can read.
+    const long = rule('.og-ride-metrics__reading[data-long="true"] .og-ride-metrics__value');
+    expect(long).toMatch(/font-size:\s*var\(--og-text-headline\)/);
+
+    // Every readout rule is on a token: no raw font sizes left in this block.
+    for (const selector of [
+      ".og-ride-metrics__value",
+      ".og-ride-metrics__unit",
+      ".og-ride-metrics__caption",
+    ]) {
+      expect(rule(selector)).not.toMatch(/font-size:\s*\d/);
+    }
+  });
+
+  it("keeps one right-hand control column at 56 px, with End ride in it", async () => {
+    const rail = rule(".og-ride__rail-button");
+    expect(rail).toMatch(/width:\s*56px/);
+    expect(rail).toMatch(/height:\s*56px/);
+    // Side by side, so the column still clears the card on a 640 px phone.
+    expect(rule(".og-ride__rail-zoom")).toMatch(/grid-auto-flow:\s*column/);
+    expect(rule(".og-ride__rail-zoom")).toMatch(/grid-auto-columns:\s*56px/);
+    expect(rule(".og-ride__rail-button--end")).toMatch(/color:\s*var\(--og-danger-light\)/);
+
+    await harness({ position: "fresh" });
+    const end = screen.getByTestId("ride-end");
+    expect(end).toHaveClass("og-ride__rail-button");
+    expect(end).toHaveAccessibleName("End this ride");
+    // The strip holds readouts and the sheet toggle only; nothing beside them
+    // squeezes a 24 px reading below the width it needs.
+    expect(end.closest(".og-ride__strip")).toBeNull();
+    const strip = screen.getByTestId("ride-strip").closest(".og-ride__strip");
+    expect(strip).not.toBeNull();
+    expect(strip?.querySelectorAll(".og-ride-metrics__slot")).toHaveLength(3);
+    expect(strip?.querySelector(".og-ride__strip-end")).toBeNull();
+  });
+
+  it("leaves the map full-bleed, with the card and the strip floating over it", () => {
+    const map = rule(".og-ride__map");
+    expect(map).toMatch(/position:\s*absolute/);
+    expect(map).toMatch(/inset:\s*0/);
+    // The chrome is overlays, not a layout that shrinks the map, and the strip
+    // is sized to its 56 px content (56 + 10 padding + 2 border).
+    expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*68px/);
+    expect(rule(".og-ride__strip")).toMatch(/position:\s*absolute/);
   });
 });

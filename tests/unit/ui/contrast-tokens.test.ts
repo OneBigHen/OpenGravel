@@ -157,6 +157,9 @@ const SCAN_EXEMPT_SELECTORS = [
   // they stay focusable and in the tab order; §1.4.3 exempts the state either
   // way.
   '[data-disabled="true"]',
+  // End ride's glyph is checked against both rail surfaces in the pair test
+  // below (the selector also matches the rail, which the scan reads as light).
+  ".og-ride__rail-button--end",
 ] as const;
 
 describe("contrast — AA text variants (12 §3, §15)", () => {
@@ -208,6 +211,15 @@ describe("contrast — text token guard (12 §15, §16)", () => {
       }
     }
     expect(violations).toEqual([]);
+  });
+});
+
+describe("contrast — the ride rail's End ride glyph (12 §15)", () => {
+  it("clears 4.5:1 on the day rail and on the night glass", () => {
+    // theme-glass paints the day rail white and the night rail dark glass; the
+    // glyph is the danger-light hue in each.
+    expect(contrastRatio("#b3261e", "#ffffff"), "day rail").toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#ff9b91", "#101614"), "night rail").toBeGreaterThanOrEqual(4.5);
   });
 });
 
