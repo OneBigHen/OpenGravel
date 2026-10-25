@@ -19,6 +19,9 @@
  * - **Unknown stays unknown** (§2: progress, ETA and remaining distance come
  *   from the 8.2 matching engine). With no answer the surface says so; it does
  *   not print `0 mi`, and it does not draw a progress bar it cannot justify.
+ *   Off the line the matcher's projection is not the rider's place on the
+ *   route, so miles and minutes left are withheld there too rather than
+ *   answered "0 left" from a loop's closing miles.
  * - **The turn's distance is a measurement, not a memory.** The stored
  *   `instruction.distanceMeters` is the distance at issue time; the card shows
  *   the engine's live distance for the same instruction identity when the
@@ -1085,6 +1088,26 @@ export function buildRideFocusViewModel(
   const unplaced = navigation.offRouteState === "uncertain" && navigation.aheadGuidanceSuspended;
   const currentTelemetry =
     position.quality === "stale" || position.quality === "unavailable" || unplaced ? null : telemetry;
+  /**
+   * Miles and minutes left are the matcher's projection of the rider onto the
+   * line. Off the line that projection is the nearest point on it, which on a
+   * loop can be the closing miles: the strip then read "0.0 mi / 0 min" while
+   * the rider was still 900 ft off the route with the ride nowhere near done.
+   * So the numbers a projection feeds are withheld (`—`) until the matcher
+   * holds the rider on the line again; what it did measure — the offset — stays.
+   */
+  const routeAnswer =
+    currentTelemetry === null ||
+    navigation.offRouteState === null ||
+    navigation.offRouteState === "on-route"
+      ? currentTelemetry
+      : {
+          ...currentTelemetry,
+          routeProgress: null,
+          remainingDistanceMeters: null,
+          remainingDurationSeconds: null,
+          etaIso: null,
+        };
   const now = input.now ?? new Date().toISOString();
   const mapReady = input.mapReady ?? true;
   const speedLimit = navigation.activity === "guided" ? speedLimitOf(currentTelemetry, navigation.position) : null;
@@ -1094,8 +1117,8 @@ export function buildRideFocusViewModel(
     moving: navigation.activity === "guided" || navigation.activity === "free" || navigation.activity === "track",
     guidance: guidanceOf(navigation, currentTelemetry),
     position,
-    progress: progressOf(navigation, currentTelemetry),
-    secondary: secondaryOf(currentTelemetry),
+    progress: progressOf(navigation, routeAnswer),
+    secondary: secondaryOf(routeAnswer),
     recording: recordingOf(
       navigation,
       position,
@@ -1131,7 +1154,7 @@ export function buildRideFocusViewModel(
           },
     metrics: buildRideMetricStrip({
       navigation,
-      telemetry: currentTelemetry,
+      telemetry: routeAnswer,
       recordingSummary: input.recordingSummary ?? null,
       recordingTelemetry: input.recordingTelemetry ?? null,
       liveTelemetry: input.liveTelemetry ?? null,
