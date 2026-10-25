@@ -29,13 +29,16 @@ import {
 } from "@/application/roads/surface-evidence";
 import type { SurfaceAssessment, SurfaceClass } from "@/domain/roads/surface";
 import {
+  busyRoadShare,
   CURVINESS_LABELS,
   curvatureLabel,
   curvinessLevel,
+  curvyMeters,
   surfaceMixLabel,
   surfaceRuns,
   type SurfaceRun,
   surfaceShares,
+  unpavedMeters,
 } from "@/application/roads/engine-road-evidence";
 import type { MapObjectRef } from "@/application/map/types";
 import { routeLegs, type RouteLeg } from "@/domain/route/legs";
@@ -143,6 +146,22 @@ export const DISABLED_MISSING_START = "Search for a start, or set it on the map.
 export const DISABLED_MISSING_FINISH = "Search for a destination, or choose it on the map.";
 export const DISABLED_IN_FLIGHT = "Your ride is on its way — one moment.";
 
+/**
+ * The measured quantities behind a phone option's one-word character
+ * (small-screen design system v2 §3): how many miles of the line bend, how many
+ * are unpaved, and how much of it is on a busy road. Miles are rounded to the
+ * tenth the card prints, so two routes a rider cannot tell apart never get
+ * called against each other. `null` is unmeasured — never a low value.
+ */
+export interface RouteCardMeasurements {
+  /** Miles of line through bends, to a tenth. */
+  readonly curvyMi: number | null;
+  /** Miles of gravel or dirt, to a tenth. */
+  readonly unpavedMi: number | null;
+  /** Share of the line on a busy road, `0..1`. */
+  readonly busyShare: number | null;
+}
+
 /** One route choice (04 §11). */
 export interface RouteCardVm {
   readonly routeId: RouteCandidateId;
@@ -186,6 +205,11 @@ export interface RouteCardVm {
    * never `0` by implication (`OGV-D-251`).
    */
   readonly unknownSurfaceMi: number | null;
+  /**
+   * The numbers the one-word option comparison reads. Optional for injected
+   * view models; absent is unmeasured, so no word is claimed from it.
+   */
+  readonly measurements?: RouteCardMeasurements;
   /**
    * The DOM id of this card's explanation region, so the `Why this ride?`
    * control and the region it expands are matched by construction rather than by
@@ -702,6 +726,8 @@ function routeCards(
     const curviness = curvinessLevel(candidate.evidence["curvature"]);
     const strip = surfaceShares(candidate.evidence["surfaceMix"]);
     const runs = surfaceRuns(candidate.evidence["surfaceMix"]);
+    const curvy = curvyMeters(candidate.evidence["curvature"]);
+    const unpaved = unpavedMeters(candidate.evidence["surfaceMix"]);
     return {
       routeId: candidate.id,
       notices: candidate.warnings.filter(warning => warning.code === "destination-final-approach").map(warning => warning.message),
@@ -730,6 +756,11 @@ function routeCards(
         unverifiedMeters === null
           ? null
           : Number((unverifiedMeters / METERS_PER_MILE).toFixed(1)),
+      measurements: {
+        curvyMi: milesToTenth(curvy),
+        unpavedMi: milesToTenth(unpaved),
+        busyShare: busyRoadShare(candidate.evidence["busyRoads"]),
+      },
       whyKey: `why-${candidate.id}`,
       trafficLabel:
         ownTraffic === "Traffic unknown" && routeTraffic?.routeId === candidate.id
@@ -738,6 +769,11 @@ function routeCards(
       isSelected: candidate.id === selectedRouteId,
     };
   });
+}
+
+/** Miles to the tenth the card prints, or `null` when the metres were not measured. */
+function milesToTenth(meters: number | null): number | null {
+  return meters === null ? null : Number((meters / METERS_PER_MILE).toFixed(1));
 }
 
 function trafficLabelFor(candidate: RouteCandidate): string {

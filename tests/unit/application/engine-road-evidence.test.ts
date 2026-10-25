@@ -9,10 +9,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { ProviderRoadSummary } from "@/application/planner/route-provider";
+import type { ProviderRoadRun, ProviderRoadSummary } from "@/application/planner/route-provider";
 import {
   backroadShare,
+  busyRoadShare,
   curvatureLabel,
+  engineBusyRoads,
   engineCurvature,
   engineRoadEvidence,
   engineRoadCharacter,
@@ -237,6 +239,61 @@ describe("surface runs", () => {
   });
 });
 
+
+/** One road run with only the fields the busy-road rule reads set explicitly. */
+function roadRun(
+  meters: number,
+  roadClass: string,
+  urbanDensity = "rural",
+  overrides: Partial<ProviderRoadRun> = {},
+): ProviderRoadRun {
+  return {
+    meters,
+    durationSeconds: null,
+    surface: "asphalt",
+    roadClass,
+    roadEnvironment: "road",
+    urbanDensity,
+    curvatureRatio: null,
+    toll: false,
+    ...overrides,
+  };
+}
+
+/** A summary whose ordered runs add up to its total, as the provider sends it. */
+function runSummary(runs: readonly ProviderRoadRun[]): ProviderRoadSummary {
+  const totalMeters = runs.reduce((sum, run) => sum + run.meters, 0);
+  return summary({
+    totalMeters,
+    surfaceByRoadClassMeters: { "asphalt|secondary": totalMeters },
+    roadRuns: runs,
+  });
+}
+
+describe("engine busy roads", () => {
+  it("measures the share on motorway, trunk, primary, their links and city streets", () => {
+    // 20 mi ridden: 5 primary, 2 through a city, 2 on a primary link, 11 quiet.
+    const routes = runSummary([
+      roadRun(5 * MILE, "primary"),
+      roadRun(2 * MILE, "tertiary", "city"),
+      roadRun(7 * MILE, "tertiary", "town"),
+      roadRun(4 * MILE, "residential"),
+      roadRun(2 * MILE, "secondary", "rural", { roadClassLink: true }),
+    ]);
+    expect(engineBusyRoads(routes)?.share).toBeCloseTo(0.45, 5);
+    expect(engineBusyRoads(routes)?.coverage).toBeCloseTo(1, 5);
+
+    const evidence = engineRoadEvidence(routes, "mixed");
+    expect(evidence["busyRoads"]?.status).toBe("estimated");
+    expect(busyRoadShare(evidence["busyRoads"])).toBeCloseTo(0.45, 3);
+  });
+
+  it("measures nothing from a class tally alone, where a town street would read quiet", () => {
+    expect(engineBusyRoads(summary())).toBeNull();
+    expect(engineRoadEvidence(summary(), "mixed")).not.toHaveProperty("busyRoads");
+    expect(busyRoadShare(undefined)).toBeNull();
+  });
+});
 
 describe("road character coverage", () => {
   it("orders road classes for a through ride and keeps service roads low", () => {
