@@ -140,6 +140,106 @@ describe("RoutePreparationSection", () => {
     expect(screen.queryByRole("group", { name: "Long-trip considerations" })).not.toBeInTheDocument();
     expect(screen.queryByTestId("long-trip-consideration-fuel")).not.toBeInTheDocument();
   });
+
+  describe("brief", () => {
+    function weatherItem(
+      state: RoutePreparationItem["state"],
+      display: string,
+      primaryAlert = false,
+    ): RoutePreparationItem {
+      return {
+        kind: "weather",
+        state,
+        relevance: "conditional",
+        reason: "Forecast received for the selected route.",
+        provenance: "Source: weather service · updated 14:32",
+        data: { display, freshnessLabel: state === "ready" ? "Fresh" : "Stale", ...(primaryAlert ? { primaryAlert: { severity: "Severe" } } : {}) },
+      };
+    }
+
+    function brief(items: readonly RoutePreparationItem[]): RoutePreparation {
+      return { registeredProviderCount: 1, capabilities: [], items };
+    }
+
+    it("says the conditions at the start in one line, with no rows, badges or source", () => {
+      render(<RoutePreparationSection variant="brief" preparation={brief([weatherItem("ready", "Sunny · 72°F")])} />);
+
+      expect(screen.getByTestId("route-conditions")).toHaveTextContent(/^Sunny · 72°F at the start$/);
+      expect(screen.queryByRole("heading", { name: "Before you ride" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("term")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Source:/)).not.toBeInTheDocument();
+      expect(screen.queryByText("Fresh")).not.toBeInTheDocument();
+      expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+    });
+
+    it("stays silent for a forecast past its freshness window instead of wearing a Stale badge", () => {
+      render(<RoutePreparationSection variant="brief" preparation={brief([weatherItem("stale", "Sunny · 72°F")])} />);
+
+      expect(screen.queryByTestId("route-conditions")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Sunny/)).not.toBeInTheDocument();
+    });
+
+    it("still says a live weather alert, which carries its own age", () => {
+      render(<RoutePreparationSection
+        variant="brief"
+        preparation={brief([weatherItem("stale", "Severe Thunderstorm Watch — through 8:00 PM (updated 12 min ago)", true)])}
+      />);
+
+      expect(screen.getByTestId("route-conditions"))
+        .toHaveTextContent("Severe Thunderstorm Watch — through 8:00 PM (updated 12 min ago)");
+    });
+
+    it("leaves an alert note unqualified by the start point", () => {
+      render(<RoutePreparationSection variant="brief" preparation={brief([{
+        kind: "weather",
+        state: "ready",
+        relevance: "conditional",
+        reason: "Forecast received for the selected route.",
+        provenance: "Source: weather service · updated 14:32",
+        data: { display: "Sunny · 72°F · Active alert timing unavailable", alerts: [{ event: "Flood Watch" }], freshnessLabel: "Fresh" },
+      }])} />);
+
+      expect(screen.getByTestId("route-conditions"))
+        .toHaveTextContent(/^Sunny · 72°F · Active alert timing unavailable$/);
+    });
+
+    it("adds one warning line only when traffic would change the plan", () => {
+      const closure: RoutePreparationItem = {
+        kind: "traffic",
+        state: "ready",
+        relevance: "conditional",
+        reason: "Traffic was matched to this route.",
+        provenance: "Live traffic feed",
+        data: { display: "Road closure reported", roadClosure: true },
+      };
+      render(<RoutePreparationSection variant="brief" preparation={brief([weatherItem("ready", "Sunny · 72°F"), closure])} />);
+
+      const line = screen.getByTestId("route-conditions");
+      expect(line).toHaveTextContent("Sunny · 72°F at the start");
+      expect(line).toHaveTextContent("Road closure reported on this route");
+      expect(line.querySelectorAll("p")).toHaveLength(2);
+    });
+
+    it("renders nothing at all when there is nothing a rider can act on", () => {
+      render(<RoutePreparationSection variant="brief" preparation={brief([
+        weatherItem("unavailable", "Weather data is not available yet."),
+      ])} />);
+
+      expect(screen.queryByTestId("route-conditions")).not.toBeInTheDocument();
+      expect(screen.queryByText(/not available yet/i)).not.toBeInTheDocument();
+      expect(screen.queryByText("Clear", { exact: true })).not.toBeInTheDocument();
+    });
+
+    it("keeps the long-trip considerations that a rider has to act on", () => {
+      render(<RoutePreparationSection
+        variant="brief"
+        preparation={{ ...brief([weatherItem("ready", "Sunny · 72°F")]), considerations: longTripConsiderations }}
+      />);
+
+      expect(screen.getByRole("group", { name: "Long-trip considerations" })).toBeInTheDocument();
+      expect(screen.getByTestId("long-trip-consideration-fuel")).toHaveTextContent("Plan a fuel stop before the range gap.");
+    });
+  });
 });
 
 describe("trafficWarning", () => {
