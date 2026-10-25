@@ -21,6 +21,22 @@ describe("closeout layers sheet", () => {
     fireEvent.click(screen.getByTestId("map-lens-weather"));
     expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "weather"]);
   });
+  it("gives a lens row one icon tile, its words and a switch", () => {
+    const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
+    render(<MapLayersPanel enabled={["great-roads", "gravel", "viewpoints", "hillshade"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onToggleLens={vi.fn()} onClearAll={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+    for (const lens of screen.getAllByTestId(/^map-lens-/)) {
+      expect(lens.querySelectorAll(".og-layers__swatch")).toHaveLength(1);
+      expect(lens.querySelectorAll(".og-layers__name")).toHaveLength(1);
+      expect(lens.querySelectorAll(".og-layers__legend")).toHaveLength(1);
+      expect(lens.querySelectorAll(".og-switch")).toHaveLength(1);
+      // Nothing else may sit in the row: a leftover tile, badge or absolutely
+      // positioned circle was what covered the icon.
+      expect(lens.children).toHaveLength(4);
+    }
+    expect(screen.getByTestId("map-lens-fun").querySelector(".og-switch")).toHaveAttribute("data-on", "true");
+    expect(screen.getByTestId("map-lens-weather").querySelector(".og-switch")).toHaveAttribute("data-on", "false");
+  });
   it("shows stale frame time, unavailable primary and empty gravel", () => {
     panel({ "weather-radar": "stale", "public-land": "unavailable", gravel: "ready" });
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));

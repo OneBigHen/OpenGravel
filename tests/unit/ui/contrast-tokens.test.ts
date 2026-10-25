@@ -143,6 +143,8 @@ const SCAN_EXEMPT_SELECTORS = [
   ".og-places-card__actions button",
   // decorative, aria-hidden layer glyphs drawn in the layer's own colour
   ".og-layers__swatch",
+  // the chosen map style's check: paper on the spruce fill, pair-checked below
+  ".og-layers__check",
   ".og-info-card__glyph",
   // text over the ink scrim on the map: pair-checked below against the worst
   // case (the 74% ink scrim over the lightest basemap)
@@ -343,6 +345,13 @@ describe("contrast — filled controls keep their text at 4.5:1 (12 §15)", () =
         text: "--og-paper",
         background: "--og-ember-strong",
         rule: "12 §15 text-on-fill; the active-layer count",
+      },
+      {
+        // The chosen map style's tick sits on the Spruce fill of its circle.
+        selector: ".og-layers__check",
+        text: declaredVar(exactRuleBody(".og-layers__check"), "color") ?? "",
+        background: "--og-deep-spruce",
+        rule: "12 §15 text-on-fill; the chosen map style",
       },
       {
         selector: ".og-update-failure__close",

@@ -16,6 +16,8 @@ import type {
   PlacesOverlayStatus,
 } from "@/application/places";
 
+import { LayerSwitch } from "@/ui/layers/LayerSwitch";
+
 import { placesStatusMessage } from "./PlacesControl";
 
 const WINDOWS: readonly { readonly value: PlaceWindow; readonly label: string }[] = [
@@ -92,7 +94,7 @@ export function PlacesSheetRows({
                 {metaLine(enabled, status, reason, count, scope)}
               </span>
             </span>
-            <span className="og-layers__toggle" aria-hidden="true" />
+            <LayerSwitch on={enabled} />
           </button>
           {enabled ? (
             <div className="og-layers__filters">
