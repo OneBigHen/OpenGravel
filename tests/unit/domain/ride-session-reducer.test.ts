@@ -285,6 +285,8 @@ function eventFor(
       return completedEvent(tick);
     case "session.abandoned":
       return abandonedEvent(tick);
+    case "recording.started":
+      return { type: "recording.started", at: at(tick), recordingId: state.recordingId! };
     case "recording.discarded":
       return { type: "recording.discarded", at: at(tick) };
     case "suggestions.changed":

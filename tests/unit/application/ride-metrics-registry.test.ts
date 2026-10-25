@@ -898,3 +898,21 @@ describe("Free Ride live telemetry", () => {
     expect(shownMetricIds(stored, "free-ride", live)).toEqual(stored);
   });
 });
+
+
+describe("route readouts waiting for GPS", () => {
+  it.each(["stale", "unavailable"] as const)("finds GPS before any fix even with %s quality", (quality) => {
+    const position = { ...context().position, quality, observedAtMs: null };
+    const reading = read("route.eta", { position, route: { answer: null } });
+    expect(reading.state).toBe("waiting");
+    expect(reading.accessibleDetail).toContain("Finding GPS");
+    expect(reading.accessibleDetail).not.toContain("stale");
+  });
+
+  it("reports stale GPS only after a previous fix", () => {
+    const position = { ...context().position, quality: "stale" as const, observedAtMs: NOW_MS - 60_000 };
+    const reading = read("route.eta", { position, route: { answer: null } });
+    expect(reading.state).toBe("stale");
+    expect(reading.accessibleDetail).toContain("GPS is stale");
+  });
+});

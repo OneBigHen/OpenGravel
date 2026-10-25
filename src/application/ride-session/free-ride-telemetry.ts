@@ -77,6 +77,8 @@ export interface FreeRideTelemetry {
    * `null` when the session records (the recording is the source) or never rode Free Ride.
    */
   snapshot(state: Pick<RideSessionState, "sessionId" | "activity" | "resumeActivity" | "recordingId">): RecordingTelemetry | null;
+  /** Keeps aggregate statistics when the rider explicitly discards a recording. */
+  adoptRecording(sessionId: string, state: RecordingTelemetryState): void;
   /** Writes any unsaved state now (pause, stop, the page hiding). */
   flush(): void;
   /** The ride ended: forget the state here and in storage. */
@@ -167,6 +169,29 @@ export function createFreeRideTelemetry(options: FreeRideTelemetryOptions = {}):
         entry.accumulator = createRecordingTelemetry();
       }
       return entry.accumulator.snapshot();
+    },
+
+    adoptRecording(sessionId, state) {
+      const entry = load(sessionId);
+      const prior = entry.accumulator?.state();
+      const combined = prior === undefined ? state : {
+        ...state,
+        distance: prior.distance + state.distance,
+        movingMs: prior.movingMs + state.movingMs,
+        maxSpeed: prior.maxSpeed === null ? state.maxSpeed : state.maxSpeed === null ? prior.maxSpeed : Math.max(prior.maxSpeed, state.maxSpeed),
+        gain: prior.gain + state.gain,
+        loss: prior.loss + state.loss,
+        altitudeSamples: prior.altitudeSamples + state.altitudeSamples,
+        rejected: {
+          poorAccuracy: prior.rejected.poorAccuracy + state.rejected.poorAccuracy,
+          jumps: prior.rejected.jumps + state.rejected.jumps,
+          speedSpikes: prior.rejected.speedSpikes + state.rejected.speedSpikes,
+          verticalJumps: prior.rejected.verticalJumps + state.rejected.verticalJumps,
+        },
+      };
+      entry.accumulator = createRecordingTelemetry(suspendRecordingTelemetry(combined));
+      entry.dirty = true;
+      write();
     },
 
     flush() {

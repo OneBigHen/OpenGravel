@@ -343,6 +343,11 @@ export type RideFocusTelemetryProvider = (now: string) => RideFocusTelemetryInpu
 export interface RideFocusViewModelInput {
   readonly navigation: SessionNavigationState;
   readonly environment: RideFocusEnvironmentSnapshot;
+  /**
+   * Whether this Free Ride offers roads. A recording Free Ride is still a Free
+   * Ride; only a plain recording (suggestions off) is named "Recording".
+   */
+  readonly suggestions?: "on" | "off";
   /** `null` while the engine has no telemetry yet — not an empty answer. */
   readonly telemetry?: RideFocusTelemetryInput | null;
   /** Streamed trace summary; only present when RideSession references a recording. */
@@ -765,7 +770,7 @@ function positionOf(position: NavigationPosition): RideFocusPosition {
         : `updated ${age} ago`;
   return {
     quality: position.quality,
-    qualityLabel: label[position.quality],
+    qualityLabel: position.observedAt === null ? "Finding GPS" : label[position.quality],
     tone: tone[position.quality],
     hasCoordinate: position.coordinate !== null,
     ageText,
@@ -792,6 +797,7 @@ function offRouteDistanceTextOf(telemetry: RideFocusTelemetryInput | null): stri
 function guidanceOf(
   navigation: SessionNavigationState,
   telemetry: RideFocusTelemetryInput | null,
+  suggestions: "on" | "off" = "off",
 ): RideFocusGuidance {
   if (navigation.aheadGuidanceSuspended) {
     // Name the real cause (UX rework phase 6): a rider who is moving but off
@@ -826,7 +832,7 @@ function guidanceOf(
   if (instruction === null) {
     // A Free Ride or a recording has no route to follow: name the ride instead.
     const onRoute = navigation.activity === "guided" || navigation.activity === "track";
-    return { kind: "waiting", text: onRoute ? "Follow the route" : activityLabelOf(navigation) };
+    return { kind: "waiting", text: onRoute ? "Follow the route" : activityLabelOf(navigation, suggestions) };
   }
   return {
     kind: "maneuver",
@@ -915,7 +921,7 @@ function warningsOf(
       severity: "critical",
       text: "No GPS fix. Progress and ahead guidance are paused.",
     });
-  } else if (position.quality === "stale") {
+  } else if (position.quality === "stale" && position.hasCoordinate) {
     warnings.push({
       id: "gps-stale",
       severity: "caution",
@@ -1032,10 +1038,17 @@ const ACTIVITY_LABEL: Readonly<Record<SessionNavigationState["activity"], string
   completed: "Ride ended",
 };
 
-function activityLabelOf(navigation: SessionNavigationState): string {
+/**
+ * The ride's mode in a word. Recording has its own indicator, so a recorded
+ * guided ride still reads "Guided ride" and a recording Free Ride "Free ride";
+ * only the plain Record mode (a Free Ride with suggestions off) is "Recording".
+ */
+function activityLabelOf(navigation: SessionNavigationState, suggestions: "on" | "off" = "off"): string {
   if (navigation.activity === "paused") return ACTIVITY_LABEL.paused;
   if (navigation.recordingId === null) return ACTIVITY_LABEL[navigation.activity];
-  return navigation.activity === "completed" ? "Recorded ride" : "Recording";
+  if (navigation.activity === "completed") return "Recorded ride";
+  if (navigation.activity === "free" && suggestions === "off") return "Recording";
+  return ACTIVITY_LABEL[navigation.activity];
 }
 
 function terminalOf(
@@ -1113,9 +1126,9 @@ export function buildRideFocusViewModel(
   const speedLimit = navigation.activity === "guided" ? speedLimitOf(currentTelemetry, navigation.position) : null;
   return {
     activity: navigation.activity,
-    activityLabel: activityLabelOf(navigation),
+    activityLabel: activityLabelOf(navigation, input.suggestions),
     moving: navigation.activity === "guided" || navigation.activity === "free" || navigation.activity === "track",
-    guidance: guidanceOf(navigation, currentTelemetry),
+    guidance: guidanceOf(navigation, currentTelemetry, input.suggestions),
     position,
     progress: progressOf(navigation, routeAnswer),
     secondary: secondaryOf(routeAnswer),

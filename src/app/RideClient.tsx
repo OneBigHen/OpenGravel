@@ -239,6 +239,12 @@ export function RideClient({
       riderSettings: createLocalStorageRiderSettings(),
       freeRideTelemetry,
       recording,
+      saveSuggestionLine: async (line) => (await geometry.put({ kind: "line", coordinates: [...line] }, { kind: "route" })).geometryRef,
+      saveFreeRideSummary: async ({ state, telemetry, acceptedGeometryRefs }) => {
+        const loaded = await rides.loadRide(state.plan.rideId);
+        if (loaded === null || !loaded.ok) throw new Error("The ride document is unavailable.");
+        return library.saveFreeRideSummary({ document: loaded.document, sessionId: state.sessionId, telemetry, acceptedGeometryRefs });
+      },
       evaluateLiveSuggestion: evaluateSuggestion,
       returnPlanner,
       reroutePlanner: createGuidedReroutePlanner({

@@ -13542,3 +13542,15 @@ a.og-secondary {
     font-size: clamp(24px, 7vh, 34px);
   }
 }
+
+
+/* Readout utilities: keep every digit and unit visible in narrow ride strips. */
+.og-ride-metrics .overflow-visible { overflow: visible; }
+.og-ride-metrics .shrink-0 { flex-shrink: 0; }
+.og-ride-metrics .tabular-nums { font-variant-numeric: tabular-nums; }
+@media (width < 640px) {
+  .og-ride-metrics .max-sm\:flex-col {
+    flex-direction: column;
+    align-items: center;
+  }
+}

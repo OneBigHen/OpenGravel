@@ -62,6 +62,7 @@ export const SESSION_EVENT_TYPES: readonly SessionTransitionEventType[] = [
   "session.resumed",
   "session.completed",
   "session.abandoned",
+  "recording.started",
   "recording.discarded",
   "suggestions.changed",
   "ride.revised",
@@ -182,6 +183,7 @@ export const SESSION_ACTIVITY_MATRIX: Readonly<
     ALLOWED,
     denied("illegal-transition", ENDED),
   ),
+  "recording.started": row(ALLOWED, ALLOWED, ALLOWED, ALLOWED, denied("illegal-transition", ENDED)),
   "recording.discarded": row(
     ALLOWED,
     ALLOWED,
