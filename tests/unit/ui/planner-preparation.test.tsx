@@ -333,7 +333,8 @@ describe("PlannerPreparation", () => {
 
   it("ends the briefing line with the time it gets dark, not a sunset sentence", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 5, 21, 12, 0));
+    // Noon in Pennsylvania (EDT), whatever zone the test runner uses.
+    vi.setSystemTime(new Date("2026-06-21T16:00:00Z"));
     try {
       const registry = providers();
       render(
