@@ -146,10 +146,12 @@ export function PlannerWorkspaceDock({
   const swallowClick = useRef(false);
   const swipeHandlers = {
     onPointerDown: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      if (!(event.target instanceof Element) || !event.target.closest(".og-sheet__handle")) return;
+      // Phone: the 48px handle drags the sheet. Elsewhere any touch on the head swipes it.
+      const handle = event.target instanceof Element ? event.target.closest<HTMLElement>(".og-sheet__handle") : null;
+      if (phone ? handle === null : event.pointerType === "mouse") return;
       const height = event.currentTarget.parentElement?.getBoundingClientRect().height ?? 0;
       swipe.current = { y: event.clientY, id: event.pointerId, height };
-      (event.target.closest(".og-sheet__handle") as HTMLElement).setPointerCapture(event.pointerId);
+      if (phone) handle?.setPointerCapture(event.pointerId);
     },
     onPointerMove: (event: ReactPointerEvent<HTMLDivElement>): void => {
       const start = swipe.current;
@@ -163,7 +165,6 @@ export function PlannerWorkspaceDock({
       swipe.current = null;
       setDragHeight(null);
       if (start === null || start.id !== event.pointerId) return;
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
       const dy = event.clientY - start.y;
       if (Math.abs(dy) >= SWIPE_PX) onStepSheet(dy < 0 ? "up" : "down");
       // Pointer-generated clicks are synchronous with release. Keyboard taps
@@ -206,7 +207,7 @@ export function PlannerWorkspaceDock({
         data-has-ride={hasChoices ? "true" : "false"}
         data-dragging={dragHeight !== null ? "true" : undefined}
         aria-label="Ride planning"
-        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px`, ...(dragHeight === null ? {} : { height: dragHeight, maxHeight: dragHeight }) } as CSSProperties}
+        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px`, ...(dragHeight === null ? {} : { "--og-sheet-drag-h": `${dragHeight}px` }) } as CSSProperties}
       >
         <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...swipeHandlers}>
           <PlannerWorkspaceStatus {...status} />

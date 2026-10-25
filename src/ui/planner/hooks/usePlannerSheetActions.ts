@@ -2,6 +2,7 @@ import { useCallback } from "react";
 
 import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
+import { isPhoneViewport } from "@/ui/planner/usePhonePlanner";
 
 /** The compact sheet's height changes: tap the handle, or swipe/drag the head. */
 export function usePlannerSheetActions(
@@ -18,7 +19,7 @@ export function usePlannerSheetActions(
 
   const onToggleSheet = useCallback((): void => {
     const state = plannerUiStore.getState();
-    if (window.matchMedia("(max-width: 760px)").matches) {
+    if (isPhoneViewport()) {
       state.setSheetDetent(state.sheetDetent === "expanded" ? "peek" : state.sheetDetent === "half" ? "expanded" : "half");
     } else state.toggleSheet(hasRide());
   }, [hasRide, plannerUiStore]);
@@ -26,7 +27,7 @@ export function usePlannerSheetActions(
   const onStepSheet = useCallback(
     (direction: "up" | "down"): void => {
       const state = plannerUiStore.getState();
-      if (window.matchMedia("(max-width: 760px)").matches) {
+      if (isPhoneViewport()) {
         const current = state.sheetDetent;
         state.setSheetDetent(direction === "up"
           ? current === "half" || current === "expanded" ? "expanded" : "half"
