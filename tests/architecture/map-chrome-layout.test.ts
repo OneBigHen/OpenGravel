@@ -104,19 +104,40 @@ describe("compact map chrome", () => {
     expect(declarationsFor(blocks, '[data-places-sheet="true"] .og-places-overlay--planner .og-places-control')["display"]).toBe("none");
   });
 
-  it("gives a phone sheet 56 px rows with a 24 px icon and a wrapping meta line", () => {
+  it("gives a phone sheet 56 px rows with one 24 px icon in a 40 px tile", () => {
     const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
     expect(declarationsFor(blocks, ".og-layers__switch")["min-height"]).toBe("56px");
-    expect(declarationsFor(blocks, ".og-layers__swatch")["width"]).toBe("24px");
+    expect(declarationsFor(blocks, ".og-layers__swatch")["width"]).toBe("40px");
+    expect(declarationsFor(blocks, ".og-layers__swatch")["font-size"]).toBe("24px");
     expect(declarationsFor(blocks, ".og-layers__legend")["white-space"]).toBe("normal");
     expect(declarationsFor(blocks, ".og-layers__about")["display"]).toBe("none");
 
     const rowBlocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE_ROWS));
     expect(declarationsFor(rowBlocks, ".og-layers__lenses")["grid-template-columns"]).toBe("minmax(0, 1fr)");
     expect(declarationsFor(rowBlocks, ".og-layers__lens")["min-height"]).toBe("56px");
-    expect(declarationsFor(rowBlocks, ".og-layers__lens-glyph")["width"]).toBe("24px");
-    expect(declarationsFor(rowBlocks, ".og-layers__lens-hint")["white-space"]).toBe("normal");
-    expect(declarationsFor(rowBlocks, ".og-layers__lens .og-layers__toggle")["grid-column"]).toBe("3");
+    // Tile, words, switch: the row keeps its own column for the control so the
+    // switch can never float over the icon again.
+    expect(declarationsFor(rowBlocks, ".og-layers__lens")["grid-template-columns"]).toBe("40px minmax(0, 1fr) 40px");
+  });
+
+  it("draws every sheet switch as a track with a knob that moves to the green", () => {
+    const css = sourceOf("globals.css");
+    const track = declarationsFor([css], ".og-switch");
+    expect(track["width"]).toBe("40px");
+    expect(track["height"]).toBe("24px");
+    expect(track["border-radius"]).toBe("999px");
+
+    // Off is neutral; on is the primary green, and the knob has to travel so the
+    // state reads without relying on colour alone.
+    expect(declarationsFor([css], '.og-switch[data-on="true"]')["background"]).toBe("var(--og-go)");
+    expect(declarationsFor([css], '.og-switch[data-on="true"]::after')["transform"]).toBe("translateX(16px)");
+    expect(declarationsFor([css], ".og-switch::after")["width"]).toBe("16px");
+
+    // The old fake switch (a span with no knob of its own) must not come back.
+    expect(css).not.toContain("og-layers__toggle");
+    expect(css).not.toContain("og-layers__lens-glyph");
+    expect(declarationsFor([css], ".og-layers__lens .og-switch")["grid-column"]).toBe("3");
+    expect(declarationsFor([css], ".og-layers__lens .og-layers__swatch")["grid-row"]).toBe("1 / span 2");
   });
 
   it("leaves the short phone's right edge to the wrapped instrument column", () => {

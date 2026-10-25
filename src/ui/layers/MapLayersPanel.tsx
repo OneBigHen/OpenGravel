@@ -6,6 +6,10 @@
  * live conditions, roads, stops, land and access. Each row is a switch with
  * its colour, a one-line legend and a status; the source and its limits are
  * one tap away, because community-mapped data must never pass for authority.
+ *
+ * Every row — the four quick sets, the map style radios, the layers and the
+ * Places overlay — has the same three parts: one icon tile, the words, and the
+ * control on the right.
  */
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
@@ -20,6 +24,7 @@ import {
 } from "@/application/map-layers";
 
 import type { MapLayerStatus } from "./useMapLayers";
+import { LayerSwitch } from "./LayerSwitch";
 import { LOOK_LABEL, LOOK_NOTE, type BasemapLook } from "@/ui/map/basemap-look";
 
 /** The basemap style rows the sheet owns on a phone. */
@@ -132,9 +137,9 @@ function LayerRow({
         data-testid={`map-layer-${layer.id}`}
         onClick={onToggle}
       >
-        <svg className="og-layers__swatch" width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
-          <rect width="34" height="34" rx="10" fill={layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`} opacity={on ? 1 : 0.22} />
-          <text x="17" y="18" textAnchor="middle" dominantBaseline="middle" fill={on ? "var(--og-paper)" : "var(--og-ink)"}>{layer.glyph}</text>
+        <svg className="og-layers__swatch" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+          <rect width="40" height="40" rx="12" fill={layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`} opacity={on ? 1 : 0.22} />
+          <text x="20" y="21" textAnchor="middle" dominantBaseline="middle" fill={on ? "var(--og-paper)" : "var(--og-ink)"}>{layer.glyph}</text>
         </svg>
         <span className="og-layers__text">
           <span className="og-layers__name">{layer.name}</span>
@@ -143,7 +148,7 @@ function LayerRow({
         <span className="og-layers__status" data-status={status} role="status" aria-live="polite">
           {label}
         </span>
-        <span className="og-layers__toggle" aria-hidden="true" />
+        <LayerSwitch on={on} />
       </button>
       <button
         type="button"
@@ -247,10 +252,10 @@ export function MapLayersPanel({
                         data-testid={`map-lens-${lens.id}`}
                         onClick={() => onToggleLens(lens.layers)}
                       >
-                        <span className="og-layers__lens-glyph" aria-hidden="true">{lens.glyph}</span>
-                        <span className="og-layers__lens-name">{lens.name}</span>
-                        <span className="og-layers__lens-hint">{lens.hint}</span>
-                        <span className="og-layers__toggle" aria-hidden="true" />
+                        <span className="og-layers__swatch" aria-hidden="true">{lens.glyph}</span>
+                        <span className="og-layers__name">{lens.name}</span>
+                        <span className="og-layers__legend">{lens.hint}</span>
+                        <LayerSwitch on={on} />
                       </button>
                     </li>
                   );
@@ -287,7 +292,7 @@ export function MapLayersPanel({
                                 {cameraRouteAvailable ? "Within about 3 mi of the selected route" : "Select a route first"}
                               </small>
                             </span>
-                            <span className="og-layers__toggle" aria-hidden="true" />
+                            <LayerSwitch on={cameraRouteOnly} />
                           </button>
                         ) : null
                       }

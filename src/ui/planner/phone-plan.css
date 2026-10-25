@@ -26,11 +26,8 @@
   .og-planner .og-layers__button-label { display: none; }
   .og-planner .og-layers__panel { position: fixed; inset: auto 0 var(--og-tabbar-h); width: 100%; max-height: calc(85dvh - var(--og-tabbar-h)); border-radius: 20px 20px 0 0; }
   .og-planner:has(.og-layers[data-open="true"]) .og-planner__dock { visibility: hidden; }
-  .og-planner .og-layers__lenses { display: flex; flex-direction: column; gap: var(--og-space-2); }
-  .og-planner .og-layers__lens { min-height: 56px; text-align: left; display: grid; grid-template-columns: 24px 1fr; padding: var(--og-space-2) var(--og-space-3); border-radius: 0; box-shadow: none; }
-  .og-planner .og-layers__lens-glyph { grid-row: span 2; font-size: var(--og-text-headline); }
-  .og-planner .og-layers__lens-name, .og-planner .og-layers__name { font-size: var(--og-text-body); line-height: 1.4; }
-  .og-planner .og-layers__lens-hint, .og-planner .og-layers__legend { font-size: var(--og-text-meta); white-space: normal; overflow: visible; line-height: 1.35; }
+  /* The sheet's rows (icon tile · words · switch) are laid out by globals.css,
+     which already gives phones 56 px rows; only the hit area is tightened here. */
   .og-planner .og-layers :is(button, summary) { min-height: 48px; min-width: 48px; }
   .og-planner .og-layers__head h2 { font-size: var(--og-text-headline); }
   .og-planner .og-layers__body { font-size: var(--og-text-body); }
