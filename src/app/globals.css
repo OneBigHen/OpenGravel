@@ -11519,15 +11519,15 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   pointer-events: none;
 }
 
-/* Two lines on a phone (the number, then its unit) so a reading stays whole at
-   320 px; one line with the unit beside it as soon as there is room. Never
-   `overflow: hidden` and never an ellipsis: §5's 24 px number is not clipped. */
+/* One line, always: the number with its small unit beside it ("47 mph",
+   "10:12 AM"), never stacked. Never `overflow: hidden` and never an ellipsis:
+   §5's 24 px number is not clipped. */
 .og-ride-metrics__reading {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: baseline;
   justify-content: center;
-  gap: 0;
+  gap: 3px;
   max-width: 100%;
   overflow: visible;
   white-space: nowrap;
@@ -11566,17 +11566,8 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   letter-spacing: 0.02em;
   line-height: 1.15;
   text-align: center;
-  text-transform: uppercase;
-  white-space: normal;
+  white-space: nowrap;
   color: var(--og-ride-muted);
-}
-
-@media (min-width: 640px) {
-  .og-ride-metrics__reading {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 3px;
-  }
 }
 
 /* A held reading is dimmed, not shouted; its accessible name says it is stale. */

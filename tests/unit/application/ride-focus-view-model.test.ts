@@ -108,8 +108,10 @@ function view(input: {
   readonly mapReady?: boolean;
   readonly routeWarnings?: Parameters<typeof buildRideFocusViewModel>[0]["routeWarnings"];
   readonly suggestions?: "on" | "off";
+  readonly heldRouteTelemetry?: Parameters<typeof buildRideFocusViewModel>[0]["heldRouteTelemetry"];
 } = {}) {
   return buildRideFocusViewModel({
+    ...(input.heldRouteTelemetry === undefined ? {} : { heldRouteTelemetry: input.heldRouteTelemetry }),
     ...(input.suggestions === undefined ? {} : { suggestions: input.suggestions }),
     navigation: input.navigation ?? navigation(),
     environment: input.environment ?? environment(),
@@ -950,12 +952,48 @@ describe("progress and telemetry (08 §2, §5)", () => {
     const [, distanceSlot, timeSlot] = result.metrics.slots;
     expect(distanceSlot?.reading.id).toBe("route.distanceRemaining");
     expect(distanceSlot?.reading.displayValue).toBe("—");
-    expect(timeSlot?.reading.id).toBe("route.timeRemaining");
+    expect(timeSlot?.reading.id).toBe("route.eta");
     expect(timeSlot?.reading.displayValue).toBe("—");
     // What the engine did measure — how far off the line — is still said.
     expect(result.guidance.kind).toBe("suspended");
     if (result.guidance.kind !== "suspended") throw new Error("expected suspension");
     expect(result.guidance.offRouteDistanceText).toBe("900 ft off route");
+  });
+
+  it("keeps the last known distance left and arrival while off the line, never a dash", () => {
+    const held = {
+      routeProgress: 0.5,
+      remainingDistanceMeters: 4_800,
+      remainingDurationSeconds: 600,
+      etaIso: "2026-09-21T14:10:00.000Z",
+    };
+    const result = view({
+      navigation: navigation({ aheadGuidanceSuspended: true, offRouteState: "off-route" }),
+      telemetry: { ...held, routeProgress: 1, remainingDistanceMeters: 0, remainingDurationSeconds: 0, etaIso: NOW, distanceFromRouteMeters: 275 },
+      heldRouteTelemetry: held,
+    });
+
+    expect(result.metrics.slots[1]?.reading.displayValue).toBe("3.0");
+    expect(result.metrics.slots[2]?.reading.id).toBe("route.eta");
+    expect(result.metrics.slots[2]?.reading.displayValue).not.toBe("—");
+    expect(result.secondary.distanceLeftText).toBe("3 mi");
+    // Progress is still not claimed: the rider is not on the line.
+    expect(result.progress.fraction).toBeNull();
+  });
+
+  it("holds the last numbers through a stale fix too, but not for a ride with no route", () => {
+    const held = {
+      routeProgress: 0.5,
+      remainingDistanceMeters: 4_800,
+      remainingDurationSeconds: 600,
+      etaIso: "2026-09-21T14:10:00.000Z",
+    };
+    const routeless = view({
+      navigation: navigation({ activity: "free", plan: { ...navigation().plan, route: null } }),
+      telemetry: null,
+      heldRouteTelemetry: held,
+    });
+    expect(routeless.secondary.distanceLeftText).toBeNull();
   });
 
   it("shows the numbers again once the matcher holds the rider on the line", () => {

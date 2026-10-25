@@ -825,6 +825,9 @@ export function createRideFocusStore(
       void motion.requestPermission().then(() => refresh());
     }
 
+    /** The last on-route distance and time left of the current route. */
+    let heldRoute: { readonly routeId: unknown; readonly telemetry: RideFocusTelemetryInput } | null = null;
+
     function refresh(): void {
       if (!running) return;
       ensureMotionSubscribed();
@@ -835,16 +838,35 @@ export function createRideFocusStore(
       const current = get();
       const recordingSnapshot = recording?.snapshot() ?? null;
       const liveTelemetry = liveTelemetryFor(state);
+      const routeTelemetry =
+        navigation === null
+          ? null
+          : navigationEngine !== null && telemetryFromEngine !== undefined
+            ? telemetryFromEngine(navigationEngine, instant)
+            : telemetry?.(instant) ?? null;
+      // The last distance and time left while the matcher held the rider on the
+      // line, so the strip never blanks while a route exists (off route,
+      // rerouting). A different route starts again from nothing.
+      const heldRouteId = navigation?.plan.route?.routeId ?? null;
+      if (heldRoute !== null && heldRoute.routeId !== heldRouteId) heldRoute = null;
+      if (
+        heldRouteId !== null &&
+        routeTelemetry !== null &&
+        navigation?.offRouteState === "on-route" &&
+        routeTelemetry.remainingDistanceMeters !== null &&
+        navigation.position.quality !== "stale" &&
+        navigation.position.quality !== "unavailable"
+      ) {
+        heldRoute = { routeId: heldRouteId, telemetry: routeTelemetry };
+      }
       const viewModel =
         navigation === null
           ? null
           : buildRideFocusViewModel({
               navigation,
               environment: snapshot,
-              telemetry:
-                navigationEngine !== null && telemetryFromEngine !== undefined
-                  ? telemetryFromEngine(navigationEngine, instant)
-                  : telemetry?.(instant) ?? null,
+              telemetry: routeTelemetry,
+              heldRouteTelemetry: heldRoute?.telemetry ?? null,
               recordingSummary: recordingSnapshot?.summary ?? null,
               recordingTelemetry: recordingSnapshot?.telemetry ?? null,
               liveTelemetry,

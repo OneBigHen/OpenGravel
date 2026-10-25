@@ -344,6 +344,13 @@ export interface RideFocusViewModelInput {
   readonly navigation: SessionNavigationState;
   readonly environment: RideFocusEnvironmentSnapshot;
   /**
+   * The last answer the matcher gave while it held the rider on the line. While
+   * the live answer is withheld (off the route, rerouting, a stale fix) the
+   * strip keeps showing this distance and arrival instead of "—": a route that
+   * exists always has a number left to ride. Absent means nothing was held.
+   */
+  readonly heldRouteTelemetry?: RideFocusTelemetryInput | null;
+  /**
    * Whether this Free Ride offers roads. A recording Free Ride is still a Free
    * Ride; only a plain recording (suggestions off) is named "Recording".
    */
@@ -1089,6 +1096,30 @@ function withSummary(
   return stats.length === 0 ? terminal : { ...terminal, stats };
 }
 
+/**
+ * The last on-route distance and time left, carried through a stretch with no
+ * live answer. Progress stays unknown (the rider is not on the line), but the
+ * arrival moves with the clock: it is `now` plus the time that was left.
+ */
+function heldAnswer(
+  base: RideFocusTelemetryInput,
+  held: RideFocusTelemetryInput,
+  now: string,
+): RideFocusTelemetryInput {
+  const nowMs = Date.parse(now);
+  const etaIso =
+    held.remainingDurationSeconds !== null && Number.isFinite(nowMs)
+      ? new Date(nowMs + held.remainingDurationSeconds * 1000).toISOString()
+      : held.etaIso;
+  return {
+    ...base,
+    routeProgress: null,
+    remainingDistanceMeters: held.remainingDistanceMeters,
+    remainingDurationSeconds: held.remainingDurationSeconds,
+    etaIso,
+  };
+}
+
 /** Projects one navigation frame into the whole rider-facing surface. */
 export function buildRideFocusViewModel(
   input: RideFocusViewModelInput,
@@ -1109,7 +1140,8 @@ export function buildRideFocusViewModel(
    * So the numbers a projection feeds are withheld (`—`) until the matcher
    * holds the rider on the line again; what it did measure — the offset — stays.
    */
-  const routeAnswer =
+  const now = input.now ?? new Date().toISOString();
+  const liveAnswer =
     currentTelemetry === null ||
     navigation.offRouteState === null ||
     navigation.offRouteState === "on-route"
@@ -1121,7 +1153,14 @@ export function buildRideFocusViewModel(
           remainingDurationSeconds: null,
           etaIso: null,
         };
-  const now = input.now ?? new Date().toISOString();
+  const held = input.heldRouteTelemetry ?? null;
+  const routeAnswer =
+    held !== null &&
+    navigation.plan.route !== null &&
+    held.remainingDistanceMeters !== null &&
+    (liveAnswer === null || liveAnswer.remainingDistanceMeters === null)
+      ? heldAnswer(liveAnswer ?? held, held, now)
+      : liveAnswer;
   const mapReady = input.mapReady ?? true;
   const speedLimit = navigation.activity === "guided" ? speedLimitOf(currentTelemetry, navigation.position) : null;
   return {

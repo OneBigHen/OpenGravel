@@ -630,7 +630,7 @@ describe("the strip model", () => {
   it("shows exactly three slots with the guided defaults", () => {
     const model = strip(navigation());
     expect(model.slots).toHaveLength(3);
-    expect(model.shownIds).toEqual(["speed.current", "route.distanceRemaining", "route.timeRemaining"]);
+    expect(model.shownIds).toEqual(["speed.current", "route.distanceRemaining", "route.eta"]);
     expect(model.preset?.id).toBe("navigate");
     expect(model.slots[0].spokenValue).toBe("Speed, 47 miles per hour.");
     expect(model.slots[1].caption).toBe("Dist left");
