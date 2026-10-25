@@ -9668,7 +9668,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   height: 24px;
   border: 2px solid var(--og-hairline-strong);
   border-radius: 50%;
-  color: var(--og-paper);
+  color: var(--og-on-fill);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -13786,7 +13786,7 @@ a.og-secondary {
 
 .og-explore-card__fact {
   min-width: 0;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* The separator trails each fact, so a wrapped line never starts with "·". */
