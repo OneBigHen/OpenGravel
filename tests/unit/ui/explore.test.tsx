@@ -62,10 +62,15 @@ describe("Explore UI", () => {
     await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
   });
 
-  it("expands the route map with a close control", () => {
+  it("expands the route map from a corner control on the map itself", () => {
     const hosts = createStubMapHostFactory();
-    render(<ExploreMap entries={[entry]} highlightedId={null} onOpen={vi.fn()} hostFactory={hosts.factory} basemap="empty" />);
-    fireEvent.click(screen.getByRole("button", { name: "Expand map" }));
+    const view = render(<ExploreMap entries={[entry]} highlightedId={null} onOpen={vi.fn()} hostFactory={hosts.factory} basemap="empty" />);
+    const expand = screen.getByRole("button", { name: "Expand map" });
+    // The control lives in the map's own frame, so it takes no row from the page
+    // above the map (small-screen design system v2 §3).
+    expect(expand.closest(".og-explore-map-panel__frame")).not.toBeNull();
+    expect(view.container.querySelector(".og-explore-map-panel__head")).toBeNull();
+    fireEvent.click(expand);
     expect(screen.getByRole("dialog", { name: "Explore route map" })).toBeInTheDocument();
     expect(screen.getAllByTestId("explore-map")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Close map" }));
@@ -312,10 +317,14 @@ describe("Explore UI", () => {
     expect(screen.queryByText("Curated route")).not.toBeInTheDocument();
 
     // The detail exists, and it is a disclosure rather than a paragraph in the
-    // header the rider reads first.
+    // header the rider reads first: it closes the page, with the credits.
     const disclosure = screen.getByText("Where this route came from");
     expect(disclosure.closest("details")).not.toBeNull();
     expect(disclosure.closest("details")).toHaveTextContent(entry.provenanceDetail ?? "");
+    expect(disclosure.closest(".og-route-detail__credits")).not.toBeNull();
+    expect(screen.getByTestId("route-meta")).toHaveTextContent(
+      "Sample route — built from real roads, not a recommendation.",
+    );
   });
 
   it("shares a route through the share sheet, or copies its link where there is none", async () => {
@@ -343,7 +352,8 @@ describe("Explore UI", () => {
     };
     render(<RouteDetail entry={donorEntry} onUse={vi.fn()} />);
 
-    expect(screen.getByText("Source: rideplanner")).toBeInTheDocument();
+    // The header names the source; the file path stays in the disclosure.
+    expect(screen.getByTestId("route-meta")).toHaveTextContent(/^rideplanner$/);
     expect(screen.queryByText(donorEntry.provenance)).not.toBeInTheDocument();
     const disclosure = screen.getByText("Where this route came from").closest("details");
     expect(disclosure).toHaveTextContent(donorEntry.provenance);
@@ -362,6 +372,24 @@ describe("Explore UI", () => {
     expect(screen.getByRole("region", { name: "Catalog variants and tracks" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Lehigh sample route.*3 exports/i })).toHaveAttribute("href", "/explore/route-1");
     expect(screen.getByRole("link", { name: /track 2/i })).toBeInTheDocument();
+  });
+
+  it("keeps the distance and the source on one meta line, with the paperwork at the foot", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<RouteDetail entry={{ ...entry, provenance: "PA Adventure Bike Rides · rides/pa-ridge.gpx" }} onUse={vi.fn()} />);
+
+    const meta = await screen.findByTestId("route-meta");
+    expect(meta).toHaveTextContent(/^Starts 7 mi from you · PA Adventure Bike Rides$/);
+    expect(meta.closest("header")).not.toBeNull();
+    // The header carries the two facts and nothing else: the disclosure that
+    // explains them closes the page with the credits.
+    expect(screen.getByText("Where this route came from").closest("header")).toBeNull();
+    expect(screen.getByText("Where this route came from").closest(".og-route-detail__credits")).not.toBeNull();
   });
 
   it("says how far the start is from a rider who already allowed location, and asks nobody else", async () => {

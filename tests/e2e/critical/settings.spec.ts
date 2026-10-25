@@ -110,6 +110,6 @@ test("active bike carries into a new ride and local data can be exported or dele
   await expect(page.getByRole("status")).toContainText("rides, route geometry, sessions, recordings, imports, road and share records, bikes, Home, map and telemetry preferences, saved place names, and ride pointers");
   await page.getByRole("link", { name: "My rides" }).click();
   await expect(page).toHaveURL(/\/rides$/);
-  await expect(page.getByRole("heading", { name: "Your library is ready for its first ride." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No saved rides yet" })).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

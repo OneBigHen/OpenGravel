@@ -996,44 +996,74 @@ h3,
   background: var(--og-canvas);
 }
 
-.og-explore__header,
-.og-route-detail__header {
+.og-explore__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
 }
 
+/* The route page's own header: the way back is a real 48px target, the title
+   sits beside it (it may take two lines), and one meta line carries the two
+   things a rider decides with — how far the start is, and where the route came
+   from. Nothing here repeats the page below (§7 copy). */
 .og-route-detail__header {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--og-space-1) var(--og-space-2);
 }
 
-.og-route-detail__title {
-  display: grid;
-  align-content: start;
-  gap: 8px;
+.og-route-detail__back {
+  display: inline-flex;
+  flex: 0 0 48px;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  /* The target starts at the gutter edge, so its 24px arrow lands on the same
+     left line as the words under it. */
+  margin-left: -12px;
+  border-radius: 999px;
+  color: var(--og-ink);
+  text-decoration: none;
+}
+
+.og-route-detail__back:hover {
+  background: color-mix(in srgb, var(--og-ink) 7%, transparent);
+}
+
+.og-route-detail__back:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-route-detail__heading {
+  flex: 1 1 180px;
   min-width: 0;
 }
 
-.og-route-detail__title h1 {
+.og-route-detail__heading h1 {
+  /* The one page-title size the design system allows, route pages included. */
   max-width: 36ch;
   margin: 0;
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
   overflow-wrap: anywhere;
 }
 
-.og-route-detail__title .og-route-detail__provenance {
+/* One meta line under both. It wraps rather than truncating, so a source name
+   is never cut off at 320px. */
+.og-route-detail__meta {
+  flex: 1 0 100%;
   margin: 0;
-}
-
-/* How far the start is from the rider, when the device already knows: the first
-   thing a rider checks before deciding to ride somewhere. */
-.og-route-detail__away {
-  margin: 0;
-  color: var(--og-ink);
-  font-size: var(--og-text-body);
-  font-weight: 700;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .og-explore h1,
@@ -1051,7 +1081,8 @@ h3,
 }
 
 /* The provenance mechanics behind a disclosure (09 §6 step 8): the one-line truth
-   stays visible in the header, and what produced the geometry is one press away. */
+   stays visible in the header, and what produced the geometry is one press away
+   at the foot of the page with the rest of the credits. */
 .og-route-detail__provenance-detail {
   margin-top: 8px;
   color: var(--og-moss-text);
@@ -1059,14 +1090,30 @@ h3,
 }
 
 .og-route-detail__provenance-detail > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
   cursor: pointer;
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .og-route-detail__provenance-detail > p {
   margin-top: 6px;
   max-width: 68ch;
   overflow-wrap: anywhere;
+}
+
+.og-route-detail__credits {
+  display: grid;
+  gap: 0;
+  padding-top: var(--og-space-3);
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-route-detail__credits > p {
+  margin: 0;
 }
 
 .og-explore__lens {
@@ -2011,14 +2058,9 @@ h3,
     padding: 16px 12px calc(16px + var(--og-safe-bottom));
   }
 
-  .og-explore__header,
-  .og-route-detail__header {
+  .og-explore__header {
     flex-direction: column;
     gap: 12px;
-  }
-
-  .og-route-detail__header {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .og-explore__controls {
@@ -9234,13 +9276,40 @@ h3,
 }
 
 .og-explore-map-panel { min-width: 0; }
-.og-explore-map-panel__head {
-  display: flex;
-  justify-content: flex-end;
+
+/* Expanding is a control on the map's own corner: 48px to hit, 20px of icon,
+   one shadow, and no row taken from the page above it (§3 map chrome). */
+.og-explore-map-panel__frame {
+  position: relative;
+  min-width: 0;
+}
+
+.og-explore-map-panel__expand {
+  position: absolute;
+  z-index: 2;
+  top: var(--og-space-3);
+  right: var(--og-space-3);
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  font-size: var(--og-text-meta);
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--og-paper);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-2);
+  cursor: pointer;
+}
+
+.og-explore-map-panel__expand:hover {
+  background: var(--og-canvas);
+}
+
+.og-explore-map-panel__expand:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
 }
 
 .og-explore-map-dialog {
@@ -10915,53 +10984,40 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   gap: 16px;
 }
 
-/* Advanced import is a native disclosure, styled like the app's other
-   secondary rows instead of the browser's default triangle. */
-.og-library__advanced > summary {
-  display: flex;
+/* The older SwitchBack import is a quiet text link at the foot of the page, so
+   it is available without competing with the two real ways in (§7). */
+.og-library__legacy {
+  margin-top: var(--og-space-4);
+}
+
+.og-library__legacy > summary {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 44px;
-  padding: 10px 14px;
-  border: 1px solid var(--og-sandstone);
-  border-radius: var(--og-radius-object);
-  background: var(--og-paper);
+  min-height: 48px;
   color: var(--og-slate-text);
   font-size: var(--og-text-meta);
-  font-weight: 600;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   cursor: pointer;
   list-style: none;
 }
 
-.og-library__advanced > summary::-webkit-details-marker {
+.og-library__legacy > summary::-webkit-details-marker {
   display: none;
 }
 
-.og-library__advanced > summary::after {
-  content: "\2304";
-  color: var(--og-moss-text);
-  line-height: 1;
-  transition: transform 160ms ease;
+.og-library__legacy > summary:hover {
+  color: var(--og-ink);
 }
 
-.og-library__advanced[open] > summary::after {
-  transform: rotate(180deg);
-}
-
-.og-library__advanced > summary:focus-visible {
+.og-library__legacy > summary:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
 
-.og-library__advanced[open] > summary {
-  margin-bottom: 10px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .og-library__advanced > summary::after {
-    transition: none;
-  }
+.og-library__legacy[open] > summary {
+  margin-bottom: var(--og-space-3);
 }
 
 @media (min-width: 1100px) {
@@ -12765,33 +12821,6 @@ a.og-secondary {
   }
 }
 
-.og-route-detail__header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-}
-
-.og-route-detail__header > .og-secondary {
-  width: fit-content;
-  min-height: 44px;
-  padding: 8px 16px 8px 12px;
-  border-radius: 999px;
-  font-size: var(--og-text-meta);
-  text-decoration: none;
-}
-
-.og-route-detail__header > .og-secondary::before {
-  content: "←";
-  margin-right: 8px;
-  color: var(--og-slate-text);
-}
-
-.og-route-detail__title h1 {
-  font-size: clamp(30px, 2.6vw + 20px, 44px);
-  line-height: 1.04;
-  letter-spacing: -0.028em;
-}
-
 /* The live map is the hero of a route. */
 .og-route-detail__map {
   gap: 0;
@@ -12933,8 +12962,77 @@ a.og-secondary {
   border-radius: var(--og-radius-panel);
 }
 
-.og-library__state.og-empty-state--hero {
-  margin: 0 auto 24px;
+/* An empty library is one quiet card: what is true, the two ways out of it, and
+   nothing to read. The whole card is the drop target on a desktop (§7). */
+.og-library__empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--og-space-3);
+  margin-bottom: var(--og-space-5);
+  padding: var(--og-space-5) var(--og-space-4);
+  border: 1px dashed var(--og-hairline-strong);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+}
+
+.og-library__empty[data-drop-target="true"] {
+  border-color: var(--og-signal-blue);
+  background: color-mix(in srgb, var(--og-signal-blue) 6%, var(--og-paper));
+}
+
+.og-library__empty h2 {
+  margin: 0;
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.og-library__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+/* Every tap target on this card is 48px, gloved thumb included (§1 touch). */
+.og-library__empty-actions .og-primary,
+.og-library__empty-actions .og-secondary {
+  min-height: 48px;
+  padding-inline: var(--og-space-4);
+}
+
+.og-library__empty-hint {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+/* Dragging a file is a pointer device's gesture; a phone has no use for the
+   instruction and no room to spare. */
+@media (hover: none) {
+  .og-library__empty-hint {
+    display: none;
+  }
+}
+
+/* The import flow a page opened itself: no second card, no second drop zone. */
+.og-import--quiet {
+  gap: var(--og-space-3);
+  margin-bottom: var(--og-space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* Nothing chosen yet and nothing to show: no box, no gap. */
+.og-import--quiet:empty {
+  display: none;
+}
+
+.og-import__quiet-head {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .og-library__state--notice {
@@ -14209,6 +14307,61 @@ a.og-secondary {
     width: 100%;
     height: auto;
     aspect-ratio: 16 / 9;
-    margin-top: var(--og-space-2);
+  }
+
+  /* My rides uses the same vertical card as Explore (§4): the ride's map, its
+     name, one line of facts, and one caption of paperwork — no frame, no pill. */
+  .og-library__list {
+    gap: var(--og-space-5);
+  }
+
+  .og-library__row,
+  .og-library__row:hover,
+  .og-library__row:focus-within {
+    gap: var(--og-space-2);
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .og-library__row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* The picture leads the card, the way Explore's list reads. */
+  .og-library__map,
+  .og-library__track-thumbnail {
+    order: -1;
+  }
+
+  .og-library__map {
+    margin: 0 0 var(--og-space-1);
+  }
+
+  /* The name is the card's headline, at body size and never under 16px, so iOS
+     does not zoom the page when it is tapped to rename (§1). */
+  .og-library__title-line input {
+    min-height: 48px;
+    padding: 0;
+    font-size: var(--og-text-body);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .og-library__meta,
+  .og-library__credit {
+    margin-top: var(--og-space-1);
+  }
+
+  .og-library__actions {
+    gap: var(--og-space-2);
+  }
+
+  .og-library__actions .og-primary,
+  .og-library__actions .og-secondary {
+    min-height: 48px;
   }
 }

@@ -75,9 +75,13 @@ function UnknownMetric({ label }: { readonly label: string }) {
   return <span aria-label={`${label} not computed`}>—</span>;
 }
 
-function provenanceSummary(value: string): string {
+/**
+ * The source's own name: what it calls itself, without the file path it also
+ * carries. The path and the rest of the paperwork stay in the disclosure.
+ */
+function provenanceSourceName(value: string): string {
   const separator = value.indexOf(" · ");
-  return separator < 0 ? value : `Source: ${value.slice(0, separator)}`;
+  return separator < 0 ? value : value.slice(0, separator);
 }
 
 function formatDistance(distanceKm: number | null): string | ReactNode {
@@ -366,6 +370,10 @@ export function RouteDetail({
   }, [preparationContext, providedPreparation, trafficProvider]);
 
   const startDistance = riderOrigin === undefined ? null : startDistanceLabel(distanceToStartKm(riderOrigin, entry));
+  // The header says the two things a rider decides with: how far the start is,
+  // and where the route came from. Everything else waits below (§7 copy).
+  const provenanceSource = provenanceSourceName(entry.provenance);
+  const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
   const basePreparation = providedPreparation ?? prepareRoute({
     ...preparationContext,
@@ -405,23 +413,26 @@ export function RouteDetail({
   return (
     <main id="main" className="og-route-detail">
       <header className="og-route-detail__header">
-        <Link className="og-secondary" href="/explore">Back to Explore</Link>
-        <div className="og-route-detail__title">
+        {/* The way back is a target, not a pill: 48px, and it sits on the gutter
+            the words below align to. */}
+        <Link className="og-route-detail__back" href="/explore" aria-label="Back to Explore">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </Link>
+        <div className="og-route-detail__heading">
           <p className="og-eyebrow">{entry.source === "catalog" ? "Catalog route" : entry.source === "import" ? "Imported route" : "Your ride"}</p>
           <h1>{entry.name}</h1>
-          {startDistance === null ? null : (
-            <p className="og-route-detail__away" data-testid="route-start-distance">{startDistance}</p>
-          )}
-          {/* Keep the route's source concise, with source mechanics behind a disclosure (09 §6 step 8). */}
-          <p className="og-route-detail__provenance">{provenanceSummary(entry.provenance)}</p>
-          {entry.provenanceDetail === undefined && !entry.provenance.includes(" · ") ? null : (
-            <details className="og-route-detail__provenance-detail">
-              <summary>Where this route came from</summary>
-              {entry.provenance.includes(" · ") ? <p>Source project and file: {entry.provenance}</p> : null}
-              {entry.provenanceDetail === undefined ? null : <p>{entry.provenanceDetail}</p>}
-            </details>
-          )}
         </div>
+        {showHeaderMeta ? (
+          <p className="og-route-detail__meta" data-testid="route-meta">
+            {startDistance === null ? null : (
+              <span data-testid="route-start-distance">{startDistance}</span>
+            )}
+            {startDistance === null ? null : " · "}
+            {provenanceSource}
+          </p>
+        ) : null}
       </header>
 
       {/* The route where it is leads the page (VISUAL-OVERHAUL): a detail page
@@ -534,10 +545,23 @@ export function RouteDetail({
       {entry.source === "catalog" ? <RouteCommunity routeId={entry.id} /> : null}
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
       <p className="og-route-detail__summary">{entry.summary}</p>
-      <p className="og-route-detail__region">{entry.region}</p>
       {status !== null ? <p role="status">{status}</p> : null}
         </div>
       </div>
+      {/* Credits close the page: who made the place the ride goes through, and
+          — one press away — what produced its line (09 §6 step 8). */}
+      <footer className="og-route-detail__credits" aria-label="Route credits">
+        {entry.region.trim().length === 0 ? null : (
+          <p className="og-route-detail__region">{entry.region}</p>
+        )}
+        {entry.provenanceDetail === undefined && !entry.provenance.includes(" · ") ? null : (
+          <details className="og-route-detail__provenance-detail">
+            <summary>Where this route came from</summary>
+            {entry.provenance.includes(" · ") ? <p>Source project and file: {entry.provenance}</p> : null}
+            {entry.provenanceDetail === undefined ? null : <p>{entry.provenanceDetail}</p>}
+          </details>
+        )}
+      </footer>
       {selectedRoad !== null ? <RoadDetailSheet road={selectedRoad} onClose={() => setSelectedRoad(null)} /> : null}
     </main>
   );
