@@ -25,15 +25,22 @@ function dayOfYear(date: Date): number {
   return Math.floor((Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - start) / DAY_MS) + 1;
 }
 
+/** The two horizon crossings the NOAA approximation can resolve. */
+type SolarEvent = "sunrise" | "sunset";
+
 /**
- * Calculate sunset in UTC using NOAA's sunrise/sunset approximation.
- * The result is a fact, not a promise that the route can be ridden safely at
- * night; callers still compare it with the authored departure and duration.
+ * One horizon crossing in UTC, using NOAA's sunrise/sunset approximation.
+ *
+ * `event` picks which side of noon the hour angle is read from: sunset keeps
+ * the afternoon estimate, sunrise the morning one. The result is a fact, not a
+ * promise that a route can be ridden in the dark; callers still compare it with
+ * the authored departure and duration.
  */
-export function calculateSunset(
+function solarEvent(
   coordinate: Coordinate,
   departureAt: string,
-): LongTripDaylightFact | null {
+  event: SolarEvent,
+): { readonly at: string; readonly sourceRef: string } | null {
   const date = new Date(departureAt);
   if (
     !Number.isFinite(date.getTime())
@@ -50,7 +57,7 @@ export function calculateSunset(
   const day = date.getUTCDate();
   const ordinal = dayOfYear(date);
   const longitudeHour = coordinate.lon / 15;
-  const approximateTime = ordinal + ((18 - longitudeHour) / 24);
+  const approximateTime = ordinal + (((event === "sunrise" ? 6 : 18) - longitudeHour) / 24);
   const meanAnomaly = (0.9856 * approximateTime) - 3.289;
   const sunLongitude = normalizedDegrees(
     meanAnomaly
@@ -72,16 +79,75 @@ export function calculateSunset(
   ) / (cosineDeclination * Math.cos(radians(coordinate.lat)));
   if (cosineHourAngle > 1 || cosineHourAngle < -1) return null;
 
-  const hourAngle = degrees(Math.acos(cosineHourAngle)) / 15;
+  const hourAngle = (event === "sunrise" ? -1 : 1) * degrees(Math.acos(cosineHourAngle)) / 15;
   const localMeanTime = hourAngle + rightAscension - (0.06571 * approximateTime) - 6.622;
   const utcHour = normalizedHours(localMeanTime - longitudeHour);
-  const sunset = new Date(Date.UTC(year, month, day) + utcHour * 3_600_000);
-
+  const crossing = new Date(Date.UTC(year, month, day) + utcHour * 3_600_000);
   return {
-    sunset: sunset.toISOString(),
-    source: "NOAA solar calculation",
+    at: crossing.toISOString(),
     sourceRef: `daylight:solar:${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}:${String(coordinate.lat)}:${String(coordinate.lon)}`,
   };
+}
+
+/** Calculate sunset in UTC using NOAA's sunrise/sunset approximation. */
+export function calculateSunset(
+  coordinate: Coordinate,
+  departureAt: string,
+): LongTripDaylightFact | null {
+  const event = solarEvent(coordinate, departureAt, "sunset");
+  if (event === null) return null;
+  return {
+    sunset: event.at,
+    source: "NOAA solar calculation",
+    sourceRef: event.sourceRef,
+  };
+}
+
+/**
+ * Sunrise in UTC, the morning mirror of {@link calculateSunset}: the instant
+ * the sun is due to clear the horizon at this coordinate, or `null` when the
+ * approximation cannot resolve one (a polar day or night).
+ */
+export function calculateSunrise(coordinate: Coordinate, departureAt: string): string | null {
+  return solarEvent(coordinate, departureAt, "sunrise")?.at ?? null;
+}
+
+/** Whether the sun is up, or unknown. */
+export type SunState = "day" | "night";
+
+/**
+ * The solar-local calendar date of `nowMs` at `coordinate`, as a midday UTC
+ * instant.
+ *
+ * `calculateSunset`/`calculateSunrise` read only the date part of what they are
+ * given, and shift it by the coordinate's own longitude internally; handing
+ * them this date lands on the observer's own day rather than on the UTC one,
+ * which for the Americas is a day off for most of the evening.
+ */
+function solarLocalNoon(coordinate: Coordinate, nowMs: number): string {
+  const offsetMs = (coordinate.lon / 15) * 3_600_000;
+  const local = new Date(nowMs + offsetMs);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 12)).toISOString();
+}
+
+/**
+ * Is the sun up at `coordinate` at `nowMs`?
+ *
+ * `null` — never a guess — when the calculation cannot answer: a polar day or
+ * night (no horizon crossing to compare against), or a coordinate and time that
+ * are not real. A caller that needs a theme falls back to the device's own
+ * light/dark setting rather than inventing daylight.
+ */
+export function sunState(coordinate: Coordinate, nowMs: number): SunState | null {
+  if (!Number.isFinite(nowMs)) return null;
+  const day = solarLocalNoon(coordinate, nowMs);
+  const sunrise = calculateSunrise(coordinate, day);
+  const sunset = calculateSunset(coordinate, day);
+  if (sunrise === null || sunset === null) return null;
+  const sunriseMs = Date.parse(sunrise);
+  const sunsetMs = Date.parse(sunset.sunset);
+  if (!Number.isFinite(sunriseMs) || !Number.isFinite(sunsetMs) || sunsetMs <= sunriseMs) return null;
+  return nowMs < sunriseMs || nowMs >= sunsetMs ? "night" : "day";
 }
 
 /**

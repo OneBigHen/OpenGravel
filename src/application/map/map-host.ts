@@ -200,13 +200,17 @@ export interface MapHost {
   /** True when this host can draw satellite imagery. */
   readonly supportsSatellite?: boolean;
   /**
-   * Switches between the configured basemap and Night contrast. The ride, its
-   * points and every overlay are redrawn on the new basemap. Present only on a
-   * host that can draw Night contrast.
+   * Switches between the configured basemap and a night look. The ride, its
+   * points and every overlay stay on top of it.
+   *
+   * Two honest ways to draw it: a dark basemap style of its own (Night
+   * contrast), or — when the deployment has no Mapbox token — a dark scrim over
+   * the rider's basemap, which darkens the map without pretending to be a
+   * different cartography. A host that can do neither ignores the call.
    */
   setBasemapLook?(look: "map" | "night"): void;
-  /** True when this host can draw Night contrast. */
-  readonly supportsNightContrast?: boolean;
+  /** True when this host can draw a night look. */
+  readonly supportsNightLook?: boolean;
   /**
    * Shows the ground in 3D and tilts the camera (UX rework phase 8), or lays it
    * flat again. A no-op before the style loads; applied when it does.

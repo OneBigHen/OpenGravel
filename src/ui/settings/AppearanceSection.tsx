@@ -53,7 +53,8 @@ export function AppearanceSection() {
         ))}
       </div>
       <p className="og-settings__section-copy">
-        Day is bright and high-contrast for riding in sunlight. Auto follows your phone.
+        Day is bright and high-contrast for riding in sunlight. Auto follows your phone, and
+        the sun where you are while a ride is open.
       </p>
     </section>
   );

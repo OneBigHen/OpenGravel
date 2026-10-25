@@ -74,7 +74,7 @@ export interface LongTripFacts {
   readonly service?: LongTripCatalogFact;
 }
 
-export { calculateSunset, sunsetOnDepartureDay } from "./daylight";
+export { calculateSunrise, calculateSunset, sunState, sunsetOnDepartureDay, type SunState } from "./daylight";
 
 function finite(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value);

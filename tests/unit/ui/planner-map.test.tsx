@@ -607,7 +607,7 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
       seen.push(options.basemapLook);
       return Object.assign(base.factory(container, options), {
         supportsSatellite: true,
-        supportsNightContrast: true,
+        supportsNightLook: true,
         setSatellite,
         setBasemapLook,
       });
@@ -630,6 +630,45 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
     });
     expect(seen.at(-1)).toBe("night");
     expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
+  });
+});
+
+describe("a surface that insists on a look (the ride follows Day/Night)", () => {
+  const props = {
+    scene: scene(),
+    onIntent: (() => undefined) as never,
+    activeTool: "pan" as const,
+  };
+
+  it("opens dark without reading or writing the rider's planner look", async () => {
+    const base = createStubMapHostFactory();
+    const opened: unknown[] = [];
+    const factory = (container: HTMLElement, options: Parameters<typeof base.factory>[1]) => {
+      opened.push(options.basemapLook);
+      return Object.assign(base.factory(container, options), { supportsNightLook: true });
+    };
+    // The planner's own last choice is satellite; the ride must not inherit it.
+    window.localStorage.setItem("opengravel-basemap-look", "satellite");
+
+    const view = render(<PlannerMap {...props} hostFactory={factory as never} forcedLook="night" />);
+    await act(settle);
+
+    expect(opened.at(-1)).toBe("night");
+    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
+    expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
+
+    // The sun comes up: the same mounted map turns with the chrome.
+    const setBasemapLook = vi.fn();
+    const host = base.hosts.at(-1);
+    if (host === undefined) throw new Error("no host");
+    Object.assign(host, { setBasemapLook });
+    view.rerender(<PlannerMap {...props} hostFactory={factory as never} forcedLook="map" />);
+    await act(settle);
+    expect(setBasemapLook).toHaveBeenLastCalledWith("map");
+    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Map");
+    expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
+    view.unmount();
+    window.localStorage.clear();
   });
 });
 
