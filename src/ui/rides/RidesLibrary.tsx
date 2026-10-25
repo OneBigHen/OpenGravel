@@ -158,7 +158,7 @@ function originalExtension(filename: string | null, mime: string | null): string
 /** The ride on a real map: its line when stored, else its pinned points. */
 function rideMapUrl(ride: RideSummary, token: string | undefined): string | null {
   if (token === undefined || ride.mapPreview === undefined) return null;
-  const size = { token, width: 400, height: 170 };
+  const size = { token, width: 400, height: 225 };
   return ride.mapPreview.line.length >= 2
     ? staticRouteMapUrl(ride.mapPreview.line, size)
     : staticPointsMapUrl(ride.mapPreview.pins, size);
@@ -574,7 +574,6 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                         if (event.key === "Enter") void rename(ride);
                       }}
                     />
-                    <span className="og-library__badge">{libraryTypeLabel(ride.type)}</span>
                   </div>
                   {emptyTitle ? (
                     <p className="og-library__reason">A title is required.</p>
@@ -588,7 +587,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       loading="lazy"
                       decoding="async"
                       width={400}
-                      height={170}
+                      height={225}
                     />
                   ) : ride.recordedTrack === undefined ? null : (
                     <RecordedTrackThumbnail
@@ -596,9 +595,6 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       title={ride.title}
                     />
                   )}
-                  <p className="og-library__meta">
-                    Updated {formatTimestamp(ride.updatedAt)} · Saved {formatTimestamp(ride.savedAt)}
-                  </p>
                   {ride.recordedTrack === undefined ? (
                     rideFacts(ride) === null ? null : (
                       <p className="og-library__meta og-library__facts" data-testid={`ride-facts-${ride.rideId}`}>
@@ -610,12 +606,18 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       Distance: {formatDistance(ride.recordedTrack.summary.distanceMeters)} · {formatRideTime(ride.recordedTrack.summary.movingSeconds)} moving · {formatRideTime(ride.recordedTrack.summary.elapsedSeconds)} total
                     </p>
                   )}
-                  <p className="og-library__meta" data-testid={`offline-pack-${ride.rideId}`}>
-                    Offline pack: {ride.offlinePack === "present" ? "saved" : ride.offlinePack === "not-present" ? "not saved" : "unknown"}
+                  {/* One caption line: what this ride is and when it last changed.
+                      The rest of the paperwork waits behind View details. */}
+                  <p className="og-library__meta og-library__credit" data-testid={`ride-credit-${ride.rideId}`}>
+                    {libraryTypeLabel(ride.type)} · Updated {formatTimestamp(ride.updatedAt)}
                   </p>
                   {isExpanded ? (
                     <div className="og-library__details">
                       <p>{sourceText(ride)}</p>
+                      <p>Saved {formatTimestamp(ride.savedAt)}</p>
+                      <p data-testid={`offline-pack-${ride.rideId}`}>
+                        Offline pack: {ride.offlinePack === "present" ? "saved" : ride.offlinePack === "not-present" ? "not saved" : "unknown"}
+                      </p>
                       {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
                         ? null
                         : <RecordedRoadProgress state={roadProgress[ride.rideId]!} />}

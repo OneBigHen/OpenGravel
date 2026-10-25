@@ -352,6 +352,27 @@ describe("RidesLibrary", () => {
     expect(document.body.textContent).not.toContain("import_d5fe3bdb");
   });
 
+  it("puts one line of facts and one caption line on a ride card", async () => {
+    // Design system v2 §4 for My rides: the ride's map, its name, ONE line of
+    // facts and one caption line. The type is a caption word now, not a pill,
+    // and the offline state is paperwork behind View details.
+    const ride: RideSummary = {
+      ...RIDE,
+      distanceMeters: 20_000,
+      durationSeconds: 3_900,
+      area: "Lehigh Valley",
+    };
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([ride]) })} />);
+
+    expect(await screen.findByTestId(`ride-facts-${ride.rideId}`)).toHaveTextContent("12 mi · 1:05 h · Lehigh Valley");
+    expect(screen.getByTestId(`ride-credit-${ride.rideId}`)).toHaveTextContent(/^Planned · Updated /);
+    expect(document.querySelector(".og-library__badge")).toBeNull();
+    expect(screen.queryByTestId(`offline-pack-${ride.rideId}`)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "View details for Pine Loop" }));
+    expect(screen.getByTestId(`offline-pack-${ride.rideId}`)).toHaveTextContent("Offline pack: unknown");
+  });
+
   it("offers Clear filters when a search matches nothing", async () => {
     const library = service();
     vi.mocked(library.listRides).mockImplementation(async (filter) =>

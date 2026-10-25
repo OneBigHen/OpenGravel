@@ -13,8 +13,6 @@ import { ThingsFeed } from "@/ui/explore/ThingsFeed";
 import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
-import { useRiderOrigin } from "@/ui/hooks/use-rider-origin";
-import { awayLabel } from "@/ui/explore/rider-distance";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
 import { formatDistance } from "@/application/planner/measurements";
@@ -70,7 +68,8 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
   // The route on a real map, so a rider sees where it is: towns, roads, terrain.
   const mapUrl = mapboxToken === undefined
     ? null
-    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 400, height: 190 });
+    // The card's image is 16:9 (design system v2 §4), so the map is framed that way.
+    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 400, height: 225 });
   if (mapUrl !== null) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a remote static map, sized by CSS; next/image would proxy it.
@@ -81,7 +80,7 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
         loading="lazy"
         decoding="async"
         width={400}
-        height={190}
+        height={225}
       />
     );
   }
@@ -97,26 +96,21 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
   );
 }
 
-/** A summary that only restates the distance ("155 mi route") says nothing new. */
-function isDistanceOnly(summary: string): boolean {
-  return /^[\d.,]+\s*(mi|km)\s+route$/i.test(summary.trim());
+/** "12 mi away" to where the route starts, rounded the way a rider says it. */
+function awayLabel(km: number): string | null {
+  if (!Number.isFinite(km)) return null;
+  const miles = km / 1.609344;
+  if (miles < 1) return "Starts near you";
+  return `${miles < 10 ? miles.toFixed(0) : Math.round(miles / 5) * 5} mi away`;
 }
 
-function durationLabel(minutes: number | undefined): string | null {
-  if (minutes === undefined || !(minutes > 0)) return null;
-  const hours = Math.floor(minutes / 60);
-  const rest = Math.round(minutes % 60);
-  return hours === 0 ? `${rest} min` : rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
-}
-
-/** The surface chip's tone, from the rider-facing summary the catalog build wrote. */
-function surfaceTone(summary: string | undefined): "paved" | "mixed" | "unpaved" | "unknown" {
-  if (summary === undefined) return "unknown";
-  if (/^paved/i.test(summary)) return "paved";
-  if (/^mostly paved/i.test(summary)) return "mixed";
-  return "unpaved";
-}
-
+/**
+ * One ride in a list (design system v2 §4).
+ *
+ * The card is vertical: the route on its map full width in 16:9, the name over
+ * at most two lines, one line of facts, and one caption line for the credit.
+ * Nothing on it is a pill, so nothing can clip at 320px.
+ */
 function RouteCard({
   entry,
   onHighlight,
@@ -130,15 +124,28 @@ function RouteCard({
   readonly awayKm?: number | undefined;
 }) {
   const away = awayKm === undefined ? null : awayLabel(awayKm);
-  const duration = durationLabel(entry.estimatedTimeMinutes);
-  const variants = entry.exportCount !== undefined && entry.exportCount > 1
-    ? `${entry.exportCount} exports${(entry.variantCount ?? entry.exportCount) > 1 ? ` · ${entry.variantCount ?? entry.exportCount} tracks` : ""}`
-    : entry.variantCount !== undefined && entry.variantCount > 1
-      ? `${entry.variantCount} tracks and variants`
-      : null;
+  // One line of facts, in the order a rider asks them: how far the ride is, how
+  // far its start is, how twisty, and what is under the wheels. A fact the
+  // catalog does not have says so rather than disappearing (§4, §7).
+  const facts: readonly { readonly text: string; readonly testId?: string }[] = [
+    { text: distanceLabel(entry.distanceKm) },
+    ...(away === null ? [] : [{ text: away, testId: "explore-card-away" }]),
+    { text: entry.curvatureSummary ?? "Curvature unknown" },
+    { text: entry.surfaceSummary ?? "Surface unknown" },
+  ];
+  const teaser = entry.storyTeaser;
+  const byline = teaser === undefined
+    ? null
+    : [
+        teaser.sharedBy === undefined ? `From ${teaser.sourceName}` : `Shared by ${teaser.sharedBy}`,
+        teaser.commentCount > 0 ? `${teaser.commentCount} ${teaser.commentCount === 1 ? "comment" : "comments"}` : null,
+        teaser.photoCount > 0 ? `${teaser.photoCount} ${teaser.photoCount === 1 ? "photo" : "photos"}` : null,
+      ].filter((part): part is string => part !== null).join(" · ");
+  const versionCount = Math.max(entry.variantCount ?? 0, entry.exportCount ?? 0);
+  const versions = versionCount > 1 ? `${versionCount} versions` : null;
   return (
     <li
-      className="og-explore-card"
+      className="og-explore-card og-explore-card--ride"
       onPointerEnter={onHighlight === undefined ? undefined : () => onHighlight(entry.id)}
       onPointerLeave={onHighlight === undefined ? undefined : () => onHighlight(null)}
       onFocus={onHighlight === undefined ? undefined : () => onHighlight(entry.id)}
@@ -150,38 +157,25 @@ function RouteCard({
       >
         <RoutePreview entry={entry} mapboxToken={mapboxToken} />
         <span className="og-explore-card__body">
-          <span className="og-explore-card__topline">
-            <span className="og-explore-card__source" data-source={entry.source}>{SOURCE_LABEL[entry.source]}</span>
-            <span className="og-explore-card__region">{entry.region}</span>
-          </span>
-          <strong>{entry.name}</strong>
+          <strong className="og-explore-card__title">{entry.name}</strong>
           <span className="og-explore-card__facts">
-            <span className="og-explore-card__distance">{distanceLabel(entry.distanceKm)}</span>
-            {duration === null ? null : <span className="og-explore-card__time">≈ {duration}</span>}
-            {away === null ? null : <span className="og-explore-card__away" data-testid="explore-card-away">{away}</span>}
+            {facts.map((fact, index) => (
+              <span
+                key={`${index}-${fact.text}`}
+                className="og-explore-card__fact"
+                {...(fact.testId === undefined ? {} : { "data-testid": fact.testId })}
+              >
+                {fact.text}
+              </span>
+            ))}
           </span>
-          <span className="og-explore-card__chips">
-            {/* EX-03/RI-01: the catalog's surface is the route service's
-                estimate (the detail page says "Est. surface"); say so here too. */}
-            <span className="og-explore-card__chip" data-surface={surfaceTone(entry.surfaceSummary)}>
-              {entry.surfaceSummary === undefined ? "Surface unknown" : `Est. ${entry.surfaceSummary}`}
-            </span>
-            <span className="og-explore-card__chip" data-curves={entry.curvatureSummary === undefined ? "unknown" : "known"}>
-              <span aria-hidden="true">∿ </span>
-              {entry.curvatureSummary ?? "Curvature unknown"}
-            </span>
-          </span>
-          {isDistanceOnly(entry.summary) ? null : <span className="og-explore-card__summary">{entry.summary}</span>}
-          {variants === null ? null : <span className="og-explore-card__variants">{variants}</span>}
-          {entry.storyTeaser === undefined ? null : (
-            <span className="og-explore-card__byline">
-              {entry.storyTeaser.sharedBy === undefined ? `From ${entry.storyTeaser.sourceName}` : `Shared by ${entry.storyTeaser.sharedBy}`}
-              {entry.storyTeaser.commentCount > 0 ? ` · ${entry.storyTeaser.commentCount} ${entry.storyTeaser.commentCount === 1 ? "comment" : "comments"}` : ""}
-              {entry.storyTeaser.photoCount > 0 ? ` · ${entry.storyTeaser.photoCount} ${entry.storyTeaser.photoCount === 1 ? "photo" : "photos"}` : ""}
-            </span>
-          )}
         </span>
       </Link>
+      <p className="og-explore-card__credit">
+        <span className="og-explore-card__source" data-source={entry.source}>{SOURCE_LABEL[entry.source]}</span>
+        {byline === null ? null : <span className="og-explore-card__byline">{byline}</span>}
+        {versions === null ? null : <span className="og-explore-card__versions">{versions}</span>}
+      </p>
     </li>
   );
 }
@@ -335,11 +329,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
   const readUrlOnMount = useRef(initialQuery === undefined);
   /** A discrete filter change is a history entry; typing replaces (EX-12). */
   const pushNext = useRef(false);
-  // A rider who already let OpenGravel see their location gets "N mi away" on
-  // every card and nearest-first Recommended, without being asked again. No
-  // permission yet: nothing happens until they tap Near me. The read itself
-  // lives in useRiderOrigin, shared with the route page.
-  const { origin, setOrigin } = useRiderOrigin();
+  const [origin, setOrigin] = useState<readonly [number, number] | undefined>();
   const [locationNote, setLocationNote] = useState<string | null>(null);
   const [roadSurface, setRoadSurface] = useState<RoadSurfaceFilter>("any");
   const [roadOrigin, setRoadOrigin] = useState<readonly [number, number] | undefined>();
@@ -397,6 +387,27 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     ...area,
     count: filterAndSortCatalog(entries, { ...query, region: undefined, area: area.id }).length,
   })), [entries, query]);
+
+  // A rider who already let OpenGravel see their location gets "N mi away" on
+  // every card and nearest-first Recommended, without being asked again. No
+  // permission yet: nothing happens until they tap Near me.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || navigator.permissions?.query === undefined || !navigator.geolocation) return;
+    let cancelled = false;
+    navigator.permissions.query({ name: "geolocation" as PermissionName }).then((status) => {
+      if (cancelled || status.state !== "granted") return;
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          if (!cancelled) setOrigin((current) => current ?? [position.coords.longitude, position.coords.latitude]);
+        },
+        () => undefined,
+        { enableHighAccuracy: false, maximumAge: 600_000, timeout: 10_000 },
+      );
+    }).catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // The phone's filter sheet closes on Escape, like any sheet.
   useEffect(() => {

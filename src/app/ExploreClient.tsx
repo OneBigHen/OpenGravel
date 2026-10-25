@@ -297,7 +297,7 @@ function ExploreLoading() {
       <p className="og-visually-hidden" role="status">Loading Explore…</p>
       <ul className="og-explore__list og-explore__list--skeleton" aria-hidden="true">
         {[0, 1, 2, 3].map((index) => (
-          <li key={index} className="og-explore-card og-skeleton-card">
+          <li key={index} className="og-explore-card og-explore-card--ride og-skeleton-card">
             <span className="og-skeleton og-skeleton-card__map" />
             <span className="og-skeleton og-skeleton-card__line og-skeleton-card__line--title" />
             <span className="og-skeleton og-skeleton-card__line" />
