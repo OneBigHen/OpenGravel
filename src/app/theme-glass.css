@@ -1760,7 +1760,10 @@ html .og-ride {
    -------------------------------------------------------------------------- */
 
 .og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants) {
-  padding: 16px;
+  /* The community star row bleeds to the card's inner edge on a phone, so it
+     reads the same padding value instead of guessing it. */
+  --og-card-pad: 16px;
+  padding: var(--og-card-pad);
   border: 1px solid var(--og-hairline);
   border-top: 1px solid var(--og-hairline);
   border-radius: var(--og-radius-object);

@@ -480,30 +480,45 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("group", { name: "Long-trip considerations" })).not.toBeInTheDocument();
   });
 
-  it("submits an anonymous rating, comment, and road condition through their server paths", async () => {
+  it("saves a rating from one star tap, then a comment and a road condition through their server paths", async () => {
+    let rated = false;
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === "/api/contributions") {
         const contribution = JSON.parse(String(init?.body)) as Record<string, unknown>;
         return Response.json({ id: "contrib_route", contribution, receivedAt: new Date().toISOString() }, { status: 201 });
       }
-      if (init?.method === "POST") return Response.json({ ratingAverage: 5, ratingCount: 1 }, { status: 201 });
-      return Response.json({ ratingAverage: null, ratingCount: 0, comments: [] });
+      if (init?.method === "POST") {
+        rated = true;
+        return Response.json({ ratingAverage: 4, ratingCount: 1 }, { status: 201 });
+      }
+      return Response.json(rated
+        ? { ratingAverage: 4, ratingCount: 1, comments: [] }
+        : { ratingAverage: null, ratingCount: 0, comments: [] });
     });
     vi.stubGlobal("fetch", fetcher);
     window.localStorage.clear();
     render(<RouteCommunity routeId="route-1" />);
-    expect(await screen.findByText((_, element) => element?.textContent === "No ratings yet · 0 ratings")).toBeInTheDocument();
+    // A ride nobody has rated says so once, not twice ("No ratings yet · 0 ratings").
+    const meta = await screen.findByText((_, element) => element?.textContent === "No ratings yet");
+    expect(meta).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Save rating" }));
-    await screen.findByRole("status");
+    // Five stars, each its own 48px target, saving on the tap itself.
+    const stars = screen.getAllByRole("radio");
+    expect(stars.map((star) => star.getAttribute("aria-label"))).toEqual(["1 star", "2 stars", "3 stars", "4 stars", "5 stars"]);
+    expect(stars.every((star) => !(star as HTMLInputElement).checked)).toBe(true);
+    fireEvent.click(screen.getByRole("radio", { name: "4 stars" }));
+    expect(await screen.findByText("Thanks. Your rating is saved.")).toBeInTheDocument();
+    expect((screen.getByRole("radio", { name: "4 stars" }) as HTMLInputElement).checked).toBe(true);
+    expect(await screen.findByText("4.0 out of 5 · 1 rating")).toBeInTheDocument();
+
     fireEvent.change(screen.getByRole("textbox", { name: "Leave a comment" }), { target: { value: "Fresh gravel at the bridge." } });
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }));
-    await screen.findByText("Comment sent for review. It will appear after approval. Posted from this device.");
-    fireEvent.change(screen.getByRole("combobox", { name: "Road condition" }), { target: { value: "closed" } });
+    await screen.findByText("Comment sent for review. It will appear after approval.");
+    fireEvent.change(screen.getByRole("combobox", { name: "Report a road condition" }), { target: { value: "closed" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Optional note" }), { target: { value: "Gate at the north entrance." } });
     fireEvent.click(screen.getByRole("button", { name: "Send report" }));
-    await screen.findByText(/Road condition report sent for review/);
+    await screen.findByText("Road condition report sent for review.");
 
     const posts = fetcher.mock.calls.filter((call) => call[1]?.method === "POST");
     expect(posts.map((call) => String(call[0]))).toEqual([
@@ -511,9 +526,36 @@ describe("Explore UI", () => {
       "/api/contributions",
       "/api/contributions",
     ]);
+    expect(JSON.parse(String(posts[0]?.[1]?.body))).toMatchObject({ kind: "rating", rating: 4 });
     expect(JSON.parse(String(posts[1]?.[1]?.body))).toMatchObject({ kind: "condition", value: { tag: "comment", severity: "minor", note: "Fresh gravel at the bridge." } });
     expect(JSON.parse(String(posts[2]?.[1]?.body))).toMatchObject({ kind: "condition", value: { tag: "closed", severity: "severe", note: "Gate at the north entrance." } });
-    expect(screen.getByText("Posted from this device. No account is required.")).toBeInTheDocument();
+    // The privacy behaviour is unchanged (a coarse, route-scoped precision and
+    // no coordinates); only the explanatory sentences left the screen.
+    for (const post of posts.slice(1)) {
+      expect(JSON.parse(String(post[1]?.body))).toMatchObject({ gps_precision_m: 1000 });
+      expect(String(post[1]?.body)).not.toContain("lat");
+    }
+    expect(screen.queryByText(/Posted from this device/)).toBeNull();
+    expect(screen.queryByText(/do not request your GPS location/)).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("leaves the stars unrated when the server refuses the rating", async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") return Response.json({ error: { code: "paused" } }, { status: 503 });
+      return Response.json({ ratingAverage: null, ratingCount: 0, comments: [] });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    window.localStorage.clear();
+    render(<RouteCommunity routeId="route-1" />);
+    await screen.findByText("No ratings yet");
+
+    fireEvent.click(screen.getByRole("radio", { name: "2 stars" }));
+
+    expect(await screen.findByText("Your rating could not be saved.")).toBeInTheDocument();
+    // A refused rating must not leave the row claiming a star the server never kept.
+    expect((screen.getByRole("radio", { name: "2 stars" }) as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByText("No ratings yet")).toBeInTheDocument();
     vi.unstubAllGlobals();
   });
 
@@ -535,7 +577,7 @@ describe("Explore UI", () => {
     vi.stubGlobal("fetch", fetcher);
     window.localStorage.clear();
     render(<RouteCommunity routeId="route-1" />);
-    await screen.findByText((_, element) => element?.textContent === "No ratings yet · 0 ratings");
+    await screen.findByText((_, element) => element?.textContent === "No ratings yet");
 
     fireEvent.change(screen.getByRole("textbox", { name: "Leave a comment" }), { target: { value: "Bridge is out." } });
     fireEvent.click(screen.getByRole("button", { name: "Post comment" }));

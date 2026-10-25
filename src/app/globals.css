@@ -808,87 +808,182 @@ h3,
   accent-color: var(--og-ember);
 }
 
+/* Route notes (small-screen design system v2 §1/§7): a rating is five stars
+   that save on the tap, then one comment field and one road-condition report.
+   No explanatory provenance sentences and no badges — the controls say what
+   they do. The card frame itself comes from the route-detail card rule. */
 .og-route-community {
   display: grid;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid var(--og-sandstone);
-  border-radius: var(--og-radius-object);
-  background: var(--og-paper);
+  align-content: start;
+  gap: var(--og-space-4);
 }
 
-.og-route-community form {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.og-route-community form:nth-of-type(3) {
-  align-items: flex-start;
-}
-
-.og-route-community form:nth-of-type(3) > button {
-  align-self: flex-end;
-}
-
-.og-route-community label {
+.og-route-community__head {
   display: grid;
-  gap: 5px;
-  min-width: min(240px, 100%);
+  gap: var(--og-space-1);
+  min-width: 0;
+}
+
+.og-route-community__meta {
+  color: var(--og-moss-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-route-community__rating {
+  display: grid;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-route-community__legend {
   color: var(--og-deep-spruce);
-  font-size: 13px;
+  font-size: var(--og-text-body);
   font-weight: 600;
 }
 
-.og-route-community select,
-.og-route-community textarea {
-  min-height: 44px;
+/* Five 48px targets, 8px apart; the row may use the card's full inner width on
+   a phone (see the max-width block) so no hit area drops below 48px at 320px. */
+.og-route-community__stars {
+  display: grid;
+  grid-template-columns: repeat(5, 48px);
+  gap: var(--og-space-2);
+  justify-content: start;
+}
+
+.og-route-community__star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: var(--og-radius-control);
+  color: var(--og-slate-text);
+  cursor: pointer;
+  transition: color var(--og-dur-fast) var(--og-ease), background-color var(--og-dur-fast) var(--og-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.og-route-community__star[data-filled="true"] {
+  color: var(--og-golden-text);
+}
+
+.og-route-community__star:hover {
+  background: color-mix(in srgb, var(--og-sandstone) 30%, transparent);
+}
+
+/* The real radio covers its whole target: the glyph is decoration, the input
+   carries the name, the checked state and the arrow-key behaviour. Its ring
+   moves to the label so the focus box matches the 48px tap area. */
+.og-route-community__star-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* `:focus-within` is the fallback for engines without `:has()`; it cannot
+   tell a keyboard focus from a tap, but a visible ring beats none. */
+.og-route-community__star:focus-within,
+.og-route-community__star:has(> .og-route-community__star-input:focus-visible) {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-route-community__star:has(> .og-route-community__star-input:disabled) {
+  cursor: default;
+}
+
+.og-route-community__star-glyph {
+  pointer-events: none;
+}
+
+/* One quiet line for a saved rating, a sent note or a refusal. */
+.og-route-community__note {
+  color: var(--og-moss-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-route-community__note--failed {
+  color: var(--og-danger);
+}
+
+.og-route-community__form {
+  display: grid;
+  gap: var(--og-space-2);
   min-width: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--og-sandstone);
+}
+
+.og-route-community__label {
+  color: var(--og-deep-spruce);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+}
+
+/* 16px text: anything smaller makes iOS zoom the page on focus. */
+.og-route-community__input {
+  width: 100%;
+  min-width: 0;
+  min-height: 88px;
+  padding: var(--og-space-3);
+  border: 1px solid var(--og-hairline-strong);
   border-radius: var(--og-radius-control);
   background: var(--og-paper);
   color: var(--og-ink);
   font: inherit;
-}
-
-.og-route-community textarea {
-  flex: 1 1 260px;
-  min-height: 90px;
+  font-size: var(--og-text-body);
   resize: vertical;
 }
 
-.og-route-community__comment {
+/* Two classes deep so the shared `.og-secondary` sizing cannot shrink it back
+   to 44px: on a phone every tappable thing is 48px (§1). */
+.og-route-community .og-route-community__submit {
+  justify-self: start;
+  min-height: 48px;
+  padding-inline: var(--og-space-4);
+  font-size: var(--og-text-body);
+}
+
+.og-route-community .og-select > select {
+  min-height: 48px;
+}
+
+.og-route-community__comments {
   display: grid;
-  flex: 1 1 260px;
-  gap: 5px;
-  min-width: min(260px, 100%);
-}
-
-.og-route-community__comment textarea {
-  width: 100%;
-}
-
-.og-route-community button {
-  min-height: 44px;
-}
-
-.og-route-community__device {
-  flex-basis: 100%;
-  color: var(--og-moss-text);
-  font-size: 12px;
-}
-
-.og-route-community ul {
-  display: grid;
-  gap: 10px;
+  gap: var(--og-space-3);
   list-style: none;
 }
 
-.og-route-community li {
-  padding-top: 10px;
-  border-top: 1px solid var(--og-sandstone);
+.og-route-community__comments li {
+  padding-top: var(--og-space-3);
+  border-top: 1px solid var(--og-hairline);
+  font-size: var(--og-text-body);
+}
+
+.og-route-community__comments small {
+  display: block;
+  margin-top: var(--og-space-1);
+  color: var(--og-moss-text);
+  font-size: var(--og-text-meta);
+}
+
+@media (max-width: 760px) {
+  /* Full-bleed to the card's inner edge: at 320px, five 48px targets plus 8px
+     gaps need 272px and the card's 16px padding would leave 262px. */
+  .og-route-community__stars {
+    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    margin-inline: calc(-1 * var(--og-card-pad, 16px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-route-community__star {
+    transition: none;
+  }
 }
 
 .og-explore-card__why {
