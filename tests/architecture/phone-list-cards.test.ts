@@ -103,3 +103,37 @@ describe("ride cards on a phone", () => {
     expect(declaration(row!.body, "scroll-padding-inline")).toBe("14px");
   });
 });
+
+/**
+ * My rides reads as the same list as Explore (§4): a saved ride was a framed
+ * row with a headline-sized rename field and five compact buttons, which at
+ * 320px left the name and the buttons fighting for the same line.
+ */
+describe("saved rides on a phone", () => {
+  it("leads with the ride's own map, in the same 16:9 slot Explore uses", () => {
+    const map = declarationsFor(".og-library__map");
+    expect(map["aspect-ratio"]).toBe("16 / 9");
+    expect(map["border-radius"]).toBe("var(--og-radius-object)");
+    // The picture comes first in the card, the way a ride list reads.
+    expect(declarationsFor(".og-library__map")["order"]).toBe("-1");
+    expect(declarationsFor(".og-library__track-thumbnail")["order"]).toBe("-1");
+    expect(declarationsFor(".og-library__row-main")["display"]).toBe("flex");
+    expect(declarationsFor(".og-library__row-main")["flex-direction"]).toBe("column");
+  });
+
+  it("puts the words on the page instead of in a second box", () => {
+    const row = declarationsFor(".og-library__row");
+    expect(row["border-color"]).toBe("transparent");
+    expect(row["background"]).toBe("transparent");
+    expect(row["padding"]).toBe("0");
+  });
+
+  it("keeps the name at body size and every action at 48px", () => {
+    // Below 16px iOS zooms the page when the name is tapped to rename it.
+    expect(declarationsFor(".og-library__title-line input")["font-size"]).toBe("var(--og-text-body)");
+    expect(declarationsFor(".og-library__title-line input")["font-weight"]).toBe("600");
+    for (const selector of [".og-library__actions .og-primary", ".og-library__actions .og-secondary"]) {
+      expect(Number.parseInt(declarationsFor(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(48);
+    }
+  });
+});
