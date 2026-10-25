@@ -254,7 +254,9 @@ function searchUrl(baseUrl: string, request: TomTomPlaceRequest, radiusMeters: n
   const query = request.query?.trim() ?? "";
   const url = categoryId !== undefined
     ? new URL(`${baseUrl}/nearbySearch/.json`)
-    : new URL(`${baseUrl}/fuzzySearch/${encodeURIComponent(query)}.json`);
+    : // `/search/{query}` is TomTom's fuzzy search; a `/fuzzySearch/` path answers
+      // 200 with no results at all, which is how brand searches came back empty.
+      new URL(`${baseUrl}/search/${encodeURIComponent(query)}.json`);
   url.searchParams.set("lat", request.center.lat.toFixed(5));
   url.searchParams.set("lon", request.center.lon.toFixed(5));
   url.searchParams.set("radius", String(Math.round(radiusMeters)));

@@ -181,7 +181,7 @@ const SHEETZ_HONESDALE = {
 
 /** The text a TomTom fuzzy search is looking for, decoded from its path. */
 function tomtomQuery(url: URL): string {
-  return /\/fuzzySearch\/(.+)\.json$/.exec(decodeURIComponent(url.pathname))?.[1] ?? "";
+  return /\/search\/2\/search\/(.+)\.json$/.exec(decodeURIComponent(url.pathname))?.[1] ?? "";
 }
 
 function stub(photon: PhotonFeatures, tomtom: TomTomPayload | "fail"): Stub {
@@ -227,7 +227,7 @@ describe("place search engine", () => {
     expect(places[0]?.provider).toBe("tomtom");
     // The town the rider typed is resolved, and only its name is sent to TomTom.
     expect(photonQueries).toContain("Jim Thorpe");
-    expect(tomtomUrls[0]?.pathname).toBe(`/search/2/fuzzySearch/${encodeURIComponent("Wawa")}.json`);
+    expect(tomtomUrls[0]?.pathname).toBe(`/search/2/search/${encodeURIComponent("Wawa")}.json`);
     expect(tomtomUrls[0]?.searchParams.get("lat")).toBe("40.87570");
     expect(tomtomUrls[0]?.searchParams.get("lon")).toBe("-75.73240");
     // The key travels upstream and never comes back in an answer.
@@ -266,7 +266,7 @@ describe("place search engine", () => {
     expect(places.map((place) => place.name)).toContain("Blue Mountain Ski Area");
     // No town resolved, so the rider's own point is the centre of the POI search.
     expect(tomtomUrls[0]?.pathname).toBe(
-      `/search/2/fuzzySearch/${encodeURIComponent("Blue Mountain Ski")}.json`,
+      `/search/2/search/${encodeURIComponent("Blue Mountain Ski")}.json`,
     );
     expect(tomtomUrls[0]?.searchParams.get("lat")).toBe("40.87000");
   });
