@@ -9,6 +9,7 @@ import {
   rideTimeWindow,
   type RideTimeLens,
 } from "@/application/explore/time-lens";
+import type { AlongRideStopRow } from "@/application/explore/along-ride-stops";
 
 export type AlongRideSuggestion =
   | {
@@ -16,6 +17,10 @@ export type AlongRideSuggestion =
       readonly road: RoadOpeningSummary;
       readonly score: number;
       readonly detour: number;
+    }
+  | {
+      readonly kind: "along-stop";
+      readonly stop: AlongRideStopRow;
     }
   | {
       readonly kind: "stop";
@@ -79,21 +84,78 @@ export function roadWindowsForTime(
   return { open: matching.filter((event) => !ids.has(event.id)), closing };
 }
 
+type AlongStopSuggestion = Extract<AlongRideSuggestion, { kind: "along-stop" }>;
+type StopSuggestion = Extract<AlongRideSuggestion, { kind: "stop" }>;
+type RoadSuggestion = Extract<AlongRideSuggestion, { kind: "road" }>;
+
 /** Mixed route-context policy lives here, independent of presentation and fetch state. */
+const SUGGESTION_LIMIT = 6;
+const ROAD_LIMIT = 2;
+const EVENT_LIMIT = RIDER_OPPORTUNITY_EVENT_LIMIT;
+
+function mileOf(suggestion: AlongRideSuggestion): number | null {
+  if (suggestion.kind === "along-stop") return suggestion.stop.mile;
+  if (suggestion.kind === "stop") return suggestion.item.routeMile;
+  return null;
+}
+
+function scoreOf(suggestion: AlongRideSuggestion): number {
+  return suggestion.kind === "road" || suggestion.kind === "stop" ? suggestion.score : 0;
+}
+
+function idOf(suggestion: AlongRideSuggestion): string {
+  if (suggestion.kind === "along-stop") return suggestion.stop.id;
+  if (suggestion.kind === "stop") return suggestion.item.id;
+  return suggestion.road.id;
+}
+
+/**
+ * Stops are read the way the ride is ridden: by route mile, with places whose
+ * position is unknown after the ones that have one. Road windows close the
+ * list because widening the ride is a different decision from stopping on it.
+ */
+function byRoutePosition(left: AlongRideSuggestion, right: AlongRideSuggestion): number {
+  const leftMile = mileOf(left);
+  const rightMile = mileOf(right);
+  if (leftMile !== null && !Number.isFinite(leftMile)) return 1;
+  if (rightMile !== null && !Number.isFinite(rightMile)) return -1;
+  if (leftMile === null && rightMile === null) {
+    return scoreOf(right) - scoreOf(left) || idOf(left).localeCompare(idOf(right));
+  }
+  if (leftMile === null) return 1;
+  if (rightMile === null) return -1;
+  return leftMile - rightMile || scoreOf(right) - scoreOf(left) || idOf(left).localeCompare(idOf(right));
+}
+
 export function alongRideSuggestions(input: {
   readonly roads: readonly RoadOpeningSummary[];
   readonly stops: readonly RiderOpportunity[];
+  /** Gas, food, coffee and overlooks already placed on the line. */
+  readonly alongStops?: readonly AlongRideStopRow[];
   readonly line: readonly Coordinate[];
   readonly durationSeconds: number;
   readonly departAt: string;
 }): readonly AlongRideSuggestion[] {
-  const suggestions: AlongRideSuggestion[] = input.stops
+  const alongStops: AlongStopSuggestion[] = (input.alongStops ?? []).map(
+    (stop) => ({ kind: "along-stop" as const, stop }),
+  );
+  let events = 0;
+  const stopSuggestions: StopSuggestion[] = input.stops
     .filter(
       (item) =>
         item.timingFit !== "misses" &&
         (item.detourMinutes === null || item.detourMinutes <= 25),
     )
-    .map((item) => ({ kind: "stop", item, score: item.score }));
+    .map((item) => ({ kind: "stop" as const, item, score: item.score }))
+    .sort((left, right) => right.score - left.score || idOf(left).localeCompare(idOf(right)))
+    .filter(
+      (item) =>
+        item.kind !== "stop" ||
+        item.item.kind !== "event" ||
+        ++events <= EVENT_LIMIT,
+    );
+
+  const roadSuggestions: RoadSuggestion[] = [];
   // Conservative round-trip estimate at 30 mph; never an engine ETA/access proof.
   for (const road of input.roads) {
     if (road.anchor === null || (road.line?.length ?? 0) < 2) continue;
@@ -114,21 +176,18 @@ export function alongRideSuggestions(input: {
     )
       continue;
     const closingSoon = Date.parse(road.endsAt) - time <= 7 * 86_400_000;
-    suggestions.push({
+    roadSuggestions.push({
       kind: "road",
       road,
       detour,
       score: 1.5 + (closingSoon ? 0.4 : 0) - detour / 10,
     });
   }
-  let events = 0;
-  return suggestions
-    .sort((a, b) => b.score - a.score)
-    .filter(
-      (item) =>
-        item.kind !== "stop" ||
-        item.item.kind !== "event" ||
-        ++events <= RIDER_OPPORTUNITY_EVENT_LIMIT,
-    )
-    .slice(0, 5);
+  roadSuggestions.sort((left, right) => right.score - left.score || idOf(left).localeCompare(idOf(right)));
+
+  const room = Math.max(0, SUGGESTION_LIMIT - alongStops.length);
+  const keptRoads = roadSuggestions.slice(0, Math.min(ROAD_LIMIT, room));
+  const keptStops = stopSuggestions.slice(0, Math.max(0, room - keptRoads.length));
+  const positioned: AlongRideSuggestion[] = [...alongStops, ...keptStops];
+  return positioned.sort(byRoutePosition).concat(keptRoads);
 }
