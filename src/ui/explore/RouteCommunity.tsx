@@ -22,6 +22,14 @@ interface CommunityState {
 
 const EMPTY: CommunityState = { ratingAverage: null, ratingCount: 0, comments: [] };
 const ROUTE_LEVEL_GPS_PRECISION_M = 1_000;
+const STARS = [1, 2, 3, 4, 5] as const;
+
+/** "No ratings yet" is one line: a zero count is the same fact said twice. */
+function ratingSummary(state: CommunityState): string {
+  if (state.ratingAverage === null || state.ratingCount === 0) return "No ratings yet";
+  const count = `${state.ratingCount} ${state.ratingCount === 1 ? "rating" : "ratings"}`;
+  return `${state.ratingAverage.toFixed(1)} out of 5 · ${count}`;
+}
 
 /**
  * A refusal from the server already says what happened in plain English (too
@@ -47,7 +55,10 @@ function deviceId(): string {
 
 export function RouteCommunity({ routeId }: { readonly routeId: string }) {
   const [community, setCommunity] = useState(EMPTY);
-  const [rating, setRating] = useState(5);
+  // No star is chosen until the rider taps one: a pre-filled "5 stars" would
+  // claim a rating the rider never gave.
+  const [rating, setRating] = useState<number | null>(null);
+  const [ratingNotice, setRatingNotice] = useState<{ readonly failed: boolean; readonly text: string } | null>(null);
   const [comment, setComment] = useState("");
   const [condition, setCondition] = useState("rough");
   const [reportNote, setReportNote] = useState("");
@@ -82,21 +93,26 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
     return () => { active = false; };
   }, [loadCommunity]);
 
-  async function postRating(): Promise<void> {
+  async function postRating(value: number): Promise<void> {
+    // The stars fill at the tap so the row answers immediately; if the save is
+    // refused they go back to what the server last kept, never a claim of a
+    // rating that was not stored.
+    const previous = rating;
+    setRating(value);
     setBusy(true);
-    setError(null);
-    setStatus(null);
+    setRatingNotice(null);
     try {
       const response = await fetch(`/api/catalog/${encodeURIComponent(routeId)}/community`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ kind: "rating", rating, deviceId: deviceId() }),
+        body: JSON.stringify({ kind: "rating", rating: value, deviceId: deviceId() }),
       });
-      if (!response.ok) throw new Error(response.status === 429 ? "Too many posts from this device. Try again later." : "Your submission could not be saved.");
-      setStatus("Rating saved.");
+      if (!response.ok) throw new Error(response.status === 429 ? "Too many posts from this device. Try again later." : "Your rating could not be saved.");
+      setRatingNotice({ failed: false, text: "Thanks. Your rating is saved." });
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Your submission could not be saved.");
+      setRating(previous);
+      setRatingNotice({ failed: true, text: reason instanceof Error ? reason.message : "Your rating could not be saved." });
     } finally {
       setBusy(false);
     }
@@ -127,7 +143,7 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
         provenance: { contributorPseudoId: anonymousId, clientVersion: "vnext-m7", evidenceLevel: "low" },
       });
       setReportNote("");
-      setStatus("Road condition report sent for review. Posted from this device.");
+      setStatus("Road condition report sent for review.");
     } catch (caught: unknown) {
       setError(refusalMessage(caught, "Road condition report could not be saved. Try again later."));
     } finally {
@@ -154,7 +170,7 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
         provenance: { contributorPseudoId: anonymousId, clientVersion: "vnext-m7", evidenceLevel: "low" },
       });
       setComment("");
-      setStatus("Comment sent for review. It will appear after approval. Posted from this device.");
+      setStatus("Comment sent for review. It will appear after approval.");
     } catch (caught: unknown) {
       setError(refusalMessage(caught, "Comment could not be sent for review. Try again later."));
     } finally {
@@ -164,57 +180,112 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
 
   return (
     <section className="og-route-community" aria-labelledby="route-community-title">
-      <div>
-        <p className="og-eyebrow">Community</p>
+      <div className="og-route-community__head">
         <h2 id="route-community-title">Route notes</h2>
-        <p>
-          {community.ratingAverage === null ? "No ratings yet" : `${community.ratingAverage.toFixed(1)} out of 5`}
-          {` · ${community.ratingCount} ${community.ratingCount === 1 ? "rating" : "ratings"}`}
-        </p>
+        <p className="og-route-community__meta">{ratingSummary(community)}</p>
       </div>
-      <p className="og-route-community__device">Posted from this device. No account is required.</p>
-      <p className="og-route-community__device">Community posts do not request your GPS location; reports are scoped to this route.</p>
 
-      <form onSubmit={(event) => { event.preventDefault(); void postRating(); }}>
-        <label>Rate this ride
-          <span className="og-select">
-            <select aria-label="Your rating" value={rating} onChange={(event) => setRating(Number(event.target.value))}>
-              {[1, 2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} {value === 1 ? "star" : "stars"}</option>)}
-            </select>
-          </span>
-        </label>
-        <button type="submit" className="og-secondary" disabled={busy}>Save rating</button>
-      </form>
-
-      <form onSubmit={(event) => void postComment(event)}>
-        <div className="og-route-community__comment">
-          <label htmlFor="route-comment">Leave a comment</label>
-          <textarea id="route-comment" maxLength={CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Share a useful note about this ride." />
+      {/* A radio group, not a select and a Save button: the tap is the save.
+          The group is a div named by its own label, so the five stars do not
+          depend on how each engine lays out a `legend` inside a `fieldset`. */}
+      <div className="og-route-community__rating">
+        <p className="og-route-community__legend" id="route-rating-label">Rate this ride</p>
+        <div className="og-route-community__stars" role="radiogroup" aria-labelledby="route-rating-label">
+          {STARS.map((value) => (
+            <label
+              key={value}
+              className="og-route-community__star"
+              data-filled={rating !== null && rating >= value}
+            >
+              <input
+                className="og-route-community__star-input"
+                type="radio"
+                name={`route-rating-${routeId}`}
+                value={value}
+                checked={rating === value}
+                disabled={busy}
+                aria-label={`${value} ${value === 1 ? "star" : "stars"}`}
+                // Tapping a star is the whole interaction: the rating saves on
+                // that tap, so there is no separate save button to find.
+                onChange={() => { void postRating(value); }}
+              />
+              <svg
+                className="og-route-community__star-glyph"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill={rating !== null && rating >= value ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M12 3.4 14.7 9l6.1.9-4.4 4.3 1 6.1L12 17.4 6.6 20.3l1-6.1L3.2 9.9 9.3 9z" />
+              </svg>
+            </label>
+          ))}
         </div>
-        <button type="submit" className="og-secondary" disabled={busy || comment.trim().length === 0}>Post comment</button>
+      </div>
+      {ratingNotice === null ? null : (
+        <p
+          className={ratingNotice.failed ? "og-route-community__note og-route-community__note--failed" : "og-route-community__note"}
+          aria-live="polite"
+        >
+          {ratingNotice.text}
+        </p>
+      )}
+
+      <form className="og-route-community__form" onSubmit={(event) => void postComment(event)}>
+        <label className="og-route-community__label" htmlFor="route-comment">Leave a comment</label>
+        <textarea
+          id="route-comment"
+          className="og-route-community__input"
+          rows={3}
+          maxLength={CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH}
+          value={comment}
+          onChange={(event) => setComment(event.target.value)}
+          placeholder="Share a useful note about this ride."
+        />
+        <button type="submit" className="og-secondary og-route-community__submit" disabled={busy || comment.trim().length === 0}>Post comment</button>
       </form>
 
-      <form onSubmit={(event) => void report(event)}>
-        <label>Report a road condition
-          <span className="og-select">
-            <select aria-label="Road condition" value={condition} onChange={(event) => setCondition(event.target.value)}>
-              <option value="closed">Closed</option>
-              <option value="rough">Rough</option>
-              <option value="gravel">Gravel</option>
-              <option value="hazard">Hazard</option>
-            </select>
-          </span>
-        </label>
-        <label htmlFor="road-condition-note">Optional note
-          <textarea id="road-condition-note" maxLength={CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH} value={reportNote} onChange={(event) => setReportNote(event.target.value)} placeholder="Where on the route? What did you see?" />
-        </label>
-        <button type="submit" className="og-secondary" disabled={busy}>Send report</button>
+      <form className="og-route-community__form" onSubmit={(event) => void report(event)}>
+        <label className="og-route-community__label" htmlFor="road-condition">Report a road condition</label>
+        <span className="og-select">
+          <select
+            id="road-condition"
+            value={condition}
+            onChange={(event) => setCondition(event.target.value)}
+          >
+            <option value="closed">Closed</option>
+            <option value="rough">Rough</option>
+            <option value="gravel">Gravel</option>
+            <option value="hazard">Hazard</option>
+          </select>
+        </span>
+        <label className="og-route-community__label" htmlFor="road-condition-note">Optional note</label>
+        <textarea
+          id="road-condition-note"
+          className="og-route-community__input"
+          rows={3}
+          maxLength={CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH}
+          value={reportNote}
+          onChange={(event) => setReportNote(event.target.value)}
+          placeholder="Where on the route? What did you see?"
+        />
+        <button type="submit" className="og-secondary og-route-community__submit" disabled={busy}>Send report</button>
       </form>
 
-      {error !== null ? <p role="alert">{error}</p> : null}
-      {status !== null ? <p role="status">{status}</p> : null}
-      <ul aria-label="Route comments">
-        {community.comments.map((item) => <li key={item.id}><p>{item.text}</p><small>{item.authorLabel} · {new Date(item.postedAt).toLocaleDateString()}</small></li>)}
+      {error !== null ? <p className="og-route-community__note og-route-community__note--failed" role="alert">{error}</p> : null}
+      {status !== null ? <p className="og-route-community__note" role="status">{status}</p> : null}
+      <ul className="og-route-community__comments" aria-label="Route comments">
+        {community.comments.map((item) => (
+          <li key={item.id}>
+            <p>{item.text}</p>
+            <small>{item.authorLabel} · {new Date(item.postedAt).toLocaleDateString()}</small>
+          </li>
+        ))}
       </ul>
     </section>
   );

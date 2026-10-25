@@ -56,7 +56,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     if (viewport.width === 1440) {
       await reader.getByLabel("Leave a comment").fill("Synthetic test comment for review.");
       await reader.getByRole("button", { name: "Post comment" }).click();
-      await expect(reader.getByText("Comment sent for review. It will appear after approval. Posted from this device.")).toBeVisible();
+      await expect(reader.getByText("Comment sent for review. It will appear after approval.")).toBeVisible();
     }
     await other.close();
     // Publishing never replaces or renames the private saved ride.
