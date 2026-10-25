@@ -67,30 +67,22 @@
   --og-dur-fast: 140ms;
   --og-dur-base: 220ms;
 
-  /* Editorial type scale (12 §4; small-screen design system v2 in
-     docs/vnext/design/small-screen-v2.md). Five rider-facing sizes, nothing
-     below 12px. Eyebrow and page are legacy aliases kept for existing screens. */
-  --og-text-caption: 12px;
-  --og-text-meta: 14px;
-  --og-text-body: 16px;
-  --og-text-headline: 20px;
+  /* The type scale (small-screen design system v2 §1): five sizes, and nothing
+     outside them. Line heights and weights travel with each size where it is
+     used — title 700/1.15, headline 700/1.25, body 500/1.4, meta 500/1.35,
+     caption 600/1.3. Nothing below 12px: captions are the floor. */
   --og-text-title: 28px;
-  --og-text-eyebrow: 12px;
-  --og-text-page: clamp(32px, 3.2vw + 20px, 48px);
-  /* The two sizes the list cards and sheet headlines ask for by name
-     (design system v2 §1). */
   --og-text-headline: 20px;
+  --og-text-body: 16px;
+  --og-text-meta: 14px;
   --og-text-caption: 12px;
+  /* Older names for the same five sizes: an eyebrow is a caption, and a page
+     title is a title. Kept so existing declarations carry no sixth size. */
+  --og-text-eyebrow: var(--og-text-caption);
+  --og-text-page: var(--og-text-title);
 
-  /* Spacing scale (design system v2 §1): 4 · 8 · 12 · 16 · 24 · 32. */
-  --og-space-1: 4px;
-  --og-space-2: 8px;
-  --og-space-3: 12px;
-  --og-space-4: 16px;
-  --og-space-5: 24px;
-  --og-space-6: 32px;
-
-  /* Spacing scale: 4 · 8 · 12 · 16 · 24 · 32. Screen gutter 16, section gap 24. */
+  /* Spacing: 4 · 8 · 12 · 16 · 24 · 32. Screen gutter 16, between sections 24,
+     inside a card 12–16 (small-screen design system v2 §1). */
   --og-space-1: 4px;
   --og-space-2: 8px;
   --og-space-3: 12px;
@@ -7975,20 +7967,21 @@ h3,
   }
 }
 
-/* Phone portrait (UX rework phase 1): the primary nav is a bottom tab bar on
-   every page, like a native app, instead of a pill floating over the map. The
-   planner's sheet and every page's content sit above it. Short landscape keeps
-   the header row. */
+/* Compact widths (UX rework phase 1): the primary nav is a bottom tab bar on
+   every page, like a native app, instead of a row in the header. The planner's
+   sheet and every page's content sit above it. Short landscape keeps the header
+   row. On phones the bar is docked to the bottom edge (theme-glass.css, phone
+   app shell); this block is the floating glass capsule the iPad tier keeps. */
 @media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   :root {
-    /* Owner 2026-09-26 (OW-03): the tab bar floats as a frosted-glass capsule
-       over the map, like iOS's own tab bars. It sits just above the home
-       indicator; with no inset (older iPhones, desktop emulation) it keeps a
-       10px margin. --og-tabbar-h stays "the space the bar takes at the bottom",
-       so every page that pads by it keeps working. */
+    /* The tablet's tab bar floats as a frosted-glass capsule over the map, like
+       iOS's own tab bars. It sits just above the home indicator; with no inset
+       (older iPads, desktop emulation) it keeps a 10px margin. --og-tabbar-h
+       stays "the space the bar takes at the bottom", so every page that pads by
+       it keeps working. */
     --og-tabbar-pill-h: 60px;
     --og-tabbar-gap: max(10px, calc(var(--og-safe-bottom) - 12px));
-    --og-tabbar-h: calc(var(--og-tabbar-measured-pill-h, var(--og-tabbar-pill-h)) + var(--og-tabbar-gap));
+    --og-tabbar-h: calc(var(--og-tabbar-measured-h, var(--og-tabbar-pill-h)) + var(--og-tabbar-gap));
   }
 
   .og-planner__nav-shell,
@@ -11873,14 +11866,14 @@ h1 {
   text-transform: uppercase;
 }
 
-/* Page titles on the editorial pages: large, tight, confident. */
+/* Page titles on the editorial pages: the one title size, left-aligned. */
 .og-explore h1,
 .og-library h1,
 .og-settings__header h1 {
-  font-size: var(--og-text-page);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: -0.03em;
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .og-explore__intro,
