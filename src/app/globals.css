@@ -9264,6 +9264,14 @@ h3,
   flex: none;
 }
 
+/* "Saved" is the normal state, so it says nothing; only saving or unsaved
+   work earns room on the line. */
+@media (min-width: 1181px) {
+  .og-sheet__head > .og-planner__save-indicator[data-state="saved"] {
+    display: none;
+  }
+}
+
 /* The Settings link is an icon on every tier. Phase 1 hid the nav icons above
    the phone tier, which left the desktop link an empty ring; the gear stays. */
 .og-planner__settings-link .og-nav__icon {
