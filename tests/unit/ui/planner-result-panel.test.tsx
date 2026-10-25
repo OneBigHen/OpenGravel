@@ -13,7 +13,7 @@
  * the same subtree the wide tier portals into its inspector column.
  */
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ElevationResult, ElevationSource } from "@/application/elevation/profile";
@@ -129,5 +129,48 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
     await screen.findByTestId("elevation-climb");
     expect(screen.getByTestId("elevation-profile")).toHaveAttribute("data-density", "compact");
     expect(screen.queryByTestId("elevation-waypoints")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * The phone block's options and the one-tap ride style need more room than the
+ * peek detent has, so opening Compare rides there asks the sheet for its next
+ * step up instead of showing a list the rider cannot shape.
+ */
+describe("PlannerResultPanel on a phone", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("asks the sheet for room when Compare rides opens from the peek block", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
+    const onExpandSheet = vi.fn();
+    const ride = rideWithWaypoints();
+    render(
+      <PlannerResultPanel
+        inspector={null}
+        onExpandSheet={onExpandSheet}
+        choices={{
+          cards: [card("route_peek_a"), card("route_peek_b", { isSelected: false })],
+          explanation: null,
+          onSelect: vi.fn(),
+        }}
+        actions={{ document: ride, libraryService: undefined, shareService: undefined, route: null, start: null }}
+        briefing={{
+          route: null,
+          ride,
+          bikes: [],
+          providers: {},
+          offlineRoute: null,
+          actions: { setBike: vi.fn(), setDeparture: vi.fn(), setArriveBy: vi.fn() },
+          onRouteTraffic: vi.fn(),
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("compare-rides"));
+    expect(onExpandSheet).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("phone-alternatives")).toBeInTheDocument();
+    // Going back to the summary is not a move up.
+    fireEvent.click(screen.getByRole("button", { name: "Back to ride" }));
+    expect(onExpandSheet).toHaveBeenCalledTimes(1);
   });
 });

@@ -4417,6 +4417,8 @@ h3,
   grid-area: action;
   color: var(--og-moss-text);
   padding: 0 4px;
+  font-size: var(--og-text-body);
+  line-height: 1;
 }
 
 .og-style__panel {
@@ -4509,6 +4511,17 @@ h3,
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--og-moss-text);
+}
+
+/* The ride-style disclosure is a normal row — `Ride style`, a short value, a
+   chevron — not an eyebrow beside a sentence that wrapped to two lines. */
+.og-style__toggle-label {
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--og-ink);
 }
 
 /* The value cell wraps instead of truncating (owner review 2026-09-17): a
