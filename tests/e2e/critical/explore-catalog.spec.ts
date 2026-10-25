@@ -23,18 +23,25 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   // section is absent rather than heading an explanation of its own absence.
   await expect(page.getByRole("heading", { name: "Roads on this ride" })).toHaveCount(0);
   await expect(page.getByLabel("Curvature not computed")).toHaveText("—");
-  await expect(page.getByText("Posted from this device. No account is required.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Route notes" })).toBeVisible();
+  // The rating count is stated once ("No ratings yet", never "No ratings yet · 0 ratings").
+  await expect(page.locator(".og-route-community__meta")).toBeVisible();
+  await expect(page.getByText(/·\s*0 ratings/)).toHaveCount(0);
+  // Posting needs no account and no location, and the screen no longer explains that.
+  await expect(page.getByText(/Posted from this device/)).toHaveCount(0);
+  await expect(page.getByText(/do not request your GPS location/)).toHaveCount(0);
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export GPX" }).click();
   expect((await downloadPromise).suggestedFilename()).toMatch(/\.gpx$/i);
 
-  await page.getByRole("button", { name: "Save rating" }).click();
-  await expect(page.getByRole("status")).toContainText("Rating saved.");
+  await page.getByRole("radio", { name: "4 stars" }).click();
+  await expect(page.getByText("Thanks. Your rating is saved.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "4 stars" })).toBeChecked();
   await page.getByRole("textbox", { name: "Leave a comment" }).fill("This synthetic sample opened correctly.");
   await page.getByRole("button", { name: "Post comment" }).click();
   await expect(page.getByRole("status")).toContainText("Comment sent for review. It will appear after approval.");
   await expect(page.getByRole("list", { name: "Route comments" })).toBeEmpty();
-  await page.getByRole("combobox", { name: "Road condition" }).selectOption("rough");
+  await page.getByRole("combobox", { name: "Report a road condition" }).selectOption("rough");
   await page.getByRole("button", { name: "Send report" }).click();
   await expect(page.getByRole("status")).toContainText("Road condition report sent for review.");
 
