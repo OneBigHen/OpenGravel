@@ -283,6 +283,25 @@ export type PlannerUiStore = Pick<
   "getState" | "getInitialState" | "subscribe"
 >;
 
+/**
+ * Ends the armed placement an endpoint set answers (OGV-D-213).
+ *
+ * Arming "Set destination on map" is one instruction for the next tap. Any other
+ * way of setting that endpoint — a place picked from search, the rider's own fix,
+ * a dragged marker, a road that comes home — spends the instruction, so the mode
+ * and its hint end with it instead of sitting over a ride that is already
+ * planned. Setting one endpoint leaves a placement armed for the other alone.
+ */
+export function settleEndpointPlacement(
+  store: PlannerUiStore,
+  slot: "start" | "finish",
+): void {
+  const state = store.getState();
+  const armed = slot === "start" ? "place-start" : "place-finish";
+  if (state.placementTool !== armed) return;
+  state.setPlacementTool("idle");
+}
+
 export interface PlannerUiStoreOptions {
   readonly activeTool?: PointerTool;
   readonly placementTool?: PlacementTool;

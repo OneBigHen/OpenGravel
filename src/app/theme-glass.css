@@ -1168,6 +1168,17 @@ html .og-ride {
   color: #ffffff;
 }
 
+/* A disabled action still has to be readable. Day paints the ride white, and
+   the primary rule above forces white text for the ember fill; without this,
+   every disabled primary ("Routing…" while a reroute is in flight, "Reroute
+   now" on a fix that is not fresh-good) landed as white on the white disabled
+   surface: an empty pill beside "Details". */
+:root[data-theme="day"] .og-ride .og-ride__action:disabled {
+  color: var(--og-ride-muted);
+  background: var(--og-ride-surface);
+  border-color: var(--og-ride-border);
+}
+
 /* The GPS warning on the green turn card: amber on green is lost in glare. */
 .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) .og-ride__gps-badge {
   color: #ffd76a;
@@ -1258,6 +1269,11 @@ html .og-ride {
   .og-explore .og-explore__toolbar > .og-explore__controls {
     display: contents;
   }
+
+  /* On the wide toolbar the ride-date chips join the same row as the selects. */
+  .og-explore .og-explore__toolbar > .og-explore__controls > .og-explore__row {
+    padding-block: 0;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1342,6 +1358,12 @@ html .og-ride {
 
   .og-explore__controls[data-open="true"] > :is(.og-explore__sheet-head, .og-explore__sheet-done, .og-explore__near) {
     grid-column: 1 / -1;
+  }
+
+  /* The ride date is a row of chips, not a field: it spans the sheet. */
+  .og-explore__controls[data-open="true"] > .og-explore__row {
+    grid-column: 1 / -1;
+    padding-block: 0;
   }
 
   .og-explore__controls[data-open="true"] label {
@@ -2469,6 +2491,53 @@ html .og-ride {
 .og-along__road { list-style: none; }
 .og-along__road > ul { margin: 0; padding: 0; list-style: none; }
 .og-along__road-note { margin: 0 0 4px; font-size: 12px; font-weight: 650; color: var(--og-golden-text, var(--og-slate-text)); }
+
+/* Gas, food, coffee and overlooks: one glanceable row each, ordered by mile. */
+.og-along__stop {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-object, 14px);
+  background: var(--og-raised, var(--og-paper));
+}
+.og-along__stop-mile {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--og-moss-text);
+  font-variant-numeric: tabular-nums;
+}
+.og-along__stop-place { display: grid; gap: 1px; min-width: 0; }
+.og-along__stop-name {
+  font-size: 14.5px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.og-along__stop-place small {
+  font-size: 12px;
+  color: var(--og-slate-text);
+}
+.og-along__stop-add {
+  min-width: 62px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-sandstone) 55%, var(--og-paper));
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.og-along__stop-add:disabled { cursor: default; opacity: 0.6; }
+.og-along__stop-add:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
+.og-along__note { margin: 0; font-size: 11.5px; color: var(--og-slate-text); }
 .og-along__error { margin: 0; font-size: 13px; color: var(--og-danger); }
 .og-along__sources { font-size: 12.5px; color: var(--og-slate-text); }
 .og-along__sources summary { cursor: pointer; padding: 4px 2px; }

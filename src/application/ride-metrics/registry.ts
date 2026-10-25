@@ -467,6 +467,7 @@ function routeAnswer(
   if (context.route === null) return unsupported(base, "this ride has no route");
   const answer = context.route.answer;
   if (answer === null) {
+    if (context.position.observedAtMs === null) return waiting(base, "Finding GPS");
     return positionStale(context)
       ? { ...waiting(base, "GPS is stale"), state: "stale" }
       : waiting(base, "waiting for your place on the route");

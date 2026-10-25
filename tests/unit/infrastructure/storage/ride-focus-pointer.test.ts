@@ -150,3 +150,14 @@ describe("pointer shape", () => {
     expect((raw as RideFocusPointer).sessionId).toBe(POINTER.sessionId);
   });
 });
+
+
+it("retains and protects accepted suggestion lines for an unrecorded summary across reload", () => {
+  const pointer = createLocalStorageRideFocusPointer();
+  const ref = "geo_accepted" as GeometryRef;
+  pointer.write({ ...POINTER, routeGeometryRef: null, acceptedSuggestionGeometryRefs: [ref] });
+  const restored = createLocalStorageRideFocusPointer();
+  expect(restored.read()).toMatchObject({ status: "found", pointer: { acceptedSuggestionGeometryRefs: [ref] } });
+  expect(rideFocusGeometryRefs(restored)).toEqual([ref]);
+  expect(isRideFocusPointer({ version: 1, ...POINTER, acceptedSuggestionGeometryRefs: ["bad-ref"] })).toBe(false);
+});

@@ -25,10 +25,9 @@ import type {
 } from "@/application/planner/planning-session";
 import {
   aggregateRouteSurface,
-  surfaceBandLabel,
   unverifiedSurfaceMeters,
 } from "@/application/roads/surface-evidence";
-import type { SurfaceBand } from "@/domain/roads/surface";
+import type { SurfaceAssessment, SurfaceClass } from "@/domain/roads/surface";
 import {
   CURVINESS_LABELS,
   curvatureLabel,
@@ -87,27 +86,34 @@ export const ALTERNATIVE_LABEL = "Alternative";
 /** Evidence-driven badge: generated routes have no surface evidence. */
 export const UNVERIFIED_SURFACE_BADGE = "Surface unknown";
 
-/**
- * The 07 §5 rider vocabulary for surface confidence. The bands come from the
- * surface aggregation, so a band a rider sees here can never be more confident
- * than the evidence that produced it (07 §7 lowers a conflicting or stale
- * winner one band or more). The words name what is uncertain (the surface) rather than an abstract
- * "confidence" (UX rework 2). No numeric confidence is ever shown: 07 §5 says not
- * to expose false precision, so the band is the whole claim.
- */
-export type RouteConfidenceLabel =
-  | "Surface confirmed"
-  | "Surface mostly known"
-  | "Surface partly guessed"
-  | "Unknown";
-
-/** The 07 §5 band names, in the aggregation's own vocabulary. */
-export const CONFIDENCE_LABELS: Readonly<Record<SurfaceBand, RouteConfidenceLabel>> = {
-  confirmed: "Surface confirmed",
-  likely: "Surface mostly known",
-  possible: "Surface partly guessed",
-  unknown: "Unknown",
+/** The one-word badge for a surface class the evidence actually names. */
+const SURFACE_BADGE_WORDS: Readonly<Record<Exclude<SurfaceClass, "unknown">, string>> = {
+  paved: "Paved",
+  gravel: "Gravel",
+  dirt: "Dirt",
 };
+
+/**
+ * The surface badge, with the 07 §5 band folded into it (no separate confidence
+ * line). A confirmed or mostly-known surface is stated plainly; a partly-guessed
+ * one asks a question instead of claiming a surface the evidence cannot carry
+ * (07 §5, 07 §7). Only a band with names to show gets a word at all.
+ */
+function surfaceBadgeLabel(
+  surface: SurfaceAssessment,
+  evidence: Parameters<typeof surfaceMixLabel>[0],
+): string {
+  const value = surface.value;
+  if (surface.band === "unknown" || value === "unknown") return UNVERIFIED_SURFACE_BADGE;
+  const mix = surfaceMixLabel(evidence);
+  if (mix !== null) {
+    return surface.band === "possible" && !/\bunknown\b/i.test(mix) ? `${mix}?` : mix;
+  }
+  const word = SURFACE_BADGE_WORDS[value];
+  if (surface.band === "confirmed") return word;
+  if (surface.band === "likely") return `Likely ${word.toLowerCase()}`;
+  return `Maybe ${word.toLowerCase()}`;
+}
 
 /** 04 §11: at most three meaningful choices. */
 export const MAX_ROUTE_CARDS = 3;
@@ -123,6 +129,8 @@ export const DISABLED_IN_FLIGHT = "Your ride is on its way — one moment.";
 /** One route choice (04 §11). */
 export interface RouteCardVm {
   readonly routeId: RouteCandidateId;
+  /** Important plan consequences, carried from the server's warning channel. */
+  readonly notices?: readonly string[];
   /**
    * The role behind the label, as a stable token (`best-ride`, `alternative`,
    * …). Stable identity rather than display copy: it is what a hook, a test or
@@ -149,12 +157,6 @@ export interface RouteCardVm {
   /** Where each surface is along the line, for the strip under the elevation profile. */
   readonly surfaceRuns?: readonly SurfaceRun[];
 
-  /**
-   * The 07 §5 surface-confidence band (04 §11's "confidence summary"), or
-   * `null` for a card whose route has no measurable metric at all: a band on a
-   * line we cannot measure would be a claim about nothing (`OGV-D-251`).
-   */
-  readonly confidenceLabel: RouteConfidenceLabel | null;
   /**
    * Miles of this route whose surface no usable evidence covers, from the
    * evidence's own coverage share. `null` when that share is not measurable —
@@ -205,9 +207,26 @@ export interface PlannerViewModel {
    * offered beside it (owner review 2026-09-17).
    */
   readonly failed: boolean;
-  /** `Create ride` / `Update ride` / `Plan again` — never a success claim on
-   * top of an error. */
+  /** `Create ride` / `Update ride` / `Make my loop` / `Plan again` — never a
+   * success claim on top of an error. */
   readonly planLabel: string;
+  /**
+   * Whether the commitment control is offered at all (04 §8).
+   *
+   * A ride with a destination plans itself: the pick that completes it, and every
+   * later change to its style or its ends, asks the router without a press. So the
+   * control is hidden where a press would only ask the same question twice. It
+   * stays for the cases where a tap is still the rider's own:
+   *
+   * - **a loop**, whose shape and ride time the rider accepts by pressing
+   *   `Make my loop`;
+   * - **a failure**, where `Plan again` is a deliberate retry;
+   * - **a cancel**, where the rider stopped the attempt and the planner must not
+   *   start it again behind their back;
+   * - **a ride with no destination** (including one a sketch supplies), whose
+   *   disabled state carries the single instruction that says what is missing.
+   */
+  readonly showPlanAction: boolean;
   /**
    * True when the routes on screen were planned from the current ride revision,
    * so planning again would change nothing. The plan button steps back to a
@@ -438,6 +457,7 @@ const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point."
 /** The commitment label per phase (04 §8, §29): never a success claim on error. */
 export const PLAN_LABEL_CREATE = "Create ride";
 export const PLAN_LABEL_UPDATE = "Update ride";
+export const PLAN_LABEL_LOOP = "Make my loop";
 export const PLAN_LABEL_RETRY = "Plan again";
 
 /** Phases in which an attempt is still running (04 §8, §9). */
@@ -464,6 +484,29 @@ export function isPlanningInFlight(
  * cell's secondary value.
  */
 export const DROPPED_PIN_LABEL = "Dropped pin";
+
+/** The one line a place field shows, and its optional secondary detail line. */
+export interface PlaceFieldLines {
+  /** The point's name: the rider's own, a resolved place, or "Dropped pin". */
+  readonly label: string;
+  /**
+   * The coordinate line, only for a point that has no name at all.
+   *
+   * A named place is the whole answer; repeating its coordinate underneath is
+   * machine detail a rider does not need. A dropped pin is different: "Dropped
+   * pin" alone would not say which pin, so the coordinate stays as small
+   * secondary text.
+   */
+  readonly coordinate: string | null;
+}
+
+/**
+ * What a place field shows for one point: a named place reads as its name, and
+ * only a dropped pin carries the coordinate as a second line.
+ */
+export function placeFieldLines(label: string, coordinate: string | null): PlaceFieldLines {
+  return { label, coordinate: label === DROPPED_PIN_LABEL ? coordinate : null };
+}
 
 /**
  * A placed point's label: its authored name, else the place a geocoder found at
@@ -629,12 +672,6 @@ function routeCards(
     const surface = aggregateRouteSurface(candidate.evidence["surfaceMix"]);
     const curves = curvatureLabel(candidate.evidence["curvature"]);
     const ownTraffic = trafficLabelFor(candidate);
-    // A card with no measurable metric describes nothing a band could qualify,
-    // so it makes no confidence claim (OGV-D-251); every other card carries the
-    // 07 §5 band itself, never a numeric confidence.
-    const measurable =
-      isKnownMeasurement(candidate.distanceMeters) ||
-      isKnownMeasurement(candidate.durationSeconds);
     const unverifiedMeters = unverifiedSurfaceMeters(
       candidate.evidence["surfaceMix"],
       candidate.distanceMeters,
@@ -644,6 +681,7 @@ function routeCards(
     const runs = surfaceRuns(candidate.evidence["surfaceMix"]);
     return {
       routeId: candidate.id,
+      notices: candidate.warnings.filter(warning => warning.code === "destination-final-approach").map(warning => warning.message),
       tint: bundle.candidates.indexOf(candidate),
       ...(curviness === null ? {} : { curviness: { level: curviness, label: CURVINESS_LABELS[curviness - 1] ?? "Curvy" } }),
       ...(strip === null ? {} : { surfaceStrip: strip }),
@@ -657,14 +695,11 @@ function routeCards(
           ? null
           : formatAddedTime(candidate.durationSeconds, reference.durationSeconds),
       badges: [
-        surface.band === "unknown"
-          ? UNVERIFIED_SURFACE_BADGE
-          : surfaceMixLabel(candidate.evidence["surfaceMix"]) ?? surfaceBandLabel(surface.band),
+        surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]),
         ...(curves === null ? [] : [curves]),
         ...(candidate.warnings.some((warning) => warning.code === "basic-routing") ? [BASIC_ROUTING_BADGE] : []),
         ...(candidate.warnings.some((warning) => warning.code === "offline-routing") ? [OFFLINE_ROUTING_BADGE] : []),
       ],
-      confidenceLabel: measurable ? CONFIDENCE_LABELS[surface.band] : null,
       unknownSurfaceMi:
         unverifiedMeters === null
           ? null
@@ -1004,6 +1039,9 @@ export function buildPlannerViewModel(
   const rows = pointRows(document, input.placeNameFor);
   const itinerary = itineraryLegs(rows.itinerary, input.routeLine ?? null, document);
   const failed = session.phase === "failed";
+  // A cancel is the rider stopping a plan, not the planner finishing one: nothing
+  // is on screen to accept, so the press that can resume it stays available.
+  const cancelled = session.phase === "cancelled";
   return {
     phase: session.phase,
     statusMessage: statusFor(session.phase, document, session, derived),
@@ -1048,9 +1086,18 @@ export function buildPlannerViewModel(
     failed,
     planLabel: failed
       ? PLAN_LABEL_RETRY
-      : (bundle?.candidates.length ?? 0) > 0
-        ? PLAN_LABEL_UPDATE
-        : PLAN_LABEL_CREATE,
+      : document.intent.shape === "loop"
+        ? PLAN_LABEL_LOOP
+        : (bundle?.candidates.length ?? 0) > 0
+          ? PLAN_LABEL_UPDATE
+          : PLAN_LABEL_CREATE,
+    // A loop, a failure and a cancel still need the press; a destination that is
+    // being planned does not.
+    showPlanAction:
+      failed ||
+      cancelled ||
+      document.intent.shape === "loop" ||
+      document.intent.finish === null,
     planIsCurrent:
       !failed &&
       bundle !== null &&

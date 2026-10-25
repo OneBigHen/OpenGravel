@@ -5,6 +5,7 @@ import {
   plannerMap,
   settledExtent,
   type Coordinate,
+  pressPlan,
 } from "./map-helpers";
 
 export const RIDE_FIXTURE_START: Coordinate = { lon: -75.4385, lat: 40.1385 };
@@ -18,7 +19,7 @@ export async function startRide(page: Page): Promise<void> {
 
   await clickMapAtCoordinate(page, RIDE_FIXTURE_START);
   await clickMapAtCoordinate(page, RIDE_FIXTURE_DESTINATION);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
   const start = page.getByTestId("start-ride");

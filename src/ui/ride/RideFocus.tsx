@@ -28,6 +28,13 @@
  *   and no readout already shows it),
  *   Re-center (after the rider pans away; it also snaps back by itself), the
  *   "Head to the start" question (DV-07), and one alert chip.
+ * - **The map rail is glove-sized**: a compass that swaps heading-up for
+ *   north-up, a 56 x 112 zoom pill (pinch is unreliable in a glove), the whole
+ *   route, and the voice. Every half is 56 px with a divider between them.
+ * - **Night means night.** The chrome is already dark; the map follows it, with
+ *   the dark basemap where the deployment has one and a dark scrim where it does
+ *   not. On Auto the screen also follows the sun at the rider's own coordinate,
+ *   and the sheet carries Day / Night / Auto so a switch at dusk is never stuck.
  * - **Where the rider is looking**: when the line is lost, the suspended card
  *   carries the recovery itself — how far off route the engine measured, then
  *   "Reroute now" and "Details", both 56 px — so one thumb fixes it without the
@@ -46,7 +53,7 @@
  */
 
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import Link from "next/link";
 import { useStore } from "zustand";
 
@@ -60,8 +67,16 @@ import { opportunityDirection, opportunityReasons } from "@/application/free-rid
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
 import type { PlacesSource } from "@/application/places";
-import type { BasemapMode, MapHostFactory, MapLoadStatus } from "@/application/map/map-host";
+import type { BasemapMode, MapHost, MapHostFactory, MapLoadStatus } from "@/application/map/map-host";
 import type { MapIntent } from "@/application/map/types";
+import {
+  applyAppearance,
+  applyResolvedTheme,
+  readAppearanceMode,
+  setAppearanceMode,
+  type AppearanceMode,
+} from "@/ui/appearance/appearance";
+import { useAppearanceMode, useResolvedTheme } from "@/ui/appearance/use-appearance";
 import type {
   RideFocusStore,
   RideFocusStoreStatus,
@@ -70,6 +85,7 @@ import type { MapLayersSource } from "@/application/map-layers";
 import type { RideInterestDiscoverSource } from "@/application/ride-interest";
 import { AppBar } from "@/ui/nav/AppBar";
 import { LayeredMap } from "@/ui/layers/LayeredMap";
+import type { CameraView } from "@/ui/map/PlannerMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
 import { RideInterestCard } from "@/ui/ride/RideInterestCard";
@@ -122,6 +138,22 @@ const NO_RIDE_COPY =
   "Plan a route in the planner and press Start ride, or record a ride as you go — it opens here.";
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
+
+/** Zoom changes below this are rounding noise, not a limit the button is at. */
+const ZOOM_LIMIT_EPSILON = 0.01;
+
+/** The three display choices, in the rider's words. */
+const DISPLAY_CHOICES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [
+  { mode: "auto", label: "Auto" },
+  { mode: "day", label: "Day" },
+  { mode: "night", label: "Night" },
+];
+
+/** The level one zoom press asks for, inside the renderer's own limits. */
+function zoomStep(camera: CameraView, delta: 1 | -1): number {
+  const next = Math.min(camera.maxZoom, Math.max(camera.minZoom, camera.zoom + delta));
+  return Math.round(next * 10) / 10;
+}
 
 function rideSafeArea(): MapInsets {
   const style = getComputedStyle(document.documentElement);
@@ -245,9 +277,21 @@ export function RideFocus({
   const cameraExtent = useStore(store, (state) => state.cameraExtent);
   const cameraHeld = useStore(store, (state) => state.cameraHeld);
   const rideCamera = useStore(store, (state) => state.rideCamera);
+  const rideBearing = useStore(store, (state) => state.rideBearing);
+  const northUp = useStore(store, (state) => state.northUp);
+  const appearanceMode = useAppearanceMode();
+  const theme = useResolvedTheme();
+  /** The live renderer, so the rail's own zoom and compass drive the same map. */
+  const hostRef = useRef<MapHost | null>(null);
+  /** The map's own bearing and zoom, reported by the renderer (not guessed). */
+  const [camera, setCamera] = useState<CameraView | null>(null);
   const voiceMuted = useSyncExternalStore(subscribeVoiceMuted, isVoiceMuted, () => false);
   const farFromStart = useStore(store, (state) => state.farFromStart);
   const stopConfirm = useStore(store, (state) => state.stopConfirm);
+  const recordingToggleBusy = useStore(store, (state) => state.recordingToggleBusy);
+  const recordingCleanupPending = useStore(store, (state) => state.recordingCleanupPending);
+  const canSaveFreeRideSummary = useStore(store, (state) => state.canSaveFreeRideSummary);
+  const savedSummaryRideId = useStore(store, (state) => state.savedSummaryRideId);
   const rerouteAvailable = useStore(store, (state) => state.rerouteAvailable);
   const rerouteBusy = useStore(store, (state) => state.rerouteBusy);
   const rerouteMessage = useStore(store, (state) => state.rerouteMessage);
@@ -330,6 +374,28 @@ export function RideFocus({
       observer?.disconnect();
     };
   }, [surfaceReady]);
+
+  /*
+    Auto follows the sky while a ride is open. The phone's light/dark setting is
+    a guess about the room the rider is in; the ride knows where they are, so
+    dusk is a fact rather than a schedule. Day and Night stay the rider's own
+    choice, and the phone's setting comes back when the ride closes: this is a
+    display for now, not a stored preference.
+
+    The fact comes from the store (`sunlight`, derived from its own clock and the
+    latest fix), so the screen follows the sun without a second timer and the
+    map can open in the right look instead of turning a moment later.
+  */
+  const sunlight = useStore(store, (state) => state.sunlight);
+  const mapTheme = appearanceMode === "auto" ? sunlight ?? theme : theme;
+  useEffect(() => {
+    if (appearanceMode !== "auto" || sunlight === null) return;
+    applyResolvedTheme(sunlight);
+  }, [appearanceMode, sunlight]);
+  // Leaving the ride puts Auto back on the phone, whatever the sun was doing.
+  useEffect(() => () => {
+    if (readAppearanceMode() === "auto") applyAppearance("auto");
+  }, []);
 
   const terminal = viewModel?.terminal ?? null;
   const recordingHud = viewModel?.recording ?? null;
@@ -433,15 +499,16 @@ export function RideFocus({
         position: {
           coordinate: viewModel?.mapPosition?.coordinate ?? null,
           quality: viewModel?.mapPosition?.quality ?? "unavailable",
-          // The arrow points where the heading-up camera looks: up the road.
-          heading: rideCamera?.camera.bearing ?? null,
+          // Up the road, not up the screen: the bearing is the direction of
+          // travel, so a north-up map turns the view without turning the arrow.
+          heading: rideBearing,
         },
       }),
       // Optional like the rest of `MapScene`: a ride with nothing to show
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
     }),
-    [availableRouteLine, liveSuggestion, navigation, onRoute, progressFraction, rideCamera, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
+    [availableRouteLine, liveSuggestion, navigation, onRoute, progressFraction, rideBearing, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
   );
 
   const selectRideInterest = rideInterest.select;
@@ -455,12 +522,44 @@ export function RideFocus({
     () => (rideCamera === null || !insetsReady ? null : { key: `follow:${rideCamera.token}`, camera: rideCamera.camera }),
     [insetsReady, rideCamera],
   );
+  /** The renderer's handle, kept so the rail moves this map and no other. */
+  const onHost = useCallback((host: MapHost | null): void => {
+    hostRef.current = host;
+    if (host === null) setCamera(null);
+  }, []);
+  const onCamera = useCallback((next: CameraView): void => {
+    setCamera((previous) =>
+      previous !== null &&
+      previous.bearing === next.bearing &&
+      previous.zoom === next.zoom &&
+      previous.minZoom === next.minZoom &&
+      previous.maxZoom === next.maxZoom
+        ? previous
+        : next,
+    );
+  }, []);
+  /*
+    The rail's own zoom and compass. They go through the same `MapHost` port as
+    the planner's column: one press is one host call, and the store remembers the
+    level so the follow camera does not put the speed zoom straight back.
+  */
+  const zoomStepBy = (delta: 1 | -1): void => {
+    hostRef.current?.zoomBy?.(delta);
+    if (camera !== null) store.getState().zoomTo(zoomStep(camera, delta));
+  };
+  const atMaxZoom = camera !== null && camera.zoom >= camera.maxZoom - ZOOM_LIMIT_EPSILON;
+  const atMinZoom = camera !== null && camera.zoom <= camera.minZoom + ZOOM_LIMIT_EPSILON;
   const mapProps = {
     scene,
     onIntent: onMapIntent,
     hostFactory: mapHostFactory,
     basemap,
     ...(assetBasePath === undefined ? {} : { assetBasePath }),
+    // The map turns dark with the screen: Night contrast where the deployment
+    // has a dark style, the scrim over its basemap where it does not.
+    forcedLook: mapTheme === "night" ? ("night" as const) : ("map" as const),
+    onHost,
+    onCamera,
     insets: mapInsets,
     // A `null` key while the rider holds the camera, or while the follow
     // camera owns it: nothing may snap a following map back to an overview.
@@ -933,6 +1032,69 @@ export function RideFocus({
           ) : null}
           {terminal !== null ? null : (
             <div className="og-ride__rail" role="group" aria-label="Map and voice">
+              {/*
+                The compass is the map's own rotation: the needle turns with it,
+                and one press swaps heading-up for north-up and back. It is a
+                toggle rather than "face north" because a rider who turned the
+                map north to read a junction wants the road-up view back.
+              */}
+              <button
+                type="button"
+                className="og-ride__rail-button og-ride__rail-compass"
+                data-testid="ride-compass"
+                aria-pressed={northUp}
+                // One name, one state: pressed means the map is north-up. The
+                // needle says which way north is in either case.
+                aria-label="North up"
+                title={northUp ? "North up" : "Heading up"}
+                style={{ "--og-bearing": String(camera?.bearing ?? 0) } as CSSProperties}
+                onClick={(): void => {
+                  const next = !northUp;
+                  store.getState().setNorthUp(next);
+                  // A map the rider has panned has no follow frame to turn, so
+                  // the press is carried out on the map they are looking at.
+                  if (next && !follow) hostRef.current?.faceNorth?.();
+                }}
+              >
+                <svg className="og-ride__compass-needle" viewBox="0 0 24 24" aria-hidden="true">
+                  <path className="og-ride__compass-tip" d="M12 2.5 16.5 12h-9z" />
+                  <path className="og-ride__compass-tail" d="M12 21.5 7.5 12h9z" />
+                </svg>
+              </button>
+              {/*
+                Zoom for a gloved thumb: two 56 px halves of one pill, so the
+                pair reads as one instrument and neither press is a pinch. The
+                controls stay focusable at a limit and say so instead of
+                disappearing.
+              */}
+              <div className="og-ride__rail-zoom" role="group" aria-label="Zoom">
+                <button
+                  type="button"
+                  className="og-ride__rail-button"
+                  data-testid="ride-zoom-in"
+                  data-disabled={atMaxZoom ? "true" : "false"}
+                  aria-label="Zoom in"
+                  aria-disabled={atMaxZoom ? true : undefined}
+                  onClick={atMaxZoom ? undefined : (): void => zoomStepBy(1)}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 6v12M6 12h12" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="og-ride__rail-button"
+                  data-testid="ride-zoom-out"
+                  data-disabled={atMinZoom ? "true" : "false"}
+                  aria-label="Zoom out"
+                  aria-disabled={atMinZoom ? true : undefined}
+                  onClick={atMinZoom ? undefined : (): void => zoomStepBy(-1)}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 12h12" />
+                  </svg>
+                </button>
+              </div>
               {routeless ? null : (
                 <button
                   type="button"
@@ -981,8 +1143,8 @@ export function RideFocus({
                 summary and the two ways onward stay outside it, so a change to
                 the card never re-reads the whole screen to a rider. */}
             <div className="og-ride__terminal-head" role="status">
-              <h2 className="og-ride__terminal-title">{terminal.title}</h2>
-              <p className="og-ride__terminal-text">{terminal.text}</p>
+              <h2 className="og-ride__terminal-title">{savedSummaryRideId !== null ? "Free Ride summary saved" : terminal.title}</h2>
+              <p className="og-ride__terminal-text">{savedSummaryRideId !== null ? "Your ride summary is in My rides." : terminal.text}</p>
             </div>
             {terminal.reason !== "completed" ? null : (
               <RideRouteSketch
@@ -1008,7 +1170,7 @@ export function RideFocus({
                 rides has something to open only once the recording landed
                 there, so the link exists only when it does. */}
             <div className="og-ride__actions og-ride__terminal-actions">
-              {terminal.reason !== "completed" || navigation?.recordingId == null ? null : (
+              {terminal.reason !== "completed" || (navigation?.recordingId == null && savedSummaryRideId === null) ? null : (
                 <Link
                   className="og-ride__action og-ride__action--primary"
                   data-testid="ride-summary-rides"
@@ -1036,24 +1198,28 @@ export function RideFocus({
         {terminal !== null || !stopConfirm ? null : (
           <div className="og-ride__confirm" data-testid="ride-stop-confirm">
             <p className="og-ride__confirm-text">End this ride?</p>
+            {navigation?.recordingId == null && canSaveFreeRideSummary ? <p>Save your distance, moving time, elevation and accepted suggestions as a ride summary. No GPS track was retained.</p> : null}
             <div className="og-ride__actions">
               <button
                 type="button"
                 className="og-ride__action og-ride__action--primary"
                 data-testid="ride-finish"
-                disabled={!controls.finish.enabled}
+                disabled={recordingToggleBusy || recordingCleanupPending || !controls.finish.enabled}
                 title={controls.finish.reason ?? undefined}
                 onClick={(): void => {
                   void store.getState().finish();
                 }}
               >
-                Finish ride
+                {navigation?.recordingId == null && canSaveFreeRideSummary ? "Save summary & finish" : "Finish ride"}
               </button>
+              {navigation?.recordingId == null && canSaveFreeRideSummary ? (
+                <button type="button" className="og-ride__action" onClick={(): void => { void store.getState().finish(false); }}>Finish without saving</button>
+              ) : null}
               <button
                 type="button"
                 className="og-ride__action"
                 data-testid="ride-discard"
-                disabled={!controls.discard.enabled}
+                disabled={recordingToggleBusy || recordingCleanupPending || !controls.discard.enabled}
                 title={controls.discard.reason ?? undefined}
                 onClick={(): void => {
                   void store.getState().discard();
@@ -1113,10 +1279,33 @@ export function RideFocus({
           </section>
         )}
 
-        {terminal !== null ? null : navigation?.activity === "free" && navigation.recordingId === null ? (
+        {terminal === null && recordingCleanupPending && navigation?.activity !== "free" ? (
+          <section aria-label="Recording cleanup">
+            <p>Retry turning recording off before finishing this ride.</p>
+            <button type="button" className="og-ride__action" disabled={recordingToggleBusy}
+              onClick={(): void => { void store.getState().stopRecording(); }}>Retry turning recording off</button>
+          </section>
+        ) : null}
+
+        {terminal !== null ? null : navigation?.activity === "free" ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
             <div className="og-ride__free-ride-heading">
               <h2 className="og-visually-hidden">Free Ride</h2>
+              <button
+                type="button"
+                className="og-ride__action"
+                data-testid="free-ride-recording-toggle"
+                disabled={recordingToggleBusy}
+                aria-pressed={navigation.recordingId !== null}
+                aria-describedby="free-ride-recording-help"
+                onClick={(): void => {
+                  if (recordingCleanupPending || navigation.recordingId !== null) void store.getState().stopRecording();
+                  else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
+                }}
+              >
+                {recordingCleanupPending ? "Retry turning recording off" : navigation.recordingId === null ? "Not recording · tap to record" : "Recording · tap to turn off"}
+              </button>
+              <p id="free-ride-recording-help" className="og-ride__free-ride-copy">Turning recording off discards the track. Your ride summary can still be saved.</p>
               <button
                 type="button"
                 className="og-ride__action"
@@ -1227,7 +1416,7 @@ export function RideFocus({
               </p>
             )}
           </section>
-        ) : navigation?.activity === "guided" && navigation.recordingId === null && (suggestions === "on" || freeRideStatusMessage !== null) ? (
+        ) : navigation?.activity === "guided" && (suggestions === "on" || freeRideStatusMessage !== null) ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
             {freeRideStatusMessage === null
               ? <p className="og-ride__free-ride-copy">Following a suggested route segment.</p>
@@ -1368,7 +1557,7 @@ export function RideFocus({
               {viewModel.activityLabel}
             </p>
             <p className="og-ride__gps" data-testid="ride-gps" data-tone={position.tone}>
-              <span className="og-ride__gps-label">{gpsUnavailable ? "Waiting for location" : position.qualityLabel}</span>
+              <span className="og-ride__gps-label">{gpsUnavailable ? "Finding GPS" : position.qualityLabel}</span>
               {position.ageText === null ? null : (
                 <span className="og-ride__gps-age"> · {position.ageText}</span>
               )}
@@ -1431,6 +1620,25 @@ export function RideFocus({
               ? "Tap a readout below to change it."
               : "You can change the readouts when you're stopped."}
           </p>
+          {/*
+            Day / Night where the rider is, not three taps away in Settings: a
+            switch at sunset that cannot be overridden at the roadside is not
+            automatic, it is stuck. Auto follows the sun while a ride is open.
+          */}
+          <div className="og-ride__display" data-testid="ride-display" role="group" aria-label="Screen">
+            {DISPLAY_CHOICES.map((choice) => (
+              <button
+                key={choice.mode}
+                type="button"
+                className="og-ride__action og-ride__display-option"
+                data-testid={`ride-display-${choice.mode}`}
+                aria-pressed={appearanceMode === choice.mode}
+                onClick={(): void => setAppearanceMode(choice.mode)}
+              >
+                {choice.label}
+              </button>
+            ))}
+          </div>
           {routeLineAvailable || navigation?.plan.route === null ? null : (
             <p className="og-ride__progress-line" data-testid="ride-line-unavailable">
               The route line can&apos;t be drawn right now. The ride is unaffected.

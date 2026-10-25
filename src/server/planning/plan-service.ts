@@ -6,7 +6,9 @@ import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/rid
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
+import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
 import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { BALANCED_DETOUR_CAP, searchBalancedEnvelope } from "@/application/planner/balanced-search";
 import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
@@ -837,6 +839,7 @@ async function planRideAttempt(
   // they never starve the phase 1 knee search.
   const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
   const formulaMode = riderEnabled ? parseRideFormulaMode(riderEnv["OGV_RIDE_FORMULA"]) : "off";
+  const balancedFun = riderEnabled && parsed.value.request.options.roadCharacter === "balanced" && !seeksDirt(parsed.value.request.options);
   let riderCalls = 0;
   let riderFactor: number | undefined;
   let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
@@ -884,6 +887,7 @@ async function planRideAttempt(
     candidates: from,
     intent,
     policy: ROUTE_POLICY,
+    ...(balancedFun ? { recommendationDetourCap: BALANCED_DETOUR_CAP } : {}),
     // OGV_RIDE_FORMULA=on: the versioned Ride Formula picks Best Ride among the
     // eligible, in-budget candidates; evidence and RouteScore stay canonical.
     ...(formulaMode !== "on"
@@ -897,7 +901,7 @@ async function planRideAttempt(
           // fastest eligible ETA here is often motorcycle_fastest's, which
           // runs ~20% quicker than the adventure profile on the same road.
           ...(seeksDirt(parsed.value.request.options) ? { recommendationDetourCap: DIRT_DETOUR_CAP } : {}),
-          recommendationProfile: parsed.value.request.profile,
+          ...(balancedFun ? {} : { recommendationProfile: parsed.value.request.profile }),
         }),
     // What the engine knows about the roads under each line: surface mix, the
     // backroad share and curvature (M3, OGV-D-263).
@@ -1033,7 +1037,18 @@ async function planRideAttempt(
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
     const options = parsed.value.request.options;
     const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred" && riderEnv["OGV_CURVY_SEARCH"] !== "off";
-    const result = curvy ? await searchCurvyEnvelope({
+    const result = balancedFun ? await searchBalancedEnvelope({
+      request: parsed.value.request,
+      candidates: eligible,
+      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
+      provider, maxCalls: riderBudget.maxProviderCalls, deadlineMs: riderBudget.deadlineMs, signal,
+      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
+      verify: async (proposed, searchSignal) => {
+        const own = await assessRoads([...candidates, ...proposed], searchSignal);
+        roads = own;
+        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
+      },
+    }) : curvy ? await searchCurvyEnvelope({
       request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
@@ -1167,6 +1182,52 @@ async function planRideAttempt(
     }
   }
 
+  let approachNotice: { readonly accessBlocked: boolean } | null = null;
+  if (pipeline.candidates.length === 0 && fixture === null && intent.shape === "destination" && candidates.length > 0
+    && pipeline.diagnostics.length > 0 && pipeline.diagnostics.every(entry => entry.code === "ineligible"
+      && entry.eligibilityCode !== undefined && ROAD_AUTHORITY_ELIGIBILITY_CODES.has(entry.eligibilityCode))) {
+    const approaches = candidates.map(candidate => {
+      const verdict = approachBlocksFor(candidate, roadVerdict(candidate));
+      return { verdict, targets: verdict === null ? [] : finalApproachTargets(candidate.geometry, verdict) };
+    });
+    // Every candidate must fail exclusively on a located final-approach block.
+    // A middle-route block or an unlocated/unknown restriction cannot authorize this fallback.
+    if (approaches.every(approach => approach.targets.length > 0)) {
+      const request = parsed.value.request;
+      const retries = approaches.flatMap(approach => approach.targets.map(target => ({ ...approach, target })))
+        .sort((a, b) => haversine(a.target, request.destination) - haversine(b.target, request.destination));
+      const attempted: Coordinate[] = [];
+      const retrySignal = AbortSignal.any([signal, AbortSignal.timeout(8000)]);
+      for (const retry of retries) {
+        if (attempted.length >= 3 || retrySignal.aborted) break;
+        if (attempted.some(point => haversine(point, retry.target) < 25)) continue;
+        attempted.push(retry.target);
+        try {
+          const answer = await provider.candidates({
+            ...request, requestId: `${request.requestId}:approach:${attempted.length}`,
+            destination: retry.target, options: { ...request.options, includeAlternatives: false },
+          }, retrySignal);
+          const proposed = answer.candidates.filter(candidate => {
+            const end = candidate.geometry.at(-1);
+            return end !== undefined && haversine(end, retry.target) <= 125
+              && !blockedRoadOverlap(candidate.geometry, retry.verdict!);
+          });
+          const ownRoads = await assessRoads(proposed, retrySignal);
+          const checked = rank(proposed, candidate => ownRoads?.evaluate(candidate.geometry) ?? null);
+          if (checked.candidates.length === 0) continue;
+          candidates = proposed;
+          roads = ownRoads;
+          pipeline = checked;
+          approachNotice = { accessBlocked: retry.verdict!.failures.some(failure => failure.code === "access-prohibited") };
+          break;
+        } catch {
+          if (signal.aborted) throw signal.reason;
+          // An optional retry cannot replace the original blocked-road diagnosis.
+        }
+      }
+    }
+  }
+
   if (pipeline.candidates.length === 0) {
     // Candidates the engine returned own their eligibility diagnosis. An
     // optional lane's refusal cannot explain why another lane's line was dropped.
@@ -1191,7 +1252,16 @@ async function planRideAttempt(
     };
   }
 
-  const mapped = pipeline.candidates.map(toRoutePlanCandidate);
+  const mapped = pipeline.candidates.map(candidate => {
+    const wire = toRoutePlanCandidate(candidate);
+    return approachNotice === null ? wire : {
+      ...wire,
+      warnings: [...wire.warnings, {
+        id: "destination:final-approach", code: "destination-final-approach", severity: "warning" as const,
+        message: finalApproachMessage(candidate.geometry.at(-1)!, parsed.value.request.destination, approachNotice.accessBlocked, parsed.value.request.destinationLabel),
+      }],
+    };
+  });
   let rideFormulaDiagnostic: NonNullable<RoutePlanDiagnosticsWire["rideFormula"]> | null = null;
   if (formulaMode !== "off") {
     const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
@@ -1219,7 +1289,7 @@ async function planRideAttempt(
     // Mirror the pipeline's recommendation cap: measured from the rider's own
     // profile ETA, with the dirt allowance for dirt-seeking riders.
     const ownSeconds = Math.min(...pipeline.candidates.filter((kept) => sourceOf(candidates, kept)?.profile === parsed.value.request.profile).map((kept) => kept.durationSeconds));
-    const capSeconds = (Number.isFinite(ownSeconds) ? Math.max(fastestSeconds, ownSeconds) : fastestSeconds) * (seeksDirt(parsed.value.request.options) ? DIRT_DETOUR_CAP : 1.35);
+    const capSeconds = (balancedFun ? fastestSeconds : Number.isFinite(ownSeconds) ? Math.max(fastestSeconds, ownSeconds) : fastestSeconds) * (seeksDirt(parsed.value.request.options) ? DIRT_DETOUR_CAP : balancedFun ? BALANCED_DETOUR_CAP : 1.35);
     const inBudget = rows.filter((row) => row.eligible && row.confidence >= RIDE_FORMULA_MIN_CONFIDENCE
       && (parsed.value.request.discovery !== undefined || (pipeline.candidates[row.index]?.durationSeconds ?? Infinity) <= capSeconds));
     const pick = [...inBudget].sort((left, right) => right.value - left.value)[0];

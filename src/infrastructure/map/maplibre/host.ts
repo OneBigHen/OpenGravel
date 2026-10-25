@@ -126,6 +126,7 @@ import {
   MAP_LAYER_IDS,
   MAP_SOURCE_IDS,
   emptyBasemapStyle,
+  nightScrimLayer,
   osmBasemapStyle,
   overlayLayers,
   readMapPalette,
@@ -897,15 +898,39 @@ export async function createMapLibreHost(
   let configuredStyle = style;
   /** Night contrast is a Mapbox map: it needs the public token. */
   const nightAvailable = mapboxToken !== null;
-  let basemapLook: "map" | "night" = nightAvailable && options.basemapLook === "night" ? "night" : "map";
+  let basemapLook: "map" | "night" = options.basemapLook === "night" ? "night" : "map";
   /** The repainted Night contrast style, fetched once per host. */
   let nightStyle: Promise<MapStyleSpec | null> | null = null;
+  /** The style document Night contrast resolved to, so "is it drawn?" is a fact. */
+  let nightStyleSpec: MapStyleSpec | null = null;
   function loadNightStyle(): Promise<MapStyleSpec | null> {
     if (mapboxToken === null) return Promise.resolve(null);
     nightStyle ??= fetch(mapboxRequestUrl(NIGHT_CONTRAST_BASE_STYLE_URL, mapboxToken))
-      .then(async (response) => (response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null))
+      .then(async (response) => {
+        nightStyleSpec = response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null;
+        return nightStyleSpec;
+      })
       .catch(() => null);
     return nightStyle;
+  }
+  /**
+   * How long the map waits for Night contrast before opening without it.
+   *
+   * A dark style is fetched over the network, and it is asked for exactly when
+   * a rider opens a ride in the dark — often on a weak signal. Rather than hold
+   * the map closed behind a fetch that may take a minute, the wait is bounded
+   * and the scrim is the fallback: a dark map now beats a dark style later.
+   */
+  const NIGHT_STYLE_TIMEOUT_MS = 4_000;
+  /** `loadNightStyle`, bounded, for the one path that holds the map open. */
+  function loadNightStyleBounded(): Promise<MapStyleSpec | null> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), NIGHT_STYLE_TIMEOUT_MS);
+      void loadNightStyle().then((night) => {
+        clearTimeout(timer);
+        resolve(night);
+      });
+    });
   }
   /** True when the map draws the rider's downloaded basemap (Lane A2). */
   let drawingOfflineBasemap = false;
@@ -1186,6 +1211,38 @@ export async function createMapLibreHost(
   }
 
   /**
+   * Where the night scrim goes: under the ride's own line, and under the
+   * basemap's labels so road names stay legible, but over everything the
+   * basemap draws as ground. On a style that has no route layers yet the answer
+   * is the first label, which is exactly where the line layers land afterwards.
+   */
+  function scrimBeforeId(map: MapLibreMap): string | undefined {
+    for (const id of ROUTE_LINE_LAYER_IDS) {
+      if (map.getLayer(id) !== undefined) return id;
+    }
+    return firstBasemapLabelId(map);
+  }
+
+  /**
+   * The night look over the rider's own basemap, for a deployment that has no
+   * dark style of its own (see `nightScrimLayer`). Idempotent and cheap: it runs
+   * when a style loads and when the look changes, never per frame.
+   */
+  function syncNightScrim(map: MapLibreMap): void {
+    // Night contrast *is* the dark map; the scrim is only for the styles that
+    // are not, and a downloaded basemap is one of them.
+    const wanted = basemapLook === "night" && style !== nightStyleSpec;
+    try {
+      if (map.getLayer(MAP_LAYER_IDS.nightScrim) !== undefined) map.removeLayer(MAP_LAYER_IDS.nightScrim);
+      if (!wanted) return;
+      map.addLayer(nightScrimLayer() as unknown as MapLibreLayerSpec, scrimBeforeId(map));
+    } catch {
+      // Cosmetic: a dimmer that cannot be added leaves the map as it was. The
+      // chrome is dark either way, so nothing claims a night map that is not.
+    }
+  }
+
+  /**
    * Adds the overlay layers above the basemap.
    *
    * One failing layer must not take the others with it (05 §22: "custom layer
@@ -1194,6 +1251,8 @@ export async function createMapLibreHost(
    * being swallowed. The map keeps drawing whatever did load.
    */
   function addOverlayLayers(map: MapLibreMap): void {
+    // First, so the scrim sits under the line layers added below it.
+    syncNightScrim(map);
     const failed: string[] = [];
     const fonts = placeFontStack(map);
     let placeImagesReady = false;
@@ -2309,7 +2368,8 @@ export async function createMapLibreHost(
     satelliteVisible = false;
     style = OPENFREEMAP_STYLE_URL;
     configuredStyle = OPENFREEMAP_STYLE_URL;
-    basemapLook = "map";
+    // The rider's look is kept: the Night style was a Mapbox map and can no
+    // longer be fetched, so the same choice becomes the scrim over this one.
     container.setAttribute(MAP_BASEMAP_ATTRIBUTE, "openfreemap");
     startAttempt();
   }
@@ -2679,20 +2739,35 @@ export async function createMapLibreHost(
       return mapboxToken !== null;
     },
 
-    get supportsNightContrast(): boolean {
-      return nightAvailable && mapboxToken !== null;
+    // Every basemap has a night look: Night contrast where the token allows a
+    // dark style, the scrim below where it does not.
+    get supportsNightLook(): boolean {
+      return true;
     },
 
     setBasemapLook(look: "map" | "night"): void {
-      if (!nightAvailable || drawingOfflineBasemap || look === basemapLook) return;
+      if (disposed || look === basemapLook) return;
       basemapLook = look;
       container.setAttribute("data-basemap-look", look);
+      // Night contrast is a whole dark style and the only thing `setStyle` is
+      // worth for here; without the token, on a downloaded basemap, or when the
+      // fetch fails, the same choice is the scrim over the map already drawn.
+      if (!nightAvailable || drawingOfflineBasemap) {
+        const map = attempt?.map;
+        if (map !== undefined) syncNightScrim(map);
+        return;
+      }
       void (async () => {
         const next = look === "night" ? await loadNightStyle() : configuredStyle;
-        // A later choice wins; a failed fetch keeps the map the rider has.
-        if (disposed || basemapLook !== look || next === null) return;
-        style = next;
+        // A later choice wins.
+        if (disposed || basemapLook !== look) return;
         const map = attempt?.map;
+        if (next === null) {
+          // No dark style after all: the scrim is the honest night look.
+          if (map !== undefined) syncNightScrim(map);
+          return;
+        }
+        style = next;
         // `style.load` follows, and restoreStyle redraws the ride on the new map.
         map?.setStyle?.(next, { diff: false });
       })();
@@ -2792,9 +2867,11 @@ export async function createMapLibreHost(
 
   // Night contrast opens dark from the first frame instead of flashing the day map.
   if (renderer !== null && basemapLook === "night" && !drawingOfflineBasemap) {
-    const night = await loadNightStyle();
+    const night = await loadNightStyleBounded();
+    // No dark style (no token, or the fetch failed): the map opens with the
+    // scrim over the configured basemap instead of a bright map the rider did
+    // not ask for.
     if (night !== null) style = night;
-    else basemapLook = "map";
   }
   if (basemapLook === "night") container.setAttribute("data-basemap-look", "night");
 

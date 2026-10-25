@@ -244,3 +244,34 @@ describe("runCandidatePipeline — enrichment and shape", () => {
       ?.score.components.curvature.input).toBeGreaterThan(0);
   });
 });
+
+it.each([false, true])("enforces an explicit recommendation cap even without usable formula values (formula=%s)", formula => {
+  const result = runCandidatePipeline({
+    candidates: [providerCandidate(), providerCandidate({
+      geometry: [ORIGIN, { lon: -77.15, lat: 40.25 }, DESTINATION],
+      durationSeconds: 1170, providerMetadata: { fingerprint: "fp_curvy_over_budget" },
+    })],
+    intent: { roadCharacter: "balanced" }, policy: POLICY,
+    recommendationDetourCap: 1.25,
+    ...(formula ? { candidateValueFor: () => null } : {}),
+    evidenceFor: candidate => ({ curvature: { ...knownEvidence(candidate.durationSeconds > 900 ? 1 : 0,
+      { id: "test-curves", label: "Measured curves", category: "derived" }, 1), coverage: 1 } }),
+  });
+  expect(result.candidates.find(candidate => candidate.durationSeconds === 1170)?.score.total).toBeGreaterThan(
+    result.candidates.find(candidate => candidate.durationSeconds === 900)!.score.total,
+  );
+  const best = result.candidates[result.roles["best-ride"] ?? result.selectedIndex ?? 0];
+  expect(best?.durationSeconds).toBe(900);
+});
+
+
+it("preserves an in-budget candidate through near-duplicate suppression", () => {
+  const result = runCandidatePipeline({
+    candidates: [providerCandidate(), providerCandidate({ durationSeconds: 1170, providerMetadata: { fingerprint: "fp_same_line_slow" } })],
+    intent: { roadCharacter: "balanced" }, policy: POLICY, recommendationDetourCap: 1.25,
+    evidenceFor: candidate => ({ curvature: { ...knownEvidence(candidate.durationSeconds > 900 ? 1 : 0,
+      { id: "test-curves", label: "Measured curves", category: "derived" }, 1), coverage: 1 } }),
+  });
+  const best = result.candidates[result.roles["best-ride"] ?? result.selectedIndex ?? 0];
+  expect(best?.durationSeconds).toBe(900);
+});

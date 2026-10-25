@@ -540,7 +540,9 @@ export function PlannerWorkspace({
     [plannerUiStore, scene],
   );
 
-  const handlePlan = usePlanCommand({ document, markRevisionAttempted, planningSessionStore });
+  // A pick that completes the ride plans itself (04 §8); a draft still loading is
+  // not compared, so a reload never starts a plan on its own.
+  const handlePlan = usePlanCommand({ document, markRevisionAttempted, planningSessionStore, sketchDerivedEndpoints, restoreSettled: restoreStatus.state !== "loading" });
 
   const handleCancel = useCallback((): void => {
     planningSessionStore.getState().cancel();

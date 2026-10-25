@@ -101,6 +101,22 @@ function deps(result: PlanServiceResult): RecordingDeps {
 }
 
 describe("handleRoutePlanRequest — validation before provider work", () => {
+  it.each(["", "a".repeat(201), "Park\nInjected", 12])("rejects an invalid destination label: %j", async label => {
+    const plan = deps(successResult());
+    const body = validBody();
+    (body["request"] as Record<string, unknown>)["destinationLabel"] = label;
+    expect((await handleRoutePlanRequest(body, plan)).status).toBe(400);
+    expect(plan.calls).toBe(0);
+  });
+
+  it("preserves a bounded destination label through handler validation", async () => {
+    const plan = deps(successResult());
+    const body = validBody();
+    (body["request"] as Record<string, unknown>)["destinationLabel"] = "  Mountain Park  ";
+    expect((await handleRoutePlanRequest(body, plan)).status).toBe(200);
+    expect(plan.lastInput?.request.destinationLabel).toBe("Mountain Park");
+  });
+
   it("rejects an invalid body with 400 and the issue list", async () => {
     const plan = deps(successResult());
 

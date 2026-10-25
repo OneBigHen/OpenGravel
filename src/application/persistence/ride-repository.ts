@@ -9,6 +9,7 @@ import type { RideDocument } from "@/domain/ride/types";
 import type { ImportRideData } from "@/application/import/types";
 import type { CorridorPackManifest } from "@/domain/offline/capabilities";
 import type { RecordingId } from "@/domain/recording/ids";
+import type { RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { RecordingSummary } from "@/domain/recording/types";
 
 export interface BootstrapPointerPort {
@@ -55,6 +56,12 @@ export interface RideDerivedFrom {
   readonly sourceId: string;
 }
 
+export interface FreeRideSummary {
+  readonly telemetry: RecordingTelemetry | null;
+  /** Accepted plans, never evidence that the rider followed them. */
+  readonly acceptedGeometryRefs: readonly GeometryRef[];
+}
+
 export interface RideBundleSummary {
   readonly distanceMeters?: number;
   readonly durationSeconds?: number;
@@ -93,6 +100,7 @@ export interface RideRecord {
   readonly uniqueKey?: string;
   readonly originalsRef?: string;
   readonly area?: string;
+  readonly freeRideSummary?: FreeRideSummary;
   readonly bundleSummary?: RideBundleSummary;
   /** Durable description of route data needed offline; downloads are separate. */
   readonly offlinePack?: CorridorPackManifest;
@@ -109,6 +117,7 @@ export interface SaveLibraryRideOptions {
   readonly uniqueKey?: string;
   readonly originalsRef?: string;
   readonly area?: string;
+  readonly freeRideSummary?: FreeRideSummary;
   readonly bundleSummary?: RideBundleSummary;
   readonly offlinePack?: CorridorPackManifest;
   readonly importData?: ImportRideData;

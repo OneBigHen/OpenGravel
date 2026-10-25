@@ -195,6 +195,8 @@ export interface ProviderRouteRequest {
   readonly origin: Coordinate;
   /** The endpoint to plan to; a loop rides back to the origin (§17). */
   readonly destination: Coordinate;
+  /** Rider copy only; never influences routing or establishes access. */
+  readonly destinationLabel?: string;
   /** Ordered intermediates; the provider must visit them in this order. */
   readonly stops: readonly Coordinate[];
   /** Ordered shaping anchors; they bias the path and are not stops. */

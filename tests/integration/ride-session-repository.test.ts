@@ -371,6 +371,25 @@ describe("RideSessionController", () => {
     };
   }
 
+  it("starts a fresh durable journal after ending a leftover ride", async () => {
+    const { controller, repository, advance } = harness();
+    await controller.start({ activity: "free", rideId: RIDE_ID, rideRevision: 1, sessionId: SESSION_ID });
+    advance(1);
+    await controller.dispatch({ type: "session.abandoned", at: at(1) });
+    const ended = controller.snapshot();
+    advance(2);
+    const nextId = asRideSessionId("sess_after_leftover");
+    const started = await controller.start({ activity: "free", rideId: RIDE_ID, rideRevision: 2,
+      sessionId: nextId, recordingId: asRecordingId("rec_new"), suggestions: "on" });
+    expect(started).toMatchObject({ outcome: "applied", persistence: "durable" });
+    const old = await repository.loadSession(SESSION_ID);
+    const next = await repository.loadSession(nextId);
+    expect(reconstructRideSession(old, SESSION_ID).state).toEqual(ended);
+    expect(next?.checkpoint?.checkpointSeq).toBe(1);
+    expect(reconstructRideSession(next, nextId).state).toEqual(controller.snapshot());
+    expect((await controller.start({ activity: "free", rideId: RIDE_ID, rideRevision: 3 })).outcome).toBe("rejected");
+  });
+
   it("runs a guided session from a real planned ride: start → positions → arrive → complete", async () => {
     const { controller, repository, advance } = harness();
     const ride = rideWithStops();

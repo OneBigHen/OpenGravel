@@ -31,6 +31,7 @@ import type {
   RideFocusEnvironmentPort,
   RideFocusEnvironmentSnapshot,
 } from "@/application/ride-session/ports/ride-focus-environment";
+import type { MapHostFactory } from "@/application/map/map-host";
 import { asPlaceId, type NearbyPlace, type PlacesSource } from "@/application/places";
 import type {
   GeometryRef,
@@ -203,6 +204,8 @@ interface Harness {
   readonly tick: () => void;
   /** The identity of the issued maneuver, when the fixture issued one. */
   readonly instructionId: SessionInstructionId | null;
+  /** What the map was told to draw, when the stub advertises a night look. */
+  readonly nightLooks: readonly ("map" | "night")[];
 }
 
 /** A deterministic identity per issued fixture maneuver (the journal validates the prefix). */
@@ -260,10 +263,15 @@ async function harness(options: {
   readonly instructionId?: SessionInstructionId;
   /** The matcher's continuity verdict for a positioned ride; defaults to "on-route". */
   readonly offRoute?: Parameters<typeof offRouteChangedEvent>[0];
+  /** Advertise a night look on the stub renderer and record what the map asks it for. */
+  readonly nightLook?: boolean;
+  /** The instant this whole fixture lives at; the shared NOW unless a test needs dusk. */
+  readonly at?: string;
 } = {}): Promise<Harness> {
+  const instant = options.at ?? NOW;
   const databaseName = options.databaseName ?? freshDatabaseName();
   const repository = createRideSessionRepository({ databaseName });
-  const controller = createRideSessionController({ repository, now: () => NOW });
+  const controller = createRideSessionController({ repository, now: () => instant });
   const fresh = options.sessionId === undefined;
   const started = fresh
     ? await controller.start({
@@ -272,7 +280,7 @@ async function harness(options: {
         rideRevision: 7,
         route: ROUTE,
         itinerary: [newStopId() as StopId],
-        at: NOW,
+        at: instant,
       })
     : null;
   if (fresh && started?.state === null) throw new Error("the fixture session did not start");
@@ -290,7 +298,7 @@ async function harness(options: {
     environment: () => environment.port,
     pointer,
     readRouteLine: async () => LINE,
-    now: () => NOW,
+    now: () => instant,
     ...(options.riderSettings === undefined ? {} : { riderSettings: options.riderSettings }),
     ...(options.reroutePlanner === undefined ? {} : { reroutePlanner: options.reroutePlanner }),
     ...(options.telemetry === undefined ? {} : { telemetry: options.telemetry }),
@@ -312,12 +320,12 @@ async function harness(options: {
       positionUpdatedEvent(
         {
           coordinate: { lon: -75.4385, lat: 40.1385 },
-          observedAt: NOW,
+          observedAt: instant,
           accuracyMeters: 6,
           headingDegrees: 212,
           speedMps: 14.2,
         },
-        NOW,
+        instant,
       ),
     );
   }
@@ -327,12 +335,12 @@ async function harness(options: {
       positionUpdatedEvent(
         {
           coordinate: { lon: -75.4385, lat: 40.1385 },
-          observedAt: NOW,
+          observedAt: instant,
           accuracyMeters: 120,
           headingDegrees: 212,
           speedMps: 14.2,
         },
-        NOW,
+        instant,
       ),
     );
   }
@@ -344,17 +352,17 @@ async function harness(options: {
       positionUpdatedEvent(
         {
           coordinate: { lon: -75.4385, lat: 40.1385 },
-          observedAt: new Date(Date.parse(NOW) - 42_000).toISOString(),
+          observedAt: new Date(Date.parse(instant) - 42_000).toISOString(),
           accuracyMeters: 6,
           headingDegrees: 212,
           speedMps: 14.2,
         },
-        NOW,
+        instant,
       ),
     );
   }
   if (options.position === "fresh" || options.position === "poor" || options.position === "stale") {
-    await controller.dispatch(offRouteChangedEvent(options.offRoute ?? "on-route", NOW));
+    await controller.dispatch(offRouteChangedEvent(options.offRoute ?? "on-route", instant));
   }
   if (options.instruction !== undefined) {
     const roundabout = options.instruction.startsWith("roundabout");
@@ -379,7 +387,7 @@ async function harness(options: {
               distanceMeters: 120,
               targetStopId: null,
             },
-        NOW,
+        instant,
       ),
     );
   }
@@ -387,10 +395,20 @@ async function harness(options: {
   await store.getState().setMapReady(true);
 
   const hosts = createStubMapHostFactory();
+  const nightLooks: ("map" | "night")[] = [];
+  const mapHostFactory: MapHostFactory = options.nightLook === true
+    ? (container, hostOptions) =>
+        Object.assign(hosts.factory(container, hostOptions), {
+          supportsNightLook: true,
+          setBasemapLook: (look: "map" | "night"): void => {
+            nightLooks.push(look);
+          },
+        })
+    : hosts.factory;
   render(
     <RideFocus
       store={store}
-      mapHostFactory={hosts.factory}
+      mapHostFactory={mapHostFactory}
       basemap="empty"
       {...(options.placesSource === undefined ? {} : { placesSource: options.placesSource })}
     />,
@@ -400,7 +418,7 @@ async function harness(options: {
   });
 
   return {
-    store, controller, environment, pointer, hosts, sessionId, databaseName,
+    store, controller, environment, pointer, hosts, sessionId, databaseName, nightLooks,
     tick: () => tickHandler?.(),
     instructionId: issuedInstructionId,
   };
@@ -442,6 +460,7 @@ describe("dark chrome and honest states", () => {
     expect(screen.getByTestId("ride-warning-gps-unavailable")).toBeInTheDocument();
     expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("No GPS fix");
     expect(screen.getByTestId("ride-gps")).not.toHaveTextContent("No GPS fix");
+    expect(screen.getByTestId("ride-gps")).toHaveTextContent("Finding GPS");
     expect(screen.getAllByText(/No GPS fix/)).toHaveLength(1);
   });
 
@@ -616,6 +635,33 @@ describe("dark chrome and honest states", () => {
     );
   });
 
+  it("keeps a disabled ride action's label readable in the day theme", () => {
+    const read = (file: string): string =>
+      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
+    const ruleIn = (css: string, selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+
+    const glass = read("theme-glass.css");
+    // Day paints the ride white, and the primary action's text with it. Both are
+    // kept above the disabled rule on purpose: that pair is what made a disabled
+    // "Reroute now" / "Routing…" an empty white pill beside "Details".
+    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action--primary')).toMatch(
+      /color:\s*#ffffff/,
+    );
+    const disabled = ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action:disabled');
+    expect(disabled).toMatch(/color:\s*var\(--og-ride-muted\)/);
+    expect(disabled).toMatch(/background:\s*var\(--og-ride-surface\)/);
+    // Day declares those two as ink-ish text on the white ride surface, so the
+    // label is painted, not white on white.
+    const dayBlock = glass.slice(glass.indexOf(':root[data-theme="day"] .og-ride {'));
+    const day = dayBlock.slice(0, dayBlock.indexOf("}"));
+    expect(day).toMatch(/--og-ride-muted:\s*#3a4540/);
+    expect(day).toMatch(/--og-raised-dark:\s*#ffffff/);
+  });
+
   it("draws the route line and the rider position into the map scene", async () => {
     const { hosts } = await harness({ position: "fresh" });
 
@@ -764,6 +810,9 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-gps", "fresh-poor");
     const reroute = screen.getByTestId("ride-reroute-now");
     expect(reroute).toBeDisabled();
+    // Disabled is not blank: the label stays, and the day theme paints it (see
+    // the stylesheet test below) instead of white on the white disabled pill.
+    expect(reroute).toHaveTextContent("Reroute now");
     expect(reroute).toHaveAttribute("title", "Rerouting needs a fresh, accurate GPS fix.");
 
     fireEvent.click(reroute);
@@ -1217,6 +1266,72 @@ describe("camera (08 §2, DV-10)", () => {
     expect(screen.queryByTestId("ride-recenter")).not.toBeInTheDocument();
   });
 
+  it("zooms the map itself from the rail and holds the level through the next frame", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    const host = hosts.hosts[0];
+    if (host === undefined) throw new Error("the ride created no map host");
+    await waitFor(() => expect(store.getState().follow).toBe(true));
+
+    // The renderer's own reading, with room to move either way.
+    act(() => {
+      host.reportCamera({ bearing: 212, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
+    });
+
+    fireEvent.click(screen.getByTestId("ride-zoom-in"));
+    // One press is one host call — the map moves, not a stored preference.
+    expect(host.zooms).toEqual([1]);
+    expect(store.getState().zoomHold?.zoom).toBe(17);
+
+    const headingUp = host.follows.at(-1)?.bearing ?? null;
+    expect(headingUp).not.toBeNull();
+
+    // North-up re-issues the follow frame, so this is the same reading the next
+    // fix would produce: the pressed zoom survives it, and the map turns.
+    fireEvent.click(screen.getByTestId("ride-compass"));
+    const northUp = host.follows.at(-1);
+    expect(store.getState().northUp).toBe(true);
+    expect(northUp?.bearing).toBe(0);
+    expect(northUp?.zoom).toBe(17);
+    // The arrow still points up the road: the direction of travel is not the
+    // direction the screen is turned.
+    expect(host.lastScene()?.riderPosition?.heading).toBe(headingUp);
+
+    expect(screen.getByTestId("ride-compass")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("ride-compass")).toHaveAccessibleName("North up");
+    fireEvent.click(screen.getByTestId("ride-compass"));
+    expect(store.getState().northUp).toBe(false);
+    expect(host.follows.at(-1)?.bearing).toBe(headingUp);
+  });
+
+  it("still turns a map the rider has panned, where no follow frame will", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    const host = hosts.hosts[0];
+    await waitFor(() => expect(store.getState().follow).toBe(true));
+
+    act(() => {
+      host?.emit({ type: "camera-changed" });
+    });
+    expect(store.getState().follow).toBe(false);
+
+    fireEvent.click(screen.getByTestId("ride-compass"));
+    expect(host?.northResets).toBe(1);
+    expect(store.getState().northUp).toBe(true);
+  });
+
+  it("says a zoom limit instead of pressing a button that cannot move", async () => {
+    const { hosts } = await harness({ position: "fresh" });
+    const host = hosts.hosts[0];
+    if (host === undefined) throw new Error("the ride created no map host");
+    act(() => {
+      host.reportCamera({ bearing: 212, zoom: 22, minZoom: 0, maxZoom: 22, metersPerPixel: 1 });
+    });
+
+    const zoomIn = screen.getByTestId("ride-zoom-in");
+    expect(zoomIn).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(zoomIn);
+    expect(host.zooms).toEqual([]);
+  });
+
   it("snaps back to following 10 s after the rider's last pan", async () => {
     const { store, hosts } = await harness({ position: "fresh" });
     const host = hosts.hosts[0];
@@ -1327,12 +1442,65 @@ describe("12 §10 touch targets", () => {
     expect(end).toMatch(/width:\s*56px/);
     expect(end).toMatch(/height:\s*56px/);
     expect(rule(".og-ride__recenter")).toMatch(/min-height:\s*56px/);
+    // DV-10's glove rail: 56 px round buttons, spaced so a thumb cannot reach
+    // two, and the zoom pair as one pill whose halves are each 56 px.
+    const rail = rule(".og-ride__rail-button");
+    expect(rail).toMatch(/width:\s*56px/);
+    expect(rail).toMatch(/height:\s*56px/);
+    expect(rule(".og-ride__rail")).toMatch(/gap:\s*12px/);
+    const railZoom = rule(".og-ride__rail-zoom .og-ride__rail-button");
+    expect(railZoom).toMatch(/width:\s*56px/);
+    expect(railZoom).toMatch(/height:\s*56px/);
+    // The compass needle is the map's rotation, drawn in the theme's own ink.
+    expect(rule(".og-ride__compass-needle")).toMatch(/rotate\(calc\(var\(--og-bearing/);
 
     // 12 §3: Ride Focus is dark chrome in day and night, not a themed surface.
     const ride = rule(".og-ride");
     expect(ride).toMatch(/background:\s*var\(--og-ink\)/);
     expect(ride).toMatch(/color:\s*var\(--og-paper\)/);
     expect(ride).not.toMatch(/prefers-color-scheme/);
+  });
+
+  it("follows the sun on Auto: dusk darkens the screen and the map, without storing a choice", async () => {
+    // 02:00Z at the fixture's own coordinate: the sun set hours ago.
+    const { hosts, store } = await harness({
+      position: "fresh",
+      nightLook: true,
+      at: "2026-09-22T02:00:00.000Z",
+    });
+
+    expect(store.getState().sunlight).toBe("night");
+    expect(document.documentElement.dataset["theme"]).toBe("night");
+    // The map opens in the same night rather than turning a frame later.
+    expect(hosts.options.at(-1)?.basemapLook).toBe("night");
+    // The sun is a fact about now, not a choice: Auto is still what is stored.
+    expect(window.localStorage.getItem("og-appearance")).toBeNull();
+    expect(screen.getByTestId("ride-display-auto")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the phone's own theme in daylight, and never decides it from the clock hour alone", async () => {
+    // The shared fixture instant is late morning at the same coordinate.
+    const { store } = await harness({ position: "fresh" });
+    expect(store.getState().sunlight).toBe("day");
+    expect(screen.getByTestId("ride-display-auto")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("turns the screen Day or Night from the sheet, with Auto following the sun", async () => {
+    await harness({ position: "fresh" });
+
+    expect(screen.getByTestId("ride-display")).toHaveAccessibleName("Screen");
+    expect(screen.getByTestId("ride-display-auto")).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByTestId("ride-display-night"));
+    expect(document.documentElement.dataset["theme"]).toBe("night");
+    expect(screen.getByTestId("ride-display-night")).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByTestId("ride-display-day"));
+    expect(document.documentElement.dataset["theme"]).toBe("day");
+
+    // Back to the device's own choice, so this file leaves no mode behind.
+    fireEvent.click(screen.getByTestId("ride-display-auto"));
+    expect(screen.getByTestId("ride-display-auto")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("gives the off-route card and the recording indicator their own fixed geometry", () => {
@@ -1404,6 +1572,29 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(screen.getByTestId("ride-metric-slot-0")).toHaveAccessibleName(
       "Speed, 32 miles per hour. Show ride controls.",
     );
+  });
+
+  it("keeps showing a dash, not 0 left, when off the route reads the ride's finish", async () => {
+    // Off the line the matcher projects onto the nearest point of a loop, which
+    // can be the closing miles: the strip showed "0.0 mi / 0 min" 900 ft off
+    // route on a ride that was nowhere near done.
+    await harness({
+      position: "fresh",
+      offRoute: "off-route",
+      telemetry: () => ({
+        routeProgress: 1,
+        remainingDistanceMeters: 0,
+        remainingDurationSeconds: 0,
+        etaIso: NOW,
+        distanceFromRouteMeters: 275,
+      }),
+    });
+
+    expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("900 ft off route");
+    expect(screen.getByTestId("ride-metric-value-1")).toHaveTextContent("—");
+    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-state", "waiting");
+    expect(screen.getByTestId("ride-metric-value-2")).toHaveTextContent("—");
+    expect(screen.getByTestId("ride-remaining")).toHaveTextContent("Unknown");
   });
 
   it("drops the speed bubble while a readout shows speed, and keeps it otherwise", async () => {
@@ -1532,5 +1723,37 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     // §2.4: no animation on the strip at all, so reduced motion has nothing to stop.
     const block = css.slice(css.indexOf("Ride instrument strip"), css.indexOf("The right-hand rail"));
     expect(block).not.toMatch(/^\s*(animation|transition)[\w-]*\s*:/m);
+  });
+});
+
+
+describe("Free Ride recording controls", () => {
+  it("keeps the Free Ride sheet controls available during a recording without opening the sheet", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store, { activity: "free", plan: { ...store.getState().navigation!.plan, route: null } });
+    act(() => store.setState({ ...projected, suggestions: "on" }));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+    expect(screen.getByTestId("free-ride-controls")).not.toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: /Recording,.*Show ride controls/ }));
+    expect(screen.getByTestId("free-ride-controls")).toBeVisible();
+    expect(screen.getByTestId("free-ride-suggestions-toggle")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Head Home" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Loop from here" })).toBeVisible();
+    expect(screen.getByTestId("free-ride-recording-toggle")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("offers to save an unrecorded summary and links to My rides after saving", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const finish = vi.fn(async () => undefined);
+    act(() => store.setState({ canSaveFreeRideSummary: true, stopConfirm: true, finish }));
+    fireEvent.click(screen.getByRole("button", { name: "Save summary & finish" }));
+    expect(finish).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Finish without saving" }));
+    expect(finish).toHaveBeenLastCalledWith(false);
+    const navigation = { ...store.getState().navigation!, activity: "completed" as const, endedAt: NOW, endReason: "completed" as const };
+    const viewModel = buildRideFocusViewModel({ navigation, environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" }, now: NOW });
+    act(() => store.setState({ navigation, viewModel, savedSummaryRideId: RIDE_ID }));
+    expect(screen.getByText("Free Ride summary saved")).toBeVisible();
+    expect(screen.getByRole("link", { name: "View in My rides" })).toHaveAttribute("href", "/rides");
   });
 });

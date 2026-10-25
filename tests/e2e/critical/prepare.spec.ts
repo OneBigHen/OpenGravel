@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /**
  * The route briefing (MVP parity M4, OGV-D-266): once a route is chosen the
@@ -24,7 +24,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
 });
 
@@ -33,8 +33,10 @@ test("a chosen route is briefed: weather for the ride, and honest unknowns", asy
   await expect(prepare).toBeVisible();
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
   await expect(page.getByTestId("departure-summary")).toHaveText("Leaving now");
-  await expect(page.getByTestId("preparation-section")).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
+  // The weather is one line under Start, stated once and never twice.
+  await expect(page.getByTestId("prepare-glance")).toContainText(/°F/);
+  await expect(page.getByTestId("prepare-glance")).not.toContainText("min remaining");
+  await expect(page.getByTestId("prepare-weather-credit")).toContainText("National Weather Service");
   // No traffic key in the gate: traffic is unknown, never clear.
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
 });
@@ -46,6 +48,6 @@ test("a later departure is one tap and still briefs the ride", async ({ page }) 
   await expect(page.getByTestId("departure-in-3h")).toBeChecked();
   await expect(page.getByTestId("departure-summary")).toHaveText(/^Leaving \w{3} \d{1,2}:\d{2} [AP]M$/);
   await expect(routeCards(page).first()).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
+  await expect(page.getByTestId("prepare-glance")).toContainText(/°F/);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 });

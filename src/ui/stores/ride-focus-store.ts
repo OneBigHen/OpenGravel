@@ -41,6 +41,7 @@ import { buildRideScene, recenterExtent } from "@/application/map/build-ride-sce
 import { sceneExtent } from "@/application/map/build-map-scene";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
+import { sunState, type SunState } from "@/application/long-trip";
 import { haversine } from "@/domain/geometry/analysis";
 import { nearestOnLine, rideCameraFor, type RideCamera } from "@/application/map/ride-camera";
 import type { Coordinate } from "@/domain/ride/types";
@@ -98,7 +99,7 @@ import {
   type RideFocusTelemetryProvider,
   type RideFocusViewModel,
 } from "@/application/ride-session/ride-focus-view-model";
-import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
+import type { RideFocusPointer, RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import {
   createRiderSettings,
   withMetricSlots,
@@ -131,6 +132,13 @@ import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 const FOLLOW_STEP_METERS = 30;
 /** A rider who panned away is brought back after this long (DV-10). */
 const SNAP_BACK_MS = 10_000;
+/**
+ * How long a zoom the rider pressed stays put before the camera's speed zoom
+ * takes over again (the "pause after manual zoom" rule). Long enough to zoom
+ * out and look ahead through a junction, short enough that the ride view comes
+ * back by itself without a second tap.
+ */
+const ZOOM_HOLD_MS = 20_000;
 /** Further than this from the route at the start: offer "Head to the start" (DV-07). */
 const FAR_FROM_START_METERS = 500;
 /** No fix for this long: restart the position source by itself (DV-10). */
@@ -215,11 +223,38 @@ export interface RideFocusStoreState {
   readonly cameraHeld: boolean;
   /** `true` while the stop confirmation is open (08 §2 "stop/exit ride"). */
   readonly stopConfirm: boolean;
+  readonly canSaveFreeRideSummary: boolean;
+  readonly recordingCleanupPending: boolean;
+  readonly recordingToggleBusy: boolean;
+  readonly savedSummaryRideId: RideId | null;
   /**
    * The heading-up follow camera (DV-10), re-issued with a new token as the
    * rider moves; `null` while nothing follows (a pan, a route fit).
    */
   readonly rideCamera: { readonly token: number; readonly camera: RideCamera } | null;
+  /**
+   * The direction the rider is travelling, in map degrees: the follow camera's
+   * own bearing, kept separate from the map's rotation so a north-up map still
+   * points the rider's arrow up the road. `null` while nothing follows.
+   */
+  readonly rideBearing: number | null;
+  /**
+   * A zoom level the rider pressed on the map rail, held for a few seconds
+   * (`ZOOM_HOLD_MS`). Without it the follow camera's speed zoom would undo the
+   * press on the next fix, which is exactly when a glove needs the button.
+   */
+  readonly zoomHold: { readonly zoom: number; readonly untilMs: number } | null;
+  /** North-up instead of heading-up: the map rail's compass toggle. */
+  readonly northUp: boolean;
+  /**
+   * Whether the sun is up at the rider's own fix, from the store's clock.
+   *
+   * The one place the app knows where the rider is, so "is it dark out?" is a
+   * derived fact here rather than a guess in the view. `null` when there is no
+   * fix or the solar calculation cannot answer (a polar day) — a surface then
+   * keeps the device's own display setting, because unknown is not daylight.
+   */
+  readonly sunlight: SunState | null;
   /**
    * The rider is far from a guided ride's start (DV-07): the surface asks
    * whether to head there, instead of silently re-planning from here.
@@ -249,10 +284,18 @@ export interface RideFocusStoreActions {
   overview(): void;
   /** Toggle follow; turning it on frames the rider. */
   setFollow(follow: boolean): void;
+  /**
+   * The map rail's zoom buttons: hold `zoom` (the level the host has already
+   * moved to) for a few seconds, then hand zoom back to the ride camera.
+   */
+  zoomTo(zoom: number): void;
+  /** The map rail's compass: north-up, or heading-up following the road. */
+  setNorthUp(northUp: boolean): void;
   pause(): Promise<void>;
   resume(): Promise<void>;
   /** Starts a route-free recording in the existing RideSession authority. */
   startRecording(rideId: RideId, rideRevision: number): Promise<void>;
+  stopRecording(): Promise<void>;
   /** Changes the explicit route-free live-suggestion policy through a typed event. */
   setSuggestions(enabled: boolean): Promise<void>;
   /** Binds the offered ahead segment to this RideSession. */
@@ -287,7 +330,7 @@ export interface RideFocusStoreActions {
   beginStop(): void;
   cancelStop(): void;
   /** Ends the ride as finished (8 §13 "completed"). */
-  finish(): Promise<void>;
+  finish(saveSummary?: boolean): Promise<void>;
   /** Ends the ride as discarded (8 §13 "abandoned"). */
   discard(): Promise<void>;
   /** §3's Retry on a blocked location permission. */
@@ -391,6 +434,12 @@ export interface RideFocusStoreOptions {
    * hides, and drops it when the ride ends. Absent: Free Ride offers none.
    */
   readonly freeRideTelemetry?: FreeRideTelemetry;
+  readonly saveSuggestionLine?: (line: readonly Coordinate[]) => Promise<GeometryRef>;
+  readonly saveFreeRideSummary?: (input: {
+    readonly state: RideSessionState;
+    readonly telemetry: RecordingTelemetry | null;
+    readonly acceptedGeometryRefs: readonly GeometryRef[];
+  }) => Promise<RideId>;
   /**
    * Builds the device-motion adapter for the lean-angle beta (issue #12
    * follow-up). A factory, like `environment`, so `start()`/`stop()` own one
@@ -571,6 +620,17 @@ export function createRideFocusStore(
     }
   }
 
+  function writePointer(next: Omit<RideFocusPointer, "version">, acceptedRef?: GeometryRef | null): void {
+    const current = pointer.read();
+    const previous = current.status === "found" && current.pointer.sessionId === next.sessionId
+      ? current.pointer.acceptedSuggestionGeometryRefs ?? [] : [];
+    const refs = [...new Set([...previous, ...(acceptedRef == null ? [] : [acceptedRef])])].slice(-512);
+    const pendingDiscard = current.status === "found" && current.pointer.sessionId === next.sessionId
+      ? current.pointer.pendingRecordingDiscardId : undefined;
+    pointer.write({ ...next, ...(refs.length === 0 ? {} : { acceptedSuggestionGeometryRefs: refs }),
+      ...(pendingDiscard === undefined ? {} : { pendingRecordingDiscardId: pendingDiscard }) });
+  }
+
   const store = createStore<RideFocusStore>((set, get) => {
     /**
      * Re-derives the whole present-tense view from the controller, the device
@@ -589,6 +649,7 @@ export function createRideFocusStore(
     let lastBearing: number | null = null;
     let lastCameraKey: string | null = null;
     let snapBackTimer: ReturnType<typeof setTimeout> | null = null;
+    let zoomHoldTimer: ReturnType<typeof setTimeout> | null = null;
     /** DV-07: the start question is asked once, until answered or the rider joins the line. */
     let farFromStartSettled = false;
     let farFromStartDismissed = false;
@@ -598,6 +659,13 @@ export function createRideFocusStore(
     function clearSnapBack(): void {
       if (snapBackTimer !== null) clearTimeout(snapBackTimer);
       snapBackTimer = null;
+    }
+
+    /** Drops the rider's zoom hold without touching the camera. */
+    function clearZoomHold(): void {
+      if (zoomHoldTimer !== null) clearTimeout(zoomHoldTimer);
+      zoomHoldTimer = null;
+      if (get().zoomHold !== null) set({ zoomHold: null });
     }
 
     /**
@@ -630,18 +698,30 @@ export function createRideFocusStore(
         previousBearing: lastBearing,
       });
       lastBearing = camera.bearing;
+      // Two rider choices outlive a single fix: a zoom they pressed (until it
+      // goes stale) and a north-up map. Both are applied here, in the one place
+      // a follow frame is decided, so nothing can disagree about them.
+      const heldZoom =
+        current.zoomHold !== null && current.zoomHold.untilMs > Date.parse(now())
+          ? current.zoomHold.zoom
+          : camera.zoom;
+      const bearing = current.northUp ? 0 : camera.bearing;
       const key = [
         camera.center.lon.toFixed(6),
         camera.center.lat.toFixed(6),
-        camera.bearing === null ? "-" : Math.round(camera.bearing),
-        camera.zoom.toFixed(1),
+        bearing === null ? "-" : Math.round(bearing),
+        heldZoom.toFixed(1),
       ].join(",");
       if (!force && key === lastCameraKey && current.follow && current.rideCamera !== null) return;
       lastCameraKey = key;
       set({
         follow: true,
         cameraHeld: false,
-        rideCamera: { token: (current.rideCamera?.token ?? current.cameraToken) + 1, camera },
+        rideBearing: camera.bearing,
+        rideCamera: {
+          token: (current.rideCamera?.token ?? current.cameraToken) + 1,
+          camera: { ...camera, zoom: heldZoom, bearing },
+        },
       });
     }
 
@@ -778,11 +858,16 @@ export function createRideFocusStore(
               routeWarnings: routeWarnings(),
               mapReady: current.mapReady,
               riderSettings: current.riderSettings,
+              suggestions: state?.suggestions ?? "off",
             });
+      const fix = navigation?.position.coordinate ?? null;
       set({
         navigation,
+        sunlight: fix === null ? null : sunState(fix, Date.parse(instant)),
         suggestions: state?.suggestions ?? "off",
-        ...(!state || navigation?.activity !== "free" || state.recordingId !== null || state.suggestions !== "on"
+        canSaveFreeRideSummary: options.saveFreeRideSummary !== undefined && state !== null &&
+          (state.activity === "free" || state.resumeActivity === "free" || liveTelemetry !== null),
+        ...(!state || navigation?.activity !== "free" || state.suggestions !== "on"
           ? { liveSuggestion: null, suggestionPreviewLine: NO_COORDINATES, suggestionBusy: false }
           : {}),
         environment: snapshot,
@@ -921,7 +1006,7 @@ export function createRideFocusStore(
      */
     function scheduleRideOffer(state: RideSessionState, navigation: SessionNavigationState, instant: string): void {
       const eligible = rideOffers && navigation.activity === "free" && state.suggestions === "on" &&
-        state.recordingId === null && returnPlanner !== undefined;
+        returnPlanner !== undefined;
       if (offerSession !== state.sessionId) {
         clearRideOffer();
         offerSession = state.sessionId;
@@ -1017,7 +1102,6 @@ export function createRideFocusStore(
         current.sessionId !== state.sessionId ||
         current.activity !== "free" ||
         current.suggestions !== "on" ||
-        current.recordingId !== null ||
         get().liveSuggestion !== null ||
         get().suggestionBusy
       ) {
@@ -1056,7 +1140,6 @@ export function createRideFocusStore(
         latest.sessionId !== state.sessionId ||
         latest.activity !== "free" ||
         latest.suggestions !== "on" ||
-        latest.recordingId !== null ||
         get().liveSuggestion !== null ||
         get().suggestionBusy ||
         latestNavigation === null ||
@@ -1084,7 +1167,6 @@ export function createRideFocusStore(
       if (
         navigation.activity !== "free" ||
         state.suggestions !== "on" ||
-        state.recordingId !== null ||
         evaluateSuggestion === undefined
       ) {
         if (suggestionAbort !== null) {
@@ -1159,7 +1241,7 @@ export function createRideFocusStore(
           suggestionAbort = null;
           if (
             current?.suggestions !== "on" || current.activity !== "free" ||
-            current.recordingId !== null || currentNavigation === null ||
+            currentNavigation === null ||
             currentNavigation.position.quality !== "fresh-good" || currentNavigation.position.coordinate === null
           ) {
             set({ liveSuggestion: null, suggestionPreviewLine: NO_COORDINATES, suggestionBusy: false });
@@ -1435,7 +1517,7 @@ export function createRideFocusStore(
         return;
       }
 
-      pointer.write({
+      writePointer({
         sessionId: applied.state.sessionId,
         rideId: applied.state.plan.rideId,
         routeGeometryRef: plan.routeGeometryRef,
@@ -1581,7 +1663,9 @@ export function createRideFocusStore(
         cameraHeld: false,
         cameraExtent: sceneExtent(scene),
         rideCamera: null,
+        rideBearing: null,
       });
+      clearZoomHold();
     }
 
     /** Recovers the session the pointer names, or states why it cannot (8 §13). */
@@ -1603,8 +1687,19 @@ export function createRideFocusStore(
       switch (report.status) {
         case "restored": {
           let recordingMessage: string | null = null;
-          if (report.state.recordingId !== null && recording !== undefined) {
-            const recoveredRecording = await recording.recover(report.state.recordingId);
+          const pendingDiscardId = read.pointer.pendingRecordingDiscardId;
+          const recoveryRecordingId = pendingDiscardId ?? report.state.recordingId;
+          if (recoveryRecordingId !== null && recording !== undefined) {
+            const recoveredRecording = await recording.recover(recoveryRecordingId);
+            if (pendingDiscardId !== undefined) {
+              if (recoveredRecording.status === "absent") {
+                const { pendingRecordingDiscardId: _discardedId, ...retained } = read.pointer;
+                void _discardedId;
+                pointer.write(retained);
+              } else {
+                set({ recordingCleanupPending: true });
+              }
+            }
             if (recoveredRecording.status === "already-saved") {
               pointer.clear();
               set({ status: "absent", statusMessage: "Recording saved in My rides." });
@@ -1646,7 +1741,9 @@ export function createRideFocusStore(
           const dropped = report.droppedEvents.length;
           set({
             status: "ready",
-            statusMessage: recordingMessage ?? (report.pausedByRecovery
+            statusMessage: get().recordingCleanupPending
+              ? "Recording cleanup is pending. Retry turning recording off before finishing this ride."
+              : recordingMessage ?? (report.pausedByRecovery
               ? "Ride restored. It is paused — resume when you're ready."
               : dropped > 0
                 ? `Ride restored. ${dropped} unreadable journal ${dropped === 1 ? "entry was" : "entries were"} skipped.`
@@ -1710,7 +1807,15 @@ export function createRideFocusStore(
       cameraHeld: false,
       cameraExtent: null,
       stopConfirm: false,
+      canSaveFreeRideSummary: false,
+      recordingCleanupPending: false,
+      recordingToggleBusy: false,
+      savedSummaryRideId: null,
       rideCamera: null,
+      rideBearing: null,
+      zoomHold: null,
+      northUp: false,
+      sunlight: null,
       farFromStart: null,
       riderSettings: riderSettingsStorage?.read() ?? createRiderSettings(),
 
@@ -1753,26 +1858,44 @@ export function createRideFocusStore(
       },
 
       async startRecording(rideId, rideRevision): Promise<void> {
-        if (!running || recording === undefined) return;
-        const started = await recording.start(rideId, rideRevision, now());
-        if (started.outcome !== "started") {
-          set({
-            statusMessage: "The recording could not be started. Check device storage and try again.",
-            lastError: "The recording could not be started.",
-          });
-          return;
+        if (!running || recording === undefined || get().recordingCleanupPending || get().recordingToggleBusy) return;
+        set({ recordingToggleBusy: true });
+        try {
+          const started = await recording.start(rideId, rideRevision, now());
+          if (started.outcome !== "started") {
+            set({ statusMessage: "The recording could not be started. Check device storage and try again.", lastError: "The recording could not be started." });
+          } else {
+            set({ status: "ready", statusMessage: null, lastError: null });
+          }
+          await syncNavigationEngine();
+          refresh();
+        } finally {
+          set({ recordingToggleBusy: false });
         }
-        // The Recording HUD projects "Waiting for the first GPS fix" from its
-        // trace summary; keeping that text in the persistent status slot would
-        // leave stale copy onscreen after the first point arrives.
-        set({ status: "ready", statusMessage: null, lastError: null });
-        await syncNavigationEngine();
-        refresh();
+      },
+
+      async stopRecording(): Promise<void> {
+        if (!running || recording === undefined || get().recordingToggleBusy) return;
+        const state = controller.snapshot();
+        if (state === null || (state.recordingId === null && !get().recordingCleanupPending)) return;
+        set({ recordingToggleBusy: true });
+        try {
+          const stopped = await recording.stop(now());
+          if (stopped.outcome !== "discarded") {
+            set({ recordingCleanupPending: true, statusMessage: "The recording could not be turned off. Retry before starting another recording or finishing.", lastError: "The recording could not be turned off." });
+          } else {
+            if (stopped.telemetryState !== undefined) freeRideTelemetry?.adoptRecording(state.sessionId, stopped.telemetryState);
+            set({ recordingCleanupPending: false, statusMessage: "Not recording. The track was discarded; ride statistics are kept.", lastError: null });
+          }
+          refresh();
+        } finally {
+          set({ recordingToggleBusy: false });
+        }
       },
 
       async setSuggestions(enabled): Promise<void> {
         const state = controller.snapshot();
-        if (!running || state === null || state.activity !== "free" || state.recordingId !== null) return;
+        if (!running || state === null || state.activity !== "free") return;
         const value: SessionSuggestions = enabled ? "on" : "off";
         const result = await controller.dispatch(suggestionsChangedEvent(value, now()));
         if (result.outcome !== "applied" || result.persistence !== "durable") {
@@ -1810,14 +1933,14 @@ export function createRideFocusStore(
           set({ freeRideError: applied.message ?? "That ride could not be started." });
           return;
         }
-        pointer.write({
+        writePointer({
           sessionId: applied.state.sessionId,
           rideId: applied.state.plan.rideId,
           routeGeometryRef: plan.routeGeometryRef,
           routeDurationSeconds: plan.durationSeconds,
           ...(plan.instructions === undefined ? {} : { instructions: plan.instructions }),
           updatedAt: at,
-        });
+        }, plan.routeGeometryRef);
         // The line must be in the store before the engine is built: a guided
         // engine created without geometry never starts. Re-read the offered
         // plan's line so a corrected one wins, and keep the line the card was
@@ -1876,7 +1999,7 @@ export function createRideFocusStore(
         const suggestion = get().liveSuggestion;
         const navigation = get().navigation;
         if (
-          !running || state === null || state.activity !== "free" || state.recordingId !== null || state.suggestions !== "on" ||
+          !running || state === null || state.activity !== "free" || state.suggestions !== "on" ||
           suggestion === null || navigation?.position.quality !== "fresh-good"
         ) return;
         // Bind only a ride the surface can actually follow. The preview line is
@@ -1887,7 +2010,7 @@ export function createRideFocusStore(
         const current = controller.snapshot();
         if (
           !running || current?.sessionId !== state.sessionId || current.activity !== "free" ||
-          current.recordingId !== null || get().liveSuggestion?.id !== suggestion.id
+          get().liveSuggestion?.id !== suggestion.id
         ) return;
         const segment = resolved !== null && resolved.length >= 2
           ? resolved
@@ -1903,20 +2026,35 @@ export function createRideFocusStore(
           });
           return;
         }
+        let geometryRef = suggestion.routeGeometryRef;
+        if (geometryRef === undefined) {
+          try {
+            geometryRef = await options.saveSuggestionLine?.(segment);
+          } catch {
+            // Keep the existing card available when storage refuses the line.
+          }
+          if (geometryRef === undefined) {
+            set({ freeRideError: "That road's line could not be saved. Keep riding." });
+            return;
+          }
+          const latest = controller.snapshot();
+          if (!running || latest?.sessionId !== state.sessionId || latest.activity !== "free" ||
+            get().liveSuggestion?.id !== suggestion.id) return;
+        }
         const at = now();
         const applied = await controller.dispatch(modeChangedEvent("guided", at, suggestion.route));
         if (applied.outcome !== "applied" || applied.state === null || applied.persistence !== "durable") {
           set({ freeRideError: applied.message ?? "That route could not be started." });
           return;
         }
-        pointer.write({
+        writePointer({
           sessionId: applied.state.sessionId,
           rideId: applied.state.plan.rideId,
-          routeGeometryRef: suggestion.routeGeometryRef ?? null,
+          routeGeometryRef: geometryRef,
           ...(suggestion.durationSeconds === undefined ? {} : { routeDurationSeconds: suggestion.durationSeconds }),
           ...(suggestion.instructions === undefined ? {} : { instructions: suggestion.instructions }),
           updatedAt: at,
-        });
+        }, geometryRef);
         // Publish the line before the engine is built, so guidance is bound to
         // geometry that exists rather than failing after the card is gone.
         set({ routeLine: segment, routeLineAvailable: true });
@@ -1949,7 +2087,7 @@ export function createRideFocusStore(
       async headHome(): Promise<void> {
         const state = controller.snapshot();
         const navigation = get().navigation;
-        if (!running || state === null || navigation === null || state.activity !== "free" || state.recordingId !== null) return;
+        if (!running || state === null || navigation === null || state.activity !== "free") return;
         if (returnPlanner === undefined) {
           set({ freeRideError: "Head Home is unavailable right now." });
           return;
@@ -1992,7 +2130,7 @@ export function createRideFocusStore(
           current.plan.rideRevision !== state.plan.rideRevision;
         if (
           current === null || current.sessionId !== state.sessionId ||
-          current.activity !== "free" || current.recordingId !== null ||
+          current.activity !== "free" ||
           revisionChanged
         ) {
           pendingReturnAbort = null;
@@ -2025,7 +2163,7 @@ export function createRideFocusStore(
           });
           return;
         }
-        pointer.write({
+        writePointer({
           sessionId: applied.state.sessionId,
           rideId: applied.state.plan.rideId,
           routeGeometryRef: plan.routeGeometryRef,
@@ -2146,7 +2284,7 @@ export function createRideFocusStore(
           });
           return;
         }
-        pointer.write({
+        writePointer({
           sessionId: applied.state.sessionId,
           rideId: applied.state.plan.rideId,
           routeGeometryRef: plan.routeGeometryRef,
@@ -2178,14 +2316,14 @@ export function createRideFocusStore(
       async continueFreeRide(): Promise<void> {
         excursion = null;
         const state = controller.snapshot();
-        if (!running || state === null || state.activity !== "guided" || state.recordingId !== null) return;
+        if (!running || state === null || state.activity !== "guided") return;
         const at = now();
         const applied = await controller.dispatch(modeChangedEvent("free", at));
         if (applied.outcome !== "applied" || applied.state === null || applied.persistence !== "durable") {
           set({ freeRideError: applied.message ?? "Free Ride could not be resumed." });
           return;
         }
-        pointer.write({
+        writePointer({
           sessionId: applied.state.sessionId,
           rideId: applied.state.plan.rideId,
           routeGeometryRef: null,
@@ -2250,6 +2388,7 @@ export function createRideFocusStore(
         rerouteAbort?.abort();
         rerouteAbort = null;
         clearSnapBack();
+        clearZoomHold();
       },
 
       async retryRecovery(): Promise<void> {
@@ -2276,7 +2415,7 @@ export function createRideFocusStore(
           state.recenter();
         }, SNAP_BACK_MS);
         if (!get().follow && get().cameraHeld) return;
-        set({ follow: false, cameraHeld: true, rideCamera: null });
+        set({ follow: false, cameraHeld: true, rideCamera: null, rideBearing: null });
       },
 
       recenter(): void {
@@ -2287,6 +2426,10 @@ export function createRideFocusStore(
         clearSnapBack();
         followedAt = null;
         lastCameraKey = null;
+        // The rider asked for the ride's own view: zoom goes back to the ride
+        // camera's own. A north-up map they chose stays — that is orientation,
+        // not framing.
+        clearZoomHold();
         set({
           follow: true,
           cameraToken: get().cameraToken + 1,
@@ -2308,6 +2451,7 @@ export function createRideFocusStore(
         });
         if (scene.routes.length === 0) return;
         clearSnapBack();
+        clearZoomHold();
         lastCameraKey = null;
         set({
           follow: false,
@@ -2315,6 +2459,7 @@ export function createRideFocusStore(
           cameraHeld: false,
           cameraExtent: sceneExtent(scene),
           rideCamera: null,
+          rideBearing: null,
         });
       },
 
@@ -2324,6 +2469,32 @@ export function createRideFocusStore(
           return;
         }
         set({ follow: false });
+      },
+
+      zoomTo(zoom: number): void {
+        if (!Number.isFinite(zoom)) return;
+        // The store's own clock, like every other age on this screen.
+        const untilMs = Date.parse(now()) + ZOOM_HOLD_MS;
+        set({ zoomHold: { zoom, untilMs } });
+        if (zoomHoldTimer !== null) clearTimeout(zoomHoldTimer);
+        // When the hold ends the ride view comes back on its own: a rider who
+        // zoomed out to read a junction should not have to press anything after
+        // it, and a stale hold would silently disable the speed zoom all ride.
+        zoomHoldTimer = setTimeout(() => {
+          zoomHoldTimer = null;
+          if (get().zoomHold === null) return;
+          set({ zoomHold: null });
+          followRider(get().viewModel, true);
+        }, ZOOM_HOLD_MS);
+      },
+
+      setNorthUp(northUp: boolean): void {
+        if (get().northUp === northUp) return;
+        set({ northUp });
+        // The direction lives in the follow frame, so it has to be re-issued.
+        // A map the rider has panned is theirs until they ask for the ride
+        // view back; the next follow frame turns north-up by itself.
+        if (get().follow) followRider(get().viewModel, true);
       },
 
       async pause(): Promise<void> {
@@ -2347,8 +2518,8 @@ export function createRideFocusStore(
         set({ stopConfirm: false });
       },
 
-      async finish(): Promise<void> {
-        if (!get().viewModel?.controls.finish.enabled) return;
+      async finish(saveSummary = true): Promise<void> {
+        if (get().recordingToggleBusy || get().recordingCleanupPending || !get().viewModel?.controls.finish.enabled) return;
         set({ stopConfirm: false });
         if (get().navigation?.recordingId !== null && recording !== undefined) {
           const finished = await recording.finish(now());
@@ -2364,6 +2535,18 @@ export function createRideFocusStore(
           refresh();
           return;
         }
+        const state = controller.snapshot();
+        if (saveSummary && get().canSaveFreeRideSummary && options.saveFreeRideSummary !== undefined && state !== null) {
+          try {
+            const pointed = pointer.read();
+            if (pointed.status !== "found" || pointed.pointer.sessionId !== state.sessionId) throw new Error("The active ride could not be checked.");
+            const rideId = await options.saveFreeRideSummary({ state, telemetry: liveTelemetryFor(state), acceptedGeometryRefs: pointed.pointer.acceptedSuggestionGeometryRefs ?? [] });
+            set({ savedSummaryRideId: rideId });
+          } catch {
+            set({ stopConfirm: true, lastError: "Your ride summary could not be saved. Try again or finish without saving.", statusMessage: "Your ride summary could not be saved. Try again or finish without saving." });
+            return;
+          }
+        }
         if (await dispatchCommand(sessionCompletedEvent(now()))) {
           emitTelemetry("ride_completed");
           pointer.clear();
@@ -2371,7 +2554,7 @@ export function createRideFocusStore(
       },
 
       async discard(): Promise<void> {
-        if (!get().viewModel?.controls.discard.enabled) return;
+        if (get().recordingToggleBusy || get().recordingCleanupPending || !get().viewModel?.controls.discard.enabled) return;
         set({ stopConfirm: false });
         if (get().navigation?.recordingId !== null && recording !== undefined) {
           const discarded = await recording.discard(now());

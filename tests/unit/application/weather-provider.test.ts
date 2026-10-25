@@ -52,6 +52,52 @@ function alert(overrides: Partial<WeatherAlert> = {}): WeatherAlert {
   };
 }
 
+describe("weather briefing line", () => {
+  const clear: WeatherSnapshot = {
+    ...snapshot,
+    alerts: [],
+    forecast: [{
+      ...snapshot.forecast[0]!,
+      temperatureF: 38,
+      windMph: 0,
+      precipChance: 0,
+      shortForecast: "Clear",
+    }],
+  };
+
+  async function displayFor(
+    forecast: WeatherSnapshot["forecast"],
+    tripWindow = { start: "2026-09-17T18:00:00.000Z", end: "2026-09-17T19:00:00.000Z" },
+  ): Promise<string | undefined> {
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot: { ...clear, forecast } }),
+      now: () => Date.parse("2026-09-17T14:44:00.000Z"),
+    });
+    await provider.refresh(context(tripWindow));
+    return provider.getWeather(context(tripWindow)).data?.display;
+  }
+
+  it("keeps conditions and temperature and drops quiet zeros", async () => {
+    expect(await displayFor(clear.forecast)).toBe("Clear · 38°F");
+  });
+
+  it("names gusty wind and a real rain chance, but not a light breeze or a stray shower", async () => {
+    expect(await displayFor([{ ...clear.forecast[0]!, windMph: 25, precipChance: 40 }])).toBe(
+      "Clear · 38°F · Gusty 25 mph · 40% rain",
+    );
+    expect(await displayFor([{ ...clear.forecast[0]!, windMph: 14, precipChance: 19 }])).toBe(
+      "Clear · 38°F",
+    );
+  });
+
+  it("shows a temperature range when the ride crosses more than 8°F", async () => {
+    expect(await displayFor([
+      { ...clear.forecast[0]!, name: "Start", temperatureF: 38 },
+      { ...clear.forecast[0]!, name: "End", startTime: "2026-09-17T19:00:00.000Z", endTime: "2026-09-17T21:00:00.000Z", temperatureF: 52 },
+    ])).toBe("Clear · 38–52°F");
+  });
+});
+
 describe("NWS preparation provider", () => {
   it("calls the local proxy and makes an overlapping alert the primary factual item", async () => {
     const provider = createNwsWeatherProvider({

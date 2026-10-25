@@ -3,12 +3,13 @@
 import { useCallback, useMemo } from "react";
 
 import type { MapExtent } from "@/application/map/build-map-scene";
-import type { MapLoadStatus, MapHostFactory, BasemapMode } from "@/application/map/map-host";
+import type { MapLoadStatus, MapHost, MapHostFactory, BasemapMode } from "@/application/map/map-host";
 import type { MapIntent, MapScene } from "@/application/map/types";
 import type { MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
 import { RIDE_PLACES_PREFERENCE_KEY, type PlacesSource } from "@/application/places";
 import { LayeredMap, type MapLayersProps } from "@/ui/layers/LayeredMap";
+import type { CameraView } from "@/ui/map/PlannerMap";
 
 import { PlaceCard } from "./PlaceCard";
 import { PlacesControl } from "./PlacesControl";
@@ -28,6 +29,12 @@ export interface RidePlacesMapProps {
   readonly fitExtent: MapExtent | null;
   readonly followCamera?: { readonly key: string; readonly camera: RideCamera } | null;
   readonly onLoadStatus: (status: MapLoadStatus) => void;
+  /** The renderer, for a surface with its own map controls (the ride's rail). */
+  readonly onHost?: (host: MapHost | null) => void;
+  /** The camera as those controls need it: bearing, zoom and the limits. */
+  readonly onCamera?: (camera: CameraView) => void;
+  /** The look this surface insists on (Day/Night); never the remembered one. */
+  readonly forcedLook?: "map" | "night";
   /** The rider's map layers (phase 8): fuel, incidents and alerts on the ride. */
   readonly layers?: MapLayersProps | undefined;
 }
@@ -44,6 +51,9 @@ export function RidePlacesMap({
   fitExtent,
   followCamera = null,
   onLoadStatus,
+  onHost,
+  onCamera,
+  forcedLook,
   layers,
 }: RidePlacesMapProps) {
   const places = usePlacesOverlay({
@@ -89,6 +99,9 @@ export function RidePlacesMap({
         fitExtent={fitExtent}
         followCamera={followCamera}
         onLoadStatus={onLoadStatus}
+        {...(onHost === undefined ? {} : { onHost })}
+        {...(onCamera === undefined ? {} : { onCamera })}
+        {...(forcedLook === undefined ? {} : { forcedLook })}
       />
       <div className="og-places-overlay" data-testid="places-overlay">
         <PlacesControl

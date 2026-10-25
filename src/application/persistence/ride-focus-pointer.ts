@@ -26,6 +26,7 @@
  * the surface looking for a journal that never existed.
  */
 
+import type { RecordingId } from "@/domain/recording/ids";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideSessionId } from "@/domain/ride-session/ids";
 import type { RouteInstruction, SpeedLimitSpan } from "@/domain/route/types";
@@ -47,6 +48,10 @@ export interface RideFocusPointer {
   readonly instructions?: readonly RouteInstruction[];
   /** Posted speed limits along the route line (NV-04); absent on older pointers. */
   readonly speedLimits?: readonly SpeedLimitSpan[];
+  /** Accepted suggestion plans retained for an unrecorded ride summary, never a GPS track. */
+  readonly acceptedSuggestionGeometryRefs?: readonly GeometryRef[];
+  /** Keeps a failed trace deletion recoverable after the session reference clears. */
+  readonly pendingRecordingDiscardId?: RecordingId;
   readonly updatedAt: string;
 }
 
@@ -75,7 +80,7 @@ export function rideFocusGeometryRefs(pointer: RideFocusPointerPort): readonly G
   const read = pointer.read();
   if (read.status === "absent") return [];
   if (read.status !== "found") return null;
-  return read.pointer.routeGeometryRef === null ? [] : [read.pointer.routeGeometryRef];
+  return [...new Set([...(read.pointer.routeGeometryRef === null ? [] : [read.pointer.routeGeometryRef]), ...(read.pointer.acceptedSuggestionGeometryRefs ?? [])])];
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -104,6 +109,10 @@ export function isRideFocusPointer(value: unknown): value is RideFocusPointer {
       !Number.isFinite(parsed["routeDurationSeconds"]) ||
       parsed["routeDurationSeconds"] < 0)
   ) return false;
+  const pendingDiscard = parsed["pendingRecordingDiscardId"];
+  if (pendingDiscard !== undefined && (!isNonEmptyString(pendingDiscard) || !pendingDiscard.startsWith("rec_"))) return false;
+  const accepted = parsed["acceptedSuggestionGeometryRefs"];
+  if (accepted !== undefined && (!Array.isArray(accepted) || accepted.length > 512 || accepted.some((ref) => !isNonEmptyString(ref) || !ref.startsWith("geo_")))) return false;
   const instructions = parsed["instructions"];
   if (
     instructions !== undefined &&

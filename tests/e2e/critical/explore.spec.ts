@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, settledExtent, type Coordinate } from "./map-helpers";
+import {
+  clickMapAtCoordinate,
+  plannerMap,
+  pressPlan,
+  settledExtent,
+  type Coordinate,
+} from "./map-helpers";
 
 const START: Coordinate = { lon: -75.4385, lat: 40.1385 };
 const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
@@ -49,9 +55,8 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
     /GraphHopper|motorcycle_scenic|routing engine|TomTom|NWS/,
   );
   await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
-  await expect(page.getByTestId("weather-freshness")).toHaveText("Fresh");
-  await expect(page.getByText(/Source: (National Weather Service|weather service) · updated/)).toBeVisible();
+  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
+  await expect(page.getByText("Weather from the National Weather Service")).toBeVisible();
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
 
@@ -61,7 +66,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByTestId("active-ride-provenance")).toContainText("catalog");
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
-  await expect(page.getByText("Riding: Trail bike · 60 mi range")).toBeVisible();
+  await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 50 mi range");
 
   await page.getByRole("link", { name: "Explore" }).click();
   await expect(page).toHaveURL(/\/explore$/);
@@ -71,7 +76,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await settledExtent(page);
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await page.getByTestId("named-ride-title").fill("My sample ride");
   await page.getByTestId("save-named-ride").click();
@@ -93,14 +98,13 @@ test("labels missing road evidence clearly and without console errors", async ({
   await settledExtent(page);
   await clickMapAtCoordinate(page, START);
   await clickMapAtCoordinate(page, FINISH);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 
   await page.goto("/explore/sample-ridge-loop");
   await expect(page.getByRole("heading", { name: "Before you ride" })).toBeVisible();
-  await expect(page.getByTestId("preparation-state-weather")).toHaveText("Ready");
-  await expect(page.getByTestId("weather-freshness")).toHaveText("Fresh");
+  await expect(page.getByTestId("preparation-value-weather")).toBeVisible();
   await expect(page.getByText("Clear", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Roads on this ride" })).toBeVisible();
@@ -120,7 +124,9 @@ test("shows the Roads empty state when no rider evidence is present", async ({ p
   await page.goto("/explore");
   await page.getByRole("tab", { name: "Ride", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Worth riding", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
+  // The rides lead the screen; the search field and the list are the first content.
+  await expect(page.getByRole("searchbox", { name: "Search routes" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Explore routes" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
   expect(consoleErrors).toEqual([]);
 });
@@ -128,6 +134,6 @@ test("shows the Roads empty state when no rider evidence is present", async ({ p
 test("shows the honest Roads empty state when road data is unavailable", async ({ page }) => {
   await page.goto("/explore?roads=empty");
   await page.getByRole("tab", { name: "Ride", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Ready-made rides" })).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: "Search routes" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
 });

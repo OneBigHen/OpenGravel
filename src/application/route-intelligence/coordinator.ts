@@ -19,7 +19,7 @@ import { dedupeRecords } from "./dedupe";
 import { boxesIntersect, indexRoute, matchRecord } from "./match";
 import { inSeason, roadAuthorityEffect } from "./policy";
 import type { RoadAuthoritySource } from "./road-authority-source";
-import type { BoundingBox, RoadAuthorityRecord, RoadAuthoritySnapshot, RoadAuthoritySourceInfo } from "./types";
+import type { BoundingBox, RoadAuthorityGeometry, RoadAuthorityRecord, RoadAuthoritySnapshot, RoadAuthoritySourceInfo } from "./types";
 
 /** Lane A's budget: a plan waits at most this long for road authority. */
 export const ROAD_AUTHORITY_DEADLINE_MS = 2_500;
@@ -34,6 +34,8 @@ export type RoadAuthorityWarningCode =
 
 export interface RoadAuthorityVerdict {
   readonly failures: readonly { readonly code: RoadAuthorityFailureCode; readonly message: string }[];
+  /** Every rejecting record, before copy deduplication; used to locate a blocked approach. */
+  readonly blockedRoads?: readonly { readonly code: RoadAuthorityFailureCode; readonly geometry: RoadAuthorityGeometry }[];
   readonly warnings: readonly { readonly code: RoadAuthorityWarningCode; readonly message: string }[];
   readonly evidence: {
     /** 0 = checked and clear … 1 = closed; unknown unless every covering source answered. */
@@ -147,6 +149,7 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
     sources: outcomes,
     evaluate(geometry) {
       const failures: { code: RoadAuthorityFailureCode; message: string }[] = [];
+      const blockedRoads: NonNullable<RoadAuthorityVerdict["blockedRoads"]>[number][] = [];
       const warnings: { code: RoadAuthorityWarningCode; message: string }[] = [];
       if (geometry.length < 2) {
         return {
@@ -203,6 +206,7 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
         }
         const effect = roadAuthorityEffect(record, recordAuthority, match, at);
         if (effect.effect === "none") continue;
+        if (effect.effect === "reject") blockedRoads.push({ code: effect.code, geometry: record.geometry });
         const key = `${effect.code}:${effect.message}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -272,7 +276,7 @@ function createAssessment(at: string, outcomes: readonly SourceOutcome[]): RoadA
                     ...knownEvidence(1, evidenceSource(access.covering[0]!.info, access.covering[0]!.snapshot.fetchedAt, "access")),
                     provenance: access.covering.map((outcome) => evidenceSource(outcome.info, outcome.snapshot.fetchedAt, "access")),
                   };
-      return { failures, warnings, evidence: { closures: closureEvidence, access: accessEvidence } };
+      return { failures, blockedRoads, warnings, evidence: { closures: closureEvidence, access: accessEvidence } };
     },
   };
 }

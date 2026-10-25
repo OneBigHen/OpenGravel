@@ -15,6 +15,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
 import { authorSketch } from "@/application/planner/sketch-authoring";
 import { REPLAN_SETTLE_MS } from "@/ui/planner/usePlannerAnswerLifecycle";
@@ -27,12 +28,15 @@ import { asRouteCandidateId } from "@/domain/route/ids";
 import type { RideRepositoryPort } from "@/infrastructure/storage/ride-repository";
 import {
   createRideDocumentStore,
+  placeFinishCommand,
   placeStartCommand,
 } from "@/ui/stores/ride-document-store";
 import { RESTORE_ANNOUNCEMENT_MS } from "@/ui/planner/hooks/useRestoreAnnouncement";
 import { createPlanningSessionStore } from "@/ui/stores/planning-session-store";
 import { createPlannerUiStore } from "@/ui/stores/planner-ui-store";
 import { PlannerWorkspace } from "@/ui/planner/PlannerWorkspace";
+import type { PlannerPlaceServices } from "@/ui/planner/controllers";
+import { PLACE_SEARCH_DEBOUNCE_MS } from "@/ui/planner/PlaceSearchField";
 
 import {
   createStubMapHostFactory,
@@ -157,7 +161,10 @@ async function flushHostSubscription(): Promise<void> {
   await Promise.resolve();
 }
 
-async function renderWorkspace(fetcher: typeof fetch): Promise<RenderedWorkspace> {
+async function renderWorkspace(
+  fetcher: typeof fetch,
+  options: { readonly places?: PlannerPlaceServices } = {},
+): Promise<RenderedWorkspace> {
   const posts: RoutePlanIdentityWire[] = [];
   const recording = (async (
     input: RequestInfo | URL,
@@ -183,6 +190,7 @@ async function renderWorkspace(fetcher: typeof fetch): Promise<RenderedWorkspace
       planningSessionStore={planningSessionStore}
       plannerUiStore={plannerUiStore}
       mapHostFactory={mapFactory.factory}
+      {...(options.places === undefined ? {} : { places: options.places })}
     />,
   );
 
@@ -239,6 +247,32 @@ function unfetched(): typeof fetch {
   }) as typeof fetch;
 }
 
+/**
+ * A fetcher whose answer never arrives.
+ *
+ * A complete ride plans itself on the pick (04 §8), so a test about placement or
+ * selection still starts an attempt. Letting it wait forever keeps the subject of
+ * the test — the authored points — free of an answer, a failure or a retry button.
+ */
+function pendingFetcher(): typeof fetch {
+  return (async (): Promise<Response> =>
+    new Promise<Response>(() => undefined)) as typeof fetch;
+}
+
+/**
+ * Presses the commitment button when the planner still offers it.
+ *
+ * A ride with a destination plans itself the moment the pick completes it, so the
+ * control is absent; a ride with no destination (for example one a sketch
+ * supplies) still needs the press. Returns whether the press happened.
+ */
+function pressPlanIfOffered(): boolean {
+  const plan = screen.queryByTestId("compose-create");
+  if (plan === null) return false;
+  fireEvent.click(plan);
+  return true;
+}
+
 async function placeBothPoints(): Promise<void> {
   clickMap(100, 100);
   await waitFor(() => {
@@ -282,11 +316,10 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
 
     await placeBothPoints();
 
-    const plan = screen.getByRole("button", { name: "Create ride" });
-    expect(plan).toBeEnabled();
+    // The destination completed the ride, so that pick already asked: there is
+    // nothing left to press and nothing left to explain (04 §8).
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
     expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
-
-    fireEvent.click(plan);
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
@@ -345,7 +378,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -383,7 +415,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(pending.length).toBeGreaterThan(0);
     });
@@ -410,7 +441,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     await renderWorkspace(hanging);
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
 
     await waitFor(() => {
       expect(screen.getByTestId("status-line")).toHaveTextContent("Finding your ride…");
@@ -433,7 +463,14 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("places a start on the first idle tap and the destination on the next", async () => {
-    const { plannerUiStore } = await renderWorkspace(unfetched());
+    const { plannerUiStore } = await renderWorkspace(
+      (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+        jsonResponse(
+          successBody(
+            (JSON.parse(String(init?.body)) as { identity: RoutePlanIdentityWire }).identity,
+          ),
+        )) as typeof fetch,
+    );
 
     // First-open arms no tool: the empty map is directly usable, and the
     // composer reason is the single instruction (OGV-D-213/214).
@@ -455,7 +492,12 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent(
       "No destination yet",
     );
-    expect(screen.getByRole("button", { name: "Create ride" })).toBeEnabled();
+    // The second pick completed the ride, so the planner asked by itself: the
+    // commitment control is gone because there is nothing left to press.
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
     // Both points exist: an idle tap is a selection click again, and there is
     // nothing left to instruct.
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
@@ -502,7 +544,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("clears the selection on an unarmed click once both points exist", async () => {
-    const { plannerUiStore } = await renderWorkspace(unfetched());
+    const { plannerUiStore } = await renderWorkspace(pendingFetcher());
 
     clickMap(100, 100);
     clickMap(900, 900);
@@ -559,7 +601,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "peek");
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -596,7 +637,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -612,9 +652,10 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.getByTestId("show-whole-ride")).toBeInTheDocument();
     host.reset();
 
+    // The new destination is the pick: it plans the update by itself, and the
+    // suspended camera must still hold.
     fireEvent.click(screen.getByTestId("finish-chip"));
     clickMap(500, 500);
-    fireEvent.click(screen.getByRole("button", { name: "Update ride" }));
     await waitFor(() => {
       expect(screen.getByTestId("status-line")).toHaveTextContent("Updating ride…");
     });
@@ -645,7 +686,6 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -672,7 +712,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("records overlapping route candidates and lets the rider resolve them", async () => {
-    const { plannerUiStore } = await renderWorkspace(unfetched());
+    const { plannerUiStore } = await renderWorkspace(pendingFetcher());
     // Unarmed: both points are authored, so the tap is a *selection* decision and
     // the overlap is the rider's to make (05 §6).
     await placeBothPoints();
@@ -703,7 +743,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("closes the overlap chooser without inventing a selection", async () => {
-    const { plannerUiStore } = await renderWorkspace(unfetched());
+    const { plannerUiStore } = await renderWorkspace(pendingFetcher());
     await placeBothPoints();
     emitIntent({
       type: "overlap-click",
@@ -749,7 +789,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("clears an armed placement on Escape, and the next tap does not place", async () => {
-    const { plannerUiStore, rideDocumentStore, mapFactory } = await renderWorkspace(unfetched());
+    const { plannerUiStore, rideDocumentStore, mapFactory } = await renderWorkspace(pendingFetcher());
     await placeBothPoints();
     const authoredStart = rideDocumentStore.getState().document.intent.start;
 
@@ -832,7 +872,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   });
 
   it("clears the whole route in one step and offers its undo (OW-01)", async () => {
-    const { rideDocumentStore, plannerUiStore } = await renderWorkspace(unfetched());
+    const { rideDocumentStore, plannerUiStore } = await renderWorkspace(pendingFetcher());
     expect(screen.queryByTestId("clear-ride")).not.toBeInTheDocument();
 
     await placeBothPoints();
@@ -873,9 +913,13 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
       });
       expect(result.outcome).toBe("applied");
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
+    // A ride with a destination planned itself on the pick; a sketch-derived ride
+    // with no destination still needs the press.
+    pressPlanIfOffered();
     await waitFor(() => expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2));
-    await waitFor(() => expect(posts).toHaveLength(2));
+    // The revisions that were planned up to here: clearing the ride must not add
+    // one, whichever request of an attempt is still on its way.
+    const plannedRevisions = new Set(posts.map((identity) => identity.rideRevision));
     const before = rideDocumentStore.getState().document.intent;
     // A draft/preview timer must not bring the ride back after clearing either.
     act(() => {
@@ -891,7 +935,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
       release?.();
       await new Promise((resolve) => setTimeout(resolve, REPLAN_SETTLE_MS + 100));
     });
-    expect(posts).toHaveLength(2);
+    expect(new Set(posts.map((identity) => identity.rideRevision))).toEqual(plannedRevisions);
     expect(screen.queryAllByTestId(/^route-card-/)).toHaveLength(0);
     expect(mapFactory.hosts[0]?.lastScene()?.routes).toHaveLength(0);
     expect(screen.queryByText("Finding other roads…")).not.toBeInTheDocument();
@@ -968,17 +1012,32 @@ describe("PlannerWorkspace — a failed plan (owner review 2026-09-17)", () => {
   }
 
   it("keeps both markers, frames them and offers recovery", async () => {
+    const pending: Array<(response: Response) => void> = [];
     const { mapFactory } = await renderWorkspace(
-      (async (): Promise<Response> => noRouteResponse()) as typeof fetch,
+      (async (): Promise<Response> =>
+        new Promise<Response>((resolve) => {
+          pending.push(resolve);
+        })) as typeof fetch,
     );
 
     await placeBothPoints();
     const host = mapFactory.hosts[0];
     if (host === undefined) throw new Error("expected a map host");
     // Everything up to here is placement: the camera has never been asked to frame
-    // a ride. The failure framing below is the only fit after this point.
-    host.reset();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
+    // a ride. The attempt the pick itself started is still waiting for its answer,
+    // so its failure below is the only thing that can ask for a fit.
+    const fitsBeforeFailure = host.fits.length;
+    expect(pending.length).toBeGreaterThan(0);
+    await act(async () => {
+      pending.shift()?.(noRouteResponse());
+      await Promise.resolve();
+    });
+    // The full request goes out once the first answer has settled (06 §5).
+    await waitFor(() => expect(pending.length).toBeGreaterThan(0));
+    await act(async () => {
+      pending.shift()?.(noRouteResponse());
+      await Promise.resolve();
+    });
 
     await waitFor(() => {
       expect(screen.getByTestId("planner-error")).toHaveTextContent(
@@ -994,8 +1053,8 @@ describe("PlannerWorkspace — a failed plan (owner review 2026-09-17)", () => {
     // The attempt framed what is left — the two authored points — so both markers
     // are on screen with no route line at all (owner review 2026-09-17). It is the
     // *failure* that asks for this fit, not the placement that preceded it.
-    expect(host.fits).toHaveLength(1);
-    const fit = host.fits[0];
+    await waitFor(() => expect(host.fits).toHaveLength(fitsBeforeFailure + 1));
+    const fit = host.fits[fitsBeforeFailure];
     if (fit === undefined) throw new Error("expected an automatic camera fit");
     const endpoints = [composerCoordinate("start-value"), composerCoordinate("finish-value")];
     for (const coordinate of endpoints) {
@@ -1039,7 +1098,6 @@ describe("PlannerWorkspace — a failed plan (owner review 2026-09-17)", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -1072,7 +1130,6 @@ describe("PlannerWorkspace — replanning an edit (04 §21)", () => {
     );
 
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(pending).toHaveLength(1);
     });
@@ -1207,7 +1264,7 @@ describe("PlannerWorkspace — an unloadable map (4.0s)", () => {
   });
 
   it("keeps planning available for a ride that is already complete", async () => {
-    const { mapFactory } = await renderWorkspace(unfetched());
+    const { mapFactory } = await renderWorkspace(pendingFetcher());
     await placeBothPoints();
     const host = mapFactory.hosts[0];
     if (host === undefined) throw new Error("the workspace has no map host");
@@ -1215,8 +1272,11 @@ describe("PlannerWorkspace — an unloadable map (4.0s)", () => {
       host.reportStatus({ state: "failed", reason: "tile" });
     });
 
-    // Planning itself does not need the canvas: only placement does.
-    expect(screen.getByTestId("compose-create")).toBeEnabled();
+    // Planning itself does not need the canvas: only placement does. The pick's
+    // attempt is still running, its cancel is offered, and nothing claims a point
+    // is missing because the map is gone.
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Finding your ride…");
+    expect(screen.getByTestId("cancel-planning")).toBeInTheDocument();
     expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
     // The chips still say why they cannot take a tap.
     expect(screen.getByTestId("map-required-reason")).toHaveTextContent("map");
@@ -1249,7 +1309,6 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
         )) as typeof fetch,
     );
     await placeBothPoints();
-    fireEvent.click(screen.getByRole("button", { name: "Create ride" }));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -1284,8 +1343,12 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
     expect(bulletText).toContain("Traffic is unknown for this route, so no delay is claimed.");
     expect(bulletText).not.toMatch(/graphhopper|valhalla|tomtom/i);
 
-    // And the surface itself is never claimed as known.
-    expect(screen.getByTestId("route-unknowns-note")).toHaveTextContent(/surface/);
+    // And the surface itself is never claimed as known: the uncertainty is on
+    // the card's own badge, with no status paragraph under the list.
+    expect(screen.getAllByTestId("route-badge").map((badge) => badge.textContent)).toContain(
+      "Surface unknown",
+    );
+    expect(screen.queryByTestId("route-unknowns-note")).not.toBeInTheDocument();
   });
 });
 
@@ -1384,5 +1447,296 @@ describe("map hold point authoring", () => {
     fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
     expect(rideDocumentStore.getState().document).toBe(before);
     expect(within(screen.getByRole("dialog", { name: "Plan here" })).getByRole("status")).toHaveTextContent("No authority record for this spot");
+  });
+});
+
+/**
+ * Planning as soon as there is somewhere to go (04 §8, §21).
+ *
+ * A rider who has picked a destination has already answered the question the
+ * commitment button asks, so the planner asks the router itself. The silences
+ * matter just as much: a reload, a typed query and a loop are not a completion,
+ * and two style taps in a row are one question.
+ */
+describe("PlannerWorkspace — planning as soon as there is somewhere to go", () => {
+  const HAWK_MOUNTAIN: PlaceMatch = {
+    id: "fixture:hawk-mountain",
+    label: "Hawk Mountain Sanctuary, PA",
+    name: "Hawk Mountain Sanctuary",
+    context: "Kempton, Berks County, PA",
+    coordinate: { lon: -75.9913, lat: 40.6348 },
+    provider: "fixture",
+  };
+
+  /** A fetcher that plans the fixture route for whatever identity it is given. */
+  function answerWithRoute(): typeof fetch {
+    return (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
+      jsonResponse(
+        successBody(
+          (JSON.parse(String(init?.body)) as { identity: RoutePlanIdentityWire }).identity,
+        ),
+      )) as typeof fetch;
+  }
+
+  /** Place search with one result, so a typed query can be picked. */
+  function searchablePlaces(): PlannerPlaceServices {
+    return {
+      search: {
+        search: async () => ({ status: "ok", places: [HAWK_MOUNTAIN] }),
+        reverse: async () => null,
+      },
+      names: {
+        nameFor: () => undefined,
+        request: () => undefined,
+        subscribe: () => () => undefined,
+        version: () => 0,
+      },
+    };
+  }
+
+  /** How many attempts the workspace started: `begin` bumps the generation. */
+  function begins(posts: readonly RoutePlanIdentityWire[]): number {
+    return new Set(posts.map((identity) => identity.planningGeneration)).size;
+  }
+
+  it("asks once, by itself, for the ride the destination completes", async () => {
+    const { posts } = await renderWorkspace(answerWithRoute());
+
+    // A start is not a ride: there is nothing to ask for yet, so nothing is asked.
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+    expect(posts).toHaveLength(0);
+
+    clickMap(900, 900);
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    // One attempt for the pair of points, not one per point.
+    expect(begins(posts)).toBe(1);
+    // Nothing is left to press: the ride is being planned.
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready.");
+  });
+
+  it("plans a picked place from search without a press", async () => {
+    const { posts } = await renderWorkspace(answerWithRoute(), {
+      places: searchablePlaces(),
+    });
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+
+    // The destination comes from the search field: a chosen place is a revision.
+    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.click(await screen.findByTestId("place-option"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    expect(screen.getByTestId("finish-value")).toHaveTextContent(
+      "Hawk Mountain Sanctuary, PA",
+    );
+    expect(begins(posts)).toBe(1);
+  });
+
+  it("ends the map-pick mode when the destination comes from search", async () => {
+    const { plannerUiStore } = await renderWorkspace(answerWithRoute(), {
+      places: searchablePlaces(),
+    });
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+
+    // The chip arms the map for a destination, and while the point is missing the
+    // composer's own reason is the only instruction.
+    fireEvent.click(screen.getByTestId("finish-chip"));
+    expect(plannerUiStore.getState().placementTool).toBe("place-finish");
+    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+
+    // A place picked from search is the destination the mode was waiting for.
+    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.click(await screen.findByTestId("place-option"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    // The instruction is spent: no armed chip, and no "Tap the map to set your
+    // destination." left over the ride that pick has already planned.
+    expect(plannerUiStore.getState().placementTool).toBe("idle");
+    expect(screen.getByTestId("finish-chip")).toHaveAttribute("data-armed", "false");
+    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+  });
+
+  it("never plans while the rider is typing", async () => {
+    const { posts } = await renderWorkspace(answerWithRoute(), {
+      places: searchablePlaces(),
+    });
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+
+    const finish = screen.getByTestId("finish-search");
+    fireEvent.change(finish, { target: { value: "haw" } });
+    fireEvent.change(finish, { target: { value: "hawk" } });
+    // The field asks the geocoder, not the router (M1): a query is not a place,
+    // and a half-typed destination is not a ride to plan.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, PLACE_SEARCH_DEBOUNCE_MS + 50));
+    });
+    expect(screen.getByTestId("place-option")).toBeInTheDocument();
+    expect(posts).toHaveLength(0);
+    // The composer still says what is missing, and that is all typing does.
+    expect(screen.getByTestId("compose-create")).toBeDisabled();
+  });
+
+  it("supersedes the attempt in flight when a second destination is picked", async () => {
+    const pending: Array<(response: Response) => void> = [];
+    const { posts } = await renderWorkspace(
+      (async (): Promise<Response> =>
+        new Promise<Response>((resolve) => {
+          pending.push(resolve);
+        })) as typeof fetch,
+    );
+
+    await placeBothPoints();
+    await waitFor(() => expect(pending.length).toBeGreaterThan(0));
+    const firstGeneration = Math.max(...posts.map((identity) => identity.planningGeneration));
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Finding your ride…");
+
+    // A pick while the answer is still on its way is the rider asking a newer
+    // question: the same command moves ownership, which is what cancels the
+    // superseded attempt (06 §28) rather than stacking a second one.
+    fireEvent.click(screen.getByTestId("finish-chip"));
+    clickMap(700, 700);
+
+    await waitFor(() =>
+      expect(
+        Math.max(...posts.map((identity) => identity.planningGeneration)),
+      ).toBeGreaterThan(firstGeneration),
+    );
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Finding your ride…");
+    // The superseded attempt's answer is ignored, not committed: its identity is
+    // no longer the session's.
+    const superseded = posts[0];
+    if (superseded === undefined) throw new Error("expected a plan request");
+    await act(async () => {
+      pending[0]?.(jsonResponse(successBody(superseded)));
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Finding your ride…");
+    expect(screen.queryAllByTestId(/^route-card-/)).toHaveLength(0);
+  });
+
+  it("replans once after the rider stops changing the ride style", async () => {
+    const { posts } = await renderWorkspace(answerWithRoute());
+    await placeBothPoints();
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    const before = begins(posts);
+
+    // Two taps in quick succession are one question: the settle window plans the
+    // combination rather than each control.
+    fireEvent.click(screen.getByTestId("road-character-curvy"));
+    fireEvent.click(screen.getByTestId("avoid-highways"));
+    await waitFor(() => expect(begins(posts)).toBe(before + 1), { timeout: 3_000 });
+    await waitFor(() => {
+      expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready.");
+    });
+    // Once it has settled, nothing further goes out.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+    expect(begins(posts)).toBe(before + 1);
+  });
+
+  it("needs the rider's tap for a loop: the control says Make my loop", async () => {
+    const { posts } = await renderWorkspace(answerWithRoute());
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+    fireEvent.click(screen.getByTestId("loop-near-me"));
+
+    // A loop is complete with its origin alone, and nothing else about it is a
+    // pick: its shape and ride time are accepted by the press.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, REPLAN_SETTLE_MS + 100));
+    });
+    expect(posts).toHaveLength(0);
+
+    const plan = screen.getByTestId("compose-create");
+    expect(plan).toHaveTextContent("Make my loop");
+    fireEvent.click(plan);
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    expect(begins(posts)).toBe(1);
+  });
+
+  it("never plans a restored draft by itself, only the restore rule's own ask", async () => {
+    const created = createRideDocument({ now: FIXED });
+    const withStart = applyRideCommand(created, placeStartCommand(created, ORIGIN, now));
+    if (withStart.outcome !== "applied") throw new Error(withStart.outcome);
+    const withFinish = applyRideCommand(
+      withStart.document,
+      placeFinishCommand(withStart.document, DESTINATION, now),
+    );
+    if (withFinish.outcome !== "applied") throw new Error(withFinish.outcome);
+    const restored = withFinish.document;
+    const repository: RideRepositoryPort = {
+      saveRide: vi.fn().mockResolvedValue({ ok: true }),
+      loadRide: vi.fn().mockResolvedValue({ ok: true, document: restored }),
+      loadDraftPointer: vi.fn().mockResolvedValue({
+        id: "active",
+        rideId: restored.rideId,
+        updatedAt: restored.updatedAt,
+      }),
+      deleteRide: vi.fn().mockResolvedValue(undefined),
+      readRideRevision: vi.fn().mockResolvedValue(null),
+    };
+    const rideDocumentStore = createRideDocumentStore({ now, repository });
+    const posts: RoutePlanIdentityWire[] = [];
+    const recording = (async (
+      _input: RequestInfo | URL,
+      init?: RequestInit,
+    ): Promise<Response> => {
+      const { identity } = JSON.parse(String(init?.body)) as {
+        identity: RoutePlanIdentityWire;
+      };
+      posts.push(identity);
+      return jsonResponse(successBody(identity));
+    }) as typeof fetch;
+    const planningSessionStore = createPlanningSessionStore({
+      service: createClientPlanningService({ fetcher: recording, now }),
+    });
+    const plannerUiStore = createPlannerUiStore();
+    const mapFactory = createStubMapHostFactory();
+
+    // Rendered while the draft is still loading — exactly what a reload does.
+    expect(rideDocumentStore.getState().restoreStatus.state).toBe("loading");
+    render(
+      <PlannerWorkspace
+        rideDocumentStore={rideDocumentStore}
+        planningSessionStore={planningSessionStore}
+        plannerUiStore={plannerUiStore}
+        mapHostFactory={mapFactory.factory}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(rideDocumentStore.getState().restoreStatus.state).toBe("restored");
+    });
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    // The restore rule asks once for the answer a reload does not keep. The pick
+    // rule adds nothing on top of it: a page load is not an authored point.
+    expect(begins(posts)).toBe(1);
   });
 });

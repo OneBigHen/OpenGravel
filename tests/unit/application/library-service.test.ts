@@ -8,6 +8,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { VNextDatabase } from "@/infrastructure/storage/db";
 import { buildCorridorPackManifest } from "@/domain/offline/capabilities";
 import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
+import { createRecordingTelemetry } from "@/domain/recording/telemetry";
 import { asRecordingId } from "@/domain/recording/ids";
 
 let sequence = 0;
@@ -265,6 +266,48 @@ describe("LibraryService", () => {
   });
 });
 
+
+describe("Free Ride summaries", () => {
+  it("saves folded metrics and accepted plan lines once, without claiming a recorded track", async () => {
+    const db = database();
+    const repository = createRideRepository({ database: db });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: db.name });
+    const service = createLibraryService(repository, { geometryStore, now: () => LATER });
+    const draft = createRideDocument({ now: NOW });
+    const line = [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }];
+    const geometry = await geometryStore.put({ kind: "line", coordinates: line }, { kind: "route", now: NOW });
+    const accumulator = createRecordingTelemetry();
+    for (let i = 0; i < 12; i += 1) accumulator.add({ coordinate: { lon: -75.5 + i * 0.0002, lat: 40 }, accuracyMeters: 5, observedAt: new Date(Date.parse(NOW) + i * 1000).toISOString(), speedMps: 17, altitudeMeters: 100 + i * 3, altitudeAccuracyMeters: 3 });
+    const telemetry = accumulator.snapshot();
+    expect(telemetry.acceptedDistanceMeters).toBeGreaterThan(0);
+    expect(telemetry.elevation.gainMeters).toBeGreaterThan(0);
+    const input = { document: draft, sessionId: "sess_summary", telemetry, acceptedGeometryRefs: [geometry.geometryRef] };
+    const rideId = await service.saveFreeRideSummary(input);
+    expect(await service.saveFreeRideSummary(input)).toBe(rideId);
+    expect(await service.listRides()).toHaveLength(1);
+    expect(await repository.loadRideRecord(rideId)).toMatchObject({ freeRideSummary: { telemetry, acceptedGeometryRefs: [geometry.geometryRef] } });
+    expect((await service.listRides())[0]).toMatchObject({ distanceMeters: telemetry.acceptedDistanceMeters, durationSeconds: telemetry.movingMs / 1000, mapPreview: { line }, exportCapabilities: { recordedRide: false } });
+    expect((await service.loadExportSource(rideId)).recordedTrack).toBeNull();
+    expect((await service.listExploreRides())[0]?.geometry).toEqual([]);
+    await service.renameRide(rideId, "Sunday wandering");
+    expect((await repository.loadRideRecord(rideId))?.freeRideSummary?.telemetry).toEqual(telemetry);
+    await repository.sweepUnreferencedGeometry();
+    expect(await geometryStore.get(geometry.geometryRef)).not.toBeNull();
+    db.close();
+  });
+});
+
+
+it("does not let a malformed Free Ride summary break My rides", async () => {
+  const db = database();
+  const repository = createRideRepository({ database: db });
+  const service = createLibraryService(repository);
+  const saved = await service.saveNamed(createRideDocument({ now: NOW }), { title: "Broken summary" });
+  const record = (await repository.loadRideRecord(saved.document.rideId))!;
+  await db.rides.put({ ...record, freeRideSummary: { telemetry: null, acceptedGeometryRefs: null } } as never);
+  await expect(service.listRides()).resolves.toEqual([]);
+  db.close();
+});
 describe("LibraryService planned-route geometry", () => {
   const geometry = [
     { lon: -75.5, lat: 40 },

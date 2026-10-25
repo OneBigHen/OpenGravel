@@ -7,6 +7,7 @@ import type {
   RoutingMethodVm,
 } from "@/application/planner/routing-method-comparison";
 import type { RouteCandidateId } from "@/domain/route/ids";
+import { useRoutingDebug } from "@/ui/planner/debug-routing";
 
 export interface RoutingMethodComparisonProps {
   readonly model: RoutingComparisonVm;
@@ -181,6 +182,7 @@ function MethodOption({
 }
 
 export function RoutingMethodComparison({ model, onSelect }: RoutingMethodComparisonProps) {
+  const debug = useRoutingDebug();
   const methods = orderedMethods(model.methods);
   const [open, setOpen] = useState(false);
   const [activeMethodId, setActiveMethodId] = useState<RoutingMethodVm["id"] | null>(methods[0]?.id ?? null);
@@ -188,7 +190,8 @@ export function RoutingMethodComparison({ model, onSelect }: RoutingMethodCompar
   const groupName = useId();
   const detailsId = `${groupName}-details`;
 
-  if (methods.length === 0) return null;
+  // Developer detail: only the explicit `?debug=routing` page shows it.
+  if (!debug || methods.length === 0) return null;
 
   return (
     <details

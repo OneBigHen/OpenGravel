@@ -10,7 +10,9 @@ import {
   fractionOf,
   plannerMap,
   settledExtent,
-  type Coordinate, openRefine } from "./map-helpers";
+  type Coordinate, openRefine,
+  pressPlan,
+} from "./map-helpers";
 
 /**
  * Critical browser workflow: draw a multi-stroke route (04-PLANNER-AND-WORKSPACE-UX
@@ -263,7 +265,7 @@ test("draw two strokes, plan through them, recover from a failure and undo as on
   // --- A route failure: the sketch stays visible and editable --------------
   await failNextPlan(page);
   const beforeFailure = requests.length;
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await nextRequest(requests, beforeFailure);
   await expect(page.getByTestId("status-line")).toHaveText(
     "Planning failed — your previous ride is still shown.",
@@ -282,7 +284,7 @@ test("draw two strokes, plan through them, recover from a failure and undo as on
   // --- Retry succeeds, and it re-derives from the stored trace -------------
   await page.unroute("**/api/route-plan");
   const beforeRetry = requests.length;
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   const retried = await nextRequest(requests, beforeRetry);
   await expectPlanSettled(page);
   expect(retried.request.sketch?.anchors).toEqual(sketch?.anchors);

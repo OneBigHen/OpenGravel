@@ -13,7 +13,10 @@ describe("ride bike control", () => {
     };
     const onChange = vi.fn();
     render(<RideBikeControl bike={snapshotOf(shortBike)} bikes={[...garage.bikes, shortBike]} onChange={onChange} />);
-    expect(screen.getByText("Riding: Trail bike · 60 mi range · 10 mi reserve · 50 mi usable")).toBeInTheDocument();
+    // The range the ride can use before its reserve, and nothing else: the
+    // fuel line below the chips already reads the tank against the route.
+    expect(screen.getByText("Trail bike · 50 mi range", { selector: ".og-prepare__bike > span" })).toBeInTheDocument();
+    expect(screen.queryByText(/reserve/)).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Change bike for this ride"), { target: { value: garage.bikes[0]!.id } });
     expect(onChange).toHaveBeenCalledWith(snapshotOf(garage.bikes[0]!));
   });

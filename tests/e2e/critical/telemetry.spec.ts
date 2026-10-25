@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 test("the production planner emits typed planning outcomes from its own store", async ({ page }) => {
   await page.goto("/");
@@ -18,7 +18,7 @@ test("the production planner emits typed planning outcomes from its own store", 
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as unknown as { planningTelemetryEvents: string[] }).planningTelemetryEvents)).toEqual(expect.arrayContaining(["route_plan_requested", "route_primary_ready"]));
 });

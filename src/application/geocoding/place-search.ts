@@ -20,6 +20,7 @@
  * upstream answers them (Photon today) is a server concern the UI never sees.
  */
 
+import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 
 /** One named place a geocoder returned. */
@@ -62,6 +63,52 @@ export const PLACE_QUERY_MAX_LENGTH = 120;
 /** The one line a rider reads when search cannot answer. */
 export const PLACE_SEARCH_UNAVAILABLE =
   "Place search is unavailable right now. You can still set the point on the map.";
+
+/**
+ * Two answers with the same name this close together are one place.
+ *
+ * Upstream geocoders return the same venue several times with different
+ * administrative context ("Hawk Mountain Sanctuary, Albany, PA" three times),
+ * which reads to a rider as three separate places. Within 400 m a matching
+ * normalized name is the same place, and the first answer is the one kept.
+ */
+export const PLACE_NAME_DUPLICATE_RADIUS_METERS = 400;
+
+/** A name reduced to the part that makes two answers the same place. */
+export function normalizedPlaceName(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Drop repeated places, keeping the first of each name within the radius.
+ *
+ * Order is the ranking, so the first answer survives. An answer with no usable
+ * name is never collapsed into another: without a name there is nothing that
+ * says the two are the same place.
+ */
+export function dedupePlaces(places: readonly PlaceMatch[]): readonly PlaceMatch[] {
+  const kept: { readonly name: string; readonly place: PlaceMatch }[] = [];
+  for (const place of places) {
+    const name = normalizedPlaceName(place.name);
+    if (name === "") {
+      kept.push({ name, place });
+      continue;
+    }
+    const duplicate = kept.some(
+      (entry) =>
+        entry.name === name &&
+        haversine(entry.place.coordinate, place.coordinate) <=
+          PLACE_NAME_DUPLICATE_RADIUS_METERS,
+    );
+    if (!duplicate) kept.push({ name, place });
+  }
+  return kept.map((entry) => entry.place);
+}
 
 export function isPlaceMatch(value: unknown): value is PlaceMatch {
   if (typeof value !== "object" || value === null) return false;
@@ -118,7 +165,7 @@ export function createHttpPlaceSearch(options: HttpPlaceSearchOptions = {}): Pla
         if (!response.ok) return { status: "unavailable", reason: PLACE_SEARCH_UNAVAILABLE };
         const body = (await response.json()) as { places?: unknown };
         const places = Array.isArray(body.places) ? body.places.filter(isPlaceMatch) : [];
-        return { status: "ok", places };
+        return { status: "ok", places: dedupePlaces(places) };
       } catch (error) {
         if (isAbort(error)) throw error;
         return { status: "unavailable", reason: PLACE_SEARCH_UNAVAILABLE };

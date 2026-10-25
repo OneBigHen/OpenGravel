@@ -336,8 +336,20 @@ describe("runLanes", () => {
     });
   });
 
+  it("retains all three loop seeds from each of four character lanes", async () => {
+    const provider = stubProvider({ perCall: 3 });
+    const result = await runLanes({
+      lanes: lanes(4),
+      requestFor: (profile) => ({ ...REQUEST, profile, destination: REQUEST.origin, discovery: { targetMinutes: 120, toleranceMinutes: 15 } }),
+      provider,
+      signal: new AbortController().signal,
+    });
+    expect(result.candidates).toHaveLength(12);
+    expect(result.diagnostics.map(entry => entry.candidateCount)).toEqual([3, 3, 3, 3]);
+  });
+
   it("caps the total candidate count and stops calling lanes past the cap", async () => {
-    const provider = stubProvider({ perCall: 4 });
+    const provider = stubProvider({ perCall: MAX_TOTAL_CANDIDATES - 2 });
 
     const result = await runLanes({
       lanes: lanes(3),
@@ -352,7 +364,7 @@ describe("runLanes", () => {
       "capped",
       "skipped",
     ]);
-    expect(result.diagnostics[1]?.candidateCount).toBe(MAX_TOTAL_CANDIDATES - 4);
+    expect(result.diagnostics[1]?.candidateCount).toBe(2);
     expect(result.diagnostics[2]?.note).toBe("candidate-cap-reached");
     expect(provider.calls).toBe(2);
   });

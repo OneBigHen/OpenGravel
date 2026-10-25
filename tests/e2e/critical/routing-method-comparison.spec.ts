@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { RoutePlanSuccessBody } from "../../../src/application/planner/ports/route-plan-contract";
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /** UI fixtures supplement the labeled planning fixture with synthetic aggregate
  * evidence. Live road geometry/evidence is verified by the real-router gate. */
@@ -28,7 +28,8 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
     };
     await route.fulfill({ response, json: enriched });
   });
-  await page.goto("/");
+  // The comparison is developer detail, shown only on the explicit debug page.
+  await page.goto("/?debug=routing");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
   await page.getByTestId("start-search").fill("Jim Thorpe");
@@ -45,7 +46,12 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
     await page.getByTestId(`road-character-${roadCharacter}`).check();
     if (await style.isVisible() && await style.getAttribute("aria-expanded") === "true") await style.click();
   }
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
+  if (roadCharacter !== undefined) {
+    // The style change plans by itself (04 §21): the comparison must read the
+    // answer for the authored choice, not the one the first pick produced.
+    await expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
+  }
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   const sheet = page.locator(".og-planner__sheet");
   const handle = page.getByTestId("sheet-handle");

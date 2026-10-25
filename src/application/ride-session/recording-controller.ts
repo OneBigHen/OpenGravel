@@ -16,6 +16,7 @@ import {
   createRecordingTelemetry,
   type RecordingTelemetry,
   type RecordingTelemetryAccumulator,
+  type RecordingTelemetryState,
 } from "@/domain/recording/telemetry";
 
 export { RECORDING_BATCH_MAX_AGE_MS, RECORDING_BATCH_POINT_LIMIT };
@@ -58,6 +59,8 @@ export interface RecordingControllerSnapshot {
    * persisted, so the sealed summary and its trace comparison are unchanged.
    */
   readonly telemetry: RecordingTelemetry;
+  /** Exact fold for handing aggregates to an explicitly unrecorded ride. */
+  readonly telemetryState?: RecordingTelemetryState;
 }
 
 export interface RecordingController {
@@ -310,6 +313,7 @@ export function createRecordingController(
         bufferedPointCount: buffer.length,
         summary: collector.summary(),
         telemetry: telemetry.snapshot(),
+        telemetryState: telemetry.state(),
       };
     },
 
@@ -398,11 +402,12 @@ export function createRecordingController(
           ) {
             return { outcome: "failed", reason: "session-mismatch" };
           }
-          if (sessionState.recordingId === recordingId) {
-            const removal = await session.dispatch(recordingDiscardedEvent(at ?? now()));
-            if (removal.outcome !== "applied" || removal.persistence !== "durable") {
-              return { outcome: "failed", reason: "session-write-failed" };
-            }
+          const requestedAt = at ?? now();
+          const removalAt = Date.parse(requestedAt) < Date.parse(sessionState.updatedAt)
+            ? sessionState.updatedAt : requestedAt;
+          const removal = await session.dispatch(recordingDiscardedEvent(removalAt, recordingId));
+          if (removal.outcome !== "applied" || removal.persistence !== "durable") {
+            return { outcome: "failed", reason: "session-write-failed" };
           }
           referenceRemoved = true;
         }

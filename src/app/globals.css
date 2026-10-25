@@ -1055,8 +1055,7 @@ h3,
 
 .og-preparation__row dd {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 8px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -1067,80 +1066,30 @@ h3,
   font-weight: 600;
 }
 
-.og-preparation__state {
-  align-self: start;
-  padding: 2px 7px;
-  border-radius: var(--og-radius-chip);
-  background: color-mix(in srgb, var(--og-slate) 16%, transparent);
-  color: var(--og-slate-text);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.og-preparation__state[data-state="ready"] {
-  background: color-mix(in srgb, var(--og-success) 16%, transparent);
-  color: var(--og-success);
-}
-
-.og-preparation__state[data-state="stale"] {
-  background: color-mix(in srgb, var(--og-golden-hour) 24%, transparent);
-  color: var(--og-deep-spruce);
-}
-
-.og-preparation__severity,
-.og-preparation__freshness {
-  align-self: start;
-  width: fit-content;
-  padding: 2px 7px;
-  border-radius: var(--og-radius-chip);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.og-preparation__severity {
-  background: color-mix(in srgb, var(--og-ember) 18%, transparent);
-  color: var(--og-ember-text);
-}
-
-.og-preparation__freshness {
-  background: color-mix(in srgb, var(--og-slate) 16%, transparent);
-  color: var(--og-slate-text);
-}
-
-.og-preparation__reason,
-.og-preparation__provenance {
-  grid-column: 1 / -1;
+.og-preparation__note {
   color: var(--og-slate-text);
   font-size: 12px;
 }
 
-.og-preparation__provenance {
+/* The forecast's agency, in small print: attribution without a provider row. */
+.og-preparation__credit,
+.og-prepare__credit {
   color: var(--og-moss-text);
+  font-size: 11.5px;
+}
+
+.og-preparation__credit {
+  margin: 0;
+}
+
+.og-prepare__credit {
+  margin: 2px 0 0;
 }
 
 .og-preparation__empty {
   max-width: 62ch;
   color: var(--og-deep-spruce);
   font-size: 13px;
-}
-
-.og-preparation__unavailable {
-  border-top: 1px solid var(--og-sandstone);
-  color: var(--og-deep-spruce);
-}
-
-.og-preparation__unavailable summary {
-  width: fit-content;
-  min-height: 40px;
-  padding: 9px 0;
-  cursor: pointer;
-  color: var(--og-slate-text);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.og-preparation__unavailable[open] .og-preparation__list {
-  padding-top: 4px;
 }
 
 .og-preparation__considerations {
@@ -1186,30 +1135,11 @@ h3,
   border-left-color: var(--og-ember-strong);
 }
 
-.og-preparation__consideration-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.og-preparation__consideration-severity {
-  color: var(--og-slate-text);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.og-preparation__consideration p,
-.og-preparation__consideration small {
+.og-preparation__consideration p {
   display: block;
   margin: 4px 0 0;
   color: var(--og-deep-spruce);
   font-size: 12px;
-}
-
-.og-preparation__consideration small {
-  color: var(--og-moss-text);
 }
 
 .og-offline {
@@ -3454,16 +3384,26 @@ h3,
   min-width: 0;
 }
 
-/* Fixed label column, flexible value cell, right-aligned action: both rows are
-   the same height whatever the value's length (OGV-D-215). */
+/* Fixed label column, flexible value cell, right-aligned action (OGV-D-215).
+   The row grows with its value, so a long name or a second coordinate line
+   makes its own row taller rather than spilling into the next one. */
 .og-composer__row {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr) auto;
   grid-template-areas: "label value action";
+  grid-template-rows: auto;
   align-items: center;
+  align-content: start;
   column-gap: 8px;
   row-gap: 6px;
+  /* Tracks are content-sized, never clamped to the 44 px target: a value that
+     wraps to a second line makes its own row taller and pushes the next row
+     down, so two fields can never overlap at a narrow phone width. */
+  grid-auto-rows: minmax(min-content, max-content);
   min-height: 44px;
+  /* The sheet body is a flex column: without this a row of wrapped ride-time
+     chips was squeezed to 120 px of its 144 px and painted over the next row. */
+  flex-shrink: 0;
 }
 
 /* With place search (M1) the row is two lines: the name beside the label, then
@@ -3492,7 +3432,9 @@ h3,
   position: relative;
   grid-template-columns: 14px minmax(0, 1fr) auto;
   grid-template-areas: "dot main action";
+  grid-template-rows: auto;
   align-items: start;
+  align-content: start;
   column-gap: 12px;
 }
 
@@ -3597,6 +3539,11 @@ h3,
   width: 100%;
   min-width: 0;
   min-height: 48px;
+  /* Its own content sets the height: a wrapped name and a dropped pin's
+     coordinate line stay inside the button instead of painting into the row
+     below. */
+  height: auto;
+  overflow: visible;
   padding: 6px 12px;
   border: 0;
   border-radius: var(--og-radius-control);
@@ -4860,14 +4807,6 @@ h3,
   color: var(--og-ink);
 }
 
-/* The 07 §5 confidence band: a summary line under the metrics, never a number. */
-.og-route-card__confidence {
-  margin: 0;
-  padding: 0 14px;
-  font-size: 12px;
-  color: var(--og-trail-brown);
-}
-
 /* `Why this ride?` (04 §13): a disclosure, quiet enough to sit under the card. */
 .og-route-card__why-toggle {
   margin: 0 14px 10px;
@@ -5228,8 +5167,7 @@ h3,
     padding-block: 10px;
   }
 
-  .og-route-card[data-selected="false"] :is(.og-route-card__badges, .og-route-card__traits, .og-route-card__traffic),
-  .og-route-card[data-selected="false"] .og-route-card__confidence {
+  .og-route-card[data-selected="false"] :is(.og-route-card__badges, .og-route-card__traits, .og-route-card__traffic) {
     display: none;
   }
 
@@ -5374,7 +5312,6 @@ h3,
   .og-planner__sheet[data-detent="ride"] .og-route-card[data-selected="true"] :is(
     .og-route-card__badges,
     .og-route-card__traffic,
-    .og-route-card__confidence,
     .og-route-card__strip
   ) {
     display: none;
@@ -8611,12 +8548,12 @@ h3,
   background: repeating-linear-gradient(135deg, var(--og-sandstone) 0 3px, transparent 3px 6px);
 }
 
-/* Explore map + list (UX rework phase 5). Phone: a map strip above the list.
-   Wide: the list scrolls beside a sticky map, and the card under the pointer is
-   drawn as the chosen line. */
+/* Explore map + list (UX rework phase 5). Phone: the ride cards first, the map
+   strip under them. Wide: the list scrolls beside a sticky map, and the card
+   under the pointer is drawn as the chosen line. */
 .og-explore__split {
   display: grid;
-  grid-template-areas: "map" "list";
+  grid-template-areas: "list" "map";
   gap: 12px;
 }
 
@@ -8656,28 +8593,12 @@ h3,
 .og-explore-map-panel { min-width: 0; }
 .og-explore-map-panel__head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
   font-size: var(--og-text-meta);
 }
-
-.og-explore__areas {
-  display: grid;
-  /* Region and PA riding area share one row from 360px up (a 390px phone puts
-     them side by side); below that they stack rather than squash. */
-  grid-template-columns: minmax(0, 1fr);
-  align-items: end;
-  gap: 12px 16px;
-  margin: 16px 0;
-}
-@media (min-width: 360px) {
-  .og-explore__areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-.og-explore__areas label { display: grid; gap: 6px; min-width: 0; }
-.og-explore__areas label > span:not(.og-select) { font-weight: 650; font-size: var(--og-text-meta); }
-.og-explore__areas p { grid-column: 1 / -1; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 
 .og-explore-map-dialog {
   position: fixed;
@@ -10033,9 +9954,9 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-/* Fuel on the way (phase 8): a strip the length of the ride with a tick per
-   station and the longest dry stretch shaded, a verdict against the bike's
-   range, and the next stations with Add. */
+/* Fuel on the way (phase 8): one line while the bike's range covers every dry
+   stretch. Only a gap longer than that range opens up, with the stations at
+   either end of it — the rest of the stations live in "Along this ride". */
 .og-fuel {
   display: flex;
   flex-direction: column;
@@ -10045,89 +9966,14 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   background: color-mix(in srgb, var(--og-sandstone) 18%, var(--og-paper));
 }
 
-.og-fuel__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.og-fuel__head h3 {
-  flex: 1;
-  font-size: 15px;
-}
-
-.og-fuel__icon {
-  font-size: 16px;
-}
-
-.og-fuel__verdict {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--og-success);
-  background: color-mix(in srgb, var(--og-success) 14%, var(--og-paper));
-}
-
-.og-fuel__verdict[data-tone="tight"] {
-  color: var(--og-trail-brown);
-  background: color-mix(in srgb, var(--og-golden-hour) 22%, var(--og-paper));
-}
-
-.og-fuel__verdict[data-tone="bad"] {
-  color: var(--og-danger);
-  background: color-mix(in srgb, var(--og-danger) 12%, var(--og-paper));
-}
-
-.og-fuel__strip {
-  position: relative;
-  height: 14px;
-  margin-top: 4px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--og-sandstone) 55%, var(--og-paper));
-  overflow: hidden;
-}
-
-.og-fuel__gap {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--og-golden-hour) 55%, transparent) 0 4px,
-    transparent 4px 8px
-  );
-}
-
-.og-fuel__gap[data-over="true"] {
-  background: repeating-linear-gradient(
-    -45deg,
-    color-mix(in srgb, var(--og-danger) 55%, transparent) 0 4px,
-    transparent 4px 8px
-  );
-}
-
-.og-fuel__tick {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  width: 3px;
-  margin-left: -1.5px;
-  border-radius: 2px;
-  background: #0f766e;
-}
-
-.og-fuel__scale {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
+.og-fuel__line {
+  margin: 0;
   color: var(--og-slate-text);
-  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.og-fuel__summary,
-.og-fuel__status {
-  font-size: 13px;
+.og-fuel__line--warn {
   color: var(--og-ink);
 }
 
@@ -10186,11 +10032,6 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-fuel__add:disabled {
   cursor: default;
   opacity: 0.6;
-}
-
-.og-fuel__source {
-  font-size: 11.5px;
-  color: var(--og-slate-text);
 }
 
 /* The shared app bar (UX rework phase 9): Explore, My rides and Settings wear
@@ -11048,6 +10889,93 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   outline-offset: 3px;
 }
 
+/* Zoom is one instrument, not two buttons: a 56 x 112 pill of two 56 px halves,
+   so a gloved thumb reads "in / out" from one shape and still cannot hit both.
+   Each half keeps the rail's own glass and its own 1 px edge, which is the line
+   between them; only the round outer corners are clipped. */
+.og-ride__rail-zoom {
+  display: grid;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+}
+
+.og-ride__rail-zoom .og-ride__rail-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* At a limit the button says so and stays focusable, like the planner's. */
+.og-ride__rail-button[data-disabled="true"] {
+  color: var(--og-ride-muted);
+  cursor: default;
+}
+
+/* The compass needle is the map's own rotation, drawn against it. The tail is
+   the theme ink so it reads on Day's white disc and Night's dark glass; the tip
+   is Ember in both, the way the map's own compass is. It snaps rather than
+   eases: a needle that lags is wrong for a moment, and there is no motion to
+   remove under prefers-reduced-motion. */
+.og-ride__rail-compass svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.og-ride__compass-needle {
+  transform: rotate(calc(var(--og-bearing, 0) * -1deg));
+}
+
+.og-ride__compass-tip {
+  fill: var(--og-ember-text);
+}
+
+.og-ride__compass-tail {
+  fill: currentColor;
+}
+
+/* Landscape has the width and not the height, so the rail turns on its side:
+   the same five 56 px targets plus the zoom pair in one row that wraps rather
+   than a column that would run into the maneuver card. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride__float-end {
+    flex-direction: row-reverse;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .og-ride__rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .og-ride__rail-zoom {
+    grid-auto-flow: column;
+    grid-auto-columns: 56px;
+  }
+}
+
+/* Day / Night where the rider is: three sheet buttons in a row, the same
+   words Settings uses. The chosen one is ringed rather than recoloured, so the
+   answer survives glare and the sheet's own theme. */
+.og-ride__display {
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__display-option {
+  flex: 1 1 0;
+}
+
+.og-ride__display-option[aria-pressed="true"] {
+  border-color: var(--og-ember);
+  box-shadow: inset 0 0 0 1px var(--og-ember);
+}
+
 /* EX-11: the size of the list, quietly, above it. */
 .og-road-discovery__title {
   margin-top: 8px;
@@ -11219,11 +11147,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   order: 3;
 }
 
-/* The briefing's one line stays one line; the details are behind the handle. */
+/* The briefing's line wraps on a narrow phone instead of cutting a word in half. */
 .og-prepare__glance {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 /* Phone portrait, compact sheet (OW-02): with a ride chosen, the collapsed sheet
@@ -11289,9 +11215,15 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
     text-align: center;
   }
 
-  /* Places on the map: one small glass capsule — dot, count, filters. The words
-     stay the button's name; an empty count says nothing, so it is not drawn. */
-  .og-places-overlay--planner .og-places-control__label {
+  .og-planner__sheet[data-detent="ride"] .og-prepare__credit {
+    font-size: 10.5px;
+    text-align: center;
+  }
+
+  /* Places on the map: one small glass capsule. A pill that carries a number
+     keeps it as its only visible content; without one the words stay, so the
+     Along-ride pill still has a name. */
+  .og-places-overlay--planner .og-places-control__toggle:has(.og-places-control__count) .og-places-control__label {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -13551,5 +13483,17 @@ a.og-secondary {
 
   .og-ride-crash__title {
     font-size: clamp(24px, 7vh, 34px);
+  }
+}
+
+
+/* Readout utilities: keep every digit and unit visible in narrow ride strips. */
+.og-ride-metrics .overflow-visible { overflow: visible; }
+.og-ride-metrics .shrink-0 { flex-shrink: 0; }
+.og-ride-metrics .tabular-nums { font-variant-numeric: tabular-nums; }
+@media (width < 640px) {
+  .og-ride-metrics .max-sm\:flex-col {
+    flex-direction: column;
+    align-items: center;
   }
 }

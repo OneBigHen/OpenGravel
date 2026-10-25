@@ -42,10 +42,14 @@ function statusMessage(status: PlacesOverlayStatus, reason: string | null, count
 }
 
 /** The compact pill's badge: the count when ready, otherwise the state in a glyph. */
-function badgeFor(status: PlacesOverlayStatus, count: number): string {
+function badgeFor(status: PlacesOverlayStatus, count: number, scope: "view" | "route"): string | null {
   if (status === "loading") return "…";
-  if (status === "zoom-in") return "zoom in";
   if (status === "unavailable") return "off";
+  // Along a route the pill sits beside "Along this ride", whose list counts gas,
+  // food, views and road windows — not these happy-hour and event pins. Two
+  // different numbers over one ride would disagree, so this pill carries none.
+  if (scope === "route") return null;
+  if (status === "zoom-in") return "zoom in";
   return String(count);
 }
 
@@ -62,6 +66,7 @@ export function PlacesControl({
   collapsible = false,
 }: PlacesControlProps) {
   const message = enabled ? statusMessage(status, reason, count, scope) : null;
+  const badge = enabled ? badgeFor(status, count, scope) : null;
   const [filtersOpen, setFiltersOpen] = useState(false);
   const showFilters = enabled && (!collapsible || filtersOpen);
 
@@ -81,11 +86,11 @@ export function PlacesControl({
         onClick={onToggle}
       >
         <span className="og-places-control__label">{scope === "route" ? "Along ride" : "Places"}</span>
-        {enabled ? (
+        {badge === null ? null : (
           <span className="og-places-control__count" data-testid="places-count" data-status={status} data-count={count}>
-            {collapsible ? badgeFor(status, count) : count}
+            {collapsible ? badge : count}
           </span>
-        ) : null}
+        )}
       </button>
       {collapsible && enabled ? (
         <button

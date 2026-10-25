@@ -8,6 +8,7 @@ import {
   plannerMap,
   settledExtent,
   type Extent,
+  pressPlan,
 } from "./map-helpers";
 import { openRideSheet, rideMapReady, startRide } from "./ride-focus-helpers";
 
@@ -69,7 +70,7 @@ async function planFixtureRide(page: Page): Promise<void> {
   await settledExtent(page);
   await clickMapAtCoordinate(page, START_COORDINATE);
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 }

@@ -3,8 +3,9 @@
 /**
  * The planner's route briefing (MVP parity M4, OGV-D-266): when to leave, and
  * what that means for the selected route — weather over the ride's window,
- * live traffic when leaving now, fuel range against the distance, daylight —
- * plus the offline readiness disclosure the workspace used to own.
+ * heavy traffic when leaving now, fuel against the distance, daylight — plus
+ * the offline readiness disclosure the workspace used to own. What could not
+ * be checked is left out rather than listed.
  *
  * It owns no ride state: the departure is authored through `onDepartureChange`
  * (one `departure.set` command), and the checks are read-only projections of
@@ -25,6 +26,7 @@ import {
   type PlannerPreparationRoute,
 } from "@/application/preparation/planner-context";
 import { prepareRoute, type RoutePreparationContext } from "@/application/preparation/prepare-route";
+import { daylightLine } from "@/application/preparation/daylight-line";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
 import type { BikeConstraintSnapshot, Coordinate, DepartureIntent } from "@/domain/ride/types";
 import {
@@ -37,7 +39,12 @@ import {
 } from "@/application/planner/arrive-by";
 import { snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
 import { OfflineDisclosure } from "@/ui/preparation/OfflineDisclosure";
-import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
+import {
+  RoutePreparationSection,
+  stalenessNote,
+  trafficWarning,
+  WEATHER_SOURCE_CREDIT,
+} from "@/ui/preparation/RoutePreparationSection";
 import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
 import type { ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
@@ -73,6 +80,13 @@ export interface PlannerPreparationProps {
   readonly onAddStopAt?: (coordinate: Coordinate, name: string) => void;
 }
 
+/** What the ride can use before the reserve, in whole miles; `null` when unknown. */
+function usableRangeMiles(bike: Pick<BikeConstraintSnapshot, "fuelRangeMiles" | "reserveMiles">): number | null {
+  if (!Number.isFinite(bike.fuelRangeMiles)) return null;
+  const reserve = Number.isFinite(bike.reserveMiles) ? bike.reserveMiles : 0;
+  return Math.max(0, Math.round(bike.fuelRangeMiles - reserve));
+}
+
 export function RideBikeControl({
   bike,
   bikes,
@@ -84,13 +98,19 @@ export function RideBikeControl({
 }) {
   const profile = bikes.find((candidate) => candidate.id === bike.bikeId);
   const name = profile?.name ?? "Saved bike";
+  // The range that matters is what the ride can use before the reserve: the
+  // tank is already read out against the route by the fuel line below.
+  const usable = usableRangeMiles(bike);
   return (
     <div className="og-prepare__bike">
-      <span>Riding: {name} · {bike.fuelRangeMiles} mi range · {bike.reserveMiles} mi reserve · {Math.max(0, bike.fuelRangeMiles - bike.reserveMiles)} mi usable</span>
+      <span>{name}{usable === null ? "" : ` · ${usable} mi range`}</span>
       {bikes.length > 1 && <label>Change bike for this ride<select aria-label="Change bike for this ride" value={bike.bikeId} onChange={(event) => {
         const selected = bikes.find((candidate) => candidate.id === event.target.value);
         if (selected !== undefined) onChange(snapshotOf(selected));
-      }}>{bikes.map((candidate) => <option value={candidate.id} key={candidate.id}>{candidate.name} · {candidate.fuelRangeMiles} mi range</option>)}</select></label>}
+      }}>{bikes.map((candidate) => {
+        const range = usableRangeMiles(candidate);
+        return <option value={candidate.id} key={candidate.id}>{candidate.name}{range === null ? "" : ` · ${range} mi range`}</option>;
+      })}</select></label>}
     </div>
   );
 }
@@ -423,14 +443,24 @@ export function PlannerPreparation({
 
   const current = briefing !== null && briefing.key === briefingKey ? briefing : null;
   const preparation = current === null ? null : prepareRoute({ ...current.context, providers: providers ?? {} });
-  const glance = preparation === null ? [] : glanceParts(preparation);
+  const glance = preparation === null || current === null ? [] : glanceParts(preparation, current.context);
+  const weatherShown = preparation !== null
+    && preparation.items.some((item) => item.kind === "weather" && item.state !== "unavailable");
 
   return (
     <>
-      {/* FT-03: weather and fuel in one line under Start, without opening anything. */}
+      {/* FT-03: the ride's conditions in one line under Start, without opening
+          anything. The checks below do not repeat it. */}
       {route === null || glance.length === 0 ? null : (
         <p className="og-prepare__glance" data-testid="prepare-glance">
           {glance.join(" · ")}
+        </p>
+      )}
+      {/* A US forecast is the National Weather Service's work: one small credit,
+          no update stamp or provider sentence in the rider's way. */}
+      {route === null || !weatherShown ? null : (
+        <p className="og-prepare__credit" data-testid="prepare-weather-credit">
+          {WEATHER_SOURCE_CREDIT}
         </p>
       )}
       {route === null ? null : (
@@ -467,7 +497,13 @@ export function PlannerPreparation({
               Checking weather and traffic for this ride…
             </p>
           ) : (
-            <RoutePreparationSection preparation={preparation ?? prepareRoute({ ...current.context, providers: providers ?? {} })} />
+            /* Weather and daylight are the one line above; the disclosure's own
+               summary is the "Before you ride" heading. */
+            <RoutePreparationSection
+              preparation={preparation ?? prepareRoute({ ...current.context, providers: providers ?? {} })}
+              omit={["weather", "daylight"]}
+              heading={false}
+            />
           )}
           <PlannerFuelAlong
             route={route === null ? null : { routeId: route.routeId, geometry: route.geometry }}
@@ -479,7 +515,7 @@ export function PlannerPreparation({
         </details>
       )}
 
-      <PlannerAlongOpportunities route={route} departure={effectiveDeparture} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
+      <PlannerAlongOpportunities route={route} departure={effectiveDeparture} source={providers?.mapLayers} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
 
       {/* Nothing to be offline-ready for until there is a route. */}
       {route === null ? null : (
@@ -525,18 +561,31 @@ export function offlineSummaryNote(snapshot: OfflineRuntimeSnapshot | null): str
   return snapshot.matrix["plan.route"].state === "requires_network" ? ready : `${ready} · plan offline`;
 }
 
-/** The briefing's verdicts a rider needs before Start, in a few words each (FT-03). */
-function glanceParts(preparation: ReturnType<typeof prepareRoute>): readonly string[] {
-  const ready = (kind: string) => preparation.items.find((item) => item.kind === kind && item.state === "ready");
+/**
+ * The briefing's verdicts a rider needs before Start, in a few words each
+ * (FT-03): the weather over the ride, when the light comes or goes, and a
+ * delay worth changing the plan for. Everything else stays out of the line.
+ */
+function glanceParts(
+  preparation: ReturnType<typeof prepareRoute>,
+  context: RoutePreparationContext,
+): readonly string[] {
   const parts: string[] = [];
-  const weather = ready("weather");
+  // Traffic only when it is worth changing the plan for; a checked-and-quiet
+  // route says nothing here.
+  const traffic = trafficWarning(preparation.items);
+  if (traffic !== null) parts.push(traffic);
+  const weather = preparation.items.find(
+    (item) => item.kind === "weather" && (item.state === "ready" || item.state === "stale"),
+  );
   const weatherData = weather?.data;
   if (typeof weatherData === "object" && weatherData !== null && "display" in weatherData && typeof weatherData.display === "string") {
     parts.push(weatherData.display);
+    // An old forecast says so in words instead of wearing a "Stale" chip.
+    const stale = weather === undefined ? null : stalenessNote(weather);
+    if (stale !== null) parts.push(stale);
   }
-  const fuel = ready("fuel");
-  if (fuel !== undefined) parts.push(/does not cover/.test(fuel.reason) ? "Fuel stop needed" : "Range covers it");
-  const daylight = ready("daylight");
-  if (daylight !== undefined && /after sunset/.test(daylight.reason)) parts.push("Ends after sunset");
+  const daylight = daylightLine(context);
+  if (daylight !== null) parts.push(daylight);
   return parts;
 }

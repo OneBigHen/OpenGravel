@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 test("planner content is server-rendered before browser hydration", async ({ request }) => {
   const response = await request.get("/");
@@ -87,13 +87,14 @@ test("active bike carries into a new ride and local data can be exported or dele
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
-  await expect(page.getByText("Riding: Trail bike · 60 mi range")).toBeVisible();
-  await expect(page.getByTestId("preparation-state-fuel")).toBeVisible();
-  await expect(page.getByText("30 mi range", { exact: true })).toBeVisible();
+  // The bike line reads the usable range (60 mi tank less the 30 mi reserve),
+  // and the fuel line under it reads that same tank against the route.
+  await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 30 mi range");
+  await expect(page.getByTestId("fuel-line")).toBeVisible();
 
   await page.getByTestId("named-ride-title").fill("Trail bike test ride");
   await page.getByTestId("save-named-ride").click();

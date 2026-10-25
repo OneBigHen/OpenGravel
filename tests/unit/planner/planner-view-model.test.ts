@@ -15,6 +15,7 @@ import {
   itineraryRefFor,
   legLabel,
   mapRefForItineraryRef,
+  placeFieldLines,
   type PlannerViewModelInput,
   type RowLegVm,
   visiblePlanningSession,
@@ -205,6 +206,31 @@ function input(overrides: Partial<PlannerViewModelInput> = {}): PlannerViewModel
   return { document: READY_DOCUMENT, session: session("idle"), ...overrides };
 }
 
+describe("placeFieldLines — what a place field shows", () => {
+  it("names a place and drops its coordinate line", () => {
+    expect(placeFieldLines("Hawk Mountain Sanctuary, Albany, PA", "40.6288, -75.9772")).toEqual({
+      label: "Hawk Mountain Sanctuary, Albany, PA",
+      coordinate: null,
+    });
+    expect(placeFieldLines("Home", "39.9500, -75.2000")).toEqual({
+      label: "Home",
+      coordinate: null,
+    });
+  });
+
+  it("keeps the coordinate as the second line of a dropped pin", () => {
+    expect(placeFieldLines("Dropped pin", "40.6288, -75.9772")).toEqual({
+      label: "Dropped pin",
+      coordinate: "40.6288, -75.9772",
+    });
+    // Nothing to show as a second line when there is no coordinate.
+    expect(placeFieldLines("Dropped pin", null)).toEqual({
+      label: "Dropped pin",
+      coordinate: null,
+    });
+  });
+});
+
 describe("buildPlannerViewModel — plan commitment and disabled reasons", () => {
   it("asks for a start when none is authored", () => {
     const vm = buildPlannerViewModel(
@@ -386,6 +412,15 @@ describe("buildPlannerViewModel — failure and cancellation copy", () => {
 });
 
 describe("buildPlannerViewModel — route cards", () => {
+  it("projects the final-approach warning onto the route choices notice", () => {
+    const message = "Ends 0.6 mi before Mountain Park — the last stretch isn't open to motorcycles.";
+    const route = { ...BEST, warnings: [{ id: "approach", code: "destination-final-approach", severity: "warning" as const, message }] };
+    const vm = buildPlannerViewModel(input({ session: session("ready", {
+      committedBundle: bundle([route], BEST_ID), selectedRouteId: BEST_ID,
+    }) }));
+    expect(vm.routeCards[0]!.notices).toEqual([message]);
+  });
+
   const ready = (): PlanningSessionSnapshot =>
     session("ready", {
       committedBundle: bundle([BEST, FAST], BEST_ID, {
@@ -506,7 +541,7 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(required(vm.routeCards[0]).badges).toEqual(["Surface unknown"]);
   });
 
-  it("drops the badge once surface evidence is usable", () => {
+  it("names the surface plainly once evidence supports it", () => {
     const known = candidate(BEST_ID, {
       evidence: {
         surfaceMix: knownEvidence(
@@ -525,7 +560,7 @@ describe("buildPlannerViewModel — route cards", () => {
       }),
     );
 
-    expect(required(vm.routeCards[0]).badges).toEqual(["Surface likely"]);
+    expect(required(vm.routeCards[0]).badges).toEqual(["Likely paved"]);
   });
 
   it("keeps unknown metrics unknown rather than printing zero", () => {
@@ -724,6 +759,40 @@ describe("buildPlannerViewModel — commitment label and recovery (04 §8, §29)
     expect(vm.planLabel).toBe("Plan again");
   });
 
+  it("asks for the loop's one tap, and names it", () => {
+    // A loop needs only its origin, so once that is set planning is unblocked —
+    // and the button stays, because the rider accepts the shape and ride time by
+    // pressing it.
+    const vm = buildPlannerViewModel(
+      input({
+        document: documentWith({ ...READY_DOCUMENT.intent, shape: "loop" }),
+      }),
+    );
+
+    expect(vm.planLabel).toBe("Make my loop");
+    expect(vm.showPlanAction).toBe(true);
+  });
+
+  it("offers the press only where a press still decides something", () => {
+    // A ride with a destination plans itself on the pick, so the control is absent
+    // — the composer hid a button that would re-ask the same question (04 §8).
+    expect(buildPlannerViewModel(input({ document: READY_DOCUMENT })).showPlanAction).toBe(false);
+    // A ride with no destination keeps it: its disabled state carries the single
+    // instruction that says which point is missing.
+    expect(buildPlannerViewModel(input({ document: documentWith() })).showPlanAction).toBe(true);
+    // A failure keeps it too: `Plan again` is a deliberate retry, never a claim
+    // that the update succeeded.
+    expect(
+      buildPlannerViewModel(
+        input({
+          session: session("failed", {
+            error: { code: "no-route", message: "x", recoverable: false },
+          }),
+        }),
+      ).showPlanAction,
+    ).toBe(true);
+  });
+
   it("blames no destination on a loop, which has none", () => {
     const vm = buildPlannerViewModel(
       input({
@@ -796,13 +865,13 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
 
   const SURFACE_SOURCE = { id: "official", label: "State survey", category: "survey" } as const;
 
-  const bandCases: readonly { readonly label: string; readonly confidence: number }[] = [
-    { label: "Surface confirmed", confidence: 0.9 },
-    { label: "Surface mostly known", confidence: 0.6 },
-    { label: "Surface partly guessed", confidence: 0.2 },
+  const bandCases: readonly { readonly badge: string; readonly confidence: number }[] = [
+    { badge: "Paved", confidence: 0.9 },
+    { badge: "Likely paved", confidence: 0.6 },
+    { badge: "Maybe paved", confidence: 0.2 },
   ];
 
-  it.each(bandCases)("shows $label for a $confidence confidence report", ({ label, confidence }) => {
+  it.each(bandCases)("folds a $badge confidence report into the surface badge", ({ badge, confidence }) => {
     const verified = candidate(BEST_ID, {
       evidence: {
         surfaceMix: knownEvidence("paved", SURFACE_SOURCE, confidence),
@@ -818,10 +887,39 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     );
 
     const card = required(vm.routeCards[0]);
-    expect(card.confidenceLabel).toBe(label);
+    expect(card.badges).toEqual([badge]);
     // The report states no coverage share, so how much of the line it verifies
     // is not measurable — never rounded to "all of it".
     expect(card.unknownSurfaceMi).toBeNull();
+  });
+
+  it("asks a question on a partly-guessed surface mix instead of adding a line", () => {
+    const mixed = candidate(BEST_ID, {
+      evidence: {
+        surfaceMix: {
+          value: {
+            surface: "paved",
+            pavedMeters: 100_000,
+            gravelMeters: 0,
+            dirtMeters: 0,
+            unknownMeters: 0,
+          },
+          status: "known",
+          confidence: 0.2,
+          provenance: [SURFACE_SOURCE],
+        },
+      },
+    });
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("ready", {
+          committedBundle: bundle([mixed], BEST_ID, { "best-ride": BEST_ID }),
+          selectedRouteId: BEST_ID,
+        }),
+      }),
+    );
+
+    expect(required(vm.routeCards[0]).badges).toEqual(["Paved?"]);
   });
 
   it("reports no unverified mileage when the evidence covers the whole line", () => {
@@ -848,11 +946,10 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).unknownSurfaceMi).toBe(0);
   });
 
-  it("keeps an unknown surface visible as Unknown confidence, not as a number", () => {
+  it("keeps an unknown surface visible as an unknown badge, not as a number", () => {
     const vm = buildPlannerViewModel(input({ session: ready() }));
     const card = required(vm.routeCards[0]);
 
-    expect(card.confidenceLabel).toBe("Unknown");
     expect(card.badges).toEqual(["Surface unknown"]);
     // 125 529 m of unverified line, measured from the evidence that is absent.
     expect(card.unknownSurfaceMi).toBe(78);
@@ -899,7 +996,7 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).unknownSurfaceMi).toBeNull();
   });
 
-  it("makes no confidence claim for a route with no measurable metric", () => {
+  it("claims no unverified mileage for a route with no measurable metric", () => {
     const broken = candidate(BEST_ID, {
       durationSeconds: Number.NaN,
       distanceMeters: Number.NaN,
@@ -914,7 +1011,6 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     );
 
     const card = required(vm.routeCards[0]);
-    expect(card.confidenceLabel).toBeNull();
     expect(card.unknownSurfaceMi).toBeNull();
   });
 

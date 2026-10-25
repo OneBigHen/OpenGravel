@@ -45,7 +45,6 @@ function card(routeId: string, overrides: Partial<RouteCardVm> = {}): RouteCardV
     distanceLabel: "30 mi",
     addedTimeLabel: null,
     badges: [],
-    confidenceLabel: "Unknown",
     unknownSurfaceMi: null,
     whyKey: `why-${routeId}`,
     isSelected: true,

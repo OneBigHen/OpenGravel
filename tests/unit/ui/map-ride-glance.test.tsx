@@ -30,7 +30,6 @@ function card(overrides: Partial<RouteCardVm> = {}): RouteCardVm {
     distanceLabel: "84 mi",
     addedTimeLabel: null,
     badges: [],
-    confidenceLabel: "Surface confirmed",
     unknownSurfaceMi: 0,
     whyKey: `why-${BEST_ID}`,
     isSelected: true,
@@ -98,7 +97,7 @@ describe("MapRideGlance", () => {
     render(
       glance({
         summary: rideGlanceSummary(
-          card({ surfaceStrip: undefined, confidenceLabel: "Unknown", unknownSurfaceMi: 84 }),
+          card({ surfaceStrip: undefined, unknownSurfaceMi: 84 }),
           CLIMB_METERS,
         ),
       }),
@@ -111,6 +110,19 @@ describe("MapRideGlance", () => {
     expect(screen.getByRole("button", { name: /Ride summary/ })).toHaveAccessibleName(
       /surface unknown/,
     );
+  });
+
+  it("counts dirt and gravel together when the ride has both", () => {
+    render(
+      glance({
+        summary: rideGlanceSummary(
+          card({ surfaceStrip: { paved: 0.55, gravel: 0.35, dirt: 0.08, unknown: 0.02 } }),
+          CLIMB_METERS,
+        ),
+      }),
+    );
+
+    expect(screen.getByTestId("ride-glance-surface")).toHaveTextContent("43% dirt & gravel");
   });
 
   it("treats a strip that is entirely unknown as no usable surface", () => {
@@ -146,6 +158,24 @@ describe("MapRideGlance", () => {
     expect(screen.getByRole("button", { name: /planning your ride/ })).toHaveAttribute(
       "aria-busy",
       "true",
+    );
+  });
+
+  it("shows the card's numbers while alternatives are still loading", () => {
+    // The primary route and its card arrive before the alternatives do. The pill
+    // is a projection of that card, so it must state the same numbers then and
+    // not sit on a skeleton the answer has already outlived.
+    render(glance({ planning: true }));
+
+    const container = screen.getByTestId("ride-glance-map");
+    expect(container).toHaveAttribute("data-state", "ready");
+    expect(screen.getByTestId("ride-glance-duration")).toHaveTextContent("1 h 57 min");
+    expect(screen.getByTestId("ride-glance-distance")).toHaveTextContent("84 mi");
+    expect(screen.getByTestId("ride-glance-surface")).toHaveTextContent("12% gravel");
+    expect(screen.queryByText(/Measuring the ride/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ride summary/ })).toHaveAttribute(
+      "aria-busy",
+      "false",
     );
   });
 

@@ -113,24 +113,58 @@ describe("IntentComposer", () => {
   });
 
   it("explains that an attempt is already running", () => {
-    renderComposer(
-      viewModelFor(
-        documentWith({
-          start: endpoint("pt_start", "start", ORIGIN),
-          finish: endpoint("pt_finish", "finish", DESTINATION),
-        }),
-        "routing-primary",
-      ),
+    // A loop keeps its commitment control, so this is the surface that still has
+    // something to explain while an attempt is in flight (04 §8).
+    render(
+      <IntentComposer
+        viewModel={viewModelFor(
+          documentWith({
+            shape: "loop",
+            start: endpoint("pt_start", "start", ORIGIN),
+          }),
+          "routing-primary",
+        )}
+        onPlan={vi.fn()}
+        onSetStart={vi.fn()}
+        onSetFinish={vi.fn()}
+        rideStyle={{
+          view: {
+            shape: "loop",
+            loopMinutes: 120,
+            roadCharacter: "balanced",
+            noveltyPreference: "balanced",
+            surface: "mixed",
+            traffic: "protect-ride",
+            avoidHighways: false,
+            avoidTolls: true,
+          },
+          actions: {
+            setBike: vi.fn(),
+            setShape: vi.fn(),
+            setLoopMinutes: vi.fn(),
+            setRoadCharacter: vi.fn(),
+            setNoveltyPreference: vi.fn(),
+            setTraffic: vi.fn(),
+            setSurface: vi.fn(),
+            setAvoidHighways: vi.fn(),
+            setAvoidTolls: vi.fn(),
+            setDeparture: vi.fn(),
+          },
+        }}
+      />,
     );
 
-    expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Make my loop" })).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
       "Your ride is on its way — one moment.",
     );
   });
 
-  it("commits when the intent is complete", () => {
-    const { onPlan } = renderComposer(
+  it("leaves nothing to press once a destination is chosen", () => {
+    // The ride plans itself the moment the destination completes it, so a
+    // commitment control here would only ask the planner a question it is already
+    // answering (04 §8).
+    renderComposer(
       viewModelFor(
         documentWith({
           start: endpoint("pt_start", "start", ORIGIN),
@@ -140,7 +174,25 @@ describe("IntentComposer", () => {
       ),
     );
 
-    const plan = screen.getByRole("button", { name: "Create ride" });
+    expect(screen.queryByTestId("compose-create")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
+    expect(screen.getByTestId("finish-value")).toHaveTextContent("40.2000, -74.8000");
+  });
+
+  it("asks for a loop in one tap, and names the tap", () => {
+    // A loop has no destination to wait for: its shape and ride time are the
+    // rider's to accept, so the button stays and says what it will do.
+    const { onPlan } = renderComposer(
+      viewModelFor(
+        documentWith({
+          shape: "loop",
+          start: endpoint("pt_start", "start", ORIGIN),
+        }),
+        "idle",
+      ),
+    );
+
+    const plan = screen.getByRole("button", { name: "Make my loop" });
     expect(plan).toBeEnabled();
     expect(screen.queryByTestId("plan-disabled-reason")).not.toBeInTheDocument();
     fireEvent.click(plan);
@@ -232,7 +284,7 @@ describe("IntentComposer", () => {
     expect(start).toHaveAttribute("data-coordinate", "40.0769, -75.0422");
   });
 
-  it("wears the rider's own name for a point and still exposes the coordinate", () => {
+  it("shows a named place as its name alone and keeps the coordinate machine-readable", () => {
     renderComposer(
       viewModelFor(
         documentWith({
@@ -243,8 +295,15 @@ describe("IntentComposer", () => {
       ),
     );
 
+    // A named place is the whole answer: no coordinate line repeats it.
     expect(screen.getByTestId("start-value")).toHaveTextContent("Home");
-    expect(screen.getByTestId("start-coordinate")).toHaveTextContent("39.9500, -75.2000");
+    expect(screen.queryByTestId("start-coordinate")).not.toBeInTheDocument();
+    // The point is still machine-readable for the browser gate.
+    expect(screen.getByTestId("start-value")).toHaveAttribute(
+      "data-coordinate",
+      "39.9500, -75.2000",
+    );
+    // A dropped pin keeps its coordinate as the small secondary line.
     expect(screen.getByTestId("finish-value")).toHaveTextContent("Dropped pin");
     expect(screen.getByTestId("finish-coordinate")).toHaveTextContent("40.2000, -74.8000");
   });
@@ -255,6 +314,46 @@ describe("IntentComposer", () => {
  * `text-overflow: ellipsis`), and jsdom does not apply the app's stylesheet — so
  * the regression guard reads the rule the browser actually uses.
  */
+/**
+ * Two place fields sit one above the other in the Plan sheet. The stylesheet is
+ * what keeps them apart — jsdom does not lay the app out — so the structural
+ * properties that give each row its own content height are pinned here: a
+ * wrapped value grows its row, and the composer's gap separates the rows at
+ * every phone width down to 320 px.
+ */
+describe("the composer's place fields cannot overlap", () => {
+  const css = readFileSync(
+    path.join(process.cwd(), "src", "app", "globals.css"),
+    "utf8",
+  );
+  const rule = (selector: string, occurrence: "first" | "last" = "first"): string => {
+    const matches = [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))];
+    return (occurrence === "last" ? matches.at(-1) : matches[0])?.[1] ?? "";
+  };
+
+  it("gives every row its own content-sized height with a gap between rows", () => {
+    expect(rule("\\.og-composer")).toMatch(/gap:\s*12px/);
+
+    const row = rule("\\.og-composer__row");
+    expect(row).toContain("align-content: start");
+    expect(row).toContain("grid-template-rows: auto");
+    expect(row).toContain("grid-auto-rows: minmax(min-content, max-content)");
+    // No height cap: the row grows with a wrapped name or coordinate line.
+    expect(row).not.toMatch(/(^|;)\s*(max-)?height\s*:/);
+
+    const searchRow = rule("\\.og-composer__row--search", "last");
+    expect(searchRow).toContain("grid-template-rows: auto");
+    expect(searchRow).toContain("align-content: start");
+  });
+
+  it("never clips the place button's second line", () => {
+    const place = rule("\\.og-composer__place");
+    expect(place).toContain("height: auto");
+    expect(place).toContain("overflow: visible");
+    expect(place).not.toMatch(/max-height\s*:/);
+  });
+});
+
 describe("the composer value cell never truncates", () => {
   const css = readFileSync(
     path.join(process.cwd(), "src", "app", "globals.css"),

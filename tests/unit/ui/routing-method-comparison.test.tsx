@@ -108,15 +108,49 @@ function model(overrides: Partial<TestModel> = {}): TestModel {
   };
 }
 
+/** The comparison is developer detail; only the explicit flag page renders it. */
+function setSearch(search: string): void {
+  window.history.replaceState({}, "", search);
+}
+
 function renderComparison(overrides: Partial<TestModel> = {}) {
   const onSelect = vi.fn();
+  setSearch("/?debug=routing");
   render(<RoutingMethodComparison model={model(overrides)} onSelect={onSelect} />);
   return onSelect;
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setSearch("/");
+});
 
 describe("RoutingMethodComparison", () => {
+  it("renders nothing without the routing debug flag", () => {
+    setSearch("/");
+
+    render(<RoutingMethodComparison model={model()} onSelect={vi.fn()} />);
+
+    expect(screen.queryByTestId("routing-method-comparison")).not.toBeInTheDocument();
+    expect(screen.queryByText("Compare routing methods")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Jev/)).not.toBeInTheDocument();
+  });
+
+  it("renders for the explicit ?debug=routing flag", () => {
+    renderComparison();
+
+    expect(screen.getByTestId("routing-method-comparison")).toBeInTheDocument();
+    expect(screen.getByText("Compare routing methods", { exact: true })).toBeInTheDocument();
+  });
+
+  it("ignores other debug values", () => {
+    setSearch("/?debug=other");
+
+    render(<RoutingMethodComparison model={model()} onSelect={vi.fn()} />);
+
+    expect(screen.queryByTestId("routing-method-comparison")).not.toBeInTheDocument();
+  });
+
   it("does not render an empty comparison panel", () => {
     renderComparison({ methods: [] });
 
@@ -271,6 +305,7 @@ describe("RoutingMethodComparison", () => {
 });
 
 it("explains the scoped time reference for loop comparisons", () => {
+  setSearch("/?debug=routing");
   render(<RoutingMethodComparison model={model({ methods: [method({ id: "sustained-curves", addedMinutes: 15, addedTimeReference: "loop-comparison" })] })} onSelect={vi.fn()} />);
   fireEvent.click(screen.getByText("Compare routing methods"));
   expect(screen.getByText("+15 min vs fastest loop comparison")).toBeInTheDocument();

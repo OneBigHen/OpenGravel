@@ -11,6 +11,7 @@ import {
   readDrawnScene,
   settledExtent,
   type Coordinate,
+  pressPlan,
 } from "./map-helpers";
 import { clickInRideSheet, openRideSheet } from "./ride-focus-helpers";
 
@@ -47,7 +48,7 @@ async function startRide(page: import("@playwright/test").Page): Promise<void> {
 
   await clickMapAtCoordinate(page, START_COORDINATE);
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
   // 04 §28: the handoff is offered for the selected route and nothing else.
@@ -261,7 +262,7 @@ test("the planner offers the handoff only once a route is chosen", async ({ page
   await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
   await expect(page.getByTestId("start-ride")).toHaveCount(0);
 
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("start-ride")).toBeEnabled();
 });

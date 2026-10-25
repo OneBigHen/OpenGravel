@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /**
  * Ride style (MVP parity M2, OGV-D-262): a loop needs only a start and a ride
@@ -47,7 +47,7 @@ test("a loop from the start with a ride time plans without a destination", async
   await page.getByTestId("loop-time-90").check();
   await expect(page.getByTestId("loop-time-90")).toBeChecked();
 
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
 
   // Back to a destination: the destination row returns.
@@ -59,7 +59,7 @@ test("road character, surface and tolls are one tap each and replan", async ({ p
   await page.getByTestId("finish-search").fill("hawk mountain s");
   await page.getByTestId("finish-search").press("Enter");
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
-  await page.getByTestId("compose-create").click();
+  await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
 
   await openStyle(page);
