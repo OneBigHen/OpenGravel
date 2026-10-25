@@ -842,9 +842,12 @@ async function planRideAttempt(
   const formulaMode = riderEnabled ? parseRideFormulaMode(riderEnv["OGV_RIDE_FORMULA"]) : "off";
   const balancedFun = riderEnabled && parsed.value.request.options.roadCharacter === "balanced" && !seeksDirt(parsed.value.request.options);
   const requestOptions = parsed.value.request.options;
-  // Geometry chooses Balanced/Curvy recreational rides; authored/dirt modes
-  // retain their existing objectives. Jev supplies labels, never this choice.
-  const geometryFun = riderEnabled && ["balanced", "curvy"].includes(requestOptions.roadCharacter ?? "") &&
+  // Geometry fun selection is Curvy-only. In the 2026-10-25 benchmark it
+  // regressed Balanced (Jim Thorpe loop 9.48 -> 5.89 curvy mi, Bethlehem
+  // 5.09 -> 4.11, Reading 10.19 -> 8.92), so Balanced and Fast keep the
+  // previous Best Ride selection. Authored/dirt modes keep their objectives.
+  // Jev supplies labels, never this choice.
+  const geometryFun = riderEnabled && requestOptions.roadCharacter === "curvy" &&
     !seeksDirt(requestOptions) && requestOptions.bike?.category !== "dual-sport" &&
     parsed.value.request.sketch === undefined && parsed.value.request.shaping.length === 0 &&
     parsed.value.request.stops.length === 0 && (parsed.value.request.roadSpans?.length ?? 0) === 0;
@@ -913,8 +916,8 @@ async function planRideAttempt(
         }),
     ...(geometryFun ? {
       candidateValueFor: (_candidate, source, fastestSeconds, reference) => geometryFunRecommendation(source, fastestSeconds, reference, requestOptions.traffic === "protect-ride"),
-      recommendationDetourCap: balancedFun ? BALANCED_DETOUR_CAP : 1.35,
-      // Both modes use the actual fastest eligible ETA, across lanes.
+      recommendationDetourCap: 1.35,
+      // Curvy uses the actual fastest eligible ETA, across lanes.
       recommendationProfile: undefined,
     } : {}),
     // What the engine knows about the roads under each line: surface mix, the
@@ -1066,7 +1069,7 @@ async function planRideAttempt(
       request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, sweepCalls: CURVY_SWEEP.length, deadlineMs: riderBudget.deadlineMs, signal,
+      provider, sweepCalls: Math.min(CURVY_SWEEP.length, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);

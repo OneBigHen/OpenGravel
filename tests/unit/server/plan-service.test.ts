@@ -10,7 +10,6 @@
  * Wave-3.3 stub.
  */
 
-import { haversine } from "@/domain/geometry/analysis";
 import { describe, expect, it } from "vitest";
 
 import { GraphHopperProviderError } from "@/infrastructure/routing/graphhopper/response-parser";
@@ -915,17 +914,6 @@ describe("planRide — fun-route generator family (OGV_FUN_GENERATORS)", () => {
 });
 
 describe("rider mode plan integration", () => {
-  // Road-run chainage must describe the returned geometry, not the fixture's
-  // independent router distance/ETA. Geometry fun rejects incomplete runs.
-  const measuredRoads = (route: ProviderCandidate): ProviderCandidate => {
-    const meters = route.geometry.slice(1).reduce((sum, p, i) => sum + haversine(route.geometry[i]!, p), 0);
-    const roadSummary = route.roadSummary!;
-    const roadClass = roadSummary.roadRuns![0]!.roadClass;
-    return { ...route, roadSummary: { ...roadSummary, totalMeters: meters,
-      surfaceByRoadClassMeters: { [`asphalt|${roadClass}`]: meters },
-      roadRuns: roadSummary.roadRuns!.map(r => ({ ...r, meters: r.meters * meters / roadSummary.totalMeters })),
-    } };
-  };
   it("leads with the quieter rider-mode route but keeps the faster choice to compare", async () => {
     const run = (meters: number, roadClass: string, urbanDensity: string) => ({ totalMeters: meters, surfaceByRoadClassMeters: { [`asphalt|${roadClass}`]: meters }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters, durationSeconds: null, surface: "asphalt", roadClass, roadEnvironment: "road", urbanDensity, curvatureRatio: null, toll: false }] });
     const busy = candidate({ roadSummary: run(120_000, "primary", "city") });
@@ -936,7 +924,7 @@ describe("rider mode plan integration", () => {
       providerMetadata: { fingerprint: "fp_quiet" },
       roadSummary: run(125_000, "tertiary", "rural"),
     });
-    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => ({ candidates: [measuredRoads(request.options.riderModeFactor === undefined ? busy : { ...quiet, providerMetadata: { ...quiet.providerMetadata, riderModeFactor: request.options.riderModeFactor } })] }) };
+    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => ({ candidates: [request.options.riderModeFactor === undefined ? busy : { ...quiet, providerMetadata: { ...quiet.providerMetadata, riderModeFactor: request.options.riderModeFactor } }] }) };
     const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
       provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_FUN_GENERATORS_CALLS: "2" },
     });
@@ -952,7 +940,7 @@ describe("rider mode plan integration", () => {
   it.each([false, true])("obeys the shared budget and kill switch (off=%s)", async off => {
     const requests: ProviderRouteRequest[] = [];
     const roadSummary = { totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|primary": 120_000 }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 120_000, durationSeconds: null, surface: "asphalt", roadClass: "primary", roadEnvironment: "road", urbanDensity: "city", curvatureRatio: null, toll: false }] };
-    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => { requests.push(request); return { candidates: [measuredRoads(candidate({ roadSummary }))] }; } };
+    const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => { requests.push(request); return { candidates: [candidate({ roadSummary })] }; } };
     const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
       provider, roadAuthority: null, env: { OGV_RIDER_MODES: off ? "off" : "on", OGV_FUN_GENERATORS_CALLS: "2" },
     });

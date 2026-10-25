@@ -6,14 +6,16 @@ import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } 
 /** Curvy may stretch the trip this far over the fastest eligible ETA. */
 export const CURVY_DETOUR_CAP = 1.35;
 
-/** Router calls for the Curvy sweep: busy-road strengths on the twisty profile plus scenic. */
+/** Two complementary alternative calls, in one parallel wave. The initial
+ * lanes already supply the fastest reference; stronger busy-road searches
+ * duplicated that pool while extending the tail of destination plans. */
 export const CURVY_SWEEP: readonly { readonly profile?: string; readonly factor: number }[] = [
-  { profile: "motorcycle_fastest", factor: 0 },
   { factor: 1 },
   { profile: "motorcycle_scenic", factor: 1 },
-  { factor: 2 },
-  { factor: 4 },
 ];
+
+/** Below this much remaining search budget the alternative calls are skipped: they cannot finish and would only add tail latency. */
+export const CURVY_MIN_SWEEP_BUDGET_MS = 1500;
 
 interface Measured {
   readonly candidate: ProviderCandidate;
@@ -73,7 +75,7 @@ export async function searchCurvyEnvelope(input: {
   if (discovery !== undefined) return answer(pick(measured, (discovery.targetMinutes - discovery.toleranceMinutes) * 60), 0, measured);
   const signal = AbortSignal.any([input.signal, AbortSignal.timeout(Math.max(1, input.deadlineMs))]);
   // Without busy-road avoidance the strengths change nothing; one twisty and one scenic call remain.
-  const sweep = CURVY_SWEEP.filter(step => avoidBusy || step.factor <= 1).slice(0, Math.max(0, input.sweepCalls));
+  const sweep = input.deadlineMs < CURVY_MIN_SWEEP_BUDGET_MS ? [] : CURVY_SWEEP.filter(step => avoidBusy || step.factor <= 1).slice(0, Math.max(0, input.sweepCalls));
   const settled = await Promise.allSettled(sweep.map(step => input.provider.candidates({ ...input.request, profile: step.profile ?? input.request.profile, options: { ...input.request.options, includeAlternatives: step.factor > 0, riderModeFactor: step.factor } }, signal)));
   if (input.signal.aborted) throw input.signal.reason;
   const initialCount = measured.length;

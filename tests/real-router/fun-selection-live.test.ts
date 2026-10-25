@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { afterAll, describe, expect, it } from "vitest";
 import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from "@/application/planner/route-provider";
 import { analyzeBends } from "@/domain/geometry/bends";
@@ -61,14 +61,15 @@ live("geometry fun selection through planRide", () => {
             transport.push({ profile: request.profile, algorithm: request.algorithm ?? "", status: response.status });
             return response;
           } });
-          const calls: { profile: string; candidates: readonly ProviderCandidate[] }[] = [];
+          const calls: { profile: string; requestId: string; factor: number | null; elapsedMs: number; alternatives: boolean; candidates: readonly ProviderCandidate[] }[] = [];
           const sourceRoads = new Map<string, ProviderCandidate>();
           const geometryHash = (geometry: ProviderCandidate["geometry"]) => createHash("sha256").update(JSON.stringify(geometry)).digest("hex");
           const provider: RouteCandidateProvider = {
             id: inner.id, capabilities: () => inner.capabilities(),
             async candidates(request, signal) {
+              const callStarted = performance.now();
               const result = await inner.candidates(request, signal);
-              calls.push({ profile: request.profile, candidates: result.candidates });
+              calls.push({ profile: request.profile, requestId: request.requestId, factor: request.options.riderModeFactor ?? null, alternatives: request.options.includeAlternatives, elapsedMs: performance.now() - callStarted, candidates: result.candidates });
               return result;
             },
           };
@@ -95,7 +96,15 @@ live("geometry fun selection through planRide", () => {
             if (candidate.roadSummary) sourceRoads.set(geometryHash(candidate.geometry), candidate);
           }
           const bestSource = best ? sourceRoads.get(geometryHash(best.geometry)) : undefined;
-          const row = { repeat, bestSurfaceEvidence: best?.evidence.surfaceMix ?? null, bestRawSurfaceByRoadClassMeters: bestSource ? { surfaces: bestSource.roadSummary?.surfaceByRoadClassMeters, fun: candidateGeometryFun(bestSource) } : null, graph, trip: trip.id, label: trip.label, style, httpAttempts, transport, canonicalScore: best?.score.total, elapsedMs, bestGeometryHash: best ? geometryHash(best.geometry) : null, best: best && { ...measure(best), headingDegreesPerKm: bestSource ? candidateGeometryFun(bestSource)?.headingDegreesPerKm ?? null : null, funScore: bestSource ? candidateGeometryFun(bestSource)?.funScore ?? null : null }, fastest: fastest && measure(fastest), calls: calls.map(call => ({ profile: call.profile, candidates: call.candidates.map(measure) })), diagnostics: result.diagnostics };
+          const row = { repeat, bestSurfaceEvidence: best?.evidence.surfaceMix ?? null, bestRawSurfaceByRoadClassMeters: bestSource ? { surfaces: bestSource.roadSummary?.surfaceByRoadClassMeters, fun: candidateGeometryFun(bestSource) } : null, graph, trip: trip.id, label: trip.label, style, httpAttempts, transport, canonicalScore: best?.score.total, elapsedMs, bestGeometryHash: best ? geometryHash(best.geometry) : null, best: best && { ...measure(best), headingDegreesPerKm: bestSource ? candidateGeometryFun(bestSource)?.headingDegreesPerKm ?? null : null, funScore: bestSource ? candidateGeometryFun(bestSource)?.funScore ?? null : null }, fastest: fastest && measure(fastest), calls: calls.map(call => ({ ...call, candidates: call.candidates.map(measure) })), diagnostics: result.diagnostics };
+          if (style === "balanced" && process.env.OGV_FUN_SELECTION_BASELINE) {
+            const baseline = JSON.parse(readFileSync(process.env.OGV_FUN_SELECTION_BASELINE, "utf8")) as { rows: { trip: string; style: string; best: ReturnType<typeof measure> }[] };
+            const previous = baseline.rows.find(r => r.trip === trip.id && r.style === style)?.best;
+            expect(previous, "Every Balanced ride needs its old Best Ride comparator").toBeDefined();
+            if (previous && row.best && row.best.curvyMiles < previous.curvyMiles - 1e-8 && row.best.francoPerKm < previous.francoPerKm - 1e-8) {
+              expect(row.best.minutes, "Losing both curve metrics requires at least 10% time savings").toBeLessThanOrEqual(previous.minutes * 0.9 + 1e-8);
+            }
+          }
           rows.push(row);
           console.log(JSON.stringify({ graph, trip: trip.id, style, best: row.best }));
           writeEvidence();

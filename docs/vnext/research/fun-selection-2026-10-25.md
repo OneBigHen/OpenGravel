@@ -1,35 +1,34 @@
 # Geometry fun selection — 2026-10-25
 
-**Verdict: HOLD for rollout.** Selection is app-owned and static/focused gates pass, but ride-quality changes are mixed and Curvy p95 rose 20.4%; this is a review branch, not a deployment.
+**Update 2026-10-25 (gated):** geometry fun selection now applies to the Curvy ride style only. Balanced and Fast use exactly the previous Best Ride selection (Balanced regressed in the first benchmark below), so the Balanced "After" rows equal the control by construction and were re-measured identical. Curvy's alternative search is one parallel wave of two router calls (twisty alternatives plus scenic), skipped when under 1.5 s of search budget remains. The tables show the gated build; the Before columns are the unchanged control. Still a review branch, not a deployment.
 
 Values are **curvy mi / heading degrees per eligible km / Franco per route km / minutes**. Curvy miles and Franco use the unchanged legacy geometry evaluators. Heading uses the new 20 m / centred 1 km signal, with residential, service, urban and link roads excluded from its numerator and denominator. A longer sweeping road can improve fun value while losing tight-curve miles; these are different measurements.
 
 | Ride | Mode | Before | After |
 | --- | --- | --- | --- |
 | Jim Thorpe → Hawk Mountain | Balanced | 3.22 / 58.52 / 37.34 / 51.86 | 3.22 / 58.52 / 37.34 / 51.86 |
-| Jim Thorpe → Hawk Mountain | Curvy | 3.22 / 58.52 / 37.34 / 51.86 | 3.40 / 62.47 / 37.39 / 53.04 |
-| Jim Thorpe 120-minute loop | Balanced | 9.48 / 64.85 / 80.42 / 114.60 | 5.89 / 45.54 / 27.52 / 122.00 |
+| Jim Thorpe → Hawk Mountain | Curvy | 3.22 / 58.52 / 37.34 / 51.86 | 3.22 / 58.52 / 37.34 / 51.86 |
+| Jim Thorpe 120-minute loop | Balanced | 9.48 / 64.85 / 80.42 / 114.60 | 9.48 / 64.85 / 80.42 / 114.60 |
 | Jim Thorpe 120-minute loop | Curvy | 6.68 / 49.29 / 102.16 / 117.14 | 10.69 / 90.98 / 82.51 / 121.61 |
 | Allentown → Stroudsburg | Balanced | 3.56 / 60.89 / 32.83 / 63.57 | 3.56 / 60.89 / 32.83 / 63.57 |
 | Allentown → Stroudsburg | Curvy | 5.14 / 80.36 / 114.39 / 84.24 | 5.41 / 69.26 / 62.97 / 71.72 |
-| Doylestown → New Hope | Balanced | 0.91 / 34.62 / 38.14 / 29.08 | 0.85 / 26.73 / 60.59 / 25.83 |
+| Doylestown → New Hope | Balanced | 0.91 / 34.62 / 38.14 / 29.08 | 0.91 / 34.62 / 38.14 / 29.08 |
 | Doylestown → New Hope | Curvy | 0.85 / 26.73 / 60.59 / 25.83 | 0.85 / 26.73 / 60.59 / 25.83 |
-| Reading → Jim Thorpe | Balanced | 10.19 / 69.46 / 76.30 / 116.16 | 8.92 / 65.90 / 54.44 / 109.89 |
+| Reading → Jim Thorpe | Balanced | 10.19 / 69.46 / 76.30 / 116.16 | 10.19 / 69.46 / 76.30 / 116.16 |
 | Reading → Jim Thorpe | Curvy | 10.19 / 69.46 / 76.30 / 116.16 | 9.44 / 70.98 / 58.29 / 115.24 |
-| Bethlehem → Delaware Water Gap | Balanced | 5.09 / 77.07 / 72.15 / 70.93 | 4.11 / 76.50 / 54.98 / 59.64 |
+| Bethlehem → Delaware Water Gap | Balanced | 5.09 / 77.07 / 72.15 / 70.93 | 5.09 / 77.07 / 72.15 / 70.93 |
 | Bethlehem → Delaware Water Gap | Curvy | 4.84 / 79.05 / 87.84 / 72.49 | 4.34 / 75.07 / 52.93 / 68.00 |
 
 Planning latency: three alternating complete runs per revision, same warm local control router, 36 plans per revision (18 per mode). Nearest-rank percentiles; benchmark diagnostic geometry measurements run after the plan timer; application selection analysis stays inside the timed plan. These are local provider-backed measurements, not internet/mobile latency or a population guarantee.
 
 | Mode | Before p50 / p95 ms | After p50 / p95 ms |
 | --- | --- | --- |
-| Pooled | 1314 / 4065 | 964 / 3391 |
-| Balanced | 1061 / 3490 | 377 / 3179 |
-| Curvy | 2412 / 4192 | 2424 / 5045 |
+| Balanced | 1061 / 3490 | 1175 / 3116 |
+| Curvy | 2412 / 4192 | 1794 / 2483 |
 
-Pooled p50 improves 26.6% and p95 improves 16.6%. Curvy p95 rises from 4,192 to 5,045 ms (+20.4%); with 18 Curvy samples per revision, this nearest-rank p95 is the maximum and is sensitive to individual slow plans. This fails to establish that every mode avoids a slowdown and is another reason to HOLD.
+Gated rerun: three complete runs of the six rides (18 plans per mode), same warm local control router. Curvy p95 is now below the old 4,192 ms; with 18 samples per mode the nearest-rank p95 is the maximum.
 
-Fast parity: **6/6 rides have identical selected geometry hashes, selected metrics and Fastest metrics** before/after. Balanced recommendations pass the 1.25x fastest ETA cap; both loop modes stay inside 105–135 minutes. All 72 Balanced/Curvy plans and 12 Fast plans pass the live harness.
+Fast parity (measured on the first, ungated build; Fast code paths are untouched by the gate): **6/6 rides have identical selected geometry hashes, selected metrics and Fastest metrics** before/after. Balanced recommendations pass the 1.25x fastest ETA cap; both loop modes stay inside 105–135 minutes. All 72 Balanced/Curvy plans and 12 Fast plans pass the live harness.
 
 ## Implementation and constraints
 
@@ -38,7 +37,7 @@ Fast parity: **6/6 rides have identical selected geometry hashes, selected metri
 - Raw `funScore` is integrated heading credit (capped at one equivalent bend km per km at 90 degrees/km), plus 0.35 times existing eligible/coherent Franco weighted km, minus 0.35 busy km, 0.30 residential/urban km and 0.08 eligible dull straight km (below 15 degrees/km). No credit comes from residential/service/living-street, urban, missing/other, link or roundabout segments.
 - Utility subtracts 0.06 equivalent bend km per added router minute. A monotone adapter feeds canonical MMR and Best Ride assignment before dedupe, with the actual fastest eligible ETA as the reference: Balanced 1.25x, Curvy 1.35x; loops use their timeboxes. Existing canonical eligibility, access/bike checks and road-authority verification run before adoption.
 - Busy exposure may add at most 10 percentage points under Protect Ride; residential exposure may add at most 3 points. A missing reference cannot authorize additional exposure beyond that conservative slack. Numeric fun values remain internal; Jev does not override this selection.
-- The existing 12-candidate lane retention stays. Balanced adds at most two existing-budget/deadline alternative calls only when the strongest feasible pool member has weak net fun, heading density or sustained coverage. Curvy retains its existing five-step alternative search; authored and dirt objectives retain their existing ranking path. Fast is unchanged.
+- The existing 12-candidate lane retention stays. Balanced is back to the previous selection and its previous alternatives search (no weak-pool calls). Curvy runs at most two parallel alternative calls (twisty + scenic), skipped under 1.5 s of search budget; authored and dirt objectives retain their existing ranking path. Fast is unchanged.
 - Existing rider copy is retained: its curvy-mile count has a narrower meaning than the new sweeper metric. No badges or numerical scores were added to cards.
 
 ## Reproduction, evidence and limits
