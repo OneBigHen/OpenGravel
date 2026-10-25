@@ -14,6 +14,7 @@ import {
   comingUpChip,
   createRideInterestOverlay,
   pointsAheadOfRider,
+  rideMapInterestPoints,
   visibleRideInterestPoints,
   type RideInterestChip,
   type RideInterestDiscoverSource,
@@ -38,7 +39,7 @@ export interface UseRideInterestOptions {
 
 export interface RideInterestView {
   readonly status: RideInterestStatus;
-  /** Icon-only-then-labeled pins, merged into the map's places source. */
+  /** Gas, and the opened point, as map pins (see `rideMapInterestPoints`). */
   readonly scenePlaces: readonly PlaceScene[];
   readonly chip: RideInterestChip | null;
   readonly selectedPoint: RideInterestPoint | null;
@@ -85,7 +86,17 @@ export function useRideInterest({
     [visible, routeLine, position],
   );
   const chip = useMemo(() => comingUpChip(ahead), [ahead]);
-  const scenePlaces = useMemo(() => buildRideInterestScene(ahead, { selectedId }), [ahead, selectedId]);
+  // The map draws gas and the pin the rider opened; the sheet's filter and
+  // "coming up" row stay the way to browse landmarks (`rideMapInterestPoints`).
+  const mapPoints = useMemo(
+    () => rideMapInterestPoints(state.points, { selectedId, filter }),
+    [filter, selectedId, state.points],
+  );
+  const mapAhead = useMemo(
+    () => (position === null ? [] : pointsAheadOfRider(mapPoints, routeLine, position)),
+    [mapPoints, routeLine, position],
+  );
+  const scenePlaces = useMemo(() => buildRideInterestScene(mapAhead, { selectedId }), [mapAhead, selectedId]);
   const selectedPoint = useMemo(
     () => (selectedId === null ? null : state.points.find((point) => point.id === selectedId) ?? null),
     [selectedId, state.points],
