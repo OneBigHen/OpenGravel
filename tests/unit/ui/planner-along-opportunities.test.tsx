@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PlannerAlongOpportunities } from "@/ui/planner/PlannerAlongOpportunities";
+import { PlannerAlongOpportunities, alongRideCount } from "@/ui/planner/PlannerAlongOpportunities";
 import type { RiderOpportunity } from "@/application/discover/rider-opportunities";
 import type { RoadOpeningSummary } from "@/application/route-intelligence/opening-calendar-contract";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
@@ -134,6 +134,26 @@ describe("Along this ride", () => {
     fireEvent.click(screen.getByText("Along this ride"));
     expect(await screen.findByText("Forest overlook")).toBeInTheDocument();
     expect(screen.getByText(/Authority offline/)).toBeInTheDocument();
+  });
+  it("counts the stops in the row's own line once the list is known", async () => {
+    responses();
+    render(<PlannerAlongOpportunities route={route} departure={departure} />);
+    const row = screen.getByRole("button", { name: /Along this ride/ });
+    // Closed, the row says what is behind it rather than leaving a bare title.
+    // The "·" between them is the stylesheet's separator, not a DOM text node.
+    expect(row).toHaveTextContent(/Along this ride\s*Gas, food, views/);
+    fireEvent.click(row);
+    await screen.findByText("Forest overlook");
+    // One place along the route; the road window is not a stop.
+    await waitFor(() => expect(row).toHaveTextContent(/Along this ride\s*1 stop/));
+    expect(row).not.toHaveTextContent("road");
+  });
+  it("counts places, not road windows, and keeps the hint when there are none", () => {
+    expect(alongRideCount([{ kind: "road" } as never])).toBe("Gas, food, views");
+    expect(alongRideCount([{ kind: "road" } as never, { kind: "stop" } as never])).toBe("1 stop");
+    expect(
+      alongRideCount([{ kind: "stop" } as never, { kind: "along-stop" } as never, { kind: "road" } as never]),
+    ).toBe("2 stops");
   });
   it("refreshes suggestions when reopened", async () => {
     const fetcher = responses();

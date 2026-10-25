@@ -582,18 +582,31 @@ export function AdvisorRideAsk() {
       </ul>
       {live ? <AdvisorInline surface="ride" /> : (
         <form className="og-advisor-ask__form" onSubmit={(event) => { event.preventDefault(); send(draft); }}>
-          <input
-            type="text"
-            className="og-place-search__input og-advisor__input"
-            data-testid="advisor-ride-prompt"
-            aria-label="Ask about this ride"
-            placeholder="Ask or change anything: “lunch stop in Jim Thorpe”"
-            enterKeyHint="send"
-            maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <button type="submit" className="og-secondary" disabled={busy || draft.trim().length < 2}>Ask</button>
+          {/* One row: the field holds its own send button, so a 320 px sheet
+              never wraps a field and a button onto two lines. */}
+          <div className="og-advisor-ask__field">
+            <input
+              type="text"
+              className="og-place-search__input og-advisor__input"
+              data-testid="advisor-ride-prompt"
+              aria-label="Ask about this ride"
+              placeholder="Ask or change anything: “lunch stop in Jim Thorpe”"
+              enterKeyHint="send"
+              maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <button
+              type="submit"
+              className="og-advisor-ask__send"
+              aria-label="Send"
+              disabled={busy || draft.trim().length < 2}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 12h15M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </div>
         </form>
       )}
     </section>

@@ -19,15 +19,18 @@ test("empty caches never claim offline-ready network capabilities", async ({ pag
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
-  // Offline readiness is a collapsed detail under the route briefing.
-  await page.getByTestId("offline-toggle").click();
-  await expect(page.getByTestId("offline-disclosure")).toBeVisible();
-  await expect(page.getByTestId("offline-state-plan.route")).toHaveText("Needs network");
-  await expect(page.getByTestId("offline-state-plan.replan")).toHaveText("Needs network");
-  await expect(page.getByTestId("offline-state-nav.reroute")).toHaveText("Needs network");
-  await expect(page.getByTestId("offline-state-explore.browse")).toHaveText("Needs network");
-  await expect(page.getByTestId("offline-state-weather.live")).toHaveText("Needs network");
-  await expect(page.getByTestId("offline-state-traffic.live")).toHaveText("Needs network");
+  // No downloaded area on this device: the sheet offers one plain row to save
+  // one, and never claims a capability is ready or calls the phone online-only
+  // in a status line.
+  const saveArea = page.getByTestId("offline-save-area");
+  await expect(saveArea).toBeVisible();
+  await expect(saveArea).toContainText("Save this area for offline");
+  await expect(page.getByText(/online only/)).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Offline readiness", { exact: true })).toHaveCount(0);
+  // The row leads to the download itself, which lives in Settings.
+  await saveArea.click();
+  await expect(page).toHaveURL(/\/settings/);
+  await expect(page.getByRole("heading", { name: "Offline areas" })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

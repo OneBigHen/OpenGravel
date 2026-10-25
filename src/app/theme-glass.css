@@ -2541,36 +2541,35 @@ html .og-ride {
 
 .og-along__toggle {
   display: grid;
-  grid-template-columns: 36px 1fr 20px;
+  grid-template-columns: auto minmax(0, 1fr) 20px;
   align-items: center;
-  gap: 12px;
+  gap: var(--og-space-2);
   width: 100%;
   min-height: 56px;
-  padding: 8px 12px 8px 10px;
-  border: 1px solid var(--og-hairline);
-  border-radius: var(--og-radius-object, 14px);
-  background: var(--og-raised, var(--og-paper));
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--og-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.og-along__toggle:hover { border-color: var(--og-hairline-strong); }
 .og-along__toggle:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
-.og-along__icon {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--og-ember, #d65a36) 16%, transparent);
-  color: var(--og-ember-text, #d65a36);
+.og-along__title { font-weight: 600; font-size: var(--og-text-body); }
+/* One meta line beside the title: "· 6 stops", or what is there to find. */
+.og-along__hint {
+  min-width: 0;
+  font-size: var(--og-text-meta);
+  color: var(--og-slate-text);
+  overflow-wrap: anywhere;
 }
-.og-along__label { display: grid; gap: 1px; min-width: 0; }
-.og-along__title { font-weight: 700; font-size: var(--og-text-body); }
-.og-along__hint { font-size: var(--og-text-caption); color: var(--og-slate-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.og-along__hint::before { content: "· "; }
 .og-along__chevron { color: var(--og-slate-text); transition: transform 160ms ease; }
 .og-along__toggle[aria-expanded="true"] .og-along__chevron { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .og-along__chevron { transition: none; }
+}
 
 .og-along__results { display: grid; gap: 8px; }
 .og-along__list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
