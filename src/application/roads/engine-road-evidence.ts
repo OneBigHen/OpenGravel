@@ -252,6 +252,40 @@ export function engineCurvature(summary: ProviderRoadSummary): EngineCurvature {
   };
 }
 
+/** The classes a rider reads as a busy road, whatever their surface. */
+const BUSY_ROAD_CLASSES = new Set(["motorway", "trunk", "primary"]);
+
+/**
+ * The share of the line ridden on a busy road: motorway, trunk or primary, a
+ * link of one, or any run through a city — the rule the ride formula uses to
+ * read a busy road. It is deliberately measured on the ordered road runs: a
+ * class tally knows the road class but not the urban density, so a main street
+ * through town would read as quiet. An answer without road runs therefore
+ * measures nothing here instead of understating the share.
+ */
+export function engineBusyRoads(
+  summary: ProviderRoadSummary,
+): { readonly share: number; readonly coverage: number } | null {
+  const runs = summary.roadRuns;
+  if (runs === undefined || runs.length === 0) return null;
+  let busyMeters = 0;
+  let measuredMeters = 0;
+  for (const run of runs) {
+    if (!Number.isFinite(run.meters) || run.meters <= 0) continue;
+    measuredMeters += run.meters;
+    if (
+      BUSY_ROAD_CLASSES.has(run.roadClass.toLowerCase()) ||
+      run.roadClassLink === true ||
+      run.urbanDensity.toLowerCase() === "city"
+    ) busyMeters += run.meters;
+  }
+  if (!(measuredMeters > 0)) return null;
+  return {
+    share: clamp01(busyMeters / measuredMeters),
+    coverage: summary.totalMeters > 0 ? clamp01(measuredMeters / summary.totalMeters) : 0,
+  };
+}
+
 /** Metre-weighted road character over recognized classes, with route coverage. */
 export function engineRoadCharacter(summary: ProviderRoadSummary): { readonly unit: number; readonly coverage: number } | null {
   let character = 0;
@@ -322,6 +356,17 @@ export function engineRoadEvidence(
     };
   }
 
+  const busy = engineBusyRoads(summary);
+  if (busy !== null) {
+    evidence["busyRoads"] = {
+      value: Number(busy.share.toFixed(3)),
+      coverage: busy.coverage,
+      status: "estimated",
+      confidence: 0.7,
+      provenance: [OSM_ROAD_SOURCE],
+    };
+  }
+
   const curvature = engineCurvature(summary);
   if (curvature.totalMeters > 0) {
     evidence["curvature"] = {
@@ -388,14 +433,33 @@ export function surfaceMixLabel(evidence: EvidenceValue<unknown> | undefined): s
   return `Mostly unpaved · ${miles(unpaved)} ${unpavedWord}${unknownNote}`;
 }
 
+/** Metres of the line through bends, or `null` when curvature was not measured. */
+export function curvyMeters(evidence: EvidenceValue<unknown> | undefined): number | null {
+  if (evidence === undefined || typeof evidence.value !== "object" || evidence.value === null) return null;
+  const curvy = (evidence.value as Record<string, unknown>)["curvyMeters"];
+  return typeof curvy === "number" && Number.isFinite(curvy) ? Math.max(0, curvy) : null;
+}
+
 /** `12 mi of curves`, or `null` when curvature was not measured by the engine. */
 export function curvatureLabel(evidence: EvidenceValue<unknown> | undefined): string | null {
-  if (evidence === undefined || typeof evidence.value !== "object" || evidence.value === null) return null;
-  const value = evidence.value as Record<string, unknown>;
-  const curvy = value["curvyMeters"];
-  if (typeof curvy !== "number" || !Number.isFinite(curvy)) return null;
+  const curvy = curvyMeters(evidence);
+  if (curvy === null) return null;
   if (curvy < 800) return "Few curves";
   return `${miles(curvy)} of curves`;
+}
+
+/** Gravel plus dirt metres, or `null` when the evidence is not an engine mix. */
+export function unpavedMeters(evidence: EvidenceValue<unknown> | undefined): number | null {
+  if (evidence === undefined || !isEngineSurfaceMix(evidence.value)) return null;
+  return evidence.value.gravelMeters + evidence.value.dirtMeters;
+}
+
+/** Share of the line on a busy road, `0..1`, or `null` when it was not measured. */
+export function busyRoadShare(evidence: EvidenceValue<unknown> | undefined): number | null {
+  const value = evidence?.value;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
+    ? value
+    : null;
 }
 
 /** The rider-facing curviness steps, 1 (straight) to 5 (twisty). */

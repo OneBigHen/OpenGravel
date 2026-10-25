@@ -10,9 +10,11 @@
  * one typed command through `onChange`; this module owns no ride state.
  *
  * Layout: the shape switch and the loop's ride time sit in the composer's own
- * rows; the envelope lives behind one "Ride style" row that shows the current
- * choices as its summary. On a phone that row is a disclosure (the peek detent
- * has room for exactly one more line, 04 §2); from 761 px up it is always open.
+ * rows; the envelope lives behind one "Ride style" row whose short value is the
+ * road and the surface (`Balanced · Mixed`), the two choices that change the
+ * shape of a ride most, with the rest of the envelope inside. On a phone that
+ * row is a disclosure (the peek detent has room for exactly one more line,
+ * 04 §2); from 761 px up it is always open.
  */
 
 import { useId, useState, useSyncExternalStore } from "react";
@@ -105,16 +107,14 @@ export function formatRideTime(minutes: number): string {
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 }
 
-/** The one-line summary the collapsed row shows: `Curvy · Paved · No tolls`. */
+/**
+ * The short value the collapsed `Ride style` row shows: `Balanced · Mixed`.
+ * Everything else the panel holds — familiarity, traffic, highways, tolls — is
+ * inside it, so the row keeps one value that reads at a glance instead of a
+ * sentence that wraps beside an eyebrow.
+ */
 export function rideStyleSummary(view: RideStyleView): string {
-  return [
-    ROAD_CHARACTER_LABELS[view.roadCharacter],
-    ...(view.noveltyPreference === "balanced" ? [] : [NOVELTY_LABELS[view.noveltyPreference]]),
-    SURFACE_LABELS[view.surface],
-    TRAFFIC_LABELS[view.traffic],
-    ...(view.avoidHighways ? ["No highways"] : []),
-    ...(view.avoidTolls ? ["No tolls"] : []),
-  ].join(" · ");
+  return [ROAD_CHARACTER_LABELS[view.roadCharacter], SURFACE_LABELS[view.surface]].join(" · ");
 }
 
 /** The authored shape as a composer choice: an open ride plans like a destination. */
@@ -323,12 +323,14 @@ export function RideStylePanel({ model }: { readonly model: RideStyleControlsMod
         data-testid="ride-style-toggle"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="og-composer__label">Ride style</span>
+        <span className="og-composer__label og-style__toggle-label">Ride style</span>
         <span className="og-style__summary" data-testid="ride-style-summary">
           {rideStyleSummary(view)}
         </span>
+        {/* A disclosure row points at what it opens: right when closed, down
+            when open. */}
         <span aria-hidden="true" className="og-style__chevron">
-          {open ? "⌃" : "⌄"}
+          {open ? "⌄" : "›"}
         </span>
       </button>
       <div id={panelId} className="og-style__panel" data-open={open ? "true" : "false"}>

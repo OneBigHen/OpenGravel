@@ -132,7 +132,9 @@ describe("ride style controls", () => {
       />,
     );
     const toggle = screen.getByTestId("ride-style-toggle");
-    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · New to me · Paved · Avoid busy roads · No tolls");
+    // The row carries a short value — the road and the surface. The rest of the
+    // panel's choices are inside it, where the chips already show their state.
+    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · Paved");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -143,7 +145,8 @@ describe("ride style controls", () => {
     expect(formatRideTime(60)).toBe("1 h");
     expect(formatRideTime(90)).toBe("1 h 30 min");
     expect(formatRideTime(45)).toBe("45 min");
-    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed · Avoid busy roads · No highways");
+    // Highways and tolls live inside the panel, so they never lengthen the row.
+    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed");
   });
 });
 
@@ -260,6 +263,9 @@ describe("back by sunset", () => {
   });
 });
 
-it("shows the active traffic choice in the collapsed style summary", () => {
-  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toContain("Fastest");
+it("leaves the traffic and toll choices inside the collapsed row", () => {
+  // The row is `Ride style` … `Balanced · Mixed ›`: it names where the ride goes
+  // by shape, not by repeating every switch, so it stays one line at 320 px.
+  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toBe("Balanced · Mixed");
+  expect(rideStyleSummary({ ...VIEW, avoidTolls: true })).toBe("Balanced · Mixed");
 });

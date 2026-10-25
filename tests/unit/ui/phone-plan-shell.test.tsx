@@ -135,8 +135,9 @@ function rideStyle(overrides: Partial<RideStyleControlsModel["view"]> = {}): {
 
 describe("phone ride options", () => {
   const start = { refusal: null, starting: false, error: null, onStart: vi.fn() };
-  // The data a card already carries: its colour slot, its curviness, its dirt
-  // share and the minutes it adds over the quickest option.
+  // The data a card already carries: its colour slot, its curviness and surface
+  // for the strip, the miles and busy share its one word is measured from, and
+  // the minutes it adds over the quickest option.
   const options = [
     card("a", true, {
       roleKey: "best-ride",
@@ -144,6 +145,7 @@ describe("phone ride options", () => {
       tint: 0,
       curviness: { level: 5, label: "Twisty" },
       surfaceStrip: { paved: 0.8, gravel: 0, dirt: 0.2, unknown: 0 },
+      measurements: { curvyMi: 18.4, unpavedMi: 6.6, busyShare: 0.31 },
       addedTimeLabel: "+3 min vs Fastest",
       addedMinutes: 3,
     }),
@@ -153,6 +155,7 @@ describe("phone ride options", () => {
       tint: 1,
       curviness: { level: 2, label: "Mostly straight" },
       surfaceStrip: { paved: 0.9, gravel: 0, dirt: 0.1, unknown: 0 },
+      measurements: { curvyMi: 4.2, unpavedMi: 3.3, busyShare: 0.55 },
       addedMinutes: 0,
     }),
     card("c", false, {
@@ -161,6 +164,7 @@ describe("phone ride options", () => {
       tint: 2,
       curviness: { level: 3, label: "Curvy" },
       surfaceStrip: { paved: 0.1, gravel: 0, dirt: 0.9, unknown: 0 },
+      measurements: { curvyMi: 9.1, unpavedMi: 29.7, busyShare: 0.12 },
       addedTimeLabel: "+9 min vs Fastest",
       addedMinutes: 9,
     }),
@@ -184,6 +188,8 @@ describe("phone ride options", () => {
     expect(rows[0]!.textContent).toContain("Best Ride");
     expect(rows[0]!.textContent).toContain("53 min · 33 mi");
     expect(rows[0]!.textContent).toContain("Twistiest");
+    // The word follows the numbers, one space and a middot away.
+    expect(rows[0]!.querySelector(".og-phone-choice__meta")?.textContent).toBe("53 min · 33 mi · Twistiest");
     expect(rows[0]!.textContent).toContain("+3 min");
     // "Fastest" already says the quickest, so the word would only repeat it.
     expect(rows[1]!.textContent).toContain("Fastest");
@@ -192,18 +198,31 @@ describe("phone ride options", () => {
     expect(rows[2]!.textContent).toContain("Alternative");
     expect(rows[2]!.textContent).toContain("Most dirt");
     expect(rows[2]!.textContent).toContain("+9 min");
+    // One word each: the quietest option is also the dirtiest, and a row never
+    // carries two character words.
+    expect(rows[2]!.textContent).not.toContain("Fewest busy roads");
   });
 
   it("gives an unroled option its own word", () => {
     const loose = [
-      card("x", true, { addedMinutes: 0, curviness: { level: 2, label: "Mostly straight" } }),
-      card("y", false, { addedMinutes: 6, curviness: { level: 4, label: "Curvy" } }),
+      card("x", true, { addedMinutes: 0, measurements: { curvyMi: 2.4, unpavedMi: null, busyShare: null } }),
+      card("y", false, { addedMinutes: 6, measurements: { curvyMi: 15.8, unpavedMi: null, busyShare: null } }),
     ];
     render(<PhoneRideSummary {...base} cards={loose} card={loose[0]!} comparing onCompare={vi.fn()} />);
     const rows = screen.getByTestId("phone-alternatives").querySelectorAll("button");
     expect(rows[0]!.textContent).toContain("Quickest");
     expect(rows[1]!.textContent).toContain("Twistiest");
     expect(rows[1]!.textContent).toContain("+6 min");
+  });
+
+  it("names the quietest option in the same place as the other words", () => {
+    const quiet = [
+      card("x", true, { addedMinutes: 0, measurements: { curvyMi: 3.2, unpavedMi: null, busyShare: 0.44 } }),
+      card("y", false, { addedMinutes: 7, measurements: { curvyMi: 3.2, unpavedMi: null, busyShare: 0.11 } }),
+    ];
+    render(<PhoneRideSummary {...base} cards={quiet} card={quiet[0]!} comparing onCompare={vi.fn()} />);
+    const rows = screen.getByTestId("phone-alternatives").querySelectorAll("button");
+    expect(rows[1]!.querySelector(".og-phone-choice__meta")?.textContent).toBe("53 min · 33 mi · Fewest busy roads");
   });
 
   it("marks the selected row and keeps the colour cue off the words alone", () => {
