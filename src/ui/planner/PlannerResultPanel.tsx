@@ -64,9 +64,11 @@ export interface PlannerResultPanelProps {
   readonly briefing: PlannerRouteBriefingProps;
   /** The sheet is at its expanded detent: the elevation chart opens expanded. */
   readonly sheetExpanded?: boolean;
+  /** Phone peek: where the ride goes ("To Hawk Mountain", "Loop from Jim Thorpe"). */
+  readonly destinationLine?: string | null;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const [comparing, setComparing] = useState(false);
@@ -81,7 +83,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
   const tint = selectedCard?.tint ?? 0;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => setComparing(!comparing)} onSelect={choices.onSelect} weatherLine={weatherLine} /> : null}
+      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => setComparing(!comparing)} onSelect={choices.onSelect} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
       {choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
@@ -105,7 +107,11 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
           expandedBySheet={sheetExpanded}
         />
       )}
-      <RideActions {...actions} start={phone && selectedCard !== undefined ? null : actions.start} />
+      <RideActions
+        {...actions}
+        start={phone && selectedCard !== undefined ? null : actions.start}
+        {...(phone && selectedCard !== undefined ? { rideActions: undefined } : {})}
+      />
       {choices.cards.length === 0 ? null : <AdvisorRideAsk />}
       {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}
     </>

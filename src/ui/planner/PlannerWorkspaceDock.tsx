@@ -24,7 +24,7 @@ import type { PlannerViewModel } from "@/application/planner/planner-view-model"
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { usePhonePlanner } from "./usePhonePlanner";
-import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
+import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
@@ -139,6 +139,52 @@ export function PlannerWorkspaceDock({
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
     composer.rideStyle?.view.shape !== "loop";
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const loopRide = composer.rideStyle?.view.shape === "loop";
+  const placeLabel = loopRide ? composer.viewModel.startLabel : composer.viewModel.finishLabel;
+  const destinationLine =
+    placeLabel === NO_FINISH_LABEL || placeLabel === NO_START_LABEL || placeLabel === "From your sketch" || placeLabel === ""
+      ? null
+      : `${loopRide ? "Loop from" : "To"} ${placeLabel}`;
+
+  const historyHidden =
+    (viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null);
+  const history = historyHidden ? null : (
+            <div className="og-history" data-testid="history-controls">
+              {/*
+                Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills
+                "are weird"). The text stays in the button for its accessible
+                name; what it undoes is in the title.
+              */}
+              <button
+                type="button"
+                className="og-chip og-history__button"
+                data-testid="undo"
+                title={viewModel.undoLabel === null ? "Undo" : `Undo · ${viewModel.undoLabel}`}
+                disabled={viewModel.undoLabel === null}
+                onClick={onUndo}
+              >
+                <HistoryGlyph direction="undo" />
+                <span className="og-history__text">
+                  Undo
+                  {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="og-chip og-history__button"
+                data-testid="redo"
+                title={viewModel.redoLabel === null ? "Redo" : `Redo · ${viewModel.redoLabel}`}
+                disabled={viewModel.redoLabel === null}
+                onClick={onRedo}
+              >
+                <HistoryGlyph direction="redo" />
+                <span className="og-history__text">
+                  Redo
+                  {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
+                </span>
+              </button>
+            </div>
+  );
   const phone = usePhonePlanner();
   const detent = phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
   const [dragHeight, setDragHeight] = useState<number | null>(null);
@@ -359,43 +405,7 @@ export function PlannerWorkspaceDock({
 
           {/* The first screen is From / Where to? only (owner 2026-10-04), unless
               the rider just undid back to it and Redo is the way forward. */}
-          {(viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null) ? null : (
-            <div className="og-history" data-testid="history-controls">
-              {/*
-                Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills
-                "are weird"). The text stays in the button for its accessible
-                name; what it undoes is in the title.
-              */}
-              <button
-                type="button"
-                className="og-chip og-history__button"
-                data-testid="undo"
-                title={viewModel.undoLabel === null ? "Undo" : `Undo · ${viewModel.undoLabel}`}
-                disabled={viewModel.undoLabel === null}
-                onClick={onUndo}
-              >
-                <HistoryGlyph direction="undo" />
-                <span className="og-history__text">
-                  Undo
-                  {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="og-chip og-history__button"
-                data-testid="redo"
-                title={viewModel.redoLabel === null ? "Redo" : `Redo · ${viewModel.redoLabel}`}
-                disabled={viewModel.redoLabel === null}
-                onClick={onRedo}
-              >
-                <HistoryGlyph direction="redo" />
-                <span className="og-history__text">
-                  Redo
-                  {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
-                </span>
-              </button>
-            </div>
-          )}
+          {phone ? null : history}
         </div>
 
         <div
@@ -410,11 +420,16 @@ export function PlannerWorkspaceDock({
             DOM order, not CSS order, so focus order matches what is seen. On
             the wide tier the result portals to the inspector either way.
           */}
-          {hasChoices ? <PlannerResultPanel {...results} /> : null}
-          {phone && hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {
-            bodyRef.current?.querySelector(".og-composer")?.scrollIntoView({ block: "start" });
-            bodyRef.current?.querySelector<HTMLInputElement>("input")?.focus();
-          }}>Edit route</button> : null}
+          {hasChoices ? <PlannerResultPanel {...results} destinationLine={destinationLine} /> : null}
+          {phone && (hasChoices || history !== null) ? (
+            <div className="og-phone-tools" data-testid="phone-tools">
+              {hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {
+                bodyRef.current?.querySelector(".og-composer")?.scrollIntoView({ block: "start" });
+                bodyRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+              }}>Edit route</button> : null}
+              {history}
+            </div>
+          ) : null}
           <IntentComposer {...composer} {...(planning ? { onCancelPlanning } : {})} />
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           <PlannerRefineWorkspace {...refine} />
