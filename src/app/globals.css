@@ -9988,15 +9988,16 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   box-shadow: 0 1px 3px rgb(22 29 28 / 22%);
 }
 
-/* A loop's "Which way?": the label on its own line, then five equal chips in
-   one track. Five short words fit even a 320 px phone, so the direction stays
-   one row instead of wrapping into a list; 48 px is the gloved-thumb target. */
+/* A loop's "Which way?": the label on its own line, then five chips like the
+   ride-time chips above. All five words fit one line at 320 px (each chip keeps
+   a 48 px minimum), and the 8 px gaps match the design system's touch spacing;
+   if a wider font ever did not fit, the row wraps instead of clipping a word. */
 .og-composer__row--direction {
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
     "label"
     "value";
-  row-gap: 6px;
+  row-gap: 8px;
 }
 
 .og-composer__row--direction > .og-composer__label {
@@ -10005,12 +10006,14 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-style__way {
   grid-area: value;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 2px;
-  padding: 2px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--og-sandstone) 30%, var(--og-canvas));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.og-style__way .og-style__chip {
+  flex: 1 1 auto;
+  min-width: 48px;
 }
 
 .og-style__way .og-style__chip span {
@@ -10018,9 +10021,6 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   width: 100%;
   min-height: 48px;
   padding: 0 4px;
-  border-color: transparent;
-  border-radius: 10px;
-  background: transparent;
   font-size: var(--og-text-meta);
   /* All five words fit one line at 320 px; if a wider font ever did not, the
      chip grows a line instead of clipping the word. */

@@ -338,7 +338,7 @@ export function LoopDirectionRow({ model }: { readonly model: RideStyleControlsM
         Which way?
       </span>
       <div
-        className="og-style__chips og-style__way"
+        className="og-style__way"
         role="radiogroup"
         aria-labelledby={`${name}-label`}
         data-testid="loop-heading"
