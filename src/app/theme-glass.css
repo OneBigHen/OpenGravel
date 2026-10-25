@@ -690,11 +690,11 @@ html .og-ride {
   }
 
   .og-explore .og-explore__header .og-explore__lens > [role="tab"] {
-    min-height: 36px;
+    min-height: 48px;
     padding: 6px 16px;
     border: 0;
     border-radius: 999px;
-    font-size: 13px;
+    font-size: var(--og-text-body);
     box-shadow: none;
   }
 
@@ -709,97 +709,11 @@ html .og-ride {
   }
 
 
-  .og-explore .og-explore__count.og-explore__count {
+  /* Ride cards keep their own shape below (design system v2 §4); the header
+     line and the count stay quiet. */
+  .og-explore .og-explore__header .og-explore__count.og-explore__count {
     color: var(--og-slate-text);
-    font-size: 12px;
-  }
-
-  /* Route cards: map thumbnail left, the facts right — about 5 per screen. */
-  .og-explore .og-explore-card__link.og-explore-card__link {
-    display: grid;
-    grid-template-columns: 104px minmax(0, 1fr);
-    align-items: stretch;
-    gap: 0;
-    min-height: 104px;
-    overflow: hidden;
-    border: 1px solid var(--og-hairline);
-    border-radius: var(--og-radius-object);
-    background: var(--og-paper);
-    box-shadow: none;
-  }
-
-  .og-explore .og-explore-card__preview.og-explore-card__preview {
-    width: 104px;
-    height: 100%;
-    min-height: 104px;
-    aspect-ratio: auto;
-    border-radius: 0;
-  }
-
-  .og-explore-card__preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .og-explore .og-explore-card__body {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 10px 12px;
-    min-width: 0;
-  }
-
-  .og-explore .og-explore-card__body.og-explore-card__body > strong {
-    overflow: hidden;
-    font-size: 15px;
-    line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .og-explore .og-explore-card__topline.og-explore-card__topline {
-    gap: 6px;
-    font-size: 11px;
-  }
-
-  /* "Catalog" is the norm; only a rider's own or shared source earns a tag. */
-  .og-explore .og-explore-card__source.og-explore-card__source {
-    padding: 1px 6px;
-    font-size: 10.5px;
-  }
-
-  .og-explore .og-explore-card__source[data-source="catalog"] {
-    display: none;
-  }
-
-  .og-explore .og-explore-card__facts.og-explore-card__facts {
-    gap: 8px;
-    color: var(--og-slate-text);
-    font-size: 13px;
-  }
-
-  .og-explore .og-explore-card__distance.og-explore-card__distance {
-    color: var(--og-ink);
-    font-size: 13px;
-    font-weight: 700;
-  }
-
-  .og-explore .og-explore-card__chips.og-explore-card__chips {
-    flex-wrap: nowrap;
-    gap: 4px;
-    overflow: hidden;
-  }
-
-  .og-explore .og-explore-card__chip.og-explore-card__chip {
-    padding: 2px 8px;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .og-explore .og-explore-card__summary.og-explore-card__summary,
-  .og-explore-card__variants {
-    display: none;
+    font-size: var(--og-text-caption);
   }
 
   /* My rides + Settings: tight cards, small headings. */
@@ -867,6 +781,21 @@ html .og-ride {
 
   .og-library__imports {
     gap: 10px;
+  }
+
+  /* The ride card's title is the rider's own words at body size, and every
+     action under it is a 48px target (§1, §4). */
+  .og-library .og-library__title-line input {
+    width: 100%;
+    min-width: 0;
+    font-size: var(--og-text-body);
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .og-library__actions .og-primary,
+  .og-library__actions .og-secondary {
+    min-height: 48px;
   }
 
   .og-library .og-import.og-import {
@@ -990,19 +919,13 @@ html .og-ride {
     margin-bottom: 10px;
   }
 
-  /* Cards: every route in the list shares the region, so it goes; tags wrap
-     instead of running off the card. */
+  /* Cards: every route in the list shares the region, so it goes. */
   .og-explore .og-explore-card__region {
     display: none;
   }
 
   .og-explore .og-explore-card__topline:not(:has(.og-explore-card__source:not([data-source="catalog"]))) {
     display: none;
-  }
-
-  .og-explore .og-explore-card__chips.og-explore-card__chips {
-    flex-wrap: wrap;
-    overflow: visible;
   }
 
   /* Route detail: the title leads; the source is one quiet line under it. */
@@ -1210,7 +1133,8 @@ html .og-ride {
 
 .og-explore .og-explore__search input[type="search"] {
   width: 100%;
-  min-height: 44px;
+  /* 16px text in a 48px field: iOS does not zoom in, and a glove can hit it. */
+  min-height: 48px;
   padding: 0 14px 0 38px;
   border: 1px solid var(--og-hairline-strong);
   border-radius: 999px;
@@ -1228,11 +1152,11 @@ html .og-ride {
   flex: none;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
+  min-height: 48px;
   margin: 0;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--og-text-body);
 }
 
 .og-explore__filters-count {
@@ -1285,13 +1209,18 @@ html .og-ride {
     border-color: var(--og-go);
   }
 
-  /* One-tap chips: a single scrolling row, edge to edge. */
+  /* One-tap chips: a single scrolling row, edge to edge. The row is wider than
+     the screen on purpose, so the next chip is half visible — that is the hint
+     that it scrolls (§2, §4). */
   .og-explore__quick {
     display: flex;
-    gap: 6px;
+    gap: var(--og-space-2);
     margin: 0 -14px 10px;
     padding: 0 14px 2px;
     overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 14px;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
   }
 
@@ -1301,16 +1230,17 @@ html .og-ride {
 
   .og-explore__quick-chip {
     flex: none;
-    min-height: 36px;
-    padding: 0 14px;
+    min-height: 48px;
+    padding: 0 16px;
     border: 1px solid var(--og-hairline-strong);
     border-radius: 999px;
     background: var(--og-paper);
     color: var(--og-ink);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--og-text-body);
     font-weight: 600;
     white-space: nowrap;
+    scroll-snap-align: start;
     cursor: pointer;
   }
 
@@ -2128,9 +2058,8 @@ html .og-ride {
 }
 
 /* "12 mi away": where the ride starts, from the rider (Explore cards). */
-.og-explore-card__away {
-  color: var(--og-go-text);
-  font-weight: 700;
+.og-explore-card__fact {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Phone and tablet: the sheet's head is its grip (swipe up / down), and its

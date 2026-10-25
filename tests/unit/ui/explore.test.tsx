@@ -140,6 +140,39 @@ describe("Explore UI", () => {
     expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
   });
 
+  it("draws a ride card as its map, the name and one line of plain facts", () => {
+    // Design system v2 §4: a phone card is the route on its map, the name over
+    // two lines at most, then ONE line of facts. The old card's pill badges are
+    // what clipped at 320px ("Est. Mostly paved · 4.7 mi gra"), so nothing on
+    // the card is a pill and nothing carries an "Est." stamp any more.
+    const twisty = { ...entry, id: "twisty", name: "Twisty loop", surfaceSummary: "Mostly paved", curvatureSummary: "Twisty", variantCount: 2 };
+    render(<ExplorePanel entries={[twisty]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+
+    // The map image leads the card (16:9 and full width are the stylesheet's job).
+    expect(card.firstElementChild?.firstElementChild).toHaveClass("og-explore-card__preview");
+    expect(card.querySelector(".og-explore-card__title")).toHaveTextContent("Twisty loop");
+
+    // One meta line, in the order a rider asks the questions.
+    const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
+    expect(facts).toEqual(["17 mi", "Twisty", "Mostly paved"]);
+
+    expect(card.querySelector(".og-explore-card__chip")).toBeNull();
+    expect(card.querySelector("[data-surface]")).toBeNull();
+    expect(card).not.toHaveTextContent(/Est\./);
+
+    // The credit is one caption line, and it still names the source honestly.
+    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("Catalog");
+    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("2 versions");
+  });
+
+  it("says what is unknown on the facts line instead of hiding the fact", () => {
+    render(<ExplorePanel entries={[entry]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+    const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
+    expect(facts).toEqual(["17 mi", "Curvature unknown", "Surface unknown"]);
+  });
+
   it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
     render(<ExplorePanel entries={[entry]} />);
 

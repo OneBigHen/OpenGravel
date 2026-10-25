@@ -73,6 +73,18 @@
   --og-text-body: 15px;
   --og-text-title: clamp(20px, 1.2vw + 15px, 24px);
   --og-text-page: clamp(32px, 3.2vw + 20px, 48px);
+  /* The two sizes the list cards and sheet headlines ask for by name
+     (design system v2 §1). */
+  --og-text-headline: 20px;
+  --og-text-caption: 12px;
+
+  /* Spacing scale (design system v2 §1): 4 · 8 · 12 · 16 · 24 · 32. */
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-5: 24px;
+  --og-space-6: 32px;
 
   /* The device safe-area insets as readable custom properties (12 §12): the
      camera fit insets are computed in JS (05 §9) and the stylesheet is the one
@@ -583,7 +595,6 @@ h3,
 
 .og-explore__intro,
 .og-route-detail__provenance,
-.og-explore-card__summary,
 .og-route-detail__summary,
 .og-route-detail__region {
   color: var(--og-moss-text);
@@ -754,7 +765,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: var(--og-deep-spruce);
   color: var(--og-paper);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -768,16 +779,6 @@ h3,
   color: var(--og-deep-spruce);
   font-size: 12px;
   line-height: 1.35;
-}
-
-.og-explore-card__variants {
-  width: fit-content;
-  padding: 3px 7px;
-  border-radius: var(--og-radius-chip);
-  background: var(--og-sandstone);
-  color: var(--og-ink);
-  font-size: 11px;
-  font-weight: 600;
 }
 
 .og-explore__controls .og-explore__check {
@@ -2926,21 +2927,12 @@ h3,
   background: var(--og-canvas);
 }
 
-.og-library__badge {
-  padding: 4px 8px;
-  border-radius: var(--og-radius-chip);
-  background: var(--og-golden-hour);
-  color: var(--og-ink);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 .og-library__meta,
 .og-library__details,
 .og-library__reason {
   margin-top: 6px;
   color: var(--og-trail-brown);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-library__progress {
@@ -8662,7 +8654,7 @@ h3,
   background: var(--og-canvas);
 }
 .og-explore-map-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.og-explore-map-dialog h2 { margin: 0; font-size: var(--og-text-title); }
+.og-explore-map-dialog h2 { margin: 0; font-size: var(--og-text-headline); }
 .og-explore-map-dialog p { margin: 4px 0 0; font-size: var(--og-text-meta); color: var(--og-slate-text); }
 .og-explore-map-dialog .og-explore-map { flex: 1; height: auto; min-height: 0; }
 
@@ -8729,68 +8721,6 @@ h3,
 .og-explore-card__body strong {
   font-size: 18px;
   letter-spacing: -0.005em;
-}
-
-.og-explore-card__facts {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.og-explore-card__facts .og-explore-card__distance {
-  color: var(--og-ink);
-  font-size: 20px;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-}
-
-.og-explore-card__time {
-  color: var(--og-moss-text);
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.og-explore-card__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.og-explore-card__chip {
-  padding: 3px 8px;
-  border-radius: var(--og-radius-chip);
-  background: color-mix(in srgb, var(--og-sandstone) 40%, var(--og-paper));
-  color: var(--og-ink);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.og-explore-card__chip[data-surface="paved"] {
-  background: color-mix(in srgb, var(--og-topo-sage) 26%, var(--og-paper));
-}
-
-.og-explore-card__chip[data-surface="mixed"],
-.og-explore-card__chip[data-surface="unpaved"] {
-  background: color-mix(in srgb, var(--og-golden-hour) 30%, var(--og-paper));
-}
-
-.og-explore-card__chip[data-surface="unknown"],
-.og-explore-card__chip[data-curves="unknown"] {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--og-sandstone);
-  color: var(--og-moss-text);
-}
-
-.og-explore-card__variants {
-  margin-top: 2px;
-  padding: 0;
-  background: transparent;
-  color: var(--og-moss-text);
-  font-weight: 500;
 }
 
 .og-explore__near {
@@ -11030,7 +10960,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 /* EX-11: the size of the list, quietly, above it. */
 .og-road-discovery__title {
   margin-top: 8px;
-  font-size: var(--og-text-title);
+  font-size: var(--og-text-headline);
 }
 
 .og-explore__count {
@@ -11053,7 +10983,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 400 / 190;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   background: var(--og-canvas);
 }
@@ -11080,10 +11010,11 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 400 / 170;
-  margin: 8px 0;
+  /* The ride's map is the card's picture, in the same 16:9 as Explore's (§4). */
+  aspect-ratio: 16 / 9;
+  margin: var(--og-space-2) 0;
   object-fit: cover;
-  border-radius: var(--og-radius-control);
+  border-radius: var(--og-radius-object);
   background: var(--og-canvas);
 }
 
@@ -11826,7 +11757,7 @@ a.og-secondary {
 
 .og-road-discovery__title {
   margin-top: 8px;
-  font-size: var(--og-text-title);
+  font-size: var(--og-text-headline);
 }
 
 .og-explore__count {
@@ -11882,7 +11813,7 @@ a.og-secondary {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 400 / 190;
+  aspect-ratio: 16 / 9;
   border-radius: 0;
   background: var(--og-well);
   object-fit: cover;
@@ -11919,18 +11850,6 @@ a.og-secondary {
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.012em;
-}
-
-.og-explore-card__facts .og-explore-card__distance {
-  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.og-explore-card__chip {
-  padding: 4px 9px;
-  border-radius: 999px;
 }
 
 @media (min-width: 761px) {
@@ -12313,7 +12232,7 @@ a.og-secondary {
 }
 
 .og-library__state--notice h2 {
-  font-size: var(--og-text-title);
+  font-size: var(--og-text-headline);
 }
 
 .og-library__state--notice .og-secondary {
@@ -13173,7 +13092,7 @@ a.og-secondary {
 .og-road-map__image { display: block; width: 100%; height: 160px; border-radius: var(--og-radius-object); object-fit: cover; }
 /* Explore chips and pickers at every width (the phone sheet refines them in theme-glass.css). */
 .og-explore__quick-chip {
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 16px;
   border: 1px solid var(--og-hairline-strong);
   border-radius: 999px;
@@ -13541,5 +13460,172 @@ a.og-secondary {
   .og-ride-metrics .max-sm\:flex-col {
     flex-direction: column;
     align-items: center;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   Lists (design system v2 §4): the ride card and how Explore opens.
+
+   A card is the route on its map, the name, one line of facts and, when there
+   is one, a single credit line. Nothing on it is a pill, so nothing can clip at
+   320px: the facts wrap, and the separators are drawn by the stylesheet so one
+   can never lead or trail the line.
+   -------------------------------------------------------------------------- */
+
+/* A list is read at a glance with a glove on, so Explore and My rides render at
+   the v2 scale (§1) rather than the app's compact chrome scale: body text 16px,
+   a secondary line 14px, a credit 12px, a page title 28px. Scoped to the two
+   list pages so the dense ride chrome keeps its own scale. */
+.og-explore,
+.og-library {
+  --og-text-page: 28px;
+  --og-text-title: 28px;
+  --og-text-headline: 20px;
+  --og-text-body: 16px;
+  --og-text-meta: 14px;
+  --og-text-caption: 12px;
+}
+
+.og-explore-card__title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.og-explore-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-1);
+  row-gap: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.og-explore-card__fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.og-explore-card__fact + .og-explore-card__fact::before {
+  margin-right: var(--og-space-1);
+  color: var(--og-slate-text);
+  content: "·";
+}
+
+/* The credit: one caption line under the facts. A catalog route's source is
+   the norm, so a card with nothing else to say carries no line at all. */
+.og-explore-card__credit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-2);
+  row-gap: 0;
+  padding: 0 var(--og-space-4) var(--og-space-4);
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.og-explore-card__credit:not(:has(.og-explore-card__byline, .og-explore-card__versions)):has(> .og-explore-card__source[data-source="catalog"]) {
+  display: none;
+}
+
+.og-explore-card__byline,
+.og-explore-card__versions {
+  overflow-wrap: anywhere;
+}
+
+.og-library__credit {
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* The paperwork behind View details: one quiet line after another. */
+.og-library__details {
+  display: grid;
+  gap: var(--og-space-1);
+}
+
+@media (max-width: 479px) {
+  /* On a phone a ride card has no frame of its own: the map image is the card,
+     and the words sit on the page under it (§4). */
+  .og-explore__list {
+    gap: var(--og-space-5);
+  }
+
+  .og-explore__list > .og-explore-card--ride,
+  .og-explore-card--ride:hover,
+  .og-explore-card--ride:focus-within {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .og-explore-card--ride .og-explore-card__link {
+    gap: 0;
+    padding: 0;
+  }
+
+  .og-explore-card--ride .og-explore-card__preview {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--og-radius-object);
+  }
+
+  /* The first paint holds the same shape, so nothing jumps when the cards land. */
+  .og-explore-card--ride .og-skeleton-card__map {
+    aspect-ratio: 16 / 9;
+    border-radius: var(--og-radius-object);
+  }
+
+  .og-explore-card--ride .og-explore-card__body {
+    gap: 0;
+    padding: var(--og-space-2) 0 0;
+  }
+
+  .og-explore-card--ride .og-explore-card__title {
+    font-family: var(--og-font-body), ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--og-text-body);
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .og-explore-card--ride .og-explore-card__facts {
+    margin-top: var(--og-space-1);
+  }
+
+  .og-explore-card--ride .og-explore-card__credit {
+    padding: 0;
+    margin-top: var(--og-space-1);
+  }
+
+  /* A source is a phrase here, not a tag: no pill to clip. */
+  .og-explore-card--ride .og-explore-card__source {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--og-slate-text);
+    font-size: var(--og-text-caption);
+    font-weight: 600;
+  }
+
+  /* A recorded ride with no map image draws its own line in the same 16:9 slot,
+     so every card in My rides starts with a picture of the same shape. */
+  .og-library__track-thumbnail {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    margin-top: var(--og-space-2);
   }
 }
