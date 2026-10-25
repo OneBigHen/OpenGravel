@@ -21,7 +21,10 @@ import {
   searchedEndpointCommand,
   type RideDocumentStore,
 } from "@/ui/stores/ride-document-store";
-import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
+import {
+  settleEndpointPlacement,
+  type PlannerUiStore,
+} from "@/ui/stores/planner-ui-store";
 
 /**
  * The place services the composition root supplies (M1). All optional: a
@@ -225,6 +228,10 @@ export function usePlannerPlaces(input: {
         ),
       );
       if (result.outcome === "applied") {
+        // A picked place is the endpoint the map-pick mode was waiting for: the
+        // armed placement and its hint end here, exactly as they do after a tap,
+        // so a planned ride never keeps "Tap the map to set your destination."
+        settleEndpointPlacement(plannerUiStore, slot);
         plannerUiStore.getState().requestFit(searchFitExtent(result.document));
       }
     },
@@ -251,6 +258,7 @@ export function usePlannerPlaces(input: {
       const state = rideDocumentStore.getState();
       const result = state.dispatch(currentLocationStartCommand(state.document, outcome));
       if (result.outcome === "applied") {
+        settleEndpointPlacement(plannerUiStore, "start");
         plannerUiStore.getState().requestFit(searchFitExtent(result.document));
       }
     });
@@ -291,6 +299,7 @@ export function usePlannerPlaces(input: {
       const state = rideDocumentStore.getState();
       const result = state.dispatch(currentLocationStartCommand(state.document, outcome));
       if (result.outcome === "applied") {
+        settleEndpointPlacement(plannerUiStore, "start");
         plannerUiStore.getState().requestFit(searchFitExtent(result.document));
       }
     }).catch(() => undefined);
