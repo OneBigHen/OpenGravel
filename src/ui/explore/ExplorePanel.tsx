@@ -480,7 +480,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         <div className="og-explore__heading">
           <p className="og-eyebrow">Find your next ride</p>
           <h1>Explore</h1>
-          <p className="og-explore__intro">Find your next ride around Pennsylvania and beyond. Browse by riding area, distance or surface.</p>
         </div>
         {/* AQ-06, AQ-07: a real tab list — arrow keys move, one tab stop, and
             each tab owns the panel below. */}
@@ -523,58 +522,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
       </header>
 
       <div role="tabpanel" id="og-explore-panel" aria-labelledby={`og-explore-tab-${lens}`}>
-      {lens === "ride" ? <>
-        <RideTimeLens value={timeLens} date={rideDate} onChange={setTimeLens} onDateChange={setRideDate} />
-        <RideRoadOpenings lens={timeLens} date={rideDate} token={mapboxToken} map={map} />
-
-        {roadCandidates.length === 0 ? null : <>
-        <section className="og-explore__controls" aria-label="Road filters">
-          <label>
-            <span>Surface band</span>
-            <span className="og-select">
-              <select aria-label="Filter roads by surface" value={roadSurface} onChange={(event) => setRoadSurface(event.target.value as RoadSurfaceFilter)}>
-                <option value="any">Any surface</option>
-                <option value="gravel">Gravel</option>
-                <option value="unknown">Unknown surface</option>
-              </select>
-            </span>
-          </label>
-          <label>
-            <span>Distance</span>
-            <span className="og-select">
-              <select aria-label="Filter roads by distance" value={roadNearMe ? "near" : "any"} onChange={(event) => {
-                const near = event.target.value === "near";
-                setRoadNearMe(near);
-                if (near && roadOrigin === undefined) setRoadLocationNote("Tap Use my location to apply the near-me filter.");
-              }}>
-                <option value="any">Any distance</option>
-                <option value="near">Near me (within 30 mi)</option>
-              </select>
-            </span>
-          </label>
-          <button type="button" className="og-secondary" onClick={filterRoadsByLocation}>Use my location for road distance</button>
-          {roadNearMe && roadOrigin !== undefined ? <button type="button" className="og-secondary" onClick={() => { setRoadNearMe(false); setRoadOrigin(undefined); }}>Clear near-me filter</button> : null}
-        </section>
-        <h2 className="og-road-discovery__title">Worth riding</h2>
-        {roadLocationNote !== null ? <p className="og-explore__note" role="status">{roadLocationNote}</p> : null}
-        {roadCandidates.length === 0 ? null : visibleRoads.length === 0 ? (
-          <p className="og-explore__empty" role="status">
-            No roads match these filters. Unknown geometry is not treated as nearby.{" "}
-            <button type="button" className="og-secondary og-explore__reset" onClick={() => { setRoadSurface("any"); setRoadNearMe(false); setRoadOrigin(undefined); }}>
-              Clear filters
-            </button>
-          </p>
-        ) : (
-          <div className="og-road-discovery" aria-label="Road discovery results">
-            <RoadSlice slice="great" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
-            <RoadSlice slice="gravel" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
-            <RoadSlice slice="new-to-me" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
-          </div>
-        )}
-        {selectedRoad !== null ? <RoadDiscoveryDetailSheet candidate={selectedRoad} map={map} onClose={() => setSelectedRoad(null)} /> : null}
-        </>}
-        <h2 className="og-explore__section">Ready-made rides</h2>
-      </> : null}
       {lens === "ride" ? <div className="og-explore__toolbar">
         <label className="og-explore__search">
           <span className="og-visually-hidden">Search</span>
@@ -648,15 +595,24 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           <input aria-label="Curvy routes only" type="checkbox" checked={query.curvy === true} disabled={!hasCurvatureEvidence} title={!hasCurvatureEvidence ? "Curvature evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ curvy: event.target.checked || undefined })} />
           <span>Curvy only</span>
         </label>
-        <label>
+        <label htmlFor="og-explore-region-picker">
           <span>Region</span>
-          <input
-            aria-label="Filter by region"
-            type="search"
-            value={query.region ?? ""}
-            onChange={(event) => updateQuery({ region: event.target.value || undefined })}
-            placeholder="e.g. Pennsylvania"
-          />
+          <span className="og-select">
+            <select id="og-explore-region-picker" aria-label="Filter by region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
+              <option value="">All regions</option>
+              {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
+              {regions.map((region) => <option key={region} value={region}>{region}</option>)}
+            </select>
+          </span>
+        </label>
+        <label htmlFor="og-explore-area-picker">
+          <span>PA riding area</span>
+          <span className="og-select">
+            <select id="og-explore-area-picker" aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
+              <option value="">All riding areas</option>
+              {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
+            </select>
+          </span>
         </label>
         <label>
           <span>Sort</span>
@@ -679,6 +635,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             </select>
           </span>
         </label>
+        <RideTimeLens value={timeLens} date={rideDate} onChange={setTimeLens} onDateChange={setRideDate} />
         <button type="button" className="og-secondary og-explore__near" aria-label="Sort by distance from me" onClick={sortByLocation}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
@@ -693,31 +650,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
       </div> : null}
 
       {lens === "ride" ? (
-        <section className="og-explore__areas" aria-label="Browse riding regions">
-          <label htmlFor="og-explore-region-picker">
-            <span>Region</span>
-            <span className="og-select">
-              <select id="og-explore-region-picker" aria-label="Browse region" value={query.region ?? ""} onChange={(event) => updateQuery({ region: event.target.value || undefined, area: undefined }, true)}>
-                <option value="">All regions</option>
-                {query.region && !regions.includes(query.region) ? <option value={query.region}>{query.region}</option> : null}
-                {regions.map((region) => <option key={region} value={region}>{region}</option>)}
-              </select>
-            </span>
-          </label>
-          <label htmlFor="og-explore-area-picker">
-            <span>PA riding area</span>
-            <span className="og-select">
-              <select id="og-explore-area-picker" aria-label="PA riding area" value={query.area ?? ""} onChange={(event) => updateQuery({ area: parsePaRidingArea(event.target.value), region: undefined }, true)}>
-                <option value="">All riding areas</option>
-                {areaCounts.map((area) => <option key={area.id} value={area.id}>{area.label} · {area.count}</option>)}
-              </select>
-            </span>
-          </label>
-          <p>Areas include nearby border towns and show where routes start. Expand the map to see full paths.</p>
-        </section>
-      ) : null}
-
-      {lens === "ride" ? (
         <div className="og-explore__quick" role="group" aria-label="Quick filters">
           <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
             if (query.sort === "near") updateQuery({ sort: "recommended" });
@@ -729,12 +661,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
               {chip.label}
             </button>
           ))}
-          {hasCurvatureEvidence ? (
-            <button type="button" className="og-explore__quick-chip" aria-pressed={query.curvy === true} onClick={() => updateQuery({ curvy: query.curvy === true ? undefined : true })}>Curvy</button>
-          ) : null}
-          {hasSurfaceEvidence ? (
-            <button type="button" className="og-explore__quick-chip" aria-pressed={query.surface === "gravel"} onClick={() => updateQuery({ surface: query.surface === "gravel" ? undefined : "gravel" })}>Gravel</button>
-          ) : null}
         </div>
       ) : null}
 
@@ -758,20 +684,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           </p>
         ) : null}
         {visibleEntries.length > 0 ? (
-          // EX-11: how many routes the list holds, so a long scroll has a size.
-          <p className="og-explore__count" role="status" data-testid="explore-count">
-            {visibleEntries.length === 1 ? "1 route" : `${visibleEntries.length} routes`}
-          </p>
-        ) : null}
-        {visibleEntries.length > 0 ? (
           <div className={map === undefined ? undefined : "og-explore__split"}>
-            {map === undefined ? null : (
-              <ExploreMap
-                {...map}
-                entries={visibleEntries}
-                highlightedId={highlightedId}
-              />
-            )}
             <ul className="og-explore__list" aria-label="Explore routes">
               {visibleEntries.map((entry) => (
                 <RouteCard
@@ -783,11 +696,67 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
                 />
               ))}
             </ul>
+            {map === undefined ? null : (
+              <ExploreMap
+                {...map}
+                entries={visibleEntries}
+                highlightedId={highlightedId}
+              />
+            )}
             {mapboxToken === undefined ? null : (
               <p className="og-explore__attribution">Map images © Mapbox © OpenStreetMap</p>
             )}
           </div>
         ) : null}
+        {/* Road windows and the roads worth riding follow the rides: a rider who
+            opened Explore to pick a ride is not asked about authority paperwork first. */}
+        <RideRoadOpenings lens={timeLens} date={rideDate} token={mapboxToken} map={map} />
+        {roadCandidates.length === 0 ? null : <>
+        <section className="og-explore__controls" aria-label="Road filters">
+          <label>
+            <span>Surface band</span>
+            <span className="og-select">
+              <select aria-label="Filter roads by surface" value={roadSurface} onChange={(event) => setRoadSurface(event.target.value as RoadSurfaceFilter)}>
+                <option value="any">Any surface</option>
+                <option value="gravel">Gravel</option>
+                <option value="unknown">Unknown surface</option>
+              </select>
+            </span>
+          </label>
+          <label>
+            <span>Distance</span>
+            <span className="og-select">
+              <select aria-label="Filter roads by distance" value={roadNearMe ? "near" : "any"} onChange={(event) => {
+                const near = event.target.value === "near";
+                setRoadNearMe(near);
+                if (near && roadOrigin === undefined) setRoadLocationNote("Tap Use my location to apply the near-me filter.");
+              }}>
+                <option value="any">Any distance</option>
+                <option value="near">Near me (within 30 mi)</option>
+              </select>
+            </span>
+          </label>
+          <button type="button" className="og-secondary" onClick={filterRoadsByLocation}>Use my location for road distance</button>
+          {roadNearMe && roadOrigin !== undefined ? <button type="button" className="og-secondary" onClick={() => { setRoadNearMe(false); setRoadOrigin(undefined); }}>Clear near-me filter</button> : null}
+        </section>
+        <h2 className="og-road-discovery__title">Worth riding</h2>
+        {roadLocationNote !== null ? <p className="og-explore__note" role="status">{roadLocationNote}</p> : null}
+        {visibleRoads.length === 0 ? (
+          <p className="og-explore__empty" role="status">
+            No roads match these filters. Unknown geometry is not treated as nearby.{" "}
+            <button type="button" className="og-secondary og-explore__reset" onClick={() => { setRoadSurface("any"); setRoadNearMe(false); setRoadOrigin(undefined); }}>
+              Clear filters
+            </button>
+          </p>
+        ) : (
+          <div className="og-road-discovery" aria-label="Road discovery results">
+            <RoadSlice slice="great" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
+            <RoadSlice slice="gravel" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
+            <RoadSlice slice="new-to-me" candidates={visibleRoads} onOpen={setSelectedRoad} mapboxToken={mapboxToken} />
+          </div>
+        )}
+        {selectedRoad !== null ? <RoadDiscoveryDetailSheet candidate={selectedRoad} map={map} onClose={() => setSelectedRoad(null)} /> : null}
+        </>}
       </> : <ThingsFeed />}
       </div>
     </main>

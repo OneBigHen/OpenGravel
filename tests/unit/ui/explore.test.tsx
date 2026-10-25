@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
@@ -74,8 +74,9 @@ describe("Explore UI", () => {
 
   it("adds discrete region and riding-area selections to browser history", () => {
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     const push = vi.spyOn(window.history, "pushState");
-    fireEvent.change(screen.getByRole("combobox", { name: "Browse region" }), { target: { value: "Lehigh Valley" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by region" }), { target: { value: "Lehigh Valley" } });
     expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("region=Lehigh"));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("area=eastern-pa"));
@@ -87,26 +88,56 @@ describe("Explore UI", () => {
     // Each select now sits in the shared .og-select wrapper (pill, hairline,
     // custom chevron), and the visible caption is associated by htmlFor/id.
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    const filters = screen.getByRole("region", { name: "Explore filters" });
     for (const id of ["og-explore-region-picker", "og-explore-area-picker"]) {
       const select = document.getElementById(id);
       expect(select?.tagName).toBe("SELECT");
       expect(select?.parentElement).toHaveClass("og-select");
       expect(select?.closest("label")).toHaveAttribute("for", id);
+      expect(filters).toContainElement(select);
     }
     const selects = Array.from(document.querySelectorAll("select"));
     expect(selects.length).toBeGreaterThan(0);
     for (const select of selects) expect(select.parentElement).toHaveClass("og-select");
   });
 
-  it("shows more than ten rides and filters Pennsylvania riding areas without opening the sheet", () => {
+  it("shows more than ten rides and filters Pennsylvania riding areas from the filters sheet", () => {
     const entries = Array.from({ length: 30 }, (_, index) => ({ ...entry, id: `route-${index}`, name: `Route ${index}`, region: "Pennsylvania" }));
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
     render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
     expect(window.location.search).toContain("area=eastern-pa");
+  });
+
+  it("leads with the ride cards and folds the date, region and area pickers into the filters sheet", () => {
+    const twisty = { ...entry, id: "twisty", surfaceSummary: "Mixed", curvatureSummary: "Twisty" };
+    render(<ExplorePanel entries={[twisty]} mapboxToken="public-test" />);
+    const list = screen.getByRole("list", { name: "Explore routes" });
+    const filters = screen.getByRole("region", { name: "Explore filters" });
+    const follows = (first: Element, second: Element): boolean =>
+      (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+
+    // One row of chips: the near-me sort and the three distance buckets. Curvy
+    // and gravel stay reachable, as options in the sheet.
+    expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent))
+      .toEqual(["Near me", "Under 30 mi", "30–90 mi", "90+ mi"]);
+    // The date chips and both pickers live in the sheet, not above the list.
+    expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
+    expect(filters).toContainElement(screen.getByRole("combobox", { name: "Filter by region" }));
+    expect(filters).toContainElement(screen.getByRole("combobox", { name: "PA riding area" }));
+    expect(follows(filters, list)).toBe(true);
+    // Road windows come after the rides, and the map images are credited under them.
+    expect(follows(list, screen.getByRole("button", { name: "Find roads near me" }))).toBe(true);
+    expect(follows(list, screen.getAllByText("Map images © Mapbox © OpenStreetMap")[0]!)).toBe(true);
+    // No explanatory prose and no section heading before the first ride.
+    expect(screen.queryByRole("heading", { name: "Ready-made rides" })).toBeNull();
+    expect(screen.queryByText(/Areas include nearby border towns/)).toBeNull();
+    expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
   });
 
   it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
@@ -167,15 +198,18 @@ describe("Explore UI", () => {
     expect(screen.getByText("Surface unknown")).toBeInTheDocument();
     expect(screen.getByText("Curvature unknown")).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Search routes" })).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: "Filter by region" })).toHaveAttribute("placeholder", "e.g. Pennsylvania");
-    expect(screen.getByRole("combobox", { name: "Sort routes" })).toHaveValue("recommended");
-    expect(screen.getByRole("combobox", { name: "Filter by surface" })).toBeDisabled();
-    expect(screen.getByRole("checkbox", { name: "Curvy routes only" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    const filters = within(screen.getByRole("region", { name: "Explore filters" }));
+    expect(filters.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
+    expect(filters.getByRole("combobox", { name: "Filter by region" })).toHaveValue("");
+    expect(filters.getByRole("combobox", { name: "Sort routes" })).toHaveValue("recommended");
+    expect(filters.getByRole("combobox", { name: "Filter by surface" })).toBeDisabled();
+    expect(filters.getByRole("checkbox", { name: "Curvy routes only" })).toBeDisabled();
     expect(screen.queryByText("Curated")).not.toBeInTheDocument();
     expect(screen.queryByText(entry.provenance)).not.toBeInTheDocument();
     expect(screen.queryByText(/GraphHopper|motorcycle_scenic/)).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Filter by source" }), {
+    fireEvent.change(filters.getByRole("combobox", { name: "Filter by source" }), {
       target: { value: "personal" },
     });
     expect(screen.getByText("No routes match these filters.")).toBeInTheDocument();
@@ -676,12 +710,12 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("button", { name: /use in planner/i })).not.toBeInTheDocument();
   });
 
-  it("omits the empty road section while keeping ready-made rides available", () => {
+  it("omits the empty road section while keeping the ride list and search available", () => {
     render(<ExplorePanel entries={[]} roadCandidates={[]} />);
     fireEvent.click(screen.getByRole("tab", { name: "Ride" }));
 
     expect(screen.queryByRole("heading", { name: "Worth riding" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ready-made rides" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search routes" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /road details/i })).not.toBeInTheDocument();
   });
 

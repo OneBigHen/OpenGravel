@@ -1258,6 +1258,11 @@ html .og-ride {
   .og-explore .og-explore__toolbar > .og-explore__controls {
     display: contents;
   }
+
+  /* On the wide toolbar the ride-date chips join the same row as the selects. */
+  .og-explore .og-explore__toolbar > .og-explore__controls > .og-explore__row {
+    padding-block: 0;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1342,6 +1347,12 @@ html .og-ride {
 
   .og-explore__controls[data-open="true"] > :is(.og-explore__sheet-head, .og-explore__sheet-done, .og-explore__near) {
     grid-column: 1 / -1;
+  }
+
+  /* The ride date is a row of chips, not a field: it spans the sheet. */
+  .og-explore__controls[data-open="true"] > .og-explore__row {
+    grid-column: 1 / -1;
+    padding-block: 0;
   }
 
   .og-explore__controls[data-open="true"] label {

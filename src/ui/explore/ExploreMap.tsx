@@ -151,7 +151,6 @@ export function ExploreMap(props: ExploreMapProps) {
   return (
     <div className="og-explore-map-panel">
       <div className="og-explore-map-panel__head">
-        <span>Every matching route on the map</span>
         <button type="button" className="og-secondary" onClick={() => setExpanded(true)}>Expand map</button>
       </div>
       {expanded ? null : <ExploreMapCanvas {...props} />}

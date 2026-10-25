@@ -8628,12 +8628,12 @@ h3,
   background: repeating-linear-gradient(135deg, var(--og-sandstone) 0 3px, transparent 3px 6px);
 }
 
-/* Explore map + list (UX rework phase 5). Phone: a map strip above the list.
-   Wide: the list scrolls beside a sticky map, and the card under the pointer is
-   drawn as the chosen line. */
+/* Explore map + list (UX rework phase 5). Phone: the ride cards first, the map
+   strip under them. Wide: the list scrolls beside a sticky map, and the card
+   under the pointer is drawn as the chosen line. */
 .og-explore__split {
   display: grid;
-  grid-template-areas: "map" "list";
+  grid-template-areas: "list" "map";
   gap: 12px;
 }
 
@@ -8673,28 +8673,12 @@ h3,
 .og-explore-map-panel { min-width: 0; }
 .og-explore-map-panel__head {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
   font-size: var(--og-text-meta);
 }
-
-.og-explore__areas {
-  display: grid;
-  /* Region and PA riding area share one row from 360px up (a 390px phone puts
-     them side by side); below that they stack rather than squash. */
-  grid-template-columns: minmax(0, 1fr);
-  align-items: end;
-  gap: 12px 16px;
-  margin: 16px 0;
-}
-@media (min-width: 360px) {
-  .og-explore__areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-.og-explore__areas label { display: grid; gap: 6px; min-width: 0; }
-.og-explore__areas label > span:not(.og-select) { font-weight: 650; font-size: var(--og-text-meta); }
-.og-explore__areas p { grid-column: 1 / -1; margin: 0; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 
 .og-explore-map-dialog {
   position: fixed;
