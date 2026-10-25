@@ -24,7 +24,7 @@ import "fake-indexeddb/auto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -626,7 +626,7 @@ describe("dark chrome and honest states", () => {
     const glass = read("theme-glass.css");
     expect(
       ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver[data-then="true"]'),
-    ).toMatch(/min-height:\s*138px/);
+    ).toMatch(/min-height:\s*126px/);
     expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-then')).toMatch(
       /border-top-color:\s*rgb\(255 255 255 \/ 24%\)/,
     );
@@ -775,20 +775,25 @@ async function offRouteHarness(options: {
 }
 
 describe("off the route: the recovery is on the card (DV-10)", () => {
-  it("shows how far off the line, plus Reroute now and Details, and reroutes once", async () => {
+  it("says the way back, shows how far off, offers one New route from here, and reroutes once", async () => {
     const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
     const { store } = await offRouteHarness({ reroutePlanner: { plan } });
 
     expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
-    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("Off the route");
+    // The same card says what to do next, in plain words: no heading is known
+    // here, so it names the road and never guesses left or right.
+    expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent(/^Head back to /);
+    expect(screen.queryByText(/Off the route/)).toBeNull();
     // The engine's own measurement, in the maneuver card's feet/mile rule.
     expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("200 ft off route");
 
     const reroute = screen.getByTestId("ride-reroute-now");
-    expect(reroute).toHaveTextContent("Reroute now");
+    expect(reroute).toHaveTextContent("New route from here");
     expect(reroute).toBeEnabled();
     expect(reroute).toHaveClass("og-ride__action", "og-ride__action--primary");
-    expect(screen.getByTestId("ride-off-route-details")).toHaveTextContent("Details");
+    // One action: no second button on the card.
+    expect(screen.getByTestId("ride-off-route-actions").querySelectorAll("button")).toHaveLength(1);
+    expect(screen.queryByTestId("ride-off-route-details")).toBeNull();
     // The sheet is not needed to recover.
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
 
@@ -798,10 +803,26 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
     await waitFor(() => expect(plan).toHaveBeenCalledTimes(1));
     // It is the store's own reroute, so its failure is the store's own copy.
     expect(store.getState().rerouteError).toContain("Keep riding toward the line");
-    expect(screen.getByTestId("ride-toast")).toHaveTextContent("Keep riding toward the line");
+    // The card carries the failure itself; there is no second banner.
+    expect(screen.getByTestId("ride-off-route-distance")).toHaveTextContent("Keep riding toward the line");
+    expect(screen.queryByTestId("ride-toast")).toBeNull();
+  });
 
-    fireEvent.click(screen.getByTestId("ride-off-route-details"));
-    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+  it("never raises the ride-changed-elsewhere banner: it keeps riding and offers the newer version quietly", async () => {
+    const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "stale-ride" as const }));
+    const { store } = await offRouteHarness({ reroutePlanner: { plan } });
+
+    fireEvent.click(screen.getByTestId("ride-reroute-now"));
+    await waitFor(() => expect(plan).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(store.getState().newerVersionReady).toBe(true));
+
+    expect(screen.queryByText(/changed on another screen/i)).toBeNull();
+    expect(screen.queryByText(/Return to Plan/i)).toBeNull();
+    expect(screen.getByTestId("ride-maneuver")).toHaveAttribute("data-kind", "suspended");
+    // The sheet has the quiet row.
+    const row = screen.getByTestId("ride-newer-version");
+    expect(row).toHaveTextContent("A newer version of this ride is ready");
+    expect(within(row).getByRole("link", { name: "Switch", hidden: true })).toBeInTheDocument();
   });
 
   it("refuses the reroute on a fix that is not fresh-good, with the reason on the button", async () => {
@@ -813,7 +834,7 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
     expect(reroute).toBeDisabled();
     // Disabled is not blank: the label stays, and the day theme paints it (see
     // the stylesheet test below) instead of white on the white disabled pill.
-    expect(reroute).toHaveTextContent("Reroute now");
+    expect(reroute).toHaveTextContent("New route from here");
     expect(reroute).toHaveAttribute("title", "Rerouting needs a fresh, accurate GPS fix.");
 
     fireEvent.click(reroute);
@@ -842,7 +863,7 @@ describe("off the route: the recovery is on the card (DV-10)", () => {
     await act(async () => {
       settle?.({ status: "unavailable", reason: "no-route" });
     });
-    await waitFor(() => expect(screen.getByTestId("ride-reroute-now")).toHaveTextContent("Reroute now"));
+    await waitFor(() => expect(screen.getByTestId("ride-reroute-now")).toHaveTextContent("New route from here"));
   });
 
   it("offers the distance but no recovery controls when the ride cannot reroute at all", async () => {
@@ -1292,38 +1313,40 @@ describe("camera (08 §2, DV-10)", () => {
     expect(screen.queryByTestId("ride-recenter")).not.toBeInTheDocument();
   });
 
-  it("zooms the map itself from the rail and holds the level through the next frame", async () => {
+  it("turns the map from the compass, which appears only while the map is rotated or north-up", async () => {
     const { store, hosts } = await harness({ position: "fresh" });
     const host = hosts.hosts[0];
     if (host === undefined) throw new Error("the ride created no map host");
     await waitFor(() => expect(store.getState().follow).toBe(true));
 
-    // The renderer's own reading, with room to move either way.
+    // Pointing up the road: nothing to turn back, so no compass on screen.
+    act(() => {
+      host.reportCamera({ bearing: 0, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
+    });
+    expect(screen.queryByTestId("ride-compass")).toBeNull();
+
     act(() => {
       host.reportCamera({ bearing: 212, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
     });
-
-    fireEvent.click(screen.getByTestId("ride-zoom-in"));
-    // One press is one host call — the map moves, not a stored preference.
-    expect(host.zooms).toEqual([1]);
-    expect(store.getState().zoomHold?.zoom).toBe(17);
-
     const headingUp = host.follows.at(-1)?.bearing ?? null;
     expect(headingUp).not.toBeNull();
 
     // North-up re-issues the follow frame, so this is the same reading the next
-    // fix would produce: the pressed zoom survives it, and the map turns.
+    // fix would produce: the map turns.
     fireEvent.click(screen.getByTestId("ride-compass"));
     const northUp = host.follows.at(-1);
     expect(store.getState().northUp).toBe(true);
     expect(northUp?.bearing).toBe(0);
-    expect(northUp?.zoom).toBe(17);
     // The arrow still points up the road: the direction of travel is not the
     // direction the screen is turned.
     expect(host.lastScene()?.riderPosition?.heading).toBe(headingUp);
 
     expect(screen.getByTestId("ride-compass")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("ride-compass")).toHaveAccessibleName("North up");
+    // North-up with a straight map keeps the compass, so heading-up is one tap away.
+    act(() => {
+      host.reportCamera({ bearing: 0, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
+    });
     fireEvent.click(screen.getByTestId("ride-compass"));
     expect(store.getState().northUp).toBe(false);
     expect(host.follows.at(-1)?.bearing).toBe(headingUp);
@@ -1339,23 +1362,23 @@ describe("camera (08 §2, DV-10)", () => {
     });
     expect(store.getState().follow).toBe(false);
 
+    act(() => {
+      host?.reportCamera({ bearing: 40, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
+    });
     fireEvent.click(screen.getByTestId("ride-compass"));
     expect(host?.northResets).toBe(1);
     expect(store.getState().northUp).toBe(true);
   });
 
-  it("says a zoom limit instead of pressing a button that cannot move", async () => {
-    const { hosts } = await harness({ position: "fresh" });
-    const host = hosts.hosts[0];
-    if (host === undefined) throw new Error("the ride created no map host");
-    act(() => {
-      host.reportCamera({ bearing: 212, zoom: 22, minZoom: 0, maxZoom: 22, metersPerPixel: 1 });
-    });
-
-    const zoomIn = screen.getByTestId("ride-zoom-in");
-    expect(zoomIn).toHaveAttribute("aria-disabled", "true");
-    fireEvent.click(zoomIn);
-    expect(host.zooms).toEqual([]);
+  it("has no + / - zoom on touch: the map zooms by pinch", async () => {
+    await harness({ position: "fresh" });
+    expect(screen.queryByTestId("ride-zoom-in")).toBeNull();
+    expect(screen.queryByTestId("ride-zoom-out")).toBeNull();
+    // The planner map's own column (compass, + / -) is hidden on the ride screen.
+    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const at = css.indexOf(".og-ride__map .og-map__cluster");
+    expect(at).toBeGreaterThan(-1);
+    expect(css.slice(at, css.indexOf("}", at))).toMatch(/display:\s*none/);
   });
 
   it("snaps back to following 10 s after the rider's last pan", async () => {
@@ -1442,11 +1465,12 @@ describe("12 §10 touch targets", () => {
 
     for (const id of [
       "ride-pause",
-      "ride-stop",
       "ride-exit",
     ]) {
       expect(screen.getByTestId(id)).toHaveClass("og-ride__action");
     }
+    // The sheet's rows are the same glove size.
+    expect(screen.getByTestId("ride-stop")).toHaveClass("og-ride__sheet-row");
   });
 
   it("declares the 56 px hit area and the dark chrome in the stylesheet", () => {
@@ -1465,20 +1489,16 @@ describe("12 §10 touch targets", () => {
     expect(action).toMatch(/min-width:\s*56px/);
     // The off-route recovery's labels are the page's body size, not 15 px.
     expect(action).toMatch(/font-size:\s*var\(--og-text-body\)/);
-    // DV-10: the strip's end button and Re-center are glove-sized too.
+    // DV-10: the strip's exit button and the sheet's rows are glove-sized too.
     const end = rule(".og-ride__strip-end");
     expect(end).toMatch(/width:\s*56px/);
     expect(end).toMatch(/height:\s*56px/);
-    expect(rule(".og-ride__recenter")).toMatch(/min-height:\s*56px/);
-    // DV-10's glove rail: 56 px round buttons, spaced so a thumb cannot reach
-    // two, and the zoom pair as one pill whose halves are each 56 px.
+    expect(rule(".og-ride__sheet-row")).toMatch(/min-height:\s*56px/);
+    // DV-10's glove rail: 56 px round buttons, spaced so a thumb cannot reach two.
     const rail = rule(".og-ride__rail-button");
     expect(rail).toMatch(/width:\s*56px/);
     expect(rail).toMatch(/height:\s*56px/);
     expect(rule(".og-ride__rail")).toMatch(/gap:\s*12px/);
-    const railZoom = rule(".og-ride__rail-zoom .og-ride__rail-button");
-    expect(railZoom).toMatch(/width:\s*56px/);
-    expect(railZoom).toMatch(/height:\s*56px/);
     // The compass needle is the map's rotation, drawn in the theme's own ink.
     expect(rule(".og-ride__compass-needle")).toMatch(/rotate\(calc\(var\(--og-bearing/);
 
@@ -1677,15 +1697,15 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(screen.queryByTestId("ride-metric-option-context.smart")).toBeNull();
     expect(screen.getByTestId("ride-metric-option-route.distanceRemaining")).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByTestId("ride-metric-option-route.eta"));
+    fireEvent.click(screen.getByTestId("ride-metric-option-route.timeRemaining"));
     expect(screen.queryByTestId("ride-metric-picker")).toBeNull();
-    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-metric", "route.eta");
+    expect(screen.getByTestId("ride-metric-slot-1")).toHaveAttribute("data-metric", "route.timeRemaining");
     // Only that slot changed.
     expect(screen.getByTestId("ride-metric-slot-0")).toHaveAttribute("data-metric", "speed.current");
-    expect(screen.getByTestId("ride-metric-slot-2")).toHaveAttribute("data-metric", "route.timeRemaining");
+    expect(screen.getByTestId("ride-metric-slot-2")).toHaveAttribute("data-metric", "route.eta");
     expect(screen.getByTestId("ride-metric-strip")).toHaveAttribute("data-preset", "custom");
-    expect(settings.saved.at(-1)?.uiPreferences.rideMetrics).toEqual(["speed.current", "route.eta", "route.timeRemaining"]);
-    expect(screen.getByTestId("ride-metric-announcement")).toHaveTextContent("Readout 2 now shows Arrival.");
+    expect(settings.saved.at(-1)?.uiPreferences.rideMetrics).toEqual(["speed.current", "route.timeRemaining", "route.eta"]);
+    expect(screen.getByTestId("ride-metric-announcement")).toHaveTextContent("Readout 2 now shows Time left.");
     expect(screen.getByTestId("ride-metric-slot-1")).toHaveFocus();
   });
 
@@ -1702,7 +1722,7 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
     expect(settings.saved.at(-1)?.uiPreferences.rideMetrics).toEqual([
       "speed.current",
       "route.distanceRemaining",
-      "route.timeRemaining",
+      "route.eta",
     ]);
   });
 
@@ -1858,13 +1878,16 @@ describe("the ride screen's number scale and controls (small-screen design syste
     expect(rule(".og-ride-metrics__unit")).toMatch(/font-size:\s*var\(--og-text-caption\)/);
   });
 
-  it("never clips a readout: the value is shown whole, the caption wraps", () => {
+  it("never clips a readout: the value is shown whole, number and unit on one line, caption one line", () => {
     const reading = rule(".og-ride-metrics__reading");
     expect(reading).toMatch(/overflow:\s*visible/);
+    // "47 mph", never stacked.
+    expect(reading).toMatch(/flex-direction:\s*row/);
     expect(reading).not.toMatch(/text-overflow/);
 
     const caption = rule(".og-ride-metrics__caption");
-    expect(caption).toMatch(/white-space:\s*normal/);
+    expect(caption).toMatch(/white-space:\s*nowrap/);
+    expect(caption).toMatch(/font-size:\s*var\(--og-text-caption\)/);
     expect(caption).not.toMatch(/text-overflow/);
 
     // The only step-down is the seven-character clock, and it lands on the page
@@ -1882,26 +1905,27 @@ describe("the ride screen's number scale and controls (small-screen design syste
     }
   });
 
-  it("keeps one right-hand control column at 56 px, with End ride in it", async () => {
+  it("keeps one right-hand control column of at most three 56 px buttons, with no red X", async () => {
     const rail = rule(".og-ride__rail-button");
     expect(rail).toMatch(/width:\s*56px/);
     expect(rail).toMatch(/height:\s*56px/);
-    // Side by side, so the column still clears the card on a 640 px phone.
-    expect(rule(".og-ride__rail-zoom")).toMatch(/grid-auto-flow:\s*column/);
-    expect(rule(".og-ride__rail-zoom")).toMatch(/grid-auto-columns:\s*56px/);
-    expect(rule(".og-ride__rail-button--end")).toMatch(/color:\s*var\(--og-danger-light\)/);
 
     await harness({ position: "fresh" });
-    const end = screen.getByTestId("ride-end");
-    expect(end).toHaveClass("og-ride__rail-button");
-    expect(end).toHaveAccessibleName("End this ride");
-    // The strip holds readouts and the sheet toggle only; nothing beside them
-    // squeezes a 24 px reading below the width it needs.
-    expect(end.closest(".og-ride__strip")).toBeNull();
+    const column = screen.getByRole("group", { name: "Map and voice" });
+    const buttons = within(column).getAllByRole("button");
+    expect(buttons.length).toBeLessThanOrEqual(3);
+    for (const button of buttons) expect(button).toHaveClass("og-ride__rail-button");
+    // The old unlabeled red X is gone; the end of the ride is a named row in the sheet.
+    expect(screen.queryByTestId("ride-end")).toBeNull();
+    expect(screen.queryByRole("button", { name: "End this ride" })).toBeNull();
+    expect(screen.getByTestId("ride-stop")).toHaveTextContent("End ride");
+    // The strip holds readouts and the labelled menu button only; nothing beside
+    // them squeezes a 24 px reading below the width it needs.
     const strip = screen.getByTestId("ride-strip").closest(".og-ride__strip");
     expect(strip).not.toBeNull();
     expect(strip?.querySelectorAll(".og-ride-metrics__slot")).toHaveLength(3);
     expect(strip?.querySelector(".og-ride__strip-end")).toBeNull();
+    expect(screen.getByTestId("ride-strip")).toHaveTextContent("Menu");
   });
 
   it("leaves the map full-bleed, with the card and the strip floating over it", () => {

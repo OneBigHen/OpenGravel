@@ -67,6 +67,7 @@ import { formatDistance } from "@/application/planner/measurements";
 import { RideOfferCard } from "@/ui/ride/RideOfferCard";
 import { RideRouteSketch } from "@/ui/ride/RideRouteSketch";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
+import { headBackDirection } from "@/application/ride-session/head-back";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
 import type { RideSummaryStat } from "@/application/ride-metrics/ride-summary";
@@ -143,9 +144,6 @@ const NO_RIDE_COPY =
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
-/** Zoom changes below this are rounding noise, not a limit the button is at. */
-const ZOOM_LIMIT_EPSILON = 0.01;
-
 /** The four numbers the finish card leads with; the rest become its one meta line. */
 const SUMMARY_HEADLINE_IDS: readonly RideSummaryStat["id"][] = ["distance", "moving", "max", "climb"];
 
@@ -155,12 +153,6 @@ const DISPLAY_CHOICES: readonly { readonly mode: AppearanceMode; readonly label:
   { mode: "day", label: "Day" },
   { mode: "night", label: "Night" },
 ];
-
-/** The level one zoom press asks for, inside the renderer's own limits. */
-function zoomStep(camera: CameraView, delta: 1 | -1): number {
-  const next = Math.min(camera.maxZoom, Math.max(camera.minZoom, camera.zoom + delta));
-  return Math.round(next * 10) / 10;
-}
 
 function rideSafeArea(): MapInsets {
   const style = getComputedStyle(document.documentElement);
@@ -302,6 +294,7 @@ export function RideFocus({
   const rerouteBusy = useStore(store, (state) => state.rerouteBusy);
   const rerouteMessage = useStore(store, (state) => state.rerouteMessage);
   const rerouteError = useStore(store, (state) => state.rerouteError);
+  const newerVersionReady = useStore(store, (state) => state.newerVersionReady);
   const riderSettings = useStore(store, (state) => state.riderSettings);
   const surfaceReady = status === "ready" && viewModel !== null;
   const rootRef = useRef<HTMLElement | null>(null);
@@ -558,12 +551,8 @@ export function RideFocus({
     the planner's column: one press is one host call, and the store remembers the
     level so the follow camera does not put the speed zoom straight back.
   */
-  const zoomStepBy = (delta: 1 | -1): void => {
-    hostRef.current?.zoomBy?.(delta);
-    if (camera !== null) store.getState().zoomTo(zoomStep(camera, delta));
-  };
-  const atMaxZoom = camera !== null && camera.zoom >= camera.maxZoom - ZOOM_LIMIT_EPSILON;
-  const atMinZoom = camera !== null && camera.zoom <= camera.minZoom + ZOOM_LIMIT_EPSILON;
+  /** The compass shows while the map is turned, or north-up (so it can turn back). */
+  const compassShown = northUp || (camera !== null && Math.abs(((camera.bearing + 540) % 360) - 180) > 1.5);
   const mapProps = {
     scene,
     onIntent: onMapIntent,
@@ -729,6 +718,20 @@ export function RideFocus({
     guidance.reason === "off-route" &&
     rerouteAvailable;
   const rerouteFixGood = position.quality === "fresh-good";
+  // Which way the route is, from the rider's own heading (never guessed: with no
+  // heading the card says where, not left or right).
+  const offRouteHere = terminal === null && guidance.kind === "suspended" && guidance.reason === "off-route";
+  const headBack =
+    offRouteHere && navigation?.position.coordinate != null
+      ? headBackDirection(availableRouteLine, navigation.position.coordinate, navigation.position.headingDegrees)
+      : null;
+  const headBackRoad = navigation?.instruction?.roadName ?? null;
+  const headBackText =
+    headBack?.glyph === "uturn"
+      ? "Turn around"
+      : headBackRoad === null
+        ? "Head back to the route"
+        : `Head back to ${headBackRoad}`;
 
   /*
     Is it recording? A mounted phone can answer that without the sheet: the
@@ -773,6 +776,7 @@ export function RideFocus({
             className="og-ride__maneuver"
             data-testid="ride-maneuver"
             data-kind={guidance.kind}
+            data-reason={guidance.kind === "suspended" ? guidance.reason : undefined}
             /*
               The card only reserves the extra row when there really is a
               second maneuver inside a mile, so it never grows for a guess
@@ -844,21 +848,24 @@ export function RideFocus({
                   </p>
                 )}
               </>
-            ) : (
+            ) : guidance.kind === "suspended" && guidance.reason === "off-route" ? (
               <>
-                <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
-                  <span data-testid={gpsUnavailable ? "ride-warning-gps-unavailable" : undefined}>{guidance.text}</span>
-                </p>
-                {guidance.kind === "suspended" && guidance.offRouteDistanceText !== null ? (
-                  <p className="og-ride__off-route-distance" data-testid="ride-off-route-distance">
-                    {guidance.offRouteDistanceText}
-                  </p>
-                ) : null}
                 {/*
-                  A reroute already in flight is shown, not hidden: the card
-                  keeps its shape and the rider can see why nothing more will
-                  happen (the store refuses the second call).
+                  Off the line, the same card still says the next action: which
+                  way the route is, and the one thing to tap if the rider would
+                  rather have a new route from here.
                 */}
+                <span className="og-ride__maneuver-symbol">
+                  <ManeuverGlyph glyph={headBack?.glyph ?? "straight"} />
+                </span>
+                <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
+                  {headBackText}
+                </p>
+                {(rerouteError ?? guidance.offRouteDistanceText) === null ? null : (
+                  <p className="og-ride__off-route-distance" data-testid="ride-off-route-distance">
+                    {rerouteError ?? guidance.offRouteDistanceText}
+                  </p>
+                )}
                 {offRouteActionsShown ? (
                   <div className="og-ride__off-route-actions" data-testid="ride-off-route-actions">
                     <button
@@ -870,18 +877,16 @@ export function RideFocus({
                       title={rerouteBusy || rerouteFixGood ? undefined : REROUTE_FIX_REASON}
                       onClick={(): void => { void store.getState().reroute(); }}
                     >
-                      {rerouteBusy ? "Routing…" : "Reroute now"}
-                    </button>
-                    <button
-                      type="button"
-                      className="og-ride__action og-ride__off-route-action"
-                      data-testid="ride-off-route-details"
-                      onClick={openSheet}
-                    >
-                      Details
+                      {rerouteBusy ? "Routing…" : "New route from here"}
                     </button>
                   </div>
                 ) : null}
+              </>
+            ) : (
+              <>
+                <p className="og-ride__maneuver-suspended" data-testid="ride-guidance-state">
+                  <span data-testid={gpsUnavailable ? "ride-warning-gps-unavailable" : undefined}>{guidance.text}</span>
+                </p>
               </>
             )}
             {position.tone === "good" || terminal !== null ? null : (
@@ -929,7 +934,7 @@ export function RideFocus({
           </div>
         )}
 
-        {toast === null || terminal !== null ? null : (
+        {toast === null || terminal !== null || offRouteHere ? null : (
           <p
             className="og-ride__toast"
             data-testid="ride-toast"
@@ -1041,28 +1046,15 @@ export function RideFocus({
           </div>
         )}
         <div className="og-ride__float-end">
-          {recenterShown ? (
-            <button
-              type="button"
-              className="og-ride__recenter"
-              data-testid="ride-recenter"
-              onClick={(): void => store.getState().recenter()}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3 5 20l7-4 7 4-7-17Z" />
-              </svg>
-              Re-center
-            </button>
-          ) : null}
+          {/*
+            One right-hand column, three buttons at most: the compass (only
+            while the map is turned, or north-up so it can be turned back), the
+            whole route or Re-center, and the voice. There is no + / -: the map
+            zooms by pinch, and the end of the ride lives in the sheet.
+          */}
           {terminal !== null ? null : (
-            <>
-              <div className="og-ride__rail" role="group" aria-label="Map and voice">
-                {/*
-                  The compass is the map's own rotation: the needle turns with it,
-                  and one press swaps heading-up for north-up and back. It is a
-                  toggle rather than "face north" because a rider who turned the
-                  map north to read a junction wants the road-up view back.
-                */}
+            <div className="og-ride__rail" role="group" aria-label="Map and voice">
+              {!compassShown ? null : (
                 <button
                   type="button"
                   className="og-ride__rail-button og-ride__rail-compass"
@@ -1086,93 +1078,51 @@ export function RideFocus({
                     <path className="og-ride__compass-tail" d="M12 21.5 7.5 12h9z" />
                   </svg>
                 </button>
-                {/*
-                  Zoom for a gloved thumb: two 56 px halves of one pill, so the
-                  pair reads as one instrument and neither press is a pinch. The
-                  controls stay focusable at a limit and say so instead of
-                  disappearing.
-                */}
-                <div className="og-ride__rail-zoom" role="group" aria-label="Zoom">
-                  <button
-                    type="button"
-                    className="og-ride__rail-button"
-                    data-testid="ride-zoom-in"
-                    data-disabled={atMaxZoom ? "true" : "false"}
-                    aria-label="Zoom in"
-                    aria-disabled={atMaxZoom ? true : undefined}
-                    onClick={atMaxZoom ? undefined : (): void => zoomStepBy(1)}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M12 6v12M6 12h12" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className="og-ride__rail-button"
-                    data-testid="ride-zoom-out"
-                    data-disabled={atMinZoom ? "true" : "false"}
-                    aria-label="Zoom out"
-                    aria-disabled={atMinZoom ? true : undefined}
-                    onClick={atMinZoom ? undefined : (): void => zoomStepBy(-1)}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M6 12h12" />
-                    </svg>
-                  </button>
-                </div>
-                {routeless ? null : (
-                  <button
-                    type="button"
-                    className="og-ride__rail-button"
-                    data-testid="ride-overview"
-                    aria-label="Show the whole route"
-                    title="Show the whole route"
-                    onClick={(): void => store.getState().overview()}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <circle cx="6" cy="18" r="2.2" />
-                      <circle cx="18" cy="6" r="2.2" />
-                      <path d="M8 17c5-1 3-6 8-9" />
-                    </svg>
-                  </button>
-                )}
+              )}
+              {recenterShown ? (
                 <button
                   type="button"
                   className="og-ride__rail-button"
-                  data-testid="ride-mute"
-                  aria-label="Mute voice guidance"
-                  aria-pressed={voiceMuted}
-                  title={voiceMuted ? "Voice is off" : "Voice is on"}
-                  onClick={(): void => setVoiceMuted(!voiceMuted)}
+                  data-testid="ride-recenter"
+                  aria-label="Re-center"
+                  title="Re-center on me"
+                  onClick={(): void => store.getState().recenter()}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 9h4l5-4v14l-5-4H4z" />
-                    {voiceMuted ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
+                    <path d="M12 3 5 20l7-4 7 4-7-17Z" />
                   </svg>
                 </button>
-              </div>
-              {/*
-                Ending the ride is a control, so it lives in the one right
-                column with the rest: the strip keeps the readouts and the
-                sheet toggle, which is what its width has to hold at 320 px.
-                The confirmation still asks before anything is thrown away.
-                It sits after the map/voice group, not inside it.
-              */}
+              ) : routeless ? null : (
+                <button
+                  type="button"
+                  className="og-ride__rail-button"
+                  data-testid="ride-overview"
+                  aria-label="Show the whole route"
+                  title="Show the whole route"
+                  onClick={(): void => store.getState().overview()}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="6" cy="18" r="2.2" />
+                    <circle cx="18" cy="6" r="2.2" />
+                    <path d="M8 17c5-1 3-6 8-9" />
+                  </svg>
+                </button>
+              )}
               <button
                 type="button"
-                className="og-ride__rail-button og-ride__rail-button--end"
-                data-testid="ride-end"
-                aria-label="End this ride"
-                title="End this ride"
-                disabled={!controls.finish.enabled && !controls.discard.enabled}
-                onClick={(): void => {
-                  store.getState().beginStop();
-                  setSheetOpen(true);
-                }}
+                className="og-ride__rail-button"
+                data-testid="ride-mute"
+                aria-label="Mute voice guidance"
+                aria-pressed={voiceMuted}
+                title={voiceMuted ? "Voice is off" : "Voice is on"}
+                onClick={(): void => setVoiceMuted(!voiceMuted)}
               >
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 9h4l5-4v14l-5-4H4z" />
+                  {voiceMuted ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
+                </svg>
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -1244,9 +1194,6 @@ export function RideFocus({
           </div>
         )}
 
-        {safety === undefined || terminal !== null ? null : (
-          <RideSafetyPanel safety={safety} {...(requestMotion === undefined ? {} : { requestMotion })} />
-        )}
         {spotifyPlayer === undefined ? null : <RideSpotifyPlayer player={spotifyPlayer} />}
 
         {/*
@@ -1310,6 +1257,52 @@ export function RideFocus({
                 </button>
               ) : null}
             </div>
+          </div>
+        )}
+
+        {/*
+          A newer version of the ride exists (it was edited on another screen).
+          Never an alarm: the loaded version keeps being ridden, and the way to
+          the newer one is one quiet row.
+        */}
+        {terminal !== null || !newerVersionReady ? null : (
+          <div className="og-ride__newer" data-testid="ride-newer-version">
+            <span className="og-ride__newer-text">A newer version of this ride is ready</span>
+            <Link className="og-ride__newer-switch" href={exitHref}>
+              Switch
+            </Link>
+          </div>
+        )}
+
+        {/*
+          The two ways out, in plain words and kept apart: End ride finishes
+          (Save or Discard), Cancel route stops following the line but keeps
+          riding, and recording, as Free Ride.
+        */}
+        {terminal !== null || stopConfirm ? null : (
+          <div className="og-ride__sheet-rows" role="group" aria-label="End or cancel">
+            <button
+              type="button"
+              className="og-ride__sheet-row og-ride__sheet-row--danger"
+              data-testid="ride-stop"
+              disabled={!controls.finish.enabled && !controls.discard.enabled}
+              title={controls.finish.reason ?? controls.discard.reason ?? undefined}
+              onClick={(): void => store.getState().beginStop()}
+            >
+              <span className="og-ride__sheet-row-label">End ride</span>
+              <span className="og-ride__sheet-row-hint">Finish and see your ride</span>
+            </button>
+            {navigation?.activity !== "guided" ? null : (
+              <button
+                type="button"
+                className="og-ride__sheet-row"
+                data-testid="continue-free-ride"
+                onClick={(): void => { void store.getState().continueFreeRide(); }}
+              >
+                <span className="og-ride__sheet-row-label">Cancel route</span>
+                <span className="og-ride__sheet-row-hint">Keep riding as Free Ride</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -1508,19 +1501,11 @@ export function RideFocus({
               </p>
             )}
           </section>
-        ) : navigation?.activity === "guided" && (suggestions === "on" || freeRideStatusMessage !== null) ? (
+        ) : navigation?.activity === "guided" && (freeRideStatusMessage !== null || freeRideError !== null) ? (
           <section className="og-ride__free-ride" aria-label="Free Ride controls" data-testid="free-ride-controls">
             {freeRideStatusMessage === null ? null : (
               <p className="og-ride__free-ride-status" data-testid="free-ride-status" role="status">{freeRideStatusMessage}</p>
             )}
-            <button
-              type="button"
-              className="og-ride__action"
-              data-testid="continue-free-ride"
-              onClick={(): void => { void store.getState().continueFreeRide(); }}
-            >
-              Continue Free Ride
-            </button>
             {freeRideError === null ? null : (
               <p className="og-ride__error" role="alert">{freeRideError}</p>
             )}
@@ -1568,16 +1553,8 @@ export function RideFocus({
           />
         )}
 
-        {terminal !== null || navigation?.activity !== "guided" ? null : (
-          <RideInterestPanel
-            filter={riderSettings.uiPreferences.rideInterests}
-            onSetFilter={(filter): void => store.getState().setRideInterestFilter(filter)}
-            chip={rideInterest.chip}
-            onOpenChip={(): void => {
-              const point = rideInterest.chip?.point;
-              if (point !== undefined) rideInterest.select(point.id);
-            }}
-          />
+        {safety === undefined || terminal !== null ? null : (
+          <RideSafetyPanel safety={safety} {...(requestMotion === undefined ? {} : { requestMotion })} />
         )}
 
         {terminal !== null || stopConfirm ? null : (
@@ -1628,17 +1605,6 @@ export function RideFocus({
                 Retry location
               </button>
             )}
-
-            <button
-              type="button"
-              className="og-ride__action og-ride__action--danger"
-              data-testid="ride-stop"
-              disabled={!controls.finish.enabled && !controls.discard.enabled}
-              title={controls.finish.reason ?? controls.discard.reason ?? undefined}
-              onClick={(): void => store.getState().beginStop()}
-            >
-              Stop ride
-            </button>
           </div>
         )}
 
@@ -1713,24 +1679,43 @@ export function RideFocus({
               : "You can change the readouts when you're stopped."}
           </p>
           {/*
-            Day / Night where the rider is, not three taps away in Settings: a
-            switch at sunset that cannot be overridden at the roadside is not
-            automatic, it is stuck. Auto follows the sun while a ride is open.
+            Ride style: how the screen looks and what the map points out along
+            the way. Day / Night where the rider is, not three taps away in
+            Settings: a switch at sunset that cannot be overridden at the
+            roadside is not automatic, it is stuck. Auto follows the sun while
+            a ride is open.
           */}
-          <div className="og-ride__display" data-testid="ride-display" role="group" aria-label="Screen">
-            {DISPLAY_CHOICES.map((choice) => (
-              <button
-                key={choice.mode}
-                type="button"
-                className="og-ride__action og-ride__display-option"
-                data-testid={`ride-display-${choice.mode}`}
-                aria-pressed={appearanceMode === choice.mode}
-                onClick={(): void => setAppearanceMode(choice.mode)}
-              >
-                {choice.label}
-              </button>
-            ))}
-          </div>
+          <details className="og-ride__more og-ride__style" data-testid="ride-style">
+            <summary className="og-ride__sheet-row">
+              <span className="og-ride__sheet-row-label">Ride style</span>
+              <span className="og-ride__sheet-row-hint">Day or night, and what to show</span>
+            </summary>
+            <div className="og-ride__display" data-testid="ride-display" role="group" aria-label="Screen">
+              {DISPLAY_CHOICES.map((choice) => (
+                <button
+                  key={choice.mode}
+                  type="button"
+                  className="og-ride__action og-ride__display-option"
+                  data-testid={`ride-display-${choice.mode}`}
+                  aria-pressed={appearanceMode === choice.mode}
+                  onClick={(): void => setAppearanceMode(choice.mode)}
+                >
+                  {choice.label}
+                </button>
+              ))}
+            </div>
+            {navigation?.activity !== "guided" ? null : (
+              <RideInterestPanel
+                filter={riderSettings.uiPreferences.rideInterests}
+                onSetFilter={(filter): void => store.getState().setRideInterestFilter(filter)}
+                chip={rideInterest.chip}
+                onOpenChip={(): void => {
+                  const point = rideInterest.chip?.point;
+                  if (point !== undefined) rideInterest.select(point.id);
+                }}
+              />
+            )}
+          </details>
           {routeLineAvailable || navigation?.plan.route === null ? null : (
             <p className="og-ride__progress-line" data-testid="ride-line-unavailable">
               The route line can&apos;t be drawn right now. The ride is unaffected.
@@ -1845,6 +1830,7 @@ export function RideFocus({
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d={sheetVisible ? "m6 9 6 6 6-6" : "m6 15 6-6 6 6"} />
               </svg>
+              <span className="og-ride-metrics__toggle-label" aria-hidden="true">Menu</span>
               <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
             </button>
           </>

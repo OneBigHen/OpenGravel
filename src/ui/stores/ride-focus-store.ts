@@ -200,6 +200,11 @@ export interface RideFocusStoreState {
   readonly rerouteMessage: string | null;
   /** Why the last reroute failed, in rider copy. */
   readonly rerouteError: string | null;
+  /**
+   * The ride was edited on another screen after this ride started. The rider
+   * keeps riding the loaded version; the sheet offers the newer one quietly.
+   */
+  readonly newerVersionReady: boolean;
   readonly environment: RideFocusEnvironmentSnapshot;
   readonly viewModel: RideFocusViewModel | null;
   /** The route line the session is following; empty when it did not resolve. */
@@ -1516,13 +1521,14 @@ export function createRideFocusStore(
           ? "Return routing needs a fresh, accurate GPS fix."
           : plan.reason === "no-lower-workload-route"
             ? "No lower-workload return was found. Your current route is unchanged."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed while the return was planning. Go back to Plan and try again."
-              : "A return route could not be found right now. Your current ride is unchanged.";
+            : "A return route could not be found right now. Your current ride is unchanged.";
+        // An edit on another screen is not an alarm: keep riding this version
+        // and let the sheet offer the newer one.
+        const newer = plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {};
         if (guided) {
-          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message });
+          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message, ...newer });
         } else {
-          set({ returnBusy: false, freeRideStatusMessage: null, freeRideError: message });
+          set({ returnBusy: false, freeRideStatusMessage: null, freeRideError: message, ...newer });
         }
         return;
       }
@@ -1819,6 +1825,7 @@ export function createRideFocusStore(
       rerouteBusy: false,
       rerouteMessage: null,
       rerouteError: null,
+      newerVersionReady: false,
       environment: EMPTY_ENVIRONMENT,
       viewModel: null,
       routeLine: NO_COORDINATES,
@@ -2169,10 +2176,13 @@ export function createRideFocusStore(
         if (plan.status !== "planned") {
           const message = plan.reason === "gps"
             ? "Head Home needs a fresh, accurate GPS fix. Check location and try again."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed and its return could not be planned. Resume from the planner and try again."
-              : "A return route could not be found right now. Keep riding or try again later.";
-          set({ returnBusy: false, freeRideError: message, freeRideStatusMessage: null });
+            : "A return route could not be found right now. Keep riding or try again later.";
+          set({
+            returnBusy: false,
+            freeRideError: message,
+            freeRideStatusMessage: null,
+            ...(plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {}),
+          });
           return;
         }
         const at = now();
@@ -2288,12 +2298,16 @@ export function createRideFocusStore(
         if (plan.status !== "planned") {
           const message = plan.reason === "gps"
             ? "Rerouting needs a fresh, accurate GPS fix."
-            : plan.reason === "stale-ride" || plan.reason === "ride-missing"
-              ? "The ride changed on another screen. Return to Plan to update it."
-              : detour === undefined
-                ? "A new route couldn't be found right now. Keep riding toward the line."
-                : `A route via ${detour.label} couldn't be found right now.`;
-          set({ rerouteBusy: false, rerouteMessage: null, rerouteError: message });
+            : detour === undefined
+              ? "A new route couldn't be found right now. Keep riding toward the line."
+              : `A route via ${detour.label} couldn't be found right now.`;
+          set({
+            rerouteBusy: false,
+            rerouteMessage: null,
+            rerouteError: message,
+            // Edited elsewhere: keep riding this version, offer the newer one in the sheet.
+            ...(plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {}),
+          });
           return;
         }
         const at = now();
