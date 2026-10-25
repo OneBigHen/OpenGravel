@@ -40,12 +40,13 @@ export interface PrimaryNavProps {
 
 /**
  * Line icons for the phone tab bar (UX rework phase 1). They are decoration:
- * `aria-hidden`, so each link's accessible name stays its visible label.
+ * `aria-hidden`, so each link's accessible name stays its visible label. The
+ * glyph is drawn at the tab bar's 24px and the stylesheet sets the same size.
  */
 function NavIcon({ href }: { readonly href: string }) {
   const common = {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
@@ -96,11 +97,12 @@ export function PrimaryNav({ current, items = PRIMARY_NAV_ITEMS }: PrimaryNavPro
     const shell = shellRef.current;
     if (shell === null) return;
     const root = document.documentElement.style;
-    const property = "--og-tabbar-measured-pill-h";
+    const property = "--og-tabbar-measured-h";
     const previous = root.getPropertyValue(property);
     let ownedValue = previous;
-    // Reserve the rendered bar, including text reflow, for every page's
-    // bottom padding and the planner dock. This is only a layout measurement.
+    // Publish the rendered bar's height so every page's bottom padding and the
+    // planner dock reserve exactly the space it draws — including the extra row
+    // a larger text size adds to the labels. This is only a layout measurement.
     const measure = (): void => {
       const height = shell.getBoundingClientRect().height;
       ownedValue = getComputedStyle(shell).position === "fixed" && height > 0 ? `${height}px` : "";

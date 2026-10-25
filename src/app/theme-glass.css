@@ -38,12 +38,15 @@
   --og-hairline: rgb(255 255 255 / 8%);
   --og-hairline-strong: rgb(255 255 255 / 14%);
 
-  /* Compact type (the old scale read bulky on a 390px phone). */
-  --og-text-eyebrow: 10.5px;
-  --og-text-meta: 12px;
-  --og-text-body: 14px;
-  --og-text-title: 17px;
-  --og-text-page: 26px;
+  /* Type: the same five sizes as globals.css (small-screen design system v2
+     §1), restated here because this theme owns the palette tokens. */
+  --og-text-caption: 12px;
+  --og-text-meta: 14px;
+  --og-text-body: 16px;
+  --og-text-headline: 20px;
+  --og-text-title: 28px;
+  --og-text-eyebrow: var(--og-text-caption);
+  --og-text-page: var(--og-text-title);
 
   --og-radius-chip: 999px;
   --og-radius-control: 14px;
@@ -653,16 +656,23 @@ html .og-ride {
    -------------------------------------------------------------------------- */
 
 @media (max-width: 760px) {
+  /* The screen gutter is 16px on every page (small-screen design system v2
+     §1/§2), so titles and content share one left edge. */
   .og-explore,
   .og-library,
   .og-settings {
-    padding-inline: 14px;
-    padding-top: calc(12px + var(--og-safe-top));
+    padding-inline: var(--og-space-4);
+    padding-top: calc(var(--og-space-3) + var(--og-safe-top));
   }
 
+  /* Page titles: left-aligned at the title size, one rung above the body text
+     instead of a desktop-sized masthead on a phone. */
   :is(.og-explore__heading, .og-library__header, .og-settings__header) h1 {
-    font-size: var(--og-text-page);
-    line-height: 1.1;
+    font-size: var(--og-text-title);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: 0;
+    text-align: left;
   }
 
   /* The intros and eyebrows repeat what the page already shows. */
@@ -861,8 +871,10 @@ html .og-ride {
     padding-inline: 0;
   }
 
+  /* The page keeps the 16px screen gutter even though its own padding is zero
+     (the library centres a narrower column above 760px). */
   .og-library.og-library > :not(.og-appbar) {
-    width: calc(100% - 28px);
+    width: calc(100% - 2 * var(--og-space-4));
   }
 
   .og-library__imports {
@@ -2783,40 +2795,114 @@ html .og-ride {
    (owner 2026-10-04). Right after a clear, "Undo clear" still offers itself. */
 .og-planner__sheet[data-idle="true"] .og-sheet__undo-clear { justify-self: start; margin-bottom: 4px; }
 
-/* ── Tab bar: real frosted glass, and out of the way while the map moves ── */
-:root {
-  --og-tabbar-glass: rgb(16 22 20 / 58%);
-}
-:root[data-theme="day"] {
-  --og-tabbar-glass: rgb(255 255 255 / 64%);
-}
-@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+/* --------------------------------------------------------------------------
+   Phone app shell (small-screen design system v2 §2): the tab bar is docked to
+   the bottom edge — full width, solid paper, a top hairline, 56px plus the home
+   indicator's inset — instead of a frosted capsule floating over the map. Icons
+   are 24px, labels 12px, and every tab is a full-height column so its target is
+   never smaller than 48px. It is always visible on the pages that have it; the
+   only screen without a tab bar is a running ride, which has no app bar at all.
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
+  :root {
+    /* "The space the bar takes at the bottom". The bar measures itself, so a
+       larger text size (which wraps the labels to a second row) still reserves
+       exactly the height it draws; the fallback is the bar's own 56px. */
+    --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom)));
+  }
+
   .og-planner__nav-shell,
   .og-planner__header .og-planner__nav-shell,
   .og-library__header > .og-planner__nav-shell {
-    background: var(--og-tabbar-glass);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-    transition: transform 220ms ease, opacity 180ms ease;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 8;
+    display: grid;
+    /* Four tabs across the width; at a larger text size the row wraps instead
+       of clipping a label, and the measured height above keeps pages clear. */
+    grid-template-columns: repeat(auto-fit, minmax(4em, 1fr));
+    align-items: stretch;
+    gap: 0;
+    height: auto;
+    min-height: calc(56px + var(--og-safe-bottom));
+    padding: 0 var(--og-safe-right) var(--og-safe-bottom) var(--og-safe-left);
+    border: 0;
+    border-top: 1px solid var(--og-hairline);
+    border-radius: 0;
+    background: var(--og-paper);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    font-size: var(--og-text-caption);
+    pointer-events: auto;
   }
-  .og-planner__dock { transition: transform 220ms ease; }
 
-  html[data-chrome="away"] .og-planner .og-planner__nav-shell {
-    transform: translateY(calc(100% + var(--og-tabbar-gap) + 12px));
-    opacity: 0;
-    pointer-events: none;
+  .og-planner__nav {
+    display: contents;
   }
-  /* The sheet drops into the space the bar left, down to the home indicator. */
-  html[data-chrome="away"] .og-planner__dock {
-    transform: translateY(calc(var(--og-tabbar-h) - var(--og-safe-bottom, 0px) - 2px));
+
+  .og-nav__sep {
+    display: none;
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--og-space-1);
+    width: auto;
+    min-width: 0;
+    /* A quarter of the screen wide and at least 48px tall, at every size. */
+    min-height: 48px;
+    padding: 0;
+    border-radius: 0;
+    color: var(--og-slate-text);
+    font-size: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color var(--og-dur-fast) ease-out;
+  }
+
+  .og-nav__icon,
+  .og-nav__label--tab-only {
+    display: block;
+  }
+
+  .og-nav__icon {
+    width: 24px;
+    height: 24px;
+    margin-inline: auto;
+  }
+
+  .og-nav__label {
+    font-size: inherit;
+    line-height: 1.3;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  /* The current tab is green — glyph and label. No pill inside the bar: the
+     bar itself is the surface now. */
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    color: var(--og-go-text);
+    background: none;
+    box-shadow: none;
+    text-decoration: none;
+  }
+
+  .og-planner__nav a[aria-current="page"] .og-nav__icon,
+  .og-planner__settings-link[aria-current="page"] .og-nav__icon {
+    stroke-width: 2.2;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .og-planner__nav-shell,
-  .og-planner__dock { transition: none !important; }
-}
-@media (prefers-reduced-transparency: reduce) {
-  :root, :root[data-theme="day"] { --og-tabbar-glass: var(--og-glass-dense); }
+  .og-planner__nav a,
+  .og-planner__settings-link { transition: none; }
 }
 
 /* Places: always say what the button is. A bare dot in a disc puzzled new
