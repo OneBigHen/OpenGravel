@@ -24,11 +24,13 @@ import {
   moveShapeCommand,
   moveStartCommand,
   moveStopCommand,
+  placeFinishCommand,
   removeFinishCommand,
   removeShapeCommand,
   removeStartCommand,
   removeStopCommand,
   reorderStopCommand,
+  rideShapeCommand,
   setArrivalIntentCommand,
   type RideDocumentStore,
 } from "@/ui/stores/ride-document-store";
@@ -39,10 +41,14 @@ export interface PlannerItineraryActions {
   readonly zoomTo: (ref: ItineraryRef) => void;
   readonly replacePlace: (ref: ItineraryRef) => void;
   readonly moveStop: (stopId: StopId, direction: "up" | "down") => void;
+  /** One drag, one `stop.reorder`: the stop lands before the named neighbour. */
+  readonly reorder: (stopId: StopId, beforeStopId: StopId | undefined) => void;
   readonly remove: (ref: ItineraryRef) => void;
   readonly convert: (ref: ItineraryRef) => void;
   readonly addStop: () => void;
   readonly addStopAt: (coordinate: Coordinate, label: string) => void;
+  /** A tapped road on the map: its entry and exit as two stops, in that order. */
+  readonly addRideRoad: (entry: Coordinate, exit: Coordinate, name: string) => void;
   readonly editCoordinate: (ref: ItineraryRef, coordinate: Coordinate) => void;
   readonly setArrivalIntent: (
     stopId: StopId,
@@ -126,6 +132,15 @@ export function usePlannerItineraryActions(input: {
     [document, rideDocumentStore],
   );
 
+  const reorder = useCallback(
+    (stopId: StopId, beforeStopId: StopId | undefined): void => {
+      rideDocumentStore
+        .getState()
+        .dispatch(reorderStopCommand(document, stopId, beforeStopId));
+    },
+    [document, rideDocumentStore],
+  );
+
   const remove = useCallback(
     (ref: ItineraryRef): void => {
       const state = rideDocumentStore.getState();
@@ -186,6 +201,37 @@ export function usePlannerItineraryActions(input: {
     [document, rideDocumentStore, scene],
   );
 
+  /**
+   * "Ride this road": the two via points become two stops, entry then exit.
+   *
+   * One rider action, two typed `stop.insert` commands. Each command is built
+   * from the document the previous one produced, so the exit stop lands after
+   * the entry stop instead of being inserted against a stale stop list.
+   */
+  const addRideRoad = useCallback(
+    (entry: Coordinate, exit: Coordinate, name: string): void => {
+      const viaPoints: readonly (readonly [Coordinate, string])[] = [
+        [entry, `${name} entry`],
+        [exit, `${name} exit`],
+      ];
+      for (const [coordinate, label] of viaPoints) {
+        const state = rideDocumentStore.getState();
+        const command = insertStopCommand(state.document, coordinate, undefined);
+        state.dispatch({ ...command, stop: { ...command.stop, label } });
+      }
+      // With nowhere to go yet, riding a road means riding it and coming home:
+      // the destination becomes the start, so the planner has a whole ride.
+      const after = rideDocumentStore.getState();
+      const start = after.document.intent.start;
+      if (after.document.intent.finish !== null || start === null) return;
+      if (after.document.intent.shape !== "destination") after.dispatch(rideShapeCommand(after.document, "destination"));
+      const home = rideDocumentStore.getState();
+      const finish = placeFinishCommand(home.document, start.coordinate);
+      home.dispatch({ ...finish, point: { ...finish.point, label: start.label ?? "Back to start" } });
+    },
+    [rideDocumentStore],
+  );
+
   const editCoordinate = useCallback(
     (ref: ItineraryRef, coordinate: Coordinate): void => {
       const state = rideDocumentStore.getState();
@@ -228,10 +274,12 @@ export function usePlannerItineraryActions(input: {
     zoomTo,
     replacePlace,
     moveStop,
+    reorder,
     remove,
     convert,
     addStop,
     addStopAt,
+    addRideRoad,
     editCoordinate,
     setArrivalIntent,
     changeDestination,

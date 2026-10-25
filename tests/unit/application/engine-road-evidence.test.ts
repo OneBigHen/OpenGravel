@@ -161,6 +161,52 @@ describe("card labels", () => {
     expect(surfaceMixLabel(paved["surfaceMix"])).toBe("Paved");
     expect(surfaceMixLabel(undefined)).toBeNull();
   });
+
+  it("never calls a route paved when there is no paved metre at all", () => {
+    // One 100 m gravel sliver on a 10 mi line: the rest is untagged.
+    const sliver = engineRoadEvidence(
+      summary({
+        totalMeters: 100 + 9.94 * MILE,
+        surfaceByRoadClassMeters: { "gravel|unclassified": 100, "missing|unclassified": 9.94 * MILE },
+      }),
+      "mixed",
+    );
+
+    const label = surfaceMixLabel(sliver["surfaceMix"]);
+    expect(label).not.toBeNull();
+    expect(label).not.toContain("Paved");
+    expect(label).toBe("Surface mostly unknown");
+  });
+
+  it("discloses a mostly unknown surface instead of claiming paved", () => {
+    const thin = engineRoadEvidence(
+      summary({
+        totalMeters: 10 * MILE,
+        surfaceByRoadClassMeters: { "asphalt|secondary": MILE, "missing|unclassified": 9 * MILE },
+      }),
+      "mixed",
+    );
+
+    const label = surfaceMixLabel(thin["surfaceMix"]);
+    expect(label).not.toBe("Paved");
+    expect(label?.toLowerCase()).toContain("unknown");
+  });
+
+  it("keeps the mix claim but names an untagged remainder", () => {
+    const partial = engineRoadEvidence(
+      summary({
+        totalMeters: 10 * MILE,
+        surfaceByRoadClassMeters: {
+          "asphalt|secondary": 6 * MILE,
+          "gravel|unclassified": 2 * MILE,
+          "missing|unclassified": 2 * MILE,
+        },
+      }),
+      "mixed",
+    );
+
+    expect(surfaceMixLabel(partial["surfaceMix"])).toBe("Mixed · 2 mi unpaved · 2 mi unknown");
+  });
 });
 
 describe("surface runs", () => {

@@ -10,6 +10,7 @@ import {
   readDrawnScene,
   settledExtent,
   type Coordinate, openRefine } from "./map-helpers";
+import { interceptNextPlanAttempt } from "./plan-attempt";
 
 /**
  * Critical browser workflow: a bad network during an edit (04-PLANNER-AND-WORKSPACE-UX
@@ -135,17 +136,13 @@ async function dragStop(page: Page): Promise<void> {
 }
 
 /**
- * Makes the **next** plan answer fail with the wire contract's own 422 `no-route`
- * body — the "network dropped" of Mission 8, as the client sees it.
+ * Makes the **next** plan attempt fail with the wire contract's own 422 `no-route`
+ * body — the "network dropped" of Mission 8, as the client sees it. Both plan
+ * queries of the attempt are answered this way: the router being down is not the
+ * same thing as the alternatives query being slow (`plan-attempt.ts`).
  */
 async function failNextPlan(page: Page): Promise<void> {
-  let spent = false;
-  await page.route("**/api/route-plan", async (route) => {
-    if (spent) {
-      await route.continue();
-      return;
-    }
-    spent = true;
+  await interceptNextPlanAttempt(page, async (route) => {
     await route.fulfill({
       status: 422,
       contentType: "application/json",
@@ -158,21 +155,17 @@ async function failNextPlan(page: Page): Promise<void> {
 }
 
 /**
- * Lets the **next** plan answer succeed with a materially different route.
+ * Lets the **next** plan attempt succeed with a materially different route.
  *
- * The body is the fixture's own (so the shape is the server's, not the gate's) with
- * the line moved ~350 m west, three more minutes and 1.8 more miles — i.e. exactly the
- * "+3 min · +1.8 mi vs previous" the chip must state. Everything after the first answer
- * is passed through untouched.
+ * Every answer of the attempt is the fixture's own (so the shape is the server's, not
+ * the gate's) with the line moved ~350 m west, three more minutes and 1.8 more miles —
+ * i.e. exactly the "+3 min · +1.8 mi vs previous" the chip must state. Applying the
+ * same shift to both queries of the attempt is what keeps the settled ride — whichever
+ * answer commits it — the one the chip describes. Later attempts are passed through
+ * untouched.
  */
 async function shiftNextPlan(page: Page): Promise<void> {
-  let spent = false;
-  await page.route("**/api/route-plan", async (route) => {
-    if (spent) {
-      await route.continue();
-      return;
-    }
-    spent = true;
+  await interceptNextPlanAttempt(page, async (route) => {
     const response = await route.fetch();
     const body = (await response.json()) as {
       bundle?: {

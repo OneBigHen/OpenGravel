@@ -125,8 +125,33 @@ export function isAdvisorRideSummary(value: unknown): value is AdvisorRideSummar
     });
 }
 
+/** "1 h 50 min", "45 min". */
+function durationWords(minutes: number): string {
+  const total = Math.max(1, Math.round(minutes));
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  return hours === 0 ? `${rest} min` : rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
+/** "98% paved, 2% unknown (estimated)": the non-zero parts of the summary's own surface line. */
+function surfaceWords(surface: string): string {
+  if (surface === "Surface unknown") return "Surface unknown";
+  const estimated = surface.startsWith("Estimated: ");
+  const parts = surface.replace(/^Estimated: /, "").split(", ").filter((part) => !part.startsWith("0% "));
+  return `${parts.join(", ")}${estimated ? " (estimated)" : ""}`;
+}
+
+/** "Very curvy (estimated)". */
+function curvinessWords(curviness: string): string {
+  return curviness.startsWith("Estimated: ") ? `${curviness.slice("Estimated: ".length)} (estimated)` : curviness;
+}
+
 /** Model chooses the answer intent; only the app's bounded facts become the answer. */
 export function advisorRideAnswer(summary: AdvisorRideSummary | undefined): string {
   if (summary === undefined) return "Plan a ride first, then I can explain the selected route.";
-  return `${summary.why} About ${Math.round(summary.distanceKm / 1.609344)} miles and ${Math.round(summary.durationMinutes)} minutes. ${summary.surface}. ${summary.curviness}. ${summary.climbMeters === null ? "Climb unknown." : `About ${Math.round(summary.climbMeters * 3.28084).toLocaleString("en-US")} ft of climbing.`} I can't see closures, gates or access rules, so check those before you go.`;
+  const miles = Math.round(summary.distanceKm / 1.609344);
+  const climb = summary.climbMeters === null
+    ? "Climb unknown."
+    : `About ${(Math.round(summary.climbMeters * 3.28084 / 10) * 10).toLocaleString("en-US")} ft of climbing.`;
+  return `${summary.why} ${miles} mi, about ${durationWords(summary.durationMinutes)}. ${surfaceWords(summary.surface)}. ${curvinessWords(summary.curviness)}. ${climb} I can't see closures, gates or access rules, so check those before you go.`;
 }

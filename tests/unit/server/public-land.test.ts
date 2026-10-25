@@ -15,10 +15,14 @@ describe("PAD-US polygons", () => {
   });
   it("identifies OSM fallback and leaves PAD-US unavailable", async () => {
     const result = await publicLandProvider.snapshot!({ west: -76, south: 40, east: -75, north: 41 }, ["public-land"], {
-      env: {}, fetch: async (input) => String(input).includes("arcgis") ? new Response("{}", { status: 503 }) : Response.json({ elements: [] }),
+      env: {}, fetch: async (input) => String(input).includes("arcgis") ? new Response("{}", { status: 503 }) : Response.json({ elements: [{ type: "way", id: 7, center: { lat: 40.5, lon: -75.5 }, tags: { boundary: "protected_area", name: "State Forest", operator: "State" } }] }),
     });
     expect(result.unavailable).toBe(true);
     expect(result.freshness?.[0]?.source).toContain("OpenStreetMap");
+    expect(result.features).toHaveLength(1);
+    expect(result.features[0]).toMatchObject({ layerId: "public-land", name: "State Forest", geometry: { type: "Point", coordinates: [-75.5, 40.5] } });
+    expect(result.features[0]?.detail).toContain("OpenStreetMap fallback");
+    expect(result.features[0]?.detail).toContain("not legal access evidence");
   });
   it("finishes bounded ArcGIS pagination before presenting primary boundaries", async () => {
     const feature = { id: 1, properties: { Unit_Nm: "Forest", Pub_Access: "OA" }, geometry: { type: "Polygon", coordinates: [ring] } };

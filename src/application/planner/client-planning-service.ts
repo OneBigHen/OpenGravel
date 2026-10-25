@@ -46,8 +46,7 @@ import { isUsableEvidence } from "@/domain/evidence/types";
 import { withOfflineFallback, type OfflineRouteEngine } from "@/application/offline/offline-route-fallback";
 import { createOfflineRouteEngine } from "@/infrastructure/offline/offline-route-engine";
 import { RegionDownloadStore } from "@/infrastructure/offline/region-download-store";
-import { createApiRouteProvider } from "@/infrastructure/routing/api-provider";
-import { profileFor as graphHopperProfileFor } from "@/infrastructure/routing/graphhopper/profiles";
+import { createApiRouteProvider, type ApiRouteProvider } from "@/infrastructure/routing/api-provider";import { profileFor as graphHopperProfileFor } from "@/infrastructure/routing/graphhopper/profiles";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideIntent } from "@/domain/ride/types";
@@ -114,9 +113,20 @@ export interface ClientPlanningServiceOptions {
   readonly localHistoryReader?: () => Promise<readonly Pick<LibraryExploreRide, "geometry" | "riddenAt">[]>;
 }
 
-function defaultOfflineEngine(): OfflineRouteEngine | null {
+/** The one offline engine a page owns: each request still gets its own worker. */
+let sharedOfflineEngine: ReturnType<typeof createOfflineRouteEngine> | null | undefined;
+
+/**
+ * The browser's offline engine, built once per page.
+ *
+ * The planner workspace, a mid-ride reroute and a Free Ride detour all plan
+ * from the same downloaded regions, so they share one engine rather than each
+ * keeping a standby worker (and each missing the warm-up when it is their turn).
+ */
+function sharedClientOfflineEngine(): OfflineRouteEngine | null {
   if (typeof Worker === "undefined" || typeof indexedDB === "undefined") return null;
-  const engine = createOfflineRouteEngine();
+  sharedOfflineEngine ??= createOfflineRouteEngine();
+  const engine = sharedOfflineEngine;
   // With a downloaded area, load a routing worker while there is signal: once
   // it is lost, the browser cannot fetch the worker's script (OF-01).
   void new RegionDownloadStore().list().then(
@@ -126,9 +136,30 @@ function defaultOfflineEngine(): OfflineRouteEngine | null {
   return engine;
 }
 
-/** Creates an independent `/api/route-plan` provider for non-PlanningSession flows. */
-export function createClientRouteCandidateProvider() {
-  return createApiRouteProvider();
+export interface ClientRouteCandidateProviderOptions {
+  /** Injectable `fetch` for tests and non-browser transports. */
+  readonly fetcher?: typeof fetch;
+  /**
+   * Plans from downloaded offline regions when the planner cannot be reached.
+   * The shared browser engine by default; `null` turns the fallback off.
+   */
+  readonly offlineEngine?: OfflineRouteEngine | null;
+}
+
+/**
+ * A `/api/route-plan` provider for non-PlanningSession flows (a mid-ride
+ * reroute, Free Ride detours and head-home): each call is an independent
+ * provider instance, already wrapped so an unreachable planner falls back to
+ * the downloaded road graph instead of failing the rider.
+ */
+export function createClientRouteCandidateProvider(
+  options: ClientRouteCandidateProviderOptions = {},
+): ApiRouteProvider {
+  const provider = createApiRouteProvider(
+    options.fetcher === undefined ? {} : { fetcher: options.fetcher },
+  );
+  const engine = options.offlineEngine === undefined ? sharedClientOfflineEngine() : options.offlineEngine;
+  return engine === null ? provider : withOfflineFallback(provider, engine);
 }
 
 const LOCAL_HISTORY_CACHE_LIMIT = 8;
@@ -285,7 +316,7 @@ export function createClientPlanningService(
           },
         };
   const listeners = new Set<() => void>();
-  const offlineEngine = options.offlineEngine === undefined ? defaultOfflineEngine() : options.offlineEngine;
+  const offlineEngine = options.offlineEngine === undefined ? sharedClientOfflineEngine() : options.offlineEngine;
   const localHistoryPipeline = createLocalHistoryPipeline({
     ...(options.localHistoryReader === undefined ? {} : { localHistoryReader: options.localHistoryReader }),
     ...(options.now === undefined ? {} : { now: options.now }),

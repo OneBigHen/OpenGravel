@@ -34,6 +34,12 @@ export interface ContributionStoreOptions {
  */
 export interface ContributionStore extends ContributionModerationPort {
   list(roadRef: ContributionRoadRef, limit?: number): readonly StoredContribution[];
+  /**
+   * Accepted rows only, filtered before the limit. This is what the public read
+   * path uses: a burst of pending or rejected notes must not push an approved
+   * one out of the window, and moderation state is not a rider-visible secret.
+   */
+  listAccepted(roadRef: ContributionRoadRef, limit?: number): readonly StoredContribution[];
   close(): void;
 }
 
@@ -221,6 +227,23 @@ export class SQLiteContributionStore implements ContributionStore {
     const rows = this.database.prepare(`
       ${SELECT_CONTRIBUTION}
       WHERE c.road_id = ? AND c.span_id = ?
+      ORDER BY c.received_at DESC, c.id DESC
+      LIMIT ?
+    `).all(roadRef.roadId, roadRef.spanId, bounded) as unknown as readonly ContributionRow[];
+    return rows.map(toRecord);
+  }
+
+  public listAccepted(
+    roadRef: ContributionRoadRef,
+    limit = CONTRIBUTION_STORE_MAX_RESULTS,
+  ): readonly StoredContribution[] {
+    this.assertOpen();
+    const bounded = boundedLimit(limit);
+    if (bounded === 0) return [];
+    const rows = this.database.prepare(`
+      ${SELECT_CONTRIBUTION}
+      WHERE c.road_id = ? AND c.span_id = ?
+        AND m.id IS NOT NULL AND m.decision = 'accept'
       ORDER BY c.received_at DESC, c.id DESC
       LIMIT ?
     `).all(roadRef.roadId, roadRef.spanId, bounded) as unknown as readonly ContributionRow[];

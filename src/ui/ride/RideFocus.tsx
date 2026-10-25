@@ -78,6 +78,8 @@ import { useRideInterest } from "@/ui/ride/useRideInterest";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
 import { RideSpotifyPlayer } from "@/ui/ride/RideSpotifyPlayer";
+import { RideSafetyOverlay, RideSafetyPanel } from "@/ui/ride/RideSafetyPanel";
+import type { RideSafety } from "@/application/safety/ride-safety";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
 import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
 import type { StoreApi } from "zustand/vanilla";
@@ -96,6 +98,10 @@ export interface RideFocusProps {
   readonly discoverSource?: RideInterestDiscoverSource;
   /** Optional native Spotify App Remote player; absent in browsers/PWAs. */
   readonly spotifyPlayer?: SpotifyPlayerPort;
+  /** Live location sharing and crash detection; absent where not composed. */
+  readonly safety?: RideSafety;
+  /** Asks for motion access from the Share tap (iOS gates it on a gesture). */
+  readonly requestMotion?: () => Promise<unknown>;
   /** Where "Back to the planner" goes; the surface never decides routing. */
   readonly exitHref?: string;
 }
@@ -211,6 +217,8 @@ export function RideFocus({
   mapLayersSource,
   discoverSource,
   spotifyPlayer,
+  safety,
+  requestMotion,
   exitHref = "/",
 }: RideFocusProps) {
   const status = useStore(store, (state) => state.status);
@@ -1020,6 +1028,9 @@ export function RideFocus({
           </div>
         )}
 
+        {safety === undefined || terminal !== null ? null : (
+          <RideSafetyPanel safety={safety} {...(requestMotion === undefined ? {} : { requestMotion })} />
+        )}
         {spotifyPlayer === undefined ? null : <RideSpotifyPlayer player={spotifyPlayer} />}
 
         {/*
@@ -1388,7 +1399,7 @@ export function RideFocus({
               {viewModel.activityLabel}
             </p>
             <p className="og-ride__gps" data-testid="ride-gps" data-tone={position.tone}>
-              <span className="og-ride__gps-label">{gpsUnavailable ? "Waiting for location" : position.qualityLabel}</span>
+              <span className="og-ride__gps-label">{gpsUnavailable ? "Finding GPS" : position.qualityLabel}</span>
               {position.ageText === null ? null : (
                 <span className="og-ride__gps-age"> · {position.ageText}</span>
               )}
@@ -1596,6 +1607,7 @@ export function RideFocus({
           </button>
         )}
       </footer>
+      {safety === undefined ? null : <RideSafetyOverlay safety={safety} />}
     </main>
   );
 }

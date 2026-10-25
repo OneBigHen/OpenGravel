@@ -60,12 +60,39 @@ export const US_STATE_BOXES: Readonly<Record<string, BoundingBox>> = {
   wyoming: { west: -111.06, south: 40.99, east: -104.05, north: 45.01 },
 };
 
-/** "New Hampshire, Vermont, Maine" → its boxes; unknown names give none. */
-export function stateBoxes(names: string): readonly BoundingBox[] {
+/** "New Hampshire, Vermont, Maine" → the state names this module knows, lower-cased. */
+export function stateNames(names: string): readonly string[] {
   return names
     .split(/[,/;]|\band\b/i)
-    .map((name) => US_STATE_BOXES[name.trim().toLowerCase()])
-    .filter((box): box is BoundingBox => box !== undefined);
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => US_STATE_BOXES[name] !== undefined);
+}
+
+/** "New Hampshire, Vermont, Maine" → its boxes; unknown names give none. */
+export function stateBoxes(names: string): readonly BoundingBox[] {
+  return stateNames(names).map((name) => US_STATE_BOXES[name]!);
+}
+
+function boxArea(box: BoundingBox): number {
+  return (box.east - box.west) * (box.north - box.south);
+}
+
+/**
+ * The state a point most likely belongs to: among the coarse boxes that
+ * contain it, the smallest. The boxes overlap borders on purpose, so the
+ * biggest neighbour's box must not decide what the point's own state owes it
+ * (New York's box reaches across Pennsylvania, and vice versa). `null` when no
+ * box contains the point at all.
+ */
+export function homeStateOf(point: { readonly lon: number; readonly lat: number }): string | null {
+  let home: string | null = null;
+  let smallest = Number.POSITIVE_INFINITY;
+  for (const [name, box] of Object.entries(US_STATE_BOXES)) {
+    if (point.lon < box.west || point.lon > box.east || point.lat < box.south || point.lat > box.north) continue;
+    const area = boxArea(box);
+    if (area < smallest) { home = name; smallest = area; }
+  }
+  return home;
 }
 
 const CENTRAL = new Set(["alabama", "arkansas", "illinois", "iowa", "kansas", "louisiana", "minnesota", "mississippi", "missouri", "nebraska", "north dakota", "oklahoma", "south dakota", "tennessee", "texas", "wisconsin"]);

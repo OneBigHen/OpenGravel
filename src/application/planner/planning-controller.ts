@@ -885,6 +885,14 @@ class PlanningSessionController implements PlanningController {
       ...(notes.length === 0 ? {} : { note: notes.join("; ") }),
       ...(set.funCharacter === undefined ? {} : { funCharacter: set.funCharacter }),
     });
+    // A later answer that names its own best ride (the full answer after the
+    // fast first route) speaks for the whole attempt: the first answer's pick
+    // was made without the alternatives, so it must not keep the role. Without
+    // this the 3% dirt first route stayed "Best ride" over a 43% dirt loop.
+    for (const key of ["bestRide", "lowerWorkload"] as const) {
+      if (!set.candidates.some((candidate) => candidate.providerMetadata?.[key] === true)) continue;
+      for (const [fingerprint, hint] of run.roleHints) run.roleHints.set(fingerprint, { ...hint, [key]: false });
+    }
     for (const candidate of set.candidates) {
       const fingerprint: unknown = candidate.providerMetadata?.["fingerprint"];
       if (typeof fingerprint !== "string") continue;

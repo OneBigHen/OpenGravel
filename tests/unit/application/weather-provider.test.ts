@@ -117,7 +117,7 @@ describe("NWS preparation provider", () => {
     expect(result.provenance).toContain("updated 23:32 GMT+9");
   });
 
-  it("shows forecast only without a trip window, even when alerts exist", async () => {
+  it("surfaces an active alert as area information when the route has no trip window", async () => {
     const provider = createNwsWeatherProvider({
       fetcher: async () => Response.json({ snapshot }),
       now: () => Date.parse("2026-09-17T14:44:00.000Z"),
@@ -125,9 +125,30 @@ describe("NWS preparation provider", () => {
     await provider.refresh(context(null));
 
     const result = provider.getWeather(context(null));
+    // The forecast is still shown, but an active alert in the start area is not
+    // hidden merely because the ride has no window yet.
     expect(result.data?.display).toContain("Sunny");
+    expect(result.data?.display).toContain("Severe Thunderstorm Watch");
+    expect(result.data?.display.toLowerCase()).toContain("nearby");
+    // It is area information, not a claim that it covers the ride window.
     expect(result.data).not.toHaveProperty("primaryAlert");
-    expect(result.data?.display).not.toContain("Thunderstorm");
+    expect(result.data?.tripWindowScoped).toBe(false);
+    expect(result.data?.tripAlerts).toBeUndefined();
+    expect(result.reason.toLowerCase()).toContain("area");
+    expect(result.reason).not.toContain("covers your trip window");
+  });
+
+  it("shows the forecast alone when the route has no trip window and no alert", async () => {
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot: { ...snapshot, alerts: [] } }),
+      now: () => Date.parse("2026-09-17T14:44:00.000Z"),
+    });
+    await provider.refresh(context(null));
+
+    const result = provider.getWeather(context(null));
+    expect(result.data?.display).toContain("Sunny");
+    expect(result.reason).toBe("Forecast received for the selected route.");
+    expect(result.data).not.toHaveProperty("primaryAlert");
   });
 
   it("scopes long-trip weather metrics and alerts to the trip window", async () => {
@@ -155,6 +176,57 @@ describe("NWS preparation provider", () => {
       maxWindMph: 35,
       tripAlerts: [{ event: "Trip advisory" }],
     });
+  });
+
+  it("briefs the forecast period that covers the trip window, not today's", async () => {
+    const futureSnapshot: WeatherSnapshot = {
+      fetchedAt: "2026-09-17T14:32:00.000Z",
+      source: "nws",
+      alerts: [],
+      forecast: [
+        {
+          name: "Today",
+          startTime: "2026-09-17T14:00:00.000Z",
+          endTime: "2026-09-17T22:00:00.000Z",
+          temperatureF: 80,
+          shortForecast: "Sunny",
+        },
+        {
+          name: "Tomorrow",
+          startTime: "2026-09-18T06:00:00.000Z",
+          endTime: "2026-09-18T18:00:00.000Z",
+          temperatureF: 50,
+          precipChance: 90,
+          shortForecast: "Heavy rain",
+        },
+      ],
+    };
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot: futureSnapshot }),
+      now: () => Date.parse("2026-09-17T15:00:00.000Z"),
+    });
+    const tripWindow = { start: "2026-09-18T08:00:00.000Z", end: "2026-09-18T16:00:00.000Z" };
+    await provider.refresh(context(tripWindow));
+
+    const result = provider.getWeather(context(tripWindow));
+    // Planning tomorrow must not read today's sunshine as tomorrow's ride weather.
+    expect(result.data?.display).toContain("Heavy rain");
+    expect(result.data?.display).not.toContain("Sunny");
+    expect(result.data?.maxPrecipChance).toBe(90);
+  });
+
+  it("says no forecast covers the trip window rather than showing an unrelated period", async () => {
+    const provider = createNwsWeatherProvider({
+      fetcher: async () => Response.json({ snapshot }),
+      now: () => Date.parse("2026-09-17T14:44:00.000Z"),
+    });
+    const tripWindow = { start: "2026-10-02T12:00:00.000Z", end: "2026-10-02T18:00:00.000Z" };
+    await provider.refresh(context(tripWindow));
+
+    const result = provider.getWeather(context(tripWindow));
+    expect(result.data?.display).toBe("No forecast covers this trip window.");
+    expect(result.data?.display).not.toContain("Sunny");
+    expect(result.reason.toLowerCase()).toContain("no forecast covers this trip window");
   });
 
   it.each([

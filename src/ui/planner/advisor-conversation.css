@@ -97,8 +97,8 @@
 .og-advisor-ask__chips {
   display: flex;
   gap: 8px;
-  margin: 0 -4px;
-  padding: 2px 4px 4px;
+  margin: 0;
+  padding: 2px 0 4px;
   overflow-x: auto;
   list-style: none;
   scrollbar-width: none;

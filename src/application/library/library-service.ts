@@ -1,8 +1,9 @@
 import { deepFreeze } from "@/domain/util/freeze";
 import { newRideId, type GeometryRef, type RideId } from "@/domain/ride/ids";
-import type { RideDocument, RideProvenance } from "@/domain/ride/types";
+import type { RideDocument, RideIntent, RideProvenance } from "@/domain/ride/types";
 import type {
   LibrarySourceKind,
+  PlannedRouteEnvelope,
   RideDerivedFrom,
   RideLibraryRepositoryPort,
   RideRecord,
@@ -80,6 +81,8 @@ export interface ExportWaypoint {
 
 export interface RideExportSource {
   readonly title: string;
+  /** The ride document's creation instant, for `<metadata><time>`. */
+  readonly createdTime: string;
   readonly plannedRoute: {
     readonly geometry: readonly Coordinate[];
     readonly waypoints: readonly ExportWaypoint[];
@@ -137,6 +140,13 @@ export interface SaveNamedOptions {
   readonly offlinePack?: CorridorPackManifest;
   /** Distance and time the card shows; known at save time, not re-derived. */
   readonly bundleSummary?: RideBundleSummary;
+  /** The selected route line; without it the saved ride has nothing to export. */
+  readonly plannedRoute?: SavePlannedRouteInput;
+}
+
+/** A route line the rider selected in the planner, at the moment of saving. */
+export interface SavePlannedRouteInput {
+  readonly geometry: readonly Coordinate[];
 }
 
 export interface LibraryExploreRide {
@@ -253,9 +263,10 @@ function summary(record: RideRecord): RideSummary {
       : { recordedTrack: { summary: record.recordedTrack.summary, previewGeometry: [] } }),
     exportCapabilities: {
       plannedRoute:
-        record.importData !== undefined &&
-        record.importData.tracks.length === 1 &&
-        record.importData.tracks[0]?.segments.length === 1,
+        record.plannedRoute !== undefined ||
+        (record.importData !== undefined &&
+          record.importData.tracks.length === 1 &&
+          record.importData.tracks[0]?.segments.length === 1),
       track: (record.importData?.tracks.length ?? 0) > 0,
       original: record.originalsRef !== undefined,
       recordedRide: record.recordedTrack !== undefined,
@@ -290,6 +301,24 @@ function matches(record: RideRecord, filter: RideListFilter): boolean {
   return true;
 }
 
+/**
+ * Start, stops and finish as export waypoints. A point the rider never named
+ * stays unnamed: a role word ("Start") would be a name they did not give.
+ */
+export function waypointsFromIntent(intent: RideIntent): readonly ExportWaypoint[] {
+  const waypoints: ExportWaypoint[] = [];
+  if (intent.start !== null) {
+    waypoints.push({ name: intent.start.label?.trim() || null, coordinate: intent.start.coordinate });
+  }
+  for (const stop of intent.stops) {
+    waypoints.push({ name: stop.label?.trim() || null, coordinate: stop.coordinate });
+  }
+  if (intent.finish !== null) {
+    waypoints.push({ name: intent.finish.label?.trim() || null, coordinate: intent.finish.coordinate });
+  }
+  return waypoints;
+}
+
 export class LibraryService implements LibraryServicePort {
   private readonly repository: LibraryRepository;
   private readonly now: () => string;
@@ -301,6 +330,25 @@ export class LibraryService implements LibraryServicePort {
     this.now = options.now ?? (() => new Date().toISOString());
     this.blobStore = options.blobStore;
     this.geometryStore = options.geometryStore;
+  }
+
+  /**
+   * The route line is written before the library row, exactly like a recording:
+   * a row that never commits leaves only an unreferenced payload, which the
+   * startup sweep reclaims.
+   */
+  private async storePlannedRoute(
+    input: SavePlannedRouteInput | undefined,
+    savedAt: string,
+  ): Promise<PlannedRouteEnvelope | undefined> {
+    if (input === undefined) return undefined;
+    if (input.geometry.length < 2) throw new Error("A planned route needs at least two geometry points.");
+    if (this.geometryStore === undefined) throw new Error("Planned route geometry storage is unavailable.");
+    const geometry = await this.geometryStore.put(
+      { kind: "line", coordinates: input.geometry.map((coordinate) => ({ ...coordinate })) },
+      { kind: "route", now: savedAt },
+    );
+    return { geometryRef: geometry.geometryRef };
   }
 
   async saveNamed(document: RideDocument, options: SaveNamedOptions): Promise<NamedRide> {
@@ -315,6 +363,7 @@ export class LibraryService implements LibraryServicePort {
     const offlinePack = options.offlinePack === undefined
       ? undefined
       : { ...options.offlinePack, rideId: namedDocument.rideId };
+    const plannedRoute = await this.storePlannedRoute(options.plannedRoute, savedAt);
     const saveResult = await this.repository.saveLibraryRide(namedDocument, {
       writerToken: `library-${crypto.randomUUID()}`,
       savedAt,
@@ -325,6 +374,7 @@ export class LibraryService implements LibraryServicePort {
       ...(options.uniqueKey === undefined ? {} : { uniqueKey: options.uniqueKey }),
       ...(options.importData === undefined ? {} : { importData: options.importData }),
       ...(offlinePack === undefined ? {} : { offlinePack }),
+      ...(plannedRoute === undefined ? {} : { plannedRoute }),
       ...(options.bundleSummary === undefined ? {} : { bundleSummary: options.bundleSummary }),
     });
     if (saveResult.status === "duplicate-key") {
@@ -484,6 +534,7 @@ export class LibraryService implements LibraryServicePort {
       ...(record.freeRideSummary === undefined ? {} : { freeRideSummary: record.freeRideSummary }),
       ...(record.offlinePack === undefined ? {} : { offlinePack: record.offlinePack }),
       ...(record.importData === undefined ? {} : { importData: record.importData }),
+      ...(record.plannedRoute === undefined ? {} : { plannedRoute: record.plannedRoute }),
     });
   }
 
@@ -533,6 +584,12 @@ export class LibraryService implements LibraryServicePort {
     if (acceptedRef !== undefined && this.geometryStore !== undefined) {
       const stored = await this.geometryStore.get(acceptedRef);
       if (stored?.payload.kind === "line") return { ...item, mapPreview: { line: previewLine(stored.payload.coordinates), pins: [] } };
+    }
+    if (record.plannedRoute !== undefined && this.geometryStore !== undefined) {
+      const stored = await this.geometryStore.get(record.plannedRoute.geometryRef).catch(() => null);
+      if (stored !== null && stored.payload.kind === "line" && stored.payload.coordinates.length >= 2) {
+        return { ...item, mapPreview: { line: previewLine(stored.payload.coordinates), pins: [] } };
+      }
     }
     if (record.freeRideSummary !== undefined) return item;
     const intent = record.document.intent;
@@ -590,22 +647,27 @@ export class LibraryService implements LibraryServicePort {
         }
       }
     }
-    const documentWaypoints: ExportWaypoint[] = [];
-    const start = record.document.intent.start;
-    if (start !== null) documentWaypoints.push({ name: start.label?.trim() || null, coordinate: start.coordinate });
-    for (const stop of record.document.intent.stops) {
-      documentWaypoints.push({ name: stop.label?.trim() || null, coordinate: stop.coordinate });
-    }
-    const finish = record.document.intent.finish;
-    if (finish !== null) documentWaypoints.push({ name: finish.label?.trim() || null, coordinate: finish.coordinate });
+    const documentWaypoints = waypointsFromIntent(record.document.intent);
     const waypoints: ExportWaypoint[] = importData?.waypoints.map((waypoint) => ({
         name: waypoint.name?.trim() || null,
         coordinate: waypoint.coordinate,
       })) ?? [];
     const routeWaypoints = [...waypoints, ...documentWaypoints];
-    const firstTrack = importData?.tracks.length === 1 ? importData.tracks[0] : undefined;
-    const plannedSegment = firstTrack?.segments.length === 1 ? firstTrack.segments[0] : undefined;
-    const plannedCoordinates = plannedSegment === undefined ? null : trackGeometry[plannedSegment.geometryRef] ?? null;
+    // The line the rider selected at save time wins over an import's single
+    // track: it is the geometry they actually saw on the map.
+    let plannedCoordinates: readonly Coordinate[] | null = null;
+    if (record.plannedRoute !== undefined) {
+      if (this.geometryStore === undefined) throw new Error("Planned route geometry storage is unavailable.");
+      const stored = await this.geometryStore.get(record.plannedRoute.geometryRef);
+      if (stored === null || stored.payload.kind !== "line") {
+        throw new Error("The planned route geometry is unavailable.");
+      }
+      plannedCoordinates = stored.payload.coordinates;
+    } else {
+      const firstTrack = importData?.tracks.length === 1 ? importData.tracks[0] : undefined;
+      const plannedSegment = firstTrack?.segments.length === 1 ? firstTrack.segments[0] : undefined;
+      plannedCoordinates = plannedSegment === undefined ? null : trackGeometry[plannedSegment.geometryRef] ?? null;
+    }
     const originalRecord = record.originalsRef === undefined || this.blobStore === undefined
       ? null
       : await this.blobStore.get(record.originalsRef as GeometryRef);
@@ -623,6 +685,7 @@ export class LibraryService implements LibraryServicePort {
     }
     return {
       title: record.document.title ?? "Ride",
+      createdTime: record.document.createdAt,
       plannedRoute: plannedCoordinates === null ? null : { geometry: plannedCoordinates, waypoints: routeWaypoints },
       tracks: importData?.tracks ?? [],
       trackGeometry,

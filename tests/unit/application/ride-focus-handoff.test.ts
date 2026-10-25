@@ -1,3 +1,4 @@
+import { asRecordingId } from "@/domain/recording/ids";
 import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
 /**
  * The Active Ride handoff (04-PLANNER-AND-WORKSPACE-UX §28;
@@ -330,6 +331,68 @@ describe("startRideFromHandoff", () => {
       routeGeometryRef: null,
       updatedAt: NOW,
     });
+  });
+
+  it("ends a ride left open (not recording) and starts Free Ride anyway", async () => {
+    const controller = createRideSessionController({ repository: journalSpy([]), now: () => NOW });
+    await controller.start({ activity: "free", rideId: RIDE_ID, rideRevision: 7, itinerary: [], at: NOW });
+    const leftoverSessionId = controller.snapshot()!.sessionId;
+    const dispatch = vi.spyOn(controller, "dispatch");
+    const base = pointer();
+    let found = true;
+    const port = {
+      ...base,
+      get writes() { return base.writes; },
+      get cleared() { return base.cleared; },
+      read: () => (found
+        ? { status: "found" as const, pointer: { version: 1, sessionId: leftoverSessionId, rideId: RIDE_ID, routeGeometryRef: null, updatedAt: NOW } }
+        : { status: "absent" as const }),
+      clear: () => { found = false; base.clear(); },
+    } as unknown as ReturnType<typeof pointer>;
+
+    const outcome = await startFreeRideFromPlanner({
+      controller,
+      pointer: port,
+      document: document(),
+      rides: { saveRide: vi.fn(async () => ({ ok: true as const })) } as never,
+      writerToken: "free-ride-test-writer",
+      now: NOW,
+      recording: createRideRecordingWorkflow({
+        session: controller, pointer: port,
+        recordings: { load: async (recordingId: string) => ({ recordingId, status: "open", lastBatchSeq: 0, pointCount: 0, summary: null }), create: async () => ({ ok: true }), delete: async () => ({ ok: true }) } as never,
+        library: {} as never,
+      }),
+    });
+
+    expect(outcome.outcome).toBe("started");
+    expect(port.cleared).toBe(1);
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "session.abandoned" }));
+    expect(controller.snapshot()).toMatchObject({ activity: "free", suggestions: "on" });
+    expect(controller.snapshot()?.recordingId).toMatch(/^rec_/);
+    expect(controller.snapshot()?.sessionId).not.toBe(leftoverSessionId);
+  });
+
+  it.each(["free", "guided"] as const)("opens an existing recording %s ride before starting a new one", async (activity) => {
+    const controller = createRideSessionController({ repository: journalSpy([]), now: () => NOW });
+    await controller.start({ activity, rideId: RIDE_ID, rideRevision: 7, itinerary: [],
+      route: activity === "guided" ? { planningGeneration: 3, routeId: ROUTE_ID } : null,
+      recordingId: asRecordingId("rec_existing"), at: NOW });
+    const existing = controller.snapshot()!;
+    const base = pointer();
+    const port = { ...base, read: () => ({ status: "found" as const, pointer: {
+      version: 1 as const, sessionId: existing.sessionId, rideId: RIDE_ID,
+      routeGeometryRef: null, updatedAt: NOW,
+    } }) };
+    const saveRide = vi.fn();
+    const start = vi.fn();
+    const outcome = await startFreeRideFromPlanner({ controller, pointer: port, document: document(),
+      rides: { saveRide } as never, recording: { start } as never, writerToken: "new", now: NOW });
+    expect(outcome).toMatchObject({ outcome: "rejected", sessionId: existing.sessionId });
+    expect(controller.snapshot()).toMatchObject({ sessionId: existing.sessionId, recordingId: existing.recordingId, activity });
+    expect(base.cleared).toBe(0);
+    expect(base.writes).toEqual([]);
+    expect(saveRide).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
   });
 
   it("does not start or publish a session when the RideDocument cannot be persisted", async () => {

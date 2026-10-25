@@ -8,6 +8,11 @@ export interface TrafficDelayBand {
 
 export interface ProtectTheRideTrafficCost {
   readonly status: Extract<EvidenceStatus, "known" | "unknown">;
+  /**
+   * A matched segment was reported closed. A closure is a fact about the road,
+   * not a delay, so it never becomes a zero band or an all-clear.
+   */
+  readonly closed: boolean;
   readonly applied: boolean;
   /** Null means the existing no-traffic cost remains in force. */
   readonly normalizedCost: number | null;
@@ -30,14 +35,34 @@ export function protectTheRideCost(
   options: { readonly routeDurationSeconds?: number } = {},
 ): ProtectTheRideTrafficCost {
   const delayEstimateCount = response.segments.filter((segment) => segment.delaySeconds !== null).length;
-  const usable = response.availability === "available"
+  const hasSegments = response.availability === "available" && response.segments.length > 0;
+  const usable = hasSegments
     && response.departureApplicability === "current"
     && response.freshness.status === "fresh"
-    && response.segments.length > 0
     && delayEstimateCount > 0;
+
+  // A provider closure outranks delay arithmetic and freshness: a road that is
+  // reported shut does not become clear when the reading ages, and the traffic
+  // term must not improve the route's score.
+  const closed = hasSegments && response.segments.some(
+    (segment) => segment.roadClosure === true || segment.speedClass === "closed",
+  );
+  if (closed) {
+    return {
+      status: "unknown",
+      closed: true,
+      applied: false,
+      normalizedCost: null,
+      delayBand: null,
+      label: "Road closure reported",
+      explanationKey: "score.traffic.closure",
+    };
+  }
+
   if (!usable) {
     return {
       status: "unknown",
+      closed: false,
       applied: false,
       normalizedCost: null,
       delayBand: null,
@@ -59,6 +84,7 @@ export function protectTheRideCost(
   const normalizedCost = clamp((maxMinutes * 60) / Math.max(60, routeDurationSeconds), 0, 1);
   return {
     status: "known",
+    closed: false,
     applied: true,
     normalizedCost,
     delayBand: { minMinutes, maxMinutes },

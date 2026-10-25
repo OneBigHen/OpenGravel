@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
-import type { PlaceSearchPort } from "@/application/geocoding/place-search";
+import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
+import { newCommandId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
@@ -30,9 +31,38 @@ function jimThorpeLoop(document: RideDocument): AdvisorDraft {
   };
 }
 
-function places(): PlaceSearchPort & { search: ReturnType<typeof vi.fn> } {
+const OLD_MILL_GAP: PlaceMatch = {
+  id: "photon:addr-1",
+  label: "1234 Old Mill Gap Road, Stroudsburg, PA 18360",
+  name: "1234 Old Mill Gap Road",
+  context: "Stroudsburg, Monroe County, PA",
+  coordinate: { lat: 40.9868, lon: -75.1947 },
+  provider: "photon",
+};
+const COFFEE: PlaceMatch = {
+  id: "photon:poi-1",
+  label: "Notebook Coffee, Jim Thorpe, PA",
+  name: "Notebook Coffee",
+  context: "Jim Thorpe, Carbon County, PA",
+  coordinate: { lat: 40.8631, lon: -75.7377 },
+  provider: "photon",
+};
+
+/** A date a few days ahead, so a proposed return-by time is still in the future. */
+function futureDay(offsetDays: number): string {
+  return new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** The month and day names of a rider-local date, as the card reads them. */
+function dayWords(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1)));
+}
+
+function places(list: readonly PlaceMatch[] = []): PlaceSearchPort & { search: ReturnType<typeof vi.fn> } {
   return {
-    search: vi.fn(async () => ({ status: "ok" as const, places: [] })),
+    search: vi.fn(async () => ({ status: "ok" as const, places: list })),
     reverse: vi.fn(async () => null),
   };
 }
@@ -50,12 +80,20 @@ function WhereTo({ port }: { readonly port: PlaceSearchPort }) {
   );
 }
 
-function setup(options: { readonly enabled?: boolean; readonly onApplied?: () => AdvisorAppliedNext } = {}) {
+function setup(
+  options: {
+    readonly enabled?: boolean;
+    readonly onApplied?: () => AdvisorAppliedNext;
+    readonly places?: readonly PlaceMatch[];
+    readonly client?: AdvisorProposalClient;
+    readonly draft?: (document: RideDocument) => AdvisorDraft;
+  } = {},
+) {
   const store = createRideDocumentStore({ document: createRideDocument() });
-  const client: AdvisorProposalClient = {
-    request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+  const client: AdvisorProposalClient = options.client ?? {
+    request: vi.fn(async () => ({ ok: true as const, draft: (options.draft ?? jimThorpeLoop)(store.getState().document) })),
   };
-  const port = places();
+  const port = places(options.places);
   render(
     <RideAdvisorProvider enabled={options.enabled ?? true} store={store} client={client} {...(options.onApplied === undefined ? {} : { onApplied: options.onApplied })}>
       <WhereTo port={port} />
@@ -89,6 +127,35 @@ describe("one box for where to and describe a ride", () => {
     expect(port.search).not.toHaveBeenCalled();
   });
 
+  it("accepts a ride description far longer than a place query", () => {
+    setup();
+    expect(screen.getByTestId("finish-search")).toHaveAttribute("maxLength", "600");
+  });
+
+  it("still searches places for a long street address", async () => {
+    const { port } = setup({ places: [OLD_MILL_GAP] });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "1234 Old Mill Gap Road, Stroudsburg, PA 18360" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getAllByTestId("place-option")).toHaveLength(1));
+    expect(screen.getByText("1234 Old Mill Gap Road")).toBeInTheDocument();
+  });
+
+  it("keeps the place results for a business search, with the ride row after them", async () => {
+    const { port } = setup({ places: [COFFEE] });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.focus(box);
+    fireEvent.change(box, { target: { value: "coffee shop, Jim Thorpe PA" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getAllByRole("option").map((option) => option.getAttribute("data-testid"))).toEqual([
+        "place-option",
+        "place-option-describe",
+      ]),
+    );
+  });
+
   it("shows the proposal in rider words and plans it on one tap", async () => {
     const onApplied = vi.fn((): AdvisorAppliedNext => ({ kind: "planning" }));
     const { store } = setup({ onApplied });
@@ -107,6 +174,35 @@ describe("one box for where to and describe a ride", () => {
     expect(onApplied).toHaveBeenCalledOnce();
     expect(store.getState().document.intent.shape).toBe("loop");
     await waitFor(() => expect(screen.queryByTestId("advisor-inline")).toBeNull());
+  });
+
+  it("refreshes a stale proposal against the ride as it is now, without asking the model again", async () => {
+    const { store, client } = setup();
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2h of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+    await screen.findByTestId("advisor-proposal");
+
+    // The rider taps a ride-style control before pressing Plan it.
+    const before = store.getState().document;
+    store.getState().dispatch({
+      type: "roadCharacter.set",
+      commandId: newCommandId(),
+      rideId: before.rideId,
+      baseRevision: before.revision,
+      source: "rider",
+      label: "Set road character",
+      roadCharacter: "efficient",
+    });
+
+    expect(await screen.findByTestId("advisor-refresh")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Plan it" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Plan it" }));
+    expect(client.request).toHaveBeenCalledOnce();
+    expect(store.getState().document.intent.shape).toBe("loop");
+    expect(store.getState().document.intent.roadCharacter).toBe("backroads");
   });
 
   it("names the point still missing after applying", async () => {
@@ -210,5 +306,149 @@ describe("ask about this ride", () => {
     fireEvent.submit(screen.getByTestId("advisor-ride-prompt").closest("form")!);
     await waitFor(() => expect(client.request).toHaveBeenCalledTimes(1));
     expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("add a coffee stop in Jim Thorpe");
+  });
+
+  it("lets the rider cancel an ask that came from the ride sheet", async () => {
+    let requested: AbortSignal | undefined;
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = {
+      request: (_request, signal) => {
+        requested = signal;
+        return new Promise(() => undefined);
+      },
+    };
+    render(<RideAdvisorProvider enabled store={store} client={client}><AdvisorRideAsk /></RideAdvisorProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Curvier" }));
+    const working = await screen.findByTestId("advisor-working");
+    expect(screen.getByTestId("advisor-ride-ask")).toContainElement(working);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByTestId("advisor-working")).toBeNull());
+    expect(requested?.aborted).toBe(true);
+  });
+});
+
+describe("the proposal card", () => {
+  it("reads in rider words, with a local date and the before-value in text", async () => {
+    const returnDay = futureDay(3);
+    setup({
+      draft: (document) => {
+        const draft = jimThorpeLoop(document);
+        return {
+          ...draft,
+          fields: {
+            ...draft.fields,
+            rideTimeKind: "returnBy",
+            rideTimeMinutes: null,
+            rideTimeDate: returnDay,
+            rideTimeLocalTime: "18:00",
+            noveltyPreference: "prefer-new-to-me",
+            departureKind: "unchanged",
+            departureLocalDate: null,
+            departureLocalTime: null,
+          },
+        };
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "new roads, back by 6" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const proposal = await screen.findByTestId("advisor-proposal");
+    expect(proposal).toHaveTextContent("Proposed ride");
+    expect(proposal).toHaveTextContent("New roads");
+    expect(proposal).toHaveTextContent(`Back by 6:00 pm on ${dayWords(returnDay)}`);
+    expect(proposal.textContent).not.toMatch(/prefer-new-to-me|\d{4}-\d{2}-\d{2}/);
+    // The old value is readable on a touch screen, not hidden in a hover title,
+    // and filling an empty slot ("No time target") is not called a replacement.
+    expect(proposal).toHaveTextContent("Replaces Balanced roads");
+    expect(proposal.querySelector(".og-advisor__was")?.textContent).not.toMatch(/No time target|No start/);
+    expect(proposal.querySelector("li[title]")).toBeNull();
+  });
+
+  it("names the departure in rider words", async () => {
+    const leaveDay = futureDay(4);
+    setup({
+      draft: (document) => {
+        const draft = jimThorpeLoop(document);
+        return {
+          ...draft,
+          fields: {
+            ...draft.fields,
+            departureKind: "future",
+            departureLocalDate: leaveDay,
+            departureLocalTime: "08:00",
+          },
+        };
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "loop from Jim Thorpe, leave at 8" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const proposal = await screen.findByTestId("advisor-proposal");
+    expect(proposal).toHaveTextContent("8:00 AM");
+    expect(proposal.textContent).toMatch(/Leave /);
+    expect(proposal.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe("waiting for the advisor", () => {
+  it("offers Cancel while the advisor is thinking, and cancelling returns to idle", async () => {
+    let requested: AbortSignal | undefined;
+    setup({
+      client: {
+        request: (_request, signal) => {
+          requested = signal;
+          return new Promise(() => undefined);
+        },
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    const working = await screen.findByTestId("advisor-working");
+    expect(working).toHaveTextContent("Reading");
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveClass("og-advisor__cancel");
+    fireEvent.click(cancel);
+
+    await waitFor(() => expect(screen.queryByTestId("advisor-inline")).toBeNull());
+    expect(requested?.aborted).toBe(true);
+  });
+
+  it("does not offer Retry once the shared daily allowance is spent", async () => {
+    setup({
+      client: {
+        request: async () => ({
+          ok: false as const,
+          errorClass: "quota-exhausted" as const,
+          message: "The advisor has used up today's limit. Everything else works without it.",
+          recovery: "none" as const,
+        }),
+      },
+    });
+    const box = screen.getByTestId("finish-search");
+    fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    expect(await screen.findByText(/used up today's limit/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("says what it is still doing after a few seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      setup({ client: { request: () => new Promise(() => undefined) } });
+      const box = screen.getByTestId("finish-search");
+      fireEvent.change(box, { target: { value: "2 hours of backroads from Jim Thorpe" } });
+      fireEvent.keyDown(box, { key: "Enter" });
+      await act(async () => { await Promise.resolve(); });
+      expect(screen.getByTestId("advisor-working")).not.toHaveTextContent("checking places");
+      await act(async () => { vi.advanceTimersByTime(3_100); });
+      expect(screen.getByTestId("advisor-working")).toHaveTextContent("Still reading your ride and checking places");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,5 +1,3 @@
-import { createHash, timingSafeEqual } from "node:crypto";
-
 import {
   CONTRIBUTION_RESPONSE_HEADERS,
   handleContributionModerationDecide,
@@ -11,6 +9,7 @@ import {
   SQLiteContributionStore,
   type ContributionStore,
 } from "./store";
+import { bearerTokenMatches } from "@/server/security/operator-token";
 
 export const MAX_CONTRIBUTION_BODY_BYTES = 32 * 1024;
 const MODERATION_ACCESS_HEADERS = { "cache-control": "private, no-store" } as const;
@@ -116,10 +115,7 @@ function moderationAccessFailure(request: Request, moderationToken: string | und
       headers,
     });
   }
-  const candidate = /^Bearer ([^\s]+)$/i.exec(request.headers.get("authorization") ?? "")?.[1] ?? "";
-  const expectedDigest = createHash("sha256").update(moderationToken).digest();
-  const candidateDigest = createHash("sha256").update(candidate).digest();
-  if (candidate.length === 0 || !timingSafeEqual(candidateDigest, expectedDigest)) {
+  if (!bearerTokenMatches(request, moderationToken)) {
     return Response.json({ error: { code: "unauthorized", message: "Moderation authorization is required." } }, {
       status: 401,
       headers,

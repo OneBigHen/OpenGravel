@@ -18,6 +18,7 @@ describe("advisor error classes → rider-safe states (10 §13)", () => {
       "unavailable",
       "timeout",
       "rate-limit",
+      "quota-exhausted",
       "invalid-request",
       "unsupported-action",
       "grounding-failed",
@@ -45,9 +46,15 @@ describe("advisor error classes → rider-safe states (10 §13)", () => {
 
   it("offers Refresh for a stale revision and nothing for a hard rejection", () => {
     expect(advisorRiderState("stale-revision").recovery).toBe("refresh");
-    for (const errorClass of ["invalid-request", "unsupported-action"] as const) {
+    for (const errorClass of ["invalid-request", "unsupported-action", "quota-exhausted"] as const) {
       expect(advisorRiderState(errorClass).recovery).toBe("none");
     }
+  });
+
+  it("says the shared daily allowance is spent instead of promising a retry", () => {
+    const state = advisorRiderState("quota-exhausted");
+    expect(state.message).toBe("The advisor has used up today's limit. Everything else works without it.");
+    expect(state.message).not.toMatch(/moment|try again/i);
   });
 
   it("builds a transport failure that mirrors the rider state", () => {

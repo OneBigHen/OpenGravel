@@ -76,6 +76,33 @@ export function canMoveStopDown(index: number, count: number): boolean {
 }
 
 /**
+ * Where a dragged stop lands, in the reducer's own vocabulary: the stop it must
+ * be placed **before**, or `undefined` for the list's last slot.
+ *
+ * `null` means the drag changed nothing, and the caller must not dispatch: a
+ * `stop.reorder` with `undefined` appends, so a no-op drag would otherwise move
+ * the stop to the end of the ride. One drag is one command (03 §27), so the
+ * neighbour is resolved once, at the drop, rather than as a series of one-step
+ * moves.
+ */
+export function reorderTargetFor(
+  stopIds: readonly StopId[],
+  fromIndex: number,
+  toIndex: number,
+): { readonly beforeStopId: StopId | undefined } | null {
+  if (!Number.isFinite(fromIndex) || !Number.isFinite(toIndex)) return null;
+  if (fromIndex < 0 || fromIndex >= stopIds.length) return null;
+  const target = Math.max(0, Math.min(stopIds.length - 1, Math.trunc(toIndex)));
+  if (target === fromIndex) return null;
+  // Moving down passes the stop that currently holds the slot after the drop's
+  // last neighbour, so the anchor is the one *after* the target; moving up
+  // lands in front of the stop that already occupies the target slot.
+  return {
+    beforeStopId: target > fromIndex ? stopIds[target + 1] : stopIds[target],
+  };
+}
+
+/**
  * Where along `line` a coordinate falls, as a fractional vertex index: the
  * nearest segment's start index plus how far along that segment the
  * coordinate projects. Plane geometry on lon/lat scaled by latitude is plenty

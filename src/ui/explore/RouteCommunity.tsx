@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
-import { submitContribution } from "@/application/contributions/client";
+import { ContributionSubmissionError, submitContribution } from "@/application/contributions/client";
 import { COMMUNITY_DEVICE_ID_STORAGE_KEY } from "@/application/contributions/device-id";
 import { asRoadEntityId, asRoadSpanId } from "@/domain/ride/ids";
 import { CONTRIBUTION_MAX_CONDITION_NOTE_LENGTH, newContributorPseudoId } from "@/domain/contributions";
@@ -22,6 +22,20 @@ interface CommunityState {
 
 const EMPTY: CommunityState = { ratingAverage: null, ratingCount: 0, comments: [] };
 const ROUTE_LEVEL_GPS_PRECISION_M = 1_000;
+
+/**
+ * A refusal from the server already says what happened in plain English (too
+ * many notes from this connection, a full review queue). Show it instead of
+ * blaming the rider's note, and keep the action-specific copy for everything
+ * else.
+ */
+function refusalMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof ContributionSubmissionError && (caught.status === 429 || caught.status === 413)) {
+    const message = (caught.body as { error?: { message?: unknown } } | null)?.error?.message;
+    if (typeof message === "string" && message.trim().length > 0) return message;
+  }
+  return fallback;
+}
 
 function deviceId(): string {
   const saved = window.localStorage.getItem(COMMUNITY_DEVICE_ID_STORAGE_KEY);
@@ -114,8 +128,8 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
       });
       setReportNote("");
       setStatus("Road condition report sent for review. Posted from this device.");
-    } catch {
-      setError("Road condition report could not be saved. Try again later.");
+    } catch (caught: unknown) {
+      setError(refusalMessage(caught, "Road condition report could not be saved. Try again later."));
     } finally {
       setBusy(false);
     }
@@ -141,8 +155,8 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
       });
       setComment("");
       setStatus("Comment sent for review. It will appear after approval. Posted from this device.");
-    } catch {
-      setError("Comment could not be sent for review. Try again later.");
+    } catch (caught: unknown) {
+      setError(refusalMessage(caught, "Comment could not be sent for review. Try again later."));
     } finally {
       setBusy(false);
     }

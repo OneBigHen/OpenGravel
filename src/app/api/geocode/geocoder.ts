@@ -1,13 +1,14 @@
 import type { GeocodeDependencies } from "@/server/geocoding/handler";
-import { createPhotonGeocoder, PHOTON_DEFAULT_URL } from "@/infrastructure/geocoding/photon";
+import { createDeploymentGeocoder } from "@/server/geocoding/fallback-geocoder";
 
 /**
  * The deployment's geocoder, composed once per server process. `PHOTON_URL`
  * points at a self-hosted Photon when there is one; the public komoot instance
  * otherwise. `OGV_GEOCODER_BIAS` (`lat,lon`) is an optional regional hint set
- * by the operator. With no configured hint, Photon ranks without a location.
+ * by the operator. With `TOMTOM_API_KEY` set, TomTom answers whenever Photon
+ * cannot. With no configured hint, Photon ranks without a location.
  */
-const photon = createPhotonGeocoder({ baseUrl: process.env.PHOTON_URL ?? PHOTON_DEFAULT_URL });
+const photon = createDeploymentGeocoder();
 
 function configuredBias(): { lat: number; lon: number } | undefined {
   const configured = process.env.OGV_GEOCODER_BIAS?.trim();

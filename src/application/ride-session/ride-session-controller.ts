@@ -233,8 +233,8 @@ export function createRideSessionController(
     }
   }
 
-  async function applyEvent(event: RideSessionEvent): Promise<RideSessionCommandResult> {
-    const outcome = reduce(state, event);
+  async function applyEvent(event: RideSessionEvent, newSession = false): Promise<RideSessionCommandResult> {
+    const outcome = reduce(newSession ? null : state, event);
     if (outcome.outcome === "rejected") {
       return {
         outcome: "rejected",
@@ -245,6 +245,10 @@ export function createRideSessionController(
       };
     }
     const applied = outcome.state;
+    if (newSession) {
+      lastSeq = 0;
+      uncheckpointed = 0;
+    }
     state = applied;
     const persistence = await enqueue(() => persist(applied.sessionId, event, applied));
     return { outcome: "applied", state: applied, persistence };
@@ -273,7 +277,9 @@ export function createRideSessionController(
         recordingId: input.recordingId ?? null,
         suggestions: input.suggestions ?? "off",
       });
-      return applyEvent(event);
+      // A finished session stays in its own journal. A new ride gets a fresh
+      // reducer and sequence, while an active ride still rejects a second start.
+      return applyEvent(event, state?.activity === "completed" && event.type === "session.started" && state.sessionId !== event.sessionId);
     },
 
     dispatch(event: RideSessionEvent): Promise<RideSessionCommandResult> {

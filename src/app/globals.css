@@ -2285,6 +2285,21 @@ h3,
   gap: 10px;
 }
 
+.og-plan-actions__unfinished {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-object);
+  background: var(--og-well);
+}
+
+.og-plan-actions__unfinished p {
+  margin: 0;
+  color: var(--og-ink);
+}
+
 .og-plan-actions__record-row {
   display: flex;
   flex-wrap: wrap;
@@ -4037,7 +4052,7 @@ h3,
   flex-direction: column;
   gap: 10px;
   padding-top: 4px;
-  border-top: 1px solid var(--og-sandstone);
+  border-top: 1px solid var(--og-hairline);
 }
 
 .og-points__head {
@@ -4062,13 +4077,13 @@ h3,
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
 .og-points__section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .og-points__empty {
@@ -4077,6 +4092,10 @@ h3,
   color: var(--og-slate-text);
 }
 
+/* The object row shared by the planner's editable lists — road spans, avoid areas
+   and the itinerary (04 §15): one row per authored object, actions as real
+   buttons, because the list is the accessible path for every map operation
+   (04 §31). The itinerary row below refines it; the other lists keep this card. */
 .og-point {
   display: flex;
   flex-direction: column;
@@ -4144,24 +4163,6 @@ h3,
   overflow-wrap: anywhere;
 }
 
-/* The secondary coordinate under a row's name: never clipped, always four
-   decimals (OGV-D-224's rule, applied to the list as well as the composer). */
-.og-point__coordinate {
-  font-size: 12px;
-  color: var(--og-slate-text);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.og-point__intent {
-  flex: none;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--og-golden-hour);
-  color: var(--og-ink);
-  font-size: 12px;
-}
-
 .og-point__actions {
   display: flex;
   flex-wrap: wrap;
@@ -4194,6 +4195,281 @@ h3,
 .og-point__action:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
+}
+
+/* The itinerary row (04 §15): the pin, the place and the leg that ends there,
+   as the ride briefing rather than as a set of pins. Grid columns are the pin,
+   the reading, the arrival intent and the 44 px control that holds every
+   action, so a row never wraps into a toolbar. The hairline is the only
+   structure it needs. */
+.og-point--itinerary {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--og-hairline);
+  background: transparent;
+  transition:
+    transform var(--og-dur-fast) var(--og-ease),
+    background-color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-point--itinerary:last-child {
+  border-bottom: 0;
+}
+
+.og-point--itinerary[data-selected="true"] {
+  border-left-color: transparent;
+  background: color-mix(in srgb, var(--og-ember) 7%, transparent);
+}
+
+/* The selected row's bar: the same highlight the map's own pin uses, drawn as a
+   rail instead of a border so the hairline dividers stay aligned. */
+.og-point--itinerary[data-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--og-ember);
+}
+
+/* An armed "replace place" marks the row that owns the next map tap. */
+.og-point--itinerary[data-armed="true"] {
+  border-radius: var(--og-radius-control);
+  background: color-mix(in srgb, var(--og-ember) 11%, transparent);
+  box-shadow: inset 0 0 0 1px var(--og-ember-strong);
+}
+
+/* The pin the map draws, at list scale: a numbered white stop, a green start, a
+   checkered finish, a Golden Hour anchor. */
+.og-point__pin {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--og-ink);
+  background: var(--og-paper);
+  color: var(--og-ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--og-ink) 22%, transparent);
+}
+
+.og-point__pin--start {
+  border-color: var(--og-success);
+  background: var(--og-success);
+}
+
+/* The start's white "go" arrow, drawn with the same triangle the map's pin
+   image uses. `--og-paper` rather than `--og-on-fill` because the fill is the
+   theme's success green, which lightens in Night and needs a dark mark. */
+.og-point__pin--start::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 8px solid var(--og-paper);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  margin-left: 2px;
+}
+
+.og-point__pin--finish {
+  border-color: var(--og-ink);
+  background: repeating-conic-gradient(var(--og-ink) 0% 25%, var(--og-paper) 0% 50%);
+  background-size: 9px 9px;
+}
+
+.og-point__pin--shaping {
+  width: 14px;
+  height: 14px;
+  justify-self: center;
+  border-color: var(--og-golden-hour);
+  background: var(--og-golden-hour);
+  box-shadow: 0 0 0 2px var(--og-paper);
+}
+
+.og-point__main {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: var(--og-radius-chip);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-point__main:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+.og-point__title {
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The leg that ends here (04 §15): "34 mi · ~48 min from previous", or the
+   honest words for a leg nothing measured. Never a number that was not read. */
+.og-point__leg {
+  font-size: 12.5px;
+  line-height: 1.3;
+  color: var(--og-slate-text);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-point__leg[data-leg="off-route"],
+.og-point__leg[data-leg="unknown"] {
+  font-style: italic;
+}
+
+/* The secondary coordinate under a row's name: muted but AA-readable, always
+   four decimals (OGV-D-224's rule, applied to the list as well as the
+   composer), and never clipped. */
+.og-point__coordinate {
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: var(--og-slate-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.og-point__intent {
+  grid-column: 3;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--og-slate-text);
+}
+
+.og-point__intent svg {
+  display: block;
+}
+
+.og-point__more {
+  grid-column: 4;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-chip);
+  background: transparent;
+  color: var(--og-slate-text);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.og-point__more:hover,
+.og-point__more[aria-expanded="true"] {
+  background: var(--og-well);
+  color: var(--og-ink);
+}
+
+.og-point__more:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+/* The reorder grab handle (04 §15). It appears where a thumb is the input, and
+   its six dots are the grip, not a label. */
+.og-point__grab {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-chip);
+  background: transparent;
+  color: var(--og-slate-text);
+  opacity: 0.6;
+  touch-action: none;
+  cursor: grab;
+}
+
+.og-point__grab:active {
+  cursor: grabbing;
+}
+
+.og-point__grab:focus-visible {
+  opacity: 1;
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+.og-point__grab-dots {
+  width: 16px;
+  height: 24px;
+  background-image: radial-gradient(circle, currentColor 1.6px, transparent 1.9px);
+  background-size: 8px 8px;
+  background-position: 4px 3px;
+  background-repeat: repeat;
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .og-point--itinerary {
+    padding-left: 46px;
+  }
+
+  .og-point__grab {
+    display: grid;
+  }
+}
+
+/* A drag in flight: the row follows the pointer and the others make room by one
+   row height, in the fast token's time. */
+.og-point--itinerary[data-dragging="true"] {
+  z-index: 2;
+  border-radius: var(--og-radius-control);
+  background: var(--og-paper);
+  box-shadow: var(--og-shadow-2);
+  transform: translateY(var(--og-point-drag-y, 0px));
+  transition: none;
+}
+
+.og-point--itinerary[data-shift="up"] {
+  z-index: 1;
+  transform: translateY(-100%);
+}
+
+.og-point--itinerary[data-shift="down"] {
+  z-index: 1;
+  transform: translateY(100%);
 }
 
 /* The numeric inspector (04 §31 "edit geometry numerically"): the accessible
@@ -4249,6 +4525,149 @@ h3,
   margin: 0;
   font-size: 13px;
   color: var(--og-danger);
+}
+
+/* A point's actions as a bottom sheet (04 §15, §31): the on-list twin of the
+   map's long-press menu, so a rider who works from the list never needs the
+   map. */
+.og-stop-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.og-stop-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--og-ink) 38%, transparent);
+}
+
+.og-stop-sheet__panel {
+  position: relative;
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 10px 10px calc(10px + var(--og-safe-bottom));
+  border-top: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
+  background: var(--og-paper);
+  box-shadow: var(--og-shadow-3);
+  animation: og-stop-sheet-in var(--og-dur-base) var(--og-ease);
+}
+
+.og-stop-sheet__panel:focus-visible {
+  outline: none;
+}
+
+@keyframes og-stop-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.og-stop-sheet__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 10px 10px;
+  border-bottom: 1px solid var(--og-hairline);
+}
+
+.og-stop-sheet__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--og-moss-text);
+}
+
+.og-stop-sheet__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--og-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-stop-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  padding-top: 4px;
+}
+
+.og-stop-sheet__action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-stop-sheet__action svg {
+  flex: 0 0 20px;
+  color: var(--og-slate-text);
+}
+
+.og-stop-sheet__action:hover {
+  background: var(--og-well);
+}
+
+.og-stop-sheet__action:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+.og-stop-sheet__action:disabled {
+  color: var(--og-slate-text);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.og-stop-sheet__action:disabled svg {
+  opacity: 0.5;
+}
+
+.og-stop-sheet__action[data-armed="true"] {
+  background: color-mix(in srgb, var(--og-ember) 10%, transparent);
+}
+
+.og-stop-sheet__action[data-danger="true"] {
+  color: var(--og-danger);
+}
+
+.og-stop-sheet__action[data-danger="true"] svg {
+  color: var(--og-danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-point--itinerary {
+    transition: none;
+  }
+
+  .og-stop-sheet__panel {
+    animation: none;
+  }
 }
 
 /* Whole-ride undo/redo (04 §20): persistent while history exists. */
@@ -4935,6 +5354,7 @@ h3,
     .og-plan-actions__record-row,
     .og-plan-actions__row,
     .og-advisor,
+    .og-advisor-ask,
     .og-route-card[data-selected="false"]
   ),
   .og-planner__sheet[data-detent="ride"] [data-testid="offline-checking"],
@@ -6060,37 +6480,102 @@ h3,
   border-radius: var(--og-radius-object);
 }
 
-.og-ride__spotify {
+.og-ride__safety {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 12px;
   border: 1px solid var(--og-ride-border);
   border-radius: var(--og-radius-object);
   background: var(--og-ride-glass);
 }
 
-.og-ride__spotify-header,
-.og-ride__spotify-actions,
-.og-ride__spotify-controls {
+.og-ride__safety-head {
   display: flex;
   align-items: center;
+  gap: 10px;
+}
+
+.og-ride__safety-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--og-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--og-success) 30%, transparent);
+}
+
+.og-ride__safety-status,
+.og-ride__safety-note {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: 13px;
+}
+
+.og-ride__safety-actions {
+  display: flex;
   gap: 8px;
 }
 
-.og-ride__spotify-header {
-  justify-content: space-between;
+.og-ride__safety-actions > button {
+  flex: 1 1 0;
 }
 
-.og-ride__spotify-title,
+.og-ride__safety-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--og-ride-muted);
+}
+
+.og-ride__safety-name input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-control);
+  background: var(--og-ride-surface);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.og-ride__safety-name input:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
+.og-ride__spotify {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-glass);
+}
+
+.og-ride__spotify-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .og-ride__spotify-track strong,
 .og-ride__spotify-track span {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.og-ride__spotify-title {
-  margin: 0;
-  font-size: 16px;
+.og-ride__spotify-track {
+  min-width: 0;
+}
+
+.og-ride__spotify-track span {
+  color: var(--og-ride-muted);
+  font-size: 14px;
 }
 
 .og-ride__spotify-status {
@@ -6099,32 +6584,75 @@ h3,
   font-size: 13px;
 }
 
-.og-ride__spotify-track {
-  min-width: 0;
-}
-
-.og-ride__spotify-track strong,
-.og-ride__spotify-track span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.og-ride__spotify-track span {
-  color: var(--og-ride-muted);
-}
-
 .og-ride__spotify-art {
+  display: grid;
+  place-items: center;
   width: 48px;
   height: 48px;
   border-radius: 8px;
   object-fit: cover;
 }
 
-.og-ride__spotify-controls > button,
-.og-ride__spotify-actions > button,
-.og-ride__spotify-actions > a {
-  flex: 1 1 0;
+.og-ride__spotify-art--empty {
+  background: var(--og-ride-surface);
+  color: var(--og-ride-muted);
+  font-size: 22px;
+}
+
+.og-ride__spotify-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Glove-sized: every control is at least 52 px square. */
+.og-ride__spotify-button {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.og-ride__spotify-button--primary {
+  background: var(--og-ride-surface);
+}
+
+.og-ride__spotify-button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.og-ride__spotify-button:focus-visible,
+.og-ride__spotify-link:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
+.og-ride__spotify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.og-ride__spotify-actions:empty {
+  display: none;
+}
+
+.og-ride__spotify-link {
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .og-ride__free-ride-heading {
@@ -6921,6 +7449,13 @@ h3,
   gap: 8px;
 }
 
+.og-advisor__pending {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .og-advisor__working {
   display: flex;
   align-items: center;
@@ -6930,6 +7465,24 @@ h3,
   color: var(--og-slate-text);
   font-size: 14px;
   overflow-wrap: anywhere;
+}
+
+.og-advisor__working-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.og-advisor__cancel {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 0;
+  background: none;
+  color: var(--og-slate-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .og-advisor__working .og-advisor__mark {
@@ -6967,12 +7520,27 @@ h3,
 }
 
 .og-advisor__changes li {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
   border: 1px solid var(--og-sandstone);
   border-radius: 999px;
   background: var(--og-paper);
   font-size: 13px;
   line-height: 1.35;
+}
+
+.og-advisor__was {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: 13px;
+}
+
+.og-advisor__brief {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: 13px;
 }
 
 .og-advisor__note {
@@ -8989,6 +9557,70 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 4px 8px 12px;
+}
+
+.og-layers__lenses {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 2px 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.og-layers__lens {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-object);
+  background: var(--og-well);
+  color: var(--og-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms var(--og-ease), border-color 160ms var(--og-ease);
+}
+
+.og-layers__lens:focus-visible {
+  outline: 2px solid var(--og-signal-blue);
+  outline-offset: 2px;
+}
+
+.og-layers__lens[data-on="true"] {
+  border-color: var(--og-deep-spruce);
+  box-shadow: inset 0 0 0 1px var(--og-deep-spruce);
+  background: color-mix(in srgb, var(--og-deep-spruce) 14%, var(--og-paper));
+  color: var(--og-deep-spruce);
+}
+
+.og-layers__lens-glyph {
+  grid-row: 1 / span 2;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.og-layers__lens-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.og-layers__lens-hint {
+  font-size: 12px;
+  opacity: 0.78;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-layers__lens {
+    transition: none;
+  }
 }
 
 .og-layers__group h3 {
@@ -12752,4 +13384,184 @@ a.og-secondary {
 .og-map-point-menu__info p { margin: 6px 0 0; }
 @media (prefers-reduced-transparency: reduce) {
   .og-map-point-menu { background: var(--og-paper); backdrop-filter: none; }
+}
+
+/* Crash check (issue #12 follower safety): the one screen that takes over a
+   ride. Full-bleed Ink with Paper text, the seconds in the largest type in the
+   app, and an "I'm OK" button that fills at least 40 % of the viewport height
+   so a gloved hand or a bystander cannot miss it. Everything scrolls rather
+   than clips on a short phone; only the countdown's unit pulses, and
+   `prefers-reduced-motion` removes even that. */
+.og-ride-crash {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(16px, var(--og-safe-top)) max(16px, var(--og-safe-right))
+    max(16px, var(--og-safe-bottom)) max(16px, var(--og-safe-left));
+  background: var(--og-ink);
+  color: var(--og-paper);
+}
+
+.og-ride-crash__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  min-height: 100%;
+  margin: 0 auto;
+}
+
+.og-ride-crash__eyebrow {
+  margin: 0;
+  font-size: var(--og-text-eyebrow);
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--og-danger-light);
+}
+
+.og-ride-crash__title {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 48px);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__digits {
+  font-size: clamp(72px, 22vh, 160px);
+  font-weight: 800;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-crash__unit {
+  font-size: clamp(24px, 6vh, 40px);
+  font-weight: 700;
+  color: var(--og-paper);
+  animation: og-crash-pulse 2s ease-in-out infinite;
+}
+
+@keyframes og-crash-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.og-ride-crash__line {
+  margin: 0;
+  font-size: clamp(17px, 2.4vh, 21px);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* The glove target: 40 % of the viewport height, never a tiny corner button. */
+.og-ride-crash__ok {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 40vh;
+  min-height: 40dvh;
+  padding: 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--og-success);
+  color: var(--og-paper);
+  font: inherit;
+  font-size: clamp(30px, 7vh, 52px);
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.og-ride-crash__alert,
+.og-ride-crash__call {
+  display: grid;
+  place-items: center;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--og-radius-control);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-ride-crash__alert {
+  border: 1px solid var(--og-border-dark);
+  background: transparent;
+  color: var(--og-paper);
+}
+
+.og-ride-crash__call {
+  border: 0;
+  background: var(--og-ember-strong);
+  color: var(--og-paper);
+}
+
+.og-ride-crash :is(button, a):focus-visible {
+  outline: 3px solid var(--og-golden-hour);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-ride-crash__unit {
+    animation: none;
+  }
+}
+
+/* Phone landscape: the digit block would push the button off-screen, so the
+   seconds shrink and everything still scrolls inside the panel. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-ride-crash__digits {
+    font-size: clamp(44px, 16vh, 84px);
+  }
+
+  .og-ride-crash__title {
+    font-size: clamp(24px, 7vh, 34px);
+  }
+}
+
+
+/* Readout utilities: keep every digit and unit visible in narrow ride strips. */
+.og-ride-metrics .overflow-visible { overflow: visible; }
+.og-ride-metrics .shrink-0 { flex-shrink: 0; }
+.og-ride-metrics .tabular-nums { font-variant-numeric: tabular-nums; }
+@media (width < 640px) {
+  .og-ride-metrics .max-sm\:flex-col {
+    flex-direction: column;
+    align-items: center;
+  }
 }

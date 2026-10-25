@@ -127,6 +127,62 @@ describe("traffic application boundary", () => {
   });
 });
 
+describe("traffic closures", () => {
+  function closedSegment(overrides: Partial<TrafficResponse["segments"][number]> = {}) {
+    return {
+      id: "synthetic-closed",
+      geometry: [ROUTE[0], ROUTE[1]],
+      speedClass: "closed" as const,
+      delaySeconds: 0,
+      currentSpeed: 0,
+      freeFlowSpeed: 45,
+      confidence: 0.9,
+      roadClosure: true,
+      observedAt: "2026-09-17T14:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  it("never turns a provider-reported closure into no delays", () => {
+    const cost = protectTheRideCost(syntheticTraffic({ segments: [closedSegment()] }));
+
+    // A closed road is a fact, not a zero delay: it must not score the route
+    // better or read as an all-clear (CLAUDE.md: unknown/bad never becomes clear).
+    expect(cost.closed).toBe(true);
+    expect(cost.status).toBe("unknown");
+    expect(cost.applied).toBe(false);
+    expect(cost.normalizedCost).toBeNull();
+    expect(cost.delayBand).toBeNull();
+    expect(cost.label).not.toBe("No traffic delays");
+    expect(cost.label.toLowerCase()).toContain("closure");
+  });
+
+  it("reports the closure even when another matched segment only has a delay", () => {
+    const cost = protectTheRideCost(syntheticTraffic({
+      segments: [closedSegment(), ...syntheticTraffic().segments],
+    }));
+
+    expect(cost.closed).toBe(true);
+    expect(cost.label).not.toBe("No traffic delays");
+  });
+
+  it("treats a closed speed class as a closure even without the closure flag", () => {
+    const cost = protectTheRideCost(syntheticTraffic({
+      segments: [closedSegment({ roadClosure: null })],
+    }));
+
+    expect(cost.closed).toBe(true);
+    expect(cost.label).not.toBe("No traffic delays");
+  });
+
+  it("keeps an open but slow segment on the delay path", () => {
+    const cost = protectTheRideCost(syntheticTraffic());
+
+    expect(cost.closed).toBe(false);
+    expect(cost.status).toBe("known");
+  });
+});
+
 describe("traffic band copy (M4)", () => {
   it("says no delay plainly and names a band in minutes", async () => {
     const { trafficBandLabel } = await import("@/application/traffic/protect-ride-cost");

@@ -767,7 +767,7 @@ function positionOf(position: NavigationPosition): RideFocusPosition {
         : `updated ${age} ago`;
   return {
     quality: position.quality,
-    qualityLabel: label[position.quality],
+    qualityLabel: position.observedAt === null ? "Finding GPS" : label[position.quality],
     tone: tone[position.quality],
     hasCoordinate: position.coordinate !== null,
     ageText,
@@ -918,7 +918,7 @@ function warningsOf(
       severity: "critical",
       text: "No GPS fix. Progress and ahead guidance are paused.",
     });
-  } else if (position.quality === "stale") {
+  } else if (position.quality === "stale" && position.hasCoordinate) {
     warnings.push({
       id: "gps-stale",
       severity: "caution",

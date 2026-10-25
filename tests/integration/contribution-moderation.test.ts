@@ -42,10 +42,21 @@ function body(overrides: Record<string, unknown> = {}): string {
   });
 }
 
+let clientAddressSeq = 0;
+/**
+ * Each submission comes from its own client address (198.18.0.0/15, the
+ * benchmarking range), so these tests exercise the per-reporter caps rather
+ * than the route's per-address budget, which every key is metered by.
+ */
+function nextClientAddress(): string {
+  clientAddressSeq += 1;
+  return `198.18.${Math.floor(clientAddressSeq / 250)}.${(clientAddressSeq % 250) + 1}`;
+}
+
 function postRequest(payload: string): Request {
   return new Request("http://localhost/api/contributions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-real-ip": nextClientAddress() },
     body: payload,
   });
 }
@@ -253,5 +264,37 @@ describe("contribution moderation over the validated submission foundation", () 
     expect(contributionColumns).not.toContain("moderation_state");
     expect(contributionColumns).not.toContain("decided_at");
     expect(decisionRow).toEqual({ id, decision: "accept", decided_at: NOW });
+  });
+});
+
+describe("the public read path", () => {
+  it("lists only accepted contributions and never the reporter's pseudo id", async () => {
+    const store = new SQLiteContributionStore(":memory:", { now: () => NOW });
+    const accepted = await handleContributionPostRequest(postRequest(body({ value: "maintained-gravel" })), store);
+    const rejected = await handleContributionPostRequest(postRequest(body({ value: "unknown" })), store);
+    const pending = await handleContributionPostRequest(postRequest(body({ value: "sealed" })), store);
+    const acceptedId = (await accepted.json() as { id: string }).id;
+    const rejectedId = (await rejected.json() as { id: string }).id;
+    const pendingId = (await pending.json() as { id: string }).id;
+    expect((await handleContributionModerationDecideRequest(decideRequest(acceptedId, "accept"), store)).status).toBe(200);
+    expect((await handleContributionModerationDecideRequest(decideRequest(rejectedId, "reject"), store)).status).toBe(200);
+
+    const listed = await handleContributionGetRequest(
+      new Request("http://localhost/api/contributions?roadRef=road_main%2Fspan_main"),
+      store,
+    );
+    const text = await listed.text();
+    const parsed = JSON.parse(text) as { contributions: { id: string; state: string }[] };
+
+    expect(listed.status).toBe(200);
+    expect(parsed.contributions.map((record) => record.id)).toEqual([acceptedId]);
+    expect(parsed.contributions[0]).toMatchObject({ state: "accepted", value: "maintained-gravel" });
+    expect(parsed.contributions.map((record) => record.id)).not.toContain(rejectedId);
+    expect(parsed.contributions.map((record) => record.id)).not.toContain(pendingId);
+    // The device pseudo id links every note one rider ever wrote.
+    expect(text).not.toContain(CONTRIBUTOR);
+    expect(text).not.toContain("provenance");
+    expect(text).not.toContain("reporter");
+    store.close();
   });
 });

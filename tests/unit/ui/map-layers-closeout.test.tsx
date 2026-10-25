@@ -8,24 +8,36 @@ afterEach(cleanup);
 
 function panel(statusOverrides: Partial<Record<MapLayerId, MapLayerStatus>> = {}) {
   const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, statusOverrides[layer.id] ?? "off"])) as Record<MapLayerId, MapLayerStatus>;
-  return render(<MapLayersPanel enabled={["weather-radar", "active-fire", "public-land", "road-surface"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onClearAll={vi.fn()} freshness={[{ layerId: "weather-radar", source: "NOAA / IEM", observedAt: "2026-10-03T12:00:00Z", fetchedAt: "2026-10-03T12:30:00Z", stale: true, note: "Coverage gaps unknown" }, { layerId: "public-land", source: "OpenStreetMap fallback", observedAt: null, fetchedAt: "2026-10-03T12:30:00Z", stale: false, note: "PAD-US unavailable" }]} />);
+  return render(<MapLayersPanel enabled={["weather-radar", "active-fire", "public-land", "gravel"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onClearAll={vi.fn()} freshness={[{ layerId: "weather-radar", source: "NOAA / IEM", observedAt: "2026-10-03T12:00:00Z", fetchedAt: "2026-10-03T12:30:00Z", stale: true, note: "Coverage gaps unknown" }, { layerId: "public-land", source: "OpenStreetMap fallback", observedAt: null, fetchedAt: "2026-10-03T12:30:00Z", stale: false, note: "PAD-US unavailable" }]} />);
 }
 describe("closeout layers sheet", () => {
-  it("shows stale frame time, unavailable primary and unknown surface gaps", () => {
-    panel({ "weather-radar": "stale", "public-land": "unavailable", "road-surface": "ready" });
+  it("turns a whole lens on with one tap", () => {
+    const onToggleLens = vi.fn();
+    const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
+    render(<MapLayersPanel enabled={["great-roads", "gravel", "viewpoints", "hillshade"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onToggleLens={onToggleLens} onClearAll={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
-    expect(screen.getByText("Stale")).toBeInTheDocument();
+    expect(screen.getByTestId("map-lens-fun")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("map-lens-weather")).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(screen.getByTestId("map-lens-weather"));
+    expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "weather"]);
+  });
+  it("shows stale frame time, unavailable primary and empty gravel", () => {
+    panel({ "weather-radar": "stale", "public-land": "unavailable", gravel: "ready" });
+    fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+    expect(screen.getByText("Out of date")).toBeInTheDocument();
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
+    expect(screen.getByText(/May be out of date · Updated/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About Rain radar" }));
     expect(screen.getByText(/NOAA \/ IEM · Observed/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About Public land" }));
     expect(screen.getByText(/OpenStreetMap fallback · Retrieved/)).toBeInTheDocument();
-    expect(screen.getByText("No records · gaps unknown")).toBeInTheDocument();
-    expect(screen.getByTestId("map-layer-road-surface").querySelector("rect")?.getAttribute("fill")).toBe("var(--og-trail-brown)");
+    expect(screen.getByText("None here")).toBeInTheDocument();
   });
   it("discloses fire limits and returns keyboard focus after Escape", () => {
     panel();
     const control = screen.getByRole("button", { name: "Layers" });
     fireEvent.click(control);
-    fireEvent.click(screen.getByRole("button", { name: "About Active fire hotspots" }));
+    fireEvent.click(screen.getByRole("button", { name: "About Wildfires" }));
     expect(screen.getByText(/Hotspots are not road closures/)).toBeInTheDocument();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(control).toHaveFocus();

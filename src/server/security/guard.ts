@@ -14,9 +14,8 @@
  */
 
 import { statSync, readFileSync } from "node:fs";
-import { isIP } from "node:net";
 
-import { clientKey, createRateLimiter, type RateLimiter } from "@/server/rate-limit";
+import { actionableAddress, clientKey, createRateLimiter, type RateLimiter } from "@/server/rate-limit";
 
 export const DEFAULT_BLOCKLIST_PATH = "/var/lib/opengravel/banned-ips.txt";
 const BLOCKLIST_RECHECK_MS = 5_000;
@@ -33,7 +32,7 @@ const PROBE = new RegExp(
 );
 
 /** API routes that spend engine time or paid quota per call. */
-const METERED = /^\/api\/(?:route-plan|advisor|geocode|road-match|map-layers|places|weather|route-traffic|contributions|elevation|community)(?:\/|$)/;
+const METERED = /^\/api\/(?:route-plan|advisor|geocode|road-match|map-layers|places|weather|route-traffic|contributions|elevation|community|shares)(?:\/|$)/;
 
 export type GuardVerdict =
   | { readonly action: "pass" }
@@ -44,15 +43,7 @@ export function isProbePath(pathname: string): boolean {
 }
 
 /** A public address we may act on; private, loopback and unknown keys never are. */
-export function actionableAddress(key: string): string | null {
-  const bare = key.replace(/^\[|\]$/g, "");
-  if (isIP(bare) === 0) return null;
-  if (bare === "::1" || /^127\./.test(bare) || /^10\./.test(bare) || /^192\.168\./.test(bare) ||
-    /^172\.(?:1[6-9]|2\d|3[01])\./.test(bare) || /^(?:fc|fd|fe80)/i.test(bare) || /^100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(bare)) {
-    return null;
-  }
-  return bare;
-}
+export { actionableAddress } from "@/server/rate-limit";
 
 /** Keeps log lines single-line and free of anything a fail2ban regex could trip on. */
 function loggable(pathname: string): string {

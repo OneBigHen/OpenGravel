@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildPlannerViewModel } from "@/application/planner/planner-view-model";
 import { emptyPlanningSession } from "@/application/planner/planning-session";
+import { haversine } from "@/domain/geometry/analysis";
 import { defaultRideIntent } from "@/domain/ride/create";
 import { newRideId, type RideId, type ShapingId, type StopId } from "@/domain/ride/ids";
 import {
@@ -95,6 +96,7 @@ function spyHandlers() {
     onZoomTo: vi.fn(),
     onReplacePlace: vi.fn(),
     onMoveStop: vi.fn(),
+    onReorder: vi.fn(),
     onRemove: vi.fn(),
     onConvert: vi.fn(),
     onAddStop: vi.fn(),
@@ -109,12 +111,14 @@ function renderPanel(
     readonly selectedRef?: Parameters<typeof StopsPanel>[0]["selectedRef"];
     readonly armedTool?: Parameters<typeof StopsPanel>[0]["armedTool"];
     readonly armedStopId?: StopId | null;
+    readonly routeLine?: Parameters<typeof buildPlannerViewModel>[0]["routeLine"];
   } = {},
 ): Handlers {
   const document = options.document ?? FULL_DOCUMENT;
   const viewModel = buildPlannerViewModel({
     document,
     session: emptyPlanningSession(RIDE_ID),
+    routeLine: options.routeLine ?? null,
   });
   const handlers = spyHandlers();
   render(
@@ -127,6 +131,15 @@ function renderPanel(
     />,
   );
   return handlers;
+}
+
+/** Opens one row's action sheet, which owns every per-row action. */
+function openMenu(key: string): void {
+  fireEvent.click(screen.getByTestId(`more-${key}`));
+}
+
+function closeMenu(): void {
+  fireEvent.keyDown(window, { key: "Escape" });
 }
 
 afterEach(() => {
@@ -146,7 +159,7 @@ describe("StopsPanel — the ordered list (04 §15)", () => {
       "point-row-finish",
     ]);
     expect(screen.getByTestId("label-stop-1")).toHaveTextContent("Coffee");
-    expect(screen.getByTestId("intent-stop-1")).toHaveTextContent("Food");
+    expect(screen.getByTestId("intent-stop-1")).toHaveAccessibleName("Food");
     // A stop with no name of its own is a dropped pin, and the coordinate is its
     // secondary value — the raw number is never the point's name (defect: raw
     // coordinates shown as the place value).
@@ -194,8 +207,9 @@ describe("StopsPanel — the ordered list (04 §15)", () => {
     renderPanel({ armedTool: "place-stop", armedStopId: STOP_B.id });
 
     expect(screen.getByTestId("point-row-stop-2")).toHaveAttribute("data-armed", "true");
-    expect(screen.getByTestId("replace-stop-2")).toHaveAttribute("data-armed", "true");
     expect(screen.getByTestId("point-row-stop-1")).toHaveAttribute("data-armed", "false");
+    openMenu("stop-2");
+    expect(screen.getByTestId("replace-stop-2")).toHaveAttribute("data-armed", "true");
   });
 });
 
@@ -203,7 +217,9 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
   it("reorders up and down with the row's own direction", () => {
     const handlers = renderPanel();
 
+    openMenu("stop-2");
     fireEvent.click(screen.getByTestId("move-up-stop-2"));
+    openMenu("stop-1");
     fireEvent.click(screen.getByTestId("move-down-stop-1"));
 
     expect(handlers.onMoveStop).toHaveBeenCalledTimes(2);
@@ -214,15 +230,61 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
   it("disables reorder at the ends of the list and nowhere else", () => {
     renderPanel();
 
+    openMenu("stop-1");
     expect(screen.getByTestId("move-up-stop-1")).toBeDisabled();
     expect(screen.getByTestId("move-down-stop-1")).toBeEnabled();
+    closeMenu();
+    openMenu("stop-2");
     expect(screen.getByTestId("move-up-stop-2")).toBeEnabled();
     expect(screen.getByTestId("move-down-stop-2")).toBeDisabled();
+  });
+
+  it("emits one reorder command per drag, and nothing below the threshold", () => {
+    const handlers = renderPanel();
+    const grab = screen.getByTestId("grab-stop-2");
+
+    // A press that barely moves is a press, not a reorder.
+    fireEvent.pointerDown(grab, { pointerId: 7, button: 0, clientY: 200 });
+    fireEvent.pointerMove(grab, { pointerId: 7, clientY: 194 });
+    fireEvent.pointerUp(grab, { pointerId: 7, clientY: 194 });
+    expect(handlers.onReorder).not.toHaveBeenCalled();
+
+    // One row up lands in front of Stop 1, and the drag is one command.
+    fireEvent.pointerDown(grab, { pointerId: 8, button: 0, clientY: 200 });
+    fireEvent.pointerMove(grab, { pointerId: 8, clientY: 130 });
+    fireEvent.pointerUp(grab, { pointerId: 8, clientY: 130 });
+
+    expect(handlers.onReorder).toHaveBeenCalledTimes(1);
+    expect(handlers.onReorder).toHaveBeenCalledWith(STOP_B.id, STOP_A.id);
+    expect(handlers.onMoveStop).not.toHaveBeenCalled();
+  });
+
+  it("gives every stop row its own grab handle", () => {
+    renderPanel();
+
+    expect(screen.getByTestId("grab-stop-1")).toHaveAccessibleName("Reorder Stop 1");
+    expect(screen.getByTestId("grab-stop-1").closest("li")).toBe(
+      screen.getByTestId("point-row-stop-1"),
+    );
+    // The endpoints are not stops, so they have nothing to drag.
+    expect(screen.queryByTestId("grab-start")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("grab-finish")).not.toBeInTheDocument();
+  });
+
+  it("offers the endpoints no convert action, because they have none", () => {
+    renderPanel();
+
+    openMenu("start");
+
+    expect(screen.queryByTestId("convert-start")).not.toBeInTheDocument();
+    expect(screen.getByTestId("remove-start")).toBeInTheDocument();
   });
 
   it("converts a stop in the direction the button names", () => {
     const handlers = renderPanel();
 
+    openMenu("stop-1");
+    expect(screen.getByTestId("convert-stop-1")).toHaveTextContent("Make a shaping point");
     fireEvent.click(screen.getByTestId("convert-stop-1"));
 
     expect(handlers.onConvert).toHaveBeenCalledTimes(1);
@@ -232,6 +294,8 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
   it("converts an anchor back into a stop", () => {
     const handlers = renderPanel();
 
+    openMenu("shape-1");
+    expect(screen.getByTestId("convert-shape-1")).toHaveTextContent("Make a stop");
     fireEvent.click(screen.getByTestId("convert-shape-1"));
 
     expect(handlers.onConvert).toHaveBeenCalledTimes(1);
@@ -244,9 +308,12 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
   it("removes, zooms, selects and replaces with the row's identity", () => {
     const handlers = renderPanel();
 
+    openMenu("stop-2");
     fireEvent.click(screen.getByTestId("remove-stop-2"));
+    openMenu("finish");
     fireEvent.click(screen.getByTestId("zoom-finish"));
     fireEvent.click(screen.getByTestId("select-start"));
+    openMenu("stop-1");
     fireEvent.click(screen.getByTestId("replace-stop-1"));
 
     expect(handlers.onRemove).toHaveBeenCalledWith({ kind: "stop", stopId: STOP_B.id });
@@ -256,6 +323,17 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
       kind: "stop",
       stopId: STOP_A.id,
     });
+  });
+
+  it("keeps Remove in the danger colour and closes the sheet after an action", () => {
+    const handlers = renderPanel();
+
+    openMenu("stop-1");
+    expect(screen.getByTestId("remove-stop-1")).toHaveAttribute("data-danger", "true");
+    fireEvent.click(screen.getByTestId("remove-stop-1"));
+
+    expect(handlers.onRemove).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("point-menu")).not.toBeInTheDocument();
   });
 
   it("reports the selected row on the control itself", () => {
@@ -339,5 +417,45 @@ describe("StopsPanel — the numeric inspector (04 §31)", () => {
   it("shows no inspector until something is selected", () => {
     renderPanel();
     expect(screen.queryByTestId("point-inspector")).not.toBeInTheDocument();
+  });
+});
+
+describe("StopsPanel — each row states its leg (04 §15)", () => {
+  const LINE = [ORIGIN, STOP_A.coordinate, STOP_B.coordinate, DESTINATION];
+  const ROUTE_LINE = {
+    geometry: LINE,
+    distanceMeters:
+      haversine(ORIGIN, STOP_A.coordinate) +
+      haversine(STOP_A.coordinate, STOP_B.coordinate) +
+      haversine(STOP_B.coordinate, DESTINATION),
+    durationSeconds: 3_600,
+    rideRevision: FULL_DOCUMENT.revision,
+  };
+
+  it("prints the measured leg as miles and an estimated time", () => {
+    renderPanel({ routeLine: ROUTE_LINE });
+
+    expect(screen.getByTestId("leg-start")).toHaveTextContent("From your location");
+    expect(screen.getByTestId("leg-stop-1")).toHaveAttribute("data-leg", "measured");
+    expect(screen.getByTestId("leg-stop-1").textContent).toMatch(
+      /^\d+(\.\d)? mi · ~\d+ min from previous$/,
+    );
+    expect(screen.getByTestId("leg-finish")).toHaveAttribute("data-leg", "measured");
+  });
+
+  it("says the distance is not known, and never prints a number, with no route", () => {
+    renderPanel();
+
+    const leg = screen.getByTestId("leg-stop-1");
+    expect(leg).toHaveTextContent("distance not known");
+    expect(leg).toHaveAttribute("data-leg", "unknown");
+    expect(leg.textContent).not.toMatch(/\d/);
+  });
+
+  it("says the route does not cover a stop it does not pass", () => {
+    renderPanel({ routeLine: { ...ROUTE_LINE, geometry: [ORIGIN, DESTINATION] } });
+
+    expect(screen.getByTestId("leg-stop-1")).toHaveTextContent("Not on the selected route");
+    expect(screen.getByTestId("leg-stop-1")).toHaveAttribute("data-leg", "off-route");
   });
 });

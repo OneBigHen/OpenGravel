@@ -308,6 +308,7 @@ describe("atlas dirt and backroad generators", () => {
     expect(spanCounts).toEqual([2, 1]);
     expect(execution.candidate).not.toBeNull();
     expect(execution.candidate?.providerMetadata?.["atlasCorridorIds"]).toBe(JSON.stringify(["strong"]));
+    expect(execution.sourceIds).toEqual(["strong"]);
   });
 
   it("measures detours against the fastest route: far corridors are ignored, near ones are ridden in travel order", () => {
@@ -323,4 +324,67 @@ describe("atlas dirt and backroad generators", () => {
     expect(probe.id).toContain("near");
     expect(probe.forecast.addedSeconds).not.toBeNull();
   });
+});
+
+it("offers atlas dirt for Mixed loops, while leaving Mixed point-to-point alone", () => {
+  const mixed: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 }, options: { ...REQUEST.options, surfacePreference: "mixed" } };
+  const generator = createAtlasGenerators([corridor("near")])[0]!;
+  expect(generator.propose(context(mixed)).length).toBeGreaterThan(0);
+  expect(generator.propose(context({ ...mixed, discovery: undefined, destination: DESTINATION }))).toEqual([]);
+});
+
+it("calibrates a short atlas loop toward a longer corridor sequence instead of discarding the dirt", async () => {
+  const loop: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 } };
+  const generator = createAtlasGenerators([
+    corridor("one", { lengthMeters: 8000, geometry: line({ lon: -75.49, lat: 40.51 }, { lon: -75.46, lat: 40.55 }, { lon: -75.43, lat: 40.51 }) }),
+    corridor("two", { lengthMeters: 8000, geometry: line({ lon: -75.43, lat: 40.51 }, { lon: -75.40, lat: 40.55 }, { lon: -75.37, lat: 40.51 }) }),
+    corridor("three", { lengthMeters: 8000, geometry: line({ lon: -75.37, lat: 40.51 }, { lon: -75.34, lat: 40.55 }, { lon: -75.31, lat: 40.51 }) }),
+  ])[0]!;
+  const probe = generator.propose(context(loop))[0]!;
+  let calls = 0;
+  const result = await probe.execute(async (request) => candidate(request, { durationSeconds: ++calls === 1 ? 35 * 60 : 60 * 60 }));
+  expect(calls).toBeGreaterThan(1);
+  expect(result.candidate?.durationSeconds).toBe(60 * 60);
+});
+
+it("reports unknown surface in the denominator instead of inflating observed dirt", async () => {
+  const result = await executeFirst("gravel-prize", [corridor("known-road")], REQUEST, request => candidate(request, {
+    roadSummary: { totalMeters: 10000, surfaceByRoadClassMeters: { "gravel|track": 2000, "missing|unclassified": 8000 }, curvatureMeters: {}, tollMeters: 0 },
+  }));
+  expect(result.execution.candidate?.providerMetadata?.["observedUnpavedShare"]).toBe(0.2);
+});
+
+it("keeps nonreversible atlas loop corridors in their legal direction", async () => {
+  const road = corridor("one-way", { reversible: false });
+  const loop: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 } };
+  const result = await executeFirst("gravel-prize", [road], loop, request => candidate(request, { durationSeconds: 3600 }));
+  expect(result.requests[0]!.roadSpans![0]!.anchors[0]).toEqual(road.geometry[0]);
+  expect(result.requests[0]!.roadSpans![0]!.anchors.at(-1)).toEqual(road.geometry.at(-1));
+  expect(result.requests[0]!.roadSpans![0]!.direction).toBe("forward");
+});
+
+it.each(["pavement", "mostly-pavement"] as const)("never adds dirt tours to a %s loop", surface => {
+  const loop: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 }, options: { ...REQUEST.options, surfacePreference: surface } };
+  expect(createAtlasGenerators([corridor("near")])[0]!.propose(context(loop))).toEqual([]);
+});
+
+it.each([
+  { access: { legal: false, unknownRestrictionFlags: [], sandShare: 0 } },
+  { seasonal: { closed: true, seasonalClosed: false, flags: [] } },
+  { routable: false },
+  { exitLinks: 0 },
+  { maxTrackGrade: 4 },
+])("never proposes a dirt loop through a prohibited corridor: %j", forbidden => {
+  const loop: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 } };
+  expect(createAtlasGenerators([corridor("forbidden", forbidden)])[0]!.propose(context(loop))).toEqual([]);
+});
+
+it("leaves the existing short-loop behavior of paved backroad probes unchanged", async () => {
+  const loop: ProviderRouteRequest = { ...REQUEST, destination: ORIGIN, discovery: { targetMinutes: 60, toleranceMinutes: 9 }, options: { ...REQUEST.options, surfacePreference: "pavement", roadCharacter: "curvy" } };
+  const result = await executeFirst("backroad-stitch", [
+    corridor("backroad-one", { kind: "backroad", geometry: line({ lon: -75.49, lat: 40.5 }, { lon: -75.46, lat: 40.51 }) }),
+    corridor("backroad-two", { kind: "backroad", geometry: line({ lon: -75.46, lat: 40.51 }, { lon: -75.43, lat: 40.5 }) }),
+  ], loop, request => candidate(request, { durationSeconds: 35 * 60 }));
+  expect(result.requests).toHaveLength(1);
+  expect(result.execution.note).toBe("loop-shortfall");
 });

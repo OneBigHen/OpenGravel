@@ -25,10 +25,52 @@ describe("readQuery: a ride or a place?", () => {
     },
   );
 
+  it.each([
+    // An address is a place however many words it has.
+    "1234 Old Mill Gap Road, Stroudsburg, PA 18360",
+    "1234 Old Mill Gap Road",
+    "Turkey Hill, 100 Main Street, Doylestown, PA",
+    "Jim Thorpe, PA 18229",
+    "jim thorpe, pa",
+    // A street called "Scenic Drive" is still a street.
+    "100 Scenic Drive, Stroudsburg, PA",
+  ])("reads the address %j as a place", (text) => {
+    expect(readQuery(text)).toBe("place");
+  });
+
+  it("keeps the advisor after the places when a ride word and a town are both present", () => {
+    expect(readQuery("twisty roads, Jim Thorpe, PA")).toBe("maybe");
+    // A ride phrase ("loop near …") is a ride however the town is spelled.
+    expect(readQuery("twisty loop near Jim Thorpe, PA")).toBe("ride");
+  });
+
+  it.each(["coffee shop, Jim Thorpe PA", "coffee shop Jim Thorpe"])(
+    "does not read the business search %j as a ride description",
+    (text) => {
+      expect(readQuery(text)).not.toBe("ride");
+    },
+  );
+
   it("offers the advisor after places when it could be either", () => {
     expect(readQuery("twisty loop")).toBe("maybe");
     expect(readQuery("new roads")).toBe("maybe");
-    expect(readQuery("Loop Road")).toBe("maybe");
+    // "Loop Road" is a street: the word alone is not a ride signal.
+    expect(readQuery("Loop Road")).toBe("place");
     expect(readQuery("Jim")).toBe("place");
+  });
+});
+
+describe("ride phrases", () => {
+  it.each([
+    "loop from Jim Thorpe, leave at 8",
+    "ride from Doylestown to the coast",
+    "lunch stop in Jim Thorpe",
+    "leave by 9 and back by lunch",
+  ])("reads %s as a ride", (text) => {
+    expect(readQuery(text)).toBe("ride");
+  });
+
+  it.each(["Loop Road", "Lunch Box Cafe, Easton PA", "Ride Shop, Stroudsburg, PA"])("keeps %s a place", (text) => {
+    expect(readQuery(text)).not.toBe("ride");
   });
 });

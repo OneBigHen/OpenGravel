@@ -84,6 +84,14 @@ describe("the strip with filtered telemetry", () => {
     expect(screen.getByTestId("ride-metric-slot-2")).toHaveAccessibleName("Moving time, 30 minutes moving. Change metric.");
   });
 
+  it("keeps a three-digit speed and its full unit in the readout", () => {
+    render(<RideMetricStrip model={model(navigation({ position: { ...FRESH, speedMps: 157 * MPH } }))}
+      onShowControls={vi.fn()} onChooseSlot={vi.fn()} />);
+    expect(screen.getByTestId("ride-metric-value-0")).toHaveTextContent("157");
+    expect(screen.getByTestId("ride-metric-slot-0")).toHaveAccessibleName(/157 miles per hour/);
+    expect(screen.getByTestId("ride-metric-slot-0").querySelector(".og-ride-metrics__unit")).toHaveTextContent("mph");
+  });
+
   it("renders average, max and since-stop readouts", () => {
     render(
       <RideMetricStrip

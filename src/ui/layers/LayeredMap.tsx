@@ -27,6 +27,10 @@ type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 export interface MapLayersProps {
   readonly source: MapLayersSource;
   readonly onAddStop?: (coordinate: Coordinate, name: string) => void;
+  /** Where the rider is coming from, so a tapped road is entered at the near end. */
+  readonly rideRoadReference?: Coordinate | null;
+  /** Present when the host can add a road's two via points as stops. */
+  readonly onRideRoad?: (entry: Coordinate, exit: Coordinate, name: string) => void;
 }
 
 export function LayeredMap({
@@ -66,7 +70,7 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
     [layerViewport, onViewport],
   );
   const { select } = view;
-  const { onAddStop } = layers;
+  const { onAddStop, onRideRoad, rideRoadReference } = layers;
   const addStop = useMemo(
     () =>
       onAddStop === undefined
@@ -76,6 +80,16 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
             select(null);
           },
     [onAddStop, select],
+  );
+  const rideRoad = useMemo(
+    () =>
+      onRideRoad === undefined
+        ? undefined
+        : (entry: Coordinate, exit: Coordinate, name: string): void => {
+            onRideRoad(entry, exit, name);
+            select(null);
+          },
+    [onRideRoad, select],
   );
 
   return (
@@ -98,10 +112,17 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
           cameraRouteAvailable={view.cameraRouteAvailable}
           onToggleCameraRouteOnly={view.toggleCameraRouteOnly}
           onToggle={view.toggle}
+          onToggleLens={view.toggleSet}
           onClearAll={view.clearAll}
         />
         {view.selected === null ? null : (
-          <InfoFeatureCard feature={view.selected} onClose={() => select(null)} onAddStop={addStop} />
+          <InfoFeatureCard
+            feature={view.selected}
+            onClose={() => select(null)}
+            onAddStop={addStop}
+            rideRoadReference={rideRoadReference}
+            onRideRoad={rideRoad}
+          />
         )}
       </div>
     </>

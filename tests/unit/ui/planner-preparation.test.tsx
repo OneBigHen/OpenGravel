@@ -7,7 +7,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import {
   departureIsLive,
@@ -25,8 +25,30 @@ import { DEFAULT_BIKE } from "@/domain/ride/create";
 import { createGarage } from "@/application/garage/garage-model";
 import type { Coordinate } from "@/domain/ride/types";
 import { departureFor, departureSummary, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
+import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
 afterEach(() => cleanup());
+
+/**
+ * A device whose app shell reopens offline: a controlling service worker and a
+ * fresh cached shell. "Plan offline" needs that as well as a downloaded area.
+ */
+function withOfflineShell(): () => void {
+  const previous = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: { controller: { scriptURL: "https://opengravel.test/sw.js" }, getRegistrations: async () => [{}] },
+  });
+  vi.stubGlobal("caches", {
+    match: vi.fn(async () => new Response("shell", { headers: { "x-og-cached-at": new Date().toISOString() } })),
+  });
+  return () => {
+    if (previous === undefined) delete (navigator as { serviceWorker?: unknown }).serviceWorker;
+    else Object.defineProperty(navigator, "serviceWorker", previous);
+    vi.unstubAllGlobals();
+  };
+}
+
 
 const NOW = "2026-06-21T14:00:00.000Z";
 const LINE: Coordinate[] = Array.from({ length: 400 }, (_, index) => ({ lon: -75.7 + index * 0.001, lat: 40.86 }));
@@ -268,6 +290,87 @@ describe("PlannerPreparation", () => {
       />,
     );
     expect(screen.queryByTestId("departure-arrive")).toBeNull();
+  });
+
+  it("says the downloaded area plans rides offline instead of 'online only for now'", async () => {
+    const restore = withOfflineShell();
+    onTestFinished(restore);
+    const offlineRegions = {
+      installed: vi.fn(async () => [{ regionId: "pennsylvania" }, { regionId: "maryland" }]),
+    };
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        offlineRegions={offlineRegions as never}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByTestId("offline-summary-note");
+    expect(note).toHaveTextContent("2 areas ready · plan offline");
+    expect(note).not.toHaveTextContent("online only for now");
+    // The disclosure underneath agrees with the line above it.
+    expect(screen.getByTestId("offline-state-plan.route")).not.toHaveTextContent("Needs network");
+  });
+
+  it("reads the areas the composition root provided when no prop is given", async () => {
+    const restore = withOfflineShell();
+    onTestFinished(restore);
+    render(
+      <InstalledOfflineAreasProvider regions={{ installed: async () => [{ regionId: "pennsylvania" }] as never }}>
+        <PlannerPreparation
+          route={{ routeId: "route_a", ...ROUTE }}
+          departure={{ kind: "now" }}
+          bike={DEFAULT_BIKE}
+          offlineRoute={null}
+          onDepartureChange={vi.fn()}
+          onBikeChange={vi.fn()}
+        />
+      </InstalledOfflineAreasProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("offline-summary-note")).toHaveTextContent("1 area ready · plan offline");
+  });
+
+  it("says so plainly when this device holds no downloaded area", async () => {
+    const offlineRegions = { installed: vi.fn(async () => []) };
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE }}
+        departure={{ kind: "now" }}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        offlineRegions={offlineRegions as never}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const note = screen.getByTestId("offline-summary-note");
+    expect(note).toHaveTextContent("no downloaded area · online only");
+    expect(note).not.toHaveTextContent("online only for now");
   });
 
   it("shows nothing before there is a route", () => {

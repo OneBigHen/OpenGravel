@@ -270,10 +270,19 @@ describe("position freshness (08 §4)", () => {
       }),
     });
 
-    expect(position.qualityLabel).toBe("No GPS fix");
+    expect(position.qualityLabel).toBe("Finding GPS");
     expect(position.hasCoordinate).toBe(false);
     expect(position.speedText).toBeNull();
     expect(mapPosition).toBeNull();
+  });
+
+  it("does not call GPS stale before its first fix", () => {
+    const result = view({ navigation: navigation({ position: {
+      ...HEALTHY_POSITION, coordinate: null, observedAt: null, ageMs: null,
+      speedMps: null, headingDegrees: null, quality: "stale",
+    } }) });
+    expect(result.position.qualityLabel).toBe("Finding GPS");
+    expect(result.warnings.some((warning) => warning.id === "gps-stale")).toBe(false);
   });
 
   it("formats ages, speeds and headings without inventing values", () => {

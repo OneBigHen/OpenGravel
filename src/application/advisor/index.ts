@@ -46,6 +46,7 @@ export {
 } from "./advisor-proposal";
 export {
   buildAdvisorProposal,
+  refreshAdvisorProposal,
   type AdvisorProposalBuildResult,
   type AdvisorProposalChange,
   type AdvisorProposalField,

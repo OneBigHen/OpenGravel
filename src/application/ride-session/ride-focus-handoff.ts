@@ -31,6 +31,7 @@ import type { RouteBundle, RouteCandidate, RouteInstruction, SpeedLimitSpan } fr
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { RideSessionId } from "@/domain/ride-session/ids";
 import type { SessionRouteBinding } from "@/domain/ride-session/types";
+import { sessionAbandonedEvent } from "@/domain/ride-session/create";
 
 import type { RideRecordingWorkflow } from "./recording-workflow";
 import type { RideSessionCommandResult, RideSessionController } from "./ride-session-controller";
@@ -289,6 +290,33 @@ export async function prepareRecordingFromPlanner(input: {
   }
 }
 
+/**
+ * Ends a ride session nobody is riding any more, unless it is recording.
+ * `true` when the way is clear for a new ride.
+ */
+async function endLeftoverSession(
+  controller: RideSessionController,
+  sessionId: RideSessionId,
+  now: string,
+): Promise<boolean> {
+  try {
+    await controller.resume(sessionId);
+  } catch {
+    // The journal cannot be read back: nothing is left to end.
+    return true;
+  }
+  const state = controller.snapshot();
+  if (state === null || state.sessionId !== sessionId) return true;
+  if (state.recordingId !== null) return false;
+  if (state.activity === "completed") return true;
+  try {
+    const result = await controller.dispatch(sessionAbandonedEvent(now));
+    return result.outcome !== "rejected";
+  } catch {
+    return false;
+  }
+}
+
 /** Starts the distinct, route-free Free Ride activity from the planner. */
 export async function startFreeRideFromPlanner(input: {
   readonly controller: RideSessionController;
@@ -303,13 +331,19 @@ export async function startFreeRideFromPlanner(input: {
 }): Promise<RideStartOutcome> {
   const current = input.pointer.read();
   if (current.status === "found") {
-    return {
-      outcome: "rejected",
-      sessionId: current.pointer.sessionId,
-      message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
-    };
-  }
-  if (current.status !== "absent") {
+    // A ride left open (closed app, crashed tab) must not block a new one: end
+    // it and carry on. One that is recording is the rider's data, so that one
+    // is opened instead of ended.
+    const ended = await endLeftoverSession(input.controller, current.pointer.sessionId, input.now);
+    if (!ended) {
+      return {
+        outcome: "rejected",
+        sessionId: current.pointer.sessionId,
+        message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
+      };
+    }
+    input.pointer.clear();
+  } else if (current.status !== "absent") {
     return {
       outcome: "rejected",
       sessionId: null,

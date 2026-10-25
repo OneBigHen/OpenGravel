@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { createApiGuard, guarded } from "@/server/api-guard";
-import { createConcurrencyGate, createDailyCap } from "@/server/rate-limit";
+import { createConcurrencyGate, createDailyCap, createRateLimiter } from "@/server/rate-limit";
 
 const request = (ip = "203.0.113.5") => new Request("https://ogv.test/api/x", { headers: { "x-real-ip": ip } });
 const ok = () => Promise.resolve(Response.json({ ok: true }));
 
 describe("guarded", () => {
+  it.each(["127.0.0.1", "::ffff:127.0.0.1", "10.0.0.1"])("keeps metering a forwarded %s: a header a client can write never buys an exemption", async (ip) => {
+    const guard = createApiGuard({ perMinute: 1 });
+    expect((await guarded(guard, request(ip), ok)).status).toBe(200);
+    expect((await guarded(guard, request(ip), ok)).status).toBe(429);
+  });
+
   it("answers 429 with Retry-After once a client passes its per-minute budget", async () => {
     const guard = createApiGuard({ perMinute: 2 });
     expect((await guarded(guard, request(), ok)).status).toBe(200);
@@ -35,6 +41,26 @@ describe("guarded", () => {
     const guard = createApiGuard({ perMinute: 100, maxConcurrent: 1 });
     await expect(guarded(guard, request(), () => Promise.reject(new Error("boom")))).rejects.toThrow("boom");
     expect((await guarded(guard, request("198.51.100.4"), ok)).status).toBe(200);
+  });
+});
+
+describe("createRateLimiter", () => {
+  it("lifts the per-client window only when the browser gate sets its own flag", () => {
+    const limited = createRateLimiter({ windowMs: 60_000, max: 2, env: {} });
+    expect(limited.check(request())).toBeNull();
+    expect(limited.check(request())).toBeNull();
+    expect(limited.check(request())).not.toBeNull();
+
+    const gate = createRateLimiter({
+      windowMs: 60_000,
+      max: 2,
+      env: { OGV_RATE_LIMIT_UNLIMITED: "1" },
+    });
+    for (let index = 0; index < 50; index += 1) expect(gate.check(request())).toBeNull();
+    // Unset (or any value but "1") keeps enforcing the configured budget.
+    const explicit = createRateLimiter({ windowMs: 60_000, max: 1, env: { OGV_RATE_LIMIT_UNLIMITED: "0" } });
+    expect(explicit.check(request())).toBeNull();
+    expect(explicit.check(request())).not.toBeNull();
   });
 });
 

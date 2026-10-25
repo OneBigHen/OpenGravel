@@ -16,9 +16,25 @@ import {
   handleContributionPostRequest,
   MAX_CONTRIBUTION_BODY_BYTES,
 } from "@/app/api/contributions/route";
+import { handleContributionModerationDecideRequest } from "@/server/contributions/http";
 import { SQLiteContributionStore } from "@/server/contributions/store";
 
 const NOW = "2026-09-17T12:00:00.000Z";
+const MODERATION_TOKEN = "integration-test-moderation-token";
+
+/** The public read lists approved notes only, so a round-trip approves first. */
+async function approve(store: SQLiteContributionStore, id: string): Promise<void> {
+  const response = await handleContributionModerationDecideRequest(
+    new Request("http://localhost/api/contributions/moderation", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${MODERATION_TOKEN}` },
+      body: JSON.stringify({ id, decision: "accept" }),
+    }),
+    store,
+    MODERATION_TOKEN,
+  );
+  expect(response.status).toBe(200);
+}
 
 function envelope(overrides: Record<string, unknown> = {}): ContributionEnvelope {
   const parsed = parseContribution({
@@ -93,9 +109,26 @@ describe("contribution HTTP handlers", () => {
     );
 
     expect(post.status).toBe(201);
-    expect((await post.json())).toMatchObject({ id: expect.stringMatching(/^contrib_/) });
+    const id = (await post.json() as { id: string }).id;
+    expect(id).toMatch(/^contrib_/);
+    // A submission is pending until moderation accepts it, so it is not public yet.
     expect(get.status).toBe(200);
-    expect((await get.json())).toMatchObject({ contributions: [expect.objectContaining({ envelope: envelope() })] });
+    expect(await get.json()).toMatchObject({ contributions: [] });
+
+    await approve(store, id);
+    const approved = await handleContributionGetRequest(
+      new Request("http://localhost/api/contributions?roadRef=road_main%2Fspan_main"),
+      store,
+    );
+    expect(await approved.json()).toMatchObject({
+      contributions: [{
+        id,
+        kind: envelope().kind,
+        value: envelope().value,
+        observedAt: envelope().observedAt,
+        state: "accepted",
+      }],
+    });
     store.close();
   });
 
@@ -131,9 +164,17 @@ describe("contribution HTTP handlers", () => {
     expect(posted.status).toBe(201);
     expect(posted.body).toMatchObject({ contribution: { kind: "surface", roadRef: { roadId: "road_main", spanId: "span_main" } } });
 
+    await approve(store, (posted.body as { id: string }).id);
     const listed = await handleContributionGet({ roadRef: "road_main/span_main" }, { store });
     expect(listed.status).toBe(200);
-    expect(listed.body).toMatchObject({ contributions: [expect.objectContaining({ envelope: envelope() })] });
+    expect(listed.body).toMatchObject({
+      contributions: [{
+        id: (posted.body as { id: string }).id,
+        kind: envelope().kind,
+        value: envelope().value,
+        state: "accepted",
+      }],
+    });
     store.close();
   });
 

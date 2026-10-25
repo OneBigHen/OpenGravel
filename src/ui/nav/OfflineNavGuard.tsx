@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OFFLINE_SHELL_ROUTES } from "@/application/offline/shell-routes";
 
 /**
  * Offline, a tap on an in-app link used to fail its data fetch, fall back to a
  * full page load and land on the browser's error page, losing the page the
  * rider was on (AQ-02). While the browser reports no connection this keeps the
- * current page and says why, then clears itself once the connection returns.
+ * current page and says why unless a worker can serve that app-shell route.
  */
-export function OfflineNavGuard() {
+export function OfflineNavGuard({ assetBasePath = "" }: { readonly assetBasePath?: string }) {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export function OfflineNavGuard() {
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin) return;
       if (url.pathname === window.location.pathname) return;
+      if (navigator.serviceWorker?.controller && OFFLINE_SHELL_ROUTES.some((path) => url.pathname === `${assetBasePath}${path}`)) return;
       event.preventDefault();
       event.stopPropagation();
       const label = anchor.textContent?.trim() || anchor.getAttribute("aria-label") || "That page";
@@ -40,7 +42,7 @@ export function OfflineNavGuard() {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("online", onOnline);
     };
-  }, []);
+  }, [assetBasePath]);
 
   return (
     <div className="og-offline-toast" role="status" aria-live="polite" hidden={message === null}>

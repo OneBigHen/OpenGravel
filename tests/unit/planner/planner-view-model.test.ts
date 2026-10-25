@@ -13,10 +13,13 @@ import {
   buildPlannerViewModel,
   fastestReference,
   itineraryRefFor,
+  legLabel,
   mapRefForItineraryRef,
   type PlannerViewModelInput,
+  type RowLegVm,
   visiblePlanningSession,
 } from "@/application/planner/planner-view-model";
+import { haversine } from "@/domain/geometry/analysis";
 import {
   emptyPlanningSession,
   emptyRouteRoles,
@@ -30,6 +33,7 @@ import {
   newRideId,
   type PointId,
   type RideId,
+  type StopId,
 } from "@/domain/ride/ids";
 import {
   SCHEMA_VERSION,
@@ -986,5 +990,142 @@ describe("visiblePlanningSession (UX audit PP-01)", () => {
     expect(
       visiblePlanningSession(READY_DOCUMENT, answered, { generations: [generation + 1], drawing: false }),
     ).toBe(answered);
+  });
+});
+
+describe("buildPlannerViewModel — the itinerary states each leg (04 §15)", () => {
+  // A straight west-to-east ride: the line runs through all three points, so the
+  // legs are the slices between them.
+  const START: Coordinate = { lon: -75.2, lat: 40 };
+  const STOP: Coordinate = { lon: -75.1, lat: 40 };
+  const FINISH: Coordinate = { lon: -75.0, lat: 40 };
+  const LINE = [START, STOP, FINISH];
+  const TOTALS = {
+    distanceMeters: haversine(START, STOP) + haversine(STOP, FINISH),
+    durationSeconds: 3_600,
+  };
+  const STOP_ID = "stop_mid" as StopId;
+
+  const STOP_POINT: StopPoint = {
+    id: STOP_ID,
+    kind: "stop",
+    coordinate: STOP,
+    label: "Lunch",
+    arrivalIntent: "food",
+    provenance: { type: "map", selectedAt: FIXED },
+  };
+
+  function rideDocument(): RideDocument {
+    return documentWith({
+      start: endpoint("pt_start", "start", START),
+      stops: [STOP_POINT],
+      finish: endpoint("pt_finish", "finish", FINISH),
+    });
+  }
+
+  function legsOf(viewModel: ReturnType<typeof buildPlannerViewModel>): readonly RowLegVm[] {
+    return viewModel.itinerary.map((row) => {
+      if (row.leg === null) throw new Error("an itinerary row without a leg");
+      return row.leg;
+    });
+  }
+
+  it("measures each row's leg on the selected route and sums to its distance", () => {
+    const viewModel = buildPlannerViewModel({
+      document: rideDocument(),
+      session: session("ready"),
+      routeLine: { geometry: LINE, ...TOTALS, rideRevision: 4 },
+    });
+
+    expect(viewModel.itinerary.map((row) => row.kind)).toEqual(["start", "stop", "finish"]);
+    const legs = legsOf(viewModel);
+    expect(legs[0]?.state).toBe("start");
+    expect(legs[1]?.state).toBe("measured");
+    expect(legs[2]?.state).toBe("measured");
+    const measured = legs.flatMap((leg) => (leg.state === "measured" ? [leg.distanceMeters] : []));
+    expect(measured.reduce((sum, meters) => sum + meters, 0)).toBeCloseTo(TOTALS.distanceMeters, 3);
+    // The first row states where the ride begins; no row claims a leg it has not
+    // measured.
+    expect(legLabel(legs[0] ?? null)).toBe("From your location");
+    expect(legLabel(legs[1] ?? null)).toMatch(/mi · ~\d+ min from previous$/);
+  });
+
+  it("says the distance is not known rather than showing a number, with no route", () => {
+    const viewModel = buildPlannerViewModel({
+      document: rideDocument(),
+      session: session("idle"),
+    });
+
+    const legs = legsOf(viewModel);
+    expect(legs.map((leg) => leg.state)).toEqual(["start", "unknown", "unknown"]);
+    expect(legLabel(legs[1] ?? null)).toBe("distance not known");
+    expect(viewModel.itinerary.map((row) => row.leg)).not.toContainEqual(
+      expect.objectContaining({ distanceMeters: 0 }),
+    );
+  });
+
+  it("does not label the rows with a route that answers an older revision", () => {
+    const viewModel = buildPlannerViewModel({
+      document: { ...rideDocument(), revision: 5 },
+      session: session("ready"),
+      routeLine: { geometry: LINE, ...TOTALS, rideRevision: 4 },
+    });
+
+    expect(legsOf(viewModel).map((leg) => leg.state)).toEqual(["start", "unknown", "unknown"]);
+  });
+
+  it("says the route does not cover a stop it does not pass", () => {
+    const movedAway: StopPoint = { ...STOP_POINT, coordinate: { lon: -75.1, lat: 40.06 } };
+    const viewModel = buildPlannerViewModel({
+      document: documentWith({
+        start: endpoint("pt_start", "start", START),
+        stops: [movedAway],
+        finish: endpoint("pt_finish", "finish", FINISH),
+      }),
+      session: session("ready"),
+      routeLine: { geometry: LINE, ...TOTALS, rideRevision: 4 },
+    });
+
+    const legs = legsOf(viewModel);
+    expect(legs[1]?.state).toBe("off-route");
+    expect(legs[2]?.state).toBe("off-route");
+    expect(legLabel(legs[1] ?? null)).toBe("Not on the selected route");
+  });
+
+  it("does not call a start-less ride's first stop the rider's location", () => {
+    // The start can be removed while stops remain; the first row is then a stop,
+    // and "From your location" would be a claim the document does not support.
+    const viewModel = buildPlannerViewModel({
+      document: documentWith({
+        stops: [STOP_POINT],
+        finish: endpoint("pt_finish", "finish", FINISH),
+      }),
+      session: session("idle"),
+    });
+
+    expect(viewModel.itinerary[0]?.ref.kind).toBe("stop");
+    expect(legsOf(viewModel).map((leg) => leg.state)).toEqual(["unknown", "unknown"]);
+    expect(legLabel(legsOf(viewModel)[0] ?? null)).toBe("distance not known");
+  });
+
+  it("gives shaping anchors no leg at all", () => {
+    const viewModel = buildPlannerViewModel({
+      document: documentWith({
+        start: endpoint("pt_start", "start", START),
+        shaping: [
+          {
+            id: "shape_a" as never,
+            kind: "shape",
+            coordinate: { lon: -75.15, lat: 40 },
+            source: "map-drag",
+          },
+        ],
+        finish: endpoint("pt_finish", "finish", FINISH),
+      }),
+      session: session("ready"),
+      routeLine: { geometry: LINE, ...TOTALS, rideRevision: 4 },
+    });
+
+    expect(viewModel.shapingPoints.map((row) => row.leg)).toEqual([null]);
   });
 });

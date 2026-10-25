@@ -15,7 +15,7 @@
  *   departure day.
  */
 
-import { calculateSunset } from "@/application/long-trip/daylight";
+import { sunsetOnDepartureDay } from "@/application/long-trip";
 import type { Coordinate, DepartureIntent, BikeConstraintSnapshot } from "@/domain/ride/types";
 
 import type { RoutePreparationContext } from "./prepare-route";
@@ -61,32 +61,6 @@ export function departureIsLive(departure: DepartureIntent, now: string): boolea
   return Number.isFinite(lead) && lead <= LIVE_TRAFFIC_WINDOW_MINUTES;
 }
 
-/**
- * The sunset of the rider's own day. `calculateSunset` works on the UTC date,
- * which for the Americas is the *previous* evening for a morning departure
- * (a 10 AM EDT start got last night's sunset). The departure's solar-local day
- * is found from longitude, and of the sunsets computed for the neighbouring UTC
- * dates the one nearest that day's late afternoon wins.
- */
-export function sunsetOnDepartureDay(start: Coordinate, departAt: string): string | null {
-  const departure = Date.parse(departAt);
-  if (!Number.isFinite(departure)) return null;
-  const offsetMs = (start.lon / 15) * 3_600_000;
-  const solarLocal = new Date(departure + offsetMs);
-  const solarNoonUtc =
-    Date.UTC(solarLocal.getUTCFullYear(), solarLocal.getUTCMonth(), solarLocal.getUTCDate(), 12) - offsetMs;
-  const target = solarNoonUtc + 6 * 3_600_000;
-  let best: string | null = null;
-  for (const shiftHours of [-24, 0, 24]) {
-    const fact = calculateSunset(start, new Date(solarNoonUtc + shiftHours * 3_600_000).toISOString());
-    if (fact === null) continue;
-    if (best === null || Math.abs(Date.parse(fact.sunset) - target) < Math.abs(Date.parse(best) - target)) {
-      best = fact.sunset;
-    }
-  }
-  return best;
-}
-
 export function plannerPreparationContext(input: PlannerPreparationInput): RoutePreparationContext {
   const { route, bike } = input;
   const start = route.geometry[0];
@@ -94,7 +68,7 @@ export function plannerPreparationContext(input: PlannerPreparationInput): Route
   const durationMinutes = Number.isFinite(route.durationSeconds) ? route.durationSeconds / 60 : null;
   const end =
     durationMinutes === null ? null : new Date(Date.parse(departAt) + durationMinutes * 60_000).toISOString();
-  const sunset = start === undefined ? null : sunsetOnDepartureDay(start, departAt);
+  const sunset = start === undefined ? null : sunsetOnDepartureDay(start, departAt)?.sunset ?? null;
   const remainingDaylightMinutes =
     sunset === null ? null : Math.round((Date.parse(sunset) - Date.parse(departAt)) / 60_000);
   const usableRangeMiles = Math.max(0, bike.fuelRangeMiles - bike.reserveMiles);

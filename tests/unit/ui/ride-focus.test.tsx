@@ -442,6 +442,7 @@ describe("dark chrome and honest states", () => {
     expect(screen.getByTestId("ride-warning-gps-unavailable")).toBeInTheDocument();
     expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent("No GPS fix");
     expect(screen.getByTestId("ride-gps")).not.toHaveTextContent("No GPS fix");
+    expect(screen.getByTestId("ride-gps")).toHaveTextContent("Finding GPS");
     expect(screen.getAllByText(/No GPS fix/)).toHaveLength(1);
   });
 

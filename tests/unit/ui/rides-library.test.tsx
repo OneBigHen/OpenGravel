@@ -365,3 +365,69 @@ describe("RidesLibrary", () => {
     expect(screen.getByRole("searchbox", { name: "Search rides" })).toHaveValue("");
   });
 });
+
+describe("RidesLibrary planned-ride export", () => {
+  it("hides Export when the ride has nothing exportable", async () => {
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([RIDE]) })} />);
+    await screen.findByRole("button", { name: "Open Pine Loop" });
+    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
+  });
+
+  it("exports a planned ride from the route line stored with it", async () => {
+    const planned: RideSummary = {
+      ...RIDE,
+      exportCapabilities: { plannedRoute: true, track: false, original: false, recordedRide: false },
+    };
+    const geometry = [
+      { lon: -75, lat: 40 },
+      { lon: -75.1, lat: 40.1 },
+      { lon: -75.2, lat: 40.2 },
+    ] as const;
+    const loadExportSource = vi.fn().mockResolvedValue({
+      title: "Pine Loop",
+      createdTime: "2026-09-17T12:00:00.000Z",
+      plannedRoute: {
+        geometry,
+        waypoints: [
+          { name: "Ranger station", coordinate: geometry[0] },
+          { name: null, coordinate: geometry[2] },
+        ],
+      },
+      tracks: [],
+      trackGeometry: {},
+      waypoints: [],
+      originalBytes: null,
+      originalFilename: null,
+      originalMime: null,
+      recordedTrack: null,
+    });
+    const blobs: Blob[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      blobs.push(blob as Blob);
+      return "blob:export";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    render(<RidesLibrary service={service({
+      listRides: vi.fn().mockResolvedValue([planned]),
+      loadExportSource,
+    })} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Export Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
+    await waitFor(() => expect(blobs).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Export Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /gpx route/i }));
+    await waitFor(() => expect(blobs).toHaveLength(2));
+
+    const trackXml = await blobs[0]!.text();
+    const routeXml = await blobs[1]!.text();
+    expect(trackXml).toContain("<trk>");
+    expect(trackXml).toContain("<wpt");
+    expect(trackXml).toContain("<name>Ranger station</name>");
+    expect(trackXml).toContain("<time>2026-09-17T12:00:00.000Z</time>");
+    expect(routeXml).toContain("<rte>");
+    expect(routeXml).not.toContain("<trk>");
+    expect(loadExportSource).toHaveBeenCalledWith(planned.rideId);
+    vi.restoreAllMocks();
+  });
+});

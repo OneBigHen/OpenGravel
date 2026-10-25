@@ -36,7 +36,7 @@ export function usePlannerRideStyle(input: {
   readonly rideDocumentStore: RideDocumentStore;
 }): RideStyleControlsModel {
   const { document, rideDocumentStore } = input;
-  const { shape, time, roadCharacter, noveltyPreference, surface, avoidHighways, tollPolicy, traffic } = document.intent;
+  const { shape, start, time, roadCharacter, noveltyPreference, surface, avoidHighways, tollPolicy, traffic } = document.intent;
 
   const actions = useMemo(() => {
     const dispatch = (build: (current: RideDocument) => RideCommand): void => {
@@ -79,6 +79,7 @@ export function usePlannerRideStyle(input: {
     () => ({
       shape: shapeChoice(shape),
       loopMinutes: time.kind === "budget" ? time.targetMinutes : DEFAULT_LOOP_MINUTES,
+      startCoordinate: start?.coordinate ?? null,
       roadCharacter,
       noveltyPreference: noveltyPreference ?? "balanced",
       surface: surface.preference,
@@ -86,7 +87,7 @@ export function usePlannerRideStyle(input: {
       avoidHighways,
       avoidTolls: tollPolicy === "avoid",
     }),
-    [shape, time, roadCharacter, noveltyPreference, surface.preference, avoidHighways, tollPolicy, traffic],
+    [shape, start, time, roadCharacter, noveltyPreference, surface.preference, avoidHighways, tollPolicy, traffic],
   );
 
   return useMemo(() => ({ view, actions }), [view, actions]);

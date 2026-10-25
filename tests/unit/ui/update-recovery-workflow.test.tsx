@@ -223,8 +223,10 @@ async function renderWorkspace(): Promise<Harness> {
       mapHostFactory={mapFactory.factory}
     />,
   );
-  // The shaping tools live behind the "Refine route" disclosure.
+  // The shaping tools live behind the "Refine route" disclosure, and the panel
+  // itself is code-split, so wait for the controls to arrive before driving them.
   fireEvent.click(screen.getByTestId("refine-toggle"));
+  await screen.findByTestId("stops-panel");
   await Promise.resolve();
   await Promise.resolve();
   const harness: Harness = { rideDocumentStore, plannerUiStore, mapFactory, answer };

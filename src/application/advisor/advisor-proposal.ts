@@ -1,12 +1,14 @@
 /** Natural-language request and strict structured-output boundary for M8. */
 
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
+import { haversine } from "@/domain/geometry/analysis";
 import type { RideId } from "@/domain/ride/ids";
 import type { DepartureIntent, RideDocument, RideIntent, TimeIntent } from "@/domain/ride/types";
 import { relativeAdvisorTime } from "./advisor-relative-time";
 import { isAdvisorHistory, type AdvisorExchange } from "./advisor-conversation";
 import { advisorRideAnswer, isAdvisorRideSummary, type AdvisorRideSummary } from "./advisor-ride-summary";
 import { advisorRiderState, type AdvisorErrorClass, type AdvisorRecovery } from "./advisor-errors";
+import { RIDE_DESCRIPTION_MAX_LENGTH } from "./ride-description";
 import type { AdvisorMessage, AdvisorOutputSchema, AdvisorTransport } from "./ports/advisor-transport";
 
 export interface AdvisorContextSnapshot {
@@ -93,6 +95,8 @@ export type AdvisorDraftResult =
       readonly errorClass: AdvisorErrorClass;
       readonly message: string;
       readonly recovery: AdvisorRecovery;
+      /** Seconds the server asked the surface to wait, when it knows. */
+      readonly retryAfterSeconds?: number;
     };
 
 export interface AdvisorProposalDependencies {
@@ -195,7 +199,7 @@ Riders describe rides in their own words. Map them to settings with this glossar
 - trafficPreference: "avoid traffic", "no jams", "stay off busy roads", "quiet roads" -> protect-ride. "beat traffic", "fastest through traffic", "in a hurry" -> minimize-delay. Avoiding traffic is not the same as avoiding highways; set avoidHighways only when highways, interstates or freeways are named.
 - shape: "loop", "round trip", "and back", "then home", "back home", "back by <time>" from where the ride starts -> loop. "to <place>", "ride to" -> destination with finishPlace. A loop through a named stop ("to X for gas then home") is a loop with that stop.
 - A bike model alone ("KTM 890", "GS", "Harley") is not a setting; mention it in unmappedDetails unless the rider also says how they want to ride.
-Write place queries the way a map search expects them: "Name, Town, State" for a business ("Turkey Hill, Doylestown, PA"), the official name for an airport ("Philadelphia International Airport"), and for a region name its main town ("the Poconos" -> "Stroudsburg, PA"). Use the place names the rider gave; never invent a business. Never set stopPlace to the destination itself: for a vague stop such as "lunch somewhere along the way", leave stopPlace null and put it in unmappedDetails.
+Write place queries the way a map search expects them: "Name, Town, State" for a business ("Turkey Hill, Doylestown, PA"), the official name for an airport ("Philadelphia International Airport"), and for a region name its main town ("the Poconos" -> "Stroudsburg, PA"). Use the place names the rider gave; never invent a business. When the user message includes rideArea (the ride's coarse position), use it only to choose the right vicinity and town for a place query; it is not a place the rider named, so never restate it, never describe it as an address, and never output coordinates. Never set stopPlace to the destination itself: for a vague stop such as "lunch somewhere along the way", leave stopPlace null and put it in unmappedDetails.
 Map requests for roads the rider has not ridden, "new roads", or "new to me" to noveltyPreference "prefer-new-to-me". Map requests to stay on known/familiar roads to "prefer-familiar". Do not infer novelty from generic words such as fun, scenic, adventure, surprise, or different.
 Keep dependent fields consistent: a budget requires rideTimeMinutes and null ride-time date/time; returnBy or arriveBy requires a local time and null minutes; none or unchanged requires null ride-time minutes/date/time. A two-hour request is budget with 120 minutes, not none. A future departure requires a local time; include its date when the rider names a future day, otherwise leave the date null so OpenGravel uses riderLocalDate for today. Now or unchanged requires both departure fields to be null. A stop place requires an arrival intent, and no stop place requires a null arrival intent.
 When outcome is "clarification", set a non-null clarification reason; other outcomes require null clarification.
@@ -318,7 +322,7 @@ export function parseAdvisorRequest(value: unknown): AdvisorRequest | null {
   const baseRevision = value["baseRevision"];
   const context = value["context"];
   if (
-    typeof prompt !== "string" || prompt.trim().length < 2 || prompt.trim().length > 600 || prompt.includes("\u0000") ||
+    typeof prompt !== "string" || prompt.trim().length < 2 || prompt.trim().length > RIDE_DESCRIPTION_MAX_LENGTH || prompt.includes("\u0000") ||
     typeof rideId !== "string" || !/^ride_[\w-]{1,90}$/.test(rideId) ||
     !Number.isInteger(baseRevision) || Number(baseRevision) < 0 || !isRecord(context)
   ) return null;
@@ -578,6 +582,9 @@ function messagesFor(request: AdvisorRequest): readonly AdvisorMessage[] {
         riderRequest: redactPrivateText(request.prompt),
         currentRide: current,
         ...(context.plannedRide === undefined ? {} : { plannedRide: context.plannedRide }),
+        // The ride's coarse position, as data the model may only use to pick the
+        // vicinity of a place query; it is not a place the rider named.
+        ...(context.near === undefined ? {} : { rideArea: { lat: context.near.lat, lon: context.near.lon } }),
         riderLocalDate: context.localDate,
         riderTimeZone: context.timeZone,
       }),
@@ -605,12 +612,19 @@ async function resolvePlace(
     if (result.status !== "ok") return { status: "unavailable" };
     // A geocoder returns its nearest namesake even when the business is not in
     // its index ("Turkey Hill, Doylestown" came back as "Mercer Hill at
-    // Doylestown"). The match must carry every word of the name the rider gave,
-    // or the advisor asks instead of guessing.
+    // Doylestown"). The match must carry every word of the name the rider gave
+    // *and* the town or postcode that qualifies it, or the advisor asks instead
+    // of guessing; `bias` only ranks, it never rejects.
     const words = nameWords(query);
+    if (words.length === 0) return { status: "not-found" };
+    const qualifiers = qualifierWords(query);
+    const nearby = qualifiers.length === 0 ? undefined : near;
     const place = result.places.find((candidate) => {
-      const label = `${candidate.name} ${candidate.label}`.toLowerCase();
-      return words.every((word) => label.includes(word));
+      const label = `${candidate.name} ${candidate.label} ${candidate.context}`.toLowerCase();
+      if (!words.every((word) => label.includes(word))) return false;
+      if (!qualifiers.every((word) => label.includes(word))) return false;
+      if (nearby === undefined) return true;
+      return haversine(candidate.coordinate, nearby) <= MAX_NEARBY_PLACE_METERS;
     });
     return place === undefined ? { status: "not-found" } : { status: "found", place };
   } catch {
@@ -619,19 +633,54 @@ async function resolvePlace(
 }
 
 const NAME_STOPWORDS = new Set(["the", "and", "of", "at", "in", "on", "near", "a"]);
+/** Postal abbreviations riders add after a town; they are not part of the name to match. */
+const STATE_ABBREVIATIONS = new Set([
+  "ala", "ariz", "ark", "calif", "colo", "conn", "del", "fla", "ga", "ill", "ind", "kan", "ky", "la", "md",
+  "mass", "mich", "minn", "miss", "mo", "mont", "neb", "nev", "okla", "ore", "penn", "tenn", "tex", "va", "vt",
+  "wash", "wis", "wyo",
+]);
+/** A place named with a town/state qualifier must resolve near the ride (~150 km). */
+const MAX_NEARBY_PLACE_METERS = 150_000;
+
+function queryWords(text: string): readonly string[] {
+  return text
+    .split(/[^\p{L}\p{N}']+/u)
+    .filter((word) =>
+      word.length >= 3 &&
+      !/^\d+$/.test(word) &&
+      !NAME_STOPWORDS.has(word.toLowerCase()) &&
+      !STATE_ABBREVIATIONS.has(word.toLowerCase()),
+    )
+    .map((word) => word.toLowerCase());
+}
 
 /**
  * The proper-name words of a query's name part (before the first comma): the
  * capitalised ones. "Turkey Hill, Doylestown" must match Turkey and Hill; a
  * category search like "coffee shop in Jim Thorpe" only has to land in Jim
- * Thorpe, because any café there answers it.
+ * Thorpe, because any café there answers it. A model that lowercases the whole
+ * query still has its name words checked instead of matching the first hit.
  */
 function nameWords(query: string): readonly string[] {
   const name = query.split(",")[0] ?? query;
-  return name
+  const capitalised = name
     .split(/[^\p{L}\p{N}']+/u)
-    .filter((word) => word.length >= 3 && /^\p{Lu}/u.test(word) && !NAME_STOPWORDS.has(word.toLowerCase()))
+    .filter((word) => word.length >= 3 && /^\p{Lu}/u.test(word) && queryWords(word).length > 0)
     .map((word) => word.toLowerCase());
+  return capitalised.length > 0 ? capitalised : queryWords(name);
+}
+
+/**
+ * The locality words after the first comma ("Doylestown", "PA 18360"): state
+ * abbreviations and postcodes identify nothing (postcodes are numeric, states
+ * are filtered by {@link queryWords}), because the geocoder's label may carry
+ * the state but never the rider's county.
+ */
+function qualifierWords(query: string): readonly string[] {
+  return query
+    .split(",")
+    .slice(1)
+    .flatMap((segment) => queryWords(segment));
 }
 
 /** Within ~1.5 km: a stop there is the destination itself, not a stop on the way. */

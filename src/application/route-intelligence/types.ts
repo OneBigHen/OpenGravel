@@ -106,6 +106,12 @@ export interface RoadAuthorityRecord {
   readonly motorcycleAccess?: MotorcycleAccess;
 }
 
+/** A fetched feed's records and when they were retrieved, for a snapshot store. */
+export interface AuthorityFeedSnapshot {
+  readonly fetchedAt: string;
+  readonly records: readonly RoadAuthorityRecord[];
+}
+
 export interface RoadAuthoritySourceInfo {
   readonly id: string;
   /** Human-safe source line, e.g. "NJDOT work zones (WZDx)". */

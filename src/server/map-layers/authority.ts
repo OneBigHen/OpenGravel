@@ -5,6 +5,15 @@ import { inSeason, isActive } from "@/application/route-intelligence/policy";
 import { roadAuthorityFromEnv } from "@/server/planning/road-authority";
 import type { LayerProvider } from "@/server/map-layers/providers";
 
+/**
+ * How long a map view waits for the work-zone feeds. A plan keeps the tight
+ * `ROAD_AUTHORITY_DEADLINE_MS`, but the WZDx source needs a registry round-trip
+ * plus a feed round-trip (each capped at 8 s by its own budget) before it can
+ * answer a cold view, and no rider is waiting on a layer that is drawn later.
+ * Stays inside the map-layers handler's 30 s job bound.
+ */
+const VIEW_AUTHORITY_DEADLINE_MS = 15_000;
+
 /** Presentation only: consumes the very snapshots assessed by routing, with no new ingestion. */
 export function projectAuthority(outcomes: readonly SourceOutcome[], layers: readonly MapLayerId[], at: string, bounds?: MapLayerBounds): readonly InfoFeature[] {
   return outcomes.flatMap(({ info, snapshot }) => snapshot.records.flatMap((record): InfoFeature[] => {
@@ -50,7 +59,11 @@ export const authorityProvider: LayerProvider = {
   async snapshot(bounds, layers, context) {
     const coordinator = roadAuthorityFromEnv(context.env);
     if (coordinator === null) throw new Error("Canonical road authority is disabled");
-    const assessment = await coordinator.assess(bounds, context.signal ?? AbortSignal.timeout(10_000));
+    const assessment = await coordinator.assess(
+      bounds,
+      context.signal ?? AbortSignal.timeout(VIEW_AUTHORITY_DEADLINE_MS),
+      { deadlineMs: VIEW_AUTHORITY_DEADLINE_MS },
+    );
     const outcomes = assessment.sources.filter(({ info }) => layers.includes(info.facet === "access" ? "mvum" : "work-zones") && info.coverage.some((box) => box.west < bounds.east && box.east > bounds.west && box.south < bounds.north && box.north > bounds.south));
     const unavailable = outcomes.length === 0 || layers.some((layerId) => !outcomes.some(({ info }) => info.facet === (layerId === "mvum" ? "access" : "closures"))) || outcomes.some(({ snapshot }) => snapshot.status === "unavailable");
     return {
@@ -58,7 +71,10 @@ export const authorityProvider: LayerProvider = {
       freshness: layers.map((layerId) => {
         const relevant = outcomes.filter(({ info }) => info.facet === (layerId === "mvum" ? "access" : "closures"));
         const dates = relevant.flatMap(({ snapshot }) => snapshot.fetchedAt === null ? [] : [snapshot.fetchedAt]).sort();
-        return { layerId, source: relevant.map(({ info }) => info.label).join(" / ") || "Canonical road authority", fetchedAt: dates[0] ?? assessment.at, observedAt: null, stale: relevant.some(({ snapshot }) => snapshot.status === "stale"), note: `Snapshot retrieval; individual source observation dates vary. ${unavailable ? "One or more requested authority sources unavailable. " : ""}Coverage is regional; unreported roads and coverage gaps remain unknown. Online only.` };
+        // A partial answer (a feed that did not answer, or a state with no
+        // feed) is not "unavailable", but the rider still reads why it is thin.
+        const reasons = relevant.flatMap(({ snapshot }) => snapshot.reason === null ? [] : [snapshot.reason]);
+        return { layerId, source: relevant.map(({ info }) => info.label).join(" / ") || "Canonical road authority", fetchedAt: dates[0] ?? assessment.at, observedAt: null, stale: relevant.some(({ snapshot }) => snapshot.status === "stale"), note: `Snapshot retrieval; individual source observation dates vary. ${reasons.length === 0 ? "" : `${reasons.join(" ")} `}${unavailable ? "One or more requested authority sources unavailable. " : ""}Coverage is regional; unreported roads and coverage gaps remain unknown. Online only.` };
       }),
     };
   },

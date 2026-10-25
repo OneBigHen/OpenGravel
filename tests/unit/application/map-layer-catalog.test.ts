@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAP_LAYERS, type MapLayerId } from "@/application/map-layers";
+import { MAP_LAYERS, MAP_LAYER_LENSES, type MapLayerId } from "@/application/map-layers";
 
 const TOMTOM_STOP_LAYERS: readonly MapLayerId[] = [
   "fuel",
@@ -28,12 +28,14 @@ describe("map layer catalogue provenance", () => {
     expect(weather?.caveat).toContain("not every visible point");
   });
 
-  it("keeps OSM provenance on the access layers that are actually served by Overpass", () => {
-    const definitions = new Map(MAP_LAYERS.map((layer) => [layer.id, layer]));
+  it("no longer offers the Overpass layers that failed on every request", () => {
+    const ids = new Set(MAP_LAYERS.map((layer) => layer.id));
+    for (const id of ["forest-roads", "cell-towers", "closures", "road-surface"]) expect(ids.has(id as never)).toBe(false);
+  });
 
-    for (const id of ["forest-roads", "cell-towers"] as const) {
-      expect(definitions.get(id)?.source).toBe("OpenStreetMap");
-    }
+  it("builds every lens from layers the panel offers", () => {
+    const ids = new Set(MAP_LAYERS.map((layer) => layer.id));
+    for (const lens of MAP_LAYER_LENSES) for (const id of lens.layers) expect(ids.has(id)).toBe(true);
   });
 
   it("credits PAD-US first and OSM as the fallback for public land", () => {

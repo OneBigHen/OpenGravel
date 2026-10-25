@@ -10,7 +10,11 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
+import {
+  PLACE_QUERY_MAX_LENGTH,
+  type PlaceMatch,
+  type PlaceSearchPort,
+} from "@/application/geocoding/place-search";
 import {
   EMPTY_PLACE_MEMORY,
   recordRecent,
@@ -304,6 +308,11 @@ describe("PlaceSearchField", () => {
       />,
     );
     expect(screen.getByTestId("start-search-status").textContent).toBe("Location permission is off.");
+  });
+
+  it("caps a plain place query at the geocoder's limit", () => {
+    render(<PlaceSearchField slot="finish" search={fakePort([])} onPick={vi.fn()} />);
+    expect(screen.getByRole("combobox")).toHaveAttribute("maxLength", String(PLACE_QUERY_MAX_LENGTH));
   });
 
   it("Escape clears the query and closes the list", async () => {

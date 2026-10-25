@@ -59,6 +59,8 @@ export interface PlannerStopsAuthoring {
   readonly onMapPointAction: (action: MapPointAction, coordinate: Coordinate) => void;
   /** Adds a stop at a known place (a places card's "Add as stop"). */
   readonly addStopAt: (coordinate: Coordinate, label: string) => void;
+  /** Adds a tapped road as two stops, entry then exit (the map card's "Ride this road"). */
+  readonly addRideRoad: (entry: Coordinate, exit: Coordinate, name: string) => void;
   beginPointDrag(ref: MapObjectRef | null, coordinate: Coordinate): void;
   previewPointDrag(coordinate: Coordinate): void;
   commitPointDrag(coordinate: Coordinate | undefined): void;
@@ -132,6 +134,7 @@ export function usePlannerStops(input: {
       onZoomTo: actions.zoomTo,
       onReplacePlace: actions.replacePlace,
       onMoveStop: actions.moveStop,
+      onReorder: actions.reorder,
       onRemove: actions.remove,
       onConvert: actions.convert,
       onAddStop: actions.addStop,
@@ -336,6 +339,7 @@ export function usePlannerStops(input: {
     panelProps,
     changeDestination: actions.changeDestination,
     addStopAt: actions.addStopAt,
+    addRideRoad: actions.addRideRoad,
     beginPointDrag,
     previewPointDrag,
     commitPointDrag,

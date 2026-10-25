@@ -1,3 +1,4 @@
+import { loopDirtTarget } from "@/application/planner/atlas-dirt-loops";
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
 import { corridorsInReachableEllipse, type GravelAtlasCorridor, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
 import type { RouteEvidence } from "@/domain/route/types";
@@ -828,9 +829,10 @@ async function planRideAttempt(
   let atlasReport: FunGeneratorReport | null = null;
   let atlasConsidered = 0;
   let atlasCorridors: readonly GravelAtlasCorridor[] = [];
-  // OGV_ATLAS_GENERATORS=off turns the Gravel Atlas probes off; OGV_RIDE_FORMULA
-  // (off|shadow|on) decides whether the formula only reports or also ranks.
-  const atlasEnabled = riderEnv["OGV_ATLAS_GENERATORS"] !== "off";
+  // A loop-only opt-in can deliver dirt while the general atlas experiments
+  // stay off. Paved/Mostly paved and point-to-point retain the general switch.
+  const atlasEnabled = riderEnv["OGV_ATLAS_GENERATORS"] !== "off" ||
+    (riderEnv["OGV_DIRT_LOOP_GENERATORS"] === "on" && loopDirtTarget(parsed.value.request) > 0);
   // Atlas probes have their own router-call budget (default 2, at most 4) so
   // they never starve the phase 1 knee search.
   const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
@@ -947,24 +949,27 @@ async function planRideAttempt(
   let pipeline = rank(candidates);
   if (fullPlan && riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
     const request = parsed.value.request;
-    const wantsDirt = request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
+    const wantsDirt = loopDirtTarget(request) > 0 || request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
     const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
     if (wantsDirt || wantsBackroads) {
-      // The character lanes may not include the plain fastest route, and every
-      // detour is measured against it: fetch it first (one cheap router call).
+      // Point-to-point detours need a fastest reference. Dirt loops use the
+      // rider's time budget; another seeded fastest loop adds no useful bound.
+      // Keep the existing baseline behavior for paved/backroad probes.
       try {
-        const plain = await provider.candidates({
-          ...request,
-          requestId: `${request.requestId}:fastest`,
-          profile: "motorcycle_fastest",
-          options: { ...request.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "efficient", targetUnpavedShare: 0, traffic: "minimize-delay" },
-        }, signal);
-        const first = plain.candidates[0];
-        if (first !== undefined) {
-          riderCalls += 1;
-          candidates = [...candidates, first];
-          roads = await assessRoads(candidates);
-          pipeline = rank(candidates);
+        if (loopDirtTarget(request) === 0) {
+          const plain = await provider.candidates({
+            ...request,
+            requestId: `${request.requestId}:fastest`,
+            profile: "motorcycle_fastest",
+            options: { ...request.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "efficient", targetUnpavedShare: 0, traffic: "minimize-delay" },
+          }, signal);
+          const first = plain.candidates[0];
+          if (first !== undefined) {
+            riderCalls += 1;
+            candidates = [...candidates, first];
+            roads = await assessRoads(candidates);
+            pipeline = rank(candidates);
+          }
         }
       } catch {
         // No baseline: the probes fall back on the fastest route the lanes found.
@@ -976,7 +981,7 @@ async function planRideAttempt(
       atlasCorridors = corridors;
       atlasReport = await runFunGenerators({
         context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })), sources: [] },
-        generators: createAtlasGenerators(corridors), provider,
+        generators: createAtlasGenerators(corridors, atlasCallBudget), provider,
         budget: { ...riderBudget, maxProviderCalls: atlasCallBudget },
         allocation: "fixed", signal, duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
         verify: async candidate => {

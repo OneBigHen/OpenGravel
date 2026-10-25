@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // The renderer's own stylesheet, imported at the composition root exactly as the
 // planner does: the UI layer may not know which renderer it draws with
 // (02-ARCHITECTURE-CONTRACT §7, 4.0 review finding 8).
@@ -42,6 +42,7 @@ import {
 } from "@/infrastructure/ride/native-shell";
 import { createBrowserRideEnvironment } from "@/infrastructure/ride/browser-ride-environment";
 import { createBrowserLeanMotion } from "@/infrastructure/motion/browser-lean-motion";
+import { createBrowserRideSafety } from "@/infrastructure/live/browser-ride-safety";
 import { createFixturePositionSource } from "@/infrastructure/ride/fixture-position-source";
 import { consumeRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -155,9 +156,17 @@ export function RideClient({
       player?.dispose();
     };
   }, []);
+  const crashMotion = useMemo(() => createBrowserLeanMotion(), []);
+  const syncMotionRef = useRef<() => void>(() => undefined);
+  const requestMotion = useCallback(async () => {
+    const answer = await crashMotion.requestPermission();
+    // Permission can arrive after the share started: subscribe now.
+    syncMotionRef.current();
+    return answer;
+  }, [crashMotion]);
   const pointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
-  const { store, rides, library, activitySync } = useMemo(() => {
+  const { store, rides, library, activitySync, safety } = useMemo(() => {
     // The ride on the Lock Screen and Dynamic Island, inside the iOS app only.
     const rideActivity = nativeShellRideActivity();
     const activitySync = rideActivity === undefined ? null : createRideActivitySync(rideActivity);
@@ -214,6 +223,12 @@ export function RideClient({
       const port = nativeShellSpeech() ?? createBrowserSpeech();
       return port === undefined ? undefined : mutableSpeech(port);
     })();
+    // Live location sharing and crash detection (Follow my ride). The saved
+    // link is restored after mount (the server render cannot see it).
+    const safety = createBrowserRideSafety((text) => {
+      void opportunityVoice?.speakText?.(text);
+      haptic("heavy");
+    });
     const store = createRideFocusStore({
       controller: sessions,
       announceOpportunity: (text) => { void opportunityVoice?.speakText?.(text); },
@@ -314,7 +329,17 @@ export function RideClient({
                 routeLine: () => routeLine,
               })
             : nativeShellPositionSource() ?? createBrowserPositionSource()),
-          onSessionFix: (fix, appliedState) => freeRideTelemetry.accept(fix, appliedState),
+          onSessionFix: (fix, appliedState) => {
+            freeRideTelemetry.accept(fix, appliedState);
+            safety.acceptFix({
+              atMs: Date.parse(fix.observedAt),
+              lat: fix.coordinate.lat,
+              lon: fix.coordinate.lon,
+              speedMps: fix.speedMps,
+              headingDeg: fix.headingDegrees,
+              accuracyM: fix.accuracyMeters,
+            });
+          },
           onAcceptedFix: async (fix, appliedState) => {
             if (appliedState.recordingId === null) return;
             // Raw device values only: a derived speed is recomputed by the
@@ -352,8 +377,32 @@ export function RideClient({
         };
       },
     });
-    return { rides, store, library, activitySync };
+    return { rides, store, library, activitySync, safety };
   }, [fixturePosition, homeLocation, pointer]);
+
+  useEffect(() => {
+    safety.restore();
+    // Motion feeds crash detection only while a live link is shared.
+    let stopMotion: (() => void) | null = null;
+    const syncMotion = (): void => {
+      const sharing = safety.snapshot().live.status === "sharing";
+      if (sharing && stopMotion === null && crashMotion.permission() === "granted") {
+        stopMotion = crashMotion.subscribe((g, atMs) => safety.acceptMotion({ atMs, x: g.x, y: g.y, z: g.z }));
+      } else if (!sharing && stopMotion !== null) {
+        stopMotion();
+        stopMotion = null;
+      }
+    };
+    syncMotionRef.current = syncMotion;
+    syncMotion();
+    const unsubscribe = safety.subscribe(syncMotion);
+    return () => {
+      unsubscribe();
+      stopMotion?.();
+      syncMotionRef.current = () => undefined;
+      safety.suspend();
+    };
+  }, [crashMotion, safety]);
 
   const mapLayersSource = useMemo(
     () => createRoadHistoryMapLayersSource(
@@ -427,6 +476,8 @@ export function RideClient({
       mapLayersSource={mapLayersSource}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
+      safety={safety}
+      requestMotion={requestMotion}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
   );

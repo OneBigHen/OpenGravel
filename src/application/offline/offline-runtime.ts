@@ -35,12 +35,20 @@ export interface BrowserOfflineRuntimeOptions {
   readonly tileUrlFor?: (tile: CorridorPackManifest["tiles"][number]) => string;
   readonly weather?: OfflineProviderFact;
   readonly traffic?: OfflineProviderFact;
+  /**
+   * How many offline areas with a road graph this device holds, read by the
+   * caller from storage. `null`/absent means it was not (or could not be)
+   * checked, which stays a network requirement rather than a guess.
+   */
+  readonly installedAreas?: number | null;
 }
 
 export interface OfflineRuntimeSnapshot {
   readonly facts: OfflineRuntimeFacts;
   readonly matrix: CapabilityMatrix;
   readonly readiness: RouteReadiness | null;
+  /** Downloaded road-graph areas on this device; `null` when unknown. */
+  readonly installedAreas: number | null;
 }
 
 function nowIso(value?: string): string {
@@ -139,8 +147,9 @@ export async function readBrowserOfflineRuntime(
   const now = nowIso(options.now);
   const route = options.route;
   const worker = await serviceWorkerFact();
+  const controllerUrl = typeof navigator === "undefined" ? undefined : navigator.serviceWorker?.controller?.scriptURL;
   const appShell = await cachedUrl(
-    typeof location === "undefined" ? "/" : `${location.origin}/`,
+    controllerUrl ? new URL("./", controllerUrl).href : typeof location === "undefined" ? "/" : `${location.origin}/`,
     24 * 60 * 60 * 1000,
   );
   const routeGeometry = routeCache(route, now);
@@ -148,6 +157,7 @@ export async function readBrowserOfflineRuntime(
     ? { presence: "present", cachedAt: now, maxAgeMs: 24 * 60 * 60 * 1000 } as const
     : { presence: "absent", maxAgeMs: 24 * 60 * 60 * 1000 } as const;
   const mapTiles = await mapTileFact(route, options.tileUrlFor, 24 * 60 * 60 * 1000);
+  const installedAreas = Number.isFinite(options.installedAreas) ? Math.max(0, options.installedAreas as number) : null;
   const facts: OfflineRuntimeFacts = {
     now,
     networkOnline: typeof navigator === "undefined" ? false : navigator.onLine,
@@ -159,9 +169,12 @@ export async function readBrowserOfflineRuntime(
       mapTiles,
       routeData: routeGeometry,
       exploreCatalog: { presence: "absent", maxAgeMs: 24 * 60 * 60 * 1000 },
-      // No browser-side graph/download service exists in this task. Its absence
-      // is a real fact and deliberately keeps planning/rerouting network-bound.
-      offlineGraph: { presence: "absent", maxAgeMs: 24 * 60 * 60 * 1000 },
+      // A downloaded area really does let the planner answer with no signal.
+      // Its data date is the region's own, not this read, so the age stays
+      // unknown rather than pretending to be fresh.
+      offlineGraph: installedAreas !== null && installedAreas > 0
+        ? { presence: "present", maxAgeMs: 24 * 60 * 60 * 1000 }
+        : { presence: "absent", maxAgeMs: 24 * 60 * 60 * 1000 },
     },
     local: {
       // These are current-page local operations. They do not claim that a future
@@ -178,7 +191,7 @@ export async function readBrowserOfflineRuntime(
     },
   };
   const matrix = buildCapabilityMatrix(facts);
-  if (route === null || route === undefined) return { facts, matrix, readiness: null };
+  if (route === null || route === undefined) return { facts, matrix, readiness: null, installedAreas };
   const manifest = route.pack ?? buildCorridorPackManifest({
     rideId: route.rideId,
     routeRevision: route.routeRevision,
@@ -203,6 +216,7 @@ export async function readBrowserOfflineRuntime(
   return {
     facts,
     matrix,
+    installedAreas,
     readiness: routeReadiness({
       now,
       rideId: route.rideId,

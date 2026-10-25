@@ -39,6 +39,7 @@ import {
   surfaceShares,
 } from "@/application/roads/engine-road-evidence";
 import type { MapObjectRef } from "@/application/map/types";
+import { routeLegs, type RouteLeg } from "@/domain/route/legs";
 import { canRedo, canUndo } from "@/domain/ride/history";
 import type { ShapingId, StopId } from "@/domain/ride/ids";
 import type {
@@ -249,6 +250,28 @@ export interface PlannerViewModelInput {
    * every other card stays "Traffic unknown".
    */
   readonly routeTraffic?: { readonly routeId: string; readonly label: string } | null;
+  /**
+   * The line the selected route draws, with the route's own measured totals, so
+   * each itinerary row can state its leg (04 §15). Absent means no route is on
+   * screen, and every row says its distance is not known rather than showing a
+   * number for a line no one drew.
+   */
+  readonly routeLine?: SelectedRouteLine | null;
+}
+
+/**
+ * The selected candidate's line, as the leg measurement reads it.
+ *
+ * `rideRevision` is what keeps an answer that no longer describes the ride from
+ * labelling its points: a route planned before the rider's last edit may pass
+ * near the edited point by coincidence, and a distance measured on it would be a
+ * claim about a ride the rider is no longer building.
+ */
+export interface SelectedRouteLine {
+  readonly geometry: readonly Coordinate[];
+  readonly distanceMeters: number;
+  readonly durationSeconds: number;
+  readonly rideRevision: number;
 }
 
 /** Reads a cached place name for a coordinate (`application/geocoding/place-names`). */
@@ -271,6 +294,55 @@ export type ItineraryRef =
   | { readonly kind: "stop"; readonly stopId: StopId }
   | { readonly kind: "shaping"; readonly shapingId: ShapingId };
 
+/**
+ * What one row's second line states: the leg that ends at this point (04 §15).
+ *
+ * `unknown` is a state, not a zero: a leg with no measured distance prints
+ * words, never `0 mi`. `off-route` is the route saying it does not cover this
+ * point — an unsettled draft, or a stop added after the route was planned.
+ */
+export type RowLegVm =
+  | { readonly state: "start" }
+  | {
+      readonly state: "measured";
+      readonly distanceMeters: number;
+      readonly durationSeconds: number | null;
+    }
+  | { readonly state: "off-route" }
+  | { readonly state: "unknown" };
+
+/** The first row has no previous stop, so it states where the ride begins. */
+export const LEG_FROM_LOCATION = "From your location";
+/** Bounded wording for a leg that was measured on a line that misses the point. */
+export const LEG_OFF_ROUTE = "Not on the selected route";
+/** The only spelling of an unmeasured distance; never a number, never zero. */
+export const LEG_UNKNOWN = "distance not known";
+
+/** The leg's rider-facing sentence, or `null` for a point outside the itinerary. */
+export function legLabel(leg: RowLegVm | null): string | null {
+  if (leg === null) return null;
+  switch (leg.state) {
+    case "start":
+      return LEG_FROM_LOCATION;
+    case "off-route":
+      return LEG_OFF_ROUTE;
+    case "unknown":
+      return LEG_UNKNOWN;
+    case "measured": {
+      const distance = formatDistance(leg.distanceMeters);
+      // The tilde is the estimate: the route measured one duration, and a leg's
+      // share of it is shared out by distance, not measured on its own.
+      const duration =
+        leg.durationSeconds === null
+          ? null
+          : `~${formatDuration(leg.durationSeconds)}`;
+      return duration === null
+        ? `${distance} from previous`
+        : `${distance} · ${duration} from previous`;
+    }
+  }
+}
+
 /** One row of the object list (04 §15). */
 export interface PointRowVm {
   readonly ref: ItineraryRef;
@@ -284,6 +356,8 @@ export interface PointRowVm {
   readonly arrivalIntent: StopArrivalIntent | null;
   /** 1-based position among the stops; `null` for the endpoints and anchors. */
   readonly position: number | null;
+  /** The leg that ends here, or `null` for a shaping anchor (04 §15). */
+  readonly leg: RowLegVm | null;
 }
 
 /**
@@ -796,6 +870,7 @@ function pointRows(document: RideDocument, placeNameFor?: PlaceNameLookup): {
       coordinate: start.coordinate,
       arrivalIntent: null,
       position: null,
+      leg: null,
     });
   }
   document.intent.stops.forEach((stop, index) => {
@@ -807,6 +882,7 @@ function pointRows(document: RideDocument, placeNameFor?: PlaceNameLookup): {
       coordinate: stop.coordinate,
       arrivalIntent: stop.arrivalIntent ?? null,
       position: index + 1,
+      leg: null,
     });
   });
   const finish = document.intent.finish;
@@ -819,6 +895,7 @@ function pointRows(document: RideDocument, placeNameFor?: PlaceNameLookup): {
       coordinate: finish.coordinate,
       arrivalIntent: null,
       position: null,
+      leg: null,
     });
   }
   return {
@@ -833,8 +910,68 @@ function pointRows(document: RideDocument, placeNameFor?: PlaceNameLookup): {
       coordinate: anchor.coordinate,
       arrivalIntent: null,
       position: null,
+      leg: null,
     })),
   };
+}
+
+/** The first row of the itinerary, when it is the ride's own start. */
+function isRideStart(row: PointRowVm): boolean {
+  return row.ref.kind === "start";
+}
+
+/** One projected leg as the row states it (04 §15). */
+function legVm(leg: RouteLeg, row: PointRowVm): RowLegVm {
+  switch (leg.kind) {
+    case "first":
+      // "From your location" is a claim about the ride's first point. A ride whose
+      // start was removed begins at its first stop, and that stop is not where the
+      // rider is: it gets no leg at all rather than the wrong sentence.
+      return isRideStart(row) ? { state: "start" } : { state: "unknown" };
+    case "off-route":
+      return { state: "off-route" };
+    case "unknown":
+      return { state: "unknown" };
+    case "measured":
+      return {
+        state: "measured",
+        distanceMeters: leg.distanceMeters,
+        durationSeconds: leg.durationSeconds,
+      };
+  }
+}
+
+/**
+ * The itinerary rows with their legs (04 §15).
+ *
+ * The legs are measured from the selected candidate's own line, and only while
+ * that line answers the document's current revision: a route planned before the
+ * rider's last edit describes a ride the rows no longer hold, so its rows say
+ * their distance is not known instead of labelling a stop with a stranger's leg.
+ */
+function itineraryLegs(
+  itinerary: readonly PointRowVm[],
+  routeLine: SelectedRouteLine | null,
+  document: RideDocument,
+): readonly PointRowVm[] {
+  if (routeLine === null || routeLine.rideRevision !== document.revision) {
+    return itinerary.map((row) => ({
+      ...row,
+      leg: isRideStart(row) ? { state: "start" } : { state: "unknown" },
+    }));
+  }
+  const legs = routeLegs(
+    routeLine.geometry,
+    itinerary.map((row) => row.coordinate),
+    {
+      distanceMeters: routeLine.distanceMeters,
+      durationSeconds: routeLine.durationSeconds,
+    },
+  );
+  return itinerary.map((row, index) => {
+    const leg = legs[index];
+    return { ...row, leg: leg === undefined ? { state: "unknown" } : legVm(leg, row) };
+  });
 }
 
 /**
@@ -865,6 +1002,7 @@ export function buildPlannerViewModel(
   const reading = session.diagnostics.find((diagnostic) => diagnostic.outcome === "ok" && diagnostic.funCharacter !== undefined)?.funCharacter;
   const disabledReason = disabledReasonFor(document, session.phase, derived);
   const rows = pointRows(document, input.placeNameFor);
+  const itinerary = itineraryLegs(rows.itinerary, input.routeLine ?? null, document);
   const failed = session.phase === "failed";
   return {
     phase: session.phase,
@@ -918,7 +1056,7 @@ export function buildPlannerViewModel(
       bundle !== null &&
       bundle.candidates.length > 0 &&
       bundle.rideRevision === document.revision,
-    itinerary: rows.itinerary,
+    itinerary,
     shapingPoints: rows.shapingPoints,
     undoLabel: historyLabel(document, "undo"),
     redoLabel: historyLabel(document, "redo"),

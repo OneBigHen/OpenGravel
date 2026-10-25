@@ -13,6 +13,8 @@
 
 import type { OfflineDownloadProgress } from "@/application/offline/offline-regions";
 
+import { hasSpaceFor, isQuotaExceeded, QUOTA_RECHECK_BYTES, STORAGE_QUOTA_MESSAGE } from "./storage-quota";
+
 const DIRECTORY = "ogv-basemaps";
 const MARKER_SUFFIX = ".json";
 export const BASEMAP_ASSET_CACHE = "ogv-basemap-assets";
@@ -34,7 +36,7 @@ interface ArchiveMarker {
 
 export class BasemapArchiveError extends Error {
   constructor(
-    readonly code: "unsupported" | "network" | "integrity",
+    readonly code: "unsupported" | "network" | "integrity" | "quota",
     message: string,
   ) {
     super(message);
@@ -164,18 +166,39 @@ export class BasemapArchiveStore {
     if (!Number.isFinite(totalBytes) || totalBytes <= 0) {
       throw new BasemapArchiveError("integrity", "The offline map's size is unknown.");
     }
-    await writeMarker(dir, { regionId, bytes: totalBytes, etag, complete: false });
+    // The archive is the larger half of an area, so the check happens before
+    // the first byte is written: a phone without the room is told so instead of
+    // watching a progress bar that can only end in a retry loop.
+    if (!(await hasSpaceFor(totalBytes - offset, { requestPersistence: true }))) {
+      throw new BasemapArchiveError("quota", STORAGE_QUOTA_MESSAGE);
+    }
 
-    const writable = await handle.createWritable({ keepExistingData: resumed });
-    if (resumed) await writable.seek(offset);
-    else await writable.truncate(0);
+    let writable: FileSystemWritableFileStream;
+    try {
+      await writeMarker(dir, { regionId, bytes: totalBytes, etag, complete: false });
+      writable = await handle.createWritable({ keepExistingData: resumed });
+      if (resumed) await writable.seek(offset);
+      else await writable.truncate(0);
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason ?? error;
+      if (isQuotaExceeded(error)) throw new BasemapArchiveError("quota", STORAGE_QUOTA_MESSAGE);
+      throw new BasemapArchiveError("network", "The offline map could not be downloaded.");
+    }
+
     let written = offset;
+    let nextQuotaCheck = written + QUOTA_RECHECK_BYTES;
     onProgress({ completedBytes: written, totalBytes });
     const reader = response.body.getReader();
     try {
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (written >= nextQuotaCheck) {
+          nextQuotaCheck = written + QUOTA_RECHECK_BYTES;
+          if (!(await hasSpaceFor(totalBytes - written))) {
+            throw new BasemapArchiveError("quota", STORAGE_QUOTA_MESSAGE);
+          }
+        }
         await writable.write(value);
         written += value.byteLength;
         onProgress({ completedBytes: written, totalBytes });
@@ -185,6 +208,8 @@ export class BasemapArchiveStore {
       // Keep what was written: closing commits it, and the next call resumes.
       await writable.close().catch(() => undefined);
       if (signal?.aborted) throw signal.reason ?? error;
+      if (error instanceof BasemapArchiveError) throw error;
+      if (isQuotaExceeded(error)) throw new BasemapArchiveError("quota", STORAGE_QUOTA_MESSAGE);
       throw new BasemapArchiveError("network", "The offline map download stopped; try again to resume it.");
     }
 

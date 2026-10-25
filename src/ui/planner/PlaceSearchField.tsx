@@ -28,7 +28,7 @@ import {
   type PlaceMatch,
   type PlaceSearchPort,
 } from "@/application/geocoding/place-search";
-import { readQuery } from "@/application/advisor/ride-description";
+import { readQuery, RIDE_DESCRIPTION_MAX_LENGTH } from "@/application/advisor/ride-description";
 import { placeKey, type RememberedPlace } from "@/application/geocoding/place-memory";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -123,8 +123,13 @@ export function PlaceSearchField({
   const trimmed = query.trim();
   const reading = describe === undefined ? "place" : readQuery(trimmed);
   const typed = trimmed.length >= PLACE_QUERY_MIN_LENGTH;
-  // A ride description is not a place: no geocoding request for it.
+  // A definite ride description (an amount, or ride words in a phrase) is not a
+  // place: no geocoding request for it. Anything that only *might* be a ride
+  // keeps its search — a lost place result is worse than one extra row.
   const searchable = typed && reading !== "ride";
+  // The box accepts a long ride description; the geocoder only sees a query it
+  // will accept.
+  const geocodeQuery = trimmed.slice(0, PLACE_QUERY_MAX_LENGTH);
   const state: SearchState = !searchable
     ? { phase: "idle" }
     : answer === null || answer.query !== trimmed
@@ -138,7 +143,7 @@ export function PlaceSearchField({
     const controller = new AbortController();
     const timer = setTimeout(() => {
       search
-        .search(trimmed, {
+        .search(geocodeQuery, {
           signal: controller.signal,
           ...(bias === undefined ? {} : { bias }),
         })
@@ -169,7 +174,7 @@ export function PlaceSearchField({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [trimmed, searchable, search, bias]);
+  }, [trimmed, geocodeQuery, searchable, search, bias]);
 
   // Remembered places lead: all of them in an empty box, the matching few
   // ahead of the geocoder's answers once the rider types (NV-02).
@@ -291,7 +296,7 @@ export function PlaceSearchField({
         autoComplete="off"
         enterKeyHint="search"
         spellCheck={false}
-        maxLength={PLACE_QUERY_MAX_LENGTH}
+        maxLength={describe === undefined ? PLACE_QUERY_MAX_LENGTH : RIDE_DESCRIPTION_MAX_LENGTH}
         disabled={disabled}
         value={query}
         onChange={(event) => {
