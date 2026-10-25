@@ -113,7 +113,7 @@ describe("TomTom place search requests", () => {
     const search = createTomTomPlaceSearch({ apiKey: "test-key", fetcher });
     await search.search({ query: "Wawa Jim Thorpe", center: JIM_THORPE, limit: 40 });
     const url = urls[0]!;
-    expect(url.pathname).toBe(`/search/2/fuzzySearch/${encodeURIComponent("Wawa Jim Thorpe")}.json`);
+    expect(url.pathname).toBe(`/search/2/search/${encodeURIComponent("Wawa Jim Thorpe")}.json`);
     expect(url.searchParams.get("idxSet")).toBe("POI");
     expect(url.searchParams.get("typeahead")).toBe("false");
     expect(url.searchParams.get("limit")).toBe("10");
