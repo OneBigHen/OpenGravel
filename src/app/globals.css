@@ -9091,6 +9091,25 @@ h3,
 
 }
 
+/* Desktop map chrome (small-screen v2 §3 in spirit): the map carries one control
+   — Layers, in the top-left — and the panel behind it holds map style and Places
+   as rows, the rows a phone already uses. The style globe and the Places pill
+   leave the map, so the only other floating chrome is the instrument column on
+   the right edge (compass, zoom, locate, show whole ride). The route-editing
+   tools moved into the planning rail (`MapEditBar` in the sheet head), and the
+   floating summary pill is gone because the selected route's card is on screen. */
+@media (min-width: 1181px) {
+  /* Layers takes the corner the globe used to hold. */
+  .og-planner__map-slot .og-layers {
+    left: var(--og-float-left, 12px);
+  }
+
+  [data-map-style-sheet="true"] .og-map__look,
+  [data-places-sheet="true"] .og-places-overlay--planner .og-places-control {
+    display: none;
+  }
+}
+
 /* Short landscape, map-first (UX rework phase 7, MVP parity row 28). A phone on
    its side is all map on the left, edge to edge and full height; the rail is one
    column on the right with the navigation at its top. The body steps out of the
@@ -9546,11 +9565,21 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 }
 
-/* The sheet only owns the basemap and Places on a phone; desktop keeps the
-   map's own style button and the Places pill. */
+/* The sheet owns the basemap choice and the Places overlay wherever its rows are
+   shown: on a phone (small-screen v2 §3, two map controls) and on the desktop
+   plan, where the sheet is the one top-left group and the map carries no
+   floating chrome. Between those tiers the sheet has no rows for them, so the
+   map keeps its own style button and Places pill. */
 .og-layers__group--style,
 .og-layers__group--places {
   display: none;
+}
+
+@media (min-width: 1181px) {
+  .og-layers__group--style,
+  .og-layers__group--places {
+    display: block;
+  }
 }
 
 .og-layers__group h3 {
@@ -11739,35 +11768,13 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   display: none;
 }
 
-/* The map slot's strip on the wide tiers: top centre, the summary above the
-   geography it describes. It clears the top control band — Layers and Along
-   ride end at 108 px, the edit bar's row at 62 px and the tool status or drag
-   tip it prints under itself at 112 px — and it is centred in the map the two
-   floating panels leave visible rather than in the window, so neither panel can
-   sit on it and it never reaches Show whole ride in the bottom right. The
-   panels' insets are the tokens the map's own controls use; where they are
-   columns instead of overlays the insets are undefined and it spans the map
-   cell's edges. Only the pill takes pointers: the band itself stays draggable. */
+/* On the desktop tier the plan has the selected route's card on screen — in the
+   ride inspector column, or in the rail's own list when the window is short —
+   so a floating summary pill over the map said the same ride twice. The card is
+   the summary there; the phone and tablet keep the strip, where the card sits
+   behind a folded sheet. */
 @media (min-width: 1181px) {
   .og-glance--map {
-    top: 120px;
-    bottom: auto;
-    left: var(--og-float-left, 12px);
-    right: var(--og-float-right, 12px);
-    justify-content: center;
-    transform: none;
-    pointer-events: none;
-  }
-
-  .og-glance--map > * {
-    pointer-events: auto;
-  }
-
-  /* An open place card, or the filters under the Along-ride pill, owns the band
-     the strip would take (it is the thing the rider is reading), so the summary
-     steps out of the way until it is closed. */
-  .og-planner__map-slot:has(.og-places-card) .og-glance--map,
-  .og-planner__map-slot:has(.og-places-control__panel) .og-glance--map {
     display: none;
   }
 }

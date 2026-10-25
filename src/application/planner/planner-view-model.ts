@@ -94,10 +94,23 @@ const SURFACE_BADGE_WORDS: Readonly<Record<Exclude<SurfaceClass, "unknown">, str
 };
 
 /**
+ * The trailing "· 4.7 mi unknown" a mix label carries when part of the line is
+ * untagged. It is a number a rider would have to combine themselves, so the card
+ * folds the doubt into the surface word instead (see `surfaceBadgeLabel`).
+ */
+const UNKNOWN_MILES_NOTE = /\s*·\s*[\d.,]+\s*mi\s+unknown$/i;
+
+/**
  * The surface badge, with the 07 §5 band folded into it (no separate confidence
  * line). A confirmed or mostly-known surface is stated plainly; a partly-guessed
  * one asks a question instead of claiming a surface the evidence cannot carry
  * (07 §5, 07 §7). Only a band with names to show gets a word at all.
+ *
+ * The untagged mileage of a partial mix is not printed either: `Paved · 4.7 mi
+ * unknown` reads as a data dump, and a badge is a word, not a measurement. The
+ * doubt lands on the surface word as a question (`Paved?`, `Mostly paved?`), the
+ * same way a partly-guessed band already asks. A surface the evidence says is
+ * mostly unknown keeps its own sentence — there is no named class to question.
  */
 function surfaceBadgeLabel(
   surface: SurfaceAssessment,
@@ -107,7 +120,10 @@ function surfaceBadgeLabel(
   if (surface.band === "unknown" || value === "unknown") return UNVERIFIED_SURFACE_BADGE;
   const mix = surfaceMixLabel(evidence);
   if (mix !== null) {
-    return surface.band === "possible" && !/\bunknown\b/i.test(mix) ? `${mix}?` : mix;
+    const [surfaceWord = mix] = mix.split(" · ");
+    if (mix.replace(UNKNOWN_MILES_NOTE, "") !== mix) return `${surfaceWord}?`;
+    if (/\bunknown\b/i.test(mix)) return mix;
+    return surface.band === "possible" ? `${mix}?` : mix;
   }
   const word = SURFACE_BADGE_WORDS[value];
   if (surface.band === "confirmed") return word;

@@ -922,6 +922,72 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).badges).toEqual(["Paved?"]);
   });
 
+  it("folds an untagged remainder into the surface word instead of printing its miles", () => {
+    const partlyTagged = candidate(BEST_ID, {
+      evidence: {
+        surfaceMix: {
+          value: {
+            surface: "paved",
+            pavedMeters: 80_000,
+            gravelMeters: 0,
+            dirtMeters: 0,
+            unknownMeters: 20_000,
+          },
+          status: "known",
+          confidence: 0.8,
+          coverage: 0.8,
+          provenance: [SURFACE_SOURCE],
+        },
+      },
+    });
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("ready", {
+          committedBundle: bundle([partlyTagged], BEST_ID, { "best-ride": BEST_ID }),
+          selectedRouteId: BEST_ID,
+        }),
+      }),
+    );
+
+    const card = required(vm.routeCards[0]);
+    // A card badge is a word, not a measurement: the untagged remainder becomes
+    // the question on the surface itself. The unverified mileage still exists for
+    // the explanation ("Surface is unverified on N mi of this route"), it just
+    // does not belong on a badge.
+    expect(card.badges).toEqual(["Paved?"]);
+    for (const badge of card.badges) expect(badge).not.toMatch(/mi unknown/);
+    expect(card.unknownSurfaceMi).toBeCloseTo(15.6, 1);
+  });
+
+  it("folds an untagged remainder into a mixed surface word too", () => {
+    const mixedUnpaved = candidate(BEST_ID, {
+      evidence: {
+        surfaceMix: {
+          value: {
+            surface: "gravel",
+            pavedMeters: 60_000,
+            gravelMeters: 4_000,
+            dirtMeters: 0,
+            unknownMeters: 20_000,
+          },
+          status: "known",
+          confidence: 0.8,
+          provenance: [SURFACE_SOURCE],
+        },
+      },
+    });
+    const vm = buildPlannerViewModel(
+      input({
+        session: session("ready", {
+          committedBundle: bundle([mixedUnpaved], BEST_ID, { "best-ride": BEST_ID }),
+          selectedRouteId: BEST_ID,
+        }),
+      }),
+    );
+
+    expect(required(vm.routeCards[0]).badges).toEqual(["Mostly paved?"]);
+  });
+
   it("reports no unverified mileage when the evidence covers the whole line", () => {
     const covered = candidate(BEST_ID, {
       evidence: {
