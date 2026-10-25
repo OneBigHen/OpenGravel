@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { riderEnvelopeMetrics } from "@/application/planner/rider-mode-search";
 import { searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import type { ProviderCandidate, ProviderRouteRequest } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
@@ -6,13 +7,13 @@ import type { Coordinate } from "@/domain/ride/types";
 const request: ProviderRouteRequest = { requestId: "curvy", origin: { lat: 40, lon: -75 }, destination: { lat: 40, lon: -74.8 }, stops: [], shaping: [], avoidPolygons: [], profile: "motorcycle_twisty", options: { vehicle: "motorcycle", tollPolicy: "avoid", avoidHighways: false, includeAlternatives: false, roadCharacter: "curvy", traffic: "protect-ride" } };
 
 const line: Coordinate[] = [request.origin, request.destination];
-/** `franco` is the route's curvature per km, read back through the test's curvature seam. */
+/** `franco` is the route's curvature per km, read back through the test's geometry measurement seam. */
 const route = (minutes: number, franco: number, busy = 0, profile = request.profile): ProviderCandidate => ({
   providerId: "test", profile, geometry: line, durationSeconds: minutes * 60, distanceMeters: 17_000 + franco, providerMetadata: { franco },
   roadSummary: { totalMeters: 17_000, surfaceByRoadClassMeters: { "asphalt|secondary": 17_000 }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 17_000 * busy, durationSeconds: null, surface: "asphalt", roadClass: "primary", urbanDensity: "rural", roadEnvironment: "road", toll: false, curvatureRatio: null }, { meters: 17_000 * (1 - busy), durationSeconds: null, surface: "asphalt", roadClass: "secondary", urbanDensity: "rural", roadEnvironment: "road", toll: false, curvatureRatio: null }] },
 });
 const provider = (answer: (r: ProviderRouteRequest) => ProviderCandidate[]) => ({ id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates: answer(r) })) });
-const base = { deadlineMs: 1000, signal: new AbortController().signal, sweepCalls: 5, curvature: (c: ProviderCandidate) => Number(c.providerMetadata?.["franco"] ?? 0) };
+const base = { deadlineMs: 1000, signal: new AbortController().signal, sweepCalls: 5, measure: (c: ProviderCandidate) => ({ funScore: Number(c.providerMetadata?.["franco"] ?? 0) / 10, francoPerKm: Number(c.providerMetadata?.["franco"] ?? 0), headingDegreesPerKm: 40, bendMeters: 10000, busyShare: riderEnvelopeMetrics(c)?.busyShare ?? 1, residentialShare: 0, dullMeters: 0 }) };
 
 describe("curvy search", () => {
   it("picks a twistier line the pipeline held but did not lead with", async () => {

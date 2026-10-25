@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { planRide } from "@/server/planning/plan-service";
+import { haversine } from "@/domain/geometry/analysis";
+import { riderEnvelopeMetrics } from "@/application/planner/rider-mode-search";
 import { analyzeBends } from "@/domain/geometry/bends";
 import { searchBalancedEnvelope } from "@/application/planner/balanced-search";
 import type { ProviderCandidate, ProviderRouteRequest } from "@/application/planner/route-provider";
@@ -14,10 +16,18 @@ const provider = (answer: (r: ProviderRouteRequest) => ProviderCandidate[]) => (
 
 describe("Balanced fun envelope", () => {
   const balanced = { ...request, profile: "motorcycle_fastest", options: { ...request.options, roadCharacter: "balanced" as const } };
-  const measure = (candidate: ProviderCandidate) => ({ perKm: Number(candidate.providerMetadata?.["franco"] ?? 0), bendMeters: Number(candidate.providerMetadata?.["bendMeters"] ?? 0) });
+  const measure = (candidate: ProviderCandidate) => candidate.roadSummary === undefined ? null : ({
+    funScore: Number(candidate.providerMetadata?.["fun"] ?? 0),
+    francoPerKm: Number(candidate.providerMetadata?.["franco"] ?? 0),
+    bendMeters: Number(candidate.providerMetadata?.["bendMeters"] ?? 0),
+    headingDegreesPerKm: Number(candidate.providerMetadata?.["heading"] ?? 20),
+    busyShare: riderEnvelopeMetrics(candidate)?.busyShare ?? 1,
+    residentialShare: candidate.roadSummary.roadRuns?.some(r => r.roadClass === "residential") ? 1 : 0,
+    dullMeters: 0,
+  });
   const bendy = (minutes: number, franco: number, bendMeters: number, busy = 0) => {
     const candidate = route(minutes, franco, busy, balanced.profile);
-    return { ...candidate, providerMetadata: { ...candidate.providerMetadata, bendMeters } };
+    return { ...candidate, providerMetadata: { ...candidate.providerMetadata, bendMeters, fun: bendMeters / 1000 + franco / 50 } };
   };
   const run = (candidates: ProviderCandidate[], override: Partial<Parameters<typeof searchBalancedEnvelope>[0]> = {}) => searchBalancedEnvelope({ request: balanced, candidates, incumbent: candidates[0], provider: provider(() => []), maxCalls: 2, deadlineMs: 1000, signal: new AbortController().signal, measure, ...override });
   it("buys real curves within 25% of fastest, never 25% of the slower incumbent", async () => {
@@ -36,9 +46,29 @@ describe("Balanced fun envelope", () => {
     const unknown = { ...bendy(52, 100, 12000), roadSummary: undefined };
     expect((await run([bendy(48, 20, 4000), unknown])).candidate).toBeNull();
   });
-  it("does not spend time for nominal curvature or street-corner counts", async () => {
+  it("does not spend extra minutes when fun improves only nominally", async () => {
     const incumbent = bendy(48, 30, 4000);
-    expect((await run([incumbent, bendy(55, 33, 8000), bendy(50, 90, 4100)])).candidate).toBeNull();
+    const nominal = bendy(55, 31, 4100);
+    expect((await run([incumbent, nominal])).candidate).toBeNull();
+  });
+  it("does not make extra calls when the pool already has sustained sweeping fun", async () => {
+    const good = bendy(48, 0, 10000);
+    const strong = { ...good, providerMetadata: { ...good.providerMetadata, heading: 60 } };
+    const p = provider(() => []);
+    expect((await run([strong], { provider: p })).calls).toBe(0);
+    expect(p.candidates).not.toHaveBeenCalled();
+  });
+  it("searches when geometric coverage is strong but net funScore is weak", async () => {
+    const good = bendy(48, 0, 10000);
+    const weak = { ...good, providerMetadata: { ...good.providerMetadata, heading: 60, fun: -1 } };
+    const p = provider(() => []);
+    expect((await run([weak], { provider: p })).calls).toBe(2);
+    expect(p.candidates).toHaveBeenCalledTimes(2);
+  });
+  it("spends no calls after its search deadline", async () => {
+    const p = provider(() => []);
+    expect((await run([bendy(48, 20, 4000)], { provider: p, deadlineMs: 0 })).calls).toBe(0);
+    expect(p.candidates).not.toHaveBeenCalled();
   });
   it("keeps busy-road exposure bounded", async () => {
     expect((await run([bendy(48, 20, 4000), bendy(52, 90, 9000, 0.5)])).candidate).toBeNull();
@@ -96,13 +126,14 @@ describe("Balanced fun envelope", () => {
 it.each(["yes", "private", "no"])("the complete plan gates a generated %s road before it can lead", async roadAccess => {
   const geometry = Array.from({ length: 801 }, (_, index) => ({
     lon: request.origin.lon + (request.destination.lon - request.origin.lon) * index / 800,
-    lat: request.origin.lat + Math.sin(index / 800 * Math.PI * 64) * 0.002,
+    lat: request.origin.lat + Math.sin(index / 800 * Math.PI * 16) * 0.002,
   }));
   const fast = route(48, 0);
   const curved = route(58, 100);
+  const meters = geometry.slice(1).reduce((sum, p, i) => sum + haversine(geometry[i]!, p), 0);
   const generated = { ...curved, geometry, roadSummary: {
-    ...curved.roadSummary!, bendMeters: analyzeBends(geometry).bendMeters,
-    roadRuns: curved.roadSummary!.roadRuns!.map(run => ({ ...run, roadAccess })),
+    ...curved.roadSummary!, totalMeters: meters, bendMeters: analyzeBends(geometry).bendMeters,
+    roadRuns: curved.roadSummary!.roadRuns!.map(run => ({ ...run, meters: run.meters / curved.roadSummary!.totalMeters * meters, roadAccess })),
   } };
   const p = provider(asked => asked.options.riderModeFactor === undefined ? [fast] : [generated]);
   const result = await planRide({ identity: { rideId: "balanced-gates", rideRevision: 1, planningGeneration: 1 }, request }, {
