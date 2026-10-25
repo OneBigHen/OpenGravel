@@ -8,7 +8,7 @@ import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import { TRAFFIC_CORRIDOR_POINTS } from "@/application/preparation/planner-context";
 import type { RoutePreparationContext } from "@/application/preparation/prepare-route";
-import type { PreparationProviderRegistry, ProviderResult, TrafficData } from "@/application/preparation/providers";
+import type { PreparationProviderRegistry, ProviderResult, TrafficData, WeatherData } from "@/application/preparation/providers";
 import { discoverRoads } from "@/application/roads/discovery";
 import { createRoadEntity } from "@/domain/roads/road-entity";
 import { asRoadEntityId } from "@/domain/ride/ids";
@@ -138,6 +138,39 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("heading", { name: "Ready-made rides" })).toBeNull();
     expect(screen.queryByText(/Areas include nearby border towns/)).toBeNull();
     expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
+  });
+
+  it("draws a ride card as its map, the name and one line of plain facts", () => {
+    // Design system v2 §4: a phone card is the route on its map, the name over
+    // two lines at most, then ONE line of facts. The old card's pill badges are
+    // what clipped at 320px ("Est. Mostly paved · 4.7 mi gra"), so nothing on
+    // the card is a pill and nothing carries an "Est." stamp any more.
+    const twisty = { ...entry, id: "twisty", name: "Twisty loop", surfaceSummary: "Mostly paved", curvatureSummary: "Twisty", variantCount: 2 };
+    render(<ExplorePanel entries={[twisty]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+
+    // The map image leads the card (16:9 and full width are the stylesheet's job).
+    expect(card.firstElementChild?.firstElementChild).toHaveClass("og-explore-card__preview");
+    expect(card.querySelector(".og-explore-card__title")).toHaveTextContent("Twisty loop");
+
+    // One meta line, in the order a rider asks the questions.
+    const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
+    expect(facts).toEqual(["17 mi", "Twisty", "Mostly paved"]);
+
+    expect(card.querySelector(".og-explore-card__chip")).toBeNull();
+    expect(card.querySelector("[data-surface]")).toBeNull();
+    expect(card).not.toHaveTextContent(/Est\./);
+
+    // The credit is one caption line, and it still names the source honestly.
+    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("Catalog");
+    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("2 versions");
+  });
+
+  it("says what is unknown on the facts line instead of hiding the fact", () => {
+    render(<ExplorePanel entries={[entry]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+    const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
+    expect(facts).toEqual(["17 mi", "Curvature unknown", "Surface unknown"]);
   });
 
   it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
@@ -286,6 +319,76 @@ describe("Explore UI", () => {
     expect(screen.getByRole("region", { name: "Catalog variants and tracks" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Lehigh sample route.*3 exports/i })).toHaveAttribute("href", "/explore/route-1");
     expect(screen.getByRole("link", { name: /track 2/i })).toBeInTheDocument();
+  });
+
+  it("says how far the start is from a rider who already allowed location, and asks nobody else", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: -75.5, latitude: 40.6 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    expect(await screen.findByTestId("route-start-distance")).toHaveTextContent(/^Starts 7 mi from you$/);
+  });
+
+  it("shows no start distance on the route page without location permission", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "prompt" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled());
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("route-start-distance")).toBeNull();
+  });
+
+  it("draws one route with a way back to its line instead of a count", async () => {
+    const hosts = createStubMapHostFactory();
+    render(<RouteDetail entry={entry} onUse={vi.fn()} map={{ hostFactory: hosts.factory, basemap: "empty" }} />);
+    await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(1));
+
+    expect(screen.queryByText(/1 mapped/)).toBeNull();
+    const fits = hosts.hosts[0]!.fits.length;
+    fireEvent.click(screen.getByRole("button", { name: "Recenter" }));
+    await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
+  });
+
+  it("leaves roads, planning mechanics and the briefing off the page when there is nothing to say", () => {
+    render(<RouteDetail entry={entry} onUse={vi.fn()} />);
+
+    // No matched roads is no section, not a paragraph explaining an absence.
+    expect(screen.queryByRole("heading", { name: "Roads on this ride" })).toBeNull();
+    expect(screen.queryByTestId("roads-none-matched")).toBeNull();
+    expect(screen.queryByText(/Planning follows this line/)).toBeNull();
+    // No weather provider means no weather line, never a badge or a source line.
+    expect(screen.queryByRole("heading", { name: "Before you ride" })).toBeNull();
+    expect(screen.queryByTestId("route-conditions")).toBeNull();
+    expect(screen.queryByText("Offline readiness")).toBeNull();
+  });
+
+  it("reduces the briefing to one line of weather at the start", () => {
+    const ready: ProviderResult<WeatherData> = {
+      state: "ready",
+      reason: "Forecast received for the selected route.",
+      provenance: "Source: weather service · updated 14:32",
+      data: { display: "Sunny · 72°F", freshnessLabel: "Fresh" },
+    };
+    const weather: PreparationProviderRegistry["weather"] = {
+      id: "weather-test",
+      kind: "weather",
+      capabilities: () => ({ kind: "weather", availability: "available", freshness: "time-bound", reason: null, provenance: "test" }),
+      getWeather: () => ready,
+    };
+    render(<RouteDetail entry={entry} onUse={vi.fn()} preparationProviders={{ weather }} />);
+
+    const line = screen.getByTestId("route-conditions");
+    expect(line).toHaveTextContent(/^Sunny · 72°F at the start$/);
+    expect(line).not.toHaveTextContent(/Source|Fresh|Ready/);
   });
 
   it("uses the route and keeps unknown metrics as an accessible em dash", () => {

@@ -131,6 +131,7 @@ const SCAN_EXEMPT_SELECTORS = [
   ".og-sheet__handle-count",
   ".og-route-list__count",
   ".og-explore-card__source",
+  ".og-layers__check",
   ".og-style__chip input:checked + span",
   ".og-explore__lens [role=\"tab\"][aria-selected=\"true\"]",
   ".og-layers[data-open=\"true\"] .og-layers__button",

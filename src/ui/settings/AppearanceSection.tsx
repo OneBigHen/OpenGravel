@@ -33,7 +33,6 @@ export function AppearanceSection() {
     <section className="og-settings__section" aria-labelledby="settings-appearance-title">
       <div className="og-settings__section-heading">
         <div>
-          <p className="og-settings__eyebrow">DISPLAY</p>
           <h2 id="settings-appearance-title">Day / Night</h2>
         </div>
       </div>
@@ -53,8 +52,7 @@ export function AppearanceSection() {
         ))}
       </div>
       <p className="og-settings__section-copy">
-        Day is bright and high-contrast for riding in sunlight. Auto follows your phone, and
-        the sun where you are while a ride is open.
+        Auto follows your phone, and the sun during a ride.
       </p>
     </section>
   );

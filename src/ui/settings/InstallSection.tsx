@@ -49,7 +49,6 @@ export function InstallSection() {
     <section className="og-settings__section" aria-labelledby="settings-install-title" data-testid="install-section">
       <div className="og-settings__section-heading">
         <div>
-          <p className="og-settings__eyebrow">ON YOUR PHONE</p>
           <h2 id="settings-install-title">Add to your Home Screen</h2>
         </div>
       </div>
@@ -70,7 +69,6 @@ export function InstallSection() {
           Install OpenGravel
         </button>
       )}
-      <p className="og-settings__section-copy">It opens full screen with no browser bars, which leaves more room for the map.</p>
     </section>
   );
 }

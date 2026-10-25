@@ -26,6 +26,12 @@ export interface ExploreMapProps extends ExploreMapConfig {
   /** The card under the pointer or focus: its line is drawn as the chosen one. */
   readonly highlightedId: string | null;
   readonly onOpen: (entryId: string) => void;
+  /**
+   * A list needs to say how many rides it drew and to fit them all again after
+   * a pan. One route's own page needs neither count nor plural: just the way
+   * back to its line.
+   */
+  readonly tools?: "count" | "recentre";
 }
 
 function lineOf(entry: CatalogEntry): readonly Coordinate[] {
@@ -54,7 +60,7 @@ function extentOf(entries: readonly CatalogEntry[]): MapExtent | null {
  * The card under the pointer is drawn as the chosen line, and tapping a line
  * opens that route. A read-only map: nothing here authors a ride.
  */
-function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap, assetBasePath }: ExploreMapProps) {
+function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap, assetBasePath, tools = "count" }: ExploreMapProps) {
   const [fitRevision, setFitRevision] = useState(0);
   const [cameraOwned, setCameraOwned] = useState(false);
   const available = useMemo(() => entries.filter((entry) => lineOf(entry).length >= 2), [entries]);
@@ -107,8 +113,12 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
   return (
     <div className="og-explore-map" data-testid="explore-map">
       <div className="og-explore-map__tools">
-        <span>{available.length} mapped{entries.length > available.length ? ` · ${entries.length - available.length} without geometry` : ""}</span>
-        <button type="button" className="og-secondary" onClick={() => { setCameraOwned(false); setFitRevision((value) => value + 1); }}>Fit routes</button>
+        {tools === "count" ? (
+          <span>{available.length} mapped{entries.length > available.length ? ` · ${entries.length - available.length} without geometry` : ""}</span>
+        ) : null}
+        <button type="button" className="og-secondary" onClick={() => { setCameraOwned(false); setFitRevision((value) => value + 1); }}>
+          {tools === "count" ? "Fit routes" : "Recenter"}
+        </button>
       </div>
       <PlannerMap
         scene={scene}

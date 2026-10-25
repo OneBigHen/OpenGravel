@@ -13,6 +13,7 @@ import type { MapExtent } from "@/application/map/build-map-scene";
 import { buildPlaceCard } from "@/application/places/place-scene";
 import { PlaceCard } from "@/ui/places/PlaceCard";
 import { PlacesControl } from "@/ui/places/PlacesControl";
+import { PlacesSheetRows } from "@/ui/places/PlacesSheetRows";
 import { usePlacesOverlay } from "@/ui/places/usePlacesOverlay";
 
 const STORAGE_KEY = "test-places-enabled";
@@ -256,6 +257,55 @@ describe("PlacesControl", () => {
       />,
     );
     expect(screen.getByRole("status")).toHaveTextContent(message);
+  });
+});
+
+describe("PlacesSheetRows", () => {
+  const props = {
+    status: "ready" as const,
+    reason: null,
+    count: 3,
+    scope: "view" as const,
+    query: QUERY,
+  };
+
+  it("turns places on inside the sheet and keeps the filters with the row", () => {
+    const onToggle = vi.fn();
+    const setWindow = vi.fn();
+    const setKinds = vi.fn();
+    const view = render(
+      <PlacesSheetRows {...props} enabled={false} onToggle={onToggle} setWindow={setWindow} setKinds={setKinds} />,
+    );
+    expect(screen.getByTestId("places-sheet-toggle")).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByTestId("places-sheet-window-week")).toBeNull();
+    expect(screen.getByText("Happy hours and events near the ride")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("places-sheet-toggle"));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <PlacesSheetRows {...props} enabled onToggle={onToggle} setWindow={setWindow} setKinds={setKinds} />,
+    );
+    expect(screen.getByText("3 in view")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("places-sheet-window-week"));
+    fireEvent.click(screen.getByTestId("places-sheet-kind-event"));
+    expect(setWindow).toHaveBeenCalledWith("week");
+    expect(setKinds).toHaveBeenCalledWith(["happy_hour", "event"]);
+  });
+
+  it("says why places are missing instead of carrying a badge", () => {
+    render(
+      <PlacesSheetRows
+        {...props}
+        enabled
+        status="unavailable"
+        reason="The provider is not configured."
+        count={0}
+        onToggle={vi.fn()}
+        setWindow={vi.fn()}
+        setKinds={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Places unavailable — The provider is not configured.")).toBeInTheDocument();
   });
 });
 

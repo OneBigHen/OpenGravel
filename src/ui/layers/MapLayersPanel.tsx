@@ -20,6 +20,14 @@ import {
 } from "@/application/map-layers";
 
 import type { MapLayerStatus } from "./useMapLayers";
+import { LOOK_LABEL, LOOK_NOTE, type BasemapLook } from "@/ui/map/basemap-look";
+
+/** The basemap style rows the sheet owns on a phone. */
+export interface MapStyleChoice {
+  readonly look: BasemapLook;
+  readonly options: readonly BasemapLook[];
+  readonly onChoose: (look: BasemapLook) => void;
+}
 
 export interface MapLayersPanelProps {
   readonly freshness?: readonly LayerFreshness[];
@@ -33,6 +41,49 @@ export interface MapLayersPanelProps {
   /** Turns a lens's whole set of layers on or off together. */
   readonly onToggleLens?: (ids: readonly MapLayerId[]) => void;
   readonly onClearAll: () => void;
+  /** Present when the sheet, not the map's globe button, chooses the basemap. */
+  readonly mapStyle?: MapStyleChoice;
+  /** Rows owned by another surface (the Places overlay), rendered in the sheet. */
+  readonly settings?: ReactNode;
+}
+
+const LOOK_GLYPH: Readonly<Record<BasemapLook, string>> = {
+  map: "◱",
+  night: "☾",
+  satellite: "◉",
+};
+
+/** Map style as radio rows: one tap changes the basemap and closes nothing. */
+function MapStyleRows({ style }: { readonly style: MapStyleChoice }) {
+  return (
+    <section className="og-layers__group og-layers__group--style" aria-label="Map style">
+      <h3>Map style</h3>
+      <ul role="radiogroup" aria-label="Map style">
+        {style.options.map((option) => {
+          const on = style.look === option;
+          return (
+            <li key={option} className="og-layers__row" data-on={on ? "true" : "false"}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className="og-layers__switch og-layers__switch--choice"
+                data-testid={`sheet-map-style-${option}`}
+                onClick={() => style.onChoose(option)}
+              >
+                <span className="og-layers__swatch" aria-hidden="true">{LOOK_GLYPH[option]}</span>
+                <span className="og-layers__text">
+                  <span className="og-layers__name">{LOOK_LABEL[option]}</span>
+                  <span className="og-layers__legend">{LOOK_NOTE[option]}</span>
+                </span>
+                <span className="og-layers__check" aria-hidden="true">{on ? "✓" : null}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: number): string | null {
@@ -89,11 +140,9 @@ function LayerRow({
           <span className="og-layers__name">{layer.name}</span>
           <span className="og-layers__legend">{layer.legend}</span>
         </span>
-        {label === null ? null : (
-          <span className="og-layers__status" data-status={status} role="status" aria-live="polite">
-            {label}
-          </span>
-        )}
+        <span className="og-layers__status" data-status={status} role="status" aria-live="polite">
+          {label}
+        </span>
         <span className="og-layers__toggle" aria-hidden="true" />
       </button>
       <button
@@ -130,6 +179,8 @@ export function MapLayersPanel({
   onToggle,
   onToggleLens,
   onClearAll,
+  mapStyle,
+  settings,
 }: MapLayersPanelProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -180,6 +231,7 @@ export function MapLayersPanel({
             </button>
           </header>
           <div className="og-layers__body">
+            {mapStyle === undefined ? null : <MapStyleRows style={mapStyle} />}
             {onToggleLens === undefined ? null : (
               <ul className="og-layers__lenses" aria-label="Quick layer sets">
                 {MAP_LAYER_LENSES.map((lens) => {
@@ -198,6 +250,7 @@ export function MapLayersPanel({
                         <span className="og-layers__lens-glyph" aria-hidden="true">{lens.glyph}</span>
                         <span className="og-layers__lens-name">{lens.name}</span>
                         <span className="og-layers__lens-hint">{lens.hint}</span>
+                        <span className="og-layers__toggle" aria-hidden="true" />
                       </button>
                     </li>
                   );
@@ -243,6 +296,7 @@ export function MapLayersPanel({
                 </ul>
               </section>
             ))}
+            {settings}
           </div>
         </section>
       ) : null}

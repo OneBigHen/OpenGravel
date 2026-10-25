@@ -45,7 +45,6 @@ export function FeedbackSection() {
     <section className="og-settings__section" aria-labelledby="settings-feedback-title">
       <div className="og-settings__section-heading">
         <div>
-          <p className="og-settings__eyebrow">HELP US</p>
           <h2 id="settings-feedback-title">Send feedback</h2>
         </div>
       </div>
@@ -64,7 +63,7 @@ export function FeedbackSection() {
           />
         </label>
         <label className="og-feedback__field">
-          <span>Email or phone, if you’d like a reply (optional)</span>
+          <span>Email or phone (optional)</span>
           <input type="text" data-testid="feedback-contact" value={contact} maxLength={200} autoComplete="email" onChange={(event) => setContact(event.target.value)} />
         </label>
         <button type="submit" className="og-primary" data-testid="feedback-send" disabled={message.trim().length < 3 || state === "sending"}>

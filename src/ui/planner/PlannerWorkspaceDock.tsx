@@ -10,6 +10,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
@@ -22,7 +23,8 @@ import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
-import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
+import { usePhonePlanner } from "./usePhonePlanner";
+import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
@@ -137,33 +139,89 @@ export function PlannerWorkspaceDock({
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
     composer.rideStyle?.view.shape !== "loop";
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  // Swipe the sheet's head up to open it, down to fold it (owner 2026-09-28:
-  // the sheet "doesn't move easily"). A swipe swallows the click it ends in,
-  // so the handle does not toggle a second time.
-  const swipe = useRef<{ y: number; id: number } | null>(null);
+  const loopRide = composer.rideStyle?.view.shape === "loop";
+  const placeLabel = loopRide ? composer.viewModel.startLabel : composer.viewModel.finishLabel;
+  const destinationLine =
+    placeLabel === NO_FINISH_LABEL || placeLabel === NO_START_LABEL || placeLabel === "From your sketch" || placeLabel === ""
+      ? null
+      : // The place name a rider says ("Hawk Mountain Sanctuary"), not its full address.
+        `${loopRide ? "Loop from" : "To"} ${placeLabel.split(",")[0]?.trim() || placeLabel}`;
+
+  const historyHidden =
+    (viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null);
+  const history = historyHidden ? null : (
+            <div className="og-history" data-testid="history-controls">
+              {/*
+                Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills
+                "are weird"). The text stays in the button for its accessible
+                name; what it undoes is in the title.
+              */}
+              <button
+                type="button"
+                className="og-chip og-history__button"
+                data-testid="undo"
+                title={viewModel.undoLabel === null ? "Undo" : `Undo · ${viewModel.undoLabel}`}
+                disabled={viewModel.undoLabel === null}
+                onClick={onUndo}
+              >
+                <HistoryGlyph direction="undo" />
+                <span className="og-history__text">
+                  Undo
+                  {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="og-chip og-history__button"
+                data-testid="redo"
+                title={viewModel.redoLabel === null ? "Redo" : `Redo · ${viewModel.redoLabel}`}
+                disabled={viewModel.redoLabel === null}
+                onClick={onRedo}
+              >
+                <HistoryGlyph direction="redo" />
+                <span className="og-history__text">
+                  Redo
+                  {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
+                </span>
+              </button>
+            </div>
+  );
+  const phone = usePhonePlanner();
+  const detent = phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const swipe = useRef<{ y: number; id: number; height: number } | null>(null);
   const swallowClick = useRef(false);
   const swipeHandlers = {
     onPointerDown: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      if (event.pointerType === "mouse") return;
-      swipe.current = { y: event.clientY, id: event.pointerId };
+      // Phone: the 48px handle drags the sheet. Elsewhere any touch on the head swipes it.
+      const handle = event.target instanceof Element ? event.target.closest<HTMLElement>(".og-sheet__handle") : null;
+      if (phone ? handle === null : event.pointerType === "mouse") return;
+      const height = event.currentTarget.parentElement?.getBoundingClientRect().height ?? 0;
+      swipe.current = { y: event.clientY, id: event.pointerId, height };
+      if (phone) handle?.setPointerCapture(event.pointerId);
+    },
+    onPointerMove: (event: ReactPointerEvent<HTMLDivElement>): void => {
+      const start = swipe.current;
+      if (start === null || start.id !== event.pointerId) return;
+      const dy = event.clientY - start.y;
+      if (Math.abs(dy) > 4) swallowClick.current = true;
+      if (phone) setDragHeight(Math.max(120, Math.min(window.innerHeight - 72, start.height - dy)));
     },
     onPointerUp: (event: ReactPointerEvent<HTMLDivElement>): void => {
       const start = swipe.current;
       swipe.current = null;
+      setDragHeight(null);
       if (start === null || start.id !== event.pointerId) return;
       const dy = event.clientY - start.y;
-      if (Math.abs(dy) < SWIPE_PX) return;
-      const direction = dy < 0 ? "up" : "down";
-      // Nothing above the full sheet, nothing below the thin bar.
-      if ((direction === "up" && sheetDetent === "expanded") || (direction === "down" && sheetDetent === "mini")) return;
-      swallowClick.current = true;
-      window.setTimeout(() => {
-        swallowClick.current = false;
-      }, 400);
-      onStepSheet(direction);
+      if (Math.abs(dy) >= SWIPE_PX) onStepSheet(dy < 0 ? "up" : "down");
+      // Pointer-generated clicks are synchronous with release. Keyboard taps
+      // after this gesture must still work.
+      window.setTimeout(() => { swallowClick.current = false; }, 0);
     },
     onPointerCancel: (): void => {
       swipe.current = null;
+      swallowClick.current = false;
+      setDragHeight(null);
     },
     onClickCapture: (event: ReactMouseEvent<HTMLDivElement>): void => {
       if (!swallowClick.current) return;
@@ -184,17 +242,19 @@ export function PlannerWorkspaceDock({
     <div
       className="og-planner__dock"
       data-testid="planner-dock"
-      data-detent={sheetDetent}
+      data-detent={detent}
       ref={dockRef}
     >
       {glance}
       <section
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"
-        data-detent={sheetDetent}
+        data-detent={detent}
         data-idle={idle ? "true" : undefined}
+        data-has-ride={hasChoices ? "true" : "false"}
+        data-dragging={dragHeight !== null ? "true" : undefined}
         aria-label="Ride planning"
-        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px` } as CSSProperties}
+        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px`, ...(dragHeight === null ? {} : { "--og-sheet-drag-h": `${dragHeight}px` }) } as CSSProperties}
       >
         <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...swipeHandlers}>
           <PlannerWorkspaceStatus {...status} />
@@ -274,16 +334,25 @@ export function PlannerWorkspaceDock({
             type="button"
             className="og-sheet__handle"
             data-testid="sheet-handle"
-            data-detent={sheetDetent}
-            aria-expanded={sheetDetent === "expanded"}
+            data-detent={detent}
+            aria-expanded={phone ? detent !== "peek" : sheetDetent === "expanded"}
             aria-controls="og-sheet-body"
-            aria-label={
+            aria-label={phone ? `Planner: ${detent}. ${detent === "full" ? "Collapse to peek" : detent === "half" ? "Expand fully" : "Expand to half"}` :
               sheetDetent === "mini"
                 ? "Show planner"
                 : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
                     viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
                   }`
             }
+            onKeyDown={(event) => {
+              if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                event.preventDefault();
+                onStepSheet(event.key === "ArrowUp" ? "up" : "down");
+              } else if (event.key === "Home" && phone) {
+                event.preventDefault();
+                onStepSheet("down");
+              }
+            }}
             onClick={onToggleSheet}
           >
             <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
@@ -337,43 +406,7 @@ export function PlannerWorkspaceDock({
 
           {/* The first screen is From / Where to? only (owner 2026-10-04), unless
               the rider just undid back to it and Redo is the way forward. */}
-          {(viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null) ? null : (
-            <div className="og-history" data-testid="history-controls">
-              {/*
-                Icon buttons (owner 2026-09-28: the stacked arrow-over-word pills
-                "are weird"). The text stays in the button for its accessible
-                name; what it undoes is in the title.
-              */}
-              <button
-                type="button"
-                className="og-chip og-history__button"
-                data-testid="undo"
-                title={viewModel.undoLabel === null ? "Undo" : `Undo · ${viewModel.undoLabel}`}
-                disabled={viewModel.undoLabel === null}
-                onClick={onUndo}
-              >
-                <HistoryGlyph direction="undo" />
-                <span className="og-history__text">
-                  Undo
-                  {viewModel.undoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.undoLabel}`}</span>}
-                </span>
-              </button>
-              <button
-                type="button"
-                className="og-chip og-history__button"
-                data-testid="redo"
-                title={viewModel.redoLabel === null ? "Redo" : `Redo · ${viewModel.redoLabel}`}
-                disabled={viewModel.redoLabel === null}
-                onClick={onRedo}
-              >
-                <HistoryGlyph direction="redo" />
-                <span className="og-history__text">
-                  Redo
-                  {viewModel.redoLabel === null ? null : <span className="og-history__what">{` · ${viewModel.redoLabel}`}</span>}
-                </span>
-              </button>
-            </div>
-          )}
+          {phone ? null : history}
         </div>
 
         <div
@@ -388,7 +421,16 @@ export function PlannerWorkspaceDock({
             DOM order, not CSS order, so focus order matches what is seen. On
             the wide tier the result portals to the inspector either way.
           */}
-          {hasChoices ? <PlannerResultPanel {...results} /> : null}
+          {hasChoices ? <PlannerResultPanel {...results} destinationLine={destinationLine} /> : null}
+          {phone && (hasChoices || history !== null) ? (
+            <div className="og-phone-tools" data-testid="phone-tools">
+              {hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {
+                bodyRef.current?.querySelector(".og-composer")?.scrollIntoView({ block: "start" });
+                bodyRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+              }}>Edit route</button> : null}
+              {history}
+            </div>
+          ) : null}
           <IntentComposer {...composer} {...(planning ? { onCancelPlanning } : {})} />
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           <PlannerRefineWorkspace {...refine} />

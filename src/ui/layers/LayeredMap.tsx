@@ -9,15 +9,21 @@ import dynamic from "next/dynamic";
  * this renders the plain map.
  */
 
-import { useCallback, useMemo, type ComponentProps } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
 
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { MapIntent } from "@/application/map/types";
 import type { MapLayersSource } from "@/application/map-layers";
 import type { Coordinate } from "@/domain/ride/types";
+import {
+  readLookChoice,
+  subscribeLookChoice,
+  writeLookChoice,
+  type BasemapLook,
+} from "@/ui/map/basemap-look";
 import { PlannerMap } from "@/ui/map/PlannerMap";
 
-import { MapLayersPanel } from "./MapLayersPanel";
+import { MapLayersPanel, type MapStyleChoice } from "./MapLayersPanel";
 import { useMapLayers } from "./useMapLayers";
 
 const InfoFeatureCard = dynamic(() => import("./InfoFeatureCard").then((mod) => mod.InfoFeatureCard), { loading: () => <p className="og-composer__reason" role="status">Loading map details…</p> });
@@ -35,13 +41,50 @@ export interface MapLayersProps {
 
 export function LayeredMap({
   layers,
+  panelSettings,
+  mapStyleInSheet = false,
   ...map
-}: PlannerMapProps & { readonly layers?: MapLayersProps | undefined }) {
+}: PlannerMapProps & {
+  readonly layers?: MapLayersProps | undefined;
+  /** Rows another surface owns, rendered inside the layers sheet (Places). */
+  readonly panelSettings?: ReactNode;
+  /** Let the sheet own the basemap style choice instead of the map's button. */
+  readonly mapStyleInSheet?: boolean;
+}) {
   if (layers === undefined) return <PlannerMap {...map} />;
-  return <LayeredMapWith map={map} layers={layers} />;
+  return (
+    <LayeredMapWith
+      map={map}
+      layers={layers}
+      panelSettings={panelSettings}
+      mapStyleInSheet={mapStyleInSheet}
+    />
+  );
 }
 
-function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readonly layers: MapLayersProps }) {
+function LayeredMapWith({
+  map,
+  layers,
+  panelSettings,
+  mapStyleInSheet,
+}: {
+  readonly map: PlannerMapProps;
+  readonly layers: MapLayersProps;
+  readonly panelSettings: ReactNode;
+  readonly mapStyleInSheet: boolean;
+}) {
+  // The remembered look is an external, per-device value: the server snapshot
+  // is the default so hydration agrees, then the stored choice arrives. Writing
+  // it notifies this store, so the sheet and the map change in one commit.
+  const look = useSyncExternalStore(subscribeLookChoice, readLookChoice, () => "map" as const);
+  const [lookOptions, setLookOptions] = useState<readonly BasemapLook[]>(["map"]);
+  const chooseLook = useCallback((next: BasemapLook): void => {
+    writeLookChoice(next);
+  }, []);
+  const mapStyle = useMemo<MapStyleChoice>(
+    () => ({ look, options: lookOptions, onChoose: chooseLook }),
+    [look, lookOptions, chooseLook],
+  );
   const cameraRoute = useMemo(() => {
     const route = map.scene.routes.find((candidate) => candidate.id === map.scene.selectedRouteId);
     if (route === undefined || route.geometry.length < 2) return null;
@@ -96,6 +139,7 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
     <>
       <PlannerMap
         {...map}
+        {...(mapStyleInSheet ? { look, onLookChange: chooseLook, onLookOptions: setLookOptions } : {})}
         scene={scene}
         onIntent={intercept}
         onViewport={viewport}
@@ -114,6 +158,8 @@ function LayeredMapWith({ map, layers }: { readonly map: PlannerMapProps; readon
           onToggle={view.toggle}
           onToggleLens={view.toggleSet}
           onClearAll={view.clearAll}
+          {...(mapStyleInSheet ? { mapStyle } : {})}
+          {...(panelSettings === undefined ? {} : { settings: panelSettings })}
         />
         {view.selected === null ? null : (
           <InfoFeatureCard

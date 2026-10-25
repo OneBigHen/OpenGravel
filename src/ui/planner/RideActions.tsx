@@ -302,7 +302,8 @@ export function RideActions({
                 : "Save a named copy to your rides library."
             }
           >
-            {saveState === "saving" ? "Saving…" : "Save"}
+            <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h10l4 4v14H6z" /><path d="M9 3v6h6M9 21v-7h8v7" /></svg>
+            <span className="og-plan-actions__label">{saveState === "saving" ? "Saving…" : "Save"}</span>
           </button>
           <button
             type="button"
@@ -312,7 +313,8 @@ export function RideActions({
             title={canShare ? "Preview what a share link exposes." : "Plan a route to share it."}
             onClick={() => setShareOpen(true)}
           >
-            Share
+            <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4" /><path d="M5 12v8h14v-8" /></svg>
+            <span className="og-plan-actions__label">Share</span>
           </button>
         </form>
       ) : null}

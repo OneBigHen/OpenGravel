@@ -69,18 +69,36 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     throw new Error("the sheet and its status line must both be measurable");
   }
 
-  // The tab bar is a glass capsule floating just above the bottom edge (OW-03;
-  // Trail Glass: 8px with no safe-area inset), inset from the sides, and the
-  // sheet is a card resting 6px above it. The status line is *inside* the sheet
-  // — the defect the owner review flagged was a status chip floating over the
-  // map. On the idle sheet it is announced but not drawn (Trail Glass).
+  // The tab bar is docked to the bottom edge (small-screen design system v2
+  // §2): full width, flush with the bottom, 56px tall, a solid paper surface
+  // with a top hairline rather than a frosted capsule floating over the map.
+  // The sheet is a card resting 6px above it. The status line is *inside* the
+  // sheet — the defect the owner review flagged was a status chip floating over
+  // the map. On the idle sheet it is announced but not drawn (Trail Glass).
   const tabBar = await page.getByTestId("primary-nav").boundingBox();
   if (tabBar === null) throw new Error("the tab bar has no measured box");
   const barGap = PHONE.height - (tabBar.y + tabBar.height);
-  expect(barGap).toBeGreaterThanOrEqual(7);
-  expect(barGap).toBeLessThanOrEqual(9);
-  expect(tabBar.x).toBeGreaterThanOrEqual(9);
+  expect(barGap).toBeGreaterThanOrEqual(0);
+  expect(barGap).toBeLessThanOrEqual(1);
+  expect(tabBar.x).toBeLessThanOrEqual(1);
+  expect(tabBar.width).toBeGreaterThanOrEqual(PHONE.width - 1);
+  expect(tabBar.height).toBeGreaterThanOrEqual(55);
+  expect(tabBar.height).toBeLessThanOrEqual(57);
   expect(Math.abs(tabBar.y - (sheetBox.y + sheetBox.height) - 6)).toBeLessThanOrEqual(1);
+  const barStyle = await page.getByTestId("primary-nav").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      backdrop: style.backdropFilter,
+      background: style.backgroundColor,
+      borderTopWidth: style.borderTopWidth,
+      borderTopLeftRadius: style.borderTopLeftRadius,
+    };
+  });
+  // Solid paper, not glass: nothing of the map shows through the bar.
+  expect(barStyle.background).toMatch(/^rgb\(/);
+  expect(barStyle.backdrop).toBe("none");
+  expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
+  expect(Number.parseFloat(barStyle.borderTopLeftRadius)).toBe(0);
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);

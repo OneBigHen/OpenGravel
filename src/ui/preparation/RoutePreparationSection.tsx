@@ -22,6 +22,13 @@ export interface RoutePreparationSectionProps {
    * planner turns the heading off so the rider sees the name once.
    */
   readonly heading?: boolean;
+  /**
+   * `brief` is the route page on a phone: the rider is about to ride, so it is
+   * one line of weather at the start and a warning only when it would change
+   * the plan. No per-check rows, state badges or provenance. `full` is the
+   * planner's briefing.
+   */
+  readonly variant?: "full" | "brief";
 }
 
 /**
@@ -123,6 +130,30 @@ export function stalenessNote(item: RoutePreparationItem): string | null {
     : `${noun} is out of date`;
 }
 
+/**
+ * The weather at the start in one line, and only when there is something to
+ * say: a forecast past its freshness window is silence here, because "Stale"
+ * on a chip tells a rider nothing they can ride on, and a missing forecast must
+ * never read as clear.
+ *
+ * A weather alert is the exception: its own text carries the age ("updated 12
+ * min ago"), so it is shown even when the forecast behind it is stale.
+ */
+export function weatherLine(items: readonly RoutePreparationItem[]): string | null {
+  const item = items.find((candidate) => candidate.kind === "weather");
+  if (item === undefined) return null;
+  const data = objectData(item);
+  const alerts = Array.isArray(data?.["alerts"]) ? (data["alerts"] as readonly unknown[]) : [];
+  const isAlert = data?.["primaryAlert"] !== undefined || alerts.length > 0;
+  if (item.state !== "ready" && !isAlert) return null;
+  const display = data?.["display"];
+  if (typeof display !== "string" || display.trim() === "") return null;
+  // An alert, or a sentence about the ride window, already says what it is
+  // about; only a plain condition is the one measured where the ride starts.
+  const readsAsCondition = !isAlert && !/[.!]$/.test(display.trim());
+  return readsAsCondition ? `${display} at the start` : display;
+}
+
 function PreparationRow({ item }: { readonly item: RoutePreparationItem }) {
   const note = stalenessNote(item);
   return (
@@ -160,13 +191,34 @@ function ConsiderationList({ items }: { readonly items: readonly Consideration[]
   );
 }
 
+/** One line of conditions, then only the warnings worth acting on. */
+function BriefPreparation({ preparation }: { readonly preparation: RoutePreparation }) {
+  const weather = weatherLine(preparation.items);
+  const warning = trafficWarning(preparation.items);
+  const considerations = preparation.considerations ?? [];
+  if (weather === null && warning === null && considerations.length === 0) return null;
+  return (
+    <section
+      className="og-preparation og-preparation--brief"
+      aria-label="Conditions at the start"
+      data-testid="route-conditions"
+    >
+      {weather === null ? null : <p className="og-preparation__weather-line">{weather}</p>}
+      {warning === null ? null : <p className="og-preparation__warning-line">{warning}</p>}
+      <ConsiderationList items={considerations} />
+    </section>
+  );
+}
+
 export function RoutePreparationSection({
   preparation,
   offline,
   omit,
   heading = true,
+  variant = "full",
 }: RoutePreparationSectionProps) {
   const [showAll, setShowAll] = useState(false);
+  if (variant === "brief") return <BriefPreparation preparation={preparation} />;
   // What could not be checked is not a row: an unknown route is never drawn as
   // clear, and a list of "not available yet" is not something a rider reads
   // before a ride. Traffic speaks once, as a warning, in the briefing line.
