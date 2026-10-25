@@ -5,14 +5,18 @@ import { clickMapAtCoordinate, plannerMap, pressPlan, settledExtent } from "./ma
 const START = { lon: -75.4385, lat: 40.1385 };
 const FINISH = { lon: -75.4335, lat: 40.1325 };
 
-test("no TomTom key keeps preparation and route traffic surfaces unknown", async ({ page }) => {
+test("no TomTom key leaves traffic off the rider surfaces instead of claiming it clear", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
 
   await page.goto("/explore/sample-ridge-loop");
-  await expect(page.getByText("Traffic unknown", { exact: true })).toBeVisible();
+  // A check the host could not make is left off the page, not listed as
+  // "unknown" and never turned into an all-clear.
+  await expect(page.getByText("Traffic unknown", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Not available yet", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Traffic clear/i)).toHaveCount(0);
 
   const trafficResponse = await page.request.post("/api/route-traffic", {
     data: {
