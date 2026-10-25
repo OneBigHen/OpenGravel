@@ -65,6 +65,7 @@ import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
 import type { RideId } from "@/domain/ride/ids";
 import { RideFocus } from "@/ui/ride/RideFocus";
 import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
+import { RideInstallHint } from "@/ui/ride/RideInstallHint";
 import { createWebSpotifyPlayer } from "@/infrastructure/spotify/web-spotify-player";
 
 /**
@@ -468,6 +469,7 @@ export function RideClient({
   }, [rides, store]);
 
   return (
+    <>
     <RideFocus
       store={store}
       mapHostFactory={hostFactory}
@@ -480,5 +482,7 @@ export function RideClient({
       requestMotion={requestMotion}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
+    <RideInstallHint />
+    </>
   );
 }
