@@ -130,7 +130,7 @@ body {
   background: var(--og-canvas);
   color: var(--og-ink);
   font-family: var(--og-font-body), ui-sans-serif, system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   word-spacing: 0.08em;
@@ -164,13 +164,13 @@ h3,
 }
 
 .og-planner__header h1 {
-  font-size: 26px;
+  font-size: var(--og-text-title);
   line-height: 1.15;
   letter-spacing: 0.01em;
 }
 
 .og-tagline {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-moss-text);
 }
 
@@ -202,7 +202,7 @@ h3,
 
 .og-planner__nav a {
   color: var(--og-signal-strong);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   padding: 0 4px;
 }
@@ -217,7 +217,7 @@ h3,
   width: 44px;
   border-radius: 999px;
   color: var(--og-signal-strong);
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   text-decoration: none;
 }
 
@@ -246,7 +246,7 @@ h3,
 .og-nav__sep {
   margin: 0 8px;
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   line-height: 1;
   vertical-align: middle;
   user-select: none;
@@ -285,30 +285,30 @@ h3,
 
 .og-settings__header h1 { font-size: clamp(30px, 4vw, 46px); line-height: 1.05; }
 .og-settings__header > div > p:last-child { max-width: 520px; margin-top: 8px; color: var(--og-slate-text); }
-.og-settings__eyebrow { color: var(--og-moss-text); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+.og-settings__eyebrow { color: var(--og-moss-text); font-size: var(--og-text-caption); font-weight: 700; letter-spacing: .13em; }
 .og-settings__layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 16px; max-width: 1120px; margin: 0 auto; align-items: start; }
 .og-settings__section { min-width: 0; padding: 24px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-object); background: var(--og-paper); box-shadow: 0 8px 24px #243a350a; }
-.og-settings__section h2 { font-size: 21px; }
-.og-settings__section h3 { font-size: 16px; }
-.og-settings__section-copy { margin-top: 8px; color: var(--og-slate-text); font-size: 13px; }
+.og-settings__section h2 { font-size: var(--og-text-headline); }
+.og-settings__section h3 { font-size: var(--og-text-body); }
+.og-settings__section-copy { margin-top: 8px; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 .og-settings__spotify-callback { overflow-wrap: anywhere; margin-top: 8px; }
 .og-settings__section-heading { align-items: flex-start; margin-bottom: 14px; }
 .og-settings__home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .og-settings__bike-list { display: grid; gap: 10px; margin-top: 18px; list-style: none; }
 .og-settings__bike { min-width: 0; padding: 16px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-object); background: #fffefa; }
 .og-settings__bike-main { align-items: flex-start; }
-.og-settings__bike-main p, .og-settings__bike-details { color: var(--og-slate-text); font-size: 13px; }
+.og-settings__bike-main p, .og-settings__bike-details { color: var(--og-slate-text); font-size: var(--og-text-meta); }
 .og-settings__bike-details { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
 .og-settings__bike-actions { justify-content: flex-start; margin-top: 8px; }
-.og-settings__active, .og-settings__status { padding: 4px 9px; border-radius: 999px; background: #e7eee8; color: var(--og-deep-spruce); font-size: 12px; font-weight: 700; }
+.og-settings__active, .og-settings__status { padding: 4px 9px; border-radius: 999px; background: #e7eee8; color: var(--og-deep-spruce); font-size: var(--og-text-caption); font-weight: 700; }
 .og-settings__button, .og-settings__text-button { min-height: 44px; border: 1px solid var(--og-deep-spruce); border-radius: var(--og-radius-control); padding: 8px 13px; background: var(--og-deep-spruce); color: var(--og-paper); font: inherit; font-weight: 650; cursor: pointer; }
 .og-settings__button--quiet { background: transparent; color: var(--og-deep-spruce); }
 .og-settings__text-button { min-height: 44px; border: 0; padding: 4px 8px; background: transparent; color: var(--og-signal-strong); white-space: nowrap; }
 .og-settings__text-button--danger { color: var(--og-danger); }
-.og-settings__hint { align-self: center; color: var(--og-slate-text); font-size: 13px; }
+.og-settings__hint { align-self: center; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 .og-settings__button--danger { background: var(--og-danger); border-color: var(--og-danger); }
 .og-settings__button:disabled { cursor: not-allowed; opacity: .48; }
-.og-settings label { display: grid; gap: 6px; margin-top: 12px; font-size: 13px; font-weight: 650; }
+.og-settings label { display: grid; gap: 6px; margin-top: 12px; font-size: var(--og-text-meta); font-weight: 650; }
 .og-settings input:not([type="checkbox"]), .og-settings select { width: 100%; min-height: 44px; border: 1px solid #a9aaa0; border-radius: var(--og-radius-control); padding: 9px 11px; background: white; color: var(--og-ink); font: inherit; }
 .og-settings select:disabled { color: var(--og-slate-text); background: #f1eee7; }
 .og-settings__editor { display: grid; gap: 10px; margin-top: 18px; padding: 18px; border: 1px solid var(--og-trail-moss); border-radius: var(--og-radius-object); background: #f7f5ee; }
@@ -318,9 +318,9 @@ h3,
 .og-settings__check { grid-template-columns: 24px 1fr; align-items: start; margin: 18px 0 0 !important; }
 .og-settings__check input { width: 20px; height: 20px; accent-color: var(--og-deep-spruce); }
 .og-settings__danger-zone { display: grid; justify-items: start; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--og-sandstone); }
-.og-settings__danger-zone p { margin-bottom: 4px; color: var(--og-slate-text); font-size: 13px; }
+.og-settings__danger-zone p { margin-bottom: 4px; color: var(--og-slate-text); font-size: var(--og-text-meta); }
 .og-settings__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 12px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-control); }
-.og-settings__error { color: var(--og-danger); font-size: 13px; }
+.og-settings__error { color: var(--og-danger); font-size: var(--og-text-meta); }
 .og-settings button:focus-visible, .og-settings input:focus-visible, .og-settings select:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
 
 @media (max-width: 760px) {
@@ -402,14 +402,14 @@ h3,
 .og-first-run__copy strong {
   display: block;
   font-family: var(--og-font-display), var(--og-font-body), sans-serif;
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1.08;
 }
 
 .og-first-run__copy p:last-child {
   margin-top: 8px;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   line-height: 1.4;
 }
 
@@ -424,7 +424,7 @@ h3,
   background: transparent;
   color: var(--og-deep-spruce);
   font: inherit;
-  font-size: 26px;
+  font-size: var(--og-text-title);
   cursor: pointer;
 }
 
@@ -451,7 +451,7 @@ h3,
   .og-first-run__picture,
   .og-first-run__picture img { min-height: 142px; }
 
-  .og-first-run__copy strong { font-size: 20px; }
+  .og-first-run__copy strong { font-size: var(--og-text-headline); }
 }
 
 .og-map-host {
@@ -525,7 +525,7 @@ h3,
 
 .og-map .maplibregl-ctrl-attrib {
   background: color-mix(in srgb, var(--og-paper) 88%, transparent);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   max-width: 62%;
 }
 
@@ -596,7 +596,7 @@ h3,
 .og-route-detail__away {
   margin: 0;
   color: var(--og-ink);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 
@@ -611,7 +611,7 @@ h3,
 .og-route-detail__summary,
 .og-route-detail__region {
   color: var(--og-moss-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 /* The provenance mechanics behind a disclosure (09 §6 step 8): the one-line truth
@@ -619,7 +619,7 @@ h3,
 .og-route-detail__provenance-detail {
   margin-top: 8px;
   color: var(--og-moss-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-route-detail__provenance-detail > summary {
@@ -664,7 +664,7 @@ h3,
   gap: 4px;
   min-width: 150px;
   color: var(--og-deep-spruce);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -761,7 +761,7 @@ h3,
 }
 
 .og-explore-card__body strong {
-  font-size: 17px;
+  font-size: var(--og-text-body);
   line-height: 1.2;
 }
 
@@ -785,12 +785,12 @@ h3,
 .og-explore-card__distance,
 .og-explore-card__region {
   color: var(--og-moss-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-explore-card__evidence {
   color: var(--og-deep-spruce);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.35;
 }
 
@@ -988,7 +988,7 @@ h3,
 
 .og-explore-card__why {
   color: var(--og-deep-spruce);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.35;
 }
 
@@ -1012,12 +1012,12 @@ h3,
 
 .og-road-discovery__slice-head h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--og-text-headline);
 }
 
 .og-road-discovery__slice-head span {
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-route-detail__stats {
@@ -1035,12 +1035,12 @@ h3,
 
 .og-route-detail__stats dt {
   color: var(--og-moss-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-route-detail__stats dd {
   margin-top: 4px;
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
 }
 
@@ -1084,7 +1084,7 @@ h3,
 .og-route-detail__variants p,
 .og-route-detail__variants li span {
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-route-detail__variants ul {
@@ -1135,7 +1135,7 @@ h3,
   flex: 0 0 auto;
   min-height: 40px;
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-preparation__list {
@@ -1158,7 +1158,7 @@ h3,
 
 .og-preparation__row dt {
   color: var(--og-deep-spruce);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -1171,20 +1171,20 @@ h3,
 .og-preparation__value {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
 .og-preparation__note {
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 /* The forecast's agency, in small print: attribution without a provider row. */
 .og-preparation__credit,
 .og-prepare__credit {
   color: var(--og-moss-text);
-  font-size: 11.5px;
+  font-size: var(--og-text-caption);
 }
 
 .og-preparation__credit {
@@ -1198,18 +1198,18 @@ h3,
 .og-preparation__empty {
   max-width: 62ch;
   color: var(--og-deep-spruce);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 /* The route page's briefing: conditions at the start, one line, no badges. */
 .og-preparation__weather-line {
-  font-size: 16px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 
 .og-preparation__warning-line {
   color: var(--og-ember-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 700;
 }
 
@@ -1226,7 +1226,7 @@ h3,
   padding: 9px 0;
   cursor: pointer;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -1260,7 +1260,7 @@ h3,
   display: block;
   margin: 4px 0 0;
   color: var(--og-deep-spruce);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-offline {
@@ -1291,19 +1291,19 @@ h3,
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-slate) 16%, transparent);
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
 .og-offline__readiness,
 .og-offline__reason {
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-offline__readiness strong {
   color: var(--og-deep-spruce);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-offline__readiness ul {
@@ -1330,7 +1330,7 @@ h3,
 
 .og-offline__row dt {
   color: var(--og-deep-spruce);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -1395,7 +1395,7 @@ h3,
 .og-route-detail__coverage {
   margin: 4px 0 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-route-detail__roads-list,
@@ -1440,7 +1440,7 @@ h3,
   display: block;
   margin-top: 3px;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-road-surface {
@@ -1449,7 +1449,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-slate) 16%, transparent);
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -1476,7 +1476,7 @@ h3,
 .og-route-detail__surface-summary {
   margin-top: 4px;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -1492,13 +1492,13 @@ h3,
 .og-road-detail-sheet__aliases {
   margin: 10px 0 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-road-detail-sheet__conflict {
   margin: 8px 0 0;
   color: var(--og-ember-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -1516,17 +1516,17 @@ h3,
 
 .og-road-detail-sheet__facts dt {
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 .og-road-detail-sheet__facts dd {
   margin: 3px 0 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-road-detail-sheet h3 {
   margin-top: 16px;
-  font-size: 15px;
+  font-size: var(--og-text-body);
 }
 
 .og-road-detail-sheet__lineage {
@@ -1534,14 +1534,14 @@ h3,
   padding-left: 18px;
   list-style: disc;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-road-detail-sheet__evidence {
   width: 100%;
   margin-top: 8px;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-road-detail-sheet__evidence th,
@@ -1665,7 +1665,7 @@ h3,
   min-height: 44px;
   padding: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   cursor: pointer;
   border: 1px solid var(--og-glass-edge);
   border-radius: 999px;
@@ -1761,7 +1761,7 @@ h3,
   backdrop-filter: var(--og-glass-blur);
   box-shadow: var(--og-glass-shadow);
   color: var(--og-ink);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
@@ -1843,7 +1843,7 @@ h3,
   left: 12px;
   z-index: 2;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   pointer-events: none;
   border: 1px solid var(--og-sandstone);
   border-radius: var(--og-radius-control);
@@ -1863,7 +1863,7 @@ h3,
   min-width: 44px;
   padding: 10px 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   cursor: pointer;
   border: 1px solid var(--og-sandstone);
   border-radius: var(--og-radius-control);
@@ -1941,7 +1941,7 @@ h3,
 }
 
 .og-sketch__label {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1951,7 +1951,7 @@ h3,
 .og-sketch__value {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
   font-variant-numeric: tabular-nums;
 }
@@ -1966,7 +1966,7 @@ h3,
 .og-sketch__near-loop {
   flex: 1 1 100%;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
 }
 
@@ -1995,7 +1995,7 @@ h3,
 .og-spans__hint,
 .og-spans__footnote {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.4;
   color: var(--og-slate-text);
 }
@@ -2021,7 +2021,7 @@ h3,
 
 .og-spans__direction {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-slate-text);
 }
 
@@ -2035,7 +2035,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-slate) 16%, transparent);
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -2077,7 +2077,7 @@ h3,
 .og-avoid__hint,
 .og-avoid__footnote {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.4;
   color: var(--og-slate-text);
 }
@@ -2120,7 +2120,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-ember) 18%, transparent);
   color: var(--og-ember-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -2138,7 +2138,7 @@ h3,
 
 .og-avoid-conflict__notice {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-ember-text);
 }
@@ -2160,7 +2160,7 @@ h3,
 
 .og-avoid-conflict__what {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
 }
 
@@ -2184,7 +2184,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-ink) 74%, transparent);
   color: var(--og-paper);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 500;
   backdrop-filter: blur(4px);
   pointer-events: none;
@@ -2199,12 +2199,12 @@ h3,
 }
 
 .og-planner__status {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-deep-spruce);
 }
 
 .og-planner__error {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-danger);
 }
 
@@ -2213,7 +2213,7 @@ h3,
    own surface and the planner keeps working, so the copy must not out-shout the
    ride. Trail Moss is the muted, informational tone of the palette. */
 .og-planner__map-error {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   line-height: 1.4;
   color: var(--og-moss-text);
 }
@@ -2230,14 +2230,14 @@ h3,
 
 .og-planner__map-failed-detail {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-slate-text);
 }
 
 .og-planner__map-retry {
   min-height: 32px;
   padding: 4px 12px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 /* The 05 §6 overlap chooser: a compact list of the candidates under one tap,
@@ -2254,7 +2254,7 @@ h3,
 }
 
 .og-overlap__question {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-deep-spruce);
 }
@@ -2301,12 +2301,12 @@ h3,
 }
 
 .og-overlap__metrics {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-slate-text);
 }
 
 .og-planner__save-indicator {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-moss-text);
 }
 
@@ -2322,7 +2322,7 @@ h3,
 
 .og-named-save__status {
   color: var(--og-success);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 /*
@@ -2388,7 +2388,7 @@ h3,
 
 .og-route-choices__note {
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 /* Refine route: the shaping tools behind one disclosure. */
@@ -2426,7 +2426,7 @@ h3,
 .og-refine__summary {
   overflow: hidden;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2483,7 +2483,7 @@ h3,
 
 .og-prepare__summary {
   grid-area: value;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
   margin: 0;
 }
@@ -2497,14 +2497,14 @@ h3,
   padding: 10px 0;
   border-bottom: 1px solid var(--og-sandstone);
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-prepare__bike label {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -2562,7 +2562,7 @@ h3,
 }
 
 .og-prepare__checking {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
 }
 
@@ -2578,7 +2578,7 @@ h3,
   justify-content: space-between;
   gap: 12px;
   color: var(--og-ink);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   cursor: pointer;
   list-style: none;
@@ -2633,7 +2633,7 @@ h3,
 
 .og-places-along__place {
   color: var(--og-ink);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   line-height: 1.4;
 }
 
@@ -2646,7 +2646,7 @@ h3,
   align-items: center;
   gap: 5px;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.4;
 }
 
@@ -2668,7 +2668,7 @@ h3,
   color: var(--og-paper);
   padding: 0 12px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 650;
   cursor: pointer;
 }
@@ -2682,7 +2682,7 @@ h3,
 .og-places-along__status {
   margin: 8px 0 12px;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-places-along__skeleton {
@@ -2716,7 +2716,7 @@ h3,
   display: flex;
   align-items: center;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   cursor: pointer;
 }
 
@@ -2763,7 +2763,7 @@ h3,
 
 .og-share-sheet__header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--og-text-headline);
 }
 
 .og-share-sheet__controls {
@@ -2776,7 +2776,7 @@ h3,
 }
 
 .og-share-sheet__controls legend {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -2785,7 +2785,7 @@ h3,
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-share-sheet__controls input[type="number"],
@@ -2796,7 +2796,7 @@ h3,
 
 .og-share-sheet__preview h3 {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: var(--og-text-body);
 }
 
 .og-share-sheet__facts {
@@ -2804,7 +2804,7 @@ h3,
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0 0 10px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-share-sheet__facts div {
@@ -2822,7 +2822,7 @@ h3,
   border: 1px solid var(--og-sandstone);
   border-radius: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -2866,14 +2866,14 @@ h3,
 }
 
 .og-library h1 {
-  font-size: 32px;
+  font-size: var(--og-text-title);
   line-height: 1.1;
 }
 
 .og-eyebrow {
   margin-bottom: 6px;
   color: var(--og-moss-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -2900,7 +2900,7 @@ h3,
   flex-direction: column;
   gap: 4px;
   color: var(--og-trail-brown);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -2916,7 +2916,7 @@ h3,
   background: var(--og-canvas);
   color: var(--og-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   text-transform: none;
 }
 
@@ -2943,7 +2943,7 @@ h3,
 }
 
 .og-library__state h2 {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
 }
 
 .og-library__state p {
@@ -2986,7 +2986,7 @@ h3,
   background: transparent;
   color: var(--og-ink);
   font: inherit;
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
 }
 
@@ -3011,12 +3011,12 @@ h3,
   border-radius: var(--og-radius-control);
   background: var(--og-canvas);
   color: var(--og-trail-brown);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-library__progress strong {
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 650;
   letter-spacing: 0.02em;
 }
@@ -3048,7 +3048,7 @@ h3,
   display: inline-block;
   margin-top: 8px;
   color: var(--og-trail-brown);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-library__reason {
@@ -3067,7 +3067,7 @@ h3,
 .og-library__actions .og-secondary {
   min-height: 44px;
   padding: 8px 11px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-library__actions .og-secondary:disabled {
@@ -3131,11 +3131,11 @@ h3,
 
 .og-import h2,
 .og-import h3 {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
 }
 
 .og-import h3 {
-  font-size: 18px;
+  font-size: var(--og-text-headline);
 }
 
 .og-import__header p:not(.og-eyebrow),
@@ -3308,7 +3308,7 @@ h3,
 .og-import__options legend {
   padding: 0 6px;
   color: var(--og-moss-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3334,7 +3334,7 @@ h3,
 }
 
 .og-import__disabled-option span {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-import__success {
@@ -3384,7 +3384,7 @@ h3,
   gap: 3px;
   margin: 0;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   line-height: 1.25;
 }
 
@@ -3416,7 +3416,7 @@ h3,
 .og-export-menu__reason,
 .og-export-menu__error {
   color: var(--og-trail-brown);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-export-menu__options {
@@ -3448,7 +3448,7 @@ h3,
   border: 1px solid var(--og-sandstone);
   border-radius: var(--og-radius-control);
   background: color-mix(in srgb, var(--og-golden-hour) 14%, var(--og-paper));
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-planner__conflict {
@@ -3672,11 +3672,11 @@ h3,
 
 .og-composer__place .og-composer__value-label {
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--og-text-body);
 }
 
 .og-composer__place .og-composer__coordinate {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-chip--icon {
@@ -3699,7 +3699,7 @@ h3,
 
 .og-place-search__input {
   font: inherit;
-  font-size: 16px; /* 16px stops iOS Safari zooming the page on focus. */
+  font-size: var(--og-text-body); /* 16px stops iOS Safari zooming the page on focus. */
   min-height: 44px;
   width: 100%;
   padding: 10px 12px 10px 36px;
@@ -3760,18 +3760,18 @@ h3,
 }
 
 .og-place-search__name {
-  font-size: 15px;
+  font-size: var(--og-text-body);
   color: var(--og-ink);
 }
 
 .og-place-search__context {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
 }
 
 .og-place-search__status {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-trail-brown);
 }
 
@@ -3788,7 +3788,7 @@ h3,
 
 .og-style__legend {
   padding: 0;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--og-moss-text);
@@ -3823,7 +3823,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: var(--og-canvas);
   color: var(--og-ink);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   white-space: nowrap;
 }
 
@@ -3896,7 +3896,7 @@ h3,
 
 .og-style__summary {
   grid-area: value;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
   overflow-wrap: break-word;
 }
@@ -3927,7 +3927,7 @@ h3,
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
   cursor: pointer;
 }
@@ -3993,7 +3993,7 @@ h3,
 
 .og-composer__label {
   grid-area: label;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--og-moss-text);
@@ -4013,7 +4013,7 @@ h3,
   grid-area: value;
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
   font-variant-numeric: tabular-nums;
   white-space: normal;
@@ -4025,7 +4025,7 @@ h3,
 
 /* The secondary coordinate line: same numerals, quieter than the name. */
 .og-composer__coordinate {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
   font-variant-numeric: tabular-nums;
   white-space: normal;
@@ -4033,7 +4033,7 @@ h3,
 }
 
 .og-composer__reason {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-trail-brown);
 }
 
@@ -4053,7 +4053,7 @@ h3,
   border: 1px solid var(--og-sandstone);
   background: var(--og-canvas);
   color: var(--og-ink);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 /* The chip that owns the next map click is visibly the armed one. */
@@ -4067,7 +4067,7 @@ h3,
   border: 1px solid var(--og-ember-strong);
   background: var(--og-ember-strong);
   color: var(--og-on-fill);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 600;
 }
 
@@ -4083,7 +4083,7 @@ h3,
   border: 1px solid var(--og-sandstone);
   background: var(--og-paper);
   color: var(--og-ink);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-chip:focus-visible,
@@ -4123,7 +4123,7 @@ h3,
 
 .og-points__title {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -4147,7 +4147,7 @@ h3,
 
 .og-points__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
 }
 
@@ -4207,7 +4207,7 @@ h3,
 }
 
 .og-point__name {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -4217,7 +4217,7 @@ h3,
 .og-point__value {
   display: flex;
   flex-direction: column;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -4230,7 +4230,7 @@ h3,
 
 .og-point__action {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   min-height: 32px;
   padding: 4px 10px;
   border: 1px solid var(--og-sandstone);
@@ -4319,7 +4319,7 @@ h3,
   border: 2px solid var(--og-ink);
   background: var(--og-paper);
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -4382,7 +4382,7 @@ h3,
 }
 
 .og-point__title {
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   line-height: 1.25;
   overflow: hidden;
@@ -4393,7 +4393,7 @@ h3,
 /* The leg that ends here (04 §15): "34 mi · ~48 min from previous", or the
    honest words for a leg nothing measured. Never a number that was not read. */
 .og-point__leg {
-  font-size: 12.5px;
+  font-size: var(--og-text-caption);
   line-height: 1.3;
   color: var(--og-slate-text);
   font-variant-numeric: tabular-nums;
@@ -4411,7 +4411,7 @@ h3,
    four decimals (OGV-D-224's rule, applied to the list as well as the
    composer), and never clipped. */
 .og-point__coordinate {
-  font-size: 11.5px;
+  font-size: var(--og-text-caption);
   line-height: 1.3;
   color: var(--og-slate-text);
   font-variant-numeric: tabular-nums;
@@ -4443,7 +4443,7 @@ h3,
   background: transparent;
   color: var(--og-slate-text);
   font: inherit;
-  font-size: 20px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
@@ -4553,7 +4553,7 @@ h3,
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-moss-text);
 }
 
@@ -4564,7 +4564,7 @@ h3,
 
 .og-point__input {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-variant-numeric: tabular-nums;
   min-height: 32px;
   min-width: 110px;
@@ -4582,7 +4582,7 @@ h3,
 
 .og-point__error {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-danger);
 }
 
@@ -4641,7 +4641,7 @@ h3,
 
 .og-stop-sheet__eyebrow {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -4650,7 +4650,7 @@ h3,
 
 .og-stop-sheet__title {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   line-height: 1.25;
   color: var(--og-ink);
@@ -4677,7 +4677,7 @@ h3,
   background: transparent;
   color: var(--og-ink);
   font: inherit;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -4755,7 +4755,7 @@ h3,
 
 .og-history__button::before {
   content: "↶";
-  font-size: 20px;
+  font-size: var(--og-text-headline);
   line-height: 1;
 }
 
@@ -4781,18 +4781,18 @@ h3,
 }
 
 .og-update-failure__label {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-deep-spruce);
 }
 
 .og-update-failure__message {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
 }
 
 .og-update-failure__keep {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-moss-text);
 }
 
@@ -4804,7 +4804,7 @@ h3,
 }
 
 .og-update-failure__action {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   min-height: 32px;
   padding: 4px 10px;
 }
@@ -4813,7 +4813,7 @@ h3,
    measured against the answer it replaced. Ember-strong ties it to the route it
    describes without joining the alarm palette. */
 .og-route-delta {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-ember-text);
 }
@@ -4876,12 +4876,12 @@ h3,
 }
 
 .og-route-card__button[data-selected="true"] .og-route-card__metrics {
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 
 .og-route-card__role {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--og-trail-brown);
@@ -4890,7 +4890,7 @@ h3,
 .og-route-card__metrics {
   display: flex;
   gap: 6px;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -4900,7 +4900,7 @@ h3,
 }
 
 .og-route-card__delta {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-trail-brown);
   font-variant-numeric: tabular-nums;
 }
@@ -4912,7 +4912,7 @@ h3,
 }
 
 .og-route-card__badge {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   padding: 2px 8px;
   border-radius: 6px;
   background: var(--og-golden-hour);
@@ -4928,7 +4928,7 @@ h3,
   background: transparent;
   color: var(--og-deep-spruce);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   cursor: pointer;
 }
 
@@ -4937,7 +4937,7 @@ h3,
   padding: 10px 12px;
   border-left: 2px solid var(--og-topo-sage);
   background: var(--og-paper);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-route-card__why-headline {
@@ -4955,7 +4955,7 @@ h3,
 }
 
 .og-route-card__why-status {
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--og-trail-brown);
@@ -5019,7 +5019,7 @@ h3,
   }
 
   .og-planner__header h1 {
-    font-size: 30px;
+    font-size: var(--og-text-title);
   }
 
   .og-planner__body {
@@ -5106,7 +5106,7 @@ h3,
   }
 
   .og-planner__header h1 {
-    font-size: 22px;
+    font-size: var(--og-text-headline);
   }
 
   .og-tagline {
@@ -5173,7 +5173,7 @@ h3,
   .og-planner__status,
   .og-planner__error {
     padding: 0 2px 6px;
-    font-size: 13px;
+    font-size: var(--og-text-meta);
     text-align: center;
     color: var(--og-deep-spruce);
   }
@@ -5284,7 +5284,7 @@ h3,
   }
 
   .og-route-card[data-selected="false"] .og-route-card__metrics {
-    font-size: 1rem;
+    font-size: var(--og-text-body);
   }
 
   /* Sticky only works inside its parent's box, and this section sits below the
@@ -5489,7 +5489,7 @@ h3,
     margin-block: 0;
     padding: 4px 6px;
     font: inherit;
-    font-size: 12px;
+    font-size: var(--og-text-caption);
     letter-spacing: 0;
     text-transform: none;
     color: var(--og-moss-text);
@@ -5525,7 +5525,7 @@ h3,
     border-radius: 9px;
     background: var(--og-ember-strong);
     color: var(--og-on-fill);
-    font-size: 11px;
+    font-size: var(--og-text-caption);
     font-weight: 600;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -5534,7 +5534,7 @@ h3,
   .og-sheet__handle-chevron {
     flex: none;
     margin-left: 0;
-    font-size: 12px;
+    font-size: var(--og-text-caption);
   }
 
   .og-sheet__handle:focus-visible {
@@ -5564,7 +5564,7 @@ h3,
   }
 
   .og-planner__header h1 {
-    font-size: 18px;
+    font-size: var(--og-text-headline);
   }
 
   .og-tagline {
@@ -5662,6 +5662,10 @@ h3,
   --og-ride-gap: 8px;
   /* Readouts plus the sheet toggle: 56 + 10 padding + 2 border. */
   --og-ride-strip-h: 68px;
+  /* What the strip actually occupies right now: the same 68 px, plus the
+     20 px recording line while one is running. Everything stacked above the
+     strip reads this, so a state line never hides under the rail. */
+  --og-ride-strip-live-h: var(--og-ride-strip-h);
   /* The ride's own number scale (small-screen design system v2 §5). The page
      scale above is right for words; a glance at 50 mph needs these instead,
      and they are tokens so no ride rule invents a sixth size. */
@@ -5677,6 +5681,13 @@ h3,
   overflow: hidden;
   background: var(--og-ink);
   color: var(--og-paper);
+}
+
+/* A recording adds one line to the strip: the dot and the word above the
+   numbers. Derived in one place, so the strip, the rail, the sheet and the
+   metric picker agree on what the strip takes up. */
+.og-ride[data-recording="true"] {
+  --og-ride-strip-live-h: calc(var(--og-ride-strip-h) + 20px);
 }
 
 /* DV-10: the map is full-bleed; every piece of chrome floats over it. */
@@ -6071,7 +6082,7 @@ h3,
   z-index: 7;
   left: max(12px, var(--og-safe-left));
   right: max(12px, var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 12px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 12px);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -6174,7 +6185,7 @@ h3,
   z-index: 7;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 92px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 92px);
 }
 
 /* ---- Bottom: one slim translucent strip ------------------------------ */
@@ -6187,12 +6198,42 @@ h3,
   display: flex;
   align-items: center;
   gap: 4px;
-  height: var(--og-ride-strip-h);
+  height: var(--og-ride-strip-live-h);
   padding: 4px;
   border-radius: 22px;
   background: var(--og-ride-glass);
   backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
+}
+
+/* Recording: one 20 px line above the readings — a small danger dot and the
+   word — then the same 56 px row of numbers. The line takes the whole width
+   (it wraps above them) so no 24 px reading loses a pixel to it, and nothing
+   pulses, so there is no motion to stop for reduced motion. */
+.og-ride__strip[data-recording="true"] {
+  flex-wrap: wrap;
+  align-content: center;
+  row-gap: 0;
+}
+
+.og-ride__recording-state {
+  display: flex;
+  flex: 1 0 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 18px;
+  color: var(--og-paper);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.og-ride__recording-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--og-danger-light);
 }
 
 .og-ride__strip-summary {
@@ -6278,11 +6319,11 @@ h3,
   z-index: 9;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-h) - 40px));
+  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-live-h) - 40px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px;
@@ -6383,7 +6424,7 @@ h3,
   }
 
   .og-ride__floating-card {
-    bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+    bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   }
 
   .og-ride__float {
@@ -6426,18 +6467,21 @@ h3,
 
 .og-ride__recording span {
   color: var(--og-ride-muted);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .og-ride__recording strong {
-  font-size: 16px;
+  font-size: var(--og-text-body);
+  font-variant-numeric: tabular-nums;
 }
 
 .og-ride__recording p {
   grid-column: 1 / -1;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__recording-warning {
@@ -6452,7 +6496,7 @@ h3,
 
 .og-ride__recording-warning p {
   color: var(--og-paper);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__warnings {
@@ -6461,7 +6505,7 @@ h3,
   flex-direction: column;
   gap: 6px;
   padding: 0;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__warnings li[data-severity="critical"] {
@@ -6512,7 +6556,7 @@ h3,
 .og-ride__progress-text,
 .og-ride__progress-stops,
 .og-ride__progress-line {
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -6526,11 +6570,7 @@ h3,
 .og-ride__free-ride {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  background: var(--og-ride-surface);
-  border: 1px solid var(--og-ride-border);
-  border-radius: var(--og-radius-object);
+  gap: var(--og-space-3);
 }
 
 .og-ride__safety {
@@ -6561,7 +6601,7 @@ h3,
 .og-ride__safety-note {
   margin: 0;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__safety-actions {
@@ -6577,7 +6617,7 @@ h3,
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
 }
 
@@ -6589,7 +6629,7 @@ h3,
   background: var(--og-ride-surface);
   color: inherit;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--og-text-body);
 }
 
 .og-ride__safety-name input:focus-visible {
@@ -6628,13 +6668,13 @@ h3,
 
 .og-ride__spotify-track span {
   color: var(--og-ride-muted);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__spotify-status {
   margin: 2px 0 0;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__spotify-art {
@@ -6649,7 +6689,7 @@ h3,
 .og-ride__spotify-art--empty {
   background: var(--og-ride-surface);
   color: var(--og-ride-muted);
-  font-size: 22px;
+  font-size: var(--og-text-headline);
 }
 
 .og-ride__spotify-controls {
@@ -6703,45 +6743,93 @@ h3,
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   text-decoration: underline;
   cursor: pointer;
 }
 
-.og-ride__free-ride-heading {
+/*
+  Free Ride's switches are rows, not chips: 56 px each, the label at body size
+  on the left and the switch on the right. The row says what a press does; the
+  switch says whether it is on. Nothing here truncates at 320 px.
+*/
+.og-ride__switch-rows {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  border-top: 1px solid var(--og-ride-border);
+}
+
+.og-ride__switch-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--og-space-3);
+  min-height: 56px;
+  padding: 0 var(--og-space-1);
+  border: 0;
+  border-bottom: 1px solid var(--og-ride-border);
+  background: transparent;
+  color: var(--og-paper);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
 }
 
-.og-ride__free-ride-heading h2 { font-size: 16px; }
-
-/* UX rework 2 (#19): the suggestions switch is a chip beside its one-line
-   state, and the rarer ways back sit behind "More ways back". */
-.og-ride__free-ride-heading {
-  justify-content: flex-start;
+.og-ride__switch-row-label {
+  min-width: 0;
 }
 
-.og-ride__free-ride-heading [data-testid="free-ride-suggestions-toggle"] {
-  min-height: 44px;
-  padding-inline: 14px;
-  font-size: 14px;
+.og-ride__switch-row:disabled {
+  color: var(--og-ride-muted);
+  cursor: not-allowed;
 }
 
-/* Head Home and Loop from here share a row; everything else spans it. */
-.og-ride__free-ride:has(> [data-testid="free-ride-loop"]) {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.og-ride__switch-row:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
 }
 
-.og-ride__free-ride > * {
-  grid-column: 1 / -1;
+.og-ride__switch {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 28px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--og-ride-muted) 30%, transparent);
 }
 
-.og-ride__free-ride > :is([data-testid="head-home"], [data-testid="free-ride-loop"]) {
-  grid-column: auto;
+.og-ride__switch[data-on="true"] {
+  border-color: var(--og-ember-strong);
+  background: var(--og-ember-strong);
+}
+
+.og-ride__switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--og-paper);
+  transition: transform var(--og-dur-fast) var(--og-ease);
+}
+
+.og-ride__switch[data-on="true"] .og-ride__switch-knob {
+  transform: translateX(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-ride__switch-knob {
+    transition: none;
+  }
+}
+
+.og-ride__free-ride-note {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__more > summary {
@@ -6759,11 +6847,14 @@ h3,
 .og-ride__more[open] > summary {
   margin-bottom: 8px;
 }
-.og-ride__free-ride-heading p,
-.og-ride__free-ride-copy,
+.og-ride__free-ride-status {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+}
+
 .og-ride__suggestion p {
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__suggestion {
@@ -6777,7 +6868,7 @@ h3,
 
 .og-ride__suggestion .og-ride__suggestion-head {
   color: inherit;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
@@ -6785,7 +6876,7 @@ h3,
 /* One large target: taken with a gloved thumb, or not at all. */
 .og-ride__suggestion-take {
   min-height: 52px;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 
@@ -6848,7 +6939,13 @@ h3,
 .og-ride__confirm {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--og-space-3);
+}
+
+/* Save is the finish card's one obvious action, so it keeps a row of its own and
+   the ways out share the row under it. */
+.og-ride__confirm .og-ride__action--primary {
+  flex-basis: 100%;
 }
 
 /* The way out sits at the end of the panel's own content, and at the bottom of
@@ -6858,32 +6955,24 @@ h3,
 }
 
 .og-ride__confirm-text {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--og-text-body);
+  font-weight: 700;
 }
 
 .og-ride__terminal {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 12px 14px;
+  gap: var(--og-space-3);
+  padding: var(--og-space-4);
   border: 1px solid var(--og-success);
   border-radius: var(--og-radius-object);
   background: var(--og-ink);
 }
 
-.og-ride__terminal-head {
-  display: grid;
-  gap: 4px;
-}
-
 .og-ride__terminal-title {
-  font-size: 20px;
-}
-
-.og-ride__terminal-text {
-  font-size: 14px;
-  color: var(--og-ride-muted);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 /* The finish card's route sketch (08 §13): the shape of the ride, drawn from
@@ -6941,7 +7030,7 @@ h3,
   border-radius: var(--og-radius-chip);
   background: var(--og-ride-surface);
   color: var(--og-paper);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
 }
 
@@ -6961,7 +7050,7 @@ h3,
 .og-ride__detour-note {
   margin: 0;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride__fuel {
@@ -6986,7 +7075,7 @@ h3,
 
 .og-ride__fuel-ahead {
   color: var(--og-paper);
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
@@ -6997,13 +7086,13 @@ h3,
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--og-paper);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
 }
 
 .og-ride__fuel-name small {
   color: var(--og-ride-muted);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 500;
 }
 
@@ -7034,7 +7123,7 @@ h3,
   color: var(--og-paper);
   background: var(--og-ride-surface);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   cursor: pointer;
 }
@@ -7055,7 +7144,7 @@ h3,
   color: var(--og-paper);
   background: var(--og-ride-surface);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   text-align: left;
   cursor: pointer;
@@ -7063,7 +7152,7 @@ h3,
 
 .og-ride-interest__chip-glyph {
   color: var(--og-golden-hour);
-  font-size: 16px;
+  font-size: var(--og-text-body);
 }
 
 /* ---- The card behind a tapped pin (OGV#13) ---------------------------- */
@@ -7097,7 +7186,7 @@ h3,
 }
 
 .og-ride-interest-card__title {
-  font-size: 19px;
+  font-size: var(--og-text-headline);
   line-height: 1.2;
 }
 
@@ -7105,7 +7194,7 @@ h3,
   min-width: 36px;
   min-height: 36px;
   font: inherit;
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1;
   color: var(--og-ride-muted);
   cursor: pointer;
@@ -7116,13 +7205,13 @@ h3,
 
 .og-ride-interest-card__summary {
   color: var(--og-paper);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   line-height: 1.4;
 }
 
 .og-ride-interest-card__attribution {
   color: var(--og-ride-muted);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-ride-interest-card__actions {
@@ -7138,7 +7227,7 @@ h3,
 }
 
 .og-ride__error {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-danger-light);
 }
 
@@ -7169,11 +7258,11 @@ h3,
 }
 
 .og-ride__title {
-  font-size: 28px;
+  font-size: var(--og-text-title);
 }
 
 .og-ride__recovery-text {
-  font-size: 15px;
+  font-size: var(--og-text-body);
   color: var(--og-paper);
 }
 
@@ -7229,7 +7318,7 @@ h3,
   border-radius: 999px;
   color: var(--og-ink);
   background: var(--og-golden-hour);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -7262,7 +7351,7 @@ h3,
   color: var(--og-paper);
   background: var(--og-ride-surface);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   cursor: pointer;
 }
@@ -7279,7 +7368,7 @@ h3,
 .og-ride .og-places-control__status {
   padding: 2px 4px 0;
   color: var(--og-ride-muted);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-ride .og-places-control__status--loading {
@@ -7315,7 +7404,7 @@ h3,
   align-items: center;
   gap: 7px;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -7344,13 +7433,13 @@ h3,
   color: var(--og-paper);
   background: var(--og-ride-surface);
   font: inherit;
-  font-size: 24px;
+  font-size: var(--og-text-title);
   cursor: pointer;
 }
 
 .og-ride .og-places-card__title {
   margin-top: 1px;
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1.15;
 }
 
@@ -7358,7 +7447,7 @@ h3,
 .og-ride .og-places-card__perks {
   margin-top: 6px;
   color: var(--og-ride-muted);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-ride .og-places-card__specials {
@@ -7371,14 +7460,14 @@ h3,
 .og-ride .og-places-card__specials li {
   padding-left: 10px;
   border-left: 2px solid var(--og-golden-hour);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
 .og-ride .og-places-card__attribution {
   margin-top: 9px;
   color: var(--og-ride-muted);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 .og-ride .og-places-card__actions {
@@ -7401,7 +7490,7 @@ h3,
   color: var(--og-paper);
   background: var(--og-deep-spruce);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
@@ -7436,7 +7525,7 @@ h3,
     padding: 12px;
   }
 
-  .og-ride .og-places-card__title { font-size: 19px; }
+  .og-ride .og-places-card__title { font-size: var(--og-text-headline); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7516,14 +7605,14 @@ h3,
   min-height: 44px;
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   overflow-wrap: anywhere;
 }
 
 .og-advisor__working-detail {
   display: block;
   margin-top: 2px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-advisor__cancel {
@@ -7580,26 +7669,26 @@ h3,
   border: 1px solid var(--og-sandstone);
   border-radius: 999px;
   background: var(--og-paper);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   line-height: 1.35;
 }
 
 .og-advisor__was {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-advisor__brief {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-advisor__note {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-advisor__actions {
@@ -7617,7 +7706,7 @@ h3,
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 .og-advisor__notice p,
@@ -7647,7 +7736,7 @@ h3,
 }
 
 .og-advisor__close {
-  font-size: 20px;
+  font-size: var(--og-text-headline);
   color: var(--og-slate-text);
 }
 
@@ -7692,7 +7781,7 @@ h3,
   }
 
   .og-library h1 {
-    font-size: 26px;
+    font-size: var(--og-text-title);
   }
 
   .og-switchback-import {
@@ -7722,7 +7811,7 @@ h3,
   .og-switchback-import .og-switchback-import__report-title {
     grid-area: title;
     margin: 0;
-    font-size: 14px;
+    font-size: var(--og-text-meta);
     line-height: 1.2;
     justify-self: end;
   }
@@ -7741,13 +7830,13 @@ h3,
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 2px 5px;
-    font-size: 12px;
+    font-size: var(--og-text-caption);
     line-height: 1.1;
   }
 
   .og-switchback-import__report-items > li > p,
   .og-switchback-import__report-items > li > ul {
-    font-size: 11px;
+    font-size: var(--og-text-caption);
     line-height: 1.1;
   }
 
@@ -7824,7 +7913,7 @@ h3,
   color: var(--og-ink);
   box-shadow: 0 2px 10px rgb(22 29 28 / 18%);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   cursor: pointer;
 }
@@ -7857,7 +7946,7 @@ h3,
   border-radius: 999px;
   background: var(--og-golden-hour);
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -7898,7 +7987,7 @@ h3,
   background: transparent;
   color: var(--og-slate-text);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   cursor: pointer;
 }
@@ -7921,7 +8010,7 @@ h3,
   border-radius: 8px;
   background: color-mix(in srgb, var(--og-paper) 88%, transparent);
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-places-overlay--planner .og-places-card {
@@ -7957,7 +8046,7 @@ h3,
   gap: 7px;
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -7989,13 +8078,13 @@ h3,
   background: var(--og-canvas);
   color: var(--og-ink);
   font: inherit;
-  font-size: 20px;
+  font-size: var(--og-text-headline);
   cursor: pointer;
 }
 
 .og-places-overlay--planner .og-places-card__title {
   margin: 4px 0 0;
-  font-size: 21px;
+  font-size: var(--og-text-headline);
   line-height: 1.15;
 }
 
@@ -8003,7 +8092,7 @@ h3,
 .og-places-overlay--planner .og-places-card__perks {
   margin: 6px 0 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-places-overlay--planner .og-places-card__specials {
@@ -8018,14 +8107,14 @@ h3,
   padding: 8px 10px;
   border-radius: 10px;
   background: color-mix(in srgb, var(--og-golden-hour) 16%, var(--og-paper));
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
 }
 
 .og-places-overlay--planner .og-places-card__attribution {
   margin: 10px 0 0;
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 .og-places-overlay--planner .og-places-card__actions {
@@ -8048,7 +8137,7 @@ h3,
   background: var(--og-paper);
   color: var(--og-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   text-decoration: none;
   cursor: pointer;
@@ -8127,7 +8216,7 @@ h3,
     padding: 0;
     border-radius: 999px;
     color: var(--og-slate-text);
-    font-size: 10.5px;
+    font-size: var(--og-text-caption);
     font-weight: 650;
     letter-spacing: 0.01em;
     text-decoration: none;
@@ -8272,7 +8361,7 @@ h3,
 .og-elevation__title {
   margin: 0;
   font-family: var(--og-font-display), var(--og-font-body), sans-serif;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -8284,7 +8373,7 @@ h3,
   flex-wrap: wrap;
   gap: 4px 12px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--og-ink);
@@ -8295,7 +8384,7 @@ h3,
   border-radius: 999px;
   background: color-mix(in srgb, var(--og-route-tint) 14%, transparent);
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 20px;
 }
 
@@ -8354,7 +8443,7 @@ h3,
   border-radius: 4px;
   background: color-mix(in srgb, var(--og-paper) 80%, transparent);
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
@@ -8379,7 +8468,7 @@ h3,
   border-radius: 4px;
   background: color-mix(in srgb, var(--og-paper) 84%, transparent);
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   line-height: 14px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -8419,7 +8508,7 @@ h3,
   background: var(--og-paper);
   box-shadow: inset 0 0 0 1px var(--og-hairline);
   color: var(--og-ink);
-  font-size: 10px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   line-height: 12px;
   font-variant-numeric: tabular-nums;
@@ -8453,7 +8542,7 @@ h3,
   background: var(--og-paper);
   box-shadow: 0 1px 6px rgb(22 29 28 / 22%);
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -8490,7 +8579,7 @@ h3,
   gap: 4px 12px;
   margin: 6px 0 0;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -8514,7 +8603,7 @@ h3,
   justify-content: space-between;
   white-space: nowrap;
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   font-variant-numeric: tabular-nums;
 }
 
@@ -8522,7 +8611,7 @@ h3,
   position: relative;
   display: block;
   height: 16px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 /* Distance ticks sit on their exact share of the ride, not on flex gaps. */
@@ -8543,7 +8632,7 @@ h3,
 .og-elevation__status {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
 }
 
 .og-elevation__skeleton {
@@ -8643,7 +8732,7 @@ h3,
 
 .og-route-card__curvy-label {
   color: var(--og-ink);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 650;
 }
 
@@ -8794,7 +8883,7 @@ h3,
 }
 
 .og-explore-card__body strong {
-  font-size: 18px;
+  font-size: var(--og-text-headline);
   letter-spacing: -0.005em;
 }
 
@@ -8886,7 +8975,7 @@ h3,
   }
 
   .og-explore__header h1 {
-    font-size: 28px;
+    font-size: var(--og-text-title);
   }
 
   /* One row: the title and the Rides/Roads switch. */
@@ -9006,7 +9095,7 @@ h3,
   }
 
   .og-planner__header h1 {
-    font-size: 24px;
+    font-size: var(--og-text-title);
   }
 
   .og-planner__body,
@@ -9281,7 +9370,7 @@ h3,
 /* File pickers read as the app's own secondary buttons, not browser chrome. */
 input[type="file"] {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-slate-text);
 }
 
@@ -9331,7 +9420,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border-color: transparent;
   border-radius: 10px;
   background: transparent;
-  font-size: 13.5px;
+  font-size: var(--og-text-meta);
   line-height: 1.35;
   text-align: center;
   white-space: normal;
@@ -9421,7 +9510,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   min-height: 44px;
   padding: 0 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-ink);
   cursor: pointer;
@@ -9445,7 +9534,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border-radius: 999px;
   background: var(--og-ember-strong);
   color: var(--og-on-fill);
-  font-size: 11.5px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
 }
 
@@ -9485,7 +9574,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-layers__head h2 {
   flex: 1;
-  font-size: 18px;
+  font-size: var(--og-text-headline);
 }
 
 .og-layers__clear,
@@ -9494,7 +9583,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   min-width: 36px;
   padding: 0 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-signal-strong);
   cursor: pointer;
   border: 0;
@@ -9503,7 +9592,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-layers__close {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1;
   color: var(--og-slate-text);
 }
@@ -9610,7 +9699,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-layers__group h3 {
   margin: 12px 10px 4px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--og-moss-text);
@@ -9660,7 +9749,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border-radius: 10px;
   background: color-mix(in srgb, var(--og-layer-color) 22%, var(--og-paper));
   color: var(--og-ink);
-  font-size: 16px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 
@@ -9676,12 +9765,12 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-layers__name {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
 .og-layers__legend {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   color: var(--og-slate-text);
   overflow: hidden;
   white-space: nowrap;
@@ -9689,7 +9778,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-layers__status {
-  font-size: 11.5px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   color: var(--og-moss-text);
   font-variant-numeric: tabular-nums;
@@ -9764,7 +9853,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border: 2px solid var(--og-hairline-strong);
   border-radius: 50%;
   color: var(--og-on-fill);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 700;
   line-height: 1;
 }
@@ -9830,7 +9919,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   height: 32px;
   margin-right: 6px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-style: italic;
   font-weight: 700;
   color: var(--og-slate-text);
@@ -9843,7 +9932,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-layers__caveat {
   grid-column: 1 / -1;
   margin: 0 12px 10px 52px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.45;
   color: var(--og-slate-text);
 }
@@ -9874,12 +9963,12 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-layers__subswitch strong {
-  font-size: 12.5px;
+  font-size: var(--og-text-caption);
 }
 
 .og-layers__subswitch small {
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
   line-height: 1.3;
 }
 
@@ -9914,7 +10003,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -9929,7 +10018,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border-radius: 7px;
   background: var(--og-layer-color);
   color: var(--og-paper);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   text-transform: none;
 }
 
@@ -9937,7 +10026,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   min-width: 36px;
   min-height: 36px;
   font: inherit;
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1;
   color: var(--og-slate-text);
   cursor: pointer;
@@ -9947,12 +10036,12 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-info-card__title {
-  font-size: 19px;
+  font-size: var(--og-text-headline);
   line-height: 1.2;
 }
 
 .og-info-card__detail {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ink);
 }
 
@@ -9968,7 +10057,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-info-card__source {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   line-height: 1.4;
   color: var(--og-slate-text);
 }
@@ -9993,7 +10082,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-info-card__link {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-signal-strong);
   text-underline-offset: 3px;
@@ -10046,7 +10135,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
     right: -4px;
     min-width: 18px;
     height: 18px;
-    font-size: 10.5px;
+    font-size: var(--og-text-caption);
   }
 
   .og-layers__panel,
@@ -10168,7 +10257,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
     width: 40px;
     height: 40px;
     border-radius: 12px;
-    font-size: 24px;
+    font-size: var(--og-text-title);
   }
 
   .og-layers__name {
@@ -10258,7 +10347,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-fuel__line {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -10285,7 +10374,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 }
 
 .og-fuel__mile {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 700;
   color: var(--og-moss-text);
   font-variant-numeric: tabular-nums;
@@ -10294,13 +10383,13 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 .og-fuel__name {
   display: flex;
   flex-direction: column;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   min-width: 0;
 }
 
 .og-fuel__name small {
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 400;
   color: var(--og-slate-text);
 }
@@ -10309,7 +10398,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   min-height: 44px;
   padding: 0 14px;
   font: inherit;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   color: var(--og-ink);
   cursor: pointer;
@@ -10341,7 +10430,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-appbar__brand {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 24px;
+  font-size: var(--og-text-title);
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: 0.01em;
@@ -10351,7 +10440,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-appbar__tagline {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   color: var(--og-moss-text);
 }
 
@@ -10403,7 +10492,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   border-radius: var(--og-radius-object);
   background: var(--og-paper);
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   cursor: pointer;
   list-style: none;
@@ -10454,7 +10543,7 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   }
 
   .og-appbar__brand {
-    font-size: 20px;
+    font-size: var(--og-text-headline);
   }
 
   .og-appbar__tagline {
@@ -10544,7 +10633,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   border-radius: 999px;
   background: color-mix(in srgb, var(--og-paper) 92%, transparent);
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
   animation: og-map-veil-pulse 1.6s ease-in-out infinite;
@@ -10703,7 +10792,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 /* The pace a catalog ride's time is estimated at (EX-08): quiet, beside the value. */
 .og-route-detail__basis {
   color: var(--og-slate-text);
-  font-size: 0.8em;
+  font-size: var(--og-text-meta);
   font-weight: 500;
 }
 
@@ -10931,51 +11020,9 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 }
 
 /*
-  Recording, from the map screen (a mounted phone's "is it recording?"): the
-  same 56×56 sheet toggle, turned into the ride's state — a danger dot, a
-  REC caption and the elapsed time, stacked in two lines. No pulse and no
-  animation in either theme: a dot beside a counting clock is enough, and
-  nothing moves at 60 mph (and nothing to stop for reduced motion).
+  Is it recording? The strip answers that on its own line (above), so the sheet
+  toggle stays what it always was: the chevron that opens the controls.
 */
-.og-ride-metrics__toggle[data-recording="true"] {
-  gap: 1px;
-  border: 1px solid var(--og-ride-border);
-  background: var(--og-ride-surface);
-  color: var(--og-paper);
-  line-height: 1;
-}
-
-.og-ride-metrics__rec {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.og-ride-metrics__rec-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--og-danger);
-}
-
-.og-ride-metrics__rec-label {
-  font-size: var(--og-text-caption);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.og-ride-metrics__toggle .og-ride-metrics__rec-chevron {
-  width: 10px;
-  height: 10px;
-}
-
-.og-ride-metrics__rec-time {
-  font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: var(--og-text-caption);
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-}
-
 .og-ride-metrics__toggle[data-held="true"] {
   display: none;
 }
@@ -11004,11 +11051,11 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   z-index: 10;
   left: max(var(--og-ride-gap), var(--og-safe-left));
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-h) + 8px);
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-h) - 40px));
+  max-height: min(64dvh, calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-live-h) - 40px));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px;
@@ -11262,7 +11309,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-explore__count {
   margin: 0;
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -11298,7 +11345,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-explore__attribution {
   margin: 8px 0 0;
   color: var(--og-slate-text);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 /* My rides: each ride on a real map (owner, 2026-09-26). */
@@ -11347,7 +11394,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-prepare__glance {
   margin: 4px 0 0;
   color: var(--og-slate-text);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 
@@ -11357,10 +11404,10 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-offline-areas__main { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .og-offline-areas__main > div { min-width: 0; }
 .og-offline-areas__main .og-settings__active { flex-shrink: 0; white-space: nowrap; }
-.og-offline-areas__main p { color: var(--og-slate-text); font-size: 13px; }
+.og-offline-areas__main p { color: var(--og-slate-text); font-size: var(--og-text-meta); }
 .og-offline-areas__actions, .og-offline-areas__progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 .og-offline-areas__progress progress { flex: 1 1 140px; height: 8px; accent-color: var(--og-deep-spruce); }
-.og-offline-areas__progress span { min-width: 3ch; color: var(--og-slate-text); font-size: 13px; font-variant-numeric: tabular-nums; }
+.og-offline-areas__progress span { min-width: 3ch; color: var(--og-slate-text); font-size: var(--og-text-meta); font-variant-numeric: tabular-nums; }
 
 /* Glass needs a working backdrop blur and a rider who wants it: with Reduce
    Transparency on, or no backdrop-filter at all, the same chrome is solid paper. */
@@ -11462,23 +11509,23 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   }
 
   .og-planner__sheet[data-detent="ride"] .og-route-card[data-selected="true"] .og-route-card__role {
-    font-size: 11px;
+    font-size: var(--og-text-caption);
   }
 
   .og-planner__sheet[data-detent="ride"] .og-route-card[data-selected="true"] .og-route-card__metrics {
-    font-size: 17px;
+    font-size: var(--og-text-body);
   }
 
   /* Two lines: role, time and distance; then the added time and the traits. */
   .og-planner__sheet[data-detent="ride"] .og-route-card__delta {
     flex-basis: auto;
-    font-size: 12.5px;
+    font-size: var(--og-text-caption);
   }
 
   .og-planner__sheet[data-detent="ride"] .og-route-card__traits {
     width: auto;
     flex: 0 1 auto;
-    font-size: 13px;
+    font-size: var(--og-text-meta);
   }
 
   /* Start keeps its 56px glove target (12 §10); only the corners soften. */
@@ -11489,12 +11536,12 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 
   .og-planner__sheet[data-detent="ride"] .og-prepare__glance {
     margin-top: 2px;
-    font-size: 13px;
+    font-size: var(--og-text-meta);
     text-align: center;
   }
 
   .og-planner__sheet[data-detent="ride"] .og-prepare__credit {
-    font-size: 10.5px;
+    font-size: var(--og-text-caption);
     text-align: center;
   }
 
@@ -11599,7 +11646,7 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   max-width: min(280px, calc(100vw - 88px));
   margin: 0;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   border-radius: var(--og-radius-control);
   background: var(--og-ink);
   color: var(--og-paper);
@@ -11886,12 +11933,12 @@ h1 {
   max-width: 54ch;
   margin-top: 10px;
   color: var(--og-slate-text);
-  font-size: 16px;
+  font-size: var(--og-text-body);
   line-height: 1.5;
 }
 
 .og-appbar__brand {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -12106,7 +12153,7 @@ a.og-secondary {
   gap: 4px;
   background: radial-gradient(circle at 22% 18%, color-mix(in srgb, var(--og-topo-sage) 16%, transparent), transparent 48%), var(--og-well);
   color: var(--og-slate-text);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   text-align: center;
 }
@@ -12114,7 +12161,7 @@ a.og-secondary {
 .og-map-preview-unavailable__glyph {
   color: var(--og-deep-spruce);
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 32px;
+  font-size: var(--og-text-title);
   line-height: 1;
 }
 
@@ -12125,7 +12172,7 @@ a.og-secondary {
 
 .og-explore-card__body strong {
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 20px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.012em;
@@ -12264,7 +12311,7 @@ a.og-secondary {
 }
 
 .og-ride .og-ride__empty-note {
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   color: var(--og-ride-muted);
 }
 
@@ -12335,7 +12382,7 @@ a.og-secondary {
   min-height: 44px;
   padding: 8px 16px 8px 12px;
   border-radius: 999px;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   text-decoration: none;
 }
 
@@ -12385,7 +12432,7 @@ a.og-secondary {
 .og-route-detail__map > a {
   margin: 0;
   padding: 12px 16px;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
 }
 
 /* Stats as one ledger: hairline-separated tiles, figures in the display face. */
@@ -12418,7 +12465,7 @@ a.og-secondary {
   margin-top: 6px;
   overflow-wrap: anywhere;
   font-family: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.01em;
@@ -12593,7 +12640,7 @@ a.og-secondary {
 }
 
 .og-settings__bike h3 {
-  font-size: 18px;
+  font-size: var(--og-text-headline);
 }
 
 .og-settings__bike-details span {
@@ -12601,7 +12648,7 @@ a.og-secondary {
   border-radius: 999px;
   background: var(--og-well);
   color: var(--og-deep-spruce);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
   font-weight: 600;
 }
 
@@ -12628,7 +12675,7 @@ a.og-secondary {
   border-radius: var(--og-radius-control);
   background: color-mix(in srgb, var(--og-golden-hour) 16%, var(--og-paper));
   color: var(--og-deep-spruce);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   line-height: 1.45;
 }
 
@@ -12668,7 +12715,7 @@ a.og-secondary {
 }
 
 .og-offline-areas__main h3 {
-  font-size: 17px;
+  font-size: var(--og-text-body);
 }
 
 .og-offline-areas__actions {
@@ -12696,7 +12743,7 @@ a.og-secondary {
 .og-places-overlay--planner .og-places-card__time {
   margin: 6px 0 0;
   color: var(--og-deep-spruce);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
@@ -12704,20 +12751,20 @@ a.og-secondary {
 .og-places-overlay--planner .og-places-card__updated {
   margin: 4px 0 0;
   color: var(--og-slate-text);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 .og-ride .og-places-card__time {
   margin: 6px 0 0;
   color: var(--og-paper);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 650;
 }
 
 .og-ride .og-places-card__updated {
   margin: 4px 0 0;
   color: var(--og-ride-muted);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 /* -- Motion ---------------------------------------------------------------- */
@@ -13269,11 +13316,11 @@ a.og-secondary {
   display: flex;
   align-items: baseline;
   gap: 4px;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-variant-numeric: tabular-nums;
 }
 .og-ride-offer__figures strong {
-  font-size: 34px;
+  font-size: var(--og-ride-text-maneuver);
   font-weight: 800;
   line-height: 1;
 }
@@ -13297,7 +13344,7 @@ a.og-secondary {
   padding: 4px 10px;
   border: 1px solid var(--og-ride-border);
   border-radius: var(--og-radius-chip);
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
 }
 .og-ride-offer__actions {
@@ -13308,7 +13355,7 @@ a.og-secondary {
 .og-ride-offer__take,
 .og-ride-offer__skip {
   min-height: 56px;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }
 .og-ride-offer__timer {
@@ -13317,7 +13364,7 @@ a.og-secondary {
   place-items: center;
   inline-size: 40px;
   block-size: 40px;
-  font-size: 13px;
+  font-size: var(--og-text-meta);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -13378,7 +13425,7 @@ a.og-secondary {
   background: var(--og-paper);
   color: var(--og-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -13408,7 +13455,7 @@ a.og-secondary {
   border-radius: 14px;
   background: var(--og-paper);
   color: var(--og-ink);
-  font-size: 0.95rem;
+  font-size: var(--og-text-body);
   line-height: 1.45;
 }
 .og-community-action p { margin: 0; }
@@ -13484,7 +13531,7 @@ a.og-secondary {
   background: var(--og-paper);
   color: var(--og-ink);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--og-text-body);
   appearance: none;
   -webkit-appearance: none;
   /* WebKit can paint a long value outside its box; clip it, the popup still
@@ -13545,7 +13592,7 @@ a.og-secondary {
   background: transparent;
   color: inherit;
   text-align: left;
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
   cursor: pointer;
 }
@@ -13555,8 +13602,8 @@ a.og-secondary {
 .og-map-point-menu__row:focus-visible { outline: 2px solid var(--og-ember); outline-offset: -2px; }
 .og-map-point-menu__row:disabled { cursor: default; color: var(--og-slate-text); }
 .og-map-point-menu__secondary,
-.og-map-point-menu__info p { font-size: 13px; font-weight: 400; color: var(--og-slate-text); }
-.og-map-point-menu__info { padding: 10px 12px; font-size: 15px; }
+.og-map-point-menu__info p { font-size: var(--og-text-meta); font-weight: 400; color: var(--og-slate-text); }
+.og-map-point-menu__info { padding: 10px 12px; font-size: var(--og-text-body); }
 .og-map-point-menu__info p { margin: 6px 0 0; }
 @media (prefers-reduced-transparency: reduce) {
   .og-map-point-menu { background: var(--og-paper); backdrop-filter: none; }
@@ -13688,7 +13735,7 @@ a.og-secondary {
   padding: 10px 14px;
   border-radius: var(--og-radius-control);
   font: inherit;
-  font-size: 17px;
+  font-size: var(--og-text-body);
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;

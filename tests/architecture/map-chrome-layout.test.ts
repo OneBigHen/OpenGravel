@@ -130,11 +130,14 @@ describe("compact map chrome", () => {
     expect(declarationsFor(blocks, ".og-planner__sheet .og-sheet__head .og-editbar")["position"]).toBe("static");
   });
 
-  it("gives a phone sheet 56 px rows with one 24 px icon in a 40 px tile", () => {
+  it("gives a phone sheet 56 px rows with one icon in a 40 px tile", () => {
     const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
     expect(declarationsFor(blocks, ".og-layers__switch")["min-height"]).toBe("56px");
     expect(declarationsFor(blocks, ".og-layers__swatch")["width"]).toBe("40px");
-    expect(declarationsFor(blocks, ".og-layers__swatch")["font-size"]).toBe("24px");
+    // The tile's glyph is a size on the type scale, not a raw value.
+    expect(declarationsFor(blocks, ".og-layers__swatch")["font-size"]).toBe(
+      "var(--og-text-title)",
+    );
     expect(declarationsFor(blocks, ".og-layers__legend")["white-space"]).toBe("normal");
     expect(declarationsFor(blocks, ".og-layers__about")["display"]).toBe("none");
 

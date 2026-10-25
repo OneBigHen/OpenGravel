@@ -32,7 +32,7 @@
 .og-routing-methods__why > summary::before {
   content: "▸";
   color: var(--og-signal-strong);
-  font-size: 12px;
+  font-size: var(--og-text-caption);
 }
 
 .og-routing-methods[open] > .og-routing-methods__summary-toggle::before,

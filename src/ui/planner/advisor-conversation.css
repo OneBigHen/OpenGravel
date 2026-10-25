@@ -7,7 +7,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   line-height: 1.45;
 }
 
@@ -90,7 +90,7 @@
   gap: 6px;
   margin: 0;
   color: var(--og-ink);
-  font-size: 15px;
+  font-size: var(--og-text-body);
   font-weight: 650;
 }
 
@@ -122,7 +122,7 @@
   background: var(--og-raised, var(--og-paper));
   color: var(--og-ink);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -178,7 +178,7 @@
   align-items: flex-start;
   gap: 4px;
   color: var(--og-ink);
-  font-size: 14px;
+  font-size: var(--og-text-meta);
   line-height: 1.45;
 }
 
