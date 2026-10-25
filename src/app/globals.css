@@ -2927,14 +2927,14 @@ h3,
   padding-top: 6px;
 }
 
+/* "Leaving … Now ⌄" is a row like every other one in the sheet, not an eyebrow
+   above a sentence: label on the left at body size, value on the right. */
 .og-prepare__head {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) auto;
-  /* The label shares the composer's `grid-area: label`. */
-  grid-template-areas: "label value action";
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
+  gap: var(--og-space-2);
+  min-height: 56px;
   cursor: pointer;
   list-style: none;
 }
@@ -2944,10 +2944,8 @@ h3,
 }
 
 .og-prepare__head::after {
-  grid-area: action;
   content: "⌄";
-  color: var(--og-moss-text);
-  padding: 0 4px;
+  color: var(--og-slate-text);
 }
 
 .og-prepare[open] > .og-prepare__head::after {
@@ -2959,11 +2957,56 @@ h3,
   outline-offset: var(--og-focus-offset);
 }
 
-.og-prepare__summary {
-  grid-area: value;
-  font-size: var(--og-text-meta);
+.og-prepare__label {
   color: var(--og-ink);
-  margin: 0;
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* The value wraps rather than truncating: an arrive-by time is a sentence. */
+.og-prepare__summary {
+  max-width: 70%;
+  margin: 0 0 0 auto;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-body);
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* A plain 56 px action row ("Save this area for offline"): a title and the
+   chevron that says it leads somewhere, with no card around it. */
+.og-prepare__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+  min-height: 56px;
+  padding: 0;
+  border-top: 1px solid var(--og-hairline);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  line-height: 1.4;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.og-prepare__row:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-prepare__row-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.og-prepare__chevron {
+  flex: none;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-headline);
+  line-height: 1;
 }
 
 .og-prepare__bike {
@@ -3187,15 +3230,6 @@ h3,
   .og-places-along__row > .og-places-along__add {
     width: 100%;
   }
-}
-
-.og-offline-details > summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  color: var(--og-slate-text);
-  font-size: var(--og-text-meta);
-  cursor: pointer;
 }
 
 /*
@@ -5829,9 +5863,7 @@ h3,
   /* Offline readiness is a disclosure behind the handle, not part of the
      compact composer. Keeping it out of peek also prevents its rows from
      extending over the map and intercepting map gestures. */
-  .og-planner__sheet[data-detent="peek"] .og-offline,
-  .og-planner__sheet[data-detent="peek"] .og-offline-details,
-  .og-planner__sheet[data-detent="peek"] [data-testid="offline-checking"] {
+  .og-planner__sheet[data-detent="peek"] .og-offline {
     display: none;
   }
 
@@ -5877,7 +5909,6 @@ h3,
     .og-history,
     .og-sketch,
     .og-offline,
-    .og-offline-details,
     .og-elevation-slot,
     .og-plan-actions__record-row,
     .og-plan-actions__row,
@@ -5885,7 +5916,6 @@ h3,
     .og-advisor-ask,
     .og-route-card[data-selected="false"]
   ),
-  .og-planner__sheet[data-detent="ride"] [data-testid="offline-checking"],
   .og-planner__sheet[data-detent="ride"] .og-route-choices__note {
     display: none;
   }
@@ -8781,12 +8811,20 @@ h3,
 .og-elevation-slot[data-tint="2"] { --og-route-tint: var(--og-deep-spruce); }
 
 .og-elevation {
+  /* The chart's left gutter: 0 while compact, room for the feet when expanded.
+     The plot, the surface strip and the distance ticks all reserve it, so the
+     axis labels and the drawing line up and nothing hangs off the edge. */
+  --og-elevation-gutter: 0px;
   display: grid;
   gap: 6px;
   padding: 12px 14px 10px;
   border-radius: 14px;
   background: var(--og-paper);
   box-shadow: 0 1px 3px rgb(22 29 28 / 8%), 0 0 0 1px rgb(22 29 28 / 5%);
+}
+
+.og-elevation[data-density="expanded"] {
+  --og-elevation-gutter: 60px;
 }
 
 .og-elevation__head {
@@ -8797,8 +8835,7 @@ h3,
   gap: 6px 12px;
 }
 
-/* The stats and the density control share the head's trailing side; the control
-   is a real 44 px target even though the chart itself is compact. */
+/* The stats and the density control share the head's trailing side. */
 .og-elevation__head-right {
   display: flex;
   flex-wrap: wrap;
@@ -8808,32 +8845,27 @@ h3,
   margin-left: auto;
 }
 
+/* The density control is a quiet text button: the chart is the thing to look
+   at, and a filled pill next to the numbers competed with it. */
 .og-elevation__expand {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid color-mix(in srgb, var(--og-route-tint) 30%, var(--og-sandstone));
-  border-radius: var(--og-radius-chip);
-  background: color-mix(in srgb, var(--og-route-tint) 9%, transparent);
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 var(--og-space-2);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: none;
   color: var(--og-ink);
   font: inherit;
-  font-size: var(--og-text-eyebrow);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
   cursor: pointer;
-  transition:
-    background-color var(--og-dur-fast) var(--og-ease),
-    border-color var(--og-dur-fast) var(--og-ease);
+  transition: color var(--og-dur-fast) var(--og-ease);
 }
 
 .og-elevation__expand:hover {
-  background: color-mix(in srgb, var(--og-route-tint) 16%, transparent);
-  border-color: color-mix(in srgb, var(--og-route-tint) 44%, var(--og-sandstone));
-}
-
-.og-elevation__expand[aria-expanded="true"] {
-  background: color-mix(in srgb, var(--og-route-tint) 20%, transparent);
-  border-color: color-mix(in srgb, var(--og-route-tint) 52%, var(--og-sandstone));
+  color: var(--og-ember-text);
 }
 
 .og-elevation__title {
@@ -8869,6 +8901,16 @@ h3,
 .og-elevation__plot {
   position: relative;
   height: 96px;
+  /* The gutter is inside the plot, so the y labels are part of the chart's own
+     width instead of being pushed past its left edge. */
+  padding-inline-start: var(--og-elevation-gutter);
+}
+
+/* The drawing and everything laid over it share one box, so a percentage
+   position means the same thing for the line, a notch and the grade tag. */
+.og-elevation__frame {
+  position: relative;
+  height: 100%;
 }
 
 /* Expanded is the same drawing with room for a readable chart (168 px). */
@@ -8929,20 +8971,21 @@ h3,
 .og-elevation__axis--max { top: 0; }
 .og-elevation__axis--min { bottom: 2px; }
 
-/* Expanded reads as a chart: a 44 px gutter of right-aligned feet, the same
-   values the gridlines mark. */
+/* Expanded reads as a chart: the feet are right-aligned in the plot's gutter,
+   at the same heights as the gridlines they name. Caption size, tabular. */
 .og-elevation__yaxis {
   position: absolute;
   inset-block: 0;
   left: 0;
-  width: 44px;
+  width: var(--og-elevation-gutter);
   pointer-events: none;
 }
 
 .og-elevation__ylabel {
   position: absolute;
-  right: 0;
-  padding: 0 5px;
+  right: 6px;
+  max-width: calc(100% - 6px);
+  padding: 0 2px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--og-paper) 84%, transparent);
   color: var(--og-slate-text);
@@ -8992,9 +9035,13 @@ h3,
   font-variant-numeric: tabular-nums;
 }
 
-/* The steepest sustained grade, over the climb it measured. */
+/* The steepest sustained grade, over the climb it measured. The chart passes
+   the share; the clamp keeps the tag inside the drawing on a 320 px phone
+   instead of letting it hang off the right edge. */
 .og-elevation__grade-pin {
+  --og-elevation-pin-half: 34px;
   position: absolute;
+  left: clamp(var(--og-elevation-pin-half), var(--og-elevation-pin-share, 50%), calc(100% - var(--og-elevation-pin-half)));
   padding: 1px 7px;
   border-radius: 999px;
   background: var(--og-paper);
@@ -9033,6 +9080,7 @@ h3,
   position: relative;
   height: 7px;
   margin: 6px 0 4px;
+  margin-inline-start: var(--og-elevation-gutter);
   overflow: hidden;
   border-radius: 4px;
   background: var(--og-sandstone);
@@ -9079,6 +9127,7 @@ h3,
 .og-elevation__ticks {
   display: flex;
   justify-content: space-between;
+  margin-inline-start: var(--og-elevation-gutter);
   white-space: nowrap;
   color: var(--og-slate-text);
   font-size: var(--og-text-caption);
@@ -9895,10 +9944,6 @@ input[type="file"]::file-selector-button {
 
 input[type="file"]:hover:not(:disabled)::file-selector-button {
   background: color-mix(in srgb, var(--og-sandstone) 65%, var(--og-paper));
-}
-
-.og-offline-details__note {
-  color: var(--og-slate-text);
 }
 
 /* Ride style reads as segmented controls (UX rework phase 7): each choice is one

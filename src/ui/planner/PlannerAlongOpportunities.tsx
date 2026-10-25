@@ -51,6 +51,20 @@ const STOP_SOURCE_LABEL: Readonly<Record<string, string>> = {
   wikimedia: "Wikimedia",
 };
 
+/** What is behind the row before it has been opened. */
+const ALONG_RIDE_HINT = "Gas, food, views";
+
+/**
+ * The row's one meta line once the list is known: how many places are worth a
+ * stop along the ride. Road windows widen the ride rather than stop it, so
+ * they are not counted as stops; with none of either, the hint stays.
+ */
+export function alongRideCount(suggestions: readonly AlongRideSuggestion[]): string {
+  const stops = suggestions.filter((suggestion) => suggestion.kind !== "road").length;
+  if (stops === 0) return ALONG_RIDE_HINT;
+  return `${stops} ${stops === 1 ? "stop" : "stops"}`;
+}
+
 interface Result {
   readonly key: string;
   readonly suggestions: readonly AlongRideSuggestion[];
@@ -223,19 +237,9 @@ export function PlannerAlongOpportunities({
         aria-controls="along-ride-results"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="og-along__icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
-            <circle cx="12" cy="10" r="2.3" />
-          </svg>
-        </span>
-        <span className="og-along__label">
-          <span className="og-along__title">Along this ride</span>
-          <span className="og-along__hint">
-            {open && current !== null
-              ? `${current.suggestions.length} worth a stop`
-              : "Gas, food, views and road windows on your way"}
-          </span>
+        <span className="og-along__title">Along this ride</span>
+        <span className="og-along__hint">
+          {current === null ? ALONG_RIDE_HINT : alongRideCount(current.suggestions)}
         </span>
         <svg className="og-along__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M6 9l6 6 6-6" />

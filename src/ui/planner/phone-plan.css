@@ -67,7 +67,7 @@
   .og-planner .og-refine { order: 2; }
   .og-planner .og-composer { order: 3; }
   .og-planner .og-sheet__body > :not(.og-phone-summary, .og-phone-tools, .og-refine, .og-composer) { order: 4; }
-  .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-offline-details, .og-elevation, .og-point-row, .og-refine__body > section) { border: 0; border-bottom: 1px solid var(--og-hairline); border-radius: 0; background: transparent; box-shadow: none; padding: var(--og-space-2) 0; }
+  .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-prepare__row, .og-elevation, .og-point-row, .og-refine__body > section) { border: 0; border-bottom: 1px solid var(--og-hairline); border-radius: 0; background: transparent; box-shadow: none; padding: var(--og-space-2) 0; }
   .og-planner .og-planner__sheet :is(input, select, button, summary, label) { font-size: var(--og-text-body); }
   .og-planner .og-planner__sheet :is(button, summary, input, select) { min-height: 48px; }
   .og-planner .og-planner__sheet :is(p, .og-composer__value, .og-composer__coordinate, .og-refine__summary) { font-size: var(--og-text-meta); line-height: 1.35; }

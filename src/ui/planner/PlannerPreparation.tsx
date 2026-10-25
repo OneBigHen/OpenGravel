@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 
 import type { OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
 import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
@@ -38,7 +39,6 @@ import {
   type ArrivalTarget,
 } from "@/application/planner/arrive-by";
 import { snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
-import { OfflineDisclosure } from "@/ui/preparation/OfflineDisclosure";
 import {
   RoutePreparationSection,
   stalenessNote,
@@ -146,17 +146,12 @@ export function departureFor(choice: QuickChoice, from: Date): DepartureIntent {
   }
 }
 
-/** `Leaving Tue 3:40 PM` in the rider's own time zone, or `Leaving now`. */
-export function departureSummary(departure: DepartureIntent, timeZone?: string): string {
-  if (departure.kind === "now") return "Leaving now";
+/** `Now`, or `Sun 11:00 AM`: the value beside the row's "Leaving" label. */
+export function departureValue(departure: DepartureIntent, timeZone?: string): string {
+  if (departure.kind === "now") return "Now";
   const at = new Date(departure.at);
-  if (!Number.isFinite(at.getTime())) return "Leaving now";
-  return `Leaving ${at.toLocaleString("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    ...(timeZone === undefined ? {} : { timeZone }),
-  })}`;
+  if (!Number.isFinite(at.getTime())) return "Now";
+  return clock(at, timeZone);
 }
 
 function clock(at: Date, timeZone?: string): string {
@@ -169,10 +164,12 @@ function clock(at: Date, timeZone?: string): string {
 }
 
 /**
- * `Leave Tue 3:40 PM to arrive by 6:00 PM`, or, when that moment has passed,
- * `Leave now · arrive Tue 6:40 PM, after 6:00 PM`.
+ * The departure row's value when an arrival time is authoritative:
+ * `Sun 4:30 PM to arrive by 6:00 PM`, `Now · arrive by 6:00 PM`, or, when that
+ * moment has already passed, `Now · arrive Sun 6:40 PM, after 6:00 PM`. The
+ * label beside it is "Leaving", so every value reads as one clause.
  */
-export function arrivalSummary(
+export function arrivalValue(
   arrival: ArrivalTarget,
   departure: DepartureIntent,
   late: boolean,
@@ -181,7 +178,7 @@ export function arrivalSummary(
   timeZone?: string,
 ): string {
   const arrive = arrivalInstant(arrival);
-  if (arrive === null) return departureSummary(departure, timeZone);
+  if (arrive === null) return departureValue(departure, timeZone);
   const target = arrive.toLocaleString("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -189,10 +186,10 @@ export function arrivalSummary(
   });
   if (late) {
     const eta = new Date(now.getTime() + durationSeconds * 1000);
-    return `Leave now · arrive ${clock(eta, timeZone)}, after ${target}`;
+    return `Now · arrive ${clock(eta, timeZone)}, after ${target}`;
   }
-  if (departure.kind !== "future") return `Arrive by ${target}`;
-  return `Leave ${clock(new Date(departure.at), timeZone)} to arrive by ${target}`;
+  if (departure.kind !== "future") return `Now · arrive by ${target}`;
+  return `${clock(new Date(departure.at), timeZone)} to arrive by ${target}`;
 }
 
 /** `YYYY-MM-DDTHH:mm` in local time, the value a `datetime-local` field holds. */
@@ -482,10 +479,10 @@ export function PlannerPreparation({
           onToggle={(event) => setUserOpen(event.currentTarget.open)}
         >
           <summary className="og-prepare__head" data-testid="prepare-toggle">
-            <span className="og-composer__label">Before you ride</span>
+            <span className="og-prepare__label">Leaving</span>
             <span className="og-prepare__summary" data-testid="departure-summary">
               {arrival !== null && route !== null
-                ? arrivalSummary(
+                ? arrivalValue(
                     arrival,
                     effectiveDeparture,
                     current?.late ?? false,
@@ -493,7 +490,7 @@ export function PlannerPreparation({
                     new Date(current?.now ?? 0),
                     timeZone,
                   )
-                : departureSummary(departure, timeZone)}
+                : departureValue(departure, timeZone)}
             </span>
           </summary>
           <DepartureRow
@@ -528,48 +525,18 @@ export function PlannerPreparation({
 
       <PlannerAlongOpportunities route={route} departure={effectiveDeparture} source={providers?.mapLayers} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
 
-      {/* Nothing to be offline-ready for until there is a route. */}
-      {route === null ? null : (
-      <details className="og-offline-details">
-        {/* The one line a rider sees has to describe this phone, not a build:
-            it is derived from the disclosure's own facts, so the two cannot
-            disagree with each other or with Settings. */}
-        <summary data-testid="offline-toggle">
-          Offline readiness{" "}
-          <span className="og-offline-details__note" data-testid="offline-summary-note">
-            · {offlineSummaryNote(offlineSnapshot)}
-          </span>
-        </summary>
-        {offlineSnapshot === null ? (
-          <p className="og-offline__readiness" data-testid="offline-checking" role="status">
-            Checking offline availability…
-          </p>
-        ) : (
-          <OfflineDisclosure
-            matrix={offlineSnapshot.matrix}
-            readiness={offlineSnapshot.readiness}
-            packPresence={offlineRoute === null ? undefined : "not-present"}
-          />
-        )}
-      </details>
+      {/* Downloading an area is a real action in Settings, so the sheet offers
+          it as one plain row — and only while this phone really holds no area.
+          With an area already saved the ride simply works offline, and with
+          the download state unknown there is nothing honest to say. */}
+      {route === null || offlineSnapshot === null || offlineSnapshot.installedAreas !== 0 ? null : (
+        <Link className="og-prepare__row" data-testid="offline-save-area" href="/settings#settings-offline-title">
+          <span className="og-prepare__row-label">Save this area for offline</span>
+          <span className="og-prepare__chevron" aria-hidden="true">›</span>
+        </Link>
       )}
     </>
   );
-}
-
-/**
- * What offline really means for this rider right now, in one line.
- *
- * No downloaded area is the only honest "online only"; with areas on the device
- * the planner can answer from them, which is exactly what Settings promised.
- */
-export function offlineSummaryNote(snapshot: OfflineRuntimeSnapshot | null): string {
-  if (snapshot === null) return "checking this device";
-  const areas = snapshot.installedAreas;
-  if (areas === null) return "downloads not checked";
-  if (areas === 0) return "no downloaded area · online only";
-  const ready = `${areas} ${areas === 1 ? "area" : "areas"} ready`;
-  return snapshot.matrix["plan.route"].state === "requires_network" ? ready : `${ready} · plan offline`;
 }
 
 /**

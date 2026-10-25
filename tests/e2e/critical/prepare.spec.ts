@@ -32,7 +32,8 @@ test("a chosen route is briefed: weather for the ride, and honest unknowns", asy
   const prepare = page.getByTestId("prepare");
   await expect(prepare).toBeVisible();
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
-  await expect(page.getByTestId("departure-summary")).toHaveText("Leaving now");
+  await expect(page.getByTestId("prepare-toggle")).toContainText("Leaving");
+  await expect(page.getByTestId("departure-summary")).toHaveText("Now");
   // The weather is one line under Start, stated once and never twice.
   await expect(page.getByTestId("prepare-glance")).toContainText(/°F/);
   await expect(page.getByTestId("prepare-glance")).not.toContainText("min remaining");
@@ -46,7 +47,7 @@ test("a later departure is one tap and still briefs the ride", async ({ page }) 
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
   await page.getByTestId("departure-in-3h").check();
   await expect(page.getByTestId("departure-in-3h")).toBeChecked();
-  await expect(page.getByTestId("departure-summary")).toHaveText(/^Leaving \w{3} \d{1,2}:\d{2} [AP]M$/);
+  await expect(page.getByTestId("departure-summary")).toHaveText(/^\w{3} \d{1,2}:\d{2} [AP]M$/);
   await expect(routeCards(page).first()).toBeVisible();
   await expect(page.getByTestId("prepare-glance")).toContainText(/°F/);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

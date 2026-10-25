@@ -142,16 +142,50 @@
   cursor: default;
 }
 
+/* One row, always: the field carries its own send button inside it, so a
+   320 px sheet cannot wrap the field and the button onto two lines. */
 .og-advisor-ask__form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
-.og-advisor-ask__form input,
-.og-advisor-ask__form button {
-  min-height: 44px;
+.og-advisor-ask__field {
+  position: relative;
   min-width: 0;
+}
+
+.og-advisor-ask__field input {
+  width: 100%;
+  min-height: 48px;
+  padding-inline-end: 56px;
+}
+
+.og-advisor-ask__send {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: none;
+  color: var(--og-ember-text);
+  cursor: pointer;
+  translate: 0 -50%;
+  transition: background-color var(--og-dur-fast, 120ms) ease;
+}
+
+.og-advisor-ask__send:hover:not(:disabled) {
+  background: var(--og-well);
+}
+
+.og-advisor-ask__send:disabled {
+  color: var(--og-slate-text);
+  cursor: default;
 }
 
 .og-advisor-ask :is(input, button):focus-visible {
@@ -160,7 +194,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .og-advisor-ask__chips button {
+  .og-advisor-ask__chips button,
+  .og-advisor-ask__send {
     transition: none;
   }
 }
