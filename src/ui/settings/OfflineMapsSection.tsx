@@ -145,17 +145,13 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
     <section className="og-settings__section og-settings__section--offline" aria-labelledby="settings-offline-title" data-testid="offline-maps">
       <div className="og-settings__section-heading">
         <div>
-          <p className="og-settings__eyebrow">NO SIGNAL</p>
           <h2 id="settings-offline-title">Offline areas</h2>
         </div>
-        <span className="og-settings__status">{storageLabel}</span>
+        <span className="og-settings__hint">{storageLabel}</span>
       </div>
-      <p className="og-settings__section-copy">
-        Download an area and OpenGravel can still draw its map and plan a ride inside it when you lose signal.
-      </p>
       <p className="og-settings__section-copy" data-testid="offline-shell-disclosure">
         {canReopenOffline
-          ? "This device can reopen OpenGravel without signal. Download an area before leaving coverage."
+          ? "This device can reopen OpenGravel without signal."
           : "Keep OpenGravel open when you lose signal. Reopening the app still needs signal until it has been saved on this device."}
       </p>
       {offers === null && !offersFailed && rows.length === 0 ? <p className="og-settings__section-copy">Checking which areas are available…</p> : null}
@@ -187,7 +183,7 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
                     {row.sizeLabel} · {row.dataLabel}
                   </p>
                 </div>
-                {label !== null ? <span className="og-settings__active">{label}</span> : null}
+                {label !== null ? <span className="og-settings__hint">{label}</span> : null}
               </div>
               {downloading ? (
                 <div className="og-offline-areas__progress">

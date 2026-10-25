@@ -72,8 +72,8 @@ test("active bike carries into a new ride and local data can be exported or dele
   await page.getByLabel("Fuel range (miles)").fill("60");
   await page.getByLabel("Reserve (miles)").fill("30");
   await page.getByRole("button", { name: "Save bike" }).click();
-  await page.getByRole("button", { name: "Make active" }).click();
-  await expect(page.getByText("Active", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Use for new rides" }).click();
+  await expect(page.getByText("New rides use this bike", { exact: true })).toBeVisible();
 
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
