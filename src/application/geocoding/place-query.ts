@@ -11,8 +11,12 @@
  *
  * Nothing here invents a place. A category is a rider's own word mapped to one
  * provider-neutral label; an unparseable query keeps its whole text as the term
- * and is answered exactly as before.
+ * and is answered exactly as before. A query that is already a place's whole
+ * name ("Hawk Mountain Sanctuary") is recognized as such, so its last words are
+ * never mistaken for a town.
  */
+
+import { withoutTrailingUsState } from "./us-states";
 
 /** One rider-facing category, and how a POI provider can look it up. */
 export interface PlaceCategory {
@@ -106,6 +110,43 @@ function normalize(text: string): string {
 
 function words(text: string): string[] {
   return text.split(" ").filter((word) => word !== "");
+}
+
+/** A name as comparable words: case, accents, punctuation and spacing ignored. */
+function comparableWords(text: string): string[] {
+  return text
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter((word) => word !== "");
+}
+
+/** Are the typed words the whole of this name, or the start of it? */
+function leadsName(typed: readonly string[], name: readonly string[]): boolean {
+  if (typed.length === 0 || name.length < typed.length) return false;
+  return typed.every((word, index) => name[index] === word);
+}
+
+/**
+ * Is this geocoded name the query as a whole, rather than a fragment of it?
+ *
+ * "Hawk Mountain Sanctuary" is one place's own name: a result called that (in
+ * any case, punctuation or accent) is what the rider asked for, and a result
+ * whose name begins with the query is the place they stopped typing. A result
+ * called only "Sanctuary" is not: that is the last word of the query, not its
+ * answer. A state the rider typed at the end ("Jim Thorpe, PA") is not part of
+ * the name, so it is set aside before comparing.
+ */
+export function matchesWholeQuery(query: string, name: string): boolean {
+  const actual = comparableWords(name);
+  if (actual.length === 0) return false;
+  const typed = comparableWords(query);
+  if (leadsName(typed, actual)) return true;
+  const withoutState = comparableWords(withoutTrailingUsState(query));
+  return withoutState.length !== typed.length && leadsName(withoutState, actual);
 }
 
 /**

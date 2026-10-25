@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PLACE_CATEGORIES,
+  matchesWholeQuery,
   parsePlaceQuery,
 } from "@/application/geocoding/place-query";
 
@@ -84,5 +85,30 @@ describe("place query parsing", () => {
       expect(parsePlaceQuery(word).category, word).toEqual(category);
     }
     expect(parsePlaceQuery("fuel station").category).toBe(parsePlaceQuery("gas").category);
+  });
+});
+
+describe("whole-query name matching", () => {
+  it("accepts the name as typed, whatever its case and punctuation", () => {
+    expect(matchesWholeQuery("Hawk Mountain Sanctuary", "Hawk Mountain Sanctuary")).toBe(true);
+    expect(matchesWholeQuery("hawk mountain sanctuary", "Hawk Mountain Sanctuary")).toBe(true);
+    expect(matchesWholeQuery("hawk-mountain sanctuary", "Hawk Mountain Sanctuary")).toBe(true);
+    expect(matchesWholeQuery("Hawk Mountain Sanctuary!", "Hawk Mountain Sanctuary")).toBe(true);
+  });
+
+  it("accepts a name that begins with the query, or with the state set aside", () => {
+    // The rider stopped typing: "Blue Mountain Ski" is "Blue Mountain Ski Area".
+    expect(matchesWholeQuery("Blue Mountain Ski", "Blue Mountain Ski Area")).toBe(true);
+    expect(matchesWholeQuery("Jim Thorpe, PA", "Jim Thorpe")).toBe(true);
+    expect(matchesWholeQuery("Jim Thorpe PA", "Jim Thorpe")).toBe(true);
+  });
+
+  it("does not mistake a fragment of the query for the whole answer", () => {
+    expect(matchesWholeQuery("Hawk Mountain Sanctuary", "Sanctuary")).toBe(false);
+    expect(matchesWholeQuery("Hawk Mountain Sanctuary", "Hawk Mountain")).toBe(false);
+    expect(matchesWholeQuery("Hawk Mountain Sanctuary", "Mountain Sanctuary")).toBe(false);
+    // A word prefix is not a matched word: "Wawa Jim" is not a Wawa.
+    expect(matchesWholeQuery("Wawa Jim Thorpe", "Wawa Jim Thorpe Plaza")).toBe(true);
+    expect(matchesWholeQuery("Wawa Ji", "Wawa Jim Thorpe Plaza")).toBe(false);
   });
 });
