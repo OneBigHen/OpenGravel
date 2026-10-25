@@ -892,6 +892,9 @@ h3,
   cursor: pointer;
 }
 
+/* `:focus-within` is the fallback for engines without `:has()`; it cannot
+   tell a keyboard focus from a tap, but a visible ring beats none. */
+.og-route-community__star:focus-within,
 .og-route-community__star:has(> .og-route-community__star-input:focus-visible) {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
