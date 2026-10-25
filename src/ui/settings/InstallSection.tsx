@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { SettingsGroup } from "./SettingsGroup";
 
 interface InstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -46,29 +47,26 @@ export function InstallSection() {
   if (platform === "other" && prompt === null) return null;
 
   return (
-    <section className="og-settings__section" aria-labelledby="settings-install-title" data-testid="install-section">
-      <div className="og-settings__section-heading">
-        <div>
-          <h2 id="settings-install-title">Add to your Home Screen</h2>
-        </div>
-      </div>
+    <SettingsGroup id="settings-install-title" label="Install" testId="install-section">
       {platform === "ios" ? (
-        <ol className="og-install__steps">
+        <ol className="og-install__steps og-settings__card-block">
           <li>Tap <strong>Share</strong> <span aria-hidden="true">(the square with the arrow)</span> in Safari’s toolbar.</li>
           <li>Choose <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
         </ol>
       ) : (
-        <button
-          type="button"
-          className="og-primary"
-          onClick={() => {
-            void prompt?.prompt();
-            setPrompt(null);
-          }}
-        >
-          Install OpenGravel
-        </button>
+        <div className="og-settings__card-block">
+          <button
+            type="button"
+            className="og-primary"
+            onClick={() => {
+              void prompt?.prompt();
+              setPrompt(null);
+            }}
+          >
+            Install OpenGravel
+          </button>
+        </div>
       )}
-    </section>
+    </SettingsGroup>
   );
 }

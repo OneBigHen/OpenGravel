@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { validSpotifyClientId } from "@/application/spotify/client-id";
 import type { SpotifyPlayerPort, SpotifyPlayerSnapshot } from "@/application/ride-session/ports/spotify-player";
+import { Chevron, SettingsGroup } from "./SettingsGroup";
 
 export interface SpotifySetupSectionProps {
   readonly readClientId: () => string | null;
@@ -84,51 +85,75 @@ export function SpotifySetupSection({ readClientId, saveClientId, clearClientId,
     }
   }
 
+  const connected = nativeSnapshot?.connection === "connected";
+  const connecting = nativeSnapshot?.connection === "connecting";
+  const unavailable = nativeSnapshot?.connection === "unavailable";
+  const nativeStatus = nativeSnapshot === null
+    ? null
+    : nativeSnapshot.errorMessage ?? (connected ? "Connected on this iPhone." : connecting ? "Connecting…" : unavailable ? "Spotify is unavailable in this iPhone build." : "Not connected on this iPhone.");
+
   return (
-    <section id="spotify" className="og-settings__section" aria-labelledby="settings-spotify-title">
-      <div className="og-settings__section-heading">
-        <div><h2 id="settings-spotify-title">Spotify</h2></div>
-      </div>
-      <p className="og-settings__section-copy">Playback controls need Spotify Premium.</p>
-      <div className="og-settings__editor-actions">
-        {nativeSnapshot?.connection === "connected" || nativeSnapshot?.connection === "connecting" ? (
-          <button className="og-settings__button" type="button" onClick={() => void nativePlayer?.disconnect()}>{nativeSnapshot.connection === "connecting" ? "Cancel" : "Disconnect Spotify"}</button>
+    <SettingsGroup id="settings-music-title" label="Music">
+      <div className="og-settings__row">
+        <span className="og-settings__row-text">
+          <span className="og-settings__row-label">Spotify</span>
+          {/* The Premium requirement is the rider's business before they connect,
+              not a permanent note once playback already works. */}
+          {connected || connecting ? null : <span className="og-settings__row-meta">Playback controls need Spotify Premium.</span>}
+          {nativeStatus === null ? null : <span className="og-settings__row-meta" role="status">{nativeStatus}</span>}
+        </span>
+        {connected || connecting ? (
+          <button className="og-settings__row-action" type="button" aria-label={connecting ? "Cancel Spotify sign-in" : "Disconnect Spotify"} onClick={() => void nativePlayer?.disconnect()}>
+            {connecting ? "Cancel" : "Disconnect"}
+          </button>
         ) : (
-          <button className="og-settings__button" type="button" disabled={nativePlayer !== undefined && nativeSnapshot?.connection === "unavailable"} onClick={connect}>Connect Spotify</button>
+          <button className="og-settings__row-action" type="button" aria-label="Connect Spotify" disabled={unavailable} onClick={connect}>
+            Connect
+          </button>
         )}
       </div>
-      {/* The developer setup is for people running their own Spotify app; it
-          used to be the first thing on Settings (owner review 2026-10-04). */}
-      <details className="og-settings__advanced" open={clientId.length > 0 ? true : undefined}>
-        <summary>Use your own Spotify app (advanced)</summary>
-        <ol className="og-settings__section-copy">
-          <li>In the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer Dashboard</a>, create an app and enable Web API.</li>
-          <li>Add this exact callback URL:</li>
-        </ol>
-        <p className="og-settings__spotify-callback"><code id="spotify-callback-url">{callbackUrl}</code> <button className="og-settings__text-button" type="button" onClick={() => void copyCallback()}>Copy</button></p>
-        <ol className="og-settings__section-copy" start={3}>
-          <li>While the app is in Development Mode, add your Spotify account to its allowed users (up to five; the app owner needs Premium).</li>
-          <li>Paste the app&apos;s public client ID here and save.</li>
-        </ol>
-        <label htmlFor="spotify-client-id">Public client ID</label>
-        <input
-          id="spotify-client-id"
-          data-testid="spotify-client-id"
-          inputMode="text"
-          autoComplete="off"
-          spellCheck={false}
-          value={clientId}
-          placeholder="32-character client ID"
-          onChange={(event) => { setClientId(event.target.value); setSaved(false); }}
-        />
-        <p className="og-settings__section-copy">Only the public client ID is stored, in this browser. Never paste a client secret. The iPhone app uses its own built-in registration.</p>
-        <div className="og-settings__editor-actions">
-          <button className="og-settings__button og-settings__button--quiet" type="button" onClick={save}>Save app ID</button>
+      {/* The developer setup is for people running their own Spotify app; it is
+          a disclosure row, never the first thing on the page. */}
+      <details className="og-settings__disclosure" open={clientId.length > 0 ? true : undefined}>
+        <summary className="og-settings__row og-settings__row--button">
+          <span className="og-settings__row-text">
+            <span className="og-settings__row-label">Use your own Spotify app</span>
+            <span className="og-settings__row-meta">Advanced</span>
+          </span>
+          <Chevron />
+        </summary>
+        <div className="og-settings__disclosure-body">
+          <ol className="og-settings__note">
+            <li>In the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noreferrer">Spotify Developer Dashboard</a>, create an app and enable Web API.</li>
+            <li>Add this exact callback URL:</li>
+          </ol>
+          <p className="og-settings__spotify-callback"><code id="spotify-callback-url">{callbackUrl}</code> <button className="og-settings__text-button" type="button" onClick={() => void copyCallback()}>Copy</button></p>
+          <ol className="og-settings__note" start={3}>
+            <li>While the app is in Development Mode, add your Spotify account to its allowed users (up to five; the app owner needs Premium).</li>
+            <li>Paste the app&apos;s public client ID here and save.</li>
+          </ol>
+          <label className="og-settings__field" htmlFor="spotify-client-id">Public client ID
+            <input
+              id="spotify-client-id"
+              data-testid="spotify-client-id"
+              inputMode="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={clientId}
+              placeholder="32-character client ID"
+              onChange={(event) => { setClientId(event.target.value); setSaved(false); }}
+            />
+          </label>
+          <p className="og-settings__note">Only the public client ID is stored, in this browser. Never paste a client secret. The iPhone app uses its own built-in registration.</p>
+          <div className="og-settings__editor-actions">
+            <button className="og-settings__button og-settings__button--quiet" type="button" onClick={save}>Save app ID</button>
+          </div>
         </div>
       </details>
-      {nativeSnapshot === null ? null : <p className="og-settings__section-copy" role="status">{nativeSnapshot.errorMessage ?? (nativeSnapshot.connection === "connected" ? "Spotify is connected on this iPhone." : nativeSnapshot.connection === "connecting" ? "Connecting…" : nativeSnapshot.connection === "unavailable" ? "Spotify is unavailable in this iPhone build." : "Spotify is disconnected on this iPhone.")}</p>}
-      {saved ? <p className="og-settings__section-copy" role="status">Saved.</p> : null}
-      {message === null ? null : <p className="og-settings__section-copy" role="status">{message}</p>}
-    </section>
+      {/* What the last action did stays on the row's group, not inside a
+          disclosure the rider may have just closed. */}
+      {saved ? <p className="og-settings__card-block og-settings__note" role="status">Saved.</p> : null}
+      {message === null ? null : <p className="og-settings__card-block og-settings__note" role="status">{message}</p>}
+    </SettingsGroup>
   );
 }

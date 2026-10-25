@@ -259,80 +259,516 @@ h3,
   display: none;
 }
 
+/* --------------------------------------------------------------------------
+   Settings (small-screen design system v2 §6): a list of grouped rows, not a
+   stack of bordered cards. A small uppercase group label, then one rounded
+   container whose rows are 56px tall — the label on the left, the value or
+   control on the right, a chevron when the row opens something. A row wraps
+   instead of clipping when a 320px screen cannot hold label and control side
+   by side, and every tappable row clears the 48px target.
+   -------------------------------------------------------------------------- */
+
 .og-settings {
   min-height: 100%;
   padding: clamp(16px, 3vw, 40px);
   background: var(--og-canvas);
 }
 
-.og-settings__header,
-.og-settings__section-heading,
-.og-settings__bike-main,
-.og-settings__bike-actions,
-.og-settings__editor-actions {
+.og-settings__header {
+  max-width: 720px;
+  margin: 0 auto var(--og-space-5);
+}
+
+.og-settings__header h1 {
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.og-settings__layout {
+  display: grid;
+  gap: var(--og-space-5);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.og-settings__group {
+  min-width: 0;
+}
+
+.og-settings__group-head {
   display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+  padding: 0 var(--og-space-1) var(--og-space-2);
+}
+
+.og-settings__group-label {
+  color: var(--og-moss-text);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-settings__group-aside {
+  flex: none;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  line-height: 1.3;
+  text-align: right;
+}
+
+.og-settings__group-hint {
+  padding: 0 var(--og-space-1) var(--og-space-2);
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+/* One container per group; the hairline between rows is the only divider. */
+.og-settings__card {
+  overflow: hidden;
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-object);
+  background: var(--og-paper);
+}
+
+.og-settings .og-settings__card > * + * {
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-settings__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-1) var(--og-space-3);
+  min-height: 56px;
+  padding: var(--og-space-2) var(--og-space-4);
+}
+
+/* A row that is one control: the whole 56px row is the tap target, so a gloved
+   thumb never has to find a small button inside it. */
+.og-settings__row--button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-settings__row--button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* The ring sits just inside the row: the group's rounded container would clip
+   an outer ring (12 §20 — the ring never disappears). */
+.og-settings__row--button:focus-visible,
+.og-settings__row-open:focus-visible,
+.og-settings__disclosure > summary:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: calc(-1 * var(--og-focus-offset));
+}
+
+.og-settings__row-text {
+  display: grid;
+  flex: 1 1 4rem;
+  gap: 2px;
+  /* Never squeeze the label to a sliver: below this the control wraps to its
+     own line instead (a 320px screen still reads one thing per line). */
+  min-width: 6.5rem;
+}
+
+.og-settings__row-label {
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.og-settings__row-meta {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.og-settings__row-note {
+  color: var(--og-moss-text);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.og-settings__row-value {
+  flex: 0 1 auto;
+  max-width: 60%;
+  margin-left: auto;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-body);
+  line-height: 1.4;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.og-settings__row-control {
+  flex: 0 0 auto;
+  max-width: 100%;
+  margin-left: auto;
+  min-width: 0;
+}
+
+.og-settings .og-settings__row-control select {
+  width: auto;
+  min-width: 7rem;
+  max-width: 100%;
+}
+
+.og-settings__row--danger .og-settings__row-label {
+  color: var(--og-danger);
+}
+
+/* A bike row: the open button fills the row, the choice action sits beside it. */
+.og-settings__row--bike {
+  padding: 0;
+  gap: 0;
+}
+
+.og-settings__row-open {
+  display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--og-space-3);
+  min-width: 0;
+  min-height: 56px;
+  padding: var(--og-space-2) var(--og-space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.og-settings__header {
-  max-width: 1120px;
-  margin: 0 auto 28px;
+.og-settings__row--bike .og-settings__row-action {
+  margin-right: var(--og-space-2);
+}
+
+/* The acknowledgement row: the whole row is the checkbox's label. */
+.og-settings__row--check {
+  cursor: pointer;
+}
+
+.og-settings__row--check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  accent-color: var(--og-deep-spruce);
+}
+
+/* A quiet action on the right of a row (Use, Connect, Download): a full 48px
+   target, so it still works with a gloved finger. */
+.og-settings__row-action {
+  flex: none;
+  min-height: 48px;
+  padding: 0 var(--og-space-2);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-signal-strong);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.og-settings__row-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.og-settings__row-action--danger {
+  color: var(--og-danger);
+}
+
+.og-settings__row-actions {
+  display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--og-space-1);
+  margin-left: auto;
 }
 
-.og-settings__header h1 { font-size: clamp(30px, 4vw, 46px); line-height: 1.05; }
-.og-settings__header > div > p:last-child { max-width: 520px; margin-top: 8px; color: var(--og-slate-text); }
-.og-settings__eyebrow { color: var(--og-moss-text); font-size: var(--og-text-caption); font-weight: 700; letter-spacing: .13em; }
-.og-settings__layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 16px; max-width: 1120px; margin: 0 auto; align-items: start; }
-.og-settings__section { min-width: 0; padding: 24px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-object); background: var(--og-paper); box-shadow: 0 8px 24px #243a350a; }
-.og-settings__section h2 { font-size: var(--og-text-headline); }
-.og-settings__section h3 { font-size: var(--og-text-body); }
-.og-settings__section-copy { margin-top: 8px; color: var(--og-slate-text); font-size: var(--og-text-meta); }
-.og-settings__spotify-callback { overflow-wrap: anywhere; margin-top: 8px; }
-.og-settings__section-heading { align-items: flex-start; margin-bottom: 14px; }
-.og-settings__home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.og-settings__bike-list { display: grid; gap: 10px; margin-top: 18px; list-style: none; }
-.og-settings__bike { min-width: 0; padding: 16px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-object); background: #fffefa; }
-.og-settings__bike-main { align-items: flex-start; }
-.og-settings__bike-main p, .og-settings__bike-details { color: var(--og-slate-text); font-size: var(--og-text-meta); }
-.og-settings__bike-details { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
-.og-settings__bike-actions { justify-content: flex-start; margin-top: 8px; }
-.og-settings__active, .og-settings__status { padding: 4px 9px; border-radius: 999px; background: #e7eee8; color: var(--og-deep-spruce); font-size: var(--og-text-caption); font-weight: 700; }
-.og-settings__button, .og-settings__text-button { min-height: 44px; border: 1px solid var(--og-deep-spruce); border-radius: var(--og-radius-control); padding: 8px 13px; background: var(--og-deep-spruce); color: var(--og-paper); font: inherit; font-weight: 650; cursor: pointer; }
-.og-settings__button--quiet { background: transparent; color: var(--og-deep-spruce); }
-.og-settings__text-button { min-height: 44px; border: 0; padding: 4px 8px; background: transparent; color: var(--og-signal-strong); white-space: nowrap; }
-.og-settings__text-button--danger { color: var(--og-danger); }
-.og-settings__hint { align-self: center; color: var(--og-slate-text); font-size: var(--og-text-meta); }
-.og-settings__button--danger { background: var(--og-danger); border-color: var(--og-danger); }
-.og-settings__button:disabled { cursor: not-allowed; opacity: .48; }
-.og-settings label { display: grid; gap: 6px; margin-top: 12px; font-size: var(--og-text-meta); font-weight: 650; }
-.og-settings input:not([type="checkbox"]), .og-settings select { width: 100%; min-height: 44px; border: 1px solid #a9aaa0; border-radius: var(--og-radius-control); padding: 9px 11px; background: white; color: var(--og-ink); font: inherit; }
-.og-settings select:disabled { color: var(--og-slate-text); background: #f1eee7; }
-.og-settings__editor { display: grid; gap: 10px; margin-top: 18px; padding: 18px; border: 1px solid var(--og-trail-moss); border-radius: var(--og-radius-object); background: #f7f5ee; }
-.og-settings__editor label { margin: 0; }
-.og-settings__field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.og-settings__editor-actions { justify-content: flex-start; margin-top: 4px; }
-.og-settings__check { grid-template-columns: 24px 1fr; align-items: start; margin: 18px 0 0 !important; }
-.og-settings__check input { width: 20px; height: 20px; accent-color: var(--og-deep-spruce); }
-.og-settings__danger-zone { display: grid; justify-items: start; gap: 8px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--og-sandstone); }
-.og-settings__danger-zone p { margin-bottom: 4px; color: var(--og-slate-text); font-size: var(--og-text-meta); }
-.og-settings__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding: 12px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-control); }
-.og-settings__error { color: var(--og-danger); font-size: var(--og-text-meta); }
-.og-settings button:focus-visible, .og-settings input:focus-visible, .og-settings select:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
+.og-settings__row-action:focus-visible,
+.og-settings__segment:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-settings__chevron {
+  flex: none;
+  color: var(--og-slate-text);
+  transition: transform var(--og-dur-fast) var(--og-ease);
+}
+
+/* A row that opens a body of its own (the own-app setup): a native disclosure
+   whose summary is a settings row. */
+.og-settings__disclosure > summary {
+  list-style: none;
+}
+
+.og-settings__disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-settings__disclosure[open] > summary .og-settings__chevron {
+  transform: rotate(90deg);
+}
+
+.og-settings__disclosure-body {
+  display: grid;
+  gap: var(--og-space-3);
+  padding: 0 var(--og-space-4) var(--og-space-4);
+}
+
+.og-settings__disclosure-body ol {
+  display: grid;
+  gap: var(--og-space-1);
+  padding-left: var(--og-space-5);
+}
+
+/* A three- or two-way choice inside a row (Day / Night, Ride screen) is a
+   segmented track; its chosen-option fill is theme-owned (theme-glass.css). */
+
+/* A block inside a group's container: the bike editor, the Home search, the
+   feedback form, a note that spans the rows. */
+.og-settings__card-block {
+  padding: var(--og-space-4);
+}
+
+.og-settings__editor {
+  display: grid;
+  gap: var(--og-space-3);
+  padding: var(--og-space-4);
+  background: var(--og-canvas);
+}
+
+.og-settings__editor h3 {
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+.og-settings__field {
+  display: grid;
+  gap: 6px;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-settings__field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--og-space-3);
+}
+
+.og-settings__editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+/* Inputs stay at 16px: iOS zooms any field below that. */
+.og-settings input:not([type="checkbox"]),
+.og-settings select,
+.og-settings textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-canvas);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+}
+
+.og-settings select:disabled {
+  color: var(--og-slate-text);
+}
+
+.og-settings__button, .og-settings__text-button {
+  min-height: 48px;
+  border: 1px solid var(--og-deep-spruce);
+  border-radius: var(--og-radius-control);
+  padding: 8px 13px;
+  background: var(--og-deep-spruce);
+  color: var(--og-paper);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.og-settings__button--quiet {
+  background: transparent;
+  color: var(--og-deep-spruce);
+}
+
+.og-settings__button--danger {
+  background: var(--og-danger);
+  border-color: var(--og-danger);
+}
+
+.og-settings__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.og-settings__text-button {
+  border: 0;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--og-signal-strong);
+  white-space: nowrap;
+}
+
+.og-settings__text-button--danger {
+  color: var(--og-danger);
+}
+
+.og-settings__spotify-callback {
+  overflow-wrap: anywhere;
+}
+
+.og-settings__danger-zone {
+  display: grid;
+}
+
+.og-settings__danger-zone > * + * {
+  border-top: 1px solid var(--og-hairline);
+}
+
+/* The delete row is a row; its messages and confirmation are blocks. */
+.og-settings__danger-zone > .og-settings__note,
+.og-settings__danger-zone > .og-settings__confirm {
+  padding: var(--og-space-4);
+}
+
+.og-settings__confirm {
+  display: grid;
+  justify-items: start;
+  gap: var(--og-space-2);
+  width: 100%;
+}
+
+.og-settings__stack {
+  display: grid;
+  justify-items: start;
+  gap: var(--og-space-2);
+}
+
+.og-settings__note {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.og-settings__error {
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+}
+
+/* FR-01: Home feedback shows where the rider just tapped. */
+.og-settings__home-feedback {
+  padding: var(--og-space-3) var(--og-space-4);
+  background: color-mix(in srgb, var(--og-golden-hour) 16%, var(--og-paper));
+  color: var(--og-deep-spruce);
+  font-size: var(--og-text-meta);
+  line-height: 1.45;
+}
+
+.og-settings__home-search {
+  display: grid;
+  gap: var(--og-space-2);
+  padding: var(--og-space-4);
+}
+
+.og-settings__home-search-row {
+  display: flex;
+  gap: var(--og-space-2);
+}
+
+.og-settings__home-search-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.og-settings__home-results {
+  display: grid;
+  gap: var(--og-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-settings__home-results .og-settings__text-button {
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  white-space: normal;
+}
+
+/* Offline areas: the download's progress and its actions share the row. */
+.og-settings__progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-2);
+  flex: 1 1 100%;
+}
+
+.og-settings__progress progress {
+  flex: 1 1 120px;
+  height: 8px;
+  accent-color: var(--og-deep-spruce);
+}
+
+.og-settings__progress-value {
+  min-width: 3ch;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
 
 @media (max-width: 760px) {
-  .og-settings__layout { grid-template-columns: minmax(0, 1fr); }
-  .og-settings__section { padding: 18px; }
+  .og-settings__header {
+    margin-bottom: var(--og-space-4);
+  }
 }
 
 @media (max-width: 420px) {
-  .og-settings { padding: 12px; }
-  .og-settings__field-row { grid-template-columns: 1fr; }
-  .og-settings__bike-details { display: grid; }
-  .og-settings__section-heading { align-items: flex-start; }
+  .og-settings__field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-settings__chevron {
+    transition: none;
+  }
 }
 
 /* One focus ring for the app (12 §15 focus visible, §20 keyboard reach; 05
@@ -11361,35 +11797,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   background: var(--og-canvas);
 }
 
-/* Settings → Home by name (RS-04). */
-.og-settings__home-search {
-  margin-top: 12px;
-}
-
-.og-settings__home-search-row {
-  display: flex;
-  gap: 8px;
-}
-
-.og-settings__home-search-row input {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.og-settings__home-results {
-  display: grid;
-  gap: 4px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.og-settings__home-results .og-settings__text-button {
-  width: 100%;
-  text-align: left;
-  white-space: normal;
-}
-
 /* FT-03: the briefing's verdicts in one line, visible in the ride detent too. */
 .og-prepare__glance {
   margin: 4px 0 0;
@@ -11397,17 +11804,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   font-size: var(--og-text-meta);
   font-weight: 600;
 }
-
-/* Settings → Offline areas (Lane A1). */
-.og-offline-areas__list { display: grid; gap: 10px; margin-top: 16px; list-style: none; }
-.og-offline-areas__row { display: grid; gap: 4px; min-width: 0; padding: 14px 16px; border: 1px solid var(--og-sandstone); border-radius: var(--og-radius-object); background: #fffefa; }
-.og-offline-areas__main { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.og-offline-areas__main > div { min-width: 0; }
-.og-offline-areas__main .og-settings__active { flex-shrink: 0; white-space: nowrap; }
-.og-offline-areas__main p { color: var(--og-slate-text); font-size: var(--og-text-meta); }
-.og-offline-areas__actions, .og-offline-areas__progress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
-.og-offline-areas__progress progress { flex: 1 1 140px; height: 8px; accent-color: var(--og-deep-spruce); }
-.og-offline-areas__progress span { min-width: 3ch; color: var(--og-slate-text); font-size: var(--og-text-meta); font-variant-numeric: tabular-nums; }
 
 /* Glass needs a working backdrop blur and a rider who wants it: with Reduce
    Transparency on, or no backdrop-filter at all, the same chrome is solid paper. */
@@ -11906,8 +12302,7 @@ h1 {
 }
 
 /* Micro category markers: the body face, tracked out, never the display face. */
-.og-eyebrow,
-.og-settings__eyebrow {
+.og-eyebrow {
   margin: 0 0 6px;
   color: var(--og-moss-text);
   font-family: var(--og-font-body), ui-sans-serif, system-ui, sans-serif;
@@ -11928,8 +12323,7 @@ h1 {
 }
 
 .og-explore__intro,
-.og-library__intro,
-.og-settings__header > div > p:last-child {
+.og-library__intro {
   max-width: 54ch;
   margin-top: 10px;
   color: var(--og-slate-text);
@@ -12604,81 +12998,6 @@ a.og-secondary {
   }
 }
 
-/* -- Settings: groups use rows and dividers, not card-in-card (12 §7) ------- */
-
-.og-settings__section {
-  --og-section-pad: 24px;
-  padding: var(--og-section-pad);
-  border-color: var(--og-hairline);
-  border-radius: var(--og-radius-panel);
-  box-shadow: var(--og-shadow-1);
-}
-
-@media (max-width: 760px) {
-  .og-settings__section {
-    --og-section-pad: 20px;
-  }
-}
-
-.og-settings__section h2 {
-  font-size: var(--og-text-title);
-  letter-spacing: -0.015em;
-}
-
-.og-settings__bike-list {
-  gap: 0;
-  margin-top: 16px;
-  border-top: 1px solid var(--og-hairline);
-}
-
-.og-settings__bike {
-  padding: 16px 0;
-  border: 0;
-  border-bottom: 1px solid var(--og-hairline);
-  border-radius: 0;
-  background: transparent;
-}
-
-.og-settings__bike h3 {
-  font-size: var(--og-text-headline);
-}
-
-.og-settings__bike-details span {
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--og-well);
-  color: var(--og-deep-spruce);
-  font-size: var(--og-text-caption);
-  font-weight: 600;
-}
-
-.og-settings__button,
-.og-settings__text-button {
-  border-radius: var(--og-radius-control);
-}
-
-.og-settings input:not([type="checkbox"]),
-.og-settings select {
-  border-color: var(--og-hairline-strong);
-  background: var(--og-canvas);
-}
-
-.og-settings__editor {
-  border-color: var(--og-hairline-strong);
-  background: var(--og-canvas);
-}
-
-/* FR-01: Home feedback shows where the rider just tapped. */
-.og-settings__home-feedback {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: var(--og-radius-control);
-  background: color-mix(in srgb, var(--og-golden-hour) 16%, var(--og-paper));
-  color: var(--og-deep-spruce);
-  font-size: var(--og-text-meta);
-  line-height: 1.45;
-}
-
 /* Offline areas open on the view they are for: a ridge far from signal. */
 .og-settings__art {
   width: calc(100% + 2 * var(--og-section-pad));
@@ -12694,36 +13013,6 @@ a.og-secondary {
   .og-settings__art {
     aspect-ratio: 16 / 7;
   }
-}
-
-/* Offline areas are rows in their group, not cards inside a card: the name
-   and size on the left, the action on the right, progress across the row. */
-.og-offline-areas__list {
-  gap: 0;
-  border-top: 1px solid var(--og-hairline);
-}
-
-.og-offline-areas__row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 4px 16px;
-  padding: 14px 0;
-  border: 0;
-  border-bottom: 1px solid var(--og-hairline);
-  border-radius: 0;
-  background: transparent;
-}
-
-.og-offline-areas__main h3 {
-  font-size: var(--og-text-body);
-}
-
-.og-offline-areas__actions {
-  margin-top: 0;
-}
-
-.og-offline-areas__progress {
-  grid-column: 1 / -1;
 }
 
 /* -- Map chrome ------------------------------------------------------------ */
@@ -13234,28 +13523,6 @@ a.og-secondary {
     --og-slate-text: #5f6766;
     --og-ember-text: #af4226;
     --og-golden-text: #7d5c1c;
-  }
-
-  /* The few literal light fills that predate the tokens. */
-  .og-settings__bike,
-  .og-offline-areas__row,
-  .og-settings__editor {
-    background: var(--og-paper);
-  }
-
-  .og-settings__active,
-  .og-settings__status {
-    background: color-mix(in srgb, var(--og-deep-spruce) 16%, var(--og-paper));
-  }
-
-  .og-settings input:not([type="checkbox"]),
-  .og-settings select {
-    border-color: var(--og-sandstone);
-    background: var(--og-canvas);
-  }
-
-  .og-settings select:disabled {
-    background: var(--og-paper);
   }
 
   .og-composer__place:hover {

@@ -329,30 +329,6 @@ textarea {
   }
 }
 
-/* The literal light fills that predate the tokens (the old og-dark block,
-   which only ran with the system in dark mode). */
-.og-settings__bike,
-.og-offline-areas__row,
-.og-settings__editor {
-  background: var(--og-paper);
-}
-
-.og-settings__active,
-.og-settings__status {
-  background: var(--og-go-soft);
-  color: var(--og-go-text);
-}
-
-.og-settings input:not([type="checkbox"]),
-.og-settings select {
-  border-color: var(--og-sandstone);
-  background: var(--og-canvas);
-}
-
-.og-settings select:disabled {
-  background: var(--og-paper);
-}
-
 .og-art img,
 .og-first-run__picture img,
 .og-not-found__photo {
@@ -676,13 +652,8 @@ html .og-ride {
   }
 
   /* The intros and eyebrows repeat what the page already shows. */
-  :is(.og-explore__intro, .og-library__intro, .og-explore__heading .og-eyebrow, .og-settings__eyebrow),
-  .og-settings__header > div > p:last-child {
+  :is(.og-explore__intro, .og-library__intro, .og-explore__heading .og-eyebrow) {
     display: none;
-  }
-
-  .og-settings__header {
-    margin-bottom: 14px;
   }
 
   .og-explore .og-explore__header.og-explore__header {
@@ -726,10 +697,9 @@ html .og-ride {
     font-size: var(--og-text-caption);
   }
 
-  /* My rides + Settings: tight cards, small headings. */
+  /* My rides: tight cards, small headings. */
   .og-empty-state,
-  .og-library__state,
-  .og-settings__section {
+  .og-library__state {
     padding: 14px;
     border: 1px solid var(--og-hairline);
     border-radius: var(--og-radius-object);
@@ -737,27 +707,18 @@ html .og-ride {
     box-shadow: none;
   }
 
-  .og-empty-state h2,
-  .og-settings__section h2 {
+  .og-empty-state h2 {
     font-size: var(--og-text-body);
   }
 
-  .og-empty-state p,
-  .og-settings__section-copy,
-  .og-settings__hint {
+  .og-empty-state p {
     font-size: var(--og-text-meta);
   }
 
+  /* Settings keeps one column of grouped rows on a phone too; the rows already
+     meet the 16px gutter (small-screen design system v2 §6). */
   .og-settings__layout {
-    gap: 10px;
-  }
-
-  .og-settings__bike {
-    padding: 12px;
-  }
-
-  .og-settings__bike-details {
-    gap: 4px;
+    gap: var(--og-space-5);
   }
 }
 
@@ -839,39 +800,41 @@ html .og-ride {
 }
 
 /* --------------------------------------------------------------------------
-   Settings → Day / Night: a three-way segmented switch.
+   Settings → a choice in a row (Day / Night, Ride screen): a segmented track
+   whose chosen option is the primary green. The fill lives here with the other
+   theme-owned pills, because --og-go differs per theme.
    -------------------------------------------------------------------------- */
 
-.og-appearance {
+.og-settings__segmented {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 4px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
   border: 1px solid var(--og-hairline);
-  border-radius: 16px;
+  border-radius: var(--og-radius-control);
   background: var(--og-well);
 }
 
-.og-appearance__choice {
+.og-settings__segment {
   min-height: 44px;
+  padding: 0 var(--og-space-2);
   border: 0;
-  border-radius: 12px;
+  border-radius: calc(var(--og-radius-control) - 2px);
   background: transparent;
   color: var(--og-slate-text);
   font: inherit;
-  font-weight: 700;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.og-appearance__choice[aria-checked="true"] {
+.og-settings__segment[aria-checked="true"] {
   background: var(--og-go);
   color: var(--og-on-fill);
   box-shadow: var(--og-shadow-1);
-}
-
-.og-appearance__choice:focus-visible {
-  outline: var(--og-focus-width, 2px) solid var(--og-focus-ring);
-  outline-offset: 2px;
 }
 
 /* --------------------------------------------------------------------------
@@ -1661,9 +1624,7 @@ html .og-ride {
 }
 
 /* Section eyebrows ("OPENGRAVEL / BRING A RIDE", "GARAGE") repeat the title. */
-.og-settings__eyebrow,
-.og-library__imports .og-eyebrow,
-.og-settings__header .og-eyebrow {
+.og-library__imports .og-eyebrow {
   display: none;
 }
 
@@ -1673,29 +1634,11 @@ html .og-ride {
   color: var(--og-slate-text);
 }
 
-/* Settings: one readable column on a wide screen, not a ragged masonry. */
+/* Settings: one readable column of grouped rows on a wide screen too. */
 @media (min-width: 761px) {
   .og-settings__layout.og-settings__layout {
-    grid-template-columns: minmax(0, 1fr);
     max-width: 720px;
   }
-}
-
-/* A bike's rules are tags, not full-width bars. */
-.og-settings .og-settings__bike-details.og-settings__bike-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.og-settings .og-settings__bike-details span {
-  width: auto;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--og-well);
-  color: var(--og-ink);
-  font-size: var(--og-text-caption);
-  font-weight: 600;
 }
 
 /* My rides: the type filters are chips on one row; the chosen one is green. */
@@ -2151,7 +2094,7 @@ html .og-ride {
 .og-feedback textarea,
 .og-feedback input {
   width: 100%;
-  min-height: 46px;
+  min-height: 48px;
   padding: 10px 12px;
   border: 1px solid var(--og-hairline-strong);
   border-radius: 14px;
@@ -2869,19 +2812,6 @@ html .og-ride {
 }
 .og-map .maplibregl-ctrl-attrib.maplibregl-compact-show a { color: var(--og-ink); }
 
-/* Settings: developer-only setup behind a quiet disclosure. */
-.og-settings__advanced { margin-top: 12px; border-top: 1px solid var(--og-hairline); padding-top: 8px; }
-.og-settings__advanced > summary {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-  color: var(--og-slate-text);
-  cursor: pointer;
-}
-.og-settings__advanced > summary:focus-visible { outline: var(--og-focus-width, 3px) solid var(--og-focus-ring); outline-offset: 2px; }
-.og-settings__advanced[open] > summary { color: var(--og-ink); }
 /* Cards never outgrow a 400 px sheet: the text column may shrink, actions wrap. */
 .og-opp { grid-template-columns: 58px minmax(0, 1fr); min-width: 0; max-width: 100%; box-sizing: border-box; }
 .og-opp__foot { flex-wrap: wrap; row-gap: 6px; }

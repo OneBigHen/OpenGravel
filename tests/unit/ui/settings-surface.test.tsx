@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { addBike, createGarage } from "@/application/garage/garage-model";
 import type { InstalledOfflineRegion, OfflineRegionOffer, OfflineRegionsPort } from "@/application/offline/offline-regions";
@@ -38,7 +38,9 @@ describe("settings surface", () => {
     const onExport = vi.fn();
     const onDelete = vi.fn();
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} onExport={onExport} onDeleteAll={onDelete} />);
-    expect(screen.getByTestId("settings-units")).toHaveTextContent("Distance: miles");
+    const units = screen.getByTestId("settings-units");
+    expect(units).toHaveTextContent("Distance");
+    expect(units).toHaveTextContent("miles");
     // Miles are the only unit, so the page states the fact instead of offering dead controls.
     expect(screen.queryByLabelText("Distance units")).not.toBeInTheDocument();
     expect(screen.getByText(/Rides stay on this device\. Export includes your garage and preferences\./)).toBeInTheDocument();
@@ -89,7 +91,12 @@ describe("settings surface", () => {
     });
     render(<SettingsSurface garage={garage} onGarageChange={onGarageChange} />);
     expect(screen.getByText("New rides use this bike")).toBeInTheDocument();
-    expect(screen.getByText(/Unknown surface: avoid if possible/)).toBeInTheDocument();
+    // The row states the bike at a glance; its routing rules are the editor's
+    // fields, so the stored preference is still checked on the page.
+    const trailRow = screen.getByRole("button", { name: /Trail bike/ });
+    expect(trailRow).toHaveTextContent("Touring · 150 mi range");
+    fireEvent.click(trailRow);
+    expect(screen.getByLabelText("Unknown surface")).toHaveValue("avoid-when-possible");
     fireEvent.click(screen.getByRole("button", { name: "Use for new rides" }));
     expect(onGarageChange).toHaveBeenCalledWith({ ...garage, activeBikeId: "bike_trail" });
   });
@@ -113,6 +120,25 @@ describe("settings surface", () => {
     expect(screen.queryByRole("button", { name: "Confirm delete" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete all data" })).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Deleted this device's OpenGravel data");
+  });
+
+  it("is a list of labelled groups, one row container each", () => {
+    render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} onExport={vi.fn()} onDeleteAll={vi.fn()} />);
+    // Small uppercase group labels (design system v2 §6), not a card per setting.
+    const labels = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+    expect(labels).toEqual(expect.arrayContaining(["Display", "Map", "Your bikes", "Home", "Usage data", "Feedback", "Data"]));
+    for (const heading of screen.getAllByRole("heading", { level: 2 })) {
+      expect(heading).toHaveClass("og-settings__group-label");
+      expect(heading.closest("section")?.querySelectorAll(".og-settings__card")).toHaveLength(1);
+    }
+    // Day / Night is three choices inside its own row.
+    const dayNight = screen.getByRole("radiogroup", { name: "Day / Night" });
+    expect(within(dayNight).getAllByRole("radio")).toHaveLength(3);
+    expect(dayNight.closest(".og-settings__row")).not.toBeNull();
+    // "Add bike" closes the bike group's rows.
+    const bikes = screen.getByRole("heading", { name: "Your bikes" }).closest("section");
+    const rows = [...(bikes?.querySelectorAll(".og-settings__card > *") ?? [])];
+    expect(rows.at(-1)).toHaveTextContent("Add bike");
   });
 
   it("re-reads offline device storage after a wipe", async () => {
