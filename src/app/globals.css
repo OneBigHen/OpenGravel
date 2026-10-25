@@ -14365,4 +14365,12 @@ a.og-secondary {
   .og-library__actions .og-secondary {
     min-height: 48px;
   }
+
+  /* The action row still spans the card and may wrap at 320px. */
+  .og-library__actions {
+    justify-content: flex-start;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
 }
