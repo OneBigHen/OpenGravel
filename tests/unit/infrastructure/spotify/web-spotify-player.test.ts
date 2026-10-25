@@ -43,7 +43,7 @@ describe("web Spotify player", () => {
     const player = createWebSpotifyPlayer();
     await new Promise((resolve) => window.setTimeout(resolve, 0));
     await player.togglePlayPause();
-    expect(player.snapshot()).toMatchObject({ connection: "error", errorMessage: "Spotify playback is restricted. Check Premium and this app's tester access in Spotify setup." });
+    expect(player.snapshot()).toMatchObject({ connection: "error", errorMessage: "Spotify Premium is needed for playback." });
     expect(JSON.stringify(player.snapshot())).not.toContain("token");
     player.dispose();
   });

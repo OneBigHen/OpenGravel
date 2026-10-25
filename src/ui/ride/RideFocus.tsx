@@ -98,7 +98,7 @@ import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
 import { useRideInterest } from "@/ui/ride/useRideInterest";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
-import { RideSpotifyPlayer } from "@/ui/ride/RideSpotifyPlayer";
+import { RideMusicEntry } from "@/ui/ride/RideMusicEntry";
 import { RideSafetyOverlay, RideSafetyPanel } from "@/ui/ride/RideSafetyPanel";
 import type { RideSafety } from "@/application/safety/ride-safety";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
@@ -1194,7 +1194,7 @@ export function RideFocus({
           </div>
         )}
 
-        {spotifyPlayer === undefined ? null : <RideSpotifyPlayer player={spotifyPlayer} />}
+        {spotifyPlayer === undefined ? null : <RideMusicEntry player={spotifyPlayer} />}
 
         {/*
           `Stop ride` is two steps (8 §11): Finish / Discard / Keep riding, in

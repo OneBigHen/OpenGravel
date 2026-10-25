@@ -136,6 +136,31 @@ describe("wake lock (08 §8)", () => {
     environment.dispose();
   });
 
+  it("tries again on return when the first request failed, without throwing", async () => {
+    const documentLike = visibilityDocument();
+    let attempts = 0;
+    const environment = createBrowserRideEnvironment({
+      browser: {
+        wakeLock: {
+          request: async () => {
+            attempts += 1;
+            if (attempts === 1) throw new Error("NotAllowedError");
+            return sentinel() as unknown as WakeLockSentinel;
+          },
+        } as unknown as WakeLock,
+      },
+      document: documentLike,
+    });
+    environment.setRideActive(true);
+    await settle();
+    expect(environment.snapshot().wakeLock).toBe("failed");
+    documentLike.setHidden(true);
+    documentLike.setHidden(false);
+    await settle();
+    expect(environment.snapshot().wakeLock).toBe("active");
+    environment.dispose();
+  });
+
   it("re-acquires the lock when the rider comes back to the tab", async () => {
     const documentLike = visibilityDocument();
     let acquisitions = 0;
