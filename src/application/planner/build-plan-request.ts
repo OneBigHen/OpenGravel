@@ -56,6 +56,7 @@ import {
   MAX_PROVIDER_SPAN_CORRIDOR_POINTS,
   type ProviderSketch,
 } from "./route-provider";
+import { loopHeadingDegrees } from "./loop-heading";
 import { buildSketchCorridor } from "./sketch-corridor";
 import {
   resampleSketchCorridor,
@@ -229,17 +230,23 @@ export function defaultLoopToleranceMinutes(targetMinutes: number): number {
   return Math.max(15, Math.round(targetMinutes * 0.15));
 }
 
-function loopDiscovery(time: RideIntent["time"]): {
+function loopDiscovery(intent: RideIntent): {
   readonly targetMinutes: number;
   readonly toleranceMinutes: number;
+  readonly headingDegrees?: number;
 } {
-  if (time.kind === "budget") {
-    return { targetMinutes: time.targetMinutes, toleranceMinutes: time.toleranceMinutes };
-  }
-  return {
-    targetMinutes: DEFAULT_LOOP_MINUTES,
-    toleranceMinutes: defaultLoopToleranceMinutes(DEFAULT_LOOP_MINUTES),
-  };
+  const time = intent.time;
+  const heading = loopHeadingDegrees(intent.loopHeading);
+  const timebox =
+    time.kind === "budget"
+      ? { targetMinutes: time.targetMinutes, toleranceMinutes: time.toleranceMinutes }
+      : {
+          targetMinutes: DEFAULT_LOOP_MINUTES,
+          toleranceMinutes: defaultLoopToleranceMinutes(DEFAULT_LOOP_MINUTES),
+        };
+  // "Any way" is the default and sends no heading at all, so a loop authored
+  // before this preference existed asks for exactly the same round trip.
+  return heading === null ? timebox : { ...timebox, headingDegrees: heading };
 }
 
 /**
@@ -445,7 +452,7 @@ export async function buildProviderRequest(
     roadSpans,
     ...(sketchResolution.sketch === null ? {} : { sketch: sketchResolution.sketch }),
     ...(wantsLoopDiscovery(intent, origin, destination)
-      ? { discovery: loopDiscovery(intent.time) }
+      ? { discovery: loopDiscovery(intent) }
       : {}),
     options,
   });
@@ -463,7 +470,7 @@ export async function buildProviderRequest(
  * ---------------------------------------------------------------------- */
 
 /** Prefix of every planning identity; a new canonical form bumps the number. */
-export const IDENTITY_PREFIX = "id2:";
+export const IDENTITY_PREFIX = "id3:";
 
 /** Coordinate resolution: 7 decimals is ~1 cm, below any meaningful routing. */
 const COORDINATE_DECIMALS = 7;
@@ -577,7 +584,9 @@ function canonicalIntentStructure(
   versions: PlanRequestVersions,
 ): Readonly<Record<string, unknown>> {
   return {
-    identityVersion: 2,
+    // 3: the loop's heading joined the route-affecting set (a loop asked for
+    // north is a different question from the same loop asked for "any way").
+    identityVersion: 3,
     shape: intent.shape,
     start: canonicalPoint(intent.start),
     finish: canonicalPoint(intent.finish),
@@ -587,6 +596,7 @@ function canonicalIntentStructure(
     departure: canonicalDeparture(intent.departure),
     roadCharacter: intent.roadCharacter,
     noveltyPreference: intent.noveltyPreference ?? "balanced",
+    loopHeading: intent.loopHeading ?? "any",
     surface: canonicalSurface(intent.surface),
     terrain: intent.terrain.level,
     traffic: intent.traffic,

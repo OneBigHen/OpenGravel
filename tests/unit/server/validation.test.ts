@@ -81,6 +81,57 @@ describe("validateRoutePlanRequestBody — bounds and shapes", () => {
     ]);
   });
 
+  it("accepts a loop heading as a bearing and defaults it away when absent", () => {
+    const withHeading = validBody();
+    const withHeadingRequest = withHeading["request"] as Record<string, unknown>;
+    withHeadingRequest["destination"] = withHeadingRequest["origin"];
+    withHeadingRequest["discovery"] = {
+      targetMinutes: 120,
+      toleranceMinutes: 18,
+      headingDegrees: 270,
+    };
+
+    const parsed = parseRoutePlanRequestBody(withHeading);
+
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.request.discovery).toEqual({
+        targetMinutes: 120,
+        toleranceMinutes: 18,
+        headingDegrees: 270,
+      });
+    }
+  });
+
+  it("rejects a loop heading outside one turn of the compass", () => {
+    const body = validBody();
+    const request = body["request"] as Record<string, unknown>;
+    request["destination"] = request["origin"];
+    request["discovery"] = {
+      targetMinutes: 120,
+      toleranceMinutes: 18,
+      headingDegrees: 361,
+    };
+
+    const issues = validateRoutePlanRequestBody(body);
+
+    expect(issues.map((entry) => entry.path)).toEqual([
+      "request.discovery.headingDegrees",
+    ]);
+    expect(issues[0]?.code).toBe("invalid-value");
+  });
+
+  it("rejects a non-numeric loop heading", () => {
+    const body = validBody();
+    const request = body["request"] as Record<string, unknown>;
+    request["destination"] = request["origin"];
+    request["discovery"] = { targetMinutes: 120, toleranceMinutes: 18, headingDegrees: "north" };
+
+    expect(validateRoutePlanRequestBody(body).map((entry) => entry.path)).toContain(
+      "request.discovery.headingDegrees",
+    );
+  });
+
   it("rejects discovery metadata on a point-to-point request", () => {
     const body = validBody();
     const request = body["request"] as Record<string, unknown>;

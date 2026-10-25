@@ -55,6 +55,10 @@ import type {
 } from "@/domain/route/types";
 import { deepFreeze } from "@/domain/util/freeze";
 import { sketchStraySections } from "@/domain/sketch/snap";
+import {
+  loopHeadingPreferredIndexes,
+  type LoopHeadingPreference,
+} from "./loop-heading";
 import { formatDistance } from "./measurements";
 import type { ProviderCandidate } from "./route-provider";
 import {
@@ -183,6 +187,14 @@ export interface CandidatePipelineInput {
    * normal RideIntent time budget cannot silently change standard planning.
    */
   readonly discoveryTimebox?: DiscoveryTimebox;
+  /**
+   * Discovery-only selection preference: which way a loop heads from its start.
+   * Kept outside `PipelineIntent` for the same reason as the timebox — it
+   * ranks candidates rather than changing what a normal ride means — and it
+   * never removes one: when nothing heads the asked-for way, the closest loops
+   * are preferred instead of the plan failing.
+   */
+  readonly loopHeading?: LoopHeadingPreference;
   /** Optional measured recommendation value; canonical evidence and RouteScore stay intact. */
   readonly candidateValueFor?: (candidate: PipelineCandidate, source: ProviderCandidate, fastestSeconds: number, reference: ProviderCandidate) => number | null;
   /** How far past the fastest eligible ETA a candidate may still be recommended (default 1.35). */
@@ -662,9 +674,11 @@ export function runCandidatePipeline(
     candidates,
     input.discoveryTimebox,
   );
+  const headingPreferred = loopHeadingPreferredIndexes(candidates, input.loopHeading);
   const budgetPreferred = input.recommendationDetourCap === undefined || input.discoveryTimebox !== undefined ? null :
     new Set(candidates.flatMap((candidate, index) => candidate.durationSeconds <= recommendationBaseline * input.recommendationDetourCap! ? [index] : []));
-  const selectionPreferred = timeboxPreferred ?? budgetPreferred;
+  const selectionPreferred =
+    intersectPreferred(headingPreferred, timeboxPreferred) ?? budgetPreferred;
   const maximumScore = candidates.reduce(
     (maximum, candidate) => Math.max(maximum, rankingValue(candidates.indexOf(candidate))),
     0,
@@ -756,9 +770,11 @@ export function runCandidatePipeline(
   // A timeboxed loop's best ride fits the ride time (OGV-D-262): a shorter,
   // higher-scoring loop is still a choice, but never the recommendation.
   const keptInBox = timeboxPreferredIndexes(kept, input.discoveryTimebox);
+  const keptOnHeading = loopHeadingPreferredIndexes(kept, input.loopHeading);
+  const keptPreferred = intersectPreferred(keptOnHeading, keptInBox);
   const recommendationPick = hasRecommendation
     ? kept.map((candidate, index) => ({ index, value: boundedRecommendation(candidates.indexOf(candidate)) }))
-      .filter(entry => entry.value !== null && (keptInBox === null || keptInBox.has(entry.index)))
+      .filter(entry => entry.value !== null && (keptPreferred === null || keptPreferred.has(entry.index)))
       .sort((left, right) => (right.value! - left.value!) || kept[left.index]!.durationSeconds - kept[right.index]!.durationSeconds)[0]?.index
     : undefined;
   const roles = assignRoles(
@@ -775,7 +791,9 @@ export function runCandidatePipeline(
       // canonical scores choose Best Ride. Discovery has its own timebox.
       if (input.recommendationDetourCap !== undefined && input.discoveryTimebox === undefined &&
         candidate.durationSeconds > recommendationBaseline * input.recommendationDetourCap) return false;
-      return recommendationPick === undefined ? keptInBox === null || keptInBox.has(candidate.id) : candidate.id === recommendationPick;
+      return recommendationPick === undefined
+        ? keptPreferred === null || keptPreferred.has(candidate.id)
+        : candidate.id === recommendationPick;
     },
   );
 
@@ -822,6 +840,23 @@ function selectTimeboxedCandidate(
     return left.index - right.index;
   });
   return pool[0]?.index ?? fallback;
+}
+
+/**
+ * The indexes both preferences keep, when there are any.
+ *
+ * `null` on one side means that preference was not asked for, so the other one
+ * stands alone. When the two disagree, the timebox wins: the ride time is the
+ * rider's primary ask and the heading is the wish on top of it.
+ */
+export function intersectPreferred(
+  heading: ReadonlySet<number> | null,
+  timebox: ReadonlySet<number> | null,
+): ReadonlySet<number> | null {
+  if (heading === null) return timebox;
+  if (timebox === null) return heading;
+  const both = new Set([...heading].filter((index) => timebox.has(index)));
+  return both.size > 0 ? both : timebox;
 }
 
 /**

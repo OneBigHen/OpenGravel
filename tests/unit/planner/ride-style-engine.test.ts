@@ -130,6 +130,30 @@ describe("loop", () => {
     expect(request.discovery).toEqual({ targetMinutes: 240, toleranceMinutes: 36 });
   });
 
+  it('"Any way" sends no heading, so an unasked loop is unchanged', async () => {
+    const request = await requestFor(
+      intent({ shape: "loop", finish: null, loopHeading: "any" }),
+    );
+    expect(request.discovery).toEqual({
+      targetMinutes: DEFAULT_LOOP_MINUTES,
+      toleranceMinutes: defaultLoopToleranceMinutes(DEFAULT_LOOP_MINUTES),
+    });
+  });
+
+  it("a chosen direction is asked of the engine as a bearing", async () => {
+    const north = await requestFor(intent({ shape: "loop", finish: null, loopHeading: "north" }));
+    const west = await requestFor(intent({ shape: "loop", finish: null, loopHeading: "west" }));
+    expect(north.discovery?.headingDegrees).toBe(0);
+    expect(west.discovery?.headingDegrees).toBe(270);
+    // The bearing rides on the timebox; it never replaces the ride time.
+    expect(north.discovery?.targetMinutes).toBe(DEFAULT_LOOP_MINUTES);
+  });
+
+  it("a point-to-point ride has no loop heading to send", async () => {
+    const request = await requestFor(intent({ loopHeading: "east" }));
+    expect(request.discovery).toBeUndefined();
+  });
+
   it("a loop through a stop without a ride time stays a plain round trip", async () => {
     const request = await requestFor(
       intent({
@@ -169,6 +193,37 @@ describe("the server contract", () => {
 
   it("rejects an unknown surface preference", () => {
     const parsed = parseRoutePlanRequestBody(body({ surfacePreference: "cobbles" }));
+    expect(parsed.ok).toBe(false);
+  });
+
+  /** The same body with a round-trip request and a discovery timebox. */
+  function loopBody(discovery: Record<string, unknown>) {
+    const base = body({});
+    const request = base.request as Record<string, unknown>;
+    return {
+      ...base,
+      request: { ...request, origin: START, destination: START, discovery },
+    };
+  }
+
+  it("carries a loop's heading through validation as a bearing", () => {
+    const parsed = parseRoutePlanRequestBody(
+      loopBody({ targetMinutes: 120, toleranceMinutes: 18, headingDegrees: 270 }),
+    );
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.request.discovery).toEqual({
+        targetMinutes: 120,
+        toleranceMinutes: 18,
+        headingDegrees: 270,
+      });
+    }
+  });
+
+  it("rejects a heading the engine cannot read", () => {
+    const parsed = parseRoutePlanRequestBody(
+      loopBody({ targetMinutes: 120, toleranceMinutes: 18, headingDegrees: 400 }),
+    );
     expect(parsed.ok).toBe(false);
   });
 });

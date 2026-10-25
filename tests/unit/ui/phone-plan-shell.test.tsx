@@ -111,6 +111,7 @@ function rideStyle(overrides: Partial<RideStyleControlsModel["view"]> = {}): {
     setBike: vi.fn(),
     setShape: vi.fn(),
     setLoopMinutes: vi.fn(),
+    setLoopHeading: vi.fn(),
     setRoadCharacter: vi.fn(),
     setNoveltyPreference: vi.fn(),
     setTraffic: vi.fn(),
@@ -122,6 +123,7 @@ function rideStyle(overrides: Partial<RideStyleControlsModel["view"]> = {}): {
   const view = {
     shape: "destination" as const,
     loopMinutes: 120,
+    loopHeading: "any" as const,
     roadCharacter: "balanced" as const,
     noveltyPreference: "balanced" as const,
     surface: "mixed" as const,

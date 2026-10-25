@@ -6,6 +6,7 @@ import type { RouteEvidence } from "@/domain/route/types";
 import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/ride-formula";
 import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
+import type { LoopHeadingPreference } from "@/application/planner/loop-heading";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
 import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
@@ -879,6 +880,15 @@ async function planRideAttempt(
     return verdict;
   };
   const catalogueEvidence = memoizedKnownRoadEvidence(knownRoads);
+  // "Which way?" is a preference on a loop's answer: the engine is asked for
+  // that bearing, and the returned line is ranked against it here. Measuring
+  // from the start the loop actually uses (the request's origin, not the
+  // intent's start, which a sketch may have moved) keeps the two in step.
+  const loopDiscovery = parsed.value.request.discovery;
+  const loopHeading: LoopHeadingPreference | undefined =
+    loopDiscovery?.headingDegrees === undefined
+      ? undefined
+      : { origin: parsed.value.request.origin, headingDegrees: loopDiscovery.headingDegrees };
 
   const formulaFor = (evidence: RouteEvidence, source: ProviderCandidate, fastestSeconds: number) => {
     const request = parsed.value.request;
@@ -937,9 +947,10 @@ async function planRideAttempt(
     },
     // A loop's ride time is its budget (OGV-D-262): the discovery request is
     // only ever sent for a loop, so this never touches point-to-point planning.
-    ...(parsed.value.request.discovery === undefined
+    ...(loopDiscovery === undefined
       ? {}
-      : { discoveryTimebox: parsed.value.request.discovery }),
+      : { discoveryTimebox: loopDiscovery }),
+    ...(loopHeading === undefined ? {} : { loopHeading }),
     constraintContext: constraintContextFromRequest(parsed.value.request),
     // Each candidate is measured against its own returned line: a span verdict
     // belongs to the route that was actually produced (06 §8).

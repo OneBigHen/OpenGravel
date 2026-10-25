@@ -585,6 +585,22 @@ function discoveryIssues(
       issue("invalid-value", "request.discovery.toleranceMinutes", "must be between 0 and 480 minutes"),
     );
   }
+  // "Which way?" is one bearing at the start, in the same degrees-clockwise-of-
+  // north the engine reads. Absent means "any way", which is the default and
+  // sends nothing.
+  const headingDegrees = value["headingDegrees"];
+  if (
+    headingDegrees !== undefined &&
+    (!isFiniteNumber(headingDegrees) || headingDegrees < 0 || headingDegrees > 360)
+  ) {
+    issues.push(
+      issue(
+        "invalid-value",
+        "request.discovery.headingDegrees",
+        "must be a bearing between 0 and 360 degrees",
+      ),
+    );
+  }
   const origin = request["origin"];
   const destination = request["destination"];
   const sameOrigin =
@@ -844,6 +860,9 @@ export function parseRoutePlanRequestBody(
           discovery: {
             targetMinutes: discoverySource["targetMinutes"] as number,
             toleranceMinutes: discoverySource["toleranceMinutes"] as number,
+            ...(discoverySource["headingDegrees"] === undefined
+              ? {}
+              : { headingDegrees: discoverySource["headingDegrees"] as number }),
           },
         }
       : {}),

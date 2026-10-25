@@ -289,6 +289,12 @@ export function createGraphHopperProvider(
                   targetMinutes: request.discovery.targetMinutes,
                   ...(roundTripSeed === undefined ? {} : { seed: roundTripSeed }),
                   ...(distanceScale === undefined ? {} : { distanceScale }),
+                  // "Which way?" at the start of the loop. The engine biases
+                  // the round trip toward this bearing; the returned line is
+                  // measured against it afterwards (plan-service).
+                  ...(request.discovery.headingDegrees === undefined
+                    ? {}
+                    : { heading: request.discovery.headingDegrees }),
                 },
               }),
         });
