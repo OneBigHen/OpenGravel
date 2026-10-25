@@ -1516,6 +1516,30 @@ describe("stub pipeline", () => {
     expect(seenRoleInput.identity.planningGeneration).toBe(1);
   });
 
+  it("lets the full answer's best ride replace the fast first route's", async () => {
+    const first = fakeProvider("first");
+    const full = fakeProvider("full");
+    const controller = buildController({ providers: [first.provider, full.provider], now: FIXED_CLOCK });
+
+    void begin(controller, 1);
+    await flush();
+    first.settle(0, [rawCandidate("first", { providerMetadata: { fingerprint: "fp-quick", bestRide: true } })]);
+    await flush();
+    const quick = controller.snapshot().committedBundle;
+    expect(quick?.selectedRouteId).toBe(quick?.candidates[0]?.id);
+
+    full.settle(0, [
+      rawCandidate("full", { providerMetadata: { fingerprint: "fp-quick" } }),
+      rawCandidate("full", { profile: "motorcycle_adventure", providerMetadata: { fingerprint: "fp-dirt", bestRide: true } }),
+    ]);
+    await flush();
+    const bundle = controller.snapshot().committedBundle;
+    if (bundle === null) throw new Error("the test expected a committed bundle");
+    const dirt = bundle.candidates.find((candidate) => candidate.fingerprint === "fp-dirt");
+    expect(bundle.roles["best-ride"]).toBe(dirt?.id);
+    expect(bundle.selectedRouteId).toBe(dirt?.id);
+  });
+
   it("stores candidate geometry and marks eligibility and score as placeholders", async () => {
     const alpha = fakeProvider("alpha");
     const store = createMemoryGeometryStore();

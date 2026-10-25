@@ -37,6 +37,35 @@ describe("route-free ride entry points", () => {
   });
 });
 
+describe("a ride that was never ended", () => {
+  it("offers to open it instead of a dead-end error", async () => {
+    const freeRide = vi.fn(async () => ({
+      outcome: "rejected" as const,
+      sessionId: "session_old" as never,
+      message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
+    }));
+    render(
+      <RideActions
+        document={createRideDocument({ now: "2026-09-24T12:00:00.000Z" })}
+        libraryService={undefined}
+        shareService={undefined}
+        route={null}
+        rideActions={{
+          start: vi.fn(async () => ({ outcome: "rejected" as const, sessionId: null, message: "not used" })),
+          record: vi.fn(async () => ({ outcome: "ready" as const })),
+          freeRide,
+        }}
+        start={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Free Ride" }));
+    expect(await screen.findByTestId("just-ride-unfinished")).toHaveTextContent("never ended");
+    expect(screen.getByRole("link", { name: "Open that ride" })).toHaveAttribute("href", "/ride");
+    expect(screen.queryByTestId("just-ride-error")).toBeNull();
+  });
+});
+
 describe("exporting a planned ride from Ride actions", () => {
   const geometry = [
     { lon: -75, lat: 40 },

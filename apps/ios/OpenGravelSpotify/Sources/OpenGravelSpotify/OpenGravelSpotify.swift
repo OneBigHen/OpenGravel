@@ -175,6 +175,28 @@ public struct OpenGravelSpotifyLifecycle: Equatable, Sendable {
     }
 }
 
+/// Reads Spotify's authorization reply. Spotify reports a refused sign-in by
+/// opening the redirect URL with `error=…`; the SDK does not always turn that
+/// into a delegate failure, which left the player stuck on "Connecting…".
+public enum OpenGravelSpotifyCallback {
+    /// The rider-facing message for an error reply, or nil for any other URL.
+    public static func errorMessage(from url: URL) -> String? {
+        guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+              let code = items.first(where: { $0.name == "error" })?.value,
+              !code.isEmpty
+        else { return nil }
+        switch code {
+        case "access_denied", "user_cancelled", "cancelled":
+            return "Spotify sign-in was cancelled. Tap Connect to try again."
+        default:
+            return "Spotify turned down the connection (\(code)). Tap Connect to try again."
+        }
+    }
+
+    /// How long "Connecting…" may last while OpenGravel is on screen.
+    public static let connectingTimeout: Duration = .seconds(30)
+}
+
 /// A small main-thread App Remote controller. Spotify remains an optional
 /// companion app: this object never owns navigation, recording, or ride state.
 @MainActor
@@ -190,6 +212,7 @@ public final class OpenGravelSpotifyRemote: NSObject {
     private var lifecycle: OpenGravelSpotifyLifecycle
     private var lastTrackURI: String?
     private var activeAuthorizationAttemptID: UInt?
+    private var connectingWatchdog: Task<Void, Never>?
     private static let pendingAuthorizationKey = "OpenGravelSpotify.pendingAuthorization"
 
     public init(configuration: OpenGravelSpotifyConfiguration?) {
@@ -234,6 +257,7 @@ public final class OpenGravelSpotifyRemote: NSObject {
             return
         }
         publish(OpenGravelSpotifySnapshot(connection: .connecting))
+        armConnectingWatchdog()
         if let session = manager.session, !session.isExpired {
             appRemote.connectionParameters.accessToken = session.accessToken
             appRemote.connect()
@@ -255,6 +279,8 @@ public final class OpenGravelSpotifyRemote: NSObject {
     }
 
     public func disconnect() {
+        connectingWatchdog?.cancel()
+        connectingWatchdog = nil
         lifecycle.disconnect()
         activeAuthorizationAttemptID = nil
         persistAuthorizationPending()
@@ -297,6 +323,10 @@ public final class OpenGravelSpotifyRemote: NSObject {
     public func handleOpenURL(_ url: URL) -> Bool {
         guard let sessionManager else { return false }
         guard lifecycle.acceptAuthorizationCallback() else { return false }
+        if let message = OpenGravelSpotifyCallback.errorMessage(from: url) {
+            failConnection(message)
+            return true
+        }
         return sessionManager.application(UIApplication.shared, open: url, options: [:])
     }
 
@@ -312,6 +342,36 @@ public final class OpenGravelSpotifyRemote: NSObject {
     public func sceneDidBecomeActive() {
         guard lifecycle.wantsConnection else { return }
         connect()
+        // The countdown runs only while OpenGravel is on screen, so time spent
+        // on Spotify's consent screen never counts against it. It also clears a
+        // sign-in left pending by an earlier launch.
+        if snapshot.connection == .connecting { armConnectingWatchdog() }
+    }
+
+    private func armConnectingWatchdog() {
+        connectingWatchdog?.cancel()
+        let attempt = lifecycle.attemptID
+        connectingWatchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: OpenGravelSpotifyCallback.connectingTimeout)
+            guard !Task.isCancelled, let self,
+                  self.lifecycle.attemptID == attempt,
+                  self.snapshot.connection == .connecting
+            else { return }
+            self.failConnection("Spotify didn't answer. Open Spotify once, then tap Connect.")
+        }
+    }
+
+    /// Ends the current attempt so Connect starts a fresh one.
+    private func failConnection(_ message: String) {
+        connectingWatchdog?.cancel()
+        connectingWatchdog = nil
+        _ = lifecycle.connectionFailed()
+        activeAuthorizationAttemptID = nil
+        appRemote?.disconnect()
+        appRemote = nil
+        resetSessionManager()
+        persistAuthorizationPending()
+        publish(OpenGravelSpotifySnapshot(connection: .error, errorMessage: message))
     }
 
     private func makeAppRemote() -> SPTAppRemote? {

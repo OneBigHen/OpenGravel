@@ -420,6 +420,14 @@ describe("contrast — filled controls keep their text at 4.5:1 (12 §15)", () =
         background: declaredVar(exactRuleBody(".og-places-along__add"), "background") ?? "",
         rule: "Places along the route action text on spruce",
       },
+      {
+        // The crash check's glove-sized primary control: Paper on the Success
+        // fill, readable at arm's length before any other control on the screen.
+        selector: ".og-ride-crash__ok",
+        text: declaredVar(exactRuleBody(".og-ride-crash__ok"), "color") ?? "",
+        background: declaredVar(exactRuleBody(".og-ride-crash__ok"), "background") ?? "",
+        rule: "12 §15 text-on-fill; the crash check's I'm OK",
+      },
     ];
     const pairFailures: string[] = [];
     for (const pair of pairs) {

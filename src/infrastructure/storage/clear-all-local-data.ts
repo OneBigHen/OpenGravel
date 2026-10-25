@@ -14,6 +14,7 @@ import { HOME_LOCATION_STORAGE_KEY } from "@/infrastructure/storage/home-locatio
 import { RIDER_SETTINGS_STORAGE_KEY } from "@/infrastructure/storage/rider-settings-storage";
 import { FREE_RIDE_TELEMETRY_STORAGE_KEY } from "@/infrastructure/storage/free-ride-telemetry-storage";
 import { invalidatePlaceMemoryCaches, PLACE_MEMORY_STORAGE_KEY } from "@/infrastructure/storage/place-memory-storage";
+import { LIVE_RIDER_NAME_STORAGE_KEY, LIVE_SESSION_STORAGE_KEY } from "@/application/live/storage-keys";
 
 export const LOCAL_DATA_STORAGE_KEYS = [
   GARAGE_STORAGE_KEY,
@@ -40,6 +41,9 @@ export const LOCAL_DATA_STORAGE_KEYS = [
   SPOTIFY_CLIENT_ID_STORAGE_KEY,
   VOICE_MUTED_STORAGE_KEY,
   HIDDEN_ROUTES_STORAGE_KEY,
+  // A live link being shared, with its write secret, and the name on it.
+  LIVE_SESSION_STORAGE_KEY,
+  LIVE_RIDER_NAME_STORAGE_KEY,
 ] as const;
 
 export interface LocalDataStorage {

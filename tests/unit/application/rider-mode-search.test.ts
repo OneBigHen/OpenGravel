@@ -139,3 +139,29 @@ describe("dirt loops", () => {
     expect(result.candidate).toBeNull();
   });
 });
+
+it("Mixed loops seek proportionate dirt without making point-to-point Mixed a dirt search", async () => {
+  const paved = candidate(120 * 60, 0);
+  const dirt = candidate(120 * 60, 0.3);
+  const calls = vi.fn(async () => ({ candidates: [] }));
+  const result = await searchRiderEnvelope({ request: { ...request, discovery: { targetMinutes: 120, toleranceMinutes: 18 }, options: { ...request.options, surfacePreference: "mixed", targetUnpavedShare: undefined } }, candidates: [paved, dirt], incumbent: paved, provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: false }), candidates: calls }, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+  expect(result.candidate?.roadSummary?.surfaceByRoadClassMeters["gravel|track"]).toBe(36000);
+  expect(calls).not.toHaveBeenCalled();
+  const pointToPoint = await searchRiderEnvelope({ request: { ...request, options: { ...request.options, surfacePreference: "mixed", targetUnpavedShare: undefined } }, candidates: [paved, dirt], incumbent: paved, provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: false }), candidates: calls }, maxCalls: 3, deadlineMs: 1000, signal: new AbortController().signal });
+  expect(pointToPoint.candidate).toBeNull();
+  expect(calls).not.toHaveBeenCalled();
+});
+
+it("Mixed loops stop rewarding additional dirt once their target is met", async () => {
+  const incumbent = candidate(120 * 60, 0.25);
+  const excessive = candidate(120 * 60, 0.6);
+  const result = await searchRiderEnvelope({ request: { ...request, discovery: { targetMinutes: 120, toleranceMinutes: 18 }, options: { ...request.options, surfacePreference: "mixed", targetUnpavedShare: undefined } }, candidates: [incumbent, excessive], incumbent, provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: false }), candidates: vi.fn(async () => ({ candidates: [] })) }, maxCalls: 0, deadlineMs: 1000, signal: new AbortController().signal });
+  expect(result.candidate).toBeNull();
+});
+
+it("does not make Mixed dirtier merely because a dirt-heavy loop covers more kilometres", async () => {
+  const incumbent = candidate(120 * 60, 0.25, 70000);
+  const longDirty = candidate(120 * 60, 0.6, 110000);
+  const result = await searchRiderEnvelope({ request: { ...request, discovery: { targetMinutes: 120, toleranceMinutes: 18 }, options: { ...request.options, surfacePreference: "mixed", targetUnpavedShare: undefined } }, candidates: [incumbent, longDirty], incumbent, provider: { id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: false, supportsAvoidPolygons: false }), candidates: vi.fn(async () => ({ candidates: [] })) }, maxCalls: 0, deadlineMs: 1000, signal: new AbortController().signal });
+  expect(result.candidate).toBeNull();
+});

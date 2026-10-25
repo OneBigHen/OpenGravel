@@ -8,10 +8,12 @@ export default defineConfig({
     {
       // node:sqlite is prefix-only and absent from Node's builtinModules list.
       // Vitest 5's client resolver otherwise tries to bundle it for jsdom.
-      name: "native-node-sqlite",
+      // node:net is the server rate limiter's address parser and hits the same
+      // resolver path, so it is externalized too.
+      name: "native-node-builtins",
       enforce: "pre",
       resolveId(id) {
-        return id === "node:sqlite" ? { id, external: true } : null;
+        return id === "node:sqlite" || id === "node:net" ? { id, external: true } : null;
       },
     },
   ],

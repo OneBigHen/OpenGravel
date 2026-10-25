@@ -5,6 +5,7 @@
  * ordering, cancellation and the shared call budget.
  */
 
+import { atlasDirtLoopSequences, loopDirtTarget } from "./atlas-dirt-loops";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import { indexRoute, lineOverlap, type RouteIndex } from "@/application/roads/route-overlap";
@@ -139,7 +140,7 @@ function requestHasAuthoredGeometry(request: ProviderRouteRequest): boolean {
 
 function dirtMode(request: ProviderRouteRequest): boolean {
   return request.options.surfacePreference === "dirt-preferred" ||
-    request.options.bike?.category === "dual-sport";
+    request.options.bike?.category === "dual-sport" || loopDirtTarget(request) > 0;
 }
 
 function roughTrackAllowed(request: ProviderRouteRequest): boolean {
@@ -600,7 +601,7 @@ function observedUnpavedShare(candidate: ProviderCandidate): number | null {
     const surface = key.split("|")[0]?.toLowerCase() ?? "";
     return sum + (DIRT_SURFACES.has(surface) ? meters : 0);
   }, 0);
-  return clamp01(unpaved / known);
+  return clamp01(unpaved / summary.totalMeters);
 }
 
 function knownUnsafeRoad(candidate: ProviderCandidate): boolean {
@@ -689,8 +690,24 @@ function makeProbe(
       for (let attempt = 0; attempt < plan.attempts && sequence !== undefined; attempt += 1) {
         tried.add(sequence.key);
         const answer = await call(requestForSequence(request, sequence));
-        last = evaluateAnswer(id, answer, sequence, fastestSeconds, request);
-        if (last.candidate !== null || !RETRYABLE_NOTES.has(last.note)) return last;
+        last = {
+          ...evaluateAnswer(id, answer, sequence, fastestSeconds, request),
+          sourceIds: sequence.corridors.flatMap(corridor => corridor.sourceIds.length > 0 ? corridor.sourceIds : [corridor.id]),
+        };
+        if (last.candidate !== null) return last;
+        if (id === "gravel-prize" && loopDirtTarget(request) > 0 && request.discovery !== undefined && (last.note === "time-cap" || last.note === "loop-shortfall") && answer !== null) {
+          const wantedEstimate: number = sequence.estimatedSeconds * request.discovery.targetMinutes * 60 / answer.durationSeconds;
+          const longer = last.note === "loop-shortfall";
+          const previousEstimate: number = sequence.estimatedSeconds;
+          const untried = plan.alternatives.filter(candidate => !tried.has(candidate.key));
+          const directed: SelectedSequence[] = untried.filter(candidate => longer ? candidate.estimatedSeconds > previousEstimate : candidate.estimatedSeconds < previousEstimate);
+          // Estimates miss river crossings and useful dirt on connectors. If
+          // no larger/smaller tour remains, explore the nearest untried one.
+          sequence = (directed.length > 0 ? directed : untried)
+            .sort((a, b) => Math.abs(a.estimatedSeconds - wantedEstimate) - Math.abs(b.estimatedSeconds - wantedEstimate) || b.prize - a.prize)[0];
+          continue;
+        }
+        if (!RETRYABLE_NOTES.has(last.note)) return last;
         // How far past its estimate did the router put this sequence? Plan the
         // next attempt as if the same error applies to its estimate too.
         const base: number | undefined = sequence.baseSeconds;
@@ -714,11 +731,16 @@ function buildPlans(
   id: AtlasGeneratorId,
   context: FunGeneratorContext,
   corridors: readonly GravelAtlasCorridor[],
+  loopCalls: number,
 ): readonly AtlasPlan[] {
   if (requestHasAuthoredGeometry(context.request)) return [];
   const fastest = fastestProductionSeconds(context);
   if (fastest === null && context.request.discovery === undefined) return [];
   const speed = speedProxy(context);
+  if (context.request.discovery !== undefined && id === "gravel-prize" && loopDirtTarget(context.request) > 0) {
+    const alternatives = atlasDirtLoopSequences(context.request, corridors.filter(c => corridorAllowed(c, context.request, id)), speed);
+    return alternatives.length === 0 ? [] : [{ alternatives, attempts: Math.min(loopCalls, 4) }];
+  }
   if (context.request.discovery !== undefined) {
     const proposed = sequenceCandidates(selectReachable(corridors, context.request, context, id), context.request, context, id);
     return proposed.map((widest) => {
@@ -744,6 +766,7 @@ function buildPlans(
 function generatorFor(
   id: AtlasGeneratorId,
   supplied: readonly GravelAtlasCorridor[],
+  loopCalls: number,
 ): FunCandidateGenerator {
   return {
     id,
@@ -751,7 +774,7 @@ function generatorFor(
       const corridors = supplied.length > 0 ? supplied : context.atlasCorridors ?? [];
       const fastest = fastestProductionSeconds(context);
       if (fastest === null && context.request.discovery === undefined) return [];
-      return buildPlans(id, context, corridors)
+      return buildPlans(id, context, corridors, loopCalls)
         .slice(0, MAX_ATLAS_PROPOSALS)
         .map((plan) => makeProbe(id, plan, fastest, context.request));
     },
@@ -761,6 +784,7 @@ function generatorFor(
 /** Build the atlas generators; registration in the existing family is caller-owned. */
 export function createAtlasGenerators(
   corridors: readonly GravelAtlasCorridor[],
+  loopCalls = 2,
 ): readonly FunCandidateGenerator[] {
-  return ATLAS_GENERATOR_IDS.map((id) => generatorFor(id, corridors));
+  return ATLAS_GENERATOR_IDS.map((id) => generatorFor(id, corridors, loopCalls));
 }
