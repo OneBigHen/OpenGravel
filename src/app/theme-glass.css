@@ -2388,6 +2388,53 @@ html .og-ride {
 /* Ride Focus and fullscreen keep the map bare. */
 .og-ride .og-editbar { display: none; }
 
+/* Desktop: the edit tools live in the planning rail, in the sheet's head beside
+   undo/redo, so the map over the route keeps its one control (Layers) and the
+   instruments on the right. The bar is the same component and the same modes;
+   only its place changes, from a floating pill over the map to a row in the
+   panel that holds the ride. */
+@media (min-width: 1181px) {
+  .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--og-space-2, 8px);
+    margin-left: auto;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    justify-items: end;
+    gap: var(--og-space-1, 4px);
+    transform: none;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    border-radius: var(--og-radius-control);
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__btn {
+    min-height: 44px;
+    padding: 0 var(--og-space-3, 12px);
+    font-size: var(--og-text-meta, 14px);
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__status,
+  .og-planner__sheet .og-sheet__head .og-editbar__tip {
+    max-width: 100%;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-sheet__tools .og-history {
+    margin: 0;
+  }
+}
+
 /* ── Along this ride + opportunity cards (owner review 2026-10-04) ──────── */
 .og-along { display: grid; gap: 8px; margin-top: 4px; }
 

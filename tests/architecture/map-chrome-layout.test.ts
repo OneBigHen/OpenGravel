@@ -18,6 +18,8 @@ const SHORT_PHONE =
   "(max-width: 760px) and (max-height: 700px) and (orientation: portrait)";
 const PHONE = "(max-width: 760px)";
 const PHONE_ROWS = "(max-width: 479px)";
+/** The desktop plan tier: rail, map and ride inspector as columns. */
+const DESKTOP = "(min-width: 1181px)";
 
 function sourceOf(file: (typeof FILES)[number]): string {
   return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(
@@ -102,6 +104,30 @@ describe("compact map chrome", () => {
     const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
     expect(declarationsFor(blocks, '[data-map-style-sheet="true"] .og-map__look')["display"]).toBe("none");
     expect(declarationsFor(blocks, '[data-places-sheet="true"] .og-places-overlay--planner .og-places-control')["display"]).toBe("none");
+  });
+
+  it("leaves the desktop map one top-left group and no second summary", () => {
+    const blocks = FILES.flatMap((file) => mediaBlocks(sourceOf(file), DESKTOP));
+
+    // Map style and Places are rows in the layers panel at this tier, exactly as
+    // they are on a phone, so the globe and the pill leave the map.
+    expect(declarationsFor(blocks, '[data-map-style-sheet="true"] .og-map__look')["display"]).toBe("none");
+    expect(declarationsFor(blocks, '[data-places-sheet="true"] .og-places-overlay--planner .og-places-control')["display"]).toBe("none");
+    expect(declarationsFor(blocks, ".og-layers__group--style")["display"]).toBe("block");
+    expect(declarationsFor(blocks, ".og-layers__group--places")["display"]).toBe("block");
+
+    // Layers takes the corner the style globe held, since it is the only control
+    // left on that edge.
+    expect(declarationsFor(blocks, ".og-planner__map-slot .og-layers")["left"]).toBe("var(--og-float-left, 12px)");
+
+    // The selected route's card is on screen (inspector or rail list), so the
+    // floating summary pill stated the same ride twice.
+    expect(declarationsFor(blocks, ".og-glance--map")["display"]).toBe("none");
+
+    // The route's edit tools sit in the panel beside undo/redo instead of a
+    // floating bar over the map.
+    expect(declarationsFor(blocks, ".og-planner__sheet .og-sheet__head > .og-sheet__tools")["display"]).toBe("flex");
+    expect(declarationsFor(blocks, ".og-planner__sheet .og-sheet__head .og-editbar")["position"]).toBe("static");
   });
 
   it("gives a phone sheet 56 px rows with one 24 px icon in a 40 px tile", () => {
