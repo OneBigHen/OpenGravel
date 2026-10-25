@@ -45,7 +45,11 @@ import {
   placeStartCommand,
   type RideDocumentStore,
 } from "@/ui/stores/ride-document-store";
-import type { PlannerUiStore, PlacementTool } from "@/ui/stores/planner-ui-store";
+import {
+  settleEndpointPlacement,
+  type PlannerUiStore,
+  type PlacementTool,
+} from "@/ui/stores/planner-ui-store";
 import type { StopsPanelProps } from "@/ui/planner/StopsPanel";
 import { usePlannerItineraryActions } from "@/ui/planner/usePlannerItineraryActions";
 
@@ -184,8 +188,12 @@ export function usePlannerStops(input: {
               : moveShapeCommand(document, target.shapingId, landed);
       // An endpoint removed between press and release has nothing to move.
       if (command !== null) state.dispatch(command);
+      // Dragging the start or the destination places it too: an armed map-pick
+      // mode for that point has been spent by the gesture and ends here.
+      if (target.kind === "start") settleEndpointPlacement(plannerUiStore, "start");
+      if (target.kind === "finish") settleEndpointPlacement(plannerUiStore, "finish");
     },
-    [document, rideDocumentStore, snappedCoordinate],
+    [document, rideDocumentStore, snappedCoordinate, plannerUiStore],
   );
 
   /** The selected ride's line, which a route drag reshapes. */

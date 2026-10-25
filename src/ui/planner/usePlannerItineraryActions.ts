@@ -34,7 +34,10 @@ import {
   setArrivalIntentCommand,
   type RideDocumentStore,
 } from "@/ui/stores/ride-document-store";
-import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
+import {
+  settleEndpointPlacement,
+  type PlannerUiStore,
+} from "@/ui/stores/planner-ui-store";
 
 export interface PlannerItineraryActions {
   readonly selectRef: (ref: ItineraryRef) => void;
@@ -228,8 +231,11 @@ export function usePlannerItineraryActions(input: {
       const home = rideDocumentStore.getState();
       const finish = placeFinishCommand(home.document, start.coordinate);
       home.dispatch({ ...finish, point: { ...finish.point, label: start.label ?? "Back to start" } });
+      // Riding a road home set the destination: an armed "Set destination on map"
+      // has just been answered by another action, so it ends with it.
+      settleEndpointPlacement(plannerUiStore, "finish");
     },
-    [rideDocumentStore],
+    [rideDocumentStore, plannerUiStore],
   );
 
   const editCoordinate = useCallback(

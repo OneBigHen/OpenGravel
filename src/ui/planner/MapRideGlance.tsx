@@ -20,7 +20,9 @@
  * - **The numbers are a projection.** Nothing is measured here: the values are the
  *   selected route card's own labels (`formatDuration`/`formatDistance`) and the
  *   climb the elevation profile measured, so the pill can never disagree with the
- *   card it belongs to.
+ *   card it belongs to — and it never holds a skeleton over a card that already
+ *   has them. While a plan is in flight with no answer yet it says so; the moment
+ *   a card exists, its numbers are what the pill shows.
  *
  * A change to the summary is re-stated once, after a short throttle, through a
  * `role="status"` region: a ride being edited is not a ride being shouted about
@@ -190,7 +192,7 @@ function OpenGlyph(): ReactElement {
 export interface MapRideGlanceProps {
   /** The selected route's summary, or `null` when there is no route yet. */
   readonly summary: RideGlanceSummary | null;
-  /** A plan is in flight: the metrics read as "still measuring", not as numbers. */
+  /** A plan is in flight: with no route card yet the metrics read as "still measuring", not as numbers. */
   readonly planning: boolean;
   /** The last attempt failed: with no route to show, the pill offers Retry. */
   readonly failed: boolean;
@@ -219,6 +221,11 @@ export function MapRideGlance({
   // No route, nothing being planned and nothing failed: there is no ride to
   // summarise, and an empty pill would be a claim about a ride that does not exist.
   if (summary === null && !planning && !failed) return null;
+  // "Still measuring" is only honest while nothing has been measured. A card that
+  // is already on screen has its numbers, so the pill shows them instead of a
+  // skeleton that would outlive the answer (the alternatives can still be on
+  // their way long after the primary route and its card are there).
+  const measuring = summary === null && planning;
 
   const className = `og-glance og-glance--${placement}`;
   const testId = `ride-glance-${placement}`;
@@ -249,7 +256,7 @@ export function MapRideGlance({
     <div
       className={className}
       data-testid={testId}
-      data-state={planning ? "planning" : "ready"}
+      data-state={measuring ? "planning" : "ready"}
       data-placement={placement}
       data-tint={summary?.tint ?? 0}
     >
@@ -257,11 +264,11 @@ export function MapRideGlance({
         type="button"
         className="og-glance__button"
         aria-label={summary === null ? `${statement} Show the planner.` : `${statement} Show ride details.`}
-        aria-busy={planning}
+        aria-busy={measuring}
         onClick={onOpenRide}
       >
         {summary === null ? null : <span className="og-glance__swatch" aria-hidden="true" />}
-        {planning ? (
+        {measuring ? (
           <span className="og-glance__planning" aria-hidden="true">
             <span className="og-glance__shimmer" />
             <span className="og-glance__shimmer og-glance__shimmer--short" />
@@ -283,7 +290,7 @@ export function MapRideGlance({
             )}
           </span>
         )}
-        {summary === null || planning ? null : (
+        {summary === null ? null : (
           <span
             className={summary.surface.known ? "og-glance__surface" : "og-glance__surface og-glance__surface--unknown"}
             data-testid="ride-glance-surface"

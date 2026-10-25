@@ -1542,6 +1542,35 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(begins(posts)).toBe(1);
   });
 
+  it("ends the map-pick mode when the destination comes from search", async () => {
+    const { plannerUiStore } = await renderWorkspace(answerWithRoute(), {
+      places: searchablePlaces(),
+    });
+    clickMap(100, 100);
+    await waitFor(() => {
+      expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
+    });
+
+    // The chip arms the map for a destination, and while the point is missing the
+    // composer's own reason is the only instruction.
+    fireEvent.click(screen.getByTestId("finish-chip"));
+    expect(plannerUiStore.getState().placementTool).toBe("place-finish");
+    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+
+    // A place picked from search is the destination the mode was waiting for.
+    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.click(await screen.findByTestId("place-option"));
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
+    });
+    // The instruction is spent: no armed chip, and no "Tap the map to set your
+    // destination." left over the ride that pick has already planned.
+    expect(plannerUiStore.getState().placementTool).toBe("idle");
+    expect(screen.getByTestId("finish-chip")).toHaveAttribute("data-armed", "false");
+    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+  });
+
   it("never plans while the rider is typing", async () => {
     const { posts } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),

@@ -161,6 +161,24 @@ describe("MapRideGlance", () => {
     );
   });
 
+  it("shows the card's numbers while alternatives are still loading", () => {
+    // The primary route and its card arrive before the alternatives do. The pill
+    // is a projection of that card, so it must state the same numbers then and
+    // not sit on a skeleton the answer has already outlived.
+    render(glance({ planning: true }));
+
+    const container = screen.getByTestId("ride-glance-map");
+    expect(container).toHaveAttribute("data-state", "ready");
+    expect(screen.getByTestId("ride-glance-duration")).toHaveTextContent("1 h 57 min");
+    expect(screen.getByTestId("ride-glance-distance")).toHaveTextContent("84 mi");
+    expect(screen.getByTestId("ride-glance-surface")).toHaveTextContent("12% gravel");
+    expect(screen.queryByText(/Measuring the ride/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ride summary/ })).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
   it("offers Retry inside the pill when a plan failed with no route to show", () => {
     const onRetry = vi.fn();
     render(glance({ summary: null, planning: false, failed: true, onRetry }));
