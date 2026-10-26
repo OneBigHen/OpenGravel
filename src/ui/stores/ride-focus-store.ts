@@ -315,6 +315,11 @@ export interface RideFocusStoreActions {
   requestRideOffer(): void;
   /** Plans and binds a fresh return to saved Home, or session start as fallback. */
   headHome(): Promise<void>;
+  /**
+   * Routes from here to a place the rider picked (the ride sheet's search):
+   * a guided ride reroutes through it, and a Free Ride starts navigating to it.
+   */
+  navigateTo(target: { readonly coordinate: Coordinate; readonly label: string }): Promise<void>;
   /** Finds a lower-workload legal return without changing the authored ride. */
   easierWayBack(): Promise<void>;
   /** Routes legally back to the first accepted session position; never reverses route geometry. */
@@ -559,7 +564,7 @@ export function createRideFocusStore(
    */
   let activeReturn: {
     readonly sessionId: string;
-    readonly mode: Extract<ReturnMode, "fatigue" | "turn-around" | "loop">;
+    readonly mode: Extract<ReturnMode, "head-home" | "fatigue" | "turn-around" | "loop">;
     readonly target: ExplicitReturnTarget;
   } | null = null;
   let rerouteMessageAt = Number.NEGATIVE_INFINITY;
@@ -1412,7 +1417,9 @@ export function createRideFocusStore(
     }
 
     async function planRecoveryReturn(
-      mode: Extract<ReturnMode, "fatigue" | "turn-around" | "loop">,
+      // A destination the rider chose rides the same planner as a way back: the
+      // target says which question is being asked, not the mode.
+      mode: Extract<ReturnMode, "head-home" | "fatigue" | "turn-around" | "loop">,
       options: {
         readonly resume?: ExplicitReturnTarget;
         readonly via?: RerouteDetour;
@@ -1438,6 +1445,11 @@ export function createRideFocusStore(
       }
 
       const here = navigation.position.quality === "fresh-good" ? navigation.position.coordinate : null;
+      // A place the rider searched for is a destination, not a way back: it says
+      // so in the one line the sheet shows while the planner works and after.
+      const chosenPlace = options.resume?.kind === "chosen-destination"
+        ? options.resume.label ?? "that place"
+        : null;
       const target: ExplicitReturnTarget | null = options.resume !== undefined
         ? options.resume
         : mode === "loop"
@@ -1475,13 +1487,15 @@ export function createRideFocusStore(
       if (guided) lastRerouteAt = Date.parse(now());
       const planningCopy = options.via !== undefined
         ? `Finding a route via ${options.via.label}…`
-        : replan
-          ? mode === "loop" ? "Getting you back on your loop…" : "Finding a new way back…"
-          : mode === "loop"
-            ? `Planning a ${loopLengthLabel(options.loopMinutes ?? 60)} loop from here…`
-          : mode === "fatigue"
-            ? "Finding an easier way back…"
-            : "Planning a legal route back to your ride start…";
+        : chosenPlace !== null
+          ? `Planning a route to ${chosenPlace}…`
+          : replan
+            ? mode === "loop" ? "Getting you back on your loop…" : "Finding a new way back…"
+            : mode === "loop"
+              ? `Planning a ${loopLengthLabel(options.loopMinutes ?? 60)} loop from here…`
+            : mode === "fatigue"
+              ? "Finding an easier way back…"
+              : "Planning a legal route back to your ride start…";
       if (guided) {
         set({ rerouteBusy: true, rerouteError: null, rerouteMessage: planningCopy });
       } else {
@@ -1537,7 +1551,9 @@ export function createRideFocusStore(
           ? "Return routing needs a fresh, accurate GPS fix."
           : plan.reason === "no-lower-workload-route"
             ? "No lower-workload return was found. Your current route is unchanged."
-            : "A return route could not be found right now. Your current ride is unchanged.";
+            : chosenPlace !== null
+              ? `A route to ${chosenPlace} could not be found right now. Keep riding.`
+              : "A return route could not be found right now. Your current ride is unchanged.";
         // An edit on another screen is not an alarm: keep riding this version
         // and let the sheet offer the newer one.
         const newer = plan.reason === "stale-ride" || plan.reason === "ride-missing" ? { newerVersionReady: true } : {};
@@ -1582,8 +1598,10 @@ export function createRideFocusStore(
       });
       const successCopy = options.via !== undefined
         ? `Via ${options.via.label} · ${formatDistance(plan.distanceMeters)} to go`
-        : replan
-          ? `${mode === "loop" ? "Back on your loop" : "New way back"} · ${formatDistance(plan.distanceMeters)} to go`
+        : chosenPlace !== null
+          ? `Route to ${chosenPlace} · ${formatDistance(plan.distanceMeters)} to go`
+          : replan
+            ? `${mode === "loop" ? "Back on your loop" : "New way back"} · ${formatDistance(plan.distanceMeters)} to go`
           : mode === "loop"
             ? `Loop from here · ${formatDistance(plan.distanceMeters)}`
           : mode === "fatigue"
@@ -2253,6 +2271,19 @@ export function createRideFocusStore(
 
       async loopFromHere(minutes: number): Promise<void> {
         await planRecoveryReturn("loop", { loopMinutes: minutes });
+      },
+
+      async navigateTo(target): Promise<void> {
+        const state = controller.snapshot();
+        if (!running || state === null) return;
+        if (state.activity === "guided") {
+          await get().reroute({ coordinate: target.coordinate, label: target.label });
+          return;
+        }
+        if (state.activity !== "free") return;
+        await planRecoveryReturn("head-home", {
+          resume: { kind: "chosen-destination", coordinate: target.coordinate, label: target.label },
+        });
       },
 
       async reroute(detour?: RerouteDetour, rerouteOptions?: { readonly wholeRoute?: boolean }): Promise<void> {

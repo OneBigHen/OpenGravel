@@ -61,6 +61,7 @@ import Link from "next/link";
 import { useStore } from "zustand";
 
 import { buildRideScene } from "@/application/map/build-ride-scene";
+import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import { computeInsets, toRect, type MapInsets } from "@/application/map/insets";
 import { formatDistance } from "@/application/planner/measurements";
@@ -93,6 +94,7 @@ import { LayeredMap } from "@/ui/layers/LayeredMap";
 import type { CameraView } from "@/ui/map/PlannerMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
+import { RideStopSearch } from "@/ui/ride/RideStopSearch";
 import { RideFuelLine } from "@/ui/ride/RideFuelLine";
 import { RideInterestCard } from "@/ui/ride/RideInterestCard";
 import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
@@ -116,6 +118,12 @@ export interface RideFocusProps {
   readonly placesSource?: PlacesSource;
   /** The rider's map layers (phase 8): fuel, incidents and alerts on the ride. */
   readonly mapLayersSource?: MapLayersSource;
+  /**
+   * The app's own place search, for "search along this ride": the same port the
+   * planner uses, biased to the rider's position here. Absent where the
+   * deployment has none, and then the stop search simply is not offered.
+   */
+  readonly placeSearch?: PlaceSearchPort;
   /**
    * The active bike's usable range in miles (its range before the reserve), or
    * `null`/absent when the garage has none: the ride's "next gas" line judges
@@ -253,6 +261,7 @@ export function RideFocus({
   assetBasePath,
   placesSource,
   mapLayersSource,
+  placeSearch,
   discoverSource,
   spotifyPlayer,
   safety,
@@ -1473,6 +1482,19 @@ export function RideFocus({
                 {rideOfferBusy ? "Finding a ride…" : "Offer me a ride"}
               </button>
             ) : null}
+            {/* One more row before the ways back: anywhere the rider can name,
+                searched from here and navigated to through the same session. */}
+            <RideStopSearch
+              mode="nearby"
+              search={placeSearch}
+              position={navigation.position.coordinate}
+              routeLine={[]}
+              busy={returnBusy}
+              fixGood={navigation.position.quality === "fresh-good"}
+              onGo={(place): void => {
+                void store.getState().navigateTo({ coordinate: place.coordinate, label: place.name });
+              }}
+            />
             <button
               type="button"
               className="og-ride__action og-ride__action--primary"
@@ -1612,6 +1634,9 @@ export function RideFocus({
             position={navigation.position.coordinate}
             fixGood={navigation.position.quality === "fresh-good"}
             source={mapLayersSource}
+            search={placeSearch}
+            remainingMeters={viewModel?.secondary.remainingDistanceMeters ?? null}
+            remainingSeconds={viewModel?.secondary.remainingDurationSeconds ?? null}
             onReroute={(detour): void => {
               void store.getState().reroute(detour);
             }}

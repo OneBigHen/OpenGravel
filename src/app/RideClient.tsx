@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
+import { createHttpPlaceSearch } from "@/application/geocoding/place-search";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import { createClientRouteCandidateProvider } from "@/application/planner/client-planning-service";
 import { createRideNavigationEngine, type ResolvedNavigationRoute } from "@/application/ride-session/navigation-engine";
@@ -132,6 +133,10 @@ export function RideClient({
     () => createHttpPlacesSource({ basePath: assetBasePath }),
     [assetBasePath],
   );
+  // The ride sheet's "search along this ride" is the app's own place search, the
+  // same HTTP client the planner calls: which upstream answers is a server
+  // concern, and an unavailable one is one quiet line in the sheet.
+  const placeSearch = useMemo(() => createHttpPlaceSearch(), []);
   const discoverSource = useMemo(
     () => createHttpDiscoverSource({ basePath: assetBasePath }),
     [assetBasePath],
@@ -495,6 +500,7 @@ export function RideClient({
       basemap={basemap}
       placesSource={placesSource}
       mapLayersSource={mapLayersSource}
+      placeSearch={placeSearch}
       usableRangeMiles={usableFuelRange}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}

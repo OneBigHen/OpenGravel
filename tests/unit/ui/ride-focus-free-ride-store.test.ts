@@ -482,6 +482,41 @@ describe("Ride Focus Free Ride actions", () => {
     ride.database.close();
   });
 
+  it("routes a Free Ride to a place the rider searched for", async () => {
+    const planToPlace = vi.fn(async () => ({
+      status: "planned" as const,
+      route: { planningGeneration: 13, routeId: asRouteCandidateId("route_searched_place") },
+      routeGeometryRef: "geo_searched_place" as GeometryRef,
+      durationSeconds: 600,
+      distanceMeters: 6_400,
+    }));
+    const ride = await makeRide({
+      suggestions: "off",
+      readSavedHome: () => SAVED_HOME,
+      returnPlanner: { plan: planToPlace },
+    });
+    const sessionId = ride.controller.snapshot()?.sessionId;
+    const place = { lon: -77.15, lat: 40.2 };
+
+    await ride.store.getState().navigateTo({ coordinate: place, label: "Riverside Diner" });
+
+    // The same planner that takes a rider home, asked a destination question.
+    expect(planToPlace).toHaveBeenCalledWith(expect.objectContaining({
+      mode: "head-home",
+      target: { kind: "chosen-destination", coordinate: place, label: "Riverside Diner" },
+    }));
+    expect(ride.controller.snapshot()).toMatchObject({
+      sessionId,
+      activity: "guided",
+      plan: { route: { routeId: "route_searched_place" } },
+    });
+    expect(ride.store.getState().freeRideStatusMessage).toBe("Route to Riverside Diner · 4 mi to go");
+    expect(ride.writes.at(-1)).toMatchObject({ routeGeometryRef: "geo_searched_place" });
+
+    ride.store.getState().stop();
+    ride.database.close();
+  });
+
   it("turns around by routing back to the session start instead of reversing geometry", async () => {
     const planReturn = vi.fn(async (request: { readonly mode: import("@/application/free-ride/return-routing").ReturnMode }) => ({
       status: "planned" as const,

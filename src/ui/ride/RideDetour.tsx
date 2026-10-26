@@ -1,13 +1,16 @@
 "use client";
 
 /**
- * Back on track and gas or food ahead (UX rework phase 9; SwitchBack parity for
+ * Back on track and a stop ahead (UX rework phase 9; SwitchBack parity for
  * off-route recovery and "detour to fuel").
  *
  * Off the line, the ride replans by itself; this block says so, and offers the
- * same thing as a button for a rider who wants it now. "Fuel ahead" finds the
- * gas stations along the rest of the route, nearest first, and one tap routes
- * through the chosen one and on to the stops still ahead.
+ * same thing as a button for a rider who wants it now. "Add a stop" asks the two
+ * quick questions — Gas and Food along the rest of the route, nearest first — and
+ * then the wider one: the app's own place search, ordered by distance ahead
+ * (`RideStopSearch`), so a coffee, a motel or a town can become the next stop
+ * without leaving the ride. Either way one tap routes through the chosen place
+ * and on to the stops still ahead.
  */
 
 import { useState } from "react";
@@ -19,8 +22,11 @@ import {
   type LngLat,
   type MapLayersSource,
 } from "@/application/map-layers";
+import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import type { RerouteDetour } from "@/application/ride-session/guided-reroute";
 import type { Coordinate } from "@/domain/ride/types";
+
+import { RideStopSearch } from "./RideStopSearch";
 
 export interface RideDetourProps {
   readonly offRoute: boolean;
@@ -33,6 +39,11 @@ export interface RideDetourProps {
   /** Whether the fix is fresh and accurate enough to replan from. */
   readonly fixGood: boolean;
   readonly source?: MapLayersSource | undefined;
+  /** The app's own place search, for "search along this ride". */
+  readonly search?: PlaceSearchPort | undefined;
+  /** The ride's own distance and time left, so a stop's cost is measured. */
+  readonly remainingMeters?: number | null;
+  readonly remainingSeconds?: number | null;
   readonly onReroute: (detour?: RerouteDetour) => void;
   readonly onEasierWayBack: () => void;
   readonly onTurnAround: () => void;
@@ -60,11 +71,15 @@ function miles(meters: number): string {
   return value < 10 ? value.toFixed(1) : String(Math.round(value));
 }
 
-export function RideDetour({ offRoute, busy, message, error, routeLine, position, fixGood, source, onReroute, onEasierWayBack, onTurnAround }: RideDetourProps) {
+export function RideDetour({ offRoute, busy, message, error, routeLine, position, fixGood, source, search, remainingMeters = null, remainingSeconds = null, onReroute, onEasierWayBack, onTurnAround }: RideDetourProps) {
   const [kind, setKind] = useState<StopKind | null>(null);
   const [fuel, setFuel] = useState<FuelAhead | null>(null);
   const [adding, setAdding] = useState(false);
-  const canFindStops = source?.along !== undefined && routeLine.length >= 2 && position !== null;
+  const hasLine = routeLine.length >= 2 && position !== null;
+  // Gas and Food are POI layers along the line; the search only needs the
+  // geocoder, so each fails on its own and one still works without the other.
+  const canFindStops = source?.along !== undefined && hasLine;
+  const canAddStop = hasLine && (canFindStops || search !== undefined);
 
   const findStops = (next: StopKind): void => {
     if (source?.along === undefined || position === null) return;
@@ -116,7 +131,7 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
         >
           <span className="og-ride__sheet-row-label">{busy ? "Routing…" : "New route from here"}</span>
         </button>
-        {!canFindStops ? null : (
+        {!canAddStop ? null : (
           <button
             type="button"
             className="og-ride__sheet-row"
@@ -132,34 +147,56 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
             }}
           >
             <span className="og-ride__sheet-row-label">Add a stop</span>
-            <span className="og-ride__sheet-row-hint">Gas or food ahead</span>
+            <span className="og-ride__sheet-row-hint">Gas, food or anywhere</span>
           </button>
         )}
       </div>
-      {!adding || !canFindStops ? null : (
-        <div className="og-ride__detour-actions" role="group" aria-label="Add a stop">
-          <button
-            type="button"
-            className="og-ride__action"
-            data-testid="ride-fuel-ahead"
-            aria-pressed={kind === "fuel"}
-            disabled={busy}
-            onClick={(): void => findStops("fuel")}
-          >
-            <span aria-hidden="true">⛽ </span>
-            Gas
-          </button>
-          <button
-            type="button"
-            className="og-ride__action"
-            data-testid="ride-food-ahead"
-            aria-pressed={kind === "food"}
-            disabled={busy}
-            onClick={(): void => findStops("food")}
-          >
-            Food
-          </button>
-        </div>
+      {!adding || !canAddStop ? null : (
+        <>
+          {!canFindStops ? null : (
+            <div className="og-ride__detour-actions" role="group" aria-label="Add a stop">
+              <button
+                type="button"
+                className="og-ride__action"
+                data-testid="ride-fuel-ahead"
+                aria-pressed={kind === "fuel"}
+                disabled={busy}
+                onClick={(): void => findStops("fuel")}
+              >
+                <span aria-hidden="true">⛽ </span>
+                Gas
+              </button>
+              <button
+                type="button"
+                className="og-ride__action"
+                data-testid="ride-food-ahead"
+                aria-pressed={kind === "food"}
+                disabled={busy}
+                onClick={(): void => findStops("food")}
+              >
+                Food
+              </button>
+            </div>
+          )}
+          {/* Coffee, lodging and anything the rider can name, searched along
+              the rest of the line and added through the same reroute. */}
+          <RideStopSearch
+            mode="along"
+            search={search}
+            position={position}
+            routeLine={routeLine}
+            remainingMeters={remainingMeters}
+            remainingSeconds={remainingSeconds}
+            busy={busy}
+            fixGood={fixGood}
+            onGo={(place): void => {
+              setFuel(null);
+              setKind(null);
+              setAdding(false);
+              onReroute({ coordinate: place.coordinate, label: place.name });
+            }}
+          />
+        </>
       )}
       <details className="og-ride__more" data-testid="ride-more">
         <summary className="og-ride__action">More</summary>

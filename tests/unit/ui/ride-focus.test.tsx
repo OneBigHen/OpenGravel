@@ -33,6 +33,7 @@ import type {
 } from "@/application/ride-session/ports/ride-focus-environment";
 import type { MapHostFactory } from "@/application/map/map-host";
 import type { MapLayersSource } from "@/application/map-layers";
+import type { PlaceSearchPort } from "@/application/geocoding/place-search";
 import { asPlaceId, type NearbyPlace, type PlacesSource } from "@/application/places";
 import type {
   GeometryRef,
@@ -270,6 +271,8 @@ async function harness(options: {
   readonly at?: string;
   /** The rider's map layers: gas along the route, and the Free Ride's nearby search. */
   readonly mapLayersSource?: MapLayersSource;
+  /** The app's own place search, for "search along this ride". */
+  readonly placeSearch?: PlaceSearchPort;
   /** The active bike's usable range, for the ride sheet's "next gas" line. */
   readonly usableRangeMiles?: number | null;
 } = {}): Promise<Harness> {
@@ -417,6 +420,7 @@ async function harness(options: {
       basemap="empty"
       {...(options.placesSource === undefined ? {} : { placesSource: options.placesSource })}
       {...(options.mapLayersSource === undefined ? {} : { mapLayersSource: options.mapLayersSource })}
+      {...(options.placeSearch === undefined ? {} : { placeSearch: options.placeSearch })}
       {...(options.usableRangeMiles === undefined ? {} : { usableRangeMiles: options.usableRangeMiles })}
     />,
   );
@@ -1963,6 +1967,62 @@ describe("Free Ride recording controls", () => {
     expect(screen.queryByText("Turning recording off discards the track.")).not.toBeInTheDocument();
   });
 
+  it("searches from where the rider is, orders by distance and Go navigates there", async () => {
+    const places = [
+      {
+        id: "fixture:far-cafe",
+        label: "Far Cafe, PA",
+        name: "Far Cafe",
+        context: "Carbon County, PA",
+        coordinate: { lon: -75.3, lat: 40.3 },
+        provider: "fixture",
+      },
+      {
+        id: "fixture:near-cafe",
+        label: "Near Cafe, PA",
+        name: "Near Cafe",
+        context: "Carbon County, PA",
+        coordinate: { lon: -75.43, lat: 40.15 },
+        provider: "fixture",
+      },
+    ];
+    const search: PlaceSearchPort = {
+      search: vi.fn(async () => ({ status: "ok" as const, places })),
+      reverse: vi.fn(async () => null),
+    };
+    const { store } = await harness({ position: "fresh", placeSearch: search });
+    const base = store.getState().navigation!;
+    const navigation = { ...base, activity: "free" as const, plan: { ...base.plan, route: null } };
+    const viewModel = buildRideFocusViewModel({
+      navigation,
+      environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
+      suggestions: "on",
+      now: NOW,
+    });
+    const navigateTo = vi.fn(async () => undefined);
+    act(() => store.setState({ navigation, viewModel, suggestions: "on", navigateTo }));
+    fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
+
+    fireEvent.click(screen.getByTestId("ride-stop-search"));
+    // The chip is a quick search, biased to where the rider is.
+    fireEvent.click(screen.getByTestId("ride-stop-coffee"));
+    expect(search.search).toHaveBeenCalledWith("coffee shop", expect.objectContaining({ bias: { lon: -75.4385, lat: 40.1385 } }));
+
+    const list = await screen.findByTestId("ride-stop-results");
+    const rows = within(list).getAllByTestId("ride-stop-option");
+    expect(rows[0]?.textContent).toContain("Near Cafe");
+    // Free Ride has no line to measure along, so the distance reads as "away".
+    expect(rows[0]?.textContent).toMatch(/ mi away/);
+    expect(rows[1]?.textContent).toContain("Far Cafe");
+
+    fireEvent.click(rows[0]!);
+    const confirm = await screen.findByTestId("ride-stop-confirm");
+    expect(confirm.textContent).toContain("Near Cafe");
+    fireEvent.click(screen.getByTestId("ride-stop-confirm-go"));
+    expect(navigateTo).toHaveBeenCalledWith({ coordinate: { lon: -75.43, lat: 40.15 }, label: "Near Cafe" });
+    expect(screen.queryByTestId("ride-stop-search-field")).toBeNull();
+  });
+
   it("offers to save an unrecorded summary and links to My rides after saving", async () => {
     const { store } = await harness({ position: "fresh" });
     const finish = vi.fn(async () => undefined);
@@ -2146,6 +2206,49 @@ describe("next gas on the ride", () => {
     await waitFor(() => expect(plan).toHaveBeenCalled());
     expect(plan).toHaveBeenCalledWith(
       expect.objectContaining({ detour: { coordinate: { lon: -75.42, lat: 40.11 }, label: "Sheetz" } }),
+    );
+  });
+});
+
+describe("search along this ride", () => {
+  it("searches from the rider's own position and adds the chosen place through the ride's reroute", async () => {
+    const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
+    const search: PlaceSearchPort = {
+      search: vi.fn(async () => ({
+        status: "ok" as const,
+        places: [
+          {
+            id: "fixture:riverside-diner",
+            label: "Riverside Diner, PA",
+            name: "Riverside Diner",
+            context: "Carbon County, PA",
+            coordinate: { lon: -75.42, lat: 40.11 },
+            provider: "fixture",
+          },
+        ],
+      })),
+      reverse: vi.fn(async () => null),
+    };
+    await harness({ position: "fresh", placeSearch: search, reroutePlanner: { plan } });
+    if (screen.getByTestId("ride-focus").getAttribute("data-sheet") === "closed") {
+      fireEvent.click(screen.getByTestId("ride-menu"));
+    }
+    fireEvent.click(await screen.findByTestId("ride-add-stop"));
+    fireEvent.click(screen.getByTestId("ride-stop-coffee"));
+
+    // The planner's own search, biased to where the rider is.
+    expect(search.search).toHaveBeenCalledWith(
+      "coffee shop",
+      expect.objectContaining({ bias: { lon: -75.4385, lat: 40.1385 } }),
+    );
+
+    fireEvent.click(await screen.findByTestId("ride-stop-option"));
+    // A tap only selects; nothing is planned until the rider confirms (§1).
+    expect(plan).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("ride-stop-confirm-go"));
+    await waitFor(() => expect(plan).toHaveBeenCalled());
+    expect(plan).toHaveBeenCalledWith(
+      expect.objectContaining({ detour: { coordinate: { lon: -75.42, lat: 40.11 }, label: "Riverside Diner" } }),
     );
   });
 });
