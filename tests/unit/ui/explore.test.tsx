@@ -320,7 +320,10 @@ describe("Explore UI", () => {
     fireEvent.change(filters.getByRole("combobox", { name: "Filter by source" }), {
       target: { value: "personal" },
     });
-    expect(screen.getByText("No routes match these filters.")).toBeInTheDocument();
+    // Asked for their own rides and has none: that is the honest reason, said
+    // once, instead of a filter message about catalog routes.
+    expect(screen.getByText(/No personal rides yet/)).toBeInTheDocument();
+    expect(screen.queryByText("No routes match these filters.")).toBeNull();
   });
 
   it("shows an inline note when geolocation is denied", async () => {
@@ -1088,5 +1091,17 @@ describe("Explore UI", () => {
     expect(screen.getByRole("heading", { name: "No rides here yet" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
     expect(screen.queryByText("No catalog routes loaded.")).toBeNull();
+  });
+
+  it("says when the filters match nothing and offers the way out", () => {
+    const longRide = { ...entry, distanceKm: 100 };
+    render(<ExplorePanel entries={[longRide]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Under 30 mi" }));
+
+    const notice = screen.getByTestId("explore-no-match");
+    expect(notice).toHaveTextContent("No routes match these filters.");
+    fireEvent.click(screen.getByTestId("explore-clear-filters"));
+    expect(screen.queryByTestId("explore-no-match")).toBeNull();
+    expect(screen.getByRole("link", { name: new RegExp(entry.name) })).toBeInTheDocument();
   });
 });

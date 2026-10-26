@@ -394,6 +394,13 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     [roadCandidates, roadNearMe, roadOrigin, roadSurface],
   );
 
+  // Why the list is empty, said once each: nothing loaded at all, nothing in
+  // the rider's own rides when they asked for those, or nothing matching the
+  // filters they set. Only the last one has a way out worth offering.
+  const noRidesAtAll = !hasCatalogEntries && !hasPersonalEntries;
+  const noPersonalRidesYet = !hasPersonalEntries && query.source === "personal";
+  const noMatch = visibleEntries.length === 0 && !noRidesAtAll && !noPersonalRidesYet;
+
   const filterCount = activeFilterCount(query);
   const regions = useMemo(() => [...new Set(entries.flatMap((entry) =>
     entry.catalogMembers?.map((member) => member.region) ?? [entry.region],
@@ -707,7 +714,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
 
       {lens === "ride" ? <>
         {locationNote !== null ? <p className="og-explore__note" role="status">{locationNote}</p> : null}
-        {visibleEntries.length === 0 && !hasCatalogEntries && !hasPersonalEntries ? (
+        {noRidesAtAll ? (
           // Nothing to browse yet: say what is missing and offer the one action.
           <section className="og-empty-state" aria-labelledby="explore-empty-title">
             <div className="og-empty-state__body">
@@ -721,10 +728,10 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         ) : null}
         {/* EX-05, FT-08: the "no personal rides" note only matters when the
             rider asked for their own rides; it never heads a list of catalog routes. */}
-        {!hasPersonalEntries && query.source === "personal" ? (
+        {noPersonalRidesYet ? (
           <p className="og-explore__empty">No personal rides yet. <Link href="/">Plan and save a ride</Link> to see it here.</p>
         ) : null}
-        {visibleEntries.length === 0 && hasCatalogEntries ? (
+        {noMatch ? (
           // CL-04, EX-04, AQ-08: say it, announce it, and offer the way out.
           <p className="og-explore__empty" role="status" data-testid="explore-no-match">
             No routes match these filters.{" "}
