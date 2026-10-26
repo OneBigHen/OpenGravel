@@ -310,7 +310,7 @@ export function StopsPanel({
     if (ref.kind === "stop" || ref.kind === "shaping") {
       actions.push({
         testId: `convert-${key}`,
-        label: ref.kind === "shaping" ? "Make a stop" : "Make a shaping point",
+        label: ref.kind === "shaping" ? "Make a stop" : "Just pass through",
         path: ACTION_PATHS.convert,
         onSelect: () => onConvert(ref),
       });
@@ -358,8 +358,8 @@ export function StopsPanel({
       )}
 
       {viewModel.shapingPoints.length === 0 ? null : (
-        <section className="og-points__section" aria-label="Shaping points">
-          <h3 className="og-points__title">Shaping points</h3>
+        <section className="og-points__section" aria-label="Points on the line">
+          <h3 className="og-points__title">Points on the line</h3>
           <ol className="og-points__list" data-testid="shaping-list">
             {viewModel.shapingPoints.map(renderRow)}
           </ol>
@@ -416,7 +416,7 @@ export function StopsPanel({
 
           {selectedRow.ref.kind === "stop" ? (
             <label className="og-point__field">
-              <span className="og-point__field-label">Arrival intent</span>
+              <span className="og-point__field-label">Stop for</span>
               <select
                 className="og-point__input"
                 data-testid="arrival-intent"

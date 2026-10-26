@@ -286,7 +286,7 @@ describe("StopsPanel — one press, one intent (03 §27)", () => {
     const handlers = renderPanel();
 
     openMenu("stop-1");
-    expect(screen.getByTestId("convert-stop-1")).toHaveTextContent("Make a shaping point");
+    expect(screen.getByTestId("convert-stop-1")).toHaveTextContent("Just pass through");
     fireEvent.click(screen.getByTestId("convert-stop-1"));
 
     expect(handlers.onConvert).toHaveBeenCalledTimes(1);

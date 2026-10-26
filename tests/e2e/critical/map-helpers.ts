@@ -390,26 +390,12 @@ export async function clickMapAtCoordinate(
   await clickFractionOfExtent(page, extent, fraction);
 }
 
-/**
- * Sets the ride's start or destination at `coordinate` the way a rider does now:
- * a long-press (a right-click with a mouse) opens the point menu, and the rider
- * picks "Start here" or "Finish here". A plain tap on the map never authors an
- * endpoint by itself (maps-for-riders §1), so specs can no longer tap twice.
- */
-export async function placeEndpoint(
+/** The map point menu at a fraction of the visible map, then its action. */
+async function pickPointMenu(
   page: Page,
   target: "start" | "finish",
-  coordinate: Coordinate,
+  fraction: Fraction,
 ): Promise<void> {
-  if (target === "finish") {
-    // These authoring specs deliberately preserve the start they just set.
-    // Directions from an idle menu is exercised in search-card.spec.ts.
-    if (!(await page.getByTestId("finish-chip").isVisible())) await page.getByTestId("sheet-handle").click();
-    await page.getByTestId("finish-chip").click();
-    await clickMapAtCoordinate(page, coordinate);
-    return;
-  }
-  const { fraction } = await settledExtentShowing(page, coordinate);
   const map = plannerMap(page);
   const box = await map.boundingBox();
   if (box === null) throw new Error("the planner map has no measured box");
@@ -427,8 +413,62 @@ export async function placeEndpoint(
   }
   const menu = page.getByTestId("map-point-menu");
   await expect(menu).toBeVisible();
-  await menu.getByRole("button", { name: target === "start" ? "Start here" : "Finish here" }).click();
+  if (target === "start") {
+    await menu.getByRole("button", { name: "Start here" }).click();
+  } else {
+    // Directions to here is the same finish action while no route exists, and
+    // it is the label a rider sees when a places source is composed.
+    const directions = menu.getByRole("button", { name: "Directions to here" });
+    if (await directions.count() > 0) await directions.click();
+    else await menu.getByRole("button", { name: "Finish here" }).click();
+  }
   await expect(menu).toHaveCount(0);
+}
+
+/** A plain press (not a hold) at a fraction, for an armed placement tool. */
+async function pressMapAt(page: Page, fraction: Fraction): Promise<void> {
+  const map = plannerMap(page);
+  const box = await map.boundingBox();
+  if (box === null) throw new Error("the planner map has no measured box");
+  await map.click({
+    position: { x: Math.round(fraction.x * box.width), y: Math.round(fraction.y * box.height) },
+  });
+}
+
+export async function placeEndpoint(
+  page: Page,
+  target: "start" | "finish",
+  coordinate: Coordinate,
+): Promise<void> {
+  const { fraction } = await settledExtentShowing(page, coordinate);
+  if (target === "start") {
+    await pickPointMenu(page, "start", fraction);
+    return;
+  }
+  // A destination placed after a start must keep that start, so it goes through
+  // the composer's armed placement rather than the menu's "Directions to here",
+  // which deliberately replaces the start with the rider's location.
+  if (!(await page.getByTestId("finish-chip").isVisible())) await page.getByTestId("sheet-handle").click();
+  await page.getByTestId("finish-chip").click();
+  await pressMapAt(page, fraction);
+}
+
+/**
+ * Places an endpoint at a fraction of the map, for layout gates that only need
+ * two authored points and must keep the press clear of floating chrome.
+ *
+ * The coordinate-based helper stays the default: it proves the camera is
+ * showing the geography a test names. This variant is for a viewport where the
+ * top search covers the upper third of the map and a fixed geography would put
+ * the press under a chip. It uses the point menu, so a caller that wants a
+ * destination after a start places the destination first.
+ */
+export async function placeEndpointAtFraction(
+  page: Page,
+  target: "start" | "finish",
+  fraction: Fraction,
+): Promise<void> {
+  await pickPointMenu(page, target, fraction);
 }
 
 /**

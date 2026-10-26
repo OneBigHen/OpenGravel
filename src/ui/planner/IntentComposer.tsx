@@ -469,14 +469,14 @@ export function IntentComposer({
           type="button"
           className="og-chip og-composer__loop-quick"
           data-testid="loop-near-me"
-          aria-label={hasStart ? "Loop from here" : "Loop near me"}
+          aria-label={hasStart ? "Loop from here, then choose the ride time" : "Loop near me, then choose the ride time"}
           onClick={() => shapeModel.actions.setShape("loop")}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M20 12a8 8 0 1 1-2.34-5.66" />
             <path d="M20 4v4h-4" />
           </svg>
-          Loop
+          {hasStart ? "Loop from here" : "Loop near me"}
         </button>
       )}
 

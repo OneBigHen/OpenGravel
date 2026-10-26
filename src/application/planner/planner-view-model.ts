@@ -87,9 +87,6 @@ export const ROLE_LABELS: Readonly<Record<RouteRole, string>> = {
 /** Shown for a candidate the bundle assigned no role (04 §11). */
 export const ALTERNATIVE_LABEL = "Alternative";
 
-/** Evidence-driven badge: generated routes have no surface evidence. */
-export const UNVERIFIED_SURFACE_BADGE = "Surface unknown";
-
 /** The one-word badge for a surface class the evidence actually names. */
 const SURFACE_BADGE_WORDS: Readonly<Record<Exclude<SurfaceClass, "unknown">, string>> = {
   paved: "Paved",
@@ -113,20 +110,24 @@ const UNKNOWN_MILES_NOTE = /\s*·\s*[\d.,]+\s*mi\s+unknown$/i;
  * The untagged mileage of a partial mix is not printed either: `Paved · 4.7 mi
  * unknown` reads as a data dump, and a badge is a word, not a measurement. The
  * doubt lands on the surface word as a question (`Paved?`, `Mostly paved?`), the
- * same way a partly-guessed band already asks. A surface the evidence says is
- * mostly unknown keeps its own sentence — there is no named class to question.
+ * same way a partly-guessed band already asks.
+ *
+ * A surface the evidence does not measure gets no badge at all: a card that says
+ * "Surface unknown" spends a rider's attention on a fact that changes nothing,
+ * and the honest-unknown rule is served by silence. The measured mileage on the
+ * card still carries what is known; it is never rounded up to a surface claim.
  */
 function surfaceBadgeLabel(
   surface: SurfaceAssessment,
   evidence: Parameters<typeof surfaceMixLabel>[0],
-): string {
+): string | null {
   const value = surface.value;
-  if (surface.band === "unknown" || value === "unknown") return UNVERIFIED_SURFACE_BADGE;
+  if (surface.band === "unknown" || value === "unknown") return null;
   const mix = surfaceMixLabel(evidence);
   if (mix !== null) {
     const [surfaceWord = mix] = mix.split(" · ");
     if (mix.replace(UNKNOWN_MILES_NOTE, "") !== mix) return `${surfaceWord}?`;
-    if (/\bunknown\b/i.test(mix)) return mix;
+    if (/\bunknown\b/i.test(mix)) return null;
     return surface.band === "possible" ? `${mix}?` : mix;
   }
   const word = SURFACE_BADGE_WORDS[value];
@@ -717,6 +718,7 @@ function routeCards(
       bundle.selectionSource === "automatic" &&
       candidate.id === selectedRouteId;
     const surface = aggregateRouteSurface(candidate.evidence["surfaceMix"]);
+    const surfaceBadge = surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]);
     const curves = curvatureLabel(candidate.evidence["curvature"]);
     const ownTraffic = trafficLabelFor(candidate);
     const unverifiedMeters = unverifiedSurfaceMeters(
@@ -747,7 +749,7 @@ function routeCards(
         ? {}
         : { addedMinutes: addedMinutesBetween(candidate.durationSeconds, reference.durationSeconds) }),
       badges: [
-        surfaceBadgeLabel(surface, candidate.evidence["surfaceMix"]),
+        ...(surfaceBadge === null ? [] : [surfaceBadge]),
         ...(curves === null ? [] : [curves]),
         ...(candidate.warnings.some((warning) => warning.code === "basic-routing") ? [BASIC_ROUTING_BADGE] : []),
         ...(candidate.warnings.some((warning) => warning.code === "offline-routing") ? [OFFLINE_ROUTING_BADGE] : []),

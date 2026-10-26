@@ -264,8 +264,9 @@ test("planning shows a route the rider can see and select", async ({ page }) => 
   await expect(page.getByTestId("route-card-alternative")).toContainText(
     "+2 min vs Fastest",
   );
-  // An unverified surface is stated on the card's badge, not in a footer note.
-  await expect(selectedCard.getByTestId("route-badge")).toContainText("Surface unknown");
+  // An unverified surface is left unsaid: no badge claims it, and no footer note
+  // turns the absence into a sentence.
+  await expect(selectedCard.getByTestId("route-badge")).toHaveCount(0);
   await expect(page.getByTestId("route-unknowns-note")).toHaveCount(0);
 
   // The renderer was given two routes and selected one of them (05 §11), and the

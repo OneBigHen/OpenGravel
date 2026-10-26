@@ -55,6 +55,7 @@ import {
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
 import { buildMapScene, objectExtent } from "@/application/map/build-map-scene";
+import { sceneAtRest } from "@/ui/planner/scene-points";
 import type {
   BasemapMode,
   MapHostFactory,
@@ -227,6 +228,7 @@ export function PlannerWorkspace({
   const keepMyCopy = useStore(rideDocumentStore, (state) => state.keepMyCopy);
   const retrySave = useStore(rideDocumentStore, (state) => state.retrySave);
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
+  const [refineEditing, setRefineEditing] = useState(false);
   const [rideStart, setRideStart] = useState<{
     readonly state: "idle" | "starting";
     readonly message: string | null;
@@ -410,35 +412,47 @@ export function PlannerWorkspace({
     finishStroke: finishSketchGesture,
   } = sketchAuthoring;
 
-  const scene = useMemo(
-    () =>
-      buildMapScene({
-        document,
-        session,
-        uiState: { selectedObject },
-        preview: dragPreview,
-        previewArea: avoidAreaPreview,
-        previewSpan: roadSpanPreview,
-        previewSketch: sketchPreview,
-        // 05 §12: the changed section after a successful update, if the emphasis's
-        // bounded interval is still running.
-        changedSpan: updateHighlight?.span ?? null,
-        readGeometry,
-        riderPosition,
-      }),
-    [
+  const scene = useMemo(() => {
+    const projected = buildMapScene({
       document,
       session,
-      selectedObject,
-      dragPreview,
-      avoidAreaPreview,
-      roadSpanPreview,
-      sketchPreview,
-      updateHighlight,
+      uiState: { selectedObject },
+      preview: dragPreview,
+      previewArea: avoidAreaPreview,
+      previewSpan: roadSpanPreview,
+      previewSketch: sketchPreview,
+      // 05 §12: the changed section after a successful update, if the emphasis's
+      // bounded interval is still running.
+      changedSpan: updateHighlight?.span ?? null,
       readGeometry,
       riderPosition,
-    ],
-  );
+    });
+    // Shaping anchors are handles, not places. They return for an edit: the
+    // Change this ride panel open, an armed map tool, or the anchor itself
+    // selected. A published Explore route can carry many of them, and at rest
+    // they would bury the line under a row of dots.
+    const editing =
+      refineEditing ||
+      activeTool !== "pan" ||
+      placementTool !== "idle" ||
+      (selectedObject?.kind === "point" &&
+        document.intent.shaping.some((anchor) => anchor.id === selectedObject.pointId));
+    return sceneAtRest(projected, editing);
+  }, [
+    document,
+    session,
+    selectedObject,
+    dragPreview,
+    avoidAreaPreview,
+    roadSpanPreview,
+    sketchPreview,
+    updateHighlight,
+    readGeometry,
+    riderPosition,
+    activeTool,
+    placementTool,
+    refineEditing,
+  ]);
 
   const selectedRef = useMemo(
     () => (selectedObject === null ? null : itineraryRefFor(document, selectedObject)),
@@ -882,6 +896,7 @@ export function PlannerWorkspace({
             sheetExpanded: sheetDetent === "expanded",
           }}
           refine={{
+            onExpandedChange: setRefineEditing,
             forceOpen:
               (activeTool !== "pan" &&
                 activeTool !== "point-drag" &&

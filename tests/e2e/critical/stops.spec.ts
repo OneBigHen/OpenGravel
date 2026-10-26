@@ -182,48 +182,49 @@ test("a stop is added, reordered, removed and restored by undo", async ({ page }
 
 test("dragging a point is one command and never blanks the last ride", async ({ page }) => {
   await planFixtureRide(page);
-  const finishBefore = await readCoordinate(page, "finish-value");
+  const startBefore = await readCoordinate(page, "start-value");
 
   // The exact authored position: the composer rounds its label to four decimals,
   // which is ~11 m — enough of a miss to slide off a 8px marker at this zoom. The
   // numeric inspector is the app's own full-precision view of the same object, so
   // the grab is aimed with the position the app actually holds.
   await openRefine(page);
-  await page.getByTestId("select-start").click();
-  const startBefore = {
+  await page.getByTestId("select-finish").click();
+  const finishBefore = {
     lat: Number(await page.getByTestId("point-lat").inputValue()),
     lon: Number(await page.getByTestId("point-lon").inputValue()),
   };
 
-  // Grab the start marker where the camera is actually drawing it.
+  // Grab the finish marker where the camera is actually drawing it.
   const extent = await settledExtent(page);
   const box = await plannerMap(page).boundingBox();
   if (box === null) throw new Error("the planner map has no measured box");
-  const grab = fractionOf(extent, startBefore);
-  const startPixel = {
+  const grab = fractionOf(extent, finishBefore);
+  const markerPixel = {
     x: Math.round(grab.x * box.width),
     y: Math.round(grab.y * box.height),
   };
 
-  // A move of ~170 m west and ~165 m south: away from the destination and from
-  // the authored stops, so the preview's snap rule stays out of the way.
+  // A move of ~170 m west and ~165 m south: away from the start and from the
+  // authored stops, so the preview's snap rule stays out of the way. Screen y
+  // grows downward, so a southern latitude is a positive drag along it.
   const deltaLon = -0.002;
   const deltaLat = -0.0015;
   const drag = {
     x: Math.round((deltaLon / (extent.maxLon - extent.minLon)) * box.width),
-    y: Math.round((deltaLat / (extent.maxLat - extent.minLat)) * box.height),
+    y: Math.round((-deltaLat / (extent.maxLat - extent.minLat)) * box.height),
   };
 
-  await page.mouse.move(box.x + startPixel.x, box.y + startPixel.y);
+  await page.mouse.move(box.x + markerPixel.x, box.y + markerPixel.y);
   await page.mouse.down();
-  await page.mouse.move(box.x + startPixel.x + drag.x, box.y + startPixel.y + drag.y, {
+  await page.mouse.move(box.x + markerPixel.x + drag.x, box.y + markerPixel.y + drag.y, {
     steps: 6,
   });
 
   // Mid-gesture: the ghost marker exists, and nothing has been authored — a drag
   // previews locally until the release commits it (05 §4).
   await expectDrawnScene(page, { preview: "1" });
-  await expectPointValue(page, "start-value", startBefore);
+  await expectPointValue(page, "finish-value", finishBefore);
 
   // Armed before the release; see `settleReplan`. The release is one command: the
   // planner is asked again for the new revision while the previous ride is still on
@@ -234,28 +235,28 @@ test("dragging a point is one command and never blanks the last ride", async ({ 
   await expectDrawnScene(page, { routes: "2" });
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 
-  // The ghost is gone, the start really moved, and it is still one start: the same
-  // point, at the coordinate the rider released it over.
+  // The ghost is gone, the finish really moved, and it is still one finish: the
+  // same point, at the coordinate the rider released it over.
   const scene = await readDrawnScene(page);
   expect(scene.preview).toBe("0");
-  const startAfter = {
+  const finishAfter = {
     lat: Number(await page.getByTestId("point-lat").inputValue()),
     lon: Number(await page.getByTestId("point-lon").inputValue()),
   };
   // It really moved (a tolerance this tight cannot pass on the old position)...
-  expect(Math.abs(startAfter.lon - startBefore.lon)).toBeGreaterThan(0.0005);
-  expect(Math.abs(startAfter.lat - startBefore.lat)).toBeGreaterThan(0.0005);
+  expect(Math.abs(finishAfter.lon - finishBefore.lon)).toBeGreaterThan(0.0005);
+  expect(Math.abs(finishAfter.lat - finishBefore.lat)).toBeGreaterThan(0.0005);
   // ...and it landed on the geography the pointer was released over.
-  expectCoordinateNear(startAfter, {
-    lon: startBefore.lon + deltaLon,
-    lat: startBefore.lat + deltaLat,
+  expectCoordinateNear(finishAfter, {
+    lon: finishBefore.lon + deltaLon,
+    lat: finishBefore.lat + deltaLat,
   });
   // The other endpoint is untouched: a drag moves one object.
-  await expectPointValue(page, "finish-value", finishBefore);
-  await expectPointValue(page, "label-start", startAfter);
+  await expectPointValue(page, "start-value", startBefore);
+  await expectPointValue(page, "label-finish", finishAfter);
   await expectHealthyMap(page);
 
-  // The whole edit is one undo unit: a single press puts the start back.
+  // The whole edit is one undo unit: a single press puts the finish back.
   await page.getByTestId("undo").click();
-  await expectPointValue(page, "start-value", startBefore);
+  await expectPointValue(page, "finish-value", finishBefore);
 });

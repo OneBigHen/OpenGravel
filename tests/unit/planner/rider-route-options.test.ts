@@ -23,7 +23,7 @@ describe("riderRouteOptions", () => {
     expect(result.map(({ label }) => label)).toEqual(["Fastest", "Twistiest", "Most gravel"]);
     expect(result.map(({ reason }) => reason)).toEqual(["Shortest ride time", "12 mi of curves", "8 mi unpaved"]);
     expect(result[1]?.card.isSelected).toBe(true);
-    for (const option of result) expect(option.reason.split(/\s+/).length).toBeLessThanOrEqual(6);
+    for (const option of result) expect(option.reason?.split(/\s+/).length ?? 0).toBeLessThanOrEqual(6);
   });
 
   it("withholds comparative character labels for ties, missing or non-finite measurements", () => {
@@ -52,6 +52,11 @@ describe("riderRouteOptions", () => {
     for (const addedMinutes of [0, null, undefined, Number.NaN]) {
       expect(riderRouteOptions([card("a", { addedMinutes: 0 }), card("b", { addedMinutes })]).some(({ label }) => label === "Fastest")).toBe(false);
     }
+  });
+
+  it("says nothing when the surface and its character are unmeasured", () => {
+    const unknown = card("unknown", { unknownSurfaceMi: 78 });
+    expect(riderRouteOptions([unknown])[0]?.reason).toBeNull();
   });
 
   it("uses a fully measured paved surface and never converts unknown to paved", () => {

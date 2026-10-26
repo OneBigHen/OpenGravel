@@ -113,6 +113,16 @@ describe("ride style controls", () => {
     expect(spy.setLoopMinutes).toHaveBeenCalledWith(240);
   });
 
+  it("sets a two-hour twisty loop with one press", () => {
+    const spy = actions();
+    render(<LoopTimeRow model={{ view: { ...VIEW, shape: "loop", roadCharacter: "curvy" }, actions: spy }} />);
+    const quick = screen.getByTestId("twisty-loop-quick");
+    expect(quick).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(quick);
+    expect(spy.setLoopMinutes).toHaveBeenCalledWith(120);
+    expect(spy.setRoadCharacter).toHaveBeenCalledWith("curvy");
+  });
+
   it("the direction row offers any way and the four compass directions", () => {
     const spy = actions();
     render(<LoopDirectionRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
@@ -167,7 +177,7 @@ describe("ride style controls", () => {
     const toggle = screen.getByTestId("ride-style-toggle");
     // The row carries a short value — the road and the surface. The rest of the
     // panel's choices are inside it, where the chips already show their state.
-    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Curvy · Paved");
+    expect(screen.getByTestId("ride-style-summary")).toHaveTextContent("Roads: Curvy · Surface: Paved");
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -179,7 +189,7 @@ describe("ride style controls", () => {
     expect(formatRideTime(90)).toBe("1 h 30 min");
     expect(formatRideTime(45)).toBe("45 min");
     // Highways and tolls live inside the panel, so they never lengthen the row.
-    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Balanced · Mixed");
+    expect(rideStyleSummary({ ...VIEW, avoidHighways: true })).toBe("Roads: Balanced · Surface: Mixed");
   });
 });
 
@@ -297,8 +307,8 @@ describe("back by sunset", () => {
 });
 
 it("leaves the traffic and toll choices inside the collapsed row", () => {
-  // The row is `Ride style` … `Balanced · Mixed ›`: it names where the ride goes
+  // The row is `Ride style` … `Roads: Balanced · Surface: Mixed ›`: both words
   // by shape, not by repeating every switch, so it stays one line at 320 px.
-  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toBe("Balanced · Mixed");
-  expect(rideStyleSummary({ ...VIEW, avoidTolls: true })).toBe("Balanced · Mixed");
+  expect(rideStyleSummary({ ...VIEW, traffic: "minimize-delay" })).toBe("Roads: Balanced · Surface: Mixed");
+  expect(rideStyleSummary({ ...VIEW, avoidTolls: true })).toBe("Roads: Balanced · Surface: Mixed");
 });

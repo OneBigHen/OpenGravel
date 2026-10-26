@@ -740,7 +740,7 @@ describe("the map point menu", () => {
     expect(onIntent).not.toHaveBeenCalled();
   });
 
-  it.each([ ["Start here", "start"], ["Add stop here", "stop"], ["Finish here", "finish"], ["Loop from here (1 h)", "loop"] ])("dispatches %s at the original press coordinate", async (label, action) => {
+  it.each([ ["Start here", "start"], ["Add stop here", "stop"], ["Finish here", "finish"], ["Loop from here", "loop"] ])("dispatches %s at the original press coordinate", async (label, action) => {
     const onPointAction = vi.fn();
     const { factory } = await renderMap({ onPointAction });
     act(() => factory.hosts[0]?.emit(press));

@@ -1,11 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  placeEndpoint,
+  placeEndpointAtFraction,
   expectDrawnScene,
   plannerMap,
   settledExtent,
-  type Coordinate,
   pressPlan,
 } from "./map-helpers";
 
@@ -24,18 +23,24 @@ import {
  * deterministic empty basemap as the rest of the gate (see `playwright.config.ts`).
  */
 
-/** The fixture's canned geography, exactly as `first-route.spec.ts` places it. */
-const START_COORDINATE: Coordinate = { lon: -75.4385, lat: 40.1385 };
-const DESTINATION_COORDINATE: Coordinate = { lon: -75.4335, lat: 40.1325 };
-
 /**
  * Fills the rail with the content that used to overrun the viewport: two
  * authored points, a planned fixture ride (so the route choices and the sketch
  * toolbar exist), and the offline disclosure last.
+ *
+ * The points are placed by fraction of the visible map, below the top search and
+ * clear of the rail: short landscape shows the search and its category chips
+ * across the top, and a press aimed by geography can land under a chip instead
+ * of on the map. These two points only need to author a ride; the fixture answer
+ * is the route under test.
  */
 async function fillRail(page: import("@playwright/test").Page): Promise<void> {
-  await placeEndpoint(page, "start", START_COORDINATE);
-  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
+  // Destination first: the map's "Directions to here" menu action is the one
+  // path every tier offers without the sheet's destination chip, and the start
+  // placed afterwards keeps the destination. A start first would be cleared by
+  // that action when no current-location fix is available (the gate has none).
+  await placeEndpointAtFraction(page, "finish", { x: 0.6, y: 0.58 });
+  await placeEndpointAtFraction(page, "start", { x: 0.4, y: 0.52 });
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

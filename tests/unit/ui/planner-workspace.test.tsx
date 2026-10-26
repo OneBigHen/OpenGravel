@@ -1378,9 +1378,9 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
     expect(bulletText).toContain("Traffic is unknown for this route, so no delay is claimed.");
     expect(bulletText).not.toMatch(/graphhopper|valhalla|tomtom/i);
 
-    // And the surface itself is never claimed as known: the uncertainty is on
-    // the card's own badge, with no status paragraph under the list.
-    expect(screen.getAllByTestId("route-badge").map((badge) => badge.textContent)).toContain(
+    // And the surface itself is never claimed as known: with no evidence the
+    // card says nothing about it, and no status paragraph repeats the doubt.
+    expect(screen.queryAllByTestId("route-badge").map((badge) => badge.textContent)).not.toContain(
       "Surface unknown",
     );
     expect(screen.queryByTestId("route-unknowns-note")).not.toBeInTheDocument();
@@ -1468,7 +1468,7 @@ describe("map hold point authoring", () => {
   it("authors a one hour loop at the held coordinate", async () => {
     const { rideDocumentStore } = await renderWorkspace(vi.fn<typeof fetch>());
     holdAt(MIDPOINT);
-    fireEvent.click(screen.getByRole("button", { name: "Loop from here (1 h)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Loop from here" }));
     const { intent } = rideDocumentStore.getState().document;
     expect(intent.start?.coordinate).toEqual(MIDPOINT);
     expect(intent.shape).toBe("loop");
@@ -1905,5 +1905,37 @@ describe("PlannerWorkspace — the desktop plan", () => {
 
     expect(screen.getByTestId("map-edit-bar").closest(".og-planner__map-slot")).not.toBeNull();
     expect(screen.queryByTestId("sheet-edit-tools")).toBeNull();
+  });
+});
+
+/**
+ * The phone sheet is the only place its edit tools can live: the map slot hides
+ * the floating bar at this width. Once a ride has points, the head carries the
+ * same Add stop / Draw control and the status line beside it.
+ */
+describe("PlannerWorkspace — the phone sheet head", () => {
+  function stubPhone(): void {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 760px)" || query.includes("max-width: 1180px"),
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }));
+  }
+
+  it("puts one edit row and a visible status line in the sheet head", async () => {
+    stubPhone();
+    await renderWorkspace(pendingFetcher());
+    await placeBothPoints();
+
+    const bar = screen.getByTestId("map-edit-bar");
+    expect(screen.getByTestId("phone-edit-tools")).toContainElement(bar);
+    expect(bar.closest(".og-planner__sheet")).not.toBeNull();
+    expect(screen.getByTestId("map-edit-open")).toBeVisible();
+    expect(screen.getByTestId("status-line").closest(".og-planner__sheet")).not.toBeNull();
   });
 });

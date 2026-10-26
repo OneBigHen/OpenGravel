@@ -86,6 +86,16 @@ describe("PhoneRideSummary", () => {
     expect(screen.queryByTestId("phone-weather")).toBeNull();
   });
 
+  it("hides the compare switch when there is only one ride", () => {
+    render(<PhoneRideSummary {...base} cards={[cards[0]!]} comparing={false} onCompare={vi.fn()} />);
+    expect(screen.queryByTestId("compare-rides")).toBeNull();
+  });
+
+  it("says nothing about a surface the evidence did not measure", () => {
+    render(<PhoneRideSummary {...base} comparing={false} onCompare={vi.fn()} />);
+    expect(screen.getByTestId("phone-ride-summary")).not.toHaveTextContent(/surface unknown/i);
+  });
+
   it("says where the ride goes above the headline", () => {
     render(<PhoneRideSummary {...base} comparing={false} onCompare={vi.fn()} destinationLine="To Hawk Mountain Sanctuary" />);
     expect(screen.getByTestId("phone-destination").textContent).toBe("To Hawk Mountain Sanctuary");

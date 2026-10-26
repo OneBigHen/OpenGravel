@@ -68,7 +68,7 @@ export function rowName(row: PointRowVm, index: number): string {
     case "stop":
       return `Stop ${row.position ?? 0}`;
     case "shaping":
-      return `Shaping ${index + 1}`;
+      return `Point ${index + 1}`;
   }
 }
 
