@@ -36,7 +36,8 @@ test("unavailable device storage has a clean recovery path", async ({ page }) =>
   await expect(offline.getByRole("alert")).toContainText("storage could not be checked");
   await expect(offline.getByText("Device unavailable", { exact: true })).toBeVisible();
   await expect(offline.getByText("None yet", { exact: true })).toHaveCount(0);
-  await expect(offline.getByRole("button", { name: "Download", exact: true })).toBeDisabled();
+  // With the device unknown there is nothing to download into, so the picker is not offered at all.
+  await expect(offline.getByTestId("offline-download-open")).toHaveCount(0);
   await expect(offline.getByRole("button", { name: "Retry device storage" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
 
@@ -46,7 +47,7 @@ test("unavailable device storage has a clean recovery path", async ({ page }) =>
   await offline.getByRole("button", { name: "Retry device storage" }).click();
   await expect(offline.getByText("None yet", { exact: true })).toBeVisible();
   await expect(offline.getByRole("alert")).toHaveCount(0);
-  await expect(offline.getByRole("button", { name: "Download", exact: true })).toBeEnabled();
+  await expect(offline.getByTestId("offline-download-open")).toBeEnabled();
   expect(pageErrors).toEqual([]);
 });
 
