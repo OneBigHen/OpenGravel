@@ -180,82 +180,118 @@ test("a stop is added, reordered, removed and restored by undo", async ({ page }
   await expectHealthyMap(page);
 });
 
-test("dragging a point is one command and never blanks the last ride", async ({ page }) => {
-  await planFixtureRide(page);
-  const finishBefore = await readCoordinate(page, "finish-value");
+// First/last vertices and an interior vertex of the selected fixture route.
+// Set the exact numeric coordinate, so the pin is on the line rather than just
+// near it (map placement and row labels round their coordinates).
+const DRAG_POINTS = [
+  { key: "start", value: "start-value", coordinate: { lon: -75.44, lat: 40.14 } },
+  { key: "finish", value: "finish-value", coordinate: { lon: -75.4328, lat: 40.131 } },
+  { key: "stop-1", value: "label-stop-1", coordinate: { lon: -75.4355, lat: 40.1382 } },
+] as const;
 
-  // The exact authored position: the composer rounds its label to four decimals,
-  // which is ~11 m — enough of a miss to slide off a 8px marker at this zoom. The
-  // numeric inspector is the app's own full-precision view of the same object, so
-  // the grab is aimed with the position the app actually holds.
-  await openRefine(page);
-  await page.getByTestId("select-start").click();
-  const startBefore = {
-    lat: Number(await page.getByTestId("point-lat").inputValue()),
-    lon: Number(await page.getByTestId("point-lon").inputValue()),
-  };
+for (const point of DRAG_POINTS) {
+  for (const pointerType of ["mouse", "touch"] as const) {
+    test(`dragging a point is one command and never blanks the last ride (${point.key}, ${pointerType})`, async ({ page, browserName }) => {
+      test.skip(pointerType === "touch" && browserName !== "chromium", "Held touch input uses Chromium CDP.");
+      await planFixtureRide(page);
+      if (point.key === "stop-1") await addStop(page, STOP_A);
+      const otherEndpoint = point.key === "start" ? "finish" : "start";
+      const otherBefore = await readCoordinate(page, `${otherEndpoint}-value`);
 
-  // Grab the start marker where the camera is actually drawing it.
-  const extent = await settledExtent(page);
-  const box = await plannerMap(page).boundingBox();
-  if (box === null) throw new Error("the planner map has no measured box");
-  const grab = fractionOf(extent, startBefore);
-  const startPixel = {
-    x: Math.round(grab.x * box.width),
-    y: Math.round(grab.y * box.height),
-  };
+      // The exact authored position: the composer rounds its label to four decimals,
+      // which is ~11 m — enough of a miss to slide off a 8px marker at this zoom. The
+      // numeric inspector is the app's own full-precision view of the same object, so
+      // the grab is aimed with the position the app actually holds.
+      await openRefine(page);
+      await page.getByTestId(`select-${point.key}`).click();
+      await page.getByTestId("point-lat").fill(String(point.coordinate.lat));
+      await page.getByTestId("point-lon").fill(String(point.coordinate.lon));
+      const positionInFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
+      await page.getByTestId("apply-coordinate").click();
+      await positionInFlight;
+      await settleReplan(page);
+      const pointBefore = {
+        lat: Number(await page.getByTestId("point-lat").inputValue()),
+        lon: Number(await page.getByTestId("point-lon").inputValue()),
+      };
 
-  // A move of ~170 m west and ~165 m south: away from the destination and from
-  // the authored stops, so the preview's snap rule stays out of the way.
-  const deltaLon = -0.002;
-  const deltaLat = -0.0015;
-  const drag = {
-    x: Math.round((deltaLon / (extent.maxLon - extent.minLon)) * box.width),
-    y: Math.round((deltaLat / (extent.maxLat - extent.minLat)) * box.height),
-  };
+      // Grab the pin where the camera is actually drawing it.
+      const extent = await settledExtent(page);
+      const box = await plannerMap(page).boundingBox();
+      if (box === null) throw new Error("the planner map has no measured box");
+      const grab = fractionOf(extent, pointBefore);
+      const markerPixel = {
+        x: Math.round(grab.x * box.width),
+        y: Math.round(grab.y * box.height),
+      };
 
-  await page.mouse.move(box.x + startPixel.x, box.y + startPixel.y);
-  await page.mouse.down();
-  await page.mouse.move(box.x + startPixel.x + drag.x, box.y + startPixel.y + drag.y, {
-    steps: 6,
-  });
+      // A move of ~170 m west and ~165 m south: away from the start and from the
+      // authored stops, so the preview's snap rule stays out of the way. Screen y
+      // grows downward, so a southern latitude is a positive drag along it.
+      const deltaLon = -0.002;
+      const deltaLat = -0.0015;
+      const drag = {
+        x: Math.round((deltaLon / (extent.maxLon - extent.minLon)) * box.width),
+        y: Math.round((-deltaLat / (extent.maxLat - extent.minLat)) * box.height),
+      };
 
-  // Mid-gesture: the ghost marker exists, and nothing has been authored — a drag
-  // previews locally until the release commits it (05 §4).
-  await expectDrawnScene(page, { preview: "1" });
-  await expectPointValue(page, "start-value", startBefore);
+      const from = { x: box.x + markerPixel.x, y: box.y + markerPixel.y };
+      const to = { x: from.x + drag.x, y: from.y + drag.y };
+      const cdp = pointerType === "touch" ? await page.context().newCDPSession(page) : null;
+      if (cdp !== null) {
+        await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...from, id: 0 }] });
+        // Touch claims a pin only after the contract's 300 ms stationary hold.
+        await page.waitForTimeout(350);
+        for (let step = 1; step <= 6; step += 1) {
+          await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{
+            x: from.x + drag.x * step / 6, y: from.y + drag.y * step / 6, id: 0,
+          }] });
+        }
+      } else {
+        await page.mouse.move(from.x, from.y);
+        await page.mouse.down();
+        await page.mouse.move(to.x, to.y, { steps: 6 });
+      }
 
-  // Armed before the release; see `settleReplan`. The release is one command: the
-  // planner is asked again for the new revision while the previous ride is still on
-  // screen (04 §9, §21).
-  const releaseInFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
-  await page.mouse.up();
-  await releaseInFlight;
-  await expectDrawnScene(page, { routes: "2" });
-  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
+      // Mid-gesture: the ghost marker exists, and nothing has been authored — a drag
+      // previews locally until the release commits it (05 §4).
+      await expectDrawnScene(page, { preview: "1" });
+      await expectPointValue(page, point.value, pointBefore);
 
-  // The ghost is gone, the start really moved, and it is still one start: the same
-  // point, at the coordinate the rider released it over.
-  const scene = await readDrawnScene(page);
-  expect(scene.preview).toBe("0");
-  const startAfter = {
-    lat: Number(await page.getByTestId("point-lat").inputValue()),
-    lon: Number(await page.getByTestId("point-lon").inputValue()),
-  };
-  // It really moved (a tolerance this tight cannot pass on the old position)...
-  expect(Math.abs(startAfter.lon - startBefore.lon)).toBeGreaterThan(0.0005);
-  expect(Math.abs(startAfter.lat - startBefore.lat)).toBeGreaterThan(0.0005);
-  // ...and it landed on the geography the pointer was released over.
-  expectCoordinateNear(startAfter, {
-    lon: startBefore.lon + deltaLon,
-    lat: startBefore.lat + deltaLat,
-  });
-  // The other endpoint is untouched: a drag moves one object.
-  await expectPointValue(page, "finish-value", finishBefore);
-  await expectPointValue(page, "label-start", startAfter);
-  await expectHealthyMap(page);
+      // Armed before the release; see `settleReplan`. The release is one command: the
+      // planner is asked again for the new revision while the previous ride is still on
+      // screen (04 §9, §21).
+      const releaseInFlight = expect(page.getByTestId("status-line")).toHaveText("Updating ride…");
+      if (cdp !== null) await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+      else await page.mouse.up();
+      await releaseInFlight;
+      await expectDrawnScene(page, { routes: "2" });
+      await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 
-  // The whole edit is one undo unit: a single press puts the start back.
-  await page.getByTestId("undo").click();
-  await expectPointValue(page, "start-value", startBefore);
-});
+      // The ghost is gone, the point really moved, and it is still one point: the
+      // same point, at the coordinate the rider released it over.
+      const scene = await readDrawnScene(page);
+      expect(scene.preview).toBe("0");
+      const pointAfter = {
+        lat: Number(await page.getByTestId("point-lat").inputValue()),
+        lon: Number(await page.getByTestId("point-lon").inputValue()),
+      };
+      // It really moved (a tolerance this tight cannot pass on the old position)...
+      expect(Math.abs(pointAfter.lon - pointBefore.lon)).toBeGreaterThan(0.0005);
+      expect(Math.abs(pointAfter.lat - pointBefore.lat)).toBeGreaterThan(0.0005);
+      // ...and it landed on the geography the pointer was released over.
+      expectCoordinateNear(pointAfter, {
+        lon: pointBefore.lon + deltaLon,
+        lat: pointBefore.lat + deltaLat,
+      });
+      // The other endpoint is untouched: a drag moves one object.
+      await expectPointValue(page, `${otherEndpoint}-value`, otherBefore);
+      await expectPointValue(page, `label-${point.key}`, pointAfter);
+      await expectHealthyMap(page);
+
+      // The whole edit is one undo unit: a single press puts the point back.
+      await page.getByTestId("undo").click();
+      await expectPointValue(page, point.value, pointBefore);
+    });
+  }
+}

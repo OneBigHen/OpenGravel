@@ -41,11 +41,13 @@ export function PlaceSheet({ place, rider, busy = false, saved = false, driveTim
     return () => document.removeEventListener("keydown", escape);
   }, [onClose]);
   const distance = placeDistance(place.coordinate, rider);
+  // Say only what is known: an unfetched drive time used to read as a promise.
+  const detail = [distance ?? "Distance needs your location", driveTime ?? null].filter((part) => part !== null).join(" · ");
   return <section className="og-place-sheet" data-testid="place-sheet" role="region" aria-labelledby="place-sheet-title">
     <div data-testid="place-card">
     <h2 id="place-sheet-title" ref={heading} tabIndex={-1}>{place.name}</h2>
     <p className="og-place-sheet__context">{place.context || `${place.coordinate.lat.toFixed(5)}, ${place.coordinate.lon.toFixed(5)}`}</p>
-    <p className="og-place-sheet__distance">{distance ?? "Distance needs your location"} · {driveTime ?? "Drive time after Directions"}</p>
+    <p className="og-place-sheet__distance">{detail}</p>
     <div className="og-place-sheet__actions">
       <button type="button" className="og-primary" data-testid="place-directions" onClick={onDirections} disabled={busy}>{busy ? "Finding your location…" : "Directions"}</button>
       {onAddStop === undefined ? null : <button type="button" className="og-secondary" onClick={onAddStop}>Add stop</button>}

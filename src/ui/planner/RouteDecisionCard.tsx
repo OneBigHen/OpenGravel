@@ -50,7 +50,7 @@ const EVIDENCE_STATUS_LABELS: Readonly<Record<EvidenceStatus, string>> = {
 export interface RouteDecisionCardProps {
   readonly compact?: boolean;
   readonly compactLabel?: string;
-  readonly compactReason?: string;
+  readonly compactReason?: string | null;
   readonly card: RouteCardVm;
   readonly onSelect: (routeId: RouteCandidateId) => void;
   /**

@@ -1921,7 +1921,10 @@ export async function createMapLibreHost(
     const stoppingCamera = map.isMoving?.() === true;
     if (stoppingCamera) map.stop?.();
     const consumed = stoppingCamera || performance.now() < quietUntil;
-    const grabbed = !consumed && interaction.activeTool === "pan" ? grabAt(map, pixel) : null;
+    // Renderer queries are canvas-relative; gesture distances remain in client
+    // pixels. Mixing them can miss the pin and grab the line beneath it instead.
+    const [x, y] = pixelAt(map, event);
+    const grabbed = !consumed && interaction.activeTool === "pan" ? grabAt(map, { x, y }) : null;
     const ref = consumed ? null : grabbed ?? objectAt(map, coordinate);
     pressedRef = ref;
     if (event.button === 0 && event.pointerType === "touch" && interaction.activeTool === "pan" && isDraggablePointRef(ref)) pendingPin = ref;

@@ -130,13 +130,15 @@ export function formatRideTime(minutes: number): string {
 }
 
 /**
- * The short value the collapsed `Ride style` row shows: `Balanced · Mixed`.
- * Everything else the panel holds — familiarity, traffic, highways, tolls — is
- * inside it, so the row keeps one value that reads at a glance instead of a
- * sentence that wraps beside an eyebrow.
+ * The short value the collapsed `Ride style` row shows: `Roads: Balanced ·
+ * Surface: Mixed`. Naming the two dimensions is what makes the value mean
+ * something; `Balanced · Mixed` alone asked a rider to remember which word was
+ * which. Everything else the panel holds — familiarity, traffic, highways,
+ * tolls — is inside it, so the row keeps one value that reads at a glance
+ * instead of a sentence that wraps beside an eyebrow.
  */
 export function rideStyleSummary(view: RideStyleView): string {
-  return [ROAD_CHARACTER_LABELS[view.roadCharacter], SURFACE_LABELS[view.surface]].join(" · ");
+  return `Roads: ${ROAD_CHARACTER_LABELS[view.roadCharacter]} · Surface: ${SURFACE_LABELS[view.surface]}`;
 }
 
 /** The authored shape as a composer choice: an open ride plans like a destination. */
@@ -317,6 +319,21 @@ export function LoopTimeRow({ model, now }: LoopTimeRowProps) {
           </label>
         ))}
       </div>
+      {/* One tap for the loop most riders ask for: two hours on the twisty
+          roads. The same two choices the time row and road character hold, set
+          together, and the rider still accepts the loop with Make my loop. */}
+      <button
+        type="button"
+        className="og-chip og-composer__twisty-loop"
+        data-testid="twisty-loop-quick"
+        aria-pressed={model.view.loopMinutes === 120 && model.view.roadCharacter === "curvy"}
+        onClick={() => {
+          choosePlain(120);
+          model.actions.setRoadCharacter("curvy");
+        }}
+      >
+        Twisty loop · 2 h
+      </button>
     </div>
   );
 }

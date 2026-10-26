@@ -9,22 +9,30 @@
  * exists: the controls that finish or cancel that work must stay reachable.
  */
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 export interface RefineSectionProps {
   readonly forceOpen: boolean;
   /** Short count of what is already applied, e.g. "2 stops · 1 avoid area". */
   readonly summary: string | null;
+  /**
+   * Told whenever the disclosure opens or closes, so the map can show the
+   * points a rider edits only while they are editing (shaping handles).
+   */
+  readonly onExpandedChange?: ((expanded: boolean) => void) | undefined;
   readonly children: ReactNode;
 }
 
-export function RefineSection({ forceOpen, summary, children }: RefineSectionProps) {
+export function RefineSection({ forceOpen, summary, onExpandedChange, children }: RefineSectionProps) {
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const expanded = open || forceOpen;
+  useEffect(() => {
+    onExpandedChange?.(expanded);
+  }, [expanded, onExpandedChange]);
 
   return (
-    <section className="og-refine" data-testid="refine-section" aria-label="Refine route">
+    <section className="og-refine" data-testid="refine-section" aria-label="Change this ride">
       <button
         type="button"
         className="og-refine__toggle"
@@ -34,9 +42,9 @@ export function RefineSection({ forceOpen, summary, children }: RefineSectionPro
         disabled={forceOpen}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="og-refine__title">Refine route</span>
+        <span className="og-refine__title">Change this ride</span>
         <span className="og-refine__summary">
-          {summary ?? "Stops, avoid areas, roads, draw"}
+          {summary ?? "Stops, no-go areas, roads, draw"}
         </span>
         <span className="og-refine__chevron" aria-hidden="true">
           {expanded ? "⌃" : "⌄"}
@@ -61,7 +69,7 @@ export function refineSummary(counts: {
   const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`;
   if (counts.stops > 0) parts.push(plural(counts.stops, "stop"));
   if (counts.avoidAreas > 0) parts.push(plural(counts.avoidAreas, "avoid area"));
-  if (counts.roadSpans > 0) parts.push(plural(counts.roadSpans, "road rule"));
+  if (counts.roadSpans > 0) parts.push(plural(counts.roadSpans, "road"));
   if (counts.sketch) parts.push("drawn route");
   return parts.length === 0 ? null : parts.join(" · ");
 }

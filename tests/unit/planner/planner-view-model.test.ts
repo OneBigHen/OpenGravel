@@ -591,10 +591,10 @@ describe("buildPlannerViewModel — route cards", () => {
     expect(JSON.stringify(vm)).not.toMatch(/graphhopper|valhalla/i);
   });
 
-  it("badges an unverified surface instead of claiming a surface", () => {
+  it("says nothing about an unverified surface instead of claiming one", () => {
     const vm = buildPlannerViewModel(input({ session: ready() }));
 
-    expect(required(vm.routeCards[0]).badges).toEqual(["Surface unknown"]);
+    expect(required(vm.routeCards[0]).badges).toEqual([]);
   });
 
   it("names the surface plainly once evidence supports it", () => {
@@ -1068,11 +1068,11 @@ describe("buildPlannerViewModel — evidence display (04 §11, 07 §5)", () => {
     expect(required(vm.routeCards[0]).unknownSurfaceMi).toBe(0);
   });
 
-  it("keeps an unknown surface visible as an unknown badge, not as a number", () => {
+  it("leaves an unknown surface unsaid while keeping its mileage measurable", () => {
     const vm = buildPlannerViewModel(input({ session: ready() }));
     const card = required(vm.routeCards[0]);
 
-    expect(card.badges).toEqual(["Surface unknown"]);
+    expect(card.badges).toEqual([]);
     // 125 529 m of unverified line, measured from the evidence that is absent.
     expect(card.unknownSurfaceMi).toBe(78);
   });

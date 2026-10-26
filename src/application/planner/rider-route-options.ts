@@ -4,7 +4,7 @@ import type { RouteCardVm } from "./planner-view-model";
 export interface RiderRouteOption {
   readonly card: RouteCardVm;
   readonly label: string;
-  readonly reason: string;
+  readonly reason: string | null;
 }
 
 function measured(value: number | null | undefined): value is number {
@@ -39,12 +39,14 @@ function miles(value: number): string {
   return value.toLocaleString("en-US", { maximumFractionDigits: 1 });
 }
 
-function fallbackReason(card: RouteCardVm): string {
+function fallbackReason(card: RouteCardVm): string | null {
   const curves = card.measurements?.curvyMi;
   if (measured(curves) && curves > 0) return `${miles(curves)} mi of curves`;
   const unpaved = card.measurements?.unpavedMi;
   if (measured(unpaved) && unpaved > 0) return `${miles(unpaved)} mi unpaved`;
-  return card.unknownSurfaceMi == null || card.unknownSurfaceMi > 0 ? "Surface not fully measured" : "Another way to ride";
+  // No measured fact, no sentence: an unmeasured surface is not a reason to
+  // choose one ride over another, and naming it only adds noise.
+  return null;
 }
 
 /**

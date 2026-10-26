@@ -23,6 +23,8 @@ const StopsPanel = dynamic(() => import("./StopsPanel").then((mod) => mod.StopsP
 
 export interface PlannerRefineWorkspaceProps {
   readonly forceOpen: boolean;
+  /** Lets the map show shaping handles only while this panel is open. */
+  readonly onExpandedChange?: ((expanded: boolean) => void) | undefined;
   readonly summaryCounts: {
     readonly stops: number;
     readonly avoidAreas: number;
@@ -37,6 +39,7 @@ export interface PlannerRefineWorkspaceProps {
 
 export function PlannerRefineWorkspace({
   forceOpen,
+  onExpandedChange,
   summaryCounts,
   stops,
   avoidAreas,
@@ -44,7 +47,7 @@ export function PlannerRefineWorkspace({
   sketch,
 }: PlannerRefineWorkspaceProps) {
   return (
-    <RefineSection forceOpen={forceOpen} summary={refineSummary(summaryCounts)}>
+    <RefineSection forceOpen={forceOpen} summary={refineSummary(summaryCounts)} onExpandedChange={onExpandedChange}>
       <StopsPanel {...stops} />
       <AvoidAreasPanel {...avoidAreas} />
       {/*

@@ -54,7 +54,7 @@ import {
   buildRideHandoff,
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
-import { buildMapScene, objectExtent } from "@/application/map/build-map-scene";
+import { objectExtent } from "@/application/map/build-map-scene";
 import type {
   BasemapMode,
   MapHostFactory,
@@ -97,6 +97,7 @@ import {
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
+  usePlannerScene,
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
@@ -227,6 +228,7 @@ export function PlannerWorkspace({
   const keepMyCopy = useStore(rideDocumentStore, (state) => state.keepMyCopy);
   const retrySave = useStore(rideDocumentStore, (state) => state.retrySave);
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
+  const [refineEditing, setRefineEditing] = useState(false);
   const [rideStart, setRideStart] = useState<{
     readonly state: "idle" | "starting";
     readonly message: string | null;
@@ -410,34 +412,22 @@ export function PlannerWorkspace({
     finishStroke: finishSketchGesture,
   } = sketchAuthoring;
 
-  const scene = useMemo(
-    () =>
-      buildMapScene({
-        document,
-        session,
-        uiState: { selectedObject },
-        preview: dragPreview,
-        previewArea: avoidAreaPreview,
-        previewSpan: roadSpanPreview,
-        previewSketch: sketchPreview,
-        // 05 §12: the changed section after a successful update, if the emphasis's
-        // bounded interval is still running.
-        changedSpan: updateHighlight?.span ?? null,
-        readGeometry,
-        riderPosition,
-      }),
-    [
+  const scene = usePlannerScene(
+    {
       document,
       session,
-      selectedObject,
-      dragPreview,
-      avoidAreaPreview,
-      roadSpanPreview,
-      sketchPreview,
-      updateHighlight,
+      uiState: { selectedObject },
+      preview: dragPreview,
+      previewArea: avoidAreaPreview,
+      previewSpan: roadSpanPreview,
+      previewSketch: sketchPreview,
+      // 05 §12: the changed section after a successful update, if the emphasis's
+      // bounded interval is still running.
+      changedSpan: updateHighlight?.span ?? null,
       readGeometry,
       riderPosition,
-    ],
+    },
+    { refineEditing, activeTool, placementTool },
   );
 
   const selectedRef = useMemo(
@@ -882,6 +872,7 @@ export function PlannerWorkspace({
             sheetExpanded: sheetDetent === "expanded",
           }}
           refine={{
+            onExpandedChange: setRefineEditing,
             forceOpen:
               (activeTool !== "pan" &&
                 activeTool !== "point-drag" &&

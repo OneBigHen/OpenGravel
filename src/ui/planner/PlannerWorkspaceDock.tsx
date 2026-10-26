@@ -23,8 +23,9 @@ import type { PlannerViewModel } from "@/application/planner/planner-view-model"
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
-import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
+import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
+import { destinationLineFor } from "@/ui/planner/destination-line";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
 import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
@@ -156,11 +157,11 @@ export function PlannerWorkspaceDock({
   }, [dockRef, sheetHeadHeight]);
   const loopRide = composer.rideStyle?.view.shape === "loop";
   const placeLabel = loopRide ? composer.viewModel.startLabel : composer.viewModel.finishLabel;
-  const destinationLine =
-    placeLabel === NO_FINISH_LABEL || placeLabel === NO_START_LABEL || placeLabel === "From your sketch" || placeLabel === ""
-      ? null
-      : // The place name a rider says ("Hawk Mountain Sanctuary"), not its full address.
-        `${loopRide ? "Loop from" : "To"} ${placeLabel.split(",")[0]?.trim() || placeLabel}`;
+  const destinationLine = destinationLineFor({
+    placeLabel,
+    loopRide,
+    rideTitle: results.actions.document.title,
+  });
 
   const historyHidden =
     (viewModel.undoLabel === null && viewModel.redoLabel === null) || (idle && viewModel.redoLabel === null);
@@ -254,6 +255,19 @@ export function PlannerWorkspaceDock({
         handleLabel={compact ? undefined : sheetDetent === "mini" ? "Show planner" : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${hasChoices ? ` (${viewModel.routeCards.length})` : ""}`}
         head={<>
           <PlannerWorkspaceStatus {...status} />
+
+          {/*
+            On a phone the map slot hides the floating edit bar, so the one
+            place to arm Add stop / Draw and to read what an armed tool will do
+            is the sheet's own head. It is the same component and the same modes
+            as the desktop bar, only laid out as a 48 px row instead of a pill
+            over the map.
+          */}
+          {phone && compact && editBar !== undefined && !idle ? (
+            <div className="og-phone-edittools" data-testid="phone-edit-tools">
+              <PlannerMapEditBar {...editBar} />
+            </div>
+          ) : null}
 
           {overlapCandidates.length === 0 ? null : (
             <section

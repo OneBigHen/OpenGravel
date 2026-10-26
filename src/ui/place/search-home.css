@@ -10,6 +10,7 @@
 .og-category-results ul { list-style: none; padding: 0; margin: var(--og-space-3) 0; }
 .og-category-results li button { display: flex; flex-direction: column; gap: var(--og-space-1); width: 100%; min-height: 64px; padding: var(--og-space-3) 0; border: 0; border-bottom: 1px solid var(--og-hairline); background: transparent; color: var(--og-ink); text-align: left; font: inherit; cursor: pointer; }
 .og-category-results li span { font-size: var(--og-text-meta); color: var(--og-slate-text); }
+.og-category-results > .og-secondary { min-height: 48px; }
 .og-planner__sheet[data-place="true"] .og-sheet__head > :not(.og-sheet__handle) { display: none; }
 .og-planner__sheet[data-place="true"] .og-sheet__body > :not(.og-place-sheet-slot) { display: none; }
 .og-planner .og-planner__sheet[data-place="true"] .og-sheet__body { overflow-y: auto; }
@@ -23,11 +24,31 @@
   .og-top-search__bar > button { flex: none; min-width: 48px; min-height: 48px; background: transparent; color: var(--og-ink); border: 0; font-size: var(--og-text-headline); }
   .og-top-search .og-place-search { flex: 1; min-width: 0; }
   .og-top-search .og-place-search__input { min-height: 54px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--og-ink); font-size: var(--og-text-body); box-shadow: none; }
-  .og-top-search .og-place-search__list { z-index: 20; max-height: 45dvh; }
+  /* The bar floats over the map, so unlike the sheet's in-flow list its results
+     drop below it at full width, the way Google Maps does; the bar itself never
+     grows around them and the chips stay where they were. */
+  .og-top-search__bar { position: relative; }
+  .og-top-search__bar:focus-within { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
+  .og-top-search .og-place-search { position: static; }
+  .og-top-search .og-place-search__input:focus-visible { outline: none; }
+  .og-top-search .og-place-search__list { position: absolute; top: calc(100% + var(--og-space-2)); left: 0; right: 0; z-index: 20; max-height: 45dvh; box-shadow: var(--og-shadow-2); }
   .og-top-search .og-place-search__option { min-height: 48px; }
   .og-search-chips { display: flex; gap: var(--og-space-2); margin-top: var(--og-space-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; pointer-events: auto; padding: 2px; }
-  .og-search-chips button { flex: none; min-height: 48px; min-width: 48px; padding: 0 var(--og-space-4); border: 1px solid var(--og-hairline); border-radius: 999px; background: var(--og-paper); color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); box-shadow: var(--og-shadow-1); cursor: pointer; }
+  .og-search-chips button { display: flex; align-items: center; gap: var(--og-space-1); flex: none; min-height: 48px; min-width: 48px; padding: 0 var(--og-space-4); border: 1px solid var(--og-hairline); border-radius: 999px; background: var(--og-paper); color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); box-shadow: var(--og-shadow-1); cursor: pointer; }
   .og-search-chips button[aria-pressed="true"] { background: var(--og-deep-spruce); color: var(--og-paper); }
+  .og-search-chips__glyph { flex: none; }
+  /* Road overlays are switches, not searches: a track and a thumb say so. */
+  .og-search-chips__divider { flex: none; align-self: center; width: 1px; height: 28px; margin: 0 2px; background: var(--og-hairline-strong); }
+  .og-search-chips__layers { display: flex; align-items: center; gap: var(--og-space-2); flex: none; }
+  .og-search-chips button[data-layer="true"] { gap: var(--og-space-2); }
+  .og-search-chips button[data-layer="true"][aria-pressed="true"] { border-color: var(--og-deep-spruce); background: var(--og-paper); color: var(--og-ink); }
+  .og-layer-chips__switch { position: relative; flex: none; width: 30px; height: 18px; border-radius: 999px; background: var(--og-hairline-strong); transition: background 160ms ease; }
+  .og-layer-chips__switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--og-paper); box-shadow: var(--og-shadow-1); transition: transform 160ms ease; }
+  .og-search-chips button[aria-pressed="true"] .og-layer-chips__switch { background: var(--og-deep-spruce); }
+  .og-search-chips button[aria-pressed="true"] .og-layer-chips__switch::after { transform: translateX(12px); }
+  /* One search field per screen: when the composer opens its own field (a
+     missing endpoint, or a chosen place being changed) the floating bar bows out. */
+  .og-planner:has(.og-composer .og-place-search) .og-top-search { display: none; }
   .og-planner:has(.og-top-search) .og-planner__header { visibility: hidden; pointer-events: none; }
   .og-planner:has(.og-top-search) .og-planner__header .og-planner__nav-shell { visibility: visible; pointer-events: auto; }
   .og-planner:has(.og-top-search) .og-places-overlay--planner .og-places-control { display: none; }
@@ -42,6 +63,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .og-rider-toast, .og-planner .og-planner__sheet { transition: none; animation: none; }
+  .og-layer-chips__switch, .og-layer-chips__switch::after { transition: none; }
 }
 
 @media (max-width: 760px) {

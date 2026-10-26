@@ -1,6 +1,6 @@
 /* Small-screen v2 §3. This layer follows the older compact/theme rules. */
 .og-plan-actions__icon { display: none; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-planner { --og-tabbar-h: calc(56px + var(--og-safe-bottom)); }
   .og-planner .og-planner__nav-shell {
     position: fixed; inset: auto 0 0; width: 100%; height: var(--og-tabbar-h);
@@ -45,14 +45,44 @@
   .og-planner .og-planner__sheet[data-detent="half"] { height: 60dvh; max-height: none; }
   .og-planner .og-planner__sheet[data-detent="full"] { max-height: none; height: calc(100dvh - var(--og-tabbar-h) - 48px - var(--og-safe-top)); }
   .og-planner .og-planner__sheet[data-dragging="true"] { transition: none; height: var(--og-sheet-drag-h); max-height: var(--og-sheet-drag-h); }
-  .og-planner .og-planner__sheet .og-sheet__head { display: block; position: relative; flex: 0 0 24px; min-height: 24px; padding: 0; touch-action: auto; }
+  .og-planner .og-planner__sheet .og-sheet__head { display: flex; flex-direction: column; align-items: stretch; position: relative; flex: 0 0 auto; min-height: 24px; padding: 0; touch-action: auto; }
   .og-planner .og-planner__sheet .og-sheet__head::before, .og-planner .og-planner__sheet .og-sheet__head::after, .og-planner .og-planner__sheet::after { display: none; }
   .og-planner .og-planner__sheet .og-sheet__handle { position: absolute; display: block; inset: -24px 0 auto; width: 100%; height: 48px; min-height: 48px; padding: 0; margin: 0; border: 0; background: transparent; box-shadow: none; touch-action: none; }
   .og-planner .og-sheet__handle::before { content: ""; position: absolute; top: 32px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 999px; background: var(--og-topo-sage); }
   .og-planner .og-sheet__handle > * { display: none; }
   .og-planner .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) { display: none; }
-  .og-planner .og-planner__sheet .og-planner__status { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; padding: 0; }
+  /* One visible line about what planning is doing. A phone rider cannot see
+     the dimmed map as a state, and a silent sheet reads as a dead app. */
+  .og-planner .og-planner__sheet .og-planner__status {
+    position: static; width: auto; height: auto; clip-path: none; overflow: visible;
+    margin: 0; padding: 2px 0; font-size: var(--og-text-meta); line-height: 1.3; color: var(--og-slate-text);
+  }
   .og-planner .og-planner__sheet .og-sheet__body { display: flex; flex-direction: column; gap: var(--og-space-2); min-height: 0; max-height: none; overflow-y: auto; overflow-x: hidden; padding: 0; scroll-padding: var(--og-space-2); }
+  /* The same edit bar as desktop, laid out as one 48 px row in the sheet's
+     head: the map slot hides the floating pill on a phone, so this is where a
+     rider arms Add stop / Draw and reads what the next tap will do. */
+  /* The drag handle's bar is drawn 8 px into the sheet: the row starts below it. */
+  .og-planner .og-planner__sheet .og-phone-edittools { flex: none; padding-top: var(--og-space-3); padding-bottom: var(--og-space-1); }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar {
+    position: static; display: flex; flex-direction: column; align-items: stretch;
+    gap: var(--og-space-1); width: 100%; max-width: none; transform: none; pointer-events: auto;
+  }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__row {
+    display: flex; flex-wrap: wrap; gap: var(--og-space-2); width: 100%; padding: 0;
+    border: 0; border-radius: 0; background: transparent; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__btn {
+    flex: 1 1 64px; justify-content: center; min-height: 48px; padding: 0 var(--og-space-2);
+    border: 1px solid var(--og-hairline); border-radius: 12px; background: var(--og-raised);
+    font-size: var(--og-text-meta);
+  }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__btn--go { border-color: transparent; }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__status {
+    display: flex; width: 100%; margin: 0; padding: 0 0 var(--og-space-1);
+    background: transparent; box-shadow: none; font-size: var(--og-text-meta);
+  }
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__tip { display: none; }
   .og-planner .og-planner__sheet[data-detent="peek"][data-has-ride="true"] .og-sheet__body > :not(.og-phone-summary) { display: none; }
   .og-phone-summary { flex: none; display: flex; flex-direction: column; gap: 0; width: 100%; }
   .og-phone-summary h2 { margin: 0; font-size: var(--og-text-headline); font-weight: 700; line-height: 1.25; }
@@ -109,6 +139,9 @@
   }
   /* The options scroll under it, so the boundary is drawn rather than implied. */
   .og-phone-summary[data-comparing="true"] .og-phone-style { border-top: 1px solid var(--og-hairline); }
+  /* Pinned only while comparing: with one ride on a 320x640 sheet a pinned row
+     would sit over Start ride, so it scrolls with the summary under it instead. */
+  .og-phone-summary[data-comparing="false"] .og-phone-style { position: static; }
   /* At the peek detent the block is the summary alone — unless the rider is
      comparing, where the style row is what they came for. */
   .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary[data-comparing="false"] .og-phone-style { display: none; }
@@ -158,7 +191,7 @@
   .og-planner .og-planner__sheet input { font-size: var(--og-text-body); }
   /* The head keeps only the close X (top right); undo/redo live in .og-phone-tools below the summary. */
   .og-planner .og-planner__sheet[data-detent="half"] .og-sheet__head,
-  .og-planner .og-planner__sheet[data-detent="full"] .og-sheet__head { flex-basis: 48px; }
+  .og-planner .og-planner__sheet[data-detent="full"] .og-sheet__head { flex-basis: auto; min-height: 48px; }
   .og-planner .og-planner__sheet:is([data-detent="half"], [data-detent="full"]) .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) { display: flex; position: absolute; top: 0; z-index: 2; }
   .og-planner .og-planner__sheet .og-sheet__clear { right: 0; min-width: 48px; min-height: 48px; justify-content: center; }
   .og-planner .og-planner__sheet .og-sheet__undo-clear { right: 0; }
@@ -181,7 +214,7 @@
 /* Loop ride time and "Which way?" on a phone: the label sits above one row of
    chips that scrolls sideways, so the two rows stay above "Make my loop"
    instead of wrapping into three. */
-@media (max-width: 760px) {
+@media (max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
   .og-composer__row--loop,
   .og-composer__row--direction {
     display: flex;
@@ -209,4 +242,27 @@
   .og-composer__row--direction .og-style__chip {
     flex: none;
   }
+}
+
+
+/* "Change this ride" is a panel of rows, not cards inside a card: one divider
+   per row and spacing are enough to separate them. */
+.og-refine .og-point {
+  border: 0;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--og-hairline);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--og-space-2) 0;
+}
+.og-refine .og-point[data-selected="true"] {
+  border-left-color: var(--og-ember);
+  background: transparent;
+}
+.og-refine .og-point:last-child { border-bottom: 0; }
+
+/* Short landscape is the map's smallest window. The search keeps its one row;
+   the category chips step aside until the phone is upright or tall enough. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 560px) {
+  .og-planner .og-top-search .og-search-chips { display: none; }
 }

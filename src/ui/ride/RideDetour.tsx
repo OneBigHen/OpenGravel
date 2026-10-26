@@ -171,7 +171,6 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
                 disabled={busy}
                 onClick={(): void => findStops("fuel")}
               >
-                <span aria-hidden="true">⛽ </span>
                 Gas
               </button>
               <button
