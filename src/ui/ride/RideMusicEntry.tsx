@@ -9,9 +9,10 @@
  * without a registered Spotify origin put a developer message — "This OpenGravel
  * origin is not registered for Spotify" with a "Setup" link — at the top of the
  * ride sheet, above "Add a stop". Setting up, connecting, a missing Premium
- * account and every other outcome belong in Settings (`/settings#spotify`),
- * which is one screen away and can explain itself in full. The ride only shows
- * music that is already working.
+ * account and every other outcome belong in Settings
+ * (`/settings#settings-music-title`, the Music group), which is one screen away
+ * and can explain itself in full. The ride only shows music that is already
+ * working.
  *
  * The phone's native App Remote player uses the same port, so it renders the
  * same row; nothing here knows which adapter it has.
