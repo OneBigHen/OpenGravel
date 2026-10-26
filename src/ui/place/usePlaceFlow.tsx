@@ -92,7 +92,11 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     uiStore.getState().cancelPlacement();
     uiStore.getState().setSheetDetent("half");
     toast("Directions set", true);
-    if (outcome.status === "located") onDirectionsReady(result.document);
+    if (outcome.status === "located") {
+      uiStore.getState().setCameraUserOwned(false);
+      uiStore.getState().requestFit(null);
+      onDirectionsReady(result.document);
+    }
     if (outcome.status === "failed") {
       // The destination mounts the start editor; focus after that render.
       requestAnimationFrame(() => window.document.querySelector<HTMLInputElement>('[data-testid="start-search"]')?.focus());

@@ -113,6 +113,8 @@ describe("place flow", () => {
     render(<>{view.result.current.sheet}</>);
     await act(async () => fireEvent.click(screen.getByTestId("place-directions")));
     expect(view.onDirectionsReady).toHaveBeenCalledOnce();
+    expect(view.uiStore.getState().fitRequest?.extent).toBeNull();
+    expect(view.uiStore.getState().cameraUserOwned).toBe(false);
     expect(view.rideStore.getState().document.intent.start?.coordinate).toEqual(rider);
     expect(view.rideStore.getState().document.intent.finish?.coordinate).toEqual(place.coordinate);
     render(<>{view.result.current.toast}</>);
