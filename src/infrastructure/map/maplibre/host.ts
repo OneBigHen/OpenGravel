@@ -56,6 +56,7 @@
 import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
+  TAP_MAX_MS,
   gestureControlsPointer,
   initialInteractionState,
   isDrawingTool,
@@ -306,6 +307,8 @@ interface MapLibreMap {
   getCanvas(): HTMLCanvasElement;
   getCanvasContainer(): HTMLElement;
   getBounds(): { toArray(): readonly (readonly [number, number])[] };
+  isMoving?(): boolean;
+  stop?(): void;
   getZoom?(): number;
   getPitch?(): number;
   getBearing?(): number;
@@ -363,6 +366,9 @@ interface MapLibreMap {
 
 /** How far from a pin a press still picks it up, in CSS pixels. */
 const GRAB_RADIUS_PX = 18;
+/** Touch must claim a pin deliberately before it owns the pan stream (05 §4). */
+const PIN_HOLD_MS = 300;
+const GESTURE_QUIET_MS = 300;
 /** How far from the selected route line a press still picks it up. */
 const ROUTE_GRAB_RADIUS_PX = 9;
 const GRAB_POINT_LAYER_IDS: readonly string[] = [
@@ -803,10 +809,15 @@ export async function createMapLibreHost(
    * (see `onPointerDown`). It is always cleared on release or cancellation.
    */
   let gestureScoped = false;
+  let pressedRef: MapObjectRef | null = null;
+  let pendingPin: MapObjectRef | null = null;
+  let multiPointer = false;
+  let quietUntil = 0;
   let holdTimer: ReturnType<typeof setTimeout> | null = null;
   function clearHold(): void {
     if (holdTimer !== null) clearTimeout(holdTimer);
     holdTimer = null;
+    pendingPin = null;
   }
   /** The published load health; `loading` until an attempt says otherwise. */
   let status: MapLoadStatus = { state: "loading", reason: null };
@@ -1674,28 +1685,49 @@ export async function createMapLibreHost(
 
   function handleInteraction(event: InteractionEvent): readonly InteractionEffect[] {
     const before = interaction;
+    if (event.type === "pointer-down" && before.activePointers?.some((id) => id !== event.pointerId)) multiPointer = true;
     const result = reduceInteraction(interaction, event);
     interaction = result.state;
+    if (multiPointer && interaction.activePointers?.length === 0) {
+      quietUntil = performance.now() + GESTURE_QUIET_MS;
+      multiPointer = false;
+    }
     if (interaction.ownership === null || interaction.ownership.moved ||
-        interaction.ownership.longPressed || interaction.longPressEnabled === false) clearHold();
+        interaction.ownership.longPressed || (interaction.longPressEnabled === false && pendingPin === null)) clearHold();
     if (event.type === "pointer-down" && before.ownership === null &&
         interaction.ownership !== null &&
         (interaction.ownership.tool === "pan" || interaction.ownership.routePress) &&
-        interaction.longPressEnabled !== false) {
+        (interaction.longPressEnabled !== false || pendingPin !== null)) {
+      const pin = pendingPin;
       clearHold();
+      pendingPin = pin;
+      const holdMs = pin === null ? LONG_PRESS_MS : PIN_HOLD_MS;
       const started = performance.now();
       const timeout = (): void => {
         const elapsedMs = performance.now() - started;
-        // Browser timers can wake a fraction early. Keep the reducer's 450 ms
-        // boundary exact rather than silently losing that rider's hold.
-        if (elapsedMs < LONG_PRESS_MS) {
-          holdTimer = setTimeout(timeout, LONG_PRESS_MS - elapsedMs);
+        // Browser timers can wake a fraction early. Keep the hold boundary
+        // exact rather than silently losing that rider's hold.
+        if (elapsedMs < holdMs) {
+          holdTimer = setTimeout(timeout, holdMs - elapsedMs);
           return;
         }
         holdTimer = null;
+        if (pin !== null) {
+          const owner = interaction.ownership;
+          if (owner === null || owner.pointerId !== event.pointerId || owner.moved) return;
+          pendingPin = null;
+          gestureScoped = true;
+          interaction = { ...interaction, activeTool: "point-drag", ownership: { ...owner, tool: "point-drag" } };
+          if (attempt !== null) applyGestures(attempt.map, "point-drag");
+          emit({ type: "pointer-down", pointerId: owner.pointerId, coordinate: owner.origin, ref: pin });
+          if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+            try { navigator.vibrate(8); } catch { /* Haptics are optional. */ }
+          }
+          return;
+        }
         handleInteraction({ type: "hold-timeout", pointerId: event.pointerId, elapsedMs });
       };
-      holdTimer = setTimeout(timeout, LONG_PRESS_MS);
+      holdTimer = setTimeout(timeout, holdMs);
     }
     for (const effect of result.effects) {
       if (effect.type !== "long-press" || attempt === null || disposed) continue;
@@ -1842,6 +1874,10 @@ export async function createMapLibreHost(
     if (event.button === 2 && interaction.activeTool !== "pan") return;
     const map = current.map;
     if (interaction.ownership !== null || interaction.activePointers?.some((id) => id !== event.pointerId)) {
+      // A second finger also cancels a scoped pin drag before it can commit.
+      if (gestureScoped && interaction.ownership?.pointerId !== event.pointerId) {
+        handleInteraction({ type: "tool-change", tool: "pan" });
+      }
       handleInteraction({ type: "pointer-down", pointerId: event.pointerId, button: event.button, pointerType: event.pointerType,
         coordinate: coordinateAt(map, event), pixel: pixelOf(event) });
       map.getCanvasContainer().setPointerCapture?.(event.pointerId);
@@ -1854,26 +1890,30 @@ export async function createMapLibreHost(
     // own hit test: a release cannot be asked which object it started on, and the
     // workspace may not query the renderer (05 §4).
     clearHold();
-    // Pins are grabbed with a finger-sized box, not a single pixel: a 14 px dot
-    // under a gloved thumb was the difference between moving the start and
-    // panning the map.
-    const grabbed = interaction.activeTool === "pan" ? grabAt(map, pixel) : null;
-    const ref = grabbed ?? objectAt(map, coordinate);
+    // The box finds the pin a glove meant to grab. Touch still starts as pan;
+    // only a stationary hold claims the marker and disables native panning.
+    const stoppingCamera = map.isMoving?.() === true;
+    if (stoppingCamera) map.stop?.();
+    const consumed = stoppingCamera || performance.now() < quietUntil;
+    const grabbed = !consumed && interaction.activeTool === "pan" ? grabAt(map, pixel) : null;
+    const ref = consumed ? null : grabbed ?? objectAt(map, coordinate);
+    pressedRef = ref;
+    if (event.button === 0 && event.pointerType === "touch" && interaction.activeTool === "pan" && isDraggablePointRef(ref)) pendingPin = ref;
     const onSelectedRoute =
       interaction.activeTool === "pan" &&
       ref?.kind === "route" &&
       latestScene !== null &&
       ref.routeId === latestScene.selectedRouteId;
-    // A press on an authored point with the neutral tool is a point drag, not a
-    // camera pan — the rider grabbed the marker. The scope lasts exactly this one
-    // gesture, so the neutral tool is what the rider still holds afterwards.
+    // A mouse or pen press on an authored point immediately claims the marker.
+    // The scope lasts one gesture; the rider still holds the neutral tool after it.
     // A mouse or pen press on the selected route line drags the line itself.
-    if (event.button === 0 && interaction.activeTool === "pan" && (isDraggablePointRef(ref) || (onSelectedRoute && event.pointerType !== "touch"))) {
+    if (event.button === 0 && interaction.activeTool === "pan" && (isDraggablePointRef(ref) || onSelectedRoute) && event.pointerType !== "touch") {
       gestureScoped = true;
       handleInteraction({ type: "tool-change", tool: "point-drag" });
     }
     handleInteraction({
       type: "pointer-down",
+      timeMs: performance.now(),
       ...(onSelectedRoute && gestureScoped ? { routePress: true } : {}),
       button: event.button,
       pointerType: event.pointerType,
@@ -1881,6 +1921,11 @@ export async function createMapLibreHost(
       coordinate,
       pixel,
     });
+    if (consumed) {
+      // Keep this pointer tracked for a later pinch, but give it no release outcome.
+      clearHold();
+      interaction = { ...interaction, ownership: null, contextMenuSuppressed: true };
+    }
     // The pointer stream belongs to a drawing tool only (05 §4): a pan is a camera
     // gesture, so a `pan` press emits nothing at all — there is no owner to
     // forward it to, and a `pointer-down` for pan would announce a stream the
@@ -1937,13 +1982,14 @@ export async function createMapLibreHost(
     const wasScoped = gestureScoped;
     const effects = handleInteraction({
       type: "pointer-up",
+      timeMs: performance.now(),
       pointerId: event.pointerId,
       coordinate,
       pixel,
     });
     if (drawing && !ownership.longPressed) emit({ type: "pointer-up", pointerId: event.pointerId, coordinate });
     for (const effect of effects) {
-      if (effect.type === "tap") tapAt(current.map, coordinate, !drawing);
+      if (effect.type === "tap" && performance.now() >= quietUntil) tapAt(current.map, coordinate, !drawing);
       else if (effect.type === "commit-gesture") {
         // The machine committed a drawing gesture: this is the one and only
         // commit point of a drag, and it can never also be a tap (05 §4).
@@ -1959,7 +2005,11 @@ export async function createMapLibreHost(
       // select it would author nothing at all.
       // The renderer temporarily armed `point-drag`, so this release belonged to
       // a drawing owner even though the rider's neutral tool is restored above.
-      if (!moved && !ownership.longPressed) tapAt(current.map, coordinate, false);
+      if (!moved && !ownership.longPressed && performance.now() >= quietUntil &&
+          (ownership.pressedAt === undefined || performance.now() - ownership.pressedAt <= TAP_MAX_MS)) {
+        if (pressedRef !== null) emit({ type: "object-click", coordinate, ref: pressedRef });
+      }
+      pressedRef = null;
     }
   }
 
@@ -1986,6 +2036,13 @@ export async function createMapLibreHost(
       layers: hitLayers(map),
     });
     emit(resolveIntent(hits, coordinate));
+  }
+
+  /** Rider zoom/rotate/pitch releases need time to settle before placement (05 §4). */
+  function onGestureEnd(payload: unknown): void {
+    if ((payload as { readonly originalEvent?: unknown } | null)?.originalEvent != null) {
+      quietUntil = performance.now() + GESTURE_QUIET_MS;
+    }
   }
 
   function onContextMenu(event: MouseEvent): void {
@@ -2244,6 +2301,7 @@ export async function createMapLibreHost(
     current.map.off("rotatestart", onMoveStart as (payload: unknown) => void);
     current.map.off("pitchstart", onMoveStart as (payload: unknown) => void);
     current.map.off("moveend", onMoveEnd);
+    for (const event of ["zoomend", "rotateend", "pitchend"]) current.map.off(event, onGestureEnd);
     current.map.off("move", onCameraMove);
     current.map.off("error", onMapError);
     current.map.off("sourcedata", onSourceData);
@@ -2583,6 +2641,7 @@ export async function createMapLibreHost(
     // mid-glide raises no new `movestart`; the drag's own start is the signal.
     map.on("dragstart", onMoveStart as (payload: unknown) => void);
     map.on("moveend", onMoveEnd);
+    for (const event of ["zoomend", "rotateend", "pitchend"]) map.on(event, onGestureEnd);
     // The instruments (compass, zoom buttons, scale rule) follow the camera while
     // it moves, not only when it settles: a rotation the rider is dragging must
     // be visible under the finger doing it (05 §9).

@@ -60,6 +60,8 @@ export type PointerTool =
  * reliable on a phone, in a glove, on a bar mount.
  */
 export const TAP_DRAG_THRESHOLD_PX = 10;
+/** A release after this deadline is no placement tap (05 §4). */
+export const TAP_MAX_MS = 350;
 export const LONG_PRESS_MS = 450;
 
 /** A pointer position in CSS pixels, as the DOM reports it. */
@@ -112,6 +114,8 @@ export interface PointerOwnership {
    * unmoved release is not a drag, and a tremor is not movement.
    */
   readonly moved: boolean;
+  /** Monotonic host clock at press time; omitted by timeless reducer callers. */
+  readonly pressedAt?: number;
   /** Consumes release and native contextmenu after a hold has fired. */
   readonly longPressed?: boolean;
   /** A neutral-tool mouse press that temporarily grabbed the selected route. */
@@ -152,6 +156,7 @@ export type InteractionEvent =
   | { readonly type: "context-menu"; readonly coordinate: Coordinate; readonly pixel: PointerPixel }
   | {
       readonly type: "pointer-down";
+      readonly timeMs?: number;
       readonly routePress?: boolean;
       readonly button?: number;
       readonly pointerType?: string;
@@ -167,6 +172,7 @@ export type InteractionEvent =
     }
   | {
       readonly type: "pointer-up";
+      readonly timeMs?: number;
       readonly pointerId: number;
       readonly coordinate: Coordinate;
       readonly pixel: PointerPixel;
@@ -254,11 +260,13 @@ function finishGesture(
   ownership: PointerOwnership,
   release: Coordinate,
   pointerId: number,
+  timeMs?: number,
 ): readonly InteractionEffect[] {
   if (ownership.longPressed || ownership.button === 2) return [];
   const { moved } = ownership;
   if (ownership.tool === "pan") {
-    return moved ? [] : [{ type: "tap", pointerId, coordinate: release }];
+    const expired = timeMs !== undefined && ownership.pressedAt !== undefined && timeMs - ownership.pressedAt > TAP_MAX_MS;
+    return moved || expired ? [] : [{ type: "tap", pointerId, coordinate: release }];
   }
   if (!moved) return [];
   return [
@@ -340,6 +348,7 @@ export function reduceInteraction(
             originPixel: event.pixel,
             currentPixel: event.pixel,
             moved: false,
+            ...(event.timeMs === undefined ? {} : { pressedAt: event.timeMs }),
             ...(event.routePress ? { routePress: true } : {}),
             ...(event.button === 2 ? { button: 2 } : {}),
           },
@@ -372,6 +381,7 @@ export function reduceInteraction(
         observed(ownership, event.coordinate, event.pixel),
         event.coordinate,
         event.pointerId,
+        event.timeMs,
       );
       return { state: released({ ...state, contextMenuSuppressed: state.contextMenuSuppressed || exceedsTapThreshold(ownership.originPixel, event.pixel) }), effects };
     }

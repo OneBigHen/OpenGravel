@@ -970,6 +970,131 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
     return { element, host, map, intents: recordIntents(host) };
   }
 
+  it.each(["touch", "mouse"])("keeps a near-miss click on its grabbed %s pin", async (pointerType) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.pointFinish }, properties: { id: "pt_finish" } }];
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10, pointerType }));
+      if (pointerType === "touch") vi.advanceTimersByTime(300);
+      fake.state.queryFeatures = [];
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 12, y: 10, pointerType }));
+      expect(intents.filter((intent) => intent.type.endsWith("click"))).toEqual([
+        { type: "object-click", coordinate: COORDINATE, ref: { kind: "point", pointId: "pt_finish" } },
+      ]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it.each(["zoomend", "rotateend", "pitchend"])("consumes releases during the %s quiet window", async (event) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10 }));
+      map.fire(event, { originalEvent: {} });
+      vi.advanceTimersByTime(299);
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 10, y: 10 }));
+      expect(intents).toEqual([]);
+      vi.advanceTimersByTime(1);
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10 }));
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 10, y: 10 }));
+      expect(intents.map((intent) => intent.type)).toEqual(["map-click"]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("uses a moving-camera press only to stop the camera", async () => {
+    const { host, map, intents } = await loaded();
+    const moving = vi.fn(() => true);
+    const stop = vi.fn(() => { moving.mockReturnValue(false); });
+    Object.assign(map, { isMoving: moving, stop });
+    fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.pointFinish }, properties: { id: "pt_finish" } }];
+    const canvas = map.getCanvasContainer();
+    canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10 }));
+    canvas.dispatchEvent(pointerEvent("pointerup", { x: 10, y: 10 }));
+    expect(stop).toHaveBeenCalledOnce();
+    expect(intents.filter((intent) => intent.type !== "gesture-cancel")).toEqual([]);
+    host.dispose();
+  });
+
+  it.each([0, 300])("requires a touch pin hold before dragging (%i ms)", async (holdMs) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const dragPan = { enable: vi.fn(), disable: vi.fn() };
+      Object.assign(map, { dragPan });
+      const vibrate = vi.fn();
+      Object.defineProperty(navigator, "vibrate", { configurable: true, value: vibrate });
+      fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.pointFinish }, properties: { id: "pt_finish" } }];
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10, pointerType: "touch" }));
+      expect(dragPan.disable).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(holdMs);
+      canvas.dispatchEvent(pointerEvent("pointermove", { x: 80, y: 80, pointerType: "touch" }));
+      vi.advanceTimersByTime(500);
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 80, y: 80, pointerType: "touch" }));
+      expect(intents.map((intent) => intent.type)).toEqual(holdMs === 300 ? ["pointer-down", "pointer-move", "pointer-up", "gesture-commit"] : []);
+      expect(dragPan.disable).toHaveBeenCalledTimes(holdMs === 300 ? 1 : 0);
+      expect(vibrate).toHaveBeenCalledTimes(holdMs === 300 ? 1 : 0);
+      host.dispose();
+      Reflect.deleteProperty(navigator, "vibrate");
+    } finally { vi.useRealTimers(); }
+  });
+
+  it.each([true, false])("consumes a pinch near a pin, owner first: %s", async (ownerFirst) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      const send = (type: string, pointerId: number): void => { canvas.dispatchEvent(pointerEvent(type, { x: 10, y: 10, pointerId, pointerType: "touch" })); };
+      send("pointerdown", 1);
+      fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.pointFinish }, properties: { id: "pt_finish" } }];
+      send("pointerdown", 2);
+      vi.advanceTimersByTime(500);
+      send("pointerup", ownerFirst ? 1 : 2);
+      send("pointerdown", 3);
+      send("pointerup", ownerFirst ? 2 : 1);
+      send("pointerup", 3);
+      send("pointerdown", 4);
+      send("pointerup", 4);
+      expect(intents.filter((intent) => intent.type !== "gesture-cancel")).toEqual([]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it.each(["mouse", "touch"])("cancels an already grabbed %s pin when another finger joins", async (pointerType) => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      fake.state.queryFeatures = [{ layer: { id: MAP_LAYER_IDS.pointFinish }, properties: { id: "pt_finish" } }];
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10, pointerType }));
+      if (pointerType === "touch") vi.advanceTimersByTime(300);
+      expect(intents.map((intent) => intent.type)).toEqual(["pointer-down"]);
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 12, y: 10, pointerId: 2, pointerType: "touch" }));
+      canvas.dispatchEvent(pointerEvent("pointermove", { x: 80, y: 80, pointerType }));
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 80, y: 80, pointerType }));
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 12, y: 10, pointerId: 2, pointerType: "touch" }));
+      expect(intents.map((intent) => intent.type)).toEqual(["pointer-down", "gesture-cancel"]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("does not tap after a 400 ms press", async () => {
+    vi.useFakeTimers();
+    try {
+      const { host, map, intents } = await loaded();
+      const canvas = map.getCanvasContainer();
+      canvas.dispatchEvent(pointerEvent("pointerdown", { x: 10, y: 10 }));
+      vi.advanceTimersByTime(400);
+      canvas.dispatchEvent(pointerEvent("pointerup", { x: 10, y: 10 }));
+      expect(intents).toEqual([]);
+      host.dispose();
+    } finally { vi.useRealTimers(); }
+  });
+
   it("does not emit a pointer stream for a pan", async () => {
     const { host, map, intents } = await loaded();
 
