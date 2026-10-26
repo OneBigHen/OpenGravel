@@ -2528,6 +2528,11 @@ export function createRideFocusStore(
         // The store's own clock, like every other age on this screen.
         const untilMs = Date.parse(now()) + ZOOM_HOLD_MS;
         set({ zoomHold: { zoom, untilMs } });
+        // Following: the ride camera is the map's one camera owner, so the press
+        // is carried out by re-issuing that frame at the held level now. A map
+        // the rider has panned keeps its own camera, and gets the press from the
+        // renderer instead (the surface's `zoomBy` call).
+        if (get().follow) followRider(get().viewModel, true);
         if (zoomHoldTimer !== null) clearTimeout(zoomHoldTimer);
         // When the hold ends the ride view comes back on its own: a rider who
         // zoomed out to read a junction should not have to press anything after

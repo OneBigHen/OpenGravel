@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStore } from "zustand";
 // The renderer's own stylesheet, imported at the composition root exactly as the
 // planner does: the UI layer may not know which renderer it draws with
 // (02-ARCHITECTURE-CONTRACT §7, 4.0 review finding 8).
@@ -438,6 +439,13 @@ export function RideClient({
     return store.subscribe((state) => activitySync.sync(state.viewModel));
   }, [store, activitySync]);
 
+  /*
+    The home-screen hint is a first-visit aside, not part of a ride. It used to
+    open over the live map for the ride's first 10 s, where it covered the strip
+    a mounted phone is read through; it is only offered while no ride is open.
+  */
+  const rideOpen = useStore(store, (state) => state.status === "ready");
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -502,7 +510,7 @@ export function RideClient({
       requestMotion={requestMotion}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
-    <RideInstallHint />
+    {rideOpen ? null : <RideInstallHint />}
     </>
   );
 }

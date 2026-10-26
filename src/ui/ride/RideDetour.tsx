@@ -10,7 +10,7 @@
  * through the chosen one and on to the stops still ahead.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   METERS_PER_MILE,
@@ -33,6 +33,13 @@ export interface RideDetourProps {
   /** Whether the fix is fresh and accurate enough to replan from. */
   readonly fixGood: boolean;
   readonly source?: MapLayersSource | undefined;
+  /**
+   * Whether this block is showing something the rider is reading right now (the
+   * Gas/Food picker, its loading note, or a station list). The ride sheet uses
+   * it to keep itself open: a list that vanishes mid-decision is worse than no
+   * list at all.
+   */
+  readonly onHoldChange?: (held: boolean) => void;
   readonly onReroute: (detour?: RerouteDetour) => void;
   readonly onEasierWayBack: () => void;
   readonly onTurnAround: () => void;
@@ -60,11 +67,21 @@ function miles(meters: number): string {
   return value < 10 ? value.toFixed(1) : String(Math.round(value));
 }
 
-export function RideDetour({ offRoute, busy, message, error, routeLine, position, fixGood, source, onReroute, onEasierWayBack, onTurnAround }: RideDetourProps) {
+export function RideDetour({ offRoute, busy, message, error, routeLine, position, fixGood, source, onHoldChange, onReroute, onEasierWayBack, onTurnAround }: RideDetourProps) {
   const [kind, setKind] = useState<StopKind | null>(null);
   const [fuel, setFuel] = useState<FuelAhead | null>(null);
   const [adding, setAdding] = useState(false);
   const canFindStops = source?.along !== undefined && routeLine.length >= 2 && position !== null;
+
+  // What this block is showing that the rider needs to keep: the picker, the
+  // status line while a search runs, and the result list. Reported up so the
+  // sheet's 8 s idle clock does not take it away.
+  const holding = adding || fuel !== null;
+  useEffect(() => {
+    onHoldChange?.(holding);
+  }, [holding, onHoldChange]);
+  // A block that unmounts (the ride ended) releases the hold it was keeping.
+  useEffect(() => () => onHoldChange?.(false), [onHoldChange]);
 
   const findStops = (next: StopKind): void => {
     if (source?.along === undefined || position === null) return;

@@ -77,6 +77,34 @@ describe("RideDetour", () => {
     expect(src.along).toHaveBeenCalledWith(expect.anything(), "food");
   });
 
+  it("tells the ride sheet to wait while its picker or list is showing", async () => {
+    const onHoldChange = vi.fn();
+    render(
+      <RideDetour
+        offRoute={false}
+        busy={false}
+        message={null}
+        error={null}
+        routeLine={LINE}
+        position={{ lon: -75.0, lat: 40.05 }}
+        fixGood
+        source={source()}
+        onHoldChange={onHoldChange}
+        onReroute={vi.fn()}
+        onEasierWayBack={vi.fn()}
+        onTurnAround={vi.fn()}
+      />,
+    );
+    expect(onHoldChange).toHaveBeenLastCalledWith(false);
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    expect(onHoldChange).toHaveBeenLastCalledWith(true);
+    fireEvent.click(screen.getByTestId("ride-fuel-ahead"));
+    await screen.findByTestId("ride-fuel-list");
+    expect(onHoldChange).toHaveBeenLastCalledWith(true);
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    expect(onHoldChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("offers a new route from here when off the line, and holds it without a good fix", () => {
     const onReroute = vi.fn();
     const { rerender } = render(
