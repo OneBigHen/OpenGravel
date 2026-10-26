@@ -1,0 +1,130 @@
+/* The few shared controls every screen uses. One primary action colour;
+   secondary and chips are neutral. No shadows on controls inside a sheet or
+   page — only things floating over the map float. */
+
+.og-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.og-eyebrow {
+  margin: 0 0 var(--og-space-1);
+  color: var(--og-ink-2);
+  font-family: var(--og-face-body);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-primary,
+.og-secondary,
+.og-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-4);
+  border-radius: var(--og-radius-control);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--og-dur-fast) var(--og-ease), color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-primary {
+  border: 0;
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+  font-size: var(--og-text-body);
+}
+
+.og-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--og-primary) 88%, var(--og-ink));
+}
+
+.og-primary:disabled {
+  background: var(--og-surface-2);
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+}
+
+.og-secondary {
+  border: 1px solid var(--og-line-strong);
+  background: var(--og-surface);
+  color: var(--og-ink);
+}
+
+.og-secondary:hover:not(:disabled),
+.og-chip:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--og-surface) 92%, var(--og-ink));
+}
+
+.og-secondary:disabled,
+.og-chip:disabled {
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+}
+
+.og-chip {
+  border: 1px solid var(--og-line);
+  background: var(--og-surface);
+  color: var(--og-ink);
+}
+
+.og-chip[data-armed="true"] {
+  border-color: var(--og-primary);
+  background: var(--og-primary-soft);
+}
+
+.og-primary:focus-visible,
+.og-secondary:focus-visible,
+.og-chip:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* A native select with a drawn chevron. */
+.og-select {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.og-select::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 6px);
+  right: 18px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--og-ink-2);
+  border-bottom: 2px solid var(--og-ink-2);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.og-select > select {
+  appearance: none;
+  padding-right: 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-primary,
+  .og-secondary,
+  .og-chip {
+    transition: none;
+  }
+}

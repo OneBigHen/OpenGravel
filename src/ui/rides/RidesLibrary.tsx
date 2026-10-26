@@ -31,7 +31,6 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
 import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
-import "./rides-library.css";
 
 const NO_EXPORT_CAPABILITIES = {
   plannedRoute: false,

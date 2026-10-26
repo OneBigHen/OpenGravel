@@ -100,11 +100,10 @@
 
 :root {
   /* Type: Plus Jakarta Sans for the interface, Outfit for titles and ride
-     numbers (both self-hosted by next/font in layout.tsx). Five sizes. */
-  --og-font-body: ui-sans-serif;
-  --og-font-display: ui-sans-serif;
-  --og-face-body: var(--og-font-body), ui-sans-serif, system-ui, sans-serif;
-  --og-face-display: var(--og-font-display), var(--og-font-body), ui-sans-serif, sans-serif;
+     numbers. next/font (layout.tsx) sets --og-font-body / --og-font-display on
+     <html>; they are deliberately not declared here. Five sizes. */
+  --og-face-body: var(--og-font-body, ui-sans-serif), system-ui, sans-serif;
+  --og-face-display: var(--og-font-display, ui-sans-serif), system-ui, sans-serif;
   --og-face-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --og-text-title: 28px;
