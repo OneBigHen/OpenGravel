@@ -14,7 +14,9 @@
  * The rules it keeps:
  *
  * - **No stations data is said out loud** ("Gas stations unknown along this
- *   ride"), never blank, and never read as "there is none".
+ *   ride"), never blank, and never read as "there is none". When nothing at all
+ *   is known the block is one compact "Filled up?" row, and if there is no bike
+ *   range to count it is not drawn at all.
  * - **The range sentence appears only when it is measured.** An unknown range
  *   (no distance along the route, no bike) leaves the plain next-station line;
  *   it never becomes "you're fine".
@@ -197,6 +199,47 @@ export function RideFuelLine({
   const add =
     line.stop === null || onAddStop === undefined ? null : { stop: line.stop, onAddStop };
   const canFill = guided && usableMiles !== null;
+
+  /*
+    Nothing is known about gas along this ride (the provider did not answer).
+    Printing that sentence in a box, with a lone "Filled up" under it, told a
+    rider nothing they could act on and looked broken. One compact row instead:
+    the button they press when they fill up, and one line saying what it does.
+    With no bike range to count, the row has nothing to offer and is not drawn
+    at all. Unknown is never printed as a value either way.
+  */
+  if (line.tone === "unknown") {
+    if (!canFill) return null;
+    return (
+      <section
+        className="og-ride-fuel og-ride-fuel--compact"
+        data-testid="ride-fuel"
+        data-tone="unknown"
+        aria-label="Filled up"
+      >
+        <button
+          type="button"
+          className="og-ride-fuel__fill"
+          data-testid="ride-fuel-filled-up"
+          onClick={() => {
+            setOdometer(resetFuelOdometer);
+            setFilledNote(true);
+          }}
+        >
+          Filled up?
+        </button>
+        <p className="og-ride-fuel__hint">
+          {filledNote ? (
+            <span role="status" data-testid="ride-fuel-filled-note">
+              Range counted from here.
+            </span>
+          ) : (
+            "Tank range counts from here."
+          )}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="og-ride-fuel" data-testid="ride-fuel" data-tone={line.tone} aria-label="Gas ahead">
