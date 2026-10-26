@@ -29,7 +29,6 @@ export interface PlannerWorkspaceFrameProps {
   readonly mapSlotRef: RefObject<HTMLDivElement | null>;
   readonly map: Omit<PlannerMapProps, "hint">;
   readonly armedTool: keyof typeof TOOL_HINTS | null;
-  readonly missingTarget: keyof typeof TOOL_HINTS | null;
   readonly retryingMap: boolean;
   /** The places overlay (sample places provider), when the app composes a source. */
   readonly places?: PlannerPlacesProps | undefined;
@@ -66,7 +65,6 @@ export function PlannerWorkspaceFrame({
   mapSlotRef,
   map,
   armedTool,
-  missingTarget,
   retryingMap,
   places,
   layers,
@@ -86,7 +84,7 @@ export function PlannerWorkspaceFrame({
   const scene = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
   // The edit bar says what a stop tap does, so the map does not say it twice.
   const hint =
-    armedTool !== null && armedTool !== missingTarget && !(armedTool === "stop" && editBar !== undefined)
+    armedTool !== null && !(armedTool === "stop" && editBar !== undefined)
       ? TOOL_HINTS[armedTool]
       : null;
   /*

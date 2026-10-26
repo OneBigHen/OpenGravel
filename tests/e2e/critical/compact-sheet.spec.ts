@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   clickMapAtCoordinate,
+  placeEndpoint,
   expectDrawnScene,
   expectHealthyMap,
   plannerMap,
@@ -142,9 +143,9 @@ test("the sheet has a peek detent and an expanded one", async ({ page }) => {
 
   // Author both endpoints and plan the fixture ride; the sheet rises to its
   // expanded detent once the choices arrive (04 §2).
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   // A destination ends idle: the full composer is back.
   await expect(sheet).not.toHaveAttribute("data-idle", "true");
@@ -244,9 +245,9 @@ test("a dropped pin is named, and its coordinate is rendered in full", async ({ 
   // review 2026-09-21: it read the raw coordinate as the place value. So the cell
   // now shows the name ("Dropped pin") over the coordinate, the coordinate is
   // never clipped, and nothing invents a place name for a pin the rider dropped.
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
 
   for (const testId of ["start-value", "finish-value"]) {
@@ -284,18 +285,25 @@ test("the armed-placement instruction is a note, never a control", async ({
   // One instruction at a time (OGV-D-214): the blocked state shows the composer
   // reason only.
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
-    "Search for a start, or set it on the map.",
+    "Search for a start, or press and hold the map.",
   );
   await expect(page.getByTestId("map-hint")).toHaveCount(0);
 
-  // The empty map is directly usable: two unarmed taps author both endpoints.
+  // A plain tap on the empty map authors nothing (maps-for-riders §1): riders
+  // pan and pinch with gloves on, and a stray touch used to route them.
   await clickMapAtCoordinate(page, START_COORDINATE);
+  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await expect(page.getByTestId("start-value")).toHaveText("No start yet");
+  await expect(page.getByTestId("map-point-menu")).toHaveCount(0);
+
+  // Press and hold is the map's way in: the point menu sets each endpoint.
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
-    "Search for a destination, or choose it on the map.",
+    "Search for a destination, or press and hold the map.",
   );
   await expect(page.getByTestId("map-hint")).toHaveCount(0);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await expect(page.getByTestId("plan-disabled-reason")).toHaveCount(0);
 

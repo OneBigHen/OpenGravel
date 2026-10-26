@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   expectCoordinateNear,
   expectDrawnScene,
   expectHealthyMap,
@@ -124,9 +124,9 @@ async function dragMapCoordinates(page: Page, corners: RectangleCorners): Promis
 
 /** Places both endpoints and plans the fixture ride, as `stops.spec.ts` does. */
 async function planFixtureRide(page: Page): Promise<void> {
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);

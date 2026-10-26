@@ -467,7 +467,6 @@ export function PlannerWorkspace({
   });
   const {
     armedTool,
-    missingTarget,
     panelProps: stopsPanelProps,
     beginPointDrag,
     previewPointDrag,
@@ -753,7 +752,6 @@ export function PlannerWorkspace({
       headerRef={headerRef}
       mapSlotRef={mapSlotRef}
       armedTool={armedTool}
-      missingTarget={missingTarget}
       retryingMap={mapLoadStatus.state === "retrying"}
       places={preparationProviders?.places && { source: preparationProviders.places, onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name) }}
       layers={preparationProviders?.mapLayers && {

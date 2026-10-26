@@ -391,6 +391,31 @@ export async function clickMapAtCoordinate(
 }
 
 /**
+ * Sets the ride's start or destination at `coordinate` the way a rider does now:
+ * a long-press (a right-click with a mouse) opens the point menu, and the rider
+ * picks "Start here" or "Finish here". A plain tap on the map never authors an
+ * endpoint by itself (maps-for-riders §1), so specs can no longer tap twice.
+ */
+export async function placeEndpoint(
+  page: Page,
+  target: "start" | "finish",
+  coordinate: Coordinate,
+): Promise<void> {
+  const { fraction } = await settledExtentShowing(page, coordinate);
+  const map = plannerMap(page);
+  const box = await map.boundingBox();
+  if (box === null) throw new Error("the planner map has no measured box");
+  await map.click({
+    button: "right",
+    position: { x: Math.round(fraction.x * box.width), y: Math.round(fraction.y * box.height) },
+  });
+  const menu = page.getByTestId("map-point-menu");
+  await expect(menu).toBeVisible();
+  await menu.getByRole("button", { name: target === "start" ? "Start here" : "Finish here" }).click();
+  await expect(menu).toHaveCount(0);
+}
+
+/**
  * Presses the planner's commitment control, when the planner still offers one.
  *
  * A ride with a destination plans itself the moment the destination completes it,

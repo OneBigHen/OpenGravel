@@ -238,7 +238,7 @@ describe("buildPlannerViewModel — plan commitment and disabled reasons", () =>
     );
 
     expect(vm.canPlan).toBe(false);
-    expect(vm.disabledReason).toBe("Search for a start, or set it on the map.");
+    expect(vm.disabledReason).toBe("Search for a start, or press and hold the map.");
     expect(vm.startLabel).toBe("No start yet");
     expect(vm.finishLabel).toBe("No destination yet");
     // The status line reports the plan's state; the disabled reason is the
@@ -256,7 +256,7 @@ describe("buildPlannerViewModel — plan commitment and disabled reasons", () =>
     );
 
     expect(vm.canPlan).toBe(false);
-    expect(vm.disabledReason).toBe("Search for a destination, or choose it on the map.");
+    expect(vm.disabledReason).toBe("Search for a destination, or press and hold the map.");
     expect(vm.finishLabel).toBe("No destination yet");
   });
 

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   pressPlan,
   settledExtent,
@@ -79,8 +79,8 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START);
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await page.getByTestId("named-ride-title").fill("My sample ride");
@@ -101,8 +101,8 @@ test("leaves the road section out when no road evidence is matched, without cons
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START);
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import {
   clickMapAtCoordinate,
+  placeEndpoint,
   expectCoordinateNear,
   expectDrawnScene,
   expectHealthyMap,
@@ -76,9 +77,9 @@ async function openRowMenu(page: Page, key: string): Promise<void> {
 
 /** Places both endpoints and plans the fixture ride. */
 async function planFixtureRide(page: Page): Promise<void> {
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText(START_LABEL);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText(FINISH_LABEL);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);

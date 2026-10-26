@@ -19,7 +19,6 @@ import {
 import {
   itineraryRefFor,
   itineraryRefKey,
-  nextPlacementTarget,
   type ItineraryRef,
   type PlacementTarget,
   type PlannerViewModel,
@@ -57,7 +56,6 @@ export type ArmedPlacementTool = "start" | "finish" | "stop" | null;
 
 export interface PlannerStopsAuthoring {
   readonly armedTool: ArmedPlacementTool;
-  readonly missingTarget: PlacementTarget;
   readonly panelProps: StopsPanelProps;
   readonly changeDestination: () => void;
   readonly onMapPointAction: (action: MapPointAction, coordinate: Coordinate) => void;
@@ -120,7 +118,6 @@ export function usePlannerStops(input: {
     plannerUiStore,
   } = input;
   const armedTool = armedToolFor(placementTool);
-  const missingTarget = nextPlacementTarget(document);
 
   const actions = usePlannerItineraryActions({
     document,
@@ -295,8 +292,11 @@ export function usePlannerStops(input: {
         return true;
       }
 
-      const armedTarget: PlacementTarget = armedTool === "stop" ? null : armedTool;
-      const target = armedTarget ?? missingTarget;
+      // Only an armed tool places a point. A plain tap on the map never fills a
+      // missing start or destination by itself: riders pan and pinch with gloves
+      // on, and a stray touch that routed them somewhere was the top complaint.
+      // Long-press (the point menu) and search are how a spot becomes a point.
+      const target: PlacementTarget = armedTool === "stop" ? null : armedTool;
       if (target !== "start" && target !== "finish") return false;
       rideDocumentStore
         .getState()
@@ -311,7 +311,6 @@ export function usePlannerStops(input: {
     [
       armedTool,
       document,
-      missingTarget,
       placementStopId,
       placementTool,
       plannerUiStore,
@@ -342,7 +341,6 @@ export function usePlannerStops(input: {
 
   return {
     armedTool,
-    missingTarget,
     onMapPointAction,
     panelProps,
     changeDestination: actions.changeDestination,

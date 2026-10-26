@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   expectDrawnScene,
   plannerMap,
   settledExtent,
@@ -34,8 +34,8 @@ const DESTINATION_COORDINATE: Coordinate = { lon: -75.4335, lat: 40.1325 };
  * toolbar exist), and the offline disclosure last.
  */
 async function fillRail(page: import("@playwright/test").Page): Promise<void> {
-  await clickMapAtCoordinate(page, START_COORDINATE);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

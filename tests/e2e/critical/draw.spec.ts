@@ -305,7 +305,7 @@ test("draw two strokes, plan through them, recover from a failure and undo as on
   await expect(page.getByTestId("redo")).toContainText("Drew route");
   await expect(page.getByTestId("compose-create")).toBeDisabled();
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
-    "Search for a start, or set it on the map.",
+    "Search for a start, or press and hold the map.",
   );
   await expectHealthyMap(page);
 

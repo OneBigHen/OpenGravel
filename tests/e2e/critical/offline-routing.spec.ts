@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   pressPlan,
   settledExtent,
@@ -33,9 +33,9 @@ async function planWithNoSignal(page: Page): Promise<void> {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START);
+  await placeEndpoint(page, "start", START);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "finish", FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
 }
@@ -67,9 +67,9 @@ test("with the browser itself offline, a ride inside a downloaded area is still 
   // Signal is lost with the app open: nothing new can be fetched, the
   // routing worker's script included.
   await page.context().setOffline(true);
-  await clickMapAtCoordinate(page, START);
+  await placeEndpoint(page, "start", START);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "finish", FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
 

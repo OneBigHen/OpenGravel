@@ -88,7 +88,7 @@ describe("IntentComposer", () => {
     const plan = screen.getByRole("button", { name: "Create ride" });
     expect(plan).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a start, or set it on the map.",
+      "Search for a start, or press and hold the map.",
     );
     expect(screen.getByTestId("start-value")).toHaveTextContent("No start yet");
     expect(screen.getByTestId("finish-value")).toHaveTextContent("No destination yet");
@@ -107,7 +107,7 @@ describe("IntentComposer", () => {
 
     expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a destination, or choose it on the map.",
+      "Search for a destination, or press and hold the map.",
     );
     expect(screen.getByTestId("start-value")).toHaveTextContent("39.9500, -75.2000");
   });

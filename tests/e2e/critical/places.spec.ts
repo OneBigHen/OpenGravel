@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   cameraGeneration,
-  clickMapAtCoordinate,
+  placeEndpoint,
   fractionOf,
   openRefine,
   plannerMap,
@@ -68,8 +68,8 @@ async function planFixtureRide(page: Page): Promise<void> {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START_COORDINATE);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

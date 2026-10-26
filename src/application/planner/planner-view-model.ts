@@ -142,8 +142,8 @@ export const NO_START_LABEL = "No start yet";
 export const NO_FINISH_LABEL = "No destination yet";
 
 /** The plan-commitment refusal, in the order a rider can act on it. */
-export const DISABLED_MISSING_START = "Search for a start, or set it on the map.";
-export const DISABLED_MISSING_FINISH = "Search for a destination, or choose it on the map.";
+export const DISABLED_MISSING_START = "Search for a start, or press and hold the map.";
+export const DISABLED_MISSING_FINISH = "Search for a destination, or press and hold the map.";
 export const DISABLED_IN_FLIGHT = "Your ride is on its way — one moment.";
 
 /**

@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   settledExtent,
   type Coordinate,
@@ -17,8 +17,8 @@ export async function startRide(page: Page): Promise<void> {
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
 
-  await clickMapAtCoordinate(page, RIDE_FIXTURE_START);
-  await clickMapAtCoordinate(page, RIDE_FIXTURE_DESTINATION);
+  await placeEndpoint(page, "start", RIDE_FIXTURE_START);
+  await placeEndpoint(page, "finish", RIDE_FIXTURE_DESTINATION);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 

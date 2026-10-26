@@ -310,7 +310,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     // absent because it would say the same thing a second time (OGV-D-214).
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a start, or set it on the map.",
+      "Search for a start, or press and hold the map.",
     );
     expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
 
@@ -484,7 +484,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     // The workspace is in finish placement now, and says so exactly once.
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a destination, or choose it on the map.",
+      "Search for a destination, or press and hold the map.",
     );
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
 
@@ -538,7 +538,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
 
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a start, or set it on the map.",
+      "Search for a start, or press and hold the map.",
     );
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
   });
@@ -960,7 +960,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
 
     expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a destination, or choose it on the map.",
+      "Search for a destination, or press and hold the map.",
     );
     // The reason is the only instruction: the overlay hint would duplicate it.
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();

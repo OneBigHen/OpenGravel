@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   pressPlan,
   settledExtent,
@@ -18,8 +18,8 @@ test("keeps named rides separate from the active draft and protects sources", as
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
 
-  await clickMapAtCoordinate(page, START);
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
