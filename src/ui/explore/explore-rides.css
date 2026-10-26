@@ -104,9 +104,13 @@
   line-height: 1.35;
 }
 
+/* One fact is one unbreakable unit. The time figure used to carry its pace
+   inside the same flex item, so at 320 px it split into "~2 h 15 min" and
+   "at 28 mph" and the trailing middot stood alone on a line of its own, where
+   it read as a fact. A figure now stays whole and wraps with its separator. */
 .og-route-detail .og-route-detail__fact {
   min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .og-route-detail .og-route-detail__fact:not(:last-child)::after {
@@ -115,10 +119,35 @@
   content: "·";
 }
 
-/* The pace the estimated time is based on stays a note beside the figure. */
-.og-route-detail .og-route-detail__basis {
-  color: var(--og-slate-text);
-  font-weight: 500;
+/* -- The ride card's facts line and the credit under it -------------------- */
+
+/* The card's facts line (globals.css) is a tight 1.35 box with no gap between
+   wrapped rows, and the source credit under it inherits a 1.3 box. Both lines
+   lead their text here, with real space between wrapped rows, so no ascender
+   or descender of either line meets a box edge and gets cut — which is hardest
+   to spot on the night page, where the credit sits directly under the facts. */
+.og-explore-card--ride .og-explore-card__facts {
+  row-gap: var(--og-space-1);
+  line-height: 1.5;
+}
+
+.og-explore-card--ride .og-explore-card__credit {
+  line-height: 1.5;
+}
+
+@media (max-width: 479px) {
+  /* A phone card is its own map and its words on the page, with no rounded
+     frame to clip for. It gives up its clip here so a line of text can never
+     be cut against the card's edge at 320 px. The doubled class keeps this
+     ahead of the base card rule wherever the sheets are bundled. The link's
+     hover tint takes the card's shape instead of relying on that clip. */
+  .og-explore-card--ride.og-explore-card--ride {
+    overflow: visible;
+  }
+
+  .og-explore-card--ride .og-explore-card__link {
+    border-radius: var(--og-radius-object);
+  }
 }
 
 /* Where a road's earlier record went: one plain line behind a disclosure, and
