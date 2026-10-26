@@ -481,6 +481,7 @@ describe("Explore UI", () => {
       variants={[
         { id: "route-1", label: "Track 1", name: "Lehigh sample route", distanceKm: 27.5, copyCount: 3 },
         { id: "route-2", label: "Track 2", name: "Lehigh sample route · track 2", distanceKm: 29, copyCount: 1 },
+        { id: "route-3", label: "Track 3", name: "Lehigh sample route · track 3", distanceKm: null, copyCount: 1 },
       ]}
     />);
     const versions = screen.getByRole("region", { name: "Other versions of this ride" });
@@ -489,7 +490,10 @@ describe("Explore UI", () => {
     expect(versions).not.toHaveTextContent(/export|variant/i);
     expect(screen.getByRole("link", { name: /Lehigh sample route.*3 versions/i })).toHaveAttribute("href", "/explore/route-1");
     expect(screen.getByRole("link", { name: /3 versions/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /1 version/i })).toHaveAttribute("href", "/explore/route-2");
+    expect(screen.getByRole("link", { name: /Track 2/ })).toHaveAttribute("href", "/explore/route-2");
+    // A version whose length was never measured keeps the em dash, and its
+    // accessible name says which number is missing.
+    expect(screen.getByLabelText("Distance unknown")).toHaveTextContent("—");
   });
 
   it("keeps the distance and the source on one meta line, with the paperwork at the foot", async () => {
