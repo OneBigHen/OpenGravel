@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
+import { withPreparedRoute } from "@/application/explore/ride-this";
 import { authorSketch } from "@/application/planner/sketch-authoring";
 import { REPLAN_SETTLE_MS } from "@/ui/planner/usePlannerAnswerLifecycle";
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
@@ -1781,6 +1782,87 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     // The restore rule asks once for the answer a reload does not keep. The pick
     // rule adds nothing on top of it: a page load is not an authored point.
     expect(begins(posts)).toBe(1);
+  });
+});
+
+/**
+ * A ride opened from Explore with "Ride this"
+ * (04 §8; the catalog route the rider was reading).
+ *
+ * The route page hands over the catalog route's own line, so the ride comes back
+ * with that line as its answer: no plan request goes out, the card shows the
+ * route's own numbers, and Start ride is available at once instead of after a
+ * replan.
+ */
+describe("PlannerWorkspace — a ride opened from Explore", () => {
+  it("shows the catalog route as the answer without asking the router", async () => {
+    const created = createRideDocument({ now: FIXED });
+    const withStart = applyRideCommand(created, placeStartCommand(created, ORIGIN, now));
+    if (withStart.outcome !== "applied") throw new Error(withStart.outcome);
+    const withFinish = applyRideCommand(
+      withStart.document,
+      placeFinishCommand(withStart.document, DESTINATION, now),
+    );
+    if (withFinish.outcome !== "applied") throw new Error(withFinish.outcome);
+    const restored = withFinish.document;
+    const repository: RideRepositoryPort = {
+      saveRide: vi.fn().mockResolvedValue({ ok: true }),
+      loadRide: vi.fn().mockResolvedValue({ ok: true, document: restored }),
+      loadDraftPointer: vi.fn().mockResolvedValue({
+        id: "active",
+        rideId: restored.rideId,
+        updatedAt: restored.updatedAt,
+      }),
+      deleteRide: vi.fn().mockResolvedValue(undefined),
+      readRideRevision: vi.fn().mockResolvedValue(null),
+    };
+    const geometryStore = createMemoryGeometryStore();
+    const line = await geometryStore.put(
+      { kind: "line", coordinates: [ORIGIN, MIDPOINT, DESTINATION] },
+      { kind: "route", now: FIXED },
+    );
+    const fetcher = vi.fn(unfetched());
+    const planningSessionStore = createPlanningSessionStore({
+      service: withPreparedRoute(
+        createClientPlanningService({ fetcher, now, geometryStore }),
+        {
+          version: 1,
+          rideId: restored.rideId,
+          rideRevision: restored.revision,
+          geometryRef: line.geometryRef,
+          distanceMeters: 27_500,
+          durationSeconds: 3_480,
+          preparedAt: FIXED,
+        },
+      ),
+    });
+    const rideDocumentStore = createRideDocumentStore({ now, repository });
+    render(
+      <PlannerWorkspace
+        rideDocumentStore={rideDocumentStore}
+        planningSessionStore={planningSessionStore}
+        plannerUiStore={createPlannerUiStore()}
+        mapHostFactory={createStubMapHostFactory().factory}
+        rideActions={{
+          start: vi.fn().mockResolvedValue({ outcome: "started", sessionId: "session-1", message: null }),
+          record: vi.fn().mockResolvedValue({ outcome: "ready" }),
+          freeRide: vi.fn().mockResolvedValue({ outcome: "started", sessionId: "session-1", message: null }),
+        }}
+      />,
+    );
+
+    // The route the rider was reading, not a fresh answer to the same question.
+    // The restore confirmation holds the status line for its own window first.
+    await waitFor(
+      () => expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready."),
+      { timeout: RESTORE_ANNOUNCEMENT_MS + 1_000 },
+    );
+    const card = screen.getByTestId(/^route-card-/);
+    expect(card).toHaveTextContent("17 mi");
+    expect(card).toHaveTextContent("58 min");
+    // Start ride, not "waiting for a plan": the line is already drawn and known.
+    expect(screen.getByTestId("start-ride")).toBeEnabled();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });
 

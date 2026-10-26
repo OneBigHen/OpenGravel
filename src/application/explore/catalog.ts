@@ -754,7 +754,7 @@ export function createExploreDerivative(
 ): RideDocument {
   const base = createRideDocument({
     now,
-    title: `${entry.name} copy`,
+    title: entry.name,
     provenance: sourceProvenance(entry),
   });
   const sourceIntent = entry.sourceDocument?.intent;

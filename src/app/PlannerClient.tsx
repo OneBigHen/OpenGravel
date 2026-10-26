@@ -45,6 +45,7 @@ import { createRideSessionRepository } from "@/infrastructure/storage/ride-sessi
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLibraryService } from "@/application/library/library-service";
+import { preparedRouteGeometryRefs, takePreparedRouteOnce, withPreparedRoute } from "@/application/explore/ride-this";
 import { createShareService } from "@/application/sharing/share-commands";
 import { createShareRepository } from "@/infrastructure/storage/share-repository";
 import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
@@ -158,7 +159,13 @@ export function PlannerClient({
   const repository = useMemo(
     () => createRideRepository({
       bootstrapPointer,
-      protectedGeometryRefs: () => rideFocusGeometryRefs(rideFocusPointer),
+      // A ride opened from Explore holds its line through the ride session, not
+      // through a library row, so the sweep is told about it here.
+      protectedGeometryRefs: () => {
+        const rideFocusRefs = rideFocusGeometryRefs(rideFocusPointer);
+        if (rideFocusRefs === null) return null;
+        return [...rideFocusRefs, ...preparedRouteGeometryRefs()];
+      },
     }),
     [bootstrapPointer, rideFocusPointer],
   );
@@ -220,10 +227,15 @@ export function PlannerClient({
   }, []);
   const planningSessionStore = useMemo(
     () => createPlanningSessionStore({
-      service: createClientPlanningService({
-        geometryStore,
-        localHistoryReader: () => libraryService.listExploreRides(),
-      }),
+      // A route the rider just opened from Explore arrives as the answer it was
+      // read with, so this ride starts ready instead of planning again.
+      service: withPreparedRoute(
+        createClientPlanningService({
+          geometryStore,
+          localHistoryReader: () => libraryService.listExploreRides(),
+        }),
+        takePreparedRouteOnce(),
+      ),
     }),
     [geometryStore, libraryService],
   );

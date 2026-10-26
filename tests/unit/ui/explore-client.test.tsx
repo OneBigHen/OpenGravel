@@ -8,8 +8,10 @@ import { createLibraryService } from "@/application/library/library-service";
 import { createRideDocument } from "@/domain/ride/create";
 import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 
+const push = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
 }));
 
 const preview = [
@@ -18,9 +20,12 @@ const preview = [
   { lon: -75.2, lat: 40.7 },
 ];
 
+const ROUTE_ID = "sample-ridge-loop";
+const ROUTE_NAME = "Sample Ridge Loop";
+
 const listRoute = {
-  id: "sample-ridge-loop",
-  name: "Sample Ridge Loop",
+  id: ROUTE_ID,
+  name: ROUTE_NAME,
   region: "Pennsylvania",
   summary: "A synthetic route.",
   distanceKm: 27.5,
@@ -53,6 +58,8 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.clear();
+  window.sessionStorage.clear();
+  push.mockClear();
 });
 
 describe("Explore route page", () => {
@@ -122,6 +129,35 @@ describe("Explore route page", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/not on Explore/i);
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
     expect(screen.getByRole("link", { name: "Back to Explore" })).toBeInTheDocument();
+  });
+
+  it("opens the route the rider was reading as the ride, ready to start", async () => {
+    // "Ride this" used to make a copy called "<name> copy" whose route had to be
+    // planned again before Start ride could appear. The ride now keeps the
+    // route's name, and the line the rider was just looking at is handed to the
+    // planner as the answer.
+    vi.stubGlobal("fetch", catalogFetch(() => Response.json({ route: fullRoute })));
+    render(<ExploreClient detailId="sample-ridge-loop" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ride this" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/"));
+
+    const repository = createRideRepository();
+    const pointer = await repository.loadDraftPointer();
+    expect(pointer).not.toBeNull();
+    const opened = await repository.loadRide(pointer!.rideId);
+    expect(opened?.ok).toBe(true);
+    expect(opened !== null && opened.ok ? opened.document.title : null).toBe(ROUTE_NAME);
+    expect(opened !== null && opened.ok ? opened.document.provenance : null)
+      .toEqual({ type: "catalog", sourceId: "sample-ridge-loop" });
+
+    const handoff = JSON.parse(window.sessionStorage.getItem("opengravel.explore.ride-this") ?? "null") as
+      | { readonly rideId: string; readonly rideRevision: number; readonly geometryRef: string }
+      | null;
+    expect(handoff).not.toBeNull();
+    expect(handoff!.rideId).toBe(String(pointer!.rideId));
+    expect(handoff!.rideRevision).toBe(opened !== null && opened.ok ? opened.document.revision : -1);
+    expect(handoff!.geometryRef.length).toBeGreaterThan(0);
   });
 
   it("offers no duplicate save for a ride that is already in the library", async () => {

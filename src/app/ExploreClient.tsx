@@ -26,6 +26,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
+import { prepareExploreRoute } from "@/application/explore/ride-this";
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { RouteDetailSkeleton } from "@/ui/explore/RouteDetailSkeleton";
 import { rememberListPosition } from "@/ui/explore/list-position";
@@ -193,15 +194,30 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     return emptyRoadData ? [] : discoverRoads(roadDiscoveryScopeFromCatalog(entries));
   }, [entries]);
 
+  /**
+   * Open this ride in the planner, ready to start.
+   *
+   * The ride is opened exactly the way one from My rides opens: a derivative
+   * document becomes the planner's active draft and the planner restores it. A
+   * published catalog route also hands over the line the rider just read, so the
+   * planner opens on that line with Start ride already there instead of planning
+   * the same ride again. The title is the route's own name.
+   */
   async function useRide(entry: CatalogEntry): Promise<void> {
     const garage = garageStorage.read();
     const sourceDocument = createExploreDerivative(entry, new Date().toISOString(), snapshotOf(activeGarageBike(garage)));
-    await library.createDerivative(
+    const opened = await library.createDerivative(
       sourceKindForEntry(entry),
       entry.id,
       sourceDocument,
-      { title: `${entry.name} copy` },
+      { title: entry.name },
     );
+    try {
+      await prepareExploreRoute(entry, opened, geometryStore);
+    } catch {
+      // A route that could not be handed over is still opened: the planner
+      // plans it, which is what it does for every other ride.
+    }
     router.push("/");
   }
 
