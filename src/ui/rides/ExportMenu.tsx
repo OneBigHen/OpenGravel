@@ -19,6 +19,13 @@ export interface ExportMenuProps {
   readonly onShare?: (() => void) | undefined;
 }
 
+export interface ExportMenuEntry {
+  readonly id: ExportMode;
+  readonly label: string;
+  readonly enabled: boolean;
+  readonly reason?: string;
+}
+
 interface MenuEntry {
   readonly id: ExportMode | "share";
   readonly label: string;
@@ -27,6 +34,42 @@ interface MenuEntry {
 }
 
 const NO_LINE_REASON = "This ride has no saved route line yet.";
+
+/** The GPX formats this ride can produce, in menu order. */
+export function exportModes(capabilities: ExportCapabilities): readonly ExportMenuEntry[] {
+  return [
+    {
+      id: "planned-track",
+      label: "GPX track",
+      enabled: capabilities.plannedRoute,
+      reason: NO_LINE_REASON,
+    },
+    {
+      id: "planned-route",
+      label: "GPX route",
+      enabled: capabilities.plannedRoute,
+      reason: NO_LINE_REASON,
+    },
+    {
+      id: "track",
+      label: "Source track GPX",
+      enabled: capabilities.track,
+      reason: "This ride has no preserved source track.",
+    },
+    {
+      id: "original",
+      label: "Original file",
+      enabled: capabilities.original,
+      reason: "Only imported rides have an unchanged original file.",
+    },
+    {
+      id: "recorded-ride",
+      label: "Recorded ride GPX",
+      enabled: capabilities.recordedRide === true,
+      reason: "This ride has no recorded track.",
+    },
+  ];
+}
 
 /**
  * The export popover. It declares menu semantics, so it also behaves like a
@@ -72,36 +115,7 @@ export function ExportMenu({ title, capabilities, onExport, onShare }: ExportMen
   }, [open]);
 
   const modes: readonly MenuEntry[] = [
-    {
-      id: "planned-track",
-      label: "GPX track",
-      enabled: capabilities.plannedRoute,
-      reason: NO_LINE_REASON,
-    },
-    {
-      id: "planned-route",
-      label: "GPX route",
-      enabled: capabilities.plannedRoute,
-      reason: NO_LINE_REASON,
-    },
-    {
-      id: "track",
-      label: "Source track GPX",
-      enabled: capabilities.track,
-      reason: "This ride has no preserved source track.",
-    },
-    {
-      id: "original",
-      label: "Original file",
-      enabled: capabilities.original,
-      reason: "Only imported rides have an unchanged original file.",
-    },
-    {
-      id: "recorded-ride",
-      label: "Recorded ride GPX",
-      enabled: capabilities.recordedRide === true,
-      reason: "This ride has no recorded track.",
-    },
+    ...exportModes(capabilities),
     ...(onShare === undefined
       ? []
       : [{ id: "share" as const, label: "Copy share link", enabled: true }]),

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RidesLibrary } from "@/ui/rides/RidesLibrary";
@@ -45,6 +45,10 @@ function service(overrides: Partial<LibraryServicePort> = {}): LibraryServicePor
   };
 }
 
+function ride(overrides: Partial<RideSummary>): RideSummary {
+  return { ...RIDE, ...overrides };
+}
+
 const PARSED_IMPORT = {
   tracks: [
     { name: "Weekend GPX", segments: [[{ lon: -75, lat: 40 }, { lon: -75.001, lat: 40.001 }]], timestamps: [[null, null]], elevation: [[null, null]] },
@@ -89,8 +93,9 @@ describe("RidesLibrary", () => {
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} />);
 
     expect(await screen.findByRole("img", { name: "Recorded track preview for Recorded ride" })).toBeInTheDocument();
-    expect(screen.getByTestId("recorded-ride-summary")).toHaveTextContent("Distance: 12 mi · 1:42 moving · 2:05 total");
-    fireEvent.click(screen.getByRole("button", { name: "Export Recorded ride" }));
+    expect(screen.getByTestId("recorded-ride-summary")).toHaveTextContent("12 mi · 1:42 moving · 2:05 total");
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Recorded ride" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Export GPX" }));
     expect(screen.getByRole("menuitem", { name: "Recorded ride GPX" })).toBeEnabled();
   });
 
@@ -159,7 +164,7 @@ describe("RidesLibrary", () => {
     fireEvent.click(details);
     await waitFor(() => expect(reader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal)));
     const signal = vi.mocked(reader.read).mock.calls[0]?.[1];
-    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide details for Recorded ride" }));
     expect(signal?.aborted).toBe(true);
     resolveFirst?.({
       rideId: recorded.rideId,
@@ -204,7 +209,7 @@ describe("RidesLibrary", () => {
     view.rerender(<RidesLibrary service={library} roadProgressReader={secondReader} />);
     expect(screen.queryByText("New-to-you: 2.5 mi estimated")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide details for Recorded ride" }));
     fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
     await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 0.5 mi estimated"));
     expect(secondReader.read).toHaveBeenCalledWith(recorded.rideId, expect.any(AbortSignal));
@@ -243,7 +248,7 @@ describe("RidesLibrary", () => {
     fireEvent.click(await screen.findByRole("button", { name: "View details for Recorded ride" }));
     await waitFor(() => expect(oldReader.read).toHaveBeenCalledOnce());
     view.rerender(<RidesLibrary service={library} roadProgressReader={newReader} />);
-    fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide details for Recorded ride" }));
     fireEvent.click(screen.getByRole("button", { name: "View details for Recorded ride" }));
     await waitFor(() => expect(screen.getByTestId("recorded-road-progress")).toHaveTextContent("New-to-you: 0.5 mi estimated"));
 
@@ -289,36 +294,111 @@ describe("RidesLibrary", () => {
     expect(screen.getByRole("link", { name: "My rides" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders a real row and filters by title without writing while browsing", async () => {
+  it("opens a ride when its row is tapped", async () => {
     const library = service();
     render(<RidesLibrary service={library} />);
 
-    expect(await screen.findByRole("textbox", { name: "Rename Pine Loop" })).toHaveValue("Pine Loop");
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search rides" }), {
-      target: { value: "missing" },
-    });
-    expect(await screen.findByText("No rides match these filters.")).toBeInTheDocument();
-    // An empty filter result keeps the filters so the rider can clear them.
-    expect(screen.getByRole("searchbox", { name: "Search rides" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Open Pine Loop" }));
+    await waitFor(() => expect(library.openRide).toHaveBeenCalledWith(RIDE.rideId));
     expect(library.renameRide).not.toHaveBeenCalled();
     expect(library.deleteRide).not.toHaveBeenCalled();
   });
 
-  it("hides the search, filter, and sort card when the library has no rides", async () => {
+  it("splits Planned and Recorded into two newest-first segments", async () => {
+    const oldPlan = ride({ rideId: "ride_plan_old" as RideSummary["rideId"], title: "Old plan", updatedAt: "2026-09-01T12:00:00.000Z" });
+    const newPlan = ride({ rideId: "ride_plan_new" as RideSummary["rideId"], title: "New plan", updatedAt: "2026-09-18T12:00:00.000Z" });
+    const oldRide = ride({
+      rideId: "ride_recorded_old" as RideSummary["rideId"],
+      title: "Old recording",
+      type: "recorded",
+      provenanceType: "recorded",
+      updatedAt: "2026-09-02T12:00:00.000Z",
+      recordedTrack: {
+        summary: { distanceMeters: 10_000, elapsedSeconds: 3_000, movingSeconds: 2_400, pointCount: 4 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    });
+    const newRide = ride({
+      rideId: "ride_recorded_new" as RideSummary["rideId"],
+      title: "New recording",
+      type: "recorded",
+      provenanceType: "recorded",
+      updatedAt: "2026-09-20T12:00:00.000Z",
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 4_000, movingSeconds: 3_600, pointCount: 4 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    });
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([oldPlan, oldRide, newPlan, newRide]) })} />);
+
+    await screen.findByRole("button", { name: "Open New plan" });
+    const labels = () => screen.getAllByRole("button", { name: /^Open / }).map((button) => button.getAttribute("aria-label"));
+    expect(labels()).toEqual(["Open New plan", "Open Old plan"]);
+    expect(screen.queryByRole("button", { name: "Open New recording" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Recorded" }));
+    expect(await screen.findByRole("button", { name: "Open New recording" })).toBeInTheDocument();
+    expect(labels()).toEqual(["Open New recording", "Open Old recording"]);
+  });
+
+  it("shows the search box only when a segment holds more than eight rides", async () => {
+    const eight = Array.from({ length: 8 }, (_, index) => ride({
+      rideId: `ride_short_${index}` as RideSummary["rideId"],
+      title: `Short ride ${index}`,
+      updatedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+    }));
+    const short = render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue(eight) })} />);
+    await screen.findByRole("button", { name: "Open Short ride 0" });
+    expect(screen.queryByRole("searchbox", { name: "Search rides" })).not.toBeInTheDocument();
+    short.unmount();
+
+    const nine = [...eight, ride({
+      rideId: "ride_short_8" as RideSummary["rideId"],
+      title: "Short ride 8",
+      updatedAt: "2026-09-09T12:00:00.000Z",
+    })];
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue(nine) })} />);
+    expect(await screen.findByRole("searchbox", { name: "Search rides" })).toBeInTheDocument();
+  });
+
+  it("searches a long library and clears the search without writing", async () => {
+    const library = service({ listRides: vi.fn().mockResolvedValue(
+      Array.from({ length: 9 }, (_, index) => ride({
+        rideId: `ride_search_${index}` as RideSummary["rideId"],
+        title: index === 0 ? "Pine Loop" : `Other ride ${index}`,
+        updatedAt: `2026-09-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+      })),
+    ) });
+    render(<RidesLibrary service={library} />);
+
+    await screen.findByRole("searchbox", { name: "Search rides" });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search rides" }), { target: { value: "nowhere" } });
+    expect(await screen.findByText("No rides match this search.")).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search rides" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(await screen.findByRole("button", { name: "Open Pine Loop" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search rides" })).toHaveValue("");
+    expect(library.renameRide).not.toHaveBeenCalled();
+    expect(library.deleteRide).not.toHaveBeenCalled();
+  });
+
+  it("keeps the empty library to one line and one button", async () => {
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} />);
 
-    expect(await screen.findByRole("heading", { name: "No saved rides yet" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("button", { name: "Import GPX" })).toBeInTheDocument();
+    const heading = await screen.findByRole("heading", { name: "No saved rides yet" });
+    const emptyState = heading.closest("section");
+    expect(emptyState).not.toBeNull();
+    expect(within(emptyState!).getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
+    expect(within(emptyState!).queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByRole("searchbox", { name: "Search rides" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "All" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Planned" })).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    // The upload card's own heading is gone: the empty state is the invitation.
+    // The upload card's own heading is gone: the secure file input still exists.
+    expect(screen.getByLabelText("Import GPX, KML, or KMZ")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Upload your GPX ride" })).not.toBeInTheDocument();
   });
 
-  it("opens the file picker from the empty state and keeps the older import quiet", async () => {
+  it("opens the file picker from the header and keeps the older import quiet", async () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click");
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={importService()} />);
 
@@ -346,27 +426,44 @@ describe("RidesLibrary", () => {
     expect(imports.previewFile).toHaveBeenCalledWith(file, expect.anything());
   });
 
-  it("disables an empty inline rename and requires confirmation before delete", async () => {
+  it("renames a ride from the overflow menu", async () => {
     const library = service();
     render(<RidesLibrary service={library} />);
-    await screen.findByRole("textbox", { name: "Rename Pine Loop" });
 
-    const renameInput = screen.getAllByRole("textbox", { name: "Rename Pine Loop" })[0];
-    if (renameInput === undefined) throw new Error("rename input not rendered");
+    fireEvent.click(await screen.findByRole("button", { name: "More actions for Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const input = await screen.findByRole("textbox", { name: "Rename Pine Loop" });
+    fireEvent.change(input, { target: { value: "Pine Loop renamed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(library.renameRide).toHaveBeenCalledWith(RIDE.rideId, "Pine Loop renamed"));
+  });
+
+  it("requires a title, confirms delete in the page, and offers undo", async () => {
+    const library = service();
+    render(<RidesLibrary service={library} />);
+    await screen.findByRole("button", { name: "Open Pine Loop" });
+
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
+    const renameInput = await screen.findByRole("textbox", { name: "Rename Pine Loop" });
     fireEvent.change(renameInput, { target: { value: "   " } });
-    expect(screen.getByRole("button", { name: "Rename Pine Loop" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     expect(screen.getByText("A title is required.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(await screen.findByRole("button", { name: "Open Pine Loop" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Delete Pine Loop" }));
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
     expect(screen.getByRole("button", { name: "Confirm delete Pine Loop" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Confirm delete Pine Loop" }));
     expect(await screen.findByRole("button", { name: "Undo" })).toBeInTheDocument();
-    expect(screen.queryByRole("textbox", { name: "Rename Pine Loop" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open Pine Loop" })).not.toBeInTheDocument();
     expect(library.deleteRide).not.toHaveBeenCalled();
 
     // Undo brings the ride back without touching the library.
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByRole("textbox", { name: "Rename Pine Loop" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Open Pine Loop" })).toBeInTheDocument();
     expect(library.deleteRide).not.toHaveBeenCalled();
   });
 
@@ -375,8 +472,9 @@ describe("RidesLibrary", () => {
     try {
       const library = service();
       render(<RidesLibrary service={library} />);
-      await screen.findByRole("textbox", { name: "Rename Pine Loop" });
-      fireEvent.click(screen.getByRole("button", { name: "Delete Pine Loop" }));
+      await screen.findByRole("button", { name: "Open Pine Loop" });
+      fireEvent.click(screen.getByRole("button", { name: "More actions for Pine Loop" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }));
       fireEvent.click(screen.getByRole("button", { name: "Confirm delete Pine Loop" }));
       await screen.findByRole("button", { name: "Undo" });
       await vi.advanceTimersByTimeAsync(8_500);
@@ -398,53 +496,79 @@ describe("RidesLibrary", () => {
       importNotes: ["Preserved 4 GPX waypoints as metadata."],
     };
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([imported]) })} />);
-    expect(await screen.findByTestId(`ride-facts-${RIDE.rideId}`)).toHaveTextContent("12 mi · 1:05 h");
+    expect(await screen.findByTestId(`ride-facts-${RIDE.rideId}`)).toHaveTextContent("12 mi · 1 h 5 min");
     fireEvent.click(screen.getByRole("button", { name: "View details for Redacted sample loop" }));
     expect(screen.getByText("Imported from a file")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Import notes for Redacted sample loop" })).toHaveTextContent("Preserved 4 GPX waypoints");
     expect(document.body.textContent).not.toContain("import_d5fe3bdb");
   });
 
-  it("puts one line of facts and one caption line on a ride card", async () => {
-    // Design system v2 §4 for My rides: the ride's map, its name, ONE line of
-    // facts and one caption line. The type is a caption word now, not a pill,
-    // and the offline state is paperwork behind View details.
-    const ride: RideSummary = {
+  it("puts the day, distance and time on one line and leaves the paperwork behind details", async () => {
+    const planned: RideSummary = {
       ...RIDE,
       distanceMeters: 20_000,
       durationSeconds: 3_900,
       area: "Lehigh Valley",
     };
-    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([ride]) })} />);
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([planned]) })} />);
 
-    expect(await screen.findByTestId(`ride-facts-${ride.rideId}`)).toHaveTextContent("12 mi · 1:05 h · Lehigh Valley");
-    expect(screen.getByTestId(`ride-credit-${ride.rideId}`)).toHaveTextContent(/^Planned · Updated /);
+    const facts = await screen.findByTestId(`ride-facts-${planned.rideId}`);
+    expect(facts).toHaveTextContent("Sep 17, 2026");
+    expect(facts).toHaveTextContent("12 mi");
+    expect(facts).toHaveTextContent("1 h 5 min");
     expect(document.querySelector(".og-library__badge")).toBeNull();
-    expect(screen.queryByTestId(`offline-pack-${ride.rideId}`)).toBeNull();
+    expect(screen.queryByTestId(`offline-pack-${planned.rideId}`)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "View details for Pine Loop" }));
-    expect(screen.getByTestId(`offline-pack-${ride.rideId}`)).toHaveTextContent("Offline pack: unknown");
+    expect(screen.getByTestId(`offline-pack-${planned.rideId}`)).toHaveTextContent("Offline pack: unknown");
   });
 
-  it("offers Clear filters when a search matches nothing", async () => {
-    const library = service();
-    vi.mocked(library.listRides).mockImplementation(async (filter) =>
-      filter?.text !== undefined && filter.text !== "" ? [] : [RIDE],
-    );
-    render(<RidesLibrary service={library} />);
-    await screen.findByRole("textbox", { name: "Rename Pine Loop" });
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search rides" }), { target: { value: "nowhere" } });
-    fireEvent.click(await screen.findByRole("button", { name: "Clear filters" }));
-    expect(await screen.findByRole("textbox", { name: "Rename Pine Loop" })).toBeInTheDocument();
-    expect(screen.getByRole("searchbox", { name: "Search rides" })).toHaveValue("");
+  it("opens Share from the overflow menu and loads the ride once", async () => {
+    const recorded = ride({
+      rideId: "ride_share_1" as RideSummary["rideId"],
+      title: "Shared loop",
+      type: "recorded",
+      provenanceType: "recorded",
+      exportCapabilities: { plannedRoute: false, track: false, original: false, recordedRide: true },
+      recordedTrack: {
+        summary: { distanceMeters: 20_000, elapsedSeconds: 125, movingSeconds: 102, pointCount: 3 },
+        previewGeometry: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+      },
+    });
+    const loadExportSource = vi.fn().mockResolvedValue({
+      title: "Shared loop",
+      createdTime: "2026-09-17T12:00:00.000Z",
+      plannedRoute: null,
+      tracks: [],
+      trackGeometry: {},
+      waypoints: [],
+      originalBytes: null,
+      originalFilename: null,
+      originalMime: null,
+      recordedTrack: {
+        coordinates: [{ lon: -75.5, lat: 40 }, { lon: -75.4, lat: 40.1 }],
+        timestamps: ["2026-09-17T12:00:00.000Z", "2026-09-17T12:01:00.000Z"],
+        summary: { distanceMeters: 20_000, elapsedSeconds: 60, movingSeconds: 60, pointCount: 2 },
+      },
+    });
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]), loadExportSource })} />);
+
+    await screen.findByRole("button", { name: "Open Shared loop" });
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Shared loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Share" }));
+
+    expect(await screen.findByRole("button", { name: "Share it" })).toBeInTheDocument();
+    expect(loadExportSource).toHaveBeenCalledTimes(1);
+    expect(loadExportSource).toHaveBeenCalledWith(recorded.rideId);
   });
 });
-
 describe("RidesLibrary planned-ride export", () => {
-  it("hides Export when the ride has nothing exportable", async () => {
+  it("keeps Export GPX disabled when the ride has nothing exportable", async () => {
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([RIDE]) })} />);
     await screen.findByRole("button", { name: "Open Pine Loop" });
-    expect(screen.queryByRole("button", { name: /export/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Pine Loop" }));
+    expect(screen.getByRole("menuitem", { name: "Export GPX" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^export/i })).not.toBeInTheDocument();
   });
 
   it("exports a planned ride from the route line stored with it", async () => {
@@ -486,10 +610,12 @@ describe("RidesLibrary planned-ride export", () => {
       loadExportSource,
     })} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Export Pine Loop" }));
+    fireEvent.click(await screen.findByRole("button", { name: "More actions for Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Export GPX" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
     await waitFor(() => expect(blobs).toHaveLength(1));
-    fireEvent.click(screen.getByRole("button", { name: "Export Pine Loop" }));
+    fireEvent.click(screen.getByRole("button", { name: "More actions for Pine Loop" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Export GPX" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /gpx route/i }));
     await waitFor(() => expect(blobs).toHaveLength(2));
 

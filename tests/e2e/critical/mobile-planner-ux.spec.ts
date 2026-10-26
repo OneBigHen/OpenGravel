@@ -145,24 +145,27 @@ test("200 percent text keeps navigation labels and the planner sheet separate", 
   for (const link of await nav.locator("a").all()) await expect(link).toBeInViewport({ ratio: 1 });
 });
 
-test("320px library sort remains usable with 200 percent text", async ({ page }) => {
+test("320px library segments remain usable with 200 percent text", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/rides");
   await expect(page.getByRole("heading", { name: "No saved rides yet" })).toBeVisible();
-  // An empty library has nothing to sort, so the sort card is hidden until there is a ride.
-  await expect(page.locator(".og-library__sort select")).toHaveCount(0);
+  // An empty library has nothing to segment, so the switch waits for a ride.
+  await expect(page.getByRole("button", { name: "Planned" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recorded" })).toHaveCount(0);
   await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "short.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from('<gpx version="1.0"><name>Short ride</name><rte><rtept lon="-75" lat="40"/><rtept lon="-74.9" lat="40.1"/></rte></gpx>') });
   await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
   await page.getByRole("button", { name: "Import separately" }).click();
   await page.getByRole("button", { name: "Import selected tracks" }).click();
-  await expect(page.getByRole("textbox", { name: "Rename Short ride" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Short ride" })).toBeVisible();
   await doubleTextSize(page);
-  const sort = page.locator(".og-library__sort select");
-  await sort.scrollIntoViewIfNeeded();
+  const planned = page.getByRole("button", { name: "Planned" });
+  await planned.scrollIntoViewIfNeeded();
   const width = await page.evaluate(() => ({ viewport: innerWidth, page: document.documentElement.scrollWidth }));
   expect(width.page).toBeLessThanOrEqual(width.viewport + 1);
-  await sort.selectOption("updated-asc");
-  await expect(sort).toHaveValue("updated-asc");
-  await sort.selectOption("updated-desc");
-  await expect(sort).toHaveValue("updated-desc");
+  await expect(planned).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Recorded" }).click();
+  await expect(page.getByRole("button", { name: "Recorded" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("No recorded rides yet.")).toBeVisible();
+  await planned.click();
+  await expect(page.getByRole("button", { name: "Open Short ride" })).toBeVisible();
 });

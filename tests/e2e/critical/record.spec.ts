@@ -90,7 +90,7 @@ test.describe("recorded rides", () => {
     await page.goto("/rides");
     const row = page.locator(".og-library__row").filter({ has: page.getByTestId("recorded-ride-summary") });
     await expect(row).toHaveCount(1);
-    await expect(row.getByText("Recorded", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recorded" })).toHaveAttribute("aria-pressed", "true");
     await expect(row.getByTestId("recorded-track-thumbnail")).toBeVisible();
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("moving");
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("total");
@@ -108,9 +108,10 @@ test.describe("recorded rides", () => {
     expect(query.get("layers")).toBe("great-roads,gravel");
     await expect(row.getByTestId("recorded-ride-summary")).toHaveText(recordedSummary);
 
-    await row.getByRole("button", { name: "Export Recorded ride" }).click();
+    await row.getByRole("button", { name: "More actions for Recorded ride" }).click();
+    await page.getByRole("menuitem", { name: "Export GPX" }).click();
     const downloadPromise = page.waitForEvent("download");
-    await row.getByRole("menuitem", { name: "Recorded ride GPX" }).click();
+    await page.getByRole("menuitem", { name: "Recorded ride GPX" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/i);
     const output = testInfo.outputPath(download.suggestedFilename());

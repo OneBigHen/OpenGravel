@@ -30,7 +30,7 @@ test("imports a redacted SwitchBack saved-ride GPX and shows its migration repor
   await expect(page.getByRole("link", { name: "Settings" })).toBeInViewport({ ratio: 1 });
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  const ride = page.locator(".og-library__row").filter({ has: page.getByRole("textbox", { name: "Rename Redacted sample loop" }) });
+  const ride = page.locator(".og-library__row").filter({ has: page.getByRole("button", { name: "Open Redacted sample loop" }) });
   await expect(ride).toBeVisible();
   await ride.getByRole("button", { name: "View details for Redacted sample loop" }).click();
   await expect(ride).toContainText("Source: SwitchBack");
