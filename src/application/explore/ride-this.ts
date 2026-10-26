@@ -246,7 +246,9 @@ function unscoredScore(): RouteScore {
 
 /** The answer the planner shows for the prepared ride, before any attempt. */
 export function preparedRouteAnswer(prepared: PreparedRoute): RouteBundle {
-  const candidateId = asRouteCandidateId(`explore:${prepared.rideId}`);
+  // A ride session only binds `route_…` identities (validateSessionRouteBinding),
+  // so the handed-over line wears that prefix or Start ride is refused.
+  const candidateId = asRouteCandidateId(`route_explore-${prepared.rideId}`);
   const candidate: RouteCandidate = {
     id: candidateId,
     // Provenance for diagnostics only: the line came from the published route.

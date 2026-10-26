@@ -72,6 +72,10 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await expect(card).toContainText("17 mi");
   await expect(card).toContainText("58 min");
   await expect(page.getByTestId("start-ride")).toBeEnabled({ timeout: 2_000 });
+  // Enabled is not enough: the ride must actually start on the handed-over line.
+  await page.getByTestId("start-ride").click();
+  await expect(page).toHaveURL(/\/ride$/);
+  await expect(page.getByTestId("ride-focus")).toHaveAttribute("data-status", "ready");
   // Nothing asked the router to plan this ride again.
   expect(planRequests).toEqual([]);
   expect(consoleErrors).toEqual([]);
