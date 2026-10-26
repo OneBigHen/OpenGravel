@@ -21,9 +21,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
     expect(shares).toHaveLength(0);
     await page.reload();
-    const card = page.locator(".og-library__row").filter({ has: page.getByRole("textbox", { name: "Rename Weekend GPX" }) });
+    const card = page.locator(".og-library__row").filter({ has: page.getByRole("button", { name: "Open Weekend GPX" }) });
     await expect(card).toBeVisible();
-    await card.getByRole("button", { name: "Share with everyone" }).click();
+    await card.getByRole("button", { name: "More actions for Weekend GPX" }).click();
+    await page.getByRole("menuitem", { name: "Share" }).click();
     await expect(card.getByRole("checkbox", { name: "Hide the start (500 m)" })).toBeChecked();
     await expect(card.getByRole("img", { name: "Public route preview" })).toBeVisible();
     const publicName = `Weekend ${viewport.width} ${test.info().project.name}`;
@@ -60,7 +61,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     }
     await other.close();
     // Publishing never replaces or renames the private saved ride.
-    await expect(card.getByRole("textbox", { name: "Rename Weekend GPX" })).toHaveValue("Weekend GPX");
+    await expect(card.getByRole("button", { name: "Open Weekend GPX" })).toBeVisible();
+    await expect(card).not.toContainText(publicName);
   });
 }
 
@@ -70,7 +72,7 @@ test("ordinary GPX 1.0 route uploads work without migration-specific restriction
   await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
   await page.getByRole("button", { name: "Import separately" }).click();
   await page.getByRole("button", { name: "Import selected tracks" }).click();
-  await expect(page.getByRole("textbox", { name: "Rename Other app ride" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Other app ride" })).toBeVisible();
 });
 
 test("rejects external entities without saving a ride, then accepts a corrected file", async ({ page }) => {
@@ -91,7 +93,8 @@ test("renders hostile GPX names as text and rejects them as public names", async
   await page.getByRole("button", { name: "Import separately" }).click();
   await page.getByRole("button", { name: "Import selected tracks" }).click();
   const card = page.locator(".og-library__row");
-  await card.getByRole("button", { name: "Share with everyone" }).click();
+  await card.getByRole("button", { name: /^More actions for / }).click();
+  await page.getByRole("menuitem", { name: "Share" }).click();
   await card.getByRole("button", { name: "Share it" }).click();
   await expect(card.getByRole("alert")).toContainText(/plain-text/);
   await expect(card.getByRole("textbox", { name: "Public ride name" })).toBeEnabled();
