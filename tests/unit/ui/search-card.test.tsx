@@ -26,6 +26,7 @@ describe("universal place sheet", () => {
   it("leads with Directions, names the place and labels straight-line distance away", () => {
     card({ driveTime: "5 min drive" });
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(place.name);
+    expect(screen.getByTestId("place-card")).toHaveTextContent(place.name);
     expect(screen.getByTestId("place-sheet")).toHaveTextContent(/mi away.*5 min drive/);
     expect(screen.getByTestId("place-directions")).toHaveTextContent("Directions");
     expect(screen.queryByRole("button", { name: "Add stop" })).toBeNull();

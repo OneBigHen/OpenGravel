@@ -42,6 +42,7 @@ export function PlaceSheet({ place, rider, busy = false, saved = false, driveTim
   }, [onClose]);
   const distance = placeDistance(place.coordinate, rider);
   return <section className="og-place-sheet" data-testid="place-sheet" role="dialog" aria-labelledby="place-sheet-title">
+    <div data-testid="place-card">
     <h2 id="place-sheet-title" ref={heading} tabIndex={-1}>{place.name}</h2>
     <p className="og-place-sheet__context">{place.context || `${place.coordinate.lat.toFixed(5)}, ${place.coordinate.lon.toFixed(5)}`}</p>
     <p className="og-place-sheet__distance">{distance ?? "Distance needs your location"} · {driveTime ?? "Drive time after Directions"}</p>
@@ -53,5 +54,6 @@ export function PlaceSheet({ place, rider, busy = false, saved = false, driveTim
       <button type="button" className="og-secondary" onClick={onShare}>Share</button>
     </div>
     <button type="button" className="og-place-sheet__close" aria-label="Close place details" onClick={onClose}>×</button>
+    </div>
   </section>;
 }
