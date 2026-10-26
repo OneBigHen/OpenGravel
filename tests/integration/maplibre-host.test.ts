@@ -993,6 +993,55 @@ describe("MapLibreHost — the pointer stream belongs to a drawing tool (05 §4)
     return { element, host, map, intents: recordIntents(host) };
   }
 
+  // MapLibre queries use canvas pixels; DOM pointers use client pixels. The
+  // selected line runs through the pin and the (wrong) untranslated query box.
+  describe.each([
+    ["start", MAP_LAYER_IDS.pointStart, { kind: "point", pointId: "pt_start" }],
+    ["finish", MAP_LAYER_IDS.pointFinish, { kind: "point", pointId: "pt_finish" }],
+    ["stop", MAP_LAYER_IDS.pointStop, { kind: "stop", stopId: "stop_1" }],
+    ["shaping", MAP_LAYER_IDS.pointShaping, { kind: "point", pointId: "shaping_1" }],
+  ] as const)("%s pin over the selected line", (kind, layerId, ref) => {
+    it.each(["mouse", "pen", "touch"])("grabs the pin within its radius on an offset canvas with %s", async (pointerType) => {
+      vi.useFakeTimers();
+      let cleanup: MapHost | undefined;
+      try {
+        const { host, map, intents } = await loaded();
+        cleanup = host;
+        const id = ref.kind === "stop" ? ref.stopId : ref.pointId;
+        host.applyScene(scene({ points: [{ id: id as PointId, kind, coordinate: COORDINATE, label: null }] }));
+        const left = 64;
+        const top = 96;
+        vi.spyOn(map.getCanvas(), "getBoundingClientRect").mockReturnValue(new DOMRect(left, top, 1000, 800));
+        const pin = { x: 100, y: 150 };
+        const query = vi.fn((geometry: readonly [number, number] | readonly [readonly [number, number], readonly [number, number]], options: { layers: readonly string[] }) => {
+          const box = typeof geometry[0] === "number"
+            ? [geometry, geometry] as readonly (readonly [number, number])[]
+            : geometry as readonly (readonly [number, number])[];
+          const onPin = box[0]![0] <= pin.x && box[1]![0] >= pin.x && box[0]![1] <= pin.y && box[1]![1] >= pin.y;
+          return [
+            ...(onPin ? [{ layer: { id: layerId }, properties: { id } }] : []),
+            { layer: { id: MAP_LAYER_IDS.routeSelected }, properties: { id: ROUTE_ID } },
+          ].filter((hit) => options.layers.includes(hit.layer.id));
+        });
+        Object.assign(map, { queryRenderedFeatures: query, project: () => pin });
+        const canvas = map.getCanvasContainer();
+        // A near miss still belongs to the pin, even with the line underneath.
+        const press = { x: left + pin.x + 17, y: top + pin.y, pointerType };
+        canvas.dispatchEvent(pointerEvent("pointerdown", press));
+        if (pointerType === "touch") {
+          vi.advanceTimersByTime(299);
+          expect(intents).toEqual([]);
+          vi.advanceTimersByTime(1);
+        }
+        expect(intents).toEqual([{ type: "pointer-down", pointerId: 1, coordinate: COORDINATE, ref }]);
+        expect(query).toHaveBeenCalledWith([[99, 132], [135, 168]], { layers: expect.arrayContaining([layerId]) });
+        canvas.dispatchEvent(pointerEvent("pointermove", { ...press, x: press.x + 80 }));
+        canvas.dispatchEvent(pointerEvent("pointerup", { ...press, x: press.x + 80 }));
+        expect(intents.map((intent) => intent.type)).toEqual(["pointer-down", "pointer-move", "pointer-up", "gesture-commit"]);
+      } finally { cleanup?.dispose(); vi.useRealTimers(); }
+    });
+  });
+
   it.each(["touch", "mouse"])("keeps a near-miss click on its grabbed %s pin", async (pointerType) => {
     vi.useFakeTimers();
     try {
