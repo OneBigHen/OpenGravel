@@ -674,11 +674,25 @@ describe("Explore UI", () => {
     // "Est." stamp: the catalog's own time is the route's time.
     const facts = screen.getByTestId("route-facts");
     expect([...facts.querySelectorAll(".og-route-detail__fact")].map((fact) => fact.textContent))
-      .toEqual(["17 mi", "~30 min at 28 mph", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
+      .toEqual(["17 mi", "~30 min", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
+    // The pace behind the estimate is not words on the line (a footnote inside
+    // the time fact is what left a lone "·" on a line of its own at 320 px);
+    // it is the figure's title.
+    expect(facts).not.toHaveTextContent(/mph/);
+    expect(screen.getByTitle("Estimated at 28 mph")).toHaveTextContent("~30 min");
     expect(facts.closest(".og-route-detail__header")).not.toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Ride this" }));
     return waitFor(() => expect(onUse).toHaveBeenCalledWith(rideEntry));
+  });
+
+  it("keeps a stated ride time as it is, with no pace note it never used", () => {
+    render(<RouteDetail entry={{ ...entry, estimatedTimeMinutes: 95 }} onUse={vi.fn()} />);
+
+    const facts = screen.getByTestId("route-facts");
+    expect(facts).toHaveTextContent("1 h 35 min");
+    expect(facts).not.toHaveTextContent(/mph/);
+    expect(facts.querySelector("[title]")).toBeNull();
   });
 
   it("leaves a fact off the line rather than printing an unknown one", () => {

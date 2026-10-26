@@ -40,6 +40,7 @@ import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
+import { routeFacts } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
 
 import "./explore-rides.css";
@@ -236,35 +237,6 @@ function RoadDetailSheet({
   );
 }
 
-/** A mixed backroad-and-gravel pace: what a catalog ride's time is estimated at. */
-const ESTIMATE_MPH = 28;
-
-function formatMinutes(minutes: number): string {
-  const rounded = Math.max(1, Math.round(minutes));
-  if (rounded < 60) return `${rounded} min`;
-  const hours = Math.floor(rounded / 60);
-  const rest = rounded % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
-}
-
-/**
- * The catalog carries no ride time, so a blank told the rider nothing (EX-08).
- * Estimate it from the distance at a stated pace, rounded to the quarter hour;
- * a distance nobody measured stays absent rather than becoming a number.
- */
-function estimatedTimeFromDistance(distanceKm: number | null | undefined): ReactNode {
-  if (distanceKm === undefined || distanceKm === null || !Number.isFinite(distanceKm) || distanceKm <= 0) {
-    return null;
-  }
-  const minutes = Math.max(15, Math.round(((distanceKm / 1.609344) / ESTIMATE_MPH) * 60 / 15) * 15);
-  return (
-    <>
-      {`~${formatMinutes(minutes)}`}
-      <span className="og-route-detail__basis">{` at ${ESTIMATE_MPH} mph`}</span>
-    </>
-  );
-}
-
 /**
  * Share a route (launch kit): the phone's own share sheet where there is one,
  * otherwise the link copied. The page itself is the shared thing.
@@ -413,21 +385,18 @@ export function RouteDetail({
   // is, how long it takes, what is under the wheels, and how much of it turns.
   // A fact this route does not know is left out — an absence is not a value,
   // and the page does not print "unknown" four times under the name.
-  const rideTime = entry.estimatedTimeMinutes === undefined
-    ? estimatedTimeFromDistance(entry.distanceKm)
-    : formatMinutes(entry.estimatedTimeMinutes);
   const surfaceFact = entry.surfaceSummary !== undefined
-    // One fact's own middot would read as another fact on this line.
-    ? entry.surfaceSummary.split(" · ").join(", ")
+    ? entry.surfaceSummary
     : entry.roadSummary === undefined || (entry.roadSummary.surfaceBand ?? "unknown") === "unknown"
       ? null
       : routeSurfaceLabel(entry.roadSummary);
-  const rideFacts: readonly { readonly key: string; readonly value: ReactNode }[] = [
-    ...(entry.distanceKm === null ? [] : [{ key: "distance", value: formatMiles(entry.distanceKm * 1000) }]),
-    ...(rideTime === null ? [] : [{ key: "time", value: rideTime }]),
-    ...(surfaceFact === null ? [] : [{ key: "surface", value: surfaceFact }]),
-    ...(entry.curvatureSummary === undefined ? [] : [{ key: "curvature", value: entry.curvatureSummary }]),
-  ];
+  const rideFacts = routeFacts({
+    distanceKm: entry.distanceKm,
+    estimatedTimeMinutes: entry.estimatedTimeMinutes,
+    surfaceLabel: surfaceFact,
+    curvatureSummary: entry.curvatureSummary,
+    formatDistance: (metres) => formatMiles(metres),
+  });
   // Climb, descent and the highest point, in the units a US rider reads; the
   // section is absent when the stored profile cannot say.
   const elevation = elevationSummaryOf(entry.stats?.elevationProfile);
@@ -492,11 +461,19 @@ export function RouteDetail({
         </div>
         {/* One line of numbers under the name, before the map: how far, how
             long, what is under the wheels. It replaces a four-tile ledger that
-            pushed the ride itself down the page. */}
+            pushed the ride itself down the page. Each figure is one unbreakable
+            unit, and an estimate's pace is its title rather than words that
+            could wrap away from the number. */}
         {rideFacts.length === 0 ? null : (
           <p className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => (
-              <span key={fact.key} className="og-route-detail__fact">{fact.value}</span>
+              <span
+                key={fact.key}
+                className="og-route-detail__fact"
+                {...(fact.note === undefined ? {} : { title: fact.note })}
+              >
+                {fact.text}
+              </span>
             ))}
           </p>
         )}
