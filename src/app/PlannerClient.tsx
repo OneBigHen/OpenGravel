@@ -19,6 +19,7 @@ import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { RideDocument } from "@/domain/ride/types";
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
 import { createPlaceNameCache } from "@/application/geocoding/place-names";
+import { placeDriveTime } from "@/infrastructure/geocoding/place-drive-time";
 import { createHttpPlaceSearch } from "@/application/geocoding/place-search";
 import {
   prepareRecordingFromPlanner,
@@ -195,6 +196,7 @@ export function PlannerClient({
     const homeStorage = createHomeLocationStorage();
     return {
       search,
+      driveTime: placeDriveTime,
       names: createPlaceNameCache({ port: search, storage: createLocalStoragePlaceNames() }),
       // In the app, the native watcher: the web view's geolocation asks a
       // second, per-site question ("localhost would like to use

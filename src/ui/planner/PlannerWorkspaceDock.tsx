@@ -33,6 +33,8 @@ import { PlannerResultPanel } from "@/ui/planner/PlannerResultPanel";
 import { PlannerWorkspaceStatus } from "@/ui/planner/PlannerWorkspaceStatus";
 
 export interface PlannerWorkspaceDockProps {
+  readonly placeSheet?: ReactNode;
+  readonly showOptions?: boolean;
   readonly dockRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadHeight: number;
@@ -114,6 +116,8 @@ function HistoryGlyph({ direction }: { readonly direction: "undo" | "redo" }) {
 const SWIPE_PX = 36;
 
 export function PlannerWorkspaceDock({
+  placeSheet,
+  showOptions = false,
   dockRef,
   sheetHeadRef,
   sheetHeadHeight,
@@ -199,7 +203,7 @@ export function PlannerWorkspaceDock({
   // frame renders them over the map everywhere else (the two checks are the same
   // query, so they can never both render the bar).
   const desktop = useDesktopPlanner();
-  const detent = phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
+  const detent = placeSheet ? "half" : phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
   const [dragHeight, setDragHeight] = useState<number | null>(null);
   const swipe = useRef<{ y: number; id: number; height: number } | null>(null);
   const swallowClick = useRef(false);
@@ -262,7 +266,8 @@ export function PlannerWorkspaceDock({
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"
         data-detent={detent}
-        data-idle={idle ? "true" : undefined}
+        data-place={placeSheet ? "true" : undefined}
+        data-idle={idle && !placeSheet ? "true" : undefined}
         data-has-ride={hasChoices ? "true" : "false"}
         data-dragging={dragHeight !== null ? "true" : undefined}
         aria-label="Ride planning"
@@ -445,9 +450,11 @@ export function PlannerWorkspaceDock({
             plus the one-tap ride style need more room than the peek block has,
             so that tap steps the sheet up once instead of hiding its own list.
           */}
+          {placeSheet ? <div className="og-place-sheet-slot">{placeSheet}</div> : null}
           {hasChoices ? (
             <PlannerResultPanel
               {...results}
+              showOptions={showOptions && detent !== "peek"}
               destinationLine={destinationLine}
               {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
             />
@@ -461,7 +468,7 @@ export function PlannerWorkspaceDock({
               {history}
             </div>
           ) : null}
-          <IntentComposer {...composer} {...(planning ? { onCancelPlanning } : {})} />
+          <IntentComposer {...composer} hideIdleSearch={idle && !desktop} {...(planning ? { onCancelPlanning } : {})} />
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           <PlannerRefineWorkspace {...refine} />
         </div>

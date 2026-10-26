@@ -44,6 +44,8 @@ export interface CurrentLocationOption {
 }
 
 export interface PlaceSearchFieldProps {
+  readonly testIdPrefix?: string;
+  readonly placeholder?: string;
   readonly slot: "start" | "finish";
   readonly search: PlaceSearchPort;
   readonly onPick: (place: PlaceMatch, query: string) => void;
@@ -92,6 +94,8 @@ const PLACEHOLDERS = { start: "Starting point", finish: "Where to?" } as const;
 const DESCRIBE_PLACEHOLDER = "Where to, or a ride idea";
 
 export function PlaceSearchField({
+  placeholder,
+  testIdPrefix,
   autoFocus = false,
   onIdleBlur,
   slot,
@@ -103,6 +107,7 @@ export function PlaceSearchField({
   describe,
   remembered,
 }: PlaceSearchFieldProps) {
+  const prefix = testIdPrefix ?? slot;
   const baseId = useId();
   const listId = `${baseId}-list`;
   const [query, setQuery] = useState("");
@@ -286,18 +291,18 @@ export function PlaceSearchField({
   const noun = slot === "start" ? "start" : "destination";
 
   return (
-    <div className="og-place-search" data-testid={`${slot}-search-field`}>
+    <div className="og-place-search" data-testid={`${prefix}-search-field`}>
       <input
         type="search"
         className="og-place-search__input"
-        data-testid={`${slot}-search`}
+        data-testid={`${prefix}-search`}
         role="combobox"
         aria-label={`Search for a ${noun}`}
         aria-autocomplete="list"
         aria-expanded={showList}
         aria-controls={listId}
         {...(activeId === undefined ? {} : { "aria-activedescendant": activeId })}
-        placeholder={describe === undefined ? PLACEHOLDERS[slot] : DESCRIBE_PLACEHOLDER}
+        placeholder={placeholder ?? (describe === undefined ? PLACEHOLDERS[slot] : DESCRIBE_PLACEHOLDER)}
         autoComplete="off"
         enterKeyHint="search"
         spellCheck={false}
@@ -323,7 +328,7 @@ export function PlaceSearchField({
         role="listbox"
         aria-label={`${noun === "start" ? "Start" : "Destination"} suggestions`}
         className="og-place-search__list"
-        data-testid={`${slot}-search-results`}
+        data-testid={`${prefix}-search-results`}
         hidden={!showList}
       >
         {options.map((option, index) => (
@@ -387,7 +392,7 @@ export function PlaceSearchField({
         ))}
       </ul>
       {status === null ? null : (
-        <p className="og-place-search__status" role="status" data-testid={`${slot}-search-status`}>
+        <p className="og-place-search__status" role="status" data-testid={`${prefix}-search-status`}>
           {status}
         </p>
       )}

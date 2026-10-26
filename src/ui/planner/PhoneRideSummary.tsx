@@ -91,7 +91,8 @@ function OptionRow({ choice, word, onSelect }: {
   );
 }
 
-export function PhoneRideSummary({ card, cards, start, route, elevationSource, comparing, onCompare, onSelect, rideStyle, weatherLine, destinationLine = null }: {
+export function PhoneRideSummary({ directionsOptions = false, card, cards, start, route, elevationSource, comparing, onCompare, onSelect, rideStyle, weatherLine, destinationLine = null }: {
+  readonly directionsOptions?: boolean;
   readonly card: RouteCardVm;
   readonly cards: readonly RouteCardVm[];
   readonly start: RideActionsProps["start"];
@@ -109,7 +110,7 @@ export function PhoneRideSummary({ card, cards, start, route, elevationSource, c
   const words = useMemo(() => routeChoiceWords(cards), [cards]);
   const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label, rideGlanceSurface(card).label];
   if (elevation?.status === "ready") meta.push(`↗ ${Math.round(elevation.profile.climbMeters * 3.28084).toLocaleString("en-US")} ft`);
-  return <section className="og-phone-summary" data-testid="phone-ride-summary" data-comparing={comparing ? "true" : "false"} aria-label="Your ride">
+  return <section className="og-phone-summary" data-testid="phone-ride-summary" data-directions={directionsOptions ? "true" : undefined} data-comparing={comparing ? "true" : "false"} aria-label="Your ride">
     {comparing ? <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
       {cards.map((choice) => <OptionRow key={choice.routeId} choice={choice} word={words[choice.routeId]} onSelect={onSelect} />)}
     </ul> : <div>

@@ -54,6 +54,7 @@ function useInspectorTier(): boolean {
 
 export interface PlannerResultPanelProps {
   /** The inspector column's element; `null` until it is mounted. */
+  readonly showOptions?: boolean;
   readonly inspector: HTMLElement | null;
   readonly choices: {
     readonly cards: readonly RouteCardVm[];
@@ -81,7 +82,7 @@ export interface PlannerResultPanelProps {
   readonly onExpandSheet?: () => void;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const [comparing, setComparing] = useState(false);
@@ -96,7 +97,7 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
   const tint = selectedCard?.tint ?? 0;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
+      {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
       {choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (

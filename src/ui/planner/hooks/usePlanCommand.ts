@@ -56,6 +56,11 @@ export function usePlanCommand(input: PlanCommandInput): () => void {
       intent: document.intent,
     });
   }, [document, markRevisionAttempted, planningSessionStore]);
-  usePlannerAutoPlan({ document, sketchDerivedEndpoints, restoreSettled, plan });
+  const autoPlan = useCallback(() => {
+    const identity = planningSessionStore.getState().snapshot.identity;
+    if (identity.rideId === document.rideId && identity.rideRevision === document.revision) return;
+    plan();
+  }, [document, planningSessionStore, plan]);
+  usePlannerAutoPlan({ document, sketchDerivedEndpoints, restoreSettled, plan: autoPlan });
   return plan;
 }

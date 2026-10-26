@@ -24,7 +24,6 @@ import {
   type PlannerViewModel,
   type PointRowVm,
 } from "@/application/planner/planner-view-model";
-import { defaultLoopToleranceMinutes } from "@/application/planner/build-plan-request";
 import type { MapPointAction } from "@/application/map/types";
 import { snapPreviewCoordinate } from "@/application/planner/point-snap";
 import {
@@ -34,8 +33,7 @@ import {
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import {
   insertStopCommand,
-  rideShapeCommand,
-  loopTimeCommand,
+  loopFromCommand,
   moveFinishCommand,
   moveShapeCommand,
   moveStartCommand,
@@ -326,17 +324,14 @@ export function usePlannerStops(input: {
     // start and time commands rather than bypassing the document authority.
     if (action === "start") dispatch(placeStartCommand(current(), coordinate));
     if (action === "finish") {
-      dispatch(rideShapeCommand(current(), "destination"));
-      dispatch(placeFinishCommand(current(), coordinate));
+      const document = current();
+      dispatch({ ...placeFinishCommand(document, coordinate), type: "ride.directions",
+        start: document.intent.start, finish: placeFinishCommand(document, coordinate).point });
     }
     if (action === "stop" && current().intent.start !== null && current().intent.finish !== null) {
       dispatch(insertStopCommand(current(), coordinate, undefined));
     }
-    if (action === "loop") {
-      dispatch(rideShapeCommand(current(), "loop"));
-      dispatch(placeStartCommand(current(), coordinate));
-      dispatch(loopTimeCommand(current(), 60, defaultLoopToleranceMinutes(60)));
-    }
+    if (action === "loop") dispatch(loopFromCommand(current(), coordinate));
   }, [rideDocumentStore]);
 
   return {

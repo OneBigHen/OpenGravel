@@ -257,7 +257,6 @@ async function placeEndpointAt(
   });
   fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
     name: target === "start" ? "Start here" : "Finish here",
-    exact: true,
   }));
   await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
 }
@@ -1481,7 +1480,8 @@ describe("map hold point authoring", () => {
     expect(screen.getByRole("button", { name: /Add stop here.*plan a start and finish first/ })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
     expect(rideDocumentStore.getState().document).toBe(before);
-    expect(within(screen.getByRole("dialog", { name: "Plan here" })).getByRole("status")).toHaveTextContent("No authority record for this spot");
+    expect(screen.getByTestId("place-sheet")).toHaveTextContent("Dropped pin");
+    expect(screen.queryByTestId("map-point-menu")).toBeNull();
   });
 });
 
@@ -1520,6 +1520,10 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
         search: async () => ({ status: "ok", places: [HAWK_MOUNTAIN] }),
         reverse: async () => null,
       },
+      position: {
+        permission: async () => "denied",
+        watch: (observer) => { observer.position({ coordinate: { lat: 40.8757, lon: -75.7324 }, accuracyMeters: 10, headingDegrees: null, speedMps: null, observedAt: "2026-10-25T12:00:00Z" }); return { stop: () => undefined }; },
+      },
       names: {
         nameFor: () => undefined,
         request: () => undefined,
@@ -1555,8 +1559,8 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready.");
   });
 
-  it("plans a picked place from search without a press", async () => {
-    const { posts } = await renderWorkspace(answerWithRoute(), {
+  it("opens a place without editing and plans on Directions", async () => {
+    const { posts, rideDocumentStore } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
     await placeEndpointAt("start", coordinateAt(100, 100));
@@ -1565,8 +1569,11 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     });
 
     // The destination comes from the search field: a chosen place is a revision.
-    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.change(screen.getByTestId("top-place-search"), { target: { value: "hawk" } });
     fireEvent.click(await screen.findByTestId("place-option"));
+    expect(screen.getByTestId("place-sheet")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("place-directions"));
+    await waitFor(() => expect(rideDocumentStore.getState().document.intent.finish, JSON.stringify(rideDocumentStore.getState().lastResult)).not.toBeNull());
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
@@ -1592,8 +1599,10 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your destination.");
 
     // A place picked from search is the destination the mode was waiting for.
-    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.change(screen.getByTestId("top-place-search"), { target: { value: "hawk" } });
     fireEvent.click(await screen.findByTestId("place-option"));
+    expect(screen.getByTestId("place-sheet")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("place-directions"));
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
@@ -1614,7 +1623,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
-    const finish = screen.getByTestId("finish-search");
+    const finish = screen.getByTestId("top-place-search");
     fireEvent.change(finish, { target: { value: "haw" } });
     fireEvent.change(finish, { target: { value: "hawk" } });
     // The field asks the geocoder, not the router (M1): a query is not a place,

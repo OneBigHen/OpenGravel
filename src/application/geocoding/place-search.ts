@@ -27,6 +27,7 @@ import type { Coordinate } from "@/domain/ride/types";
 /** One named place a geocoder returned. */
 export interface PlaceMatch {
   /** Provider-stable identity (e.g. `photon:N123`), for provenance only. */
+  readonly openNow?: boolean;
   readonly id: string;
   /** The line the rider reads and the point keeps: `Jim Thorpe, PA`. */
   readonly label: string;

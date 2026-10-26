@@ -730,15 +730,13 @@ describe("the map point menu", () => {
     } finally { style.remove(); }
   });
 
-  it("says it does not know when no authority record exists", async () => {
+  it("hands What's here to the place sheet without a ride edit", async () => {
     const onPointAction = vi.fn();
     const { factory, onIntent } = await renderMap({ onPointAction });
     act(() => factory.hosts[0]?.emit(press));
     fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
-    expect(screen.getByRole("status")).toHaveTextContent("No authority record for this spot");
-    expect(screen.getByRole("status")).toHaveTextContent(/source coverage.*unknown/);
-    expect(screen.getByRole("status")).not.toHaveTextContent(/public|open/i);
-    expect(onPointAction).not.toHaveBeenCalled();
+    expect(onPointAction).toHaveBeenCalledWith("info", press.coordinate);
+    expect(screen.queryByTestId("map-point-menu")).toBeNull();
     expect(onIntent).not.toHaveBeenCalled();
   });
 
@@ -775,7 +773,8 @@ describe("map point evidence and positioning", () => {
 
   it("shows the road name and source only for a hit on a loaded authority feature", async () => {
     const base = scene(false);
-    const { factory } = await renderMap({ onPointAction: vi.fn(), scene: { ...base, infoLayers: {
+    const onPointAction = vi.fn();
+    const { factory } = await renderMap({ onPointAction, scene: { ...base, infoLayers: {
       trafficFlowTiles: null, selectedId: null, visible: ["mvum"], features: [{
         id: "authority:usfs:123", layerId: "mvum", name: "Forest Road 123", detail: "USFS MVUM · retrieved 2026-10-23 · dates unknown",
         weight: null, geometry: { type: "Point", coordinates: [-75.2, 39.95] },
@@ -783,9 +782,8 @@ describe("map point evidence and positioning", () => {
     } } });
     act(() => factory.hosts[0]?.emit({ ...press, authorityFeatureId: "authority:usfs:123" }));
     fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Forest Road 123");
-    expect(screen.getByRole("status")).toHaveTextContent("USFS MVUM");
-    expect(screen.getByRole("status")).toHaveTextContent(/Check current local MVUM/);
+    expect(onPointAction).toHaveBeenCalledWith("info", press.coordinate);
+    expect(screen.queryByTestId("map-point-menu")).toBeNull();
   });
 
   it("flips a wide card left and up near the viewport edge", async () => {

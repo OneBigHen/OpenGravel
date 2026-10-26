@@ -45,6 +45,8 @@ export interface PlannerWorkspaceFrameProps {
   readonly glance?: ReactNode;
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
   readonly editBar?: PlannerMapEditBarProps | undefined;
+  readonly topSearch?: ReactNode;
+  readonly toast?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -73,6 +75,8 @@ export function PlannerWorkspaceFrame({
   glance,
   editBar,
   children,
+  topSearch,
+  toast,
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
   // The desktop rail owns the edit tools (beside undo/redo); every other tier
@@ -189,6 +193,7 @@ export function PlannerWorkspaceFrame({
             layers={layers}
             clusterControls={clusterControls}
           />
+          {topSearch}
           {glance}
           {editBar === undefined || desktop ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
@@ -198,6 +203,7 @@ export function PlannerWorkspaceFrame({
           ) : null}
         </div>
         {children}
+        {toast}
       </div>
     </main>
   );

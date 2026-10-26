@@ -58,6 +58,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
+import { usePlaceFlow } from "@/ui/place/usePlaceFlow";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import {
@@ -211,7 +212,7 @@ export function PlannerWorkspace({
   bikes = [],
 }: PlannerWorkspaceProps) {
   const document = useStore(rideDocumentStore, (state) => state.document);
-  const { placeNameFor, composerSearch, riderPosition, locateMe } = usePlannerPlaces({ document, rideDocumentStore, plannerUiStore, places });
+  const { placeNameFor, composerSearch, riderPosition, locateMe, locateStart } = usePlannerPlaces({ document, rideDocumentStore, plannerUiStore, places });
   const rideStyle = usePlannerRideStyle({ document, rideDocumentStore });
   const planningSnapshot = useStore(planningSessionStore, (state) => state.snapshot);
   const { session, showingSketchPreview } = usePlannerVisibleSession({ document, snapshot: planningSnapshot, plannerUiStore });
@@ -475,6 +476,14 @@ export function PlannerWorkspace({
     placeFromMap,
     changeDestination,
   } = stopAuthoring;
+  const placeFlow = usePlaceFlow({ services: places, search: composerSearch,
+    rider: riderPosition?.coordinate ?? null, locateStart, rideStore: rideDocumentStore,
+    uiStore: plannerUiStore, hasRoute: activeRoute !== null,
+    onMapPointAction: stopAuthoring.onMapPointAction,
+    onDirectionsReady: (next) => {
+      markRevisionAttempted(next.revision);
+      void planningSessionStore.getState().begin({ rideId: next.rideId, rideRevision: next.revision, intent: next.intent });
+    } });
   const mapIntents = usePlannerMapIntentController({
     plannerUiStore,
     planningSessionStore,
@@ -753,7 +762,7 @@ export function PlannerWorkspace({
       mapSlotRef={mapSlotRef}
       armedTool={armedTool}
       retryingMap={mapLoadStatus.state === "retrying"}
-      places={preparationProviders?.places && { source: preparationProviders.places, onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name) }}
+      places={preparationProviders?.places && { source: preparationProviders.places, onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name), onOpenPlace: placeFlow.overlayPlace }}
       layers={preparationProviders?.mapLayers && {
         source: preparationProviders.mapLayers,
         onAddStop: stopAuthoring.addStopAt,
@@ -763,13 +772,17 @@ export function PlannerWorkspace({
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
       glance={glance.map}
+      topSearch={placeFlow.top}
+      toast={placeFlow.toast}
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
-        scene,
-        onPointAction: stopAuthoring.onMapPointAction,
+        scene: { ...scene, places: placeFlow.pins },
+        onViewport: placeFlow.onViewport,
+        onPointAction: placeFlow.pointAction,
+        directionsWhenEmpty: places !== undefined && activeRoute === null,
         longPressEnabled: placementTool === "idle" && activeTool === "pan",
         addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,
-        onIntent: handleIntent,
+        onIntent: (intent) => { if (!placeFlow.intercept(intent)) handleIntent(intent); },
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
         dimmed: planning && session.phase !== "alternatives-loading" && session.phase !== "primary-ready",
@@ -786,6 +799,8 @@ export function PlannerWorkspace({
       }}
     >
         <PlannerWorkspaceDock
+          placeSheet={placeFlow.sheet}
+          showOptions={placeFlow.optionsOpen}
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
@@ -833,7 +848,7 @@ export function PlannerWorkspace({
             onPlan: handlePlan,
             planLabel: viewModel.planLabel,
             onChangeDestination: changeDestination,
-            ...(composerSearch === undefined ? {} : { placeSearch: composerSearch }),
+            ...(placeFlow.composerSearch === undefined ? {} : { placeSearch: placeFlow.composerSearch }),
             rideStyle,
           }}
           planning={planning}

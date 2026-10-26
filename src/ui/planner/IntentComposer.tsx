@@ -77,6 +77,7 @@ const MAP_UNAVAILABLE_WITH_SEARCH =
 export type ArmedPlacementTool = "start" | "finish" | "stop" | null;
 
 export interface IntentComposerProps {
+  readonly hideIdleSearch?: boolean;
   readonly viewModel: PlannerViewModel;
   readonly onSetStart: () => void;
   readonly onSetFinish: () => void;
@@ -258,6 +259,7 @@ function SaveStar({
 }
 
 export function IntentComposer({
+  hideIdleSearch = false,
   viewModel,
   onSetStart,
   onSetFinish,
@@ -326,7 +328,7 @@ export function IntentComposer({
           },
         };
   return (
-    <section className="og-composer" aria-label="Ride intent" data-skip-target="">
+    <section data-top-search-idle={hideIdleSearch ? "true" : undefined} className="og-composer" aria-label="Ride intent" data-skip-target="">
       {shapeModel === undefined && (loop || !hasStart || !hasFinish || reverseRide === undefined) ? null : (
         <div className="og-composer__shape-row">
           {shapeModel === undefined ? null : <RideShapeSwitch model={shapeModel} />}
@@ -373,7 +375,7 @@ export function IntentComposer({
         >
           <ChipLabel iconic={searchable}>{hasStart ? "Change start" : "Set start on map"}</ChipLabel>
         </button>
-        {placeSearch === undefined || !showStartSearch ? null : (
+        {hideIdleSearch || placeSearch === undefined || !showStartSearch ? null : (
           <PlaceSearchField
             slot="start"
             search={placeSearch.port}
@@ -429,7 +431,7 @@ export function IntentComposer({
               {hasFinish ? "Change destination" : "Set destination on map"}
             </ChipLabel>
           </button>
-          {placeSearch === undefined || !showFinishSearch ? null : (
+          {hideIdleSearch || placeSearch === undefined || !showFinishSearch ? null : (
             <PlaceSearchField
               slot="finish"
               search={placeSearch.port}
