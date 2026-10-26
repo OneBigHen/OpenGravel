@@ -28,6 +28,9 @@ import {
   type RoadDiscoverySlice,
   type RoadSurfaceFilter,
 } from "@/application/roads/discovery";
+import type { RoadEvidenceRecord } from "@/application/roads/road-evidence";
+import { surfaceEvidenceFromRoadEvidence } from "@/application/roads/surface-evidence";
+import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
 import {
   distanceToStartKm,
   filterAndSortCatalog,
@@ -49,13 +52,15 @@ export interface ExplorePanelProps {
 }
 
 /**
- * The source of a result, in one honest word per source (09 §3, §5).
+ * The source of a result, in one honest phrase per source.
  *
- * `catalog` names the published route collection. It is kept distinct from the
- * rider's own saved and imported routes in both the card and source filter.
+ * `catalog` is a ride published on Explore itself, so it says "From Explore" —
+ * the place the rider is reading it — rather than naming the store it is kept
+ * in. It stays distinct from the rider's own saved and imported rides in both
+ * the card and the source filter.
  */
 const SOURCE_LABEL: Readonly<Record<CatalogSource, string>> = {
-  catalog: "Catalog",
+  catalog: "From Explore",
   personal: "Yours",
   import: "Imported",
 };
@@ -205,6 +210,15 @@ function roadSurfaceLabel(candidate: RoadCandidate): string {
     : `Surface ${candidate.surfaceBand} · ${candidate.surfaceValue}`;
 }
 
+/**
+ * Who reported a road's surface, in the words the report's own source uses.
+ * The record carries a source key (`osm`, `recorded-ride`); the adapter beside
+ * the aggregation owns the rider-facing name for it.
+ */
+function roadReportSource(record: RoadEvidenceRecord): string {
+  return surfaceEvidenceFromRoadEvidence(record).sourceLabel ?? "Other reports";
+}
+
 function RoadCard({ candidate, onOpen, mapboxToken }: { readonly candidate: RoadCandidate; readonly onOpen: () => void; readonly mapboxToken?: string | undefined }) {
   return (
     <li className="og-explore-card og-road-discovery-card">
@@ -221,9 +235,9 @@ function RoadCard({ candidate, onOpen, mapboxToken }: { readonly candidate: Road
             <span className="og-explore-card__distance">{roadLengthLabel(candidate.lengthKm)}</span>
           </span>
           <strong>{candidate.entity.name}</strong>
-          <span className="og-explore-card__region">
-            {candidate.entity.class} · {roadLengthLabel(candidate.lengthKm)}
-          </span>
+          {candidate.region === null || candidate.region === "" ? null : (
+            <span className="og-explore-card__region">{candidate.region}</span>
+          )}
           <span className="og-road-surface" data-surface-band={candidate.surfaceBand}>
             {roadSurfaceLabel(candidate)}
           </span>
@@ -238,6 +252,9 @@ function RoadDiscoveryDetailSheet({ candidate, onClose, map }: { readonly candid
   const records = candidate.evidenceSummary.records.length > 0
     ? candidate.evidenceSummary.records
     : candidate.evidence;
+  // One reading of the clock per open sheet, so every row's age is said from
+  // the same moment.
+  const [now] = useState(() => Date.now());
   const dialogRef = useRef<HTMLElement | null>(null);
   useDialogFocus(dialogRef, onClose);
   return (
@@ -260,7 +277,6 @@ function RoadDiscoveryDetailSheet({ candidate, onClose, map }: { readonly candid
         <p className="og-road-detail-sheet__aliases">Also known as: {candidate.aliases.join(", ")}</p>
       ) : null}
       <dl className="og-road-detail-sheet__facts">
-        <div><dt>Class</dt><dd>{candidate.entity.class}</dd></div>
         <div><dt>Length</dt><dd>{roadLengthLabel(candidate.lengthKm)}</dd></div>
         <div><dt>Surface</dt><dd>{roadSurfaceLabel(candidate)}</dd></div>
         <div><dt>Region</dt><dd>{candidate.region ?? "—"}</dd></div>
@@ -269,19 +285,19 @@ function RoadDiscoveryDetailSheet({ candidate, onClose, map }: { readonly candid
         <h3 id="road-discovery-why-title">Why it appears</h3>
         <p>{candidate.whyLine}</p>
       </section>
-      <section aria-labelledby="road-discovery-evidence-title">
-        <h3 id="road-discovery-evidence-title">Evidence</h3>
+      <section aria-labelledby="road-discovery-surface-reports-title">
+        <h3 id="road-discovery-surface-reports-title">Surface reports</h3>
         {records.length === 0 ? (
-          <p>— <span className="sr-only">No evidence reported</span></p>
+          <p>— <span className="sr-only">No surface reports</span></p>
         ) : (
           <table className="og-road-detail-sheet__evidence">
-            <caption className="sr-only">Evidence reports for {candidate.entity.name}</caption>
-            <thead><tr><th scope="col">Source</th><th scope="col">Observed</th><th scope="col">Value</th></tr></thead>
+            <caption className="sr-only">Surface reports for {candidate.entity.name}</caption>
+            <thead><tr><th scope="col">Source</th><th scope="col">When</th><th scope="col">Surface</th></tr></thead>
             <tbody>
               {records.map((record) => (
                 <tr key={record.id}>
-                  <td>{record.source}</td>
-                  <td>{record.observedAt}</td>
+                  <td>{roadReportSource(record)}</td>
+                  <td>{surfaceReportAge(record.observedAt, now)}</td>
                   <td>{record.value ?? "Surface unknown"}</td>
                 </tr>
               ))}
@@ -668,7 +684,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             aria-expanded={filtersOpen}
             aria-controls="og-explore-filters"
             disabled={!hasSurfaceEvidence}
-            title={!hasSurfaceEvidence ? "Surface evidence is not available for these routes." : undefined}
+            title={!hasSurfaceEvidence ? "No surface information for these routes yet." : undefined}
             onClick={() => openFiltersOn("surface")}
           >
             {query.surface === undefined ? "Paved/gravel" : SURFACE_LABEL[query.surface]}
@@ -730,7 +746,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         <label>
           <span>Surface</span>
           <span className="og-select">
-            <select ref={surfaceRef} aria-label="Filter by surface" value={query.surface ?? "all"} disabled={!hasSurfaceEvidence} title={!hasSurfaceEvidence ? "Surface evidence is not available for these catalog routes." : undefined} onChange={(event) => updateQuery({ surface: event.target.value === "all" ? undefined : event.target.value as "paved" | "gravel" })}>
+            <select ref={surfaceRef} aria-label="Filter by surface" value={query.surface ?? "all"} disabled={!hasSurfaceEvidence} title={!hasSurfaceEvidence ? "No surface information for these routes yet." : undefined} onChange={(event) => updateQuery({ surface: event.target.value === "all" ? undefined : event.target.value as "paved" | "gravel" })}>
               <option value="all">Paved or gravel</option>
               <option value="paved">Paved</option>
               <option value="gravel">Gravel or unpaved</option>
@@ -746,7 +762,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
               onChange={(event) => updateQuery({ source: event.target.value === "all" ? undefined : event.target.value as CatalogSource })}
             >
               <option value="all">All sources</option>
-              <option value="catalog">Catalog</option>
+              <option value="catalog">From Explore</option>
               <option value="personal">Yours</option>
               <option value="import">Imported</option>
             </select>

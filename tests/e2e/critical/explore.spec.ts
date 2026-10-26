@@ -32,7 +32,10 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByRole("link", { name: /Sample (Ridge|Creek|Foothills)/ })).toHaveCount(3);
 
   await page.getByRole("combobox", { name: "Filter by source" }).selectOption("catalog");
-  await expect(page.locator(".og-explore-card__source").first()).toHaveText("Catalog");
+  // The source badge says where the rider is, not the name of the store the
+  // published rides are kept in.
+  await expect(page.locator(".og-explore-card__source").first()).toHaveText("From Explore");
+  await expect(page.getByRole("option", { name: "From Explore" })).toHaveCount(1);
   await page.getByRole("link", { name: /Sample Ridge Loop/ }).click();
   await expect(page).toHaveURL(/\/explore\/sample-ridge-loop$/);
   // The rider-facing line is short and honest, and the engine mechanics — including

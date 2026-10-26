@@ -288,8 +288,9 @@ describe("Explore UI", () => {
     expect(card.querySelector("[data-surface]")).toBeNull();
     expect(card).not.toHaveTextContent(/Est\./);
 
-    // The credit is one caption line, and it still names the source honestly.
-    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("Catalog");
+    // The credit is one caption line, and it still names the source in words a
+    // rider uses: the ride is on Explore, not "in the catalog".
+    expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("From Explore");
     expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("2 versions");
   });
 
@@ -368,17 +369,17 @@ describe("Explore UI", () => {
     vi.unstubAllGlobals();
   });
 
-  it("labels the catalog source clearly, and keeps the long provenance off the card", () => {
-    // Defect (owner review 2026-09-21): a badge reading `Curated` sat next to copy
-    // saying the route was not curated. The card now carries the honest source
-    // word, and the paragraph of engine mechanics is not on a card at all.
+  it("names the source in rider words, and keeps the long provenance off the card", () => {
+    // A badge reading `Curated` once sat next to copy saying the route was not
+    // curated, and then the badge named the store the rides are kept in. It now
+    // says where the rider is standing: the ride is from Explore.
     render(<ExplorePanel entries={[entry]} />);
 
     expect(screen.getByRole("heading", { name: "Explore" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Lehigh sample route/i })).toBeInTheDocument();
-    // Both the badge and the source filter speak the same honest word.
-    expect(screen.getByText("Catalog", { selector: ".og-explore-card__source" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
+    // Both the badge and the source filter speak the same honest words.
+    expect(screen.getByText("From Explore", { selector: ".og-explore-card__source" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "From Explore" })).toBeInTheDocument();
     // A route with no surface or curvature evidence says nothing about either,
     // on the card and in the sheet: absence is not printed as a value.
     expect(screen.queryByText("Surface unknown")).toBeNull();
@@ -386,7 +387,7 @@ describe("Explore UI", () => {
     expect(screen.getByRole("searchbox", { name: "Search routes" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "More filters" }));
     const filters = within(screen.getByRole("region", { name: "Explore filters" }));
-    expect(filters.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
+    expect(filters.getByRole("option", { name: "From Explore" })).toBeInTheDocument();
     expect(filters.getByRole("combobox", { name: "Filter by region" })).toHaveValue("");
     expect(filters.getByRole("combobox", { name: "Sort routes" })).toHaveValue("recommended");
     // Without evidence both choices say so by being unavailable, not by offering
@@ -402,7 +403,7 @@ describe("Explore UI", () => {
       target: { value: "personal" },
     });
     // Asked for their own rides and has none: that is the honest reason, said
-    // once, instead of a filter message about catalog routes.
+    // once, instead of a filter message about the published rides.
     expect(screen.getByText(/No personal rides yet/)).toBeInTheDocument();
     expect(screen.queryByText("No routes match these filters.")).toBeNull();
   });
@@ -421,24 +422,23 @@ describe("Explore UI", () => {
     expect(await screen.findByText(/location permission was not granted/i)).toBeInTheDocument();
   });
 
-  it("shows one honest provenance line and puts the mechanics behind a disclosure", () => {
+  it("opens on the ride's name and puts the provenance behind a disclosure", () => {
     render(<RouteDetail entry={entry} onUse={vi.fn()} />);
 
-    expect(
-      screen.getByText("Sample route — built from real roads, not a recommendation."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Catalog route")).toBeInTheDocument();
-    expect(screen.queryByText("Curated route")).not.toBeInTheDocument();
+    // The page opens on the ride itself: no eyebrow naming the store the route
+    // is kept in, and no "curated" claim either.
+    const heading = screen.getByRole("heading", { name: "Lehigh sample route", level: 1 });
+    expect(heading.closest(".og-route-detail__heading")).not.toBeNull();
+    expect(document.querySelector(".og-route-detail__header .og-eyebrow")).toBeNull();
+    expect(screen.queryByText(/Catalog|Curated/)).toBeNull();
 
-    // The detail exists, and it is a disclosure rather than a paragraph in the
-    // header the rider reads first: it closes the page, with the credits.
+    // One honest line under the name, and the mechanics behind a disclosure
+    // that closes the page rather than in the header the rider reads first.
+    expect(screen.getByTestId("route-meta")).toHaveTextContent(entry.provenance);
     const disclosure = screen.getByText("Where this route came from");
     expect(disclosure.closest("details")).not.toBeNull();
     expect(disclosure.closest("details")).toHaveTextContent(entry.provenanceDetail ?? "");
     expect(disclosure.closest(".og-route-detail__credits")).not.toBeNull();
-    expect(screen.getByTestId("route-meta")).toHaveTextContent(
-      "Sample route — built from real roads, not a recommendation.",
-    );
   });
 
   it("shares a route through the share sheet, or copies its link where there is none", async () => {
@@ -474,18 +474,26 @@ describe("Explore UI", () => {
     expect(disclosure).toHaveTextContent(donorEntry.provenanceDetail);
   });
 
-  it("lists repeated exports and separate tracks on the route detail page", () => {
+  it("lists the other versions of the ride in words a rider uses", () => {
     render(<RouteDetail
       entry={entry}
       onUse={vi.fn()}
       variants={[
         { id: "route-1", label: "Track 1", name: "Lehigh sample route", distanceKm: 27.5, copyCount: 3 },
         { id: "route-2", label: "Track 2", name: "Lehigh sample route · track 2", distanceKm: 29, copyCount: 1 },
+        { id: "route-3", label: "Track 3", name: "Lehigh sample route · track 3", distanceKm: null, copyCount: 1 },
       ]}
     />);
-    expect(screen.getByRole("region", { name: "Catalog variants and tracks" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Lehigh sample route.*3 exports/i })).toHaveAttribute("href", "/explore/route-1");
-    expect(screen.getByRole("link", { name: /track 2/i })).toBeInTheDocument();
+    const versions = screen.getByRole("region", { name: "Other versions of this ride" });
+    expect(versions).toHaveTextContent("Other versions");
+    // "Exports" and "tracks" are how the file was kept, not what the rider gets.
+    expect(versions).not.toHaveTextContent(/export|variant/i);
+    expect(screen.getByRole("link", { name: /Lehigh sample route.*3 versions/i })).toHaveAttribute("href", "/explore/route-1");
+    expect(screen.getByRole("link", { name: /3 versions/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Track 2/ })).toHaveAttribute("href", "/explore/route-2");
+    // A version whose length was never measured keeps the em dash, and its
+    // accessible name says which number is missing.
+    expect(screen.getByLabelText("Distance unknown")).toHaveTextContent("—");
   });
 
   it("keeps the distance and the source on one meta line, with the paperwork at the foot", async () => {
@@ -576,15 +584,60 @@ describe("Explore UI", () => {
     expect(line).not.toHaveTextContent(/Source|Fresh|Ready/);
   });
 
-  it("uses the route and keeps unknown metrics as an accessible em dash", () => {
+  it("states the ride's facts on one line, in the order a rider asks them", () => {
     const onUse = vi.fn().mockResolvedValue(undefined);
-    render(<RouteDetail entry={entry} onUse={onUse} />);
+    const rideEntry: CatalogEntry = { ...entry, surfaceSummary: "Mostly paved · 2.1 mi gravel", curvatureSummary: "14 mi of curves" };
+    render(<RouteDetail entry={rideEntry} onUse={onUse} />);
 
-    // No catalog ride time: estimated from the distance at a stated pace (EX-08).
-    expect(screen.getByRole("region", { name: "Route stats" })).toHaveTextContent("Est. time~30 min at 28 mph");
-    expect(screen.getAllByText("Surface unknown").length).toBeGreaterThan(0);
+    // Distance, time, surface and curves on one line under the name, each its
+    // own span so the stylesheet draws the separators. No tile ledger, and no
+    // "Est." stamp: the catalog's own time is the route's time.
+    const facts = screen.getByTestId("route-facts");
+    expect([...facts.querySelectorAll(".og-route-detail__fact")].map((fact) => fact.textContent))
+      .toEqual(["17 mi", "~30 min at 28 mph", "Mostly paved, 2.1 mi gravel", "14 mi of curves"]);
+    expect(facts.closest(".og-route-detail__header")).not.toBeNull();
+
     fireEvent.click(screen.getByRole("button", { name: "Ride this" }));
-    return waitFor(() => expect(onUse).toHaveBeenCalledWith(entry));
+    return waitFor(() => expect(onUse).toHaveBeenCalledWith(rideEntry));
+  });
+
+  it("leaves a fact off the line rather than printing an unknown one", () => {
+    // This route has no surface, curvature or ride-time evidence. Unknown is
+    // never shown as a value, and saying "unknown" three times under the name
+    // is not a fact a rider can use.
+    render(<RouteDetail entry={{ ...entry, distanceKm: null }} onUse={vi.fn()} />);
+    expect(screen.queryByTestId("route-facts")).toBeNull();
+    expect(screen.queryByText(/Surface unknown|Curvature unknown/)).toBeNull();
+  });
+
+  it("says how much the ride climbs, drops and tops out, in feet", () => {
+    const climbEntry: CatalogEntry = {
+      ...entry,
+      stats: {
+        elevationProfile: [
+          { distanceKm: 0, elevationMeters: 300 },
+          { distanceKm: 4, elevationMeters: 500 },
+          { distanceKm: 9, elevationMeters: 350 },
+          { distanceKm: 13, elevationMeters: 400 },
+        ],
+      },
+    };
+    render(<RouteDetail entry={climbEntry} onUse={vi.fn()} />);
+
+    const elevation = screen.getByRole("region", { name: "Elevation" });
+    // 300 → 500 m climbs 200 m, the drop to 350 m descends 150 m, the rise to
+    // 400 m climbs 50 m more, and the high point is 500 m.
+    expect(elevation).toHaveTextContent("Climb820 ft");
+    expect(elevation).toHaveTextContent("Descent492 ft");
+    expect(elevation).toHaveTextContent("Highest point1,640 ft");
+    // The profile's storage is not the ride: no count of points.
+    expect(elevation).not.toHaveTextContent(/points/i);
+  });
+
+  it("says nothing about elevation when the profile cannot say", () => {
+    render(<RouteDetail entry={{ ...entry, stats: { elevationProfile: [{ distanceKm: 0, elevationMeters: 300 }] } }} onUse={vi.fn()} />);
+    expect(screen.queryByRole("region", { name: "Elevation" })).toBeNull();
+    expect(screen.queryByText(/measured points/i)).toBeNull();
   });
 
   it("offers no map link the planner cannot open (DI-01)", () => {
@@ -832,7 +885,9 @@ describe("Explore UI", () => {
     render(<RouteDetail entry={roadEntry} onUse={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Roads on this ride" })).toBeInTheDocument();
-    expect(screen.getByText(/7\.7 mi matched · 1 road · 0 surface unknown/)).toBeInTheDocument();
+    // How much of the ride is on roads the app knows, in rider words; a road
+    // with no surface report is counted only when there is one.
+    expect(screen.getByText("7.7 mi on 1 known road")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "Roads on this ride" })).toBeInTheDocument();
     expect(screen.getByLabelText("Surface likely: paved")).toBeInTheDocument();
 
@@ -840,8 +895,136 @@ describe("Explore UI", () => {
     expect(screen.getByRole("dialog", { name: "Main Street" })).toBeInTheDocument();
     expect(screen.getByText(/Also known as: Main St/)).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "paved" })).toBeInTheDocument();
-    expect(screen.getByText("2 rides through here")).toBeInTheDocument();
+    // The rider facts: how much of this ride the road is, and how many rides use
+    // it. The road's OSM class and its first/last seen timestamps are not facts
+    // a rider can use.
+    expect(screen.getByText("On this ride")).toBeInTheDocument();
+    expect(screen.getByText("7.7 mi · 45%")).toBeInTheDocument();
+    expect(screen.getByText("2 rides")).toBeInTheDocument();
+    const sheet = screen.getByRole("dialog", { name: "Main Street" });
+    expect(sheet.textContent ?? "").not.toMatch(/first seen|last seen|lineage|Class|2026-09-17T/);
     expect(screen.queryByRole("button", { name: /avoid this road/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps a road's earlier identity to one plain line, without ids", () => {
+    const lineageEntry = {
+      ...entry,
+      roadSummary: {
+        roads: [{
+          entityId: asRoadEntityId("road_old"),
+          distanceKm: 12.4,
+          percentage: 45,
+          confidenceBand: "High",
+        }],
+        totalKm: 27.5,
+        matchedKm: 12.4,
+        unmatchedKm: 15.1,
+        coveragePercent: 45,
+        unverifiedRoadCount: 0,
+      },
+      roadDetails: [{
+        entity: {
+          id: asRoadEntityId("road_old"),
+          name: "Ridge Road",
+          normalizedName: "ridge rd",
+          class: "tertiary",
+          lineage: [{ parentId: asRoadEntityId("road_entity_01H8Z9W7QK4M2X6V0B3N5C8L"), reason: "renamed" }],
+          firstSeen: "2026-09-01T00:00:00.000Z",
+          lastSeen: "2026-09-17T00:00:00.000Z",
+          spans: ["span-old"],
+          evidenceRefs: [],
+        },
+        aliases: [],
+        summary: { entityId: asRoadEntityId("road_old"), distanceKm: 12.4, percentage: 45, confidenceBand: "High" },
+        evidence: [],
+        evidenceSummary: {
+          entityId: asRoadEntityId("road_old"),
+          surfaceValue: null,
+          confidence: null,
+          confidenceBand: "Unverified",
+          conflict: false,
+          evidenceCount: 0,
+          sourceDiversity: 0,
+          latestObservedAt: null,
+          records: [],
+        },
+        ridesThroughCount: 1,
+      }],
+    } as CatalogEntry;
+
+    render(<RouteDetail entry={lineageEntry} onUse={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Ridge Road road details" }));
+
+    // The reconciliation log — the parent road's id and the reconciliation's own
+    // reason code — is not rider copy. One plain line, behind a disclosure.
+    const sheet = screen.getByRole("dialog", { name: "Ridge Road" });
+    expect(sheet.textContent ?? "").not.toMatch(/road_entity_01H8Z9W7QK4M2X6V0B3N5C8L|renamed|Lineage/);
+    const history = screen.getByText("Where this road came from").closest("details");
+    expect(history).not.toBeNull();
+    expect(history).toHaveTextContent("This road has changed since it was first recorded.");
+    expect(history?.textContent ?? "").not.toMatch(/road_entity_01H8Z9W7QK4M2X6V0B3N5C8L/);
+  });
+
+  it("names a surface report's source and age in rider words, not record keys", () => {
+    const roadEntry = {
+      ...entry,
+      roadSummary: {
+        roads: [{
+          entityId: asRoadEntityId("road_keyed"),
+          distanceKm: 6,
+          percentage: 100,
+          confidenceBand: "High",
+        }],
+        totalKm: 6,
+        matchedKm: 6,
+        unmatchedKm: 0,
+        coveragePercent: 100,
+        unverifiedRoadCount: 0,
+      },
+      roadDetails: [{
+        entity: {
+          id: asRoadEntityId("road_keyed"),
+          name: "Keyed Road",
+          normalizedName: "keyed rd",
+          class: "tertiary",
+          lineage: [],
+          firstSeen: "2026-09-01T00:00:00.000Z",
+          lastSeen: "2026-09-17T00:00:00.000Z",
+          spans: ["span-keyed"],
+          evidenceRefs: ["evidence-keyed"],
+        },
+        aliases: [],
+        summary: { entityId: asRoadEntityId("road_keyed"), distanceKm: 6, percentage: 100, confidenceBand: "High" },
+        evidence: [{
+          id: "evidence-keyed",
+          entityId: asRoadEntityId("road_keyed"),
+          source: "recorded-ride",
+          observedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+          value: "gravel",
+          confidence: 0.9,
+        }],
+        evidenceSummary: {
+          entityId: asRoadEntityId("road_keyed"),
+          surfaceValue: "gravel",
+          confidence: 0.9,
+          confidenceBand: "High",
+          conflict: false,
+          evidenceCount: 1,
+          sourceDiversity: 1,
+          latestObservedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+          records: [],
+        },
+        ridesThroughCount: 0,
+      }],
+    } as CatalogEntry;
+
+    render(<RouteDetail entry={roadEntry} onUse={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Keyed Road road details" }));
+    const sheet = screen.getByRole("dialog", { name: "Keyed Road" });
+    expect(sheet).toHaveTextContent("Surface reports");
+    expect(sheet).toHaveTextContent("Recorded ride");
+    expect(sheet).toHaveTextContent("2 days ago");
+    expect(sheet.textContent ?? "").not.toMatch(/recorded-ride|Evidence|T00:00:00/);
   });
 
   it("renders unknown as unknown on a road strip and in the road detail", () => {
@@ -1031,13 +1214,57 @@ describe("Explore UI", () => {
 
     expect(screen.getByRole("heading", { name: "Worth riding" })).toBeInTheDocument();
     expect(screen.getAllByText("Ridge Road").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("tertiary · 5.3 mi").length).toBeGreaterThan(0);
+    // The card names where the road is, not the map data's road class.
+    expect(screen.getAllByText("Lehigh Valley").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/tertiary/)).toBeNull();
     expect(screen.getAllByText(/matched on 2 rides/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Surface unknown").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByRole("button", { name: "Open Ridge Road road details" })[0]!);
     expect(screen.getByRole("dialog", { name: "Ridge Road" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /use in planner/i })).not.toBeInTheDocument();
+  });
+
+  it("names a road surface report's source and age without exposing record keys", () => {
+    const entity = createRoadEntity({
+      name: "Ridge Road",
+      class: "tertiary",
+      endpoints: [{ lon: -75.5, lat: 40.5 }, { lon: -75.4, lat: 40.6 }],
+      firstSeen: "2026-09-01T00:00:00.000Z",
+      lastSeen: "2026-09-17T00:00:00.000Z",
+    });
+    const observedAt = new Date(Date.now() - 5 * 86_400_000).toISOString();
+    const roads = discoverRoads({
+      roads: [{
+        entity,
+        geometry: [{ lon: -75.5, lat: 40.5 }, { lon: -75.46, lat: 40.56 }, { lon: -75.4, lat: 40.6 }],
+        matchedDistanceKm: 8.5,
+        matchedRideCount: 2,
+        region: "Lehigh Valley",
+        evidence: [{
+          id: "evidence-osm",
+          entityId: entity.id,
+          source: "osm",
+          observedAt,
+          value: "gravel",
+          confidence: 0.8,
+        }],
+      }],
+    });
+
+    render(<ExplorePanel entries={[]} roadCandidates={roads} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Ride" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Open Ridge Road road details" })[0]!);
+
+    const sheet = screen.getByRole("dialog", { name: "Ridge Road" });
+    // The report's own source name and a date a rider reads, not the record's
+    // key (`osm`) and its ISO timestamp.
+    expect(sheet).toHaveTextContent("Surface reports");
+    expect(sheet).toHaveTextContent("OpenStreetMap");
+    expect(sheet).toHaveTextContent("5 days ago");
+    expect(sheet.textContent ?? "").not.toMatch(/\bosm\b|evidence-osm|Evidenc|T\d{2}:\d{2}/);
+    // The road's map-data class is not one of its rider facts.
+    expect(sheet.textContent ?? "").not.toMatch(/Class|tertiary/);
   });
 
   it("omits the empty road section while keeping the ride list and search available", () => {
@@ -1123,6 +1350,27 @@ describe("Explore UI", () => {
     render(<ExplorePanel entries={[entry]} />);
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("reads in the order a rider decides: name, facts, map, Ride this, then the description", () => {
+    const rideEntry: CatalogEntry = { ...entry, surfaceSummary: "Mostly paved" };
+    render(<RouteDetail entry={rideEntry} onUse={vi.fn()} />);
+
+    const order = (selector: string): Element | null => document.querySelector(selector);
+    const name = screen.getByRole("heading", { name: rideEntry.name, level: 1 });
+    const facts = screen.getByTestId("route-facts");
+    const map = order(".og-route-detail__map");
+    const action = screen.getByTestId("ride-this");
+    const description = order(".og-route-detail__summary");
+
+    expect(map).not.toBeNull();
+    expect(description).not.toBeNull();
+    const follows = (first: Element, second: Element | null): boolean =>
+      second !== null && (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(name, facts)).toBe(true);
+    expect(follows(facts, map)).toBe(true);
+    expect(follows(map!, action)).toBe(true);
+    expect(follows(action, description)).toBe(true);
   });
 
   it("gives the route page one primary action, with Save and Share as the quiet ones", () => {
