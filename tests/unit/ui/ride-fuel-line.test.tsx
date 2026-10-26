@@ -62,11 +62,27 @@ describe("RideFuelLine — a guided ride", () => {
     expect(onAddStop).toHaveBeenCalledWith({ lon: -75.4, lat: 40.2 }, "Sheetz");
   });
 
-  it("states an unknown search instead of staying silent", () => {
+  it("answers an unknown search with one compact Filled up row, never an empty box", () => {
     render(guided({ stations: [], stationsFound: 0 }));
-    expect(screen.getByTestId("ride-fuel-line").textContent).toBe("Gas stations unknown along this ride");
-    expect(screen.getByTestId("ride-fuel")).toHaveAttribute("data-tone", "unknown");
+    // The block exists, but it is one row: the button a rider presses when they
+    // stop for fuel, and the one line that says what it counts.
+    const block = screen.getByTestId("ride-fuel");
+    expect(block).toHaveAttribute("data-tone", "unknown");
+    expect(block).toHaveClass("og-ride-fuel--compact");
+    expect(screen.getByTestId("ride-fuel-filled-up")).toHaveTextContent("Filled up?");
+    expect(screen.getByText("Tank range counts from here.")).toBeInTheDocument();
+    // Unknown is never printed as a value, and no station is invented.
+    expect(screen.queryByTestId("ride-fuel-line")).toBeNull();
     expect(screen.queryByTestId("ride-fuel-add-stop")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("ride-fuel-filled-up"));
+    expect(screen.getByTestId("ride-fuel-filled-note")).toHaveTextContent("Range counted from here.");
+  });
+
+  it("draws nothing when the gas search is unknown and there is no bike range to count", () => {
+    render(guided({ stations: [], stationsFound: 0, usableMiles: null }));
+    expect(screen.queryByTestId("ride-fuel")).toBeNull();
+    expect(screen.queryByTestId("ride-fuel-filled-up")).toBeNull();
   });
 
   it("says no gas is ahead when the ride found stations, all of them behind", () => {

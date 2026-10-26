@@ -1,4 +1,7 @@
-/* One 64 px row for music on the ride sheet. Targets are 56 px. */
+/* One 64 px row for connected music on the ride, on the map right above the
+   strip: the strip's own width, under the sheet and never near the top card.
+   Targets are 56 px. Nothing is drawn when Spotify is not connected, so there
+   is no set-up row and no notice to style. */
 .og-ride-music {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -10,13 +13,12 @@
   border: 1px solid var(--og-ride-border);
   border-radius: var(--og-radius-object);
   background: var(--og-ride-glass);
-}
-
-.og-ride-music--connect {
-  display: flex;
-  flex-wrap: wrap;
-  max-height: none;
-  padding: 4px;
+  position: absolute;
+  z-index: 8;
+  left: max(var(--og-ride-gap), var(--og-safe-left));
+  right: max(var(--og-ride-gap), var(--og-safe-right));
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
 }
 
 .og-ride-music__art {
@@ -39,15 +41,7 @@
   font-size: var(--og-text-body);
 }
 
-.og-ride-music__line--wrap {
-  grid-column: 1 / 4;
-  white-space: normal;
-  font-size: var(--og-text-meta);
-}
-
-.og-ride-music__button,
-.og-ride-music__text-button,
-.og-ride-music__connect {
+.og-ride-music__button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -63,35 +57,7 @@
   text-decoration: none;
 }
 
-.og-ride-music__text-button {
-  padding: 0 12px;
-  font-size: var(--og-text-body);
-}
-
-.og-ride-music__connect {
-  flex: 1 1 auto;
-  justify-content: flex-start;
-  padding: 0 12px;
-  border-radius: var(--og-radius-object);
-  font-size: var(--og-text-body);
-}
-
-.og-ride-music__connect:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.og-ride-music__note {
-  flex-basis: 100%;
-  margin: 0;
-  padding: 0 12px 8px;
-  color: var(--og-ride-muted);
-  font-size: var(--og-text-meta);
-}
-
-.og-ride-music__button:focus-visible,
-.og-ride-music__text-button:focus-visible,
-.og-ride-music__connect:focus-visible {
+.og-ride-music__button:focus-visible {
   outline: 2px solid var(--og-signal-blue);
   outline-offset: 2px;
 }
@@ -133,32 +99,20 @@
   outline-offset: 2px;
 }
 
-/* Connected: the now-playing row sits on the map right above the strip, the
-   strip's own width, under the sheet and never near the top card. */
-.og-ride-music[data-placement="map"] {
-  position: absolute;
-  z-index: 8;
-  left: max(var(--og-ride-gap), var(--og-safe-left));
-  right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px);
-  background: var(--og-ride-glass);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
-}
-
 /* The right-hand column and the speed sign rise above the row. */
 .og-ride[data-music="true"] .og-ride__float {
   bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 8px + 64px + 12px);
 }
 
 @media (min-width: 700px) {
-  .og-ride-music[data-placement="map"] {
+  .og-ride-music {
     right: auto;
     width: 440px;
   }
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .og-ride-music[data-placement="map"] {
+  .og-ride-music {
     right: auto;
     width: min(360px, 44vw);
   }

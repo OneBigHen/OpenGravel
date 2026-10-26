@@ -63,3 +63,40 @@
   color: var(--og-ride-muted);
   font-size: var(--og-text-caption);
 }
+
+/* Nothing is known about gas: one compact row, never a box holding a lone
+   button. The button is 48 px — a stop for fuel is a deliberate, stationary
+   press, not a glance at 50 mph. The hint stays on one line beside it. */
+.og-ride-fuel--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px 4px 4px;
+}
+
+.og-ride-fuel__fill {
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 999px;
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-ride-fuel__fill:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+.og-ride-fuel__hint {
+  min-width: 0;
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-caption);
+}

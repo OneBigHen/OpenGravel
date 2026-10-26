@@ -135,20 +135,11 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
           {error ?? message}
         </p>
       )}
-      {/* Plain 56 px rows, one thing each; the rarer changes wait behind "More". */}
-      <div className="og-ride__sheet-rows">
-        <button
-          type="button"
-          className="og-ride__sheet-row"
-          data-testid="ride-reroute"
-          disabled={busy || !fixGood}
-          aria-busy={busy ? "true" : undefined}
-          title={fixGood ? undefined : "Rerouting needs a fresh, accurate GPS fix."}
-          onClick={(): void => onReroute()}
-        >
-          <span className="og-ride__sheet-row-label">{busy ? "Routing…" : "New route from here"}</span>
-        </button>
-        {!canAddStop ? null : (
+      {/* Plain 56 px rows, one thing each, in the order a rider needs them:
+          a stop first, then a new route from here. The rarer changes wait
+          behind "More". */}
+      {!canAddStop ? null : (
+        <div className="og-ride__sheet-rows">
           <button
             type="button"
             className="og-ride__sheet-row"
@@ -166,8 +157,8 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
             <span className="og-ride__sheet-row-label">Add a stop</span>
             <span className="og-ride__sheet-row-hint">Gas, food or anywhere</span>
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {!adding || !canAddStop ? null : (
         <>
           {!canFindStops ? null : (
@@ -215,6 +206,19 @@ export function RideDetour({ offRoute, busy, message, error, routeLine, position
           />
         </>
       )}
+      <div className="og-ride__sheet-rows">
+        <button
+          type="button"
+          className="og-ride__sheet-row"
+          data-testid="ride-reroute"
+          disabled={busy || !fixGood}
+          aria-busy={busy ? "true" : undefined}
+          title={fixGood ? undefined : "Rerouting needs a fresh, accurate GPS fix."}
+          onClick={(): void => onReroute()}
+        >
+          <span className="og-ride__sheet-row-label">{busy ? "Routing…" : "New route from here"}</span>
+        </button>
+      </div>
       <details className="og-ride__more" data-testid="ride-more">
         <summary className="og-ride__action">More</summary>
         <div className="og-ride__detour-actions">

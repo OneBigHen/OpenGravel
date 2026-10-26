@@ -57,6 +57,7 @@ import {
   type RecordingTelemetry,
 } from "@/domain/recording/telemetry";
 import type { GuidedReroutePlanner, GuidedRerouteResult } from "@/application/ride-session/guided-reroute";
+import type { SpotifyPlayerPort, SpotifyPlayerSnapshot } from "@/application/ride-session/ports/spotify-player";
 import { buildRideFocusViewModel } from "@/application/ride-session/ride-focus-view-model";
 import {
   createRideSessionController,
@@ -275,6 +276,8 @@ async function harness(options: {
   readonly placeSearch?: PlaceSearchPort;
   /** The active bike's usable range, for the ride sheet's "next gas" line. */
   readonly usableRangeMiles?: number | null;
+  /** The optional music port: absent in browsers, present on a device. */
+  readonly spotifyPlayer?: SpotifyPlayerPort;
 } = {}): Promise<Harness> {
   const instant = options.at ?? NOW;
   const databaseName = options.databaseName ?? freshDatabaseName();
@@ -422,6 +425,7 @@ async function harness(options: {
       {...(options.mapLayersSource === undefined ? {} : { mapLayersSource: options.mapLayersSource })}
       {...(options.placeSearch === undefined ? {} : { placeSearch: options.placeSearch })}
       {...(options.usableRangeMiles === undefined ? {} : { usableRangeMiles: options.usableRangeMiles })}
+      {...(options.spotifyPlayer === undefined ? {} : { spotifyPlayer: options.spotifyPlayer })}
     />,
   );
   await act(async () => {
@@ -1193,22 +1197,35 @@ describe("device failures are visible and non-blocking (08 §3, §7, §8)", () =
     expect(store.getState().stopConfirm).toBe(false);
   });
 
-  it("surfaces a wake-lock failure without blocking anything", async () => {
+  it("keeps a failed wake lock to one short dismissible line under the rows", async () => {
     await harness({ position: "fresh", environment: { wakeLock: "failed" } });
 
-    expect(screen.getByTestId("ride-warning-wake-lock")).toHaveTextContent(
-      "couldn't be kept awake",
-    );
+    const note = screen.getByTestId("ride-wake-note");
+    // One line, in the rider's words, not the view model's paragraph.
+    expect(note).toHaveTextContent("Keep your screen on, it may sleep");
+    // The full sentence is still there to read, on the row itself.
+    expect(note).toHaveAttribute("title", expect.stringContaining("couldn't be kept awake"));
+    // It is a line under the rows, not a box in the warnings list.
+    expect(screen.queryByTestId("ride-warning-wake-lock")).toBeNull();
+    expect(
+      screen.getByTestId("ride-stop").compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    fireEvent.click(screen.getByTestId("ride-wake-note-dismiss"));
+    expect(screen.queryByTestId("ride-wake-note")).toBeNull();
+
+    // Nothing about the ride changed.
     expect(screen.getByTestId("ride-pause")).toBeEnabled();
     expect(screen.queryByTestId("ride-terminal")).not.toBeInTheDocument();
   });
 
-  it("surfaces an unsupported wake lock with the guidance it implies", async () => {
+  it("says the same one line when the browser has no wake lock at all", async () => {
     await harness({ position: "fresh", environment: { wakeLock: "unsupported" } });
 
-    expect(screen.getByTestId("ride-warning-wake-lock")).toHaveTextContent(
-      "can't keep the screen awake",
-    );
+    const note = screen.getByTestId("ride-wake-note");
+    expect(note).toHaveTextContent("Keep your screen on, it may sleep");
+    expect(note).toHaveAttribute("title", expect.stringContaining("can't keep the screen awake"));
+    expect(screen.queryByTestId("ride-warning-wake-lock")).toBeNull();
   });
 
   it("surfaces a speech failure without blocking anything", async () => {
@@ -1768,6 +1785,145 @@ describe("the sheet waits for the rider (audit 8)", () => {
     });
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
     expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
+  });
+});
+
+describe("the ride menu, in the order a rider needs it", () => {
+  /** Gas/Food lookups exist, so "Add a stop" is one of the sheet's own rows. */
+  function stopLayersSource(): MapLayersSource {
+    return {
+      load: vi.fn(async () => ({ features: [], unavailable: [] })),
+      trafficTileUrl: null,
+      along: vi.fn(async () => ({ available: true as const, stops: [] })),
+    };
+  }
+
+  /** Reads as "a comes before b in the document a rider reads". */
+  function before(a: HTMLElement, b: HTMLElement): void {
+    expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  }
+
+  /** A ride that can replan, which is what gives the sheet its stop and reroute rows. */
+  function replanner(): GuidedReroutePlanner {
+    return { plan: vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const })) };
+  }
+
+  function musicPlayer(snapshot: SpotifyPlayerSnapshot): SpotifyPlayerPort {
+    return {
+      snapshot: () => snapshot,
+      subscribe: (listener) => { listener(snapshot); return () => undefined; },
+      dispose: vi.fn(),
+      connect: vi.fn(async () => undefined),
+      disconnect: vi.fn(async () => undefined),
+      togglePlayPause: vi.fn(async () => undefined),
+      skipToPrevious: vi.fn(async () => undefined),
+      skipToNext: vi.fn(async () => undefined),
+      openSpotify: vi.fn(async () => undefined),
+    };
+  }
+
+  const connectedMusic: SpotifyPlayerSnapshot = {
+    connection: "connected",
+    isPlaying: true,
+    track: { uri: "spotify:track:1", title: "Open Road", artist: "Fixture Artist", artworkDataUrl: null },
+    errorMessage: null,
+  };
+
+  it("opens on Add a stop, then New route from here, then the gas line", async () => {
+    await harness({
+      position: "fresh",
+      mapLayersSource: stopLayersSource(),
+      reroutePlanner: replanner(),
+      usableRangeMiles: 150,
+    });
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    const addStop = screen.getByTestId("ride-add-stop");
+    expect(addStop).toHaveTextContent("Add a stop");
+    expect(addStop).toHaveTextContent("Gas, food or anywhere");
+    // It is the first thing in the sheet, not below a developer message or a box.
+    const first = screen.getByTestId("ride-panel").firstElementChild as HTMLElement;
+    expect(first.contains(addStop)).toBe(true);
+
+    before(addStop, screen.getByTestId("ride-reroute"));
+    expect(screen.getByTestId("ride-reroute")).toHaveTextContent("New route from here");
+    before(screen.getByTestId("ride-reroute"), screen.getByTestId("ride-fuel"));
+  });
+
+  it("keeps End ride last, under Stop following this route and every other control", async () => {
+    await harness({ position: "fresh", mapLayersSource: stopLayersSource(), reroutePlanner: replanner() });
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    before(screen.getByTestId("ride-add-stop"), screen.getByTestId("ride-pause"));
+    before(screen.getByTestId("ride-pause"), screen.getByTestId("continue-free-ride"));
+    const end = screen.getByTestId("ride-stop");
+    expect(end).toHaveTextContent("End ride");
+    before(screen.getByTestId("continue-free-ride"), end);
+    // Nothing to press follows it but the quiet way out.
+    before(end, screen.getByTestId("ride-exit"));
+  });
+
+  it("never shows a Spotify set-up row, or its developer message, in the sheet", async () => {
+    await harness({
+      position: "fresh",
+      mapLayersSource: stopLayersSource(),
+      spotifyPlayer: musicPlayer({
+        connection: "error",
+        isPlaying: false,
+        track: null,
+        errorMessage: "This OpenGravel origin is not registered for Spotify.",
+      }),
+      reroutePlanner: replanner(),
+    });
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    expect(screen.queryByText(/not registered for Spotify/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Setup" })).toBeNull();
+    expect(screen.queryByTestId("ride-music")).toBeNull();
+    // Nothing at all is said about music: the menu starts with the ride.
+    expect(screen.queryByText(/spotify/i)).toBeNull();
+  });
+
+  it("keeps connected music on the map above the strip, not among the sheet's rows", async () => {
+    await harness({ position: "fresh", spotifyPlayer: musicPlayer(connectedMusic) });
+
+    const row = screen.getByTestId("ride-music");
+    expect(screen.getByTestId("ride-music-line")).toHaveTextContent("Open Road · Fixture Artist");
+    expect(screen.getByTestId("ride-panel")).not.toContainElement(row);
+  });
+
+  it("lets the end question take the sheet's place instead of stacking rows under it", async () => {
+    await harness({
+      position: "fresh",
+      mapLayersSource: stopLayersSource(),
+      reroutePlanner: replanner(),
+      usableRangeMiles: 150,
+    });
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    fireEvent.click(screen.getByTestId("ride-stop"));
+
+    expect(screen.getByTestId("ride-stop-confirm")).toHaveTextContent("End this ride?");
+    // No row is left underneath to be mistaken for an answer to the question.
+    for (const id of [
+      "ride-add-stop",
+      "ride-reroute",
+      "ride-fuel",
+      "ride-pause",
+      "recording-hud",
+      "ride-style",
+      "continue-free-ride",
+      "ride-stop",
+      "ride-exit",
+    ]) {
+      expect(screen.queryByTestId(id)).toBeNull();
+    }
+    // And the three answers are the sheet's whole content.
+    const sheet = screen.getByTestId("ride-panel");
+    expect(sheet).toContainElement(screen.getByTestId("ride-finish"));
+    expect(sheet).toContainElement(screen.getByTestId("ride-discard"));
+    expect(sheet).toContainElement(screen.getByTestId("ride-keep-riding"));
   });
 });
 
