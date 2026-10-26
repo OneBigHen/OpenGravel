@@ -54,10 +54,12 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await page.getByRole("radio", { name: "4 stars" }).click();
   await expect(page.getByText("Thanks. Your rating is saved.")).toBeVisible();
   await expect(page.getByRole("radio", { name: "4 stars" })).toBeChecked();
+  await page.locator("summary", { hasText: "Leave a comment" }).click();
   await page.getByRole("textbox", { name: "Leave a comment" }).fill("This synthetic sample opened correctly.");
   await page.getByRole("button", { name: "Post comment" }).click();
   await expect(page.getByRole("status")).toContainText("Comment sent for review. It will appear after approval.");
   await expect(page.getByRole("list", { name: "Route comments" })).toBeEmpty();
+  await page.locator("summary", { hasText: "Report a road condition" }).click();
   await page.getByRole("combobox", { name: "Report a road condition" }).selectOption("rough");
   await page.getByRole("button", { name: "Send report" }).click();
   await expect(page.getByRole("status")).toContainText("Road condition report sent for review.");

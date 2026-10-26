@@ -1413,6 +1413,53 @@ h3 {
   color: var(--og-danger);
 }
 
+/* A folded form reads as one row with a chevron, like the settings rows. */
+.og-route-community__fold {
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-route-community__fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  color: var(--og-deep-spruce);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.og-route-community__fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-route-community__fold > summary::after {
+  content: "›";
+  color: var(--og-slate-text);
+  font-size: 1.25em;
+  transition: transform 160ms ease;
+}
+
+.og-route-community__fold[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-route-community__fold > summary::after {
+    transition: none;
+  }
+}
+
+.og-route-community__fold > summary:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-route-community__fold[open] > .og-route-community__form {
+  padding-bottom: var(--og-space-3);
+}
+
 .og-route-community__form {
   display: grid;
   gap: var(--og-space-2);
@@ -14658,6 +14705,14 @@ a.og-secondary {
   }
 
   .og-planner:has([data-testid="route-options"]) .og-search-chips {
+    display: none;
+  }
+}
+
+/* A touch screen zooms with two fingers, as every phone map does; the + and -
+   discs only crowded the small route-page map. */
+@media (max-width: 760px) and (pointer: coarse) {
+  .og-map__zoom {
     display: none;
   }
 }

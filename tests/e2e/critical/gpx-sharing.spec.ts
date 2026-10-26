@@ -53,6 +53,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(reader.getByText("A synthetic test ride. Fuel at the village.", { exact: true })).toBeVisible();
     await expect(reader.getByRole("button", { name: "Open photo 1 of 1" })).toBeVisible();
     await expect(reader.locator('img[src^="/api/community/routes/"]')).toHaveJSProperty("naturalWidth", 16);
+    await reader.locator("summary", { hasText: "Leave a comment" }).click();
     await expect(reader.getByLabel("Leave a comment")).toBeVisible();
     if (viewport.width === 1440) {
       await reader.getByLabel("Leave a comment").fill("Synthetic test comment for review.");

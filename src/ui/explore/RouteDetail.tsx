@@ -272,6 +272,14 @@ function ShareRouteButton({ name }: { readonly name: string }) {
   );
 }
 
+/** True when the card summary is just the start of the post the story shows. */
+function repeatsStory(summary: string, story: string | undefined): boolean {
+  if (story === undefined) return false;
+  const words = (text: string): string => text.replace(/\s+/g, " ").trim().toLowerCase().replace(/[.…]+$/, "");
+  const head = words(summary);
+  return head.length > 0 && words(story).startsWith(head);
+}
+
 export function RouteDetail({
   entry,
   variants = [],
@@ -550,7 +558,8 @@ export function RouteDetail({
 
       {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
 
-      <p className="og-route-detail__summary">{entry.summary}</p>
+      {/* The group post usually opens with the same words; say them once. */}
+      {repeatsStory(entry.summary, entry.story?.description) ? null : <p className="og-route-detail__summary">{entry.summary}</p>}
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}
 

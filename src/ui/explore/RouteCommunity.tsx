@@ -236,8 +236,12 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
         </p>
       )}
 
+      {/* The forms fold away: most riders read the notes, few write one, and
+          two open textareas made the page twice as long on a phone. */}
+      <details className="og-route-community__fold">
+        <summary>Leave a comment</summary>
       <form className="og-route-community__form" onSubmit={(event) => void postComment(event)}>
-        <label className="og-route-community__label" htmlFor="route-comment">Leave a comment</label>
+        <label className="og-route-community__label sr-only" htmlFor="route-comment">Leave a comment</label>
         <textarea
           id="route-comment"
           className="og-route-community__input"
@@ -249,9 +253,12 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
         />
         <button type="submit" className="og-secondary og-route-community__submit" disabled={busy || comment.trim().length === 0}>Post comment</button>
       </form>
+      </details>
 
+      <details className="og-route-community__fold">
+        <summary>Report a road condition</summary>
       <form className="og-route-community__form" onSubmit={(event) => void report(event)}>
-        <label className="og-route-community__label" htmlFor="road-condition">Report a road condition</label>
+        <label className="og-route-community__label sr-only" htmlFor="road-condition">Report a road condition</label>
         <span className="og-select">
           <select
             id="road-condition"
@@ -276,6 +283,7 @@ export function RouteCommunity({ routeId }: { readonly routeId: string }) {
         />
         <button type="submit" className="og-secondary og-route-community__submit" disabled={busy}>Send report</button>
       </form>
+      </details>
 
       {error !== null ? <p className="og-route-community__note og-route-community__note--failed" role="alert">{error}</p> : null}
       {status !== null ? <p className="og-route-community__note" role="status">{status}</p> : null}
