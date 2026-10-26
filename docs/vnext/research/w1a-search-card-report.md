@@ -6,6 +6,7 @@ The card uses straight-line miles labelled away. A read-only preview through the
 
 Decisions made during implementation:
 
+- Search pins keep a circle at every zoom, so an unavailable text-font resource cannot hide the result or its tap target. The pin-to-card path is covered in Chromium.
 - Twisty roads enables the existing great-roads layer; Gravel enables gravel. Each shows a one-line toast. Neither invents place search results.
 - Lodging reuses the existing hotel category 7314. Moto shop reuses motorcycle shop text search. [TomTom documents the motorcycle dealer category](https://developer.tomtom.com/assets/downloads/tomtom-sdks/android/api-reference/1.0.0/location/model/com.tomtom.sdk.location.poi/-standard-category-id/-companion/-motorcycle-dealer.html); no unverified numeric Search API ID was added.
 - Route rows reuse RouteDecisionCard in compact form. Measured fastest/twistiest choices receive those names. Other rows keep the planner's actual role; an Alternative is not relabelled Most gravel without evidence. No new routing algorithm or synthetic alternative was added.
@@ -17,10 +18,10 @@ Verification:
 
 - TypeScript: npx tsc --noEmit -p . passed.
 - ESLint on all changed TypeScript/TSX files passed with no errors or warnings.
-- Focused Vitest, --maxWorkers=4: 439 passed across 24 files. This includes 22 new tests for the place sheet, chips, toast, flow, atomic commands and read-only drive time.
+- Focused Vitest, --maxWorkers=4: 443 passed across 25 files. This includes 23 new tests for the place sheet, chips, toast, flow, atomic commands and read-only drive time.
 - Architecture Vitest: 173 passed across 14 files.
 - Production build: npm run build passed.
-- Chromium browser journeys: 35 passed across 10 selected critical specs, including both requested paths, denied location, 320px/200% text, iPad/desktop cards and real touch gesture fuzz.
+- Chromium browser journeys: 36 passed across 10 selected critical specs, including both requested paths, denied location, 320px/200% text, iPad/desktop cards and real touch gesture fuzz.
 
 These are fixture-based UI checks, with an empty basemap. Live geocoding/routing quality, WebKit and physical iPhone/glove acceptance were not verified. Numeric motorcycle category IDs remain unverified; the existing text path is retained. Exact Fastest / Twistiest / Most gravel alternatives depend on the routing authority supplying distinct supported candidates.
 
@@ -34,6 +35,7 @@ Files changed (including this report):
 - `src/domain/ride/commands.ts`
 - `src/domain/ride/reducer.ts`
 - `src/infrastructure/geocoding/place-drive-time.ts`
+- `src/infrastructure/map/maplibre/style.ts`
 - `src/server/geocoding/fixture-places.ts`
 - `src/ui/layers/useMapLayers.ts`
 - `src/ui/map/PlannerMap.tsx`
@@ -72,6 +74,7 @@ Files changed (including this report):
 - `tests/e2e/visual/plan-shell.screenshots.spec.ts`
 - `tests/unit/domain/ride-commands.test.ts`
 - `tests/unit/infrastructure/geocoding/place-drive-time.test.ts`
+- `tests/unit/infrastructure/maplibre/style-places.test.ts`
 - `tests/unit/ui/avoid-area-workflow.test.tsx`
 - `tests/unit/ui/directions-command.test.ts`
 - `tests/unit/ui/planner-map.test.tsx`
