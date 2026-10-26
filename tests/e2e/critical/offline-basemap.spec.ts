@@ -32,9 +32,9 @@ test("with no network, the planner draws a downloaded area's own map from the de
   const online = await mapPixels();
 
   await page.goto("/settings");
-  const row = page.getByTestId("offline-region-lehigh-fixture");
-  await row.getByRole("button", { name: /^Download/ }).click();
-  await expect(page.getByTestId("offline-maps-message")).toContainText("is ready");
+  await page.getByTestId("offline-download-open").click();
+  await page.getByTestId("offline-region-offer-lehigh-fixture").click();
+  await expect(page.getByTestId("offline-maps-message")).toContainText("is saved");
 
   const archiveRequests: string[] = [];
   page.on("request", (request) => {

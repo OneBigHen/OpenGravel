@@ -20,11 +20,13 @@ const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
 
 async function downloadFixtureArea(page: Page): Promise<void> {
   await page.goto("/settings");
-  const row = page.getByTestId("offline-region-lehigh-fixture");
-  await row.getByRole("button", { name: /^Download/ }).click();
-  await expect(page.getByTestId("offline-maps-message")).toContainText("is ready");
-  await expect(row).toContainText("On this device");
-  await expect(row.getByRole("button", { name: "Remove" })).toBeVisible();
+  await page.getByTestId("offline-download-open").click();
+  await page.getByTestId("offline-region-offer-lehigh-fixture").click();
+  await expect(page.getByTestId("offline-maps-message")).toContainText("is saved");
+  // One card per saved area, with its size and the overflow that can delete it.
+  const card = page.getByTestId("offline-region-lehigh-fixture");
+  await expect(card).toContainText("MB");
+  await expect(card.getByRole("button", { name: "More options for Pennsylvania (clipped fixture)" })).toBeVisible();
 }
 
 async function planWithNoSignal(page: Page): Promise<void> {

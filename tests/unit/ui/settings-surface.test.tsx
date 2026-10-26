@@ -160,7 +160,7 @@ describe("settings surface", () => {
     const base = { garage: createGarage(), onGarageChange: vi.fn(), offlineRegions: regions };
     const { rerender } = render(<SettingsSurface {...base} />);
     expect(await screen.findByText("2 MB used")).toBeInTheDocument();
-    expect(await screen.findByText("On this device")).toBeInTheDocument();
+    expect(await screen.findByTestId("offline-region-test-region")).toBeInTheDocument();
 
     // The wipe deleted the offline databases on the device.
     onDevice = [];
@@ -173,7 +173,7 @@ describe("settings surface", () => {
 
     expect(await screen.findByText("None yet")).toBeInTheDocument();
     expect(screen.queryByText("2 MB used")).not.toBeInTheDocument();
-    expect(screen.queryByText("On this device")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("offline-region-test-region")).not.toBeInTheDocument();
     expect(regions.installed).toHaveBeenCalledTimes(2);
     expect(regions.storedBytes).toHaveBeenCalledTimes(2);
   });
