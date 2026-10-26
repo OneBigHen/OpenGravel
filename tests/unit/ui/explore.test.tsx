@@ -32,7 +32,15 @@ const entry: CatalogEntry = {
   provenanceDetail: "Geometry was produced from real road data between two anchor points.",
 };
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear(); window.history.replaceState({}, "", "/explore"); });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.localStorage.clear();
+  window.sessionStorage.clear();
+  // A stubbed scroll offset belongs to its own test.
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  window.history.replaceState({}, "", "/explore");
+});
 
 describe("Explore UI", () => {
   it("draws all matching routes and keeps the camera steady when a card is highlighted", async () => {
@@ -1055,7 +1063,10 @@ describe("Explore UI", () => {
     expect(await screen.findByText("Saved to My rides.")).toBeInTheDocument();
     const saved = screen.getByRole("button", { name: "Saved" });
     expect(saved).toHaveAttribute("aria-pressed", "true");
-    expect(saved).toBeDisabled();
+    // A second press is a no-op, never a second copy in the library.
+    fireEvent.click(saved);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onSave).toHaveBeenCalledTimes(1);
 
     cleanup();
     render(<RouteDetail entry={{ ...entry, source: "personal" }} onUse={vi.fn()} onSave={vi.fn()} />);

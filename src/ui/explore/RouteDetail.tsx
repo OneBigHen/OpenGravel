@@ -501,7 +501,18 @@ export function RouteDetail({
         <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Ride this</button>
         <div className="og-route-detail__alternates">
           {canSave ? (
-            <button type="button" className="og-secondary" aria-pressed={saved} disabled={busy !== null || saved} onClick={() => void runAction("save", saveRide)}>
+            // Already saved is a state, not a dead end: the button keeps its
+            // focus and says what it did rather than going grey under the thumb.
+            <button
+              type="button"
+              className="og-secondary"
+              aria-pressed={saved}
+              disabled={busy !== null}
+              onClick={() => {
+                if (saved) return;
+                void runAction("save", saveRide);
+              }}
+            >
               {saved ? "Saved" : "Save"}
             </button>
           ) : null}
