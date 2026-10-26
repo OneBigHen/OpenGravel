@@ -88,7 +88,7 @@ describe("Explore UI", () => {
 
   it("adds discrete region and riding-area selections to browser history", () => {
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
     const push = vi.spyOn(window.history, "pushState");
     fireEvent.change(screen.getByRole("combobox", { name: "Filter by region" }), { target: { value: "Lehigh Valley" } });
     expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("region=Lehigh"));
@@ -102,7 +102,7 @@ describe("Explore UI", () => {
     // Each select now sits in the shared .og-select wrapper (pill, hairline,
     // custom chevron), and the visible caption is associated by htmlFor/id.
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
     const filters = screen.getByRole("region", { name: "Explore filters" });
     for (const id of ["og-explore-region-picker", "og-explore-area-picker"]) {
       const select = document.getElementById(id);
@@ -121,7 +121,7 @@ describe("Explore UI", () => {
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
     render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
-    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
@@ -136,10 +136,10 @@ describe("Explore UI", () => {
     const follows = (first: Element, second: Element): boolean =>
       (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
-    // One row of chips: the near-me sort and the three distance buckets. Curvy
-    // and gravel stay reachable, as options in the panel.
-    expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent))
-      .toEqual(["Near me", "Under 30 mi", "30–90 mi", "90+ mi"]);
+    // One row of chips, and each names one decision: how near, how long, what
+    // surface, how twisty. Length and surface open the sheet on their own row.
+    expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent?.trim()))
+      .toEqual(["Near me", "Length", "Paved/gravel", "Twisty"]);
     // The date chips and both pickers live in the panel, not above the list.
     expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "Filter by region" }));
@@ -154,40 +154,110 @@ describe("Explore UI", () => {
     expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
   });
 
-  it("keeps the search, the distance chips and one Filters button in the toolbar, with every other filter inside filters", () => {
-    // Desktop used to spend its first two rows on six selects, an unlabelled
-    // checkbox and the date chips. The toolbar is now the phone's calm row at
-    // every width, and nothing was dropped on the way into Filters.
+  it("keeps one row of chips and one More filters button, with every other filter in that sheet", () => {
+    // Explore used to ask for the same decision twice: distance chips above the
+    // list and a distance select in the panel, "near me" in three places, and a
+    // second filter bar above the roads. One row of chips and one sheet now hold
+    // every filter, and each decision has exactly one control.
     const twisty = { ...entry, id: "twisty", surfaceSummary: "Mixed", curvatureSummary: "Twisty" };
     render(<ExplorePanel entries={[twisty]} />);
     const toolbar = screen.getByRole("searchbox", { name: "Search routes" }).closest(".og-explore__toolbar");
     expect(toolbar).not.toBeNull();
     const filters = screen.getByRole("region", { name: "Explore filters" });
+    const chips = screen.getByRole("group", { name: "Quick filters" });
 
     // The chip row and the button that opens the rest share the toolbar, so the
     // stylesheet can put them on one line.
-    expect(toolbar).toContainElement(screen.getByRole("group", { name: "Quick filters" }));
-    expect(toolbar).toContainElement(screen.getByRole("button", { name: /^Filters/ }));
+    expect(toolbar).toContainElement(chips);
     expect(toolbar).toContainElement(filters);
+    const toggle = within(toolbar as HTMLElement).getByRole("button", { name: /^More filters/ });
+    expect(toggle).toHaveAttribute("aria-label", "More filters");
 
-    // Every remaining filter is reachable from the panel, in one grid.
-    for (const name of ["Filter by source", "Filter by distance", "Filter by surface", "Sort routes"]) {
-      expect(filters).toContainElement(screen.getByRole("combobox", { name }));
+    // Every remaining filter is reachable from the sheet, in one grid, and each
+    // one appears once: no second distance, surface or near-me control.
+    for (const name of ["Filter by distance", "Filter by surface", "Filter by source", "Sort routes", "Filter by region", "PA riding area"]) {
+      expect(within(filters).getAllByRole("combobox", { name })).toHaveLength(1);
     }
-    expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
-
-    // The checkbox is named by the words beside it, not by an invisible label.
-    const curvy = within(filters).getByRole("checkbox", { name: "Curvy routes only" });
-    expect(curvy.closest("label")?.textContent).toBe("Curvy routes only");
+    expect(within(filters).getByRole("group", { name: "Ride time" })).toBeInTheDocument();
+    expect(within(filters).queryByRole("checkbox", { name: "Curvy routes only" })).toBeNull();
+    expect(within(chips).getByRole("button", { name: "Twisty" })).toHaveAttribute("aria-pressed", "false");
 
     // The panel is shut until the button says otherwise; closing it hands focus
     // back to that button.
     expect(filters).toHaveAttribute("data-open", "false");
-    fireEvent.click(screen.getByRole("button", { name: /^Filters/ }));
+    fireEvent.click(toggle);
     expect(filters).toHaveAttribute("data-open", "true");
     fireEvent.click(within(filters).getByRole("button", { name: /^Show \d+ route/ }));
     expect(filters).toHaveAttribute("data-open", "false");
-    expect(screen.getByRole("button", { name: /^Filters/ })).toHaveFocus();
+    expect(toggle).toHaveFocus();
+  });
+
+  it("names the length and surface choices on the chip, and keeps them in the one sheet", async () => {
+    const twisty = { ...entry, id: "twisty", surfaceSummary: "Mixed", curvatureSummary: "Twisty" };
+    render(<ExplorePanel entries={[twisty]} />);
+    const chips = screen.getByRole("group", { name: "Quick filters" });
+    const filters = screen.getByRole("region", { name: "Explore filters" });
+
+    // The length chip opens the sheet on the length control, so the number of
+    // distance controls is one, not two.
+    fireEvent.click(within(chips).getByRole("button", { name: "Length" }));
+    expect(filters).toHaveAttribute("data-open", "true");
+    const length = within(filters).getByRole("combobox", { name: "Filter by distance" });
+    await waitFor(() => expect(length).toHaveFocus());
+    fireEvent.change(length, { target: { value: "short" } });
+    expect(within(chips).getByRole("button", { name: "Under 30 mi" })).toHaveAttribute("data-filter", "on");
+
+    // The surface chip opens the same sheet on the surface control.
+    fireEvent.click(within(chips).getByRole("button", { name: "Paved/gravel" }));
+    const surface = within(filters).getByRole("combobox", { name: "Filter by surface" });
+    await waitFor(() => expect(surface).toHaveFocus());
+    fireEvent.change(surface, { target: { value: "gravel" } });
+    expect(within(chips).getByRole("button", { name: "Gravel" })).toHaveAttribute("data-filter", "on");
+
+    // Twisty is the one control for curvature, and it is the chip.
+    fireEvent.click(within(chips).getByRole("button", { name: "Twisty" }));
+    expect(within(chips).getByRole("button", { name: "Twisty" })).toHaveAttribute("aria-pressed", "true");
+    // Reset clears the chips too, and the sheet counts only what it hides.
+    fireEvent.click(within(filters).getByRole("button", { name: "Reset" }));
+    expect(within(chips).getByRole("button", { name: "Length" })).toBeInTheDocument();
+    expect(within(chips).getByRole("button", { name: "Twisty" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("offers only one place to filter the roads worth riding", () => {
+    const entity = createRoadEntity({
+      name: "Ridge Road",
+      class: "tertiary",
+      endpoints: [{ lon: -75.5, lat: 40.5 }, { lon: -75.4, lat: 40.6 }],
+      firstSeen: "2026-09-01T00:00:00.000Z",
+      lastSeen: "2026-09-17T00:00:00.000Z",
+    });
+    const roads = discoverRoads({
+      roads: [{
+        entity,
+        geometry: [{ lon: -75.5, lat: 40.5 }, { lon: -75.46, lat: 40.56 }, { lon: -75.4, lat: 40.6 }],
+        matchedDistanceKm: 8.5,
+        matchedRideCount: 2,
+        region: "Lehigh Valley",
+        evidence: [],
+      }],
+    });
+    render(<ExplorePanel entries={[entry]} roadCandidates={roads} />);
+
+    // The page no longer carries a second filter bar above the road list.
+    expect(screen.queryByRole("region", { name: "Road filters" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    const filters = screen.getByRole("region", { name: "Explore filters" });
+    const roadFilters = within(filters).getByRole("group", { name: "Worth riding filters" });
+    expect(within(roadFilters).getByRole("combobox", { name: "Filter roads by surface" })).toBeInTheDocument();
+    expect(within(roadFilters).getByRole("checkbox", { name: "Roads within 30 mi of me" })).toBeInTheDocument();
+    expect(within(filters).queryByRole("combobox", { name: "Filter roads by distance" })).toBeNull();
+
+    // The sheet's one Reset resets the sheet, roads included: a reset that left
+    // half of what it shows still narrowed would be a lie about its own name.
+    fireEvent.change(within(roadFilters).getByRole("combobox", { name: "Filter roads by surface" }), { target: { value: "gravel" } });
+    fireEvent.click(within(filters).getByRole("button", { name: "Reset" }));
+    expect(within(roadFilters).getByRole("combobox", { name: "Filter roads by surface" })).toHaveValue("any");
+    expect(within(filters).getByRole("button", { name: "Reset" })).toBeDisabled();
   });
 
   it("leads the page with its title, not a second line above it", () => {
@@ -223,11 +293,15 @@ describe("Explore UI", () => {
     expect(card.querySelector(".og-explore-card__credit")).toHaveTextContent("2 versions");
   });
 
-  it("says what is unknown on the facts line instead of hiding the fact", () => {
+  it("says nothing on the facts line where the route has no curvature or surface", () => {
+    // Every card used to carry "Curvature unknown · Surface unknown": sixteen
+    // repetitions of the same absence down one list. Unknown is still never
+    // shown as a value, so the fact is left out rather than dressed up.
     render(<ExplorePanel entries={[entry]} />);
     const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
     const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
-    expect(facts).toEqual(["17 mi", "Curvature unknown", "Surface unknown"]);
+    expect(facts).toEqual(["17 mi"]);
+    expect(card).not.toHaveTextContent(/Curvature unknown|Surface unknown/);
   });
 
   it("names who shared a ride instead of counting its comments on the card", () => {
@@ -248,22 +322,24 @@ describe("Explore UI", () => {
     expect(facts).toEqual(["17 mi", "Twisty", "Mostly paved, 2.1 mi gravel"]);
   });
 
-  it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
+  it("filters by length in one tap from the chip, and Escape closes the sheet", () => {
     render(<ExplorePanel entries={[entry]} />);
 
-    const underThirty = screen.getByRole("button", { name: "Under 30 mi" });
-    expect(underThirty).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(underThirty);
-    expect(underThirty).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("combobox", { name: "Filter by distance" })).toHaveValue("short");
+    // The chip opens the sheet on the length control; choosing there is one tap
+    // more than the old chip row and one control fewer on the page.
+    const length = screen.getByRole("button", { name: "Length" });
+    fireEvent.click(length);
+    const select = screen.getByRole("combobox", { name: "Filter by distance" });
+    fireEvent.change(select, { target: { value: "short" } });
+    expect(screen.getByRole("button", { name: "Under 30 mi" })).toHaveAttribute("data-filter", "on");
 
-    const toggle = screen.getByRole("button", { name: "Filters, 1 on" });
-    fireEvent.click(toggle);
+    // The sheet's own count only counts what the chips cannot show.
+    const toggle = screen.getByRole("button", { name: "More filters" });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-    expect(underThirty).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Length" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.getByRole("button", { name: "Filters" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "More filters" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("says how far each route starts from a rider who already shared their location, without asking", async () => {
@@ -303,16 +379,21 @@ describe("Explore UI", () => {
     // Both the badge and the source filter speak the same honest word.
     expect(screen.getByText("Catalog", { selector: ".og-explore-card__source" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
-    expect(screen.getByText("Surface unknown")).toBeInTheDocument();
-    expect(screen.getByText("Curvature unknown")).toBeInTheDocument();
+    // A route with no surface or curvature evidence says nothing about either,
+    // on the card and in the sheet: absence is not printed as a value.
+    expect(screen.queryByText("Surface unknown")).toBeNull();
+    expect(screen.queryByText("Curvature unknown")).toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search routes" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
     const filters = within(screen.getByRole("region", { name: "Explore filters" }));
     expect(filters.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
     expect(filters.getByRole("combobox", { name: "Filter by region" })).toHaveValue("");
     expect(filters.getByRole("combobox", { name: "Sort routes" })).toHaveValue("recommended");
+    // Without evidence both choices say so by being unavailable, not by offering
+    // a filter that would match nothing.
     expect(filters.getByRole("combobox", { name: "Filter by surface" })).toBeDisabled();
-    expect(filters.getByRole("checkbox", { name: "Curvy routes only" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Paved/gravel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Twisty" })).toBeDisabled();
     expect(screen.queryByText("Curated")).not.toBeInTheDocument();
     expect(screen.queryByText(entry.provenance)).not.toBeInTheDocument();
     expect(screen.queryByText(/GraphHopper|motorcycle_scenic/)).not.toBeInTheDocument();
@@ -1057,6 +1138,23 @@ describe("Explore UI", () => {
     expect(screen.getByRole("button", { name: "Export GPX" })).toBeInTheDocument();
   });
 
+  it("says it is getting the ride ready while the ride is being prepared", async () => {
+    let finish: (() => void) | null = null;
+    const onUse = vi.fn(() => new Promise<void>((resolve) => { finish = resolve; }));
+    render(<RouteDetail entry={entry} onUse={onUse} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ride this" }));
+    const busy = await screen.findByRole("button", { name: "Getting this ride ready…" });
+    expect(busy).toHaveAttribute("aria-busy", "true");
+    expect(busy).toBeDisabled();
+    // One action, one name at a time: the old label is not still on screen.
+    expect(screen.queryByRole("button", { name: "Ride this" })).toBeNull();
+
+    act(() => finish?.());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ride this" })).not.toBeDisabled());
+    expect(onUse).toHaveBeenCalledWith(entry);
+  });
+
   it("saves a catalog ride without leaving the page, and offers no save for a ride already in the library", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<RouteDetail entry={entry} onUse={vi.fn()} onSave={onSave} />);
@@ -1096,7 +1194,8 @@ describe("Explore UI", () => {
   it("says when the filters match nothing and offers the way out", () => {
     const longRide = { ...entry, distanceKm: 100 };
     render(<ExplorePanel entries={[longRide]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Under 30 mi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Length" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by distance" }), { target: { value: "short" } });
 
     const notice = screen.getByTestId("explore-no-match");
     expect(notice).toHaveTextContent("No routes match these filters.");
