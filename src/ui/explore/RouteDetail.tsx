@@ -1,6 +1,8 @@
 "use client";
 
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { peekListPosition } from "@/ui/explore/list-position";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
@@ -38,10 +40,14 @@ import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
 
+import "./explore-rides.css";
+
 export interface RouteDetailProps {
   readonly entry: CatalogEntry;
   readonly variants?: readonly CatalogVariantSummary[];
   readonly onUse: (entry: CatalogEntry) => Promise<void> | void;
+  /** Keep this ride in the rider's own library without leaving the page. */
+  readonly onSave?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
   readonly preparation?: RoutePreparation;
   /** The rider's active garage bike; fuel advice uses it (EX-02, RS-01). */
@@ -277,6 +283,7 @@ export function RouteDetail({
   entry,
   variants = [],
   onUse,
+  onSave,
   preparation: providedPreparation,
   preparationProviders,
   activeBike,
@@ -285,6 +292,10 @@ export function RouteDetail({
 }: RouteDetailProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  // Whether the way back leads to a list that knows where to stand: the list
+  // restores that offset itself, so the router must not scroll it to the top.
+  const [listKnowsPosition] = useState(() => peekListPosition() !== null);
   const [selectedRoad, setSelectedRoad] = useState<CatalogRoadDetail | null>(null);
   const [, setWeatherRefresh] = useState(0);
   const [, setTrafficRefresh] = useState(0);
@@ -304,6 +315,8 @@ export function RouteDetail({
   // load state when the full line cannot be fetched).
   const fullGeometry = entry.geometryComplete !== false;
   const canExport = fullGeometry && entry.geometry.length >= 2;
+  /** The line the detail page draws when there is neither a live map nor an image. */
+  const mapLine = entry.geometry.length >= 2 ? entry.geometry : entry.previewGeometry ?? [];
   const registeredProviders: RegisteredPreparationProviders = preparationProviders ?? {};
   const weatherCandidate = Array.isArray(registeredProviders)
     ? registeredProviders.find((provider) => provider.kind === "weather")
@@ -404,10 +417,21 @@ export function RouteDetail({
   }
 
   const noMatchedRoads = entry.roadDetails === undefined || entry.roadDetails.length === 0;
+  // A ride that came from the catalog is not in the rider's library yet, so it
+  // can be kept there. One that came from the library has nothing to add.
+  const canSave = onSave !== undefined && entry.source === "catalog" && fullGeometry;
 
   function exportGpx(): void {
     const xml = buildPlannedRouteGpx({ title: entry.name, geometry: entry.geometry });
     downloadExport(new TextEncoder().encode(xml), exportFilename(entry.name, "planned-route"));
+  }
+
+  /** Keep a copy in My rides and stay here: the ride page is for reading. */
+  async function saveRide(): Promise<void> {
+    if (onSave === undefined) return;
+    await onSave(entry);
+    setSaved(true);
+    setStatus("Saved to My rides.");
   }
 
   return (
@@ -415,7 +439,7 @@ export function RouteDetail({
       <header className="og-route-detail__header">
         {/* The way back is a target, not a pill: 48px, and it sits on the gutter
             the words below align to. */}
-        <Link className="og-route-detail__back" href="/explore" aria-label="Back to Explore">
+        <Link className="og-route-detail__back" href="/explore" scroll={!listKnowsPosition} aria-label="Back to Explore">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
@@ -446,6 +470,10 @@ export function RouteDetail({
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
           <img className="og-route-detail__map-image" src={staticMapUrl} alt={`${entry.name} on a map`} width={640} height={400} />
+        ) : mapLine.length >= 2 ? (
+          // No basemap on this device: the ride's own line takes the map's place
+          // rather than a sentence about a missing picture.
+          <RouteLinePreview line={mapLine} name={entry.name} />
         ) : (
           <div className="og-map-preview-unavailable" role="img" aria-label={`${entry.name} map preview`}>
             <span className="og-map-preview-unavailable__glyph" aria-hidden="true">⌖</span>
@@ -454,24 +482,36 @@ export function RouteDetail({
         )}
       </section>
 
-      <section className="og-route-detail__stats" aria-label="Route stats">
-        <div><dt>Distance</dt><dd>{formatDistance(entry.distanceKm)}</dd></div>
-        <div><dt>Est. time</dt><dd>{entry.estimatedTimeMinutes === undefined ? estimatedTimeFromDistance(entry.distanceKm) : formatMinutes(entry.estimatedTimeMinutes)}</dd></div>
-        {/* EX-07: the catalog's summary is the route service's estimate; say so where it is shown. */}
-        <div><dt>{entry.surfaceSummary === undefined ? "Surface" : "Est. surface"}</dt><dd>{entry.surfaceSummary ?? surfaceCopy(routeSurfaceAssessment)}</dd></div>
-        <div><dt>Curvature</dt><dd>{entry.curvatureSummary ?? <UnknownMetric label="Curvature" />}</dd></div>
+      <section aria-label="Route stats">
+        <dl className="og-route-detail__stats">
+          <div><dt>Distance</dt><dd>{formatDistance(entry.distanceKm)}</dd></div>
+          <div><dt>Est. time</dt><dd>{entry.estimatedTimeMinutes === undefined ? estimatedTimeFromDistance(entry.distanceKm) : formatMinutes(entry.estimatedTimeMinutes)}</dd></div>
+          {/* EX-07: the catalog's summary is the route service's estimate; say so where it is shown. */}
+          <div><dt>{entry.surfaceSummary === undefined ? "Surface" : "Est. surface"}</dt><dd>{entry.surfaceSummary ?? surfaceCopy(routeSurfaceAssessment)}</dd></div>
+          <div><dt>Curvature</dt><dd>{entry.curvatureSummary ?? <UnknownMetric label="Curvature" />}</dd></div>
+        </dl>
       </section>
         </div>
         <div className="og-route-detail__content">
 
-      {/* EX-03: the main action sits with the summary, not 3,000 px below it;
-          on a phone it stays pinned above the tab bar. */}
+      {/* ONE action a rider takes on this page: it plans the ride and opens it.
+          Saving and sharing sit beside it as the quiet choices, together on
+          their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Plan this ride</button>
-        {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
-        <ShareRouteButton name={entry.name} />
-        {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+        <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Ride this</button>
+        <div className="og-route-detail__alternates">
+          {canSave ? (
+            <button type="button" className="og-secondary" aria-pressed={saved} disabled={busy !== null || saved} onClick={() => void runAction("save", saveRide)}>
+              {saved ? "Saved" : "Save"}
+            </button>
+          ) : null}
+          <ShareRouteButton name={entry.name} />
+        </div>
       </section>
+
+      {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
+
+      <p className="og-route-detail__summary">{entry.summary}</p>
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}
 
@@ -543,9 +583,20 @@ export function RouteDetail({
       )}
 
       {entry.source === "catalog" ? <RouteCommunity routeId={entry.id} /> : null}
+
+      {/* Taking the ride elsewhere is a quieter job than riding it: the file for
+          a device, and the public listing for a shared ride. */}
+      {canExport || (fullGeometry && (entry.source === "personal" || entry.source === "import")) ? (
+        <section className="og-route-detail__take-away" aria-label="Take this ride with you">
+          <h2>Take it with you</h2>
+          <div className="og-route-detail__alternates">
+            {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
+            {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+          </div>
+        </section>
+      ) : null}
+
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
-      <p className="og-route-detail__summary">{entry.summary}</p>
-      {status !== null ? <p role="status">{status}</p> : null}
         </div>
       </div>
       {/* Credits close the page: who made the place the ride goes through, and

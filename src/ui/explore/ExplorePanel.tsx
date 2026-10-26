@@ -7,12 +7,17 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { awayLabel } from "@/ui/explore/rider-distance";
+import { rememberListPosition, takeListPosition } from "@/ui/explore/list-position";
 import { RideRoadOpenings } from "@/ui/explore/RideRoadOpenings";
 import { RideTimeLens } from "@/ui/explore/RideTimeLens";
 import { ThingsFeed } from "@/ui/explore/ThingsFeed";
 import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
+
+import "./explore-rides.css";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
 import { formatDistance } from "@/application/planner/measurements";
@@ -84,6 +89,12 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
       />
     );
   }
+  // No basemap on this device: the ride's own line still leads the card, in the
+  // same 16:9 frame a map image fills. The shape is the route, not a map.
+  const line = entry.previewGeometry ?? entry.geometry;
+  if (line.length >= 2) {
+    return <RouteLinePreview line={line} name={entry.name} className="og-explore-card__preview" />;
+  }
   return (
     <div
       className="og-explore-card__preview og-map-preview-unavailable"
@@ -94,14 +105,6 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
       <span>Map preview unavailable</span>
     </div>
   );
-}
-
-/** "12 mi away" to where the route starts, rounded the way a rider says it. */
-function awayLabel(km: number): string | null {
-  if (!Number.isFinite(km)) return null;
-  const miles = km / 1.609344;
-  if (miles < 1) return "Starts near you";
-  return `${miles < 10 ? miles.toFixed(0) : Math.round(miles / 5) * 5} mi away`;
 }
 
 /**
@@ -127,20 +130,24 @@ function RouteCard({
   // One line of facts, in the order a rider asks them: how far the ride is, how
   // far its start is, how twisty, and what is under the wheels. A fact the
   // catalog does not have says so rather than disappearing (§4, §7).
+  //
+  // The surface evidence arrives as "Mostly paved · 2.1 mi gravel". On the card
+  // the middot is the line's own separator, so that fact keeps its two halves
+  // as a comma: five facts must not read as six.
   const facts: readonly { readonly text: string; readonly testId?: string }[] = [
     { text: distanceLabel(entry.distanceKm) },
     ...(away === null ? [] : [{ text: away, testId: "explore-card-away" }]),
     { text: entry.curvatureSummary ?? "Curvature unknown" },
-    { text: entry.surfaceSummary ?? "Surface unknown" },
+    { text: (entry.surfaceSummary ?? "Surface unknown").split(" · ").join(", ") },
   ];
   const teaser = entry.storyTeaser;
+  // Who shared it is the one thing a rider needs from the story on a card; the
+  // comment and photo counts are on the ride page, where the story itself is.
   const byline = teaser === undefined
     ? null
-    : [
-        teaser.sharedBy === undefined ? `From ${teaser.sourceName}` : `Shared by ${teaser.sharedBy}`,
-        teaser.commentCount > 0 ? `${teaser.commentCount} ${teaser.commentCount === 1 ? "comment" : "comments"}` : null,
-        teaser.photoCount > 0 ? `${teaser.photoCount} ${teaser.photoCount === 1 ? "photo" : "photos"}` : null,
-      ].filter((part): part is string => part !== null).join(" · ");
+    : teaser.sharedBy === undefined
+      ? `From ${teaser.sourceName}`
+      : `Shared by ${teaser.sharedBy}`;
   const versionCount = Math.max(entry.variantCount ?? 0, entry.exportCount ?? 0);
   const versions = versionCount > 1 ? `${versionCount} versions` : null;
   return (
@@ -154,6 +161,12 @@ function RouteCard({
       <Link
         className={mapboxToken === undefined ? "og-explore-card__link" : "og-explore-card__link og-explore-card__link--map"}
         href={`/explore/${encodeURIComponent(entry.id)}`}
+        onClick={(event) => {
+          // Remember where the rider was standing so the way back lands on this
+          // card. A modified click opens its own tab and leaves the list alone.
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          rememberListPosition(window.scrollY);
+        }}
       >
         <RoutePreview entry={entry} mapboxToken={mapboxToken} />
         <span className="og-explore-card__body">
@@ -411,6 +424,40 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     };
   }, []);
 
+  // A rider who opened a ride comes back to the card they left, not the top of
+  // the list. The card noted the offset on the way out; here it is put back,
+  // once, and only until the rider scrolls or presses a key themselves.
+  useEffect(() => {
+    const target = takeListPosition();
+    if (target === null) return;
+    let frame = 0;
+    let attempts = 0;
+    let stopped = false;
+    const stop = (): void => {
+      stopped = true;
+      window.removeEventListener("wheel", stop);
+      window.removeEventListener("touchstart", stop);
+      window.removeEventListener("keydown", stop);
+    };
+    window.addEventListener("wheel", stop, { passive: true });
+    window.addEventListener("touchstart", stop, { passive: true });
+    window.addEventListener("keydown", stop);
+    const apply = (): void => {
+      if (stopped) return;
+      window.scrollTo(0, target);
+      attempts += 1;
+      // The first frame lands before the cards have their height; ask again for
+      // the next two frames so the offset survives a late layout.
+      if (attempts < 3 && window.scrollY !== target) frame = window.requestAnimationFrame(apply);
+      else stop();
+    };
+    frame = window.requestAnimationFrame(apply);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      stop();
+    };
+  }, []);
+
   /** Closing the filters puts the rider back on the button that opened them. */
   function closeFilters(): void {
     setFiltersOpen(false);
@@ -652,13 +699,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
           <span>Curvy routes only</span>
         </label>
         <RideTimeLens value={timeLens} date={rideDate} onChange={setTimeLens} onDateChange={setRideDate} />
-        <button type="button" className="og-secondary og-explore__near" aria-label="Sort by distance from me" onClick={sortByLocation}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
-            <circle cx="12" cy="9.5" r="2.5" />
-          </svg>
-          Near me
-        </button>
         <button type="button" className="og-primary og-explore__sheet-done" onClick={closeFilters}>
           {visibleEntries.length === 1 ? "Show 1 route" : `Show ${visibleEntries.length} routes`}
         </button>
@@ -667,7 +707,18 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
 
       {lens === "ride" ? <>
         {locationNote !== null ? <p className="og-explore__note" role="status">{locationNote}</p> : null}
-        {!hasCatalogEntries ? <p className="og-explore__empty">No catalog routes loaded.</p> : null}
+        {visibleEntries.length === 0 && !hasCatalogEntries && !hasPersonalEntries ? (
+          // Nothing to browse yet: say what is missing and offer the one action.
+          <section className="og-empty-state" aria-labelledby="explore-empty-title">
+            <div className="og-empty-state__body">
+              <h2 id="explore-empty-title">No rides here yet</h2>
+              <p>The ride collection could not be loaded on this device. You can still plan one.</p>
+              <div className="og-empty-state__actions">
+                <Link className="og-primary" href="/">Plan a ride</Link>
+              </div>
+            </div>
+          </section>
+        ) : null}
         {/* EX-05, FT-08: the "no personal rides" note only matters when the
             rider asked for their own rides; it never heads a list of catalog routes. */}
         {!hasPersonalEntries && query.source === "personal" ? (

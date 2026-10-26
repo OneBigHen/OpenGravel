@@ -27,6 +27,8 @@ import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/rid
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
+import { RouteDetailSkeleton } from "@/ui/explore/RouteDetailSkeleton";
+import { rememberListPosition } from "@/ui/explore/list-position";
 import { AppBar } from "@/ui/nav/AppBar";
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
@@ -35,7 +37,7 @@ import { hiddenRouteIds } from "@/ui/explore/hidden-routes";
 // The detail page owns the heavy detail-only modules (map host, preparation
 // providers). Importing it through the wrapper keeps them out of the Explore
 // list's bundle and off its first interaction.
-const RouteDetail = dynamic(() => import("./ExploreRouteDetail").then((mod) => mod.ExploreRouteDetail), { loading: () => <main id="main" className="og-explore"><AppBar current="/explore" /><p role="status">Loading ride details…</p></main> });
+const RouteDetail = dynamic(() => import("./ExploreRouteDetail").then((mod) => mod.ExploreRouteDetail), { loading: () => <RouteDetailSkeleton /> });
 
 export interface ExploreClientProps {
   readonly detailId?: string;
@@ -203,6 +205,13 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     router.push("/");
   }
 
+  /** Keep a catalog ride in My rides without leaving the page it was read on. */
+  async function saveRide(entry: CatalogEntry): Promise<void> {
+    const garage = garageStorage.read();
+    const sourceDocument = createExploreDerivative(entry, new Date().toISOString(), snapshotOf(activeGarageBike(garage)));
+    await library.createDerivative(sourceKindForEntry(entry), entry.id, sourceDocument, { title: entry.name });
+  }
+
   if (status === "loading") return <ExploreLoading />;
   if (status === "error") {
     return (
@@ -222,6 +231,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
           variants={detailVariants}
           activeBike={bike}
           onUse={useRide}
+          onSave={saveRide}
           {...(mapboxToken === undefined ? {} : { mapboxToken })}
           {...(basemap === undefined
             ? {}
@@ -235,7 +245,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     if (visibleDetailState.status === "ready") {
       return <RouteLoadFailure kind="missing" onRetry={() => setDetailAttempt((value) => value + 1)} />;
     }
-    return <ExploreLoading />;
+    return <RouteDetailSkeleton />;
   }
   return (
     <ExplorePanel
@@ -249,7 +259,11 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
               hostFactory,
               basemap,
               ...(assetBasePath === undefined ? {} : { assetBasePath }),
-              onOpen: (entryId: string) => router.push(`/explore/${encodeURIComponent(entryId)}`),
+              onOpen: (entryId: string) => {
+                // The way back lands on this card, not the top of the list.
+                rememberListPosition(window.scrollY);
+                router.push(`/explore/${encodeURIComponent(entryId)}`);
+              },
             },
           })}
     />

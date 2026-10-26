@@ -65,7 +65,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline readiness", { exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Plan this ride" }).click();
+  await page.getByRole("button", { name: "Ride this" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId("active-ride-title")).toHaveText("Sample Ridge Loop copy");
   await expect(page.getByTestId("active-ride-provenance")).toContainText("catalog");

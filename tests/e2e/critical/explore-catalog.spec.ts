@@ -48,7 +48,7 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   // Planning mechanics are not something a rider reads before a ride.
   await expect(page.getByText(/Planning follows this line/)).toHaveCount(0);
   const planRequest = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/api/route-plan"));
-  await page.getByRole("button", { name: "Plan this ride" }).click();
+  await page.getByRole("button", { name: "Ride this" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId("active-ride-title")).toHaveText(`${ROUTE_NAME} copy`);
   const requestBody = (await planRequest).postDataJSON() as { readonly request?: { readonly shaping?: readonly unknown[] } };

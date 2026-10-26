@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { ExploreMap } from "@/ui/explore/ExploreMap";
 import { RouteDetail } from "@/ui/explore/RouteDetail";
+import { rememberListPosition } from "@/ui/explore/list-position";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import { TRAFFIC_CORRIDOR_POINTS } from "@/application/preparation/planner-context";
@@ -221,6 +222,24 @@ describe("Explore UI", () => {
     expect(facts).toEqual(["17 mi", "Curvature unknown", "Surface unknown"]);
   });
 
+  it("names who shared a ride instead of counting its comments on the card", () => {
+    const shared = { ...entry, id: "shared", storyTeaser: { sourceName: "PA Adventure Bike Rides", sharedBy: "Seth", commentCount: 3, photoCount: 2 } };
+    render(<ExplorePanel entries={[shared]} />);
+    const credit = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card__credit")!;
+    expect(credit).toHaveTextContent("Shared by Seth");
+    expect(credit).not.toHaveTextContent(/comment|photo/);
+  });
+
+  it("keeps one fact's own separators from reading as extra facts", () => {
+    // The surface evidence is written "Mostly paved · 2.1 mi gravel"; on the card
+    // the middot separates facts, so that fact becomes a comma.
+    const gravel = { ...entry, id: "gravel", surfaceSummary: "Mostly paved · 2.1 mi gravel", curvatureSummary: "Twisty" };
+    render(<ExplorePanel entries={[gravel]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+    const facts = [...card.querySelectorAll(".og-explore-card__fact")].map((fact) => fact.textContent);
+    expect(facts).toEqual(["17 mi", "Twisty", "Mostly paved, 2.1 mi gravel"]);
+  });
+
   it("filters by distance in one tap and opens the full filters as a sheet that Escape closes", () => {
     render(<ExplorePanel entries={[entry]} />);
 
@@ -303,7 +322,10 @@ describe("Explore UI", () => {
     });
     render(<ExplorePanel entries={[entry]} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Sort by distance from me" }));
+    // One way to sort by distance, not two: the chip above the list. The Filters
+    // sheet's duplicate button is gone and its Sort select calls the same code.
+    expect(screen.queryByRole("button", { name: "Sort by distance from me" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Near me" }));
     expect(await screen.findByText(/location permission was not granted/i)).toBeInTheDocument();
   });
 
@@ -469,12 +491,12 @@ describe("Explore UI", () => {
     // No catalog ride time: estimated from the distance at a stated pace (EX-08).
     expect(screen.getByRole("region", { name: "Route stats" })).toHaveTextContent("Est. time~30 min at 28 mph");
     expect(screen.getAllByText("Surface unknown").length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Plan this ride" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ride this" }));
     return waitFor(() => expect(onUse).toHaveBeenCalledWith(entry));
   });
 
   it("offers no map link the planner cannot open (DI-01)", () => {
-    // The planner reads no `?route=` query; "Plan this ride" is the one way onto its map.
+    // The planner reads no `?route=` query; "Ride this" is the one way onto its map.
     const { container } = render(<RouteDetail entry={entry} onUse={vi.fn()} />);
     expect(container.querySelector('a[href^="/?route="]')).toBeNull();
     expect(screen.queryByRole("link", { name: "View on map" })).toBeNull();
@@ -971,5 +993,89 @@ describe("Explore UI", () => {
     const posts = fetcher.mock.calls.filter((call) => call[1]?.method === "POST");
     expect(posts).toHaveLength(1);
     expect(JSON.parse(String(posts[0]?.[1]?.body))).toMatchObject({ ownerToken });
+  });
+
+  it("leads a card with the ride's own line when this device has no map images", () => {
+    // Without a map token the card used to open with the words "Map preview
+    // unavailable" in the space where the ride should be. The line the route
+    // already carries is the picture: same 16:9 frame, same leading position.
+    render(<ExplorePanel entries={[entry]} />);
+    const card = screen.getByRole("list", { name: "Explore routes" }).querySelector(".og-explore-card")!;
+    const preview = card.firstElementChild?.firstElementChild;
+    expect(preview).toHaveClass("og-explore-card__preview");
+    expect(preview).toHaveAttribute("data-testid", "route-line-preview");
+    expect(preview).toHaveAccessibleName(`${entry.name} route shape`);
+    expect(card).not.toHaveTextContent(/Map preview unavailable/);
+  });
+
+  it("notes where the rider was standing before opening a ride", () => {
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 840 });
+    render(<ExplorePanel entries={[entry]} />);
+    const link = screen.getByRole("link", { name: new RegExp(entry.name) });
+    // The document itself must not follow the link in a jsdom page.
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+    expect(window.sessionStorage.getItem("opengravel.explore.list-position")).toContain("840");
+  });
+
+  it("returns the list to the card the rider came back from, once", async () => {
+    rememberListPosition(612);
+    const scrollTo = vi.fn();
+    vi.stubGlobal("scrollTo", scrollTo);
+    render(<ExplorePanel entries={[entry]} />);
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 612));
+
+    // The note is spent: the next visit is left where the router put it.
+    cleanup();
+    scrollTo.mockClear();
+    render(<ExplorePanel entries={[entry]} />);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
+  it("gives the route page one primary action, with Save and Share as the quiet ones", () => {
+    render(<RouteDetail entry={entry} onUse={vi.fn()} onSave={vi.fn()} />);
+    const actions = screen.getByRole("region", { name: "Route actions" });
+    const buttons = within(actions).getAllByRole("button");
+
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(["Ride this", "Save", "Share"]);
+    expect(actions.querySelectorAll(".og-primary")).toHaveLength(1);
+    expect(within(actions).getByRole("button", { name: "Ride this" })).toHaveClass("og-primary");
+    // The file for another device is a quieter job, below the ride itself.
+    expect(within(actions).queryByRole("button", { name: "Export GPX" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Export GPX" })).toBeInTheDocument();
+  });
+
+  it("saves a catalog ride without leaving the page, and offers no save for a ride already in the library", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<RouteDetail entry={entry} onUse={vi.fn()} onSave={onSave} />);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(entry));
+    expect(await screen.findByText("Saved to My rides.")).toBeInTheDocument();
+    const saved = screen.getByRole("button", { name: "Saved" });
+    expect(saved).toHaveAttribute("aria-pressed", "true");
+    expect(saved).toBeDisabled();
+
+    cleanup();
+    render(<RouteDetail entry={{ ...entry, source: "personal" }} onUse={vi.fn()} onSave={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+  });
+
+  it("explains a failed save instead of claiming one", async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error("unavailable"));
+    render(<RouteDetail entry={entry} onUse={vi.fn()} onSave={onSave} />);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("That action could not be completed.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Saved" })).toBeNull();
+  });
+
+  it("offers the way forward instead of a bare sentence when Explore has no rides", () => {
+    render(<ExplorePanel entries={[]} />);
+    expect(screen.getByRole("heading", { name: "No rides here yet" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Plan a ride" })).toHaveAttribute("href", "/");
+    expect(screen.queryByText("No catalog routes loaded.")).toBeNull();
   });
 });
