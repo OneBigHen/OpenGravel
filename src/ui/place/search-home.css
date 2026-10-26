@@ -34,7 +34,6 @@
   .og-planner:has(.og-top-search) .og-planner__map-slot .og-map__cluster { top: calc(env(safe-area-inset-top, 0px) + 192px); }
   .og-planner .og-planner__sheet[data-detent="half"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: 50dvh; }
   .og-planner .og-planner__sheet[data-place="true"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: 50dvh; }
-  .og-planner .og-composer[data-top-search-idle="true"] > .og-composer__row { display: none; }
   .og-planner .og-composer[data-top-search-idle="true"] .og-advisor { display: block; }
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__row:has([data-testid="finish-chip"]) { display: none; }
 }
@@ -56,4 +55,9 @@
   .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary { flex: 1 1 auto; min-height: 0; }
   .og-planner .og-planner__sheet[data-directions="true"] .og-phone-alternatives { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary__start { flex: none; }
+}
+
+@media (max-width: 760px) {
+  .og-planner { --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom))); }
+  .og-planner .og-planner__nav-shell { height: auto; min-height: calc(56px + var(--og-safe-bottom)); }
 }

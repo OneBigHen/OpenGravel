@@ -74,7 +74,7 @@ export function usePlannerAnswerLifecycle(input: {
   useEffect(() => {
     if (routeCardCount > 0 && previousCardCount.current === 0) {
       const ui = plannerUiStore.getState();
-      if (ui.sheetDetent !== "half") ui.setSheetDetent("ride");
+      if (ui.sheetDetent === "peek" || ui.sheetDetent === "mini") ui.setSheetDetent("ride");
     }
     previousCardCount.current = routeCardCount;
   }, [routeCardCount, plannerUiStore]);
