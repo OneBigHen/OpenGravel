@@ -139,6 +139,9 @@
   }
   /* The options scroll under it, so the boundary is drawn rather than implied. */
   .og-phone-summary[data-comparing="true"] .og-phone-style { border-top: 1px solid var(--og-hairline); }
+  /* Pinned only while comparing: with one ride on a 320x640 sheet a pinned row
+     would sit over Start ride, so it scrolls with the summary under it instead. */
+  .og-phone-summary[data-comparing="false"] .og-phone-style { position: static; }
   /* At the peek detent the block is the summary alone — unless the rider is
      comparing, where the style row is what they came for. */
   .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary[data-comparing="false"] .og-phone-style { display: none; }
