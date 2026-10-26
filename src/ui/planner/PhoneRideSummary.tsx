@@ -23,73 +23,18 @@
 import { useMemo } from "react";
 
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
-import { routeChoiceWords, type RouteChoiceWord } from "@/application/planner/route-choice-words";
+import { routeChoiceWords } from "@/application/planner/route-choice-words";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { ElevationSource } from "@/application/elevation/profile";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import type { RideActionsProps } from "./RideActions";
+import { RouteDecisionCard } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { rideGlanceSurface } from "./MapRideGlance";
 import { useElevationProfile } from "./useElevationProfile";
 
 const NO_LINE: readonly Coordinate[] = [];
-
-/** A tick in the row of the option the map is drawing. */
-function CheckGlyph() {
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
-      <path d="M4.5 10.5 8 14l7.5-8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-/** `+3 min` — what this option costs against the quickest one, or `null`. */
-function addedMinutesLabel(card: RouteCardVm): string | null {
-  const minutes = card.addedMinutes;
-  return minutes === undefined || minutes === null || minutes <= 0 ? null : `+${minutes} min`;
-}
-
-function OptionRow({ choice, word, onSelect }: {
-  readonly choice: RouteCardVm;
-  readonly word: RouteChoiceWord | undefined;
-  readonly onSelect: (id: RouteCandidateId) => void;
-}) {
-  const added = addedMinutesLabel(choice);
-  return (
-    <li>
-      <button
-        type="button"
-        className="og-phone-choice"
-        data-role={choice.roleKey}
-        data-tint={choice.tint ?? 0}
-        data-selected={choice.isSelected ? "true" : "false"}
-        aria-pressed={choice.isSelected}
-        onClick={() => onSelect(choice.routeId)}
-      >
-        <span className="og-phone-choice__swatch" aria-hidden="true" />
-        <span className="og-phone-choice__body">
-          <span className="og-phone-choice__role">{choice.roleLabel}</span>
-          <span className="og-phone-choice__meta">
-            {choice.durationLabel} · {choice.distanceLabel}
-            {word === undefined ? null : <span className="og-phone-choice__word"> · {word}</span>}
-          </span>
-        </span>
-        {added === null ? null : (
-          <span className="og-phone-choice__delta">
-            {added}
-            {/* The words beside the number are for a reader who cannot see that
-                every row is measured against the quickest one. */}
-            <span className="og-visually-hidden"> vs fastest</span>
-          </span>
-        )}
-        <span className="og-phone-choice__check" aria-hidden="true">
-          {choice.isSelected ? <CheckGlyph /> : null}
-        </span>
-      </button>
-    </li>
-  );
-}
 
 export function PhoneRideSummary({ directionsOptions = false, card, cards, start, route, elevationSource, comparing, onCompare, onSelect, rideStyle, weatherLine, destinationLine = null }: {
   readonly directionsOptions?: boolean;
@@ -112,7 +57,9 @@ export function PhoneRideSummary({ directionsOptions = false, card, cards, start
   if (elevation?.status === "ready") meta.push(`↗ ${Math.round(elevation.profile.climbMeters * 3.28084).toLocaleString("en-US")} ft`);
   return <section className="og-phone-summary" data-testid="phone-ride-summary" data-directions={directionsOptions ? "true" : undefined} data-comparing={comparing ? "true" : "false"} aria-label="Your ride">
     {comparing ? <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
-      {cards.map((choice) => <OptionRow key={choice.routeId} choice={choice} word={words[choice.routeId]} onSelect={onSelect} />)}
+      {cards.map((choice) => <RouteDecisionCard compact key={choice.routeId} card={choice} onSelect={onSelect}
+        compactLabel={directionsOptions && (choice.roleKey === "fastest" || words[choice.routeId] === "Quickest") ? "Fastest" : directionsOptions && (choice.roleKey === "more-twisties" || words[choice.routeId] === "Twistiest") ? "Twistiest" : choice.roleLabel}
+        compactReason={words[choice.routeId]}/>) }
     </ul> : <div>
       {destinationLine === null ? null : <p className="og-phone-summary__where" data-testid="phone-destination">{destinationLine}</p>}
       <h2>{card.durationLabel} · {card.distanceLabel}</h2>

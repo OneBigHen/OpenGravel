@@ -88,7 +88,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     const result = rideStore.getState().dispatch(directionsCommand(document, { ...place, placeId: place.id }, outcome.status === "located" ? outcome : null));
     setBusy(false);
     if (result.outcome !== "applied") return;
-    setSelection(null); setResults(null); setOptionsOpen(true);
+    setSelection(null); setResults(null); setOptionsOpen(outcome.status === "located");
     uiStore.getState().cancelPlacement();
     uiStore.getState().setSheetDetent("half");
     toast("Directions set", true);
@@ -161,7 +161,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   const sheet = place === undefined ? results === null ? null : <section className="og-category-results" data-testid="category-results" aria-label={`${results.chip.label} nearby`}>
     <h2>{results.chip.label}</h2><button type="button" className="og-place-sheet__close" aria-label="Close results" onClick={close}>×</button>
     {results.message === null ? null : <p role="status">{results.message}</p>}
-    <ul>{results.places.map((place) => <li key={place.id}><button type="button" data-testid="category-result" onClick={() => open(place)}><strong>{place.name}</strong><span>{placeDistance(place.coordinate, rider) ?? place.context}</span>{place.openNow === undefined ? null : <span>{place.openNow ? "Open now" : "Closed now"}</span>}</button></li>)}</ul>
+    <ul>{results.places.map((place) => <li key={place.id}><button type="button" data-testid="category-result" onClick={() => open(place)}><strong>{place.name}</strong><span>{rider === null ? placeDistance(place.coordinate, bias)?.replace("away", "from map center") : placeDistance(place.coordinate, rider)}</span>{place.openNow === undefined ? null : <span>{place.openNow ? "Open now" : "Closed now"}</span>}</button></li>)}</ul>
   </section> : <PlaceSheet key={place.id} place={place} rider={rider} busy={busy} driveTime={travel?.key === travelKey && travel?.seconds != null ? `${formatDuration(travel.seconds)} drive` : null}
     saved={services?.memory === undefined ? false : isSaved(services.memory.read(), place.coordinate)}
     onDirections={() => void directions(place)}

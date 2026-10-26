@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { LocateOutcome } from "@/application/geocoding/locate-once";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { PlaceSheet } from "@/ui/place/PlaceSheet";
 import { RiderToast } from "@/ui/place/RiderToast";
@@ -86,7 +87,7 @@ describe("top search and toast", () => {
   });
 });
 
-function flow(locateStart = vi.fn(async () => ({ status: "located" as const, coordinate: rider, accuracyMeters: 10, observedAt: "2026-10-25T12:00:00Z" }))) {
+function flow(locateStart: () => Promise<LocateOutcome> = vi.fn(async () => ({ status: "located" as const, coordinate: rider, accuracyMeters: 10, observedAt: "2026-10-25T12:00:00Z" }))) {
   const rideStore = createRideDocumentStore(), uiStore = createPlannerUiStore(), onDirectionsReady = vi.fn();
   const view = renderHook(() => usePlaceFlow({ services, search: { port, onPick: vi.fn() }, rider, locateStart, rideStore, uiStore, hasRoute: false, onMapPointAction: vi.fn(), onDirectionsReady }));
   return { ...view, rideStore, uiStore, onDirectionsReady };
@@ -121,4 +122,23 @@ describe("place flow", () => {
     expect(view.rideStore.getState().document.intent.start?.coordinate).toEqual(rider);
     expect(view.onDirectionsReady).toHaveBeenCalledOnce();
   });
+  it("leaves start empty and does not plan when location is denied", async () => {
+    const view = flow(async () => ({ status: "failed", code: "permission-denied" }));
+    act(() => view.rideStore.getState().dispatch(placeStartCommand(view.rideStore.getState().document, rider)));
+    await act(async () => view.result.current.pointAction("finish", place.coordinate));
+    expect(view.rideStore.getState().document.intent.start).toBeNull();
+    expect(view.rideStore.getState().document.intent.finish?.coordinate).toEqual(place.coordinate);
+    expect(view.onDirectionsReady).not.toHaveBeenCalled();
+  });
+  it("does not overwrite a newer ride edit while location is arriving", async () => {
+    let resolve: (value: LocateOutcome) => void = () => undefined;
+    const view = flow(() => new Promise<LocateOutcome>((done) => { resolve = done; }));
+    act(() => view.result.current.pointAction("finish", place.coordinate));
+    act(() => view.rideStore.getState().dispatch(placeStartCommand(view.rideStore.getState().document, { lat: 30, lon: -70 })));
+    const edited = view.rideStore.getState().document;
+    await act(async () => resolve({ status: "located", coordinate: rider, accuracyMeters: 10, observedAt: "2026-10-25T12:00:00Z" }));
+    expect(view.rideStore.getState().document).toBe(edited);
+    expect(view.onDirectionsReady).not.toHaveBeenCalled();
+  });
+
 });

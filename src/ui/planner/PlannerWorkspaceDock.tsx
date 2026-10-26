@@ -266,6 +266,7 @@ export function PlannerWorkspaceDock({
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"
         data-detent={detent}
+        data-directions={showOptions && detent === "half" ? "true" : undefined}
         data-place={placeSheet ? "true" : undefined}
         data-idle={idle && !placeSheet ? "true" : undefined}
         data-has-ride={hasChoices ? "true" : "false"}

@@ -48,6 +48,9 @@ const EVIDENCE_STATUS_LABELS: Readonly<Record<EvidenceStatus, string>> = {
 };
 
 export interface RouteDecisionCardProps {
+  readonly compact?: boolean;
+  readonly compactLabel?: string;
+  readonly compactReason?: string;
   readonly card: RouteCardVm;
   readonly onSelect: (routeId: RouteCandidateId) => void;
   /**
@@ -178,11 +181,28 @@ function RouteTraits({ card }: { readonly card: RouteCardVm }) {
 }
 
 export function RouteDecisionCard({
+  compact = false,
+  compactLabel,
+  compactReason,
   card,
   onSelect,
   explanation = null,
 }: RouteDecisionCardProps) {
   const [whyExpanded, setWhyExpanded] = useState(false);
+
+  if (compact) return <li>
+    <button type="button" className="og-phone-choice" data-testid={`route-option-${card.roleKey}`}
+      data-role={card.roleKey} data-tint={card.tint ?? 0} data-selected={card.isSelected ? "true" : "false"}
+      aria-pressed={card.isSelected} onClick={() => onSelect(card.routeId)}>
+      <span className="og-phone-choice__swatch" aria-hidden="true" />
+      <span className="og-phone-choice__body">
+        <span className="og-phone-choice__role">{compactLabel ?? card.roleLabel}</span>
+        <span className="og-phone-choice__meta">{card.durationLabel} · {card.distanceLabel}{compactReason ? ` · ${compactReason}` : ""}</span>
+      </span>
+      {card.addedMinutes == null || card.addedMinutes <= 0 ? null : <span className="og-phone-choice__delta">+{card.addedMinutes} min<span className="og-visually-hidden"> vs fastest</span></span>}
+      <span className="og-phone-choice__check" aria-hidden="true">{card.isSelected ? <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4.5 10.5 8 14l7.5-8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}</span>
+    </button>
+  </li>;
 
   return (
     <li className="og-route-card" data-selected={card.isSelected} data-tint={card.tint ?? 0}>

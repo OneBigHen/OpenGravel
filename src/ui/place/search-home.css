@@ -46,3 +46,14 @@
 }
 
 .og-phone-summary[data-directions="true"] :is(.og-phone-style, .og-phone-summary__compare, .og-phone-summary__weather) { display: none; }
+
+.og-planner .og-planner__sheet[data-place="true"] .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) { display: none; }
+@media (max-width: 760px) {
+  .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > :not(.og-phone-summary) { display: none; }
+}
+
+@media (max-width: 760px) {
+  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary { flex: 1 1 auto; min-height: 0; }
+  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-alternatives { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary__start { flex: none; }
+}

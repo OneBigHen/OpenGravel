@@ -9,7 +9,7 @@
  * authorities meet:
  *
  * - the **ride document store** holds authored state and is mutated only through
- *   `dispatch(command)` — a map tap becomes `start.set`/`finish.set`, a drag
+ *   `dispatch(command)` — an explicit map edit authors a point, a drag
  *   becomes `stop.move`, and a button in the object list becomes the one command
  *   that expresses the action;
  * - the **planning session store** holds the attempt, its bundles and its
@@ -18,10 +18,8 @@
  *   drag preview, camera ownership, zoom request, insets, sheet detent,
  *   selection).
  *
- * The map never writes anything: it emits `MapIntent`, and this component decides
- * which authority — if any — consumes it. `buildMapScene` and
- * `buildPlannerViewModel` are pure projections, so both authorities are read and
- * never mutated during render.
+ * The map emits `MapIntent`; this composition chooses its authority.
+ * Scene and view-model builders only project state during render.
  *
  * ## One gesture, one command, one undo unit (03 §27)
  *
@@ -40,25 +38,16 @@
  * is requested declaratively (`fitKey` + `fitExtent`) and executed by the host
  * against the measured insets (05 §9).
  *
- * ## Replanning (04 §21)
+ * Replanning follows authored revisions through the planning session. Search
+ * selections remain presentation state until an explicit Directions or edit.
  *
- * A ride that already has an answer is replanned when its revision moves past the
- * answer it is showing, so an edit never leaves a stale route on screen without
- * saying so. The rule is a *derived comparison* plus one guard — a revision is
- * attempted once — which is what keeps a failed attempt from looping.
- *
- * ## The compact composition (04 §2)
- *
- * On compact the dock is a bottom sheet with two heights: `peek` (the status line,
- * the history controls and the composer) and `expanded` (the object list and the
- * ride choices scroll inside it). The sheet is also where the status lives — a
- * slim line above the composer rows — so the map surface keeps its single job:
- * geography.
+ * The compact dock shares peek, half and full heights across place details,
+ * category results, route choices and the ride editor. The map stays visible
+ * above the half sheet; the desktop retains its planning rail.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
-import { usePlaceFlow } from "@/ui/place/usePlaceFlow";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import {
@@ -103,7 +92,7 @@ import {
   usePlannerHistoryActions,
   usePlannerSheetActions,
   usePlannerMapIntentController,
-  usePlanCommand,
+  usePlanCommand, usePlaceFlow,
   useRideGlance,
   usePlannerPlaces,
   usePlannerRideStyle,
