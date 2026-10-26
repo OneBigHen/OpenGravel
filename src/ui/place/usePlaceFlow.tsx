@@ -13,13 +13,18 @@ import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import { directionsCommand, searchedEndpointCommand, insertStopCommand, placeStartCommand, type RideDocumentStore } from "@/ui/stores/ride-document-store";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 import type { ComposerPlaceSearch, PlannerPlaceServices } from "@/ui/planner/usePlannerPlaces";
-import { enableMapLayer } from "@/ui/layers/useMapLayers";
+import { useMapLayers } from "@/ui/layers/useMapLayers";
 import { PlaceSheet, placeDistance } from "./PlaceSheet";
 import { RiderToast, type ToastNotice } from "./RiderToast";
-import { TopSearch, type SearchChip } from "./TopSearch";
+import { TopSearch, type LayerChip, type SearchChip } from "./TopSearch";
 
 type Selection = { readonly place: PlaceMatch; readonly dropped: boolean; readonly slot: "start" | "finish" };
-type Results = { readonly chip: SearchChip; readonly places: readonly PlaceMatch[]; readonly message: string | null };
+type Results = {
+  readonly chip: SearchChip;
+  readonly places: readonly PlaceMatch[];
+  readonly status: "searching" | "ready" | "unavailable";
+  readonly message: string | null;
+};
 
 function pinAt(coordinate: Coordinate): PlaceMatch {
   return { id: `dropped:${coordinate.lat}:${coordinate.lon}`, provider: "map", name: "Dropped pin", label: "Dropped pin", context: "", coordinate };
@@ -43,6 +48,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   const [travel, setTravel] = useState<{ readonly key: string; readonly seconds: number | null } | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [notice, setNotice] = useState<ToastNotice | null>(null);
+  const layers = useMapLayers(undefined);
   const request = useRef<AbortController | null>(null);
   const operation = useRef(0);
   const bias = useMemo(() => rider ?? { lat: (extent.minLat + extent.maxLat) / 2, lon: (extent.minLon + extent.maxLon) / 2 }, [rider, extent]);
@@ -111,25 +117,53 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     close();
   }, [rideStore, toast, close]);
 
+  /**
+   * A rider sends a place to another rider, not to Google Maps. There is no
+   * place deep link yet, so the text carries the coordinate and the app's own
+   * address; the native sheet gets it first and the clipboard is the fallback.
+   */
+  const sharePlace = useCallback(async (place: PlaceMatch) => {
+    const coordinate = `${place.coordinate.lat.toFixed(5)}, ${place.coordinate.lon.toFixed(5)}`;
+    const text = `${place.name} — ${coordinate}`;
+    const origin = typeof window === "undefined" ? null : window.location.origin;
+    const link = origin === null || origin === "null" || !/^https?:$/.test(window.location.protocol) ? null : origin;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: place.name, text, ...(link === null ? {} : { url: link }) });
+        toast("Place shared");
+        return;
+      } catch (error) {
+        // A cancelled share is not a failure; anything else still gets copied.
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(link === null ? text : `${text}\n${link}`);
+      toast("Place copied");
+    } catch {
+      toast("Couldn't share this place. Try again.");
+    }
+  }, [toast]);
+
   const pointAction = useCallback((action: MapPointAction, coordinate: Coordinate) => {
     if (action === "info") { open(pinAt(coordinate), "finish", true); return; }
     if (action === "finish" && !hasRoute && services !== undefined) { void directions(pinAt(coordinate)); return; }
     edit(() => onMapPointAction(action, coordinate), action === "start" ? "Start set" : action === "stop" ? "Stop added" : action === "loop" ? "Loop set" : "Destination set");
   }, [open, hasRoute, services, directions, edit, onMapPointAction]);
 
-  const category = useCallback(async (chip: SearchChip) => {
-    close(); setOptionsOpen(false);
-    if (chip.id === "twisty" || chip.id === "gravel") {
-      enableMapLayer(chip.id === "twisty" ? "great-roads" : "gravel");
-      toast(chip.id === "twisty" ? "Twisty roads layer on. Zoom in to see roads." : "Gravel layer on. Zoom in to see roads.");
-      return;
-    }
+  /**
+   * One chip search against one map view. `Search this area` calls it again
+   * with the view the rider has panned to, so an empty answer is never a lie
+   * about the whole map.
+   */
+  const searchChip = useCallback(async (chip: SearchChip, at: Coordinate) => {
     if (services === undefined) return;
+    request.current?.abort();
     const controller = new AbortController(); request.current = controller;
-    setResults({ chip, places: [], message: "Searching…" });
+    setResults({ chip, places: [], status: "searching", message: null });
     uiStore.getState().setSheetDetent("half");
     try {
-      const outcome = await services.search.search(chip.query, { bias, signal: controller.signal });
+      const outcome = await services.search.search(chip.query, { bias: at, signal: controller.signal });
       if (controller.signal.aborted) return;
       if (outcome.status === "ok" && outcome.places.length > 0) {
         const latitudes = outcome.places.map((place) => place.coordinate.lat);
@@ -139,11 +173,33 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
           minLon: Math.min(...longitudes) - .004, maxLon: Math.max(...longitudes) + .004,
         });
       }
-      setResults({ chip, places: outcome.status === "ok" ? outcome.places : [], message: outcome.status === "unavailable" ? outcome.reason : outcome.places.length === 0 ? "No places found here. Try moving the map." : null });
+      setResults({
+        chip,
+        places: outcome.status === "ok" ? outcome.places : [],
+        status: outcome.status === "unavailable" ? "unavailable" : "ready",
+        message: outcome.status === "unavailable" ? outcome.reason : null,
+      });
     } catch {
-      if (!controller.signal.aborted) setResults({ chip, places: [], message: "Place search is unavailable right now." });
+      if (!controller.signal.aborted) setResults({ chip, places: [], status: "unavailable", message: "Place search is unavailable right now." });
     }
-  }, [close, toast, services, bias, uiStore]);
+  }, [services, uiStore]);
+
+  const category = useCallback((chip: SearchChip) => {
+    close(); setOptionsOpen(false);
+    void searchChip(chip, bias);
+  }, [close, searchChip, bias]);
+
+  /** Re-run the open category on the map view now on screen. */
+  const searchThisArea = useCallback(() => {
+    if (results === null) return;
+    void searchChip(results.chip, { lat: (extent.minLat + extent.maxLat) / 2, lon: (extent.minLon + extent.maxLon) / 2 });
+  }, [results, extent, searchChip]);
+
+  const toggleLayer = useCallback((chip: LayerChip) => {
+    const on = layers.enabled.includes(chip.layer);
+    layers.toggle(chip.layer);
+    toast(on ? `${chip.label} off` : `${chip.label} on. Zoom in to see roads.`);
+  }, [layers, toast]);
 
   const pick = useCallback((slot: "start" | "finish", place: PlaceMatch) => { open(place, slot); }, [open]);
   const composerSearch: ComposerPlaceSearch | undefined = search === undefined ? undefined : { ...search, bias, onPick: pick };
@@ -173,18 +229,19 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   }, [place, rider, services, travelKey]);
   const sheet = place === undefined ? results === null ? null : <section className="og-category-results" data-testid="category-results" aria-label={`${results.chip.label} nearby`}>
     <h2>{results.chip.label}</h2><button type="button" className="og-place-sheet__close" aria-label="Close results" onClick={close}>×</button>
-    {results.message === null ? null : <p role="status">{results.message}</p>}
-    <ul>{results.places.map((place) => <li key={place.id}><button type="button" data-testid="category-result" onClick={() => open(place)}><strong>{place.name}</strong><span>{rider === null ? placeDistance(place.coordinate, bias)?.replace("away", "from map center") : placeDistance(place.coordinate, rider)}</span>{place.openNow === undefined ? null : <span>{place.openNow ? "Open now" : "Closed now"}</span>}</button></li>)}</ul>
+    {results.status === "searching" ? <p role="status">Searching…</p> : results.status === "unavailable" ? <p role="status">{results.message}</p> : results.places.length === 0 ? <>
+      <p>{results.chip.empty}</p>
+      <button type="button" className="og-secondary" data-testid="search-this-area" onClick={searchThisArea}>Search this area</button>
+    </> : <ul>{results.places.map((place) => <li key={place.id}><button type="button" data-testid="category-result" aria-current={selection?.place.id === place.id ? "true" : undefined} onClick={() => open(place)}><strong>{place.name}</strong><span>{rider === null ? placeDistance(place.coordinate, bias)?.replace("away", "from map center") : placeDistance(place.coordinate, rider)}</span>{place.openNow === undefined ? null : <span>{place.openNow ? "Open now" : "Closed now"}</span>}</button></li>)}</ul>}
   </section> : <PlaceSheet key={place.id} place={place} rider={rider} busy={busy} driveTime={travel?.key === travelKey && travel?.seconds != null ? `${formatDuration(travel.seconds)} drive` : null}
     saved={services?.memory === undefined ? false : isSaved(services.memory.read(), place.coordinate)}
     onDirections={() => void directions(place)}
     onAddStop={hasRoute ? () => edit(() => { const doc = rideStore.getState().document; const command = insertStopCommand(doc, place.coordinate, undefined); rideStore.getState().dispatch({ ...command, stop: { ...command.stop, label: place.label } }); }, "Stop added") : undefined}
     onStart={selection?.dropped || selection?.slot === "start" ? () => edit(() => { const doc = rideStore.getState().document; rideStore.getState().dispatch(selection?.dropped ? placeStartCommand(doc, place.coordinate) : searchedEndpointCommand(doc, "start", { ...place, placeId: place.id }, place.label)); }, "Start set") : undefined}
-    startLabel={selection?.dropped ? "Start here" : "Use as start"}
     onSave={() => { if (services?.memory === undefined) { toast("Saving places is unavailable here."); return; } services.memory.toggleSaved(place); toast("Saved places updated"); }}
-    onShare={() => { const url = `https://www.google.com/maps/search/?api=1&query=${place.coordinate.lat},${place.coordinate.lon}`; void (async () => { try { if (navigator.share) await navigator.share({ title: place.name, url }); else { await navigator.clipboard.writeText(url); toast("Place link copied"); } } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast("Couldn't share this place. Try again."); } })(); }}
+    onShare={() => void sharePlace(place)}
     onClose={close}/>;
   return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
-    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} onClear={close} onChip={(chip) => void category(chip)}/>,
+    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }

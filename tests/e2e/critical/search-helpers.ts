@@ -18,5 +18,5 @@ export async function directionsTo(page: Page, query = "Hawk Mountain Sanctuary"
 
 export async function chooseStart(page: Page, query = "Jim Thorpe") {
   await searchPlace(page, query, "start");
-  await page.getByTestId("place-sheet").getByRole("button", { name: "Use as start" }).click();
+  await page.getByTestId("place-sheet").getByRole("button", { name: "Start here" }).click();
 }

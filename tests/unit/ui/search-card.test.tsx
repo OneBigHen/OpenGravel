@@ -57,18 +57,33 @@ describe("universal place sheet", () => {
   it("keeps unknown distance and drive time honest", () => {
     card({ rider: null });
     expect(screen.getByTestId("place-sheet")).toHaveTextContent("Distance needs your location");
-    expect(screen.getByTestId("place-sheet")).toHaveTextContent("Drive time after Directions");
+    expect(screen.getByTestId("place-sheet")).not.toHaveTextContent("Drive time");
+  });
+  it("shows the drive time only when it is known", () => {
+    card({ driveTime: null });
+    expect(screen.getByTestId("place-sheet")).toHaveTextContent(/mi away/);
+    expect(screen.getByTestId("place-sheet")).not.toHaveTextContent("Drive time");
+    card({ driveTime: "5 min drive" });
+    expect(screen.getAllByTestId("place-sheet").at(-1)).toHaveTextContent("5 min drive");
   });
 });
 
 describe("top search and toast", () => {
-  it("renders one search and seven chips; selecting a chip is explicit", () => {
-    const onChip = vi.fn(), onClear = vi.fn();
-    render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} onClear={onClear} onChip={onChip}/>);
+  it("renders one search, five place chips and two layer switches", () => {
+    const onChip = vi.fn(), onClear = vi.fn(), onLayer = vi.fn();
+    render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={onClear} onChip={onChip} onLayer={onLayer}/>);
     expect(screen.getByPlaceholderText("Search here")).toBeInTheDocument();
+    expect(screen.queryByTestId("search-chip-twisty")).toBeNull();
     expect(screen.getAllByRole("button")).toHaveLength(8);
-    fireEvent.click(screen.getByTestId("search-chip-gas"));
-    expect(onChip).toHaveBeenCalledWith({ id: "gas", label: "Gas", query: "gas" });
+    const gas = screen.getByTestId("search-chip-gas");
+    expect(gas.querySelector("svg")).not.toBeNull();
+    expect(gas).toHaveTextContent("Gas");
+    expect(gas.textContent).not.toMatch(/⛽/u);
+    fireEvent.click(gas);
+    expect(onChip).toHaveBeenCalledWith({ id: "gas", label: "Gas", query: "gas", empty: "No gas in this area" });
+    fireEvent.click(screen.getByTestId("layer-chip-twisty"));
+    expect(onLayer).toHaveBeenCalledWith({ id: "twisty", layer: "great-roads", label: "Twisty roads layer" });
+    expect(onChip).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByLabelText("Clear place")); expect(onClear).toHaveBeenCalledOnce();
   });
   it("expires after four seconds", () => {
@@ -106,6 +121,84 @@ describe("place flow", () => {
     render(<>{view.result.current.sheet}</>);
     fireEvent.click(screen.getByTestId("category-result"));
     expect(view.rideStore.getState().document).toBe(before);
+    expect(view.result.current.pins[0]?.selected).toBe(true);
+  });
+  it("an empty category names what is missing and searches the map view on request", async () => {
+    const view = flow();
+    vi.mocked(port.search).mockResolvedValueOnce({ status: "ok", places: [] });
+    render(<>{view.result.current.top}</>);
+    await act(async () => fireEvent.click(screen.getByTestId("search-chip-gas")));
+    act(() => view.result.current.onViewport({ minLat: 40, maxLat: 41, minLon: -76, maxLon: -75 }));
+    render(<>{view.result.current.sheet}</>);
+    expect(screen.getByTestId("category-results")).toHaveTextContent("No gas in this area");
+    expect(screen.queryByText(/No places found here/)).toBeNull();
+    await act(async () => fireEvent.click(screen.getByTestId("search-this-area")));
+    expect(port.search).toHaveBeenLastCalledWith("gas", expect.objectContaining({ bias: { lat: 40.5, lon: -75.5 } }));
+    expect(view.result.current.pins).toHaveLength(1);
+  });
+  it("a layer chip switches the road overlay instead of searching places", async () => {
+    const view = flow();
+    render(<>{view.result.current.top}</>);
+    await act(async () => fireEvent.click(screen.getByTestId("layer-chip-twisty")));
+    expect(port.search).not.toHaveBeenCalled();
+    expect(JSON.parse(window.localStorage.getItem("ogv.map-layers.v1") ?? "[]")).toContain("great-roads");
+    render(<>{view.result.current.toast}</>);
+    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Twisty roads layer on");
+    await act(async () => fireEvent.click(screen.getByTestId("layer-chip-twisty")));
+    expect(JSON.parse(window.localStorage.getItem("ogv.map-layers.v1") ?? "[]")).not.toContain("great-roads");
+  });
+  it("shares its own coordinate and the app, never a Google Maps link, and says so", async () => {
+    const share = vi.fn(async (data: ShareData) => { void data; });
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    const view = flow();
+    act(() => view.result.current.composerSearch?.onPick("finish", place, "coffee"));
+    render(<>{view.result.current.sheet}</>);
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Share" })));
+    expect(share).toHaveBeenCalledOnce();
+    const payload = share.mock.calls[0]?.[0] as { readonly text: string; readonly url?: string };
+    expect(payload.text).toBe("Mountain Coffee — 40.87000, -75.73000");
+    expect(payload.url).toBe(window.location.origin);
+    expect(JSON.stringify(payload)).not.toContain("google");
+    render(<>{view.result.current.toast}</>);
+    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Place shared");
+    Reflect.deleteProperty(navigator, "share");
+  });
+  it("copies the place when the share sheet refuses", async () => {
+    const share = vi.fn(async (data: ShareData) => { void data; throw new Error("not allowed"); });
+    const writeText = vi.fn(async (text: string) => { void text; });
+    Object.defineProperty(navigator, "share", { configurable: true, value: share });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const view = flow();
+    act(() => view.result.current.composerSearch?.onPick("finish", place, "coffee"));
+    render(<>{view.result.current.sheet}</>);
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Share" })));
+    expect(share).toHaveBeenCalledOnce();
+    expect(writeText).toHaveBeenCalledOnce();
+    render(<>{view.result.current.toast}</>);
+    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Place copied");
+    Reflect.deleteProperty(navigator, "share");
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
+  it("copies the same place when the phone has no share sheet", async () => {
+    const writeText = vi.fn(async (text: string) => { void text; });
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+    const view = flow();
+    act(() => view.result.current.composerSearch?.onPick("finish", place, "coffee"));
+    render(<>{view.result.current.sheet}</>);
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Share" })));
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Mountain Coffee — 40.87000, -75.73000"));
+    expect(writeText.mock.calls[0]?.[0]).not.toContain("google");
+    render(<>{view.result.current.toast}</>);
+    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Place copied");
+    Reflect.deleteProperty(navigator, "clipboard");
+  });
+  it("calls the start action the same thing for a searched place as for a pin", () => {
+    const view = flow();
+    act(() => view.result.current.composerSearch?.onPick("start", place, "coffee"));
+    render(<>{view.result.current.sheet}</>);
+    expect(screen.getByRole("button", { name: "Start here" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use as start" })).toBeNull();
   });
   it("a search pick never authors the ride; Directions plans once and Undo restores it", async () => {
     const view = flow(); const before = view.rideStore.getState().document;
