@@ -11,6 +11,7 @@ export { usePlannerItineraryActions } from "./usePlannerItineraryActions";
 export { usePlannerMapIntentController } from "./hooks/usePlannerMapIntentController";
 export { usePlannerPlaces, type PlannerPlaceServices } from "./usePlannerPlaces";
 export { usePlannerRoadSpans } from "./hooks/usePlannerRoadSpans";
+export { usePlannerScene } from "./hooks/usePlannerScene";
 export { useRestoreAnnouncement } from "./hooks/useRestoreAnnouncement";
 export { usePlannerRideStyle } from "./usePlannerRideStyle";
 export { usePlannerSketch } from "./hooks/usePlannerSketch";

@@ -54,8 +54,7 @@ import {
   buildRideHandoff,
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
-import { buildMapScene, objectExtent } from "@/application/map/build-map-scene";
-import { sceneAtRest } from "@/ui/planner/scene-points";
+import { objectExtent } from "@/application/map/build-map-scene";
 import type {
   BasemapMode,
   MapHostFactory,
@@ -98,6 +97,7 @@ import {
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
+  usePlannerScene,
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
@@ -412,8 +412,8 @@ export function PlannerWorkspace({
     finishStroke: finishSketchGesture,
   } = sketchAuthoring;
 
-  const scene = useMemo(() => {
-    const projected = buildMapScene({
+  const scene = usePlannerScene(
+    {
       document,
       session,
       uiState: { selectedObject },
@@ -426,33 +426,9 @@ export function PlannerWorkspace({
       changedSpan: updateHighlight?.span ?? null,
       readGeometry,
       riderPosition,
-    });
-    // Shaping anchors are handles, not places. They return for an edit: the
-    // Change this ride panel open, an armed map tool, or the anchor itself
-    // selected. A published Explore route can carry many of them, and at rest
-    // they would bury the line under a row of dots.
-    const editing =
-      refineEditing ||
-      activeTool !== "pan" ||
-      placementTool !== "idle" ||
-      (selectedObject?.kind === "point" &&
-        document.intent.shaping.some((anchor) => anchor.id === selectedObject.pointId));
-    return sceneAtRest(projected, editing);
-  }, [
-    document,
-    session,
-    selectedObject,
-    dragPreview,
-    avoidAreaPreview,
-    roadSpanPreview,
-    sketchPreview,
-    updateHighlight,
-    readGeometry,
-    riderPosition,
-    activeTool,
-    placementTool,
-    refineEditing,
-  ]);
+    },
+    { refineEditing, activeTool, placementTool },
+  );
 
   const selectedRef = useMemo(
     () => (selectedObject === null ? null : itineraryRefFor(document, selectedObject)),
