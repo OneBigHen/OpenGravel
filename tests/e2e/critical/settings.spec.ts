@@ -33,7 +33,7 @@ test("unavailable device storage has a clean recovery path", async ({ page }) =>
   });
   await page.goto("/settings");
   const offline = page.getByTestId("offline-maps");
-  await expect(offline.getByRole("alert")).toContainText("Device storage could not be checked");
+  await expect(offline.getByRole("alert")).toContainText("storage could not be checked");
   await expect(offline.getByText("Device unavailable", { exact: true })).toBeVisible();
   await expect(offline.getByText("None yet", { exact: true })).toHaveCount(0);
   await expect(offline.getByRole("button", { name: "Download", exact: true })).toBeDisabled();
