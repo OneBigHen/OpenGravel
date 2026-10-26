@@ -86,13 +86,14 @@ import type {
   RideFocusStore,
   RideFocusStoreStatus,
 } from "@/ui/stores/ride-focus-store";
-import type { MapLayersSource } from "@/application/map-layers";
+import { METERS_PER_MILE, lineLengthMeters, type MapLayersSource } from "@/application/map-layers";
 import type { RideInterestDiscoverSource } from "@/application/ride-interest";
 import { AppBar } from "@/ui/nav/AppBar";
 import { LayeredMap } from "@/ui/layers/LayeredMap";
 import type { CameraView } from "@/ui/map/PlannerMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
+import { RideFuelLine } from "@/ui/ride/RideFuelLine";
 import { RideInterestCard } from "@/ui/ride/RideInterestCard";
 import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
 import { useRideInterest } from "@/ui/ride/useRideInterest";
@@ -115,6 +116,12 @@ export interface RideFocusProps {
   readonly placesSource?: PlacesSource;
   /** The rider's map layers (phase 8): fuel, incidents and alerts on the ride. */
   readonly mapLayersSource?: MapLayersSource;
+  /**
+   * The active bike's usable range in miles (its range before the reserve), or
+   * `null`/absent when the garage has none: the ride's "next gas" line judges
+   * the road against it and says nothing it cannot measure without it.
+   */
+  readonly usableRangeMiles?: number | null;
   /** Wikimedia/Wikidata/OSM landmarks along the route (OGV#13), when wired in. */
   readonly discoverSource?: RideInterestDiscoverSource;
   /** Optional native Spotify App Remote player; absent in browsers/PWAs. */
@@ -251,6 +258,7 @@ export function RideFocus({
   safety,
   requestMotion,
   exitHref = "/",
+  usableRangeMiles = null,
 }: RideFocusProps) {
   const status = useStore(store, (state) => state.status);
   const statusMessage = useStore(store, (state) => state.statusMessage);
@@ -498,6 +506,19 @@ export function RideFocus({
   // has already dropped) leaves the whole line ahead.
   const onRoute = navigation?.offRouteState === "on-route";
   const progressFraction = onRoute ? viewModel?.progress.fraction ?? null : null;
+
+  /*
+    How far along the line the rider is, in miles, for the "next gas" range.
+    It is the engine's own progress fraction measured against the line the
+    surface draws, so it is the same answer the progress bar shows; with no
+    fraction (off the line, or no telemetry yet) there is no measurement and the
+    fuel line states the next station without a range verdict.
+  */
+  const alongMiles = useMemo(() => {
+    if (progressFraction === null || availableRouteLine.length < 2) return null;
+    const meters = lineLengthMeters(availableRouteLine.map((point) => [point.lon, point.lat] as const));
+    return (progressFraction * meters) / METERS_PER_MILE;
+  }, [availableRouteLine, progressFraction]);
 
   const scene = useMemo(
     () => ({
@@ -1561,6 +1582,24 @@ export function RideFocus({
               </li>
             ))}
           </ul>
+        )}
+
+        {/* "Next gas": one line, and one button when the tank will not reach
+            the station ahead (maps-for-riders §5). */}
+        {terminal !== null ? null : (
+          <RideFuelLine
+            stations={rideInterest.fuelAhead}
+            stationsFound={rideInterest.fuelFound}
+            routeKey={guidedRouteId}
+            alongMiles={alongMiles}
+            position={navigation?.position.coordinate ?? null}
+            headingDegrees={navigation?.position.headingDegrees ?? null}
+            usableMiles={usableRangeMiles}
+            source={mapLayersSource}
+            onAddStop={(coordinate, name): void => {
+              void store.getState().reroute({ coordinate, label: name });
+            }}
+          />
         )}
 
         {terminal !== null || !rerouteAvailable || navigation?.activity !== "guided" ? null : (

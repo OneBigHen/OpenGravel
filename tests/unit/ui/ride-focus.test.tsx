@@ -32,6 +32,7 @@ import type {
   RideFocusEnvironmentSnapshot,
 } from "@/application/ride-session/ports/ride-focus-environment";
 import type { MapHostFactory } from "@/application/map/map-host";
+import type { MapLayersSource } from "@/application/map-layers";
 import { asPlaceId, type NearbyPlace, type PlacesSource } from "@/application/places";
 import type {
   GeometryRef,
@@ -267,6 +268,10 @@ async function harness(options: {
   readonly nightLook?: boolean;
   /** The instant this whole fixture lives at; the shared NOW unless a test needs dusk. */
   readonly at?: string;
+  /** The rider's map layers: gas along the route, and the Free Ride's nearby search. */
+  readonly mapLayersSource?: MapLayersSource;
+  /** The active bike's usable range, for the ride sheet's "next gas" line. */
+  readonly usableRangeMiles?: number | null;
 } = {}): Promise<Harness> {
   const instant = options.at ?? NOW;
   const databaseName = options.databaseName ?? freshDatabaseName();
@@ -411,6 +416,8 @@ async function harness(options: {
       mapHostFactory={mapHostFactory}
       basemap="empty"
       {...(options.placesSource === undefined ? {} : { placesSource: options.placesSource })}
+      {...(options.mapLayersSource === undefined ? {} : { mapLayersSource: options.mapLayersSource })}
+      {...(options.usableRangeMiles === undefined ? {} : { usableRangeMiles: options.usableRangeMiles })}
     />,
   );
   await act(async () => {
@@ -2066,5 +2073,79 @@ describe("the ride screen's number scale and controls (small-screen design syste
     // is sized to its 56 px content (56 + 10 padding + 2 border).
     expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*68px/);
     expect(rule(".og-ride__strip")).toMatch(/position:\s*absolute/);
+  });
+});
+
+/**
+ * "Next gas" on the ride (maps-for-riders §5): the sheet's fuel line is built on
+ * the gas the ride already prefetches along its own route, not a second search,
+ * and its one button routes through the ride's own reroute command (§1: the map
+ * never edits the ride by itself).
+ */
+describe("next gas on the ride", () => {
+  function fuelLayers(): MapLayersSource {
+    return {
+      load: vi.fn(async () => ({ features: [], unavailable: [] })),
+      trafficTileUrl: null,
+      along: vi.fn(async (_line, layerId) =>
+        layerId === "fuel"
+          ? {
+              available: true,
+              stops: [
+                {
+                  feature: {
+                    id: "osm:node/42",
+                    layerId: "fuel" as const,
+                    name: "Sheetz",
+                    detail: null,
+                    weight: null,
+                    geometry: { type: "Point" as const, coordinates: [-75.42, 40.11] as const },
+                  },
+                  alongMeters: 2_600,
+                  offMeters: 20,
+                },
+              ],
+            }
+          : { available: true, stops: [] },
+      ),
+    };
+  }
+
+  it("reads the next station off the ride's own fuel prefetch", async () => {
+    const layers = fuelLayers();
+    await harness({ position: "fresh", mapLayersSource: layers, usableRangeMiles: 120 });
+    expect(await screen.findByTestId("ride-fuel-line")).toHaveTextContent(/^Next gas \d+ mi · Sheetz$/);
+    // One along-route call per layer for the whole ride, not one per tick.
+    const fuelCalls = (layers.along as unknown as { mock: { calls: unknown[][] } }).mock.calls.filter(
+      ([, layerId]) => layerId === "fuel",
+    );
+    expect(fuelCalls).toHaveLength(1);
+    expect(screen.queryByTestId("ride-fuel-add-stop")).toBeNull();
+  });
+
+  it("adds the station as a stop through the ride's reroute, and only when pressed", async () => {
+    const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
+    await harness({
+      position: "fresh",
+      mapLayersSource: fuelLayers(),
+      usableRangeMiles: 1,
+      telemetry: () => ({
+        routeProgress: 0,
+        remainingDistanceMeters: 2_600,
+        remainingDurationSeconds: 300,
+        etaIso: null,
+      }),
+      reroutePlanner: { plan },
+    });
+
+    const line = await screen.findByTestId("ride-fuel-line");
+    expect(line.textContent).toMatch(/^Gas: \d+ mi to next station — range left ~\d+ mi$/);
+    expect(plan).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("ride-fuel-add-stop"));
+    await waitFor(() => expect(plan).toHaveBeenCalled());
+    expect(plan).toHaveBeenCalledWith(
+      expect.objectContaining({ detour: { coordinate: { lon: -75.42, lat: 40.11 }, label: "Sheetz" } }),
+    );
   });
 });
