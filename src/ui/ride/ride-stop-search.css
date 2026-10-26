@@ -45,8 +45,8 @@
   flex: 1 1 120px;
 }
 .og-ride-search__chip[aria-pressed="true"] {
-  border-color: var(--og-record);
-  box-shadow: inset 0 0 0 1px var(--og-record);
+  border-color: var(--og-primary);
+  box-shadow: inset 0 0 0 1px var(--og-primary);
 }
 
 .og-ride-search__results {

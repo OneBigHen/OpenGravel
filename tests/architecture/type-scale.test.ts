@@ -13,6 +13,7 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -85,7 +86,7 @@ describe("type scale (small-screen design system v2 §1)", () => {
 
   it("still lets the five sizes be declared once, as tokens", () => {
     const root = /:root\s*\{([\s\S]*?)\n\}/.exec(
-      readFileSync(join(SRC, "app/globals.css"), "utf8"),
+      appCss(),
     )?.[1];
     expect(root).toBeDefined();
     const declared = new Map<string, string>();

@@ -124,7 +124,6 @@ import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-me
 import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
 import type { StoreApi } from "zustand/vanilla";
 
-import "./ride-rail.css";
 
 export interface RideFocusProps {
   readonly store: StoreApi<RideFocusStore>;

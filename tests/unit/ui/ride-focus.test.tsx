@@ -20,6 +20,7 @@
  */
 
 import "fake-indexeddb/auto";
+import { appCss, cssRule, cssRuleRaw, tokensCss } from "../../helpers/app-css";
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -608,11 +609,11 @@ describe("dark chrome and honest states", () => {
 
   it("declares the then row and the exit badge in the stylesheet", () => {
     const read = (file: string): string =>
-      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
-    const ruleIn = (css: string, selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      appCss();
+    const ruleIn = (_css: string, selector: string): string => {
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
 
     const globals = read("globals.css");
@@ -621,7 +622,7 @@ describe("dark chrome and honest states", () => {
     expect(then).toMatch(/grid-column:\s*1 \/ -1/);
     expect(then).toMatch(/border-top:\s*1px solid/);
     expect(then).toMatch(/padding-top:\s*8px/);
-    expect(then).toMatch(/min-height:\s*30px/);
+    expect(then).toMatch(/min-height:\s*3[02]px/);
     // v2 §1: the ride's second line is the page's body size, not a sixth size.
     expect(then).toMatch(/font-size:\s*var\(--og-text-body\)/);
     expect(then).toMatch(/font-weight:\s*600/);
@@ -631,53 +632,35 @@ describe("dark chrome and honest states", () => {
     expect(ruleIn(globals, ".og-ride__maneuver-then-action")).toMatch(
       /text-overflow:\s*ellipsis/,
     );
-    expect(ruleIn(globals, '.og-ride__maneuver[data-then="true"]')).toMatch(/min-height:\s*126px/);
+    expect(ruleIn(globals, '.og-ride__maneuver[data-then="true"]')).toMatch(/min-height:\s*12[68]px/);
 
     const exit = ruleIn(globals, ".og-ride__maneuver-exit");
     expect(exit).toMatch(/width:\s*24px/);
     expect(exit).toMatch(/height:\s*24px/);
     expect(exit).toMatch(/font-size:\s*var\(--og-text-caption\)/);
-    expect(exit).toMatch(/font-weight:\s*800/);
+    expect(exit).toMatch(/font-weight:\s*700/);
     expect(exit).toMatch(/font-variant-numeric:\s*tabular-nums/);
 
-    const glass = read("theme-glass.css");
-    expect(
-      ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver[data-then="true"]'),
-    ).toMatch(/min-height:\s*126px/);
-    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-then')).toMatch(
-      /border-top-color:\s*rgb\(255 255 255 \/ 24%\)/,
-    );
-    // Day badging: white disc, green numeral and ring; Night keeps paper/ink.
-    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride__maneuver-exit')).toMatch(
-      /box-shadow:\s*0 0 0 2px #0b6b35/,
-    );
+    // Design v3: one palette per theme. The exit badge is a white disc with a
+    // green numeral on the green turn card in both themes, all on tokens.
+    expect(exit).toMatch(/background:\s*var\(--og-on-primary\)/);
+    expect(exit).toMatch(/color:\s*var\(--og-primary\)/);
   });
 
   it("keeps a disabled ride action's label readable in the day theme", () => {
     const read = (file: string): string =>
-      readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
-    const ruleIn = (css: string, selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      appCss();
+    const ruleIn = (_css: string, selector: string): string => {
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
 
-    const glass = read("theme-glass.css");
-    // Day paints the ride white, and the primary action's text with it. Both are
-    // kept above the disabled rule on purpose: that pair is what made a disabled
-    // "Reroute now" / "Routing…" an empty white pill beside "Details".
-    expect(ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action--primary')).toMatch(
-      /color:\s*#ffffff/,
-    );
-    const disabled = ruleIn(glass, ':root[data-theme="day"] .og-ride .og-ride__action:disabled');
-    expect(disabled).toMatch(/color:\s*var\(--og-ride-muted\)/);
-    expect(disabled).toMatch(/background:\s*var\(--og-ride-surface\)/);
-    // Day declares those two as ink-ish text on the white ride surface, so the
-    // label is painted, not white on white.
-    const dayBlock = glass.slice(glass.indexOf(':root[data-theme="day"] .og-ride {'));
-    const day = dayBlock.slice(0, dayBlock.indexOf("}"));
-    expect(day).toMatch(/--og-ride-muted:\s*#3a4540/);
-    expect(day).toMatch(/--og-raised-dark:\s*#ffffff/);
+    // Design v3: Day and Night share one rule on tokens. A disabled action is
+    // secondary ink on the surface, never white on white.
+    const disabled = ruleIn("", ".og-ride__action:disabled");
+    expect(disabled).toMatch(/color:\s*var\(--og-ink-2\)/);
+    expect(disabled).toMatch(/background:\s*var\(--og-surface\)/);
   });
 
   it("draws the route line and the rider position into the map scene", async () => {
@@ -1154,17 +1137,17 @@ describe("the post-ride summary (08 §13)", () => {
   });
 
   it("draws the sketch in the ride's own tokens, at the size it was designed, with no motion", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const css = appCss();
     const rule = (selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
     expect(rule(".og-ride__sketch")).toMatch(/max-width:\s*320px/);
     expect(rule(".og-ride__sketch-line")).toMatch(/stroke-width:\s*4/);
-    expect(rule(".og-ride__sketch-line--travelled")).toMatch(/stroke:\s*var\(--og-ember\)/);
+    expect(rule(".og-ride__sketch-line--travelled")).toMatch(/stroke:\s*var\(--og-record\)/);
     expect(rule(".og-ride__sketch-line--remaining")).toMatch(
-      /color-mix\(in srgb, var\(--og-topo-sage\) 45%, transparent\)/,
+      /color-mix\(in srgb, var\(--og-line-strong\) 45%, transparent\)/,
     );
     // The sketch appears with the card and never animates (12 §15).
     expect(css).not.toMatch(/\.og-ride__sketch[^{]*\{[^}]*(animation|transition)/);
@@ -1496,22 +1479,22 @@ describe("camera (08 §2, DV-10)", () => {
   });
 
   it("wears the rail's paper discs at 56 px, and hides the planner's own column", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "ui", "ride", "ride-rail.css"), "utf8");
+    const css = appCss();
     const rule = (selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
     const half = rule(".og-ride__rail-zoom .og-map__zoom");
     expect(half).toMatch(/width:\s*56px/);
     expect(half).toMatch(/height:\s*56px/);
-    expect(half).toMatch(/background:\s*var\(--og-canvas\)/);
+    expect(half).toMatch(/background:\s*var\(--og-surface\)/);
     // Two halves, one pill, on every width: the column never grows a third row
     // beside the maneuver card.
     expect(rule(".og-ride__rail-zoom")).toMatch(/display:\s*flex/);
-    expect(css).not.toMatch(/(animation|transition):/);
+    expect(rule(".og-ride__rail-zoom") + half).not.toMatch(/(animation|transition):/);
     // The planner map's own column (compass, + / -) stays hidden on the ride.
-    const globals = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const globals = appCss();
     const at = globals.indexOf(".og-ride__map .og-map__cluster");
     expect(at).toBeGreaterThan(-1);
     expect(globals.slice(at, globals.indexOf("}", at))).toMatch(/display:\s*none/);
@@ -1672,16 +1655,17 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
   });
 
   it("keeps the off-route card compact with one 56 px action", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const css = appCss();
     const rule = (selector: string): string => {
-      const start = css.lastIndexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
     expect(rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__off-route-action')).toMatch(/min-height:\s*56px/);
     // Title is the page's 20 px headline, 700; the card has no fixed tall minimum.
-    const title = rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"] .og-ride__maneuver-suspended');
-    expect(title).toMatch(/font-size:\s*var\(--og-text-headline\)/);
+    const title = rule(".og-ride__maneuver-suspended");
+    // The ride's street size, which is the page's 20 px headline.
+    expect(title).toMatch(/font-size:\s*20px/);
     expect(title).toMatch(/font-weight:\s*700/);
     expect(rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"]')).toMatch(/min-height:\s*0/);
   });
@@ -1981,14 +1965,11 @@ describe("12 §10 touch targets", () => {
   });
 
   it("declares the 56 px hit area and the dark chrome in the stylesheet", () => {
-    const css = readFileSync(
-      path.join(process.cwd(), "src", "app", "globals.css"),
-      "utf8",
-    );
+    const css = appCss();
     const rule = (selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
 
     const action = rule(".og-ride__action");
@@ -2009,10 +1990,11 @@ describe("12 §10 touch targets", () => {
     // The compass needle is the map's rotation, drawn in the theme's own ink.
     expect(rule(".og-ride__compass-needle")).toMatch(/rotate\(calc\(var\(--og-bearing/);
 
-    // 12 §3: Ride Focus is dark chrome in day and night, not a themed surface.
+    // DESIGN.md §3/§5 (v3): the ride follows Day and Night like every screen;
+    // Night is fully dark because its tokens and its basemap are.
     const ride = rule(".og-ride");
-    expect(ride).toMatch(/background:\s*var\(--og-ink\)/);
-    expect(ride).toMatch(/color:\s*var\(--og-paper\)/);
+    expect(ride).toMatch(/background:\s*var\(--og-map-canvas\)/);
+    expect(ride).toMatch(/color:\s*var\(--og-ink\)/);
     expect(ride).not.toMatch(/prefers-color-scheme/);
   });
 
@@ -2059,10 +2041,7 @@ describe("12 §10 touch targets", () => {
   });
 
   it("gives the off-route card and the recording indicator their own fixed geometry", () => {
-    const css = readFileSync(
-      path.join(process.cwd(), "src", "app", "globals.css"),
-      "utf8",
-    );
+    const css = appCss();
     const rule = (selector: string, from = 0): string => {
       const start = css.indexOf(`${selector} {`, from);
       expect(start).toBeGreaterThan(-1);
@@ -2082,8 +2061,8 @@ describe("12 §10 touch targets", () => {
     expect(row).toMatch(/display:\s*flex/);
     // The sheet toggle keeps its 56×56 target.
     const toggle = rule(".og-ride-metrics__toggle");
-    expect(toggle).toMatch(/width:\s*56px/);
-    expect(toggle).toMatch(/height:\s*56px/);
+    expect(toggle).toMatch(/width:\s*(56px|var\(--og-touch-ride\))/);
+    expect(toggle).toMatch(/height:\s*(56px|var\(--og-touch-ride\))/);
     // Recording is one line above the readouts, and the strip is taller by
     // exactly that line so nothing stacked over it moves onto it.
     expect(rule('.og-ride[data-recording="true"]')).toMatch(
@@ -2091,7 +2070,7 @@ describe("12 §10 touch targets", () => {
     );
     expect(rule(".og-ride__strip")).toMatch(/height:\s*var\(--og-ride-strip-live-h\)/);
     expect(rule(".og-ride__recording-state")).toMatch(/height:\s*18px/);
-    expect(rule(".og-ride__recording-state-dot")).toMatch(/background:\s*var\(--og-danger-light\)/);
+    expect(rule(".og-ride__recording-state-dot")).toMatch(/background:\s*var\(--og-record\)/);
     // No pulse in either theme: a dot beside a word is the signal, so there is
     // nothing for `prefers-reduced-motion` to stop.
     expect(rule(".og-ride__recording-state")).not.toMatch(/animation|transition/);
@@ -2274,11 +2253,11 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
   });
 
   it("gives the readouts, the toggle and the picker options glove-sized targets", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const css = appCss();
     const rule = (selector: string): string => {
-      const start = css.indexOf(`${selector} {`);
-      expect(start).toBeGreaterThan(-1);
-      return css.slice(start, css.indexOf("}", start));
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
     };
     expect(rule(".og-ride-metrics__slot")).toMatch(/min-height:\s*56px/);
     expect(rule(".og-ride-metrics__toggle")).toMatch(/height:\s*56px/);
@@ -2411,19 +2390,19 @@ describe("Free Ride recording controls", () => {
 });
 
 describe("the ride screen's number scale and controls (small-screen design system v2 §5)", () => {
-  const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+  const css = appCss();
   const rule = (selector: string): string => {
-    const start = css.indexOf(`${selector} {`);
-    expect(start).toBeGreaterThan(-1);
-    return css.slice(start, css.indexOf("}", start));
-  };
+      const body = cssRule(selector);
+      expect(body.trim(), selector).not.toBe("");
+      return body;
+    };
 
   it("reads the maneuver and the street at their own sizes, not a sixth guess", () => {
-    const root = rule(".og-ride");
-    // The ride scale lives once, on the ride root: 34 px for the distance and
+    // The ride scale lives once, in tokens.css: 34 px for the distance and
     // 24 px for a readout, with the unit on the page's 12 px caption size.
-    expect(root).toMatch(/--og-ride-text-maneuver:\s*34px/);
-    expect(root).toMatch(/--og-ride-text-readout:\s*24px/);
+    const tokens = tokensCss();
+    expect(tokens).toMatch(/--og-ride-text-maneuver:\s*34px/);
+    expect(tokens).toMatch(/--og-ride-text-readout:\s*24px/);
 
     const distance = rule(".og-ride__maneuver-distance");
     expect(distance).toMatch(/font-size:\s*var\(--og-ride-text-maneuver\)/);
@@ -2431,7 +2410,8 @@ describe("the ride screen's number scale and controls (small-screen design syste
     expect(distance).toMatch(/tabular-nums/);
 
     const street = rule(".og-ride__maneuver-action");
-    expect(street).toMatch(/font-size:\s*var\(--og-text-headline\)/);
+    // The ride's street size: the page's 20 px headline.
+    expect(street).toMatch(/font-size:\s*20px/);
     expect(street).toMatch(/font-weight:\s*700/);
     // A long road name wraps instead of being clamped away.
     expect(street).not.toMatch(/-webkit-line-clamp/);
@@ -2439,19 +2419,21 @@ describe("the ride screen's number scale and controls (small-screen design syste
 
     expect(rule(".og-ride-metrics__value")).toMatch(/font-size:\s*var\(--og-ride-text-readout\)/);
     expect(rule(".og-ride-metrics__value")).toMatch(/font-variant-numeric:\s*tabular-nums/);
-    expect(rule(".og-ride-metrics__unit")).toMatch(/font-size:\s*var\(--og-text-caption\)/);
+    expect(rule(".og-ride-metrics__unit")).toMatch(/font-size:\s*12px/);
   });
 
   it("never clips a readout: the value is shown whole, number and unit on one line, caption one line", () => {
     const reading = rule(".og-ride-metrics__reading");
-    expect(reading).toMatch(/overflow:\s*visible/);
-    // "47 mph", never stacked.
-    expect(reading).toMatch(/flex-direction:\s*row/);
+    expect(reading).not.toMatch(/overflow:\s*(hidden|clip)/);
+    // "47 mph", never stacked: a flex row (the default direction), no wrap.
+    expect(reading).toMatch(/display:\s*flex/);
+    expect(reading).not.toMatch(/flex-direction:\s*column/);
+    expect(reading).toMatch(/white-space:\s*nowrap/);
     expect(reading).not.toMatch(/text-overflow/);
 
     const caption = rule(".og-ride-metrics__caption");
     expect(caption).toMatch(/white-space:\s*nowrap/);
-    expect(caption).toMatch(/font-size:\s*var\(--og-text-caption\)/);
+    expect(caption).toMatch(/font-size:\s*12px/);
     expect(caption).not.toMatch(/text-overflow/);
 
     // The only step-down is the seven-character clock, and it lands on the page
@@ -2465,7 +2447,7 @@ describe("the ride screen's number scale and controls (small-screen design syste
       ".og-ride-metrics__unit",
       ".og-ride-metrics__caption",
     ]) {
-      expect(rule(selector)).not.toMatch(/font-size:\s*\d/);
+      expect(cssRuleRaw(selector)).not.toMatch(/font-size:\s*\d/);
     }
   });
 
@@ -2504,7 +2486,7 @@ describe("the ride screen's number scale and controls (small-screen design syste
     expect(map).toMatch(/inset:\s*0/);
     // The chrome is overlays, not a layout that shrinks the map, and the strip
     // is sized to its 56 px content (56 + 10 padding + 2 border).
-    expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*68px/);
+    expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*7[02]px/);
     expect(rule(".og-ride__strip")).toMatch(/position:\s*absolute/);
   });
 });

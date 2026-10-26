@@ -1,0 +1,456 @@
+/* Map layers (small-screen-v2 §6): one Layers button on the map; it opens a
+   panel of rows — map style, quick layer sets, and each layer with a switch.
+   Phones: the panel is a bottom sheet above the tab bar, 56px rows whose
+   meta line wraps. Larger screens: a popover beside the button. */
+
+.og-layers-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: var(--og-z-map-ui);
+  pointer-events: none;
+}
+
+.og-layers-overlay > * {
+  pointer-events: auto;
+}
+
+.og-layers {
+  position: absolute;
+  top: var(--og-space-3);
+  left: calc(var(--og-float-left, 12px) + 118px);
+  z-index: var(--og-z-map-ui);
+}
+
+/* The button: a disc on phones and tablets, a labelled pill on desktop. */
+.og-layers__button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  min-height: 44px;
+  padding: 0 var(--og-space-4);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  box-shadow: var(--og-shadow-float);
+  cursor: pointer;
+}
+
+.og-layers[data-open="true"] .og-layers__button {
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-layers__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--og-surface);
+}
+
+.og-layers :is(button, summary):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The panel. */
+.og-layers__panel {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  max-height: min(640px, calc(100dvh - 180px));
+  overflow: hidden;
+  border-radius: var(--og-radius-sheet);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-layers__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--og-space-2);
+  padding: var(--og-space-2) var(--og-space-2) var(--og-space-2) var(--og-space-4);
+  border-bottom: 1px solid var(--og-line);
+}
+
+.og-layers__head h2 {
+  flex: 1;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.og-layers__clear,
+.og-layers__close {
+  min-width: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-primary-text);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-layers__close {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-headline);
+  line-height: 1;
+}
+
+.og-layers__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--og-space-4) var(--og-space-4);
+}
+
+/* Groups of rows. Map style and Places live in the panel on every size. */
+.og-layers__group h3 {
+  margin: var(--og-space-4) 0 var(--og-space-1);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-layers__group ul,
+.og-layers__lenses {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-layers__lenses {
+  margin-top: var(--og-space-2);
+}
+
+.og-layers__group li + li,
+.og-layers__lenses > li + li {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-layers__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+/* A row: a 40px swatch, the name with a meta line that wraps, then status
+   and the switch. */
+.og-layers__switch,
+.og-layers__lens {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--og-space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-layers__switch--choice {
+  grid-template-columns: 40px minmax(0, 1fr) 24px;
+}
+
+.og-layers__switch--plain,
+.og-layers__lens {
+  grid-template-columns: 40px minmax(0, 1fr) 44px;
+}
+
+.og-layers__lens .og-layers__swatch {
+  grid-row: 1 / span 2;
+}
+
+.og-layers__lens .og-layers__name {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.og-layers__lens .og-layers__legend {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.og-layers__lens .og-switch {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.og-layers__swatch {
+  --og-layer-color: var(--og-ink-2);
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--og-radius-control);
+  background: color-mix(in srgb, var(--og-layer-color) 16%, var(--og-surface-2));
+  color: var(--og-ink);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+}
+
+.og-layers__row[data-on="true"] .og-layers__swatch,
+.og-layers__lens[data-on="true"] .og-layers__swatch {
+  background: var(--og-layer-color);
+  color: var(--og-on-primary);
+}
+
+.og-layers__group--places .og-layers__swatch {
+  --og-layer-color: var(--og-warn);
+}
+
+.og-layers__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-layers__name {
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.og-layers__legend {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-layers__status {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-layers__status[data-status="unavailable"] {
+  color: var(--og-danger);
+}
+
+/* Map style: a single choice, ticked. */
+.og-layers__check {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  color: var(--og-on-primary);
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.og-layers__row[data-on="true"] .og-layers__check {
+  border-color: var(--og-primary);
+  background: var(--og-primary);
+}
+
+/* Extras under a layer that is on. */
+.og-layers__filters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  margin: 0 0 var(--og-space-3) 52px;
+}
+
+.og-layers__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-layers__option {
+  min-height: 40px;
+  padding: 0 var(--og-space-4);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-layers__option[aria-pressed="true"] {
+  border-color: var(--og-primary);
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-layers__option:disabled,
+.og-layers__subswitch:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.og-layers__about {
+  width: 32px;
+  height: 32px;
+  margin-right: var(--og-space-1);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-style: italic;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-layers__caveat {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--og-space-3) 52px;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.4;
+}
+
+.og-layers__subswitch {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  min-height: var(--og-touch);
+  margin: 0 0 var(--og-space-3) 52px;
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-layers__subswitch > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-layers__subswitch strong {
+  font-size: var(--og-text-body);
+  font-weight: 600;
+}
+
+.og-layers__subswitch small {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+@media (min-width: 1181px) {
+  .og-planner__map-slot .og-layers {
+    left: var(--og-float-left, 12px);
+  }
+}
+
+/* Phones and tablets: a disc in the right-hand column. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-layers {
+    top: calc(var(--og-safe-top) + 128px);
+    right: calc(var(--og-safe-right) + var(--og-space-4));
+    left: auto;
+  }
+
+  .og-planner__map-slot:has(.og-places-control__panel) .og-layers {
+    top: calc(var(--og-safe-top) + var(--og-space-3));
+  }
+
+  .og-layers__button {
+    width: var(--og-touch);
+    height: var(--og-touch);
+    min-height: var(--og-touch);
+    padding: 0;
+  }
+
+  .og-layers__button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-layers__badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+  }
+
+  .og-layers__panel {
+    position: fixed;
+    inset: auto 0 var(--og-tabbar-h, 0px);
+    z-index: var(--og-z-overlay);
+    width: 100%;
+    max-height: calc(85dvh - var(--og-tabbar-h, 0px));
+    border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
+    box-shadow: var(--og-shadow-sheet);
+  }
+
+  .og-layers__about,
+  .og-layers__caveat {
+    display: none;
+  }
+}
+
+/* Tablets: the panel keeps a phone's width, beside the sheet. */
+@media (min-width: 761px) and (max-width: 1180px) and (min-height: 501px) {
+  .og-layers__panel {
+    right: calc(var(--og-safe-right) + var(--og-space-4));
+    bottom: calc(var(--og-tabbar-h, 0px) + var(--og-space-4));
+    left: auto;
+    width: min(420px, calc(100vw - 2 * var(--og-space-4)));
+    border-radius: var(--og-radius-sheet);
+    box-shadow: var(--og-shadow-float);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-layers__panel {
+    max-height: calc(100dvh - 76px);
+  }
+}

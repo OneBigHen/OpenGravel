@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -59,8 +60,8 @@ function rulesOf(source: string): Rule[] {
   return rules;
 }
 
-const featureRules = (): Rule[] => rulesOf(readFileSync(resolve(__dirname, "../..", FILES.feature), "utf8"));
-const themeRules = (): Rule[] => rulesOf(readFileSync(resolve(__dirname, "../..", FILES.theme), "utf8"));
+const featureRules = (): Rule[] => rulesOf(appCss());
+const themeRules = (): Rule[] => rulesOf(appCss());
 
 function selectorsOf(rule: Rule): string[] {
   return rule.selector.split(",").map((part) => part.trim());

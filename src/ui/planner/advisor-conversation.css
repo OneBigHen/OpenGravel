@@ -44,7 +44,7 @@
 }
 
 .og-advisor :is(input, button):focus-visible {
-  outline: 2px solid var(--og-record);
+  outline: 2px solid var(--og-focus-ring);
   outline-offset: 2px;
 }
 
@@ -123,7 +123,7 @@
 }
 
 .og-advisor-ask__chips button:hover:not(:disabled) {
-  border-color: var(--og-record);
+  border-color: var(--og-line-strong);
 }
 
 .og-advisor-ask__chips button:active:not(:disabled) {
@@ -163,7 +163,7 @@
   border: 0;
   border-radius: var(--og-radius-control);
   background: none;
-  color: var(--og-record);
+  color: var(--og-primary-text);
   cursor: pointer;
   translate: 0 -50%;
   transition: background-color var(--og-dur-fast, 120ms) ease;
@@ -179,7 +179,7 @@
 }
 
 .og-advisor-ask :is(input, button):focus-visible {
-  outline: 2px solid var(--og-record);
+  outline: 2px solid var(--og-focus-ring);
   outline-offset: 2px;
 }
 

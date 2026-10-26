@@ -7,6 +7,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { appCss } from "../../helpers/app-css";
 import path from "node:path";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -324,10 +325,7 @@ describe("IntentComposer", () => {
  * every phone width down to 320 px.
  */
 describe("the composer's place fields cannot overlap", () => {
-  const css = readFileSync(
-    path.join(process.cwd(), "src", "app", "globals.css"),
-    "utf8",
-  );
+  const css = appCss();
   const rule = (selector: string, occurrence: "first" | "last" = "first"): string => {
     const matches = [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))];
     return (occurrence === "last" ? matches.at(-1) : matches[0])?.[1] ?? "";
@@ -357,10 +355,7 @@ describe("the composer's place fields cannot overlap", () => {
 });
 
 describe("the composer value cell never truncates", () => {
-  const css = readFileSync(
-    path.join(process.cwd(), "src", "app", "globals.css"),
-    "utf8",
-  );
+  const css = appCss();
   const rule = /\.og-composer__value\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
 
   it("has a value-cell rule to check", () => {

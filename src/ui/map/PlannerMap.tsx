@@ -389,11 +389,11 @@ export function PlannerMap({
   const resolvedTheme = useResolvedTheme();
   const insistedLook: "map" | "night" = forcedLook ?? (resolvedTheme === "night" ? "night" : "map");
   const themeLookRef = useRef(insistedLook);
-  themeLookRef.current = insistedLook;
+  useEffect(() => {
+    themeLookRef.current = insistedLook;
+  }, [insistedLook]);
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
-  /** The night look (Night contrast, or the host's own dark scrim). */
-  const [nightAvailable, setNightAvailable] = useState(false);
   /** The rider's basemap look; one of Map / Night / Satellite. */
   const [ownLook, setOwnLook] = useState<BasemapLook>(forcedLook ?? "map");
   const controlled = controlledLook !== undefined && onLookChange !== undefined;
@@ -500,7 +500,6 @@ export function PlannerMap({
       unsubscribeLayerStatus = host.onLayerStatus?.((status) => layerStatusRef.current?.(status)) ?? null;
       if (terrainRef.current) host.setTerrain3d?.(true);
       if (host.supportsSatellite === true) setSatelliteAvailable(true);
-      if (host.supportsNightLook === true) setNightAvailable(true);
       // Re-read a sheet-owned choice: it may have arrived from storage while
       // the renderer was starting. A look the host cannot draw falls back to
       // the map, so the sheet never claims an imagery mode that is not showing.
@@ -690,20 +689,20 @@ export function PlannerMap({
     Day/Night switch mid-ride turns the map with the chrome, while a look the
     rider picked in the sheet afterwards stays until the next switch.
   */
-  const [forcedLookSeen, setForcedLookSeen] = useState<"map" | "night" | null>(insistedLook);
+  const [forcedLookSeen, setForcedLookSeen] = useState<"map" | "night" | null>(forcedLook ?? null);
   // Derived during render, so the map turns in the same commit as the chrome
   // that flipped the theme (the same pattern the point menu above uses).
-  if (forcedLookSeen !== insistedLook) setForcedLookSeen(insistedLook);
+  if (forcedLook !== undefined && forcedLookSeen !== forcedLook) setForcedLookSeen(forcedLook);
   useEffect(() => {
     if (forcedLookSeen === null || hostRef.current === null) return;
-    if (forcedLook === undefined) {
-      // The theme turned: the basemap follows it, the rider's own look stays.
-      hostRef.current.setBasemapLook?.(forcedLookSeen);
-      return;
-    }
     applyLook(forcedLookSeen);
     setLook(forcedLookSeen);
-  }, [forcedLookSeen, forcedLook, applyLook, setLook]);
+  }, [forcedLookSeen, applyLook, setLook]);
+  // Everywhere else the basemap follows the theme; the rider's own look stays.
+  useEffect(() => {
+    if (forcedLook !== undefined) return;
+    hostRef.current?.setBasemapLook?.(insistedLook);
+  }, [insistedLook, forcedLook]);
 
   /**
    * The style button sits in a different corner per tier and surface, so the

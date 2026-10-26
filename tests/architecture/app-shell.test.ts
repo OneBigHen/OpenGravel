@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -26,7 +27,7 @@ const COMPACT =
   "(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))";
 
 function sourceOf(file: (typeof FILES)[number]): string {
-  return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(
+  return appCss().replace(
     /\/\*[\s\S]*?\*\//g,
     "",
   );

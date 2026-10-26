@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -24,7 +25,7 @@ interface Rule {
 
 /** The stylesheet with comments removed, so prose cannot satisfy a selector. */
 function sourceOf(file: (typeof FILES)[number]): string {
-  return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  return appCss().replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 /** Rules with the media query they sit in, so a wide-screen rule is provable. */

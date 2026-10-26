@@ -10,10 +10,11 @@
  */
 
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const read = (file: string): string => readFileSync(path.join(process.cwd(), "src", "app", file), "utf8");
+const read = (file: string): string => appCss();
 const GLOBALS = read("globals.css");
 const GLASS = read("theme-glass.css");
 const CSS = `${GLOBALS}\n${GLASS}`;

@@ -7,7 +7,7 @@
   overflow: hidden;
   border-radius: var(--og-radius-card);
   background: var(--og-surface-2);
-  color: var(--og-record);
+  color: var(--og-route);
 }
 
 .og-line-preview > svg {

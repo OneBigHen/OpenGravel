@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -22,7 +23,7 @@ const PHONE_ROWS = "(max-width: 479px)";
 const DESKTOP = "(min-width: 1181px)";
 
 function sourceOf(file: (typeof FILES)[number]): string {
-  return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(
+  return appCss().replace(
     /\/\*[\s\S]*?\*\//g,
     "",
   );

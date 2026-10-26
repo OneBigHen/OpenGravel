@@ -16,6 +16,13 @@
   margin-inline: auto;
 }
 
+/* Everything under the header sits in the lens's tab panel. */
+.og-explore > [role="tabpanel"] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-4);
+}
+
 .og-explore :is(a, button, select, input):focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
@@ -544,10 +551,11 @@
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: var(--og-space-1);
+  row-gap: var(--og-space-1);
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .og-explore-card__fact {
@@ -605,7 +613,7 @@
   color: var(--og-ink-2);
   font-size: var(--og-text-caption);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .og-explore-card__credit:not(:has(.og-explore-card__byline, .og-explore-card__versions)):has(> .og-explore-card__source[data-source="catalog"]) {

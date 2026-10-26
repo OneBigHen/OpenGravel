@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { appCss } from "../helpers/app-css";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +11,7 @@ import { describe, expect, it } from "vitest";
  */
 describe("globals.css", () => {
   it("has balanced braces outside comments", () => {
-    const source = readFileSync(resolve(__dirname, "../../src/app/globals.css"), "utf8")
+    const source = appCss()
       .replace(/\/\*[\s\S]*?\*\//g, "");
     let depth = 0;
     let line = 1;

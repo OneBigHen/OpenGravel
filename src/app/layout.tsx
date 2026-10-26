@@ -13,6 +13,8 @@ import "@/ui/planner/plan-sheet.css";
 import "@/ui/settings/settings.css";
 import "@/ui/explore/explore.css";
 import "@/ui/rides/rides.css";
+import "@/ui/ride/ride.css";
+import "@/ui/layers/layers.css";
 import { version as appVersion } from "../../package.json";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import { resolveTelemetryConfig } from "@/infrastructure/telemetry/config";

@@ -10,6 +10,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { cssRule } from "../../helpers/app-css";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -112,14 +113,13 @@ describe("the route page's facts", () => {
 
 describe("the list card's facts and the credit under them", () => {
   it("gives both lines a box taller than their glyphs, with no clip on a phone", () => {
-    const css = readFileSync("src/ui/explore/explore-rides.css", "utf8");
     // A tight 1.35 facts box directly above the credit cut the credit's
-    // ascenders short in some renderings; both lines now lead their text.
-    expect(css).toMatch(/\.og-explore-card--ride \.og-explore-card__facts \{[^}]*line-height: 1\.5/);
-    expect(css).toMatch(/\.og-explore-card--ride \.og-explore-card__credit \{[^}]*line-height: 1\.5/);
+    // ascenders short in some renderings; both lines lead their text.
+    expect(cssRule(".og-explore-card__facts")).toMatch(/line-height: 1\.5/);
+    expect(cssRule(".og-explore-card__credit")).toMatch(/line-height: 1\.5/);
     // Wrapped fact rows do not sit on each other.
-    expect(css).toMatch(/\.og-explore-card--ride \.og-explore-card__facts \{[^}]*row-gap: var\(--og-space-1\)/);
-    // A phone card is frameless, so it has nothing to clip for.
-    expect(css).toMatch(/\.og-explore-card--ride\.og-explore-card--ride \{[^}]*overflow: visible/);
+    expect(cssRule(".og-explore-card__facts")).toMatch(/row-gap: var\(--og-space-1\)/);
+    // The card is frameless (v3), so nothing clips it.
+    expect(cssRule(".og-explore-card")).not.toMatch(/overflow:\s*(hidden|clip)/);
   });
 });
