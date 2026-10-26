@@ -192,3 +192,108 @@
 .og-explore .og-explore__sheet-group > .og-explore__note {
   margin: 0;
 }
+
+/* -- The Filters chip and its sheet --------------------------------------- */
+
+/* The Filters chip is the last chip in the row, at the end of the line: it
+   keeps the same 48px chip shape as its neighbours and only says what the
+   sheet holds, with a count of the filters that are narrowing the list. */
+.og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle {
+  gap: 6px;
+  margin: 0;
+}
+
+.og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle > svg {
+  flex: none;
+}
+
+/* A pressed chip is filled, so its count inverts instead of vanishing into it. */
+.og-explore .og-explore__quick-chip[data-filter="on"] .og-explore__filters-count {
+  background: var(--og-on-fill);
+  color: var(--og-go);
+}
+
+@media (min-width: 761px) {
+  /* Wide screens keep the popover: it hangs under the chip that opened it, so
+     that chip closes the row. */
+  .og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle {
+    margin-inline-start: auto;
+  }
+}
+
+/* The date choices are one wrapping row of chips under a visible caption, not
+   four full-width buttons stacked with no label. On a 640px tall phone this is
+   the difference between seeing "Show N routes" and scrolling to it. */
+.og-explore .og-explore__row--when {
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 8px;
+}
+
+.og-explore .og-explore__row--when > * {
+  flex: 0 0 auto;
+}
+
+/* Inside the sheet every button was forced to the full width of its row, which
+   is what stacked the four date choices. A chip is as wide as its own words. */
+.og-explore .og-explore__controls[data-open="true"] > .og-explore__row > * {
+  width: auto;
+  min-width: 0;
+}
+
+.og-explore .og-explore__controls[data-open="true"] > .og-explore__row > .og-explore__inline {
+  flex: 1 1 100%;
+}
+
+/* The caption of a row of chips reads as the field captions around it do. */
+.og-explore .og-explore__row-label {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  /* The phone sheet shouts its captions; this one matches them. */
+  .og-explore .og-explore__row-label {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+/* The Ride / Things switch never wraps: at 320px the page title gives up the
+   room, the two tabs keep their words on one line. */
+.og-explore .og-explore__header .og-explore__lens > [role="tab"] {
+  white-space: nowrap;
+}
+
+/* -- Phone: the sheet's scrim --------------------------------------------- */
+
+/* The sheet rises over the app's scrim: fixed, full height, above the page and
+   its bars and under the sheet itself. It is a real button, so a tap anywhere
+   on it closes the sheet (Escape does the same from a keyboard).
+
+   It is a dark veil in both themes on purpose: in Day it separates the sheet
+   from a bright page, in Night it darkens an already dark one, and the sheet's
+   top edge stays the brightest thing on screen. */
+@media (max-width: 760px) {
+  .og-explore .og-explore__toolbar > .og-explore__backdrop {
+    position: fixed;
+    z-index: 69;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 45%);
+    /* A touch that starts on the scrim never scrolls the list behind the sheet. */
+    touch-action: none;
+    animation: og-fade-in 180ms ease-out;
+  }
+}
+
+/* A rider who asked the system for less motion gets the veil, not the fade. */
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  .og-explore .og-explore__toolbar > .og-explore__backdrop {
+    animation: none;
+  }
+}

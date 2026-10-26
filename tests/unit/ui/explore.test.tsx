@@ -88,7 +88,7 @@ describe("Explore UI", () => {
 
   it("adds discrete region and riding-area selections to browser history", () => {
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     const push = vi.spyOn(window.history, "pushState");
     fireEvent.change(screen.getByRole("combobox", { name: "Filter by region" }), { target: { value: "Lehigh Valley" } });
     expect(push).toHaveBeenLastCalledWith({}, "", expect.stringContaining("region=Lehigh"));
@@ -102,7 +102,7 @@ describe("Explore UI", () => {
     // Each select now sits in the shared .og-select wrapper (pill, hairline,
     // custom chevron), and the visible caption is associated by htmlFor/id.
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     const filters = screen.getByRole("region", { name: "Explore filters" });
     for (const id of ["og-explore-region-picker", "og-explore-area-picker"]) {
       const select = document.getElementById(id);
@@ -121,7 +121,7 @@ describe("Explore UI", () => {
     entries.push({ ...entry, id: "west", name: "Western ride", region: "Pennsylvania", geometry: [{ lon: -80, lat: 40.5 }, { lon: -79.9, lat: 40.6 }] });
     render(<ExplorePanel entries={entries} initialQuery={{ sort: "recommended" }} />);
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
-    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     fireEvent.change(screen.getByRole("combobox", { name: "PA riding area" }), { target: { value: "eastern-pa" } });
     expect(screen.queryByRole("link", { name: /Western ride/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /Route \d+/ })).toHaveLength(30);
@@ -137,11 +137,12 @@ describe("Explore UI", () => {
       (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
     // One row of chips, and each names one decision: how near, how long, what
-    // surface, how twisty. Length and surface open the sheet on their own row.
+    // surface, how twisty — then the one chip that opens the rest. Length and
+    // surface open the sheet on their own row.
     expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent?.trim()))
-      .toEqual(["Near me", "Length", "Paved/gravel", "Twisty"]);
+      .toEqual(["Near me", "Length", "Paved/gravel", "Twisty", "Filters"]);
     // The date chips and both pickers live in the panel, not above the list.
-    expect(filters).toContainElement(screen.getByRole("group", { name: "Ride time" }));
+    expect(filters).toContainElement(screen.getByRole("group", { name: "When" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "Filter by region" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "PA riding area" }));
     expect(follows(filters, list)).toBe(true);
@@ -154,7 +155,7 @@ describe("Explore UI", () => {
     expect(screen.queryByText(/Find your next ride around Pennsylvania/)).toBeNull();
   });
 
-  it("keeps one row of chips and one More filters button, with every other filter in that sheet", () => {
+  it("keeps one row of chips, search above them, and every other filter in that sheet", () => {
     // Explore used to ask for the same decision twice: distance chips above the
     // list and a distance select in the panel, "near me" in three places, and a
     // second filter bar above the roads. One row of chips and one sheet now hold
@@ -170,15 +171,15 @@ describe("Explore UI", () => {
     // stylesheet can put them on one line.
     expect(toolbar).toContainElement(chips);
     expect(toolbar).toContainElement(filters);
-    const toggle = within(toolbar as HTMLElement).getByRole("button", { name: /^More filters/ });
-    expect(toggle).toHaveAttribute("aria-label", "More filters");
+    const toggle = within(toolbar as HTMLElement).getByRole("button", { name: /^Filters/ });
+    expect(toggle).toHaveAttribute("aria-label", "Filters");
 
     // Every remaining filter is reachable from the sheet, in one grid, and each
     // one appears once: no second distance, surface or near-me control.
     for (const name of ["Filter by distance", "Filter by surface", "Filter by source", "Sort routes", "Filter by region", "PA riding area"]) {
       expect(within(filters).getAllByRole("combobox", { name })).toHaveLength(1);
     }
-    expect(within(filters).getByRole("group", { name: "Ride time" })).toBeInTheDocument();
+    expect(within(filters).getByRole("group", { name: "When" })).toBeInTheDocument();
     expect(within(filters).queryByRole("checkbox", { name: "Curvy routes only" })).toBeNull();
     expect(within(chips).getByRole("button", { name: "Twisty" })).toHaveAttribute("aria-pressed", "false");
 
@@ -190,6 +191,66 @@ describe("Explore UI", () => {
     fireEvent.click(within(filters).getByRole("button", { name: /^Show \d+ route/ }));
     expect(filters).toHaveAttribute("data-open", "false");
     expect(toggle).toHaveFocus();
+  });
+
+  it("gives search the whole width on its own row and puts Filters last in the chip row", () => {
+    // At 320px the search field shared a row with the Filters button and was
+    // squeezed to "Search re…". Search now takes the width of the page on its
+    // own line, and the button that opens the rest is the last chip in the row.
+    render(<ExplorePanel entries={[entry]} />);
+    const search = screen.getByRole("searchbox", { name: "Search routes" });
+    const toolbar = search.closest(".og-explore__toolbar") as HTMLElement;
+    const chips = screen.getByRole("group", { name: "Quick filters" });
+    const toggle = screen.getByRole("button", { name: "Filters" });
+
+    expect(search.closest(".og-explore__search")?.parentElement).toBe(toolbar);
+    expect(chips).not.toContainElement(search.closest(".og-explore__search") as HTMLElement);
+    expect(chips.lastElementChild).toBe(toggle);
+    expect(toggle).toHaveClass("og-explore__quick-chip");
+
+    // The count speaks only for the filters the chips cannot show.
+    expect(toggle.querySelector(".og-explore__filters-count")).toBeNull();
+    fireEvent.click(toggle);
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by source" }), { target: { value: "personal" } });
+    const counted = screen.getByRole("button", { name: "Filters, 1 on" });
+    expect(counted).toHaveAttribute("data-filter", "on");
+    expect(counted.querySelector(".og-explore__filters-count")).toHaveTextContent("1");
+  });
+
+  it("labels the date choices When, on the group as well as on the screen", () => {
+    render(<ExplorePanel entries={[entry]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
+
+    // Four unlabelled rows became one named row of chips: the caption is real
+    // text, and it is the group's accessible name too.
+    const when = screen.getByRole("group", { name: "When" });
+    const caption = when.querySelector(".og-explore__row-label");
+    expect(caption).toHaveTextContent("When");
+    expect(when).toHaveAttribute("aria-labelledby", caption?.id);
+    expect(within(when).getAllByRole("button").map((chip) => chip.textContent?.trim()))
+      .toEqual(["Now", "This weekend", "Next weekend", "Pick date"]);
+    expect(when).toContainElement(screen.getByRole("button", { name: "Pick date" }));
+  });
+
+  it("dims the page behind the sheet, and closes it on a scrim tap or Escape", () => {
+    render(<ExplorePanel entries={[entry]} />);
+    const toggle = screen.getByRole("button", { name: "Filters" });
+    expect(screen.queryByRole("button", { name: "Close filters" })).toBeNull();
+
+    fireEvent.click(toggle);
+    // The scrim is a real target over the page, not a decorative layer: a tap
+    // anywhere on it closes the sheet and hands the rider back to the chip.
+    const scrim = screen.getByRole("button", { name: "Close filters" });
+    expect(scrim).toHaveClass("og-explore__backdrop");
+    fireEvent.click(scrim);
+    expect(screen.getByRole("region", { name: "Explore filters" })).toHaveAttribute("data-open", "false");
+    expect(toggle).toHaveFocus();
+
+    // Escape closes it the same way, and takes the scrim with it.
+    fireEvent.click(toggle);
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByRole("region", { name: "Explore filters" })).toHaveAttribute("data-open", "false");
+    expect(screen.queryByRole("button", { name: "Close filters" })).toBeNull();
   });
 
   it("names the length and surface choices on the chip, and keeps them in the one sheet", async () => {
@@ -245,7 +306,7 @@ describe("Explore UI", () => {
 
     // The page no longer carries a second filter bar above the road list.
     expect(screen.queryByRole("region", { name: "Road filters" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     const filters = screen.getByRole("region", { name: "Explore filters" });
     const roadFilters = within(filters).getByRole("group", { name: "Worth riding filters" });
     expect(within(roadFilters).getByRole("combobox", { name: "Filter roads by surface" })).toBeInTheDocument();
@@ -334,12 +395,12 @@ describe("Explore UI", () => {
     expect(screen.getByRole("button", { name: "Under 30 mi" })).toHaveAttribute("data-filter", "on");
 
     // The sheet's own count only counts what the chips cannot show.
-    const toggle = screen.getByRole("button", { name: "More filters" });
+    const toggle = screen.getByRole("button", { name: "Filters" });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
     expect(screen.getByRole("button", { name: "Length" })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.getByRole("button", { name: "More filters" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Filters" })).toHaveAttribute("aria-expanded", "false");
   });
 
   it("says how far each route starts from a rider who already shared their location, without asking", async () => {
@@ -384,7 +445,7 @@ describe("Explore UI", () => {
     expect(screen.queryByText("Surface unknown")).toBeNull();
     expect(screen.queryByText("Curvature unknown")).toBeNull();
     expect(screen.getByRole("searchbox", { name: "Search routes" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "More filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     const filters = within(screen.getByRole("region", { name: "Explore filters" }));
     expect(filters.getByRole("option", { name: "Catalog" })).toBeInTheDocument();
     expect(filters.getByRole("combobox", { name: "Filter by region" })).toHaveValue("");

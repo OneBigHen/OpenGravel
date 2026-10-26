@@ -19,13 +19,27 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(32);
     await expect(page.getByTestId("explore-map")).toContainText("32 mapped");
     // The area picker lives in the Filters panel at every width: a bottom sheet
-    // on a phone, a popover under the toolbar on a wide screen.
-    await page.getByRole("button", { name: /^More filters/ }).click();
+    // on a phone, a popover under the chip that opened it on a wide screen. The
+    // chip is the last one in the row, so it keeps search the whole width above.
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await page.getByRole("combobox", { name: "PA riding area" }).selectOption("eastern-pa");
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(31);
     await expect(page).toHaveURL(/area=eastern-pa/);
+    if (viewport.width <= 760) {
+      // Search owns its row on a phone: the whole width, not the ~130px it had
+      // while it shared the row with the Filters button.
+      const search = await page.getByRole("searchbox", { name: "Search routes" }).boundingBox();
+      expect(search!.width).toBeGreaterThan(viewport.width * 0.8);
+      // The sheet dims the page, and a tap on the scrim closes it.
+      const scrim = page.getByRole("button", { name: "Close filters" });
+      await expect(scrim).toBeVisible();
+      const veil = await scrim.boundingBox();
+      expect(veil!.width).toBeGreaterThanOrEqual(viewport.width - 1);
+      await scrim.click();
+      await expect(page.getByRole("region", { name: "Explore filters" })).toHaveAttribute("data-open", "false");
+    }
     await page.reload();
-    await page.getByRole("button", { name: /^More filters/ }).click();
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await expect(page.getByRole("combobox", { name: "PA riding area" })).toHaveValue("eastern-pa");
     await page.getByRole("button", { name: /^Show \d+ routes$/ }).click();
     await page.getByRole("button", { name: "Expand map" }).click();
