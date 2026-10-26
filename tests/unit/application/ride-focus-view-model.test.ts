@@ -1010,6 +1010,19 @@ describe("progress and telemetry (08 §2, §5)", () => {
     expect(result.secondary.distanceLeftText).toBe("3 mi");
     expect(result.secondary.timeLeftText).toBe("10 min");
     expect(result.metrics.slots[1]?.reading.displayValue).toBe("3.0");
+    // The same two measurements as numbers, for a surface that judges a detour
+    // by the pace left rather than printing it.
+    expect(result.secondary.remainingDistanceMeters).toBe(4_800);
+    expect(result.secondary.remainingDurationSeconds).toBe(600);
+  });
+
+  it("carries no numeric distance or time when the ride measured none", () => {
+    const result = view({
+      navigation: navigation({ activity: "free", plan: { ...navigation().plan, route: null } }),
+      telemetry: null,
+    });
+    expect(result.secondary.remainingDistanceMeters).toBeNull();
+    expect(result.secondary.remainingDurationSeconds).toBeNull();
   });
 });
 

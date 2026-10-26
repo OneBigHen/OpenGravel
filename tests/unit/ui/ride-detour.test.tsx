@@ -1,10 +1,13 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import type { MapLayersSource } from "@/application/map-layers";
 import { RideDetour } from "@/ui/ride/RideDetour";
+import { ALONG_RIDE_SEARCH_DEBOUNCE_MS, RIDE_PLACE_SEARCH_UNAVAILABLE } from "@/ui/ride/RideStopSearch";
 
-/** Route changes mid-ride: the reroute control and the fuel-ahead list (UX rework phase 9). */
+/** Route changes mid-ride: the reroute control, the fuel-ahead list and the
+ *  "search along this ride" row (UX rework phase 9). */
 
 const LINE = [
   { lon: -75.0, lat: 40.0 },
@@ -35,6 +38,23 @@ function source(): MapLayersSource {
 }
 
 afterEach(cleanup);
+
+function searchedPlace(id: string, name: string, lat: number): PlaceMatch {
+  return {
+    id,
+    label: `${name}, PA`,
+    name,
+    context: "Carbon County, PA",
+    coordinate: { lon: -75.0, lat },
+    provider: "fixture",
+  };
+}
+
+function placeSearch(
+  answer: Awaited<ReturnType<PlaceSearchPort["search"]>>,
+): PlaceSearchPort {
+  return { search: vi.fn(async () => answer), reverse: vi.fn(async () => null) };
+}
 
 describe("RideDetour", () => {
   it("lists stations ahead of the rider, nearest first, and routes via the chosen one", async () => {
@@ -161,5 +181,111 @@ describe("RideDetour", () => {
     );
     expect(screen.getByTestId("ride-easier-way-back")).toBeDisabled();
     expect(screen.getByTestId("ride-turn-around")).toBeDisabled();
+  });
+
+  it("keeps Gas and Food and adds Coffee, Lodging and a search box to the same stop picker", async () => {
+    const search = placeSearch({ status: "ok", places: [] });
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood source={source()} search={search} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    expect(screen.getByTestId("ride-fuel-ahead")).toBeInTheDocument();
+    expect(screen.getByTestId("ride-food-ahead")).toBeInTheDocument();
+    expect(screen.getByTestId("ride-stop-search-field")).toBeInTheDocument();
+    expect(screen.getByTestId("ride-stop-coffee")).toHaveTextContent("Coffee");
+    expect(screen.getByTestId("ride-stop-lodging")).toHaveTextContent("Lodging");
+
+    // The chip asks the shared category table's own lookup, biased to the rider.
+    fireEvent.click(screen.getByTestId("ride-stop-coffee"));
+    await screen.findByText(/No places found for/);
+    expect(search.search).toHaveBeenCalledWith("coffee shop", expect.objectContaining({ bias: { lon: -75.0, lat: 40.05 } }));
+  });
+
+  it("orders searched places along the part of the ride ahead and adds one as the next stop", async () => {
+    const onReroute = vi.fn();
+    const search = placeSearch({
+      status: "ok",
+      places: [
+        searchedPlace("far", "Far Diner", 40.4),
+        searchedPlace("behind", "Passed Cafe", 40.01),
+        searchedPlace("near", "Near Coffee", 40.1),
+      ],
+    });
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood search={search} remainingMeters={40_000} remainingSeconds={2_400} onReroute={onReroute} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    // No POI layer port at all: the search still works on its own.
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    expect(screen.queryByTestId("ride-fuel-ahead")).toBeNull();
+    fireEvent.change(screen.getByTestId("ride-stop-search-field"), { target: { value: "coffee" } });
+    fireEvent.keyDown(screen.getByTestId("ride-stop-search-field"), { key: "Enter" });
+
+    const list = await screen.findByTestId("ride-stop-results");
+    const rows = list.querySelectorAll("li");
+    expect(rows).toHaveLength(3);
+    expect(rows[0]?.textContent).toContain("Near Coffee");
+    expect(rows[1]?.textContent).toContain("Far Diner");
+    expect(rows[2]?.textContent).toContain("Passed Cafe");
+    expect(rows[2]?.textContent).toContain("Behind you");
+
+    // A tap only selects; the stop is added by the confirm button.
+    fireEvent.click(rows[0]!.querySelector("button")!);
+    expect(onReroute).not.toHaveBeenCalled();
+    const confirm = await screen.findByTestId("ride-stop-confirm");
+    expect(confirm.textContent).toContain("Near Coffee");
+    fireEvent.click(screen.getByTestId("ride-stop-confirm-go"));
+    expect(onReroute).toHaveBeenCalledWith({ coordinate: { lon: -75.0, lat: 40.1 }, label: "Near Coffee" });
+    // The picker closes with the stop, as the Gas and Food rows do.
+    expect(screen.queryByTestId("ride-stop-search-field")).toBeNull();
+  });
+
+  it("says when place search is unavailable", async () => {
+    const search = placeSearch({ status: "unavailable", reason: "fixture" });
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood search={search} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    fireEvent.click(screen.getByTestId("ride-stop-lodging"));
+    expect(await screen.findByText(RIDE_PLACE_SEARCH_UNAVAILABLE)).toBeInTheDocument();
+  });
+
+  it("holds the confirm until there is a fresh fix, and says why", async () => {
+    const search = placeSearch({ status: "ok", places: [searchedPlace("near", "Near Coffee", 40.1)] });
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood={false} search={search} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    fireEvent.click(screen.getByTestId("ride-stop-coffee"));
+    fireEvent.click(await screen.findByTestId("ride-stop-option"));
+    const go = await screen.findByTestId("ride-stop-confirm-go");
+    expect(go).toBeDisabled();
+    expect(go).toHaveAttribute("title", "Routing to a stop needs a fresh, accurate GPS fix.");
+  });
+
+  it("asks once after the rider stops typing", async () => {
+    vi.useFakeTimers();
+    try {
+      const search = placeSearch({ status: "ok", places: [] });
+      render(
+        <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={LINE} position={{ lon: -75.0, lat: 40.05 }} fixGood search={search} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+      );
+      fireEvent.click(screen.getByTestId("ride-add-stop"));
+      const field = screen.getByTestId("ride-stop-search-field");
+      fireEvent.change(field, { target: { value: "ha" } });
+      fireEvent.change(field, { target: { value: "hawk" } });
+      expect(search.search).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(ALONG_RIDE_SEARCH_DEBOUNCE_MS);
+      expect(search.search).toHaveBeenCalledOnce();
+      expect(search.search).toHaveBeenCalledWith("hawk", expect.anything());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not offer to search along a ride with no line to measure", () => {
+    render(
+      <RideDetour offRoute={false} busy={false} message={null} error={null} routeLine={[]} position={{ lon: -75.0, lat: 40.05 }} fixGood search={placeSearch({ status: "ok", places: [] })} onReroute={vi.fn()} onEasierWayBack={vi.fn()} onTurnAround={vi.fn()} />,
+    );
+    expect(screen.queryByTestId("ride-add-stop")).toBeNull();
   });
 });

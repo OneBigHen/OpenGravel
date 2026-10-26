@@ -1,0 +1,170 @@
+/* "Search along this ride" inside the ride sheet.
+   The sheet's dark chrome is the background, so this file only spaces, sizes and
+   colours: a 56 px field and 56 px result rows (the ride tier's glove size), the
+   two quick chips, and one confirm row. No animation, so reduced motion has
+   nothing to stop. */
+.og-ride-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.og-ride-search__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* An input a glove can hit and a long place name can be read back from. */
+.og-ride-search__field {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 16px;
+  font: inherit;
+  /* 16 px keeps iOS from zooming the sheet when the field takes focus. */
+  font-size: max(16px, var(--og-text-body));
+  color: var(--og-paper);
+  background: var(--og-ink);
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-control);
+}
+
+.og-ride-search__field::placeholder {
+  color: var(--og-ride-muted);
+}
+
+.og-ride-search__field:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-ride-search__field:disabled {
+  color: var(--og-ride-muted);
+  cursor: not-allowed;
+}
+
+.og-ride-search__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.og-ride-search__chips .og-ride-search__chip {
+  flex: 1 1 120px;
+}
+
+/* The chip the current list answers says so, in the ride's own accent. */
+.og-ride-search__chip[aria-pressed="true"] {
+  border-color: var(--og-ember-strong);
+  box-shadow: inset 0 0 0 1px var(--og-ember-strong);
+}
+
+.og-ride-search__results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One row per place: how far along, what it is, what stopping costs. */
+.og-ride-search__result {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 12px;
+  font: inherit;
+  text-align: left;
+  color: var(--og-paper);
+  background: var(--og-ride-surface);
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  cursor: pointer;
+}
+
+.og-ride-search__result:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-ride-search__distance {
+  color: var(--og-paper);
+  font-size: var(--og-text-body);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-search__name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--og-text-body);
+  font-weight: 650;
+}
+
+.og-ride-search__name small {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+}
+
+.og-ride-search__extra {
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-ride-search__note {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-meta);
+}
+
+.og-ride-search__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.og-ride-search__confirm-text {
+  margin: 0;
+  color: var(--og-paper);
+  font-size: var(--og-text-body);
+  overflow-wrap: anywhere;
+}
+
+.og-ride-search__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* One obvious action: the confirm takes the row, Cancel stays quiet beside it. */
+.og-ride-search__confirm-actions .og-ride__action--primary {
+  flex: 1 1 160px;
+}
+
+.og-ride-search__confirm-actions .og-ride__action:not(.og-ride__action--primary) {
+  flex: 0 0 auto;
+  background: transparent;
+}
+
+/* 320 px: the distance column would squeeze the name, so the distance and the
+   time share a line above it and the name keeps the width it needs. */
+@media (max-width: 360px) {
+  .og-ride-search__result {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .og-ride-search__distance {
+    grid-column: 1 / -1;
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+  }
+}
