@@ -1,0 +1,226 @@
+/*
+ * Offline areas: one block per saved area, then one button that reveals the
+ * areas still to download. Everything here is a settings row or a block inside
+ * the group's card, so the only borders are the card's own hairlines.
+ */
+
+/* A saved area, or the download in progress: name and size, an overflow at the
+   right, and (while downloading) a bar under them. */
+.og-offline__area {
+  display: grid;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+}
+
+.og-offline__area-head {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.og-offline__area-text {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px;
+}
+
+.og-offline__area-name {
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.og-offline__area-meta {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* The overflow trigger sits on the card's edge so the name keeps the width. */
+.og-offline__more {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-slate-text);
+  cursor: pointer;
+}
+
+.og-offline__more[aria-expanded="true"] {
+  background: var(--og-well);
+  color: var(--og-ink);
+}
+
+.og-offline__menu {
+  display: grid;
+  gap: 2px;
+  padding: var(--og-space-1);
+  border: 1px solid var(--og-hairline);
+  border-radius: var(--og-radius-control);
+  background: var(--og-well);
+}
+
+.og-offline__menu-item {
+  min-height: 48px;
+  min-width: 0;
+  padding: 0 var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-chip);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.og-offline__menu-item:hover {
+  background: var(--og-paper);
+}
+
+.og-offline__menu-item--danger {
+  color: var(--og-danger);
+}
+
+.og-offline__menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* Deleting an area is asked for in the card itself: never a browser dialog. */
+.og-offline__confirm {
+  display: grid;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-well);
+}
+
+.og-offline__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+/* Pause, while an area is on its way in. */
+.og-offline__action {
+  flex: none;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-signal-strong);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-offline__bar {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--og-deep-spruce);
+}
+
+/* The areas still to download, revealed by the one "Download a region" row. */
+.og-offline__offers {
+  display: grid;
+}
+
+.og-offline__offer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--og-space-2) var(--og-space-4);
+  border: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-offline__offer + .og-offline__offer {
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-offline__offer-name {
+  min-width: 0;
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* The size is read before the download starts, not after it. */
+.og-offline__offer-size {
+  flex: none;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-offline__offer:disabled,
+.og-offline__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* A sentence that spans the card: what works offline, a message, the credit. */
+.og-offline__note {
+  margin: 0;
+  padding: var(--og-space-3) var(--og-space-4);
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.og-offline__confirm .og-offline__note {
+  padding: 0;
+}
+
+:is(.og-offline__more, .og-offline__menu-item, .og-offline__offer, .og-offline__action):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* Phone: the same blocks, with the gutter the settings card already gives. */
+@media (max-width: 420px) {
+  .og-offline__area {
+    padding: var(--og-space-3) var(--og-space-3) var(--og-space-4);
+  }
+
+  .og-offline__offer {
+    padding: var(--og-space-2) var(--og-space-3);
+  }
+
+  .og-offline__note {
+    padding: var(--og-space-3);
+  }
+}
+
+/* Nothing here moves; the media query keeps that a promise rather than a habit. */
+@media (prefers-reduced-motion: reduce) {
+  .og-offline__more,
+  .og-offline__menu,
+  .og-offline__bar {
+    transition: none;
+    animation: none;
+  }
+}
