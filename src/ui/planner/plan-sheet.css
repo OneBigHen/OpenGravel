@@ -1,0 +1,372 @@
+/* What the Plan sheet holds (small-screen-v2 §3): with no ride, one row of three
+   equal actions (Loop · Record · Free Ride); with a ride, one summary block,
+   Start ride, and one-tap ride style. Errors are one line inside the sheet. */
+
+.og-plan-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+}
+
+.og-plan-actions__record-row,
+.og-plan-actions__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-plan-actions__record,
+.og-plan-actions__free-ride {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+}
+
+.og-plan-actions__glyph {
+  flex: none;
+}
+
+.og-plan-actions__record-dot {
+  fill: var(--og-record);
+}
+
+.og-plan-actions__icon,
+.og-composer__loop-quick {
+  display: none;
+}
+
+.og-plan-actions__row input {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-3);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+}
+
+.og-plan-actions__row input:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-plan-actions__ride-name {
+  margin: 0 0 var(--og-space-1);
+  color: var(--og-ink);
+  font-weight: 600;
+}
+
+.og-plan-actions__unfinished {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-plan-actions__unfinished p {
+  margin: 0;
+}
+
+.og-planner__error {
+  margin: 0;
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* --------------------------------------------------------------------------
+   Phones and tablets.
+   -------------------------------------------------------------------------- */
+@media (max-width: 1180px) and (min-height: 501px) {
+  /* No ride yet: three equal buttons, nothing else. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--og-space-2);
+    overflow: visible;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer, .og-plan-actions, .og-plan-actions__record-row) {
+    display: contents;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer > :not(.og-composer__row, .og-composer__loop-quick, .og-advisor),
+  .og-planner__sheet[data-idle="true"] .og-plan-actions > :not(.og-plan-actions__record-row, .og-planner__error),
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-refine, .og-phone-tools, .og-composer__row) {
+    display: none;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-composer > .og-advisor,
+  .og-planner__sheet[data-idle="true"] .og-planner__error {
+    grid-column: 1 / -1;
+  }
+
+  .og-planner__sheet[data-idle="true"] .og-planner__error {
+    order: 2;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--og-space-1);
+    width: 100%;
+    min-width: 0;
+    min-height: 64px;
+    margin: 0;
+    padding: var(--og-space-2) var(--og-space-1);
+    border: 0;
+    border-radius: var(--og-radius-control);
+    background: var(--og-surface-2);
+    color: var(--og-ink);
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
+    width: 20px;
+    height: 20px;
+    color: var(--og-primary-text);
+  }
+
+  .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride):active {
+    background: var(--og-press);
+  }
+
+  /* A ride: one summary block. */
+  .og-phone-summary {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: var(--og-space-1);
+    width: 100%;
+  }
+
+  .og-phone-summary h2 {
+    margin: 0;
+    font-family: var(--og-face-display);
+    font-size: var(--og-text-headline);
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .og-phone-summary__where,
+  .og-phone-summary__meta,
+  .og-phone-summary__weather {
+    margin: 0;
+    color: var(--og-ink-2);
+    font-size: var(--og-text-meta);
+    line-height: 1.35;
+  }
+
+  .og-phone-summary__where {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-phone-summary__start {
+    margin-top: var(--og-space-2);
+  }
+
+  .og-phone-summary .og-primary {
+    width: 100%;
+    min-height: 52px;
+    font-size: var(--og-text-body);
+  }
+
+  .og-phone-summary__compare {
+    align-self: flex-start;
+    min-height: var(--og-touch);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--og-primary-text);
+    font: inherit;
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* One-tap ride style: Roads and Surface as segmented tracks. */
+  .og-phone-style {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: var(--og-space-2);
+    min-width: 0;
+    max-width: 100%;
+    padding-top: var(--og-space-3);
+    background: var(--og-surface);
+  }
+
+  .og-phone-summary[data-comparing="true"] .og-phone-style {
+    border-top: 1px solid var(--og-line);
+  }
+
+  .og-phone-summary[data-comparing="false"] .og-phone-style {
+    position: static;
+  }
+
+  .og-phone-style__row {
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-3);
+    min-width: 0;
+  }
+
+  .og-phone-style__label {
+    flex: 0 0 64px;
+    color: var(--og-ink-2);
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+  }
+
+  .og-phone-style__track {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 2px;
+    min-width: 0;
+    padding: 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    border-radius: var(--og-radius-control);
+    background: var(--og-surface-2);
+    scrollbar-width: none;
+  }
+
+  .og-phone-style__track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-phone-style__chip {
+    position: relative;
+    display: inline-flex;
+    flex: 1 0 auto;
+  }
+
+  .og-phone-style__chip input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .og-phone-style__chip span {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--og-touch);
+    min-height: 44px;
+    padding: 0 var(--og-space-3);
+    border-radius: calc(var(--og-radius-control) - 2px);
+    color: var(--og-ink);
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .og-phone-style__chip input:checked + span {
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-phone-style__chip input:focus-visible + span {
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: -2px;
+  }
+
+  /* Edit route + Undo/Redo, one row under the summary. */
+  .og-planner .og-phone-tools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--og-space-2);
+    order: 1;
+    border-bottom: 1px solid var(--og-line);
+  }
+
+  .og-planner .og-phone-edit {
+    flex: 1 1 auto;
+    min-height: var(--og-touch);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--og-primary-text);
+    font: inherit;
+    font-size: var(--og-text-body);
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .og-planner .og-phone-tools .og-history {
+    position: static;
+    display: flex;
+    gap: var(--og-space-2);
+    margin: 0;
+  }
+
+  .og-planner .og-phone-tools .og-history__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .og-planner .og-phone-tools .og-history__button {
+    justify-content: center;
+    min-width: var(--og-touch);
+    min-height: var(--og-touch);
+    padding: 0;
+    border: 0;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface-2);
+  }
+
+  /* Save and Share as icons beside the ride's name. */
+  .og-planner .og-plan-actions__icon {
+    display: block;
+  }
+
+  .og-planner .og-plan-actions__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .og-planner .og-plan-actions__row :is(button[data-testid="save-named-ride"], button[data-testid="open-share"]) {
+    position: relative;
+    flex: 0 0 var(--og-touch);
+    justify-content: center;
+    min-width: var(--og-touch);
+    padding: 0;
+  }
+
+  .og-planner .og-plan-actions__row input {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}

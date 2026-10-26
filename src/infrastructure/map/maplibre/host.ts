@@ -102,6 +102,7 @@ import {
   isPublicMapboxToken,
   mapboxRequestUrl,
   mapboxSatelliteTiles,
+  OPENFREEMAP_DARK_STYLE_URL,
   OPENFREEMAP_STYLE_URL,
 } from "@/infrastructure/map/basemap";
 import {
@@ -833,7 +834,7 @@ export async function createMapLibreHost(
   /** True while the renderer module is being fetched. */
   let booting = false;
 
-  const palette = readMapPalette(container);
+  let palette = readMapPalette(container);
   const placePillImages = createPlacePillImages(palette);
   const puckImage = createPuckImage(palette);
   const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
@@ -913,19 +914,27 @@ export async function createMapLibreHost(
   container.setAttribute(MAP_BASEMAP_ATTRIBUTE, activeBasemap);
   /** The configured basemap, kept so Night contrast can switch back to it. */
   let configuredStyle = style;
-  /** Night contrast is a Mapbox map: it needs the public token. */
-  const nightAvailable = mapboxToken !== null;
+  /**
+   * A whole dark style exists for Night: Mapbox night contrast with the public
+   * token, otherwise OpenFreeMap's own dark style (DESIGN.md §3).
+   */
+  const nightAvailable = (): boolean => mapboxToken !== null || activeBasemap === "openfreemap";
   let basemapLook: "map" | "night" = options.basemapLook === "night" ? "night" : "map";
   /** The repainted Night contrast style, fetched once per host. */
   let nightStyle: Promise<MapStyleSpec | null> | null = null;
   /** The style document Night contrast resolved to, so "is it drawn?" is a fact. */
   let nightStyleSpec: MapStyleSpec | null = null;
   function loadNightStyle(): Promise<MapStyleSpec | null> {
-    if (mapboxToken === null) return Promise.resolve(null);
-    nightStyle ??= fetch(mapboxRequestUrl(NIGHT_CONTRAST_BASE_STYLE_URL, mapboxToken))
-      .then(async (response) => {
-        nightStyleSpec = response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null;
-        return nightStyleSpec;
+    if (!nightAvailable()) return Promise.resolve(null);
+    const token = mapboxToken;
+    nightStyle ??= (token !== null
+      ? fetch(mapboxRequestUrl(NIGHT_CONTRAST_BASE_STYLE_URL, token)).then(async (response) =>
+          response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null)
+      : fetch(OPENFREEMAP_DARK_STYLE_URL).then(async (response) =>
+          response.ok ? ((await response.json()) as MapStyleSpec) : null))
+      .then((spec) => {
+        nightStyleSpec = spec;
+        return spec;
       })
       .catch(() => null);
     return nightStyle;
@@ -2490,6 +2499,9 @@ export async function createMapLibreHost(
     satelliteVisible = false;
     style = OPENFREEMAP_STYLE_URL;
     configuredStyle = OPENFREEMAP_STYLE_URL;
+    // The Mapbox night style is gone with the token; OpenFreeMap has its own.
+    nightStyle = null;
+    nightStyleSpec = null;
     // The rider's look is kept: the Night style was a Mapbox map and can no
     // longer be fetched, so the same choice becomes the scrim over this one.
     container.setAttribute(MAP_BASEMAP_ATTRIBUTE, "openfreemap");
@@ -2875,7 +2887,9 @@ export async function createMapLibreHost(
       // Night contrast is a whole dark style and the only thing `setStyle` is
       // worth for here; without the token, on a downloaded basemap, or when the
       // fetch fails, the same choice is the scrim over the map already drawn.
-      if (!nightAvailable || drawingOfflineBasemap) {
+      // The route, pins and labels take the new theme's map colours.
+      palette = readMapPalette(container);
+      if (!nightAvailable() || drawingOfflineBasemap) {
         const map = attempt?.map;
         if (map !== undefined) syncNightScrim(map);
         return;

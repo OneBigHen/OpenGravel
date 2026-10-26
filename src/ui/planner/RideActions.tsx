@@ -223,7 +223,7 @@ export function RideActions({
         >
           <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" className="og-plan-actions__glyph">
             <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-            <circle cx="12" cy="12" r="3.5" fill="#e5534b" />
+            <circle className="og-plan-actions__record-dot" cx="12" cy="12" r="3.5" />
           </svg>
           {recordingState === "starting" ? "Preparing…" : "Record"}
         </button>

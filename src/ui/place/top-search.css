@@ -1,0 +1,247 @@
+/* The home map's search (maps-for-riders §3): one floating bar at the top and a
+   row of category chips under it. Phones and tablets only; the desktop rail has
+   its own search field. */
+
+.og-top-search {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .og-top-search {
+    position: absolute;
+    z-index: var(--og-z-float);
+    top: calc(var(--og-safe-top) + var(--og-space-3));
+    left: calc(var(--og-safe-left) + var(--og-space-4));
+    right: calc(var(--og-safe-right) + var(--og-space-4));
+    display: block;
+    pointer-events: none;
+  }
+
+  /* On a tablet the search keeps a phone's width, beside the map's controls. */
+  @media (min-width: 761px) {
+    .og-top-search {
+      right: auto;
+      width: 400px;
+    }
+  }
+
+  .og-top-search__bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-3);
+    min-height: 52px;
+    padding: 0 var(--og-space-2) 0 var(--og-space-4);
+    border-radius: var(--og-radius-card);
+    background: var(--og-surface);
+    color: var(--og-ink);
+    box-shadow: var(--og-shadow-float);
+    pointer-events: auto;
+  }
+
+  .og-top-search__bar > svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    color: var(--og-ink-2);
+  }
+
+  .og-top-search__bar:focus-within {
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: var(--og-focus-offset);
+  }
+
+  .og-top-search__bar > button {
+    flex: none;
+    min-width: var(--og-touch);
+    min-height: var(--og-touch);
+    border: 0;
+    background: transparent;
+    color: var(--og-ink-2);
+    font: inherit;
+    font-size: var(--og-text-headline);
+    cursor: pointer;
+  }
+
+  .og-top-search .og-place-search {
+    position: static;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .og-top-search .og-place-search__input {
+    width: 100%;
+    min-height: 50px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--og-ink);
+    font-size: var(--og-text-body);
+    box-shadow: none;
+  }
+
+  .og-top-search .og-place-search__input:focus-visible {
+    outline: none;
+  }
+
+  .og-top-search .og-place-search__list {
+    position: absolute;
+    top: calc(100% + var(--og-space-2));
+    left: 0;
+    right: 0;
+    z-index: var(--og-z-overlay);
+    max-height: 45dvh;
+    border-radius: var(--og-radius-card);
+    box-shadow: var(--og-shadow-float);
+  }
+
+  .og-top-search .og-place-search__option {
+    min-height: var(--og-touch);
+  }
+
+  /* Category chips: one row that scrolls inside itself; the last chip peeks. */
+  .og-search-chips {
+    display: flex;
+    gap: var(--og-space-2);
+    margin: var(--og-space-1) calc(-1 * var(--og-space-4)) 0;
+    padding: var(--og-space-1) var(--og-space-4);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    pointer-events: auto;
+  }
+
+  .og-search-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-search-chips button {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--og-space-2);
+    min-height: 40px;
+    padding: 0 var(--og-space-4);
+    border: 0;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface);
+    color: var(--og-ink);
+    font: inherit;
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+    box-shadow: var(--og-shadow-float);
+    cursor: pointer;
+  }
+
+  /* 40px to the eye, 48px to the thumb. */
+  .og-search-chips button::before {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .og-search-chips button[aria-pressed="true"] {
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-search-chips__glyph {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  .og-search-chips__divider {
+    flex: none;
+    align-self: center;
+    width: 1px;
+    height: 24px;
+    background: var(--og-line-strong);
+  }
+
+  .og-search-chips__layers {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: var(--og-space-2);
+  }
+
+  .og-search-chips button[data-layer="true"][aria-pressed="true"] {
+    background: var(--og-surface);
+    color: var(--og-ink);
+  }
+
+  .og-layer-chips__switch {
+    position: relative;
+    flex: none;
+    width: 28px;
+    height: 16px;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-line-strong);
+    transition: background-color var(--og-dur-fast) var(--og-ease);
+  }
+
+  .og-layer-chips__switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface);
+    transition: transform var(--og-dur-fast) var(--og-ease);
+  }
+
+  .og-search-chips button[aria-pressed="true"] .og-layer-chips__switch {
+    background: var(--og-primary);
+  }
+
+  .og-search-chips button[aria-pressed="true"] .og-layer-chips__switch::after {
+    transform: translateX(12px);
+  }
+
+  /* The search gives way when something else owns the top of the screen. */
+  .og-planner:has(.og-composer .og-place-search) .og-top-search,
+  .og-planner:has(.og-shared-sheet[data-detent="full"]) .og-top-search {
+    display: none;
+  }
+
+  .og-planner:has([data-testid="route-options"]) .og-search-chips {
+    display: none;
+  }
+
+  .og-planner:has(.og-top-search) .og-planner__header {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .og-planner:has(.og-top-search) .og-places-overlay--planner .og-places-control {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .og-planner:has(.og-layers[data-open="true"]) .og-top-search {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-top-search .og-search-chips {
+    display: none;
+  }
+}
+
+:is(.og-top-search, .og-place-sheet, .og-category-results, .og-rider-toast) :is(button, input, h2):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-layer-chips__switch,
+  .og-layer-chips__switch::after {
+    transition: none;
+  }
+}

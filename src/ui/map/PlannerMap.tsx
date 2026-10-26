@@ -55,6 +55,7 @@
  */
 
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
+import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -381,6 +382,14 @@ export function PlannerMap({
   useEffect(() => {
     if (cameraView !== null) cameraOutRef.current?.(cameraView);
   }, [cameraView]);
+  /**
+   * The basemap follows the theme (DESIGN.md §3): Night is a dark map, always.
+   * A surface may still insist on its own look (the ride passes its own).
+   */
+  const resolvedTheme = useResolvedTheme();
+  const insistedLook: "map" | "night" = forcedLook ?? (resolvedTheme === "night" ? "night" : "map");
+  const themeLookRef = useRef(insistedLook);
+  themeLookRef.current = insistedLook;
   /** Satellite imagery, when the host can draw it (M3, OGV-D-265). */
   const [satelliteAvailable, setSatelliteAvailable] = useState(false);
   /** The night look (Night contrast, or the host's own dark scrim). */
@@ -471,10 +480,11 @@ export function PlannerMap({
       // reads nor writes the rider's planner preference. When a sheet owns the
       // choice, its value is the opening look; the stored value is only read by
       // an uncontrolled surface.
-      const openedWith = forcedLook ?? controlledLookRef.current ?? readLookChoice();
+      const chosen = controlledLookRef.current ?? readLookChoice();
+      const openedWith = forcedLook ?? (chosen === "satellite" ? chosen : "map");
       const host = await hostFactory(container, {
         basemap,
-        ...(openedWith === "night" ? { basemapLook: "night" as const } : {}),
+        ...(openedWith === "night" || themeLookRef.current === "night" ? { basemapLook: "night" as const } : {}),
         initialExtent: sceneExtent(sceneRef.current),
         reducedMotion: prefersReducedMotion(),
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
@@ -494,14 +504,14 @@ export function PlannerMap({
       // Re-read a sheet-owned choice: it may have arrived from storage while
       // the renderer was starting. A look the host cannot draw falls back to
       // the map, so the sheet never claims an imagery mode that is not showing.
-      const desired = forcedLook ?? controlledLookRef.current ?? openedWith;
+      const desired = forcedLook ?? (controlledLookRef.current === "satellite" ? "satellite" : openedWith);
       const resolved = desired === "satellite" && host.supportsSatellite !== true
         ? "map"
         : desired === "night" && host.supportsNightLook !== true
           ? "map"
           : desired;
       if (resolved === "satellite") host.setSatellite?.(true);
-      else if (resolved === "night") host.setBasemapLook?.("night");
+      if (resolved === "night" || themeLookRef.current === "night") host.setBasemapLook?.("night");
       // A sheet-owned surface already holds this value; only its fallback (an
       // unsupported remembered look) needs to travel back up.
       if (!controlled || controlledLookRef.current !== resolved) setLook(resolved);
@@ -652,7 +662,8 @@ export function PlannerMap({
   const applyLook = useCallback((next: BasemapLook): void => {
     const host = hostRef.current;
     host?.setSatellite?.(next === "satellite");
-    host?.setBasemapLook?.(next === "night" ? "night" : "map");
+    // Under Night every look sits on the dark map (satellite draws over it).
+    host?.setBasemapLook?.(next === "night" || themeLookRef.current === "night" ? "night" : "map");
   }, []);
 
   /** The rider's own pick: it is remembered, and it closes the menu. */
@@ -679,15 +690,20 @@ export function PlannerMap({
     Day/Night switch mid-ride turns the map with the chrome, while a look the
     rider picked in the sheet afterwards stays until the next switch.
   */
-  const [forcedLookSeen, setForcedLookSeen] = useState<"map" | "night" | null>(forcedLook ?? null);
+  const [forcedLookSeen, setForcedLookSeen] = useState<"map" | "night" | null>(insistedLook);
   // Derived during render, so the map turns in the same commit as the chrome
   // that flipped the theme (the same pattern the point menu above uses).
-  if (forcedLook !== undefined && forcedLookSeen !== forcedLook) setForcedLookSeen(forcedLook);
+  if (forcedLookSeen !== insistedLook) setForcedLookSeen(insistedLook);
   useEffect(() => {
     if (forcedLookSeen === null || hostRef.current === null) return;
+    if (forcedLook === undefined) {
+      // The theme turned: the basemap follows it, the rider's own look stays.
+      hostRef.current.setBasemapLook?.(forcedLookSeen);
+      return;
+    }
     applyLook(forcedLookSeen);
     setLook(forcedLookSeen);
-  }, [forcedLookSeen, applyLook, setLook]);
+  }, [forcedLookSeen, forcedLook, applyLook, setLook]);
 
   /**
    * The style button sits in a different corner per tier and surface, so the
@@ -732,10 +748,10 @@ export function PlannerMap({
   const looks = useMemo<readonly BasemapLook[]>(
     () => [
       "map",
-      ...(nightAvailable ? (["night"] as const) : []),
+      // Night is not a map choice: the Night theme always draws the dark map.
       ...(satelliteAvailable ? (["satellite"] as const) : []),
     ],
-    [nightAvailable, satelliteAvailable],
+    [satelliteAvailable],
   );
   useEffect(() => {
     onLookOptions?.(looks);

@@ -1,0 +1,179 @@
+/* Primary navigation: Plan · Explore · My rides · Settings.
+   Desktop and landscape phones: a row in the top bar. Phones and tablets: a
+   bar docked to the bottom edge (small-screen-v2 §2), hidden while riding. */
+
+.og-planner__nav-shell {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-1);
+}
+
+.og-planner__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-1);
+}
+
+.og-nav__sep,
+.og-nav__label--tab-only {
+  display: none;
+}
+
+.og-planner__nav a,
+.og-planner__settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  min-width: var(--og-touch);
+  min-height: 40px;
+  padding: 0 var(--og-space-3);
+  border-radius: var(--og-radius-pill);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--og-dur-fast) var(--og-ease), background-color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-planner__settings-link {
+  padding: 0;
+}
+
+.og-nav__icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.og-planner__nav a:hover,
+.og-planner__settings-link:hover {
+  color: var(--og-ink);
+  background: var(--og-press);
+}
+
+.og-planner__nav a[aria-current="page"],
+.og-planner__settings-link[aria-current="page"] {
+  color: var(--og-primary-text);
+  background: var(--og-primary-soft);
+}
+
+.og-planner__nav a:focus-visible,
+.og-planner__settings-link:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The bar the non-planner pages share: brand, tagline, navigation. */
+.og-appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--og-z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-5);
+  min-height: 64px;
+  padding: var(--og-space-2) var(--og-space-5);
+  border-bottom: 1px solid var(--og-line);
+  background: var(--og-surface);
+}
+
+.og-appbar__brand {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.og-appbar__tagline {
+  flex: 1;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-appbar__brand:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-appbar {
+    min-height: 48px;
+    padding-block: 0;
+  }
+
+  .og-appbar__tagline {
+    visibility: hidden;
+  }
+}
+
+/* Phones and tablets: the docked tab bar. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-appbar {
+    display: contents;
+  }
+
+  .og-appbar__brand,
+  .og-appbar__tagline {
+    display: none;
+  }
+
+  .og-planner__nav-shell,
+  .og-planner .og-planner__nav-shell {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: var(--og-z-nav);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    min-height: calc(56px + var(--og-safe-bottom));
+    padding: 0 var(--og-safe-right) var(--og-safe-bottom) var(--og-safe-left);
+    border-top: 1px solid var(--og-line);
+    background: var(--og-surface);
+  }
+
+  .og-planner__nav {
+    display: contents;
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    min-height: 56px;
+    padding: 0;
+    border-radius: 0;
+    font-size: var(--og-text-caption);
+    line-height: 1.3;
+  }
+
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"],
+  .og-planner__nav a:hover,
+  .og-planner__settings-link:hover {
+    background: none;
+  }
+
+  .og-nav__icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .og-nav__label--tab-only {
+    display: block;
+  }
+
+  [aria-current="page"] > .og-nav__icon {
+    stroke-width: 2.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    transition: none;
+  }
+}

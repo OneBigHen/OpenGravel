@@ -82,6 +82,9 @@ export function mapboxSatelliteTiles(token: string): string {
 /** OpenFreeMap's token-free Liberty vector style. */
 export const OPENFREEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
 
+/** OpenFreeMap's token-free dark style: the Night basemap without Mapbox (DESIGN.md §3). */
+export const OPENFREEMAP_DARK_STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
+
 /** OpenStreetMap's standard raster tiles (fallback only, per the tile policy). */
 export const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 

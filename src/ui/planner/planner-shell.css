@@ -1,0 +1,201 @@
+/* The Plan screen's frame. The map is the hero on every size:
+   phones and tablets — the map fills the screen, the sheet docks over it;
+   desktop — a top bar, the planning rail floating at the left over the map,
+   and an inspector at the right when a road or place is open;
+   landscape phones — map left, rail right. */
+
+.og-planner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  --og-float-gap: 16px;
+  --og-float-rail: 400px;
+  --og-float-inspector: 368px;
+  --og-float-left: calc(var(--og-float-gap) * 2 + var(--og-float-rail));
+  --og-float-right: var(--og-space-3);
+}
+
+.og-planner__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-4);
+}
+
+.og-planner__identity {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.og-planner__header h1 {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.og-tagline {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-planner__ride-context {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-planner__ride-title {
+  color: var(--og-ink);
+  font-weight: 600;
+}
+
+.og-planner__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.og-planner__map-slot {
+  position: relative;
+  min-height: 320px;
+}
+
+.og-planner__status {
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+}
+
+.og-planner__save-indicator {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-planner__save-indicator:is([data-state="failed"], [data-state="quota"], [data-state="conflict"]) {
+  color: var(--og-danger);
+}
+
+.og-planner__inspector {
+  display: none;
+}
+
+/* Desktop. */
+@media (min-width: 1181px) {
+  .og-planner {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .og-planner:has(.og-planner__inspector:not(:empty)) {
+    --og-float-right: calc(var(--og-float-gap) * 2 + var(--og-float-inspector));
+  }
+
+  .og-planner__header {
+    position: relative;
+    z-index: var(--og-z-nav);
+    min-height: 64px;
+    padding: var(--og-space-2) var(--og-space-5);
+    border-bottom: 1px solid var(--og-line);
+    background: var(--og-surface);
+  }
+
+  .og-planner__map-slot {
+    position: absolute;
+    inset: 0;
+    min-height: 0;
+  }
+
+  .og-planner__inspector:not(:empty) {
+    position: absolute;
+    top: var(--og-float-gap);
+    right: var(--og-float-gap);
+    z-index: var(--og-z-sheet);
+    display: block;
+    width: var(--og-float-inspector);
+    max-height: calc(100% - var(--og-float-gap) * 2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: var(--og-radius-sheet);
+    background: var(--og-surface);
+    box-shadow: var(--og-shadow-float);
+    scrollbar-width: thin;
+  }
+
+  .og-planner__inspector-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--og-space-3);
+    padding: var(--og-space-4);
+  }
+}
+
+/* Phones and tablets: the map is the screen. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner__header {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: var(--og-z-map-ui);
+    padding: 0;
+    pointer-events: none;
+  }
+
+  .og-tagline {
+    display: none;
+  }
+
+  .og-planner__map-slot {
+    position: fixed;
+    inset: 0 0 auto;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  /* An open layer sheet or card rises above the planning sheet. */
+  .og-planner__map-slot:is(:has(.og-layers[data-open="true"]), :has(.og-info-card), :has(.og-places-card)) {
+    z-index: calc(var(--og-z-sheet) + 1);
+  }
+
+  .og-planner:is(:has(.og-layers[data-open="true"]), :has(.og-info-card), :has(.og-places-card)) .og-planner__header {
+    z-index: calc(var(--og-z-sheet) + 2);
+  }
+}
+
+/* Landscape phones: map left, rail right. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-planner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) calc(340px + var(--og-safe-right));
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .og-planner__body {
+    display: contents;
+  }
+
+  .og-planner__map-slot {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    min-height: 0;
+  }
+
+  .og-planner__header {
+    grid-column: 2;
+    grid-row: 1;
+    z-index: 2;
+    padding: var(--og-space-1) calc(var(--og-space-2) + var(--og-safe-right)) 0 var(--og-space-3);
+    background: var(--og-surface);
+  }
+
+  .og-planner__header h1,
+  .og-tagline {
+    display: none;
+  }
+}

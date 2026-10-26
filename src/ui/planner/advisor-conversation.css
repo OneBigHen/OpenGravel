@@ -17,14 +17,20 @@
   max-width: 100%;
   margin: 0 0 6px;
   padding: 8px 10px;
-  border-radius: var(--og-radius-object);
+  border-radius: var(--og-radius-card);
   color: var(--og-ink);
-  background: var(--og-paper);
+  background: var(--og-surface);
 }
 
 .og-advisor__rider {
   margin-left: auto;
-  border: 1px solid var(--og-sandstone);
+  max-width: 85%;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: var(--og-radius-card) var(--og-radius-card) var(--og-radius-control) var(--og-radius-card);
+  background: var(--og-primary-soft);
+  color: var(--og-ink);
+  font-weight: 500;
 }
 
 .og-advisor .og-advisor__form {
@@ -38,7 +44,7 @@
 }
 
 .og-advisor :is(input, button):focus-visible {
-  outline: 2px solid var(--og-ember-text);
+  outline: 2px solid var(--og-record);
   outline-offset: 2px;
 }
 
@@ -53,17 +59,6 @@
   flex-basis: 70%;
 }
 
-/* Chat bubbles: the rider on the right in a filled bubble, the advisor on the left beside its mark. */
-.og-advisor__rider {
-  max-width: 85%;
-  padding: 9px 13px;
-  border: 0;
-  border-radius: 18px 18px 4px 18px;
-  background: var(--og-go-soft, var(--og-paper));
-  color: var(--og-ink);
-  font-weight: 550;
-}
-
 .og-advisor__reply {
   max-width: 92%;
   padding: 2px 0;
@@ -74,14 +69,12 @@
 .og-advisor__reply .og-advisor__mark {
   margin-right: 4px;
 }
-
-/* "Ask about this ride" under a planned ride. */
 .og-advisor-ask {
   display: grid;
   gap: 10px;
   min-width: 0;
   padding: 14px 0 4px;
-  border-top: 1px solid var(--og-hairline, var(--og-sandstone));
+  border-top: 1px solid var(--og-line);
 }
 
 .og-advisor-ask__title {
@@ -91,7 +84,7 @@
   margin: 0;
   color: var(--og-ink);
   font-size: var(--og-text-body);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .og-advisor-ask__chips {
@@ -117,9 +110,9 @@
 .og-advisor-ask__chips button {
   min-height: 44px;
   padding: 0 16px;
-  border: 1px solid var(--og-hairline, var(--og-sandstone));
-  border-radius: 999px;
-  background: var(--og-raised, var(--og-paper));
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-meta);
@@ -130,20 +123,17 @@
 }
 
 .og-advisor-ask__chips button:hover:not(:disabled) {
-  border-color: var(--og-ember-text);
+  border-color: var(--og-record);
 }
 
 .og-advisor-ask__chips button:active:not(:disabled) {
-  background: var(--og-go-soft, var(--og-paper));
+  background: var(--og-primary-soft);
 }
 
 .og-advisor-ask__chips button:disabled {
   opacity: 0.55;
   cursor: default;
 }
-
-/* One row, always: the field carries its own send button inside it, so a
-   320 px sheet cannot wrap the field and the button onto two lines. */
 .og-advisor-ask__form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -173,23 +163,23 @@
   border: 0;
   border-radius: var(--og-radius-control);
   background: none;
-  color: var(--og-ember-text);
+  color: var(--og-record);
   cursor: pointer;
   translate: 0 -50%;
   transition: background-color var(--og-dur-fast, 120ms) ease;
 }
 
 .og-advisor-ask__send:hover:not(:disabled) {
-  background: var(--og-well);
+  background: var(--og-surface-2);
 }
 
 .og-advisor-ask__send:disabled {
-  color: var(--og-slate-text);
+  color: var(--og-ink-2);
   cursor: default;
 }
 
 .og-advisor-ask :is(input, button):focus-visible {
-  outline: 2px solid var(--og-ember-text);
+  outline: 2px solid var(--og-record);
   outline-offset: 2px;
 }
 
@@ -199,15 +189,11 @@
     transition: none;
   }
 }
-
-/* A chat box, not a search: no magnifier, a little more room. */
 .og-advisor .og-advisor__input,
 .og-advisor-ask .og-advisor__input {
   padding-left: 14px;
   background-image: none;
 }
-
-/* The advisor's latest answer sits in the conversation like any reply. */
 .og-advisor__notice {
   display: flex;
   align-items: flex-start;
