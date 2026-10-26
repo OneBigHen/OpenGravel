@@ -539,3 +539,19 @@ describe("tap duration and pinch release safety", () => {
     expect(result.state.activePointers).toEqual([]);
   });
 });
+
+
+describe("client-pixel gesture classification on an offset map", () => {
+  it.each(["mouse", "pen", "touch"])("keeps %s taps, pan-and-return and point drags distinct", (pointerType) => {
+    const down = { ...DOWN, pointerType, timeMs: 100, pixel: { x: 164, y: 196 } };
+    const move = { ...MOVE, pixel: { x: 204, y: 246 } };
+    const up = { ...UP_AT_ORIGIN, timeMs: 200, pixel: down.pixel };
+    expect(effects([down, up]).effects).toEqual([{ type: "tap", pointerId: 1, coordinate: DOWN.coordinate }]);
+    expect(effects([down, move, up]).effects).toEqual([]);
+    expect(effects([down, up], "point-drag").effects).toEqual([]);
+    expect(effects([down, move, up], "point-drag").effects).toEqual([{
+      type: "commit-gesture", tool: "point-drag", pointerId: 1,
+      geometry: [DOWN.coordinate, DOWN.coordinate],
+    }]);
+  });
+});
