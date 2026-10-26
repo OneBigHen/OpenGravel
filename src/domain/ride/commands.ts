@@ -91,6 +91,8 @@ export type RideCommand =
   | (RideCommandBase<"ride.shape.set"> & {
       readonly shape: RideIntent["shape"];
     })
+  | (RideCommandBase<"ride.directions"> & { readonly start: RidePoint | null; readonly finish: RidePoint; readonly keepWaypoints?: boolean })
+  | (RideCommandBase<"ride.loopFrom"> & { readonly start: RidePoint })
   | (RideCommandBase<"start.set"> & { readonly point: RidePoint })
   | (RideCommandBase<"start.clear"> & Record<never, never>)
   | (RideCommandBase<"finish.set"> & { readonly point: RidePoint })
@@ -198,6 +200,8 @@ export const RIDE_COMMAND_TYPES = {
   "ride.clear": true,
   "ride.reverse": true,
   "ride.shape.set": true,
+  "ride.directions": true,
+  "ride.loopFrom": true,
   "start.set": true,
   "start.clear": true,
   "finish.set": true,

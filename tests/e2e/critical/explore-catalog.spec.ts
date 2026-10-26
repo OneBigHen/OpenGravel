@@ -3,9 +3,14 @@ import { expect, test } from "@playwright/test";
 const ROUTE_ID = "sample-ridge-loop";
 const ROUTE_NAME = "Sample Ridge Loop";
 
-test("filters the catalog, opens a route, uses its community forms, exports GPX, and plans it", async ({ page }) => {
+test("filters the catalog, opens a route, uses its community forms, exports GPX, and rides it", async ({ page }) => {
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  // A route the rider already read must not be planned again to be ridden.
+  const planRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/api/route-plan")) planRequests.push(request.url());
+  });
 
   await page.goto("/explore");
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
@@ -17,12 +22,19 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await routeLink.click();
   await expect(page).toHaveURL(new RegExp(`/explore/${ROUTE_ID}$`));
   await expect(page.getByRole("heading", { name: ROUTE_NAME })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toContainText("2 exports");
+  // The route's other versions, in the words a rider uses for them.
+  await expect(page.getByRole("region", { name: "Other versions of this ride" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Other versions of this ride" })).toContainText("2 versions");
   // With no road matched to our data there is no road-by-road surface, so the
   // section is absent rather than heading an explanation of its own absence.
   await expect(page.getByRole("heading", { name: "Roads on this ride" })).toHaveCount(0);
-  await expect(page.getByLabel("Curvature not computed")).toHaveText("—");
+  // No surface or curvature evidence: the facts line states what is known and
+  // says nothing about either, rather than printing an absence.
+  await expect(page.getByTestId("route-facts")).toContainText("17 mi");
+  await expect(page.getByTestId("route-facts")).toContainText("58 min");
+  await expect(page.getByTestId("route-facts")).not.toContainText(/unknown/i);
+  // The ride's own name leads: no eyebrow naming the store it is kept in.
+  await expect(page.locator(".og-route-detail__header .og-eyebrow")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Route notes" })).toBeVisible();
   // The rating count is stated once ("No ratings yet", never "No ratings yet · 0 ratings").
   await expect(page.locator(".og-route-community__meta")).toBeVisible();
@@ -47,11 +59,20 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
 
   // Planning mechanics are not something a rider reads before a ride.
   await expect(page.getByText(/Planning follows this line/)).toHaveCount(0);
-  const planRequest = page.waitForRequest((request) => request.method() === "POST" && request.url().includes("/api/route-plan"));
-  await page.getByRole("button", { name: "Plan this ride" }).click();
+  await page.getByRole("button", { name: "Ride this" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByTestId("active-ride-title")).toHaveText(`${ROUTE_NAME} copy`);
-  const requestBody = (await planRequest).postDataJSON() as { readonly request?: { readonly shaping?: readonly unknown[] } };
-  expect(requestBody.request?.shaping).toHaveLength(23);
+  // The ride keeps the route's own name; "copy" was never something a rider
+  // asked to see, and it is not a different ride from the one they read.
+  await expect(page.getByTestId("active-ride-title")).toHaveText(ROUTE_NAME);
+  await expect(page.getByTestId("active-ride-title")).not.toHaveText(/copy/i);
+  // The route the rider was reading is the answer: its own card, with the
+  // catalog's distance and time, and Start ride already there.
+  const card = page.locator('[data-testid^="route-card-"]');
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText("17 mi");
+  await expect(card).toContainText("58 min");
+  await expect(page.getByTestId("start-ride")).toBeEnabled({ timeout: 2_000 });
+  // Nothing asked the router to plan this ride again.
+  expect(planRequests).toEqual([]);
   expect(consoleErrors).toEqual([]);
 });

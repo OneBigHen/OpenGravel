@@ -217,6 +217,12 @@ export interface RideFocusSecondary {
   readonly arrivalText: string | null;
   readonly timeLeftText: string | null;
   readonly distanceLeftText: string | null;
+  /**
+   * The same two measurements as numbers, for a surface that has to *judge* them
+   * rather than print them — a stop's added time is a share of the pace left.
+   */
+  readonly remainingDistanceMeters: number | null;
+  readonly remainingDurationSeconds: number | null;
 }
 
 export interface RideFocusRecordingHud {
@@ -895,6 +901,8 @@ function secondaryOf(telemetry: RideFocusTelemetryInput | null): RideFocusSecond
       arrivalText: null,
       timeLeftText: null,
       distanceLeftText: null,
+      remainingDistanceMeters: null,
+      remainingDurationSeconds: null,
     };
   }
   const eta = telemetry.etaIso === null ? null : formatClockTime(telemetry.etaIso);
@@ -916,6 +924,8 @@ function secondaryOf(telemetry: RideFocusTelemetryInput | null): RideFocusSecond
     arrivalText: eta,
     timeLeftText: duration,
     distanceLeftText: distance,
+    remainingDistanceMeters: telemetry.remainingDistanceMeters,
+    remainingDurationSeconds: telemetry.remainingDurationSeconds,
   };
 }
 

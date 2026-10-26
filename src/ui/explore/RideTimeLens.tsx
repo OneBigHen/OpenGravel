@@ -2,6 +2,13 @@
 import type { RideTimeLens as Lens } from "@/application/explore/time-lens";
 import { localDateValue } from "@/application/explore/time-lens";
 
+/**
+ * When the rider wants to ride.
+ *
+ * Four date choices under a visible "When" caption, laid out as one wrapping
+ * row of 48px chips: stacked full-width buttons pushed the sheet's "Show N
+ * routes" below the fold of a 640px tall phone.
+ */
 export function RideTimeLens({
   value,
   date,
@@ -18,10 +25,11 @@ export function RideTimeLens({
   last.setDate(last.getDate() + 179);
   return (
     <div
-      className="og-explore__row"
+      className="og-explore__row og-explore__row--when"
       role="group"
-      aria-label="Ride time"
+      aria-labelledby="og-explore-when-label"
     >
+      <span className="og-explore__row-label" id="og-explore-when-label">When</span>
       {(
         [
           ["now", "Now"],

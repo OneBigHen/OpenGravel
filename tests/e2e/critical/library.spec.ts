@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   pressPlan,
   settledExtent,
@@ -13,13 +13,23 @@ const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
 const TITLE = "Sunday Pine Barrens";
 const RENAMED = "Sunday Pine Barrens renamed";
 
+function rideRow(page: Page, title: string) {
+  return page.locator(".og-library__row").filter({
+    has: page.getByRole("button", { name: `Open ${title}` }),
+  });
+}
+
+async function openRideMenu(page: Page, title: string) {
+  await page.getByRole("button", { name: `More actions for ${title}` }).click();
+}
+
 test("keeps named rides separate from the active draft and protects sources", async ({ page }) => {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
 
-  await clickMapAtCoordinate(page, START);
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
@@ -35,37 +45,31 @@ test("keeps named rides separate from the active draft and protects sources", as
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
 
   await page.goto("/rides");
-  await expect(page.getByRole("textbox", { name: `Rename ${TITLE}` })).toBeVisible();
-  const updatedBeforeBrowse = await page
-    .getByRole("textbox", { name: `Rename ${TITLE}` })
-    .locator("..")
-    .locator("..")
-    .getByText(/Updated /)
-    .textContent();
-  await page.getByRole("button", { name: `View details for ${TITLE}` }).click();
-  await expect(page.getByText(/Planned here/)).toBeVisible();
-  await expect(
-    page
-      .getByRole("textbox", { name: `Rename ${TITLE}` })
-      .locator("..")
-      .locator("..")
-      .getByText(/Updated /),
-  ).toHaveText(updatedBeforeBrowse ?? "");
+  const row = rideRow(page, TITLE);
+  await expect(row.getByRole("button", { name: `Open ${TITLE}` })).toBeVisible();
+  const updatedBeforeBrowse = await row.locator(".og-rides__meta").textContent();
+  await openRideMenu(page, TITLE);
+  await page.getByRole("menuitem", { name: "Details" }).click();
+  await expect(row.getByText("Planned", { exact: true })).toBeVisible();
+  await expect(row.locator(".og-rides__meta")).toHaveText(updatedBeforeBrowse ?? "");
 
-  await page.getByRole("button", { name: `Open ${TITLE}` }).click();
+  await row.getByRole("button", { name: `Open ${TITLE}` }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
 
   await page.goto("/rides");
+  await openRideMenu(page, TITLE);
+  await page.getByRole("menuitem", { name: "Rename" }).click();
   const renamedTitle = page.getByRole("textbox", { name: `Rename ${TITLE}` });
   await renamedTitle.fill(RENAMED);
-  await page.getByRole("button", { name: `Rename ${TITLE}` }).click();
-  await expect(page.getByRole("textbox", { name: `Rename ${RENAMED}` })).toHaveValue(RENAMED);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByRole("button", { name: `Open ${RENAMED}` })).toBeVisible();
 
-  await page.getByRole("button", { name: `Delete ${RENAMED}` }).click();
+  await openRideMenu(page, RENAMED);
+  await page.getByRole("menuitem", { name: "Delete" }).click();
   await page.getByRole("button", { name: `Confirm delete ${RENAMED}` }).click();
-  await expect(page.getByRole("textbox", { name: `Rename ${RENAMED}` })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: `Open ${RENAMED}` })).toHaveCount(0);
 
   await page.goto("/");
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");

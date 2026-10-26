@@ -29,7 +29,6 @@ export interface PlannerWorkspaceFrameProps {
   readonly mapSlotRef: RefObject<HTMLDivElement | null>;
   readonly map: Omit<PlannerMapProps, "hint">;
   readonly armedTool: keyof typeof TOOL_HINTS | null;
-  readonly missingTarget: keyof typeof TOOL_HINTS | null;
   readonly retryingMap: boolean;
   /** The places overlay (sample places provider), when the app composes a source. */
   readonly places?: PlannerPlacesProps | undefined;
@@ -46,6 +45,8 @@ export interface PlannerWorkspaceFrameProps {
   readonly glance?: ReactNode;
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
   readonly editBar?: PlannerMapEditBarProps | undefined;
+  readonly topSearch?: ReactNode;
+  readonly toast?: ReactNode;
   readonly children: ReactNode;
 }
 
@@ -66,7 +67,6 @@ export function PlannerWorkspaceFrame({
   mapSlotRef,
   map,
   armedTool,
-  missingTarget,
   retryingMap,
   places,
   layers,
@@ -75,6 +75,8 @@ export function PlannerWorkspaceFrame({
   glance,
   editBar,
   children,
+  topSearch,
+  toast,
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
   // The desktop rail owns the edit tools (beside undo/redo); every other tier
@@ -86,7 +88,7 @@ export function PlannerWorkspaceFrame({
   const scene = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
   // The edit bar says what a stop tap does, so the map does not say it twice.
   const hint =
-    armedTool !== null && armedTool !== missingTarget && !(armedTool === "stop" && editBar !== undefined)
+    armedTool !== null && !(armedTool === "stop" && editBar !== undefined)
       ? TOOL_HINTS[armedTool]
       : null;
   /*
@@ -191,6 +193,7 @@ export function PlannerWorkspaceFrame({
             layers={layers}
             clusterControls={clusterControls}
           />
+          {topSearch}
           {glance}
           {editBar === undefined || desktop ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
@@ -200,6 +203,7 @@ export function PlannerWorkspaceFrame({
           ) : null}
         </div>
         {children}
+        {toast}
       </div>
     </main>
   );

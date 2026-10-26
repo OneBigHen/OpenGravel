@@ -51,6 +51,8 @@ const DOCUMENTED_COMMAND_TYPES: readonly string[] = [
   "ride.clear",
   "ride.reverse",
   "ride.shape.set",
+  "ride.directions",
+  "ride.loopFrom",
   "start.set",
   "start.clear",
   "finish.set",

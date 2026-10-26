@@ -17,6 +17,13 @@ import { usePlacesOverlay } from "./usePlacesOverlay";
 
 const RIDE_PLACES_QUERY = { kinds: ["happy_hour"] as const, window: "now" as const };
 
+/**
+ * The ride map: the route, the rider, and (only when asked for) the places
+ * provider's venue pins. A ride opens on the map the rider is riding, not on
+ * happy hours; fuel is the sheet's own "Next gas" line, and this provider has
+ * no gas kind to offer instead.
+ */
+
 export interface RidePlacesMapProps {
   readonly source: PlacesSource;
   readonly scene: MapScene;
@@ -60,7 +67,12 @@ export function RidePlacesMap({
     source,
     initialQuery: RIDE_PLACES_QUERY,
     storageKey: RIDE_PLACES_PREFERENCE_KEY,
-    enabledByDefault: true,
+    // Off until the rider asks for it. A ride's map is for the line ahead and
+    // where the rider is; the provider behind this overlay has happy hours and
+    // events, not gas, so opening a ride under venue pins would be the wrong
+    // default (the sheet's own "Next gas" line already carries fuel). A rider
+    // who turns it on still has that remembered.
+    enabledByDefault: false,
   });
   // OGV#13: ride-interest pins arrive already merged into `scene.places` (the
   // ride surface builds that scene); the happy-hour/events overlay adds its

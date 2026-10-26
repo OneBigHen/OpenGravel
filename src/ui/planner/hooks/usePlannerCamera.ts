@@ -39,7 +39,7 @@ function readSafeArea() {
 
 /** The ride inspector beside the map slot, when the composition has one. */
 /** Controls that float over the top of the map on every tier (UX rework 2, #8). */
-const TOP_CHROME = ["places-control"] as const;
+const TOP_CHROME = ["places-control", "top-search"] as const;
 /** The map's own button column down its right-hand side. */
 const SIDE_CHROME = ["map-satellite-toggle", "show-whole-ride", "map-layers"] as const;
 
@@ -136,7 +136,12 @@ export function usePlannerCamera(input: {
         computeInsets({
           viewport: { width: window.innerWidth, height: window.innerHeight },
           map: toRect(mapSlot.getBoundingClientRect()),
-          dock: toRect(dock.getBoundingClientRect()),
+          dock: (() => {
+            const box = dock.getBoundingClientRect();
+            const map = mapSlot.getBoundingClientRect();
+            return toRect(box.width >= map.width - 2 && box.top > map.top
+              ? { ...toRect(box), height: Math.max(box.height, map.bottom - box.top) } : box);
+          })(),
           header: header === null ? null : toRect(header.getBoundingClientRect()),
           overlays: [
             ...(inspector === null ? [] : [toRect(inspector.getBoundingClientRect())]),
@@ -157,6 +162,11 @@ export function usePlannerCamera(input: {
     if (observer !== null) {
       if (dockRef.current !== null) observer.observe(dockRef.current);
       if (headerRef.current !== null) observer.observe(headerRef.current);
+      if (mapSlotRef.current !== null) observer.observe(mapSlotRef.current);
+      for (const id of TOP_CHROME) {
+        const chrome = document.querySelector(`[data-testid="${id}"]`);
+        if (chrome !== null) observer.observe(chrome);
+      }
       if (sheetHeadRef.current !== null) observer.observe(sheetHeadRef.current);
       const inspector = mapSlotRef.current === null ? null : inspectorOf(mapSlotRef.current);
       if (inspector !== null) observer.observe(inspector);

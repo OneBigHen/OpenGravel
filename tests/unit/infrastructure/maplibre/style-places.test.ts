@@ -35,12 +35,26 @@ describe("place map layers", () => {
     expect(placePaint).toContain(DEFAULT_MAP_PALETTE.goldenHour);
   });
 
+  it("draws image-only search pins and a larger selected pin without map glyphs", () => {
+    const pins = placeLayers(DEFAULT_MAP_PALETTE).find((layer) => layer.id === MAP_LAYER_IDS.searchPin);
+    expect(pins?.minzoom).toBeUndefined();
+    expect(pins?.filter).toEqual(["==", ["get", "kind"], "search"]);
+    expect(pins?.layout?.["text-field"]).toBeUndefined();
+    expect(pins?.layout?.["icon-image"]).toEqual(["get", "pinImage"]);
+    expect(pins?.layout?.["icon-size"]).toEqual(["case", ["==", ["get", "selected"], true], 1.25, 1]);
+    expect(pins?.layout?.["icon-allow-overlap"]).toBe(true);
+    const label = placeLayers(DEFAULT_MAP_PALETTE).find((layer) => layer.id === MAP_LAYER_IDS.searchLabel);
+    expect(label?.layout?.["text-field"]).toBeUndefined();
+    expect(label?.layout?.["icon-image"]).toEqual(["get", "labelImage"]);
+    expect(label?.filter).toEqual(["all", ["==", ["get", "kind"], "search"], ["==", ["get", "selected"], true]]);
+  });
+
   it("keeps the selected pill visible through symbol collisions", () => {
     const selected = placeLayers(DEFAULT_MAP_PALETTE).find(
       (layer) => layer.id === MAP_LAYER_IDS.placeSelected,
     );
 
-    expect(selected?.filter).toEqual(["==", ["get", "selected"], true]);
+    expect(selected?.filter).toEqual(["all", ["==", ["get", "selected"], true], ["!=", ["get", "kind"], "search"]]);
     expect(selected?.layout).toMatchObject({
       "icon-allow-overlap": true,
       "text-allow-overlap": true,

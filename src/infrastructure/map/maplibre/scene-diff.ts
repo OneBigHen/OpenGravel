@@ -149,6 +149,7 @@ function placesKey(scene: MapScene): string {
       place.tone,
       place.priority,
       place.selected,
+      place.glyph ?? null,
     ]),
   );
 }

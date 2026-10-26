@@ -36,6 +36,6 @@ describe("ride library provenance", () => {
       libraryTypeLabel(
         libraryTypeForRecord({ ...base, derivedFrom: { kind: "shared", sourceId: "shared-1" } }),
       ),
-    ).toBe("Shared derivative");
+    ).toBe("Shared with you");
   });
 });

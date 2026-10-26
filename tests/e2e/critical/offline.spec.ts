@@ -1,3 +1,4 @@
+import { directionsTo } from "./search-helpers";
 import { expect, test } from "@playwright/test";
 
 import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
@@ -11,12 +12,7 @@ test("empty caches never claim offline-ready network capabilities", async ({ pag
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
-  await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
-  await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  await directionsTo(page);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   // No downloaded area on this device: the sheet offers one plain row to save

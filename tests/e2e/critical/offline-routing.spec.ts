@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   plannerMap,
   pressPlan,
   settledExtent,
@@ -20,11 +20,13 @@ const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
 
 async function downloadFixtureArea(page: Page): Promise<void> {
   await page.goto("/settings");
-  const row = page.getByTestId("offline-region-lehigh-fixture");
-  await row.getByRole("button", { name: /^Download/ }).click();
-  await expect(page.getByTestId("offline-maps-message")).toContainText("is ready");
-  await expect(row).toContainText("On this device");
-  await expect(row.getByRole("button", { name: "Remove" })).toBeVisible();
+  await page.getByTestId("offline-download-open").click();
+  await page.getByTestId("offline-region-offer-lehigh-fixture").click();
+  await expect(page.getByTestId("offline-maps-message")).toContainText("is saved");
+  // One card per saved area, with its size and the overflow that can delete it.
+  const card = page.getByTestId("offline-region-lehigh-fixture");
+  await expect(card).toContainText("MB");
+  await expect(card.getByRole("button", { name: "More options for Pennsylvania (clipped fixture)" })).toBeVisible();
 }
 
 async function planWithNoSignal(page: Page): Promise<void> {
@@ -33,9 +35,9 @@ async function planWithNoSignal(page: Page): Promise<void> {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START);
+  await placeEndpoint(page, "start", START);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "finish", FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
 }
@@ -67,9 +69,9 @@ test("with the browser itself offline, a ride inside a downloaded area is still 
   // Signal is lost with the app open: nothing new can be fetched, the
   // routing worker's script included.
   await page.context().setOffline(true);
-  await clickMapAtCoordinate(page, START);
+  await placeEndpoint(page, "start", START);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "finish", FINISH);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
 

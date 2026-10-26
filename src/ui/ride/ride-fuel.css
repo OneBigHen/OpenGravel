@@ -1,0 +1,102 @@
+/* "Next gas" on the ride: one line in the sheet, and at most one primary
+   action beside the quiet "Filled up". The sheet's own dark chrome is the
+   background, so this section only spaces and colours. Buttons reuse the ride's
+   56 px glove-sized action classes. */
+.og-ride-fuel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: var(--og-radius-object);
+  background: var(--og-ride-surface);
+}
+
+.og-ride-fuel__line {
+  margin: 0;
+  color: var(--og-paper);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  /* A long station name wraps instead of pushing a button off a 320 px sheet. */
+  overflow-wrap: anywhere;
+}
+
+/* A caution, not an alarm: the range does not reach the station ahead. */
+.og-ride-fuel[data-tone="warn"] {
+  border-color: var(--og-danger);
+  background: color-mix(in srgb, var(--og-danger) 22%, var(--og-ink));
+}
+
+.og-ride-fuel[data-tone="warn"] .og-ride-fuel__line {
+  color: var(--og-paper);
+}
+
+/* Unknown is stated in the muted tone: it is a fact about the data, not a
+   verdict about the road. */
+.og-ride-fuel[data-tone="unknown"] .og-ride-fuel__line {
+  color: var(--og-ride-muted);
+  font-weight: 400;
+}
+
+.og-ride-fuel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* One obvious action: "Add gas stop" takes the row, "Filled up" stays quiet. */
+.og-ride-fuel__actions .og-ride__action--primary {
+  flex: 1 1 auto;
+}
+
+.og-ride-fuel__actions .og-ride__action--link {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--og-ride-muted);
+  border-color: transparent;
+  font-weight: 400;
+}
+
+.og-ride-fuel__note {
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-caption);
+}
+
+/* Nothing is known about gas: one compact row, never a box holding a lone
+   button. The button is 48 px — a stop for fuel is a deliberate, stationary
+   press, not a glance at 50 mph. The hint stays on one line beside it. */
+.og-ride-fuel--compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px 4px 4px;
+}
+
+.og-ride-fuel__fill {
+  flex: 0 0 auto;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid var(--og-ride-border);
+  border-radius: 999px;
+  background: var(--og-ride-surface);
+  color: var(--og-paper);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-ride-fuel__fill:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+.og-ride-fuel__hint {
+  min-width: 0;
+  margin: 0;
+  color: var(--og-ride-muted);
+  font-size: var(--og-text-caption);
+}

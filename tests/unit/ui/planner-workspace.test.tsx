@@ -2,7 +2,7 @@
  * The planner workspace end to end (02-ARCHITECTURE-CONTRACT §8, §17;
  * 04-PLANNER-AND-WORKSPACE-UX §2–§12, §21).
  *
- * This is the Wave-2 acceptance test: two map clicks author a start and a
+ * This is the Wave-2 acceptance test: two point-menu choices author a start and a
  * destination through the domain reducer, the plan button becomes truthful, a
  * `/api/route-plan` answer becomes route cards, the recommended route is drawn
  * and marked, selecting another card moves the selection, and cancelling while
@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
+import { withPreparedRoute } from "@/application/explore/ride-this";
 import { authorSketch } from "@/application/planner/sketch-authoring";
 import { REPLAN_SETTLE_MS } from "@/ui/planner/usePlannerAnswerLifecycle";
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
@@ -211,6 +212,13 @@ async function renderWorkspace(
  * baseline region's extent, so a call site still reads as "a tap over there".
  * Which point a tap *authors* is decided by the workspace, never by the host.
  */
+function coordinateAt(x: number, y: number): { lon: number; lat: number } {
+  return {
+    lon: START_COORDINATE.lon + (x / MAP_SIZE) * 0.4,
+    lat: START_COORDINATE.lat + (y / MAP_SIZE) * 0.25,
+  };
+}
+
 function clickMap(x: number, y: number): void {
   const host = mapFactoryRef.current?.hosts[0];
   if (host === undefined) throw new Error("the workspace has no map host");
@@ -220,10 +228,7 @@ function clickMap(x: number, y: number): void {
   act(() => {
     host.emit({
       type: "map-click",
-      coordinate: {
-        lon: START_COORDINATE.lon + (x / MAP_SIZE) * 0.4,
-        lat: START_COORDINATE.lat + (y / MAP_SIZE) * 0.25,
-      },
+      coordinate: coordinateAt(x, y),
     });
   });
 }
@@ -238,6 +243,23 @@ function emitIntent(intent: Parameters<ReturnType<typeof createStubMapHostFactor
   act(() => {
     host.emit(intent);
   });
+}
+
+async function placeEndpointAt(
+  target: "start" | "finish",
+  coordinate: { lon: number; lat: number },
+): Promise<void> {
+  const before = screen.getByTestId(`${target}-value`).textContent;
+  emitIntent({
+    type: "map-long-press",
+    coordinate,
+    pixel: { x: 500, y: 500 },
+    authorityFeatureId: null,
+  });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
+    name: target === "start" ? "Start here" : "Finish here",
+  }));
+  await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
 }
 
 /** A fetcher for the tests that author points but never plan. */
@@ -274,11 +296,11 @@ function pressPlanIfOffered(): boolean {
 }
 
 async function placeBothPoints(): Promise<void> {
-  clickMap(100, 100);
+  await placeEndpointAt("start", coordinateAt(100, 100));
   await waitFor(() => {
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
   });
-  clickMap(900, 900);
+  await placeEndpointAt("finish", coordinateAt(900, 900));
   await waitFor(() => {
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent("No destination yet");
   });
@@ -295,7 +317,7 @@ afterEach(() => {
 });
 
 describe("PlannerWorkspace — the Wave-2 slice", () => {
-  it("plans from two map clicks and marks the recommended route", async () => {
+  it("plans from two point-menu choices and marks the recommended route", async () => {
     const { rideDocumentStore, posts, mapFactory, plannerUiStore } = await renderWorkspace(
       (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
         jsonResponse(
@@ -310,7 +332,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     // absent because it would say the same thing a second time (OGV-D-214).
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a start, or set it on the map.",
+      "Search for a start, or press and hold the map.",
     );
     expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
 
@@ -462,8 +484,8 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.queryAllByTestId(/^route-card-/)).toHaveLength(0);
   });
 
-  it("places a start on the first idle tap and the destination on the next", async () => {
-    const { plannerUiStore } = await renderWorkspace(
+  it("ignores idle taps and authors endpoints through the press-and-hold menu", async () => {
+    const { plannerUiStore, rideDocumentStore } = await renderWorkspace(
       (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
         jsonResponse(
           successBody(
@@ -472,23 +494,31 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
         )) as typeof fetch,
     );
 
-    // First-open arms no tool: the empty map is directly usable, and the
-    // composer reason is the single instruction (OGV-D-213/214).
+    // First-open arms no tool: the composer explains how to author a point.
     expect(plannerUiStore.getState().placementTool).toBe("idle");
     // 05 §4's pointer tool is the neutral one: nothing is armed to draw.
     expect(plannerUiStore.getState().activeTool).toBe("pan");
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "false");
 
+    const before = rideDocumentStore.getState().document;
     clickMap(100, 100);
+    expect(rideDocumentStore.getState().document).toBe(before);
+    expect(before.intent.start).toBeNull();
+    expect(screen.getByTestId("start-value")).toHaveTextContent("No start yet");
+    expect(screen.getByTestId("finish-value")).toHaveTextContent("No destination yet");
+    expect(screen.queryByTestId("map-point-menu")).not.toBeInTheDocument();
+
+    await placeEndpointAt("start", coordinateAt(100, 100));
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
-    // The workspace is in finish placement now, and says so exactly once.
+    // Choosing a start leaves the tool idle and asks for a destination.
+    expect(plannerUiStore.getState().placementTool).toBe("idle");
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a destination, or choose it on the map.",
+      "Search for a destination, or press and hold the map.",
     );
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
 
-    clickMap(900, 900);
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent(
       "No destination yet",
     );
@@ -507,8 +537,8 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   it("arms a placement tool from a chip and instructs only then", async () => {
     const { plannerUiStore } = await renderWorkspace(unfetched());
 
-    clickMap(100, 100);
-    clickMap(900, 900);
+    await placeEndpointAt("start", coordinateAt(100, 100));
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     fireEvent.click(screen.getByTestId("start-chip"));
 
     // The chip arms the tool (visibly, on the control) and the map states what
@@ -529,25 +559,30 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
   });
 
-  it("suppresses the overlay hint when the disabled reason already says it", async () => {
+  it("shows the armed tool hint even when that endpoint is missing", async () => {
     await renderWorkspace(unfetched());
 
-    // Arming the tool for the very point that blocks planning must not repeat
-    // the composer's reason on the map (OGV-D-214, one instruction at a time).
+    // An armed tool explains the next tap even when its endpoint is missing.
     fireEvent.click(screen.getByTestId("start-chip"));
 
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a start, or set it on the map.",
+      "Search for a start, or press and hold the map.",
     );
-    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your start.");
+    clickMap(100, 100);
+    fireEvent.click(screen.getByTestId("finish-chip"));
+    expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
+      "Search for a destination, or press and hold the map.",
+    );
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your destination.");
   });
 
   it("clears the selection on an unarmed click once both points exist", async () => {
     const { plannerUiStore } = await renderWorkspace(pendingFetcher());
 
-    clickMap(100, 100);
-    clickMap(900, 900);
+    await placeEndpointAt("start", coordinateAt(100, 100));
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     const authoredStart = screen.getByTestId("start-value").textContent;
 
     plannerUiStore
@@ -763,7 +798,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
 
   it("lets an armed placement own a tap that lands on overlapping routes", async () => {
     const { plannerUiStore, rideDocumentStore } = await renderWorkspace(unfetched());
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -953,14 +988,14 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
       }))) as typeof fetch,
     );
 
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
     expect(screen.getByRole("button", { name: "Create ride" })).toBeDisabled();
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
-      "Search for a destination, or choose it on the map.",
+      "Search for a destination, or press and hold the map.",
     );
     // The reason is the only instruction: the overlay hint would duplicate it.
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
@@ -1446,7 +1481,8 @@ describe("map hold point authoring", () => {
     expect(screen.getByRole("button", { name: /Add stop here.*plan a start and finish first/ })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "What's here?" }));
     expect(rideDocumentStore.getState().document).toBe(before);
-    expect(within(screen.getByRole("dialog", { name: "Plan here" })).getByRole("status")).toHaveTextContent("No authority record for this spot");
+    expect(screen.getByTestId("place-sheet")).toHaveTextContent("Dropped pin");
+    expect(screen.queryByTestId("map-point-menu")).toBeNull();
   });
 });
 
@@ -1485,6 +1521,10 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
         search: async () => ({ status: "ok", places: [HAWK_MOUNTAIN] }),
         reverse: async () => null,
       },
+      position: {
+        permission: async () => "denied",
+        watch: (observer) => { observer.position({ coordinate: { lat: 40.8757, lon: -75.7324 }, accuracyMeters: 10, headingDegrees: null, speedMps: null, observedAt: "2026-10-25T12:00:00Z" }); return { stop: () => undefined }; },
+      },
       names: {
         nameFor: () => undefined,
         request: () => undefined,
@@ -1503,13 +1543,13 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { posts } = await renderWorkspace(answerWithRoute());
 
     // A start is not a ride: there is nothing to ask for yet, so nothing is asked.
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
     expect(posts).toHaveLength(0);
 
-    clickMap(900, 900);
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -1520,18 +1560,21 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready.");
   });
 
-  it("plans a picked place from search without a press", async () => {
-    const { posts } = await renderWorkspace(answerWithRoute(), {
+  it("opens a place without editing and plans on Directions", async () => {
+    const { posts, rideDocumentStore } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
     // The destination comes from the search field: a chosen place is a revision.
-    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.change(screen.getByTestId("top-place-search"), { target: { value: "hawk" } });
     fireEvent.click(await screen.findByTestId("place-option"));
+    expect(screen.getByTestId("place-sheet")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("place-directions"));
+    await waitFor(() => expect(rideDocumentStore.getState().document.intent.finish, JSON.stringify(rideDocumentStore.getState().lastResult)).not.toBeNull());
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
@@ -1546,20 +1589,21 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { plannerUiStore } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
-    // The chip arms the map for a destination, and while the point is missing the
-    // composer's own reason is the only instruction.
+    // The chip arms the map for a destination and explains the next tap.
     fireEvent.click(screen.getByTestId("finish-chip"));
     expect(plannerUiStore.getState().placementTool).toBe("place-finish");
-    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your destination.");
 
     // A place picked from search is the destination the mode was waiting for.
-    fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
+    fireEvent.change(screen.getByTestId("top-place-search"), { target: { value: "hawk" } });
     fireEvent.click(await screen.findByTestId("place-option"));
+    expect(screen.getByTestId("place-sheet")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("place-directions"));
 
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
@@ -1575,12 +1619,12 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { posts } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
-    const finish = screen.getByTestId("finish-search");
+    const finish = screen.getByTestId("top-place-search");
     fireEvent.change(finish, { target: { value: "haw" } });
     fireEvent.change(finish, { target: { value: "hawk" } });
     // The field asks the geocoder, not the router (M1): a query is not a place,
@@ -1657,7 +1701,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
 
   it("needs the rider's tap for a loop: the control says Make my loop", async () => {
     const { posts } = await renderWorkspace(answerWithRoute());
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -1738,6 +1782,87 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     // The restore rule asks once for the answer a reload does not keep. The pick
     // rule adds nothing on top of it: a page load is not an authored point.
     expect(begins(posts)).toBe(1);
+  });
+});
+
+/**
+ * A ride opened from Explore with "Ride this"
+ * (04 §8; the catalog route the rider was reading).
+ *
+ * The route page hands over the catalog route's own line, so the ride comes back
+ * with that line as its answer: no plan request goes out, the card shows the
+ * route's own numbers, and Start ride is available at once instead of after a
+ * replan.
+ */
+describe("PlannerWorkspace — a ride opened from Explore", () => {
+  it("shows the catalog route as the answer without asking the router", async () => {
+    const created = createRideDocument({ now: FIXED });
+    const withStart = applyRideCommand(created, placeStartCommand(created, ORIGIN, now));
+    if (withStart.outcome !== "applied") throw new Error(withStart.outcome);
+    const withFinish = applyRideCommand(
+      withStart.document,
+      placeFinishCommand(withStart.document, DESTINATION, now),
+    );
+    if (withFinish.outcome !== "applied") throw new Error(withFinish.outcome);
+    const restored = withFinish.document;
+    const repository: RideRepositoryPort = {
+      saveRide: vi.fn().mockResolvedValue({ ok: true }),
+      loadRide: vi.fn().mockResolvedValue({ ok: true, document: restored }),
+      loadDraftPointer: vi.fn().mockResolvedValue({
+        id: "active",
+        rideId: restored.rideId,
+        updatedAt: restored.updatedAt,
+      }),
+      deleteRide: vi.fn().mockResolvedValue(undefined),
+      readRideRevision: vi.fn().mockResolvedValue(null),
+    };
+    const geometryStore = createMemoryGeometryStore();
+    const line = await geometryStore.put(
+      { kind: "line", coordinates: [ORIGIN, MIDPOINT, DESTINATION] },
+      { kind: "route", now: FIXED },
+    );
+    const fetcher = vi.fn(unfetched());
+    const planningSessionStore = createPlanningSessionStore({
+      service: withPreparedRoute(
+        createClientPlanningService({ fetcher, now, geometryStore }),
+        {
+          version: 1,
+          rideId: restored.rideId,
+          rideRevision: restored.revision,
+          geometryRef: line.geometryRef,
+          distanceMeters: 27_500,
+          durationSeconds: 3_480,
+          preparedAt: FIXED,
+        },
+      ),
+    });
+    const rideDocumentStore = createRideDocumentStore({ now, repository });
+    render(
+      <PlannerWorkspace
+        rideDocumentStore={rideDocumentStore}
+        planningSessionStore={planningSessionStore}
+        plannerUiStore={createPlannerUiStore()}
+        mapHostFactory={createStubMapHostFactory().factory}
+        rideActions={{
+          start: vi.fn().mockResolvedValue({ outcome: "started", sessionId: "session-1", message: null }),
+          record: vi.fn().mockResolvedValue({ outcome: "ready" }),
+          freeRide: vi.fn().mockResolvedValue({ outcome: "started", sessionId: "session-1", message: null }),
+        }}
+      />,
+    );
+
+    // The route the rider was reading, not a fresh answer to the same question.
+    // The restore confirmation holds the status line for its own window first.
+    await waitFor(
+      () => expect(screen.getByTestId("status-line")).toHaveTextContent("Ride ready."),
+      { timeout: RESTORE_ANNOUNCEMENT_MS + 1_000 },
+    );
+    const card = screen.getByTestId(/^route-card-/);
+    expect(card).toHaveTextContent("17 mi");
+    expect(card).toHaveTextContent("58 min");
+    // Start ride, not "waiting for a plan": the line is already drawn and known.
+    expect(screen.getByTestId("start-ride")).toBeEnabled();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 });
 

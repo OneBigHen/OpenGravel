@@ -56,7 +56,7 @@ describe("focus — one visible ring (12 §15)", () => {
 });
 
 describe("focus — every modal wires shared focus management (12 §20)", () => {
-  it("each role=\"dialog\" component calls useDialogFocus", () => {
+  it("each modal dialog component calls useDialogFocus", () => {
     const root = path.join(process.cwd(), "src", "ui");
     const files: string[] = [];
     const walk = (dir: string): void => {
@@ -70,7 +70,7 @@ describe("focus — every modal wires shared focus management (12 §20)", () => 
     const offenders: string[] = [];
     for (const file of files) {
       const source = readFileSync(file, "utf8");
-      if (!source.includes('role="dialog"')) continue;
+      if (!source.includes('role="dialog"') || !source.includes('aria-modal="true"')) continue;
       if (!source.includes("useDialogFocus(")) offenders.push(path.relative(process.cwd(), file));
     }
     expect(offenders).toEqual([]);

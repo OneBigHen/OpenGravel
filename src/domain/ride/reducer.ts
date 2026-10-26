@@ -302,6 +302,25 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       return applyChange({ ...intent, shape: command.shape }, true);
     }
 
+    case "ride.directions": {
+      for (const point of [command.start, command.finish]) {
+        if (point === null) continue;
+        const issues = rejectCoordinateIssues(validateCoordinate(point.coordinate));
+        if (issues !== null) return issues;
+      }
+      return applyChange({ ...intent, shape: "destination", sketch: null,
+        start: command.start === null ? null : { ...command.start, kind: "start" },
+        finish: { ...command.finish, kind: "finish" },
+        stops: command.keepWaypoints === true ? intent.stops : [],
+        shaping: command.keepWaypoints === true ? intent.shaping : [] }, true);
+    }
+    case "ride.loopFrom": {
+      const issues = rejectCoordinateIssues(validateCoordinate(command.start.coordinate));
+      if (issues !== null) return issues;
+      return applyChange({ ...intent, shape: "loop", sketch: null,
+        start: { ...command.start, kind: "start" }, finish: null, stops: [], shaping: [],
+        time: { kind: "budget", targetMinutes: 60, toleranceMinutes: 15 } }, true);
+    }
     case "start.set": {
       // System-location seeding is initialization only: it may fill an empty
       // slot, never overwrite a deliberate authored start (OGV-DOM-005).

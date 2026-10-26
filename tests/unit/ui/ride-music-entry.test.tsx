@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SpotifyPlayerPort, SpotifyPlayerSnapshot } from "@/application/ride-session/ports/spotify-player";
 import { RideMusicEntry } from "@/ui/ride/RideMusicEntry";
-import { readRideReturn } from "@/ui/ride/ride-return";
 
 function player(snapshot: SpotifyPlayerSnapshot): SpotifyPlayerPort {
   return {
@@ -20,13 +19,19 @@ function player(snapshot: SpotifyPlayerSnapshot): SpotifyPlayerPort {
 }
 
 const idle: SpotifyPlayerSnapshot = { connection: "disconnected", isPlaying: false, track: null, errorMessage: null };
+const playing: SpotifyPlayerSnapshot = {
+  connection: "connected",
+  isPlaying: true,
+  track: { uri: "u", title: "Open Road", artist: "Fixture Artist", artworkDataUrl: null },
+  errorMessage: null,
+};
 
 beforeEach(() => { window.localStorage.clear(); window.history.replaceState(null, "", "/ride"); });
 afterEach(() => cleanup());
 
 describe("RideMusicEntry", () => {
   it("shows one title - artist line with play and next when connected", () => {
-    const model = player({ connection: "connected", isPlaying: true, track: { uri: "u", title: "Open Road", artist: "Fixture Artist", artworkDataUrl: null }, errorMessage: null });
+    const model = player(playing);
     render(<RideMusicEntry player={model} />);
     expect(screen.getByTestId("ride-music-line")).toHaveTextContent("Open Road · Fixture Artist");
     fireEvent.click(screen.getByRole("button", { name: "Pause" }));
@@ -35,15 +40,48 @@ describe("RideMusicEntry", () => {
     expect(model.skipToNext).toHaveBeenCalledOnce();
   });
 
-  it("splits by placement: now-playing on the map, Connect Spotify in the sheet, never both", () => {
-    const connected = player({ connection: "connected", isPlaying: true, track: { uri: "u", title: "Open Road", artist: "Fixture Artist", artworkDataUrl: null }, errorMessage: null });
-    const { unmount } = render(<><RideMusicEntry player={connected} placement="map" /><RideMusicEntry player={connected} placement="sheet" /></>);
-    expect(screen.getAllByTestId("ride-music")).toHaveLength(1);
-    expect(screen.getByTestId("ride-music")).toHaveAttribute("data-placement", "map");
-    unmount();
-    render(<><RideMusicEntry player={player(idle)} placement="map" /><RideMusicEntry player={player(idle)} placement="sheet" /></>);
-    expect(screen.getAllByTestId("ride-music")).toHaveLength(1);
-    expect(screen.getByTestId("ride-music-connect")).toBeInTheDocument();
+  it("draws nothing at all when Spotify is not connected", () => {
+    render(<RideMusicEntry player={player(idle)} />);
+    expect(screen.queryByTestId("ride-music")).toBeNull();
+    expect(screen.queryByRole("button", { name: /spotify/i })).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("never shows a set-up message on the ride, even one about this origin", () => {
+    // What a deployment without a registered Spotify origin reported: a
+    // developer sentence with a Setup link, at the top of the ride sheet.
+    render(
+      <RideMusicEntry
+        player={player({
+          connection: "error",
+          isPlaying: false,
+          track: null,
+          errorMessage: "This OpenGravel origin is not registered for Spotify.",
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("ride-music")).toBeNull();
+    expect(screen.queryByText(/not registered for Spotify/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Setup" })).toBeNull();
+  });
+
+  it("says nothing while connecting, or when the build has no Spotify", () => {
+    const connecting = render(
+      <RideMusicEntry player={player({ connection: "connecting", isPlaying: false, track: null, errorMessage: null })} />,
+    );
+    expect(screen.queryByTestId("ride-music")).toBeNull();
+    connecting.unmount();
+    render(
+      <RideMusicEntry
+        player={player({
+          connection: "unavailable",
+          isPlaying: false,
+          track: null,
+          errorMessage: "Spotify is unavailable in this build.",
+        })}
+      />,
+    );
+    expect(screen.queryByTestId("ride-music")).toBeNull();
   });
 
   it("offers Play on this phone when connected with nothing playing", () => {
@@ -54,25 +92,11 @@ describe("RideMusicEntry", () => {
     expect(model.togglePlayPause).toHaveBeenCalledOnce();
   });
 
-  it("shows a single Connect Spotify entry that remembers the ride and starts sign-in", () => {
-    window.history.replaceState(null, "", "/ride?x=1#map");
-    const model = player(idle);
-    render(<RideMusicEntry player={model} />);
-    fireEvent.click(screen.getByRole("button", { name: "Connect Spotify" }));
-    expect(model.connect).toHaveBeenCalledOnce();
-    expect(readRideReturn()).toBe("/ride?x=1#map");
-  });
-
-  it("says plainly that Premium is needed", () => {
-    render(<RideMusicEntry player={player({ connection: "error", isPlaying: false, track: null, errorMessage: "Spotify Premium is needed for playback." })} />);
-    expect(screen.getByTestId("ride-music-message")).toHaveTextContent("Spotify Premium is needed for playback.");
-    expect(screen.queryByRole("button", { name: "Connect Spotify" })).toBeNull();
-  });
-
-  it("reports a failed return from Spotify and cleans the URL", async () => {
+  it("tidies a one-shot return from Spotify out of the URL and reports nothing", () => {
     window.history.replaceState(null, "", "/ride?spotify=error");
     render(<RideMusicEntry player={player(idle)} />);
-    expect(await screen.findByTestId("ride-music-message")).toHaveTextContent("Spotify could not connect");
     expect(window.location.search).toBe("");
+    expect(screen.queryByTestId("ride-music")).toBeNull();
+    expect(screen.queryByText(/Spotify could not connect/)).toBeNull();
   });
 });

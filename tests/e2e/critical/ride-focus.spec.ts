@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   cameraGeneration,
-  clickMapAtCoordinate,
+  placeEndpoint,
   dragMap,
   expectDrawnScene,
   expectHealthyMap,
@@ -46,8 +46,8 @@ async function startRide(page: import("@playwright/test").Page): Promise<void> {
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
 
-  await clickMapAtCoordinate(page, START_COORDINATE);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
@@ -259,8 +259,8 @@ test("the planner offers the handoff only once a route is chosen", async ({ page
   // with no route to ride (04 §8's one-instruction rule).
   await expect(page.getByTestId("start-ride")).toHaveCount(0);
 
-  await clickMapAtCoordinate(page, START_COORDINATE);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("start-ride")).toHaveCount(0);
 
   await pressPlan(page);

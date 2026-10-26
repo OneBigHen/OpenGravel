@@ -19,11 +19,34 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(32);
     await expect(page.getByTestId("explore-map")).toContainText("32 mapped");
     // The area picker lives in the Filters panel at every width: a bottom sheet
-    // on a phone, a popover under the toolbar on a wide screen.
+    // on a phone, a popover under the chip that opened it on a wide screen. The
+    // chip is the last one in the row, so it keeps search the whole width above.
     await page.getByRole("button", { name: /^Filters/ }).click();
     await page.getByRole("combobox", { name: "PA riding area" }).selectOption("eastern-pa");
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(31);
     await expect(page).toHaveURL(/area=eastern-pa/);
+    if (viewport.width <= 760) {
+      // Search owns its row on a phone: the whole width, not the ~130px it had
+      // while it shared the row with the Filters button.
+      const search = await page.getByRole("searchbox", { name: "Search routes" }).boundingBox();
+      expect(search!.width).toBeGreaterThan(viewport.width * 0.8);
+      // The sheet dims the page, and a tap on the scrim closes it. The sheet
+      // rises from the bottom edge, so the part of the scrim a rider can reach
+      // is the strip above it; the tap goes there, not through the sheet.
+      const scrim = page.getByRole("button", { name: "Close filters" });
+      await expect(scrim).toBeVisible();
+      const veil = await scrim.boundingBox();
+      expect(veil!.width).toBeGreaterThanOrEqual(viewport.width - 1);
+      const sheet = await page.getByRole("region", { name: "Explore filters" }).boundingBox();
+      // The page above the sheet stays reachable, by more than a gloved tap.
+      expect(sheet!.y).toBeGreaterThan(48);
+      await scrim.click({ position: { x: veil!.width / 2, y: Math.min(12, sheet!.y / 2) } });
+      // A closed sheet is not rendered at all on a phone, so the chip that opens
+      // it is what states it, and focus is back on that chip.
+      await expect(page.getByRole("region", { name: "Explore filters" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Filters/ })).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByRole("button", { name: /^Filters/ })).toBeFocused();
+    }
     await page.reload();
     await page.getByRole("button", { name: /^Filters/ }).click();
     await expect(page.getByRole("combobox", { name: "PA riding area" })).toHaveValue("eastern-pa");

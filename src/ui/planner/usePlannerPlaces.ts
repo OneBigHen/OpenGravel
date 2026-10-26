@@ -32,6 +32,7 @@ import {
  * exactly the honest state of an embedding with no geocoder.
  */
 export interface PlannerPlaceServices {
+  readonly driveTime?: (from: Coordinate, to: Coordinate, signal: AbortSignal) => Promise<number | null>;
   readonly search: PlaceSearchPort;
   readonly names: PlaceNameCache;
   readonly position?: PositionSource;
@@ -76,6 +77,7 @@ export interface PlannerLocateMe {
 }
 
 export interface PlannerPlaces {
+  readonly locateStart: () => Promise<LocateOutcome>;
   readonly placeNameFor: PlaceNameLookup | undefined;
   readonly composerSearch: ComposerPlaceSearch | undefined;
   /** The rider's last fix, drawn as the blue dot, or `null` before one. */
@@ -393,5 +395,12 @@ export function usePlannerPlaces(input: {
     };
   }, [search, bias, onPick, position, onUseLocation, locating, locateFailure, memoryStore, memory, homeOf, hydrated, pointPlace]);
 
-  return { placeNameFor, composerSearch, riderPosition, locateMe };
+  const locateStart = useCallback(async (): Promise<LocateOutcome> => {
+    setLocateFailure(null);
+    const outcome: LocateOutcome = position === undefined ? { status: "failed", code: "unsupported" } : await locateOnce(position);
+    if (outcome.status === "located") setRiderPosition(riderDotFor(outcome));
+    else setLocateFailure(LOCATE_FAILURE_COPY[outcome.code]);
+    return outcome;
+  }, [position]);
+  return { placeNameFor, composerSearch, riderPosition, locateMe, locateStart };
 }

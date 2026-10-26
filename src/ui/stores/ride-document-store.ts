@@ -801,6 +801,18 @@ export function currentLocationStartCommand(
   };
 }
 
+/** One Directions press is one revision and one Undo, including a missing fix. */
+export function directionsCommand(document: RideDocument, place: SearchedPlace, fix: Parameters<typeof currentLocationStartCommand>[1] | null): RideCommand {
+  return { ...commandBase(document, "rider", "Directions"), type: "ride.directions",
+    start: fix === null ? null : currentLocationStartCommand(document, fix).point,
+    finish: searchedEndpointCommand(document, "finish", place, place.label).point };
+}
+
+export function loopFromCommand(document: RideDocument, coordinate: Coordinate): RideCommand {
+  return { ...commandBase(document, "rider", "Loop from here"), type: "ride.loopFrom",
+    start: placeStartCommand(document, coordinate).point };
+}
+
 /** A `start.set` command: narrowed so a caller can read the point it built. */
 export type PlaceStartCommand = Extract<RideCommand, { type: "start.set" }>;
 

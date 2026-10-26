@@ -30,6 +30,9 @@ function place(id: string, name: string, context: string, lat: number, lon: numb
 }
 
 export const FIXTURE_PLACES: readonly PlaceMatch[] = [
+  { ...place("gas", "Wawa Gas", "Carbon County, PA", 40.864, -75.728), openNow: true },
+  place("coffee", "Mountain Coffee", "Carbon County, PA", 40.871, -75.735),
+  place("food", "Mountain Food", "Carbon County, PA", 40.869, -75.731),
   place("jim-thorpe", "Jim Thorpe", "Carbon County, PA", 40.8757, -75.7324),
   place("hawk-mountain", "Hawk Mountain Sanctuary", "Kempton, Berks County, PA", 40.6348, -75.9913),
   place("hawk-mountain-brewery", "Hawk Mountain Brewery", "Whitehall, Lehigh County, PA", 40.6557, -75.4942),

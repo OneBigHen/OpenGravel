@@ -1,0 +1,376 @@
+/*
+  Explore's ride cards, the route page's one action and the loading frames.
+
+  Colours come from the app's theme tokens, so Day and Night are the same rules.
+  Everything here is a size or a shape a thumb needs: the line preview fills the
+  card's 16:9 frame, the route page's quiet actions stay 48 px tall, and the
+  skeletons hold the same boxes as the real content so nothing jumps.
+  -------------------------------------------------------------------------- */
+
+/* -- A ride's own line in the card's 16:9 frame ---------------------------- */
+
+.og-line-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--og-radius-object);
+  background: var(--og-well);
+  color: var(--og-ember);
+}
+
+.og-line-preview > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The route page's map slot is a fixed height, so the line fills it the same
+   way a basemap image does. */
+.og-route-detail__map > .og-line-preview {
+  min-height: clamp(240px, 34vh, 520px);
+  border-radius: 0;
+}
+
+/* -- The route page's actions: one commitment, two quiet ones ------------- */
+
+/* A save, a share failure or a copying note reads under the button that caused
+   it, in the row's own voice, never as a badge. */
+.og-route-detail .og-route-detail__status {
+  margin: 0;
+  color: var(--og-moss-text);
+  font-size: var(--og-text-meta);
+}
+
+/* The file and the public listing: a heading a rider can skip past. */
+.og-route-detail .og-route-detail__take-away {
+  display: grid;
+  gap: var(--og-space-3);
+  padding-top: var(--og-space-4);
+  border-top: 1px solid var(--og-hairline);
+}
+
+.og-route-detail .og-route-detail__take-away h2 {
+  margin: 0;
+  font-size: var(--og-text-headline);
+}
+
+.og-route-detail .og-route-detail__alternates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-route-detail .og-route-detail__alternates > .og-secondary {
+  min-height: 48px;
+}
+
+@media (max-width: 760px) {
+  /* Ride this takes the room, Save and Share keep theirs. The share button is
+     already a 50 px icon below this width (the app's own phone chrome). */
+  .og-route-detail .og-route-detail__actions .og-primary {
+    min-height: 48px;
+  }
+
+  .og-route-detail .og-route-detail__alternates {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+  }
+
+  .og-route-detail .og-route-detail__alternates > .og-secondary {
+    flex: 0 0 auto;
+  }
+}
+
+/* -- The route page's one facts line --------------------------------------- */
+
+/* The numbers a rider compares, on one line under the name: how far, how
+   long, what is under the wheels, how much it turns. The separator trails each
+   fact, so a wrapped line at 320 px never starts with a middot. */
+.og-route-detail .og-route-detail__facts {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-1);
+  row-gap: 2px;
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.og-route-detail .og-route-detail__fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.og-route-detail .og-route-detail__fact:not(:last-child)::after {
+  margin-left: var(--og-space-1);
+  color: var(--og-slate-text);
+  content: "·";
+}
+
+/* The pace the estimated time is based on stays a note beside the figure. */
+.og-route-detail .og-route-detail__basis {
+  color: var(--og-slate-text);
+  font-weight: 500;
+}
+
+/* Where a road's earlier record went: one plain line behind a disclosure, and
+   a 48 px target to open it. */
+.og-road-detail-sheet__history > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.og-road-detail-sheet__history > summary:focus-visible {
+  outline: 2px solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+.og-road-detail-sheet__history > p {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+}
+
+/* Climb, descent and the highest point: three figures a rider plans fuel and
+   daylight with, never a count of the points the profile was stored as. */
+.og-route-detail .og-route-detail__elevation h2 {
+  margin: 0;
+}
+
+.og-route-detail .og-route-detail__elevation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2) var(--og-space-5);
+  margin: var(--og-space-2) 0 0;
+}
+
+.og-route-detail .og-route-detail__elevation-facts dt {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+}
+
+.og-route-detail .og-route-detail__elevation-facts dd {
+  margin: 2px 0 0;
+  font-size: var(--og-text-headline);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -- The loading frame on a route page ------------------------------------ */
+
+.og-route-detail--loading .og-skeleton {
+  border-radius: var(--og-radius-control);
+}
+
+.og-route-detail-skeleton__map {
+  width: 100%;
+  min-height: clamp(240px, 34vh, 520px);
+  border-radius: var(--og-radius-panel);
+}
+
+.og-route-detail-skeleton__heading {
+  width: min(100%, 22ch);
+  height: 28px;
+  margin-top: var(--og-space-3);
+}
+
+.og-route-detail-skeleton__line {
+  width: 100%;
+  height: 14px;
+}
+
+.og-route-detail-skeleton__line--short {
+  width: 60%;
+}
+
+.og-route-detail-skeleton__action {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--og-radius-control);
+}
+
+.og-route-detail-skeleton__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--og-space-2);
+  margin-top: var(--og-space-2);
+}
+
+.og-route-detail-skeleton__fact {
+  height: 64px;
+  border-radius: var(--og-radius-object);
+}
+
+/* A rider who asked the system for less motion gets a still frame. */
+@media (prefers-reduced-motion: reduce) {
+  .og-explore .og-skeleton,
+  .og-route-detail .og-skeleton {
+    animation: none;
+    background: var(--og-canvas);
+  }
+}
+
+/* Explore's one filter row: a chip that is holding a choice says so with the
+   choice's own words and the pressed fill, never with a second control. */
+.og-explore .og-explore__quick-chip[data-filter="on"] {
+  border-color: var(--og-go);
+  background: var(--og-go);
+  color: var(--og-on-fill);
+}
+
+.og-explore .og-explore__quick-chip:disabled {
+  border-color: var(--og-hairline);
+  background: var(--og-paper);
+  color: var(--og-slate-text);
+  cursor: default;
+}
+
+.og-explore .og-explore__quick-chip:focus-visible {
+  outline: 2px solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+/* A named group inside the one filters sheet (the roads worth riding), so the
+   page has one place to filter and no second bar above a list. */
+.og-explore .og-explore__sheet-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px 16px;
+  min-width: 0;
+}
+
+.og-explore .og-explore__sheet-group > h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+.og-explore .og-explore__sheet-group > :is(.og-explore__check, .og-explore__note) {
+  grid-column: 1 / -1;
+}
+
+.og-explore .og-explore__sheet-group > .og-explore__note {
+  margin: 0;
+}
+
+/* -- The Filters chip and its sheet --------------------------------------- */
+
+/* The Filters chip is the last chip in the row, at the end of the line: it
+   keeps the same 48px chip shape as its neighbours and only says what the
+   sheet holds, with a count of the filters that are narrowing the list. */
+.og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle {
+  gap: 6px;
+  margin: 0;
+}
+
+.og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle > svg {
+  flex: none;
+}
+
+/* A pressed chip is filled, so its count inverts instead of vanishing into it. */
+.og-explore .og-explore__quick-chip[data-filter="on"] .og-explore__filters-count {
+  background: var(--og-on-fill);
+  color: var(--og-go);
+}
+
+@media (min-width: 761px) {
+  /* Wide screens keep the popover: it hangs under the chip that opened it, so
+     that chip closes the row. */
+  .og-explore .og-explore__quick > .og-explore__quick-chip.og-explore__filters-toggle {
+    margin-inline-start: auto;
+  }
+}
+
+/* The date choices are one wrapping row of chips under a visible caption, not
+   four full-width buttons stacked with no label. On a 640px tall phone this is
+   the difference between seeing "Show N routes" and scrolling to it. */
+.og-explore .og-explore__row--when {
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 8px;
+}
+
+.og-explore .og-explore__row--when > * {
+  flex: 0 0 auto;
+}
+
+/* Inside the sheet every button was forced to the full width of its row, which
+   is what stacked the four date choices. A chip is as wide as its own words. */
+.og-explore .og-explore__controls[data-open="true"] > .og-explore__row > * {
+  width: auto;
+  min-width: 0;
+}
+
+.og-explore .og-explore__controls[data-open="true"] > .og-explore__row > .og-explore__inline {
+  flex: 1 1 100%;
+}
+
+/* The caption of a row of chips reads as the field captions around it do. */
+.og-explore .og-explore__row-label {
+  flex: 1 1 100%;
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  /* The phone sheet shouts its captions; this one matches them. */
+  .og-explore .og-explore__row-label {
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+}
+
+/* The Ride / Things switch never wraps: at 320px the page title gives up the
+   room, the two tabs keep their words on one line. */
+.og-explore .og-explore__header .og-explore__lens > [role="tab"] {
+  white-space: nowrap;
+}
+
+/* -- Phone: the sheet's scrim --------------------------------------------- */
+
+/* The sheet rises over the app's scrim: fixed, full height, above the page and
+   its bars and under the sheet itself. It is a real button, so a tap anywhere
+   on it closes the sheet (Escape does the same from a keyboard).
+
+   It is a dark veil in both themes on purpose: in Day it separates the sheet
+   from a bright page, in Night it darkens an already dark one, and the sheet's
+   top edge stays the brightest thing on screen. */
+@media (max-width: 760px) {
+  .og-explore .og-explore__toolbar > .og-explore__backdrop {
+    position: fixed;
+    z-index: 69;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 45%);
+    /* A touch that starts on the scrim never scrolls the list behind the sheet. */
+    touch-action: none;
+    animation: og-fade-in 180ms ease-out;
+  }
+}
+
+/* A rider who asked the system for less motion gets the veil, not the fade. */
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  .og-explore .og-explore__toolbar > .og-explore__backdrop {
+    animation: none;
+  }
+}

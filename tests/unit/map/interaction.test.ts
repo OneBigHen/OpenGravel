@@ -523,3 +523,19 @@ it("consumes right-button release and accepts a fresh right-click after cancella
   const down = reduceInteraction(initialInteractionState(), DOWN);
   expect(reduceInteraction(down.state, { type: "long-press-enabled", enabled: false }).state.lastCancel).toBe("placement-change");
 });
+
+
+describe("tap duration and pinch release safety", () => {
+  it.each([350, 351, 400])("bounds a pan tap at %i ms", (elapsedMs) => {
+    const result = effects([{ ...DOWN, timeMs: 100 }, { ...UP_AT_ORIGIN, timeMs: 100 + elapsedMs }]);
+    expect(result.effects).toHaveLength(elapsedMs <= 350 ? 1 : 0);
+  });
+
+  it.each([true, false])("consumes a stationary pinch with owner lifting first: %s", (ownerFirst) => {
+    const otherDown: InteractionEvent = { ...DOWN, pointerId: 2 };
+    const otherUp: InteractionEvent = { ...UP_AT_ORIGIN, pointerId: 2 };
+    const result = effects([DOWN, otherDown, ...(ownerFirst ? [UP_AT_ORIGIN, otherUp] : [otherUp, UP_AT_ORIGIN])]);
+    expect(result.effects).toEqual([]);
+    expect(result.state.activePointers).toEqual([]);
+  });
+});

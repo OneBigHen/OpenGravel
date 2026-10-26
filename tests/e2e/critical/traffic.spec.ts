@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { clickMapAtCoordinate, plannerMap, pressPlan, settledExtent } from "./map-helpers";
+import { placeEndpoint, plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 const START = { lon: -75.4385, lat: 40.1385 };
 const FINISH = { lon: -75.4335, lat: 40.1325 };
@@ -34,8 +34,8 @@ test("no TomTom key leaves traffic off the rider surfaces instead of claiming it
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START);
-  await clickMapAtCoordinate(page, FINISH);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   // Unknown traffic is left off the cards instead of being implied or turned
   // into a status paragraph under the list.

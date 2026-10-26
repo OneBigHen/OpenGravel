@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, type ComponentProps } from "react";
 
 import type { MapIntent } from "@/application/map/types";
 import {
@@ -23,6 +23,7 @@ type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 
 export interface PlannerPlacesProps {
   readonly source: PlacesSource;
+  readonly onOpenPlace?: (place: NearbyPlace) => void;
   /** "Add as stop" on a place card: the existing typed stop command. */
   readonly onAddStop: (place: NearbyPlace) => void;
 }
@@ -48,7 +49,7 @@ export function PlannerPlacesMap({
 
 function PlannerMapWithPlaces({
   map,
-  places: { source, onAddStop },
+  places: { source, onAddStop, onOpenPlace },
   layers,
 }: {
   readonly map: PlannerMapProps;
@@ -63,18 +64,29 @@ function PlannerMapWithPlaces({
     enabledByDefault: true,
     nearLine: selectedLine,
   });
+  const { selectedPlace, clear: clearPlace } = places;
+  useEffect(() => {
+    if (selectedPlace === null || onOpenPlace === undefined) return;
+    onOpenPlace(selectedPlace);
+    clearPlace();
+  }, [selectedPlace, clearPlace, onOpenPlace]);
   const scene = useMemo(
-    () => ({ ...map.scene, places: places.scenePlaces }),
+    () => ({ ...map.scene, places: [...(places.scenePlaces ?? []), ...(map.scene.places ?? [])] }),
     [places.scenePlaces, map.scene],
   );
   const { interceptIntent } = places;
   const { onIntent } = map;
   const intercept = useCallback(
     (intent: MapIntent): void => {
+      if (intent.type === "place-click" && intent.placeId.startsWith("search:")) { onIntent(intent); return; }
+      if (intent.type === "place-click" && onOpenPlace !== undefined) {
+        const place = places.scenePlaces?.some((p) => p.id === intent.placeId);
+        if (place) { places.select(intent.placeId); return; }
+      }
       const forwarded = interceptIntent(intent);
       if (forwarded !== null) onIntent(forwarded);
     },
-    [interceptIntent, onIntent],
+    [interceptIntent, onIntent, onOpenPlace, places],
   );
   const { clear } = places;
   const addStop = useCallback(
@@ -91,7 +103,7 @@ function PlannerMapWithPlaces({
         {...map}
         scene={scene}
         onIntent={intercept}
-        onViewport={places.onViewport}
+        onViewport={(extent) => { places.onViewport(extent); map.onViewport?.(extent); }}
         layers={layers}
         mapStyleInSheet
         panelSettings={
@@ -121,7 +133,7 @@ function PlannerMapWithPlaces({
           setKinds={places.setKinds}
           collapsible
         />
-        {places.selectedPlace === null || places.selectedCard === null ? null : (
+        {onOpenPlace !== undefined || places.selectedPlace === null || places.selectedCard === null ? null : (
           <PlaceCard
             place={places.selectedPlace}
             card={places.selectedCard}

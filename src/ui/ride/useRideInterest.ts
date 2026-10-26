@@ -22,6 +22,7 @@ import {
   type RideInterestPoint,
   type RideInterestStatus,
 } from "@/application/ride-interest";
+import { FUEL_LOOK_AHEAD_MILES, type GasAhead } from "@/application/ride-session/fuel-ahead";
 import type { MapLayersSource } from "@/application/map-layers";
 import type { PlaceScene, PlacesSource } from "@/application/places";
 import type { Coordinate } from "@/domain/ride/types";
@@ -43,6 +44,19 @@ export interface RideInterestView {
   readonly scenePlaces: readonly PlaceScene[];
   readonly chip: RideInterestChip | null;
   readonly selectedPoint: RideInterestPoint | null;
+  /**
+   * Gas ahead of the rider along this route, nearest first: the ride sheet's
+   * fuel line (OGV#13's own prefetched `fuel` stops, not a second request). It
+   * ignores the rider's Scenic / Food / Events filter, because "can I reach the
+   * next station?" is not a browse choice.
+   */
+  readonly fuelAhead: readonly GasAhead[];
+  /**
+   * How many gas stations the prefetch found along the whole route, behind the
+   * rider included. Zero is a provider that did not answer, and the sheet says
+   * so instead of reading it as "no gas on this road".
+   */
+  readonly fuelFound: number;
   readonly select: (id: string) => void;
   readonly clear: () => void;
 }
@@ -97,6 +111,24 @@ export function useRideInterest({
     [mapPoints, routeLine, position],
   );
   const scenePlaces = useMemo(() => buildRideInterestScene(mapAhead, { selectedId }), [mapAhead, selectedId]);
+  // Fuel is asked for further ahead than the map's pins: a rider plans a tank,
+  // not a glance, and a station 60 miles out still answers the question.
+  const fuelPoints = useMemo(
+    () => state.points.filter((point) => point.kind === "fuel"),
+    [state.points],
+  );
+  const fuelAhead = useMemo<readonly GasAhead[]>(() => {
+    if (position === null) return [];
+    return pointsAheadOfRider(fuelPoints, routeLine, position, { maxAheadMiles: FUEL_LOOK_AHEAD_MILES }).map(
+      (entry) => ({
+        id: entry.point.id,
+        name: entry.point.name,
+        coordinate: entry.point.coordinate,
+        aheadMiles: entry.aheadMiles,
+      }),
+    );
+  }, [fuelPoints, position, routeLine]);
+  const fuelFound = fuelPoints.length;
   const selectedPoint = useMemo(
     () => (selectedId === null ? null : state.points.find((point) => point.id === selectedId) ?? null),
     [selectedId, state.points],
@@ -106,6 +138,8 @@ export function useRideInterest({
     status: state.status,
     scenePlaces,
     chip,
+    fuelAhead,
+    fuelFound,
     selectedPoint,
     select: setSelectedId,
     clear: useCallback(() => setSelectedId(null), []),

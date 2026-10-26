@@ -361,8 +361,8 @@ export function LoopDirectionRow({ model }: { readonly model: RideStyleControlsM
 }
 
 /** Road character, surface, highways and tolls behind one summary row. */
-export function RideStylePanel({ model }: { readonly model: RideStyleControlsModel }) {
-  const [open, setOpen] = useState(false);
+export function RideStylePanel({ model, expanded = false }: { readonly model: RideStyleControlsModel; readonly expanded?: boolean }) {
+  const [open, setOpen] = useState(expanded);
   const panelId = useId();
   const characterName = useId();
   const noveltyName = useId();

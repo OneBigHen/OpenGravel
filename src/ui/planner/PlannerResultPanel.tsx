@@ -12,7 +12,9 @@ import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
-import { usePhonePlanner } from "./usePhonePlanner";
+import { RouteOptions } from "./RouteOptions";
+import { rideStyleSummary } from "./RideStyleControls";
+import { useCompactPlanner, usePhonePlanner } from "./usePhonePlanner";
 import { PhoneRideSummary } from "./PhoneRideSummary";
 import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 
@@ -54,6 +56,11 @@ function useInspectorTier(): boolean {
 
 export interface PlannerResultPanelProps {
   /** The inspector column's element; `null` until it is mounted. */
+  readonly showOptions?: boolean;
+  readonly onEditOptions?: (() => void) | undefined;
+  readonly onOpenOptions?: (() => void) | undefined;
+  readonly startLabel?: string;
+  readonly finishLabel?: string;
   readonly inspector: HTMLElement | null;
   readonly choices: {
     readonly cards: readonly RouteCardVm[];
@@ -81,9 +88,10 @@ export interface PlannerResultPanelProps {
   readonly onExpandSheet?: () => void;
 }
 
-export function PlannerResultPanel({ inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
+  const compact = useCompactPlanner();
   const [comparing, setComparing] = useState(false);
   const [weatherLine, setWeatherLine] = useState<string | null>(null);
   // No route on screen means no traffic claim about one: the caller clears it,
@@ -94,9 +102,13 @@ export function PlannerResultPanel({ inspector, choices, actions, briefing, shee
   }, [route, onRouteTraffic]);
   const selectedCard = choices.cards.find((card) => card.isSelected);
   const tint = selectedCard?.tint ?? 0;
+  if (showOptions && compact && selectedCard !== undefined) return <RouteOptions
+    cards={choices.cards} onSelect={choices.onSelect} start={actions.start}
+    startLabel={startLabel} finishLabel={finishLabel} onReverse={rideStyle?.actions.reverse}
+    onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}/>;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
+      {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
       {choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (

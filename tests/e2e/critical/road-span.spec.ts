@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   expectDrawnScene,
   expectHealthyMap,
   fractionOf,
@@ -115,9 +115,9 @@ async function expectReplanSettled(page: Page): Promise<void> {
 
 /** Places both endpoints and plans the fixture ride. */
 async function planFixtureRide(page: Page): Promise<void> {
-  await clickMapAtCoordinate(page, ROUTE_START);
+  await placeEndpoint(page, "start", ROUTE_START);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, NEW_DESTINATION);
+  await placeEndpoint(page, "finish", NEW_DESTINATION);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", {

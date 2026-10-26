@@ -90,14 +90,18 @@ test.describe("recorded rides", () => {
     await page.goto("/rides");
     const row = page.locator(".og-library__row").filter({ has: page.getByTestId("recorded-ride-summary") });
     await expect(row).toHaveCount(1);
-    await expect(row.getByText("Recorded", { exact: true })).toBeVisible();
+    // The segment reads "Recorded"; the recorded ride's own row also answers to
+    // names that start with that word ("Open Recorded ride", "More actions for
+    // Recorded ride"), so the segment is matched exactly.
+    await expect(page.getByRole("button", { name: "Recorded", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(row.getByTestId("recorded-track-thumbnail")).toBeVisible();
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("moving");
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("total");
 
     const recordedSummary = await row.getByTestId("recorded-ride-summary").innerText();
     expect(catalogueRequests).toHaveLength(0);
-    await row.getByRole("button", { name: "View details for Recorded ride" }).click();
+    await row.getByRole("button", { name: "More actions for Recorded ride" }).click();
+    await page.getByRole("menuitem", { name: "Details" }).click();
     const progress = row.getByTestId("recorded-road-progress");
     await expect(progress).toContainText("Ridden on mapped good roads:");
     await expect(progress).toContainText("New-to-you: Unknown");
@@ -108,9 +112,9 @@ test.describe("recorded rides", () => {
     expect(query.get("layers")).toBe("great-roads,gravel");
     await expect(row.getByTestId("recorded-ride-summary")).toHaveText(recordedSummary);
 
-    await row.getByRole("button", { name: "Export Recorded ride" }).click();
+    await row.getByRole("button", { name: "More actions for Recorded ride" }).click();
     const downloadPromise = page.waitForEvent("download");
-    await row.getByRole("menuitem", { name: "Recorded ride GPX" }).click();
+    await page.getByRole("menuitem", { name: "Download GPX" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/i);
     const output = testInfo.outputPath(download.suggestedFilename());

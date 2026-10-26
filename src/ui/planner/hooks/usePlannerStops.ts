@@ -19,13 +19,11 @@ import {
 import {
   itineraryRefFor,
   itineraryRefKey,
-  nextPlacementTarget,
   type ItineraryRef,
   type PlacementTarget,
   type PlannerViewModel,
   type PointRowVm,
 } from "@/application/planner/planner-view-model";
-import { defaultLoopToleranceMinutes } from "@/application/planner/build-plan-request";
 import type { MapPointAction } from "@/application/map/types";
 import { snapPreviewCoordinate } from "@/application/planner/point-snap";
 import {
@@ -35,8 +33,7 @@ import {
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import {
   insertStopCommand,
-  rideShapeCommand,
-  loopTimeCommand,
+  loopFromCommand,
   moveFinishCommand,
   moveShapeCommand,
   moveStartCommand,
@@ -57,7 +54,6 @@ export type ArmedPlacementTool = "start" | "finish" | "stop" | null;
 
 export interface PlannerStopsAuthoring {
   readonly armedTool: ArmedPlacementTool;
-  readonly missingTarget: PlacementTarget;
   readonly panelProps: StopsPanelProps;
   readonly changeDestination: () => void;
   readonly onMapPointAction: (action: MapPointAction, coordinate: Coordinate) => void;
@@ -120,7 +116,6 @@ export function usePlannerStops(input: {
     plannerUiStore,
   } = input;
   const armedTool = armedToolFor(placementTool);
-  const missingTarget = nextPlacementTarget(document);
 
   const actions = usePlannerItineraryActions({
     document,
@@ -295,8 +290,11 @@ export function usePlannerStops(input: {
         return true;
       }
 
-      const armedTarget: PlacementTarget = armedTool === "stop" ? null : armedTool;
-      const target = armedTarget ?? missingTarget;
+      // Only an armed tool places a point. A plain tap on the map never fills a
+      // missing start or destination by itself: riders pan and pinch with gloves
+      // on, and a stray touch that routed them somewhere was the top complaint.
+      // Long-press (the point menu) and search are how a spot becomes a point.
+      const target: PlacementTarget = armedTool === "stop" ? null : armedTool;
       if (target !== "start" && target !== "finish") return false;
       rideDocumentStore
         .getState()
@@ -311,7 +309,6 @@ export function usePlannerStops(input: {
     [
       armedTool,
       document,
-      missingTarget,
       placementStopId,
       placementTool,
       plannerUiStore,
@@ -327,22 +324,18 @@ export function usePlannerStops(input: {
     // start and time commands rather than bypassing the document authority.
     if (action === "start") dispatch(placeStartCommand(current(), coordinate));
     if (action === "finish") {
-      dispatch(rideShapeCommand(current(), "destination"));
-      dispatch(placeFinishCommand(current(), coordinate));
+      const document = current();
+      dispatch({ ...placeFinishCommand(document, coordinate), type: "ride.directions",
+        start: document.intent.start, finish: placeFinishCommand(document, coordinate).point, keepWaypoints: true });
     }
     if (action === "stop" && current().intent.start !== null && current().intent.finish !== null) {
       dispatch(insertStopCommand(current(), coordinate, undefined));
     }
-    if (action === "loop") {
-      dispatch(rideShapeCommand(current(), "loop"));
-      dispatch(placeStartCommand(current(), coordinate));
-      dispatch(loopTimeCommand(current(), 60, defaultLoopToleranceMinutes(60)));
-    }
+    if (action === "loop") dispatch(loopFromCommand(current(), coordinate));
   }, [rideDocumentStore]);
 
   return {
     armedTool,
-    missingTarget,
     onMapPointAction,
     panelProps,
     changeDestination: actions.changeDestination,

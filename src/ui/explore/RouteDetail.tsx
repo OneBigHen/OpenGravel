@@ -1,6 +1,8 @@
 "use client";
 
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
+import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { peekListPosition } from "@/ui/explore/list-position";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
@@ -16,11 +18,12 @@ import {
 } from "@/application/export/gpx-export";
 import type { CatalogRoadDetail } from "@/application/explore/catalog";
 import {
-  routeRoadCoverageLabel,
   routeSurfaceLabel,
+  type RouteRoadSummary,
 } from "@/application/roads/route-road-summary";
 import { aggregateRoadSurface } from "@/application/roads/surface-evidence";
 import { aggregateSurface, type SurfaceAssessment } from "@/domain/roads/surface";
+import { elevationSummaryOf } from "@/application/explore/elevation-summary";
 import {
   prepareRoute,
   type RoutePreparation,
@@ -37,11 +40,16 @@ import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
+import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
+
+import "./explore-rides.css";
 
 export interface RouteDetailProps {
   readonly entry: CatalogEntry;
   readonly variants?: readonly CatalogVariantSummary[];
   readonly onUse: (entry: CatalogEntry) => Promise<void> | void;
+  /** Keep this ride in the rider's own library without leaving the page. */
+  readonly onSave?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
   readonly preparation?: RoutePreparation;
   /** The rider's active garage bike; fuel advice uses it (EX-02, RS-01). */
@@ -72,7 +80,14 @@ function serverTimeZone(): string {
 }
 
 function UnknownMetric({ label }: { readonly label: string }) {
-  return <span aria-label={`${label} not computed`}>—</span>;
+  return <span aria-label={`${label} unknown`}>—</span>;
+}
+
+const FEET_PER_METER = 3.28084;
+
+/** `3,200 ft`: the same spelling the planner's elevation head uses. */
+function feet(meters: number): string {
+  return `${Math.round(meters * FEET_PER_METER).toLocaleString("en-US")} ft`;
 }
 
 /**
@@ -106,10 +121,18 @@ function surfaceChip(assessment: SurfaceAssessment) {
   );
 }
 
-function formatAge(ageDays: number | null, stale: boolean): string {
-  if (ageDays === null) return stale ? "Age unknown · stale" : "Age unknown";
-  if (ageDays === 0) return stale ? "Today · stale" : "Today";
-  return `${ageDays} day${ageDays === 1 ? "" : "s"} ago${stale ? " · stale" : ""}`;
+/**
+ * The coverage line above the road list, in rider words: how much of the ride
+ * runs on roads this app has a record for, and how many of those have no
+ * surface report yet. "7.7 mi matched · 0 surface unknown" counted absence.
+ */
+function roadCoverageCopy(summary: RouteRoadSummary): string {
+  const roadNoun = summary.roads.length === 1 ? "road" : "roads";
+  const parts = [`${formatMiles(summary.matchedKm * 1000)} on ${summary.roads.length} known ${roadNoun}`];
+  if (summary.unverifiedRoadCount > 0) {
+    parts.push(`${summary.unverifiedRoadCount} with no surface report yet`);
+  }
+  return parts.join(" · ");
 }
 
 function surfaceCopy(assessment: SurfaceAssessment): string {
@@ -124,6 +147,9 @@ function RoadDetailSheet({
   readonly onClose: () => void;
 }) {
   const assessment = surfaceAssessmentForRoad(road);
+  // One reading of the clock per open sheet, so every report's age is said
+  // from the same moment.
+  const [now] = useState(() => Date.now());
   const dialogRef = useRef<HTMLElement | null>(null);
   useDialogFocus(dialogRef, onClose);
   return (
@@ -146,32 +172,21 @@ function RoadDetailSheet({
           Also known as: {road.aliases.join(", ")}
         </p>
       ) : null}
+      <p className="og-road-detail-sheet__surface" data-surface-band={assessment.band}>
+        {surfaceCopy(assessment)}
+      </p>
       <dl className="og-road-detail-sheet__facts">
-        <div><dt>Class</dt><dd>{road.entity.class}</dd></div>
-        <div><dt>First seen</dt><dd>{road.entity.firstSeen}</dd></div>
-        <div><dt>Last seen</dt><dd>{road.entity.lastSeen}</dd></div>
         <div>
-          <dt>Rides through here</dt>
-          <dd>{road.ridesThroughCount} {road.ridesThroughCount === 1 ? "ride" : "rides"} through here</dd>
+          <dt>On this ride</dt>
+          <dd>{formatMiles(road.summary.distanceKm * 1000)} · {Math.round(road.summary.percentage)}%</dd>
+        </div>
+        <div>
+          <dt>Ridden by</dt>
+          <dd>{road.ridesThroughCount} {road.ridesThroughCount === 1 ? "ride" : "rides"}</dd>
         </div>
       </dl>
-      {road.entity.lineage.length > 0 ? (
-        <section aria-labelledby="road-lineage-title">
-          <h3 id="road-lineage-title">Lineage history</h3>
-          <ul className="og-road-detail-sheet__lineage">
-            {road.entity.lineage.map((entry, index) => (
-              <li key={`${entry.parentId ?? "unknown"}-${entry.reason}-${String(index)}`}>
-                {entry.reason}{entry.parentId === undefined ? "" : ` from ${entry.parentId}`}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-      <section aria-labelledby="road-evidence-title">
-        <h3 id="road-evidence-title">Evidence</h3>
-        <p className="og-road-detail-sheet__surface" data-surface-band={assessment.band}>
-          {`Surface ${assessment.band}`}{assessment.value === "unknown" ? "" : ` · ${assessment.value}`}
-        </p>
+      <section aria-labelledby="road-surface-reports-title">
+        <h3 id="road-surface-reports-title">Surface reports</h3>
         {assessment.conflicts.length > 0 || road.evidenceSummary.conflict ? (
           <p className="og-road-detail-sheet__conflict" role="status">
             Surface reports conflict. See each source below.
@@ -187,18 +202,21 @@ function RoadDetailSheet({
           </ul>
         ) : null}
         {assessment.provenance.length === 0 ? (
-          <p>— <span className="sr-only">No evidence reported</span></p>
+          <p>— <span className="sr-only">No surface reports</span></p>
         ) : (
           <table className="og-road-detail-sheet__evidence">
-            <caption className="sr-only">Evidence reports for {road.entity.name}</caption>
+            <caption className="sr-only">Surface reports for {road.entity.name}</caption>
             <thead>
-              <tr><th scope="col">Source</th><th scope="col">Age</th><th scope="col">Value</th></tr>
+              <tr><th scope="col">Source</th><th scope="col">Age</th><th scope="col">Surface</th></tr>
             </thead>
             <tbody>
               {assessment.provenance.map((record) => (
                 <tr key={record.evidenceId}>
                   <td>{record.sourceLabel}</td>
-                  <td>{formatAge(record.ageDays, record.stale)}</td>
+                  <td>
+                    {surfaceReportAge(record.observedAt, now)}
+                    {record.stale ? " · out of date" : ""}
+                  </td>
                   <td>{record.value === "unknown" ? <span aria-label="Surface unknown">Surface unknown</span> : record.value}</td>
                 </tr>
               ))}
@@ -206,6 +224,14 @@ function RoadDetailSheet({
           </table>
         )}
       </section>
+      {/* Where the road's identity came from, in one plain line: a rider who
+          opens this sheet wants the road, not its reconciliation log. */}
+      {road.entity.lineage.length === 0 ? null : (
+        <details className="og-road-detail-sheet__history">
+          <summary>Where this road came from</summary>
+          <p>This road has changed since it was first recorded.</p>
+        </details>
+      )}
     </section>
   );
 }
@@ -223,11 +249,12 @@ function formatMinutes(minutes: number): string {
 
 /**
  * The catalog carries no ride time, so a blank told the rider nothing (EX-08).
- * Estimate it from the distance at a stated pace, rounded to the quarter hour.
+ * Estimate it from the distance at a stated pace, rounded to the quarter hour;
+ * a distance nobody measured stays absent rather than becoming a number.
  */
 function estimatedTimeFromDistance(distanceKm: number | null | undefined): ReactNode {
   if (distanceKm === undefined || distanceKm === null || !Number.isFinite(distanceKm) || distanceKm <= 0) {
-    return <UnknownMetric label="Estimated time" />;
+    return null;
   }
   const minutes = Math.max(15, Math.round(((distanceKm / 1.609344) / ESTIMATE_MPH) * 60 / 15) * 15);
   return (
@@ -277,6 +304,7 @@ export function RouteDetail({
   entry,
   variants = [],
   onUse,
+  onSave,
   preparation: providedPreparation,
   preparationProviders,
   activeBike,
@@ -285,6 +313,10 @@ export function RouteDetail({
 }: RouteDetailProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  // Whether the way back leads to a list that knows where to stand: the list
+  // restores that offset itself, so the router must not scroll it to the top.
+  const [listKnowsPosition] = useState(() => peekListPosition() !== null);
   const [selectedRoad, setSelectedRoad] = useState<CatalogRoadDetail | null>(null);
   const [, setWeatherRefresh] = useState(0);
   const [, setTrafficRefresh] = useState(0);
@@ -304,6 +336,8 @@ export function RouteDetail({
   // load state when the full line cannot be fetched).
   const fullGeometry = entry.geometryComplete !== false;
   const canExport = fullGeometry && entry.geometry.length >= 2;
+  /** The line the detail page draws when there is neither a live map nor an image. */
+  const mapLine = entry.geometry.length >= 2 ? entry.geometry : entry.previewGeometry ?? [];
   const registeredProviders: RegisteredPreparationProviders = preparationProviders ?? {};
   const weatherCandidate = Array.isArray(registeredProviders)
     ? registeredProviders.find((provider) => provider.kind === "weather")
@@ -375,6 +409,29 @@ export function RouteDetail({
   const provenanceSource = provenanceSourceName(entry.provenance);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
+  // The ride's one line of facts, in the order a rider asks them: how far it
+  // is, how long it takes, what is under the wheels, and how much of it turns.
+  // A fact this route does not know is left out — an absence is not a value,
+  // and the page does not print "unknown" four times under the name.
+  const rideTime = entry.estimatedTimeMinutes === undefined
+    ? estimatedTimeFromDistance(entry.distanceKm)
+    : formatMinutes(entry.estimatedTimeMinutes);
+  const surfaceFact = entry.surfaceSummary !== undefined
+    // One fact's own middot would read as another fact on this line.
+    ? entry.surfaceSummary.split(" · ").join(", ")
+    : entry.roadSummary === undefined || (entry.roadSummary.surfaceBand ?? "unknown") === "unknown"
+      ? null
+      : routeSurfaceLabel(entry.roadSummary);
+  const rideFacts: readonly { readonly key: string; readonly value: ReactNode }[] = [
+    ...(entry.distanceKm === null ? [] : [{ key: "distance", value: formatMiles(entry.distanceKm * 1000) }]),
+    ...(rideTime === null ? [] : [{ key: "time", value: rideTime }]),
+    ...(surfaceFact === null ? [] : [{ key: "surface", value: surfaceFact }]),
+    ...(entry.curvatureSummary === undefined ? [] : [{ key: "curvature", value: entry.curvatureSummary }]),
+  ];
+  // Climb, descent and the highest point, in the units a US rider reads; the
+  // section is absent when the stored profile cannot say.
+  const elevation = elevationSummaryOf(entry.stats?.elevationProfile);
+
   const basePreparation = providedPreparation ?? prepareRoute({
     ...preparationContext,
     providers: registeredProviders,
@@ -395,7 +452,6 @@ export function RouteDetail({
     setStatus(null);
     try {
       await callback();
-      if (action === "use") setStatus("Opening a private copy in the planner.");
     } catch {
       setStatus("That action could not be completed.");
     } finally {
@@ -404,10 +460,21 @@ export function RouteDetail({
   }
 
   const noMatchedRoads = entry.roadDetails === undefined || entry.roadDetails.length === 0;
+  // A ride that came from the catalog is not in the rider's library yet, so it
+  // can be kept there. One that came from the library has nothing to add.
+  const canSave = onSave !== undefined && entry.source === "catalog" && fullGeometry;
 
   function exportGpx(): void {
     const xml = buildPlannedRouteGpx({ title: entry.name, geometry: entry.geometry });
     downloadExport(new TextEncoder().encode(xml), exportFilename(entry.name, "planned-route"));
+  }
+
+  /** Keep a copy in My rides and stay here: the ride page is for reading. */
+  async function saveRide(): Promise<void> {
+    if (onSave === undefined) return;
+    await onSave(entry);
+    setSaved(true);
+    setStatus("Saved to My rides.");
   }
 
   return (
@@ -415,15 +482,24 @@ export function RouteDetail({
       <header className="og-route-detail__header">
         {/* The way back is a target, not a pill: 48px, and it sits on the gutter
             the words below align to. */}
-        <Link className="og-route-detail__back" href="/explore" aria-label="Back to Explore">
+        <Link className="og-route-detail__back" href="/explore" scroll={!listKnowsPosition} aria-label="Back to Explore">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M15 5l-7 7 7 7" />
           </svg>
         </Link>
         <div className="og-route-detail__heading">
-          <p className="og-eyebrow">{entry.source === "catalog" ? "Catalog route" : entry.source === "import" ? "Imported route" : "Your ride"}</p>
           <h1>{entry.name}</h1>
         </div>
+        {/* One line of numbers under the name, before the map: how far, how
+            long, what is under the wheels. It replaces a four-tile ledger that
+            pushed the ride itself down the page. */}
+        {rideFacts.length === 0 ? null : (
+          <p className="og-route-detail__facts" data-testid="route-facts">
+            {rideFacts.map((fact) => (
+              <span key={fact.key} className="og-route-detail__fact">{fact.value}</span>
+            ))}
+          </p>
+        )}
         {showHeaderMeta ? (
           <p className="og-route-detail__meta" data-testid="route-meta">
             {startDistance === null ? null : (
@@ -435,8 +511,8 @@ export function RouteDetail({
         ) : null}
       </header>
 
-      {/* The route where it is leads the page (VISUAL-OVERHAUL): a detail page
-          opens on its live map, then the numbers, then the commitment. */}
+      {/* The route where it is comes next, then the one commitment: a rider
+          decides with the map and the line, in that order. */}
       <div className="og-route-detail__body">
         <div className="og-route-detail__visual">
       <section className="og-route-detail__map" aria-label="Map preview">
@@ -446,6 +522,10 @@ export function RouteDetail({
         ) : staticMapUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
           <img className="og-route-detail__map-image" src={staticMapUrl} alt={`${entry.name} on a map`} width={640} height={400} />
+        ) : mapLine.length >= 2 ? (
+          // No basemap on this device: the ride's own line takes the map's place
+          // rather than a sentence about a missing picture.
+          <RouteLinePreview line={mapLine} name={entry.name} />
         ) : (
           <div className="og-map-preview-unavailable" role="img" aria-label={`${entry.name} map preview`}>
             <span className="og-map-preview-unavailable__glyph" aria-hidden="true">⌖</span>
@@ -453,38 +533,59 @@ export function RouteDetail({
           </div>
         )}
       </section>
-
-      <section className="og-route-detail__stats" aria-label="Route stats">
-        <div><dt>Distance</dt><dd>{formatDistance(entry.distanceKm)}</dd></div>
-        <div><dt>Est. time</dt><dd>{entry.estimatedTimeMinutes === undefined ? estimatedTimeFromDistance(entry.distanceKm) : formatMinutes(entry.estimatedTimeMinutes)}</dd></div>
-        {/* EX-07: the catalog's summary is the route service's estimate; say so where it is shown. */}
-        <div><dt>{entry.surfaceSummary === undefined ? "Surface" : "Est. surface"}</dt><dd>{entry.surfaceSummary ?? surfaceCopy(routeSurfaceAssessment)}</dd></div>
-        <div><dt>Curvature</dt><dd>{entry.curvatureSummary ?? <UnknownMetric label="Curvature" />}</dd></div>
-      </section>
         </div>
         <div className="og-route-detail__content">
 
-      {/* EX-03: the main action sits with the summary, not 3,000 px below it;
-          on a phone it stays pinned above the tab bar. */}
+      {/* ONE action a rider takes on this page: it opens the ride ready to
+          start. Saving and sharing sit beside it as the quiet choices, together
+          on their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Plan this ride</button>
-        {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
-        <ShareRouteButton name={entry.name} />
-        {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+        <button
+          type="button"
+          className="og-primary"
+          data-testid="ride-this"
+          aria-busy={busy === "use"}
+          disabled={busy !== null || !fullGeometry}
+          onClick={() => void runAction("use", () => onUse(entry))}
+        >
+          {busy === "use" ? "Getting this ride ready…" : "Ride this"}
+        </button>
+        <div className="og-route-detail__alternates">
+          {canSave ? (
+            // Already saved is a state, not a dead end: the button keeps its
+            // focus and says what it did rather than going grey under the thumb.
+            <button
+              type="button"
+              className="og-secondary"
+              aria-pressed={saved}
+              disabled={busy !== null}
+              onClick={() => {
+                if (saved) return;
+                void runAction("save", saveRide);
+              }}
+            >
+              {saved ? "Saved" : "Save"}
+            </button>
+          ) : null}
+          <ShareRouteButton name={entry.name} />
+        </div>
       </section>
+
+      {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
+
+      <p className="og-route-detail__summary">{entry.summary}</p>
 
       {entry.story === undefined ? null : <RouteStory story={entry.story} routeName={entry.name} />}
 
       {variants.length > 0 ? (
-        <section className="og-route-detail__variants" aria-label="Catalog variants and tracks">
-          <h2>Variants and tracks</h2>
-          <p>Repeated exports are grouped together. Separate tracks remain available.</p>
+        <section className="og-route-detail__variants" aria-label="Other versions of this ride">
+          <h2>Other versions</h2>
           <ul>
             {variants.map((variant) => (
               <li key={variant.id}>
                 <Link href={`/explore/${encodeURIComponent(variant.id)}`}>
                   <strong>{variant.label ? `${variant.label} · ` : ""}{variant.name}</strong>
-                  <span>{formatDistance(variant.distanceKm)} · {variant.copyCount} {variant.copyCount === 1 ? "export" : "exports"}</span>
+                  <span>{formatDistance(variant.distanceKm)} · {variant.copyCount} {variant.copyCount === 1 ? "version" : "versions"}</span>
                 </Link>
               </li>
             ))}
@@ -494,12 +595,16 @@ export function RouteDetail({
 
       <RoutePreparationSection variant="brief" preparation={preparation} />
 
-      {entry.stats?.elevationProfile !== undefined ? (
-        <section className="og-route-detail__elevation" aria-label="Elevation profile">
+      {elevation === null ? null : (
+        <section className="og-route-detail__elevation" aria-label="Elevation">
           <h2>Elevation</h2>
-          <p>{entry.stats.elevationProfile.length} measured points</p>
+          <dl className="og-route-detail__elevation-facts">
+            <div><dt>Climb</dt><dd>{feet(elevation.climbMeters)}</dd></div>
+            <div><dt>Descent</dt><dd>{feet(elevation.descentMeters)}</dd></div>
+            <div><dt>Highest point</dt><dd>{feet(elevation.highPointMeters)}</dd></div>
+          </dl>
         </section>
-      ) : null}
+      )}
 
       {noMatchedRoads ? null : (
         <section className="og-route-detail__roads" aria-labelledby="roads-on-this-ride-title">
@@ -507,7 +612,7 @@ export function RouteDetail({
             <div>
               <h2 id="roads-on-this-ride-title">Roads on this ride</h2>
               {entry.roadSummary === undefined ? null : (
-                <p className="og-route-detail__coverage">{routeRoadCoverageLabel(entry.roadSummary)}</p>
+                <p className="og-route-detail__coverage">{roadCoverageCopy(entry.roadSummary)}</p>
               )}
               <p className="og-route-detail__surface-summary">{routeSurfaceLabel(entry.roadSummary ?? {
                 roads: [],
@@ -543,9 +648,20 @@ export function RouteDetail({
       )}
 
       {entry.source === "catalog" ? <RouteCommunity routeId={entry.id} /> : null}
+
+      {/* Taking the ride elsewhere is a quieter job than riding it: the file for
+          a device, and the public listing for a shared ride. */}
+      {canExport || (fullGeometry && (entry.source === "personal" || entry.source === "import")) ? (
+        <section className="og-route-detail__take-away" aria-label="Take this ride with you">
+          <h2>Take it with you</h2>
+          <div className="og-route-detail__alternates">
+            {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
+            {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+          </div>
+        </section>
+      ) : null}
+
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
-      <p className="og-route-detail__summary">{entry.summary}</p>
-      {status !== null ? <p role="status">{status}</p> : null}
         </div>
       </div>
       {/* Credits close the page: who made the place the ride goes through, and
@@ -557,7 +673,7 @@ export function RouteDetail({
         {entry.provenanceDetail === undefined && !entry.provenance.includes(" · ") ? null : (
           <details className="og-route-detail__provenance-detail">
             <summary>Where this route came from</summary>
-            {entry.provenance.includes(" · ") ? <p>Source project and file: {entry.provenance}</p> : null}
+            {entry.provenance.includes(" · ") ? <p>From the file: {entry.provenance}</p> : null}
             {entry.provenanceDetail === undefined ? null : <p>{entry.provenanceDetail}</p>}
           </details>
         )}

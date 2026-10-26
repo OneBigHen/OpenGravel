@@ -5,6 +5,7 @@ import {
   EMBER_STRONG,
   MUTED_ALTERNATIVE,
   clickMapAtCoordinate,
+  placeEndpoint,
   countColors,
   dragMap,
   cameraGeneration,
@@ -97,9 +98,9 @@ async function placeBothEndpoints(page: import("@playwright/test").Page): Promis
   readonly startClick: Coordinate;
   readonly destinationClick: Coordinate;
 }> {
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText(START_LABEL);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText(FINISH_LABEL);
   return {
     start: await readCoordinate(page, "start-value"),
@@ -160,16 +161,16 @@ test("idle: the planner asks for a start and refuses to plan without one", async
   await expect(plan).toHaveText("Create ride");
   await expect(plan).toBeDisabled();
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
-    "Search for a start, or set it on the map.",
+    "Search for a start, or press and hold the map.",
   );
 
-  // Arming the tool for the very point that blocks planning is visibly armed on
-  // the chip and adds no second instruction: the reason already says it.
+  // Arming the tool is the one time a tap places a point (maps-for-riders §1),
+  // so the map says so: an unarmed map stays quiet, an armed one instructs.
   await page.getByTestId("start-chip").click();
   await expect(page.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
-  await expect(page.getByTestId("map-hint")).toHaveCount(0);
+  await expect(page.getByTestId("map-hint")).toHaveText("Tap the map to set your start.");
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
-    "Search for a start, or set it on the map.",
+    "Search for a start, or press and hold the map.",
   );
 });
 

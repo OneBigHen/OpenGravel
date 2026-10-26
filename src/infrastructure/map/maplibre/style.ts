@@ -171,6 +171,8 @@ export const MAP_LAYER_IDS = {
   riderPosition: "ogv-rider-position",
   riderHeading: "ogv-rider-heading",
   placeDot: "ogv-place-dot",
+  searchPin: "ogv-search-pin",
+  searchLabel: "ogv-search-label",
   placePill: "ogv-place-pill",
   placeSelected: "ogv-place-selected",
   scrubMarker: "ogv-scrub-marker",
@@ -840,13 +842,13 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       id: MAP_LAYER_IDS.placeDot,
       type: "circle",
       source: MAP_SOURCE_IDS.places,
-      maxzoom: 11.5,
       paint: {
         // Marigold is the places colour at every zoom; live places are the
         // larger, fully opaque dots (UX rework: ink dots read as map noise).
-        "circle-radius": ["match", ["get", "tone"], "live", 5, 4],
+        "circle-radius": ["case", equals("kind", "search"), ["case", equals("selected", true), 20, 16], ["match", ["get", "tone"], "live", 5, 4]],
         "circle-color": palette.goldenHour,
-        "circle-opacity": ["match", ["get", "tone"], "live", 1, "soon", 0.85, 0.6],
+        // Search pins remain visible and tappable when optional map fonts fail.
+        "circle-opacity": ["step", ["zoom"], ["match", ["get", "tone"], "live", 1, "soon", 0.85, 0.6], 11.5, ["case", equals("kind", "search"), 1, 0]],
         "circle-stroke-color": palette.paper,
         "circle-stroke-width": 1.5,
       },
@@ -855,7 +857,7 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       id: MAP_LAYER_IDS.placePill,
       type: "symbol",
       source: MAP_SOURCE_IDS.places,
-      filter: equals("selected", false),
+      filter: ["all", equals("selected", false), ["!=", ["get", "kind"], "search"]],
       minzoom: 11.5,
       layout: {
         "symbol-sort-key": ["get", "priority"],
@@ -893,7 +895,7 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       id: MAP_LAYER_IDS.placeSelected,
       type: "symbol",
       source: MAP_SOURCE_IDS.places,
-      filter: equals("selected", true),
+      filter: ["all", equals("selected", true), ["!=", ["get", "kind"], "search"]],
       minzoom: 0,
       layout: {
         "symbol-sort-key": ["get", "priority"],
@@ -914,6 +916,32 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         "text-color": palette.paper,
         "icon-opacity": 1,
+      },
+    },
+    {
+      id: MAP_LAYER_IDS.searchPin,
+      type: "symbol",
+      source: MAP_SOURCE_IDS.places,
+      filter: equals("kind", "search"),
+      layout: {
+        "icon-image": ["get", "pinImage"],
+        "icon-size": ["case", equals("selected", true), 1.25, 1],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "symbol-sort-key": ["case", equals("selected", true), 1, 0],
+      },
+    },
+    {
+      id: MAP_LAYER_IDS.searchLabel,
+      type: "symbol",
+      source: MAP_SOURCE_IDS.places,
+      filter: ["all", equals("kind", "search"), equals("selected", true)],
+      layout: {
+        "icon-image": ["get", "labelImage"],
+        "icon-anchor": "bottom",
+        "icon-offset": [0, -26],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
       },
     },
   ];

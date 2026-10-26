@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   cameraGeneration,
-  clickMapAtCoordinate,
+  placeEndpoint,
   fractionOf,
   openRefine,
   plannerMap,
@@ -68,8 +68,8 @@ async function planFixtureRide(page: Page): Promise<void> {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await clickMapAtCoordinate(page, START_COORDINATE);
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
@@ -80,11 +80,15 @@ test("Ride Focus finds fixture places in the visible viewport", async ({ page })
   await rideMapReady(page);
 
   const placesControl = page.getByTestId("places-control").locator(".og-places-control__toggle");
-  await expect(placesControl).toHaveAttribute("aria-pressed", "true");
+  // A ride map opens on the line and the rider: the places overlay is off until
+  // the rider asks for it, and never opens over a ride by default.
+  await expect(placesControl).toHaveAttribute("aria-pressed", "false");
   // DV-10: the map's pills ride in the sheet.
   await openRideSheet(page);
-  // Ride Focus defaults Places on. Toggle through the rider control so this flow
-  // proves both the off and on states before querying the fixture viewport.
+  // Toggle through the rider control so this flow proves both the off and on
+  // states before querying the fixture viewport.
+  await placesControl.click();
+  await expect(placesControl).toHaveAttribute("aria-pressed", "true");
   await placesControl.click();
   await expect(placesControl).toHaveAttribute("aria-pressed", "false");
   await placesControl.click();

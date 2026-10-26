@@ -108,13 +108,24 @@ describe("Explore's filter toolbar", () => {
     expect(Number.parseInt(declaration(toggle[0]!.body, "min-height") ?? "0", 10)).toBeGreaterThanOrEqual(48);
   });
 
+  it("puts search on its own row, with the chips — Filters last — under it", () => {
+    // At 320px search and the Filters button shared one grid row, which left
+    // the field about 130px wide ("Search re…"). Search spans the toolbar and
+    // the chips, Filters included, are the row below it.
+    const toolbar = allRules().filter((rule) => rule.media === null
+      && selectorsOf(rule).includes(".og-explore__toolbar"));
+    expect(toolbar).toHaveLength(1);
+    expect(declaration(toolbar[0]!.body, "grid-template-areas")).toBe('"search" "quick"');
+    expect(declaration(toolbar[0]!.body, "grid-template-columns")).toBe("minmax(0, 1fr)");
+  });
+
   it("puts search, the chips and Filters on one line once the screen is wide enough", () => {
     const oneLine = allRules().filter((rule) =>
       rule.media !== null
       && rule.media.includes("min-width: 1181px")
       && selectorsOf(rule).includes(".og-explore .og-explore__toolbar"));
     expect(oneLine).toHaveLength(1);
-    expect(declaration(oneLine[0]!.body, "grid-template-areas")).toBe('"search quick filters"');
+    expect(declaration(oneLine[0]!.body, "grid-template-areas")).toBe('"search quick"');
   });
 
   it("opens the remaining filters as a popover that is not there while closed", () => {

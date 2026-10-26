@@ -25,6 +25,14 @@ const NOT_RIDER_DATA: ReadonlyMap<string, string> = new Map([
   ["opengravel-edit-tip-seen", "a one-time UI hint"],
   ["opengravel-vnext-ride-handoff", "a sessionStorage marker for this tab's Start ride"],
   [
+    "opengravel.explore.ride-this",
+    "a sessionStorage handoff of the Explore route this tab is opening; it is consumed once and expires in 90 s",
+  ],
+  [
+    "opengravel.explore.list-position",
+    "a sessionStorage note of how far down this tab's Explore list was; it holds no rider data and expires in minutes",
+  ],
+  [
     "opengravel.community.owner.",
     "the removal secret for a route this device shared publicly; wiping it would leave a public route nobody can take down",
   ],

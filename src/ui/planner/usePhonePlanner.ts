@@ -44,3 +44,11 @@ export function usePhonePlanner(): boolean {
 export function useDesktopPlanner(): boolean {
   return useSyncExternalStore(subscribeDesktop, isDesktopViewport, () => false);
 }
+
+// Short landscape retains the existing rail, matching the composition in CSS.
+const COMPACT_QUERY = "(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))";
+const subscribeCompact = subscribeTo(COMPACT_QUERY);
+export function isCompactViewport(): boolean { return matches(COMPACT_QUERY); }
+export function useCompactPlanner(): boolean {
+  return useSyncExternalStore(subscribeCompact, isCompactViewport, () => false);
+}

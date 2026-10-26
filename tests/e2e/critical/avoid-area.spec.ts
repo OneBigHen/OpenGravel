@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  clickMapAtCoordinate,
+  placeEndpoint,
   expectCoordinateNear,
   expectDrawnScene,
   expectHealthyMap,
@@ -124,9 +124,9 @@ async function dragMapCoordinates(page: Page, corners: RectangleCorners): Promis
 
 /** Places both endpoints and plans the fixture ride, as `stops.spec.ts` does. */
 async function planFixtureRide(page: Page): Promise<void> {
-  await clickMapAtCoordinate(page, START_COORDINATE);
+  await placeEndpoint(page, "start", START_COORDINATE);
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await clickMapAtCoordinate(page, DESTINATION_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
@@ -315,8 +315,8 @@ test("an area over the start raises the conflict surface, which never resolves i
  *
  * The critical gate draws the `empty` basemap, which has no attribution at all
  * (05 §23), so the band can only be asserted as the property that matters: a tap
- * near the map's lower edge reaches the **map**, not an overlay, and it authors a
- * point. The host's own control is created compact (`{ compact: true }`) for a
+ * near the map's lower edge reaches the **map**, not an overlay. A hold then
+ * offers explicit point actions. The host's own control is compact for a
  * basemap that does have attribution, and the unit guard beside this gate fails if
  * that regresses.
  */
@@ -351,10 +351,21 @@ test.describe("the lower band of the map swallows nothing on a touch viewport", 
     );
     expect(hit.inMap, `the band is owned by ${String(hit.tag)}`).toBe(true);
 
-    // …and the tap really is authored by the map: the first unarmed tap places the
-    // start (OGV-D-213), so a swallowed tap would leave the composer untouched.
-    await page.mouse.click(point.x, point.y);
-    await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
+    // A plain tap never authors a point (maps-for-riders §1). A real touch hold
+    // in the same band opens the point menu; only Start here changes the ride.
+    await page.waitForTimeout(750);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...point, id: 0 }] });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await expectDrawnScene(page, { points: "0" });
+    // The next press is a deliberate hold, outside double-tap/gesture quiet time.
+    await page.waitForTimeout(750);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...point, id: 0 }] });
+    await page.waitForTimeout(550);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await cdp.detach();
+    await expect(page.getByTestId("map-point-menu")).toBeVisible();
+    await page.getByTestId("map-point-menu").getByRole("button", { name: "Start here" }).click();
     await expectDrawnScene(page, { points: "1" });
     await expectHealthyMap(page);
   });

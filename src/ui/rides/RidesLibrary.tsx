@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-
-import { AppBar } from "@/ui/nav/AppBar";
 import { useRouter } from "next/navigation";
 
+import { AppBar } from "@/ui/nav/AppBar";
 import {
   type LibraryServicePort,
-  type RideListFilter,
   type RideSummary,
 } from "@/application/library/library-service";
 import { DRAFT_DIRTY_STORAGE_KEY } from "@/application/persistence/local-data-keys";
@@ -26,23 +24,14 @@ import type { ImportOutcome, ImportServicePort } from "@/application/import/impo
 import { ImportPanel } from "./../import/ImportPanel";
 import { SwitchBackImportPanel } from "./../import/SwitchBackImportPanel";
 import { SavedRideGroupShare } from "./SavedRideGroupShare";
-import { ExportMenu } from "./ExportMenu";
-import { libraryTypeLabel, type LibraryRideType } from "@/application/library/provenance";
-import { formatDistance } from "@/application/planner/measurements";
+import { formatDistance, formatDuration } from "@/application/planner/measurements";
 import { RecordedTrackThumbnail } from "./RecordedTrackThumbnail";
 import { staticPointsMapUrl, staticRouteMapUrl } from "@/application/map/static-map";
 import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
+import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
-
-const TYPE_FILTERS: readonly { readonly value: LibraryRideType | null; readonly label: string }[] = [
-  { value: null, label: "All" },
-  { value: "planned", label: "Planned" },
-  { value: "imported", label: "Imported" },
-  { value: "recorded", label: "Recorded" },
-  { value: "catalog-derivative", label: "Catalog derivative" },
-  { value: "shared-derivative", label: "Shared derivative" },
-];
+import "./rides-library.css";
 
 const NO_EXPORT_CAPABILITIES = {
   plannedRoute: false,
@@ -51,83 +40,19 @@ const NO_EXPORT_CAPABILITIES = {
   recordedRide: false,
 } as const;
 
-/** A menu whose every entry is disabled is not an offered action (garage-1). */
-function hasExportable(ride: RideSummary): boolean {
-  const capabilities = ride.exportCapabilities;
-  return capabilities !== undefined && (
-    capabilities.plannedRoute ||
-    capabilities.track ||
-    capabilities.original ||
-    capabilities.recordedRide === true
-  );
-}
-
-export interface RidesLibraryProps {
-  readonly service: LibraryServicePort;
-  readonly onOpen?: (ride: RideSummary) => Promise<void> | void;
-  readonly importService?: ImportServicePort;
-  /** A public Mapbox token: each ride is then shown on a real map image. */
-  readonly mapboxToken?: string;
-  /** Local-only reader, invoked when a recorded ride's details are expanded. */
-  readonly roadProgressReader?: RoadProgressReader;
-}
-
-interface RoadProgressCache {
-  readonly reader: RoadProgressReader | undefined;
-  readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
-}
+type RideSegment = "planned" | "recorded";
 
 /** How long a deleted ride can be brought back before it is gone. */
 const UNDO_DELETE_MS = 8000;
 
-/**
- * Today's changes carry seconds ("Today, 10:15:32 AM"), so two rides saved in
- * the same minute still show which came last (RS-15); older ones show the date.
- */
-function formatTimestamp(value: string, now = new Date()): string {
+/** The day a ride last changed, in the rider's own words. */
+function formatRideDate(value: string, now = new Date()): string {
   const date = new Date(value);
-  if (date.toDateString() === now.toDateString()) {
-    return `Today, ${new Intl.DateTimeFormat(undefined, { timeStyle: "medium" }).format(date)}`;
-  }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  if (date.toDateString() === now.toDateString()) return "Today";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 }
 
-/** "1:05 h" / "42 min": a ride's length in time. */
-function formatDuration(seconds: number): string {
-  const minutes = Math.max(1, Math.round(seconds / 60));
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")} h`;
-}
-
-/** The facts the card knows, and nothing for the ones it doesn't. */
-function rideFacts(ride: RideSummary): string | null {
-  const facts = [
-    ride.distanceMeters === null ? null : formatDistance(ride.distanceMeters),
-    ride.durationSeconds === null ? null : formatDuration(ride.durationSeconds),
-    ride.area,
-  ].filter((fact): fact is string => fact !== null && fact !== "");
-  return facts.length === 0 ? null : facts.join(" · ");
-}
-
-const PROVENANCE_LABELS: Readonly<Record<RideSummary["provenanceType"], string>> = {
-  new: "Planned here",
-  import: "Imported from a file",
-  "recreated-from-track": "Rebuilt from a recorded track",
-  recorded: "Recorded on a ride",
-  catalog: "From the catalog",
-  derived: "Copied from another ride",
-  shared: "Shared with you",
-};
-
-/** Where the ride came from, in words; internal ids stay out (RS-14). */
-function sourceText(ride: RideSummary): string {
-  const origin = PROVENANCE_LABELS[ride.provenanceType];
-  return ride.sourceLabel === null || ride.sourceLabel === undefined ? origin : `${origin} · Source: ${ride.sourceLabel}`;
-}
-
+/** "1:05" / "42:00": a recorded ride's moving or elapsed time. */
 function formatRideTime(seconds: number): string {
   const totalSeconds = Math.max(0, Math.floor(seconds));
   const hours = Math.floor(totalSeconds / 3600);
@@ -136,6 +61,22 @@ function formatRideTime(seconds: number): string {
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
     : `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+const PROVENANCE_LABELS: Readonly<Record<RideSummary["provenanceType"], string>> = {
+  new: "Planned",
+  import: "From a file",
+  "recreated-from-track": "Rebuilt from a recording",
+  recorded: "Recorded",
+  catalog: "From Explore",
+  derived: "Opened from My rides",
+  shared: "Shared with you",
+};
+
+/** Where the ride came from, in words; internal ids stay out (RS-14). */
+function sourceText(ride: RideSummary): string {
+  const origin = PROVENANCE_LABELS[ride.provenanceType];
+  return ride.sourceLabel === null || ride.sourceLabel === undefined ? origin : `${origin} · Source: ${ride.sourceLabel}`;
 }
 
 function isDraftDirty(): boolean {
@@ -164,16 +105,81 @@ function rideMapUrl(ride: RideSummary, token: string | undefined): string | null
     : staticPointsMapUrl(ride.mapPreview.pins, size);
 }
 
+/** A map image when a token exists, else the ride's own line drawn in the browser. */
+function RideThumbnail({ ride, token }: { readonly ride: RideSummary; readonly token: string | undefined }) {
+  const mapUrl = rideMapUrl(ride, token);
+  if (mapUrl !== null) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
+      <img
+        className="og-rides__thumb-image"
+        src={mapUrl}
+        alt={`${ride.title} on a map`}
+        loading="lazy"
+        decoding="async"
+        width={400}
+        height={225}
+      />
+    );
+  }
+  const coordinates = ride.recordedTrack?.previewGeometry.length
+    ? ride.recordedTrack.previewGeometry
+    : ride.mapPreview?.line ?? [];
+  if (coordinates.length >= 2) {
+    return <RecordedTrackThumbnail coordinates={coordinates} title={ride.title} />;
+  }
+  return (
+    <span className="og-rides__thumb-empty" aria-hidden="true">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3Z" />
+        <path d="M9 7v13M15 4v13" />
+      </svg>
+    </span>
+  );
+}
+
+/** One line of facts: the day, then the distance and time the ride knows. */
+function rideMeta(ride: RideSummary): string {
+  const facts = [formatRideDate(ride.updatedAt)];
+  if (ride.recordedTrack !== undefined) {
+    facts.push(
+      formatDistance(ride.recordedTrack.summary.distanceMeters),
+      `${formatRideTime(ride.recordedTrack.summary.movingSeconds)} moving`,
+      `${formatRideTime(ride.recordedTrack.summary.elapsedSeconds)} total`,
+    );
+    return facts.join(" · ");
+  }
+  if (ride.distanceMeters !== null) facts.push(formatDistance(ride.distanceMeters));
+  if (ride.durationSeconds !== null) facts.push(formatDuration(ride.durationSeconds));
+  return facts.join(" · ");
+}
+
+export interface RidesLibraryProps {
+  readonly service: LibraryServicePort;
+  readonly onOpen?: (ride: RideSummary) => Promise<void> | void;
+  readonly importService?: ImportServicePort;
+  /** A public Mapbox token: each ride is then shown on a real map image. */
+  readonly mapboxToken?: string;
+  /** Local-only reader, invoked when a recorded ride's details are expanded. */
+  readonly roadProgressReader?: RoadProgressReader;
+}
+
+interface RoadProgressCache {
+  readonly reader: RoadProgressReader | undefined;
+  readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
+}
+
 export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader }: RidesLibraryProps) {
   const router = useRouter();
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
+  const [segment, setSegment] = useState<RideSegment>("planned");
   const [search, setSearch] = useState("");
-  const [type, setType] = useState<LibraryRideType | null>(null);
-  const [sort, setSort] = useState<"updated-desc" | "updated-asc">("updated-desc");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
+  const [renaming, setRenaming] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [sharing, setSharing] = useState<string | null>(null);
   const [roadProgressCache, setRoadProgressCache] = useState<RoadProgressCache>(() => ({
     reader: roadProgressReader,
     entries: {},
@@ -188,14 +194,11 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   const removal = useRef<{ ride: RideSummary; timer: ReturnType<typeof setTimeout> } | null>(null);
   const expandedRef = useRef<ReadonlySet<string>>(new Set());
   const roadProgressRequests = useRef(new Map<string, { readonly controller: AbortController }>());
-  // Decided by the first load and then kept, so nothing jumps mid-import: a
-  // rider with no rides yet starts by bringing some in; everyone else sees
-  // their rides first (UX rework phase 5).
-  const [importsFirst, setImportsFirst] = useState<boolean | null>(null);
-  // The empty library offers the two ways in itself, so it owns the file it
-  // picked or dropped and hands it to the import flow below (§7 simple copy).
+  // Until the rider picks a segment, the first non-empty load picks the one
+  // that actually has rides, so a recorded-only library never opens empty.
+  const segmentChosen = useRef(false);
+  // A file picked from the page's one import control, handed to the import flow.
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
-  const [dragActive, setDragActive] = useState(false);
   const importFileInput = useRef<HTMLInputElement | null>(null);
 
   function cancelRoadProgress(rideId: RideSummary["rideId"]): void {
@@ -310,18 +313,16 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     emitTelemetry("export_completed");
   }
 
-  const filter: RideListFilter = useMemo(
-    () => ({ text: search, ...(type === null ? {} : { type }) }),
-    [search, type],
-  );
-
   const load = async (): Promise<void> => {
     setStatus("loading");
     setError(null);
     try {
-      const next = await library.listRides(filter);
+      const next = await library.listRides({});
       setRides(next);
-      setImportsFirst((current) => current ?? next.length === 0);
+      if (!segmentChosen.current && next.length > 0) {
+        segmentChosen.current = true;
+        setSegment(next.some((ride) => ride.type !== "recorded") ? "planned" : "recorded");
+      }
       setTitles((current) => {
         const merged: Record<string, string> = { ...current };
         for (const ride of next) merged[ride.rideId] = current[ride.rideId] ?? ride.title;
@@ -336,19 +337,34 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
   useEffect(() => {
     void Promise.resolve().then(() => load());
-    // `filter` is the intentionally complete query identity for this effect.
+    // `library` is the intentionally complete identity of this load.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [library, filter]);
+  }, [library]);
 
-  const sortedRides = useMemo(
-    () =>
-      rides.filter((ride) => ride.rideId !== removed?.rideId).sort((a, b) =>
-        sort === "updated-desc"
-          ? b.updatedAt.localeCompare(a.updatedAt)
-          : a.updatedAt.localeCompare(b.updatedAt),
-      ),
-    [rides, sort, removed],
+  // One stable bound reader: the share form auto-loads once it is opened.
+  const loadExportSource = useMemo(
+    () => library.loadExportSource?.bind(library),
+    [library],
   );
+
+  const activeRides = useMemo(
+    () => rides.filter((ride) => ride.rideId !== removed?.rideId),
+    [rides, removed],
+  );
+
+  // Two segments, each newest first. A ride recorded on the road belongs under
+  // Recorded; every plan, import and copy belongs under Planned.
+  const segmentRides = useMemo(
+    () => activeRides
+      .filter((ride) => (segment === "recorded" ? ride.type === "recorded" : ride.type !== "recorded"))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    [activeRides, segment],
+  );
+
+  const visibleRides = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return term === "" ? segmentRides : segmentRides.filter((ride) => ride.title.toLowerCase().includes(term));
+  }, [segmentRides, search]);
 
   async function rename(ride: RideSummary): Promise<void> {
     const title = titles[ride.rideId]?.trim() ?? "";
@@ -356,12 +372,25 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     setBusy(ride.rideId);
     try {
       await library.renameRide(ride.rideId, title);
+      setRenaming(null);
       await load();
     } catch {
       setError("Could not rename this ride.");
     } finally {
       setBusy(null);
     }
+  }
+
+  function startRename(ride: RideSummary): void {
+    setTitles((current) => ({ ...current, [ride.rideId]: current[ride.rideId] ?? ride.title }));
+    setPendingOpen(null);
+    setPendingDelete(null);
+    setRenaming(ride.rideId);
+  }
+
+  function cancelRename(ride: RideSummary): void {
+    setTitles((current) => ({ ...current, [ride.rideId]: ride.title }));
+    setRenaming(null);
   }
 
   async function commitRemoval(): Promise<void> {
@@ -387,6 +416,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     setExpanded(nextExpanded);
     cancelRoadProgress(ride.rideId);
     setPendingDelete(null);
+    if (sharing === ride.rideId) setSharing(null);
     removal.current = { ride, timer: setTimeout(() => void commitRemoval(), UNDO_DELETE_MS) };
     setRemoved(ride);
   }
@@ -407,11 +437,6 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     removal.current = null;
     void library.deleteRide(current.ride.rideId).catch(() => undefined);
   }, [library]);
-
-  function clearFilters(): void {
-    setSearch("");
-    setType(null);
-  }
 
   async function openRide(ride: RideSummary): Promise<void> {
     if (isDraftDirty() && pendingOpen !== ride.rideId) {
@@ -434,125 +459,88 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     }
   }
 
-  const libraryIsEmpty = status === "ready" && sortedRides.length === 0 && !search && type === null;
-  const showFilters = status === "ready" && !libraryIsEmpty;
-
-  // The upload card's own heading and drop zone only make sense when the page
-  // has rides to show; the empty library and the loading state offer the file
-  // picker themselves, so the flow opens without a second card (§7).
-  const importIsQuiet = status !== "ready" || libraryIsEmpty;
-
-  const importPanels = importService !== undefined ? (
-    <div className="og-library__imports">
-      <ImportPanel
-        service={importService}
-        {...(importIsQuiet ? { chrome: "quiet" as const } : {})}
-        {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
-        onImported={() => load()}
-        onOpenInPlanner={async (outcome: ImportOutcome) => {
-          await library.openRide(outcome.namedRide.document.rideId);
-          router.push("/");
-        }}
-      />
-    </div>
-  ) : null;
+  const libraryIsEmpty = status === "ready" && activeRides.length === 0;
+  const segmentIsEmpty = status === "ready" && !libraryIsEmpty && segmentRides.length === 0;
+  // A short segment needs no search box; a long one earns it.
+  const showSearch = status === "ready" && !libraryIsEmpty && (segmentRides.length > 8 || search !== "");
 
   return (
-    <main id="main" className="og-library">
+    <main id="main" className="og-library og-rides">
       <AppBar current="/rides" />
-      <header className="og-library__header">
+      <header className="og-library__header og-rides__header">
         <div>
           <h1>My rides</h1>
-          <p className="og-library__intro">
-            Saved rides stay in this browser until you share them.
-          </p>
+          <p className="og-library__intro">Saved rides stay in this browser until you share them.</p>
         </div>
+        <button
+          type="button"
+          className="og-secondary og-rides__import"
+          onClick={() => importFileInput.current?.click()}
+        >
+          Import GPX
+        </button>
+        <input
+          ref={importFileInput}
+          className="sr-only"
+          type="file"
+          aria-label="Import GPX, KML, or KMZ"
+          accept=".gpx,.kml,.kmz"
+          onChange={(event) => {
+            const picked = event.target.files?.[0];
+            event.target.value = "";
+            if (picked !== undefined) setDroppedFile(picked);
+          }}
+        />
       </header>
 
-      {/* An empty library is one quiet card: what is true, then the two ways to
-          leave it (small-screen design system v2 §7). */}
+      {/* An empty library is one line and one way out. Dropping a file on it
+          still starts the import flow without competing with the button. */}
       {libraryIsEmpty ? (
         <section
-          className="og-library__empty"
-          data-drop-target={dragActive ? "true" : "false"}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragActive(true);
-          }}
-          onDragLeave={(event) => {
-            // Moving onto a child of the card is not leaving the card.
-            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-            setDragActive(false);
-          }}
+          className="og-library__empty og-rides__empty"
+          onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => {
             event.preventDefault();
-            setDragActive(false);
             const dropped = event.dataTransfer.files[0];
             if (dropped !== undefined) setDroppedFile(dropped);
           }}
         >
           <h2>No saved rides yet</h2>
-          <div className="og-library__empty-actions">
-            <Link className="og-primary" href="/">Plan a ride</Link>
-            <button
-              type="button"
-              className="og-secondary"
-              onClick={() => importFileInput.current?.click()}
-            >
-              Import GPX
-            </button>
-          </div>
-          <input
-            ref={importFileInput}
-            className="sr-only"
-            type="file"
-            aria-label="Import GPX, KML, or KMZ"
-            accept=".gpx,.kml,.kmz"
-            onChange={(event) => {
-              const picked = event.target.files?.[0];
-              event.target.value = "";
-              if (picked !== undefined) setDroppedFile(picked);
-            }}
-          />
-          <p className="og-library__empty-hint">You can also drop a GPX, KML, or KMZ file here.</p>
+          <Link className="og-primary" href="/">Plan a ride</Link>
         </section>
       ) : null}
 
-      {importsFirst === false ? null : importPanels}
+      {status === "ready" && !libraryIsEmpty ? (
+        <div className="og-rides__segments" role="group" aria-label="Ride type">
+          <button
+            type="button"
+            className="og-rides__segment"
+            aria-pressed={segment === "planned"}
+            onClick={() => { segmentChosen.current = true; setSegment("planned"); setSearch(""); }}
+          >
+            Planned
+          </button>
+          <button
+            type="button"
+            className="og-rides__segment"
+            aria-pressed={segment === "recorded"}
+            onClick={() => { segmentChosen.current = true; setSegment("recorded"); setSearch(""); }}
+          >
+            Recorded
+          </button>
+        </div>
+      ) : null}
 
-      {showFilters ? (
-        <section className="og-library__controls" aria-label="Ride library filters">
-          <label className="og-library__search">
-            <span>Search</span>
-            <input
-              type="search"
-              aria-label="Search rides"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search titles"
-            />
-          </label>
-          <div className="og-library__chips" aria-label="Ride type">
-            {TYPE_FILTERS.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                className="og-chip"
-                aria-pressed={type === item.value}
-                onClick={() => setType(item.value)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <label className="og-library__sort">
-            <span>Sort</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}>
-              <option value="updated-desc">Updated, newest first</option>
-              <option value="updated-asc">Updated, oldest first</option>
-            </select>
-          </label>
-        </section>
+      {showSearch ? (
+        <div className="og-rides__search">
+          <input
+            type="search"
+            aria-label="Search rides"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search rides"
+          />
+        </div>
       ) : null}
 
       {removed === null ? null : (
@@ -565,14 +553,12 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
       )}
       {status === "loading" ? (
         <section className="og-library__state og-library__state--notice" role="status">
-          <span className="og-eyebrow">My rides</span>
           <h2>Opening your library</h2>
           <p>Your saved rides will appear here in a moment.</p>
         </section>
       ) : null}
       {status === "error" ? (
         <section className="og-library__state og-library__state--notice" role="alert">
-          <span className="og-eyebrow">Library unavailable</span>
           <h2>We couldn’t open your rides.</h2>
           <p>{error}</p>
           <button type="button" className="og-secondary" onClick={() => void load()}>
@@ -580,181 +566,206 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           </button>
         </section>
       ) : null}
-      {status === "ready" && sortedRides.length === 0 ? (
-        search || type !== null ? (
-          <section className="og-library__state" role="status">
-            <h2>No rides match these filters.</h2>
-            <p>Try another title, or show every ride again.</p>
-            <button type="button" className="og-primary og-library__cta" onClick={clearFilters}>
-              Clear filters
+
+      {status === "ready" && !libraryIsEmpty && visibleRides.length === 0 ? (
+        <section className="og-library__state og-rides__state" role="status">
+          <h2>{segmentIsEmpty ? (segment === "recorded" ? "No recorded rides yet." : "No planned rides yet.") : "No rides match this search."}</h2>
+          {segmentIsEmpty ? null : (
+            <button type="button" className="og-primary og-library__cta" onClick={() => setSearch("")}>
+              Clear search
             </button>
-          </section>
-        ) : null
+          )}
+        </section>
       ) : null}
 
-      {status === "ready" && sortedRides.length > 0 ? (
-        <ul className="og-library__list" aria-label="Saved rides">
-          {sortedRides.map((ride) => {
+      {status === "ready" && visibleRides.length > 0 ? (
+        <ul className="og-library__list og-rides__list" aria-label="Saved rides">
+          {visibleRides.map((ride) => {
             const title = titles[ride.rideId] ?? ride.title;
             const emptyTitle = title.trim().length === 0;
             const isExpanded = expanded.has(ride.rideId);
             const isPendingDelete = pendingDelete === ride.rideId;
             const isPendingOpen = pendingOpen === ride.rideId;
+            const isRenaming = renaming === ride.rideId;
+            const isSharing = sharing === ride.rideId;
+            const canShare = loadExportSource !== undefined &&
+              (ride.exportCapabilities?.track === true || ride.exportCapabilities?.recordedRide === true);
             return (
-              <li key={ride.rideId} className="og-library__row">
-                <div className="og-library__row-main">
-                  <div className="og-library__title-line">
-                    <input
-                      aria-label={`Rename ${ride.title}`}
-                      value={title}
-                      onChange={(event) =>
-                        setTitles((current) => ({ ...current, [ride.rideId]: event.target.value }))
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") void rename(ride);
+              <li key={ride.rideId} className="og-library__row og-rides__row">
+                {isRenaming ? (
+                  <form
+                    className="og-rides__rename"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void rename(ride);
+                    }}
+                  >
+                    <label className="og-rides__rename-field">
+                      <span>Name</span>
+                      <input
+                        aria-label={`Rename ${ride.title}`}
+                        value={title}
+                        autoFocus
+                        onChange={(event) =>
+                          setTitles((current) => ({ ...current, [ride.rideId]: event.target.value }))
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            cancelRename(ride);
+                          }
+                        }}
+                      />
+                    </label>
+                    {emptyTitle ? <p className="og-library__reason">A title is required.</p> : null}
+                    <div className="og-rides__rename-actions">
+                      <button type="submit" className="og-primary" disabled={emptyTitle || busy === ride.rideId}>
+                        Save
+                      </button>
+                      <button type="button" className="og-secondary" onClick={() => cancelRename(ride)}>
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="og-rides__row-body">
+                    <button
+                      type="button"
+                      className="og-rides__row-open"
+                      aria-label={`Open ${title}`}
+                      aria-describedby={`ride-meta-${ride.rideId}`}
+                      disabled={busy === ride.rideId}
+                      onClick={() => void openRide(ride)}
+                    >
+                      <span className="og-rides__thumb">
+                        <RideThumbnail ride={ride} token={mapboxToken} />
+                      </span>
+                      <span className="og-rides__row-text">
+                        <span className="og-rides__row-title">{title.trim().length === 0 ? "Untitled ride" : title}</span>
+                        <span
+                          id={`ride-meta-${ride.rideId}`}
+                          className="og-rides__meta"
+                          data-testid={ride.recordedTrack === undefined ? `ride-facts-${ride.rideId}` : "recorded-ride-summary"}
+                        >
+                          {rideMeta(ride)}
+                        </span>
+                      </span>
+                    </button>
+                    <RideRowMenu
+                      title={title}
+                      capabilities={ride.exportCapabilities ?? NO_EXPORT_CAPABILITIES}
+                      canShare={canShare}
+                      detailsExpanded={isExpanded}
+                      onToggleDetails={() => toggleDetails(ride)}
+                      onRename={() => startRename(ride)}
+                      onExport={(mode) => exportRide(ride, mode)}
+                      onShare={() => {
+                        setPendingOpen(null);
+                        setPendingDelete(null);
+                        setSharing(ride.rideId);
+                      }}
+                      onDelete={() => {
+                        setPendingOpen(null);
+                        setSharing(null);
+                        setPendingDelete(ride.rideId);
                       }}
                     />
                   </div>
-                  {emptyTitle ? (
-                    <p className="og-library__reason">A title is required.</p>
-                  ) : null}
-                  {rideMapUrl(ride, mapboxToken) !== null ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
-                    <img
-                      className="og-library__map"
-                      src={rideMapUrl(ride, mapboxToken) ?? undefined}
-                      alt={`${ride.title} on a map`}
-                      loading="lazy"
-                      decoding="async"
-                      width={400}
-                      height={225}
-                    />
-                  ) : ride.recordedTrack === undefined ? null : (
-                    <RecordedTrackThumbnail
-                      coordinates={ride.recordedTrack.previewGeometry}
-                      title={ride.title}
-                    />
-                  )}
-                  {ride.recordedTrack === undefined ? (
-                    rideFacts(ride) === null ? null : (
-                      <p className="og-library__meta og-library__facts" data-testid={`ride-facts-${ride.rideId}`}>
-                        {rideFacts(ride)}
-                      </p>
-                    )
-                  ) : (
-                    <p className="og-library__meta" data-testid="recorded-ride-summary">
-                      Distance: {formatDistance(ride.recordedTrack.summary.distanceMeters)} · {formatRideTime(ride.recordedTrack.summary.movingSeconds)} moving · {formatRideTime(ride.recordedTrack.summary.elapsedSeconds)} total
-                    </p>
-                  )}
-                  {/* One caption line: what this ride is and when it last changed.
-                      The rest of the paperwork waits behind View details. */}
-                  <p className="og-library__meta og-library__credit" data-testid={`ride-credit-${ride.rideId}`}>
-                    {libraryTypeLabel(ride.type)} · Updated {formatTimestamp(ride.updatedAt)}
-                  </p>
-                  {isExpanded ? (
-                    <div className="og-library__details">
-                      <p>{sourceText(ride)}</p>
-                      <p>Saved {formatTimestamp(ride.savedAt)}</p>
-                      <p data-testid={`offline-pack-${ride.rideId}`}>
-                        Offline pack: {ride.offlinePack === "present" ? "saved" : ride.offlinePack === "not-present" ? "not saved" : "unknown"}
-                      </p>
-                      {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
-                        ? null
-                        : <RecordedRoadProgress state={roadProgress[ride.rideId]!} />}
-                      {(ride.importNotes ?? []).length === 0 ? null : (
-                        <ul aria-label={`Import notes for ${ride.title}`}>
-                          {(ride.importNotes ?? []).map((note) => <li key={note}>{note}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="og-library__actions">
-                  {isPendingOpen ? (
-                    <>
-                      <span className="og-library__reason">Your unsaved draft will remain separate.</span>
+                )}
+
+                {isPendingOpen ? (
+                  <div className="og-rides__confirm" role="status">
+                    <p>Your unsaved draft will remain separate.</p>
+                    <div className="og-rides__confirm-actions">
                       <button type="button" className="og-primary" onClick={() => void openRide(ride)}>
                         Confirm open
                       </button>
                       <button type="button" className="og-secondary" onClick={() => setPendingOpen(null)}>
                         Cancel
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="og-primary"
-                      aria-label={`Open ${ride.title}`}
-                      disabled={busy === ride.rideId}
-                      onClick={() => void openRide(ride)}
-                    >
-                      Open
-                    </button>
-                  )}
-                  {library.loadExportSource !== undefined && (ride.exportCapabilities?.track || ride.exportCapabilities?.recordedRide) ? (
-                    <SavedRideGroupShare ride={ride} loadSource={library.loadExportSource.bind(library)} />
-                  ) : null}
-                  {hasExportable(ride) ? (
-                    <ExportMenu
-                      title={ride.title}
-                      capabilities={ride.exportCapabilities ?? NO_EXPORT_CAPABILITIES}
-                      onExport={(mode) => exportRide(ride, mode)}
-                    />
-                  ) : null}
-                  <button
-                    type="button"
-                    className="og-secondary"
-                    aria-label={`View details for ${ride.title}`}
-                    aria-expanded={isExpanded}
-                    onClick={() => toggleDetails(ride)}
-                  >
-                    {isExpanded ? "Hide details" : "View details"}
-                  </button>
-                  {isPendingDelete ? (
-                    <>
+                    </div>
+                  </div>
+                ) : null}
+
+                {isPendingDelete ? (
+                  <div className="og-rides__confirm" role="alert">
+                    <p>Delete “{title}”?</p>
+                    <div className="og-rides__confirm-actions">
                       <button
                         type="button"
-                        className="og-secondary"
-                        aria-label={`Confirm delete ${ride.title}`}
+                        className="og-secondary og-library__delete"
+                        aria-label={`Confirm delete ${title}`}
                         disabled={busy === ride.rideId}
                         onClick={() => void deleteRide(ride)}
                       >
-                        Confirm delete
+                        Delete ride
                       </button>
                       <button type="button" className="og-secondary" onClick={() => setPendingDelete(null)}>
                         Cancel
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="og-secondary og-library__delete"
-                      aria-label={`Delete ${ride.title}`}
-                      onClick={() => setPendingDelete(ride.rideId)}
-                    >
-                      Delete
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className="og-secondary"
-                    aria-label={`Rename ${ride.title}`}
-                    disabled={emptyTitle || busy === ride.rideId}
-                    title={emptyTitle ? "A title is required." : "Rename ride"}
-                      onClick={() => void rename(ride)}
-                  >
-                    Rename
-                  </button>
-                </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {isExpanded ? (
+                  <div className="og-library__details og-rides__details">
+                    <p>{sourceText(ride)}</p>
+                    <p>Saved {formatRideDate(ride.savedAt)}</p>
+                    {ride.offlinePack === undefined ? null : (
+                      <p data-testid={`offline-pack-${ride.rideId}`}>
+                        {ride.offlinePack === "present" ? "Saved for offline" : "Not saved for offline"}
+                      </p>
+                    )}
+                    {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
+                      ? null
+                      : <RecordedRoadProgress state={roadProgress[ride.rideId]!} />}
+                    {(ride.importNotes ?? []).length === 0 ? null : (
+                      <ul aria-label={`Import notes for ${ride.title}`}>
+                        {(ride.importNotes ?? []).map((note) => <li key={note}>{note}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                ) : null}
+
+                {isSharing && loadExportSource !== undefined ? (
+                  <div className="og-rides__share">
+                    <div className="og-rides__share-head">
+                      <h3>Share “{title}”</h3>
+                      <button type="button" className="og-rides__details" onClick={() => setSharing(null)}>
+                        Close
+                      </button>
+                    </div>
+                    <SavedRideGroupShare
+                      ride={ride}
+                      loadSource={loadExportSource}
+                      autoStart
+                    />
+                  </div>
+                ) : null}
               </li>
             );
           })}
         </ul>
       ) : null}
-      {status === "ready" && sortedRides.length > 0 && mapboxToken !== undefined ? (
+      {status === "ready" && activeRides.length > 0 && mapboxToken !== undefined ? (
         <p className="og-explore__attribution">Map images © Mapbox © OpenStreetMap</p>
       ) : null}
-      {importsFirst === false ? importPanels : null}
+
+      {importService !== undefined ? (
+        <div className="og-library__imports">
+          <ImportPanel
+            service={importService}
+            chrome="quiet"
+            {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
+            onImported={() => load()}
+            onOpenInPlanner={async (outcome: ImportOutcome) => {
+              await library.openRide(outcome.namedRide.document.rideId);
+              router.push("/");
+            }}
+          />
+        </div>
+      ) : null}
+
       {/* The older SwitchBack import is a quiet way out of the page, not a
           third card beside the two real ways in. */}
       {importService === undefined ? null : (

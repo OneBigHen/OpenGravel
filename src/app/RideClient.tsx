@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStore } from "zustand";
 // The renderer's own stylesheet, imported at the composition root exactly as the
 // planner does: the UI layer may not know which renderer it draws with
 // (02-ARCHITECTURE-CONTRACT §7, 4.0 review finding 8).
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
+import { createHttpPlaceSearch } from "@/application/geocoding/place-search";
 import { createRideSessionController } from "@/application/ride-session/ride-session-controller";
 import { createClientRouteCandidateProvider } from "@/application/planner/client-planning-service";
 import { createRideNavigationEngine, type ResolvedNavigationRoute } from "@/application/ride-session/navigation-engine";
@@ -60,6 +62,9 @@ import { speedLimitAt } from "@/domain/route/types";
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { createLocalStorageFreeRideTelemetry } from "@/infrastructure/storage/free-ride-telemetry-storage";
 import { createLocalStorageRiderSettings } from "@/infrastructure/storage/rider-settings-storage";
+import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
+import { activeBike } from "@/application/garage/garage-model";
+import { usableRangeMiles } from "@/application/ride-session/fuel-ahead";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
 import type { RideId } from "@/domain/ride/ids";
@@ -129,6 +134,10 @@ export function RideClient({
     () => createHttpPlacesSource({ basePath: assetBasePath }),
     [assetBasePath],
   );
+  // The ride sheet's "search along this ride" is the app's own place search, the
+  // same HTTP client the planner calls: which upstream answers is a server
+  // concern, and an unavailable one is one quiet line in the sheet.
+  const placeSearch = useMemo(() => createHttpPlaceSearch(), []);
   const discoverSource = useMemo(
     () => createHttpDiscoverSource({ basePath: assetBasePath }),
     [assetBasePath],
@@ -413,11 +422,34 @@ export function RideClient({
     [assetBasePath, library],
   );
 
+  /*
+    The active bike's usable range for the ride sheet's "next gas" line. The
+    garage is device storage, so it is read after mount: the first render has no
+    range (and says nothing it cannot measure) instead of a value that differs
+    between the server and the phone.
+  */
+  const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
+  const [usableFuelRange, setUsableFuelRange] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const bike = activeBike(garageStorage.read());
+      setUsableFuelRange(usableRangeMiles(bike.fuelRangeMiles, bike.reserveMiles));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [garageStorage]);
+
   useEffect(() => {
     if (activitySync === null) return;
     activitySync.sync(store.getState().viewModel);
     return store.subscribe((state) => activitySync.sync(state.viewModel));
   }, [store, activitySync]);
+
+  /*
+    The home-screen hint is a first-visit aside, not part of a ride. It used to
+    open over the live map for the ride's first 10 s, where it covered the strip
+    a mounted phone is read through; it is only offered while no ride is open.
+  */
+  const rideOpen = useStore(store, (state) => state.status === "ready");
 
   useEffect(() => {
     let cancelled = false;
@@ -476,13 +508,15 @@ export function RideClient({
       basemap={basemap}
       placesSource={placesSource}
       mapLayersSource={mapLayersSource}
+      placeSearch={placeSearch}
+      usableRangeMiles={usableFuelRange}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
       safety={safety}
       requestMotion={requestMotion}
       {...(assetBasePath === undefined ? {} : { assetBasePath })}
     />
-    <RideInstallHint />
+    {rideOpen ? null : <RideInstallHint />}
     </>
   );
 }

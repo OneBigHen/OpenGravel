@@ -27,6 +27,8 @@ import type { Coordinate } from "@/domain/ride/types";
 /** One named place a geocoder returned. */
 export interface PlaceMatch {
   /** Provider-stable identity (e.g. `photon:N123`), for provenance only. */
+  /** Present only when the provider explicitly knows the current opening state. */
+  readonly openNow?: boolean;
   readonly id: string;
   /** The line the rider reads and the point keeps: `Jim Thorpe, PA`. */
   readonly label: string;
@@ -116,6 +118,7 @@ export function isPlaceMatch(value: unknown): value is PlaceMatch {
   const place = value as Partial<PlaceMatch>;
   const coordinate = place.coordinate as Partial<Coordinate> | undefined;
   return (
+    (place.openNow === undefined || typeof place.openNow === "boolean") &&
     typeof place.id === "string" &&
     typeof place.label === "string" &&
     place.label.length > 0 &&

@@ -1,10 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { RoutePlanSuccessBody } from "../../../src/application/planner/ports/route-plan-contract";
-import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
+import { placeEndpoint, plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /** UI fixtures supplement the labeled planning fixture with synthetic aggregate
  * evidence. Live road geometry/evidence is verified by the real-router gate. */
 async function planComparison(page: Page, roadCharacter?: "curvy") {
+  const viewport = page.viewportSize();
+  // Author in portrait, then rotate to inspect the short landscape layout.
+  // Map authoring at the short tier has its own desktop-rail coverage.
+  if (viewport !== null && viewport.height < 500) await page.setViewportSize({ ...viewport, height: 900 });
   await page.route("**/api/route-plan", async (route) => {
     const response = await route.fetch();
     const body = await response.json() as RoutePlanSuccessBody;
@@ -32,12 +36,14 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
   await page.goto("/?debug=routing");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
-  await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
-  await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  // This debug-only comparison belongs to the existing composer. Directions
+  // opens rider options, so author the fixture endpoints explicitly instead.
+  await placeEndpoint(page, "start", { lat: 40.1385, lon: -75.4385 });
+  await placeEndpoint(page, "finish", { lat: 40.1325, lon: -75.4335 });
+  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
+  const editorHandle = page.getByTestId("sheet-handle");
+  const currentDetent = await page.getByTestId("planner-sheet").getAttribute("data-detent");
+  if (await editorHandle.isVisible() && currentDetent !== "full" && currentDetent !== "expanded") await editorHandle.click();
   if (roadCharacter !== undefined) {
     const handle = page.getByTestId("sheet-handle");
     if (await handle.isVisible() && await page.getByTestId("planner-sheet").getAttribute("data-detent") === "peek") await handle.click();
@@ -55,15 +61,17 @@ async function planComparison(page: Page, roadCharacter?: "curvy") {
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   const sheet = page.locator(".og-planner__sheet");
   const handle = page.getByTestId("sheet-handle");
-  if (await handle.isVisible() && await sheet.getAttribute("data-detent") !== "expanded") {
-    await expect(page.getByTestId("routing-method-comparison")).not.toBeVisible();
+  for (let step = 0; step < 2 && await handle.isVisible() && !["expanded", "full"].includes((await sheet.getAttribute("data-detent")) ?? ""); step++) {
     await handle.click();
   }
+  const compare = page.getByTestId("compare-rides");
+  if (await compare.isVisible() && (await compare.textContent())?.startsWith("Compare rides")) await compare.click();
   // The balanced fixture's classic recommendation is also fastest. Start by manually
   // choosing its other valid route so the comparison exercises a real switch.
-  await page.locator('[data-testid^="route-card-"][aria-pressed="false"]').first().click();
+  await page.locator('[data-testid^="route-card-"][aria-pressed="false"], [data-testid^="route-option-"][aria-pressed="false"]').filter({ visible: true }).first().click();
   const comparison = page.getByTestId("routing-method-comparison");
   await comparison.locator("summary").first().click();
+  if (viewport !== null && viewport.height < 500) await page.setViewportSize(viewport);
   return comparison;
 }
 
@@ -72,8 +80,8 @@ test("phone Frontier explains the authored Curvy choice and waits for manual app
   await planComparison(page, "curvy");
   // Curvy's canonical Best Ride differs from Fastest in this fixture. Choose
   // that card before inspecting Frontier so the manual action switches routes.
-  await page.locator('[data-testid^="route-card-"]').filter({ hasText: "Best Ride" }).click();
-  const selected = page.locator('[data-testid^="route-card-"][aria-pressed="true"]');
+  await page.locator('[data-testid^="route-card-"], [data-testid^="route-option-"]').filter({ visible: true }).filter({ hasText: "Best Ride" }).click();
+  const selected = page.locator('[data-testid^="route-card-"][aria-pressed="true"], [data-testid^="route-option-"][aria-pressed="true"]').filter({ visible: true });
   const before = await selected.getAttribute("data-testid");
   const frontier = page.getByTestId("routing-method-frontier");
   await frontier.getByRole("radio").check();
@@ -91,7 +99,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 568 
   test(`method comparison stays manual and readable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const comparison = await planComparison(page);
-    const selectedCard = page.locator('[data-testid^="route-card-"][aria-pressed="true"]');
+    const selectedCard = page.locator('[data-testid^="route-card-"][aria-pressed="true"], [data-testid^="route-option-"][aria-pressed="true"]').filter({ visible: true });
     const selectedBefore = await selectedCard.getAttribute("data-testid");
     const sustained = page.getByTestId("routing-method-sustained-curves");
     await sustained.getByRole("radio").check();

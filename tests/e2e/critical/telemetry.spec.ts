@@ -1,3 +1,4 @@
+import { directionsTo } from "./search-helpers";
 import { expect, test } from "@playwright/test";
 import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
@@ -12,12 +13,7 @@ test("the production planner emits typed planning outcomes from its own store", 
       target.planningTelemetryEvents.push((event as CustomEvent<{ name: string }>).detail.name);
     });
   });
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
-  await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
-  await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  await directionsTo(page);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   await expect.poll(() => page.evaluate(() => (window as unknown as { planningTelemetryEvents: string[] }).planningTelemetryEvents)).toEqual(expect.arrayContaining(["route_plan_requested", "route_primary_ready"]));

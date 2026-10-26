@@ -27,10 +27,10 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   await expect(page.getByText(/warnings kept with this import/i)).toBeVisible();
   await expect(page.getByText(/Preserved 1 GPX waypoint as metadata; they are not merged into the source track geometry\./i)).toBeVisible();
   // RS-06: the ride is named after the chosen track, not the file.
-  await expect(page.getByRole("textbox", { name: /Rename North Track/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open North Track" })).toBeVisible();
 
-  const exportMenu = page.getByRole("button", { name: "Export North Track" });
-  await exportMenu.click();
+  await page.getByRole("button", { name: "More actions for North Track" }).click();
+  await page.getByRole("menuitem", { name: "Other formats" }).click();
   const plannedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "GPX route" }).click();
   const plannedDownload = await plannedDownloadPromise;
@@ -43,9 +43,11 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   expect(plannedXml).not.toContain("<trk>");
   expect(plannedXml.match(/<rtept[\s>/]/g)?.length ?? 0).toBeLessThanOrEqual(250);
 
-  await page.getByRole("textbox", { name: /Rename North Track/ }).fill("Original multi-track-gap");
-  await page.getByRole("textbox", { name: /Rename North Track/ }).press("Enter");
-  await expect(page.getByRole("textbox", { name: "Rename Original multi-track-gap" })).toBeVisible();
+  await page.getByRole("button", { name: "More actions for North Track" }).click();
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await page.getByRole("textbox", { name: "Rename North Track" }).fill("Original multi-track-gap");
+  await page.getByRole("textbox", { name: "Rename North Track" }).press("Enter");
+  await expect(page.getByRole("button", { name: "Open Original multi-track-gap" })).toBeVisible();
 
   await picker.setInputFiles({
     name: plannedDownload.suggestedFilename(),
@@ -60,8 +62,8 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   await page.getByRole("button", { name: "Import selected tracks" }).click();
   await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
 
-  const originalMenu = page.getByRole("button", { name: "Export Original multi-track-gap" });
-  await originalMenu.click();
+  await page.getByRole("button", { name: "More actions for Original multi-track-gap" }).click();
+  await page.getByRole("menuitem", { name: "Other formats" }).click();
   const originalDownloadPromise = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Original file" }).click();
   const originalDownload = await originalDownloadPromise;

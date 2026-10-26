@@ -100,11 +100,12 @@ describe("exporting a planned ride from Ride actions", () => {
     );
   }
 
-  it("offers GPX track and GPX route for the route on screen", () => {
+  it("offers one Download GPX and keeps the route file under Other formats", () => {
     renderActions();
-    fireEvent.click(screen.getByRole("button", { name: /export/i }));
-    expect(screen.getByRole("menuitem", { name: /gpx track/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Download GPX" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Other formats" }));
     expect(screen.getByRole("menuitem", { name: /gpx route/i })).toBeEnabled();
+    expect(screen.queryByRole("menuitem", { name: /gpx track/i })).not.toBeInTheDocument();
   });
 
   it("downloads the full line as a track and the bounded line as a route", async () => {
@@ -116,10 +117,9 @@ describe("exporting a planned ride from Ride actions", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     renderActions();
 
-    fireEvent.click(screen.getByRole("button", { name: /export/i }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Download GPX" }));
     await waitFor(() => expect(blobs).toHaveLength(1));
-    fireEvent.click(screen.getByRole("button", { name: /export/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Other formats" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /gpx route/i }));
     await waitFor(() => expect(blobs).toHaveLength(2));
 
@@ -142,8 +142,7 @@ describe("exporting a planned ride from Ride actions", () => {
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
     renderActions(createRideDocument({ now: "2026-10-07T12:00:00.000Z" }));
 
-    fireEvent.click(screen.getByRole("button", { name: /export/i }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Download GPX" }));
     await waitFor(() => expect(blobs).toHaveLength(1));
 
     const xml = await blobs[0]!.text();

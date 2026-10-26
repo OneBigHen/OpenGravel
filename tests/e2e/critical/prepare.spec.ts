@@ -1,3 +1,4 @@
+import { directionsTo } from "./search-helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
@@ -15,15 +16,21 @@ function routeCards(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
+  // The checked-in weather snapshot is dated. Give this synthetic UI forecast
+  // a window around the run, including the later departure this spec exercises.
+  await page.route("**/api/weather?*", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    const now = Date.now();
+    body.snapshot.forecast = body.snapshot.forecast.map((period: Record<string, unknown>) => ({
+      ...period, startTime: new Date(now - 3600000).toISOString(), endTime: new Date(now + 86400000).toISOString(),
+    }));
+    await route.fulfill({ response, json: body });
+  });
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
-  await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
-  await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  await directionsTo(page);
   await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();
 });

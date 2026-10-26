@@ -107,6 +107,12 @@ function setEnabledNow(next: readonly MapLayerId[]): void {
   for (const listener of enabledListeners) listener();
 }
 
+/** Enable a discovery layer through the same preference store as Layers. */
+export function enableMapLayer(id: MapLayerId): void {
+  const current = enabledNow();
+  if (!current.includes(id)) setEnabledNow([...current, id]);
+}
+
 function readEnabled(): readonly MapLayerId[] {
   try {
     const raw = window.localStorage.getItem(MAP_LAYERS_STORAGE_KEY);

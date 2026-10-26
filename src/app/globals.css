@@ -155,6 +155,19 @@ h3,
   font-weight: 600;
 }
 
+/* Stragglers: a paragraph never ends on one orphaned word, and a heading breaks
+   into even lines. Both are progressive — a browser without support wraps
+   exactly as before. */
+p {
+  text-wrap: pretty;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
 .og-planner {
   min-height: 100%;
   display: flex;
@@ -1174,7 +1187,6 @@ h3,
 .og-explore__empty,
 .og-explore-status {
   padding: 12px 14px;
-  border-left: 3px solid var(--og-golden-hour);
   background: color-mix(in srgb, var(--og-paper) 82%, var(--og-golden-hour));
   color: var(--og-deep-spruce);
 }
@@ -1555,7 +1567,6 @@ h3,
   gap: 8px;
   width: min(100%, 760px);
   padding: 14px;
-  border-left: 3px solid var(--og-ember);
   background: var(--og-paper);
 }
 
@@ -1721,22 +1732,37 @@ h3,
   list-style: none;
 }
 
+/* Long-trip considerations: severity rides on a leading dot, so a rider reads
+   how loud an item is without a stripe down the side of the card. */
 .og-preparation__consideration {
-  padding: 10px 12px;
-  border-left: 3px solid var(--og-slate);
+  --og-consideration-tone: var(--og-slate);
+  position: relative;
+  padding: 10px 12px 10px 30px;
+  border-radius: var(--og-radius-control);
   background: color-mix(in srgb, var(--og-sandstone) 22%, transparent);
 }
 
+.og-preparation__consideration::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--og-consideration-tone);
+}
+
 .og-preparation__consideration[data-severity="info"] {
-  border-left-color: var(--og-success);
+  --og-consideration-tone: var(--og-success);
 }
 
 .og-preparation__consideration[data-severity="watch"] {
-  border-left-color: var(--og-golden-hour);
+  --og-consideration-tone: var(--og-golden-text);
 }
 
 .og-preparation__consideration[data-severity="critical"] {
-  border-left-color: var(--og-ember-strong);
+  --og-consideration-tone: var(--og-ember-text);
 }
 
 .og-preparation__consideration p {
@@ -2609,7 +2635,6 @@ h3,
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--og-ember) 40%, var(--og-sandstone));
-  border-left: 3px solid var(--og-ember);
   border-radius: var(--og-radius-control);
   background: color-mix(in srgb, var(--og-ember) 8%, var(--og-paper));
 }
@@ -4861,12 +4886,11 @@ h3,
    theme's success green, which lightens in Night and needs a dark mark. */
 .og-point__pin--start::before {
   content: "";
-  width: 0;
-  height: 0;
-  border-left: 8px solid var(--og-paper);
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  width: 8px;
+  height: 10px;
   margin-left: 2px;
+  background: var(--og-paper);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
 .og-point__pin--finish {
@@ -7544,19 +7568,25 @@ h3,
   gap: 8px;
 }
 
+/* A status line on the ride sheet: its tone tints the pill instead of running a
+   stripe down one side, and the words themselves say what happened. */
 .og-ride__detour-status {
   margin: 0;
   padding: 8px 12px;
-  border-left: 4px solid var(--og-signal-blue);
   border-radius: var(--og-radius-chip);
-  background: var(--og-ride-surface);
+  background: color-mix(in srgb, var(--og-signal-blue) 18%, var(--og-ride-surface));
   color: var(--og-paper);
   font-size: var(--og-text-body);
   font-weight: 650;
 }
 
-.og-ride__detour-status[data-tone="done"] { border-left-color: var(--og-golden-hour); }
-.og-ride__detour-status[data-tone="error"] { border-left-color: var(--og-danger-light); }
+.og-ride__detour-status[data-tone="done"] {
+  background: color-mix(in srgb, var(--og-golden-hour) 18%, var(--og-ride-surface));
+}
+
+.og-ride__detour-status[data-tone="error"] {
+  background: color-mix(in srgb, var(--og-danger-light) 22%, var(--og-ride-surface));
+}
 
 .og-ride__detour-actions {
   display: flex;
@@ -8543,15 +8573,10 @@ h3,
   overflow: auto;
   padding: 16px;
   border-radius: var(--og-radius-panel);
-  border-top: 4px solid var(--og-golden-hour);
   background: var(--og-paper);
   color: var(--og-ink);
   box-shadow: 0 12px 32px rgb(22 29 28 / 24%);
   overscroll-behavior: contain;
-}
-
-.og-places-overlay--planner .og-places-card[data-live="true"] {
-  border-top-color: var(--og-ember);
 }
 
 .og-places-overlay--planner .og-places-card__topline {
@@ -10589,7 +10614,6 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
   width: min(340px, calc(100% - 24px));
   padding: 14px 16px 16px;
   border-radius: var(--og-radius-panel);
-  border-top: 4px solid var(--og-layer-color);
   background: var(--og-paper);
   color: var(--og-ink);
   box-shadow: 0 12px 32px rgb(22 29 28 / 24%);
@@ -13090,7 +13114,6 @@ a.og-secondary {
   width: min(100%, 620px);
   gap: 8px;
   border: 1px solid var(--og-hairline-strong);
-  border-left: 4px solid var(--og-deep-spruce);
   border-radius: var(--og-radius-panel);
   background: var(--og-paper);
   box-shadow: var(--og-shadow-2);
@@ -13117,7 +13140,6 @@ a.og-secondary {
   min-height: 72px;
   padding: 16px 20px;
   border: 1px solid var(--og-hairline);
-  border-left: 4px solid var(--og-deep-spruce);
   border-radius: var(--og-radius-object);
   background: var(--og-paper);
   color: var(--og-ink);
@@ -13472,12 +13494,17 @@ a.og-secondary {
   object-fit: cover;
 }
 
+/* File-marked hazards: the danger tint and the coloured lead-in say what it is,
+   and the words name the stops. */
 .og-route-story__hazards {
   padding: 10px 12px;
-  border-left: 3px solid var(--og-danger);
   border-radius: var(--og-radius-chip);
   background: color-mix(in srgb, var(--og-danger) 10%, var(--og-paper));
   font-size: var(--og-text-meta);
+}
+
+.og-route-story__hazards strong {
+  color: var(--og-danger);
 }
 
 .og-route-story__block {

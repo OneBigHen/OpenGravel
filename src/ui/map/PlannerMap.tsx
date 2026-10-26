@@ -57,7 +57,6 @@
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coordinate } from "@/domain/ride/types";
-import { MAP_LAYERS } from "@/application/map-layers/catalog";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
@@ -120,6 +119,7 @@ export const TOOL_HINTS: Readonly<Record<"start" | "finish" | "stop", string>> =
 type PointMenuIntent = Extract<MapIntent, { type: "map-long-press" }>;
 
 export interface PlannerMapProps {
+  readonly directionsWhenEmpty?: boolean;
   readonly onPointAction?: (action: MapPointAction, coordinate: Coordinate) => void;
   readonly longPressEnabled?: boolean;
   readonly addStopDisabledReason?: string | null;
@@ -315,6 +315,7 @@ function prefersReducedMotion(): boolean {
 export function PlannerMap({
   scene,
   onIntent,
+  directionsWhenEmpty = false,
   onPointAction,
   longPressEnabled = onPointAction !== undefined,
   addStopDisabledReason = null,
@@ -779,7 +780,7 @@ export function PlannerMap({
 
       {pointMenu !== null && longPressEnabled && activeTool === "pan" ? (
         <MapPointMenu intent={pointMenu} scene={scene} container={containerRef}
-          insets={insets} addStopDisabledReason={addStopDisabledReason}
+          directionsWhenEmpty={directionsWhenEmpty} insets={insets} addStopDisabledReason={addStopDisabledReason}
           onClose={() => setPointMenu(null)}
           onAction={(action) => { onPointAction?.(action, pointMenu.coordinate); setPointMenu(null); }} />
       ) : null}
@@ -911,9 +912,10 @@ const POINT_ROWS = [
   { action: "info", label: "What's here?", path: "M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },
 ] as const;
 
-function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason, onAction, onClose }: {
+function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopDisabledReason, onAction, onClose }: {
   readonly intent: PointMenuIntent;
   readonly scene: MapScene;
+  readonly directionsWhenEmpty: boolean;
   readonly container: React.RefObject<HTMLDivElement | null>;
   readonly insets: MapInsets;
   readonly addStopDisabledReason: string | null;
@@ -921,10 +923,6 @@ function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason,
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [showInfo, setShowInfo] = useState(false);
-  const authority = scene.infoLayers?.features.find((feature) =>
-    feature.id === intent.authorityFeatureId && feature.id.startsWith("authority:") &&
-    (feature.layerId === "mvum" || feature.layerId === "work-zones"));
 
   useLayoutEffect(() => {
     const menu = ref.current;
@@ -987,16 +985,12 @@ function MapPointMenu({ intent, scene, container, insets, addStopDisabledReason,
         const reason = row.action === "stop" ? addStopDisabledReason : null;
         return <button key={row.action} type="button" className="og-map-point-menu__row"
           disabled={reason !== null}
-          onClick={() => row.action === "info" ? setShowInfo(true) : onAction(row.action)}>
+          onClick={() => onAction(row.action)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={row.path} /></svg>
-          <span>{row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
+          <span>{row.action === "finish" && directionsWhenEmpty ? "Directions to here" : row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
         </button>;
       })}
-      {showInfo ? <div className="og-map-point-menu__info" role="status">
-        <strong>{authority?.name ?? "No authority record for this spot"}</strong>
-        <p>{authority?.detail ?? "Only loaded authority layers and their source coverage are checked. Missing, disabled or unavailable layers and source gaps leave this spot unknown."}</p>
-        {authority === undefined ? null : <p>{MAP_LAYERS.find((layer) => layer.id === authority.layerId)?.caveat}</p>}
-      </div> : null}
+
     </div>
   );
 }

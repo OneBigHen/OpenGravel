@@ -158,6 +158,25 @@ function ExpandedExploreMap({ props, onClose }: { readonly props: ExploreMapProp
 
 export function ExploreMap(props: ExploreMapProps) {
   const [expanded, setExpanded] = useState(false);
+  /*
+    The panel — and with it the `Expand map` control — is unmounted while the
+    large map is open, so the dialog's own "focus returns to the invoker" lands
+    on a node that no longer exists and focus drops to the page. Closing
+    therefore hands focus to the control that replaces it: the same corner
+    button the rider pressed, which is what a keyboard or switch rider needs in
+    order to carry on from where they were.
+  */
+  const expandRef = useRef<HTMLButtonElement | null>(null);
+  const restoreFocusRef = useRef(false);
+  const closeExpanded = useCallback(() => {
+    restoreFocusRef.current = true;
+    setExpanded(false);
+  }, []);
+  useEffect(() => {
+    if (expanded || !restoreFocusRef.current) return;
+    restoreFocusRef.current = false;
+    expandRef.current?.focus();
+  }, [expanded]);
   // The map owns the corner it is drawn in: expanding it is a small control on
   // that corner, not a pill above the map taking a row of its own (§3 chrome).
   return (
@@ -166,6 +185,7 @@ export function ExploreMap(props: ExploreMapProps) {
         <div className="og-explore-map-panel__frame">
           <ExploreMapCanvas {...props} />
           <button
+            ref={expandRef}
             type="button"
             className="og-explore-map-panel__expand"
             aria-label="Expand map"
@@ -177,7 +197,7 @@ export function ExploreMap(props: ExploreMapProps) {
           </button>
         </div>
       )}
-      {expanded ? <ExpandedExploreMap props={props} onClose={() => setExpanded(false)} /> : null}
+      {expanded ? <ExpandedExploreMap props={props} onClose={closeExpanded} /> : null}
     </div>
   );
 }

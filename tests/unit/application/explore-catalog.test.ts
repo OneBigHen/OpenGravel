@@ -75,17 +75,35 @@ describe("Explore catalog application", () => {
       estimatedTimeMinutes: 30,
       geometry: [],
     });
-    expect(entry.provenance).toContain("saved library ride");
+    // The route page's header line: where the ride came from, in the rider's
+    // words. The library's record ids are not provenance a rider reads.
+    expect(entry.provenance).toBe("Your saved ride");
+    expect(entry.provenance).not.toMatch(/geometry|source|record|library/i);
   });
 
-  it("creates a derivative with copy title, endpoints, and preserved source provenance", () => {
-    const entry = catalogEntry({ id: "catalog-lehigh" });
+  it("names an imported library ride in plain words too", () => {
+    const entry = entryFromLibraryRide({
+      ...libraryRide,
+      summary: { ...libraryRide.summary, provenanceType: "import", type: "imported", sourceId: "source-9f2" },
+    });
+    expect(entry.provenance).toBe("Imported from a file");
+    expect(entry.provenance).not.toContain("source-9f2");
+  });
+
+  it("creates a derivative with the route's own name, endpoints, and preserved source provenance", () => {
+    const entry = catalogEntry({
+      id: "catalog-lehigh",
+      geometry: [{ lon: -75.5, lat: 40.5 }, { lon: -75.35, lat: 40.6 }, { lon: -75.2, lat: 40.7 }],
+    });
     const derivative = createExploreDerivative(entry, "2026-09-17T13:00:00.000Z");
 
-    expect(derivative.title).toBe("Catalog route copy");
+    // The ride the rider opens is the route they read: no "copy" in its name.
+    expect(derivative.title).toBe("Catalog route");
     expect(derivative.provenance).toEqual({ type: "catalog", sourceId: "catalog-lehigh" });
     expect(derivative.intent.start?.coordinate).toEqual(entry.geometry[0]);
     expect(derivative.intent.finish?.coordinate).toEqual(entry.geometry.at(-1));
+    // The line's own anchors shape the ride, so planning it follows the route.
+    expect(derivative.intent.shaping.length).toBeGreaterThan(0);
   });
 
   it("seeds an Explore derivative with the active bike snapshot when supplied", () => {

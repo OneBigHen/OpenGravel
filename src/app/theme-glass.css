@@ -23,9 +23,11 @@
   --og-deep-spruce: #cfe3d8;
   --og-on-fill: #ffffff;
 
-  /* Accents. */
-  --og-go: #22a45d;
-  --og-go-strong: #1a8a4c;
+  /* Accents. `--og-go` and `--og-go-strong` are fills, so they are dark enough
+     for the white label every green button puts on them: 4.66:1 and 6.29:1.
+     Checked in tests/unit/ui/contrast-tokens.test.ts. */
+  --og-go: #1c854b;
+  --og-go-strong: #176e3e;
   --og-go-soft: color-mix(in srgb, #3ddc84 18%, transparent);
   --og-go-text: #6fe3a3;
   --og-signal-blue: #5aa9e6;
@@ -104,9 +106,10 @@
   --og-deep-spruce: #10291f;
   --og-on-fill: #ffffff;
 
-  --og-go: #138a43;
+  /* 4.65:1 and 6.37:1 with the white label on the fill. */
+  --og-go: #138641;
   --og-go-strong: #0c6e34;
-  --og-go-soft: color-mix(in srgb, #138a43 14%, white);
+  --og-go-soft: color-mix(in srgb, #138641 14%, white);
   --og-go-text: #0a6630;
   --og-signal-blue: #1463a6;
   --og-signal-strong: #0d4f87;
@@ -180,7 +183,7 @@ a.og-primary {
   border: 0;
   background: linear-gradient(180deg, var(--og-go), var(--og-go-strong));
   color: var(--og-on-fill);
-  box-shadow: 0 6px 18px -6px rgb(34 164 93 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
+  box-shadow: 0 6px 18px -6px rgb(28 133 75 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
 }
 
 .og-primary:hover:not(:disabled) {
@@ -1074,12 +1077,14 @@ html .og-ride {
    filter is ever more than one press away and no row of controls is dropped.
    -------------------------------------------------------------------------- */
 
+/* Search takes the whole width on its own row, the way a map app's search does;
+   the chips — Filters last — scroll under it. */
 .og-explore__toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "search filters"
-    "quick quick";
+    "search"
+    "quick";
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -1106,12 +1111,12 @@ html .og-ride {
   font-size: var(--og-text-body);
 }
 
+/* The Filters chip is the last chip in the row, so it is a flex item, not a
+   second grid column beside search. */
 .og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
   display: inline-flex;
-  grid-area: filters;
   flex: none;
   align-items: center;
-  justify-self: end;
   gap: 6px;
   min-height: 48px;
   margin: 0;
@@ -1309,10 +1314,10 @@ html .og-ride {
 }
 
 @media (min-width: 1181px) {
-  /* Wide enough for one row: search, the chips, Filters. */
+  /* Wide enough for one row: search, then the chips with Filters at their end. */
   .og-explore .og-explore__toolbar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: "search quick filters";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "search quick";
     gap: var(--og-space-3);
   }
 }
@@ -1526,16 +1531,6 @@ html .og-ride {
     min-height: 46px;
     margin: 0;
     border-radius: 14px;
-  }
-
-  .og-explore__backdrop {
-    position: fixed;
-    z-index: 69;
-    inset: 0;
-    display: block;
-    border: 0;
-    background: rgb(0 0 0 / 45%);
-    animation: og-fade-in 180ms ease-out;
   }
 }
 
