@@ -41,7 +41,7 @@ export function PlaceSheet({ place, rider, busy = false, saved = false, driveTim
     return () => document.removeEventListener("keydown", escape);
   }, [onClose]);
   const distance = placeDistance(place.coordinate, rider);
-  return <section className="og-place-sheet" data-testid="place-sheet" role="dialog" aria-labelledby="place-sheet-title">
+  return <section className="og-place-sheet" data-testid="place-sheet" role="region" aria-labelledby="place-sheet-title">
     <div data-testid="place-card">
     <h2 id="place-sheet-title" ref={heading} tabIndex={-1}>{place.name}</h2>
     <p className="og-place-sheet__context">{place.context || `${place.coordinate.lat.toFixed(5)}, ${place.coordinate.lon.toFixed(5)}`}</p>
