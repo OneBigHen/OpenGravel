@@ -75,6 +75,11 @@ const STOP_CHIPS: readonly StopChip[] = [
   { id: "lodging", label: "Lodging", category: PLACE_CATEGORIES.get("lodging") ?? null },
 ];
 
+/** The rider's own word for a chip, so an empty answer never quotes the lookup. */
+function chipLabel(id: string | null): string | null {
+  return STOP_CHIPS.find((chip) => chip.id === id)?.label ?? null;
+}
+
 type Answer =
   | { readonly status: "idle" }
   | { readonly status: "searching"; readonly query: string }
@@ -360,7 +365,7 @@ export function RideStopSearch({
               </p>
             ) : answer.status === "ok" && rows.length === 0 ? (
               <p className="og-ride-search__note" role="status">
-                No places found for “{answer.query}”.
+                No places found for “{chipLabel(chip) ?? answer.query}”.
               </p>
             ) : rows.length === 0 ? null : (
               <ul
