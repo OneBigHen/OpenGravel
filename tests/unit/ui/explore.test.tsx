@@ -86,6 +86,25 @@ describe("Explore UI", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("returns focus to the Expand map control when the large map closes", () => {
+    // The panel, and the button with it, is unmounted while the large map is
+    // open. Focus has to land on the button that came back, or a keyboard rider
+    // is dropped at the top of the page.
+    const hosts = createStubMapHostFactory();
+    render(<ExploreMap entries={[entry]} highlightedId={null} onOpen={vi.fn()} hostFactory={hosts.factory} basemap="empty" />);
+    fireEvent.click(screen.getByRole("button", { name: "Expand map" }));
+    expect(screen.getByRole("dialog", { name: "Explore route map" })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Expand map" })).toHaveFocus();
+
+    // The same holds for the dialog's own close control.
+    fireEvent.click(screen.getByRole("button", { name: "Expand map" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close map" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Expand map" })).toHaveFocus();
+  });
+
   it("adds discrete region and riding-area selections to browser history", () => {
     render(<ExplorePanel entries={[entry]} initialQuery={{ sort: "recommended" }} />);
     fireEvent.click(screen.getByRole("button", { name: "Filters" }));
