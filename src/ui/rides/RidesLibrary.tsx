@@ -64,12 +64,12 @@ function formatRideTime(seconds: number): string {
 }
 
 const PROVENANCE_LABELS: Readonly<Record<RideSummary["provenanceType"], string>> = {
-  new: "Planned here",
-  import: "Imported from a file",
-  "recreated-from-track": "Rebuilt from a recorded track",
-  recorded: "Recorded on a ride",
-  catalog: "From the catalog",
-  derived: "Copied from another ride",
+  new: "Planned",
+  import: "From a file",
+  "recreated-from-track": "Rebuilt from a recording",
+  recorded: "Recorded",
+  catalog: "From Explore",
+  derived: "Opened from My rides",
   shared: "Shared with you",
 };
 
@@ -655,6 +655,8 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       title={title}
                       capabilities={ride.exportCapabilities ?? NO_EXPORT_CAPABILITIES}
                       canShare={canShare}
+                      detailsExpanded={isExpanded}
+                      onToggleDetails={() => toggleDetails(ride)}
                       onRename={() => startRename(ride)}
                       onExport={(mode) => exportRide(ride, mode)}
                       onShare={() => {
@@ -705,27 +707,15 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   </div>
                 ) : null}
 
-                {isRenaming ? null : (
-                  <div className="og-rides__row-tools">
-                    <button
-                      type="button"
-                      className="og-rides__details"
-                      aria-label={`${isExpanded ? "Hide" : "View"} details for ${title}`}
-                      aria-expanded={isExpanded}
-                      onClick={() => toggleDetails(ride)}
-                    >
-                      {isExpanded ? "Hide details" : "Details"}
-                    </button>
-                  </div>
-                )}
-
                 {isExpanded ? (
                   <div className="og-library__details og-rides__details">
                     <p>{sourceText(ride)}</p>
                     <p>Saved {formatRideDate(ride.savedAt)}</p>
-                    <p data-testid={`offline-pack-${ride.rideId}`}>
-                      Offline pack: {ride.offlinePack === "present" ? "saved" : ride.offlinePack === "not-present" ? "not saved" : "unknown"}
-                    </p>
+                    {ride.offlinePack === undefined ? null : (
+                      <p data-testid={`offline-pack-${ride.rideId}`}>
+                        {ride.offlinePack === "present" ? "Saved for offline" : "Not saved for offline"}
+                      </p>
+                    )}
                     {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
                       ? null
                       : <RecordedRoadProgress state={roadProgress[ride.rideId]!} />}

@@ -32,7 +32,8 @@ test("imports a redacted SwitchBack saved-ride GPX and shows its migration repor
 
   const ride = page.locator(".og-library__row").filter({ has: page.getByRole("button", { name: "Open Redacted sample loop" }) });
   await expect(ride).toBeVisible();
-  await ride.getByRole("button", { name: "View details for Redacted sample loop" }).click();
+  await ride.getByRole("button", { name: "More actions for Redacted sample loop" }).click();
+  await page.getByRole("menuitem", { name: "Details" }).click();
   await expect(ride).toContainText("Source: SwitchBack");
 
   await page.getByRole("button", { name: "Import another batch" }).click();

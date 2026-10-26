@@ -48,8 +48,9 @@ test("keeps named rides separate from the active draft and protects sources", as
   const row = rideRow(page, TITLE);
   await expect(row.getByRole("button", { name: `Open ${TITLE}` })).toBeVisible();
   const updatedBeforeBrowse = await row.locator(".og-rides__meta").textContent();
-  await row.getByRole("button", { name: `View details for ${TITLE}` }).click();
-  await expect(row.getByText(/Planned here/)).toBeVisible();
+  await openRideMenu(page, TITLE);
+  await page.getByRole("menuitem", { name: "Details" }).click();
+  await expect(row.getByText("Planned", { exact: true })).toBeVisible();
   await expect(row.locator(".og-rides__meta")).toHaveText(updatedBeforeBrowse ?? "");
 
   await row.getByRole("button", { name: `Open ${TITLE}` }).click();

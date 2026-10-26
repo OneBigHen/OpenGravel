@@ -30,8 +30,8 @@ export function libraryTypeLabel(type: LibraryRideType): string {
     case "recorded":
       return "Recorded";
     case "catalog-derivative":
-      return "Catalog derivative";
+      return "From Explore";
     case "shared-derivative":
-      return "Shared derivative";
+      return "Shared with you";
   }
 }

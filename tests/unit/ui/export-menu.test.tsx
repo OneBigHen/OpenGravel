@@ -1,78 +1,111 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ExportMenu } from "@/ui/rides/ExportMenu";
+import { ExportMenu, primaryExportMode } from "@/ui/rides/ExportMenu";
 
 afterEach(() => cleanup());
 
 const ALL = { plannedRoute: true, track: true, original: true, recordedRide: true } as const;
 const NONE = { plannedRoute: false, track: false, original: false, recordedRide: false } as const;
 
-function trigger(): HTMLElement {
-  return screen.getByRole("button", { name: /export/i });
+function download(): HTMLElement {
+  return screen.getByRole("button", { name: "Download GPX" });
+}
+
+function otherFormats(): HTMLElement {
+  return screen.getByRole("button", { name: "Other formats" });
 }
 
 describe("ExportMenu", () => {
-  it("offers track and route GPX for a planned ride, plus track, original, and recorded exports", async () => {
+  it("offers one Download GPX up front and exports the best-compatibility variant", async () => {
+    const onExport = vi.fn();
+    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={onExport} />);
+
+    expect(primaryExportMode({ ...NONE, plannedRoute: true })).toBe("planned-track");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
+
+    fireEvent.click(download());
+
+    expect(onExport).toHaveBeenCalledWith("planned-track");
+  });
+
+  it("downloads a recorded ride as the recording, not a planned line", () => {
+    const onExport = vi.fn();
+    render(<ExportMenu title="Recorded ride" capabilities={ALL} onExport={onExport} />);
+
+    expect(primaryExportMode(ALL)).toBe("recorded-ride");
+    fireEvent.click(download());
+
+    expect(onExport).toHaveBeenCalledWith("recorded-ride");
+  });
+
+  it("keeps the other formats behind a small disclosure and exports one of them", async () => {
     const onExport = vi.fn();
     render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={onExport} />);
-    fireEvent.click(trigger());
 
-    expect(screen.getByRole("menuitem", { name: /gpx track/i })).toBeEnabled();
+    fireEvent.click(otherFormats());
+
+    expect(screen.getByRole("menuitem", { name: /^gpx track$/i })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: /gpx route/i })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: /source track gpx/i })).toBeEnabled();
     expect(screen.getByRole("menuitem", { name: /original file/i })).toBeEnabled();
-    expect(screen.getByRole("menuitem", { name: /recorded ride gpx/i })).toBeEnabled();
-    expect(screen.getByText(/250 route points/i)).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /recorded ride gpx/i })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
-    await waitFor(() => expect(trigger()).toHaveAttribute("aria-expanded", "false"));
-    fireEvent.click(trigger());
     fireEvent.click(screen.getByRole("menuitem", { name: /gpx route/i }));
-    await waitFor(() => expect(trigger()).toHaveAttribute("aria-expanded", "false"));
-    fireEvent.click(trigger());
-    fireEvent.click(screen.getByRole("menuitem", { name: /original file/i }));
-
-    expect(onExport).toHaveBeenNthCalledWith(1, "planned-track");
-    expect(onExport).toHaveBeenNthCalledWith(2, "planned-route");
-    expect(onExport).toHaveBeenNthCalledWith(3, "original");
+    await waitFor(() => expect(onExport).toHaveBeenCalledWith("planned-route"));
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 
-  it("explains why a missing capability cannot be exported", () => {
+  it("offers no other formats when the best file is the only one", () => {
     render(<ExportMenu title="Recorded ride" capabilities={{ ...NONE, recordedRide: true }} onExport={vi.fn()} />);
-    fireEvent.click(trigger());
 
-    expect(screen.getByRole("menuitem", { name: /gpx track/i })).toBeDisabled();
-    expect(screen.getByRole("menuitem", { name: /gpx route/i })).toBeDisabled();
-    expect(screen.getAllByText(/no saved route line/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole("menuitem", { name: /recorded ride gpx/i })).toBeEnabled();
+    expect(download()).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Other formats" })).not.toBeInTheDocument();
   });
 
-  it("declares menu semantics with a controlled popover", () => {
+  it("never lists a format the ride cannot produce", () => {
+    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={vi.fn()} />);
+    fireEvent.click(otherFormats());
+
+    expect(screen.getByRole("menuitem", { name: /gpx route/i })).toBeEnabled();
+    expect(screen.queryByRole("menuitem", { name: /source track gpx/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /original file/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /recorded ride gpx/i })).not.toBeInTheDocument();
+  });
+
+  it("names an unchanged import honestly instead of calling it a GPX download", () => {
+    render(<ExportMenu title="Imported file" capabilities={{ ...NONE, original: true }} onExport={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Download original file" })).toBeEnabled();
+  });
+
+  it("declares menu semantics only on the Other formats disclosure", () => {
     render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} />);
-    expect(trigger()).toHaveAttribute("aria-haspopup", "menu");
-    expect(trigger()).not.toHaveAttribute("aria-controls");
-    fireEvent.click(trigger());
-    const controls = trigger().getAttribute("aria-controls");
+    expect(otherFormats()).toHaveAttribute("aria-haspopup", "menu");
+    expect(otherFormats()).not.toHaveAttribute("aria-controls");
+    expect(download()).not.toHaveAttribute("aria-haspopup");
+    fireEvent.click(otherFormats());
+    const controls = otherFormats().getAttribute("aria-controls");
     expect(controls).toBeTruthy();
     expect(document.getElementById(controls!)).toHaveAttribute("role", "menu");
   });
 
-  it("closes on Escape and returns focus to the trigger", async () => {
+  it("closes on Escape and returns focus to the Other formats button", async () => {
     render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} />);
-    fireEvent.click(trigger());
+    fireEvent.click(otherFormats());
     expect(screen.getByRole("menu")).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /gpx track/i })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: /^gpx track$/i })).toHaveFocus();
 
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
-    expect(trigger()).toHaveFocus();
+    expect(otherFormats()).toHaveFocus();
   });
 
-  it("closes when a pointer goes down outside the popover", async () => {
+  it("closes when a pointer goes down outside the disclosure", async () => {
     render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} />);
-    fireEvent.click(trigger());
+    fireEvent.click(otherFormats());
     expect(screen.getByRole("menu")).toBeInTheDocument();
 
     fireEvent.pointerDown(document.body);
@@ -80,63 +113,78 @@ describe("ExportMenu", () => {
     await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 
-  it("moves focus with the arrow keys and Home/End, skipping disabled items", async () => {
-    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={vi.fn()} />);
-    fireEvent.click(trigger());
+  it("moves focus with the arrow keys and Home/End through the available formats", () => {
+    render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} />);
+    fireEvent.click(otherFormats());
     const menu = screen.getByRole("menu");
-    const track = screen.getByRole("menuitem", { name: /gpx track/i });
+    const track = screen.getByRole("menuitem", { name: /^gpx track$/i });
     const route = screen.getByRole("menuitem", { name: /gpx route/i });
+    const source = screen.getByRole("menuitem", { name: /source track gpx/i });
+    const original = screen.getByRole("menuitem", { name: /original file/i });
     expect(track).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(route).toHaveFocus();
-    fireEvent.keyDown(menu, { key: "ArrowDown" });
-    expect(track).toHaveFocus();
     fireEvent.keyDown(menu, { key: "End" });
-    expect(route).toHaveFocus();
+    expect(original).toHaveFocus();
     fireEvent.keyDown(menu, { key: "Home" });
     expect(track).toHaveFocus();
+    fireEvent.keyDown(menu, { key: "ArrowUp" });
+    expect(original).toHaveFocus();
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(track).toHaveFocus();
+    expect(source).toBeEnabled();
   });
 
-  it("offers a share entry only when sharing is wired up", () => {
-    const first = render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} />);
-    fireEvent.click(trigger());
+  it("offers share only inside the disclosure when sharing is wired up", () => {
+    const first = render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={vi.fn()} />);
+    fireEvent.click(otherFormats());
     expect(screen.queryByRole("menuitem", { name: /share/i })).not.toBeInTheDocument();
     first.unmount();
 
     const onShare = vi.fn();
-    render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={vi.fn()} onShare={onShare} />);
-    fireEvent.click(trigger());
-    fireEvent.click(screen.getByRole("menuitem", { name: /copy share link/i }));
+    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={vi.fn()} onShare={onShare} />);
+    fireEvent.click(otherFormats());
+    fireEvent.click(screen.getByRole("menuitem", { name: /share this ride/i }));
     expect(onShare).toHaveBeenCalledOnce();
   });
 
-  it("keeps the entry focused instead of disabling it while an export runs", async () => {
+  it("keeps a running export focused instead of disabling it", async () => {
     let finish: (() => void) | undefined;
     const onExport = vi.fn(() => new Promise<void>((resolve) => {
       finish = resolve;
     }));
-    render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={onExport} />);
-    fireEvent.click(trigger());
-    const track = screen.getByRole("menuitem", { name: /gpx track/i });
-    fireEvent.click(track);
+    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={onExport} />);
+    fireEvent.click(otherFormats());
+    const route = screen.getByRole("menuitem", { name: /gpx route/i });
+    fireEvent.click(route);
 
-    expect(track).toBeEnabled();
-    expect(screen.getByRole("menuitem", { name: /preparing/i })).toBe(track);
+    expect(route).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: /preparing/i })).toBe(route);
     expect(screen.getByRole("menu")).toHaveAttribute("aria-busy", "true");
     finish?.();
-    await waitFor(() => expect(trigger()).toHaveAttribute("aria-expanded", "false"));
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
   });
 
-  it("reports a failed export without leaving the menu stuck open", async () => {
+  it("reports a failed primary download without pretending it worked", async () => {
     const onExport = vi.fn(async () => {
       throw new Error("nope");
     });
     render(<ExportMenu title="Pine Loop" capabilities={ALL} onExport={onExport} />);
-    fireEvent.click(trigger());
-    fireEvent.click(screen.getByRole("menuitem", { name: /gpx track/i }));
+    fireEvent.click(download());
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/could not create this export/i);
-    expect(trigger()).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not create this file/i);
+  });
+
+  it("reports a failed other-format download without leaving the menu stuck", async () => {
+    const onExport = vi.fn(async () => {
+      throw new Error("nope");
+    });
+    render(<ExportMenu title="Pine Loop" capabilities={{ ...NONE, plannedRoute: true }} onExport={onExport} />);
+    fireEvent.click(otherFormats());
+    fireEvent.click(screen.getByRole("menuitem", { name: /gpx route/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not create this file/i);
+    expect(otherFormats()).toHaveAttribute("aria-expanded", "true");
   });
 });

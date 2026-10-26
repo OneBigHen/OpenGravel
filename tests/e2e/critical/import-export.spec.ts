@@ -30,7 +30,7 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   await expect(page.getByRole("button", { name: "Open North Track" })).toBeVisible();
 
   await page.getByRole("button", { name: "More actions for North Track" }).click();
-  await page.getByRole("menuitem", { name: "Export GPX" }).click();
+  await page.getByRole("menuitem", { name: "Other formats" }).click();
   const plannedDownloadPromise = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "GPX route" }).click();
   const plannedDownload = await plannedDownloadPromise;
@@ -63,7 +63,7 @@ test("imports a gapped multi-track GPX, exports, and preserves the original byte
   await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
 
   await page.getByRole("button", { name: "More actions for Original multi-track-gap" }).click();
-  await page.getByRole("menuitem", { name: "Export GPX" }).click();
+  await page.getByRole("menuitem", { name: "Other formats" }).click();
   const originalDownloadPromise = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Original file" }).click();
   const originalDownload = await originalDownloadPromise;
