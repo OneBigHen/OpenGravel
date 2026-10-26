@@ -85,12 +85,89 @@
   }
 }
 
-/* The page's wide layout puts the map and the figures side by side; the
-   figures sit in pairs there, and keep the stylesheet's own counts below. */
-@media (min-width: 1100px) {
-  .og-route-detail__visual > section > .og-route-detail__stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* -- The route page's one facts line --------------------------------------- */
+
+/* The numbers a rider compares, on one line under the name: how far, how
+   long, what is under the wheels, how much it turns. The separator trails each
+   fact, so a wrapped line at 320 px never starts with a middot. */
+.og-route-detail .og-route-detail__facts {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-1);
+  row-gap: 2px;
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-body);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.og-route-detail .og-route-detail__fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.og-route-detail .og-route-detail__fact:not(:last-child)::after {
+  margin-left: var(--og-space-1);
+  color: var(--og-slate-text);
+  content: "·";
+}
+
+/* The pace the estimated time is based on stays a note beside the figure. */
+.og-route-detail .og-route-detail__basis {
+  color: var(--og-slate-text);
+  font-weight: 500;
+}
+
+/* Where a road's earlier record went: one plain line behind a disclosure, and
+   a 48 px target to open it. */
+.og-road-detail-sheet__history > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.og-road-detail-sheet__history > summary:focus-visible {
+  outline: 2px solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+.og-road-detail-sheet__history > p {
+  margin: 0;
+  color: var(--og-slate-text);
+  font-size: var(--og-text-meta);
+}
+
+/* Climb, descent and the highest point: three figures a rider plans fuel and
+   daylight with, never a count of the points the profile was stored as. */
+.og-route-detail .og-route-detail__elevation h2 {
+  margin: 0;
+}
+
+.og-route-detail .og-route-detail__elevation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2) var(--og-space-5);
+  margin: var(--og-space-2) 0 0;
+}
+
+.og-route-detail .og-route-detail__elevation-facts dt {
+  color: var(--og-slate-text);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+}
+
+.og-route-detail .og-route-detail__elevation-facts dd {
+  margin: 2px 0 0;
+  font-size: var(--og-text-headline);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* -- The loading frame on a route page ------------------------------------ */

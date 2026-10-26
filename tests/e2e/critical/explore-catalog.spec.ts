@@ -22,12 +22,19 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await routeLink.click();
   await expect(page).toHaveURL(new RegExp(`/explore/${ROUTE_ID}$`));
   await expect(page.getByRole("heading", { name: ROUTE_NAME })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Catalog variants and tracks" })).toContainText("2 exports");
+  // The route's other versions, in the words a rider uses for them.
+  await expect(page.getByRole("region", { name: "Other versions of this ride" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Other versions of this ride" })).toContainText("2 versions");
   // With no road matched to our data there is no road-by-road surface, so the
   // section is absent rather than heading an explanation of its own absence.
   await expect(page.getByRole("heading", { name: "Roads on this ride" })).toHaveCount(0);
-  await expect(page.getByLabel("Curvature not computed")).toHaveText("—");
+  // No surface or curvature evidence: the facts line states what is known and
+  // says nothing about either, rather than printing an absence.
+  await expect(page.getByTestId("route-facts")).toContainText("17 mi");
+  await expect(page.getByTestId("route-facts")).toContainText("58 min");
+  await expect(page.getByTestId("route-facts")).not.toContainText(/unknown/i);
+  // The ride's own name leads: no eyebrow naming the store it is kept in.
+  await expect(page.locator(".og-route-detail__header .og-eyebrow")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Route notes" })).toBeVisible();
   // The rating count is stated once ("No ratings yet", never "No ratings yet · 0 ratings").
   await expect(page.locator(".og-route-community__meta")).toBeVisible();

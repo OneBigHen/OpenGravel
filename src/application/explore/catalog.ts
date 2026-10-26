@@ -637,10 +637,10 @@ function librarySource(summary: RideSummary): CatalogSource {
 }
 
 function libraryProvenance(summary: RideSummary): string {
-  const source = summary.sourceId === null ? "the saved library record" : `source ${summary.sourceId}`;
-  return summary.provenanceType === "import"
-    ? `imported route from the saved library (${source})`
-    : `saved library ride (${source}); route geometry is not computed here`;
+  // What the rider sees in the route page's header: where the ride came from,
+  // in their own terms. The library's record ids and the fact that a saved
+  // ride's line is not recomputed are internals, not provenance a rider reads.
+  return summary.provenanceType === "import" ? "Imported from a file" : "Your saved ride";
 }
 
 export function entryFromLibraryRide(ride: LibraryExploreRide): CatalogEntry {

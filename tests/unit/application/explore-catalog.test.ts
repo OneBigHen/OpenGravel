@@ -75,7 +75,19 @@ describe("Explore catalog application", () => {
       estimatedTimeMinutes: 30,
       geometry: [],
     });
-    expect(entry.provenance).toContain("saved library ride");
+    // The route page's header line: where the ride came from, in the rider's
+    // words. The library's record ids are not provenance a rider reads.
+    expect(entry.provenance).toBe("Your saved ride");
+    expect(entry.provenance).not.toMatch(/geometry|source|record|library/i);
+  });
+
+  it("names an imported library ride in plain words too", () => {
+    const entry = entryFromLibraryRide({
+      ...libraryRide,
+      summary: { ...libraryRide.summary, provenanceType: "import", type: "imported", sourceId: "source-9f2" },
+    });
+    expect(entry.provenance).toBe("Imported from a file");
+    expect(entry.provenance).not.toContain("source-9f2");
   });
 
   it("creates a derivative with the route's own name, endpoints, and preserved source provenance", () => {
