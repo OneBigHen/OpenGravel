@@ -94,6 +94,17 @@ function flow(locateStart: () => Promise<LocateOutcome> = vi.fn(async () => ({ s
 }
 
 describe("place flow", () => {
+  it("a category supplies map pins, frames them above the sheet, and opens a card without editing", async () => {
+    const view = flow(); const before = view.rideStore.getState().document;
+    render(<>{view.result.current.top}</>);
+    await act(async () => fireEvent.click(screen.getByTestId("search-chip-gas")));
+    expect(view.result.current.pins).toHaveLength(1);
+    expect(view.result.current.pins[0]?.coordinate).toEqual(place.coordinate);
+    expect(view.uiStore.getState().fitRequest?.extent).toMatchObject({ minLat: place.coordinate.lat - .004, maxLat: place.coordinate.lat + .004 });
+    render(<>{view.result.current.sheet}</>);
+    fireEvent.click(screen.getByTestId("category-result"));
+    expect(view.rideStore.getState().document).toBe(before);
+  });
   it("a search pick never authors the ride; Directions plans once and Undo restores it", async () => {
     const view = flow(); const before = view.rideStore.getState().document;
     act(() => view.result.current.composerSearch?.onPick("finish", place, "coffee"));

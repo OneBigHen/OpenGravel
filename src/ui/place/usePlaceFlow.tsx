@@ -126,6 +126,14 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     try {
       const outcome = await services.search.search(chip.query, { bias, signal: controller.signal });
       if (controller.signal.aborted) return;
+      if (outcome.status === "ok" && outcome.places.length > 0) {
+        const latitudes = outcome.places.map((place) => place.coordinate.lat);
+        const longitudes = outcome.places.map((place) => place.coordinate.lon);
+        uiStore.getState().requestFit({
+          minLat: Math.min(...latitudes) - .004, maxLat: Math.max(...latitudes) + .004,
+          minLon: Math.min(...longitudes) - .004, maxLon: Math.max(...longitudes) + .004,
+        });
+      }
       setResults({ chip, places: outcome.status === "ok" ? outcome.places : [], message: outcome.status === "unavailable" ? outcome.reason : outcome.places.length === 0 ? "No places found here. Try moving the map." : null });
     } catch {
       if (!controller.signal.aborted) setResults({ chip, places: [], message: "Place search is unavailable right now." });
