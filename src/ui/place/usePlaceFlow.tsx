@@ -184,7 +184,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     onSave={() => { if (services?.memory === undefined) { toast("Saving places is unavailable here."); return; } services.memory.toggleSaved(place); toast("Saved places updated"); }}
     onShare={() => { const url = `https://www.google.com/maps/search/?api=1&query=${place.coordinate.lat},${place.coordinate.lon}`; void (async () => { try { if (navigator.share) await navigator.share({ title: place.name, url }); else { await navigator.clipboard.writeText(url); toast("Place link copied"); } } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast("Couldn't share this place. Try again."); } })(); }}
     onClose={close}/>;
-  return { composerSearch, sheet, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
+  return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
     top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} onClear={close} onChip={(chip) => void category(chip)}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }

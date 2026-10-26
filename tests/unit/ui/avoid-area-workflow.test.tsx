@@ -678,7 +678,7 @@ describe("the expanded sheet's scroll affordance", () => {
     const scroll = screen.getByTestId("sheet-scroll");
     expect(scroll.className).toContain("og-sheet__body");
     await waitFor(() =>
-      expect(sheet.style.getPropertyValue("--og-sheet-head-height")).toBe("96px"),
+      expect(sheet.closest<HTMLElement>(".og-planner__dock")?.style.getPropertyValue("--og-sheet-head-height")).toBe("96px"),
     );
   });
 

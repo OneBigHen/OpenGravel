@@ -12,18 +12,17 @@ import {
   useRef,
   useState,
   type ComponentProps,
-  type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
 } from "react";
 
+import { RideStylePanel } from "./RideStyleControls";
+import { Sheet } from "@/ui/sheet/Sheet";
 import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
-import { useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
+import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
 import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { IntentComposer } from "@/ui/planner/IntentComposer";
@@ -34,7 +33,9 @@ import { PlannerWorkspaceStatus } from "@/ui/planner/PlannerWorkspaceStatus";
 
 export interface PlannerWorkspaceDockProps {
   readonly placeSheet?: ReactNode;
+  readonly onDismissPlace?: (() => void) | undefined;
   readonly showOptions?: boolean;
+  readonly onFullSheet?: () => void;
   readonly dockRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadHeight: number;
@@ -112,12 +113,11 @@ function HistoryGlyph({ direction }: { readonly direction: "undo" | "redo" }) {
   );
 }
 
-/** How far a finger travels on the sheet's head before it counts as a swipe. */
-const SWIPE_PX = 36;
-
 export function PlannerWorkspaceDock({
   placeSheet,
+  onDismissPlace,
   showOptions = false,
+  onFullSheet,
   dockRef,
   sheetHeadRef,
   sheetHeadHeight,
@@ -151,6 +151,9 @@ export function PlannerWorkspaceDock({
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
     composer.rideStyle?.view.shape !== "loop";
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    dockRef.current?.style.setProperty("--og-sheet-head-height", `${sheetHeadHeight}px`);
+  }, [dockRef, sheetHeadHeight]);
   const loopRide = composer.rideStyle?.view.shape === "loop";
   const placeLabel = loopRide ? composer.viewModel.startLabel : composer.viewModel.finishLabel;
   const destinationLine =
@@ -203,49 +206,17 @@ export function PlannerWorkspaceDock({
   // frame renders them over the map everywhere else (the two checks are the same
   // query, so they can never both render the bar).
   const desktop = useDesktopPlanner();
-  const detent = placeSheet ? "half" : phone ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" ? "half" : "peek" : sheetDetent;
-  const [dragHeight, setDragHeight] = useState<number | null>(null);
-  const swipe = useRef<{ y: number; id: number; height: number } | null>(null);
-  const swallowClick = useRef(false);
-  const swipeHandlers = {
-    onPointerDown: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      // Phone: the 48px handle drags the sheet. Elsewhere any touch on the head swipes it.
-      const handle = event.target instanceof Element ? event.target.closest<HTMLElement>(".og-sheet__handle") : null;
-      if (phone ? handle === null : event.pointerType === "mouse") return;
-      const height = event.currentTarget.parentElement?.getBoundingClientRect().height ?? 0;
-      swipe.current = { y: event.clientY, id: event.pointerId, height };
-      if (phone) handle?.setPointerCapture(event.pointerId);
-    },
-    onPointerMove: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      const start = swipe.current;
-      if (start === null || start.id !== event.pointerId) return;
-      const dy = event.clientY - start.y;
-      if (Math.abs(dy) > 4) swallowClick.current = true;
-      if (phone) setDragHeight(Math.max(120, Math.min(window.innerHeight - 72, start.height - dy)));
-    },
-    onPointerUp: (event: ReactPointerEvent<HTMLDivElement>): void => {
-      const start = swipe.current;
-      swipe.current = null;
-      setDragHeight(null);
-      if (start === null || start.id !== event.pointerId) return;
-      const dy = event.clientY - start.y;
-      if (Math.abs(dy) >= SWIPE_PX) onStepSheet(dy < 0 ? "up" : "down");
-      // Pointer-generated clicks are synchronous with release. Keyboard taps
-      // after this gesture must still work.
-      window.setTimeout(() => { swallowClick.current = false; }, 0);
-    },
-    onPointerCancel: (): void => {
-      swipe.current = null;
-      swallowClick.current = false;
-      setDragHeight(null);
-    },
-    onClickCapture: (event: ReactMouseEvent<HTMLDivElement>): void => {
-      if (!swallowClick.current) return;
-      swallowClick.current = false;
-      event.preventDefault();
-      event.stopPropagation();
-    },
-  };
+  const compact = useCompactPlanner();
+  const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");
+  const optionsMode = showOptions && compact && hasChoices && !placeSheet;
+  const activeSheetView = sheetDetent === "expanded" ? sheetView : "choices";
+  const openEditor = (next: "edit" | "options") => { setSheetView(next); onFullSheet?.(); };
+  const detent = compact ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" || sheetDetent === "ride" ? "half" : "peek" : sheetDetent;
+  useEffect(() => {
+    if (!optionsMode || activeSheetView === "choices") return;
+    bodyRef.current?.querySelector<HTMLElement>("[data-sheet-focus]")?.focus({ preventScroll: true });
+    bodyRef.current?.scrollTo?.({ top: 0 });
+  }, [optionsMode, activeSheetView]);
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");
@@ -262,19 +233,26 @@ export function PlannerWorkspaceDock({
       ref={dockRef}
     >
       {glance}
-      <section
+      <Sheet
         className="og-planner__panel og-planner__sheet"
         data-testid="planner-sheet"
         data-detent={detent}
-        data-directions={showOptions && detent === "half" ? "true" : undefined}
+        data-directions={optionsMode ? "true" : undefined}
+        data-sheet-view={activeSheetView}
         data-place={placeSheet ? "true" : undefined}
         data-idle={idle && !placeSheet ? "true" : undefined}
         data-has-ride={hasChoices ? "true" : "false"}
-        data-dragging={dragHeight !== null ? "true" : undefined}
-        aria-label="Ride planning"
-        style={{ "--og-sheet-head-height": `${sheetHeadHeight}px`, ...(dragHeight === null ? {} : { "--og-sheet-drag-h": `${dragHeight}px` }) } as CSSProperties}
-      >
-        <div className="og-sheet__head" data-testid="sheet-head" ref={sheetHeadRef} {...swipeHandlers}>
+        label="Ride planning"
+        detent={sheetDetent === "expanded" ? "full" : sheetDetent === "half" || sheetDetent === "ride" ? "half" : "peek"}
+        rail={!compact}
+        onToggle={onToggleSheet}
+        onStep={onStepSheet}
+        headRef={sheetHeadRef}
+        bodyRef={bodyRef}
+        onDismiss={placeSheet ? onDismissPlace : undefined}
+        focusKey={optionsMode ? `options:${activeSheetView}` : undefined}
+        handleLabel={compact ? undefined : sheetDetent === "mini" ? "Show planner" : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${hasChoices ? ` (${viewModel.routeCards.length})` : ""}`}
+        head={<>
           <PlannerWorkspaceStatus {...status} />
 
           {overlapCandidates.length === 0 ? null : (
@@ -348,50 +326,7 @@ export function PlannerWorkspaceDock({
             </section>
           )}
 
-          <button
-            type="button"
-            className="og-sheet__handle"
-            data-testid="sheet-handle"
-            data-detent={detent}
-            aria-expanded={phone ? detent !== "peek" : sheetDetent === "expanded"}
-            aria-controls="og-sheet-body"
-            aria-label={phone ? `Planner: ${detent}. ${detent === "full" ? "Collapse to peek" : detent === "half" ? "Expand fully" : "Expand to half"}` :
-              sheetDetent === "mini"
-                ? "Show planner"
-                : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${
-                    viewModel.routeCards.length === 0 ? "" : ` (${viewModel.routeCards.length})`
-                  }`
-            }
-            onKeyDown={(event) => {
-              if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-                event.preventDefault();
-                onStepSheet(event.key === "ArrowUp" ? "up" : "down");
-              } else if (event.key === "Home" && phone) {
-                event.preventDefault();
-                onStepSheet("down");
-              }
-            }}
-            onClick={onToggleSheet}
-          >
-            <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
-              {/* Collapsed with alternatives behind it, the label says what a tap does (FT-02). */}
-              {sheetDetent === "mini"
-                ? "Show planner"
-                : hasChoices
-                  ? sheetDetent !== "expanded" && viewModel.routeCards.length > 1
-                    ? "Compare rides"
-                    : "Ride choices"
-                  : "Ride style"}
-            </span>
-            {viewModel.routeCards.length === 0 ? null : (
-              <span className="og-sheet__handle-count" data-testid="ride-choices-count">
-                {viewModel.routeCards.length}
-              </span>
-            )}
-            <span className="og-sheet__handle-chevron" aria-hidden="true">
-              {sheetDetent === "expanded" ? "⌃" : sheetDetent === "mini" ? "⌃" : "⌄"}
-            </span>
-          </button>
+
 
           {/*
             Owner review 2026-09-26 (OW-01): a restored draft had no way out.
@@ -434,14 +369,28 @@ export function PlannerWorkspaceDock({
               {history}
             </div>
           )}
-        </div>
-
-        <div
-          className="og-sheet__body"
-          id="og-sheet-body"
-          data-testid="sheet-scroll"
-          ref={bodyRef}
-        >
+        </>}
+        handleContent={<>
+            <span className="og-sheet__handle-label" data-testid="sheet-handle-label">
+              {/* Collapsed with alternatives behind it, the label says what a tap does (FT-02). */}
+              {sheetDetent === "mini"
+                ? "Show planner"
+                : hasChoices
+                  ? sheetDetent !== "expanded" && viewModel.routeCards.length > 1
+                    ? "Compare rides"
+                    : "Ride choices"
+                  : "Ride style"}
+            </span>
+            {viewModel.routeCards.length === 0 ? null : (
+              <span className="og-sheet__handle-count" data-testid="ride-choices-count">
+                {viewModel.routeCards.length}
+              </span>
+            )}
+            <span className="og-sheet__handle-chevron" aria-hidden="true">
+              {sheetDetent === "expanded" ? "⌃" : sheetDetent === "mini" ? "⌃" : "⌄"}
+            </span>
+        </>}
+      >
           {/*
             UX rework phase 2: once there are choices, the answer comes first —
             route cards, profile and Start — and the itinerary follows to edit.
@@ -452,15 +401,23 @@ export function PlannerWorkspaceDock({
             so that tap steps the sheet up once instead of hiding its own list.
           */}
           {placeSheet ? <div className="og-place-sheet-slot">{placeSheet}</div> : null}
-          {hasChoices ? (
+          {optionsMode && activeSheetView !== "choices" ? <div className="og-route-options__editor-head">
+            <button type="button" data-testid="back-to-options" onClick={() => setSheetView("choices")}>‹ Route options</button>
+            <h2 tabIndex={-1} data-sheet-focus>{activeSheetView === "edit" ? "Edit ride" : "Options"}</h2>
+          </div> : null}
+          {hasChoices && (!optionsMode || activeSheetView === "choices") ? (
             <PlannerResultPanel
               {...results}
-              showOptions={showOptions && detent !== "peek"}
+              showOptions={optionsMode}
+              startLabel={composer.viewModel.startLabel}
+              finishLabel={composer.viewModel.finishLabel}
+              onEditOptions={() => openEditor("edit")}
+              onOpenOptions={() => openEditor("options")}
               destinationLine={destinationLine}
               {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
             />
           ) : null}
-          {phone && (hasChoices || history !== null) ? (
+          {!optionsMode && phone && (hasChoices || history !== null) ? (
             <div className="og-phone-tools" data-testid="phone-tools">
               {hasChoices ? <button type="button" className="og-phone-edit" data-testid="edit-route" onClick={() => {
                 bodyRef.current?.querySelector(".og-composer")?.scrollIntoView({ block: "start" });
@@ -469,11 +426,12 @@ export function PlannerWorkspaceDock({
               {history}
             </div>
           ) : null}
-          <IntentComposer {...composer} hideIdleSearch={idle && !desktop} {...(planning ? { onCancelPlanning } : {})} />
+          {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop} {...(planning ? { onCancelPlanning } : {})} />}
           {hasChoices ? null : <PlannerResultPanel {...results} />}
-          <PlannerRefineWorkspace {...refine} />
-        </div>
-      </section>
+          {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? <RideStylePanel model={composer.rideStyle} expanded/> : null}
+          {(!optionsMode || activeSheetView !== "choices") && <PlannerRefineWorkspace {...refine} />}
+
+      </Sheet>
     </div>
   );
 }

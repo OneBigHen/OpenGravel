@@ -6,8 +6,9 @@
   .og-planner .og-shared-sheet { display: flex; flex-direction: column; gap: 0; min-height: 0; padding: 0 var(--og-space-4) var(--og-space-3); overflow: hidden; border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0; transition: height 180ms ease; }
   .og-planner .og-shared-sheet[data-detent="peek"] { height: auto; max-height: calc(50dvh - var(--og-tabbar-h, 0px)); }
   .og-planner .og-shared-sheet[data-detent="half"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: calc(50dvh - var(--og-tabbar-h, 0px)); }
-  /* Full still leaves the search chrome and a slice of the map to orient by. */
-  .og-planner .og-shared-sheet[data-detent="full"] { height: calc(100dvh - var(--og-tabbar-h, 0px) - 256px); min-height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: none; }
+  /* Full keeps a map strip; the home search returns when the sheet folds. */
+  .og-planner .og-shared-sheet[data-detent="full"] { height: calc(100dvh - var(--og-tabbar-h, 0px) - 160px); min-height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: none; }
+  .og-planner:has(.og-shared-sheet[data-detent="full"]) .og-top-search { display: none; }
   .og-planner .og-shared-sheet[data-dragging="true"] { height: var(--og-sheet-drag-h); max-height: var(--og-sheet-drag-h); transition: none; }
   .og-planner .og-shared-sheet .og-sheet__head { display: block; position: relative; flex: 0 0 48px; min-height: 48px; padding: 0; }
   .og-planner .og-shared-sheet .og-sheet__head::after, .og-planner .og-shared-sheet::before { display: none; }

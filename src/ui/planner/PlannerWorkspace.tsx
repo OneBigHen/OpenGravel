@@ -788,8 +788,8 @@ export function PlannerWorkspace({
       }}
     >
         <PlannerWorkspaceDock
-          placeSheet={placeFlow.sheet}
-          showOptions={placeFlow.optionsOpen}
+          placeSheet={placeFlow.sheet} onDismissPlace={placeFlow.dismissSheet}
+          showOptions={placeFlow.optionsOpen} onFullSheet={() => plannerUiStore.getState().setSheetDetent("expanded")}
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
