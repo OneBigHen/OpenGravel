@@ -20,6 +20,7 @@
   .og-planner .og-shared-sheet[data-directions="true"]:not([data-sheet-view="choices"]) .og-sheet__body > * { order: 0; flex-shrink: 0; }
   .og-planner .og-shared-sheet .og-planner__status { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; padding: 0; }
   .og-planner .og-shared-sheet[data-place="true"] .og-sheet__body { display: block; }
+  .og-planner .og-shared-sheet[data-place="true"] .og-sheet__head > :not(.og-sheet__handle) { display: none; }
   .og-planner .og-shared-sheet[data-place="true"] .og-sheet__body > .og-place-sheet-slot { display: block; }
   .og-planner .og-shared-sheet[data-directions="true"] .og-sheet__head > :not(.og-sheet__handle) { display: none; }
   .og-planner .og-shared-sheet[data-directions="true"] .og-sheet__body > * { display: block; }
