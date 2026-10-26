@@ -26,10 +26,12 @@ export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onRever
       {onReverse === undefined ? null : <button type="button" data-testid="route-options-swap" aria-label="Swap start and destination" onClick={onReverse}>⇅</button>}
       {onEdit === undefined ? null : <button type="button" data-testid="route-options-edit" onClick={onEdit}>Edit</button>}
     </div>
-    <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
-      {riderRouteOptions(cards).map(({ card, label, reason }) => <RouteDecisionCard key={card.routeId} compact card={card} compactLabel={label} compactReason={reason} onSelect={onSelect}/>)}
-    </ul>
-    {onOptions === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-settings" onClick={onOptions}><span>Options</span><span>{optionsLabel} ›</span></button>}
+    <div className="og-route-options__scroll">
+      <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
+        {riderRouteOptions(cards).map(({ card, label, reason }) => <RouteDecisionCard key={card.routeId} compact card={card} compactLabel={label} compactReason={reason} onSelect={onSelect}/>)}
+      </ul>
+      {onOptions === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-settings" onClick={onOptions}><span>Options</span><span>{optionsLabel} ›</span></button>}
+    </div>
     {start === null ? null : <div className="og-route-options__start">
       <button type="button" className="og-primary" data-testid="start-ride" disabled={start.starting || start.refusal !== null} onClick={start.onStart}>{start.starting ? "Starting…" : "Start ride"}</button>
       {start.refusal === null ? null : <p data-testid="start-ride-reason">{start.refusal}</p>}

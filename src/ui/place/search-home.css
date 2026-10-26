@@ -30,10 +30,10 @@
   .og-search-chips button[aria-pressed="true"] { background: var(--og-deep-spruce); color: var(--og-paper); }
   .og-planner:has(.og-top-search) .og-planner__header { visibility: hidden; pointer-events: none; }
   .og-planner:has(.og-top-search) .og-planner__header .og-planner__nav-shell { visibility: visible; pointer-events: auto; }
+  .og-planner:has(.og-top-search) .og-places-overlay--planner .og-places-control { display: none; }
   .og-planner:has(.og-top-search) .og-planner__map-slot .og-layers { top: calc(env(safe-area-inset-top, 0px) + 136px); }
   .og-planner:has(.og-top-search) .og-planner__map-slot .og-map__cluster { top: calc(env(safe-area-inset-top, 0px) + 192px); }
   .og-planner .og-planner__sheet[data-detent="half"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: 50dvh; }
-  .og-planner .og-planner__sheet[data-place="true"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: 50dvh; }
   .og-planner .og-composer[data-top-search-idle="true"] .og-advisor { display: block; }
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__row:has([data-testid="finish-chip"]) { display: none; }
 }
@@ -42,19 +42,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .og-rider-toast, .og-planner .og-planner__sheet { transition: none; animation: none; }
-}
-
-.og-phone-summary[data-directions="true"] :is(.og-phone-style, .og-phone-summary__compare, .og-phone-summary__weather) { display: none; }
-
-.og-planner .og-planner__sheet[data-place="true"] .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) { display: none; }
-@media (max-width: 760px) {
-  .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > :not(.og-phone-summary) { display: none; }
-}
-
-@media (max-width: 760px) {
-  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary { flex: 1 1 auto; min-height: 0; }
-  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-alternatives { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-  .og-planner .og-planner__sheet[data-directions="true"] .og-phone-summary__start { flex: none; }
 }
 
 @media (max-width: 760px) {

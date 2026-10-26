@@ -409,8 +409,8 @@ export function PlannerWorkspaceDock({
             <PlannerResultPanel
               {...results}
               showOptions={optionsMode}
-              startLabel={composer.viewModel.startLabel}
-              finishLabel={composer.viewModel.finishLabel}
+              startLabel={results.actions.document.intent.start?.provenance.type === "gps" ? "My location" : results.actions.document.intent.start?.label ?? composer.viewModel.startLabel}
+              finishLabel={results.actions.document.intent.finish?.provenance.type === "gps" ? "My location" : results.actions.document.intent.finish?.label ?? composer.viewModel.finishLabel}
               onEditOptions={() => openEditor("edit")}
               onOpenOptions={() => openEditor("options")}
               destinationLine={destinationLine}
