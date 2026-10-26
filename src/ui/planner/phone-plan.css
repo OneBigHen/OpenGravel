@@ -61,7 +61,8 @@
   /* The same edit bar as desktop, laid out as one 48 px row in the sheet's
      head: the map slot hides the floating pill on a phone, so this is where a
      rider arms Add stop / Draw and reads what the next tap will do. */
-  .og-planner .og-planner__sheet .og-phone-edittools { flex: none; padding-bottom: var(--og-space-1); }
+  /* The drag handle's bar is drawn 8 px into the sheet: the row starts below it. */
+  .og-planner .og-planner__sheet .og-phone-edittools { flex: none; padding-top: var(--og-space-3); padding-bottom: var(--og-space-1); }
   .og-planner .og-planner__sheet .og-phone-edittools .og-editbar {
     position: static; display: flex; flex-direction: column; align-items: stretch;
     gap: var(--og-space-1); width: 100%; max-width: none; transform: none; pointer-events: auto;

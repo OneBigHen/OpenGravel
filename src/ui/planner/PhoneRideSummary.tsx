@@ -66,12 +66,14 @@ export function PhoneRideSummary({ directionsOptions = false, card, cards, start
       <h2>{card.durationLabel} · {card.distanceLabel}</h2>
       <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
     </div>}
-    {rideStyle === undefined ? null : <PhoneQuickStyle model={rideStyle} />}
     {start === null ? null : <div className="og-phone-summary__start">
       <button className="og-primary" type="button" data-testid="start-ride" disabled={start.starting || start.refusal !== null} onClick={start.onStart}>{start.starting ? "Starting…" : "Start ride"}</button>
       {start.refusal === null ? null : <p data-testid="start-ride-reason">{start.refusal}</p>}
       {start.error === null ? null : <p role="alert">{start.error}</p>}
     </div>}
+    {/* Start sits right under the ride, like Google Maps: on a 320x640 phone the
+        style pickers below it may scroll, the one action never does. */}
+    {rideStyle === undefined ? null : <PhoneQuickStyle model={rideStyle} />}
     {weatherLine === null ? null : <p className="og-phone-summary__weather" data-testid="phone-weather">{weatherLine}</p>}
     {/* One ride is not a comparison: the switch only appears when there is a
         second choice to compare against. */}
