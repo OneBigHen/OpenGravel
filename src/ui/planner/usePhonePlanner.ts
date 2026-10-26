@@ -44,3 +44,10 @@ export function usePhonePlanner(): boolean {
 export function useDesktopPlanner(): boolean {
   return useSyncExternalStore(subscribeDesktop, isDesktopViewport, () => false);
 }
+
+const COMPACT_QUERY = "(max-width: 1180px)";
+const subscribeCompact = subscribeTo(COMPACT_QUERY);
+export function isCompactViewport(): boolean { return matches(COMPACT_QUERY); }
+export function useCompactPlanner(): boolean {
+  return useSyncExternalStore(subscribeCompact, isCompactViewport, () => false);
+}
