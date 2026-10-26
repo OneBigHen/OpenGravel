@@ -155,7 +155,9 @@ body {
   background: var(--og-canvas);
   color: var(--og-ink);
   font-size: var(--og-text-body);
-  word-spacing: 0.02em;
+  /* Plus Jakarta's own space is narrow; at 0.02em "Plan a ride" read as
+     "Plana ride" on a phone. */
+  word-spacing: 0.1em;
 }
 
 h1,

@@ -955,6 +955,12 @@ h3 {
   background-color: var(--og-canvas);
 }
 
+/* MapLibre's stylesheet sets Helvetica/Arial on the whole map box, and the
+   layers panel, place labels and attribution live inside it. */
+.og-map .maplibregl-map {
+  font-family: var(--og-font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
 .og-map canvas:focus {
   outline: none;
 }
@@ -14636,4 +14642,22 @@ a.og-secondary {
 .og-ride__maneuver[data-kind="suspended"][data-compact="true"]:not([data-reason="off-route"]) .og-ride__off-route-actions {
   grid-column: 1;
   grid-row: auto;
+}
+
+/* Phone map chrome (small-screen-v2 §3): the scale rule is the third control
+   on a narrow map, so it goes; the layers sheet covers the top search instead
+   of sliding under it; and once a route is on the map the place chips step
+   aside so the route has the room. */
+@media (max-width: 760px) {
+  .og-map__scale {
+    display: none;
+  }
+
+  .og-planner:has(.og-layers[data-open="true"]) .og-top-search {
+    display: none;
+  }
+
+  .og-planner:has([data-testid="route-options"]) .og-search-chips {
+    display: none;
+  }
 }
