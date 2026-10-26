@@ -35,6 +35,13 @@ describe("place map layers", () => {
     expect(placePaint).toContain(DEFAULT_MAP_PALETTE.goldenHour);
   });
 
+  it("keeps search circle pins at street zoom without relying on text glyphs", () => {
+    const dot = placeLayers(DEFAULT_MAP_PALETTE).find((layer) => layer.id === MAP_LAYER_IDS.placeDot);
+    expect(dot?.maxzoom).toBeUndefined();
+    expect(dot?.paint?.["circle-radius"]).toEqual(["case", ["==", ["get", "kind"], "search"], 8, ["match", ["get", "tone"], "live", 5, 4]]);
+    expect(dot?.paint?.["circle-opacity"]).toEqual(["step", ["zoom"], ["match", ["get", "tone"], "live", 1, "soon", 0.85, 0.6], 11.5, ["case", ["==", ["get", "kind"], "search"], 1, 0]]);
+  });
+
   it("keeps the selected pill visible through symbol collisions", () => {
     const selected = placeLayers(DEFAULT_MAP_PALETTE).find(
       (layer) => layer.id === MAP_LAYER_IDS.placeSelected,

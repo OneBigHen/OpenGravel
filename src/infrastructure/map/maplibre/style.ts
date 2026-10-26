@@ -840,13 +840,13 @@ export function placeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       id: MAP_LAYER_IDS.placeDot,
       type: "circle",
       source: MAP_SOURCE_IDS.places,
-      maxzoom: 11.5,
       paint: {
         // Marigold is the places colour at every zoom; live places are the
         // larger, fully opaque dots (UX rework: ink dots read as map noise).
-        "circle-radius": ["match", ["get", "tone"], "live", 5, 4],
+        "circle-radius": ["case", equals("kind", "search"), 8, ["match", ["get", "tone"], "live", 5, 4]],
         "circle-color": palette.goldenHour,
-        "circle-opacity": ["match", ["get", "tone"], "live", 1, "soon", 0.85, 0.6],
+        // Search pins remain visible and tappable when optional map fonts fail.
+        "circle-opacity": ["step", ["zoom"], ["match", ["get", "tone"], "live", 1, "soon", 0.85, 0.6], 11.5, ["case", equals("kind", "search"), 1, 0]],
         "circle-stroke-color": palette.paper,
         "circle-stroke-width": 1.5,
       },

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { plannerMap, settledExtent } from "./map-helpers";
+import { clickMapAtCoordinate, plannerMap, settledExtent } from "./map-helpers";
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, geolocation: { latitude: 40.8757, longitude: -75.7324 }, permissions: ["geolocation"] });
 test.beforeEach(async ({ page }) => { await page.goto("/"); await expect(plannerMap(page)).toBeVisible(); await settledExtent(page); });
@@ -18,6 +18,15 @@ test("chip → result → card → Directions → route options", async ({ page 
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "half");
   const sheet = await page.getByTestId("planner-sheet").boundingBox();
   expect(sheet!.y).toBeGreaterThanOrEqual(422);
+});
+
+test("a category pin opens the same place card", async ({ page }) => {
+  await page.getByTestId("search-chip-gas").click();
+  await expect(page.getByTestId("category-result")).toBeVisible();
+  await settledExtent(page);
+  await page.waitForTimeout(750);
+  await clickMapAtCoordinate(page, { lat: 40.864, lon: -75.728 });
+  await expect(page.getByTestId("place-sheet")).toContainText("Wawa Gas");
 });
 
 test("long-press → What's here → card", async ({ page }) => {
