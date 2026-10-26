@@ -99,7 +99,7 @@
 }
 
 .og-explore__search {
-  min-width: 0;
+  position: relative;
 }
 
 .og-explore .og-explore__search input[type="search"] {
@@ -108,23 +108,13 @@
   padding: 0 var(--og-space-4) 0 44px;
   border: 0;
   border-radius: var(--og-radius-control);
-  background: var(--og-surface-2) no-repeat 16px 50% / 18px 18px;
-  background-image: linear-gradient(var(--og-ink-2), var(--og-ink-2));
-  -webkit-mask: none;
+  background: var(--og-surface-2);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-body);
 }
 
-/* The search glyph, drawn in the ink-2 token through a mask on a pseudo box. */
-.og-explore__search {
-  position: relative;
-}
-
-.og-explore .og-explore__search input[type="search"] {
-  background-image: none;
-}
-
+/* The search glyph, painted in ink-2 through a mask. */
 .og-explore__search::before {
   content: "";
   position: absolute;

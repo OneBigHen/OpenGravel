@@ -2622,7 +2622,7 @@ h3 {
 
 .og-composer__dot--finish {
   background: var(--og-record);
-  box-shadow: 0 0 0 3px #d65a3633;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--og-record) 20%, transparent);
 }
 
 .og-composer__row--search + .og-composer__row--search > .og-composer__dot {
@@ -6237,7 +6237,7 @@ h3 {
   padding: 12px 14px 10px;
   border-radius: var(--og-radius-control);
   background: var(--og-surface);
-  box-shadow: 0 0 0 1px rgb(22 29 28 / 5%), var(--og-shadow-float);
+  box-shadow: 0 0 0 1px var(--og-line), var(--og-shadow-float);
 }
 
 .og-elevation[data-density="expanded"] {
