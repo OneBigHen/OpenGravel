@@ -164,11 +164,11 @@ test("idle: the planner asks for a start and refuses to plan without one", async
     "Search for a start, or press and hold the map.",
   );
 
-  // Arming the tool for the very point that blocks planning is visibly armed on
-  // the chip and adds no second instruction: the reason already says it.
+  // Arming the tool is the one time a tap places a point (maps-for-riders §1),
+  // so the map says so: an unarmed map stays quiet, an armed one instructs.
   await page.getByTestId("start-chip").click();
   await expect(page.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
-  await expect(page.getByTestId("map-hint")).toHaveCount(0);
+  await expect(page.getByTestId("map-hint")).toHaveText("Tap the map to set your start.");
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
     "Search for a start, or press and hold the map.",
   );
