@@ -60,6 +60,9 @@ import { speedLimitAt } from "@/domain/route/types";
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { createLocalStorageFreeRideTelemetry } from "@/infrastructure/storage/free-ride-telemetry-storage";
 import { createLocalStorageRiderSettings } from "@/infrastructure/storage/rider-settings-storage";
+import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
+import { activeBike } from "@/application/garage/garage-model";
+import { usableRangeMiles } from "@/application/ride-session/fuel-ahead";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createRideFocusStore } from "@/ui/stores/ride-focus-store";
 import type { RideId } from "@/domain/ride/ids";
@@ -413,6 +416,22 @@ export function RideClient({
     [assetBasePath, library],
   );
 
+  /*
+    The active bike's usable range for the ride sheet's "next gas" line. The
+    garage is device storage, so it is read after mount: the first render has no
+    range (and says nothing it cannot measure) instead of a value that differs
+    between the server and the phone.
+  */
+  const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
+  const [usableFuelRange, setUsableFuelRange] = useState<number | null>(null);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const bike = activeBike(garageStorage.read());
+      setUsableFuelRange(usableRangeMiles(bike.fuelRangeMiles, bike.reserveMiles));
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [garageStorage]);
+
   useEffect(() => {
     if (activitySync === null) return;
     activitySync.sync(store.getState().viewModel);
@@ -476,6 +495,7 @@ export function RideClient({
       basemap={basemap}
       placesSource={placesSource}
       mapLayersSource={mapLayersSource}
+      usableRangeMiles={usableFuelRange}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
       safety={safety}
