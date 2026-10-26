@@ -1,0 +1,108 @@
+/* Export is one file first; the other formats stay behind a small disclosure. */
+
+.og-export-menu {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.og-export-menu .og-export-menu__primary {
+  min-height: 48px;
+  padding-inline: var(--og-space-4);
+  font-size: var(--og-text-body);
+}
+
+.og-export-menu .og-export-menu__more {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--og-space-2);
+  border: 0;
+  background: transparent;
+  color: var(--og-slate-text);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.og-export-menu .og-export-menu__more:hover {
+  color: var(--og-ink);
+}
+
+.og-export-menu .og-export-menu__popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  right: 0;
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  min-width: 200px;
+  max-width: calc(100vw - 32px);
+  margin-top: 0;
+  padding: 6px;
+  border: 1px solid var(--og-hairline-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-paper);
+  box-shadow: var(--og-shadow-2);
+}
+
+.og-export-menu .og-export-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-chip);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.og-export-menu .og-export-menu__item:hover:not(:disabled) {
+  background: var(--og-well);
+}
+
+.og-export-menu .og-export-menu__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.og-export-menu .og-export-menu__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+}
+
+.og-export-menu .og-export-menu__primary:focus-visible,
+.og-export-menu .og-export-menu__more:focus-visible,
+.og-export-menu .og-export-menu__item:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+@media (max-width: 760px) {
+  .og-export-menu .og-export-menu__popover {
+    position: static;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-export-menu .og-export-menu__more,
+  .og-export-menu .og-export-menu__item {
+    transition: none;
+  }
+}

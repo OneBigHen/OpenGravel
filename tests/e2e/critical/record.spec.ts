@@ -97,7 +97,8 @@ test.describe("recorded rides", () => {
 
     const recordedSummary = await row.getByTestId("recorded-ride-summary").innerText();
     expect(catalogueRequests).toHaveLength(0);
-    await row.getByRole("button", { name: "View details for Recorded ride" }).click();
+    await row.getByRole("button", { name: "More actions for Recorded ride" }).click();
+    await page.getByRole("menuitem", { name: "Details" }).click();
     const progress = row.getByTestId("recorded-road-progress");
     await expect(progress).toContainText("Ridden on mapped good roads:");
     await expect(progress).toContainText("New-to-you: Unknown");
@@ -109,9 +110,8 @@ test.describe("recorded rides", () => {
     await expect(row.getByTestId("recorded-ride-summary")).toHaveText(recordedSummary);
 
     await row.getByRole("button", { name: "More actions for Recorded ride" }).click();
-    await page.getByRole("menuitem", { name: "Export GPX" }).click();
     const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("menuitem", { name: "Recorded ride GPX" }).click();
+    await page.getByRole("menuitem", { name: "Download GPX" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/i);
     const output = testInfo.outputPath(download.suggestedFilename());

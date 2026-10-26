@@ -9,20 +9,27 @@ import {
 } from "react";
 
 import type { ExportMode } from "@/application/export/gpx-export";
-import { exportModes, type ExportCapabilities, type ExportMenuEntry } from "./ExportMenu";
+import {
+  exportPrimaryLabel,
+  otherExportModes,
+  primaryExportMode,
+  type ExportCapabilities,
+} from "./ExportMenu";
 
 export interface RideRowMenuProps {
   readonly title: string;
   readonly capabilities: ExportCapabilities;
   /** False when this ride has no continuous track to publish. */
   readonly canShare: boolean;
+  readonly detailsExpanded: boolean;
+  readonly onToggleDetails: () => void;
   readonly onRename: () => void;
   readonly onExport: (mode: ExportMode) => Promise<void> | void;
   readonly onShare: () => void;
   readonly onDelete: () => void;
 }
 
-type RootId = "rename" | "export" | "share" | "delete";
+type RootId = "download" | "other" | "rename" | "details" | "share" | "delete";
 
 interface RootEntry {
   readonly id: RootId;
@@ -32,24 +39,17 @@ interface RootEntry {
   readonly reason?: string;
 }
 
-function hasExportable(capabilities: ExportCapabilities): boolean {
-  return (
-    capabilities.plannedRoute ||
-    capabilities.track ||
-    capabilities.original ||
-    capabilities.recordedRide === true
-  );
-}
-
 /**
- * The one overflow menu on a saved ride: rename it, export its GPX, share it,
- * or delete it. The menu keeps the row quiet, so the row itself stays a single
- * "open this ride" target.
+ * The one overflow menu on a saved ride: download the best file, then rename,
+ * read the details, share, or delete. The row itself stays a single "open this
+ * ride" target, so the menu is its only other control.
  */
 export function RideRowMenu({
   title,
   capabilities,
   canShare,
+  detailsExpanded,
+  onToggleDetails,
   onRename,
   onExport,
   onShare,
@@ -63,6 +63,9 @@ export function RideRowMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+
+  const primary = primaryExportMode(capabilities);
+  const otherModes = otherExportModes(capabilities);
 
   function close(returnFocus: boolean): void {
     setOpen(false);
@@ -97,13 +100,17 @@ export function RideRowMenu({
   }, [open]);
 
   const rootEntries: readonly RootEntry[] = [
-    { id: "rename", label: "Rename", enabled: true },
     {
-      id: "export",
-      label: "Export GPX",
-      enabled: hasExportable(capabilities),
-      reason: "This ride has nothing to export yet.",
+      id: "download",
+      label: exportPrimaryLabel(capabilities),
+      enabled: primary !== null,
+      reason: "This ride has nothing to download yet.",
     },
+    ...(otherModes.length === 0
+      ? []
+      : [{ id: "other" as const, label: "Other formats", enabled: true }]),
+    { id: "rename", label: "Rename", enabled: true },
+    { id: "details", label: detailsExpanded ? "Hide details" : "Details", enabled: true },
     {
       id: "share",
       label: "Share",
@@ -112,28 +119,6 @@ export function RideRowMenu({
     },
     { id: "delete", label: "Delete", enabled: true, danger: true },
   ];
-
-  const modes: readonly ExportMenuEntry[] = exportModes(capabilities);
-
-  function runRoot(id: RootId): void {
-    if (id === "rename") {
-      setOpen(false);
-      onRename();
-      return;
-    }
-    if (id === "export") {
-      setError(null);
-      setView("export");
-      return;
-    }
-    if (id === "share") {
-      setOpen(false);
-      onShare();
-      return;
-    }
-    setOpen(false);
-    onDelete();
-  }
 
   async function runExport(mode: ExportMode): Promise<void> {
     if (busyRef.current !== null) return;
@@ -144,9 +129,23 @@ export function RideRowMenu({
       await onExport(mode);
       close(true);
     } catch {
-      setError("Could not create this GPX file. The ride is unchanged.");
+      setError("Could not create this file. The ride is unchanged.");
     } finally {
       busyRef.current = null;
+      setBusy(null);
+    }
+  }
+
+  async function downloadPrimary(): Promise<void> {
+    if (primary === null || busy !== null) return;
+    setBusy(primary);
+    setError(null);
+    try {
+      await onExport(primary);
+      close(true);
+    } catch {
+      setError("Could not create this file. The ride is unchanged.");
+    } finally {
       setBusy(null);
     }
   }
@@ -212,9 +211,36 @@ export function RideRowMenu({
                   className={entry.danger === true ? "og-rides__menu-item og-rides__menu-item--danger" : "og-rides__menu-item"}
                   disabled={!entry.enabled}
                   title={entry.enabled ? undefined : entry.reason}
-                  onClick={() => runRoot(entry.id)}
+                  onClick={() => {
+                    if (entry.id === "download") {
+                      void downloadPrimary();
+                      return;
+                    }
+                    if (entry.id === "other") {
+                      setError(null);
+                      setView("export");
+                      return;
+                    }
+                    if (entry.id === "rename") {
+                      setOpen(false);
+                      onRename();
+                      return;
+                    }
+                    if (entry.id === "details") {
+                      setOpen(false);
+                      onToggleDetails();
+                      return;
+                    }
+                    if (entry.id === "share") {
+                      setOpen(false);
+                      onShare();
+                      return;
+                    }
+                    setOpen(false);
+                    onDelete();
+                  }}
                 >
-                  {entry.label}
+                  {entry.id === "download" && primary !== null && busy === primary ? "Preparing…" : entry.label}
                 </button>
                 {entry.enabled ? null : <span className="og-rides__menu-reason">{entry.reason}</span>}
               </div>
@@ -229,20 +255,18 @@ export function RideRowMenu({
               >
                 Back
               </button>
-              <p className="og-rides__menu-heading">Export GPX</p>
-              {modes.map((entry) => (
+              <p className="og-rides__menu-heading">Other formats</p>
+              {otherModes.map((entry) => (
                 <div key={entry.id} className="og-rides__menu-entry">
                   <button
                     type="button"
                     role="menuitem"
                     className="og-rides__menu-item"
                     disabled={!entry.enabled}
-                    title={entry.enabled ? undefined : entry.reason}
                     onClick={() => void runExport(entry.id)}
                   >
                     {busy === entry.id ? "Preparing…" : entry.label}
                   </button>
-                  {entry.enabled ? null : <span className="og-rides__menu-reason">{entry.reason}</span>}
                 </div>
               ))}
             </>

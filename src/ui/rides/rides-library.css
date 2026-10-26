@@ -311,12 +311,6 @@
   font-size: var(--og-text-meta);
 }
 
-.og-rides__row-tools {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 4px 2px;
-}
-
 .og-rides__details {
   display: inline-flex;
   align-items: center;
