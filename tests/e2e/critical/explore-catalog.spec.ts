@@ -7,6 +7,11 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   // A route the rider already read must not be planned again to be ridden.
+  // The ride below asks Spotify for its state; this gate's origin is not a
+  // registered Spotify app, so answer as a rider who has not connected it.
+  await page.route("**/api/spotify/state", (route) => route.fulfill({ json: {
+    connection: "disconnected", accountConnected: false, isPlaying: false, track: null, errorMessage: null,
+  } }));
   const planRequests: string[] = [];
   page.on("request", (request) => {
     if (request.method() === "POST" && request.url().includes("/api/route-plan")) planRequests.push(request.url());
@@ -72,6 +77,10 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   await expect(card).toContainText("17 mi");
   await expect(card).toContainText("58 min");
   await expect(page.getByTestId("start-ride")).toBeEnabled({ timeout: 2_000 });
+  // Enabled is not enough: the ride must actually start on the handed-over line.
+  await page.getByTestId("start-ride").click();
+  await expect(page).toHaveURL(/\/ride$/);
+  await expect(page.getByTestId("ride-focus")).toHaveAttribute("data-status", "ready");
   // Nothing asked the router to plan this ride again.
   expect(planRequests).toEqual([]);
   expect(consoleErrors).toEqual([]);
