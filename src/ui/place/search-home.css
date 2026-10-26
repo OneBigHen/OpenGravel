@@ -24,7 +24,14 @@
   .og-top-search__bar > button { flex: none; min-width: 48px; min-height: 48px; background: transparent; color: var(--og-ink); border: 0; font-size: var(--og-text-headline); }
   .og-top-search .og-place-search { flex: 1; min-width: 0; }
   .og-top-search .og-place-search__input { min-height: 54px; width: 100%; padding: 0; border: 0; background: transparent; color: var(--og-ink); font-size: var(--og-text-body); box-shadow: none; }
-  .og-top-search .og-place-search__list { z-index: 20; max-height: 45dvh; }
+  /* The bar floats over the map, so unlike the sheet's in-flow list its results
+     drop below it at full width, the way Google Maps does; the bar itself never
+     grows around them and the chips stay where they were. */
+  .og-top-search__bar { position: relative; }
+  .og-top-search__bar:focus-within { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
+  .og-top-search .og-place-search { position: static; }
+  .og-top-search .og-place-search__input:focus-visible { outline: none; }
+  .og-top-search .og-place-search__list { position: absolute; top: calc(100% + var(--og-space-2)); left: 0; right: 0; z-index: 20; max-height: 45dvh; box-shadow: var(--og-shadow-2); }
   .og-top-search .og-place-search__option { min-height: 48px; }
   .og-search-chips { display: flex; gap: var(--og-space-2); margin-top: var(--og-space-2); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; pointer-events: auto; padding: 2px; }
   .og-search-chips button { display: flex; align-items: center; gap: var(--og-space-1); flex: none; min-height: 48px; min-width: 48px; padding: 0 var(--og-space-4); border: 1px solid var(--og-hairline); border-radius: 999px; background: var(--og-paper); color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); box-shadow: var(--og-shadow-1); cursor: pointer; }
