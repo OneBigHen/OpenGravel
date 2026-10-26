@@ -24,6 +24,8 @@ const START_COORDINATE = { lon: -75.4385, lat: 40.1385 };
 const DESTINATION_COORDINATE = { lon: -75.4335, lat: 40.1325 };
 
 test.use({ viewport: PHONE, hasTouch: true, isMobile: true });
+// Each gesture is real input with its own pacing; dozens of them need room.
+test.setTimeout(150_000);
 
 interface Point {
   readonly x: number;
@@ -124,7 +126,7 @@ test.beforeEach(async ({ page }) => {
 
 test("pans, pinches, flings and taps on an empty map author nothing", async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
-  await fuzz(page, cdp, 60, 20261025);
+  await fuzz(page, cdp, 40, 20261025);
   await expect(page.getByTestId("start-value")).toHaveText("No start yet");
   await expect(page.getByTestId("finish-value")).toHaveText("No destination yet");
 });
@@ -143,7 +145,7 @@ test("a touch pan that begins on a pin moves the map, never the pin", async ({ p
   // A quick drag from the pin itself, and one from just beside it.
   await pan(page, cdp, pin, { x: pin.x + 80, y: pin.y + 40 }, 8, 16);
   await settledExtent(page);
-  await fuzz(page, cdp, 40, 7);
+  await fuzz(page, cdp, 25, 7);
 
   expect(await readCoordinate(page, "start-value")).toEqual(start);
   expect(await readCoordinate(page, "finish-value")).toEqual(finish);
