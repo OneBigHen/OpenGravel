@@ -28,6 +28,7 @@ import {
 } from "@/application/explore/ride-this";
 import { createExploreDerivative, type CatalogEntry } from "@/application/explore/catalog";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
+import { validateSessionRouteBinding } from "@/domain/ride-session/validate";
 import type { ClientPlanningService } from "@/application/planner/client-planning-service";
 import { emptyPlanningSession, type PlanningSessionSnapshot } from "@/application/planner/planning-session";
 import { createPlanningSessionStore } from "@/ui/stores/planning-session-store";
@@ -222,6 +223,14 @@ describe("Explore ride-this handoff", () => {
     expect(candidate.score.policyVersion).toBe("unscored-stub");
     expect(Object.values(candidate.score.components).every((component) => component.input === null)).toBe(true);
     expect(candidate.warnings).toEqual([]);
+  });
+
+  it("names the prepared route so a ride session will bind it", async () => {
+    const { prepared: record } = await prepared();
+    const answer = preparedRouteAnswer(record);
+
+    // Live bug 2026-10-26: Start ride refused "route.routeId must be a route_ identifier".
+    expect(validateSessionRouteBinding({ planningGeneration: answer.planningGeneration, routeId: answer.selectedRouteId })).toEqual([]);
   });
 
   it("shows the prepared route until a real attempt owns the session", async () => {
