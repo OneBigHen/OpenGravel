@@ -10,6 +10,7 @@ import "./theme-glass.css";
 import "@/ui/planner/routing-method-comparison.css";
 import "@/ui/planner/phone-plan.css";
 import "@/ui/place/search-home.css";
+import "@/ui/sheet/sheet.css";
 import { NativeShell } from "./NativeShell";
 import { OfflineShell } from "./OfflineShell";
 import { assetBasePathFromEnv } from "./asset-base-path";

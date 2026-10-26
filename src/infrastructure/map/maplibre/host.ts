@@ -120,6 +120,7 @@ import {
 } from "@/infrastructure/map/maplibre/geojson";
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
+import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { planSceneSync, type SceneFingerprints } from "@/infrastructure/map/maplibre/scene-diff";
 import {
@@ -579,6 +580,8 @@ function sourceData(sourceId: string, scene: MapScene): unknown {
 
 const PLACE_SYMBOL_LAYERS = [MAP_LAYER_IDS.placePill, MAP_LAYER_IDS.placeSelected] as const;
 const PLACE_HIT_LAYERS = [
+  MAP_LAYER_IDS.searchLabel,
+  MAP_LAYER_IDS.searchPin,
   MAP_LAYER_IDS.placeSelected,
   MAP_LAYER_IDS.placePill,
   MAP_LAYER_IDS.placeDot,
@@ -833,7 +836,8 @@ export async function createMapLibreHost(
   const palette = readMapPalette(container);
   const placePillImages = createPlacePillImages(palette);
   const puckImage = createPuckImage(palette);
-  const markerImages = createMarkerImages();
+  const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
+  const searchLabelImages = new WeakMap<MapLibreMap, Set<string>>();
   /**
    * Which tone the route arrow image in the current renderer was drawn in.
    *
@@ -1305,6 +1309,28 @@ export async function createMapLibreHost(
         recordError({ kind: "renderer", detail: `image:${image.id}` });
       }
     }
+    // Selected search names are raster images too: empty basemaps and failed
+    // glyph servers must not erase the place a rider just picked.
+    const previousLabels = searchLabelImages.get(map) ?? new Set<string>();
+    const wantedLabels = new Set<string>();
+    for (const place of latestScene?.places ?? []) {
+      if (place.kind !== "search" || !place.selected) continue;
+      const id = searchLabelImageId(place.pill);
+      wantedLabels.add(id);
+      if (map.hasImage(id)) continue;
+      try {
+        const image = createSelectedPlaceLabel(place.pill);
+        if (image !== null) map.addImage(image.id, image.data, image.options as PlacePillImage["options"]);
+      } catch {
+        recordError({ kind: "renderer", detail: `image:${id}` });
+      }
+    }
+    for (const id of previousLabels) {
+      if (!wantedLabels.has(id) && map.hasImage(id)) {
+        try { map.removeImage?.(id); } catch { /* Cosmetic: stale image is no longer referenced. */ }
+      }
+    }
+    searchLabelImages.set(map, wantedLabels);
     // The direction chevrons (05 §11): Paper on Ink by day, Ink on Paper at
     // night, so the arrow holds on the paper basemap, over satellite imagery and
     // on Night contrast. Without the image the route still draws, just without

@@ -100,6 +100,7 @@ describe("place flow", () => {
     render(<>{view.result.current.top}</>);
     await act(async () => fireEvent.click(screen.getByTestId("search-chip-gas")));
     expect(view.result.current.pins).toHaveLength(1);
+    expect(view.result.current.pins[0]?.glyph).toBe("gas");
     expect(view.result.current.pins[0]?.coordinate).toEqual(place.coordinate);
     expect(view.uiStore.getState().fitRequest?.extent).toMatchObject({ minLat: place.coordinate.lat - .004, maxLat: place.coordinate.lat + .004 });
     render(<>{view.result.current.sheet}</>);
@@ -113,6 +114,8 @@ describe("place flow", () => {
     render(<>{view.result.current.sheet}</>);
     await act(async () => fireEvent.click(screen.getByTestId("place-directions")));
     expect(view.onDirectionsReady).toHaveBeenCalledOnce();
+    expect(view.uiStore.getState().fitRequest?.extent).toBeNull();
+    expect(view.uiStore.getState().cameraUserOwned).toBe(false);
     expect(view.rideStore.getState().document.intent.start?.coordinate).toEqual(rider);
     expect(view.rideStore.getState().document.intent.finish?.coordinate).toEqual(place.coordinate);
     render(<>{view.result.current.toast}</>);

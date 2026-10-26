@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { searchPinGlyph } from "@/application/geocoding/place-glyph";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { formatDuration } from "@/application/planner/measurements";
 import { isSaved } from "@/application/geocoding/place-memory";
@@ -92,7 +93,11 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     uiStore.getState().cancelPlacement();
     uiStore.getState().setSheetDetent("half");
     toast("Directions set", true);
-    if (outcome.status === "located") onDirectionsReady(result.document);
+    if (outcome.status === "located") {
+      uiStore.getState().setCameraUserOwned(false);
+      uiStore.getState().requestFit(null);
+      onDirectionsReady(result.document);
+    }
     if (outcome.status === "failed") {
       // The destination mounts the start editor; focus after that render.
       requestAnimationFrame(() => window.document.querySelector<HTMLInputElement>('[data-testid="start-search"]')?.focus());
@@ -145,7 +150,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   const pins = useMemo(() => {
     const places = results?.places ?? [];
     const shown = selection === null || places.some((p) => p.id === selection.place.id) ? places : [...places, selection.place];
-    return shown.map((place) => ({ id: asPlaceId(`search:${place.id}`), kind: "search", coordinate: place.coordinate, pill: place.name, tone: "soon" as const, priority: 1000, selected: selection?.place.id === place.id }));
+    return shown.map((place) => ({ id: asPlaceId(`search:${place.id}`), kind: "search", glyph: searchPinGlyph(place.name, place.context, places.some((item) => item.id === place.id) ? results?.chip.id ?? null : null), coordinate: place.coordinate, pill: place.name, tone: "soon" as const, priority: 1000, selected: selection?.place.id === place.id }));
   }, [results, selection]);
   const intercept = useCallback((intent: MapIntent): boolean => {
     if (intent.type === "map-click") close();
@@ -179,7 +184,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     onSave={() => { if (services?.memory === undefined) { toast("Saving places is unavailable here."); return; } services.memory.toggleSaved(place); toast("Saved places updated"); }}
     onShare={() => { const url = `https://www.google.com/maps/search/?api=1&query=${place.coordinate.lat},${place.coordinate.lon}`; void (async () => { try { if (navigator.share) await navigator.share({ title: place.name, url }); else { await navigator.clipboard.writeText(url); toast("Place link copied"); } } catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) toast("Couldn't share this place. Try again."); } })(); }}
     onClose={close}/>;
-  return { composerSearch, sheet, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
+  return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
     top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} onClear={close} onChip={(chip) => void category(chip)}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }

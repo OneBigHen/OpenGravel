@@ -428,6 +428,9 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
       expect(map.layers.has(layer.id), layer.id).toBe(true);
     }
     expect(map.layers.has(MAP_LAYER_IDS.placeDot)).toBe(true);
+    expect(map.layers.has(MAP_LAYER_IDS.searchPin)).toBe(true);
+    expect(map.layers.has(MAP_LAYER_IDS.searchLabel)).toBe(true);
+    expect(map.images.has("ogv-search-pin-gas")).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(false);
     expect(map.layers.has(MAP_LAYER_IDS.placeSelected)).toBe(false);
     // The camera is published too, which is what the browser gate clicks against.
@@ -444,8 +447,8 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     map.fire("load");
 
     // Eight pill images, the rider's heading arrow, the three ride pins and the
-    // route's direction arrow (05 §11).
-    expect(map.images.size).toBe(13);
+    // route's direction arrow (05 §11), plus six font-independent search pins.
+    expect(map.images.size).toBe(19);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.placeSelected)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.riderHeading)).toBe(true);
@@ -455,7 +458,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     map.fire("style.load");
 
     expect(fake.state.imageAdds).toHaveLength(firstImageAdds * 2);
-    expect(map.images.size).toBe(13);
+    expect(map.images.size).toBe(19);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     host.dispose();
   });
@@ -627,6 +630,26 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     expect(element.getAttribute(MAP_SCENE_ATTRIBUTE)).toContain(`selected:${ROUTE_ID}`);
 
     host.dispose();
+  });
+
+  it("adds a selected search name image with no map glyph service", async () => {
+    const context = {
+      measureText: (value: string) => ({ width: value.length * 7 }),
+      scale: vi.fn(), beginPath: vi.fn(), roundRect: vi.fn(), fill: vi.fn(), stroke: vi.fn(), fillText: vi.fn(),
+      getImageData: (_x: number, _y: number, width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+    };
+    const canvas = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+    try {
+      host.applyScene(scene({ places: [{ id: asPlaceId("search:wawa"), kind: "search", glyph: "gas", coordinate: COORDINATE, pill: "Wawa Gas", tone: "soon", priority: 1000, selected: true }] }));
+      expect(map.images.has("ogv-search-name:Wawa Gas")).toBe(true);
+      expect(map.layers.has(MAP_LAYER_IDS.searchPin)).toBe(true);
+      expect(map.layers.has(MAP_LAYER_IDS.searchLabel)).toBe(true);
+      expect(context.fillText).toHaveBeenCalledWith("Wawa Gas", 38, 15);
+      expect(map.layers.has(MAP_LAYER_IDS.placeSelected)).toBe(false);
+    } finally { host.dispose(); canvas.mockRestore(); }
   });
 
   it("updates the places source without re-uploading routes", async () => {

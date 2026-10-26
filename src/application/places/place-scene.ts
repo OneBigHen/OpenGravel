@@ -7,6 +7,7 @@
  * the time — the way a listings map shows a price.
  */
 
+import type { PlaceGlyph } from "@/application/geocoding/place-glyph";
 import type { NearbyPlace, PlaceId } from "./types";
 
 /** How loud a pill is: on now, later today / upcoming, or finished. */
@@ -17,8 +18,7 @@ export interface PlaceScene {
   /**
    * `NearbyPlace["kind"]` for a places-provider pin, or a namespaced string
    * for anything else drawn through this same pill layer (ride-interest
-   * points, OGV#13). Never read by a MapLibre expression — the map styles a
-   * pin by `tone`, not `kind` — so widening it here cannot change a pixel.
+   * points, OGV#13). Search marks use their category glyph; provider places use pills.
    */
   readonly kind: NearbyPlace["kind"] | (string & {});
   readonly coordinate: NearbyPlace["coordinate"];
@@ -28,6 +28,8 @@ export interface PlaceScene {
   /** Higher draws on top and survives density thinning first. */
   readonly priority: number;
   readonly selected: boolean;
+  /** Category symbol for a search result; absent for provider pills. */
+  readonly glyph?: PlaceGlyph;
 }
 
 export interface PlaceCardModel {

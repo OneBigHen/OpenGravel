@@ -16,6 +16,7 @@
  * anything else.
  */
 
+import { searchLabelImageId, searchPinImageId } from "./search-pin-images";
 import {
   MIN_DRAWABLE_LINE_POSITIONS,
   drawableAreaRings,
@@ -322,6 +323,7 @@ export function placesFeatureCollection(scene: MapScene): GeoJsonFeatureCollecti
         id: place.id,
         kind: place.kind,
         pill: place.pill,
+        ...(place.kind === "search" ? { pinImage: searchPinImageId(place.glyph ?? "place"), labelImage: searchLabelImageId(place.pill) } : {}),
         tone: place.tone,
         priority: place.priority,
         selected: place.selected,
