@@ -90,7 +90,10 @@ test.describe("recorded rides", () => {
     await page.goto("/rides");
     const row = page.locator(".og-library__row").filter({ has: page.getByTestId("recorded-ride-summary") });
     await expect(row).toHaveCount(1);
-    await expect(page.getByRole("button", { name: "Recorded" })).toHaveAttribute("aria-pressed", "true");
+    // The segment reads "Recorded"; the recorded ride's own row also answers to
+    // names that start with that word ("Open Recorded ride", "More actions for
+    // Recorded ride"), so the segment is matched exactly.
+    await expect(page.getByRole("button", { name: "Recorded", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(row.getByTestId("recorded-track-thumbnail")).toBeVisible();
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("moving");
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("total");

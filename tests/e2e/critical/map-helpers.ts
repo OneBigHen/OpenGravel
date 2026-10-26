@@ -583,60 +583,84 @@ export async function expectVendoredModulesServed(page: Page): Promise<void> {
  * - The tolerance is per channel and deliberately loose enough to absorb that
  *   blend and any screenshot colour management, and tight enough that the paper
  *   background never counts.
+ *
+ * ## Why a census is retried
+ *
+ * A screenshot (and the decode that follows it) holds on to the elements it was
+ * taken of. The map container, and MapLibre's own control elements — which specs
+ * pass as `masks` — can be re-created while a style or a renderer is replaced
+ * (the offline basemap switches to the device's archive, a recovery rebuilds the
+ * renderer). Playwright then reports "Element is not attached to the DOM", which
+ * is a fact about the moment the census was taken, not about the pixels. The
+ * measurement is therefore retried against whatever is on screen now — up to
+ * five attempts, 100 ms apart — with the same colours, the same tolerance and
+ * the same meaning, and a map that really is broken still fails the assertion
+ * the census was taken for.
  */
+function isDetachedError(error: unknown): boolean {
+  return /not attached to the DOM/.test(String(error));
+}
+
 export async function countColors(
   screenshotTarget: Locator,
   colors: Readonly<Record<string, string>>,
   tolerance = 20,
   masks: Locator[] = [],
 ): Promise<Record<string, number>> {
-  const shot = await screenshotTarget.screenshot({
-    ...(masks.length === 0 ? {} : { mask: masks, maskColor: "#00ff00" }),
-  });
-  return screenshotTarget.evaluate(
-    async (
-      element: HTMLElement,
-      payload: { readonly png: string; readonly colors: Readonly<Record<string, string>>; readonly tolerance: number },
-    ): Promise<Record<string, number>> => {
-      void element;
-      const image = new Image();
-      image.src = `data:image/png;base64,${payload.png}`;
-      await image.decode();
-      const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext("2d");
-      if (context === null) throw new Error("the page could not decode the screenshot");
-      context.drawImage(image, 0, 0);
-      const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const shot = await screenshotTarget.screenshot({
+        ...(masks.length === 0 ? {} : { mask: masks, maskColor: "#00ff00" }),
+      });
+      return await screenshotTarget.evaluate(
+        async (
+          element: HTMLElement,
+          payload: { readonly png: string; readonly colors: Readonly<Record<string, string>>; readonly tolerance: number },
+        ): Promise<Record<string, number>> => {
+          void element;
+          const image = new Image();
+          image.src = `data:image/png;base64,${payload.png}`;
+          await image.decode();
+          const canvas = document.createElement("canvas");
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext("2d");
+          if (context === null) throw new Error("the page could not decode the screenshot");
+          context.drawImage(image, 0, 0);
+          const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
 
-      const channels = (hex: string): readonly number[] => [
-        Number.parseInt(hex.slice(1, 3), 16),
-        Number.parseInt(hex.slice(3, 5), 16),
-        Number.parseInt(hex.slice(5, 7), 16),
-      ];
-      const targets = Object.entries(payload.colors).map(
-        ([name, hex]) => [name, channels(hex)] as const,
-      );
-      const counts: Record<string, number> = Object.fromEntries(
-        Object.keys(payload.colors).map((name) => [name, 0]),
-      );
-      for (let index = 0; index < data.length; index += 4) {
-        for (const [name, target] of targets) {
-          if (
-            Math.abs((data[index] ?? 0) - (target[0] ?? 0)) <= payload.tolerance &&
-            Math.abs((data[index + 1] ?? 0) - (target[1] ?? 0)) <= payload.tolerance &&
-            Math.abs((data[index + 2] ?? 0) - (target[2] ?? 0)) <= payload.tolerance
-          ) {
-            counts[name] = (counts[name] ?? 0) + 1;
-            break;
+          const channels = (hex: string): readonly number[] => [
+            Number.parseInt(hex.slice(1, 3), 16),
+            Number.parseInt(hex.slice(3, 5), 16),
+            Number.parseInt(hex.slice(5, 7), 16),
+          ];
+          const targets = Object.entries(payload.colors).map(
+            ([name, hex]) => [name, channels(hex)] as const,
+          );
+          const counts: Record<string, number> = Object.fromEntries(
+            Object.keys(payload.colors).map((name) => [name, 0]),
+          );
+          for (let index = 0; index < data.length; index += 4) {
+            for (const [name, target] of targets) {
+              if (
+                Math.abs((data[index] ?? 0) - (target[0] ?? 0)) <= payload.tolerance &&
+                Math.abs((data[index + 1] ?? 0) - (target[1] ?? 0)) <= payload.tolerance &&
+                Math.abs((data[index + 2] ?? 0) - (target[2] ?? 0)) <= payload.tolerance
+              ) {
+                counts[name] = (counts[name] ?? 0) + 1;
+                break;
+              }
+            }
           }
-        }
-      }
-      return counts;
-    },
-    { png: shot.toString("base64"), colors, tolerance },
-  );
+          return counts;
+        },
+        { png: shot.toString("base64"), colors, tolerance },
+      );
+    } catch (error) {
+      if (attempt >= 4 || !isDetachedError(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
 }
 
 /**

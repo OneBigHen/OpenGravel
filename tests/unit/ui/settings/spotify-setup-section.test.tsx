@@ -37,6 +37,24 @@ describe("Spotify setup", () => {
     expect(screen.getByText("Use your own Spotify app").closest("details")).not.toHaveAttribute("open");
   });
 
+  it("lets the rider call off a sign-in that is still pending", () => {
+    // The pending state used to live on the ride screen. It belongs here with
+    // the other connection states, and its only control is "Cancel".
+    const disconnect = vi.fn(async () => undefined);
+    const nativePlayer: SpotifyPlayerPort = {
+      snapshot: () => ({ connection: "connecting", isPlaying: false, track: null, errorMessage: null }),
+      subscribe: () => () => undefined,
+      dispose: vi.fn(), connect: vi.fn(async () => undefined), disconnect,
+      togglePlayPause: vi.fn(async () => undefined), skipToPrevious: vi.fn(async () => undefined),
+      skipToNext: vi.fn(async () => undefined), openSpotify: vi.fn(async () => undefined),
+    };
+    render(<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} nativePlayer={nativePlayer} />);
+    expect(screen.getByText("Connecting…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Connect Spotify" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel Spotify sign-in" }));
+    expect(disconnect).toHaveBeenCalledOnce();
+  });
+
   it("drops the Premium note once the iPhone's player is connected", () => {
     const nativePlayer: SpotifyPlayerPort = {
       snapshot: () => ({ connection: "connected", isPlaying: false, track: null, errorMessage: null }),
