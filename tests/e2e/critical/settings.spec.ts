@@ -1,3 +1,4 @@
+import { directionsTo } from "./search-helpers";
 import { expect, test } from "@playwright/test";
 
 import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
@@ -53,6 +54,11 @@ test("active bike carries into a new ride and local data can be exported or dele
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
 
+  // This garage UI check has no live fuel provider. Keep its fuel result explicit.
+  await page.route("**/api/map-layers/along", async (route) => {
+    if (route.request().postDataJSON().layer === "fuel") await route.fulfill({ json: { available: true, stops: [] } });
+    else await route.fallback();
+  });
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
   await context.grantPermissions(["geolocation"]);
@@ -78,15 +84,8 @@ test("active bike carries into a new ride and local data can be exported or dele
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  // Location is granted, so a fresh ride starts at the rider (UX rework 2, #6);
-  // changing it is one tap on the start.
-  await page.getByTestId("start-change").click();
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
-  await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
-  await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
+  // Directions uses the rider's location and the active bike snapshot.
+  await directionsTo(page);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   const prepare = page.getByTestId("prepare");

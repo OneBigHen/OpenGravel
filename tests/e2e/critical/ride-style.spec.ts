@@ -1,3 +1,4 @@
+import { chooseStart, directionsTo } from "./search-helpers";
 import { expect, test, type Page } from "@playwright/test";
 
 import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
@@ -31,8 +32,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await page.getByTestId("start-search").fill("Jim Thorpe");
-  await page.getByTestId("start-search").press("Enter");
+  await chooseStart(page);
   await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
 });
 
@@ -56,8 +56,7 @@ test("a loop from the start with a ride time plans without a destination", async
 });
 
 test("road character, surface and tolls are one tap each and replan", async ({ page }) => {
-  await page.getByTestId("finish-search").fill("hawk mountain s");
-  await page.getByTestId("finish-search").press("Enter");
+  await directionsTo(page);
   await expect(page.getByTestId("finish-value")).toContainText("Hawk Mountain Sanctuary, PA");
   await pressPlan(page);
   await expect(routeCards(page).first()).toBeVisible();

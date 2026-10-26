@@ -1,3 +1,4 @@
+import { directionsTo } from "../critical/search-helpers";
 import { test, expect } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
@@ -30,12 +31,10 @@ for (const viewport of [{ width: 320, height: 640 }, { width: 375, height: 667 }
       await mapSpace();
       await shot("no-ride");
       await page.getByTestId("sheet-handle").click();
-      await page.getByTestId("start-search").fill("Jim Thorpe");
-      await page.getByTestId("start-search-results").getByTestId("place-option").click();
-      await page.getByTestId("finish-search").fill("Hawk Mountain Sanctuary");
-      await page.getByTestId("finish-search-results").getByTestId("place-option").click();
+      await directionsTo(page);
       await pressPlan(page);
       await expect(page.getByTestId("phone-ride-summary")).toBeVisible();
+      await page.getByTestId("sheet-handle").press("ArrowDown");
       await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "peek");
       await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
       await mapSpace();

@@ -401,14 +401,30 @@ export async function placeEndpoint(
   target: "start" | "finish",
   coordinate: Coordinate,
 ): Promise<void> {
+  if (target === "finish") {
+    // These authoring specs deliberately preserve the start they just set.
+    // Directions from an idle menu is exercised in search-card.spec.ts.
+    if (!(await page.getByTestId("finish-chip").isVisible())) await page.getByTestId("sheet-handle").click();
+    await page.getByTestId("finish-chip").click();
+    await clickMapAtCoordinate(page, coordinate);
+    return;
+  }
   const { fraction } = await settledExtentShowing(page, coordinate);
   const map = plannerMap(page);
   const box = await map.boundingBox();
   if (box === null) throw new Error("the planner map has no measured box");
-  await map.click({
-    button: "right",
-    position: { x: Math.round(fraction.x * box.width), y: Math.round(fraction.y * box.height) },
-  });
+  // Let the opening fit leave the gesture quiet window before a deliberate hold.
+  await page.waitForTimeout(750);
+  const position = { x: Math.round(fraction.x * box.width), y: Math.round(fraction.y * box.height) };
+  if (page.context().browser()?.browserType().name() === "chromium" && await page.evaluate(() => matchMedia("(pointer: coarse)").matches)) {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: box.x + position.x, y: box.y + position.y, id: 0 }] });
+    await page.waitForTimeout(550);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await cdp.detach();
+  } else {
+    await map.click({ button: "right", position });
+  }
   const menu = page.getByTestId("map-point-menu");
   await expect(menu).toBeVisible();
   await menu.getByRole("button", { name: target === "start" ? "Start here" : "Finish here" }).click();
