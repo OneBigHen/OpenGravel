@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRideDocumentStore, directionsCommand, loopFromCommand, placeStartCommand } from "@/ui/stores/ride-document-store";
+import { createRideDocumentStore, directionsCommand, insertStopCommand, loopFromCommand, placeStartCommand } from "@/ui/stores/ride-document-store";
 
 const place = { label: "Coffee", provider: "test", coordinate: { lat: 40.6, lon: -75.4 } };
 const fix = { coordinate: { lat: 40.8, lon: -75.7 }, accuracyMeters: 10, observedAt: "2026-10-25T12:00:00Z" };
@@ -16,6 +16,18 @@ describe("Directions and loop commands", () => {
     expect(after.intent.finish?.label).toBe("Coffee");
     expect(after.intent.shape).toBe("destination");
     expect(after.history.entries.length).toBe(before.history.entries.length + 1);
+    store.getState().undo();
+    expect(store.getState().document.intent).toEqual(before.intent);
+  });
+  it("preserves intermediate stops when the existing trip's finish is edited", () => {
+    const store = createRideDocumentStore();
+    store.getState().dispatch(directionsCommand(store.getState().document, place, fix));
+    store.getState().dispatch(insertStopCommand(store.getState().document, { lat: 40.7, lon: -75.5 }, undefined));
+    const before = store.getState().document;
+    const command = directionsCommand(before, { ...place, coordinate: { lat: 40.5, lon: -75.3 } }, fix);
+    if (command.type !== "ride.directions") throw new Error("Expected Directions command");
+    store.getState().dispatch({ ...command, keepWaypoints: true });
+    expect(store.getState().document.intent.stops).toEqual(before.intent.stops);
     store.getState().undo();
     expect(store.getState().document.intent).toEqual(before.intent);
   });

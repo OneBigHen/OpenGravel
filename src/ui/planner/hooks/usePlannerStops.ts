@@ -326,7 +326,7 @@ export function usePlannerStops(input: {
     if (action === "finish") {
       const document = current();
       dispatch({ ...placeFinishCommand(document, coordinate), type: "ride.directions",
-        start: document.intent.start, finish: placeFinishCommand(document, coordinate).point });
+        start: document.intent.start, finish: placeFinishCommand(document, coordinate).point, keepWaypoints: true });
     }
     if (action === "stop" && current().intent.start !== null && current().intent.finish !== null) {
       dispatch(insertStopCommand(current(), coordinate, undefined));

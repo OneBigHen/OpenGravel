@@ -310,7 +310,9 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       }
       return applyChange({ ...intent, shape: "destination", sketch: null,
         start: command.start === null ? null : { ...command.start, kind: "start" },
-        finish: { ...command.finish, kind: "finish" }, stops: [], shaping: [] }, true);
+        finish: { ...command.finish, kind: "finish" },
+        stops: command.keepWaypoints === true ? intent.stops : [],
+        shaping: command.keepWaypoints === true ? intent.shaping : [] }, true);
     }
     case "ride.loopFrom": {
       const issues = rejectCoordinateIssues(validateCoordinate(command.start.coordinate));
