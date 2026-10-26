@@ -14710,9 +14710,12 @@ a.og-secondary {
 }
 
 /* A touch screen zooms with two fingers, as every phone map does; the + and -
-   discs only crowded the small route-page map. */
+   discs only crowded the small route-page map. The ride screen keeps them:
+   gloves can't pinch. */
 @media (max-width: 760px) and (pointer: coarse) {
-  .og-map__zoom {
+  .og-route-detail .og-map__zoom,
+  .og-explore .og-map__zoom,
+  .og-planner .og-map__zoom {
     display: none;
   }
 }
