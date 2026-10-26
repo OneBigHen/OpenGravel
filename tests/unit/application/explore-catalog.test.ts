@@ -78,14 +78,20 @@ describe("Explore catalog application", () => {
     expect(entry.provenance).toContain("saved library ride");
   });
 
-  it("creates a derivative with copy title, endpoints, and preserved source provenance", () => {
-    const entry = catalogEntry({ id: "catalog-lehigh" });
+  it("creates a derivative with the route's own name, endpoints, and preserved source provenance", () => {
+    const entry = catalogEntry({
+      id: "catalog-lehigh",
+      geometry: [{ lon: -75.5, lat: 40.5 }, { lon: -75.35, lat: 40.6 }, { lon: -75.2, lat: 40.7 }],
+    });
     const derivative = createExploreDerivative(entry, "2026-09-17T13:00:00.000Z");
 
-    expect(derivative.title).toBe("Catalog route copy");
+    // The ride the rider opens is the route they read: no "copy" in its name.
+    expect(derivative.title).toBe("Catalog route");
     expect(derivative.provenance).toEqual({ type: "catalog", sourceId: "catalog-lehigh" });
     expect(derivative.intent.start?.coordinate).toEqual(entry.geometry[0]);
     expect(derivative.intent.finish?.coordinate).toEqual(entry.geometry.at(-1));
+    // The line's own anchors shape the ride, so planning it follows the route.
+    expect(derivative.intent.shaping.length).toBeGreaterThan(0);
   });
 
   it("seeds an Explore derivative with the active bike snapshot when supplied", () => {

@@ -67,7 +67,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
 
   await page.getByRole("button", { name: "Ride this" }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByTestId("active-ride-title")).toHaveText("Sample Ridge Loop copy");
+  await expect(page.getByTestId("active-ride-title")).toHaveText("Sample Ridge Loop");
   await expect(page.getByTestId("active-ride-provenance")).toContainText("catalog");
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();

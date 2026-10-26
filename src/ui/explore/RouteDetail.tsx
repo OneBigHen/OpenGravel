@@ -408,7 +408,6 @@ export function RouteDetail({
     setStatus(null);
     try {
       await callback();
-      if (action === "use") setStatus("Opening a private copy in the planner.");
     } catch {
       setStatus("That action could not be completed.");
     } finally {
@@ -494,11 +493,20 @@ export function RouteDetail({
         </div>
         <div className="og-route-detail__content">
 
-      {/* ONE action a rider takes on this page: it plans the ride and opens it.
-          Saving and sharing sit beside it as the quiet choices, together on
-          their own row so the commitment is the only thing that stands out. */}
+      {/* ONE action a rider takes on this page: it opens the ride ready to
+          start. Saving and sharing sit beside it as the quiet choices, together
+          on their own row so the commitment is the only thing that stands out. */}
       <section className="og-route-detail__actions" aria-label="Route actions">
-        <button type="button" className="og-primary" disabled={busy !== null || !fullGeometry} onClick={() => void runAction("use", () => onUse(entry))}>Ride this</button>
+        <button
+          type="button"
+          className="og-primary"
+          data-testid="ride-this"
+          aria-busy={busy === "use"}
+          disabled={busy !== null || !fullGeometry}
+          onClick={() => void runAction("use", () => onUse(entry))}
+        >
+          {busy === "use" ? "Getting this ride ready…" : "Ride this"}
+        </button>
         <div className="og-route-detail__alternates">
           {canSave ? (
             // Already saved is a state, not a dead end: the button keeps its

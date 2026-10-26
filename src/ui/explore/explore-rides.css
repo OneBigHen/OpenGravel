@@ -146,3 +146,49 @@
     background: var(--og-canvas);
   }
 }
+
+/* Explore's one filter row: a chip that is holding a choice says so with the
+   choice's own words and the pressed fill, never with a second control. */
+.og-explore .og-explore__quick-chip[data-filter="on"] {
+  border-color: var(--og-go);
+  background: var(--og-go);
+  color: var(--og-on-fill);
+}
+
+.og-explore .og-explore__quick-chip:disabled {
+  border-color: var(--og-hairline);
+  background: var(--og-paper);
+  color: var(--og-slate-text);
+  cursor: default;
+}
+
+.og-explore .og-explore__quick-chip:focus-visible {
+  outline: 2px solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+/* A named group inside the one filters sheet (the roads worth riding), so the
+   page has one place to filter and no second bar above a list. */
+.og-explore .og-explore__sheet-group {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 12px 16px;
+  min-width: 0;
+}
+
+.og-explore .og-explore__sheet-group > h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+.og-explore .og-explore__sheet-group > :is(.og-explore__check, .og-explore__note) {
+  grid-column: 1 / -1;
+}
+
+.og-explore .og-explore__sheet-group > .og-explore__note {
+  margin: 0;
+}
