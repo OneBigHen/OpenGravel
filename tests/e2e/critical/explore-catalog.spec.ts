@@ -7,6 +7,11 @@ test("filters the catalog, opens a route, uses its community forms, exports GPX,
   const consoleErrors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   // A route the rider already read must not be planned again to be ridden.
+  // The ride below asks Spotify for its state; this gate's origin is not a
+  // registered Spotify app, so answer as a rider who has not connected it.
+  await page.route("**/api/spotify/state", (route) => route.fulfill({ json: {
+    connection: "disconnected", accountConnected: false, isPlaying: false, track: null, errorMessage: null,
+  } }));
   const planRequests: string[] = [];
   page.on("request", (request) => {
     if (request.method() === "POST" && request.url().includes("/api/route-plan")) planRequests.push(request.url());
