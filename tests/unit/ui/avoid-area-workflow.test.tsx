@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
@@ -158,9 +158,28 @@ async function drawRectangle(
   await waitFor(() => expect(avoidAreas(workspace.rideDocumentStore)).toHaveLength(1));
 }
 
-/** Places the start with the unarmed first tap the composer asks for (OGV-D-213). */
+async function placeEndpointAt(
+  workspace: RenderedAvoidAreaWorkspace,
+  target: "start" | "finish",
+  coordinate: { lon: number; lat: number },
+): Promise<void> {
+  const before = screen.getByTestId(`${target}-value`).textContent;
+  workspace.emit({
+    type: "map-long-press",
+    coordinate,
+    pixel: { x: 500, y: 500 },
+    authorityFeatureId: null,
+  });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
+    name: target === "start" ? "Start here" : "Finish here",
+    exact: true,
+  }));
+  await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
+}
+
+/** Places the start through the press-and-hold menu. */
 async function placeStart(workspace: RenderedAvoidAreaWorkspace, coordinate = START): Promise<void> {
-  workspace.emit({ type: "map-click", coordinate });
+  await placeEndpointAt(workspace, "start", coordinate);
   await waitFor(() =>
     expect(workspace.rideDocumentStore.getState().document.intent.start?.coordinate).toEqual(
       coordinate,

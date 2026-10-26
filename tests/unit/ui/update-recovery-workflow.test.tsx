@@ -15,7 +15,7 @@
  * renderer.
  */
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClientPlanningService } from "@/application/planner/client-planning-service";
@@ -206,6 +206,28 @@ function tapMap(x: number, y: number): void {
   });
 }
 
+async function placeEndpointAt(
+  target: "start" | "finish",
+  coordinate: { lon: number; lat: number },
+): Promise<void> {
+  const host = current?.mapFactory.hosts[0];
+  if (host === undefined) throw new Error("the workspace has no map host");
+  const before = screen.getByTestId(`${target}-value`).textContent;
+  act(() => {
+    host.emit({
+      type: "map-long-press",
+      coordinate,
+      pixel: { x: 500, y: 500 },
+      authorityFeatureId: null,
+    });
+  });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
+    name: target === "start" ? "Start here" : "Finish here",
+    exact: true,
+  }));
+  await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
+}
+
 async function renderWorkspace(): Promise<Harness> {
   const answer = { mode: "success" as Answer };
   const rideDocumentStore = createRideDocumentStore({ now });
@@ -235,11 +257,11 @@ async function renderWorkspace(): Promise<Harness> {
 }
 
 async function planFixtureRide(): Promise<void> {
-  tapMap(100, 100);
+  await placeEndpointAt("start", coordinateAt(100, 100));
   await waitFor(() =>
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet"),
   );
-  tapMap(900, 900);
+  await placeEndpointAt("finish", coordinateAt(900, 900));
   await waitFor(() =>
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent("No destination yet"),
   );

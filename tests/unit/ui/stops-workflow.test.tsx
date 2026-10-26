@@ -77,6 +77,24 @@ function tapMap(x: number, y: number): { lon: number; lat: number } {
   return coordinate;
 }
 
+async function placeEndpointAt(
+  target: "start" | "finish",
+  coordinate: { lon: number; lat: number },
+): Promise<void> {
+  const before = screen.getByTestId(`${target}-value`).textContent;
+  emitIntent({
+    type: "map-long-press",
+    coordinate,
+    pixel: { x: 500, y: 500 },
+    authorityFeatureId: null,
+  });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
+    name: target === "start" ? "Start here" : "Finish here",
+    exact: true,
+  }));
+  await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
+}
+
 /** The fetcher for tests that author points but never plan. */
 function unfetched(): typeof fetch {
   return (async (): Promise<Response> => {
@@ -112,13 +130,13 @@ async function renderWorkspace(): Promise<Rendered> {
   return rendered;
 }
 
-/** Authors a start and a destination with two unarmed taps (OGV-D-213). */
+/** Authors a start and a destination through the press-and-hold menu. */
 async function placeBothEndpoints(): Promise<void> {
-  tapMap(100, 100);
+  await placeEndpointAt("start", coordinateAt(100, 100));
   await waitFor(() => {
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
   });
-  tapMap(900, 900);
+  await placeEndpointAt("finish", coordinateAt(900, 900));
   await waitFor(() => {
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent("No destination yet");
   });

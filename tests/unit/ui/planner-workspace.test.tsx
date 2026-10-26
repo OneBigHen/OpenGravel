@@ -2,7 +2,7 @@
  * The planner workspace end to end (02-ARCHITECTURE-CONTRACT §8, §17;
  * 04-PLANNER-AND-WORKSPACE-UX §2–§12, §21).
  *
- * This is the Wave-2 acceptance test: two map clicks author a start and a
+ * This is the Wave-2 acceptance test: two point-menu choices author a start and a
  * destination through the domain reducer, the plan button becomes truthful, a
  * `/api/route-plan` answer becomes route cards, the recommended route is drawn
  * and marked, selecting another card moves the selection, and cancelling while
@@ -211,6 +211,13 @@ async function renderWorkspace(
  * baseline region's extent, so a call site still reads as "a tap over there".
  * Which point a tap *authors* is decided by the workspace, never by the host.
  */
+function coordinateAt(x: number, y: number): { lon: number; lat: number } {
+  return {
+    lon: START_COORDINATE.lon + (x / MAP_SIZE) * 0.4,
+    lat: START_COORDINATE.lat + (y / MAP_SIZE) * 0.25,
+  };
+}
+
 function clickMap(x: number, y: number): void {
   const host = mapFactoryRef.current?.hosts[0];
   if (host === undefined) throw new Error("the workspace has no map host");
@@ -220,10 +227,7 @@ function clickMap(x: number, y: number): void {
   act(() => {
     host.emit({
       type: "map-click",
-      coordinate: {
-        lon: START_COORDINATE.lon + (x / MAP_SIZE) * 0.4,
-        lat: START_COORDINATE.lat + (y / MAP_SIZE) * 0.25,
-      },
+      coordinate: coordinateAt(x, y),
     });
   });
 }
@@ -238,6 +242,24 @@ function emitIntent(intent: Parameters<ReturnType<typeof createStubMapHostFactor
   act(() => {
     host.emit(intent);
   });
+}
+
+async function placeEndpointAt(
+  target: "start" | "finish",
+  coordinate: { lon: number; lat: number },
+): Promise<void> {
+  const before = screen.getByTestId(`${target}-value`).textContent;
+  emitIntent({
+    type: "map-long-press",
+    coordinate,
+    pixel: { x: 500, y: 500 },
+    authorityFeatureId: null,
+  });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
+    name: target === "start" ? "Start here" : "Finish here",
+    exact: true,
+  }));
+  await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
 }
 
 /** A fetcher for the tests that author points but never plan. */
@@ -274,11 +296,11 @@ function pressPlanIfOffered(): boolean {
 }
 
 async function placeBothPoints(): Promise<void> {
-  clickMap(100, 100);
+  await placeEndpointAt("start", coordinateAt(100, 100));
   await waitFor(() => {
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
   });
-  clickMap(900, 900);
+  await placeEndpointAt("finish", coordinateAt(900, 900));
   await waitFor(() => {
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent("No destination yet");
   });
@@ -295,7 +317,7 @@ afterEach(() => {
 });
 
 describe("PlannerWorkspace — the Wave-2 slice", () => {
-  it("plans from two map clicks and marks the recommended route", async () => {
+  it("plans from two point-menu choices and marks the recommended route", async () => {
     const { rideDocumentStore, posts, mapFactory, plannerUiStore } = await renderWorkspace(
       (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
         jsonResponse(
@@ -462,8 +484,8 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     expect(screen.queryAllByTestId(/^route-card-/)).toHaveLength(0);
   });
 
-  it("places a start on the first idle tap and the destination on the next", async () => {
-    const { plannerUiStore } = await renderWorkspace(
+  it("ignores idle taps and authors endpoints through the press-and-hold menu", async () => {
+    const { plannerUiStore, rideDocumentStore } = await renderWorkspace(
       (async (_input: RequestInfo | URL, init?: RequestInit): Promise<Response> =>
         jsonResponse(
           successBody(
@@ -472,23 +494,31 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
         )) as typeof fetch,
     );
 
-    // First-open arms no tool: the empty map is directly usable, and the
-    // composer reason is the single instruction (OGV-D-213/214).
+    // First-open arms no tool: the composer explains how to author a point.
     expect(plannerUiStore.getState().placementTool).toBe("idle");
     // 05 §4's pointer tool is the neutral one: nothing is armed to draw.
     expect(plannerUiStore.getState().activeTool).toBe("pan");
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "false");
 
+    const before = rideDocumentStore.getState().document;
     clickMap(100, 100);
+    expect(rideDocumentStore.getState().document).toBe(before);
+    expect(before.intent.start).toBeNull();
+    expect(screen.getByTestId("start-value")).toHaveTextContent("No start yet");
+    expect(screen.getByTestId("finish-value")).toHaveTextContent("No destination yet");
+    expect(screen.queryByTestId("map-point-menu")).not.toBeInTheDocument();
+
+    await placeEndpointAt("start", coordinateAt(100, 100));
     expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
-    // The workspace is in finish placement now, and says so exactly once.
+    // Choosing a start leaves the tool idle and asks for a destination.
+    expect(plannerUiStore.getState().placementTool).toBe("idle");
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
       "Search for a destination, or press and hold the map.",
     );
     expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
 
-    clickMap(900, 900);
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     expect(screen.getByTestId("finish-value")).not.toHaveTextContent(
       "No destination yet",
     );
@@ -507,8 +537,8 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
   it("arms a placement tool from a chip and instructs only then", async () => {
     const { plannerUiStore } = await renderWorkspace(unfetched());
 
-    clickMap(100, 100);
-    clickMap(900, 900);
+    await placeEndpointAt("start", coordinateAt(100, 100));
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     fireEvent.click(screen.getByTestId("start-chip"));
 
     // The chip arms the tool (visibly, on the control) and the map states what
@@ -529,25 +559,30 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
     );
   });
 
-  it("suppresses the overlay hint when the disabled reason already says it", async () => {
+  it("shows the armed tool hint even when that endpoint is missing", async () => {
     await renderWorkspace(unfetched());
 
-    // Arming the tool for the very point that blocks planning must not repeat
-    // the composer's reason on the map (OGV-D-214, one instruction at a time).
+    // An armed tool explains the next tap even when its endpoint is missing.
     fireEvent.click(screen.getByTestId("start-chip"));
 
     expect(screen.getByTestId("start-chip")).toHaveAttribute("data-armed", "true");
     expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
       "Search for a start, or press and hold the map.",
     );
-    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your start.");
+    clickMap(100, 100);
+    fireEvent.click(screen.getByTestId("finish-chip"));
+    expect(screen.getByTestId("plan-disabled-reason")).toHaveTextContent(
+      "Search for a destination, or press and hold the map.",
+    );
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your destination.");
   });
 
   it("clears the selection on an unarmed click once both points exist", async () => {
     const { plannerUiStore } = await renderWorkspace(pendingFetcher());
 
-    clickMap(100, 100);
-    clickMap(900, 900);
+    await placeEndpointAt("start", coordinateAt(100, 100));
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     const authoredStart = screen.getByTestId("start-value").textContent;
 
     plannerUiStore
@@ -763,7 +798,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
 
   it("lets an armed placement own a tap that lands on overlapping routes", async () => {
     const { plannerUiStore, rideDocumentStore } = await renderWorkspace(unfetched());
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -953,7 +988,7 @@ describe("PlannerWorkspace — the Wave-2 slice", () => {
       }))) as typeof fetch,
     );
 
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -1503,13 +1538,13 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { posts } = await renderWorkspace(answerWithRoute());
 
     // A start is not a ride: there is nothing to ask for yet, so nothing is asked.
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
     expect(posts).toHaveLength(0);
 
-    clickMap(900, 900);
+    await placeEndpointAt("finish", coordinateAt(900, 900));
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
@@ -1524,7 +1559,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { posts } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -1546,16 +1581,15 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { plannerUiStore } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
 
-    // The chip arms the map for a destination, and while the point is missing the
-    // composer's own reason is the only instruction.
+    // The chip arms the map for a destination and explains the next tap.
     fireEvent.click(screen.getByTestId("finish-chip"));
     expect(plannerUiStore.getState().placementTool).toBe("place-finish");
-    expect(screen.queryByTestId("map-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("map-hint")).toHaveTextContent("Tap the map to set your destination.");
 
     // A place picked from search is the destination the mode was waiting for.
     fireEvent.change(screen.getByTestId("finish-search"), { target: { value: "hawk" } });
@@ -1575,7 +1609,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     const { posts } = await renderWorkspace(answerWithRoute(), {
       places: searchablePlaces(),
     });
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
@@ -1657,7 +1691,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
 
   it("needs the rider's tap for a loop: the control says Make my loop", async () => {
     const { posts } = await renderWorkspace(answerWithRoute());
-    clickMap(100, 100);
+    await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
       expect(screen.getByTestId("start-value")).not.toHaveTextContent("No start yet");
     });
