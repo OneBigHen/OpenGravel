@@ -1074,12 +1074,14 @@ html .og-ride {
    filter is ever more than one press away and no row of controls is dropped.
    -------------------------------------------------------------------------- */
 
+/* Search takes the whole width on its own row, the way a map app's search does;
+   the chips — Filters last — scroll under it. */
 .og-explore__toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "search filters"
-    "quick quick";
+    "search"
+    "quick";
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -1106,12 +1108,12 @@ html .og-ride {
   font-size: var(--og-text-body);
 }
 
+/* The Filters chip is the last chip in the row, so it is a flex item, not a
+   second grid column beside search. */
 .og-explore .og-explore__filters-toggle.og-explore__filters-toggle {
   display: inline-flex;
-  grid-area: filters;
   flex: none;
   align-items: center;
-  justify-self: end;
   gap: 6px;
   min-height: 48px;
   margin: 0;
@@ -1309,10 +1311,10 @@ html .og-ride {
 }
 
 @media (min-width: 1181px) {
-  /* Wide enough for one row: search, the chips, Filters. */
+  /* Wide enough for one row: search, then the chips with Filters at their end. */
   .og-explore .og-explore__toolbar {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: "search quick filters";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "search quick";
     gap: var(--og-space-3);
   }
 }
@@ -1526,16 +1528,6 @@ html .og-ride {
     min-height: 46px;
     margin: 0;
     border-radius: 14px;
-  }
-
-  .og-explore__backdrop {
-    position: fixed;
-    z-index: 69;
-    inset: 0;
-    display: block;
-    border: 0;
-    background: rgb(0 0 0 / 45%);
-    animation: og-fade-in 180ms ease-out;
   }
 }
 
