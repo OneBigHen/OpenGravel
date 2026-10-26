@@ -172,7 +172,6 @@ async function placeEndpointAt(
   });
   fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", {
     name: target === "start" ? "Start here" : "Finish here",
-    exact: true,
   }));
   await waitFor(() => expect(screen.getByTestId(`${target}-value`).textContent).not.toBe(before));
 }
