@@ -1,6 +1,6 @@
 import { directionsTo } from "./search-helpers";
 import { expect, test, type Page } from "@playwright/test";
-import { plannerMap, pressPlan, settledExtent } from "./map-helpers";
+import { placeEndpoint, plannerMap, pressPlan, settledExtent } from "./map-helpers";
 
 /** Layout evidence uses the labeled geocoder/router fixtures. It does not
  * establish real-road quality or physical-phone acceptance. */
@@ -36,7 +36,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
   test(`endpoint controls have separate targets at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await chooseEndpoints(page);
-    await page.getByTestId("sheet-handle").click();
+    await page.getByTestId("route-options-edit").click();
     const controls = await page.locator(".og-composer").evaluate((composer) => {
       const ids = ["start-chip", "finish-chip", "start-change", "finish-change", "swap-endpoints"];
       return ids.map((id) => {
@@ -63,17 +63,19 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
 test("small-phone ride style has a named entry and the plan stays visible while editing", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await chooseEndpoints(page);
-  const handle = page.getByTestId("sheet-handle");
-  await expect(handle).toHaveAccessibleName("Planner: half. Expand fully");
-  await handle.click();
-  await page.getByTestId("ride-style-toggle").click();
+  await page.getByTestId("route-options-settings").click();
+  await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
+  const replan = page.waitForRequest((request) => request.url().includes("/api/route-plan") && request.method() === "POST"
+    && request.postDataJSON().request.options.roadCharacter === "curvy");
   await page.getByTestId("road-character-curvy").check();
+  await replan;
   const sheetBody = page.getByTestId("sheet-scroll");
   await sheetBody.evaluate((element) => { element.scrollTop = 0; });
   // The style change plans by itself once the rider stops changing it (04 §21), so
   // what has to stay visible in the edited sheet is the plan itself — its status
   // line and the ride it produces — rather than a commitment button the pick
   // already pressed.
+  await page.getByTestId("back-to-options").click();
   await page.getByTestId("start-ride").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
@@ -85,7 +87,9 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
   await page.goto("/?debug=routing");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  await chooseEndpoints(page);
+  // Explicit map authoring keeps the debug comparison in the composer.
+  await placeEndpoint(page, "start", { lat: 40.1385, lon: -75.4385 });
+  await placeEndpoint(page, "finish", { lat: 40.1325, lon: -75.4335 });
   await pressPlan(page);
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await page.getByTestId("sheet-handle").click();

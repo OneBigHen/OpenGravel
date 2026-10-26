@@ -85,7 +85,7 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(tabBar.width).toBeGreaterThanOrEqual(PHONE.width - 1);
   expect(tabBar.height).toBeGreaterThanOrEqual(55);
   expect(tabBar.height).toBeLessThanOrEqual(57);
-  expect(Math.abs(tabBar.y - (sheetBox.y + sheetBox.height) - 6)).toBeLessThanOrEqual(1);
+  expect(Math.abs(tabBar.y - (sheetBox.y + sheetBox.height))).toBeLessThanOrEqual(1);
   const barStyle = await page.getByTestId("primary-nav").evaluate((element) => {
     const style = getComputedStyle(element);
     return {
@@ -125,69 +125,32 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   await expect(plannerMap(page)).toHaveAttribute("data-basemap", "empty");
 });
 
-test("the sheet has a peek detent and an expanded one", async ({ page }) => {
-  const sheet = page.getByTestId("planner-sheet");
-  const handle = page.getByTestId("sheet-handle");
+test("the shared sheet has peek, half and full detents", async ({ page }) => {
+  const sheet = page.getByTestId("planner-sheet"), handle = page.getByTestId("sheet-handle");
   await expect(sheet).toHaveAttribute("data-detent", "peek");
-  // Idle (Trail Glass): nothing planned, so there is no "Ride choices" handle —
-  // just "Where to?" and the quick starts.
-  await expect(sheet).toHaveAttribute("data-idle", "true");
-  await expect(handle).toBeHidden();
   await expect(page.getByTestId("loop-near-me")).toBeVisible();
   await expect(page.getByTestId("just-ride")).toBeVisible();
-
-  // The peek detent is the composer's own height: the ride choices are not
-  // visible until the rider asks for them.
-  const peekBox = await sheet.boundingBox();
-  if (peekBox === null) throw new Error("the sheet has no measured box");
-
-  // Author both endpoints and plan the fixture ride; the sheet rises to its
-  // expanded detent once the choices arrive (04 §2).
-  await placeEndpoint(page, "start", START_COORDINATE);
-  await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
-  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
-  await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
-  // A destination ends idle: the full composer is back.
-  await expect(sheet).not.toHaveAttribute("data-idle", "true");
-  await expect(handle).toBeVisible();
-  await expect(handle).toHaveAttribute("aria-expanded", "false");
-  await pressPlan(page);
-
-  const cards = page.locator('[data-testid^="route-card-"]');
-  await expect(cards).toHaveCount(2);
-  // A planned ride settles at the ride detent (UX rework 2, #8): the chosen
-  // route and Start ride, with the map keeping most of the screen. (61% on a
-  // 6.7" phone; the 60% target at 390x844 waits on the slimmer header.)
-  await expect(sheet).toHaveAttribute("data-detent", "ride");
-  await expect(page.getByTestId("start-ride")).toBeInViewport();
-  const rideBox = await sheet.boundingBox();
-  if (rideBox === null) throw new Error("the ride sheet has no measured box");
-  expect(rideBox.y).toBeGreaterThanOrEqual(PHONE.height * 0.55);
-
   await handle.click();
-  await expect(sheet).toHaveAttribute("data-detent", "expanded");
+  await expect(sheet).toHaveAttribute("data-detent", "half");
   await expect(handle).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByTestId("route-list")).toBeVisible();
-
-  const expandedBox = await sheet.boundingBox();
-  if (expandedBox === null) throw new Error("the expanded sheet has no measured box");
-  expect(expandedBox.height).toBeGreaterThan(peekBox.height);
-  // The map stays mostly visible (04 §2): the sheet is bounded by the 58dvh cap.
-  expect(expandedBox.height).toBeLessThanOrEqual(PHONE.height * 0.59);
-
-  // The handle is the way back down. Its visible label names the surface, the
-  // chevron says which way the next press moves it, the count badge says how many
-  // choices are behind it, and the accessible name carries the action (owner
-  // review 2026-09-17).
-  await handle.click();
-  await expect(sheet).toHaveAttribute("data-detent", "ride");
-  await expect(cards.nth(1)).toBeHidden();
-  await expect(page.getByTestId("sheet-handle-label")).toHaveText("Compare rides");
-  await expect(page.getByTestId("ride-choices-count")).toHaveText("2");
+  const half = await sheet.boundingBox();
+  expect(half!.y).toBeGreaterThanOrEqual(PHONE.height * .5);
+  await placeEndpoint(page, "start", START_COORDINATE);
+  await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
+  await pressPlan(page);
+  await expectDrawnScene(page, { routes: "2" });
+  await expect(page.getByTestId("start-ride")).toBeVisible();
+  await handle.press("ArrowUp");
+  await expect(sheet).toHaveAttribute("data-detent", "full");
+  await expect(page.getByTestId("top-search")).toBeHidden();
+  const full = await sheet.boundingBox();
+  expect(full!.height).toBeGreaterThan(half!.height);
+  await handle.press("ArrowDown");
+  await expect(sheet).toHaveAttribute("data-detent", "half");
+  await expect(page.getByTestId("top-search")).toBeVisible();
+  await handle.press("ArrowDown");
+  await expect(sheet).toHaveAttribute("data-detent", "peek");
   await expect(handle).toHaveAttribute("aria-expanded", "false");
-  await expect(handle).toHaveAccessibleName("Show ride choices (2)");
-
-  // The drawing survived the collapse.
   await expectDrawnScene(page, { routes: "2" });
   await expectHealthyMap(page);
 });
@@ -221,7 +184,7 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   // 12 §10: every planning control is at least 44×44 CSS px.
   // On the idle sheet "Create ride" waits for a destination; the quick starts
   // take its place.
-  for (const testId of ["start-chip", "finish-chip", "loop-near-me", "record-a-ride", "just-ride"]) {
+  for (const testId of ["sheet-handle", "loop-near-me", "record-a-ride", "just-ride"]) {
     const box = await page.getByTestId(testId).boundingBox();
     expect(box, `${testId} must be measurable`).not.toBeNull();
     if (box === null) throw new Error(`${testId} has no measured box`);
@@ -231,7 +194,7 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   // 12 §4 (revised in VISUAL-OVERHAUL.md): Outfit for headings, Plus Jakarta Sans for body — and both are self-hosted by
   // `next/font`, so the family names resolve to real faces.
   const headingFamily = await page
-    .getByRole("heading", { name: "OpenGravel" })
+    .getByRole("heading", { name: "OpenGravel", includeHidden: true })
     .evaluate((element) => getComputedStyle(element).fontFamily);
   expect(headingFamily).toMatch(/Outfit/i);
   const bodyFamily = await page.evaluate(
@@ -336,32 +299,17 @@ async function touchDrag(page: import("@playwright/test").Page, testId: string, 
   }, dy);
 }
 
-test("dragging the sheet down folds it to a thin bar, and dragging up opens it again", async ({ page }) => {
+test("swiping the shared handle visits all three detents", async ({ page }) => {
   const sheet = page.getByTestId("planner-sheet");
   await expect(sheet).toHaveAttribute("data-detent", "peek");
-  const openBox = await sheet.boundingBox();
-  if (openBox === null) throw new Error("the sheet has no measured box");
-
-  await touchDrag(page, "sheet-head", 80);
-  await expect(sheet).toHaveAttribute("data-detent", "mini");
-  const miniBox = await sheet.boundingBox();
-  if (miniBox === null) throw new Error("the folded sheet has no measured box");
-  expect(miniBox.height).toBeLessThan(openBox.height / 2);
-  expect(miniBox.height).toBeLessThan(110);
-  await expect(page.getByTestId("sheet-handle")).toBeVisible();
-  await expect(page.getByTestId("sheet-handle")).toHaveAccessibleName("Show planner");
-
-  // Down again does nothing; up brings the sheet back.
-  await touchDrag(page, "sheet-head", 80);
-  await expect(sheet).toHaveAttribute("data-detent", "mini");
-  await touchDrag(page, "sheet-head", -80);
+  await touchDrag(page, "sheet-handle", -80);
+  await expect(sheet).toHaveAttribute("data-detent", "half");
+  await touchDrag(page, "sheet-handle", -80);
+  await expect(sheet).toHaveAttribute("data-detent", "full");
+  await touchDrag(page, "sheet-handle", 80);
+  await expect(sheet).toHaveAttribute("data-detent", "half");
+  await touchDrag(page, "sheet-handle", 80);
   await expect(sheet).toHaveAttribute("data-detent", "peek");
-
-  // A tap on the bar opens it too.
-  await touchDrag(page, "sheet-head", 80);
-  await expect(sheet).toHaveAttribute("data-detent", "mini");
-  // A swipe swallows the click it ends in for a moment; a real tap comes later.
-  await page.waitForTimeout(500);
-  await page.getByTestId("sheet-handle").click();
+  await touchDrag(page, "sheet-handle", 80);
   await expect(sheet).toHaveAttribute("data-detent", "peek");
 });
