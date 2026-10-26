@@ -23,9 +23,11 @@
   --og-deep-spruce: #cfe3d8;
   --og-on-fill: #ffffff;
 
-  /* Accents. */
-  --og-go: #22a45d;
-  --og-go-strong: #1a8a4c;
+  /* Accents. `--og-go` and `--og-go-strong` are fills, so they are dark enough
+     for the white label every green button puts on them: 4.66:1 and 6.29:1.
+     Checked in tests/unit/ui/contrast-tokens.test.ts. */
+  --og-go: #1c854b;
+  --og-go-strong: #176e3e;
   --og-go-soft: color-mix(in srgb, #3ddc84 18%, transparent);
   --og-go-text: #6fe3a3;
   --og-signal-blue: #5aa9e6;
@@ -104,9 +106,10 @@
   --og-deep-spruce: #10291f;
   --og-on-fill: #ffffff;
 
-  --og-go: #138a43;
+  /* 4.65:1 and 6.37:1 with the white label on the fill. */
+  --og-go: #138641;
   --og-go-strong: #0c6e34;
-  --og-go-soft: color-mix(in srgb, #138a43 14%, white);
+  --og-go-soft: color-mix(in srgb, #138641 14%, white);
   --og-go-text: #0a6630;
   --og-signal-blue: #1463a6;
   --og-signal-strong: #0d4f87;
@@ -180,7 +183,7 @@ a.og-primary {
   border: 0;
   background: linear-gradient(180deg, var(--og-go), var(--og-go-strong));
   color: var(--og-on-fill);
-  box-shadow: 0 6px 18px -6px rgb(34 164 93 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
+  box-shadow: 0 6px 18px -6px rgb(28 133 75 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
 }
 
 .og-primary:hover:not(:disabled) {

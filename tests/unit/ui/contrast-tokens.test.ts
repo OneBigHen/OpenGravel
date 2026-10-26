@@ -481,6 +481,72 @@ describe("contrast — filled controls keep their text at 4.5:1 (12 §15)", () =
   });
 });
 
+/**
+ * Every green primary action (Start ride, Ride this, Show N routes, the chosen
+ * Settings segment) fills with `--og-go` — and its gradient ends on
+ * `--og-go-strong` — then puts `--og-on-fill` on top. Those two fills change
+ * with the Day/Night theme, so they live in theme-glass.css rather than in the
+ * light palette this file reads above; the label still has to clear 4.5:1 in
+ * both themes (`#138a43` measured 4.43:1 and failed).
+ */
+describe("contrast — the primary green fill (theme-glass.css)", () => {
+  const GLASS = readFileSync("src/app/theme-glass.css", "utf8");
+  /** The default (Night) palette and the Day override, the two the app ships. */
+  const NIGHT_ROOT = /:root\s*\{([^}]*)\}/.exec(GLASS)?.[1] ?? "";
+  const DAY_ROOT = /:root\[data-theme="day"\]\s*\{([^}]*)\}/.exec(GLASS)?.[1] ?? "";
+  const THEMES = [
+    ["day", DAY_ROOT],
+    ["night", NIGHT_ROOT],
+  ] as const;
+
+  function glassHex(block: string, name: string): string {
+    const match = new RegExp(`${name}:\\s*(#[0-9a-f]{6})`, "i").exec(block);
+    expect(match, `${name} must be a hex token in theme-glass.css`).not.toBeNull();
+    return (match as RegExpExecArray)[1] as string;
+  }
+
+  function glassRule(selector: string): string {
+    const start = GLASS.indexOf(`${selector} {`);
+    expect(start, `expected a theme-glass.css rule for ${selector}`).toBeGreaterThan(-1);
+    return GLASS.slice(start, GLASS.indexOf("}", start));
+  }
+
+  it("defines both gradient stops in both themes", () => {
+    for (const [theme, block] of THEMES) {
+      expect(block, `${theme} root block`).toContain("--og-on-fill:");
+      expect(block, `${theme} root block`).toContain("--og-go:");
+      expect(block, `${theme} root block`).toContain("--og-go-strong:");
+    }
+  });
+
+  it("the white label clears 4.5:1 on both stops of the green fill", () => {
+    const failures: string[] = [];
+    for (const [theme, block] of THEMES) {
+      const label = glassHex(block, "--og-on-fill");
+      for (const name of ["--og-go", "--og-go-strong"] as const) {
+        const fill = glassHex(block, name);
+        const ratio = contrastRatio(fill, label);
+        if (ratio < 4.5) {
+          failures.push(`${theme} ${name} (${fill} under ${label}) — ${ratio.toFixed(2)}:1 must clear 4.5:1`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("the green fills are the ones that put that label on the green", () => {
+    // The chosen Settings segment: a flat Go fill with the label on top.
+    const segment = glassRule('.og-settings__segment[aria-checked="true"]');
+    expect(segment).toContain("background: var(--og-go)");
+    expect(segment).toContain("color: var(--og-on-fill)");
+
+    // Every primary button: Go at the top of the gradient, Go Strong at the bottom.
+    const primary = glassRule("a.og-primary");
+    expect(primary).toContain("linear-gradient(180deg, var(--og-go), var(--og-go-strong))");
+    expect(primary).toContain("color: var(--og-on-fill)");
+  });
+});
+
 describe("contrast — meaningful graphics clear 3:1 (12 §15)", () => {
   it("the focus ring is visible on every theme surface", () => {
     const ring = token("--og-focus-ring");
