@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { searchPinGlyph } from "@/application/geocoding/place-glyph";
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { formatDuration } from "@/application/planner/measurements";
 import { isSaved } from "@/application/geocoding/place-memory";
@@ -149,7 +150,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   const pins = useMemo(() => {
     const places = results?.places ?? [];
     const shown = selection === null || places.some((p) => p.id === selection.place.id) ? places : [...places, selection.place];
-    return shown.map((place) => ({ id: asPlaceId(`search:${place.id}`), kind: "search", coordinate: place.coordinate, pill: place.name, tone: "soon" as const, priority: 1000, selected: selection?.place.id === place.id }));
+    return shown.map((place) => ({ id: asPlaceId(`search:${place.id}`), kind: "search", glyph: searchPinGlyph(place.name, place.context, places.some((item) => item.id === place.id) ? results?.chip.id ?? null : null), coordinate: place.coordinate, pill: place.name, tone: "soon" as const, priority: 1000, selected: selection?.place.id === place.id }));
   }, [results, selection]);
   const intercept = useCallback((intent: MapIntent): boolean => {
     if (intent.type === "map-click") close();
