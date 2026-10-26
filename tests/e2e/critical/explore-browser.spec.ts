@@ -30,13 +30,22 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       // while it shared the row with the Filters button.
       const search = await page.getByRole("searchbox", { name: "Search routes" }).boundingBox();
       expect(search!.width).toBeGreaterThan(viewport.width * 0.8);
-      // The sheet dims the page, and a tap on the scrim closes it.
+      // The sheet dims the page, and a tap on the scrim closes it. The sheet
+      // rises from the bottom edge, so the part of the scrim a rider can reach
+      // is the strip above it; the tap goes there, not through the sheet.
       const scrim = page.getByRole("button", { name: "Close filters" });
       await expect(scrim).toBeVisible();
       const veil = await scrim.boundingBox();
       expect(veil!.width).toBeGreaterThanOrEqual(viewport.width - 1);
-      await scrim.click();
-      await expect(page.getByRole("region", { name: "Explore filters" })).toHaveAttribute("data-open", "false");
+      const sheet = await page.getByRole("region", { name: "Explore filters" }).boundingBox();
+      // The page above the sheet stays reachable, by more than a gloved tap.
+      expect(sheet!.y).toBeGreaterThan(48);
+      await scrim.click({ position: { x: veil!.width / 2, y: Math.min(12, sheet!.y / 2) } });
+      // A closed sheet is not rendered at all on a phone, so the chip that opens
+      // it is what states it, and focus is back on that chip.
+      await expect(page.getByRole("region", { name: "Explore filters" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: /^Filters/ })).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByRole("button", { name: /^Filters/ })).toBeFocused();
     }
     await page.reload();
     await page.getByRole("button", { name: /^Filters/ }).click();

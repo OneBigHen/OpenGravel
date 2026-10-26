@@ -27,15 +27,40 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
       }],
     }));
   });
+  // The planner comes back with whatever ride was last open, so the ride this
+  // test plans and saves is authored first, on a planner that starts empty.
+  // Authoring it after "Ride this" would be planning on top of the catalog
+  // ride, mid-restore, where a held press can only stop the camera.
+  await page.goto("/");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
+  await placeEndpoint(page, "start", START);
+  await placeEndpoint(page, "finish", FINISH);
+  await pressPlan(page);
+  await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
+  await page.getByTestId("named-ride-title").fill("My sample ride");
+  await page.getByTestId("save-named-ride").click();
+  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
+
   await page.goto("/explore");
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Sample (Ridge|Creek|Foothills)/ })).toHaveCount(3);
 
-  await page.getByRole("combobox", { name: "Filter by source" }).selectOption("catalog");
+  // Source is one of the decisions behind the last chip in the filter row: the
+  // rider opens Filters, picks it there, and closes the sheet with the button
+  // that says how many rides are left.
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  const filters = page.getByRole("region", { name: "Explore filters" });
+  await expect(filters).toHaveAttribute("data-open", "true");
+  await filters.getByRole("combobox", { name: "Filter by source" }).selectOption("catalog");
   // The source badge says where the rider is, not the name of the store the
   // published rides are kept in.
   await expect(page.locator(".og-explore-card__source").first()).toHaveText("From Explore");
-  await expect(page.getByRole("option", { name: "From Explore" })).toHaveCount(1);
+  await expect(filters.getByRole("option", { name: "From Explore" })).toHaveCount(1);
+  await filters.getByRole("button", { name: /^Show \d+ routes$/ }).click();
+  // The sheet is shut (it is `display: none` once closed, so the chip is what
+  // states it) and the list it filters is the page again.
+  await expect(page.getByRole("button", { name: /^Filters/ })).toHaveAttribute("aria-expanded", "false");
   await page.getByRole("link", { name: /Sample Ridge Loop/ }).click();
   await expect(page).toHaveURL(/\/explore\/sample-ridge-loop$/);
   // The rider-facing line is short and honest, and the engine mechanics — including
@@ -74,21 +99,12 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByTestId("active-ride-provenance")).toContainText("catalog");
   const prepare = page.getByTestId("prepare");
   if ((await prepare.getAttribute("open")) === null) await page.getByTestId("prepare-toggle").click();
-  await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 50 mi range");
+  // What the ride can use before its reserve: the garage fixture is a 60 mi
+  // tank with a 30 mi reserve, so it says 30.
+  await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 30 mi range");
 
   await page.getByRole("link", { name: "Explore" }).click();
   await expect(page).toHaveURL(/\/explore$/);
-
-  await page.goto("/");
-  await expect(plannerMap(page)).toBeVisible();
-  await settledExtent(page);
-  await placeEndpoint(page, "start", START);
-  await placeEndpoint(page, "finish", FINISH);
-  await pressPlan(page);
-  await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
-  await page.getByTestId("named-ride-title").fill("My sample ride");
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
 
   await page.goto("/explore");
   await expect(page.getByRole("link", { name: "My sample ride" })).toBeVisible();
