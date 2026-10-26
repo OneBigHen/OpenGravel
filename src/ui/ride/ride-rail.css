@@ -1,0 +1,47 @@
+/* The ride rail's zoom: two 56 px halves side by side, because pinch is not a
+   glove gesture a rider can count on while the phone is mounted. The halves are
+   the planner's own `MapZoomControls` (one owner of the zoom API, imported, not
+   copied), wearing the ride's paper discs instead of the planner's 44 px glass.
+   They read as one pill, so the column still clears the maneuver card on a
+   640 px phone, and a disabled half keeps its box and says so to assistive tech
+   rather than disappearing from under the thumb. */
+.og-ride__rail-zoom {
+  display: flex;
+  gap: 8px;
+}
+
+.og-ride__rail-zoom .og-map__zoom {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--og-canvas);
+  color: var(--og-deep-spruce);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  cursor: pointer;
+}
+
+.og-ride__rail-zoom .og-map__zoom svg {
+  width: 26px;
+  height: 26px;
+}
+
+.og-ride__rail-zoom .og-map__zoom:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 3px;
+}
+
+/* At a limit the half dims and stops taking presses; it stays focusable, so a
+   keyboard rider is told "this is as far as it goes" instead of losing the
+   control. Nothing here animates, so there is no motion to switch off. */
+.og-ride__rail-zoom .og-map__zoom[data-disabled="true"] {
+  color: var(--og-slate-text);
+  cursor: default;
+  opacity: 0.55;
+}

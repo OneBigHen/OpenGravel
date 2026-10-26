@@ -22,18 +22,19 @@
  *   five-character reading still fits its slot at 320 px.
  * - **Everything else lives in the sheet**: Pause, Fuel ahead, reroutes, the
  *   map's places and layers controls, GPS details, progress, Stop, and the way
- *   back to the planner. Nothing was dropped; it is hidden until asked for. The
- *   sheet closes by itself after 8 s, and stays open while the ride is paused,
- *   ended, or asking whether to stop.
+ *   back to the planner. Nothing was dropped; it is hidden until asked for. An
+ *   idle sheet closes by itself after 8 s; it never closes under a result list,
+ *   a stop question or a picker, and stays open while the ride is paused or
+ *   ended.
  * - **Only when needed**: the speed bubble (when the device reports a speed
  *   and no readout already shows it),
  *   Re-center (after the rider pans away; it also snaps back by itself), the
  *   "Head to the start" question (DV-07), and one alert chip.
  * - **The map rail is glove-sized and is the one control column**: a compass
  *   that swaps heading-up for north-up, a two-halves zoom pill (pinch is
- *   unreliable in a glove), the whole route, the voice, and End ride. Every
- *   target is 56 px with 12 px between them, and the zoom halves sit side by
- *   side so the column still clears the maneuver card on a 640 px phone.
+ *   unreliable in a glove), the whole route and the voice. Every target is
+ *   56 px with 12 px between them, and the zoom halves sit side by side so the
+ *   column still clears the maneuver card on a 640 px phone.
  * - **Night means night.** The chrome is already dark; the map follows it, with
  *   the dark basemap where the deployment has one and a dark scrim where it does
  *   not. On Auto the screen also follows the sun at the rider's own coordinate,
@@ -64,6 +65,13 @@ import { buildRideScene } from "@/application/map/build-ride-scene";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import { computeInsets, toRect, type MapInsets } from "@/application/map/insets";
 import { formatDistance } from "@/application/planner/measurements";
+import {
+  buildPlannedTrackGpx,
+  downloadExport,
+  exportFilename,
+  rideExportTitle,
+} from "@/application/export/gpx-export";
+import { MapZoomControls } from "@/ui/map/MapControls";
 import { RideOfferCard } from "@/ui/ride/RideOfferCard";
 import { RideRouteSketch } from "@/ui/ride/RideRouteSketch";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
@@ -105,6 +113,8 @@ import type { RideSafety } from "@/application/safety/ride-safety";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
 import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
 import type { StoreApi } from "zustand/vanilla";
+
+import "./ride-rail.css";
 
 export interface RideFocusProps {
   readonly store: StoreApi<RideFocusStore>;
@@ -324,6 +334,10 @@ export function RideFocus({
   const [insetsReady, setInsetsReady] = useState(false);
   /** The rider opened the sheet (DV-10); some states hold it open by themselves. */
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** "Add a stop" is showing its list or its picker, so the sheet must wait. */
+  const [stopFinderHold, setStopFinderHold] = useState(false);
+  /** The finish card's GPX download failed, said in the card rather than swallowed. */
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // iPad/iPhone Safari keeps the on-screen keyboard (and a shrunken viewport)
   // alive when the planner's text box was focused as the ride opened, which left
@@ -439,13 +453,18 @@ export function RideFocus({
   const summaryExtra = summaryStats.filter((stat) => !SUMMARY_HEADLINE_IDS.includes(stat.id));
   /**
    * States that keep the sheet open whatever the rider did: a ride that ended,
-   * the stop question, a pause (the rider is stopped and wants Resume), and a
-   * recording that could not be saved.
+   * the stop question, a pause (the rider is stopped and wants Resume), a
+   * recording that could not be saved, a list or a picker the rider is choosing
+   * from — a rider reading station names must not lose the list mid-decision.
+   * (The readout picker is never behind the sheet: it takes the sheet's place,
+   * so no auto-close is running while it shows.)
    */
   const sheetHeld =
     terminal !== null ||
     stopConfirm ||
     navigation?.activity === "paused" ||
+    stopFinderHold ||
+    choosingLoop ||
     (recordingHud?.saveWarningText ?? null) !== null;
   const sheetVisible = sheetOpen || sheetHeld;
 
@@ -468,6 +487,8 @@ export function RideFocus({
     if (sheetHeld) touchedInHold.current = true;
     if (sheetOpen) setTouchedAt(Date.now());
   };
+  /** Stable, so the detour block reports its own state without re-rendering loops. */
+  const holdSheetForStopFinder = useCallback((held: boolean): void => setStopFinderHold(held), []);
 
   // The sheet closes itself once the rider stops touching it (DV-10): a mounted
   // phone must fall back to the map without a second tap.
@@ -578,9 +599,30 @@ export function RideFocus({
   }, []);
   /*
     The rail's own zoom and compass. They go through the same `MapHost` port as
-    the planner's column: one press is one host call, and the store remembers the
+    the planner's column: one press is one step, and the store remembers the
     level so the follow camera does not put the speed zoom straight back.
   */
+  /**
+   * One press, one step. While the map is following, the ride camera is its one
+   * owner: the press holds the level in the store and the follow frame is issued
+   * at it, so a gloved rider keeps following the road after zooming. A map the
+   * rider has panned has no follow frame to re-issue, so the press goes to the
+   * renderer through the same `zoomBy` call the planner's column uses.
+   */
+  const pressZoom = useCallback((delta: 1 | -1): void => {
+    const current = camera;
+    if (current === null) {
+      hostRef.current?.zoomBy?.(delta);
+      return;
+    }
+    const next = Math.min(current.maxZoom, Math.max(current.minZoom, current.zoom + delta));
+    if (next === current.zoom) return;
+    if (follow) {
+      store.getState().zoomTo(next);
+      return;
+    }
+    hostRef.current?.zoomBy?.(delta);
+  }, [camera, follow, store]);
   /** The compass shows while the map is turned, or north-up (so it can turn back). */
   const compassShown = northUp || (camera !== null && Math.abs(((camera.bearing + 540) % 360) - 180) > 1.5);
   const mapProps = {
@@ -734,6 +776,29 @@ export function RideFocus({
     if (sheetHeld) return;
     if (sheetOpen) setSheetOpen(false);
     else openSheet();
+  };
+  /**
+   * The finish card's one export: the line this ride was ridden on, as a GPX
+   * track a device can open. The surface holds the line and nothing else about
+   * the ride's storage, so that is what it exports — and it says so if the file
+   * cannot be made rather than leaving a dead button.
+   */
+  const exportRideGpx = (): void => {
+    if (availableRouteLine.length < 2) return;
+    try {
+      const title = rideExportTitle(null);
+      downloadExport(
+        new TextEncoder().encode(buildPlannedTrackGpx({
+          title,
+          geometry: availableRouteLine,
+          createdTime: navigation?.endedAt ?? null,
+        })),
+        exportFilename(title, "planned-track"),
+      );
+      setExportError(null);
+    } catch {
+      setExportError("Could not make the GPX file. The ride is unaffected.");
+    }
   };
 
   /*
@@ -1100,10 +1165,10 @@ export function RideFocus({
         )}
         <div className="og-ride__float-end">
           {/*
-            One right-hand column, three buttons at most: the compass (only
-            while the map is turned, or north-up so it can be turned back), the
-            whole route or Re-center, and the voice. There is no + / -: the map
-            zooms by pinch, and the end of the ride lives in the sheet.
+            One right-hand column: the compass (only while the map is turned, or
+            north-up so it can be turned back), a two-halves zoom pill, the whole
+            route or Re-center, and the voice. Pinch alone is unreliable in a
+            glove, so zoom gets two 56 px halves of its own.
           */}
           {terminal !== null ? null : (
             <div className="og-ride__rail" role="group" aria-label="Map and voice">
@@ -1132,6 +1197,15 @@ export function RideFocus({
                   </svg>
                 </button>
               )}
+              <div className="og-ride__rail-zoom" role="group" aria-label="Zoom" data-testid="ride-zoom">
+                <MapZoomControls
+                  zoom={camera?.zoom ?? 0}
+                  minZoom={camera?.minZoom ?? Number.NEGATIVE_INFINITY}
+                  maxZoom={camera?.maxZoom ?? Number.POSITIVE_INFINITY}
+                  onZoomIn={(): void => pressZoom(1)}
+                  onZoomOut={(): void => pressZoom(-1)}
+                />
+              </div>
               {recenterShown ? (
                 <button
                   type="button"
@@ -1227,35 +1301,48 @@ export function RideFocus({
                 ))}
               </p>
             )}
-            {/* One obvious next action, and the way back to the planner. My
-                rides has something to open only once the recording landed
-                there, so the link exists only when it does. */}
+            {/* One obvious next action, and the two ways on: My rides always,
+                because the library is where a finished ride lives; Export GPX
+                only when this surface holds a line worth exporting. */}
             <div className="og-ride__actions og-ride__terminal-actions">
-              {terminal.reason !== "completed" || (navigation?.recordingId == null && savedSummaryRideId === null) ? null : (
-                <Link
-                  className="og-ride__action og-ride__action--primary"
-                  data-testid="ride-summary-rides"
-                  href="/rides"
+              <Link
+                className="og-ride__action og-ride__action--primary"
+                data-testid="ride-summary-rides"
+                href="/rides"
+              >
+                My rides
+              </Link>
+              {terminal.reason !== "completed" || availableRouteLine.length < 2 ? null : (
+                <button
+                  type="button"
+                  className="og-ride__action"
+                  data-testid="ride-summary-export"
+                  onClick={exportRideGpx}
                 >
-                  View in My rides
-                </Link>
+                  Export GPX
+                </button>
               )}
               <a className="og-ride__action og-ride__action--link" data-testid="ride-exit" href={exitHref}>
                 Back to the planner
               </a>
             </div>
+            {exportError === null ? null : (
+              <p className="og-ride__error" role="alert" data-testid="ride-summary-export-error">
+                {exportError}
+              </p>
+            )}
           </div>
         )}
 
         {spotifyPlayer === undefined ? null : <RideMusicEntry player={spotifyPlayer} placement="sheet" />}
 
         {/*
-          `Stop ride` is two steps (8 §11): Finish / Discard / Keep riding, in
+          `End ride` is two steps (8 §11): Save / Discard / Keep riding, in
           place. A single mis-tap at speed must not end an unsaved ride.
         */}
         {terminal !== null || !stopConfirm ? null : (
           <div className="og-ride__confirm" data-testid="ride-stop-confirm">
-            <p className="og-ride__confirm-text">Finish this ride?</p>
+            <p className="og-ride__confirm-text">End this ride?</p>
             <div className="og-ride__actions">
               {/*
                 The one obvious action, on its own row: saving is what keeps
@@ -1276,7 +1363,7 @@ export function RideFocus({
                 {navigation?.recordingId == null
                   ? canSaveFreeRideSummary
                     ? "Save summary"
-                    : "Finish ride"
+                    : "End ride"
                   : "Save ride"}
               </button>
               <button
@@ -1289,7 +1376,7 @@ export function RideFocus({
                   void store.getState().discard();
                 }}
               >
-                Discard ride
+                Discard
               </button>
               <button
                 type="button"
@@ -1299,6 +1386,8 @@ export function RideFocus({
               >
                 Keep riding
               </button>
+              {/* A summary that cannot be saved still lets the ride end, and
+                  says so in the same word as everything else here. */}
               {navigation?.recordingId == null && canSaveFreeRideSummary ? (
                 <button
                   type="button"
@@ -1306,7 +1395,7 @@ export function RideFocus({
                   data-testid="ride-finish-without-saving"
                   onClick={(): void => { void store.getState().finish(false); }}
                 >
-                  Finish without saving
+                  End without saving
                 </button>
               ) : null}
             </div>
@@ -1328,9 +1417,9 @@ export function RideFocus({
         )}
 
         {/*
-          The two ways out, in plain words and kept apart: End ride finishes
-          (Save or Discard), Cancel route stops following the line but keeps
-          riding, and recording, as Free Ride.
+          The two ways out, in plain words and kept apart: "End ride" asks
+          whether to save, and "Stop following this route" drops the line but
+          keeps riding — and recording — as Free Ride.
         */}
         {terminal !== null || stopConfirm ? null : (
           <div className="og-ride__sheet-rows" role="group" aria-label="End or cancel">
@@ -1343,7 +1432,7 @@ export function RideFocus({
               onClick={(): void => store.getState().beginStop()}
             >
               <span className="og-ride__sheet-row-label">End ride</span>
-              <span className="og-ride__sheet-row-hint">Finish and see your ride</span>
+              <span className="og-ride__sheet-row-hint">Save it or let it go</span>
             </button>
             {navigation?.activity !== "guided" ? null : (
               <button
@@ -1352,8 +1441,8 @@ export function RideFocus({
                 data-testid="continue-free-ride"
                 onClick={(): void => { void store.getState().continueFreeRide(); }}
               >
-                <span className="og-ride__sheet-row-label">Cancel route</span>
-                <span className="og-ride__sheet-row-hint">Keep riding as Free Ride</span>
+                <span className="og-ride__sheet-row-label">Stop following this route</span>
+                <span className="og-ride__sheet-row-hint">Keep recording</span>
               </button>
             )}
           </div>
@@ -1449,7 +1538,7 @@ export function RideFocus({
                 aria-pressed={suggestions === "on"}
                 onClick={(): void => { void store.getState().setSuggestions(suggestions !== "on"); }}
               >
-                <span className="og-ride__switch-row-label">Road suggestions</span>
+                <span className="og-ride__switch-row-label">Suggest roads nearby</span>
                 <span className="og-ride__switch" aria-hidden="true" data-on={suggestions === "on" ? "true" : "false"}>
                   <span className="og-ride__switch-knob" />
                 </span>
@@ -1612,6 +1701,8 @@ export function RideFocus({
             position={navigation.position.coordinate}
             fixGood={navigation.position.quality === "fresh-good"}
             source={mapLayersSource}
+            /* While its gas/food list is open the sheet must not time out. */
+            onHoldChange={holdSheetForStopFinder}
             onReroute={(detour): void => {
               void store.getState().reroute(detour);
             }}

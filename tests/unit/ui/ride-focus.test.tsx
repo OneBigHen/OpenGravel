@@ -710,7 +710,7 @@ describe("dark chrome and honest states", () => {
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
   });
 
-  it("passes enabled places into the ride map scene when a source is supplied", async () => {
+  it("starts with no places overlay on a ride, and draws one only when asked", async () => {
     const inExtent = vi.fn(async () => ({
       availability: "available" as const,
       places: [RIDE_FOCUS_PLACE],
@@ -737,13 +737,26 @@ describe("dark chrome and honest states", () => {
       await vi.advanceTimersByTimeAsync(350);
     });
 
+    // A ride is not a happy hour: the map opens on the line and the rider, and
+    // no venue pins are fetched or drawn until the rider asks for them.
+    const control = screen.getByTestId("places-control");
+    expect(within(control).getByRole("button", { name: /places/i })).toHaveAttribute("aria-pressed", "false");
+    expect(inExtent).not.toHaveBeenCalled();
+    expect(hosts.hosts[0]?.lastScene()?.places ?? []).toHaveLength(0);
+
+    act(() => {
+      fireEvent.click(within(control).getByRole("button", { name: /places/i }));
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(350);
+    });
+
     expect(inExtent).toHaveBeenCalledWith(
       expect.any(Object),
       { kinds: ["happy_hour"], window: "now" },
       expect.any(AbortSignal),
     );
     expect(hosts.hosts[0]?.lastScene()?.places?.map((place) => place.id)).toContain(RIDE_FOCUS_PLACE.id);
-    expect(screen.getByTestId("places-control")).toBeInTheDocument();
   });
 
   it("renders no places UI when a source is absent", async () => {
@@ -1047,7 +1060,7 @@ describe("the post-ride summary (08 §13)", () => {
     const rides = screen.getByTestId("ride-summary-rides");
     expect(rides).toHaveAttribute("href", "/rides");
     expect(rides).toHaveClass("og-ride__action");
-    expect(rides).toHaveTextContent("View in My rides");
+    expect(rides).toHaveTextContent("My rides");
     const exits = screen.getAllByTestId("ride-exit");
     expect(exits).toHaveLength(1);
     expect(exits[0]).toHaveClass("og-ride__action");
@@ -1075,20 +1088,61 @@ describe("the post-ride summary (08 §13)", () => {
     expect(screen.queryByTestId("ride-line-unavailable")).not.toBeInTheDocument();
   });
 
-  it("offers My rides only when the recording actually landed there", async () => {
-    // A guided ride finished without a recording: nothing is in My rides, so the
-    // card does not send the rider to an empty library.
+  it("always offers My rides, and offers GPX only when the ride has a line", async () => {
+    // A guided ride finished without a recording: My rides may hold nothing from
+    // it, but the library is still the one place a finished ride lives, so the
+    // card always offers it.
     await harness({ position: "fresh" });
     fireEvent.click(screen.getByTestId("ride-stop"));
     fireEvent.click(screen.getByTestId("ride-finish"));
     await waitFor(() => expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Ride finished"));
 
-    expect(screen.queryByTestId("ride-summary-rides")).not.toBeInTheDocument();
+    expect(screen.getByTestId("ride-summary-rides")).toHaveAttribute("href", "/rides");
     expect(screen.getAllByTestId("ride-exit")).toHaveLength(1);
-    // The route line is still there, so the shape of the ride is drawn; nothing
-    // is claimed about how much of it was covered.
+    // The route line is still there, so the shape of the ride is drawn and the
+    // line is what the export writes; nothing is claimed about how much of it
+    // was covered.
     expect(screen.getByTestId("ride-route-sketch")).toHaveAttribute("data-split", "unknown");
+    expect(screen.getByTestId("ride-summary-export")).toBeEnabled();
     expect(screen.queryByTestId("ride-summary")).not.toBeInTheDocument();
+  });
+
+  it("exports the finished ride's own line as a GPX track from the card", async () => {
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:ride-gpx");
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const anchors: HTMLAnchorElement[] = [];
+    const createElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const element = createElement(tag);
+      if (tag === "a") anchors.push(element as HTMLAnchorElement);
+      return element;
+    });
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    try {
+      await harness({ position: "fresh" });
+      fireEvent.click(screen.getByTestId("ride-stop"));
+      fireEvent.click(screen.getByTestId("ride-finish"));
+      await waitFor(() => expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Ride finished"));
+      expect(screen.queryByTestId("ride-summary-export-error")).toBeNull();
+
+      fireEvent.click(screen.getByTestId("ride-summary-export"));
+
+      expect(anchorClick).toHaveBeenCalledTimes(1);
+      // A download the browser understands: one GPX track of the line ridden,
+      // under the house name (this surface holds no rider-supplied title).
+      const download = anchors.find((anchor) => anchor.download !== "");
+      expect(download?.download).toMatch(/^opengravel-.+-planned-track\.gpx$/);
+      const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(blob.type).toBe("application/gpx+xml");
+      const xml = await blob.text();
+      expect(xml).toContain("<trk>");
+      expect(xml).toContain('lat="40.13" lon="-75.44"');
+      expect(xml).toContain("OpenGravel");
+    } finally {
+      delete (URL as unknown as Record<string, unknown>).createObjectURL;
+      delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+    }
   });
 
   it("draws the sketch in the ride's own tokens, at the size it was designed, with no motion", () => {
@@ -1379,15 +1433,67 @@ describe("camera (08 §2, DV-10)", () => {
     expect(store.getState().northUp).toBe(true);
   });
 
-  it("has no + / - zoom on touch: the map zooms by pinch", async () => {
-    await harness({ position: "fresh" });
-    expect(screen.queryByTestId("ride-zoom-in")).toBeNull();
-    expect(screen.queryByTestId("ride-zoom-out")).toBeNull();
-    // The planner map's own column (compass, + / -) is hidden on the ride screen.
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
-    const at = css.indexOf(".og-ride__map .og-map__cluster");
+  it("zooms in and out from two 56 px halves on the rail, and keeps following", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    await waitFor(() => expect(store.getState().follow).toBe(true));
+    const host = hosts.hosts[0];
+    act(() => {
+      host?.reportCamera({ bearing: 40, zoom: 16, minZoom: 0, maxZoom: 22, metersPerPixel: 9 });
+    });
+    const zoomIn = within(screen.getByTestId("ride-zoom")).getByTestId("map-zoom-in");
+    const zoomOut = within(screen.getByTestId("ride-zoom")).getByTestId("map-zoom-out");
+
+    fireEvent.click(zoomIn);
+    // One press, one step, kept as the follow camera's own level: a glove that
+    // zooms in does not stop the map following the road.
+    expect(store.getState().zoomHold?.zoom).toBe(17);
+    expect(store.getState().follow).toBe(true);
+    expect(host?.follows.at(-1)?.zoom).toBe(17);
+
+    act(() => {
+      host?.reportCamera({ bearing: 40, zoom: 17, minZoom: 0, maxZoom: 22, metersPerPixel: 4.5 });
+    });
+    fireEvent.click(zoomOut);
+    expect(store.getState().zoomHold?.zoom).toBe(16);
+    // The ride camera owns the map while following; the renderer is not asked to
+    // zoom a second time from under it.
+    expect(host?.zooms).toHaveLength(0);
+  });
+
+  it("zooms a map the rider has panned through the host's own zoom call", async () => {
+    const { store, hosts } = await harness({ position: "fresh" });
+    const host = hosts.hosts[0];
+    await waitFor(() => expect(store.getState().follow).toBe(true));
+    // The rider drags the map: the camera is theirs, so there is no follow frame
+    // to re-issue and the press goes to the renderer.
+    act(() => host?.emit({ type: "camera-changed" }));
+    expect(store.getState().follow).toBe(false);
+
+    fireEvent.click(within(screen.getByTestId("ride-zoom")).getByTestId("map-zoom-in"));
+    fireEvent.click(within(screen.getByTestId("ride-zoom")).getByTestId("map-zoom-out"));
+    expect(host?.zooms).toEqual([1, -1]);
+  });
+
+  it("wears the rail's paper discs at 56 px, and hides the planner's own column", () => {
+    const css = readFileSync(path.join(process.cwd(), "src", "ui", "ride", "ride-rail.css"), "utf8");
+    const rule = (selector: string): string => {
+      const start = css.indexOf(`${selector} {`);
+      expect(start).toBeGreaterThan(-1);
+      return css.slice(start, css.indexOf("}", start));
+    };
+    const half = rule(".og-ride__rail-zoom .og-map__zoom");
+    expect(half).toMatch(/width:\s*56px/);
+    expect(half).toMatch(/height:\s*56px/);
+    expect(half).toMatch(/background:\s*var\(--og-canvas\)/);
+    // Two halves, one pill, on every width: the column never grows a third row
+    // beside the maneuver card.
+    expect(rule(".og-ride__rail-zoom")).toMatch(/display:\s*flex/);
+    expect(css).not.toMatch(/(animation|transition):/);
+    // The planner map's own column (compass, + / -) stays hidden on the ride.
+    const globals = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
+    const at = globals.indexOf(".og-ride__map .og-map__cluster");
     expect(at).toBeGreaterThan(-1);
-    expect(css.slice(at, css.indexOf("}", at))).toMatch(/display:\s*none/);
+    expect(globals.slice(at, globals.indexOf("}", at))).toMatch(/display:\s*none/);
   });
 
   it("snaps back to following 10 s after the rider's last pan", async () => {
@@ -1500,7 +1606,7 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
     expect(screen.getByTestId("ride-metric-value-2").textContent).toMatch(/^\d{1,2}:\d{2}$/);
   });
 
-  it("End ride in the sheet goes to the finish question; Keep riding comes back", async () => {
+  it("End ride in the sheet asks once, with Save, Discard and Keep riding", async () => {
     const { store } = await harness({ position: "fresh" });
     fireEvent.click(screen.getByTestId("ride-menu"));
     const end = screen.getByTestId("ride-stop");
@@ -1508,29 +1614,33 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
     expect(end).toBeVisible();
     fireEvent.click(end);
     expect(store.getState().stopConfirm).toBe(true);
-    expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
-    expect(screen.getByTestId("ride-finish")).toBeInTheDocument();
+    // One word for ending, and three plain answers.
+    expect(screen.getByTestId("ride-stop-confirm")).toHaveTextContent("End this ride?");
+    expect(screen.getByTestId("ride-finish")).toHaveTextContent("End ride");
+    expect(screen.getByTestId("ride-discard")).toHaveTextContent("Discard");
+    expect(screen.getByTestId("ride-keep-riding")).toHaveTextContent("Keep riding");
+    expect(screen.queryByText(/finish/i)).toBeNull();
     fireEvent.click(screen.getByTestId("ride-keep-riding"));
     expect(store.getState().stopConfirm).toBe(false);
   });
 
-  it("Cancel route keeps riding as Free Ride on the same session", async () => {
+  it("stopping the route follows says so plainly, and keeps recording", async () => {
     const { store, controller } = await harness({ position: "fresh" });
     const sessionId = controller.snapshot()?.sessionId;
     fireEvent.click(screen.getByTestId("ride-menu"));
     const cancel = screen.getByTestId("continue-free-ride");
-    expect(cancel).toHaveTextContent("Cancel route");
-    expect(cancel).toHaveTextContent("Keep riding as Free Ride");
+    expect(cancel).toHaveTextContent("Stop following this route");
+    expect(cancel).toHaveTextContent("Keep recording");
     await act(async () => {
       fireEvent.click(cancel);
     });
     await waitFor(() => expect(store.getState().navigation?.activity).toBe("free"));
-    // Same session, nothing thrown away; there is no route left to cancel.
+    // Same session, nothing thrown away; there is no route left to stop following.
     expect(controller.snapshot()?.sessionId).toBe(sessionId);
     expect(screen.queryByTestId("continue-free-ride")).toBeNull();
   });
 
-  it("offers Cancel route only on a guided ride, never on Free Ride", async () => {
+  it("offers the route stop only on a guided ride, never on Free Ride", async () => {
     const { store } = await harness({ position: "fresh" });
     await act(async () => {
       await store.getState().continueFreeRide();
@@ -1553,6 +1663,107 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
     expect(title).toMatch(/font-size:\s*var\(--og-text-headline\)/);
     expect(title).toMatch(/font-weight:\s*700/);
     expect(rule('.og-ride__maneuver[data-kind="suspended"][data-compact="true"]')).toMatch(/min-height:\s*0/);
+  });
+});
+
+describe("the sheet waits for the rider (audit 8)", () => {
+  /** Gas along the route, so the "Add a stop" finder has a list to show. */
+  function stopLayers(): MapLayersSource {
+    return {
+      load: vi.fn(async () => ({ features: [], unavailable: [] })),
+      trafficTileUrl: null,
+      along: vi.fn(async () => ({
+        available: true,
+        stops: [{
+          feature: {
+            id: "osm:node/7",
+            layerId: "fuel" as const,
+            name: "Sunoco",
+            detail: null,
+            weight: null,
+            geometry: { type: "Point" as const, coordinates: [-75.42, 40.11] as const },
+          },
+          alongMeters: 2_600,
+          offMeters: 20,
+        }],
+      })),
+    };
+  }
+
+  async function stoppedAtAGasList(): Promise<void> {
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("ride-fuel-ahead"));
+      // The along-route answer lands on the next microtask.
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("ride-fuel-list")).toBeVisible();
+  }
+
+  it("holds the open sheet while a station list is showing, and closes an idle one after 8 s", async () => {
+    await harness({
+      position: "fresh",
+      mapLayersSource: stopLayers(),
+      reroutePlanner: { plan: vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const })) },
+    });
+    vi.useFakeTimers();
+    await stoppedAtAGasList();
+
+    // A rider reading four station names is not idle: 8 s later the sheet, and
+    // the list they were reading, are still there.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9_000);
+    });
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    expect(screen.getByTestId("ride-fuel-list")).toBeVisible();
+
+    // Closed by the rider, the sheet goes back to its own clock and closes.
+    fireEvent.click(screen.getByTestId("ride-add-stop"));
+    expect(screen.queryByTestId("ride-fuel-list")).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_100);
+    });
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+  });
+
+  it("holds the sheet while the loop-length picker is open", async () => {
+    const { store } = await harness({ position: "fresh" });
+    // A Free Ride: the loop picker lives in its sheet.
+    const base = store.getState().navigation!;
+    const navigation = { ...base, activity: "free" as const, plan: { ...base.plan, route: null } };
+    const viewModel = buildRideFocusViewModel({
+      navigation,
+      environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" },
+      suggestions: "on",
+      now: NOW,
+    });
+    act(() => store.setState({ navigation, viewModel }));
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    fireEvent.click(screen.getByTestId("free-ride-loop"));
+    expect(screen.getByTestId("free-ride-loop-lengths")).toBeVisible();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9_000);
+    });
+    // The rider was choosing a length, not idling: the picker is still there.
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    expect(screen.getByTestId("free-ride-loop-lengths")).toBeVisible();
+  });
+
+  it("holds the sheet while the stop question is open, however long it takes", async () => {
+    const { store } = await harness({ position: "fresh" });
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    fireEvent.click(screen.getByTestId("ride-stop"));
+    expect(store.getState().stopConfirm).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
   });
 });
 
@@ -1973,13 +2184,13 @@ describe("Free Ride recording controls", () => {
     expect(save).toHaveClass("og-ride__action--primary");
     fireEvent.click(save);
     expect(finish).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole("button", { name: "Finish without saving" }));
+    fireEvent.click(screen.getByRole("button", { name: "End without saving" }));
     expect(finish).toHaveBeenLastCalledWith(false);
     const navigation = { ...store.getState().navigation!, activity: "completed" as const, endedAt: NOW, endReason: "completed" as const };
     const viewModel = buildRideFocusViewModel({ navigation, environment: { locationPermission: "granted", wakeLock: "active", speech: "ready" }, now: NOW });
     act(() => store.setState({ navigation, viewModel, savedSummaryRideId: RIDE_ID }));
     expect(screen.getByText("Free Ride summary saved")).toBeVisible();
-    expect(screen.getByRole("link", { name: "View in My rides" })).toHaveAttribute("href", "/rides");
+    expect(screen.getByRole("link", { name: "My rides" })).toHaveAttribute("href", "/rides");
   });
 });
 
@@ -2042,16 +2253,22 @@ describe("the ride screen's number scale and controls (small-screen design syste
     }
   });
 
-  it("keeps one right-hand control column of at most three 56 px buttons, with no red X", async () => {
+  it("keeps one right-hand control column of 56 px targets, with no red X", async () => {
     const rail = rule(".og-ride__rail-button");
     expect(rail).toMatch(/width:\s*56px/);
     expect(rail).toMatch(/height:\s*56px/);
 
     await harness({ position: "fresh" });
     const column = screen.getByRole("group", { name: "Map and voice" });
+    // One column of controls: the ride's own round buttons plus the zoom pill,
+    // which is two 56 px halves reading as one control. Nothing else joins it.
     const buttons = within(column).getAllByRole("button");
-    expect(buttons.length).toBeLessThanOrEqual(3);
-    for (const button of buttons) expect(button).toHaveClass("og-ride__rail-button");
+    const railButtons = buttons.filter((button) => button.classList.contains("og-ride__rail-button"));
+    const zoomHalves = buttons.filter((button) => button.classList.contains("og-map__zoom"));
+    expect(railButtons.length).toBeLessThanOrEqual(3);
+    expect(zoomHalves).toHaveLength(2);
+    expect(railButtons.length + zoomHalves.length).toBe(buttons.length);
+    expect(within(column).getByRole("group", { name: "Zoom" })).toContainElement(zoomHalves[0]!);
     // The old unlabeled red X is gone; the end of the ride is a named row in the sheet.
     expect(screen.queryByTestId("ride-end")).toBeNull();
     expect(screen.queryByRole("button", { name: "End this ride" })).toBeNull();
