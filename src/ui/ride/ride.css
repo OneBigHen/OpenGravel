@@ -2914,3 +2914,35 @@
   border-top: 0;
   background: color-mix(in srgb, var(--og-primary) 72%, black);
 }
+
+/* The menu is up: the map's buttons step aside (Google hides them under its
+   panels), so nothing floats over the rider's choices. */
+.og-ride[data-sheet="open"] .og-ride__rail {
+  visibility: hidden;
+}
+
+/* A narrow phone: the ✕ and the Menu chevron shrink and Menu loses its word,
+   so three glove-size readouts still fit side by side. */
+@media (max-width: 360px) {
+  .og-ride__strip {
+    gap: 2px;
+    padding-inline: max(var(--og-space-2), var(--og-safe-left));
+  }
+
+  .og-ride__strip-stop {
+    width: var(--og-touch);
+    height: var(--og-touch);
+  }
+
+  .og-ride-metrics__toggle {
+    width: 40px;
+  }
+
+  .og-ride-metrics__toggle-label {
+    display: none;
+  }
+
+  .og-ride-metrics__unit {
+    font-size: var(--og-text-caption);
+  }
+}

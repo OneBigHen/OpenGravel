@@ -10,7 +10,7 @@
 
 .og-ride-fuel__line {
   margin: 0;
-  color: var(--og-surface);
+  color: var(--og-ink);
   font-size: var(--og-text-meta);
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -66,7 +66,7 @@
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-pill);
   background: var(--og-surface);
-  color: var(--og-surface);
+  color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-body);
   font-weight: 700;

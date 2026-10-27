@@ -254,10 +254,12 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     }).catch(() => undefined);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [place, rider, services, travelKey]);
-  // Nearest first, like Google: from the rider, or from the map's center.
-  const sortedResults = useMemo(() => (results?.places ?? [])
-    .map((entry) => ({ place: entry, miles: haversine(entry.coordinate, rider ?? bias) / 1609.344 }))
-    .sort((a, b) => a.miles - b.miles), [results, rider, bias]);
+  // Nearest first, like Google, when the rider's position is known; without
+  // it the search's own order (its relevance and distances) stands.
+  const sortedResults = useMemo(() => {
+    const rows = (results?.places ?? []).map((entry) => ({ place: entry, miles: haversine(entry.coordinate, rider ?? bias) / 1609.344 }));
+    return rider === null ? rows : rows.sort((a, b) => a.miles - b.miles);
+  }, [results, rider, bias]);
   const sheet = place === undefined ? results === null ? null : <section className="og-category-results" data-testid="category-results" aria-label={`${results.chip.label} nearby`}>
     <h2>{results.chip.label}</h2><button type="button" className="og-place-sheet__close" aria-label="Close results" onClick={close}>×</button>
     {results.status === "searching" ? <p role="status">Searching…</p> : results.status === "unavailable" ? <p role="status">{results.message}</p> : results.places.length === 0 ? <>
