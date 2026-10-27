@@ -40,7 +40,7 @@ import { startDistanceLabel } from "@/ui/explore/rider-distance";
 import { RouteCommunity } from "@/ui/explore/RouteCommunity";
 import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActions";
 import { RouteStory } from "@/ui/explore/RouteStory";
-import { routeFacts } from "@/ui/explore/route-facts";
+import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
 
 
@@ -279,6 +279,21 @@ function repeatsStory(summary: string, story: string | undefined): boolean {
   return head.length > 0 && words(story).startsWith(head);
 }
 
+/** A short instrument value; the complete source wording remains accessible. */
+function statOf(fact: RideFact): { label: string; value: string } {
+  switch (fact.key) {
+    case "distance": return { label: "Distance", value: fact.text };
+    case "time": return { label: "Time", value: fact.text.replace(/ h/g, "h").replace(/ min/g, "m") };
+    case "curvature": return { label: "Curves", value: fact.text.replace(/ of curves$/, "") };
+    case "surface": {
+      const gravel = fact.text.match(/([\d.,]+\s*(?:mi|km|%))\s+(?:of\s+)?gravel/i);
+      return gravel === null
+        ? { label: "Surface", value: fact.text.split(",")[0]!.replace(/^Mostly /i, "") }
+        : { label: "Gravel", value: gravel[1]! };
+    }
+  }
+}
+
 export function RouteDetail({
   entry,
   variants = [],
@@ -388,8 +403,8 @@ export function RouteDetail({
   const provenanceSource = provenanceSourceName(entry.provenance);
   const showHeaderMeta = startDistance !== null || provenanceSource !== "";
 
-  // The ride's one line of facts, in the order a rider asks them: how far it
-  // is, how long it takes, what is under the wheels, and how much of it turns.
+  // The instrument panel uses the same evidence-backed facts as the route
+  // summary; compact values retain the complete wording for screen readers.
   // A fact this route does not know is left out — an absence is not a value,
   // and the page does not print "unknown" four times under the name.
   const surfaceFact = entry.surfaceSummary !== undefined
@@ -456,33 +471,24 @@ export function RouteDetail({
   return (
     <main id="main" className="og-route-detail">
       <header className="og-route-detail__header">
-        {/* The way back is a target, not a pill: 48px, and it sits on the gutter
-            the words below align to. */}
-        <Link className="og-route-detail__back" href="/explore" scroll={!listKnowsPosition} aria-label="Back to Explore">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M15 5l-7 7 7 7" />
-          </svg>
-        </Link>
         <div className="og-route-detail__heading">
           <h1>{entry.name}</h1>
         </div>
-        {/* One line of numbers under the name, before the map: how far, how
-            long, what is under the wheels. It replaces a four-tile ledger that
-            pushed the ride itself down the page. Each figure is one unbreakable
-            unit, and an estimate's pace is its title rather than words that
-            could wrap away from the number. */}
         {rideFacts.length === 0 ? null : (
-          <p className="og-route-detail__facts" data-testid="route-facts">
-            {rideFacts.map((fact) => (
-              <span
-                key={fact.key}
-                className="og-route-detail__fact"
-                {...(fact.note === undefined ? {} : { title: fact.note })}
-              >
-                {fact.text}
-              </span>
-            ))}
-          </p>
+          <dl className="og-route-detail__facts" data-testid="route-facts">
+            {rideFacts.map((fact) => {
+              const stat = statOf(fact);
+              return (
+                <div key={fact.key} className="og-route-detail__stat" data-stat={fact.key}>
+                  <dt>{stat.label}</dt>
+                  <dd {...(fact.note === undefined ? {} : { title: fact.note })}>
+                    <span className="og-route-detail__stat-value" aria-hidden="true">{stat.value}</span>
+                    <span className="og-route-detail__fact og-visually-hidden">{fact.text}</span>
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
         )}
         {showHeaderMeta ? (
           <p className="og-route-detail__meta" data-testid="route-meta">
@@ -499,6 +505,14 @@ export function RouteDetail({
           decides with the map and the line, in that order. */}
       <div className="og-route-detail__body">
         <div className="og-route-detail__visual">
+        {/* Back floats above the map on phones, with a full-size touch target. */}
+        <Link className="og-route-detail__back" href="/explore" scroll={!listKnowsPosition} aria-label="Back to Explore">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
+        </Link>
+
+          <span className="og-route-detail__map-title" aria-hidden="true">{entry.name}</span>
       <section className="og-route-detail__map" aria-label="Map preview">
         {/* The route where it is: a live map to pan, else a map image. */}
         {map !== undefined ? (

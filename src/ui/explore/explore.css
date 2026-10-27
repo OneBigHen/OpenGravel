@@ -1,6 +1,5 @@
-/* Explore (small-screen-v2 §4): title + Ride/Things switch on one line, search
-   and filters on the next, one chip row, then rides. A ride card on a phone is
-   a 16:9 map, a title, and one meta line. Desktop: list left, sticky map right. */
+/* Explore v4: a compact glass header and grouped horizontal route rows.
+   Tablet and desktop keep the route list beside a sticky map. */
 
 .og-explore {
   display: flex;
@@ -28,13 +27,20 @@
   outline-offset: var(--og-focus-offset);
 }
 
-/* Header: title, and the Ride / Things switch. */
+/* The pseudo-element frosts the header without changing the viewport
+   containing block of the fixed filter sheet and its backdrop. */
 .og-explore__header {
+  position: relative;
+  display: grid;
+  gap: var(--og-space-2);
+  padding-top: var(--og-space-4);
+}
+
+.og-explore__heading-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--og-space-4);
-  padding-top: var(--og-space-5);
 }
 
 .og-explore__heading {
@@ -74,12 +80,16 @@
   gap: 2px;
   padding: 2px;
   border-radius: var(--og-radius-pill);
-  background: var(--og-surface-2);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass);
+  box-shadow: var(--og-glass-highlight);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-explore__lens > [role="tab"] {
   min-width: 80px;
-  min-height: 44px;
+  min-height: var(--og-touch);
   padding: 0 var(--og-space-4);
   border: 0;
   border-radius: var(--og-radius-pill);
@@ -113,9 +123,12 @@
   width: 100%;
   min-height: var(--og-touch);
   padding: 0 var(--og-space-4) 0 44px;
-  border: 0;
+  border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-control);
-  background: var(--og-surface-2);
+  background: var(--og-glass);
+  box-shadow: var(--og-glass-highlight);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-body);
@@ -162,9 +175,12 @@
   min-height: 40px;
   margin: 4px 0;
   padding: 0 var(--og-space-4);
-  border: 1px solid var(--og-line-strong);
+  border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
+  background: var(--og-glass);
+  box-shadow: var(--og-glass-highlight);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-meta);
@@ -234,7 +250,11 @@
   padding: var(--og-space-4);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-explore__controls[data-open="true"] > * {
@@ -259,7 +279,7 @@
 }
 
 .og-explore__sheet-reset {
-  min-height: 44px;
+  min-height: var(--og-touch);
   padding: 0 var(--og-space-2);
   border: 0;
   background: none;
@@ -292,7 +312,7 @@
   padding: 0 var(--og-space-3);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-control);
-  background-color: var(--og-bg);
+  background-color: var(--og-glass-well);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-body);
@@ -410,7 +430,7 @@
   gap: var(--og-space-2) var(--og-space-4);
   padding: var(--og-space-4) var(--og-space-5);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
   color: var(--og-ink);
 }
 
@@ -430,7 +450,7 @@
   overflow: hidden;
   padding: 0;
   border-radius: var(--og-radius-sheet);
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
 }
 
 .og-explore__empty-actions {
@@ -503,41 +523,60 @@
   list-style: none;
 }
 
+.og-explore__list:has(.og-explore-card--ride) {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
 .og-explore-card {
   min-width: 0;
 }
 
+.og-explore-card--ride + .og-explore-card--ride {
+  border-top: 1px solid var(--og-line);
+}
+
 .og-explore-card__link {
   display: grid;
-  gap: var(--og-space-2);
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--og-space-3);
+  min-height: 112px;
+  padding: var(--og-space-2);
   border-radius: var(--og-radius-card);
   color: inherit;
   text-decoration: none;
+  transition: background var(--og-dur-fast) var(--og-ease);
+}
+
+.og-explore-card__link:hover {
+  background: var(--og-glass-well);
 }
 
 .og-explore-card__link:focus-visible {
-  outline-offset: 2px;
+  outline-offset: calc(-1 * var(--og-focus-width));
 }
 
 .og-explore-card__preview {
   display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--og-radius-card);
-  background: var(--og-surface-2);
+  width: 96px;
+  height: 96px;
+  aspect-ratio: 1;
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
   object-fit: cover;
-  transition: box-shadow var(--og-dur-base) var(--og-ease);
-}
-
-.og-explore-card:hover .og-explore-card__preview {
-  box-shadow: var(--og-shadow-float);
 }
 
 .og-explore-card__body {
   display: grid;
-  align-content: start;
-  gap: 2px;
+  align-content: center;
+  gap: var(--og-space-1);
   min-width: 0;
 }
 
@@ -555,82 +594,63 @@
 }
 
 .og-explore-card__facts {
-  display: flex;
-  flex-wrap: wrap;
+  display: block;
   align-items: baseline;
   column-gap: var(--og-space-1);
   row-gap: var(--og-space-1);
+  min-width: 0;
+  overflow: hidden;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 500;
   line-height: 1.5;
-}
-
-.og-explore-card__fact {
-  min-width: 0;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
 }
 
-.og-explore-card__fact:not(:last-child)::after {
-  content: "·";
-  margin-left: var(--og-space-1);
-}
-
-.og-explore-card__topline {
-  display: flex;
-  align-items: center;
-  gap: var(--og-space-2);
-  min-width: 0;
-}
-
-.og-explore-card__topline:not(:has(.og-explore-card__source:not([data-source="catalog"]))) {
-  display: none;
+.og-explore-card__facts > :not(:first-child)::before {
+  content: " · ";
 }
 
 .og-explore-card__source,
-.og-explore-card__distance,
-.og-explore-card__region,
-.og-explore-card__why,
-.og-explore-card__evidence {
+.og-explore-card__byline,
+.og-explore-card__versions {
   color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
 }
 
-.og-explore-card__source {
-  font-size: var(--og-text-caption);
-  font-weight: 600;
-}
-
-.og-explore-card__source[data-source="catalog"] {
+.og-explore-card__credit:has(.og-explore-card__byline) > .og-explore-card__source[data-source="catalog"] {
   display: none;
 }
 
-.og-explore-card__region {
+.og-explore-card__credit {
+  display: block;
+  min-width: 0;
   overflow: hidden;
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+  line-height: 1.5;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.og-explore-card__credit {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: var(--og-space-2);
-  margin-top: var(--og-space-1);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-  font-weight: 600;
-  line-height: 1.5;
+.og-explore-card__credit > :not(:first-child)::before {
+  content: " · ";
 }
 
-.og-explore-card__credit:not(:has(.og-explore-card__byline, .og-explore-card__versions)):has(> .og-explore-card__source[data-source="catalog"]) {
-  display: none;
+.og-explore-card__credit > .og-explore-card__source[data-source="catalog"] + .og-explore-card__byline::before {
+  content: none;
 }
 
-.og-explore-card__byline,
-.og-explore-card__versions {
-  overflow-wrap: anywhere;
+.og-explore-card__credit:has([data-testid="explore-card-away"]) > .og-explore-card__byline::before {
+  content: " · ";
+}
+
+/* "8 mi away · From PA Adventure Bike Rides": the distance always gets its dot. */
+.og-explore-card__credit > [data-testid="explore-card-away"] + *::before {
+  content: " · ";
 }
 
 /* The map beside the list. */
@@ -665,7 +685,7 @@
 .og-explore-map__tools span {
   padding: var(--og-space-2);
   border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
   font-size: var(--og-text-meta);
   box-shadow: var(--og-shadow-float);
 }
@@ -687,7 +707,7 @@
   padding: 0;
   border: 0;
   border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
   color: var(--og-ink);
   box-shadow: var(--og-shadow-float);
   cursor: pointer;
@@ -701,7 +721,7 @@
   flex-direction: column;
   gap: var(--og-space-3);
   padding: max(var(--og-space-4), var(--og-safe-top)) max(var(--og-space-4), var(--og-safe-right)) max(var(--og-space-4), var(--og-safe-bottom)) max(var(--og-space-4), var(--og-safe-left));
-  background: var(--og-bg);
+  background: var(--og-glass-dense);
 }
 
 .og-explore-map-dialog > header {
@@ -731,11 +751,31 @@
 .og-route-detail__map .og-explore-map {
   position: relative;
   height: clamp(260px, 40vh, 520px);
-  border-radius: 0;
+  border-radius: inherit;
 }
 
 /* Tablet and up: the toolbar is one card; filters open as a popover. */
 @media (min-width: 761px) {
+  .og-explore__split {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    grid-template-areas: "list map" "attribution map";
+    align-items: start;
+  }
+
+  .og-explore__split > .og-explore-map-panel {
+    position: sticky;
+    top: calc(64px + var(--og-space-4));
+  }
+
+  .og-explore__split .og-explore-map {
+    height: calc(100dvh - 280px);
+    min-height: 380px;
+  }
+
+  .og-explore__split > .og-explore__attribution {
+    grid-area: attribution;
+  }
+
   .og-explore__toolbar {
     position: relative;
     z-index: var(--og-z-float);
@@ -781,6 +821,14 @@
 
 /* Desktop: search and chips on one line; list left, sticky map right. */
 @media (min-width: 1181px) {
+  .og-explore__list:has(.og-explore-card--ride) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .og-explore__split .og-explore__list:has(.og-explore-card--ride) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .og-explore__toolbar {
     grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
     align-items: center;
@@ -788,7 +836,7 @@
 
   .og-explore__split {
     grid-template-columns: minmax(0, 1fr) minmax(420px, 44%);
-    grid-template-areas: "list map";
+    grid-template-areas: "list map" "attribution map";
     align-items: start;
   }
 
@@ -809,8 +857,34 @@
     width: calc(100% - 2 * var(--og-space-4));
   }
 
-  .og-explore__header {
-    padding-top: calc(var(--og-safe-top) + var(--og-space-3));
+  .og-explore > .og-explore__header {
+    position: sticky;
+    top: 0;
+    z-index: var(--og-z-float);
+    width: 100%;
+    padding: calc(var(--og-safe-top) + var(--og-space-2)) var(--og-space-4) var(--og-space-2);
+  }
+
+  .og-explore__header::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-bottom: 1px solid var(--og-glass-edge);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    pointer-events: none;
+  }
+
+  .og-explore__toolbar {
+    gap: var(--og-space-2);
+  }
+
+  .og-explore__lens > [role="tab"] {
+    min-width: 64px;
+    padding-inline: var(--og-space-3);
   }
 
   .og-explore__intro,
@@ -840,7 +914,7 @@
     z-index: 1;
     margin: 0 calc(-1 * var(--og-space-4));
     padding: var(--og-space-5) var(--og-space-4) var(--og-space-2);
-    background: var(--og-surface);
+    background: var(--og-glass-dense);
   }
 
   .og-explore__sheet-head::before {
@@ -891,12 +965,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .og-explore-card__preview {
+  .og-explore-card__link {
     transition: none;
   }
 
   .og-explore__controls[data-open="true"],
   .og-explore__toolbar > .og-explore__backdrop {
     animation: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .og-explore-card__link {
+    grid-template-columns: 80px minmax(0, 1fr);
+    min-height: 104px;
+  }
+
+  .og-explore-card__preview {
+    width: 80px;
+    height: 80px;
   }
 }

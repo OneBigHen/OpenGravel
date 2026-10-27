@@ -70,22 +70,23 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     throw new Error("the sheet and its status line must both be measurable");
   }
 
-  // The tab bar is docked to the bottom edge (small-screen design system v2
-  // §2): full width, flush with the bottom, 56px tall, a solid paper surface
-  // with a top hairline rather than a frosted capsule floating over the map.
-  // The sheet is a card resting 6px above it. The status line is *inside* the
-  // sheet — the defect the owner review flagged was a status chip floating over
-  // the map. On the idle sheet it is announced but not drawn (Trail Glass).
+  // The tab bar is a floating glass pill (DESIGN.md §2, v4): inset from the
+  // edges and the bottom, 60px tall, and the sheet floats 8px above it. The
+  // status line is *inside* the sheet — the defect the owner review flagged
+  // was a status chip floating over the map. On the idle sheet it is announced
+  // but not drawn (Trail Glass).
   const tabBar = await page.getByTestId("primary-nav").boundingBox();
   if (tabBar === null) throw new Error("the tab bar has no measured box");
   const barGap = PHONE.height - (tabBar.y + tabBar.height);
-  expect(barGap).toBeGreaterThanOrEqual(0);
-  expect(barGap).toBeLessThanOrEqual(1);
-  expect(tabBar.x).toBeLessThanOrEqual(1);
-  expect(tabBar.width).toBeGreaterThanOrEqual(PHONE.width - 1);
-  expect(tabBar.height).toBeGreaterThanOrEqual(55);
-  expect(tabBar.height).toBeLessThanOrEqual(57);
-  expect(Math.abs(tabBar.y - (sheetBox.y + sheetBox.height))).toBeLessThanOrEqual(1);
+  expect(barGap).toBeGreaterThanOrEqual(6);
+  expect(barGap).toBeLessThanOrEqual(10);
+  expect(tabBar.x).toBeGreaterThanOrEqual(6);
+  expect(tabBar.x + tabBar.width).toBeLessThanOrEqual(PHONE.width - 6);
+  expect(tabBar.height).toBeGreaterThanOrEqual(59);
+  expect(tabBar.height).toBeLessThanOrEqual(62);
+  const sheetToBar = tabBar.y - (sheetBox.y + sheetBox.height);
+  expect(sheetToBar).toBeGreaterThanOrEqual(6);
+  expect(sheetToBar).toBeLessThanOrEqual(10);
   const barStyle = await page.getByTestId("primary-nav").evaluate((element) => {
     const style = getComputedStyle(element);
     return {
@@ -95,19 +96,19 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
       borderTopLeftRadius: style.borderTopLeftRadius,
     };
   });
-  // Glass over the map (DESIGN.md §2, v3.1): a blurred, mostly opaque surface,
+  // Glass over the map (DESIGN.md §2, v4): a blurred, mostly opaque surface,
   // so the map reads through the bar and its labels stay legible.
   expect(barStyle.background).toMatch(/^(rgb|color\()/);
   expect(barStyle.backdrop).toMatch(/blur/);
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
-  expect(Number.parseFloat(barStyle.borderTopLeftRadius)).toBe(0);
+  expect(Number.parseFloat(barStyle.borderTopLeftRadius)).toBeGreaterThanOrEqual(20);
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
 
-  // A sheet, not an inline panel: rounded corners, padding, an opaque surface
-  // so map labels never show through the text (UX rework 2, #5), and the one
-  // sheet shadow that lifts it off the map (DESIGN.md §4, design v3).
+  // A sheet, not an inline panel: rounded corners, padding, a dense blurred
+  // glass surface so map labels never compete with the text (UX rework 2, #5),
+  // and the glass shadow that lifts it off the map (DESIGN.md §2, v4).
   const sheetStyle = await sheet.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
@@ -120,7 +121,7 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(Number.parseFloat(sheetStyle.radius)).toBeGreaterThanOrEqual(12);
   expect(sheetStyle.shadow).not.toBe("none");
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
-  expect(sheetStyle.background).toMatch(/^rgb\(/);
+  expect(sheetStyle.background).toMatch(/^(rgb|color\()/);
 
   // The determinism claim of the compact gate: no tiles are requested.
   await expect(plannerMap(page)).toHaveAttribute("data-basemap", "empty");
@@ -135,7 +136,9 @@ test("the shared sheet has peek, half and full detents", async ({ page }) => {
   await expect(sheet).toHaveAttribute("data-detent", "half");
   await expect(handle).toHaveAttribute("aria-expanded", "true");
   const half = await sheet.boundingBox();
-  expect(half!.y).toBeGreaterThanOrEqual(PHONE.height * .5);
+  // Half is half the screen above the tab bar; the floating sheet's 8px gap
+  // lifts its top edge by the same 8px.
+  expect(half!.y).toBeGreaterThanOrEqual(PHONE.height * .5 - 10);
   await placeEndpoint(page, "start", START_COORDINATE);
   await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);
@@ -178,9 +181,9 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   // Minified by the production build, so the rule is asserted without the space
   // the stylesheet source has.
   // tokens.css derives the safe-area token from `env(safe-area-inset-bottom)`;
-  // the docked tab bar under the sheet is what reserves it (design v3).
+  // the floating tab bar's bottom gap is what reserves it (design v4).
   expect(css).toContain("--og-safe-bottom:env(safe-area-inset-bottom,0px)");
-  expect(css).toContain("calc(56px + var(--og-safe-bottom))");
+  expect(css).toMatch(/--og-tabbar-gap:max\(var\(--og-space-2\),\s*calc\(var\(--og-safe-bottom\) - 14px\)\)/);
 
   // 12 §10: every planning control is at least 44×44 CSS px.
   // On the idle sheet "Create ride" waits for a destination; the quick starts
