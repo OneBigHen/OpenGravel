@@ -136,9 +136,7 @@ test("the shared sheet has peek, half and full detents", async ({ page }) => {
   await expect(sheet).toHaveAttribute("data-detent", "half");
   await expect(handle).toHaveAttribute("aria-expanded", "true");
   const half = await sheet.boundingBox();
-  // Half is half the screen above the tab bar; the floating sheet's 8px gap
-  // lifts its top edge by the same 8px.
-  expect(half!.y).toBeGreaterThanOrEqual(PHONE.height * .5 - 10);
+  expect(half!.y).toBeGreaterThanOrEqual(PHONE.height * .5);
   await placeEndpoint(page, "start", START_COORDINATE);
   await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
   await pressPlan(page);

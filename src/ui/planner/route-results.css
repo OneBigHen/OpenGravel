@@ -446,6 +446,18 @@
   transform: translateX(-50%);
 }
 
+/* A marker at either end of the chart stays inside it instead of hanging
+   half over the sheet's edge. */
+.og-elevation__waypoint[data-edge="start"] {
+  align-items: flex-start;
+  transform: none;
+}
+
+.og-elevation__waypoint[data-edge="end"] {
+  align-items: flex-end;
+  transform: translateX(-100%);
+}
+
 .og-elevation__waypoint-bar {
   width: 2px;
   height: 8px;

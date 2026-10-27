@@ -236,9 +236,10 @@
    -------------------------------------------------------------------------- */
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-planner {
-    /* Full keeps a 160px strip of map, so the place or ride stays in view. */
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 160px);
-    --og-sheet-half: calc(50dvh - var(--og-tabbar-h));
+    /* Full keeps a 160px strip of map, so the place or ride stays in view; the
+       8px the floating sheet sits above the tab bar comes out of the sheet. */
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 160px);
+    --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-2));
   }
 
   /* The sheet floats like the tab bar: inset from the edges, glass, every
@@ -602,7 +603,24 @@
   }
 
   .og-planner {
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 200px);
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 200px);
+  }
+}
+
+/* Short phones (iPhone SE): the sheet floats 4px above the tab bar and keeps
+   8px under its last row, so a planned ride still fits in the map above it. */
+@media (max-width: 760px) and (min-height: 501px) and (max-height: 700px) {
+  .og-planner .og-planner__dock {
+    bottom: calc(var(--og-tabbar-h) + var(--og-space-1));
+  }
+
+  .og-planner .og-planner__sheet {
+    padding-bottom: var(--og-space-2);
+  }
+
+  .og-planner {
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-1) - var(--og-safe-top) - 160px);
+    --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-1));
   }
 }
 

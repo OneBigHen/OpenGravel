@@ -86,15 +86,23 @@
     outline: none;
   }
 
+  /* Suggestions drop below the category chips, so the chips stay reachable
+     while typing and never paint over the first result (the chips are their
+     own glass layer). 60px = the chip row: 4px margin, 4px padding, 40px chip,
+     4px padding, plus an 8px gap. */
   .og-top-search .og-place-search__list {
     position: absolute;
-    top: calc(100% + var(--og-space-2));
+    top: calc(100% + 60px);
     left: 0;
     right: 0;
     z-index: var(--og-z-overlay);
     max-height: 45dvh;
+    border: 1px solid var(--og-glass-edge);
     border-radius: var(--og-radius-card);
-    box-shadow: var(--og-shadow-float);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
   }
 
   .og-top-search .og-place-search__option {
@@ -212,8 +220,7 @@
     display: none;
   }
 
-  .og-planner:has([data-testid="route-options"]) .og-search-chips,
-  .og-top-search:has(.og-place-search__list:not([hidden])) .og-search-chips {
+  .og-planner:has([data-testid="route-options"]) .og-search-chips {
     display: none;
   }
 
@@ -254,5 +261,17 @@
   .og-layer-chips__switch,
   .og-layer-chips__switch::after {
     transition: none;
+  }
+}
+
+/* Short phones (iPhone SE): the bar sits 8px from the top and is 48px tall, so
+   the map between it and the sheet keeps room for a planned ride. */
+@media (max-width: 760px) and (min-height: 501px) and (max-height: 700px) {
+  .og-top-search {
+    top: calc(var(--og-safe-top) + var(--og-space-2));
+  }
+
+  .og-top-search__bar {
+    min-height: var(--og-touch);
   }
 }
