@@ -25,11 +25,12 @@ export function usePlannerVisibleSession(input: {
   const { document, snapshot, plannerUiStore } = input;
   const drawing = useStore(plannerUiStore, (state) => state.activeTool === "sketch");
   const generations = useStore(plannerUiStore, (state) => state.sketchPreviewGenerations);
+  const clearedRevision = useStore(plannerUiStore, (state) => state.clearedRevision);
   return useMemo(() => {
-    const session = visiblePlanningSession(document, snapshot, { generations, drawing });
+    const session = visiblePlanningSession(document, snapshot, { generations, drawing, clearedRevision });
     return {
       session,
       showingSketchPreview: isSketchPreviewBundle(session.committedBundle ?? session.lastGoodBundle, generations),
     };
-  }, [document, snapshot, generations, drawing]);
+  }, [document, snapshot, generations, drawing, clearedRevision]);
 }

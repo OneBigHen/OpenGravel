@@ -1191,6 +1191,17 @@ describe("visiblePlanningSession (UX audit PP-01)", () => {
     expect(visiblePlanningSession({ ...READY_DOCUMENT, revision: 6 }, answered)).toBe(answered);
   });
 
+  it("does not show a cleared ride's answer while the next ride is being found", () => {
+    // Bundles here answer revision 4; the clear produced 5 and a loop was asked for at 6.
+    const finding = session("routing-primary", { committedBundle: null, lastGoodBundle: bundle([BEST, FAST], BEST_ID), selectedRouteId: BEST_ID });
+    const next = { ...READY_DOCUMENT, revision: 6 };
+    const shown = visiblePlanningSession(next, finding, { generations: [], drawing: false, clearedRevision: 5 });
+    expect(shown.lastGoodBundle).toBeNull();
+    expect(shown.phase).toBe("routing-primary");
+    // An ordinary edit (no clear since that answer) keeps the old route on screen.
+    expect(visiblePlanningSession(next, finding, { generations: [], drawing: false, clearedRevision: 3 })).toBe(finding);
+  });
+
   it("shows a snap-as-you-go preview only while the pen is armed (OGV-D-285)", () => {
     const generation = answered.committedBundle?.planningGeneration ?? -1;
     const drawing = visiblePlanningSession(READY_DOCUMENT, answered, {

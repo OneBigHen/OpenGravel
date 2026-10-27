@@ -46,6 +46,8 @@ export interface PlannerWorkspaceFrameProps {
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
   readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly topSearch?: ReactNode;
+  /** The phone's From / To card, while a ride is on the map; it replaces the search. */
+  readonly trip?: ReactNode;
   readonly toast?: ReactNode;
   readonly children: ReactNode;
 }
@@ -76,6 +78,7 @@ export function PlannerWorkspaceFrame({
   editBar,
   children,
   topSearch,
+  trip = null,
   toast,
 }: PlannerWorkspaceFrameProps) {
   const hasDrawnRoute = map.scene.routes.some((route) => route.geometry.length >= 2);
@@ -85,6 +88,7 @@ export function PlannerWorkspaceFrame({
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
   useSnapBackAfterKeyboard();
+  const tripMode = trip !== null && compact;
   // The elevation profile's scrub point, drawn on the route (UX rework phase 3).
   const scrub = useRouteScrub();
   const scene = scrub === null ? map.scene : { ...map.scene, scrubMarker: scrub };
@@ -159,7 +163,7 @@ export function PlannerWorkspaceFrame({
     </>
   );
   return (
-    <main id="main" className="og-planner">
+    <main id="main" className="og-planner" data-trip={tripMode ? "true" : undefined}>
       <header className="og-planner__header" ref={headerRef}>
         <div className="og-planner__identity">
           <h1>OpenGravel</h1>
@@ -195,7 +199,7 @@ export function PlannerWorkspaceFrame({
             layers={layers}
             clusterControls={clusterControls}
           />
-          {topSearch}
+          {tripMode ? trip : topSearch}
           {glance}
           {editBar === undefined || desktop || (phone && compact) ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (

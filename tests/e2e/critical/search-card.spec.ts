@@ -26,10 +26,12 @@ test("chip → result → card → Directions → visible route → swap → Sta
   await expectDrawnScene(page, { routes: "2", points: "2" });
   const coordinates = connectedCoordinates();
   await expectAboveSheet(page, coordinates);
-  await expect(page.getByTestId("route-options-header")).toHaveText("My location → Wawa Gas");
-  await page.getByTestId("route-options-swap").click();
-  await expect(page.getByTestId("route-options-header")).toHaveText("Wawa Gas → My location");
-  await page.getByTestId("route-options-edit").click();
+  // The From / To card replaces the search while a route is open (Google's directions view).
+  await expect(page.getByTestId("top-search")).toHaveCount(0);
+  await expect(page.getByTestId("trip-card")).toContainText(/Your location[\s\S]*Wawa Gas/);
+  await page.getByTestId("trip-swap").click();
+  await expect(page.getByTestId("trip-card")).toContainText(/Wawa Gas[\s\S]*Your location/);
+  await page.getByTestId("trip-edit").click();
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
   await expect(page.getByTestId("start-value")).toHaveAttribute("data-coordinate", "40.8640, -75.7280");
   await expect(page.getByTestId("finish-value")).toHaveAttribute("data-coordinate", "40.8757, -75.7324");
@@ -105,7 +107,8 @@ export async function expectAboveSheet(page: Page, coordinates: readonly { lat: 
     const extent = await settledExtent(page);
     const map = await plannerMap(page).boundingBox();
     const sheet = await page.getByTestId("planner-sheet").boundingBox();
-    const top = await page.getByTestId("top-search").boundingBox();
+    // The search, or the From / To card that replaces it while a route is open.
+    const top = await page.getByTestId("top-search").or(page.getByTestId("trip-card")).boundingBox();
     if (map === null || sheet === null) return false;
     return coordinates.every((coordinate) => {
       const fraction = fractionOf(extent, coordinate);

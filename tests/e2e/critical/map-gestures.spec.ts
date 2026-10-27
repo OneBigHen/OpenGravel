@@ -88,7 +88,7 @@ async function mapBox(page: Page): Promise<{ readonly x: number; readonly y: num
   const box = await plannerMap(page).boundingBox();
   const sheet = await page.getByTestId("planner-sheet").boundingBox();
   if (box === null || sheet === null) throw new Error("the map and the sheet must be measurable");
-  const search = await page.getByTestId("top-search").boundingBox();
+  const search = await page.getByTestId("top-search").or(page.getByTestId("trip-card")).boundingBox();
   const top = Math.max(box.y + 140, (search?.y ?? 0) + (search?.height ?? 0) + 16);
   return { x: box.x + 16, y: top, width: box.width - 96, height: Math.max(80, sheet.y - top - 40) };
 }

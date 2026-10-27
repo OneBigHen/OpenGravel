@@ -462,6 +462,30 @@ export function IntentComposer({
 
       {rideStyle === undefined ? null : <RideStylePanel model={rideStyle} />}
 
+      {/* Google's home shortcuts: Home, starred places and recents, one tap
+          to a ride there. Only on the idle phone sheet, where the search is
+          the bar at the top. */}
+      {hideIdleSearch && placeSearch?.remembered !== undefined ? (() => {
+        const shortcuts = placeSearch.remembered("", 6);
+        return shortcuts.length === 0 ? null : (
+          <ul className="og-shortcuts" data-testid="home-shortcuts" aria-label="Your places">
+            {shortcuts.map(({ kind, place }) => (
+              <li key={`${kind}:${place.id}`}>
+                <button type="button" className="og-shortcuts__card" data-testid="home-shortcut" onClick={() => placeSearch.onPick("finish", place, place.name)}>
+                  <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={kind === "home" ? "M3 11 12 4l9 7M5 10v10h14V10" : kind === "saved" ? "m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2L3 9.6l6.2-.9z" : "M12 7v5l3 2M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9z"} />
+                  </svg>
+                  <span className="og-shortcuts__text">
+                    <span className="og-shortcuts__name">{kind === "home" ? "Home" : place.name}</span>
+                    <span className="og-shortcuts__where">{kind === "home" ? place.name : place.context.split(",")[0] || (kind === "saved" ? "Saved" : "Recent")}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        );
+      })() : null}
+
       {/* Trail Glass idle sheet: on a phone with nothing planned, the shape
           switch is hidden and this one tap starts a loop from here. */}
       {shapeModel === undefined || loop ? null : (

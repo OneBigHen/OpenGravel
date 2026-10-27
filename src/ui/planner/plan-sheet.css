@@ -110,13 +110,13 @@
     display: contents;
   }
 
-  .og-planner__sheet[data-idle="true"] .og-composer > :not(.og-composer__row, .og-composer__loop-quick, .og-advisor),
+  .og-planner__sheet[data-idle="true"] .og-composer > :not(.og-composer__row, .og-composer__loop-quick, .og-advisor, .og-shortcuts),
   .og-planner__sheet[data-idle="true"] .og-plan-actions > :not(.og-plan-actions__record-row, .og-planner__error),
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-refine, .og-phone-tools, .og-composer__row) {
     display: none;
   }
 
-  .og-planner__sheet[data-idle="true"] .og-composer > .og-advisor,
+  .og-planner__sheet[data-idle="true"] .og-composer > :is(.og-advisor, .og-shortcuts),
   .og-planner__sheet[data-idle="true"] .og-planner__error {
     grid-column: 1 / -1;
   }
@@ -143,7 +143,8 @@
     font-size: var(--og-text-meta);
     font-weight: 600;
     line-height: 1.2;
-    white-space: nowrap;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {

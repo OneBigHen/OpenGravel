@@ -22,6 +22,7 @@ import "@/ui/rides/rides.css";
 import "@/ui/ride/ride.css";
 import "@/ui/layers/layers.css";
 import "@/ui/places/places.css";
+import "@/ui/planner/gmaps-layout.css";
 import { version as appVersion } from "../../package.json";
 import { PA_NJ_ROUTE_POLICY_VNEXT_1 } from "@/domain/route/policy";
 import { resolveTelemetryConfig } from "@/infrastructure/telemetry/config";

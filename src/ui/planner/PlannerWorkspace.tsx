@@ -80,6 +80,7 @@ import {
 import {
   PlannerWorkspaceDock,
   PlannerWorkspaceFrame,
+  PlannerTripCard,
 } from "@/ui/planner/PlannerWorkspaceSurfaces";
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
@@ -734,8 +735,15 @@ export function PlannerWorkspace({
     planning, onRetry: handlePlan, plannerUiStore,
   });
 
+  const tripCard = viewModel.routeCards.length > 0 || planning ? (
+    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle}
+      onCancelPlanning={handleCancel} onClearRide={() => { placeFlow.closeOptions(); history.onClearRide(); }}
+      onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
+  ) : null;
+
   return (
     <PlannerWorkspaceFrame
+      trip={tripCard}
       document={document} libraryService={libraryService}
       headerRef={headerRef}
       mapSlotRef={mapSlotRef}
@@ -816,6 +824,7 @@ export function PlannerWorkspace({
           roadTap={roadTap}
           onToggleSheet={sheetActions.onToggleSheet}
           onStepSheet={sheetActions.onStepSheet}
+          onSnapSheet={(next) => plannerUiStore.getState().setSheetDetent(next === "full" ? "expanded" : next)}
           {...history}
           composer={{
             viewModel,

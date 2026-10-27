@@ -15,7 +15,7 @@ import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
 import { RouteOptions } from "./RouteOptions";
 import { rideStyleSummary } from "./RideStyleControls";
 import { useCompactPlanner, usePhonePlanner } from "./usePhonePlanner";
-import { PhoneRideSummary } from "./PhoneRideSummary";
+import { PhoneRideSummary, type PhoneRideQuickActions } from "./PhoneRideSummary";
 import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 
 // No route means there is no briefing or chart to draw. Keep their dependency
@@ -86,9 +86,11 @@ export interface PlannerResultPanelProps {
    * be a dead end.
    */
   readonly onExpandSheet?: () => void;
+  /** The phone summary's quick actions: ride options, share, add stops, save. */
+  readonly quick?: PhoneRideQuickActions;
 }
 
-export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick }: PlannerResultPanelProps) {
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
@@ -108,7 +110,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}/>;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} /> : null}
+      {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
       {choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (

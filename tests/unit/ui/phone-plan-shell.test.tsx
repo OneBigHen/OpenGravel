@@ -78,7 +78,9 @@ describe("PhoneRideSummary", () => {
   it("shows the headline, Start ride and a Compare rides count", () => {
     const onCompare = vi.fn();
     render(<PhoneRideSummary {...base} comparing={false} onCompare={onCompare} />);
-    expect(screen.getByRole("heading", { name: "53 min · 33 mi" })).toBeTruthy();
+    // Google's layout: the time is the headline, the distance sits beside it.
+    expect(screen.getByRole("heading", { name: "53 min" })).toBeTruthy();
+    expect(screen.getByTestId("phone-ride-summary")).toHaveTextContent("33 mi");
     fireEvent.click(screen.getByTestId("start-ride"));
     expect(start.onStart).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Compare rides (3)" }));

@@ -177,6 +177,8 @@ export interface RouteCardVm {
   readonly roleKey: RouteRole | "alternative";
   readonly roleLabel: string;
   readonly durationLabel: string;
+  /** The same duration in seconds, so the sheet can say when the ride gets back. */
+  readonly durationSeconds?: number;
   readonly distanceLabel: string;
   readonly addedTimeLabel: string | null;
   /**
@@ -740,6 +742,7 @@ function routeCards(
       roleKey: roleKeyFor(role, placeholderSelection),
       roleLabel: roleLabelFor(role, placeholderSelection),
       durationLabel: formatDuration(candidate.durationSeconds),
+      durationSeconds: candidate.durationSeconds,
       distanceLabel: formatDistance(candidate.distanceMeters),
       addedTimeLabel:
         reference === null
@@ -869,7 +872,7 @@ function hasRouteOnScreen(session: PlanningSessionSnapshot): boolean {
 export function visiblePlanningSession(
   document: RideDocument,
   session: PlanningSessionSnapshot,
-  sketchPreview: { readonly generations: readonly number[]; readonly drawing: boolean } = {
+  sketchPreview: { readonly generations: readonly number[]; readonly drawing: boolean; readonly clearedRevision?: number | null } = {
     generations: [],
     drawing: false,
   },
@@ -889,6 +892,13 @@ export function visiblePlanningSession(
     };
   }
   if (drawn === null || drawn.rideRevision === document.revision) return session;
+  // An answer from before a whole-ride clear describes the ride that was
+  // cleared, not the one now being found.
+  const cleared = sketchPreview.clearedRevision ?? null;
+  const fromClearedRide = cleared !== null && drawn.rideRevision < cleared && document.revision >= cleared;
+  if (fromClearedRide && (isPlanningInFlight(session.phase) || session.phase === "failed")) {
+    return { ...session, committedBundle: null, lastGoodBundle: null, selectedRouteId: null, error: null };
+  }
   if (isPlanningInFlight(session.phase)) return session;
   if (document.intent.sketch !== null || nextPlacementTarget(document) === null) return session;
   return {
