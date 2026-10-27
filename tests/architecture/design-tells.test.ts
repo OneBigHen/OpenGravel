@@ -31,11 +31,8 @@ function rulesFor(selector: string): string[] {
 /** A border on one side, 3px or thicker: the accent stripe shape. */
 const ACCENT_STRIPE = /border-(left|right|top|bottom):\s*(?:[3-9]|[1-9]\d)px/;
 
-/**
- * The only one-sided rules allowed are the route-colour markers: a planned
- * point's and a route card's left edge carry that route's own line colour.
- */
-const ROUTE_MARKERS = new Set([".og-point", ".og-route-card__button", ".og-refine .og-point"]);
+/** Design v3: no exceptions; a route card's colour is its swatch and tint. */
+const ROUTE_MARKERS = new Set<string>();
 
 describe("design tells — no accent stripe down the side of a card", () => {
   it("draws no accent stripe anywhere but on a route's own colour marker", () => {

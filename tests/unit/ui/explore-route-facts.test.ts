@@ -9,7 +9,6 @@
  * stylesheet only between facts, so it cannot be orphaned.
  */
 
-import { readFileSync } from "node:fs";
 import { cssRule } from "../../helpers/app-css";
 import { describe, expect, it } from "vitest";
 
@@ -103,11 +102,10 @@ describe("the route page's facts", () => {
   });
 
   it("is drawn with the separator inside the fact before it", () => {
-    const css = readFileSync("src/ui/explore/explore-rides.css", "utf8");
     // A fact never splits, so the trailing middot can never begin a line.
-    expect(css).toMatch(/\.og-route-detail__fact \{[^}]*white-space: nowrap/);
+    expect(cssRule(".og-route-detail__fact")).toMatch(/white-space: nowrap/);
     // The separator is the stylesheet's, and only between facts.
-    expect(css).toMatch(/\.og-route-detail__fact:not\(:last-child\)::after \{[^}]*content: "·"/);
+    expect(cssRule(".og-route-detail__fact:not(:last-child)::after")).toMatch(/content: "·"/);
   });
 });
 

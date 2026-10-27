@@ -330,7 +330,7 @@ describe("the composer's place fields cannot overlap", () => {
   };
 
   it("gives every row its own content-sized height with a gap between rows", () => {
-    expect(rule("\\.og-composer")).toMatch(/gap:\s*12px/);
+    expect(rule("\\.og-composer")).toMatch(/gap:\s*(12px|var\(--og-space-3\))/);
 
     const row = rule("\\.og-composer__row");
     expect(row).toContain("align-content: start");

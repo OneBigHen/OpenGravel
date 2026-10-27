@@ -43,7 +43,6 @@ import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
 
-import "./explore-rides.css";
 
 export interface RouteDetailProps {
   readonly entry: CatalogEntry;

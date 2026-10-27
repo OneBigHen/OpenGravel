@@ -284,8 +284,24 @@
   }
 
   /* The tool row keeps its own breathing room under the grab bar. */
-  .og-planner .og-planner__sheet .og-sheet__head > :not(.og-sheet__handle) {
+  .og-planner .og-planner__sheet .og-sheet__head > :not(.og-sheet__handle, .og-planner__status, .og-planner__save-indicator) {
     margin-bottom: var(--og-space-2);
+  }
+
+  /* Before there is a ride there is nothing to edit on the map. */
+  .og-planner .og-planner__sheet[data-has-ride="false"] .og-phone-edittools:has([data-testid="map-edit-open"]) {
+    display: none;
+  }
+
+  /* Keyboard focus rings the grab bar itself, not the whole strip. */
+  .og-planner .og-planner__sheet .og-sheet__handle:focus-visible {
+    outline: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle:focus-visible::before {
+    background: var(--og-focus-ring);
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: 3px;
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle {
@@ -364,8 +380,39 @@
     margin-left: auto;
   }
 
+  /* Undo after clearing: a quiet text action in the tool row. */
   .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__undo-clear {
-    margin-bottom: var(--og-space-2);
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 var(--og-space-3);
+    border: 0;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface-2);
+    color: var(--og-primary-text);
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+  }
+
+  /* The route's edit tools sit in the tool row, not over the map. */
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar {
+    position: static;
+    display: flex;
+    max-width: none;
+    transform: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar__row {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar__btn {
+    min-height: 40px;
+    background: var(--og-surface-2);
   }
 
   .og-planner .og-planner__sheet:is([data-directions="true"], [data-place="true"]) .og-sheet__head > :not(.og-sheet__handle) {
@@ -398,7 +445,7 @@
     display: none;
   }
 
-  .og-planner .og-planner__sheet[data-detent="peek"][data-has-ride="true"] .og-sheet__body > :not(.og-phone-summary) {
+  .og-planner .og-planner__sheet[data-detent="peek"][data-has-ride="true"]:not([data-directions="true"]) .og-sheet__body > :not(.og-phone-summary) {
     display: none;
   }
 

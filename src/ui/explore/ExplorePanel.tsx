@@ -17,7 +17,6 @@ import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 
-import "./explore-rides.css";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
 import { formatDistance } from "@/application/planner/measurements";

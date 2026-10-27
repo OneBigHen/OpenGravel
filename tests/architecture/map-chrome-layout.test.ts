@@ -113,7 +113,7 @@ describe("compact map chrome", () => {
 
     // The selected route's card is on screen (inspector or rail list), so the
     // floating summary pill stated the same ride twice.
-    expect(declarationsFor(blocks, ".og-glance--map")["display"]).toBe("none");
+    expect(declarationsFor([sourceOf()], ".og-glance--map")["display"]).toBe("none");
 
     // The route's edit tools sit in the panel beside undo/redo instead of a
     // floating bar over the map.

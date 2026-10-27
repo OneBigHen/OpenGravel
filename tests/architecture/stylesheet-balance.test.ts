@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
  * an unclosed at-rule, and a page far from either change (My rides) broke in
  * short landscape. Balanced braces are the cheapest guard against that.
  */
-describe("globals.css", () => {
+describe("the app stylesheets", () => {
   it("has balanced braces outside comments", () => {
     const source = appCss()
       .replace(/\/\*[\s\S]*?\*\//g, "");
@@ -17,7 +17,7 @@ describe("globals.css", () => {
       if (character === "\n") line += 1;
       if (character === "{") depth += 1;
       if (character === "}") depth -= 1;
-      expect(depth, `closing brace without an opener near line ${line}`).toBeGreaterThanOrEqual(0);
+      if (depth < 0) expect(depth, `closing brace without an opener near line ${line}`).toBeGreaterThanOrEqual(0);
     }
     expect(depth, "unclosed blocks at the end of the stylesheet").toBe(0);
   });

@@ -17,7 +17,7 @@
  */
 
 import { applyResolvedTheme } from "@/ui/appearance/appearance";
-import { cssRuleRaw } from "../../helpers/app-css";
+import { cssRule } from "../../helpers/app-css";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -725,7 +725,7 @@ describe("the map point menu", () => {
 
   it("offers all five rows at 48 px minimum and an inline disabled reason", async () => {
     const style = document.createElement("style");
-    style.textContent = `.og-map-point-menu__row {${cssRuleRaw(".og-map-point-menu__row")}}`;
+    style.textContent = `.og-map-point-menu__row {${cssRule(".og-map-point-menu__row")}}`;
     document.head.append(style);
     try {
       const { factory } = await renderMap({ onPointAction: vi.fn(), addStopDisabledReason: "plan a start and finish first" });

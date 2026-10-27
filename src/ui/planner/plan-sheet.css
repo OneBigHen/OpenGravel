@@ -85,7 +85,20 @@
    Phones and tablets.
    -------------------------------------------------------------------------- */
 @media (max-width: 1180px) and (min-height: 501px) {
-  /* No ride yet: three equal buttons, nothing else. */
+  /* No ride yet: three equal buttons, nothing else, at any height. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] {
+    height: auto;
+    max-height: 45dvh;
+  }
+
+  /* Building a loop (nothing routed yet): the sheet is as tall
+     as its questions, up to full, so the chips are never hidden behind the
+     button that commits them. */
+  .og-planner .og-planner__sheet[data-has-ride="false"]:has(.og-composer__row--loop) {
+    height: auto;
+    max-height: var(--og-sheet-full);
+  }
+
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

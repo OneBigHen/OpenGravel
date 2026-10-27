@@ -32,6 +32,11 @@
   cursor: pointer;
 }
 
+.og-style__toggle .og-style__toggle-label {
+  grid-area: auto;
+  font-family: var(--og-face-body);
+}
+
 .og-style__toggle-label {
   color: var(--og-ink);
   font-size: var(--og-text-body);
