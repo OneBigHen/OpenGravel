@@ -31,6 +31,11 @@
   --og-scrim: rgb(15 26 21 / 36%);
 
   --og-shadow-float: 0 1px 2px rgb(15 26 21 / 14%), 0 6px 18px rgb(15 26 21 / 12%);
+
+  /* Chrome over the map: the surface at 82% with a blur, so the map reads
+     through it (DESIGN.md §2, v3.1). Text on it stays at full ink. */
+  --og-glass: color-mix(in srgb, var(--og-surface) 82%, transparent);
+  --og-glass-blur: blur(20px) saturate(150%);
   --og-shadow-sheet: 0 -1px 0 rgb(15 26 21 / 8%), 0 -8px 28px rgb(15 26 21 / 10%);
 
   /* The map's palette (read by the MapLibre host). */
@@ -78,6 +83,9 @@
   --og-scrim: rgb(0 0 0 / 55%);
 
   --og-shadow-float: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 18px rgb(0 0 0 / 36%);
+
+  --og-glass: color-mix(in srgb, var(--og-surface) 78%, transparent);
+  --og-glass-blur: blur(22px) saturate(140%);
   --og-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 6%), 0 -8px 28px rgb(0 0 0 / 40%);
 
   /* Night cartography: the route and pins sit on a dark basemap. */
@@ -170,5 +178,20 @@ body {
   :root {
     --og-dur-fast: 0ms;
     --og-dur-base: 0ms;
+  }
+}
+
+/* Glass needs the blur to be legible: without it, or when the rider asked for
+   less transparency, chrome is the solid surface again. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --og-glass: var(--og-surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --og-glass: var(--og-surface);
+    --og-glass-blur: none;
   }
 }

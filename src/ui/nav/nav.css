@@ -137,7 +137,9 @@
     min-height: calc(56px + var(--og-safe-bottom));
     padding: 0 var(--og-safe-right) var(--og-safe-bottom) var(--og-safe-left);
     border-top: 1px solid var(--og-line);
-    background: var(--og-surface);
+    background: var(--og-glass);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
   }
 
   .og-planner__nav {

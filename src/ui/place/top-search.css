@@ -33,9 +33,11 @@
     min-height: 52px;
     padding: 0 var(--og-space-2) 0 var(--og-space-4);
     border-radius: var(--og-radius-card);
-    background: var(--og-surface);
+    background: var(--og-glass);
     color: var(--og-ink);
     box-shadow: var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
     pointer-events: auto;
   }
 
@@ -125,12 +127,14 @@
     padding: 0 var(--og-space-4);
     border: 0;
     border-radius: var(--og-radius-pill);
-    background: var(--og-surface);
+    background: var(--og-glass);
     color: var(--og-ink);
     font: inherit;
     font-size: var(--og-text-meta);
     font-weight: 600;
     box-shadow: var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
     cursor: pointer;
   }
 

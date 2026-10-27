@@ -90,7 +90,7 @@ function compactBlocks(): string[] {
 
 
 describe("phone tab bar", () => {
-  it("is docked to the bottom edge on a solid surface with a top hairline", () => {
+  it("is docked to the bottom edge on a glass surface with a top hairline", () => {
     const shell = declarationsFor(phoneBlocks(), ".og-planner__nav-shell");
 
     // Full width, flush with the bottom, and 56px plus the home indicator.
@@ -98,10 +98,10 @@ describe("phone tab bar", () => {
     expect(shell["inset"]).toBe("auto 0 0");
     expect(shell["min-height"]).toBe("calc(56px + var(--og-safe-bottom))");
 
-    // Solid surface, not frosted glass: a hairline separates it from the page.
-    expect(shell["background"]).toBe("var(--og-surface)");
+    // Glass over the map (DESIGN.md §2, v3.1); a hairline separates it from the page.
+    expect(shell["background"]).toBe("var(--og-glass)");
     expect(shell["border-top"]).toBe("1px solid var(--og-line)");
-    expect(shell["backdrop-filter"]).toBeUndefined();
+    expect(shell["backdrop-filter"]).toBe("var(--og-glass-blur)");
     expect(shell["box-shadow"]).toBeUndefined();
   });
 

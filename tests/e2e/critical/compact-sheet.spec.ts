@@ -95,9 +95,10 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
       borderTopLeftRadius: style.borderTopLeftRadius,
     };
   });
-  // Solid paper, not glass: nothing of the map shows through the bar.
-  expect(barStyle.background).toMatch(/^rgb\(/);
-  expect(barStyle.backdrop).toBe("none");
+  // Glass over the map (DESIGN.md §2, v3.1): a blurred, mostly opaque surface,
+  // so the map reads through the bar and its labels stay legible.
+  expect(barStyle.background).toMatch(/^(rgb|color\()/);
+  expect(barStyle.backdrop).toMatch(/blur/);
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
   expect(Number.parseFloat(barStyle.borderTopLeftRadius)).toBe(0);
   await expect(sheet).toHaveAttribute("data-idle", "true");

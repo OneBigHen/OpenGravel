@@ -135,11 +135,13 @@
   padding: 0;
   border: 0;
   border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
+  background: var(--og-glass);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-meta);
   box-shadow: var(--og-shadow-float);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
   cursor: pointer;
 }
 

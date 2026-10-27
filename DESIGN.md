@@ -21,7 +21,10 @@ iPad and on a 1440 px desktop.
 Premium technical-outdoors. Quiet, warm, exact — a good GPS unit and a paper map, not a
 glossy app. The map is the hero; chrome is calm and solid.
 
-- Solid surfaces. No frosted-glass panels, no glow, no gradients on controls.
+- Solid sheets and cards. Chrome that floats over the map (tab bar, top search and its
+  chips, map buttons) is translucent glass (`--og-glass`, blurred) so the map reads through
+  it; anything holding sentences or ride numbers stays solid. No glow, no gradients on
+  controls.
 - One primary action colour (forest green). The chosen route is plum. Everything else is
   neutral. Colour means something or it is not used.
 - Type does the hierarchy: few sizes, strong weights, tabular numbers for ride data.
@@ -112,6 +115,10 @@ the primary button.
   Night = dark basemap. Single tokens.css. Visual gate = og-shots gallery.
 - 2026-10-26 Night `--og-primary` #1f8a4f → #1c7f49: white on #1f8a4f is 4.37:1, under this
   file's own 4.5:1 text rule; #1c7f49 is 5.0:1 (tests/unit/ui/contrast-tokens.test.ts).
+- 2026-10-26 Owner: glass for floating map chrome to give the map more of the screen.
+  `--og-glass` (surface at 82% Day / 78% Night, blur 20–22px); solid when the browser has
+  no backdrop blur or the rider asks for reduced transparency. Sheets and the ride screen
+  stay solid.
 
 ## Open proposals
 
