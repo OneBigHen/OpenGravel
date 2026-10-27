@@ -668,7 +668,7 @@
 .og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__time {
   color: var(--og-primary-text);
   font-family: var(--og-face-display);
-  font-size: 30px;
+  font-size: var(--og-text-title);
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -677,7 +677,7 @@
 .og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dist {
   color: var(--og-ink);
   font-family: var(--og-face-display);
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   font-weight: 600;
   line-height: 1.1;
 }
@@ -710,6 +710,6 @@
 
 .og-route-options__start .og-primary {
   border-radius: var(--og-radius-pill);
-  font-size: 18px;
+  font-size: var(--og-text-body);
   font-weight: 700;
 }

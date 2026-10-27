@@ -2979,7 +2979,7 @@
   content: "›";
   flex: none;
   color: var(--og-ink-2);
-  font-size: 22px;
+  font-size: var(--og-text-headline);
   line-height: 1;
 }
 

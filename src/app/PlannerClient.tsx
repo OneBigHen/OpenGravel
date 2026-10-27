@@ -45,7 +45,8 @@ import { createRideSessionRepository } from "@/infrastructure/storage/ride-sessi
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLibraryService } from "@/application/library/library-service";
-import { preparedRouteGeometryRefs, takePreparedRouteOnce, withPreparedRoute } from "@/application/explore/ride-this";
+import type { BootstrapPointerPort } from "@/application/persistence/ride-repository";
+import { forgetKeptRoute, preparedRouteGeometryRefs, takePreparedRouteOnce, withPreparedRoute } from "@/application/explore/ride-this";
 import { createShareService } from "@/application/sharing/share-commands";
 import { createShareRepository } from "@/infrastructure/storage/share-repository";
 import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
@@ -234,10 +235,11 @@ export function PlannerClient({
           geometryStore,
           localHistoryReader: () => libraryService.listExploreRides(),
         }),
-        takePreparedRouteOnce(),
+        takePreparedRouteOnce(activeRideHint(bootstrapPointer)),
+        { onDiverged: () => forgetKeptRoute() },
       ),
     }),
-    [geometryStore, libraryService],
+    [geometryStore, libraryService, bootstrapPointer],
   );
   usePlanningTelemetry(planningSessionStore);
   const rideDocumentStore = useMemo(
@@ -389,4 +391,10 @@ export function PlannerClient({
       </InstalledOfflineAreasProvider>
     </RideAdvisorProvider>
   );
+}
+
+/** The ride the planner is about to restore, from the cached pointer, if any. */
+function activeRideHint(pointer: BootstrapPointerPort): string | null {
+  const read = pointer.read();
+  return read.status === "found" ? read.hint.rideId : null;
 }

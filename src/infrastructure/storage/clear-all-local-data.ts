@@ -16,7 +16,9 @@ import { FREE_RIDE_TELEMETRY_STORAGE_KEY } from "@/infrastructure/storage/free-r
 import { invalidatePlaceMemoryCaches, PLACE_MEMORY_STORAGE_KEY } from "@/infrastructure/storage/place-memory-storage";
 import { LIVE_RIDER_NAME_STORAGE_KEY, LIVE_SESSION_STORAGE_KEY } from "@/application/live/storage-keys";
 
+import { KEPT_ROUTE_STORAGE_KEY } from "@/application/explore/ride-this";
 export const LOCAL_DATA_STORAGE_KEYS = [
+  KEPT_ROUTE_STORAGE_KEY,
   GARAGE_STORAGE_KEY,
   SATELLITE_PREFERENCE_KEY,
   TELEMETRY_CONSENT_STORAGE_KEY,
