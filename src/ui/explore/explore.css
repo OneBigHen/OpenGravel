@@ -648,8 +648,9 @@
   content: " · ";
 }
 
-/* "8 mi away · From PA Adventure Bike Rides": the distance always gets its dot. */
-.og-explore-card__credit > [data-testid="explore-card-away"] + *::before {
+/* "8 mi away · From PA Adventure Bike Rides": the distance keeps its dot even
+   when the hidden catalog source sits between it and the byline. */
+.og-explore-card__credit:has([data-testid="explore-card-away"]) > .og-explore-card__source[data-source="catalog"] + .og-explore-card__byline::before {
   content: " · ";
 }
 
