@@ -999,3 +999,30 @@
 .og-explore__heading-row:has(.og-page-menu) .og-explore__heading {
   margin-right: auto;
 }
+
+/* Phones and tablets (mobile UX handoff, concept 04): the map leads the list,
+   so the routes are seen on the land before they are read as rows. It used to
+   sit under every route, where nobody scrolled to it. */
+@media (max-width: 1180px) {
+  .og-explore__split {
+    grid-template-areas: "map" "list";
+    gap: var(--og-space-3);
+  }
+
+  .og-explore__split .og-explore-map {
+    height: 240px;
+  }
+
+  /* The count and Fit routes ride the top-left, clear of the map's own
+     bottom-corner control and of the expand button top-right. */
+  .og-explore__split .og-explore-map__tools {
+    top: var(--og-space-3);
+    right: calc(var(--og-space-3) + var(--og-touch) + var(--og-space-2));
+    bottom: auto;
+    justify-content: flex-start;
+  }
+
+  .og-explore__split .og-explore-map__tools > button {
+    margin-left: 0;
+  }
+}
