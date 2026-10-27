@@ -1246,6 +1246,29 @@ export function RideFocus({
                 middle of the screen and under the maneuver card.
               */}
               <div className="og-ride__rail-actions" role="group" aria-label="Route and voice">
+              {/* Google's search on the nav screen: gas, food and anywhere
+                  along the rest of the route, one tap from the map. */}
+              {terminal !== null || !rerouteAvailable || navigation?.activity !== "guided" ? null : (
+                <button
+                  type="button"
+                  className="og-ride__rail-button"
+                  data-testid="ride-search-along"
+                  aria-label="Find gas, food or a stop along the route"
+                  title="Find a stop along the route"
+                  onClick={(): void => {
+                    openSheet();
+                    window.setTimeout(() => {
+                      const addStop = document.querySelector<HTMLButtonElement>('[data-testid="ride-add-stop"][aria-expanded="false"]');
+                      addStop?.click();
+                    }, 60);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="10.5" cy="10.5" r="6.5" />
+                    <path d="m16 16 5 5" />
+                  </svg>
+                </button>
+              )}
               {recenterShown ? (
                 <button
                   type="button"
@@ -2069,6 +2092,19 @@ export function RideFocus({
           </button>
         ) : (
           <>
+            {/* Google's ✕ at the left of the ETA bar: it asks before anything
+                ends (Save it or let it go), so a glove brush loses nothing. */}
+            <button
+              type="button"
+              className="og-ride__strip-stop"
+              data-testid="ride-strip-stop"
+              aria-label="End ride"
+              title="End ride"
+              disabled={!controls.finish.enabled && !controls.discard.enabled}
+              onClick={(): void => { openSheet(); store.getState().beginStop(); }}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            </button>
             {recordingIndicator === null ? null : (
               <p className="og-ride__recording-state" data-testid="ride-recording-state">
                 <span className="og-ride__recording-state-dot" aria-hidden="true" />

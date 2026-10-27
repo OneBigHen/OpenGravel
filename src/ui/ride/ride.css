@@ -2839,3 +2839,78 @@
   color: var(--og-ink);
   box-shadow: var(--og-shadow-float);
 }
+
+/* ------------------------------------------------------------------------
+   Google Maps navigation layout (owner 2026-10-27: "Google Maps like, but
+   motorcycle centric"). The bottom is Google's ETA bar: full width, flush
+   with the bottom edge, ✕ on the left, the readouts (speed stays first, at
+   glove size) and the Menu chevron. The maneuver's "Then" is the darker tab
+   Google hangs under its green banner.
+   ------------------------------------------------------------------------ */
+.og-ride__strip {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: calc(var(--og-ride-strip-live-h) + max(var(--og-ride-gap), var(--og-safe-bottom)));
+  padding: var(--og-space-2) max(var(--og-space-3), var(--og-safe-right)) max(var(--og-ride-gap), var(--og-safe-bottom)) max(var(--og-space-3), var(--og-safe-left));
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.22);
+}
+
+.og-ride__strip-stop {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--og-touch-ride);
+  height: var(--og-touch-ride);
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  cursor: pointer;
+}
+
+.og-ride__strip-stop svg {
+  width: 26px;
+  height: 26px;
+}
+
+.og-ride__strip-stop path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.og-ride__strip-stop:active {
+  background: var(--og-press);
+}
+
+.og-ride__strip-stop:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-ride__strip-stop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Google's arrival is the green number in the bar. */
+.og-ride-metrics__slot[data-metric="route.eta"] .og-ride-metrics__value {
+  color: var(--og-primary-text);
+}
+
+/* "Then" as a darker tab under the banner, edge to edge. */
+.og-ride__maneuver[data-then="true"] {
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.og-ride__maneuver-then {
+  margin: var(--og-space-3) calc(-1 * var(--og-space-4)) 0;
+  padding: var(--og-space-2) var(--og-space-4);
+  border-top: 0;
+  background: color-mix(in srgb, var(--og-primary) 72%, black);
+}

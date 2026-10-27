@@ -512,3 +512,65 @@
   color: var(--og-ink-2);
   font-size: var(--og-text-caption);
 }
+
+/* Search results, Google style: one row per place (name, distance · street,
+   open now) with its own Directions disc, nearest first. */
+.og-planner .og-category-results h2 {
+  font-size: var(--og-text-headline);
+}
+
+.og-category-results .og-result-row {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+}
+
+.og-planner .og-category-results .og-result-row .og-result-row__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.og-result-row__main > strong {
+  overflow: hidden;
+  font-size: var(--og-text-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-category-results .og-result-row__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-category-results .og-result-row__open[data-open="true"] {
+  color: var(--og-primary-text);
+  font-weight: 600;
+}
+
+.og-category-results .og-result-row__open[data-open="false"] {
+  color: var(--og-danger);
+  font-weight: 600;
+}
+
+.og-planner .og-planner__sheet .og-category-results .og-result-row .og-result-row__go {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--og-primary-soft);
+  color: var(--og-primary-text);
+}
+
+.og-result-row__go:active {
+  background: var(--og-press);
+}
+
+.og-result-row__go:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}

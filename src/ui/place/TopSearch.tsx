@@ -1,5 +1,6 @@
 "use client";
 
+import type { PlaceMatch } from "@/application/geocoding/place-search";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
@@ -35,7 +36,7 @@ function GasPump() {
   </svg>;
 }
 
-export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear, onChip, onLayer }: {
+export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear, onChip, onLayer, onSearchList }: {
   readonly search: ComposerPlaceSearch;
   readonly bias: Coordinate;
   readonly selected: boolean;
@@ -44,6 +45,8 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   readonly onClear: () => void;
   readonly onChip: (chip: SearchChip) => void;
   readonly onLayer: (chip: LayerChip) => void;
+  /** Enter on words that match many places shows them as a list. */
+  readonly onSearchList?: (query: string, places: readonly PlaceMatch[]) => void;
 }) {
   const advisor = useRideAdvisor();
   return <div className="og-top-search" data-testid="top-search">
@@ -51,6 +54,7 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
       <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={search.port} bias={bias}
         onPick={(place, query) => search.onPick("finish", place, query)}
+        {...(onSearchList === undefined ? {} : { onSubmitList: onSearchList })}
         {...(search.remembered === undefined ? {} : { remembered: search.remembered })}
         {...(advisor === null ? {} : { describe: (text: string) => advisor.ask(text) })}/>
       {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : null}

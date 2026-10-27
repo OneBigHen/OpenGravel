@@ -49,6 +49,12 @@ export interface PlaceSearchFieldProps {
   readonly slot: "start" | "finish";
   readonly search: PlaceSearchPort;
   readonly onPick: (place: PlaceMatch, query: string) => void;
+  /**
+   * Enter on words that match many places ("coffee", or a chain such as
+   * "wawa") hands the words back for a results list instead of picking the
+   * first match; a query that names one place ("Jim Thorpe") still picks it.
+   */
+  readonly onSubmitList?: (query: string, places: readonly PlaceMatch[]) => void;
   readonly bias?: Coordinate;
   readonly currentLocation?: CurrentLocationOption;
   readonly disabled?: boolean;
@@ -101,6 +107,7 @@ export function PlaceSearchField({
   slot,
   search,
   onPick,
+  onSubmitList,
   bias,
   currentLocation,
   disabled = false,
@@ -255,6 +262,11 @@ export function PlaceSearchField({
         return;
       }
       const firstPlace = options.find((option) => option.kind === "place");
+      if (onSubmitList !== undefined && state.phase === "done" && wantsList(trimmed, state.places)) {
+        onSubmitList(trimmed, state.places);
+        reset();
+        return;
+      }
       if (firstPlace !== undefined && state.phase === "done") {
         choose(firstPlace);
       } else if (searchable && state.phase === "searching") {
@@ -398,4 +410,15 @@ export function PlaceSearchField({
       )}
     </div>
   );
+}
+
+/**
+ * Whether Enter should list the matches rather than open the first: more than
+ * one place, and not exactly one whose name is what the rider typed.
+ */
+export function wantsList(query: string, places: readonly PlaceMatch[]): boolean {
+  if (places.length < 2) return false;
+  const typed = (query.split(",")[0] ?? query).trim().toLowerCase();
+  const exact = places.filter((place) => place.name.trim().toLowerCase() === typed);
+  return exact.length !== 1;
 }
