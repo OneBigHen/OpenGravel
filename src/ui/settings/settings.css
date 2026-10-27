@@ -288,7 +288,7 @@
 }
 
 .og-settings__segment {
-  min-height: 44px;
+  min-height: var(--og-touch);
   padding: 0 var(--og-space-3);
   border: 0;
   border-radius: calc(var(--og-radius-control) - 2px);

@@ -212,7 +212,8 @@
     display: none;
   }
 
-  .og-planner:has([data-testid="route-options"]) .og-search-chips {
+  .og-planner:has([data-testid="route-options"]) .og-search-chips,
+  .og-top-search:has(.og-place-search__list:not([hidden])) .og-search-chips {
     display: none;
   }
 

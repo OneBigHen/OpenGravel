@@ -598,14 +598,16 @@
   align-items: baseline;
   column-gap: var(--og-space-1);
   row-gap: var(--og-space-1);
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
   color: var(--og-ink-2);
   font-size: var(--og-text-meta);
   font-weight: 500;
-  line-height: 1.5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -986,4 +988,16 @@
     width: 80px;
     height: 80px;
   }
+}
+
+/* Filters never scrolls out of reach: it rides the right edge of the chip row. */
+.og-explore__filters-toggle {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }

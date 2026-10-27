@@ -1026,3 +1026,17 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Phones: with nothing saved, the invitation sits at thumb height above the
+   tab bar, like Ride's — not stranded at the top of an empty screen. */
+@media (max-width: 760px) {
+  .og-library:has(> .og-library__empty) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .og-library:has(> .og-library__empty) > .og-library__empty {
+    margin-top: auto;
+  }
+}

@@ -6,9 +6,11 @@ import { describe, expect, it } from "vitest";
  *
  * The card that clipped at 320px read "Est. Mostly paved · 4.7 mi gra": pill
  * badges in a row that could not wrap. This asserts the shape that replaced it,
- * from the stylesheet that actually ships — the map image is 16:9 full width,
- * the name clamps to two lines, the facts are one wrapping line, and the chip
- * row scrolls sideways instead of shrinking its targets.
+ * from the stylesheet that actually ships. Glass v4 (owner 2026-10-27, "not
+ * space efficient") made the card a compact row: a square 96px map thumbnail
+ * beside the words, the name clamps to two lines, the facts clamp to two lines
+ * instead of being cut mid-word, and the chip row scrolls sideways instead of
+ * shrinking its targets.
  */
 
 
@@ -61,13 +63,9 @@ function declarationsFor(selector: string): Record<string, string> {
 }
 
 describe("ride cards on a phone", () => {
-  it("frames the route's map 16:9 at full width, with the words on the page under it", () => {
+  it("puts a square map thumbnail beside the words", () => {
     const preview = declarationsFor(".og-explore-card__preview");
-    expect(preview["aspect-ratio"]).toBe("16 / 9");
-    expect(preview["width"]).toBe("100%");
-    expect(preview["border-radius"]).toBe("var(--og-radius-card)");
-    // Design v3: the card has no frame, so the words need no inner padding.
-    expect(declarationsFor(".og-explore-card__body")["padding"]).toBeUndefined();
+    expect(preview["aspect-ratio"]).toBe("1");
   });
 
   it("keeps the name to two lines at body size", () => {
@@ -77,12 +75,14 @@ describe("ride cards on a phone", () => {
     expect(title["font-weight"]).toBe("600");
   });
 
-  it("wraps the facts instead of clipping them", () => {
+  it("lets the facts run to a second line instead of cutting them on the first", () => {
     // The bug: a nowrap, overflow-hidden row of pills cut "Est. Mostly paved ·
-    // 4.7 mi gra" at 320px. Neither the facts line nor the credit may nowrap.
+    // 4.7 mi gra" at 320px. The facts get two lines; the single facts are never
+    // clipped on their own.
     const facts = declarationsFor(".og-explore-card__facts");
-    expect(facts["flex-wrap"]).toBe("wrap");
-    for (const selector of [".og-explore-card__facts", ".og-explore-card__fact", ".og-explore-card__credit"]) {
+    expect(facts["-webkit-line-clamp"]).toBe("2");
+    expect(facts["white-space"]).toBeUndefined();
+    for (const selector of [".og-explore-card__fact"]) {
       for (const rule of allRules()) {
         if (!rule.selector.split(",").map((part) => part.trim()).includes(selector)) continue;
         expect(declaration(rule.body, "white-space"), selector).not.toBe("nowrap");

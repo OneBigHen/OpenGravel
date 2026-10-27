@@ -451,7 +451,7 @@
 .og-category-results {
   position: relative;
   padding: var(--og-space-2) 0 var(--og-space-2);
-  background: var(--og-surface);
+  background: transparent;
   color: var(--og-ink);
 }
 

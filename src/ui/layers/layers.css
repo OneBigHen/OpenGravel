@@ -79,9 +79,12 @@
   max-height: min(640px, calc(100dvh - 180px));
   overflow: hidden;
   border-radius: var(--og-radius-sheet);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
-  box-shadow: var(--og-shadow-float);
 }
 
 .og-layers__head {

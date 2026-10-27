@@ -197,8 +197,8 @@
   align-content: start;
   gap: var(--og-space-3);
   min-width: 0;
-  padding: var(--og-space-4);
-  background: var(--og-glass-dense);
+  padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+  background: transparent;
 }
 
 /* The map card. */
@@ -1436,9 +1436,20 @@
   }
 }
 
-/* Small phones: four stats still fit on one line each. */
+/* Small phones: the four stats sit two by two. */
 @media (max-width: 360px) {
-  .og-route-detail__stat dd {
-    font-size: var(--og-text-body);
+  .og-route-detail__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--og-space-3);
   }
+
+  .og-route-detail__stat:nth-child(odd) {
+    border-left: 0;
+  }
+}
+
+/* The heading below already names the ride, and the map labels it: no
+   floating title chip over the map. */
+.og-route-detail__map-title {
+  display: none;
 }
