@@ -201,7 +201,7 @@
 
 /* Short phones (an iPhone SE has no home indicator): a slimmer bar and a 4px
    gap give the map back 8px; every tab is still 48px. */
-@media (max-width: 1180px) and (min-height: 501px) and (max-height: 700px) {
+@media (max-height: 700px) and (min-height: 501px) and (max-width: 1180px) {
   :root {
     --og-tabbar-gap: max(var(--og-space-1), calc(var(--og-safe-bottom) - 14px));
   }
