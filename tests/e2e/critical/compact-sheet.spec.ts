@@ -107,9 +107,18 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     };
   });
   expect(Number.parseFloat(sheetStyle.radius)).toBeGreaterThanOrEqual(12);
-  expect(sheetStyle.shadow).not.toBe("none");
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
   expect(sheetStyle.background).toMatch(/^(rgb|color\()/);
+  // Home (mobile UX handoff, 2026-10-27): the idle sheet draws no slab; its
+  // three quick starts and the grab handle are the glass, floating on the map.
+  for (const target of [page.getByTestId("sheet-handle"), page.getByTestId("record-a-ride")]) {
+    const glass = await target.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { shadow: style.boxShadow, backdrop: style.backdropFilter };
+    });
+    expect(glass.shadow).not.toBe("none");
+    expect(glass.backdrop).toMatch(/blur/);
+  }
 
   // The determinism claim of the compact gate: no tiles are requested.
   await expect(plannerMap(page)).toHaveAttribute("data-basemap", "empty");

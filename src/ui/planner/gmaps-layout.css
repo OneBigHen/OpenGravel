@@ -600,8 +600,25 @@
     pointer-events: none;
   }
 
-  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__head {
-    display: none;
+  /* The grab handle stays: a small glass pill centred over the pills, so the
+     full planner (From / To, ride style) is one swipe or tap away. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__handle {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 24px;
+    min-height: 24px;
+    margin: 0 auto var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-pill);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    pointer-events: auto;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__handle::before {
+    top: 9px;
   }
 
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body > *,
@@ -734,5 +751,30 @@
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
     width: 16px;
     height: 16px;
+  }
+}
+
+/* Pulled up from home: the quick starts stay pills, Record and Free Ride
+   side by side, instead of three tall grey slabs. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-plan-actions__record-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--og-space-2);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    border-radius: var(--og-radius-pill);
+    font-weight: 700;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-composer__loop-quick {
+    border-color: var(--og-primary);
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-composer__loop-quick svg {
+    color: var(--og-on-primary);
   }
 }
