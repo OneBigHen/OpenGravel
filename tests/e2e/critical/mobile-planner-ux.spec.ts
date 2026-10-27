@@ -36,6 +36,9 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
   test(`endpoint controls have separate targets at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await chooseEndpoints(page);
+    // Edit the ride once it is found: an answer that lands mid-edit swaps the
+    // sheet back to the route options.
+    await expect(page.getByTestId("start-ride")).toBeVisible();
     await page.getByTestId("trip-edit").click();
     const controls = await page.locator(".og-composer").evaluate((composer) => {
       const ids = ["start-chip", "finish-chip", "start-change", "finish-change", "swap-endpoints"];

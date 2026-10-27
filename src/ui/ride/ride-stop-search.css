@@ -15,8 +15,8 @@
   padding: 12px 16px;
   font: inherit;
   font-size: max(16px, var(--og-text-body));
-  color: var(--og-surface);
-  background: var(--og-ink);
+  color: var(--og-ink);
+  background: var(--og-surface-2);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-control);
 }
@@ -67,7 +67,7 @@
   padding: 6px 12px;
   font: inherit;
   text-align: left;
-  color: var(--og-surface);
+  color: var(--og-ink);
   background: var(--og-surface);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-card);
@@ -80,7 +80,7 @@
 }
 
 .og-ride-search__distance {
-  color: var(--og-surface);
+  color: var(--og-primary-text);
   font-size: var(--og-text-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -122,7 +122,7 @@
 
 .og-ride-search__confirm-text {
   margin: 0;
-  color: var(--og-surface);
+  color: var(--og-ink);
   font-size: var(--og-text-body);
   overflow-wrap: anywhere;
 }

@@ -14,17 +14,32 @@ import { directionsCommand, searchedEndpointCommand, insertStopCommand, placeSta
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 import type { ComposerPlaceSearch, PlannerPlaceServices } from "@/ui/planner/usePlannerPlaces";
 import { useMapLayers } from "@/ui/layers/useMapLayers";
-import { PlaceSheet, placeDistance } from "./PlaceSheet";
+import { haversine } from "@/domain/geometry/analysis";
+import { PlaceSheet } from "./PlaceSheet";
 import { RiderToast, type ToastNotice } from "./RiderToast";
 import { TopSearch, type LayerChip, type SearchChip } from "./TopSearch";
 
 type Selection = { readonly place: PlaceMatch; readonly dropped: boolean; readonly slot: "start" | "finish" };
+/** A category chip, or the rider's own words run as a results list. */
+type SearchQuery = { readonly id: string; readonly label: string; readonly query: string; readonly empty: string };
 type Results = {
-  readonly chip: SearchChip;
+  readonly chip: SearchQuery;
   readonly places: readonly PlaceMatch[];
   readonly status: "searching" | "ready" | "unavailable";
   readonly message: string | null;
 };
+
+/**
+ * "0.5 mi · 412 South York Road": the rider's distance (or the one the
+ * search already gave) and the street, each once.
+ */
+function resultMeta(context: string, miles: number | null): string {
+  const parts = context.split(" · ").map((part) => part.trim()).filter(Boolean);
+  const given = parts.find((part) => /^\d+(\.\d+)? mi$/.test(part)) ?? null;
+  const street = parts.find((part) => part !== given)?.split(",")[0]?.trim() ?? null;
+  const distance = miles === null ? given : `${miles < 10 ? miles.toFixed(1) : Math.round(miles)} mi`;
+  return [distance, street].filter(Boolean).join(" · ");
+}
 
 function pinAt(coordinate: Coordinate): PlaceMatch {
   return { id: `dropped:${coordinate.lat}:${coordinate.lon}`, provider: "map", name: "Dropped pin", label: "Dropped pin", context: "", coordinate };
@@ -156,7 +171,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
    * with the view the rider has panned to, so an empty answer is never a lie
    * about the whole map.
    */
-  const searchChip = useCallback(async (chip: SearchChip, at: Coordinate) => {
+  const searchChip = useCallback(async (chip: SearchQuery, at: Coordinate) => {
     if (services === undefined) return;
     request.current?.abort();
     const controller = new AbortController(); request.current = controller;
@@ -190,6 +205,18 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   }, [close, searchChip, bias]);
 
   /** Re-run the open category on the map view now on screen. */
+  /** Enter on words that name many places ("coffee", "wawa"): the same
+      matches the rider just saw, as a list with pins, like Google. */
+  const searchList = useCallback((query: string, places: readonly PlaceMatch[]) => {
+    close(); setOptionsOpen(false); request.current?.abort();
+    setResults({ chip: { id: "query", label: query, query, empty: `Nothing found for “${query}” here` }, places, status: "ready", message: null });
+    uiStore.getState().setSheetDetent("half");
+    if (places.length > 0) {
+      const latitudes = places.map((entry) => entry.coordinate.lat), longitudes = places.map((entry) => entry.coordinate.lon);
+      uiStore.getState().requestFit({ minLat: Math.min(...latitudes) - .004, maxLat: Math.max(...latitudes) + .004, minLon: Math.min(...longitudes) - .004, maxLon: Math.max(...longitudes) + .004 });
+    }
+  }, [close, uiStore]);
+
   const searchThisArea = useCallback(() => {
     if (results === null) return;
     void searchChip(results.chip, { lat: (extent.minLat + extent.maxLat) / 2, lon: (extent.minLon + extent.maxLon) / 2 });
@@ -227,12 +254,30 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     }).catch(() => undefined);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [place, rider, services, travelKey]);
+  // Nearest first, like Google, when the rider's position is known; without
+  // it the search's own order (its relevance and distances) stands.
+  const sortedResults = useMemo(() => {
+    const rows = (results?.places ?? []).map((entry) => ({ place: entry, miles: haversine(entry.coordinate, rider ?? bias) / 1609.344 }));
+    return rider === null ? rows : rows.sort((a, b) => a.miles - b.miles);
+  }, [results, rider, bias]);
   const sheet = place === undefined ? results === null ? null : <section className="og-category-results" data-testid="category-results" aria-label={`${results.chip.label} nearby`}>
     <h2>{results.chip.label}</h2><button type="button" className="og-place-sheet__close" aria-label="Close results" onClick={close}>×</button>
     {results.status === "searching" ? <p role="status">Searching…</p> : results.status === "unavailable" ? <p role="status">{results.message}</p> : results.places.length === 0 ? <>
       <p>{results.chip.empty}</p>
       <button type="button" className="og-secondary" data-testid="search-this-area" onClick={searchThisArea}>Search this area</button>
-    </> : <ul>{results.places.map((place) => <li key={place.id}><button type="button" data-testid="category-result" aria-current={selection?.place.id === place.id ? "true" : undefined} onClick={() => open(place)}><strong>{place.name}</strong><span>{rider === null ? placeDistance(place.coordinate, bias)?.replace("away", "from map center") : placeDistance(place.coordinate, rider)}</span>{place.openNow === undefined ? null : <span>{place.openNow ? "Open now" : "Closed now"}</span>}</button></li>)}</ul>}
+    </> : <ul>{sortedResults.map(({ place, miles }) => <li key={place.id} className="og-result-row">
+      <button type="button" className="og-result-row__main" data-testid="category-result" aria-current={selection?.place.id === place.id ? "true" : undefined} onClick={() => open(place)}>
+        <strong>{place.name}</strong>
+        <span className="og-result-row__meta">
+          {resultMeta(place.context, rider === null ? null : miles)}
+        </span>
+        {place.openNow === undefined ? null : <span className="og-result-row__open" data-open={place.openNow ? "true" : "false"}>{place.openNow ? "Open now" : "Closed now"}</span>}
+      </button>
+      {/* Google's per-row Directions: straight to the ride, no card first. */}
+      <button type="button" className="og-result-row__go" data-testid="category-result-directions" aria-label={`Directions to ${place.name}`} title="Directions" onClick={() => void directions(place)}>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20v-6a4 4 0 0 1 4-4h10M14 6l4 4-4 4"/></svg>
+      </button>
+    </li>)}</ul>}
   </section> : <PlaceSheet key={place.id} place={place} rider={rider} busy={busy} driveTime={travel?.key === travelKey && travel?.seconds != null ? `${formatDuration(travel.seconds)} drive` : null}
     saved={services?.memory === undefined ? false : isSaved(services.memory.read(), place.coordinate)}
     onDirections={() => void directions(place)}
@@ -244,6 +289,6 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen,
     /** Leaves the Directions options view (the route was closed). */
     closeOptions: () => setOptionsOpen(false), onViewport: setExtent,
-    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer}/>,
+    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} onSearchList={searchList} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }
