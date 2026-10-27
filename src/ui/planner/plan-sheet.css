@@ -127,18 +127,18 @@
 
   .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
     display: inline-flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: var(--og-space-1);
+    gap: 6px;
     width: 100%;
     min-width: 0;
-    min-height: 64px;
+    min-height: var(--og-touch);
     margin: 0;
-    padding: var(--og-space-2) var(--og-space-1);
-    border: 0;
-    border-radius: var(--og-radius-control);
-    background: var(--og-surface-2);
+    padding: 0 var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: 14px;
+    background: var(--og-glass-well);
     color: var(--og-ink);
     font-size: var(--og-text-meta);
     font-weight: 600;
@@ -147,8 +147,8 @@
   }
 
   .og-planner__sheet[data-idle="true"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     color: var(--og-primary-text);
   }
 

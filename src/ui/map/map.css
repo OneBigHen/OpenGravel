@@ -473,6 +473,14 @@
 
 /* Phones and tablets: the map is the screen. */
 @media (max-width: 1180px) and (min-height: 501px) {
+  /* The (i) disc sits under the Layers and Locate buttons: the floating
+     glass sheet changes height, and the disc used to show through it. */
+  .og-planner__map-slot .og-map .maplibregl-ctrl-bottom-right {
+    top: calc(var(--og-safe-top) + 236px);
+    right: var(--og-space-3);
+    bottom: auto !important;
+  }
+
   .og-map-host,
   .og-map {
     min-height: 0;

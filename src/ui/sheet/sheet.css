@@ -7,8 +7,10 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
   color: var(--og-ink);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-sheet__head {
@@ -140,9 +142,12 @@
   flex-direction: column;
   gap: var(--og-space-3);
   padding: var(--og-space-4);
+  border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-sheet);
-  background: var(--og-surface);
-  box-shadow: var(--og-shadow-float);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 @media (min-width: 1181px) {
@@ -236,11 +241,14 @@
     --og-sheet-half: calc(50dvh - var(--og-tabbar-h));
   }
 
+  /* The sheet floats like the tab bar: inset from the edges, glass, every
+     corner rounded, with a sliver of map between them. */
   .og-planner .og-planner__dock {
     position: fixed;
-    inset: auto 0 var(--og-tabbar-h);
+    inset: auto calc(var(--og-space-2) + var(--og-safe-right)) calc(var(--og-tabbar-h) + var(--og-space-2))
+      calc(var(--og-space-2) + var(--og-safe-left));
     z-index: var(--og-z-sheet);
-    width: 100%;
+    width: auto;
     gap: 0;
   }
 
@@ -253,9 +261,10 @@
     gap: 0;
     height: auto;
     max-height: 45dvh;
-    padding: 0 var(--og-space-4) var(--og-space-4);
-    border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
-    box-shadow: var(--og-shadow-sheet);
+    padding: 0 var(--og-space-3) var(--og-space-3);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: 24px;
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
     transition: height var(--og-dur-base) var(--og-ease);
   }
 
