@@ -1664,6 +1664,29 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
 });
 
 describe("the sheet waits for the rider (audit 8)", () => {
+  it("counts semantic clicks as activity and lets the rider ask to end again", async () => {
+    await harness({ position: "fresh" });
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByTestId("ride-menu"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(7_000); });
+
+    // Assistive activation dispatches a click without a pointer or key event.
+    fireEvent.click(screen.getByTestId("ride-mute"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "open");
+    fireEvent.click(screen.getByTestId("ride-mute")); // Restore the shared voice preference.
+
+    fireEvent.click(screen.getByTestId("ride-stop"));
+    expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
+    fireEvent.click(screen.getByTestId("ride-keep-riding"));
+    fireEvent.click(screen.getByTestId("ride-stop"));
+    expect(screen.getByTestId("ride-stop-confirm")).toBeVisible();
+
+    fireEvent.click(screen.getByTestId("ride-keep-riding"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_100); });
+    expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-sheet", "closed");
+  });
+
   /** Gas along the route, so the "Add a stop" finder has a list to show. */
   function stopLayers(): MapLayersSource {
     return {

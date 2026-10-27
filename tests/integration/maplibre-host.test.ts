@@ -632,6 +632,24 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     host.dispose();
   });
 
+  it("counts distinct route identities separately from their drawn progress segments", async () => {
+    const element = container();
+    const host = await createMapLibreHost(element, OPTIONS);
+    currentMap().fire("load");
+    const selected = scene().routes[0]!;
+    const routes: MapScene["routes"] = [selected, { ...selected, state: "travelled" }];
+
+    host.applyScene(scene({ routes }));
+    expect(element.getAttribute(MAP_SCENE_ATTRIBUTE)).toContain("routes:2,uniqueRoutes:1,");
+
+    host.applyScene(scene({
+      routes: [...routes, { ...selected, id: asRouteCandidateId("return-preview"), state: "preview" }],
+    }));
+    expect(element.getAttribute(MAP_SCENE_ATTRIBUTE)).toContain("routes:3,uniqueRoutes:2,");
+
+    host.dispose();
+  });
+
   it("adds a selected search name image with no map glyph service", async () => {
     const context = {
       measureText: (value: string) => ({ width: value.length * 7 }),

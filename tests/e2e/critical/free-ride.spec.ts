@@ -39,7 +39,9 @@ test("Just ride enables suggestions and Head Home binds a fresh return to the se
   await openRideSheet(page);
   await expect(page.getByTestId("continue-free-ride")).toBeVisible();
 
-  await expectDrawnScene(page, { routes: "1" });
+  // The matcher may split the return into selected/ahead and travelled/behind
+  // segments. It is still one route; a lingering preview has a different id.
+  await expectDrawnScene(page, { uniqueRoutes: "1" });
   await expect.poll(async () => (await readDrawnScene(page)).selected).not.toBe("none");
   const returnExtent = await settledExtent(page);
   // The fixture return line spans this full box. Requiring a close fit catches a

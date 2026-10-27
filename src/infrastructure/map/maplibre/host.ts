@@ -1133,6 +1133,7 @@ export async function createMapLibreHost(
    */
   let sceneReport = {
     routes: 0,
+    uniqueRoutes: 0,
     points: 0,
     selected: "none",
     previous: 0,
@@ -1151,6 +1152,7 @@ export async function createMapLibreHost(
       MAP_SCENE_ATTRIBUTE,
       [
         `routes:${sceneReport.routes}`,
+        `uniqueRoutes:${sceneReport.uniqueRoutes}`,
         `points:${sceneReport.points}`,
         `selected:${sceneReport.selected}`,
         `previous:${sceneReport.previous}`,
@@ -1176,6 +1178,9 @@ export async function createMapLibreHost(
     const span = scene.changedSpan ?? null;
     sceneReport = {
       routes: routes.length,
+      // One followed route can draw as selected/ahead and travelled/behind.
+      // Keep the segment count above, and report identities independently.
+      uniqueRoutes: new Set(routes.map((route) => route.id)).size,
       points: scene.points.length,
       selected: selected?.id ?? "none",
       // 05 §11: how much of what is drawn is the *stale* answer. A browser gate can

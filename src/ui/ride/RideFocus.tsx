@@ -894,6 +894,7 @@ export function RideFocus({
       data-recording={recordingIndicator === null ? undefined : "true"}
       onPointerDown={noteTouch}
       onKeyDown={noteTouch}
+      onClick={noteTouch}
     >
       {map}
 
