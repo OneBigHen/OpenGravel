@@ -745,7 +745,6 @@
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
     gap: 4px;
     font-size: var(--og-text-caption);
-    white-space: nowrap;
   }
 
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
