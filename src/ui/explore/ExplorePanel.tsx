@@ -8,6 +8,7 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 import { AppBar } from "@/ui/nav/AppBar";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
+import { routeFacts } from "@/ui/explore/route-facts";
 import { awayLabel } from "@/ui/explore/rider-distance";
 import { rememberListPosition, takeListPosition } from "@/ui/explore/list-position";
 import { RideRoadOpenings } from "@/ui/explore/RideRoadOpenings";
@@ -17,7 +18,6 @@ import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 
-import "./explore-rides.css";
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
 import { formatDistance } from "@/application/planner/measurements";
@@ -78,8 +78,8 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
   // The route on a real map, so a rider sees where it is: towns, roads, terrain.
   const mapUrl = mapboxToken === undefined
     ? null
-    // The card's image is 16:9 (design system v2 §4), so the map is framed that way.
-    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 400, height: 225 });
+    // Square maps keep the full route framed inside the compact thumbnail.
+    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 256, height: 256 });
   if (mapUrl !== null) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a remote static map, sized by CSS; next/image would proxy it.
@@ -89,13 +89,13 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
         alt={`${entry.name} on a map`}
         loading="lazy"
         decoding="async"
-        width={400}
-        height={225}
+        width={256}
+        height={256}
       />
     );
   }
   // No basemap on this device: the ride's own line still leads the card, in the
-  // same 16:9 frame a map image fills. The shape is the route, not a map.
+  // same compact thumbnail a map image fills. The shape is the route, not a map.
   const line = entry.previewGeometry ?? entry.geometry;
   if (line.length >= 2) {
     return <RouteLinePreview line={line} name={entry.name} className="og-explore-card__preview" />;
@@ -115,9 +115,8 @@ function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; re
 /**
  * One ride in a list (design system v2 §4).
  *
- * The card is vertical: the route on its map full width in 16:9, the name over
- * at most two lines, one line of facts, and one caption line for the credit.
- * Nothing on it is a pill, so nothing can clip at 320px.
+ * Compact route rows keep the preview beside a two-line title, a facts line
+ * and a source caption. The entire row opens the ride.
  */
 function RouteCard({
   entry,
@@ -132,18 +131,25 @@ function RouteCard({
   readonly awayKm?: number | undefined;
 }) {
   const away = awayKm === undefined ? null : awayLabel(awayKm);
-  // One line of facts, in the order a rider asks them: how far the ride is, how
-  // far its start is, how twisty, and what is under the wheels. A fact the
+  // Distance, ride time and road character fit on one scanning line; the
+  // distance to the start lives with the source caption. A fact the
   // catalog does not know is left out rather than printed on every card: the
   // honest-unknown rule forbids claiming a value, not saying "unknown" sixteen
   // times down a list.
   //
   // The surface evidence arrives as "Mostly paved · 2.1 mi gravel". On the card
   // the middot is the line's own separator, so that fact keeps its two halves
-  // as a comma: five facts must not read as six.
-  const facts: readonly { readonly text: string; readonly testId?: string }[] = [
+  // as a comma rather than introducing another separator.
+  const time = routeFacts({
+    distanceKm: entry.distanceKm,
+    estimatedTimeMinutes: entry.estimatedTimeMinutes,
+    surfaceLabel: null,
+    curvatureSummary: undefined,
+    formatDistance,
+  }).find((fact) => fact.key === "time");
+  const facts: readonly { readonly text: string; readonly isTime?: boolean; readonly note?: string }[] = [
     { text: distanceLabel(entry.distanceKm) },
-    ...(away === null ? [] : [{ text: away, testId: "explore-card-away" }]),
+    ...(time === undefined ? [] : [{ text: time.text, note: time.note, isTime: true }]),
     ...(entry.curvatureSummary === undefined ? [] : [{ text: entry.curvatureSummary }]),
     ...(entry.surfaceSummary === undefined ? [] : [{ text: entry.surfaceSummary.split(" · ").join(", ") }]),
   ];
@@ -182,20 +188,21 @@ function RouteCard({
             {facts.map((fact, index) => (
               <span
                 key={`${index}-${fact.text}`}
-                className="og-explore-card__fact"
-                {...(fact.testId === undefined ? {} : { "data-testid": fact.testId })}
+                className={fact.isTime ? "og-explore-card__duration" : "og-explore-card__fact"}
+                {...(fact.note === undefined ? {} : { title: fact.note })}
               >
                 {fact.text}
               </span>
             ))}
           </span>
+          <span className="og-explore-card__credit">
+            {away === null ? null : <span data-testid="explore-card-away">{away}</span>}
+            <span className="og-explore-card__source" data-source={entry.source}>{SOURCE_LABEL[entry.source]}</span>
+            {byline === null ? null : <span className="og-explore-card__byline">{byline}</span>}
+            {versions === null ? null : <span className="og-explore-card__versions">{versions}</span>}
+          </span>
         </span>
       </Link>
-      <p className="og-explore-card__credit">
-        <span className="og-explore-card__source" data-source={entry.source}>{SOURCE_LABEL[entry.source]}</span>
-        {byline === null ? null : <span className="og-explore-card__byline">{byline}</span>}
-        {versions === null ? null : <span className="og-explore-card__versions">{versions}</span>}
-      </p>
     </li>
   );
 }
@@ -608,6 +615,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
     <main id="main" className="og-explore">
       <AppBar current="/explore" />
       <header className="og-explore__header">
+        <div className="og-explore__heading-row">
         <div className="og-explore__heading">
           <h1>Explore</h1>
         </div>
@@ -649,9 +657,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             </button>
           ))}
         </div>
-      </header>
-
-      <div role="tabpanel" id="og-explore-panel" aria-labelledby={`og-explore-tab-${lens}`}>
+        </div>
       {lens === "ride" ? <div className="og-explore__toolbar">
         <label className="og-explore__search">
           <span className="og-visually-hidden">Search</span>
@@ -659,10 +665,31 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </label>
         {/* One row of chips at every width: the two decisions a rider makes
             while scanning (how far, how far from me), one surface choice, and
-            "twisty". Everything else is one press away in Filters, which is the
-            last chip in the row so search keeps the whole width above it, and no
-            decision is asked for twice. */}
+            "twisty". Everything else is one press away in Filters, which leads
+            the row so it never scrolls out of reach and search keeps the whole
+            width above it; no decision is asked for twice. */}
         <div className="og-explore__quick" role="group" aria-label="Quick filters">
+          {/* The first chip opens the rest, so it never scrolls out of reach. A
+              rider who has narrowed the list sees how many of the sheet's own
+              filters are on, without a second row of controls above the rides. */}
+          <button
+            ref={filtersToggleRef}
+            type="button"
+            className="og-explore__quick-chip og-explore__filters-toggle"
+            data-filter={filterCount > 0 ? "on" : undefined}
+            aria-expanded={filtersOpen}
+            aria-controls="og-explore-filters"
+            aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+              <circle cx="16" cy="7" r="2" />
+              <circle cx="10" cy="17" r="2" />
+            </svg>
+            <span className="og-explore__filters-label">Filters</span>
+            {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
+          </button>
           <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
             if (query.sort === "near") updateQuery({ sort: "recommended" });
             else if (origin === undefined) sortByLocation();
@@ -699,27 +726,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             onClick={() => updateQuery({ curvy: query.curvy === true ? undefined : true })}
           >
             Twisty
-          </button>
-          {/* The last chip opens the rest. A rider who has narrowed the list
-              sees how many of the sheet's own filters are on, without a second
-              row of controls above the rides. */}
-          <button
-            ref={filtersToggleRef}
-            type="button"
-            className="og-explore__quick-chip og-explore__filters-toggle"
-            data-filter={filterCount > 0 ? "on" : undefined}
-            aria-expanded={filtersOpen}
-            aria-controls="og-explore-filters"
-            aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-              <circle cx="16" cy="7" r="2" />
-              <circle cx="10" cy="17" r="2" />
-            </svg>
-            <span className="og-explore__filters-label">Filters</span>
-            {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
           </button>
         </div>
         {filtersOpen ? (
@@ -838,7 +844,9 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </button>
       </section>
       </div> : null}
+      </header>
 
+      <div role="tabpanel" id="og-explore-panel" aria-labelledby={`og-explore-tab-${lens}`}>
       {lens === "ride" ? <>
         {locationNote !== null ? <p className="og-explore__note" role="status">{locationNote}</p> : null}
         {noRidesAtAll ? (

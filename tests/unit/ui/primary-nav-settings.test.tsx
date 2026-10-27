@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { cssRule } from "../../helpers/app-css";
 import { afterEach, describe, expect, it } from "vitest";
 import { PrimaryNav } from "@/ui/nav/PrimaryNav";
 
@@ -17,10 +18,10 @@ describe("shared navigation settings link", () => {
 
 describe("settings link icon", () => {
   it("keeps the gear visible on the wider tiers, where the link has no text", async () => {
-    const { readFileSync } = await import("node:fs");
-    const css = readFileSync("src/app/globals.css", "utf8");
-    // Outside any media query the nav icons are hidden; the settings gear is the
-    // exception, or the desktop link renders as an empty ring.
-    expect(css).toMatch(/\n\.og-planner__settings-link \.og-nav__icon \{\s*display: block;/);
+    // Design v3: the top bar shows every destination's icon beside its label,
+    // and the settings link is the icon alone, so no tier may hide the icon
+    // outside the phone tab bar.
+    expect(cssRule(".og-nav__icon")).not.toMatch(/display:\s*none/);
+    expect(cssRule(".og-planner__settings-link .og-nav__icon")).not.toMatch(/display:\s*none/);
   });
 });

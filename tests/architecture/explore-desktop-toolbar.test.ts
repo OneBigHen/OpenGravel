@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appCss } from "../helpers/app-css";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -13,7 +12,6 @@ import { describe, expect, it } from "vitest";
  * cannot see which rule wins.
  */
 
-const FILES = ["globals.css", "theme-glass.css"] as const;
 
 interface Rule {
   readonly selector: string;
@@ -23,8 +21,8 @@ interface Rule {
 }
 
 /** The stylesheet with comments removed, so prose cannot satisfy a selector. */
-function sourceOf(file: (typeof FILES)[number]): string {
-  return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+function sourceOf(): string {
+  return appCss().replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
 /** Rules with the media query they sit in, so a wide-screen rule is provable. */
@@ -59,7 +57,7 @@ function rulesOf(source: string): Rule[] {
 }
 
 function allRules(): Rule[] {
-  return FILES.flatMap((file) => rulesOf(sourceOf(file)));
+  return rulesOf(sourceOf());
 }
 
 function declaration(body: string, property: string): string | null {
@@ -88,34 +86,32 @@ function wide(rule: Rule): boolean {
 
 describe("Explore's filter toolbar", () => {
   it("shows the chips and the Filters button at every width, on 48px targets", () => {
-    // The chip row is not a phone-only extra any more: it is the browse row.
-    const chips = rulesFor(".og-explore__toolbar > .og-explore__quick");
+    // The chip row is not a phone-only extra: it is the browse row.
+    const chips = rulesFor(".og-explore__quick");
     expect(chips.some((rule) => rule.media === null && declaration(rule.body, "display") === "flex")).toBe(true);
 
     // Nothing hides the chip row or the button that opens the rest.
     for (const rule of allRules()) {
-      const hides = declaration(rule.body, "display") === "none";
-      if (!hides) continue;
+      if (declaration(rule.body, "display") !== "none") continue;
       const targets = selectorsOf(rule).filter((selector) => !selector.includes("::"));
       expect(targets.filter((selector) => selector.includes(".og-explore__quick"))).toEqual([]);
       expect(targets.filter((selector) => selector.includes(".og-explore__filters-toggle"))).toEqual([]);
     }
 
-    const toggle = rulesFor(".og-explore .og-explore__filters-toggle.og-explore__filters-toggle")
-      .filter((rule) => rule.media === null);
-    expect(toggle).toHaveLength(1);
-    expect(declaration(toggle[0]!.body, "display")).toBe("inline-flex");
-    expect(Number.parseInt(declaration(toggle[0]!.body, "min-height") ?? "0", 10)).toBeGreaterThanOrEqual(48);
+    // Filters is the last chip: 40px to the eye, a 48px hit area.
+    const chip = rulesFor(".og-explore__quick-chip").filter((rule) => rule.media === null);
+    expect(chip.some((rule) => declaration(rule.body, "display") === "inline-flex")).toBe(true);
+    expect(chip.some((rule) => declaration(rule.body, "min-height") === "40px")).toBe(true);
+    const hit = rulesFor(".og-explore__quick-chip::before");
+    expect(hit.some((rule) => declaration(rule.body, "inset") === "-4px 0")).toBe(true);
   });
 
   it("puts search on its own row, with the chips — Filters last — under it", () => {
-    // At 320px search and the Filters button shared one grid row, which left
-    // the field about 130px wide ("Search re…"). Search spans the toolbar and
-    // the chips, Filters included, are the row below it.
+    // At 320px search and Filters once shared a row and left the field about
+    // 130px wide. The toolbar is one column; search, then the chip row.
     const toolbar = allRules().filter((rule) => rule.media === null
       && selectorsOf(rule).includes(".og-explore__toolbar"));
     expect(toolbar).toHaveLength(1);
-    expect(declaration(toolbar[0]!.body, "grid-template-areas")).toBe('"search" "quick"');
     expect(declaration(toolbar[0]!.body, "grid-template-columns")).toBe("minmax(0, 1fr)");
   });
 
@@ -123,31 +119,33 @@ describe("Explore's filter toolbar", () => {
     const oneLine = allRules().filter((rule) =>
       rule.media !== null
       && rule.media.includes("min-width: 1181px")
-      && selectorsOf(rule).includes(".og-explore .og-explore__toolbar"));
+      && selectorsOf(rule).includes(".og-explore__toolbar"));
     expect(oneLine).toHaveLength(1);
-    expect(declaration(oneLine[0]!.body, "grid-template-areas")).toBe('"search quick"');
+    expect(declaration(oneLine[0]!.body, "grid-template-columns")).toBe("minmax(0, 420px) minmax(0, 1fr)");
   });
 
   it("opens the remaining filters as a popover that is not there while closed", () => {
     const panel = allRules().filter((rule) => wide(rule)
-      && selectorsOf(rule).includes(".og-explore .og-explore__toolbar > .og-explore__controls"));
+      && selectorsOf(rule).includes('.og-explore__toolbar > .og-explore__controls[data-open="true"]'));
     expect(panel).toHaveLength(1);
     // Beside the toolbar, over the list: no second and third row of controls.
     expect(declaration(panel[0]!.body, "position")).toBe("absolute");
     expect(declaration(panel[0]!.body, "right")).toBe("0");
-    expect(declaration(panel[0]!.body, "grid-template-columns")).toBe("repeat(2, minmax(0, 1fr))");
-    expect(declaration(panel[0]!.body, "box-shadow")).toBe("var(--og-shadow-2)");
+    expect(declaration(panel[0]!.body, "box-shadow")).toBe("var(--og-shadow-float)");
+    const open = allRules().filter((rule) => rule.media === null
+      && selectorsOf(rule).includes('.og-explore__controls[data-open="true"]'));
+    expect(declaration(open[0]!.body, "grid-template-columns")).toBe("repeat(2, minmax(0, 1fr))");
 
     // Shut, it renders nothing at all.
-    const closed = allRules().filter((rule) => wide(rule)
-      && selectorsOf(rule).includes('.og-explore .og-explore__toolbar > .og-explore__controls[data-open="false"]'));
+    const closed = allRules().filter((rule) => rule.media === null
+      && selectorsOf(rule).includes('.og-explore__controls[data-open="false"]'));
     expect(closed).toHaveLength(1);
     expect(declaration(closed[0]!.body, "display")).toBe("none");
   });
 
   it("keeps every field's caption inside the popover instead of trusting the option", () => {
-    const labels = allRules().filter((rule) => wide(rule)
-      && selectorsOf(rule).includes(".og-explore .og-explore__toolbar > .og-explore__controls label"));
+    const labels = allRules().filter((rule) => rule.media === null
+      && selectorsOf(rule).includes(".og-explore__controls label"));
     expect(labels).toHaveLength(1);
     // A caption is only useful if it is painted.
     expect(declaration(labels[0]!.body, "display")).toBe("grid");

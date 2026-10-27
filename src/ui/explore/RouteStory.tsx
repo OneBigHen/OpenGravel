@@ -67,8 +67,8 @@ export function RouteStory({ story, routeName }: { readonly story: CatalogRideSt
     setPhotoIndex((current) => current === null ? null : (current + delta + story.photos.length) % story.photos.length);
   }
 
-  return (
-    <section className="og-route-story" aria-labelledby="route-story-title">
+  const body = (
+      <section aria-labelledby="route-story-title">
       <header className="og-route-story__head">
         <p className="og-eyebrow">{story.source.kind}</p>
         <h2 id="route-story-title">From {story.source.name}</h2>
@@ -193,6 +193,16 @@ export function RouteStory({ story, routeName }: { readonly story: CatalogRideSt
           </figure>
         )}
       </dialog>
-    </section>
+      </section>
+  );
+
+  // A post copied from elsewhere (a group's Facebook post) folds behind one
+  // row; a rider's own write-up shared here is the page's story and stays open.
+  if (story.source.url === undefined) return <div className="og-route-story">{body}</div>;
+  return (
+    <details className="og-route-story og-route-story--disclosure">
+      <summary className="og-route-story__disclosure" aria-label={`Original post from ${story.source.name}`}>Original post</summary>
+      {body}
+    </details>
   );
 }

@@ -110,7 +110,11 @@ export async function expectAboveSheet(page: Page, coordinates: readonly { lat: 
     return coordinates.every((coordinate) => {
       const fraction = fractionOf(extent, coordinate);
       const x = map.x + fraction.x * map.width, y = map.y + fraction.y * map.height;
-      return x >= map.x + 8 && x <= map.x + map.width - 8 && y >= (top === null ? map.y : top.y + top.height) + 8 && y <= sheet.y - 8;
+      // Clear of the sheet: above it (a phone's bottom sheet) or beside it (a
+      // landscape tablet's sheet floats at the left, DESIGN.md §5).
+      const clearOfSheet = y <= sheet.y - 8 || x >= sheet.x + sheet.width + 8;
+      return x >= map.x + 8 && x <= map.x + map.width - 8 && y >= (top === null ? map.y : top.y + top.height) + 8
+        && y <= map.y + map.height - 8 && clearOfSheet;
     });
   }, { timeout: 15_000, message: "route and pins fit between the search chrome and the sheet" }).toBe(true);
 }

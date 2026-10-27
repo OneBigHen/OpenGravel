@@ -16,7 +16,8 @@
  *   key (the rider owns the camera) requests nothing (05 §8).
  */
 
-import { readFileSync } from "node:fs";
+import { applyResolvedTheme } from "@/ui/appearance/appearance";
+import { cssRule } from "../../helpers/app-css";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -598,7 +599,9 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
     expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
   });
 
-  it("offers Night contrast on a host that can draw it, opens with it next time, and leaves satellite off", async () => {
+  it("draws the dark basemap whenever the theme is Night, and keeps Night out of the map menu", async () => {
+    // DESIGN.md §3 (v3): Night is a theme, not a map choice. Under Night every
+    // look sits on the dark basemap; satellite still draws over it.
     const base = createStubMapHostFactory();
     const setSatellite = vi.fn();
     const setBasemapLook = vi.fn();
@@ -612,24 +615,34 @@ describe("satellite imagery (M3, OGV-D-265)", () => {
         setBasemapLook,
       });
     };
-    render(<PlannerMap scene={scene()} onIntent={vi.fn() as never} hostFactory={factory as never} activeTool="pan" />);
-    await act(async () => {
-      await settle();
-    });
-    fireEvent.click(screen.getByTestId("map-satellite-toggle"));
-    fireEvent.click(screen.getByTestId("map-look-night"));
-    expect(setBasemapLook).toHaveBeenLastCalledWith("night");
-    expect(setSatellite).toHaveBeenLastCalledWith(false);
-    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
-    expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("night");
-    cleanup();
+    applyResolvedTheme("night");
+    try {
+      render(<PlannerMap scene={scene()} onIntent={vi.fn() as never} hostFactory={factory as never} activeTool="pan" />);
+      await act(async () => {
+        await settle();
+      });
+      // The map opens dark from its first frame.
+      expect(seen.at(-1)).toBe("night");
+      fireEvent.click(screen.getByTestId("map-satellite-toggle"));
+      expect(screen.queryByTestId("map-look-night")).toBeNull();
+      fireEvent.click(screen.getByTestId("map-look-satellite"));
+      expect(setSatellite).toHaveBeenLastCalledWith(true);
+      expect(setBasemapLook).toHaveBeenLastCalledWith("night");
+      // Back to Map: still the dark basemap while the theme is Night.
+      fireEvent.click(screen.getByTestId("map-satellite-toggle"));
+      fireEvent.click(screen.getByTestId("map-look-map"));
+      expect(setSatellite).toHaveBeenLastCalledWith(false);
+      expect(setBasemapLook).toHaveBeenLastCalledWith("night");
 
-    render(<PlannerMap scene={scene()} onIntent={vi.fn() as never} hostFactory={factory as never} activeTool="pan" />);
-    await act(async () => {
-      await settle();
-    });
-    expect(seen.at(-1)).toBe("night");
-    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
+      // The sun comes up: the same map turns light, the rider's look is kept.
+      act(() => {
+        applyResolvedTheme("day");
+      });
+      await act(settle);
+      expect(setBasemapLook).toHaveBeenLastCalledWith("map");
+    } finally {
+      applyResolvedTheme("day");
+    }
   });
 });
 
@@ -657,13 +670,13 @@ describe("a look the layers sheet owns", () => {
     };
     const view = render(<PlannerMap {...props} look="map" />);
     await act(settle);
-    expect(onLookOptions).toHaveBeenLastCalledWith(["map", "night", "satellite"]);
+    // Night is the theme's job, so the sheet is offered Map and Satellite.
+    expect(onLookOptions).toHaveBeenLastCalledWith(["map", "satellite"]);
     expect(onLookChange).not.toHaveBeenCalled();
 
-    view.rerender(<PlannerMap {...props} look="night" />);
+    view.rerender(<PlannerMap {...props} look="satellite" />);
     await act(settle);
-    expect(setBasemapLook).toHaveBeenLastCalledWith("night");
-    expect(setSatellite).toHaveBeenLastCalledWith(false);
+    expect(setSatellite).toHaveBeenLastCalledWith(true);
     // A sheet-owned choice is not written back as the rider's preference here.
     expect(window.localStorage.getItem("opengravel-basemap-look")).toBeNull();
     view.unmount();
@@ -691,7 +704,6 @@ describe("a surface that insists on a look (the ride follows Day/Night)", () => 
     await act(settle);
 
     expect(opened.at(-1)).toBe("night");
-    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Night");
     expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
 
     // The sun comes up: the same mounted map turns with the chrome.
@@ -702,7 +714,6 @@ describe("a surface that insists on a look (the ride follows Day/Night)", () => 
     view.rerender(<PlannerMap {...props} hostFactory={factory as never} forcedLook="map" />);
     await act(settle);
     expect(setBasemapLook).toHaveBeenLastCalledWith("map");
-    expect(screen.getByTestId("map-satellite-toggle")).toHaveTextContent("Map");
     expect(window.localStorage.getItem("opengravel-basemap-look")).toBe("satellite");
     view.unmount();
     window.localStorage.clear();
@@ -714,8 +725,7 @@ describe("the map point menu", () => {
 
   it("offers all five rows at 48 px minimum and an inline disabled reason", async () => {
     const style = document.createElement("style");
-    const css = readFileSync("src/app/globals.css", "utf8");
-    style.textContent = css.slice(css.indexOf("/* Map-point authoring:"));
+    style.textContent = `.og-map-point-menu__row {${cssRule(".og-map-point-menu__row")}}`;
     document.head.append(style);
     try {
       const { factory } = await renderMap({ onPointAction: vi.fn(), addStopDisabledReason: "plan a start and finish first" });

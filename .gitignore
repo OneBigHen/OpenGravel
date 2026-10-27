@@ -61,3 +61,6 @@ qa/
 
 # Local HD map build inputs/outputs; manifests/config stay tracked.
 infra/maps/data/
+
+# Generated screenshot galleries
+/shots-out/

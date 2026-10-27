@@ -1,38 +1,20 @@
-/*
- * The follower page: a full-height map with one card over it and, when the rider
- * needs help, one red banner above the card.
- *
- * The map is the page, so it takes the whole viewport and the card floats over
- * it. Nothing here animates decoratively, which is also why there is no motion to
- * switch off under `prefers-reduced-motion`; the map's own camera respects it in
- * the host. Colours come from the app's tokens, so Day, Night and the ride theme
- * all work without a second palette.
- */
-
 .page {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--og-canvas);
+  background: var(--og-bg);
 }
 
 .map {
   position: absolute;
   inset: 0;
 }
-
-/* The map is the surface here, not a card on one: no border, no radius, no inset. */
 .map :global(.og-map-host) {
   height: 100%;
   min-height: 0;
   border: 0;
   border-radius: 0;
 }
-
-/*
- * The floating chrome. It spans the screen width (a banner must read as one) and
- * pads itself by the device's safe area, so a notched phone never cuts the title.
- */
 .top {
   position: absolute;
   z-index: 3;
@@ -48,22 +30,20 @@
 .alert,
 .card {
   pointer-events: auto;
-  box-shadow: var(--og-shadow-2);
+  box-shadow: var(--og-shadow-float);
 }
-
-/* The alert: the one thing on this page that must be impossible to miss. */
 .alert {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: var(--og-radius-object);
+  border-radius: var(--og-radius-card);
   background: var(--og-danger);
-  color: var(--og-on-fill);
+  color: var(--og-on-primary);
 }
 
 .alertText {
-  font-family: var(--og-font-display), var(--og-font-body), sans-serif;
+  font-family: var(--og-face-display);
   font-size: var(--og-text-body);
   font-weight: 600;
   line-height: 1.35;
@@ -83,32 +63,25 @@
   justify-content: center;
   padding: 0 16px;
   border-radius: var(--og-radius-control);
-  background: var(--og-on-fill);
+  background: var(--og-on-primary);
   color: var(--og-danger);
   font-weight: 600;
   text-decoration: none;
 }
-
-/* Calling for help is the heavier action, so it is not the pale button. */
 .alertCall {
   background: var(--og-ink);
-  color: var(--og-on-fill);
+  color: var(--og-on-primary);
 }
 
 .card {
   display: flex;
   align-items: center;
   gap: 12px;
-  /*
-   * Clear of the map's right-hand control column (56 px plus its 12 px inset), so
-   * the compass and zoom buttons are never behind the card on a phone. The alert
-   * above it stays full width on purpose: during an alert the banner is the page.
-   */
   max-width: min(44rem, calc(100% - 68px));
   padding: 10px 14px;
-  border: 1px solid var(--og-hairline);
-  border-radius: var(--og-radius-object);
-  background: var(--og-paper);
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface);
   color: var(--og-ink);
 }
 
@@ -121,7 +94,7 @@
 }
 
 .title {
-  font-family: var(--og-font-display), var(--og-font-body), sans-serif;
+  font-family: var(--og-face-display);
   font-size: var(--og-text-body);
   font-weight: 600;
   line-height: 1.3;
@@ -130,7 +103,7 @@
 
 .detail {
   font-size: var(--og-text-meta);
-  color: var(--og-slate-text);
+  color: var(--og-ink-2);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
@@ -145,30 +118,27 @@
   padding: 0 14px;
   border: 1px solid transparent;
   border-radius: var(--og-radius-control);
-  background: var(--og-signal-blue);
-  color: var(--og-on-fill);
+  background: var(--og-primary);
+  color: var(--og-on-primary);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 
 .followButton:hover {
-  background: var(--og-signal-strong);
+  background: var(--og-primary);
 }
 
 .followButton:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
-
-/* A stopped or stale ride is still readable; only the alert changes the palette. */
 .card[data-kind="stale"] .title,
 .card[data-kind="finished"] .title {
-  color: var(--og-slate-text);
+  color: var(--og-ink-2);
 }
 
-@media (max-width: 520px) {
-  /* The card stacks on a phone so the follow button keeps its 44 px target. */
+@media (max-width: 760px) {
   .card {
     align-items: flex-start;
     flex-direction: column;

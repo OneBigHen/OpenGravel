@@ -1,0 +1,475 @@
+/* The composer: From / Where to, Loop length and direction, the place search
+   field and its suggestions, Undo / Redo, and the "Change this ride"
+   disclosure that holds stops, no-go areas and roads. */
+
+.og-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+}
+
+.og-composer__label {
+  grid-area: label;
+  color: var(--og-ink-2);
+  font-family: var(--og-face-body);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Rows size to their content: a wrapped name or coordinate line grows the row. */
+.og-composer__row {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  grid-template-areas: "label value action";
+  grid-template-rows: auto;
+  grid-auto-rows: minmax(min-content, max-content);
+  align-items: center;
+  align-content: start;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+}
+
+.og-composer__row > .og-chip {
+  grid-area: action;
+}
+
+/* The top search does the searching, so an empty Start / Destination row has
+   no field: it names itself beside its "pick on map" pin instead. */
+.og-composer[data-top-search-idle="true"] > .og-composer__row--search:not(:has(.og-composer__place, .og-composer__value)) > .og-composer__label {
+  position: static;
+  grid-area: value;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-body);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+}
+
+.og-composer__row--loop {
+  grid-template-areas: "label value value";
+}
+
+.og-composer__row--direction {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "label" "value";
+}
+
+/* From / Where to: a dot, the place, a star and a pick-on-map button. */
+.og-composer__row--search {
+  position: relative;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  grid-template-areas: "dot main action";
+  grid-template-rows: auto;
+  align-items: start;
+  align-content: start;
+  column-gap: var(--og-space-3);
+}
+
+.og-composer__row--search:has(> .og-composer__star) {
+  grid-template-columns: 14px minmax(0, 1fr) auto auto;
+  grid-template-areas: "dot main star action";
+  column-gap: var(--og-space-2);
+}
+
+.og-composer__row--search > :is(.og-composer__value, .og-composer__place, .og-place-search) {
+  grid-area: main;
+}
+
+.og-composer__row--search > .og-composer__label {
+  align-self: center;
+}
+
+.og-composer__dot {
+  grid-area: dot;
+  justify-self: center;
+  width: 12px;
+  height: 12px;
+  margin-top: 18px;
+  border-radius: var(--og-radius-pill);
+}
+
+.og-composer__row:not(.og-composer__row--search) > .og-composer__dot {
+  display: none;
+}
+
+.og-composer__dot--start {
+  border: 3px solid var(--og-primary);
+  background: var(--og-surface);
+}
+
+.og-composer__dot--finish {
+  background: var(--og-ink);
+}
+
+/* The dotted thread from start to finish. */
+.og-composer__row--search + .og-composer__row--search > .og-composer__dot {
+  position: relative;
+}
+
+.og-composer__row--search + .og-composer__row--search > .og-composer__dot::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: calc(50% - 1px);
+  height: 34px;
+  border-left: 2px dotted var(--og-line-strong);
+}
+
+.og-composer__place {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: var(--og-touch);
+  overflow: visible;
+  padding: var(--og-space-1) var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-composer__place:hover {
+  background: color-mix(in srgb, var(--og-surface-2) 80%, var(--og-ink));
+}
+
+.og-composer__value {
+  grid-area: value;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.og-composer__value-label {
+  font-size: var(--og-text-body);
+  font-weight: 600;
+}
+
+.og-composer__coordinate,
+.og-composer__reason {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: break-word;
+}
+
+.og-composer__place .og-composer__coordinate {
+  font-size: var(--og-text-caption);
+}
+
+.og-composer__star {
+  grid-area: star;
+  display: grid;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+  cursor: pointer;
+}
+
+.og-composer__star svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.og-composer__star[aria-pressed="true"] {
+  color: var(--og-ink);
+}
+
+.og-composer__star[aria-pressed="true"] svg {
+  fill: currentColor;
+}
+
+.og-composer__shape-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-composer__swap {
+  display: grid;
+  flex: 0 0 var(--og-touch);
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  margin: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  cursor: pointer;
+}
+
+.og-composer :is(.og-composer__star, .og-composer__swap):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-composer__commitment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-composer__commitment-actions {
+  display: flex;
+  gap: var(--og-space-2);
+}
+
+.og-composer__commitment-actions > button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The place search field: a well with a search glyph and its suggestions. */
+.og-place-search {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-1);
+  min-width: 0;
+}
+
+.og-place-search::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 14px;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  background: var(--og-ink-2);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='4.75'/%3E%3Cpath d='m10.5 10.5 3.5 3.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='4.75'/%3E%3Cpath d='m10.5 10.5 3.5 3.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  pointer-events: none;
+}
+
+/* The top search draws its own glyph beside the field. */
+.og-top-search .og-place-search::before {
+  display: none;
+}
+
+.og-place-search__input {
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-3) 0 42px;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+  text-overflow: ellipsis;
+}
+
+.og-place-search__input::placeholder {
+  color: var(--og-ink-2);
+}
+
+.og-place-search__input:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-place-search__list {
+  max-height: min(320px, 45vh);
+  margin: 0;
+  padding: var(--og-space-1);
+  overflow-y: auto;
+  list-style: none;
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-place-search__list[hidden] {
+  display: none;
+}
+
+.og-place-search__option {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--og-touch);
+  padding: var(--og-space-2) var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  cursor: pointer;
+}
+
+.og-place-search__option:hover,
+.og-place-search__option[aria-selected="true"] {
+  background: var(--og-surface-2);
+}
+
+.og-place-search__name {
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+}
+
+.og-place-search__context,
+.og-place-search__status {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-place-search__kind {
+  display: inline-block;
+  width: 1.1em;
+  color: var(--og-ink-2);
+  text-align: center;
+}
+
+.og-place-search__kind[data-kind="saved"] {
+  color: var(--og-ink);
+}
+
+/* Undo / Redo: two round buttons; the verb is the accessible name. */
+.og-history {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-history__button {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font-size: 0;
+}
+
+.og-history__button:disabled {
+  opacity: 0.35;
+}
+
+.og-history__button:not(:disabled):active {
+  background: var(--og-primary-soft);
+}
+
+.og-history__glyph[data-direction="redo"] {
+  transform: scaleX(-1);
+}
+
+.og-history__text,
+.og-history__what {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* "Change this ride": one disclosure row over stops, no-go areas and roads. */
+.og-refine {
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-refine__toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: var(--og-space-2) var(--og-space-4);
+  border: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-refine__toggle:disabled {
+  cursor: default;
+}
+
+.og-refine__title {
+  font-weight: 600;
+}
+
+.og-refine__summary {
+  overflow: hidden;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-refine__chevron {
+  color: var(--og-ink-2);
+}
+
+.og-refine__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  padding: var(--og-space-1) var(--og-space-4) var(--og-space-4);
+}
+
+@media (max-width: 1180px) {
+  .og-planner .og-composer[data-top-search-idle="true"] .og-advisor {
+    display: block;
+  }
+}
+
+@media (max-width: 760px) and (min-height: 501px) {
+  .og-planner .og-refine {
+    order: 2;
+  }
+
+  .og-planner .og-composer {
+    order: 3;
+  }
+
+  .og-composer__row--loop,
+  .og-composer__row--direction {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--og-space-1);
+    min-width: 0;
+  }
+}

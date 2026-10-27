@@ -1,0 +1,225 @@
+/* OpenGravel design tokens — the only place a colour, size, radius or shadow is
+   written down (DESIGN.md §4). Every stylesheet uses var(--og-…) from here.
+   Two themes: Day and Night, chosen by data-theme on <html> before first paint
+   (src/ui/appearance). The map's own colours are tokens too (--og-map-…): the
+   MapLibre host reads them from the live page (src/infrastructure/map/maplibre/style.ts). */
+
+:root,
+:root[data-theme="day"] {
+  color-scheme: light;
+
+  --og-bg: #f4f3ee;
+  --og-surface: #fdfcf9;
+  --og-surface-2: #ebede8;
+  --og-ink: #0f1a15;
+  --og-ink-2: #46524c;
+  --og-line: rgb(15 26 21 / 12%);
+  --og-line-strong: rgb(15 26 21 / 24%);
+  --og-primary: #13703f;
+  --og-on-primary: #ffffff;
+  --og-primary-text: #0a5c31;
+  --og-route: #7b4fa0;
+  --og-route-alt: #7d8a84;
+  --og-record: #d65a36;
+  --og-danger: #b3261e;
+  --og-warn: #8a6200;
+
+  /* Derived, never new hues: a wash of a token for a tint or a press. */
+  --og-primary-soft: color-mix(in srgb, var(--og-primary) 12%, var(--og-surface));
+  --og-route-soft: color-mix(in srgb, var(--og-route) 10%, var(--og-surface));
+  --og-press: color-mix(in srgb, var(--og-ink) 6%, transparent);
+  --og-scrim: rgb(15 26 21 / 36%);
+
+  --og-shadow-float: 0 1px 2px rgb(15 26 21 / 14%), 0 6px 18px rgb(15 26 21 / 12%);
+
+  /* Glass (DESIGN.md §2, v4): every surface that sits on the map or on the
+     topo backdrop is frosted. --og-glass for chrome (tab bar, search, map
+     buttons), --og-glass-dense for sheets and cards that hold sentences and
+     ride numbers. Text on either stays at full ink. */
+  --og-glass: hsl(48 33% 98% / 72%);
+  --og-glass-dense: hsl(48 33% 98% / 86%);
+  --og-glass-blur: blur(24px) saturate(170%);
+  --og-glass-edge: hsl(155 25% 15% / 12%);
+  --og-glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 70%);
+  --og-glass-shadow: 0 1px 2px hsl(155 35% 7% / 8%), 0 10px 30px -6px hsl(155 35% 7% / 16%);
+  --og-glass-well: hsl(150 12% 30% / 7%);
+
+  /* The page backdrop behind non-map screens: a quiet topographic sheet so
+     the glass has terrain to frost (public/textures/topo.svg). */
+  --og-topo-ink: hsl(150 30% 22% / 9%);
+  --og-backdrop-wash:
+    radial-gradient(120% 70% at 0% 0%, hsl(146 45% 40% / 10%), transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, hsl(275 30% 50% / 7%), transparent 60%);
+  --og-shadow-sheet: 0 -1px 0 rgb(15 26 21 / 8%), 0 -8px 28px rgb(15 26 21 / 10%);
+
+  /* The map's palette (read by the MapLibre host). */
+  --og-map-ink: #161d1c;
+  --og-map-paper: #fbf9f4;
+  --og-map-canvas: #f4f0e7;
+  --og-map-record: #d65a36;
+  --og-map-record-strong: #bf4829;
+  --og-map-slate: #68716f;
+  --og-map-sage: #9da98f;
+  --og-map-signal: #397c96;
+  --og-map-gold: #c99a46;
+  --og-map-brown: #776353;
+  --og-map-spruce: #243a35;
+  --og-map-route: #7b4fa0;
+  --og-map-route-strong: #5e3a7c;
+  --og-map-route-casing: auto;
+  --og-map-emphasis: 1;
+  --og-map-satellite: #3e4d2e;
+  --og-map-satellite-2: #5b6b3e;
+}
+
+:root[data-theme="night"] {
+  color-scheme: dark;
+
+  --og-bg: #0b100e;
+  --og-surface: #131a17;
+  --og-surface-2: #1d2724;
+  --og-ink: #ecf1ee;
+  --og-ink-2: #a2aea8;
+  --og-line: rgb(255 255 255 / 9%);
+  --og-line-strong: rgb(255 255 255 / 16%);
+  --og-primary: #1c7f49;
+  --og-on-primary: #ffffff;
+  --og-primary-text: #6fe3a3;
+  --og-route: #b48ae0;
+  --og-route-alt: #7d8a84;
+  --og-record: #f0805c;
+  --og-danger: #f0937f;
+  --og-warn: #e5c07a;
+
+  --og-primary-soft: color-mix(in srgb, var(--og-primary) 22%, var(--og-surface));
+  --og-route-soft: color-mix(in srgb, var(--og-route) 16%, var(--og-surface));
+  --og-press: color-mix(in srgb, var(--og-ink) 8%, transparent);
+  --og-scrim: rgb(0 0 0 / 55%);
+
+  --og-shadow-float: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 18px rgb(0 0 0 / 36%);
+
+  --og-glass: hsl(155 18% 9% / 66%);
+  --og-glass-dense: hsl(155 18% 9% / 82%);
+  --og-glass-blur: blur(24px) saturate(150%);
+  --og-glass-edge: hsl(145 25% 92% / 11%);
+  --og-glass-highlight: inset 0 1px 0 hsl(145 25% 92% / 7%);
+  --og-glass-shadow: 0 1px 2px hsl(0 0% 0% / 30%), 0 12px 32px -6px hsl(0 0% 0% / 45%);
+  --og-glass-well: hsl(145 25% 92% / 6%);
+
+  --og-topo-ink: hsl(145 40% 70% / 8%);
+  --og-backdrop-wash:
+    radial-gradient(120% 70% at 0% 0%, hsl(146 60% 35% / 16%), transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, hsl(275 40% 45% / 12%), transparent 60%);
+  --og-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 6%), 0 -8px 28px rgb(0 0 0 / 40%);
+
+  /* Night cartography: the route and pins sit on a dark basemap. */
+  --og-map-ink: #ecf1ee;
+  --og-map-paper: #131a17;
+  --og-map-canvas: #0b100e;
+  --og-map-record: #f0805c;
+  --og-map-record-strong: #f39c7a;
+  --og-map-slate: #a2aea8;
+  --og-map-sage: #6f7c66;
+  --og-map-signal: #5aa9e6;
+  --og-map-gold: #e5c07a;
+  --og-map-brown: #bfb2a4;
+  --og-map-spruce: #cfe3d8;
+  --og-map-route: #b48ae0;
+  --og-map-route-strong: #d3b8f0;
+  --og-map-route-casing: #131a17;
+  --og-map-emphasis: 1.4;
+}
+
+:root {
+  /* Type: Plus Jakarta Sans for the interface, Outfit for titles and ride
+     numbers. Five sizes. */
+  --og-face-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --og-text-title: 28px;
+  --og-text-headline: 20px;
+  --og-text-body: 16px;
+  --og-text-meta: 14px;
+  --og-text-caption: 12px;
+
+  /* The ride scale (small-screen-v2 §5): read at arm's length in sun. */
+  --og-ride-text-maneuver: 34px;
+  --og-ride-text-street: 20px;
+  --og-ride-text-readout: 24px;
+  --og-ride-text-unit: 12px;
+  --og-ride-text-hero: clamp(44px, 14vh, 96px);
+
+  /* Space: 4 · 8 · 12 · 16 · 24 · 32. */
+  --og-space-1: 4px;
+  --og-space-2: 8px;
+  --og-space-3: 12px;
+  --og-space-4: 16px;
+  --og-space-5: 24px;
+  --og-space-6: 32px;
+
+  /* Radius. */
+  --og-radius-control: 12px;
+  --og-radius-card: 16px;
+  --og-radius-sheet: 20px;
+  --og-radius-pill: 999px;
+
+  /* Touch. */
+  --og-touch: 48px;
+  --og-touch-ride: 56px;
+
+  /* Focus, motion. */
+  --og-focus-ring: var(--og-primary-text);
+  --og-focus-width: 2px;
+  --og-focus-offset: 2px;
+  --og-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --og-dur-fast: 140ms;
+  --og-dur-base: 220ms;
+
+  /* Safe areas, readable by stylesheets and the camera-fit code. */
+  --og-safe-top: env(safe-area-inset-top, 0px);
+  --og-safe-right: env(safe-area-inset-right, 0px);
+  --og-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --og-safe-left: env(safe-area-inset-left, 0px);
+
+  /* Stacking, bottom to top. */
+  --og-z-map-ui: 10;
+  --og-z-sheet: 20;
+  --og-z-nav: 30;
+  --og-z-float: 40;
+  --og-z-overlay: 60;
+  --og-z-toast: 70;
+}
+
+/* next/font (layout.tsx) puts --og-font-body / --og-font-display on <body>, so
+   the faces are resolved there: a var() resolves where it is declared, and on
+   <html> the fonts do not exist yet. */
+:root,
+body {
+  --og-face-body: var(--og-font-body, ui-sans-serif), system-ui, sans-serif;
+  --og-face-display: var(--og-font-display, ui-sans-serif), system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --og-dur-fast: 0ms;
+    --og-dur-base: 0ms;
+  }
+}
+
+/* Glass needs the blur to be legible: without it, or when the rider asked for
+   less transparency, chrome is the solid surface again. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  :root[data-theme] {
+    --og-glass: var(--og-surface);
+    --og-glass-dense: var(--og-surface);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root[data-theme] {
+    --og-glass: var(--og-surface);
+    --og-glass-dense: var(--og-surface);
+    --og-glass-blur: none;
+  }
+}

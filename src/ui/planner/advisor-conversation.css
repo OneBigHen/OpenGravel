@@ -1,3 +1,166 @@
+/* The ride advisor: "Describe a ride instead", its pending state, a proposal
+   with the changes it would make, and notices. */
+.og-advisor {
+  display: grid;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-advisor__mark {
+  color: var(--og-primary-text);
+  font-weight: 700;
+}
+
+.og-advisor__ask {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-1);
+  border: 0;
+  background: none;
+  color: var(--og-primary-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-advisor__form {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.og-advisor__pending,
+.og-advisor__actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.og-advisor__working {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  overflow-wrap: anywhere;
+}
+
+.og-advisor__working-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--og-text-meta);
+}
+
+.og-advisor__working .og-advisor__mark {
+  animation: og-advisor-pulse 1.1s ease-in-out infinite;
+}
+
+.og-advisor__proposal {
+  display: grid;
+  gap: var(--og-space-3);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-advisor__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  margin: 0;
+  font-weight: 600;
+}
+
+.og-advisor__changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-advisor__changes li {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: var(--og-space-1) var(--og-space-3);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-advisor__was,
+.og-advisor__brief,
+.og-advisor__note {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-advisor__actions button {
+  min-height: var(--og-touch);
+}
+
+.og-advisor__notice,
+.og-advisor__error {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-advisor__notice p,
+.og-advisor__error p {
+  flex: 1;
+  margin: 0;
+}
+
+.og-advisor__notice {
+  color: var(--og-ink-2);
+}
+
+.og-advisor__error {
+  color: var(--og-danger);
+}
+
+.og-advisor__cancel,
+.og-advisor__retry,
+.og-advisor__close {
+  min-width: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-advisor__cancel,
+.og-advisor__close {
+  color: var(--og-ink-2);
+}
+
+.og-advisor__close {
+  font-size: var(--og-text-headline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-advisor__working .og-advisor__mark {
+    animation: none;
+  }
+}
+
 .og-advisor__conversation {
   display: grid;
   gap: 10px;
@@ -17,14 +180,20 @@
   max-width: 100%;
   margin: 0 0 6px;
   padding: 8px 10px;
-  border-radius: var(--og-radius-object);
+  border-radius: var(--og-radius-card);
   color: var(--og-ink);
-  background: var(--og-paper);
+  background: var(--og-surface);
 }
 
 .og-advisor__rider {
   margin-left: auto;
-  border: 1px solid var(--og-sandstone);
+  max-width: 85%;
+  padding: 9px 13px;
+  border: 0;
+  border-radius: var(--og-radius-card) var(--og-radius-card) var(--og-radius-control) var(--og-radius-card);
+  background: var(--og-primary-soft);
+  color: var(--og-ink);
+  font-weight: 500;
 }
 
 .og-advisor .og-advisor__form {
@@ -38,7 +207,7 @@
 }
 
 .og-advisor :is(input, button):focus-visible {
-  outline: 2px solid var(--og-ember-text);
+  outline: 2px solid var(--og-focus-ring);
   outline-offset: 2px;
 }
 
@@ -53,17 +222,6 @@
   flex-basis: 70%;
 }
 
-/* Chat bubbles: the rider on the right in a filled bubble, the advisor on the left beside its mark. */
-.og-advisor__rider {
-  max-width: 85%;
-  padding: 9px 13px;
-  border: 0;
-  border-radius: 18px 18px 4px 18px;
-  background: var(--og-go-soft, var(--og-paper));
-  color: var(--og-ink);
-  font-weight: 550;
-}
-
 .og-advisor__reply {
   max-width: 92%;
   padding: 2px 0;
@@ -74,14 +232,12 @@
 .og-advisor__reply .og-advisor__mark {
   margin-right: 4px;
 }
-
-/* "Ask about this ride" under a planned ride. */
 .og-advisor-ask {
   display: grid;
   gap: 10px;
   min-width: 0;
   padding: 14px 0 4px;
-  border-top: 1px solid var(--og-hairline, var(--og-sandstone));
+  border-top: 1px solid var(--og-line);
 }
 
 .og-advisor-ask__title {
@@ -91,7 +247,7 @@
   margin: 0;
   color: var(--og-ink);
   font-size: var(--og-text-body);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .og-advisor-ask__chips {
@@ -117,9 +273,9 @@
 .og-advisor-ask__chips button {
   min-height: 44px;
   padding: 0 16px;
-  border: 1px solid var(--og-hairline, var(--og-sandstone));
-  border-radius: 999px;
-  background: var(--og-raised, var(--og-paper));
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
   color: var(--og-ink);
   font: inherit;
   font-size: var(--og-text-meta);
@@ -130,20 +286,17 @@
 }
 
 .og-advisor-ask__chips button:hover:not(:disabled) {
-  border-color: var(--og-ember-text);
+  border-color: var(--og-line-strong);
 }
 
 .og-advisor-ask__chips button:active:not(:disabled) {
-  background: var(--og-go-soft, var(--og-paper));
+  background: var(--og-primary-soft);
 }
 
 .og-advisor-ask__chips button:disabled {
   opacity: 0.55;
   cursor: default;
 }
-
-/* One row, always: the field carries its own send button inside it, so a
-   320 px sheet cannot wrap the field and the button onto two lines. */
 .og-advisor-ask__form {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -173,23 +326,23 @@
   border: 0;
   border-radius: var(--og-radius-control);
   background: none;
-  color: var(--og-ember-text);
+  color: var(--og-primary-text);
   cursor: pointer;
   translate: 0 -50%;
   transition: background-color var(--og-dur-fast, 120ms) ease;
 }
 
 .og-advisor-ask__send:hover:not(:disabled) {
-  background: var(--og-well);
+  background: var(--og-surface-2);
 }
 
 .og-advisor-ask__send:disabled {
-  color: var(--og-slate-text);
+  color: var(--og-ink-2);
   cursor: default;
 }
 
 .og-advisor-ask :is(input, button):focus-visible {
-  outline: 2px solid var(--og-ember-text);
+  outline: 2px solid var(--og-focus-ring);
   outline-offset: 2px;
 }
 
@@ -199,15 +352,11 @@
     transition: none;
   }
 }
-
-/* A chat box, not a search: no magnifier, a little more room. */
 .og-advisor .og-advisor__input,
 .og-advisor-ask .og-advisor__input {
   padding-left: 14px;
   background-image: none;
 }
-
-/* The advisor's latest answer sits in the conversation like any reply. */
 .og-advisor__notice {
   display: flex;
   align-items: flex-start;

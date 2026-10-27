@@ -6,7 +6,7 @@
  */
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { readFileSync } from "node:fs";
+import { appCss } from "../../helpers/app-css";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildElevationProfile, sampleLine, type ElevationProfile } from "@/application/elevation/profile";
@@ -105,7 +105,7 @@ describe("ElevationProfileChart", () => {
     const share = Number.parseFloat(pin.style.getPropertyValue("--og-elevation-pin-share"));
     expect(share).toBeGreaterThan(0);
     expect(share).toBeLessThan(100);
-    const css = readFileSync("src/app/globals.css", "utf8");
+    const css = appCss();
     expect(css).toMatch(/\.og-elevation__grade-pin \{[^}]*left: clamp\(/);
     // The feet get their own gutter, and the drawing starts after it.
     expect(css).toMatch(/\.og-elevation__plot \{[^}]*padding-inline-start: var\(--og-elevation-gutter\)/);
@@ -225,7 +225,7 @@ describe("ElevationProfileChart", () => {
     // Unknown is named as unknown in the strip's own accessible summary.
     expect(strip.getAttribute("aria-label")).toContain("unknown");
     // The hatch itself is the stylesheet's: unknown is never drawn as a known surface.
-    const css = readFileSync("src/app/globals.css", "utf8");
+    const css = appCss();
     expect(css).toMatch(/\.og-elevation__surface > \[data-surface="unknown"\] \{[^}]*repeating-linear-gradient/);
   });
 

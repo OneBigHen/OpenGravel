@@ -31,7 +31,6 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
 import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
-import "./rides-library.css";
 
 const NO_EXPORT_CAPABILITIES = {
   plannedRoute: false,
@@ -506,7 +505,10 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           }}
         >
           <h2>No saved rides yet</h2>
-          <Link className="og-primary" href="/">Plan a ride</Link>
+          <div className="og-library__empty-actions">
+            <Link className="og-primary" href="/">Plan a ride</Link>
+            <Link className="og-secondary" href="/explore">Find a ride</Link>
+          </div>
         </section>
       ) : null}
 

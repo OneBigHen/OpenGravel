@@ -8,6 +8,7 @@
  */
 
 import { readFileSync, readdirSync } from "node:fs";
+import { appCss } from "../../helpers/app-css";
 import path from "node:path";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState, type ReactElement } from "react";
@@ -19,7 +20,7 @@ import type { Coordinate, SurfaceIntent } from "@/domain/ride/types";
 import type { ShareSource } from "@/domain/sharing/types";
 import { ShareSheet } from "@/ui/sharing/ShareSheet";
 
-const CSS = readFileSync("src/app/globals.css", "utf8");
+const CSS = appCss();
 const CSS_RULES_SOURCE = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
 
 const RULES: ReadonlyArray<{ selector: string; body: string }> = [...CSS_RULES_SOURCE.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(

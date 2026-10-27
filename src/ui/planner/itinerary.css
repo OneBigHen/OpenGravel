@@ -1,0 +1,912 @@
+/* Editing a ride: the stops list and its point menu, no-go areas, road spans
+   and the drawn sketch, the "which road did you mean" chooser, the edit bar on
+   the map, and the notice when an update fails. Rows divided by hairlines;
+   selection is a soft green tint, never a stripe. */
+
+/* --------------------------------------------------------------------------
+   Sections share one shape: a hairline above, a caption, then rows.
+   -------------------------------------------------------------------------- */
+.og-points,
+.og-avoid,
+.og-spans,
+.og-sketch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  padding-top: var(--og-space-1);
+  border-top: 1px solid var(--og-line);
+}
+
+.og-points__head,
+.og-avoid__head,
+.og-spans__head,
+.og-sketch__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+}
+
+.og-points__title,
+.og-sketch__label {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-avoid__tools,
+.og-spans__tools,
+.og-sketch__actions,
+.og-avoid-conflict__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-2);
+}
+
+.og-avoid__hint,
+.og-avoid__footnote,
+.og-spans__hint,
+.og-spans__footnote,
+.og-spans__direction,
+.og-sketch__near-loop,
+.og-points__empty {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.4;
+}
+
+.og-sketch__near-loop {
+  flex: 1 1 100%;
+}
+
+.og-sketch__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-points__list,
+.og-avoid__list,
+.og-spans__list,
+.og-avoid-conflict__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-avoid__list,
+.og-spans__list,
+.og-avoid-conflict__list {
+  gap: var(--og-space-2);
+}
+
+.og-points__section,
+.og-avoid__draft,
+.og-spans__draft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+}
+
+.og-avoid__row,
+.og-spans__row {
+  gap: var(--og-space-2);
+}
+
+.og-spans__warning {
+  margin: 0;
+}
+
+.og-avoid__rename {
+  display: flex;
+  align-items: end;
+  gap: var(--og-space-2);
+}
+
+.og-avoid__rename .og-point__field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Small status tags: neutral unless something is actually wrong. */
+.og-spans__status,
+.og-avoid__badge {
+  flex: none;
+  padding: 2px var(--og-space-2);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-spans__status[data-status="satisfied"] {
+  background: var(--og-primary-soft);
+  color: var(--og-primary-text);
+}
+
+.og-spans__status:is([data-status="conflict"], [data-status="unavailable"]),
+.og-avoid__badge {
+  background: color-mix(in srgb, var(--og-warn) 16%, var(--og-surface));
+  color: var(--og-warn);
+}
+
+.og-avoid-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: color-mix(in srgb, var(--og-warn) 10%, var(--og-surface));
+}
+
+.og-avoid-conflict__notice {
+  margin: 0;
+  color: var(--og-warn);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-avoid-conflict__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-1);
+}
+
+.og-avoid-conflict__what {
+  margin: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+}
+
+/* --------------------------------------------------------------------------
+   A stop: pin, name and leg, then its intent glyph and a ⋯ menu.
+   -------------------------------------------------------------------------- */
+.og-point {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-1);
+  padding: var(--og-space-2) var(--og-space-2);
+  border-bottom: 1px solid var(--og-line);
+  border-radius: var(--og-radius-control);
+}
+
+.og-point:last-child {
+  border-bottom: 0;
+}
+
+.og-point[data-selected="true"] {
+  background: var(--og-primary-soft);
+}
+
+.og-point[data-armed="true"] {
+  box-shadow: inset 0 0 0 2px var(--og-primary);
+}
+
+.og-point__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-point__select,
+.og-point__main {
+  display: flex;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-point__select {
+  align-items: baseline;
+  gap: var(--og-space-2);
+  min-height: 32px;
+  padding: var(--og-space-1) var(--og-space-2);
+}
+
+.og-point__main {
+  grid-column: 2;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 44px;
+  padding: var(--og-space-1) 0;
+}
+
+.og-point__name,
+.og-point__field-label {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-point__value {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.og-point__title {
+  overflow: hidden;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-point__leg,
+.og-point__coordinate {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-point__leg {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-point__leg:is([data-leg="off-route"], [data-leg="unknown"]) {
+  font-style: italic;
+}
+
+.og-point__coordinate {
+  overflow-wrap: anywhere;
+}
+
+/* Pins: start is a green disc with a play arrow, finish is checkered, a stop
+   is numbered, a shaping point is a small dot. */
+.og-point__pin {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--og-ink);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-point__pin--start {
+  border-color: var(--og-primary);
+  background: var(--og-primary);
+}
+
+.og-point__pin--start::before {
+  content: "";
+  width: 8px;
+  height: 10px;
+  margin-left: 2px;
+  background: var(--og-on-primary);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.og-point__pin--finish {
+  border-color: var(--og-ink);
+  background: repeating-conic-gradient(var(--og-ink) 0% 25%, var(--og-surface) 0% 50%) 0 0 / 9px 9px;
+}
+
+.og-point__pin--shaping {
+  justify-self: center;
+  width: 14px;
+  height: 14px;
+  border-color: var(--og-ink-2);
+  background: var(--og-ink-2);
+}
+
+.og-point__intent {
+  grid-column: 3;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  color: var(--og-ink-2);
+}
+
+.og-point__intent svg {
+  display: block;
+}
+
+.og-point__more,
+.og-point__grab {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+}
+
+.og-point__more {
+  grid-column: 4;
+  font: inherit;
+  font-size: var(--og-text-headline);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.og-point__more:hover,
+.og-point__more[aria-expanded="true"] {
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+}
+
+/* The drag handle shows where a finger is the pointer. */
+.og-point__grab {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: none;
+  opacity: 0.6;
+  touch-action: none;
+  cursor: grab;
+  transform: translateY(-50%);
+}
+
+.og-point__grab:active {
+  cursor: grabbing;
+}
+
+.og-point__grab-dots {
+  width: 16px;
+  height: 24px;
+  background-image: radial-gradient(circle, currentColor 1.6px, transparent 1.9px);
+  background-position: 4px 3px;
+  background-size: 8px 8px;
+}
+
+.og-point__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-point__action {
+  min-height: 36px;
+  padding: 0 var(--og-space-3);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  cursor: pointer;
+}
+
+.og-point__action:disabled {
+  background: var(--og-surface-2);
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+}
+
+.og-point__action--remove {
+  border-color: color-mix(in srgb, var(--og-danger) 40%, var(--og-line));
+  color: var(--og-danger);
+}
+
+.og-point__inspector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+}
+
+.og-point__fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--og-space-2);
+}
+
+.og-point__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-point__input {
+  min-width: 110px;
+  min-height: 40px;
+  padding: 0 var(--og-space-2);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-point__error {
+  margin: 0;
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+}
+
+.og-point :is(.og-point__select, .og-point__main, .og-point__more, .og-point__grab, .og-point__action, .og-point__input):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+  opacity: 1;
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .og-point__grab {
+    display: grid;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The stop's menu: a bottom sheet of actions.
+   -------------------------------------------------------------------------- */
+.og-stop-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: var(--og-z-overlay);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.og-stop-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--og-scrim);
+}
+
+.og-stop-sheet__panel {
+  position: relative;
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: var(--og-space-2) var(--og-space-2) calc(var(--og-space-2) + var(--og-safe-bottom));
+  border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
+  background: var(--og-surface);
+  box-shadow: var(--og-shadow-sheet);
+  animation: og-stop-sheet-in var(--og-dur-base) var(--og-ease);
+}
+
+.og-stop-sheet__panel:focus-visible {
+  outline: none;
+}
+
+.og-stop-sheet__head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--og-space-2) var(--og-space-3) var(--og-space-3);
+  border-bottom: 1px solid var(--og-line);
+}
+
+.og-stop-sheet__eyebrow {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-stop-sheet__title {
+  margin: 0;
+  overflow: hidden;
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-stop-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--og-space-1);
+}
+
+.og-stop-sheet__action {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-stop-sheet__action svg {
+  flex: 0 0 20px;
+  color: var(--og-ink-2);
+}
+
+.og-stop-sheet__action:hover {
+  background: var(--og-press);
+}
+
+.og-stop-sheet__action:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+.og-stop-sheet__action:disabled {
+  background: transparent;
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+}
+
+.og-stop-sheet__action:disabled svg {
+  opacity: 0.5;
+}
+
+.og-stop-sheet__action[data-armed="true"] {
+  background: var(--og-primary-soft);
+}
+
+.og-stop-sheet__action[data-danger="true"],
+.og-stop-sheet__action[data-danger="true"] svg {
+  color: var(--og-danger);
+}
+
+/* --------------------------------------------------------------------------
+   "Which road?" when a tap lands on overlapping lines; a tapped road.
+   -------------------------------------------------------------------------- */
+.og-overlap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-overlap__question {
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-overlap__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-overlap__choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--og-touch);
+}
+
+.og-overlap__label {
+  font-weight: 600;
+}
+
+.og-overlap__metrics {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-road-tap {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.og-road-tap__actions {
+  display: flex;
+  gap: var(--og-space-2);
+}
+
+.og-road-tap .og-overlap__choice {
+  align-items: center;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   The edit bar on the map while drawing or placing a point.
+   -------------------------------------------------------------------------- */
+.og-editbar {
+  position: absolute;
+  top: calc(var(--og-safe-top) + var(--og-space-3));
+  left: 50%;
+  z-index: var(--og-z-float);
+  display: grid;
+  justify-items: center;
+  gap: var(--og-space-2);
+  max-width: calc(100% - 2 * var(--og-space-3));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.og-editbar > * {
+  pointer-events: auto;
+}
+
+.og-editbar__row {
+  display: flex;
+  gap: 2px;
+  padding: var(--og-space-1);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass);
+  box-shadow: var(--og-shadow-float);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-editbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: 40px;
+  padding: 0 var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.og-editbar__btn:hover:not(:disabled) {
+  background: var(--og-press);
+}
+
+.og-editbar__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.og-editbar__btn:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 1px;
+}
+
+.og-editbar__btn--go,
+.og-editbar__btn--go:hover:not(:disabled) {
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-editbar__icon {
+  flex: none;
+}
+
+.og-editbar__status,
+.og-editbar__tip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-editbar__status {
+  gap: var(--og-space-2);
+  padding: var(--og-space-2) var(--og-space-4);
+  border-radius: var(--og-radius-pill);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-editbar__pulse {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-primary);
+  animation: og-editbar-pulse 1.6s ease-out infinite;
+}
+
+.og-editbar__tip {
+  gap: var(--og-space-1);
+  max-width: min(340px, calc(100vw - 160px));
+  padding: var(--og-space-1) var(--og-space-1) var(--og-space-1) var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-editbar__tip-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .og-editbar:is([data-mode="drawing"], [data-mode="placing"]) {
+    right: var(--og-space-3);
+    left: var(--og-space-3);
+    max-width: none;
+    transform: none;
+  }
+
+  .og-editbar[data-mode="drawing"] .og-editbar__row {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .og-editbar__btn {
+    padding: 0 var(--og-space-3);
+  }
+
+  .og-editbar__tip {
+    max-width: calc(100vw - 100px);
+    margin-top: var(--og-space-6);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   An update that could not be planned: what failed, and the way out.
+   -------------------------------------------------------------------------- */
+.og-update-failure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-1);
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: color-mix(in srgb, var(--og-warn) 10%, var(--og-surface));
+}
+
+.og-update-failure__label {
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-update-failure__message {
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+}
+
+.og-update-failure__keep {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-update-failure__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  margin-top: var(--og-space-1);
+}
+
+.og-update-failure__action {
+  min-height: 40px;
+  padding: 0 var(--og-space-3);
+  font-size: var(--og-text-meta);
+}
+
+@keyframes og-stop-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-stop-sheet__panel,
+  .og-editbar__pulse {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   The itinerary: one 56px row per stop, reorderable by drag.
+   -------------------------------------------------------------------------- */
+.og-point--itinerary {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: var(--og-space-3);
+  min-height: 56px;
+  padding: var(--og-space-1) var(--og-space-2);
+  border-bottom: 1px solid var(--og-line);
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  transition: transform var(--og-dur-fast) var(--og-ease), background-color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-point--itinerary:last-child {
+  border-bottom: 0;
+}
+
+.og-point--itinerary[data-selected="true"] {
+  background: var(--og-primary-soft);
+}
+
+.og-point--itinerary[data-armed="true"] {
+  background: var(--og-primary-soft);
+  box-shadow: inset 0 0 0 2px var(--og-primary);
+}
+
+.og-point--itinerary[data-dragging="true"] {
+  z-index: 2;
+  background: var(--og-surface);
+  box-shadow: var(--og-shadow-float);
+  transform: translateY(var(--og-point-drag-y, 0px));
+  transition: none;
+}
+
+.og-point--itinerary[data-shift="up"] {
+  z-index: 1;
+  transform: translateY(-100%);
+}
+
+.og-point--itinerary[data-shift="down"] {
+  z-index: 1;
+  transform: translateY(100%);
+}
+
+@media (pointer: coarse), (max-width: 760px) {
+  .og-point--itinerary {
+    padding-left: 46px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-point--itinerary {
+    transition: none;
+  }
+}

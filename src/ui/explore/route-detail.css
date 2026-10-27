@@ -1,0 +1,1455 @@
+/* Explore detail v4: map first on phones, a compact glass instrument panel
+   underneath; on desktop a 420px detail pane beside a full-height map. */
+
+.og-route-detail {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  gap: 0;
+  min-height: 100%;
+  padding: 0 0 var(--og-space-5);
+  background: transparent;
+}
+
+.og-route-detail > * {
+  width: 100%;
+  margin-inline: auto;
+}
+
+.og-route-detail :is(a, button, summary):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The instrument panel follows the map visually; DOM reading order keeps
+   the ride name before the labelled map and its actions. */
+.og-route-detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  order: 1;
+  gap: var(--og-space-3);
+  padding: var(--og-space-4);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-route-detail__back {
+  position: absolute;
+  top: calc(var(--og-safe-top) + var(--og-space-3));
+  left: var(--og-space-4);
+  z-index: var(--og-z-float);
+  display: inline-grid;
+  flex: 0 0 var(--og-touch);
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  color: var(--og-ink);
+  text-decoration: none;
+}
+
+.og-route-detail__back:hover {
+  background: var(--og-press);
+}
+
+.og-route-detail__heading {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.og-route-detail__heading h1,
+.og-route-detail h1 {
+  max-width: 36ch;
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.og-route-detail__facts {
+  display: grid;
+  flex: 1 0 100%;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding-block: var(--og-space-3);
+  border-top: 1px solid var(--og-line);
+  border-bottom: 1px solid var(--og-line);
+}
+
+.og-route-detail__stat {
+  min-width: 0;
+  padding-inline: var(--og-space-2);
+}
+
+.og-route-detail__stat + .og-route-detail__stat {
+  border-left: 1px solid var(--og-line);
+}
+
+.og-route-detail__stat dt {
+  margin-bottom: var(--og-space-1);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+}
+
+.og-route-detail__stat dd {
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-route-detail__stat[data-stat="surface"] { order: 4; }
+.og-route-detail__stat[data-stat="curvature"] { order: 3; }
+.og-route-detail__stat[data-stat="time"] { order: 2; }
+.og-route-detail__stat[data-stat="distance"] { order: 1; }
+
+.og-route-detail__fact {
+  white-space: nowrap;
+}
+
+.og-route-detail__fact:not(:last-child)::after {
+  content: "·";
+  margin-left: var(--og-space-1);
+}
+
+.og-route-detail__meta,
+.og-route-detail__provenance,
+.og-route-detail__summary,
+.og-route-detail__status,
+.og-route-detail__basis {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.og-route-detail__meta {
+  flex: 1 0 100%;
+}
+
+.og-route-detail__basis {
+  display: block;
+}
+
+.og-route-detail__region {
+  display: none;
+}
+
+/* display: contents lets the map lead on phones and span the desktop grid
+   without duplicating the route heading or its accessible facts. */
+.og-route-detail__body {
+  display: contents;
+}
+
+.og-route-detail__visual {
+  position: relative;
+  order: 0;
+  min-width: 0;
+}
+
+.og-route-detail__map-title {
+  position: absolute;
+  top: calc(var(--og-safe-top) + var(--og-space-3));
+  left: calc(var(--og-touch) + 2 * var(--og-space-4));
+  z-index: var(--og-z-map-ui);
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: calc(100% - var(--og-touch) - 3 * var(--og-space-4));
+  min-height: var(--og-touch);
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.og-route-detail__content {
+  display: grid;
+  order: 2;
+  align-content: start;
+  gap: var(--og-space-3);
+  min-width: 0;
+  padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+  background: transparent;
+}
+
+/* The map card. */
+.og-route-detail__map {
+  display: grid;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--og-radius-sheet);
+  background: var(--og-glass-dense);
+}
+
+.og-route-detail__map > svg,
+.og-route-detail__map-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.og-route-detail__map > :is(.og-map-preview-unavailable, .og-line-preview) {
+  min-height: clamp(240px, 34vh, 520px);
+  border-radius: inherit;
+}
+
+.og-route-detail__map > a {
+  width: fit-content;
+  margin: 0;
+  padding: var(--og-space-3) var(--og-space-4);
+  color: var(--og-primary-text);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+/* A drawn line when there is no map image: the ride's own plum. */
+.og-line-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-well);
+  color: var(--og-route);
+}
+
+.og-line-preview > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The numbers: a grid of cells separated by hairlines. */
+.og-route-detail__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--og-radius-card);
+  background: var(--og-line);
+}
+
+.og-route-detail__stats > div {
+  min-width: 0;
+  padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+  background: var(--og-glass-dense);
+}
+
+.og-route-detail__stats dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-route-detail__stats dd {
+  margin: var(--og-space-1) 0 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Actions: Ride this, Share, the alternates. */
+.og-route-detail__actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-route-detail__actions .og-primary {
+  min-height: 52px;
+  font-size: var(--og-text-body);
+}
+
+.og-route-detail__share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+}
+
+.og-route-detail__share-note {
+  position: absolute;
+  bottom: calc(100% + var(--og-space-2));
+  left: 50%;
+  margin: 0;
+  padding: var(--og-space-2) var(--og-space-4);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-ink);
+  color: var(--og-bg);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.og-route-detail__alternates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-route-detail__alternates > .og-secondary {
+  min-height: var(--og-touch);
+}
+
+/* Sections on the page: flat surfaces, no frames. */
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation) {
+  --og-card-pad: var(--og-space-4);
+  width: 100%;
+  padding: var(--og-card-pad);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-route-detail :is(.og-route-story, .og-preparation, .og-route-detail__roads, .og-route-community, .og-route-detail__variants, .og-route-detail__elevation, .og-route-detail__take-away) h2 {
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+}
+
+.og-route-detail .og-preparation--brief {
+  gap: var(--og-space-2);
+  padding: var(--og-space-3) var(--og-space-4);
+}
+
+.og-route-detail :is(.og-preparation, .og-route-story) .og-eyebrow {
+  display: none;
+}
+
+.og-route-detail__take-away {
+  display: grid;
+  gap: var(--og-space-3);
+  padding-top: var(--og-space-4);
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-detail__elevation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2) var(--og-space-5);
+  margin: var(--og-space-2) 0 0;
+}
+
+.og-route-detail__elevation-facts dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-route-detail__elevation-facts dd {
+  margin: 2px 0 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Other versions of this ride. */
+.og-route-detail__variants {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.og-route-detail__variants p {
+  margin: 0;
+}
+
+.og-route-detail__variants :is(p, li span) {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-detail__variants ul {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-route-detail__variants a {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  min-height: var(--og-touch);
+  align-items: center;
+  border-top: 1px solid var(--og-line);
+  color: var(--og-ink);
+}
+
+.og-route-detail__variants a span {
+  flex: none;
+  text-align: right;
+}
+
+/* Roads on this ride, and a road's detail. */
+.og-route-detail__roads-head,
+.og-road-detail-sheet__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+}
+
+.og-road-detail-sheet :is(h2, h3) {
+  margin: 0;
+}
+
+.og-route-detail__coverage,
+.og-route-detail__surface-summary {
+  margin: var(--og-space-1) 0 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-detail__surface-summary {
+  font-weight: 600;
+}
+
+.og-route-detail__roads-list {
+  display: flex;
+  flex-direction: column;
+  margin: var(--og-space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-route-detail__road-row + .og-route-detail__road-row {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-detail__road-open {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: 56px;
+  padding: var(--og-space-2) var(--og-space-2);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-route-detail__road-open:hover {
+  background: var(--og-press);
+}
+
+.og-route-detail__road-meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+/* How sure we are of a road's surface: confirmed reads as fact, the rest
+   step down; nothing unknown is ever painted as a surface. */
+.og-road-surface {
+  flex: none;
+  padding: 2px var(--og-space-2);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-well);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+}
+
+.og-road-surface[data-surface-band="confirmed"] {
+  background: var(--og-primary-soft);
+  color: var(--og-primary-text);
+}
+
+.og-road-surface[data-surface-band="likely"] {
+  color: var(--og-ink);
+}
+
+.og-road-surface[data-surface-band="possible"] {
+  background: color-mix(in srgb, var(--og-warn) 16%, var(--og-surface));
+  color: var(--og-warn);
+}
+
+.og-road-detail-sheet {
+  width: min(100%, 760px);
+  padding: var(--og-space-4);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-road-detail-sheet__aliases {
+  margin: var(--og-space-3) 0 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-road-detail-sheet__conflict {
+  margin: var(--og-space-2) 0 0;
+  color: var(--og-warn);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+.og-road-detail-sheet__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--og-space-2);
+  margin: var(--og-space-4) 0;
+}
+
+.og-road-detail-sheet__facts > div {
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+}
+
+.og-road-detail-sheet__facts dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-road-detail-sheet__facts dd {
+  margin: 2px 0 0;
+  font-size: var(--og-text-meta);
+}
+
+.og-road-detail-sheet h3 {
+  margin-top: var(--og-space-4);
+  font-size: var(--og-text-body);
+}
+
+.og-road-detail-sheet__lineage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  margin: var(--og-space-2) 0 0;
+  padding-left: var(--og-space-4);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  list-style: disc;
+}
+
+.og-road-detail-sheet__evidence {
+  width: 100%;
+  margin-top: var(--og-space-2);
+  border-collapse: collapse;
+  font-size: var(--og-text-meta);
+}
+
+.og-road-detail-sheet__evidence :is(th, td) {
+  padding: var(--og-space-2) var(--og-space-1);
+  border-bottom: 1px solid var(--og-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.og-road-detail-sheet__evidence th {
+  color: var(--og-ink-2);
+  font-weight: 600;
+}
+
+.og-road-detail-sheet__history > summary,
+.og-route-detail__provenance-detail > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--og-touch);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.og-road-detail-sheet__history > p {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+/* --------------------------------------------------------------------------
+   The rider's story: the write-up, photos, hazards, stops, comments.
+   -------------------------------------------------------------------------- */
+.og-route-story {
+  display: grid;
+  gap: var(--og-space-4);
+}
+
+.og-route-story :is(h2, h3, p) {
+  margin: 0;
+}
+
+.og-route-story h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  font-size: var(--og-text-body);
+}
+
+.og-route-story__head,
+.og-route-story__block {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.og-route-story__head {
+  gap: var(--og-space-1);
+}
+
+.og-route-story__byline,
+.og-route-story__when,
+.og-route-story__also,
+.og-route-story__credit,
+.og-route-story__legs {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-story a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--og-touch);
+  color: var(--og-primary-text);
+  text-underline-offset: 2px;
+}
+
+.og-route-story__post {
+  display: grid;
+  gap: var(--og-space-2);
+  max-width: 68ch;
+  font-size: var(--og-text-body);
+  line-height: 1.55;
+}
+
+.og-route-story__more {
+  justify-self: start;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-1);
+  border: 0;
+  background: none;
+  color: var(--og-primary-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-route-story__photos {
+  display: flex;
+  gap: var(--og-space-2);
+  margin: 0 calc(-1 * var(--og-card-pad, 16px));
+  padding: 0 var(--og-card-pad, 16px) var(--og-space-1);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  list-style: none;
+}
+
+.og-route-story__photos li {
+  flex: none;
+  scroll-snap-align: start;
+}
+
+.og-route-story__photos button {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+  cursor: zoom-in;
+}
+
+.og-route-story__photos img {
+  display: block;
+  width: auto;
+  max-width: 70vw;
+  height: 160px;
+  object-fit: cover;
+}
+
+.og-route-story__hazards {
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: color-mix(in srgb, var(--og-danger) 10%, var(--og-surface));
+  font-size: var(--og-text-meta);
+}
+
+.og-route-story__hazards strong {
+  color: var(--og-danger);
+}
+
+.og-route-story__stops,
+.og-route-story__comments {
+  display: grid;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-route-story__stops li {
+  display: grid;
+  grid-template-columns: 28px 64px 1fr auto;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+  padding: var(--og-space-1) var(--og-space-3) var(--og-space-1) var(--og-space-1);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-story__stop-glyph {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-dense);
+  font-weight: 700;
+}
+
+.og-route-story__stops li[data-kind="hazard"] .og-route-story__stop-glyph {
+  background: color-mix(in srgb, var(--og-danger) 18%, var(--og-surface));
+  box-shadow: inset 0 0 0 2px var(--og-danger);
+}
+
+.og-route-story__stop-mile {
+  color: var(--og-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-route-story__stop-name {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.og-route-story__stop-kind {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.og-route-story__count {
+  padding: 1px var(--og-space-2);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-well);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+.og-route-story__comments li {
+  display: grid;
+  gap: 2px;
+  padding: var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+}
+
+.og-route-story__comments blockquote {
+  display: grid;
+  gap: var(--og-space-2);
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.og-route-story__lightbox {
+  position: fixed;
+  inset: 0;
+  width: min(96vw, 1100px);
+  height: fit-content;
+  max-height: 94dvh;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-sheet);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+}
+
+.og-route-story__lightbox::backdrop {
+  background: var(--og-scrim);
+}
+
+.og-route-story__lightbox figure {
+  display: grid;
+  gap: var(--og-space-3);
+  margin: 0;
+  padding: var(--og-space-3);
+}
+
+.og-route-story__lightbox img {
+  width: 100%;
+  height: auto;
+  max-height: calc(94dvh - 90px);
+  object-fit: contain;
+}
+
+.og-route-story__lightbox figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-3);
+}
+
+/* --------------------------------------------------------------------------
+   Community: rate it, comment, report.
+   -------------------------------------------------------------------------- */
+.og-route-community {
+  display: grid;
+  align-content: start;
+  gap: var(--og-space-4);
+}
+
+.og-route-community__head,
+.og-route-community__rating,
+.og-route-community__form {
+  display: grid;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-route-community__head {
+  gap: var(--og-space-1);
+}
+
+.og-route-community__meta,
+.og-route-community__note {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  line-height: 1.35;
+}
+
+.og-route-community__note--failed {
+  color: var(--og-danger);
+}
+
+.og-route-community__legend,
+.og-route-community__label {
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+}
+
+/* Five 48px stars; a filled star is ink, the rider's own choice. */
+.og-route-community__stars {
+  display: grid;
+  grid-template-columns: repeat(5, 48px);
+  justify-content: start;
+  gap: var(--og-space-2);
+}
+
+.og-route-community__star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: var(--og-radius-control);
+  color: var(--og-line-strong);
+  cursor: pointer;
+  transition: color var(--og-dur-fast) var(--og-ease), background-color var(--og-dur-fast) var(--og-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.og-route-community__star[data-filled="true"] {
+  color: var(--og-ink);
+}
+
+.og-route-community__star:hover {
+  background: var(--og-press);
+}
+
+.og-route-community__star-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.og-route-community__star:has(> .og-route-community__star-input:focus-visible) {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-route-community__star:has(> .og-route-community__star-input:disabled) {
+  cursor: default;
+}
+
+.og-route-community__star-glyph {
+  pointer-events: none;
+}
+
+.og-route-community__fold {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-community__fold > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--og-touch);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+
+.og-route-community__fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-route-community__fold > summary::after {
+  content: "›";
+  color: var(--og-ink-2);
+  font-size: var(--og-text-headline);
+  transition: transform var(--og-dur-fast) var(--og-ease);
+}
+
+.og-route-community__fold[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.og-route-community__fold[open] > .og-route-community__form {
+  padding-bottom: var(--og-space-3);
+}
+
+.og-route-community__input,
+.og-community-action :is(input[type="text"], input[type="number"], textarea),
+.og-community-action__reason {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--og-touch);
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-body);
+}
+
+.og-route-community__input {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.og-route-community .og-route-community__submit {
+  justify-self: start;
+  min-height: var(--og-touch);
+  padding-inline: var(--og-space-4);
+  font-size: var(--og-text-body);
+}
+
+.og-route-community .og-select > select {
+  min-height: var(--og-touch);
+}
+
+.og-route-community__comments {
+  display: grid;
+  gap: var(--og-space-3);
+  list-style: none;
+}
+
+.og-route-community__comments li {
+  padding-top: var(--og-space-3);
+  border-top: 1px solid var(--og-line);
+  font-size: var(--og-text-body);
+}
+
+.og-route-community__comments small {
+  display: block;
+  margin-top: var(--og-space-1);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-community-action {
+  display: grid;
+  gap: var(--og-space-3);
+  min-width: 0;
+  margin-block: var(--og-space-4);
+  padding: var(--og-space-3) var(--og-space-4);
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.og-community-action p {
+  margin: 0;
+}
+
+.og-community-action__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-community-action__label {
+  font-weight: 600;
+}
+
+.og-community-action__error {
+  color: var(--og-danger);
+  font-weight: 600;
+}
+
+.og-community-action fieldset {
+  display: grid;
+  gap: var(--og-space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--og-space-3);
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-control);
+}
+
+.og-community-action fieldset label {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: var(--og-touch);
+}
+
+.og-community-action fieldset .og-community-action__label {
+  display: grid;
+}
+
+.og-community-action textarea {
+  resize: vertical;
+}
+
+/* Credits at the foot of the page. */
+.og-route-detail__credits {
+  display: grid;
+  padding-top: var(--og-space-3);
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-detail__credits > p {
+  margin: 0;
+}
+
+.og-route-detail__provenance-detail {
+  margin-top: var(--og-space-2);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-detail__provenance-detail > p {
+  max-width: 68ch;
+  margin-top: var(--og-space-1);
+  overflow-wrap: anywhere;
+}
+
+/* Road discovery in Explore: slices of roads worth riding. */
+.og-road-discovery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-5);
+}
+
+.og-road-discovery__slice {
+  display: grid;
+  gap: var(--og-space-2);
+}
+
+.og-road-discovery__slice-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+}
+
+.og-road-discovery__slice-head h2,
+.og-road-discovery__title {
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+}
+
+.og-road-discovery__title {
+  margin-top: var(--og-space-2);
+}
+
+.og-road-discovery__slice-head span {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-road-discovery-card__button {
+  width: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Loading. */
+.og-route-detail--loading .og-skeleton {
+  border-radius: var(--og-radius-control);
+}
+
+.og-route-detail-skeleton__map {
+  width: 100%;
+  min-height: clamp(240px, 34vh, 520px);
+  border-radius: var(--og-radius-sheet);
+}
+
+.og-route-detail-skeleton__heading {
+  width: min(100%, 22ch);
+  height: 28px;
+  margin-top: var(--og-space-3);
+}
+
+.og-route-detail-skeleton__line {
+  width: 100%;
+  height: 14px;
+}
+
+.og-route-detail-skeleton__line--short {
+  width: 60%;
+}
+
+.og-route-detail-skeleton__action {
+  width: 100%;
+  height: 52px;
+  border-radius: var(--og-radius-control);
+}
+
+.og-route-detail-skeleton__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--og-space-2);
+  margin-top: var(--og-space-2);
+}
+
+.og-route-detail-skeleton__fact {
+  height: 64px;
+  border-radius: var(--og-radius-card);
+}
+
+/* The source story is one disclosure row until the rider opens it. */
+.og-route-detail .og-route-story--disclosure {
+  display: block;
+  padding: 0;
+}
+
+.og-route-story__disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  min-height: var(--og-touch);
+  padding: var(--og-space-3) var(--og-space-4);
+  border-radius: var(--og-radius-card);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.og-route-story__disclosure::-webkit-details-marker { display: none; }
+
+.og-route-story__disclosure::after {
+  content: "+";
+  color: var(--og-ink-2);
+  font-size: var(--og-text-headline);
+}
+
+.og-route-story--disclosure[open] > summary::after { content: "−"; }
+
+.og-route-story--disclosure > section {
+  display: grid;
+  gap: var(--og-space-3);
+  padding: 0 var(--og-space-4) var(--og-space-4);
+}
+
+.og-route-detail__credits {
+  order: 3;
+  padding: var(--og-space-4);
+  background: var(--og-glass-dense);
+}
+
+.og-route-detail .og-route-detail__actions .og-secondary {
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass);
+  box-shadow: var(--og-glass-highlight);
+}
+
+@media (min-width: 761px) {
+  .og-route-detail__map-title { display: none; }
+
+  .og-route-detail__header { border-radius: inherit; }
+
+  .og-route-detail__map,
+  .og-route-detail__map .og-explore-map {
+    border-radius: inherit;
+  }
+}
+
+@media (min-width: 1181px) {
+  .og-route-detail {
+    display: grid;
+    grid-template-columns: 420px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100dvh;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .og-route-detail__header {
+    grid-column: 1;
+    grid-row: 1;
+    border-bottom: 0;
+    box-shadow: var(--og-glass-highlight);
+  }
+
+  .og-route-detail__visual {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .og-route-detail .og-route-detail__map,
+  .og-route-detail .og-route-detail__map :is(.og-explore-map, .og-map-preview-unavailable, .og-line-preview),
+  .og-route-detail__map-image {
+    height: 100%;
+    min-height: 0;
+    object-fit: cover;
+  }
+
+  .og-route-detail__map .og-explore-map-panel,
+  .og-route-detail__map .og-explore-map-panel__frame {
+    height: 100%;
+  }
+
+  .og-route-detail__content {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    padding-top: var(--og-space-2);
+  }
+
+  .og-route-detail__credits {
+    grid-column: 1;
+    grid-row: 3;
+    max-height: 20dvh;
+    overflow-y: auto;
+    border-top: 1px solid var(--og-line);
+  }
+
+  .og-route-detail__actions {
+    position: sticky;
+    top: calc(-1 * var(--og-space-2));
+    z-index: var(--og-z-map-ui);
+    padding: var(--og-space-2);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-card);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+  }
+
+  .og-route-detail__actions > .og-primary { flex: 1; }
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .og-route-detail {
+    padding-bottom: calc(var(--og-tabbar-h) + var(--og-space-5));
+  }
+}
+
+@media (max-width: 760px) {
+  .og-route-detail {
+    padding: 0 0 calc(96px + var(--og-safe-bottom));
+  }
+
+  .og-route-detail__header {
+    z-index: var(--og-z-sheet);
+    margin-top: calc(-1 * var(--og-space-3));
+    border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
+  }
+
+  .og-route-detail__heading { flex-basis: 100%; }
+
+  .og-route-detail__back {
+    position: absolute;
+    top: calc(var(--og-safe-top) + var(--og-space-3));
+    left: var(--og-space-4);
+    z-index: var(--og-z-float);
+  }
+
+  .og-route-detail__facts {
+    padding-block: var(--og-space-2);
+  }
+
+  .og-route-detail__stat { padding-inline: var(--og-space-1); }
+
+  .og-route-detail .og-route-detail__map,
+  .og-route-detail .og-route-detail__map :is(.og-explore-map, .og-map-preview-unavailable, .og-line-preview),
+  .og-route-detail__map-image {
+    width: 100%;
+    height: max(280px, 45dvh);
+    min-height: 0;
+    margin: 0;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+
+  .og-route-detail__map .og-explore-map-panel__expand {
+    top: calc(var(--og-touch) + var(--og-space-5) + var(--og-safe-top));
+  }
+
+  .og-route-detail__content { padding-top: 0; }
+
+  .og-route-detail .og-route-detail__actions {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: var(--og-z-nav);
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: var(--og-space-3) var(--og-space-4) calc(var(--og-space-3) + var(--og-safe-bottom));
+    border: 1px solid var(--og-glass-edge);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+  }
+
+  .og-route-detail__actions .og-primary { flex: 1 1 auto; }
+
+  .og-route-detail__actions .og-secondary {
+    flex: none;
+    min-height: 52px;
+  }
+
+  .og-route-detail .og-route-detail__actions .og-route-detail__share {
+    flex: none;
+    width: 52px;
+    padding: 0;
+  }
+
+  .og-route-detail__share-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-route-detail__alternates {
+    flex: none;
+    flex-wrap: nowrap;
+  }
+
+  .og-route-detail__alternates > .og-secondary { flex: none; }
+
+  .og-route-community__stars {
+    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    margin-inline: calc(-1 * var(--og-card-pad, 16px));
+  }
+
+  .og-route-story__stops li { grid-template-columns: 28px 52px 1fr; }
+  .og-route-story__stop-kind { display: none; }
+  .og-road-detail-sheet__facts { grid-template-columns: 1fr; }
+  .og-road-detail-sheet__evidence { display: block; overflow-x: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-route-community__star,
+  .og-route-community__fold > summary::after {
+    transition: none;
+  }
+
+  :is(.og-explore, .og-route-detail) .og-skeleton {
+    animation: none;
+    background: var(--og-glass-well);
+  }
+}
+
+/* Small phones: the four stats sit two by two. */
+@media (max-width: 360px) {
+  .og-route-detail__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--og-space-3);
+  }
+
+  .og-route-detail__stat:nth-child(odd) {
+    border-left: 0;
+  }
+}
+
+/* The heading below already names the ride, and the map labels it: no
+   floating title chip over the map. */
+.og-route-detail__map-title {
+  display: none;
+}

@@ -16,6 +16,10 @@ import type { MapScene } from "@/application/map/types";
 import type { PlanningSessionSnapshot } from "@/application/planner/planning-session";
 import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 
+/** How far in from the map's sides a phone's floating sheet may sit and still
+ *  count as a bottom sheet (it floats 8px in; 24px leaves room for safe areas). */
+const FLOATING_SHEET_INSET_PX = 24;
+
 const SETTLED_PHASES: ReadonlySet<string> = new Set(["ready", "failed", "cancelled"]);
 
 function px(value: string | undefined): number {
@@ -139,8 +143,15 @@ export function usePlannerCamera(input: {
           dock: (() => {
             const box = dock.getBoundingClientRect();
             const map = mapSlot.getBoundingClientRect();
-            return toRect(box.width >= map.width - 2 && box.top > map.top
-              ? { ...toRect(box), height: Math.max(box.height, map.bottom - box.top) } : box);
+            // A phone's bottom sheet floats a few pixels in from each edge and
+            // above the tab bar (DESIGN.md §2, v4): it still hides everything
+            // from its top edge down, across the whole width.
+            const bottomSheet = box.top > map.top
+              && box.left - map.left <= FLOATING_SHEET_INSET_PX
+              && map.right - box.right <= FLOATING_SHEET_INSET_PX;
+            return toRect(bottomSheet
+              ? { left: map.left, top: box.top, width: map.width, height: Math.max(box.height, map.bottom - box.top) }
+              : box);
           })(),
           header: header === null ? null : toRect(header.getBoundingClientRect()),
           overlays: [

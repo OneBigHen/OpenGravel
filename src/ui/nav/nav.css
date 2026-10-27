@@ -1,0 +1,225 @@
+/* Primary navigation: Plan · Explore · My rides · Settings.
+   Desktop and landscape phones: a row in the top bar. Phones and tablets: a
+   bar docked to the bottom edge (small-screen-v2 §2), hidden while riding. */
+
+.og-planner__nav-shell {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-1);
+}
+
+.og-planner__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-1);
+}
+
+.og-nav__sep,
+.og-nav__label--tab-only {
+  display: none;
+}
+
+.og-planner__nav a,
+.og-planner__settings-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  min-width: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-3);
+  border-radius: var(--og-radius-pill);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color var(--og-dur-fast) var(--og-ease), background-color var(--og-dur-fast) var(--og-ease);
+}
+
+.og-planner__settings-link {
+  padding: 0;
+}
+
+.og-nav__icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.og-planner__nav a:hover,
+.og-planner__settings-link:hover {
+  color: var(--og-ink);
+  background: var(--og-press);
+}
+
+.og-planner__nav a[aria-current="page"],
+.og-planner__settings-link[aria-current="page"] {
+  color: var(--og-primary-text);
+  background: var(--og-primary-soft);
+}
+
+.og-planner__nav a:focus-visible,
+.og-planner__settings-link:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The bar the non-planner pages share: brand, tagline, navigation. */
+.og-appbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--og-z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-5);
+  min-height: 64px;
+  padding: var(--og-space-2) var(--og-space-5);
+  border-bottom: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-appbar__brand {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.og-appbar__tagline {
+  flex: 1;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-appbar__brand:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-appbar {
+    min-height: 48px;
+    padding-block: 0;
+  }
+
+  .og-appbar__tagline {
+    visibility: hidden;
+  }
+}
+
+/* Phones and tablets: a floating glass tab bar (DESIGN.md §2, v4) — a pill
+   inset from the edges so the map runs around and under it. Every page and
+   the planner sheet reserve its measured height plus the gap below it
+   (PrimaryNav publishes it; a larger text size can wrap a label). */
+@media (max-width: 1180px) and (min-height: 501px) {
+  :root {
+    --og-tabbar-gap: max(var(--og-space-2), calc(var(--og-safe-bottom) - 14px));
+    --og-tabbar-h: var(--og-tabbar-measured-h, calc(60px + var(--og-tabbar-gap)));
+  }
+
+  .og-appbar {
+    display: contents;
+  }
+
+  .og-appbar__brand,
+  .og-appbar__tagline {
+    display: none;
+  }
+
+  .og-planner__nav-shell,
+  .og-planner .og-planner__nav-shell {
+    position: fixed;
+    inset: auto max(calc(var(--og-space-2) + var(--og-safe-right)), calc(50% - 230px)) var(--og-tabbar-gap)
+      max(calc(var(--og-space-2) + var(--og-safe-left)), calc(50% - 230px));
+    z-index: var(--og-z-nav);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--og-space-1);
+    min-height: 60px;
+    padding: var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: 24px;
+    background: var(--og-glass);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+  }
+
+  .og-planner__nav {
+    display: contents;
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    min-height: 50px;
+    padding: 0;
+    border-radius: 20px;
+    font-size: var(--og-text-caption);
+    line-height: 1.25;
+  }
+
+  .og-planner__nav a:hover,
+  .og-planner__settings-link:hover {
+    background: var(--og-press);
+  }
+
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    color: var(--og-primary-text);
+    background: var(--og-primary-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--og-primary) 22%, transparent);
+  }
+
+  .og-nav__icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .og-nav__label--tab-only {
+    display: block;
+  }
+
+  /* At a large text size a label wraps inside its own tab, never past it. */
+  .og-nav__label {
+    max-width: 100%;
+    padding-inline: 2px;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  [aria-current="page"] > .og-nav__icon {
+    stroke-width: 2.2;
+  }
+}
+
+/* Short phones (an iPhone SE has no home indicator): a slimmer bar and a 4px
+   gap give the map back 8px; every tab is still 48px. */
+@media (max-height: 700px) and (min-height: 501px) and (max-width: 1180px) {
+  :root {
+    --og-tabbar-gap: max(var(--og-space-1), calc(var(--og-safe-bottom) - 14px));
+  }
+
+  .og-planner__nav-shell,
+  .og-planner .og-planner__nav-shell {
+    min-height: 56px;
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    min-height: var(--og-touch);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner__nav a,
+  .og-planner__settings-link {
+    transition: none;
+  }
+}

@@ -77,19 +77,19 @@ export const DEFAULT_MAP_PALETTE: MapPalette = {
 
 /** Token name per palette slot, in the order `readMapPalette` reads them. */
 const TOKEN_NAMES: Readonly<Record<keyof MapPalette, string>> = {
-  ink: "--og-ink",
-  paper: "--og-paper",
-  canvas: "--og-canvas",
-  ember: "--og-ember",
-  emberStrong: "--og-ember-strong",
-  slate: "--og-slate",
-  topoSage: "--og-topo-sage",
-  signalBlue: "--og-signal-blue",
-  goldenHour: "--og-golden-hour",
-  trailBrown: "--og-trail-brown",
-  deepSpruce: "--og-deep-spruce",
-  routePlum: "--og-route-plum",
-  routePlumStrong: "--og-route-plum-strong",
+  ink: "--og-map-ink",
+  paper: "--og-map-paper",
+  canvas: "--og-map-canvas",
+  ember: "--og-map-record",
+  emberStrong: "--og-map-record-strong",
+  slate: "--og-map-slate",
+  topoSage: "--og-map-sage",
+  signalBlue: "--og-map-signal",
+  goldenHour: "--og-map-gold",
+  trailBrown: "--og-map-brown",
+  deepSpruce: "--og-map-spruce",
+  routePlum: "--og-map-route",
+  routePlumStrong: "--og-map-route-strong",
   routeCasing: "--og-map-route-casing",
   emphasis: "--og-map-emphasis",
 };
@@ -256,23 +256,13 @@ function emphasisOf(palette: MapPalette): number {
 }
 
 /**
- * Route colours by the candidate's bundle index (`tint`), shared with the
- * decision cards in `globals.css` (`.og-route-card[data-tint]`): the rider
- * matches a line to its card by colour, as in a map app's route choices. Signal
- * Blue is not a route colour — it is reserved for the rider's position.
+ * Route colours (DESIGN.md §2, §4): the chosen ride is plum, every alternative
+ * is one quiet grey, as in the sheet's list of choices. Colour means "the one
+ * you will ride", never which slot a candidate came from. Signal Blue is not a
+ * route colour: it is reserved for the rider's position.
  */
-function tintColor(palette: MapPalette, strong: boolean): unknown {
-  return [
-    "match",
-    ["get", "tint"],
-    0,
-    strong ? palette.emberStrong : palette.ember,
-    1,
-    strong ? palette.routePlumStrong : palette.routePlum,
-    2,
-    strong ? palette.ink : palette.deepSpruce,
-    palette.slate,
-  ];
+function selectedRouteColor(palette: MapPalette, strong: boolean): string {
+  return strong ? palette.routePlumStrong : palette.routePlum;
 }
 
 /**
@@ -363,7 +353,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "alternative"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": tintColor(palette, false),
+        "line-color": palette.slate,
         "line-width": 5,
         "line-opacity": 0.8,
       },
@@ -401,7 +391,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "selected"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.routeCasing === "auto" ? tintColor(palette, true) : palette.routeCasing,
+        "line-color": palette.routeCasing === "auto" ? selectedRouteColor(palette, true) : palette.routeCasing,
         // Street zoom (riding) draws the line bold, like turn-by-turn apps;
         // overview zooms keep the planner's weight.
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
@@ -415,7 +405,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "selected"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": tintColor(palette, false),
+        "line-color": selectedRouteColor(palette, false),
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 15, 8 * emphasisOf(palette), 17, 13 * emphasisOf(palette)],
       },
     },
@@ -475,7 +465,8 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "text-max-width": 14,
         "text-allow-overlap": false,
         "text-padding": 4,
-        "icon-image": ["match", ["get", "tint"], 1, ROUTE_LABEL_IMAGE_IDS[1], 2, ROUTE_LABEL_IMAGE_IDS[2], 3, ROUTE_LABEL_IMAGE_IDS[3], ROUTE_LABEL_IMAGE_IDS[0]],
+        // The chosen ride's tag carries a plum dot, the others a grey one.
+        "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0], ROUTE_LABEL_IMAGE_IDS[1]],
         "icon-text-fit": "both",
         "icon-text-fit-padding": [3, 8, 3, 8],
         // The chosen route's name wins a collision.

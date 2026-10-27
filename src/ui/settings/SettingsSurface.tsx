@@ -250,12 +250,12 @@ export function SettingsSurface({
       </header>
 
       <div className="og-settings__layout" key={`local-data-${localDataEpoch}`}>
-        <SettingsGroup id="settings-display-title" label="Display" hint="Auto follows your phone, and the sun during a ride.">
+        <SettingsGroup id="settings-display-title" label="Display">
           <AppearanceRow />
           {showNavScreen ? <NavScreenRow /> : null}
         </SettingsGroup>
 
-        <SettingsGroup id="settings-map-title" label="Map" hint="Satellite appears only when this device can show it.">
+        <SettingsGroup id="settings-map-title" label="Map">
           <div className="og-settings__row">
             <span className="og-settings__row-text">
               <span className="og-settings__row-label" id="settings-map-style-label">Style</span>
@@ -275,7 +275,7 @@ export function SettingsSurface({
 
         {spotifySetup}
 
-        <SettingsGroup id="settings-bikes-title" label="Your bikes" hint="Rides keep the bike settings they were planned with.">
+        <SettingsGroup id="settings-bikes-title" label="Your bikes">
           {garage.bikes.map((bike) => {
             const isActive = garage.bikes.length > 1 && garage.activeBikeId === bike.id;
             return (
@@ -314,7 +314,7 @@ export function SettingsSurface({
           {editorOpen && editingId === null ? bikeEditor() : null}
         </SettingsGroup>
 
-        <SettingsGroup id="settings-home-title" label="Home" hint="Head Home uses this spot during a Free Ride. It stays on this device.">
+        <SettingsGroup id="settings-home-title" label="Home" hint="Free Ride’s Head Home goes here.">
           <div className="og-settings__row">
             <span className="og-settings__row-text">
               <span className="og-settings__row-label">Home</span>
@@ -380,7 +380,7 @@ export function SettingsSurface({
 
         <FeedbackSection />
 
-        <SettingsGroup id="settings-data-title" label="Data" hint="Rides stay on this device. Export includes your garage and preferences.">
+        <SettingsGroup id="settings-data-title" label="Data" hint="Rides stay on this device.">
           <div className="og-settings__row" data-testid="settings-units">
             <span className="og-settings__row-text">
               <span className="og-settings__row-label">Distance</span>

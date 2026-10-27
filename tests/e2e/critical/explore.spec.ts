@@ -46,7 +46,7 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
   await expect(page.getByRole("link", { name: /Sample (Ridge|Creek|Foothills)/ })).toHaveCount(3);
 
-  // Source is one of the decisions behind the last chip in the filter row: the
+  // Source is one of the decisions behind the first chip in the filter row: the
   // rider opens Filters, picks it there, and closes the sheet with the button
   // that says how many rides are left.
   await page.getByRole("button", { name: /^Filters/ }).click();

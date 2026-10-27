@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appCss } from "../helpers/app-css";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -12,10 +11,6 @@ import { describe, expect, it } from "vitest";
  * Ride / Things tabs could wrap inside the header.
  */
 
-const FILES = {
-  feature: "src/ui/explore/explore-rides.css",
-  theme: "src/app/theme-glass.css",
-} as const;
 
 interface Rule {
   readonly selector: string;
@@ -59,8 +54,8 @@ function rulesOf(source: string): Rule[] {
   return rules;
 }
 
-const featureRules = (): Rule[] => rulesOf(readFileSync(resolve(__dirname, "../..", FILES.feature), "utf8"));
-const themeRules = (): Rule[] => rulesOf(readFileSync(resolve(__dirname, "../..", FILES.theme), "utf8"));
+const featureRules = (): Rule[] => rulesOf(appCss());
+const themeRules = (): Rule[] => [];
 
 function selectorsOf(rule: Rule): string[] {
   return rule.selector.split(",").map((part) => part.trim());
@@ -92,24 +87,20 @@ function phone(rule: Rule): boolean {
 
 describe("Explore's filters sheet on a phone", () => {
   it("lays the date choices out as a row of chips, not four full-width buttons", () => {
-    // The sheet gives every button `width: 100%`; inside the When row that is
-    // what stacked them. The feature rule has to win for both children.
-    const chips = featureRules().filter((rule) =>
-      selectorsOf(rule).includes('.og-explore .og-explore__controls[data-open="true"] > .og-explore__row > *'));
-    expect(chips).toHaveLength(1);
-    expect(declarations(chips[0]!)["width"]).toBe("auto");
-
-    // Every chip is a 48px target at every width, and the row wraps.
-    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("48px");
-    const row = declarationsFor(".og-explore .og-explore__row--when");
-    expect(row["row-gap"]).toBe("8px");
-    expect(row["column-gap"]).toBe("8px");
+    // Inside the When row each choice keeps its own width and the row wraps.
+    const row = declarationsFor(".og-explore__row");
+    expect(row["display"]).toBe("flex");
+    expect(row["flex-wrap"]).toBe("wrap");
+    expect(row["gap"]).toBe("var(--og-space-2)");
+    expect(declarationsFor(".og-explore__row > *")["flex"]).toBe("0 0 auto");
+    // Every chip has a 48px hit area: 40px to the eye plus 4px each side.
+    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("40px");
+    expect(declarationsFor(".og-explore__quick-chip::before")["inset"]).toBe("-4px 0");
   });
 
   it("gives the When row a visible caption that is not one of its chips", () => {
-    const caption = declarationsFor(".og-explore .og-explore__row-label");
+    const caption = declarationsFor(".og-explore__row-label");
     expect(caption["flex"]).toBe("1 1 100%");
-    expect(caption["text-transform"]).toBe("uppercase");
     expect(caption["font-size"]).toBe("var(--og-text-caption)");
   });
 
@@ -117,37 +108,35 @@ describe("Explore's filters sheet on a phone", () => {
     const scrim = featureRules().filter((rule) =>
       phone(rule)
       && !rule.media.some((condition) => condition.includes("prefers-reduced-motion"))
-      && selectorsOf(rule).includes(".og-explore .og-explore__toolbar > .og-explore__backdrop"));
+      && selectorsOf(rule).includes(".og-explore__toolbar > .og-explore__backdrop"));
     expect(scrim).toHaveLength(1);
     const body = declarations(scrim[0]!);
     expect(body["position"]).toBe("fixed");
     expect(body["inset"]).toBe("0");
-    // Painted, not merely present: the base rule of the stylesheet hides it.
+    // Painted, not merely present: the base rule hides it.
     expect(body["display"]).toBe("block");
-    expect(body["background"]).toMatch(/^rgb\(0 0 0 \/ \d+%\)$/);
-    // Under the sheet (z-index 70) and over the page and its bars.
-    expect(Number.parseInt(body["z-index"] ?? "0", 10)).toBeLessThan(70);
-    expect(Number.parseInt(body["z-index"] ?? "0", 10)).toBeGreaterThan(20);
+    expect(body["background"]).toBe("var(--og-scrim)");
+    // One step under the sheet, which sits on the overlay layer.
+    expect(body["z-index"]).toBe("calc(var(--og-z-overlay) - 1)");
+    const sheet = featureRules().filter((rule) => phone(rule)
+      && selectorsOf(rule).includes('.og-explore__controls[data-open="true"]'));
+    expect(declarations(sheet[0]!)["z-index"]).toBe("var(--og-z-overlay)");
   });
 
   it("keeps the scrim still for a rider who asked for less motion", () => {
     const still = featureRules().filter((rule) =>
       rule.media.some((condition) => condition.includes("prefers-reduced-motion: reduce"))
-      && selectorsOf(rule).includes(".og-explore .og-explore__toolbar > .og-explore__backdrop"));
+      && selectorsOf(rule).includes(".og-explore__toolbar > .og-explore__backdrop"));
     expect(still).toHaveLength(1);
     expect(declarations(still[0]!)["animation"]).toBe("none");
   });
 
   it("never wraps the Ride / Things switch at 320px", () => {
-    const tabs = featureRules().filter((rule) =>
-      selectorsOf(rule).includes('.og-explore .og-explore__header .og-explore__lens > [role="tab"]'));
-    expect(tabs).toHaveLength(1);
-    expect(declarations(tabs[0]!)["white-space"]).toBe("nowrap");
-
+    expect(declarationsFor('.og-explore__lens > [role="tab"]')["white-space"]).toBe("nowrap");
     // Search above the chips at every width below the one-line desktop tier.
-    const toolbar = themeRules().filter((rule) =>
+    const toolbar = featureRules().filter((rule) =>
       rule.media.length === 0 && selectorsOf(rule).includes(".og-explore__toolbar"));
     expect(toolbar).toHaveLength(1);
-    expect(declarations(toolbar[0]!)["grid-template-areas"]).toBe('"search" "quick"');
+    expect(declarations(toolbar[0]!)["grid-template-columns"]).toBe("minmax(0, 1fr)");
   });
 });

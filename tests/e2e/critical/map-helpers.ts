@@ -708,7 +708,14 @@ export async function countColors(
  * — how an alternative is drawn since route lines are colour-matched to their
  * cards (UX rework phase 2b).
  */
-export const MUTED_ALTERNATIVE = "#9571b1";
+/**
+ * Design v3 route colours (DESIGN.md §2, tokens.css --og-map-*): the chosen
+ * ride is plum over a darker plum casing; an alternative is the slate route-alt
+ * line at 0.8 opacity over the Day map canvas (#68716f over #f4f0e7).
+ */
+export const ROUTE_PLUM = "#7b4fa0";
+export const ROUTE_PLUM_STRONG = "#5e3a7c";
+export const MUTED_ALTERNATIVE = "#848a87";
 
 /** Asserts a rendered coordinate is the one the click asked for (0.01° ≈ 1 km). */
 export function expectCoordinateNear(actual: Coordinate, expected: Coordinate): void {

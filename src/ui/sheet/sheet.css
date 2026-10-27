@@ -1,65 +1,833 @@
-.og-shared-sheet { display: flex; flex-direction: column; min-height: 0; color: var(--og-ink); background: var(--og-paper); }
-.og-shared-sheet .og-sheet__body { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
-.og-shared-sheet .og-sheet__handle { min-width: 48px; min-height: 48px; touch-action: none; cursor: grab; }
-.og-shared-sheet :is(button, input, select, summary):focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
-@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
-  .og-planner .og-shared-sheet { display: flex; flex-direction: column; gap: 0; min-height: 0; padding: 0 var(--og-space-4) var(--og-space-3); overflow: hidden; border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0; transition: height 180ms ease; }
-  .og-planner .og-shared-sheet[data-detent="peek"] { height: auto; max-height: calc(50dvh - var(--og-tabbar-h, 0px)); }
-  .og-planner .og-shared-sheet[data-detent="half"] { height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: calc(50dvh - var(--og-tabbar-h, 0px)); }
-  /* Full keeps a map strip; the home search returns when the sheet folds. */
-  .og-planner .og-shared-sheet[data-detent="full"] { height: calc(100dvh - var(--og-tabbar-h, 0px) - 160px); min-height: calc(50dvh - var(--og-tabbar-h, 0px)); max-height: none; }
-  .og-planner:has(.og-shared-sheet[data-detent="full"]) .og-top-search { display: none; }
-  .og-planner .og-shared-sheet[data-dragging="true"] { height: var(--og-sheet-drag-h); max-height: var(--og-sheet-drag-h); transition: none; }
-  .og-planner .og-shared-sheet .og-sheet__head { display: block; position: relative; flex: 0 0 48px; min-height: 48px; padding: 0; }
-  .og-planner .og-shared-sheet .og-sheet__head::after, .og-planner .og-shared-sheet::before { display: none; }
-  .og-planner .og-shared-sheet .og-sheet__handle { display: block; position: absolute; inset: 0; width: 100%; height: 48px; padding: 0; margin: 0; background: transparent; border: 0; box-shadow: none; }
-  .og-planner .og-shared-sheet .og-sheet__handle::before { content: ""; position: absolute; top: 14px; left: calc(50% - 18px); width: 36px; height: 4px; border-radius: 999px; background: var(--og-topo-sage); }
-  .og-planner .og-shared-sheet .og-sheet__handle > * { display: none; }
-  .og-planner .og-shared-sheet .og-style__chip span { min-width: 48px; min-height: 48px; }
-  .og-planner .og-shared-sheet .og-sheet__body { display: flex; flex-direction: column; gap: var(--og-space-2); flex: 1 1 auto; min-height: 0; max-height: none; padding: 0; overflow-y: auto; overflow-x: hidden; scroll-padding: var(--og-space-2); }
-  .og-planner .og-shared-sheet[data-directions="true"]:not([data-sheet-view="choices"]) .og-sheet__body > * { order: 0; flex-shrink: 0; }
-  .og-planner .og-shared-sheet .og-planner__status { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; padding: 0; }
-  .og-planner .og-shared-sheet[data-place="true"] .og-sheet__body { display: block; }
-  .og-planner .og-shared-sheet[data-place="true"] .og-sheet__head > :not(.og-sheet__handle) { display: none; }
-  .og-planner .og-shared-sheet[data-place="true"] .og-sheet__body > .og-place-sheet-slot { display: block; }
-  .og-planner .og-shared-sheet[data-directions="true"] .og-sheet__head > :not(.og-sheet__handle) { display: none; }
-  .og-planner .og-shared-sheet[data-directions="true"] .og-sheet__body > * { display: block; }
-  .og-planner .og-shared-sheet[data-directions="true"] .og-sheet__body > .og-route-options { display: flex; }
+/* The one sheet (maps-for-riders §5, small-screen-v2 §3).
+   Phones and tablets: docked above the tab bar with peek / half / full detents,
+   a 48px grab area, and nothing ever drawn over the handle.
+   Desktop: the same content in the left planning rail. */
+
+.og-shared-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
-@media (prefers-reduced-motion: reduce) { .og-planner .og-shared-sheet { transition: none; animation: none; } }
-.og-route-options { display: flex; flex-direction: column; gap: var(--og-space-1); flex: 1 1 auto; min-height: 0; }
-.og-route-options__header { display: flex; flex: none; align-items: center; gap: var(--og-space-1); }
-.og-route-options__header h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--og-text-body); line-height: 1.3; overflow-wrap: anywhere; }
-.og-route-options__header button, .og-route-options__editor-head button { flex: none; min-width: 48px; min-height: 48px; padding: 0 var(--og-space-1); border: 0; background: transparent; color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); cursor: pointer; }
-.og-route-options__scroll { flex: 1 1 auto; min-height: 64px; overflow-y: auto; overscroll-behavior-y: contain; }
-.og-route-options .og-phone-alternatives { display: flex; flex-direction: column; gap: var(--og-space-1); list-style: none; margin: 0; padding: 2px; }
-.og-route-options .og-phone-choice { display: flex; align-items: center; gap: var(--og-space-2); width: 100%; min-height: 64px; padding: var(--og-space-2); border: 1px solid var(--og-hairline); border-radius: var(--og-radius-control); background: transparent; color: var(--og-ink); text-align: left; font: inherit; cursor: pointer; }
-.og-route-options .og-phone-choice[data-selected="true"] { border-color: var(--og-ink); background: color-mix(in srgb, var(--og-topo-sage) 15%, var(--og-paper)); }
-.og-route-options .og-phone-choice__swatch { width: 4px; height: 32px; border-radius: 2px; background: var(--og-choice-tint, var(--og-ember)); flex: none; }
-.og-route-options .og-phone-choice[data-tint="1"] { --og-choice-tint: var(--og-route-plum); }
-.og-route-options .og-phone-choice[data-tint="2"] { --og-choice-tint: var(--og-deep-spruce); }
-.og-route-options .og-phone-choice__body { flex: 1; min-width: 0; }
-.og-route-options .og-phone-choice__role { display: block; font-size: var(--og-text-body); font-weight: 700; }
-.og-route-options .og-phone-choice__meta { display: block; font-size: var(--og-text-meta); color: var(--og-slate-text); line-height: 1.35; white-space: normal; }
-.og-route-options .og-phone-choice__delta { display: none; }
-.og-route-options .og-phone-choice__check { flex: none; width: 20px; }
-.og-route-options__settings { display: flex; flex: none; justify-content: space-between; align-items: center; gap: var(--og-space-2); width: 100%; min-height: 48px; padding: 0 var(--og-space-2); border: 0; background: transparent; color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); text-align: left; cursor: pointer; }
-.og-route-options__settings > :last-child { color: var(--og-slate-text); }
-.og-route-options__start { flex: none; }
-.og-route-options__start .og-primary { width: 100%; min-height: 52px; font-size: var(--og-text-body); }
-.og-route-options__start p { font-size: var(--og-text-meta); margin: var(--og-space-1) 0; }
-.og-route-options__editor-head h2 { margin: 0 0 var(--og-space-3); font-size: var(--og-text-headline); }
-.og-planner__sheet[data-sheet-view="options"] .og-style__panel { display: grid; }
-.og-planner__sheet[data-sheet-view="options"] .og-style__toggle { display: none; }
-@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
-  .og-planner .og-shared-sheet[data-directions="true"][data-sheet-view="choices"] { padding-bottom: var(--og-space-2); }
-  .og-planner .og-shared-sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body { overflow: hidden; }
-  .og-planner .og-shared-sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > .og-route-options { display: flex; }
-  .og-planner .og-shared-sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options) { display: none; }
+
+.og-sheet__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-width: 0;
 }
-@media (max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px))) {
-  .og-planner { --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom))); }
-  .og-planner .og-planner__dock { position: fixed; inset: auto 0 var(--og-tabbar-h); width: 100%; max-width: none; height: auto; padding: 0; gap: 0; transform: none; overflow: visible; }
-  .og-planner .og-planner__nav-shell { position: fixed; inset: auto 0 0; width: 100%; max-width: none; height: auto; min-height: calc(56px + var(--og-safe-bottom)); padding: 0 var(--og-space-2) var(--og-safe-bottom); border: 0; border-top: 1px solid var(--og-hairline); border-radius: 0; background: var(--og-paper); box-shadow: none; backdrop-filter: none; transform: none; }
-  .og-planner .og-planner__nav { height: 56px; }
+
+.og-sheet__head > * {
+  flex: 1 1 100%;
+}
+
+.og-sheet__head > :is(.og-planner__status, .og-planner__save-indicator, .og-history, .og-sheet__tools, .og-sheet__clear, .og-sheet__undo-clear) {
+  flex: 0 1 auto;
+}
+
+.og-sheet__head > :is(.og-history, .og-sheet__tools) {
+  margin-left: auto;
+}
+
+.og-sheet__head > .og-planner__save-indicator::before {
+  content: "·";
+  margin-right: var(--og-space-2);
+  color: var(--og-ink-2);
+}
+
+.og-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.og-sheet__handle {
+  display: none;
+}
+
+.og-shared-sheet :is(button, input, select, summary):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+/* The sheet moves focus to its heading for screen readers; a heading is not a
+   control, so it shows no ring. */
+.og-shared-sheet :is(h2, h3)[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* Undo / Redo: two quiet round buttons; the verb is the accessible name. */
+.og-sheet__head .og-history {
+  display: flex;
+  gap: var(--og-space-2);
+  margin: 0;
+}
+
+.og-sheet__head .og-history__button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font-size: 0;
+}
+
+.og-sheet__clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  padding: 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+  cursor: pointer;
+}
+
+.og-sheet__clear:hover {
+  color: var(--og-ink);
+  background: var(--og-press);
+}
+
+.og-sheet__undo-clear {
+  flex: none;
+}
+
+.og-planner__sheet[data-sheet-view="options"] .og-style__panel {
+  display: grid;
+}
+
+.og-planner__sheet[data-sheet-view="options"] .og-style__toggle {
+  display: none;
+}
+
+/* A place card owns the whole sheet. */
+.og-planner__sheet[data-place="true"] .og-sheet__head > :not(.og-sheet__handle),
+.og-planner__sheet[data-place="true"] .og-sheet__body > :not(.og-place-sheet-slot) {
+  display: none;
+}
+
+.og-planner__sheet[data-place="true"] .og-sheet__body {
+  display: block;
+  overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Desktop: the planning rail.
+   -------------------------------------------------------------------------- */
+.og-planner__dock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  min-width: 0;
+}
+
+.og-planner__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  padding: var(--og-space-4);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-sheet);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+@media (min-width: 1181px) {
+  .og-planner__dock {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--og-z-sheet);
+    width: calc(var(--og-float-rail) + var(--og-float-gap) * 2);
+    min-height: 0;
+    padding: var(--og-float-gap) var(--og-float-gap) 40px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    pointer-events: none;
+  }
+
+  .og-planner__dock > * {
+    pointer-events: auto;
+  }
+
+  .og-sheet__head > .og-planner__save-indicator[data-state="saved"] {
+    display: none;
+  }
+
+  /* The route's edit tools sit in the head beside Undo / Redo. */
+  .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--og-space-2);
+    margin-left: auto;
+  }
+
+  .og-planner__sheet[data-place="true"] {
+    min-height: 400px;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar {
+    position: static;
+    width: auto;
+    max-width: 100%;
+    justify-items: end;
+    gap: var(--og-space-1);
+    transform: none;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .og-planner__sheet .og-sheet__head .og-editbar__btn {
+    min-height: 44px;
+    padding: 0 var(--og-space-3);
+    font-size: var(--og-text-meta);
+  }
+}
+
+/* Landscape phones: the rail beside the map, edge to edge. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-planner__dock {
+    position: relative;
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    padding-right: var(--og-safe-right);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--og-surface);
+    box-shadow: var(--og-shadow-float);
+  }
+
+  .og-planner__dock .og-planner__panel {
+    padding-top: var(--og-space-2);
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Phones and tablets: the bottom sheet.
+   -------------------------------------------------------------------------- */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner {
+    /* Full keeps a 160px strip of map, so the place or ride stays in view; the
+       8px the floating sheet sits above the tab bar comes out of the sheet. */
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 160px);
+    --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-2));
+  }
+
+  /* The sheet floats like the tab bar: inset from the edges, glass, every
+     corner rounded, with a sliver of map between them. */
+  .og-planner .og-planner__dock {
+    position: fixed;
+    inset: auto calc(var(--og-space-2) + var(--og-safe-right)) calc(var(--og-tabbar-h) + var(--og-space-2))
+      calc(var(--og-space-2) + var(--og-safe-left));
+    z-index: var(--og-z-sheet);
+    width: auto;
+    gap: 0;
+  }
+
+  .og-planner:has(.og-layers[data-open="true"]) .og-planner__dock {
+    visibility: hidden;
+  }
+
+  .og-planner .og-planner__sheet {
+    position: relative;
+    gap: 0;
+    height: auto;
+    max-height: 45dvh;
+    padding: 0 var(--og-space-3) var(--og-space-3);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: 24px;
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    transition: height var(--og-dur-base) var(--og-ease);
+  }
+
+  .og-planner .og-planner__sheet[data-detent="half"] {
+    height: var(--og-sheet-half);
+    max-height: var(--og-sheet-half);
+  }
+
+  /* A place card is as tall as its buttons, up to half: no empty glass under
+     Directions / Add stop / Save / Share. */
+  .og-planner .og-planner__sheet[data-detent="half"]:has(.og-place-sheet) {
+    height: auto;
+    max-height: var(--og-sheet-half);
+  }
+
+  .og-planner .og-planner__sheet[data-detent="full"] {
+    height: var(--og-sheet-full);
+    max-height: none;
+  }
+
+  .og-planner .og-planner__sheet[data-dragging="true"] {
+    height: var(--og-sheet-drag-h);
+    max-height: var(--og-sheet-drag-h);
+    transition: none;
+  }
+
+  /* The head: a grab bar, then (half and full) one row of tools. */
+  .og-planner .og-planner__sheet .og-sheet__head {
+    flex: none;
+    gap: 0 var(--og-space-2);
+    padding: 0;
+    touch-action: none;
+  }
+
+  /* The tool row keeps its own breathing room under the grab bar. */
+  .og-planner .og-planner__sheet .og-sheet__head > :not(.og-sheet__handle, .og-planner__status, .og-planner__save-indicator) {
+    margin-bottom: var(--og-space-2);
+  }
+
+  /* Before there is a ride there is nothing to edit on the map. */
+  .og-planner .og-planner__sheet[data-has-ride="false"] .og-phone-edittools:has([data-testid="map-edit-open"]) {
+    display: none;
+  }
+
+  /* Keyboard focus rings the grab bar itself, not the whole strip. */
+  .og-planner .og-planner__sheet .og-sheet__handle:focus-visible {
+    outline: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle:focus-visible::before {
+    background: var(--og-focus-ring);
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: 3px;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle {
+    position: relative;
+    display: block;
+    order: -1;
+    flex: 1 1 100%;
+    height: 36px;
+    min-height: 36px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  /* 36px inside the sheet plus a 12px lip over its rounded edge: a 48px
+     target that leaves the map above it to the map. */
+  .og-planner .og-planner__sheet .og-sheet__handle::after {
+    content: "";
+    position: absolute;
+    inset: -12px 0 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: calc(50% - 18px);
+    width: 36px;
+    height: 4px;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-line-strong);
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle > * {
+    display: none;
+  }
+
+  /* Status is spoken, not shown: the summary already says it. */
+  .og-planner .og-planner__sheet .og-sheet__head > :is(.og-planner__status, .og-planner__save-indicator) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-sheet__head > :is(.og-history, .og-sheet__tools, .og-sheet__clear) {
+    display: none;
+  }
+
+  /* One tool row under the grab bar: Edit, Undo, Redo … ×. */
+  .og-planner .og-planner__sheet .og-sheet__head {
+    flex-wrap: wrap;
+    column-gap: var(--og-space-2);
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    order: 1;
+    margin-left: 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > .og-history {
+    order: 2;
+    margin-left: 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) {
+    order: 3;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__clear {
+    margin-left: auto;
+  }
+
+  /* Undo after clearing: a quiet text action in the tool row. */
+  .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__undo-clear {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 var(--og-space-3);
+    border: 0;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface-2);
+    color: var(--og-primary-text);
+    font-size: var(--og-text-meta);
+    font-weight: 600;
+  }
+
+  /* The route's edit tools sit in the tool row, not over the map. */
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar {
+    position: static;
+    display: flex;
+    max-width: none;
+    transform: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar__row {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head .og-editbar__btn {
+    min-height: 40px;
+    background: var(--og-surface-2);
+  }
+
+  .og-planner .og-planner__sheet:is([data-directions="true"], [data-place="true"]) .og-sheet__head > :not(.og-sheet__handle) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__body {
+    flex: 1 1 auto;
+    gap: var(--og-space-2);
+    max-height: none;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-padding: var(--og-space-2);
+  }
+
+  /* Sticky footers stay above the scroll: commit and Start ride. */
+  .og-planner__sheet .og-composer__commitment[data-current="false"],
+  .og-planner__sheet .og-ride-start {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 0;
+    padding: var(--og-space-2) 0 0;
+    border-top: 0;
+    background: var(--og-surface);
+  }
+
+  .og-planner__sheet[data-detent="peek"] :is(.og-route-list, .og-points, .og-spans, .og-sketch, .og-offline, .og-refine, .og-prepare, .og-style, .og-routing-methods, .og-phone-tools) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"][data-has-ride="true"]:not([data-directions="true"]) .og-sheet__body > :not(.og-phone-summary) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary[data-comparing="false"] .og-phone-style {
+    display: none;
+  }
+
+  .og-planner .og-sheet__body > :not(.og-phone-summary, .og-phone-tools, .og-refine, .og-composer) {
+    order: 4;
+  }
+
+  /* In the Options and Edit views the way back comes first. */
+  .og-planner .og-sheet__body > .og-route-options__editor-head {
+    order: -1;
+  }
+
+  /* Directions: the route options own the sheet. */
+  .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > * {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body {
+    overflow: hidden;
+  }
+
+  /* Route options: the sheet is as tall as two rides, Options and Start ride
+     need, up to a little more than half, so nothing the rider decides with is cut off
+     or scrolled out of sight — also on a 320 × 568 phone. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
+    height: auto;
+    max-height: max(var(--og-sheet-half), 56dvh);
+  }
+
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options) {
+    display: none;
+  }
+
+  /* The options list is the part that gives way: Start ride always fits. */
+  .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > .og-route-options {
+    display: flex;
+    flex: 1 1 auto;
+    flex-shrink: 1;
+    min-height: 0;
+  }
+
+  /* In a sheet, content is grouped rows divided by hairlines, not cards. */
+  .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-prepare__row, .og-elevation, .og-point-row, .og-refine__body > section) {
+    padding: var(--og-space-2) 0;
+    border: 0;
+    border-bottom: 1px solid var(--og-line);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .og-planner .og-planner__sheet :is(input, select, button, summary, label) {
+    font-size: var(--og-text-body);
+  }
+
+  .og-planner .og-planner__sheet :is(button:not(.og-switch), summary, select, input:not([type="checkbox"], [type="radio"])) {
+    min-height: var(--og-touch);
+  }
+
+  .og-planner .og-planner__sheet :is(p, .og-composer__value, .og-composer__coordinate, .og-refine__summary) {
+    font-size: var(--og-text-meta);
+    line-height: 1.35;
+  }
+
+  /* Edit tools for a planned ride sit in the sheet, not on the map. */
+  .og-planner .og-planner__sheet .og-phone-edittools {
+    flex: none;
+    padding: var(--og-space-3) 0 var(--og-space-1);
+  }
+
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--og-space-1);
+    width: 100%;
+    max-width: none;
+    transform: none;
+    pointer-events: auto;
+  }
+
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--og-space-2);
+    width: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__btn {
+    flex: 1 1 64px;
+    justify-content: center;
+    min-height: var(--og-touch);
+    padding: 0 var(--og-space-2);
+    border: 0;
+    border-radius: var(--og-radius-control);
+    background: var(--og-surface-2);
+    font-size: var(--og-text-meta);
+  }
+
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__status {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    padding: 0 0 var(--og-space-1);
+    background: transparent;
+    box-shadow: none;
+    font-size: var(--og-text-meta);
+  }
+
+  .og-planner .og-planner__sheet .og-phone-edittools .og-editbar__tip {
+    display: none;
+  }
+}
+
+/* Tablets: the sheet keeps a phone's width, floating at the left. */
+@media (min-width: 761px) and (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__dock {
+    right: auto;
+    left: calc(var(--og-safe-left) + var(--og-space-4));
+    bottom: calc(var(--og-tabbar-h) + var(--og-space-4));
+    width: min(560px, calc(100vw - 2 * var(--og-space-4)));
+  }
+
+  .og-planner .og-planner__sheet {
+    border-radius: var(--og-radius-sheet);
+    box-shadow: var(--og-shadow-float);
+  }
+
+  .og-planner {
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-2) - var(--og-safe-top) - 200px);
+  }
+}
+
+/* Short phones (iPhone SE): the sheet floats 4px above the tab bar and keeps
+   8px under its last row, so a planned ride still fits in the map above it. */
+@media (max-height: 700px) and (min-height: 501px) and (max-width: 760px) {
+  .og-planner .og-planner__dock {
+    bottom: calc(var(--og-tabbar-h) + var(--og-space-1));
+  }
+
+  .og-planner .og-planner__sheet {
+    padding-bottom: var(--og-space-2);
+  }
+
+  .og-planner {
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-space-1) - var(--og-safe-top) - 160px);
+    --og-sheet-half: calc(50dvh - var(--og-tabbar-h) - var(--og-space-1));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner .og-planner__sheet {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Route options: two or three rides, one Start (maps-for-riders §4).
+   -------------------------------------------------------------------------- */
+.og-route-options {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  min-height: 0;
+}
+
+.og-route-options__header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--og-space-1);
+}
+
+.og-route-options__header h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-route-options__header button,
+.og-route-options__editor-head button {
+  flex: none;
+  min-width: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-primary-text);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-route-options__editor-head h2 {
+  margin: 0 0 var(--og-space-3);
+  font-size: var(--og-text-headline);
+}
+
+.og-route-options__scroll {
+  flex: 1 1 auto;
+  min-height: 64px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.og-phone-alternatives {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One 64px row per ride: its line's colour, its role, time · distance. */
+.og-phone-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-phone-choice:hover {
+  background: var(--og-press);
+}
+
+.og-phone-choice[data-selected="true"] {
+  background: var(--og-route-soft);
+}
+
+.og-phone-choice:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: -2px;
+}
+
+.og-phone-choice__swatch {
+  flex: none;
+  width: 4px;
+  height: 36px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-route-alt);
+}
+
+.og-phone-choice[data-selected="true"] .og-phone-choice__swatch {
+  background: var(--og-route);
+}
+
+.og-phone-choice__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-phone-choice__role {
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.og-phone-choice__meta {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-phone-choice__word {
+  color: var(--og-ink);
+}
+
+.og-phone-choice__delta {
+  flex: none;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-route-options .og-phone-choice__delta {
+  display: none;
+}
+
+.og-phone-choice__check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--og-route);
+}
+
+.og-route-options__settings {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-3);
+  border: 0;
+  border-top: 1px solid var(--og-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-route-options__settings > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--og-ink-2);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-route-options__start {
+  flex: none;
+}
+
+.og-route-options__start .og-primary {
+  width: 100%;
+  min-height: 52px;
+  font-size: var(--og-text-body);
+}
+
+.og-route-options__start p {
+  margin: var(--og-space-1) 0;
+  font-size: var(--og-text-meta);
 }

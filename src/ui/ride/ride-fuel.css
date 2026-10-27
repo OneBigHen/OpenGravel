@@ -1,41 +1,31 @@
-/* "Next gas" on the ride: one line in the sheet, and at most one primary
-   action beside the quiet "Filled up". The sheet's own dark chrome is the
-   background, so this section only spaces and colours. Buttons reuse the ride's
-   56 px glove-sized action classes. */
 .og-ride-fuel {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--og-ride-border);
-  border-radius: var(--og-radius-object);
-  background: var(--og-ride-surface);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface);
 }
 
 .og-ride-fuel__line {
   margin: 0;
-  color: var(--og-paper);
+  color: var(--og-surface);
   font-size: var(--og-text-meta);
   font-weight: 600;
-  /* A long station name wraps instead of pushing a button off a 320 px sheet. */
   overflow-wrap: anywhere;
 }
-
-/* A caution, not an alarm: the range does not reach the station ahead. */
 .og-ride-fuel[data-tone="warn"] {
   border-color: var(--og-danger);
   background: color-mix(in srgb, var(--og-danger) 22%, var(--og-ink));
 }
 
 .og-ride-fuel[data-tone="warn"] .og-ride-fuel__line {
-  color: var(--og-paper);
+  color: var(--og-surface);
 }
-
-/* Unknown is stated in the muted tone: it is a fact about the data, not a
-   verdict about the road. */
 .og-ride-fuel[data-tone="unknown"] .og-ride-fuel__line {
-  color: var(--og-ride-muted);
-  font-weight: 400;
+  color: var(--og-ink-2);
+  font-weight: 500;
 }
 
 .og-ride-fuel__actions {
@@ -44,8 +34,6 @@
   align-items: center;
   gap: 8px;
 }
-
-/* One obvious action: "Add gas stop" takes the row, "Filled up" stays quiet. */
 .og-ride-fuel__actions .og-ride__action--primary {
   flex: 1 1 auto;
 }
@@ -53,20 +41,16 @@
 .og-ride-fuel__actions .og-ride__action--link {
   flex: 0 0 auto;
   margin-left: auto;
-  color: var(--og-ride-muted);
+  color: var(--og-ink-2);
   border-color: transparent;
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .og-ride-fuel__note {
   margin: 0;
-  color: var(--og-ride-muted);
+  color: var(--og-ink-2);
   font-size: var(--og-text-caption);
 }
-
-/* Nothing is known about gas: one compact row, never a box holding a lone
-   button. The button is 48 px — a stop for fuel is a deliberate, stationary
-   press, not a glance at 50 mph. The hint stays on one line beside it. */
 .og-ride-fuel--compact {
   flex-direction: row;
   align-items: center;
@@ -79,10 +63,10 @@
   min-width: 48px;
   min-height: 48px;
   padding: 0 16px;
-  border: 1px solid var(--og-ride-border);
-  border-radius: 999px;
-  background: var(--og-ride-surface);
-  color: var(--og-paper);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-surface);
   font: inherit;
   font-size: var(--og-text-body);
   font-weight: 700;
@@ -97,6 +81,6 @@
 .og-ride-fuel__hint {
   min-width: 0;
   margin: 0;
-  color: var(--og-ride-muted);
+  color: var(--og-ink-2);
   font-size: var(--og-text-caption);
 }

@@ -6,8 +6,7 @@
  * reasons, and the reason is always readable next to it.
  */
 
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { appCss } from "../../helpers/app-css";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -324,17 +323,14 @@ describe("IntentComposer", () => {
  * every phone width down to 320 px.
  */
 describe("the composer's place fields cannot overlap", () => {
-  const css = readFileSync(
-    path.join(process.cwd(), "src", "app", "globals.css"),
-    "utf8",
-  );
+  const css = appCss();
   const rule = (selector: string, occurrence: "first" | "last" = "first"): string => {
     const matches = [...css.matchAll(new RegExp(`${selector}\\s*\\{([^}]*)\\}`, "g"))];
     return (occurrence === "last" ? matches.at(-1) : matches[0])?.[1] ?? "";
   };
 
   it("gives every row its own content-sized height with a gap between rows", () => {
-    expect(rule("\\.og-composer")).toMatch(/gap:\s*12px/);
+    expect(rule("\\.og-composer")).toMatch(/gap:\s*(12px|var\(--og-space-3\))/);
 
     const row = rule("\\.og-composer__row");
     expect(row).toContain("align-content: start");
@@ -357,10 +353,7 @@ describe("the composer's place fields cannot overlap", () => {
 });
 
 describe("the composer value cell never truncates", () => {
-  const css = readFileSync(
-    path.join(process.cwd(), "src", "app", "globals.css"),
-    "utf8",
-  );
+  const css = appCss();
   const rule = /\.og-composer__value\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
 
   it("has a value-cell rule to check", () => {

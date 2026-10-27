@@ -374,6 +374,7 @@ function ReadyProfile({
                   className="og-elevation__waypoint"
                   data-testid="elevation-waypoint"
                   data-position={notch.position}
+                  data-edge={notch.share < 0.03 ? "start" : notch.share > 0.97 ? "end" : undefined}
                   title={notch.label}
                   style={{ left: `${notch.share * 100}%` }}
                 >

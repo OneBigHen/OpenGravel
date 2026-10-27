@@ -1,13 +1,12 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appCss, tokensCss } from "../helpers/app-css";
 import { describe, expect, it } from "vitest";
 
 /**
  * The phone app shell (small-screen design system v2 §1–§2).
  *
- * On a phone the tab bar is docked to the bottom edge — full width, solid paper,
- * a top hairline, 56px plus the home indicator's inset, 24px icons and 12px
- * labels — instead of the frosted capsule that floated over the map. It is
+ * On a phone the tab bar is a floating glass pill (DESIGN.md §2, v4, owner
+ * 2026-10-27) — inset 8px from the edges, 60px tall with 50px tabs, 22px icons
+ * and 12px labels, lifted above the home indicator. It is
  * always visible on the pages that show it: only a running ride (which renders
  * no app bar at all) is without one, so the old "hide while the map moves"
  * behaviour must not come back. Page titles are left-aligned at the one title
@@ -17,16 +16,14 @@ import { describe, expect, it } from "vitest";
  * of the phone media queries rather than on a rendered screenshot.
  */
 
-const FILES = ["globals.css", "theme-glass.css"] as const;
-const PHONE =
-  "(max-width: 760px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))";
+/** Phones and tablets share the floating tab bar (DESIGN.md §4 breakpoints). */
+const PHONE = "(max-width: 1180px) and (min-height: 501px)";
 const PHONE_ONLY = "(max-width: 760px)";
 /** The phone-and-tablet tier that owns the page/dock offsets. */
-const COMPACT =
-  "(max-width: 1180px) and (not ((orientation: landscape) and (max-height: 500px) and (min-width: 560px)))";
+const COMPACT = "(max-width: 1180px) and (min-height: 501px)";
 
-function sourceOf(file: (typeof FILES)[number]): string {
-  return readFileSync(resolve(__dirname, "../../src/app", file), "utf8").replace(
+function sourceOf(): string {
+  return appCss().replace(
     /\/\*[\s\S]*?\*\//g,
     "",
   );
@@ -80,152 +77,108 @@ function declarationsFor(blocks: readonly string[], selector: string): Record<st
 }
 
 function phoneBlocks(): string[] {
-  return FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE));
+  return mediaBlocks(sourceOf(), PHONE);
 }
 
 function phoneOnlyBlocks(): string[] {
-  return FILES.flatMap((file) => mediaBlocks(sourceOf(file), PHONE_ONLY));
+  return mediaBlocks(sourceOf(), PHONE_ONLY);
 }
 
 function compactBlocks(): string[] {
-  return FILES.flatMap((file) => mediaBlocks(sourceOf(file), COMPACT));
+  return mediaBlocks(sourceOf(), COMPACT);
 }
 
-/**
- * A rule whose selector list carries commas inside a function — a plain
- * `:is(…) h1` cannot be looked up by splitting on every comma.
- */
-function declarationsForSelector(
-  blocks: readonly string[],
-  selector: string,
-): Record<string, string> {
-  const declarations: Record<string, string> = {};
-  for (const block of blocks) {
-    const rule = /([^{}]+)\{([^{}]*)\}/g;
-    for (let match = rule.exec(block); match !== null; match = rule.exec(block)) {
-      if ((match[1] ?? "").trim().replace(/\s+/g, " ") !== selector) continue;
-      for (const declaration of (match[2] ?? "").split(";")) {
-        const colon = declaration.indexOf(":");
-        if (colon === -1) continue;
-        const property = declaration.slice(0, colon).trim();
-        if (property === "") continue;
-        declarations[property] = declaration.slice(colon + 1).trim().replace(/\s+/g, " ");
-      }
-    }
-  }
-  return declarations;
-}
 
 describe("phone tab bar", () => {
-  it("is docked to the bottom edge on a solid paper surface with a top hairline", () => {
+  it("floats as a glass pill inset from the edges and above the home indicator", () => {
     const shell = declarationsFor(phoneBlocks(), ".og-planner__nav-shell");
 
-    // Full width, flush with the bottom, and 56px plus the home indicator.
+    // Inset 8px (centred and capped at 460px on a tablet), lifted by the gap.
     expect(shell["position"]).toBe("fixed");
-    expect(shell["left"]).toBe("0");
-    expect(shell["right"]).toBe("0");
-    expect(shell["bottom"]).toBe("0");
-    expect(shell["min-height"]).toBe("calc(56px + var(--og-safe-bottom))");
-    expect(shell["border-radius"]).toBe("0");
+    expect(shell["inset"]).toBe(
+      "auto max(calc(var(--og-space-2) + var(--og-safe-right)), calc(50% - 230px)) var(--og-tabbar-gap) max(calc(var(--og-space-2) + var(--og-safe-left)), calc(50% - 230px))",
+    );
+    expect(shell["min-height"]).toBe("60px");
+    expect(shell["border-radius"]).toBe("24px");
 
-    // Solid paper, not frosted glass: a hairline separates it from the page.
-    expect(shell["background"]).toBe("var(--og-paper)");
-    expect(shell["border-top"]).toBe("1px solid var(--og-hairline)");
-    expect(shell["backdrop-filter"]).toBe("none");
-    expect(shell["box-shadow"]).toBe("none");
+    // Glass over the map (DESIGN.md §2, v4): edge, fill, highlight and blur.
+    expect(shell["background"]).toBe("var(--og-glass)");
+    expect(shell["border"]).toBe("1px solid var(--og-glass-edge)");
+    expect(shell["backdrop-filter"]).toBe("var(--og-glass-blur)");
+    expect(shell["box-shadow"]).toBe("var(--og-glass-highlight), var(--og-glass-shadow)");
   });
 
   it("spaces every page and the planner dock by the bar's measured height", () => {
     const root = declarationsFor(phoneBlocks(), ":root");
     // The fallback is the bar itself; the measurement (PrimaryNav) keeps a
     // label row that has wrapped to two lines from overlapping the page.
+    expect(root["--og-tabbar-gap"]).toBe("max(var(--og-space-2), calc(var(--og-safe-bottom) - 14px))");
     expect(root["--og-tabbar-h"]).toBe(
-      "var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom)))",
+      "var(--og-tabbar-measured-h, calc(60px + var(--og-tabbar-gap)))",
     );
     for (const selector of [".og-explore", ".og-library", ".og-settings"]) {
       expect(declarationsFor(compactBlocks(), selector)["padding-bottom"]).toBe(
-        "calc(var(--og-tabbar-h) + 16px)",
+        "calc(var(--og-tabbar-h) + var(--og-space-5))",
       );
     }
-    expect(declarationsFor(compactBlocks(), ".og-planner__dock")["bottom"]).toBe(
-      "calc(var(--og-tabbar-h) + 6px)",
+    // The sheet floats too: inset like the bar, 8px above it.
+    expect(declarationsFor(compactBlocks(), ".og-planner .og-planner__dock")["inset"]).toBe(
+      "auto calc(var(--og-space-2) + var(--og-safe-right)) calc(var(--og-tabbar-h) + var(--og-space-2)) calc(var(--og-space-2) + var(--og-safe-left))",
     );
   });
 
-  it("draws 24px icons and 12px labels in targets at least 48px tall", () => {
-    const shell = declarationsFor(phoneBlocks(), ".og-planner__nav-shell");
-    expect(shell["font-size"]).toBe("var(--og-text-caption)");
-
+  it("draws 22px icons and 12px labels in targets at least 48px tall", () => {
     const tab = declarationsFor(phoneBlocks(), ".og-planner__nav a");
-    expect(tab["min-height"]).toBe("48px");
-    expect(tab["font-size"]).toBe("inherit");
+    expect(tab["min-height"]).toBe("50px");
+    expect(tab["font-size"]).toBe("var(--og-text-caption)");
 
     const icon = declarationsFor(phoneBlocks(), ".og-nav__icon");
-    expect(icon["width"]).toBe("24px");
-    expect(icon["height"]).toBe("24px");
+    expect(icon["width"]).toBe("22px");
+    expect(icon["height"]).toBe("22px");
 
     const settings = declarationsFor(phoneBlocks(), ".og-planner__settings-link");
-    expect(settings["min-height"]).toBe("48px");
+    expect(settings["min-height"]).toBe("50px");
   });
 
   it("never hides itself while the map moves", () => {
     // The bar is always there on the pages that have one; a running ride has no
     // app bar at all, so there is nothing to slide away.
-    for (const file of FILES) {
-      expect(sourceOf(file)).not.toContain('data-chrome="away"');
-      expect(sourceOf(file)).not.toContain("--og-tabbar-glass");
-    }
+    expect(sourceOf()).not.toContain('data-chrome="away"');
+    expect(sourceOf()).not.toContain("--og-tabbar-glass");
   });
 });
 
-describe("phone page headers", () => {
+describe("page headers", () => {
   it("left-aligns Explore, My rides and Settings titles at the title size", () => {
-    const title = declarationsForSelector(
-      phoneOnlyBlocks(),
-      ":is(.og-explore__heading, .og-library__header, .og-settings__header) h1",
-    );
-    expect(title["font-size"]).toBe("var(--og-text-title)");
-    expect(title["font-weight"]).toBe("700");
-    expect(title["line-height"]).toBe("1.15");
-    expect(title["letter-spacing"]).toBe("0");
-    expect(title["text-align"]).toBe("left");
+    for (const selector of [".og-explore h1", ".og-library h1", ".og-settings__header h1"]) {
+      const title = declarationsFor([sourceOf()], selector);
+      expect(title["font-size"], selector).toBe("var(--og-text-title)");
+      expect(title["font-weight"], selector).toBe("700");
+      expect(title["text-align"] ?? "left", selector).toBe("left");
+    }
   });
 
-  it("puts those pages on the 16px screen gutter", () => {
-    for (const selector of [".og-explore", ".og-library", ".og-settings"]) {
-      expect(declarationsFor(phoneOnlyBlocks(), selector)["padding-inline"]).toBe(
-        "var(--og-space-4)",
-      );
+  it("puts those pages on the 16px screen gutter on a phone", () => {
+    // The base rule is the phone's; wider screens override it in min-width blocks.
+    const baseRules = sourceOf().replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
+    for (const selector of [".og-explore > :not(.og-appbar)", ".og-settings > :not(.og-appbar)"]) {
+      const width = declarationsFor(phoneOnlyBlocks(), selector)["width"]
+        ?? declarationsFor([baseRules], selector)["width"];
+      expect(width, selector).toContain("2 * var(--og-space-4)");
     }
-    // My rides centres its own column instead of padding the page.
-    expect(
-      declarationsFor(phoneOnlyBlocks(), ".og-library.og-library > :not(.og-appbar)")["width"],
-    ).toBe("calc(100% - 2 * var(--og-space-4))");
   });
 });
 
 describe("design system tokens", () => {
-  it("defines the five type sizes and the spacing scale in globals.css", () => {
-    const root = /:root\s*\{([\s\S]*?)\}/.exec(sourceOf("globals.css"))?.[1] ?? "";
-    const tokens: Record<string, string> = {};
-    for (const declaration of root.split(";")) {
-      const colon = declaration.indexOf(":");
-      if (colon === -1) continue;
-      const property = declaration.slice(0, colon).trim();
-      if (property.startsWith("--og-text-") || property.startsWith("--og-space-")) {
-        tokens[property] = declaration.slice(colon + 1).trim();
-      }
+  it("defines the five type sizes and the spacing scale once, in tokens.css", () => {
+    const tokens = tokensCss();
+    for (const [name, value] of [
+      ["--og-text-title", "28px"], ["--og-text-headline", "20px"], ["--og-text-body", "16px"],
+      ["--og-text-meta", "14px"], ["--og-text-caption", "12px"],
+      ["--og-space-1", "4px"], ["--og-space-2", "8px"], ["--og-space-3", "12px"],
+      ["--og-space-4", "16px"], ["--og-space-5", "24px"], ["--og-space-6", "32px"],
+    ] as const) {
+      expect(tokens, name).toMatch(new RegExp(`${name}:\\s*${value};`));
     }
-    expect(tokens["--og-text-title"]).toBe("28px");
-    expect(tokens["--og-text-headline"]).toBe("20px");
-    expect(tokens["--og-text-body"]).toBe("16px");
-    expect(tokens["--og-text-meta"]).toBe("14px");
-    expect(tokens["--og-text-caption"]).toBe("12px");
-    expect(tokens["--og-space-1"]).toBe("4px");
-    expect(tokens["--og-space-2"]).toBe("8px");
-    expect(tokens["--og-space-3"]).toBe("12px");
-    expect(tokens["--og-space-4"]).toBe("16px");
-    expect(tokens["--og-space-5"]).toBe("24px");
-    expect(tokens["--og-space-6"]).toBe("32px");
   });
 });

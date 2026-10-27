@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
+import { cssRuleRaw } from "../../helpers/app-css";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -682,28 +681,14 @@ describe("the expanded sheet's scroll affordance", () => {
     );
   });
 
-  it("insets the scroll origin by that height in the stylesheet", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
-    // The inset the *scroll* respects: a keyboard scrollIntoView never parks a
-    // row under the block above the list.
-    expect(css).toMatch(
-      /\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__body\s*\{[^}]*scroll-padding-top:\s*var\(--og-sheet-head-height/,
-    );
-    // …and the fade that makes a clipped row read as scrolled: it hangs exactly
-    // where the scroller begins.
-    expect(css).toMatch(
-      /\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__head::after\s*\{[^}]*top:\s*calc\(100% \+ 8px\)/,
-    );
-    expect(css).toMatch(/\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__head::after\s*\{[^}]*linear-gradient/);
-  });
-
-  it("never pads the scroll container by the header height, which would leave a permanent band", () => {
-    const css = readFileSync(path.join(process.cwd(), "src", "app", "globals.css"), "utf8");
-    const rule =
-      /\.og-planner__sheet\[data-detent="expanded"\]\s+\.og-sheet__body\s*\{([^}]*)\}/.exec(
-        css,
-      )?.[1] ?? "";
-    expect(rule).not.toBe("");
-    expect(rule).not.toMatch(/^\s*padding-top:/m);
+  it("keeps the sheet's head outside the scroller, so no row ever parks under it", () => {
+    // Design v3: the grab bar and the tool row are the sheet's own head, above
+    // its scrolling body, so the body needs no inset for them and never pads
+    // itself by the head's height (which would leave a permanent band).
+    const body = cssRuleRaw(".og-planner .og-planner__sheet .og-sheet__body", { inMedia: true });
+    expect(body).toMatch(/overflow-y:\s*auto/);
+    expect(body).toMatch(/padding:\s*0/);
+    expect(body).not.toMatch(/--og-sheet-head-height/);
+    expect(cssRuleRaw(".og-planner .og-planner__sheet .og-sheet__head", { inMedia: true })).toMatch(/flex:\s*none/);
   });
 });

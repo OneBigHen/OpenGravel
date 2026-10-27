@@ -105,6 +105,9 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
       try {
         const rides = library.listExploreRides === undefined ? [] : await library.listExploreRides();
         if (!active) return;
+        // A route page only needs the saved rides to know whether to fetch its
+        // own line, so it starts now instead of waiting on the whole catalog.
+        setLibraryRides(rides);
         const response = await fetch("/api/catalog", { cache: "no-cache" });
         if (!response.ok) throw new Error("catalog-unavailable");
         const payload = await response.json() as { readonly routes?: readonly unknown[] };
@@ -121,7 +124,6 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
           })].filter((entry) => entry !== null);
         }));
         if (!active) return;
-        setLibraryRides(rides);
         setCatalogRoutes(routes);
         setStatus("ready");
       } catch {
@@ -132,7 +134,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
   }, [library]);
 
   useEffect(() => {
-    if (detailId === undefined || catalogRoutes === null || libraryRides === null) return;
+    if (detailId === undefined || libraryRides === null) return;
     // A saved ride comes from the local library with its own geometry; there is
     // no catalog route to fetch for it, and the entry renders from `entries`.
     if (libraryRides.some((ride) => String(ride.summary.rideId) === detailId)) return;
@@ -169,7 +171,7 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
       }
     })();
     return () => { active = false; };
-  }, [catalogRoutes, detailAttempt, detailId, libraryRides]);
+  }, [detailAttempt, detailId, libraryRides]);
 
   const detailEntry = loadedDetail !== null && loadedDetail.id === detailId ? loadedDetail.entry : null;
   const detailVariants = loadedDetail !== null && loadedDetail.id === detailId ? loadedDetail.variants : [];
@@ -228,8 +230,10 @@ export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }:
     await library.createDerivative(sourceKindForEntry(entry), entry.id, sourceDocument, { title: entry.name });
   }
 
-  if (status === "loading") return <ExploreLoading />;
-  if (status === "error") {
+  // A route page renders from its own fetch; only the list waits on the catalog.
+  const routePageReady = detailId !== undefined && libraryRides !== null;
+  if (status === "loading" && !routePageReady) return <ExploreLoading />;
+  if (status === "error" && !routePageReady) {
     return (
       <main id="main" className="og-explore">
         <AppBar current="/explore" />
