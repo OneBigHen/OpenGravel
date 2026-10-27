@@ -990,3 +990,12 @@
   }
 }
 
+
+/* The named menu (AppMenu) ends the heading row on phones and tablets. */
+.og-explore__heading-row .og-page-menu {
+  order: 10;
+}
+
+.og-explore__heading-row:has(.og-page-menu) .og-explore__heading {
+  margin-right: auto;
+}

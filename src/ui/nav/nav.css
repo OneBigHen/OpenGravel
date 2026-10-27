@@ -1,4 +1,4 @@
-/* Primary navigation: Plan · Explore · My rides · Settings.
+/* Primary navigation: Map · Explore · My rides (+ Settings on wide screens).
    Desktop and landscape phones: a row in the top bar. Phones and tablets: a
    bar docked to the bottom edge (small-screen-v2 §2), hidden while riding. */
 
@@ -136,7 +136,7 @@
     inset: auto 0 0;
     z-index: var(--og-z-nav);
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0;
     padding: 6px calc(var(--og-space-2) + var(--og-safe-right)) calc(6px + var(--og-safe-bottom)) calc(var(--og-space-2) + var(--og-safe-left));
     border-top: 1px solid var(--og-line);
@@ -194,8 +194,10 @@
     background: var(--og-press);
   }
 
-  .og-nav__label--tab-only {
-    display: block;
+  /* Settings moved to the named menu in the top bar (AppMenu): the bar holds
+     the three places only, like Google Maps. */
+  .og-planner__settings-link {
+    display: none;
   }
 
   /* At a large text size a label wraps inside its own tab, never past it. */
@@ -222,4 +224,124 @@
   .og-nav__icon {
     transition: none;
   }
+}
+
+/* The named menu (AppMenu): phones and tablets only; wide screens and
+   landscape phones keep Settings in their top bar. */
+.og-appmenu {
+  display: none;
+}
+
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-appmenu {
+    position: relative;
+    display: block;
+    flex: none;
+  }
+}
+
+.og-appmenu__button {
+  display: grid;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  padding: 0;
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass);
+  color: var(--og-ink);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  cursor: pointer;
+}
+
+.og-appmenu[data-open="true"] .og-appmenu__button {
+  background: var(--og-primary);
+  border-color: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-appmenu__button:focus-visible,
+.og-appmenu__link:focus-visible,
+.og-appmenu__modes button:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-appmenu__panel {
+  position: absolute;
+  z-index: var(--og-z-nav);
+  top: calc(100% + var(--og-space-2));
+  right: 0;
+  display: grid;
+  gap: var(--og-space-1);
+  width: min(280px, calc(100vw - 2 * var(--og-space-3)));
+  padding: var(--og-space-3);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-appmenu__title {
+  margin: 0 var(--og-space-1) var(--og-space-1);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-appmenu__modes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin-bottom: var(--og-space-1);
+  padding: 3px;
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+}
+
+.og-appmenu__modes button {
+  min-height: 40px;
+  border: 0;
+  border-radius: calc(var(--og-radius-control) - 3px);
+  background: transparent;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-appmenu__modes button[aria-checked="true"] {
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-appmenu__link {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border-radius: var(--og-radius-control);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.og-appmenu__link:hover,
+.og-appmenu__link:active {
+  background: var(--og-press);
+}
+
+.og-appmenu__link svg {
+  color: var(--og-ink-2);
 }

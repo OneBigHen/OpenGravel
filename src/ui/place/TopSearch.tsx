@@ -5,6 +5,7 @@ import type { Coordinate } from "@/domain/ride/types";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { useRideAdvisor } from "@/ui/planner/RideAdvisor";
+import { AppMenu } from "@/ui/nav/AppMenu";
 
 /** Searches a place category near the rider. Every chip here runs a search. */
 export const SEARCH_CHIPS = [
@@ -50,6 +51,7 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
 }) {
   const advisor = useRideAdvisor();
   return <div className="og-top-search" data-testid="top-search">
+    <div className="og-top-search__row">
     <div className="og-top-search__bar">
       <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
       <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={search.port} bias={bias}
@@ -58,6 +60,8 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
         {...(search.remembered === undefined ? {} : { remembered: search.remembered })}
         {...(advisor === null ? {} : { describe: (text: string) => advisor.ask(text) })}/>
       {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : null}
+    </div>
+    <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">
       {SEARCH_CHIPS.map((chip) => <button key={chip.id} type="button" data-testid={`search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>

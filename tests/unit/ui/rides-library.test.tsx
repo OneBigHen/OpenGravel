@@ -299,7 +299,7 @@ describe("RidesLibrary", () => {
 
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(nav.textContent).toMatch(/Plan\s*·\s*Explore\s*·\s*My rides/);
-    expect(screen.getByRole("link", { name: "Plan" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Map" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "My rides" })).toHaveAttribute("aria-current", "page");
   });
 

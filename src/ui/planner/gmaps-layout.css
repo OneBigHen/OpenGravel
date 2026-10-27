@@ -574,3 +574,57 @@
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
+
+/* Home (mobile UX handoff, 2026-10-27): with nothing planned there is no
+   sheet slab over the map. Loop, Record and Free Ride float as three glass
+   pills just above the tab bar, at thumb height; the map runs behind them.
+   The Sheet stays mounted (and keyboard-reachable), it just draws nothing. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] {
+    padding-top: var(--og-space-2);
+    padding-bottom: var(--og-space-2);
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__head {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body > *,
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride, .og-shortcuts > *, .og-advisor) {
+    pointer-events: auto;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    min-height: 48px;
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-pill);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    font-weight: 700;
+  }
+
+  /* Loop is the home's main way in: the one green pill. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__loop-quick {
+    border-color: var(--og-primary);
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__loop-quick svg {
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-planner__error {
+    padding: var(--og-space-2) var(--og-space-3);
+    border-radius: var(--og-radius-control);
+    background: var(--og-glass-dense);
+  }
+}
