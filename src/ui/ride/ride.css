@@ -2915,10 +2915,11 @@
   background: color-mix(in srgb, var(--og-primary) 72%, black);
 }
 
-/* The menu is up: the map's buttons step aside (Google hides them under its
-   panels), so nothing floats over the rider's choices. */
-.og-ride[data-sheet="open"] .og-ride__rail {
-  visibility: hidden;
+/* The menu is up: it lies over the map's buttons (Google's panels do), so
+   nothing floats on top of the rider's choices, and any button the menu does
+   not cover, Re-center above all, still works. */
+.og-ride[data-sheet="open"] .og-ride__float {
+  z-index: 8;
 }
 
 /* A narrow phone: the ✕ and the Menu chevron shrink and Menu loses its word,
