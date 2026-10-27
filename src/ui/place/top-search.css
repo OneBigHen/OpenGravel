@@ -216,7 +216,7 @@
 
   /* The search gives way when something else owns the top of the screen. */
   .og-planner:has(.og-composer .og-place-search) .og-top-search,
-  .og-planner:has(.og-shared-sheet[data-detent="full"]) .og-top-search {
+  .og-planner:has(.og-shared-sheet[data-detent="full"]) :is(.og-top-search, .og-trip) {
     display: none;
   }
 
@@ -224,24 +224,25 @@
     display: none;
   }
 
-  .og-planner:has(.og-top-search) .og-planner__header {
+  /* The search, or the From / To card in its place, owns the top. */
+  .og-planner:has(.og-top-search, .og-trip) .og-planner__header {
     visibility: hidden;
     pointer-events: none;
   }
 
   /* The header gives way to the search, but it carries the tab bar. */
-  .og-planner:has(.og-top-search) .og-planner__header .og-planner__nav-shell {
+  .og-planner:has(.og-top-search, .og-trip) .og-planner__header .og-planner__nav-shell {
     visibility: visible;
     pointer-events: auto;
   }
 
-  .og-planner:has(.og-top-search) .og-places-overlay--planner .og-places-control {
+  .og-planner:has(.og-top-search, .og-trip) .og-places-overlay--planner .og-places-control {
     display: none;
   }
 }
 
 @media (max-width: 760px) {
-  .og-planner:has(.og-layers[data-open="true"]) .og-top-search {
+  .og-planner:has(.og-layers[data-open="true"]) :is(.og-top-search, .og-trip) {
     display: none;
   }
 }
