@@ -193,6 +193,12 @@ export interface ProviderSketch {
 export interface ProviderRouteRequest {
   readonly requestId: string;
   readonly origin: Coordinate;
+  /**
+   * The rider's direction of travel at `origin`, in degrees clockwise of
+   * north (a mid-ride reroute). The route leaves the way they are already
+   * riding instead of telling a moving rider to turn around. Absent: any way.
+   */
+  readonly originHeadingDegrees?: number;
   /** The endpoint to plan to; a loop rides back to the origin (§17). */
   readonly destination: Coordinate;
   /** Rider copy only; never influences routing or establishes access. */

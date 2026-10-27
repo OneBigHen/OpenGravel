@@ -823,7 +823,8 @@ function guidanceOf(
           ? "gps-unavailable"
           : onRouteActivity && (navigation.offRouteState === "off-route" || navigation.offRouteState === "rejoining")
             ? "off-route"
-            : onRouteActivity && navigation.offRouteState === "uncertain"
+            : onRouteActivity
+              // Uncertain, or a fresh route not yet matched (a reroute just landed).
               ? "locating"
               : "not-moving";
     // Stopped (not paused) with a maneuver already issued: the card shows that

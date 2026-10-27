@@ -370,6 +370,10 @@ function roadSpanGeometryIssues(
 function requestGeometryIssues(value: Record<string, unknown>, issues: ValidationIssue[]): void {
   coordinateIssues(value["origin"], "request.origin", issues);
   coordinateIssues(value["destination"], "request.destination", issues);
+  const originHeading = value["originHeadingDegrees"];
+  if (originHeading !== undefined && (!isFiniteNumber(originHeading) || originHeading < 0 || originHeading > 360)) {
+    issues.push(issue("invalid-value", "request.originHeadingDegrees", "must be a bearing between 0 and 360 degrees"));
+  }
   const label = value["destinationLabel"];
   if (label !== undefined && (typeof label !== "string" || label.length > 200 || label.trim().length === 0 || /[\u0000-\u001f\u007f]/.test(label))) {
     issues.push(issue("invalid-value", "request.destinationLabel", "must be a non-empty destination name of at most 200 characters"));
@@ -842,6 +846,9 @@ export function parseRoutePlanRequestBody(
   const request: ProviderRouteRequest = {
     requestId: requestSource["requestId"] as string,
     origin: toCoordinate(requestSource["origin"]),
+    ...(typeof requestSource["originHeadingDegrees"] === "number"
+      ? { originHeadingDegrees: requestSource["originHeadingDegrees"] }
+      : {}),
     destination: toCoordinate(requestSource["destination"]),
     ...(typeof requestSource["destinationLabel"] === "string" ? { destinationLabel: requestSource["destinationLabel"].trim() } : {}),
     stops: toCoordinateList(requestSource["stops"]),
