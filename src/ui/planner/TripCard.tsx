@@ -9,6 +9,10 @@
  * the route (the sheet then offers Undo clear); ⇅ turns an A → B ride around.
  */
 
+import type { PlannerViewModel } from "@/application/planner/planner-view-model";
+import type { RideDocument } from "@/domain/ride/types";
+import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
+
 export interface TripCardProps {
   readonly startLabel: string;
   readonly finishLabel: string;
@@ -41,4 +45,35 @@ export function TripCard({ startLabel, finishLabel, loop, onEdit, onClose, close
       </button>}
     </div>
   </div>;
+}
+
+/** The card as the planner composes it: the ride's ends, its shape and its actions. */
+export function PlannerTripCard({ document, viewModel, rideStyle, onCancelPlanning, onClearRide, onEditRide }: {
+  readonly document: RideDocument;
+  readonly viewModel: PlannerViewModel;
+  readonly rideStyle: RideStyleControlsModel;
+  readonly onCancelPlanning: () => void;
+  readonly onClearRide: () => void;
+  readonly onEditRide: () => void;
+}) {
+  const endLabel = (end: RideDocument["intent"]["start"], fallback: string): string =>
+    end?.provenance.type === "gps" ? "Your location" : end?.label ?? fallback;
+  const hasRide = viewModel.routeCards.length > 0;
+  return <TripCard
+    startLabel={endLabel(document.intent.start, viewModel.startLabel)}
+    finishLabel={endLabel(document.intent.finish, viewModel.finishLabel)}
+    loop={rideStyle.view.shape === "loop"}
+    onSwap={rideStyle.actions.reverse}
+    closeLabel={hasRide ? "Close route" : "Stop planning"}
+    onClose={hasRide ? onClearRide : onCancelPlanning}
+    onEdit={(): void => {
+      // Directions from a place card edit in their own view of the sheet.
+      const optionsEdit = window.document.querySelector<HTMLButtonElement>('[data-testid="route-options-edit"]');
+      if (optionsEdit !== null) { optionsEdit.click(); return; }
+      onEditRide();
+      window.setTimeout(() => {
+        window.document.querySelector<HTMLElement>(".og-planner__sheet .og-composer")?.scrollIntoView({ block: "start" });
+      }, 280);
+    }}
+  />;
 }

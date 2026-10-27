@@ -2,76 +2,13 @@
    replicate its views"). Loaded after the sheet and plan-sheet rules, so at the
    same specificity these win.
 
-   - The tab bar is docked to the bottom edge, full width, with Material's
-     pill behind the current tab's icon.
+   - The tab bar is docked to the bottom edge (nav.css).
    - The Plan sheet sits flush on the bar: full width, top corners rounded.
    - While a ride is on the map, or being planned, the top shows a From / To
      card instead of the search, the tab bar steps aside and the sheet reaches
      the bottom edge, like Google's directions view.
    - The ride summary reads like Google's: title with icon actions, the time
      large and green, arrival and distance beside it, then a row of pills. */
-
-@media (max-width: 1180px) and (min-height: 501px) {
-  :root {
-    --og-tabbar-gap: 0px;
-  }
-
-  .og-planner__nav-shell,
-  .og-planner .og-planner__nav-shell {
-    inset: auto 0 0;
-    gap: 0;
-    min-height: 0;
-    padding: 6px calc(var(--og-space-2) + var(--og-safe-right)) calc(6px + var(--og-safe-bottom)) calc(var(--og-space-2) + var(--og-safe-left));
-    border: 0;
-    border-top: 1px solid var(--og-line);
-    border-radius: 0;
-    background: var(--og-glass-dense);
-    box-shadow: none;
-  }
-
-  .og-planner__nav a,
-  .og-planner__settings-link,
-  .og-planner__nav a:hover,
-  .og-planner__settings-link:hover,
-  .og-planner__nav a[aria-current="page"],
-  .og-planner__settings-link[aria-current="page"] {
-    gap: 4px;
-    min-height: 56px;
-    border-radius: 16px;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  /* Material's active indicator: a pill behind the icon, not the whole tab. */
-  .og-planner__nav .og-nav__icon,
-  .og-planner__settings-link .og-nav__icon {
-    box-sizing: border-box;
-    width: 56px;
-    height: 30px;
-    padding: 4px 16px;
-    border-radius: 15px;
-    transition: background-color var(--og-dur-fast) var(--og-ease);
-  }
-
-  [aria-current="page"] > .og-nav__icon {
-    background: var(--og-primary-soft);
-  }
-
-  .og-planner__nav a:active > .og-nav__icon,
-  .og-planner__settings-link:active > .og-nav__icon {
-    background: var(--og-press);
-  }
-
-  .og-planner__nav a:not([aria-current="page"]),
-  .og-planner__settings-link:not([aria-current="page"]) {
-    color: var(--og-ink-2);
-  }
-
-  .og-planner__nav a[aria-current="page"],
-  .og-planner__settings-link[aria-current="page"] {
-    font-weight: 700;
-  }
-}
 
 /* Phones: the Plan sheet is a bottom sheet, not a floating card. */
 @media (max-width: 760px) and (min-height: 501px) {
@@ -109,12 +46,12 @@
   }
 
   /* On its way: the form folds away and the sheet says so, with Cancel. */
-  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] {
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"]:not([data-detent="full"]) {
     height: auto;
   }
 
-  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] .og-sheet__body > :not(.og-composer),
-  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] .og-composer > :not(.og-composer__commitment) {
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"]:not([data-detent="full"]) .og-sheet__body > :not(.og-composer),
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"]:not([data-detent="full"]) .og-composer > :not(.og-composer__commitment) {
     display: none;
   }
 
@@ -296,7 +233,7 @@
     flex: none;
     max-width: 38%;
     color: var(--og-primary-text);
-    font-size: 26px;
+    font-size: var(--og-text-title);
     line-height: 1.1;
   }
 
@@ -324,8 +261,7 @@
   .og-phone-summary__actions {
     display: flex;
     gap: var(--og-space-2);
-    margin: 0 calc(-1 * var(--og-space-4));
-    padding: 0 var(--og-space-4) 2px;
+    padding-bottom: 2px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
@@ -378,13 +314,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .og-planner__nav .og-nav__icon,
-  .og-planner__settings-link .og-nav__icon {
-    transition: none;
-  }
-}
-
 /* Under the From / To card the map's own buttons keep the search's column. */
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-planner[data-trip="true"] .og-planner__map-slot .og-layers {
@@ -403,9 +332,9 @@
     min-height: 24px;
   }
 
-  /* 24px plus a 20px lip over the rounded edge: still a 44px target. */
+  /* 24px plus a 12px lip over the rounded edge; the map keeps the rest. */
   .og-planner .og-planner__sheet .og-sheet__handle::after {
-    inset: -20px 0 0;
+    inset: -12px 0 0;
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle::before {
@@ -439,7 +368,7 @@
   }
 
   .og-planner .og-planner__sheet .og-phone-summary p.og-phone-summary__where {
-    font-size: 22px;
+    font-size: var(--og-text-headline);
   }
 
   .og-phone-summary__actions > button,
@@ -455,7 +384,7 @@
 /* The place sheet, Google style: a large name, one quiet line under it, a
    round × and one sideways row of icon pills with Directions filled. */
 .og-planner .og-place-sheet h2 {
-  font-size: 22px;
+  font-size: var(--og-text-headline);
 }
 
 .og-planner .og-place-sheet .og-place-sheet__close {
@@ -482,8 +411,8 @@
 .og-planner .og-place-sheet .og-place-sheet__actions {
   flex-wrap: nowrap;
   gap: var(--og-space-2);
-  margin: var(--og-space-3) calc(-1 * var(--og-space-4)) 0;
-  padding: 0 var(--og-space-4) 2px;
+  margin-top: var(--og-space-3);
+  padding-bottom: 2px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -510,4 +439,76 @@
 .og-planner .og-planner__sheet .og-place-sheet .og-place-sheet__actions .og-secondary {
   background: var(--og-primary-soft);
   color: var(--og-primary-text);
+}
+
+/* Home shortcuts (Google's Home / Work / saved cards), one sideways row. */
+.og-shortcuts {
+  display: flex;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 2px 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scrollbar-width: none;
+}
+
+.og-shortcuts::-webkit-scrollbar {
+  display: none;
+}
+
+.og-shortcuts > li {
+  flex: none;
+}
+
+.og-planner .og-planner__sheet .og-shortcuts__card {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-3);
+  max-width: 220px;
+  min-height: 60px;
+  padding: var(--og-space-2) var(--og-space-4) var(--og-space-2) var(--og-space-3);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-well);
+  color: var(--og-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.og-shortcuts__card > svg {
+  flex: none;
+  color: var(--og-primary-text);
+}
+
+.og-shortcuts__card:active {
+  background: var(--og-press);
+}
+
+.og-shortcuts__card:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-shortcuts__text {
+  display: grid;
+  min-width: 0;
+}
+
+.og-shortcuts__name,
+.og-shortcuts__where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-shortcuts__name {
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+}
+
+.og-shortcuts__where {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
 }

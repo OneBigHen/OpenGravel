@@ -108,7 +108,7 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
   const handle = boxes.find((box) => box.id === "sheet-handle")!;
   const clear = boxes.find((box) => box.id === "clear-ride")!;
   expect(clear.height).toBeGreaterThanOrEqual(48);
-  // Google's slim grab bar: 24px drawn, plus a 20px lip over the sheet's edge.
+  // Google's slim grab bar: 24px drawn, plus a 12px lip over the sheet's edge.
   expect(handle.height).toBeGreaterThanOrEqual(24);
   for (const { id, ...box } of boxes.filter((box) => box.id !== "sheet-handle")) {
     expect.soft(box.height, `${id} touch height`).toBeGreaterThanOrEqual(44);

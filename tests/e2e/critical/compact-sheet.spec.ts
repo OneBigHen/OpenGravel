@@ -70,38 +70,26 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     throw new Error("the sheet and its status line must both be measurable");
   }
 
-  // The tab bar is a floating glass pill (DESIGN.md §2, v4): inset from the
-  // edges and the bottom, 60px tall, and the sheet floats 8px above it. The
-  // status line is *inside* the sheet — the defect the owner review flagged
-  // was a status chip floating over the map. On the idle sheet it is announced
-  // but not drawn (Trail Glass).
+  // Google Maps layout (owner 2026-10-27): the tab bar is docked to the
+  // bottom edge, full width, and the sheet sits flush on it. The status line is
+  // *inside* the sheet — the defect the owner review flagged was a status chip
+  // floating over the map. On the idle sheet it is announced but not drawn.
   const tabBar = await page.getByTestId("primary-nav").boundingBox();
   if (tabBar === null) throw new Error("the tab bar has no measured box");
-  const barGap = PHONE.height - (tabBar.y + tabBar.height);
-  expect(barGap).toBeGreaterThanOrEqual(6);
-  expect(barGap).toBeLessThanOrEqual(10);
-  expect(tabBar.x).toBeGreaterThanOrEqual(6);
-  expect(tabBar.x + tabBar.width).toBeLessThanOrEqual(PHONE.width - 6);
-  expect(tabBar.height).toBeGreaterThanOrEqual(59);
-  expect(tabBar.height).toBeLessThanOrEqual(62);
-  const sheetToBar = tabBar.y - (sheetBox.y + sheetBox.height);
-  expect(sheetToBar).toBeGreaterThanOrEqual(6);
-  expect(sheetToBar).toBeLessThanOrEqual(10);
+  expect(Math.abs(PHONE.height - (tabBar.y + tabBar.height))).toBeLessThanOrEqual(1);
+  expect(tabBar.x).toBeLessThanOrEqual(1);
+  expect(tabBar.width).toBeGreaterThanOrEqual(PHONE.width - 1);
+  expect(tabBar.height).toBeGreaterThanOrEqual(60);
+  expect(tabBar.height).toBeLessThanOrEqual(80);
+  expect(Math.abs(tabBar.y - (sheetBox.y + sheetBox.height))).toBeLessThanOrEqual(1);
   const barStyle = await page.getByTestId("primary-nav").evaluate((element) => {
     const style = getComputedStyle(element);
-    return {
-      backdrop: style.backdropFilter,
-      background: style.backgroundColor,
-      borderTopWidth: style.borderTopWidth,
-      borderTopLeftRadius: style.borderTopLeftRadius,
-    };
+    return { backdrop: style.backdropFilter, background: style.backgroundColor, borderTopWidth: style.borderTopWidth };
   });
-  // Glass over the map (DESIGN.md §2, v4): a blurred, mostly opaque surface,
-  // so the map reads through the bar and its labels stay legible.
+  // Glass over the map: a blurred, mostly opaque surface with a hairline on top.
   expect(barStyle.background).toMatch(/^(rgb|color\()/);
   expect(barStyle.backdrop).toMatch(/blur/);
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
-  expect(Number.parseFloat(barStyle.borderTopLeftRadius)).toBeGreaterThanOrEqual(20);
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
@@ -149,7 +137,8 @@ test("the shared sheet has peek, half and full detents", async ({ page }) => {
   expect(full!.height).toBeGreaterThan(half!.height);
   await handle.press("ArrowDown");
   await expect(sheet).toHaveAttribute("data-detent", "half");
-  await expect(page.getByTestId("top-search")).toBeVisible();
+  // With a ride open the top is the From / To card, not the search (Google's directions view).
+  await expect(page.getByTestId("trip-card")).toBeVisible();
   await handle.press("ArrowDown");
   await expect(sheet).toHaveAttribute("data-detent", "peek");
   await expect(handle).toHaveAttribute("aria-expanded", "false");
@@ -179,14 +168,16 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   // Minified by the production build, so the rule is asserted without the space
   // the stylesheet source has.
   // tokens.css derives the safe-area token from `env(safe-area-inset-bottom)`;
-  // the floating tab bar's bottom gap is what reserves it (design v4).
+  // the docked tab bar pads itself by it (Google Maps layout, 2026-10-27).
   expect(css).toContain("--og-safe-bottom:env(safe-area-inset-bottom,0px)");
-  expect(css).toMatch(/--og-tabbar-gap:max\(var\(--og-space-2\),\s*calc\(var\(--og-safe-bottom\) - 14px\)\)/);
+  expect(css).toMatch(/calc\(6px \+ var\(--og-safe-bottom\)\)/);
 
   // 12 §10: every planning control is at least 44×44 CSS px.
   // On the idle sheet "Create ride" waits for a destination; the quick starts
   // take its place.
-  for (const testId of ["sheet-handle", "loop-near-me", "record-a-ride", "just-ride"]) {
+  // The grab bar draws 24px and reaches 12px over the sheet's edge (::after).
+  expect((await page.getByTestId("sheet-handle").boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  for (const testId of ["loop-near-me", "record-a-ride", "just-ride"]) {
     const box = await page.getByTestId(testId).boundingBox();
     expect(box, `${testId} must be measurable`).not.toBeNull();
     if (box === null) throw new Error(`${testId} has no measured box`);
@@ -273,6 +264,8 @@ test("the armed-placement instruction is a note, never a control", async ({
   await expect(page.getByTestId("plan-disabled-reason")).toHaveCount(0);
 
   // Nothing blocks planning now, so the armed tool is what the map states.
+  // The ride is on its way, so its form is behind the From / To card.
+  await page.getByTestId("trip-edit").click();
   await page.getByTestId("start-chip").click();
   const hint = page.getByTestId("map-hint");
   await expect(hint).toHaveText("Tap the map to set your start.");

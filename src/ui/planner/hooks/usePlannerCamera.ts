@@ -43,7 +43,7 @@ function readSafeArea() {
 
 /** The ride inspector beside the map slot, when the composition has one. */
 /** Controls that float over the top of the map on every tier (UX rework 2, #8). */
-const TOP_CHROME = ["places-control", "top-search"] as const;
+const TOP_CHROME = ["places-control", "top-search", "trip-card"] as const;
 /** The map's own button column down its right-hand side. */
 const SIDE_CHROME = ["map-satellite-toggle", "show-whole-ride", "map-layers"] as const;
 

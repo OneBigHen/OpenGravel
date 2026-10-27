@@ -80,8 +80,8 @@ import {
 import {
   PlannerWorkspaceDock,
   PlannerWorkspaceFrame,
+  PlannerTripCard,
 } from "@/ui/planner/PlannerWorkspaceSurfaces";
-import { TripCard } from "@/ui/planner/TripCard";
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
@@ -735,30 +735,10 @@ export function PlannerWorkspace({
     planning, onRetry: handlePlan, plannerUiStore,
   });
 
-  // While a ride is on the map or on its way, the top of a phone says where it
-  // runs (Google's From / To card) instead of offering a search.
-  const loopRide = rideStyle.view.shape === "loop";
-  const endLabel = (end: typeof document.intent.start, fallback: string): string =>
-    end?.provenance.type === "gps" ? "Your location" : end?.label ?? fallback;
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
-    <TripCard
-      startLabel={endLabel(document.intent.start, viewModel.startLabel)}
-      finishLabel={endLabel(document.intent.finish, viewModel.finishLabel)}
-      loop={loopRide}
-      onSwap={rideStyle.actions.reverse}
-      closeLabel={viewModel.routeCards.length === 0 ? "Stop planning" : "Close route"}
-      onClose={viewModel.routeCards.length === 0 ? handleCancel : history.onClearRide}
-      onEdit={(): void => {
-        // Directions from a place card edit in their own view of the sheet.
-        const optionsEdit = window.document.querySelector<HTMLButtonElement>('[data-testid="route-options-edit"]');
-        if (optionsEdit !== null) { optionsEdit.click(); return; }
-        plannerUiStore.getState().setSheetDetent("expanded");
-        window.setTimeout(() => {
-          const composer = window.document.querySelector<HTMLElement>(".og-planner__sheet .og-composer");
-          composer?.scrollIntoView({ block: "start" });
-        }, 280);
-      }}
-    />
+    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle}
+      onCancelPlanning={handleCancel} onClearRide={history.onClearRide}
+      onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
   return (

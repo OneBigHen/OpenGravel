@@ -90,54 +90,44 @@ function compactBlocks(): string[] {
 
 
 describe("phone tab bar", () => {
-  it("floats as a glass pill inset from the edges and above the home indicator", () => {
+  it("is docked to the bottom edge, full width, like Google Maps", () => {
     const shell = declarationsFor(phoneBlocks(), ".og-planner__nav-shell");
 
-    // Inset 8px (centred and capped at 460px on a tablet), lifted by the gap.
     expect(shell["position"]).toBe("fixed");
-    expect(shell["inset"]).toBe(
-      "auto max(calc(var(--og-space-2) + var(--og-safe-right)), calc(50% - 230px)) var(--og-tabbar-gap) max(calc(var(--og-space-2) + var(--og-safe-left)), calc(50% - 230px))",
-    );
-    expect(shell["min-height"]).toBe("60px");
-    expect(shell["border-radius"]).toBe("24px");
-
-    // Glass over the map (DESIGN.md §2, v4): edge, fill, highlight and blur.
-    expect(shell["background"]).toBe("var(--og-glass)");
-    expect(shell["border"]).toBe("1px solid var(--og-glass-edge)");
+    expect(shell["inset"]).toBe("auto 0 0");
+    // It reaches under the home indicator and keeps its tabs above it.
+    expect(shell["padding"]).toContain("calc(6px + var(--og-safe-bottom))");
+    expect(shell["border-top"]).toBe("1px solid var(--og-line)");
+    expect(shell["background"]).toBe("var(--og-glass-dense)");
     expect(shell["backdrop-filter"]).toBe("var(--og-glass-blur)");
-    expect(shell["box-shadow"]).toBe("var(--og-glass-highlight), var(--og-glass-shadow)");
   });
 
   it("spaces every page and the planner dock by the bar's measured height", () => {
     const root = declarationsFor(phoneBlocks(), ":root");
     // The fallback is the bar itself; the measurement (PrimaryNav) keeps a
     // label row that has wrapped to two lines from overlapping the page.
-    expect(root["--og-tabbar-gap"]).toBe("max(var(--og-space-2), calc(var(--og-safe-bottom) - 14px))");
+    expect(root["--og-tabbar-gap"]).toBe("0px");
     expect(root["--og-tabbar-h"]).toBe(
-      "var(--og-tabbar-measured-h, calc(60px + var(--og-tabbar-gap)))",
+      "var(--og-tabbar-measured-h, calc(68px + var(--og-safe-bottom)))",
     );
     for (const selector of [".og-explore", ".og-library", ".og-settings"]) {
       expect(declarationsFor(compactBlocks(), selector)["padding-bottom"]).toBe(
         "calc(var(--og-tabbar-h) + var(--og-space-5))",
       );
     }
-    // The sheet floats too: inset like the bar, 8px above it.
-    expect(declarationsFor(compactBlocks(), ".og-planner .og-planner__dock")["inset"]).toBe(
-      "auto calc(var(--og-space-2) + var(--og-safe-right)) calc(var(--og-tabbar-h) + var(--og-space-2)) calc(var(--og-space-2) + var(--og-safe-left))",
-    );
   });
 
-  it("draws 22px icons and 12px labels in targets at least 48px tall", () => {
+  it("draws Material tabs: an icon pill and 12px labels in targets at least 48px tall", () => {
     const tab = declarationsFor(phoneBlocks(), ".og-planner__nav a");
-    expect(tab["min-height"]).toBe("50px");
+    expect(tab["min-height"]).toBe("56px");
     expect(tab["font-size"]).toBe("var(--og-text-caption)");
 
     const icon = declarationsFor(phoneBlocks(), ".og-nav__icon");
-    expect(icon["width"]).toBe("22px");
-    expect(icon["height"]).toBe("22px");
+    expect(icon["width"]).toBe("56px");
+    expect(icon["height"]).toBe("30px");
 
     const settings = declarationsFor(phoneBlocks(), ".og-planner__settings-link");
-    expect(settings["min-height"]).toBe("50px");
+    expect(settings["min-height"]).toBe("56px");
   });
 
   it("never hides itself while the map moves", () => {

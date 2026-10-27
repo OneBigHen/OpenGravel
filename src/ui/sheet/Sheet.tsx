@@ -88,11 +88,15 @@ export function Sheet({ label, detent, onToggle, onStep, onSnap, onDismiss, focu
     }}
     onPointerUp={(event) => {
       const start = drag.current; resetDrag();
-      if (start === null || start.id !== event.pointerId || !start.active) return;
+      if (start === null || start.id !== event.pointerId) return;
       const dy = event.clientY - start.y;
+      // A release far from the press is a swipe even when no move was reported.
+      if (!start.active && (Math.abs(dy) < 36 || Math.abs(event.clientX - start.x) > Math.abs(dy))) return;
+      swallowed.current = true;
       window.setTimeout(() => { swallowed.current = false; }, 0);
-      const flick = Math.abs(start.velocity) > 0.45;
-      if (onSnap === undefined || rail || flick) {
+      // A flick or a short swipe goes one height; a long drag lands where it was let go.
+      const flick = start.active && Math.abs(start.velocity) > 0.45;
+      if (onSnap === undefined || rail || flick || Math.abs(dy) < 160) {
         if (flick || Math.abs(dy) >= 36) onStep((flick ? start.velocity : dy) < 0 ? "up" : "down");
         return;
       }

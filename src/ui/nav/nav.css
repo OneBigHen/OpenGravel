@@ -111,14 +111,14 @@
   }
 }
 
-/* Phones and tablets: a floating glass tab bar (DESIGN.md §2, v4) — a pill
-   inset from the edges so the map runs around and under it. Every page and
-   the planner sheet reserve its measured height plus the gap below it
+/* Phones and tablets: a tab bar docked to the bottom edge, full width, like
+   Google Maps (owner 2026-10-27), with Material's pill behind the current
+   tab's icon. Every page and the planner sheet reserve its measured height
    (PrimaryNav publishes it; a larger text size can wrap a label). */
 @media (max-width: 1180px) and (min-height: 501px) {
   :root {
-    --og-tabbar-gap: max(var(--og-space-2), calc(var(--og-safe-bottom) - 14px));
-    --og-tabbar-h: var(--og-tabbar-measured-h, calc(60px + var(--og-tabbar-gap)));
+    --og-tabbar-gap: 0px;
+    --og-tabbar-h: var(--og-tabbar-measured-h, calc(68px + var(--og-safe-bottom)));
   }
 
   .og-appbar {
@@ -133,18 +133,14 @@
   .og-planner__nav-shell,
   .og-planner .og-planner__nav-shell {
     position: fixed;
-    inset: auto max(calc(var(--og-space-2) + var(--og-safe-right)), calc(50% - 230px)) var(--og-tabbar-gap)
-      max(calc(var(--og-space-2) + var(--og-safe-left)), calc(50% - 230px));
+    inset: auto 0 0;
     z-index: var(--og-z-nav);
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--og-space-1);
-    min-height: 60px;
-    padding: var(--og-space-1);
-    border: 1px solid var(--og-glass-edge);
-    border-radius: 24px;
-    background: var(--og-glass);
-    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    gap: 0;
+    padding: 6px calc(var(--og-space-2) + var(--og-safe-right)) calc(6px + var(--og-safe-bottom)) calc(var(--og-space-2) + var(--og-safe-left));
+    border-top: 1px solid var(--og-line);
+    background: var(--og-glass-dense);
     -webkit-backdrop-filter: var(--og-glass-blur);
     backdrop-filter: var(--og-glass-blur);
   }
@@ -156,30 +152,46 @@
   .og-planner__nav a,
   .og-planner__settings-link {
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     min-width: 0;
-    min-height: 50px;
+    min-height: 56px;
     padding: 0;
-    border-radius: 20px;
+    border-radius: 16px;
+    color: var(--og-ink-2);
     font-size: var(--og-text-caption);
     line-height: 1.25;
   }
 
   .og-planner__nav a:hover,
-  .og-planner__settings-link:hover {
-    background: var(--og-press);
+  .og-planner__settings-link:hover,
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    background: transparent;
   }
 
   .og-planner__nav a[aria-current="page"],
   .og-planner__settings-link[aria-current="page"] {
     color: var(--og-primary-text);
-    background: var(--og-primary-soft);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--og-primary) 22%, transparent);
+    font-weight: 700;
   }
 
+  /* Material's active indicator: a pill behind the icon, not the whole tab. */
   .og-nav__icon {
-    width: 22px;
-    height: 22px;
+    box-sizing: border-box;
+    width: 56px;
+    height: 30px;
+    padding: 4px 16px;
+    border-radius: 15px;
+    transition: background-color var(--og-dur-fast) var(--og-ease);
+  }
+
+  [aria-current="page"] > .og-nav__icon {
+    background: var(--og-primary-soft);
+    stroke-width: 2.2;
+  }
+
+  :is(.og-planner__nav a, .og-planner__settings-link):active > .og-nav__icon {
+    background: var(--og-press);
   }
 
   .og-nav__label--tab-only {
@@ -193,24 +205,11 @@
     text-align: center;
     overflow-wrap: anywhere;
   }
-
-  [aria-current="page"] > .og-nav__icon {
-    stroke-width: 2.2;
-  }
 }
 
 /* Short phones (an iPhone SE has no home indicator): a slimmer bar and a 4px
    gap give the map back 8px; every tab is still 48px. */
 @media (max-height: 700px) and (min-height: 501px) and (max-width: 1180px) {
-  :root {
-    --og-tabbar-gap: max(var(--og-space-1), calc(var(--og-safe-bottom) - 14px));
-  }
-
-  .og-planner__nav-shell,
-  .og-planner .og-planner__nav-shell {
-    min-height: 56px;
-  }
-
   .og-planner__nav a,
   .og-planner__settings-link {
     min-height: var(--og-touch);
@@ -219,7 +218,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .og-planner__nav a,
-  .og-planner__settings-link {
+  .og-planner__settings-link,
+  .og-nav__icon {
     transition: none;
   }
 }

@@ -107,7 +107,8 @@ export async function expectAboveSheet(page: Page, coordinates: readonly { lat: 
     const extent = await settledExtent(page);
     const map = await plannerMap(page).boundingBox();
     const sheet = await page.getByTestId("planner-sheet").boundingBox();
-    const top = await page.getByTestId("top-search").boundingBox();
+    // The search, or the From / To card that replaces it while a route is open.
+    const top = await page.getByTestId("top-search").or(page.getByTestId("trip-card")).boundingBox();
     if (map === null || sheet === null) return false;
     return coordinates.every((coordinate) => {
       const fraction = fractionOf(extent, coordinate);
