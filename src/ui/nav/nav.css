@@ -270,10 +270,10 @@
 }
 
 .og-appmenu__panel {
-  position: absolute;
+  position: fixed;
   z-index: var(--og-z-nav);
-  top: calc(100% + var(--og-space-2));
-  right: 0;
+  top: var(--og-appmenu-top, calc(var(--og-safe-top) + 72px));
+  right: calc(var(--og-safe-right) + var(--og-space-3));
   display: grid;
   gap: var(--og-space-1);
   width: min(280px, calc(100vw - 2 * var(--og-space-3)));

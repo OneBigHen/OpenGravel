@@ -27,6 +27,14 @@ export function AppMenu({ className }: { readonly className?: string }) {
 
   useEffect(() => {
     if (!open) return;
+    // The panel is fixed to the viewport's right edge, under the button, so it
+    // never opens off-screen when a narrow header wraps the button left.
+    const place = (): void => {
+      const box = buttonRef.current?.getBoundingClientRect();
+      if (box !== undefined) rootRef.current?.style.setProperty("--og-appmenu-top", `${Math.round(box.bottom + 8)}px`);
+    };
+    place();
+    window.addEventListener("resize", place);
     const onPointer = (event: PointerEvent): void => {
       if (event.target instanceof Node && rootRef.current?.contains(event.target) === true) return;
       setOpen(false);
@@ -39,6 +47,7 @@ export function AppMenu({ className }: { readonly className?: string }) {
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.removeEventListener("resize", place);
       document.removeEventListener("pointerdown", onPointer);
       document.removeEventListener("keydown", onKey);
     };
