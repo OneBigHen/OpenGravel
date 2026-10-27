@@ -21,10 +21,19 @@ iPad and on a 1440 px desktop.
 Premium technical-outdoors. Quiet, warm, exact — a good GPS unit and a paper map, not a
 glossy app. The map is the hero; chrome is calm and solid.
 
-- Solid sheets and cards. Chrome that floats over the map (tab bar, top search and its
-  chips, map buttons) is translucent glass (`--og-glass`, blurred) so the map reads through
-  it; anything holding sentences or ride numbers stays solid. No glow, no gradients on
-  controls.
+- **Glass everywhere (v4, owner 2026-10-27).** Every surface that sits on the map or on a page
+  is frosted glass: `--og-glass` for chrome (tab bar, top search, chips, map buttons),
+  `--og-glass-dense` for sheets, cards and panels that hold sentences or ride numbers. One
+  recipe: 1px `--og-glass-edge` border, the fill, `box-shadow: var(--og-glass-highlight),
+  var(--og-glass-shadow)`, `backdrop-filter: var(--og-glass-blur)`. Nested blocks inside a glass
+  card use `--og-glass-well` or hairlines, never a second blur. Non-map pages sit on the
+  fixed topographic backdrop (`body::before/::after`, `public/textures/topo.svg`) so the glass
+  has terrain to frost. Solid only when the browser has no backdrop blur or the rider asks for
+  reduced transparency (tokens.css handles both). No glow, no gradients on controls.
+- **No dead space.** The tab bar and the Plan sheet float (inset 8px, 24px corners) with map
+  between them; lists are compact rows (Explore: 96px thumbnail rows); wide screens use their
+  width (Settings in two columns, route page = 420px pane + full-height map); an empty or idle
+  state sits at thumb height, never alone in the middle of a blank screen.
 - One primary action colour (forest green). The chosen route is plum. Everything else is
   neutral. Colour means something or it is not used.
 - Type does the hierarchy: few sizes, strong weights, tabular numbers for ride data.
@@ -84,7 +93,7 @@ Breakpoints (only these): phone `< 761px`, tablet `761–1180px`, desktop `≥ 1
 ## 5. Screens
 
 Phone layout: small-screen-v2 §2–§6 (map ≥ 60 % while planning, ≥ 80 % riding; one sheet
-with peek/half/full; ≤ 2 floating map controls; docked tab bar hidden while riding).
+with peek/half/full; ≤ 2 floating map controls; floating glass tab bar, hidden while riding).
 
 Desktop (≥ 1181px): left planning rail 400px, map fills the rest, the same sheet content
 lives in the rail; tab destinations are a top bar. Tablet: phone layout with a wider sheet
@@ -119,6 +128,11 @@ the primary button.
   `--og-glass` (surface at 82% Day / 78% Night, blur 20–22px); solid when the browser has
   no backdrop blur or the rider asks for reduced transparency. Sheets and the ride screen
   stay solid.
+
+- 2026-10-27 Owner: "better than Gaia GPS; tons of dead space, ugly, no glass theme, not space
+  efficient". v4 = glass everywhere (§2), topo backdrop, floating tab bar and sheet, compact
+  Explore rows, map-first route page, two-column Settings on wide screens. Supersedes v3's
+  "solid sheets and cards" and small-screen-v2's docked tab bar.
 
 ## Open proposals
 
