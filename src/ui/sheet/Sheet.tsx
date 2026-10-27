@@ -8,6 +8,8 @@ export interface SheetProps extends Omit<ComponentPropsWithoutRef<"section">, "o
   readonly detent: SheetDetent;
   readonly onToggle: () => void;
   readonly onStep: (direction: "up" | "down") => void;
+  /** A drag lands on the height nearest where it was let go (or the next one, on a flick). */
+  readonly onSnap?: ((detent: SheetDetent) => void) | undefined;
   readonly onDismiss?: (() => void) | undefined;
   /** Non-modal: the map stays reachable. Focus is moved only for a new surface. */
   readonly focusKey?: string | undefined;
@@ -22,11 +24,11 @@ export interface SheetProps extends Omit<ComponentPropsWithoutRef<"section">, "o
   readonly children: ReactNode;
 }
 
-export function Sheet({ label, detent, onToggle, onStep, onDismiss, focusKey, head, handleContent,
+export function Sheet({ label, detent, onToggle, onStep, onSnap, onDismiss, focusKey, head, handleContent,
   handleLabel, headRef, bodyRef, bodyId = "og-sheet-body", rail = false, children, className = "", ...attributes }: SheetProps) {
   const root = useRef<HTMLElement>(null);
   const handle = useRef<HTMLButtonElement>(null);
-  const drag = useRef<{ y: number; id: number; height: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; t: number; id: number; height: number; head: boolean; active: boolean; lastY: number; lastT: number; velocity: number } | null>(null);
   const swallowed = useRef(false);
   const previous = useRef(detent);
   useEffect(() => {
@@ -49,42 +51,66 @@ export function Sheet({ label, detent, onToggle, onStep, onDismiss, focusKey, he
   return <section {...attributes} ref={root} role="dialog" aria-label={label}
     className={`og-shared-sheet ${className}`} data-sheet-detent={detent} data-detent={attributes["data-detent" as keyof typeof attributes] ?? detent}
     data-sheet-rail={rail ? "true" : undefined}
+    /*
+      Drag like Google Maps' sheet: from the grab bar or the head anywhere, and
+      on a phone from the body too while it is not the full sheet (the body
+      scrolls only when full). The sheet follows the finger; on release it
+      lands on the nearest height, or the next one in the flick's direction.
+    */
+    onPointerDown={(event) => {
+      const element = event.target instanceof Element ? event.target : null;
+      const inHandle = element?.closest(".og-sheet__handle") != null;
+      const inHead = element?.closest(".og-sheet__head") != null;
+      if (rail ? !inHead || event.pointerType === "mouse" && !inHandle : event.pointerType === "mouse" && !inHandle) return;
+      if (!inHead && (detent === "full" || element?.closest("input, textarea, select, [contenteditable]") != null)) return;
+      const height = root.current?.getBoundingClientRect().height ?? 0;
+      drag.current = { x: event.clientX, y: event.clientY, t: event.timeStamp, id: event.pointerId, height, head: inHead, active: false, lastY: event.clientY, lastT: event.timeStamp, velocity: 0 };
+    }}
+    onPointerMove={(event) => {
+      const start = drag.current;
+      if (start === null || start.id !== event.pointerId) return;
+      const dy = event.clientY - start.y;
+      if (!start.active) {
+        if (Math.abs(dy) <= 6) return;
+        // A sideways swipe belongs to a chip row, not the sheet.
+        if (Math.abs(event.clientX - start.x) > Math.abs(dy)) { drag.current = null; return; }
+        start.active = true;
+        swallowed.current = true;
+        root.current?.setPointerCapture?.(event.pointerId);
+      }
+      const dt = Math.max(1, event.timeStamp - start.lastT);
+      start.velocity = (event.clientY - start.lastY) / dt;
+      start.lastY = event.clientY; start.lastT = event.timeStamp;
+      if (!rail) {
+        root.current?.setAttribute("data-dragging", "true");
+        root.current?.style.setProperty("--og-sheet-drag-h", `${Math.max(96, Math.min(window.innerHeight - 72, start.height - dy))}px`);
+      }
+    }}
+    onPointerUp={(event) => {
+      const start = drag.current; resetDrag();
+      if (start === null || start.id !== event.pointerId || !start.active) return;
+      const dy = event.clientY - start.y;
+      window.setTimeout(() => { swallowed.current = false; }, 0);
+      const flick = Math.abs(start.velocity) > 0.45;
+      if (onSnap === undefined || rail || flick) {
+        if (flick || Math.abs(dy) >= 36) onStep((flick ? start.velocity : dy) < 0 ? "up" : "down");
+        return;
+      }
+      const share = (start.height - dy) / window.innerHeight;
+      onSnap(share > 0.66 ? "full" : share > 0.3 ? "half" : "peek");
+    }}
+    onPointerCancel={() => { resetDrag(); swallowed.current = false; }}
+    onClickCapture={(event) => {
+      if (!swallowed.current) return;
+      swallowed.current = false; event.preventDefault(); event.stopPropagation();
+    }}
     onKeyDown={(event) => {
       attributes.onKeyDown?.(event);
       if (event.key !== "Escape" || event.defaultPrevented) return;
       event.preventDefault(); event.stopPropagation();
       if (onDismiss) onDismiss(); else onStep("down");
     }}>
-    <div className="og-sheet__head" data-testid="sheet-head" ref={headRef}
-      onPointerDown={(event) => {
-        const target = event.target instanceof Element ? event.target.closest(".og-sheet__handle") : null;
-        if (target === null && (!rail || event.pointerType === "mouse")) return;
-        drag.current = { y: event.clientY, id: event.pointerId, height: root.current?.getBoundingClientRect().height ?? 0 };
-        if (target !== null) handle.current?.setPointerCapture?.(event.pointerId);
-      }}
-      onPointerMove={(event) => {
-        const start = drag.current;
-        if (start === null || start.id !== event.pointerId) return;
-        const dy = event.clientY - start.y;
-        if (Math.abs(dy) <= 4) return;
-        swallowed.current = true;
-        if (!rail) {
-          root.current?.setAttribute("data-dragging", "true");
-          root.current?.style.setProperty("--og-sheet-drag-h", `${Math.max(96, Math.min(window.innerHeight - 72, start.height - dy))}px`);
-        }
-      }}
-      onPointerUp={(event) => {
-        const start = drag.current; resetDrag();
-        if (start === null || start.id !== event.pointerId) return;
-        const dy = event.clientY - start.y;
-        if (Math.abs(dy) >= 36) { swallowed.current = true; onStep(dy < 0 ? "up" : "down"); }
-        window.setTimeout(() => { swallowed.current = false; }, 0);
-      }}
-      onPointerCancel={() => { resetDrag(); swallowed.current = false; }}
-      onClickCapture={(event) => {
-        if (!swallowed.current) return;
-        swallowed.current = false; event.preventDefault(); event.stopPropagation();
-      }}>
+    <div className="og-sheet__head" data-testid="sheet-head" ref={headRef}>
       <button ref={handle} type="button" className="og-sheet__handle" data-testid="sheet-handle" data-detent={attributes["data-detent" as keyof typeof attributes] ?? detent}
         aria-expanded={rail ? detent === "full" : detent !== "peek"} aria-controls={bodyId}
         aria-label={handleLabel ?? `${label}: ${detent}. ${detent === "full" ? "Collapse to peek" : detent === "half" ? "Expand fully" : "Expand to half"}`}

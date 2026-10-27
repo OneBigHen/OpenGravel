@@ -20,7 +20,7 @@ export function usePlannerSheetActions(
   const onToggleSheet = useCallback((): void => {
     const state = plannerUiStore.getState();
     if (isCompactViewport()) {
-      state.setSheetDetent(state.sheetDetent === "expanded" ? "peek" : state.sheetDetent === "half" ? "expanded" : "half");
+      state.setSheetDetent(state.sheetDetent === "expanded" ? "peek" : state.sheetDetent === "half" || state.sheetDetent === "ride" ? "expanded" : "half");
     } else state.toggleSheet(hasRide());
   }, [hasRide, plannerUiStore]);
 
@@ -28,7 +28,8 @@ export function usePlannerSheetActions(
     (direction: "up" | "down"): void => {
       const state = plannerUiStore.getState();
       if (isCompactViewport()) {
-        const current = state.sheetDetent;
+        // "ride" is the half sheet a new ride opens at; it steps like half.
+        const current = state.sheetDetent === "ride" ? "half" : state.sheetDetent;
         state.setSheetDetent(direction === "up"
           ? current === "half" || current === "expanded" ? "expanded" : "half"
           : current === "expanded" ? "half" : "peek");

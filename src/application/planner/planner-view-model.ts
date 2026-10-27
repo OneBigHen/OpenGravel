@@ -177,6 +177,8 @@ export interface RouteCardVm {
   readonly roleKey: RouteRole | "alternative";
   readonly roleLabel: string;
   readonly durationLabel: string;
+  /** The same duration in seconds, so the sheet can say when the ride gets back. */
+  readonly durationSeconds?: number;
   readonly distanceLabel: string;
   readonly addedTimeLabel: string | null;
   /**
@@ -740,6 +742,7 @@ function routeCards(
       roleKey: roleKeyFor(role, placeholderSelection),
       roleLabel: roleLabelFor(role, placeholderSelection),
       durationLabel: formatDuration(candidate.durationSeconds),
+      durationSeconds: candidate.durationSeconds,
       distanceLabel: formatDistance(candidate.distanceMeters),
       addedTimeLabel:
         reference === null

@@ -1,0 +1,513 @@
+/* Google Maps layout for phones (owner 2026-10-27: "look at Google Maps and
+   replicate its views"). Loaded after the sheet and plan-sheet rules, so at the
+   same specificity these win.
+
+   - The tab bar is docked to the bottom edge, full width, with Material's
+     pill behind the current tab's icon.
+   - The Plan sheet sits flush on the bar: full width, top corners rounded.
+   - While a ride is on the map, or being planned, the top shows a From / To
+     card instead of the search, the tab bar steps aside and the sheet reaches
+     the bottom edge, like Google's directions view.
+   - The ride summary reads like Google's: title with icon actions, the time
+     large and green, arrival and distance beside it, then a row of pills. */
+
+@media (max-width: 1180px) and (min-height: 501px) {
+  :root {
+    --og-tabbar-gap: 0px;
+  }
+
+  .og-planner__nav-shell,
+  .og-planner .og-planner__nav-shell {
+    inset: auto 0 0;
+    gap: 0;
+    min-height: 0;
+    padding: 6px calc(var(--og-space-2) + var(--og-safe-right)) calc(6px + var(--og-safe-bottom)) calc(var(--og-space-2) + var(--og-safe-left));
+    border: 0;
+    border-top: 1px solid var(--og-line);
+    border-radius: 0;
+    background: var(--og-glass-dense);
+    box-shadow: none;
+  }
+
+  .og-planner__nav a,
+  .og-planner__settings-link,
+  .og-planner__nav a:hover,
+  .og-planner__settings-link:hover,
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    gap: 4px;
+    min-height: 56px;
+    border-radius: 16px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Material's active indicator: a pill behind the icon, not the whole tab. */
+  .og-planner__nav .og-nav__icon,
+  .og-planner__settings-link .og-nav__icon {
+    box-sizing: border-box;
+    width: 56px;
+    height: 30px;
+    padding: 4px 16px;
+    border-radius: 15px;
+    transition: background-color var(--og-dur-fast) var(--og-ease);
+  }
+
+  [aria-current="page"] > .og-nav__icon {
+    background: var(--og-primary-soft);
+  }
+
+  .og-planner__nav a:active > .og-nav__icon,
+  .og-planner__settings-link:active > .og-nav__icon {
+    background: var(--og-press);
+  }
+
+  .og-planner__nav a:not([aria-current="page"]),
+  .og-planner__settings-link:not([aria-current="page"]) {
+    color: var(--og-ink-2);
+  }
+
+  .og-planner__nav a[aria-current="page"],
+  .og-planner__settings-link[aria-current="page"] {
+    font-weight: 700;
+  }
+}
+
+/* Phones: the Plan sheet is a bottom sheet, not a floating card. */
+@media (max-width: 760px) and (min-height: 501px) {
+  .og-planner .og-planner__dock {
+    inset: auto 0 var(--og-tabbar-h);
+  }
+
+  .og-planner .og-planner__sheet {
+    padding: 0 calc(var(--og-space-4) + var(--og-safe-right)) var(--og-space-3) calc(var(--og-space-4) + var(--og-safe-left));
+    border-width: 1px 0 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: var(--og-glass-highlight), 0 -6px 24px rgb(0 0 0 / 0.18);
+  }
+
+  /* Directions view: no tab bar, the sheet reaches the bottom edge. */
+  .og-planner[data-trip="true"] {
+    --og-tabbar-h: 0px;
+  }
+
+  .og-planner[data-trip="true"] .og-planner__nav-shell {
+    display: none;
+  }
+
+  .og-planner[data-trip="true"] .og-planner__sheet {
+    padding-bottom: calc(var(--og-space-3) + var(--og-safe-bottom));
+  }
+
+  /* The head is the grab bar only: × lives in the From / To card, Add stops in
+     the summary. An armed tool (placing a stop, drawing) still shows its bar
+     here, with its status and Cancel. The full sheet keeps every tool. */
+  .og-planner[data-trip="true"] .og-planner__sheet:not([data-detent="full"]) .og-sheet__head > :is(.og-history, .og-sheet__clear),
+  .og-planner[data-trip="true"] .og-planner__sheet:not([data-detent="full"]) .og-phone-edittools:has(.og-editbar[data-mode="idle"]),
+  .og-planner[data-trip="true"] .og-planner__sheet:not([data-detent="full"]) .og-sheet__body > .og-phone-tools {
+    display: none;
+  }
+
+  /* On its way: the form folds away and the sheet says so, with Cancel. */
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] {
+    height: auto;
+  }
+
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] .og-sheet__body > :not(.og-composer),
+  .og-planner .og-planner__sheet[data-planning="true"][data-has-ride="false"] .og-composer > :not(.og-composer__commitment) {
+    display: none;
+  }
+
+  /* Record and Free Ride are home actions; a ride being set up hides them. */
+  .og-planner .og-planner__sheet:not([data-idle="true"])[data-has-ride="false"] :is(.og-plan-actions__record, .og-plan-actions__free-ride) {
+    display: none;
+  }
+}
+
+/* The From / To card. */
+.og-trip {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  .og-trip {
+    position: absolute;
+    z-index: var(--og-z-float);
+    top: calc(var(--og-safe-top) + var(--og-space-3));
+    left: calc(var(--og-safe-left) + var(--og-space-3));
+    right: calc(var(--og-safe-right) + var(--og-space-3));
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-1);
+    padding: var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-card);
+    background: var(--og-glass-dense);
+    color: var(--og-ink);
+    box-shadow: var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+  }
+
+  @media (min-width: 761px) {
+    .og-trip {
+      right: auto;
+      width: 400px;
+    }
+  }
+
+  .og-trip__lines {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 var(--og-space-2) 0 var(--og-space-3);
+    border: 0;
+    border-radius: calc(var(--og-radius-card) - 4px);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .og-trip__lines:focus-visible,
+  .og-trip__tool:focus-visible {
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: var(--og-focus-offset);
+  }
+
+  .og-trip__line {
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-3);
+    min-height: 42px;
+    min-width: 0;
+    font-size: var(--og-text-body);
+  }
+
+  .og-trip__line:first-child .og-trip__label {
+    color: var(--og-primary-text);
+  }
+
+  .og-trip__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-trip__rule {
+    height: 1px;
+    margin-left: calc(12px + var(--og-space-3));
+    background: var(--og-line);
+  }
+
+  .og-trip__dot {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .og-trip__dot[data-end="start"] {
+    background: var(--og-primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--og-primary) 28%, transparent);
+  }
+
+  .og-trip__dot[data-end="finish"] {
+    border-radius: 50% 50% 50% 0;
+    background: var(--og-danger);
+    transform: rotate(-45deg);
+  }
+
+  .og-trip__dot[data-end="loop"] {
+    border: 2px solid var(--og-primary-text);
+    background: transparent;
+  }
+
+  .og-trip__tools {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+  }
+
+  .og-trip__tool {
+    display: grid;
+    place-items: center;
+    width: var(--og-touch);
+    height: var(--og-touch);
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--og-ink-2);
+    cursor: pointer;
+  }
+
+  .og-trip__tool:active {
+    background: var(--og-press);
+  }
+}
+
+/* The ride summary, Google style (phones and tablets). */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-phone-summary {
+    gap: var(--og-space-2);
+  }
+
+  .og-phone-summary__head {
+    display: flex;
+    align-items: center;
+    gap: var(--og-space-2);
+    min-width: 0;
+  }
+
+  .og-phone-summary .og-phone-summary__where {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--og-ink);
+    font-family: var(--og-face-display);
+    font-size: var(--og-text-title);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .og-phone-summary__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: var(--og-touch);
+    height: var(--og-touch);
+    border: 0;
+    border-radius: 50%;
+    background: var(--og-glass-well);
+    color: var(--og-ink);
+    cursor: pointer;
+  }
+
+  .og-phone-summary__eta {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--og-space-4);
+    min-width: 0;
+    margin-top: var(--og-space-1);
+  }
+
+  .og-phone-summary .og-phone-summary__time {
+    flex: none;
+    max-width: 38%;
+    color: var(--og-primary-text);
+    font-size: 26px;
+    line-height: 1.1;
+  }
+
+  .og-phone-summary__facts {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .og-phone-summary__arrive {
+    margin: 0;
+    color: var(--og-ink);
+    font-size: var(--og-text-body);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .og-phone-summary__facts .og-phone-summary__meta {
+    margin-top: 2px;
+  }
+
+  .og-phone-summary__start {
+    margin-top: var(--og-space-1);
+  }
+
+  .og-phone-summary__actions {
+    display: flex;
+    gap: var(--og-space-2);
+    margin: 0 calc(-1 * var(--og-space-4));
+    padding: 0 var(--og-space-4) 2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .og-phone-summary__actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .og-phone-summary__actions > button,
+  .og-phone-summary .og-phone-summary__actions > .og-primary {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: var(--og-space-2);
+    width: auto;
+    min-height: var(--og-touch);
+    padding: 0 var(--og-space-4);
+    border-radius: var(--og-radius-pill);
+    font-size: var(--og-text-meta);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .og-phone-summary .og-phone-summary__actions > .og-primary {
+    padding-inline: var(--og-space-5);
+  }
+
+  .og-phone-summary[data-comparing="true"] .og-phone-summary__actions > .og-primary {
+    flex: 1 1 auto;
+  }
+
+  .og-phone-summary__pill {
+    border: 0;
+    background: var(--og-primary-soft);
+    color: var(--og-primary-text);
+    cursor: pointer;
+  }
+
+  .og-phone-summary__pill:active,
+  .og-phone-summary__icon:active {
+    background: var(--og-press);
+  }
+
+  .og-phone-summary__pill:focus-visible,
+  .og-phone-summary__icon:focus-visible {
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: var(--og-focus-offset);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner__nav .og-nav__icon,
+  .og-planner__settings-link .og-nav__icon {
+    transition: none;
+  }
+}
+
+/* Under the From / To card the map's own buttons keep the search's column. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner[data-trip="true"] .og-planner__map-slot .og-layers {
+    top: calc(var(--og-safe-top) + 120px);
+  }
+
+  .og-planner[data-trip="true"] .og-planner__map-slot .og-map__cluster {
+    top: calc(var(--og-safe-top) + 176px);
+  }
+}
+
+/* Phones: Google's slimmer sheet head and the directions view's sizes. */
+@media (max-width: 760px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet button.og-sheet__handle {
+    height: 24px;
+    min-height: 24px;
+  }
+
+  /* 24px plus a 20px lip over the rounded edge: still a 44px target. */
+  .og-planner .og-planner__sheet .og-sheet__handle::after {
+    inset: -20px 0 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__handle::before {
+    top: 10px;
+  }
+
+  /* The body scrolls only in the full sheet; below that a vertical drag
+     anywhere moves the sheet (Sheet.tsx) and chip rows still swipe sideways. */
+  .og-planner .og-planner__sheet:not([data-detent="full"]) .og-sheet__body {
+    touch-action: pan-x;
+  }
+
+  /* Directions view at half: as tall as the ride, Start and Compare. The ride
+     style waits in the full sheet (the sliders button opens it). */
+  .og-planner[data-trip="true"] .og-planner__sheet[data-detent="half"][data-has-ride="true"]:not([data-directions="true"]) {
+    height: auto;
+    max-height: 62dvh;
+  }
+
+  .og-planner[data-trip="true"] .og-planner__sheet[data-detent="half"] .og-phone-summary[data-comparing="false"] .og-phone-style {
+    display: none;
+  }
+
+  .og-planner[data-trip="true"] .og-planner__sheet[data-detent="half"][data-has-ride="true"]:not([data-directions="true"]) .og-sheet__body > :not(.og-phone-summary) {
+    display: none;
+  }
+
+  /* The From / To card already says where the options run, with ⇅ and edit. */
+  .og-planner[data-trip="true"] .og-route-options__header {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet .og-phone-summary p.og-phone-summary__where {
+    font-size: 22px;
+  }
+
+  .og-phone-summary__actions > button,
+  .og-phone-summary .og-phone-summary__actions > .og-primary {
+    padding: 0 var(--og-space-3);
+  }
+
+  .og-phone-summary .og-phone-summary__actions > .og-primary {
+    padding-inline: var(--og-space-4);
+  }
+}
+
+/* The place sheet, Google style: a large name, one quiet line under it, a
+   round × and one sideways row of icon pills with Directions filled. */
+.og-planner .og-place-sheet h2 {
+  font-size: 22px;
+}
+
+.og-planner .og-place-sheet .og-place-sheet__close {
+  top: var(--og-space-1);
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border-radius: 50%;
+  background: var(--og-glass-well);
+  color: var(--og-ink);
+}
+
+/* The 36px disc keeps a 48px target. */
+.og-planner .og-place-sheet .og-place-sheet__close::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.og-planner .og-place-sheet .og-place-sheet__actions {
+  flex-wrap: nowrap;
+  gap: var(--og-space-2);
+  margin: var(--og-space-3) calc(-1 * var(--og-space-4)) 0;
+  padding: 0 var(--og-space-4) 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.og-planner .og-place-sheet .og-place-sheet__actions::-webkit-scrollbar {
+  display: none;
+}
+
+.og-planner .og-planner__sheet .og-place-sheet .og-place-sheet__actions button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-height: 44px;
+  padding: 0 var(--og-space-4);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.og-planner .og-planner__sheet .og-place-sheet .og-place-sheet__actions .og-secondary {
+  background: var(--og-primary-soft);
+  color: var(--og-primary-text);
+}

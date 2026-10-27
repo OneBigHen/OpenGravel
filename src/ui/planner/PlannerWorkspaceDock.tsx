@@ -8,7 +8,9 @@
  */
 
 import {
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ComponentProps,
@@ -51,6 +53,8 @@ export interface PlannerWorkspaceDockProps {
   readonly onToggleSheet: () => void;
   /** Swipe or drag the sheet one height up or down (mini < resting < expanded). */
   readonly onStepSheet: (direction: "up" | "down") => void;
+  /** A drag let go at a height: land on that detent. */
+  readonly onSnapSheet?: (detent: "peek" | "half" | "full") => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   /** True when the ride has any authored point, so there is a route to clear. */
@@ -131,6 +135,7 @@ export function PlannerWorkspaceDock({
   roadTap = null,
   onToggleSheet,
   onStepSheet,
+  onSnapSheet,
   onUndo,
   onRedo,
   canClear,
@@ -218,6 +223,24 @@ export function PlannerWorkspaceDock({
     bodyRef.current?.querySelector<HTMLElement>("[data-sheet-focus]")?.focus({ preventScroll: true });
     bodyRef.current?.scrollTo?.({ top: 0 });
   }, [optionsMode, activeSheetView]);
+  // The summary's quick actions jump to the full control further down the sheet
+  // (the save field, the share button, the ride style), so there is one of each.
+  const reveal = useCallback((selector: string, act: (element: HTMLElement) => void): void => {
+    onFullSheet?.();
+    window.setTimeout(() => {
+      const element = document.querySelector<HTMLElement>(`.og-planner__sheet .og-sheet__body ${selector}`);
+      if (element === null) return;
+      element.scrollIntoView({ block: "center" });
+      act(element);
+    }, 280);
+  }, [onFullSheet]);
+  const onAddStopQuick = editBar?.onAddStop;
+  const quick = useMemo(() => phone ? {
+    onAddStop: onAddStopQuick,
+    onSave: () => reveal('[data-testid="named-ride-title"]', (element) => element.focus({ preventScroll: true })),
+    onShare: () => reveal('[data-testid="open-share"]', (element) => element.click()),
+    onStyle: () => reveal(".og-phone-style", () => undefined),
+  } : undefined, [phone, onAddStopQuick, reveal]);
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");
@@ -243,11 +266,13 @@ export function PlannerWorkspaceDock({
         data-place={placeSheet ? "true" : undefined}
         data-idle={idle && !placeSheet ? "true" : undefined}
         data-has-ride={hasChoices ? "true" : "false"}
+        data-planning={planning ? "true" : undefined}
         label="Ride planning"
         detent={sheetDetent === "expanded" ? "full" : sheetDetent === "half" || sheetDetent === "ride" ? "half" : "peek"}
         rail={!compact}
         onToggle={onToggleSheet}
         onStep={onStepSheet}
+        onSnap={compact ? onSnapSheet : undefined}
         headRef={sheetHeadRef}
         bodyRef={bodyRef}
         onDismiss={placeSheet ? onDismissPlace : undefined}
@@ -428,6 +453,7 @@ export function PlannerWorkspaceDock({
               onEditOptions={() => openEditor("edit")}
               onOpenOptions={() => openEditor("options")}
               destinationLine={destinationLine}
+              {...(quick === undefined ? {} : { quick })}
               {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
             />
           ) : null}

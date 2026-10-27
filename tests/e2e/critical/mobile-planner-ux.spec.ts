@@ -36,7 +36,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
   test(`endpoint controls have separate targets at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await chooseEndpoints(page);
-    await page.getByTestId("route-options-edit").click();
+    await page.getByTestId("trip-edit").click();
     const controls = await page.locator(".og-composer").evaluate((composer) => {
       const ids = ["start-chip", "finish-chip", "start-change", "finish-change", "swap-endpoints"];
       return ids.map((id) => {
@@ -108,8 +108,9 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
   const handle = boxes.find((box) => box.id === "sheet-handle")!;
   const clear = boxes.find((box) => box.id === "clear-ride")!;
   expect(clear.height).toBeGreaterThanOrEqual(48);
-  expect(handle.height).toBeGreaterThanOrEqual(48);
-  for (const { id, ...box } of boxes) {
+  // Google's slim grab bar: 24px drawn, plus a 20px lip over the sheet's edge.
+  expect(handle.height).toBeGreaterThanOrEqual(24);
+  for (const { id, ...box } of boxes.filter((box) => box.id !== "sheet-handle")) {
     expect.soft(box.height, `${id} touch height`).toBeGreaterThanOrEqual(44);
     expect.soft(box.width, `${id} touch width`).toBeGreaterThanOrEqual(44);
   }
@@ -124,10 +125,8 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
 
 test("200 percent text keeps navigation labels and the planner sheet separate", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  await chooseEndpoints(page);
-  await pressPlan(page);
-  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
-  await page.getByTestId("sheet-handle").click();
+  // The tab bar belongs to the home screen; an open route hides it (Google's
+  // directions view), so the labels are measured with no route on the map.
   await doubleTextSize(page);
   const nav = page.getByTestId("primary-nav");
   const labelsFit = () => nav.locator("a").evaluateAll((links) => links.every((link) => {

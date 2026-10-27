@@ -261,8 +261,10 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
         hasOtherPoints &&
         intent.start !== null &&
         (intent.start.provenance.type === "gps" || intent.start.provenance.type === "saved");
+      // A cleared loop is no longer a loop either: × on the route goes back to
+      // the home screen (Google's close), and Undo clear brings the loop back.
       return applyChange(
-        { ...intent, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [], sketch: null },
+        { ...intent, shape: intent.shape === "loop" ? "destination" : intent.shape, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [], sketch: null },
         true,
       );
     }
