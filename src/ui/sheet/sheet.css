@@ -418,6 +418,12 @@
     overflow: hidden;
   }
 
+  /* Route options at peek: room for two rides, Options and Start ride, so
+     nothing the rider decides with is scrolled out of sight. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="peek"] {
+    max-height: 52dvh;
+  }
+
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options) {
     display: none;
   }
