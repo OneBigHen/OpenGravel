@@ -503,7 +503,7 @@
 
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-settings {
-    padding-bottom: calc(var(--og-tabbar-h, 56px) + var(--og-space-5));
+    padding-bottom: calc(var(--og-tabbar-h) + var(--og-space-5));
   }
 }
 

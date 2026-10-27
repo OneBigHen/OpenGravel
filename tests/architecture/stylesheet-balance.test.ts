@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
 import { appCss } from "../helpers/app-css";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**

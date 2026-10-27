@@ -176,10 +176,10 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   ).join("\n");
   // Minified by the production build, so the rule is asserted without the space
   // the stylesheet source has.
-  // The sheet pads itself with the safe-area token, which `globals.css` derives
-  // from `env(safe-area-inset-bottom)`.
+  // tokens.css derives the safe-area token from `env(safe-area-inset-bottom)`;
+  // the docked tab bar under the sheet is what reserves it (design v3).
   expect(css).toContain("--og-safe-bottom:env(safe-area-inset-bottom,0px)");
-  expect(css).toContain("calc(12px + var(--og-safe-bottom))");
+  expect(css).toContain("calc(56px + var(--og-safe-bottom))");
 
   // 12 §10: every planning control is at least 44×44 CSS px.
   // On the idle sheet "Create ride" waits for a destination; the quick starts

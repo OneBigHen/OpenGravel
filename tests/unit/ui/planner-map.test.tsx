@@ -16,7 +16,6 @@
  *   key (the rider owns the camera) requests nothing (05 §8).
  */
 
-import { readFileSync } from "node:fs";
 import { applyResolvedTheme } from "@/ui/appearance/appearance";
 import { cssRuleRaw } from "../../helpers/app-css";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";

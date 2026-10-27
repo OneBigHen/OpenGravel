@@ -55,7 +55,7 @@ Colour (semantic names; values per theme):
 | `--og-ink-2` | secondary text (≥4.5:1 on surface) | `#46524c` | `#a2aea8` |
 | `--og-line` | hairlines | `rgb(15 26 21 / 12%)` | `rgb(255 255 255 / 9%)` |
 | `--og-line-strong` | input borders, dividers that must show | `rgb(15 26 21 / 24%)` | `rgb(255 255 255 / 16%)` |
-| `--og-primary` | primary buttons, active tab, selected control | `#13703f` | `#1f8a4f` |
+| `--og-primary` | primary buttons, active tab, selected control | `#13703f` | `#1c7f49` |
 | `--og-on-primary` | text on primary | `#ffffff` | `#ffffff` |
 | `--og-primary-text` | green used as text/icon | `#0a5c31` | `#6fe3a3` |
 | `--og-route` | the chosen route line + its row tint | `#7b4fa0` | `#b48ae0` |
@@ -110,6 +110,8 @@ the primary button.
 - 2026-10-25 Small-screen v2 rules; maps-for-riders interaction contract.
 - 2026-10-26 This file. Direction "trail instrument". Two themes only; glass layer retired.
   Night = dark basemap. Single tokens.css. Visual gate = og-shots gallery.
+- 2026-10-26 Night `--og-primary` #1f8a4f → #1c7f49: white on #1f8a4f is 4.37:1, under this
+  file's own 4.5:1 text rule; #1c7f49 is 5.0:1 (tests/unit/ui/contrast-tokens.test.ts).
 
 ## Open proposals
 

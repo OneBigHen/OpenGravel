@@ -831,11 +831,57 @@
   .og-import__track {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  /* A phone lists rides as Explore does (small-screen-v2 §4): the ride's own
+     16:9 map, the title, one meta line; the ⋯ menu sits beside the title. */
+  .og-library__list {
+    gap: var(--og-space-5);
+    overflow: visible;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .og-library__row {
+    padding: 0;
+  }
+
+  .og-library__row + .og-library__row {
+    border-top: 0;
+  }
+
+  .og-rides__row-body {
+    position: relative;
+    align-items: flex-start;
+  }
+
+  .og-rides__row-open {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--og-space-2);
+    min-height: 0;
+  }
+
+  .og-rides__thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--og-radius-card);
+  }
+
+  .og-rides__row-text {
+    padding-right: var(--og-touch);
+  }
+
+  .og-rides__row-body > .og-rides__menu {
+    position: absolute;
+    right: calc(-1 * var(--og-space-2));
+    bottom: calc(-1 * var(--og-space-1));
+  }
 }
 
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-library {
-    padding-bottom: calc(var(--og-tabbar-h, 56px) + var(--og-space-5));
+    padding-bottom: calc(var(--og-tabbar-h) + var(--og-space-5));
   }
 }
 

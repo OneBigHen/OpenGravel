@@ -22,8 +22,6 @@
 import "fake-indexeddb/auto";
 import { appCss, cssRule, cssRuleRaw, tokensCss } from "../../helpers/app-css";
 
-import { readFileSync } from "node:fs";
-import path from "node:path";
 
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -608,15 +606,13 @@ describe("dark chrome and honest states", () => {
   });
 
   it("declares the then row and the exit badge in the stylesheet", () => {
-    const read = (file: string): string =>
-      appCss();
     const ruleIn = (_css: string, selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");
       return body;
     };
 
-    const globals = read("globals.css");
+    const globals = "";
     const then = ruleIn(globals, ".og-ride__maneuver-then");
     // Third grid row under the action line, spanning the icon column too.
     expect(then).toMatch(/grid-column:\s*1 \/ -1/);
@@ -648,8 +644,6 @@ describe("dark chrome and honest states", () => {
   });
 
   it("keeps a disabled ride action's label readable in the day theme", () => {
-    const read = (file: string): string =>
-      appCss();
     const ruleIn = (_css: string, selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");
@@ -1479,7 +1473,6 @@ describe("camera (08 §2, DV-10)", () => {
   });
 
   it("wears the rail's paper discs at 56 px, and hides the planner's own column", () => {
-    const css = appCss();
     const rule = (selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");
@@ -1655,7 +1648,6 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
   });
 
   it("keeps the off-route card compact with one 56 px action", () => {
-    const css = appCss();
     const rule = (selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");
@@ -1965,7 +1957,6 @@ describe("12 §10 touch targets", () => {
   });
 
   it("declares the 56 px hit area and the dark chrome in the stylesheet", () => {
-    const css = appCss();
     const rule = (selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");
@@ -2390,7 +2381,6 @@ describe("Free Ride recording controls", () => {
 });
 
 describe("the ride screen's number scale and controls (small-screen design system v2 §5)", () => {
-  const css = appCss();
   const rule = (selector: string): string => {
       const body = cssRule(selector);
       expect(body.trim(), selector).not.toBe("");

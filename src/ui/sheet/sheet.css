@@ -163,6 +163,17 @@
     display: none;
   }
 
+  /* The route's edit tools sit in the head beside Undo / Redo. */
+  .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--og-space-2);
+    margin-left: auto;
+  }
+
   .og-planner__sheet[data-place="true"] {
     min-height: 400px;
   }
@@ -214,7 +225,6 @@
    -------------------------------------------------------------------------- */
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-planner {
-    --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom)));
     --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 48px);
     --og-sheet-half: calc(50dvh - var(--og-tabbar-h));
   }

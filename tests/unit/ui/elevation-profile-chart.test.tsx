@@ -7,7 +7,6 @@
 
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { appCss } from "../../helpers/app-css";
-import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildElevationProfile, sampleLine, type ElevationProfile } from "@/application/elevation/profile";

@@ -13,7 +13,7 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { appCss } from "../helpers/app-css";
+import { tokensCss } from "../helpers/app-css";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -85,12 +85,10 @@ describe("type scale (small-screen design system v2 §1)", () => {
   });
 
   it("still lets the five sizes be declared once, as tokens", () => {
-    const root = /:root\s*\{([\s\S]*?)\n\}/.exec(
-      appCss(),
-    )?.[1];
-    expect(root).toBeDefined();
+    // Design v3: the five sizes live once, in tokens.css; the old aliases are gone.
+    const tokens = tokensCss();
     const declared = new Map<string, string>();
-    for (const match of (root as string).matchAll(/(--og-text-[a-z]+):\s*([0-9]+px|var\(--og-text-[a-z]+\))/g)) {
+    for (const match of tokens.matchAll(/(--og-text-[a-z]+):\s*([0-9]+px|var\(--og-text-[a-z]+\))/g)) {
       declared.set(match[1] as string, match[2] as string);
     }
     expect(declared.get("--og-text-title")).toBe("28px");
@@ -98,8 +96,6 @@ describe("type scale (small-screen design system v2 §1)", () => {
     expect(declared.get("--og-text-body")).toBe("16px");
     expect(declared.get("--og-text-meta")).toBe("14px");
     expect(declared.get("--og-text-caption")).toBe("12px");
-    // The two older names alias a size rather than adding a sixth.
-    expect(declared.get("--og-text-eyebrow")).toBe("var(--og-text-caption)");
-    expect(declared.get("--og-text-page")).toBe("var(--og-text-title)");
+    expect(declared.size).toBe(5);
   });
 });

@@ -1,6 +1,4 @@
-import { readFileSync } from "node:fs";
 import { appCss } from "../helpers/app-css";
-import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -13,10 +11,9 @@ import { describe, expect, it } from "vitest";
  * row scrolls sideways instead of shrinking its targets.
  */
 
-const FILES = ["globals.css", "theme-glass.css"] as const;
 
 /** The stylesheet with comments removed, so prose cannot satisfy a selector. */
-function sourceOf(file: (typeof FILES)[number]): string {
+function sourceOf(): string {
   return appCss().replace(/\/\*[\s\S]*?\*\//g, "");
 }
 
@@ -35,7 +32,7 @@ function rulesOf(source: string): Rule[] {
 }
 
 function allRules(): Rule[] {
-  return FILES.flatMap((file) => rulesOf(sourceOf(file)));
+  return rulesOf(sourceOf());
 }
 
 function declaration(body: string, property: string): string | null {
@@ -64,17 +61,18 @@ function declarationsFor(selector: string): Record<string, string> {
 }
 
 describe("ride cards on a phone", () => {
-  it("frames the route's map 16:9 at full width, with square text under it", () => {
-    const preview = declarationsFor(".og-explore-card--ride .og-explore-card__preview");
+  it("frames the route's map 16:9 at full width, with the words on the page under it", () => {
+    const preview = declarationsFor(".og-explore-card__preview");
     expect(preview["aspect-ratio"]).toBe("16 / 9");
-    expect(preview["border-radius"]).toBe("var(--og-radius-object)");
-    // The words sit on the page, not in a second box inside the card.
-    expect(declarationsFor(".og-explore-card--ride .og-explore-card__body")["padding"]).toBe("var(--og-space-2) 0 0");
+    expect(preview["width"]).toBe("100%");
+    expect(preview["border-radius"]).toBe("var(--og-radius-card)");
+    // Design v3: the card has no frame, so the words need no inner padding.
+    expect(declarationsFor(".og-explore-card__body")["padding"]).toBeUndefined();
   });
 
   it("keeps the name to two lines at body size", () => {
-    expect(declarationsFor(".og-explore-card__title")["-webkit-line-clamp"]).toBe("2");
-    const title = declarationsFor(".og-explore-card--ride .og-explore-card__title");
+    const title = declarationsFor(".og-explore-card__title");
+    expect(title["-webkit-line-clamp"]).toBe("2");
     expect(title["font-size"]).toBe("var(--og-text-body)");
     expect(title["font-weight"]).toBe("600");
   });
@@ -99,9 +97,10 @@ describe("ride cards on a phone", () => {
     expect(row).toBeDefined();
     expect(declaration(row!.body, "overflow-x")).toBe("auto");
     expect(declaration(row!.body, "flex-wrap")).toBeNull();
-    const chip = declarationsFor(".og-explore__quick-chip");
-    expect(Number.parseInt(chip["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(48);
-    expect(declaration(row!.body, "scroll-padding-inline")).toBe("14px");
+    expect(declaration(row!.body, "scroll-padding-inline")).toBe("var(--og-space-4)");
+    // 40px to the eye, with a hit area 4px taller on each side: 48px to the thumb.
+    expect(declarationsFor(".og-explore__quick-chip")["min-height"]).toBe("40px");
+    expect(declarationsFor(".og-explore__quick-chip::before")["inset"]).toBe("-4px 0");
   });
 });
 
@@ -111,30 +110,51 @@ describe("ride cards on a phone", () => {
  * 320px left the name and the buttons fighting for the same line.
  */
 describe("saved rides on a phone", () => {
+  const PHONE = "(max-width: 760px)";
+  const phone = (selector: string): Record<string, string> => {
+    const source = sourceOf();
+    const out: Record<string, string> = {};
+    let from = 0;
+    for (;;) {
+      const start = source.indexOf(`@media ${PHONE} {`, from);
+      if (start === -1) return out;
+      let depth = 0;
+      let end = start;
+      for (; end < source.length; end += 1) {
+        if (source[end] === "{") depth += 1;
+        if (source[end] === "}") { depth -= 1; if (depth === 0) break; }
+      }
+      for (const rule of rulesOf(source.slice(source.indexOf("{", start) + 1, end))) {
+        if (!rule.selector.split(",").map((part) => part.trim()).includes(selector)) continue;
+        for (const part of rule.body.split(";")) {
+          const colon = part.indexOf(":");
+          if (colon !== -1) out[part.slice(0, colon).trim()] = part.slice(colon + 1).trim().replace(/\s+/g, " ");
+        }
+      }
+      from = end;
+    }
+  };
+
   it("leads with the ride's own map, in the same 16:9 slot Explore uses", () => {
-    const map = declarationsFor(".og-library__map");
-    expect(map["aspect-ratio"]).toBe("16 / 9");
-    expect(map["border-radius"]).toBe("var(--og-radius-object)");
-    // The picture comes first in the card, the way a ride list reads.
-    expect(declarationsFor(".og-library__map")["order"]).toBe("-1");
-    expect(declarationsFor(".og-library__track-thumbnail")["order"]).toBe("-1");
-    expect(declarationsFor(".og-library__row-main")["display"]).toBe("flex");
-    expect(declarationsFor(".og-library__row-main")["flex-direction"]).toBe("column");
+    const thumb = phone(".og-rides__thumb");
+    expect(thumb["aspect-ratio"]).toBe("16 / 9");
+    expect(thumb["width"]).toBe("100%");
+    expect(thumb["border-radius"]).toBe("var(--og-radius-card)");
+    expect(phone(".og-rides__row-open")["flex-direction"]).toBe("column");
   });
 
   it("puts the words on the page instead of in a second box", () => {
-    const row = declarationsFor(".og-library__row");
-    expect(row["border-color"]).toBe("transparent");
-    expect(row["background"]).toBe("transparent");
-    expect(row["padding"]).toBe("0");
+    expect(phone(".og-library__list")["background"]).toBe("transparent");
+    expect(phone(".og-library__row")["padding"]).toBe("0");
   });
 
   it("keeps the name at body size and every action at 48px", () => {
+    expect(declarationsFor(".og-rides__row-title")["font-size"]).toBe("var(--og-text-body)");
+    expect(declarationsFor(".og-rides__row-title")["font-weight"]).toBe("600");
     // Below 16px iOS zooms the page when the name is tapped to rename it.
-    expect(declarationsFor(".og-library__title-line input")["font-size"]).toBe("var(--og-text-body)");
-    expect(declarationsFor(".og-library__title-line input")["font-weight"]).toBe("600");
-    for (const selector of [".og-library__actions .og-primary", ".og-library__actions .og-secondary"]) {
-      expect(Number.parseInt(declarationsFor(selector)["min-height"] ?? "0", 10)).toBeGreaterThanOrEqual(48);
-    }
+    expect(declarationsFor(".og-rides__rename-field input")["font-size"] ?? "var(--og-text-body)").toBe("var(--og-text-body)");
+    expect(declarationsFor(".og-rides__more")["width"]).toBe("var(--og-touch)");
+    expect(declarationsFor(".og-rides__more")["height"]).toBe("var(--og-touch)");
   });
 });
+

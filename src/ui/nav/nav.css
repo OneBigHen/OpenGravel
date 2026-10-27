@@ -109,8 +109,14 @@
   }
 }
 
-/* Phones and tablets: the docked tab bar. */
+/* Phones and tablets: the docked tab bar. Every page and the planner sheet
+   reserve its measured height (PrimaryNav publishes it; a larger text size can
+   wrap a label onto a second line). */
 @media (max-width: 1180px) and (min-height: 501px) {
+  :root {
+    --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom)));
+  }
+
   .og-appbar {
     display: contents;
   }

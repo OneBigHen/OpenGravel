@@ -6,9 +6,7 @@
  * reasons, and the reason is always readable next to it.
  */
 
-import { readFileSync } from "node:fs";
 import { appCss } from "../../helpers/app-css";
-import path from "node:path";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

@@ -154,6 +154,7 @@
 }
 
 .og-explore__quick-chip {
+  position: relative;
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -170,6 +171,13 @@
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* 40px to the eye, 48px to the thumb. */
+.og-explore__quick-chip::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
 }
 
 .og-explore__quick-chip:is([aria-pressed="true"], [data-filter="on"]) {
@@ -878,7 +886,7 @@
 
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-explore {
-    padding-bottom: calc(var(--og-tabbar-h, 56px) + var(--og-space-5));
+    padding-bottom: calc(var(--og-tabbar-h) + var(--og-space-5));
   }
 }
 
