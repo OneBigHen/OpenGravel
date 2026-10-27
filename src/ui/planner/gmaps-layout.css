@@ -387,6 +387,15 @@
   font-size: var(--og-text-headline);
 }
 
+/* A picked place is a destination: its name is the sheet's title. */
+.og-planner .og-place-sheet h2#place-sheet-title {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
 .og-planner .og-place-sheet .og-place-sheet__close {
   top: var(--og-space-1);
   right: 0;
@@ -712,4 +721,18 @@
   border-radius: var(--og-radius-pill);
   font-size: var(--og-text-body);
   font-weight: 700;
+}
+
+/* Small phones: the three home pills keep their words on one line. */
+@media (max-width: 360px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    gap: 4px;
+    font-size: var(--og-text-caption);
+    white-space: nowrap;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
+    width: 16px;
+    height: 16px;
+  }
 }

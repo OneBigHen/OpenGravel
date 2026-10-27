@@ -299,3 +299,35 @@
     height: var(--og-touch);
   }
 }
+
+/* Search results read like a map's: a pin beside each place, the name over its
+   area. Rows that are not places (your location, ask the advisor, saved ones)
+   keep the same indent so the names line up. */
+@media (max-width: 1180px) {
+  .og-top-search .og-place-search__option {
+    position: relative;
+    padding-left: 48px;
+  }
+
+  .og-top-search .og-place-search__option[data-testid="place-option"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    width: 20px;
+    height: 20px;
+    background: var(--og-ink-2);
+    transform: translateY(-50%);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Cpath d='M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z'/%3E%3Ccircle cx='12' cy='10' r='2.3'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+
+  .og-top-search .og-place-search__option + .og-place-search__option {
+    border-top: 1px solid var(--og-line);
+  }
+
+  /* Typing a search: the home pills step away, like Google's. */
+  .og-planner:has(.og-top-search input:focus, .og-top-search .og-place-search__list:not([hidden])) .og-planner__sheet[data-idle="true"] {
+    visibility: hidden;
+  }
+}
