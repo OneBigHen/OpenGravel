@@ -43,7 +43,7 @@ describe("settings surface", () => {
     expect(units).toHaveTextContent("miles");
     // Miles are the only unit, so the page states the fact instead of offering dead controls.
     expect(screen.queryByLabelText("Distance units")).not.toBeInTheDocument();
-    expect(screen.getByText(/Rides stay on this device\. Export includes your garage and preferences\./)).toBeInTheDocument();
+    expect(screen.getByText(/^Rides stay on this device\.$/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Export all data" }));
     expect(onExport).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByRole("button", { name: "Delete all data" }));
