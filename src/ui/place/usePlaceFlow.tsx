@@ -241,7 +241,9 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
     onSave={() => { if (services?.memory === undefined) { toast("Saving places is unavailable here."); return; } services.memory.toggleSaved(place); toast("Saved places updated"); }}
     onShare={() => void sharePlace(place)}
     onClose={close}/>;
-  return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen, onViewport: setExtent,
+  return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen,
+    /** Leaves the Directions options view (the route was closed). */
+    closeOptions: () => setOptionsOpen(false), onViewport: setExtent,
     top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }

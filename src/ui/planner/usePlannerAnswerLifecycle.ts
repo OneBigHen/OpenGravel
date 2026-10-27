@@ -165,6 +165,9 @@ export function usePlannerAnswerLifecycle(input: {
     lastAnswerRef.current = answer;
 
     if (previous === null || previous.revision === answer.revision) return;
+    // The first answer after a whole-ride clear is a new ride, not a change.
+    const cleared = plannerUiStore.getState().clearedRevision;
+    if (cleared !== null && previous.revision < cleared && answer.revision >= cleared) return;
 
     const span = computeChangedSpan(previous.geometry, answer.geometry);
     const delta = routeDelta(previous, answer);
@@ -178,7 +181,7 @@ export function usePlannerAnswerLifecycle(input: {
       delta,
       untilIso,
     });
-  }, [session, geometry]);
+  }, [session, geometry, plannerUiStore]);
 
   useEffect(() => {
     if (updateHighlight === null) return;

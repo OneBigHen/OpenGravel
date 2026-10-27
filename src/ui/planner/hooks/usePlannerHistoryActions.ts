@@ -43,6 +43,7 @@ export function usePlannerHistoryActions(input: {
     plannerUiStore.getState().setSketchTool(false);
     clearUpdateHighlight();
     rideDocumentStore.getState().dispatch(clearRideCommand(document));
+    plannerUiStore.getState().setClearedRevision(rideDocumentStore.getState().document.revision);
     // With no ride left, the sheet is the composer again, not an empty ride row.
     plannerUiStore.getState().setSheetDetent("peek");
   }, [document, plannerUiStore, rideDocumentStore, planningSessionStore, clearUpdateHighlight]);

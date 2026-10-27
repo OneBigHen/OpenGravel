@@ -227,6 +227,14 @@ export interface PlannerUiState {
   readonly addSketchPreviewGeneration: (generation: number) => void;
   readonly resetSketchPreviewGenerations: () => void;
   /**
+   * The document revision a whole-ride clear produced. An answer for an older
+   * revision belongs to the cleared ride: while the next ride is being found it
+   * is not shown as if it were that ride (a loop started after closing a
+   * destination route used to show the old route's numbers).
+   */
+  readonly clearedRevision: number | null;
+  readonly setClearedRevision: (revision: number) => void;
+  /**
    * Arming and disarming the `sketch` pointer tool (05 §4, §18, §19).
    *
    * Arming sets {@link PlannerUiState.activeTool} so the renderer disables its own
@@ -415,6 +423,8 @@ export function createPlannerUiStore(
     addSketchPreviewGeneration: (generation: number): void =>
       set({ sketchPreviewGenerations: [...get().sketchPreviewGenerations, generation] }),
     resetSketchPreviewGenerations: (): void => set({ sketchPreviewGenerations: [] }),
+    clearedRevision: null,
+    setClearedRevision: (revision: number): void => set({ clearedRevision: revision }),
     setSketchTool: (active: boolean): void =>
       set({
         activeTool: active ? "sketch" : "pan",
