@@ -74,7 +74,9 @@ describe("top search and toast", () => {
     render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={onClear} onChip={onChip} onLayer={onLayer}/>);
     expect(screen.getByPlaceholderText("Search here")).toBeInTheDocument();
     expect(screen.queryByTestId("search-chip-twisty")).toBeNull();
-    expect(screen.getAllByRole("button")).toHaveLength(8);
+    // Clear, five place chips, two layer switches, and the named Menu beside the search.
+    expect(screen.getAllByRole("button")).toHaveLength(9);
+    expect(screen.getByRole("button", { name: "Menu" })).toHaveAttribute("aria-expanded", "false");
     const gas = screen.getByTestId("search-chip-gas");
     expect(gas.querySelector("svg")).not.toBeNull();
     expect(gas).toHaveTextContent("Gas");

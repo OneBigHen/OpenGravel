@@ -197,7 +197,12 @@ export function RouteDecisionCard({
       <span className="og-phone-choice__swatch" aria-hidden="true" />
       <span className="og-phone-choice__body">
         <span className="og-phone-choice__role">{compactLabel ?? card.roleLabel}</span>
-        <span className="og-phone-choice__meta">{card.durationLabel} · {card.distanceLabel}{compactReason ? ` · ${compactReason}` : ""}</span>
+        <span className="og-phone-choice__meta">
+          <span className="og-phone-choice__time">{card.durationLabel}</span>
+          <span className="og-phone-choice__dot" aria-hidden="true"> · </span>
+          <span className="og-phone-choice__dist">{card.distanceLabel}</span>
+          {compactReason ? <><span className="og-phone-choice__dot og-phone-choice__dot--reason" aria-hidden="true"> · </span><span className="og-phone-choice__reason">{compactReason}</span></> : null}
+        </span>
       </span>
       {card.addedMinutes == null || card.addedMinutes <= 0 ? null : <span className="og-phone-choice__delta">+{card.addedMinutes} min<span className="og-visually-hidden"> vs fastest</span></span>}
       <span className="og-phone-choice__check" aria-hidden="true">{card.isSelected ? <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4.5 10.5 8 14l7.5-8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg> : null}</span>

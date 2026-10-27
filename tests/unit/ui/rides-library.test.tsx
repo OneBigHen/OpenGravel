@@ -298,7 +298,7 @@ describe("RidesLibrary", () => {
     render(<RidesLibrary service={service()} />);
 
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(nav.textContent).toMatch(/Plan\s*·\s*Explore\s*·\s*My rides/);
+    expect(nav.textContent).toMatch(/Map\s*·\s*Explore\s*·\s*My rides/);
     expect(screen.getByRole("link", { name: "Map" })).toHaveAttribute("href", "/");
     expect(screen.getByRole("link", { name: "My rides" })).toHaveAttribute("aria-current", "page");
   });

@@ -628,3 +628,88 @@
     background: var(--og-glass-dense);
   }
 }
+
+/* Route preview (mobile UX handoff, 2026-10-27): the chosen ride reads as a
+   hero, like Google's directions sheet: its name as a plum eyebrow, the time
+   large in green, distance beside it, the measured reason under. The other
+   candidates stay compact rows under it, one tap to switch. */
+.og-route-options .og-phone-choice[data-selected="true"] {
+  align-items: flex-start;
+  padding: var(--og-space-3) var(--og-space-3) var(--og-space-3) var(--og-space-2);
+  background: transparent;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__swatch {
+  width: 5px;
+  height: auto;
+  align-self: stretch;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__role {
+  color: var(--og-route);
+  font-size: var(--og-text-caption);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-3);
+  row-gap: 2px;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dot {
+  display: none;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__time {
+  color: var(--og-primary-text);
+  font-family: var(--og-face-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dist {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__reason {
+  flex-basis: 100%;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__check {
+  display: none;
+}
+
+/* The alternatives under the hero: a hairline apart, quiet until tapped. */
+.og-route-options .og-phone-alternatives > li:not(:has(.og-phone-choice[data-selected="true"])) {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-options .og-phone-choice:not([data-selected="true"]) .og-phone-choice__role::after {
+  content: " ›";
+  color: var(--og-ink-2);
+  font-weight: 500;
+}
+
+/* The selected ride leads the list wherever the planner ranked it. */
+.og-route-options .og-phone-alternatives > li:has(.og-phone-choice[data-selected="true"]) {
+  order: -1;
+}
+
+.og-route-options__start .og-primary {
+  border-radius: var(--og-radius-pill);
+  font-size: 18px;
+  font-weight: 700;
+}

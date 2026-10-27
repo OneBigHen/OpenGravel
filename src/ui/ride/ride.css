@@ -2947,3 +2947,116 @@
     font-size: var(--og-text-caption);
   }
 }
+
+/* Ride menu polish (mobile UX handoff, 2026-10-27): the controls sheet reads
+   as one grouped list, not a stack of boxed buttons. Rows sit on the glass
+   well, a hairline apart, label left, hint right, a chevron where a row
+   opens something. Every row keeps its 56px glove target. */
+.og-ride__sheet .og-ride__detour {
+  gap: 0;
+  overflow: hidden;
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-well);
+}
+
+.og-ride__sheet .og-ride__detour > .og-ride__sheet-rows {
+  gap: 0;
+}
+
+.og-ride__sheet .og-ride__detour > * + * {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__sheet-row {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__sheet-row::after,
+.og-ride__sheet .og-ride__detour .og-ride__more > summary::after,
+.og-ride__sheet .og-ride__style > summary::after {
+  content: "›";
+  flex: none;
+  color: var(--og-ink-2);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__sheet-row-hint {
+  margin-left: auto;
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__more > summary {
+  justify-content: space-between;
+  min-height: 56px;
+  margin: 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font-weight: 700;
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__more[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.og-ride__sheet .og-ride__detour .og-ride__detour-actions {
+  padding: 0 12px 12px;
+}
+
+.og-ride__sheet .og-ride-fuel {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 4px 4px 4px 16px;
+  border-color: transparent;
+  background: var(--og-glass-well);
+}
+
+.og-ride__sheet .og-ride-fuel[data-tone="warn"] {
+  border-color: var(--og-danger);
+}
+
+.og-ride__sheet .og-ride-fuel__line {
+  flex: 1 1 12em;
+  font-size: var(--og-text-body);
+}
+
+.og-ride__sheet .og-ride-fuel__actions .og-ride__action--link {
+  min-height: 48px;
+  background: transparent;
+  color: var(--og-primary-text);
+  font-weight: 600;
+}
+
+.og-ride__sheet .og-ride__safety {
+  border-color: transparent;
+  background: var(--og-glass-well);
+}
+
+.og-ride__sheet .og-ride__sheet-row--danger {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--og-danger) 12%, transparent);
+  color: var(--og-danger);
+}
+
+.og-ride__sheet .og-ride__sheet-row--danger .og-ride__sheet-row-hint {
+  color: var(--og-danger);
+}
+
+.og-ride__sheet .og-ride__sheet-rows > .og-ride__sheet-row:not(.og-ride__sheet-row--danger) {
+  border-color: transparent;
+  background: var(--og-glass-well);
+}
+
+.og-ride__sheet .og-ride__actions .og-ride__action:not(.og-ride__action--primary),
+.og-ride__sheet .og-ride__style > summary {
+  border-color: transparent;
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-well);
+}
