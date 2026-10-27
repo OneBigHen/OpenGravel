@@ -74,6 +74,20 @@ describe("createGuidedReroutePlanner", () => {
     expect(port.requests[0]?.stops).toEqual([{ lon: -75.55, lat: 40.5 }]);
   });
 
+  it("leaves the way a moving rider is heading, and any way when they are stopped", async () => {
+    const port = provider();
+    const planner = createGuidedReroutePlanner({
+      rides: { loadRide: vi.fn(async () => ({ ok: true as const, document })) } as never,
+      geometry: createMemoryGeometryStore(), provider: port,
+    });
+    const moving = navigation({ position: { ...navigation().position, headingDegrees: -90, speedMps: 15 } });
+    await planner.plan({ navigation: moving, signal: new AbortController().signal });
+    expect(port.requests[0]?.originHeadingDegrees).toBe(270);
+    const stopped = navigation({ position: { ...navigation().position, headingDegrees: 90, speedMps: 0.5 } });
+    await planner.plan({ navigation: stopped, signal: new AbortController().signal });
+    expect(port.requests[1]).not.toHaveProperty("originHeadingDegrees");
+  });
+
   it("does not plan without a good fix or outside guidance", async () => {
     const port = provider();
     const planner = createGuidedReroutePlanner({

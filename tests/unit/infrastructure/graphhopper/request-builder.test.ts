@@ -223,6 +223,16 @@ describe("GraphHopper request builder", () => {
     expect(body.heading_penalty).toBe(SKETCH_HEADING_PENALTY_SECONDS);
   });
 
+  it("holds a rerouted rider's heading on the origin and leaves every other point free", () => {
+    const body = createGraphHopperRequest(
+      request({ originHeadingDegrees: 45, stops: [READING] }),
+      { details: REQUESTED_DETAILS },
+    );
+    expect(body.headings).toEqual([45, "NaN", "NaN"]);
+    expect(body.heading_penalty).toBe(SKETCH_HEADING_PENALTY_SECONDS);
+    expect(createGraphHopperRequest(request(), { details: REQUESTED_DETAILS })).not.toHaveProperty("headings");
+  });
+
   it("sends exactly the chunk's points and band when the provider splits a sketch", () => {
     const chunk = [
       { lon: -76.7, lat: 40.2732 },

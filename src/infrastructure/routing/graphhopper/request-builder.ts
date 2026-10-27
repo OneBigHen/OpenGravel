@@ -581,7 +581,11 @@ export function requestWirePoints(request: ProviderRouteRequest): GraphHopperWir
 /** The endpoint wire list a non-round-trip request starts from. */
 function endpointPoints(request: ProviderRouteRequest): GraphHopperWirePoint[] {
   return [
-    { lon: request.origin.lon, lat: request.origin.lat },
+    {
+      lon: request.origin.lon,
+      lat: request.origin.lat,
+      ...(request.originHeadingDegrees === undefined ? {} : { heading: request.originHeadingDegrees }),
+    },
     ...request.stops.map((stop) => ({ lon: stop.lon, lat: stop.lat })),
     ...request.shaping.map((point) => ({ lon: point.lon, lat: point.lat })),
     ...sketchViaPoints(request),

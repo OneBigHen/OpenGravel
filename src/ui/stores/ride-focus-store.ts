@@ -145,7 +145,7 @@ const FAR_FROM_START_METERS = 500;
 /** No fix for this long: restart the position source by itself (DV-10). */
 const AUTO_RETRY_LOCATION_MS = 20_000;
 /** How long an automatic reroute waits after the last one. */
-const AUTO_REROUTE_COOLDOWN_MS = 45_000;
+const AUTO_REROUTE_COOLDOWN_MS = 8_000;
 /** How long "Route updated" stays on screen. */
 const REROUTE_MESSAGE_MS = 10_000;
 /** A taken opportunity finishes once the rider is back within this of its end… */
@@ -2672,9 +2672,10 @@ export function createRideFocusStore(
       },
 
       dismissFarFromStart(): void {
-        // Settled only once the rider reaches the line; until then nothing
-        // re-plans on its own, and the question is not asked again.
+        // The rider rides on: from here an off-route ride re-plans by itself,
+        // as a sat-nav does, and the question is not asked again.
         farFromStartDismissed = true;
+        farFromStartSettled = true;
         set({ farFromStart: null });
       },
     };

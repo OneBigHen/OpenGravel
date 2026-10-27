@@ -60,6 +60,21 @@ function candidateId(candidate: ProviderCandidate): string | null {
   return typeof id === "string" && id.length > 0 ? id : null;
 }
 
+/** Below this speed a GPS heading is noise, so the route may leave any way. */
+const HEADING_MIN_SPEED_MPS = 2;
+
+/**
+ * A moving rider's heading on the request's origin: the new route carries on
+ * the way they are riding (a sat-nav reroute) instead of "turn around" back to
+ * the line they left.
+ */
+function withRiderHeading(request: ProviderRouteRequest, navigation: SessionNavigationState): ProviderRouteRequest {
+  const { headingDegrees, speedMps } = navigation.position;
+  if (headingDegrees === null || !Number.isFinite(headingDegrees)) return request;
+  if (speedMps !== null && speedMps < HEADING_MIN_SPEED_MPS) return request;
+  return { ...request, originHeadingDegrees: ((headingDegrees % 360) + 360) % 360 };
+}
+
 export function createGuidedReroutePlanner(deps: {
   readonly rides: RideRepositoryPort;
   readonly geometry: GeometryStore;
@@ -110,7 +125,7 @@ export function createGuidedReroutePlanner(deps: {
         rideRevision: navigation.plan.rideRevision,
         planningGeneration,
       });
-      const answer = await deps.provider.candidates(built.request, input.signal);
+      const answer = await deps.provider.candidates(withRiderHeading(built.request, navigation), input.signal);
       if (input.signal.aborted) throw input.signal.reason;
       const chosen =
         answer.candidates.find((candidate) => candidate.providerMetadata?.["bestRide"] === true) ??

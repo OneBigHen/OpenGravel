@@ -154,7 +154,9 @@ function loopShaping(
   const intent = input.authoredIntent;
   if (intent.sketch !== null || input.aheadLine === undefined) return null;
   const followLine = input.followLine === true;
-  if (intent.shape !== "loop" && !followLine) return null;
+  // A destination ride shaped through points rides back onto its line too:
+  // its authored shaping includes points already behind the rider.
+  if (intent.shape !== "loop" && !followLine && intent.shaping.length === 0) return null;
   const anchors = loopRejoinAnchors(input.aheadLine, stops.map((stop) => stop.coordinate), followLine ? 0 : undefined);
   return anchors.map((coordinate, index) => ({
     id: `shape_reroute_rejoin_${index}` as ShapingId,
