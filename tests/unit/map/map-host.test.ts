@@ -769,7 +769,7 @@ describe("the cartography table", () => {
     expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.3);
   });
 
-  it("colours each route by its candidate slot, Ember first, over a stronger casing (05 §11)", () => {
+  it("draws the chosen ride plum and every alternative one quiet grey (DESIGN.md §2)", () => {
     const layers = routeLayers(DEFAULT_MAP_PALETTE);
     const byId = new Map(layers.map((layer) => [layer.id, layer]));
 
@@ -777,25 +777,12 @@ describe("the cartography table", () => {
     const selected = byId.get(MAP_LAYER_IDS.routeSelected);
     const alternative = byId.get(MAP_LAYER_IDS.routeAlternative);
     expect(casing?.filter).toEqual(["==", ["get", "state"], "selected"]);
-    // A line and its card share a colour whichever is selected (UX rework
-    // phase 2): the first candidate is Ember, the others their own tints, and a
-    // candidate past the palette is the neutral Slate.
-    const tints = (layer: { paint?: Record<string, unknown> } | undefined): unknown[] =>
-      layer?.paint?.["line-color"] as unknown[];
-    expect(tints(selected)).toEqual([
-      "match",
-      ["get", "tint"],
-      0,
-      DEFAULT_MAP_PALETTE.ember,
-      1,
-      DEFAULT_MAP_PALETTE.routePlum,
-      2,
-      DEFAULT_MAP_PALETTE.deepSpruce,
-      DEFAULT_MAP_PALETTE.slate,
-    ]);
-    expect(tints(alternative)).toEqual(tints(selected));
-    expect(tints(casing)?.[3]).toBe(DEFAULT_MAP_PALETTE.emberStrong);
-    expect(tints(selected)).not.toContain(DEFAULT_MAP_PALETTE.signalBlue);
+    // Design v3: colour means "the one you will ride", as in the sheet's list.
+    const colour = (layer: { paint?: Record<string, unknown> } | undefined): unknown => layer?.paint?.["line-color"];
+    expect(colour(selected)).toBe(DEFAULT_MAP_PALETTE.routePlum);
+    expect(colour(casing)).toBe(DEFAULT_MAP_PALETTE.routePlumStrong);
+    expect(colour(alternative)).toBe(DEFAULT_MAP_PALETTE.slate);
+    expect([colour(selected), colour(alternative)]).not.toContain(DEFAULT_MAP_PALETTE.signalBlue);
 
     // The selected line must carry the most visual weight, and the alternatives
     // must be visibly secondary rather than a second highlight.

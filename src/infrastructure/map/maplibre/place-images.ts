@@ -127,8 +127,8 @@ export function createPlacePillImages(palette: MapPalette): readonly PlacePillIm
     { id: PLACE_IMAGE_IDS.quiet, data: image(paper), options },
     { id: PLACE_IMAGE_IDS.selected, data: image(ink), options },
     // Route names wear their line's colour as the dot, so the pill reads as the
-    // line's own tag (same slots as `tintColor` in style.ts).
-    ...[palette.ember, palette.routePlum, palette.deepSpruce, palette.slate].map((color, slot) => ({
+    // line's own tag: plum for the chosen ride, grey for the rest (style.ts).
+    ...[palette.routePlum, palette.slate, palette.slate, palette.slate].map((color, slot) => ({
       id: ROUTE_LABEL_IMAGE_IDS[slot]!,
       data: image(paper, parseColor(color, [22, 29, 28])),
       options,

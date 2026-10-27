@@ -56,6 +56,12 @@
   outline-offset: var(--og-focus-offset);
 }
 
+/* The sheet moves focus to its heading for screen readers; a heading is not a
+   control, so it shows no ring. */
+.og-shared-sheet :is(h2, h3)[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* Undo / Redo: two quiet round buttons; the verb is the accessible name. */
 .og-sheet__head .og-history {
   display: flex;
@@ -327,6 +333,26 @@
     display: none;
   }
 
+  /* One tool row under the grab bar: Edit, Undo, Redo … ×. */
+  .og-planner .og-planner__sheet .og-sheet__head {
+    flex-wrap: wrap;
+    column-gap: var(--og-space-2);
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__tools {
+    order: 1;
+    margin-left: 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > .og-history {
+    order: 2;
+    margin-left: 0;
+  }
+
+  .og-planner .og-planner__sheet .og-sheet__head > :is(.og-sheet__clear, .og-sheet__undo-clear) {
+    order: 3;
+  }
+
   .og-planner .og-planner__sheet .og-sheet__head > .og-sheet__clear {
     margin-left: auto;
   }
@@ -377,6 +403,11 @@
     order: 4;
   }
 
+  /* In the Options and Edit views the way back comes first. */
+  .og-planner .og-sheet__body > .og-route-options__editor-head {
+    order: -1;
+  }
+
   /* Directions: the route options own the sheet. */
   .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > * {
     display: block;
@@ -391,8 +422,12 @@
     display: none;
   }
 
+  /* The options list is the part that gives way: Start ride always fits. */
   .og-planner .og-planner__sheet[data-directions="true"] .og-sheet__body > .og-route-options {
     display: flex;
+    flex: 1 1 auto;
+    flex-shrink: 1;
+    min-height: 0;
   }
 
   /* In a sheet, content is grouped rows divided by hairlines, not cards. */
@@ -409,7 +444,7 @@
     font-size: var(--og-text-body);
   }
 
-  .og-planner .og-planner__sheet :is(button, summary, input, select) {
+  .og-planner .og-planner__sheet :is(button:not(.og-switch), summary, select, input:not([type="checkbox"], [type="radio"])) {
     min-height: var(--og-touch);
   }
 

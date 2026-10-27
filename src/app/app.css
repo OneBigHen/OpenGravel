@@ -1571,20 +1571,6 @@ h3 {
   border: 0;
 }
 
-.og-prepare__departure .og-style__chip {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.og-prepare__departure .og-style__chips {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.og-prepare__departure .og-style__chip span {
-  text-align: center;
-  line-height: 1.15;
-}
-
 .og-prepare__departure > legend {
   padding: 0;
   margin-bottom: 6px;
@@ -2193,212 +2179,9 @@ h3 {
   font-size: var(--og-text-meta);
   color: var(--og-ink-2);
 }
-.og-style__group {
-  border: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.og-style__legend {
-  padding: 0;
-  font-size: var(--og-text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--og-ink-2);
-}
-
-.og-style__chips,
-.og-style__loop {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.og-style__chip {
-  position: relative;
-  display: inline-flex;
-}
-
-.og-style__chip input {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.og-style__chip span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--og-line);
-  border-radius: var(--og-radius-pill);
-  background: var(--og-bg);
-  color: var(--og-ink);
-  font-size: var(--og-text-meta);
-  white-space: nowrap;
-}
-
-.og-style__chip input:checked + span {
-  border-color: var(--og-ink);
-  background: var(--og-primary);
-  color: var(--og-surface);
-}
-
-.og-style__chip input:focus-visible + span,
-.og-style__switch input:focus-visible,
-.og-style__toggle:focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
-}
-[data-testid="ride-shape"] .og-style__chips {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-[data-testid="ride-shape"] .og-style__chip span {
-  justify-content: center;
-  width: 100%;
-}
 
 .og-composer__row--loop {
   grid-template-areas: "label value value";
-}
-
-.og-composer__row--loop > .og-style__loop {
-  grid-area: value;
-}
-
-.og-composer__row--loop .og-style__chip span {
-  padding: 0 11px;
-}
-
-.og-style {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px solid var(--og-line);
-  padding-top: 10px;
-}
-
-.og-style__heading {
-  display: none;
-  margin: 0;
-}
-
-.og-style__toggle {
-  font: inherit;
-  display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) auto;
-  grid-template-areas: "label value action";
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--og-ink);
-  text-align: left;
-  cursor: pointer;
-}
-
-.og-style__summary {
-  grid-area: value;
-  font-size: var(--og-text-meta);
-  color: var(--og-ink);
-  overflow-wrap: break-word;
-}
-
-.og-style__chevron {
-  grid-area: action;
-  color: var(--og-ink-2);
-  padding: 0 4px;
-  font-size: var(--og-text-body);
-  line-height: 1;
-}
-
-.og-style__panel {
-  display: grid;
-  gap: 12px;
-}
-
-.og-style__panel[data-open="false"] {
-  display: none;
-}
-
-.og-style__switches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-}
-
-.og-style__switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-  font-size: var(--og-text-meta);
-  color: var(--og-ink);
-  cursor: pointer;
-}
-
-.og-style__switch input {
-  appearance: none;
-  margin: 0;
-  position: relative;
-  width: 40px;
-  height: 24px;
-  border-radius: var(--og-radius-control);
-  border: 1px solid var(--og-line-strong);
-  background: var(--og-bg);
-  cursor: pointer;
-  flex: none;
-}
-
-.og-style__switch input::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-ink-2);
-  transition: transform 120ms ease;
-}
-
-.og-style__switch input:checked {
-  border-color: var(--og-ink);
-  background: var(--og-primary);
-}
-
-.og-style__switch input:checked::after {
-  background: var(--og-surface);
-  transform: translateX(16px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .og-style__switch input::after {
-    transition: none;
-  }
-}
-@media (min-width: 1181px), (min-width: 761px) and (orientation: landscape) and (max-height: 500px) {
-  .og-style__toggle {
-    display: none;
-  }
-
-  .og-style__heading {
-    display: block;
-  }
-
-  .og-style__panel[data-open="false"] {
-    display: grid;
-  }
 }
 
 .og-composer__label {
@@ -2407,14 +2190,6 @@ h3 {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--og-ink-2);
-}
-.og-style__toggle-label {
-  font-size: var(--og-text-body);
-  font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: normal;
-  text-transform: none;
-  color: var(--og-ink);
 }
 .og-composer__value {
   grid-area: value;
@@ -3114,9 +2889,8 @@ h3 {
   --og-route-tint: var(--og-ink-2);
   border-bottom: 1px solid var(--og-line);
 }
-.og-route-card[data-tint="0"] { --og-route-tint: var(--og-route); }
-.og-route-card[data-tint="1"] { --og-route-tint: var(--og-route); }
-.og-route-card[data-tint="2"] { --og-route-tint: var(--og-primary); }
+.og-route-card { --og-route-tint: var(--og-route-alt); }
+.og-route-card[data-selected="true"] { --og-route-tint: var(--og-route); }
 
 .og-route-card__swatch {
   display: inline-block;
@@ -3755,9 +3529,8 @@ h3 {
   --og-route-tint: var(--og-ink-2);
 }
 
-.og-elevation-slot[data-tint="0"] { --og-route-tint: var(--og-route); }
-.og-elevation-slot[data-tint="1"] { --og-route-tint: var(--og-route); }
-.og-elevation-slot[data-tint="2"] { --og-route-tint: var(--og-primary); }
+/* It always shows the chosen ride, so it wears the chosen ride's plum. */
+.og-elevation-slot { --og-route-tint: var(--og-route); }
 
 .og-elevation {
   --og-elevation-gutter: 0px;
@@ -4229,44 +4002,6 @@ input[type="file"]::file-selector-button {
 input[type="file"]:hover:not(:disabled)::file-selector-button {
   background: color-mix(in srgb, var(--og-surface-2) 65%, var(--og-surface));
 }
-.og-style__chips {
-  flex-wrap: nowrap;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--og-radius-control);
-  background: color-mix(in srgb, var(--og-surface-2) 30%, var(--og-bg));
-}
-
-.og-style__chips > .og-style__chip {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.og-style__chips .og-style__chip span {
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  padding: 8px;
-  border-color: transparent;
-  border-radius: var(--og-radius-control);
-  background: transparent;
-  font-size: var(--og-text-meta);
-  line-height: 1.35;
-  text-align: center;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-.og-style__chips .og-style__chip input:hover:not(:checked) + span {
-  background: color-mix(in srgb, var(--og-surface) 70%, transparent);
-}
-
-.og-style__chips .og-style__chip input:checked + span {
-  border-color: var(--og-ink);
-  background: var(--og-primary);
-  color: var(--og-surface);
-  box-shadow: var(--og-shadow-float);
-}
 .og-composer__row--direction {
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
@@ -4277,27 +4012,6 @@ input[type="file"]:hover:not(:disabled)::file-selector-button {
 
 .og-composer__row--direction > .og-composer__label {
   grid-area: label;
-}
-
-.og-style__way {
-  grid-area: value;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.og-style__way .og-style__chip {
-  flex: 1 1 auto;
-  min-width: 48px;
-}
-
-.og-style__way .og-style__chip span {
-  justify-content: center;
-  width: 100%;
-  min-height: 48px;
-  padding: 0 4px;
-  font-size: var(--og-text-meta);
-  white-space: normal;
 }
 
 .og-info-card button:focus-visible,
@@ -4650,11 +4364,6 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
   min-width: 0;
 }
 
-.og-composer__shape-row > .og-style__group {
-  flex: 1;
-  min-width: 0;
-}
-
 .og-composer__swap {
   display: grid;
   place-items: center;
@@ -4792,9 +4501,8 @@ html[data-native="1"] :is(input, textarea, [contenteditable="true"]) {
 .og-glance__button:hover .og-glance__open {
   color: var(--og-ink);
 }
-.og-glance[data-tint="0"] { --og-glance-tint: var(--og-route); }
-.og-glance[data-tint="1"] { --og-glance-tint: var(--og-route); }
-.og-glance[data-tint="2"] { --og-glance-tint: var(--og-primary); }
+/* It always shows the chosen ride, so it wears the chosen ride's plum. */
+.og-glance { --og-glance-tint: var(--og-route); }
 
 .og-glance__swatch {
   flex: none;
@@ -5645,12 +5353,6 @@ h1,
 h2,
 h3 {
   letter-spacing: -0.01em;
-}
-a.og-primary {
-  border: 0;
-  background: linear-gradient(180deg, var(--og-primary), var(--og-primary));
-  color: var(--og-on-primary);
-  box-shadow: var(--og-shadow-float);
 }
 input,
 select,
@@ -6646,25 +6348,6 @@ textarea {
     align-items: stretch;
     gap: var(--og-space-1);
     min-width: 0;
-  }
-
-  .og-composer__row--loop > .og-style__loop,
-  .og-composer__row--direction > .og-style__way {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    overscroll-behavior-x: contain;
-    padding-bottom: 2px;
-  }
-
-  .og-composer__row--loop > .og-style__loop::-webkit-scrollbar,
-  .og-composer__row--direction > .og-style__way::-webkit-scrollbar {
-    display: none;
-  }
-
-  .og-composer__row--loop .og-style__chip,
-  .og-composer__row--direction .og-style__chip {
-    flex: none;
   }
 }
 .og-refine .og-point {

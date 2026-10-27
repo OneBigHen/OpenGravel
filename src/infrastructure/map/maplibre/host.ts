@@ -150,6 +150,7 @@ import {
 import type { MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
 import { declutterTargets, gasOnlyFilter } from "@/infrastructure/map/maplibre/ride-declutter";
 import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
+import { toNightLegible } from "@/infrastructure/map/night-legible-style";
 
 /** The default location of the vendored worker module (see the header). */
 export const DEFAULT_WORKER_PATH = "/vendor/maplibre/maplibre-gl-worker.mjs";
@@ -931,7 +932,7 @@ export async function createMapLibreHost(
       ? fetch(mapboxRequestUrl(NIGHT_CONTRAST_BASE_STYLE_URL, token)).then(async (response) =>
           response.ok ? (toNightContrast(await response.json()) as MapStyleSpec) : null)
       : fetch(OPENFREEMAP_DARK_STYLE_URL).then(async (response) =>
-          response.ok ? ((await response.json()) as MapStyleSpec) : null))
+          response.ok ? (toNightLegible(await response.json()) as MapStyleSpec) : null))
       .then((spec) => {
         nightStyleSpec = spec;
         return spec;

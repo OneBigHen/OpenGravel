@@ -60,7 +60,8 @@
   z-index: 2;
 }
 
-.og-map .maplibregl-ctrl-attrib {
+.og-map .maplibregl-ctrl-attrib,
+.og-map .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact {
   max-width: 70%;
   background: var(--og-surface);
   color: var(--og-ink-2);

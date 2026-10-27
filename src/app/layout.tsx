@@ -10,6 +10,7 @@ import "@/ui/map/map.css";
 import "@/ui/planner/planner-shell.css";
 import "@/ui/sheet/sheet.css";
 import "@/ui/planner/plan-sheet.css";
+import "@/ui/planner/ride-style.css";
 import "@/ui/settings/settings.css";
 import "@/ui/explore/explore.css";
 import "@/ui/rides/rides.css";

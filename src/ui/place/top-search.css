@@ -217,6 +217,12 @@
     pointer-events: none;
   }
 
+  /* The header gives way to the search, but it carries the tab bar. */
+  .og-planner:has(.og-top-search) .og-planner__header .og-planner__nav-shell {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
   .og-planner:has(.og-top-search) .og-places-overlay--planner .og-places-control {
     display: none;
   }

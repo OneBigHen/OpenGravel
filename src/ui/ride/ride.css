@@ -2704,7 +2704,7 @@
   grid-row: auto;
 }
 .og-ride__maneuver:not([data-kind="suspended"], [data-kind="waiting"]) {
-  background: linear-gradient(180deg, var(--og-primary), var(--og-primary));
+  background: var(--og-primary);
   color: var(--og-on-primary);
 }
 .og-ride .og-layers {
