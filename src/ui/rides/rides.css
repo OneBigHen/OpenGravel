@@ -936,3 +936,70 @@
   border-radius: var(--og-radius-control);
   background: var(--og-surface-2);
 }
+
+/* Landscape phones: the SwitchBack batch report fits one screen whole. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-switchback-import {
+    gap: var(--og-space-1);
+    margin-bottom: var(--og-space-1);
+    padding: var(--og-space-2) var(--og-space-3);
+  }
+
+  .og-switchback-import .og-import__success {
+    grid-template-areas:
+      "summary title"
+      "files files";
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 2px var(--og-space-2);
+    padding: var(--og-space-2);
+  }
+
+  .og-switchback-import__result-copy {
+    grid-area: summary;
+  }
+
+  .og-switchback-import__result-copy p {
+    display: none;
+  }
+
+  .og-switchback-import .og-switchback-import__report-title {
+    grid-area: title;
+    justify-self: end;
+    margin: 0;
+    font-size: var(--og-text-meta);
+    line-height: 1.2;
+  }
+
+  .og-switchback-import .og-switchback-import__report-items {
+    grid-area: files;
+    gap: 2px;
+  }
+
+  .og-switchback-import .og-switchback-import__report-items > li {
+    gap: 2px;
+    padding: 2px var(--og-space-1);
+  }
+
+  .og-switchback-import__file-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 2px var(--og-space-1);
+    font-size: var(--og-text-caption);
+    line-height: 1.15;
+  }
+
+  .og-switchback-import__report-items > li > :is(p, ul) {
+    font-size: var(--og-text-caption);
+    line-height: 1.15;
+  }
+
+  .og-switchback-import__report-items > li > ul {
+    gap: 2px;
+    padding-left: var(--og-space-3);
+  }
+
+  .og-switchback-import .og-import__warning {
+    grid-column: 1 / -1;
+  }
+}

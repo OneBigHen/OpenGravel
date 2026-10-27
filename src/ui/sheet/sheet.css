@@ -231,7 +231,8 @@
    -------------------------------------------------------------------------- */
 @media (max-width: 1180px) and (min-height: 501px) {
   .og-planner {
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 48px);
+    /* Full keeps a 160px strip of map, so the place or ride stays in view. */
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 160px);
     --og-sheet-half: calc(50dvh - var(--og-tabbar-h));
   }
 
@@ -277,9 +278,14 @@
   /* The head: a grab bar, then (half and full) one row of tools. */
   .og-planner .og-planner__sheet .og-sheet__head {
     flex: none;
-    gap: var(--og-space-2);
+    gap: 0 var(--og-space-2);
     padding: 0;
     touch-action: none;
+  }
+
+  /* The tool row keeps its own breathing room under the grab bar. */
+  .og-planner .og-planner__sheet .og-sheet__head > :not(.og-sheet__handle) {
+    margin-bottom: var(--og-space-2);
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle {
@@ -287,8 +293,8 @@
     display: block;
     order: -1;
     flex: 1 1 100%;
-    height: 28px;
-    min-height: 28px;
+    height: 36px;
+    min-height: 36px;
     margin: 0;
     padding: 0;
     border: 0;
@@ -297,17 +303,18 @@
     cursor: grab;
   }
 
-  /* 28px to the eye, 48px to the thumb: the hit area reaches above the edge. */
+  /* 36px inside the sheet plus a 12px lip over its rounded edge: a 48px
+     target that leaves the map above it to the map. */
   .og-planner .og-planner__sheet .og-sheet__handle::after {
     content: "";
     position: absolute;
-    inset: -20px 0 0;
+    inset: -12px 0 0;
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle::before {
     content: "";
     position: absolute;
-    top: 10px;
+    top: 12px;
     left: calc(50% - 18px);
     width: 36px;
     height: 4px;
@@ -418,10 +425,12 @@
     overflow: hidden;
   }
 
-  /* Route options at peek: room for two rides, Options and Start ride, so
-     nothing the rider decides with is scrolled out of sight. */
-  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="peek"] {
-    max-height: 52dvh;
+  /* Route options: the sheet is as tall as two rides, Options and Start ride
+     need, up to a little more than half, so nothing the rider decides with is cut off
+     or scrolled out of sight — also on a 320 × 568 phone. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
+    height: auto;
+    max-height: max(var(--og-sheet-half), 56dvh);
   }
 
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options) {
@@ -530,7 +539,7 @@
   }
 
   .og-planner {
-    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 96px);
+    --og-sheet-full: calc(100dvh - var(--og-tabbar-h) - var(--og-safe-top) - 200px);
   }
 }
 

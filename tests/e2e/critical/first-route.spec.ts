@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  EMBER,
-  EMBER_STRONG,
   MUTED_ALTERNATIVE,
+  ROUTE_PLUM,
+  ROUTE_PLUM_STRONG,
   clickMapAtCoordinate,
   placeEndpoint,
   countColors,
@@ -145,13 +145,15 @@ test("idle: the planner asks for a start and refuses to plan without one", async
   // Mask the advisor toggle because an element screenshot is composited from
   // the page and includes fixed controls that overlap the WebGL canvas.
   const idleColors = await countColors(mapCanvas(page), {
-    casing: EMBER_STRONG,
-    ember: EMBER,
+    casing: ROUTE_PLUM_STRONG,
+    selected: ROUTE_PLUM,
     mutedAlternative: MUTED_ALTERNATIVE,
   }, 20, mapColorMasks(page));
   expect(idleColors.casing ?? 0).toBe(0);
-  expect(idleColors.ember ?? 0).toBe(0);
-  expect(idleColors.mutedAlternative ?? 0).toBe(0);
+  expect(idleColors.selected ?? 0).toBe(0);
+  // The alternative's slate is close to the map's own neutral greys, so the
+  // idle map may hold a few such pixels; far fewer than a drawn line (> 500).
+  expect(idleColors.mutedAlternative ?? 0).toBeLessThan(200);
 
   // The basemap the gate asked for is the deterministic one: no tile request can
   // make this run red, and the assertion is the proof.
@@ -277,18 +279,18 @@ test("planning shows a route the rider can see and select", async ({ page }) => 
   // Nothing about the cartography silently failed to load (05 §22).
   await expectHealthyMap(page);
 
-  // Pixel evidence for the cartography (05 §11): the selected route is Ember over
-  // its Ember-Strong casing, and the alternative is muted slate. A DOM assertion
+  // Pixel evidence for the cartography (05 §11, DESIGN.md §2): the selected
+  // route is plum over its darker plum casing, and the alternative is muted slate. A DOM assertion
   // cannot make this claim any more — the drawing is a WebGL canvas — and the
   // *idle* census in the same test is what proves the colours are the route's and
   // not the chrome's (it is all zeros before anything is drawn).
   const drawnColors = await countColors(mapCanvas(page), {
-    casing: EMBER_STRONG,
-    ember: EMBER,
+    casing: ROUTE_PLUM_STRONG,
+    selected: ROUTE_PLUM,
     mutedAlternative: MUTED_ALTERNATIVE,
   }, 20, mapColorMasks(page));
   expect(drawnColors.casing ?? 0).toBeGreaterThan(500);
-  expect(drawnColors.ember ?? 0).toBeGreaterThan(500);
+  expect(drawnColors.selected ?? 0).toBeGreaterThan(500);
   expect(drawnColors.mutedAlternative ?? 0).toBeGreaterThan(500);
 
   // A fixture answer is not a failure, and nothing claims a provider error.

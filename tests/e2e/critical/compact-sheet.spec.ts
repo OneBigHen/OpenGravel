@@ -104,20 +104,20 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
 
-  // A sheet, not an inline panel: a border, rounded corners, padding and an
-  // opaque surface, so map labels never show through the text
-  // (UX rework 2, #5).
+  // A sheet, not an inline panel: rounded corners, padding, an opaque surface
+  // so map labels never show through the text (UX rework 2, #5), and the one
+  // sheet shadow that lifts it off the map (DESIGN.md §4, design v3).
   const sheetStyle = await sheet.evaluate((element) => {
     const style = getComputedStyle(element);
     return {
       radius: style.borderTopLeftRadius,
-      borderTopWidth: style.borderTopWidth,
+      shadow: style.boxShadow,
       paddingBottom: style.paddingBottom,
       background: style.backgroundColor,
     };
   });
   expect(Number.parseFloat(sheetStyle.radius)).toBeGreaterThanOrEqual(12);
-  expect(Number.parseFloat(sheetStyle.borderTopWidth)).toBeGreaterThan(0);
+  expect(sheetStyle.shadow).not.toBe("none");
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
   expect(sheetStyle.background).toMatch(/^rgb\(/);
 
