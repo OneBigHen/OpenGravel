@@ -32,10 +32,24 @@
 
   --og-shadow-float: 0 1px 2px rgb(15 26 21 / 14%), 0 6px 18px rgb(15 26 21 / 12%);
 
-  /* Chrome over the map: the surface at 82% with a blur, so the map reads
-     through it (DESIGN.md §2, v3.1). Text on it stays at full ink. */
-  --og-glass: color-mix(in srgb, var(--og-surface) 82%, transparent);
-  --og-glass-blur: blur(20px) saturate(150%);
+  /* Glass (DESIGN.md §2, v4): every surface that sits on the map or on the
+     topo backdrop is frosted. --og-glass for chrome (tab bar, search, map
+     buttons), --og-glass-dense for sheets and cards that hold sentences and
+     ride numbers. Text on either stays at full ink. */
+  --og-glass: hsl(48 33% 98% / 72%);
+  --og-glass-dense: hsl(48 33% 98% / 86%);
+  --og-glass-blur: blur(24px) saturate(170%);
+  --og-glass-edge: hsl(155 25% 15% / 12%);
+  --og-glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 70%);
+  --og-glass-shadow: 0 1px 2px hsl(155 35% 7% / 8%), 0 10px 30px -6px hsl(155 35% 7% / 16%);
+  --og-glass-well: hsl(150 12% 30% / 7%);
+
+  /* The page backdrop behind non-map screens: a quiet topographic sheet so
+     the glass has terrain to frost (public/textures/topo.svg). */
+  --og-topo-ink: hsl(150 30% 22% / 9%);
+  --og-backdrop-wash:
+    radial-gradient(120% 70% at 0% 0%, hsl(146 45% 40% / 10%), transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, hsl(275 30% 50% / 7%), transparent 60%);
   --og-shadow-sheet: 0 -1px 0 rgb(15 26 21 / 8%), 0 -8px 28px rgb(15 26 21 / 10%);
 
   /* The map's palette (read by the MapLibre host). */
@@ -84,8 +98,18 @@
 
   --og-shadow-float: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 18px rgb(0 0 0 / 36%);
 
-  --og-glass: color-mix(in srgb, var(--og-surface) 78%, transparent);
-  --og-glass-blur: blur(22px) saturate(140%);
+  --og-glass: hsl(155 18% 9% / 66%);
+  --og-glass-dense: hsl(155 18% 9% / 82%);
+  --og-glass-blur: blur(24px) saturate(150%);
+  --og-glass-edge: hsl(145 25% 92% / 11%);
+  --og-glass-highlight: inset 0 1px 0 hsl(145 25% 92% / 7%);
+  --og-glass-shadow: 0 1px 2px hsl(0 0% 0% / 30%), 0 12px 32px -6px hsl(0 0% 0% / 45%);
+  --og-glass-well: hsl(145 25% 92% / 6%);
+
+  --og-topo-ink: hsl(145 40% 70% / 8%);
+  --og-backdrop-wash:
+    radial-gradient(120% 70% at 0% 0%, hsl(146 60% 35% / 16%), transparent 60%),
+    radial-gradient(90% 60% at 100% 100%, hsl(275 40% 45% / 12%), transparent 60%);
   --og-shadow-sheet: 0 -1px 0 rgb(255 255 255 / 6%), 0 -8px 28px rgb(0 0 0 / 40%);
 
   /* Night cartography: the route and pins sit on a dark basemap. */
@@ -184,14 +208,18 @@ body {
 /* Glass needs the blur to be legible: without it, or when the rider asked for
    less transparency, chrome is the solid surface again. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
+  :root,
+  :root[data-theme] {
     --og-glass: var(--og-surface);
+    --og-glass-dense: var(--og-surface);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  :root {
+  :root,
+  :root[data-theme] {
     --og-glass: var(--og-surface);
+    --og-glass-dense: var(--og-surface);
     --og-glass-blur: none;
   }
 }

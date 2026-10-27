@@ -104,7 +104,10 @@ export function PrimaryNav({ current, items = PRIMARY_NAV_ITEMS }: PrimaryNavPro
     // planner dock reserve exactly the space it draws — including the extra row
     // a larger text size adds to the labels. This is only a layout measurement.
     const measure = (): void => {
-      const height = shell.getBoundingClientRect().height;
+      // The bar floats above the bottom edge, so reserve from its top edge to
+      // the bottom of the viewport: the bar plus the gap under it.
+      const rect = shell.getBoundingClientRect();
+      const height = rect.height > 0 ? Math.max(rect.height, Math.round(window.innerHeight - rect.top)) : 0;
       ownedValue = getComputedStyle(shell).position === "fixed" && height > 0 ? `${height}px` : "";
       if (root.getPropertyValue(property) === ownedValue) return;
       if (ownedValue === "") root.removeProperty(property);

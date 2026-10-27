@@ -4,7 +4,7 @@
 .og-library {
   min-height: 100%;
   padding-bottom: var(--og-space-6);
-  background: var(--og-bg);
+  background: transparent;
 }
 
 .og-library > :not(.og-appbar) {
@@ -103,7 +103,11 @@
   overflow: hidden;
   list-style: none;
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__row {
@@ -254,8 +258,11 @@
   max-width: calc(100vw - 32px);
   padding: var(--og-space-1);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
-  box-shadow: var(--og-shadow-float);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-rides__menu-entry {
@@ -397,7 +404,11 @@
   margin-top: var(--og-space-4);
   padding: var(--og-space-5);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__empty[data-drop-target="true"] {
@@ -436,7 +447,11 @@
   margin-top: var(--og-space-4);
   padding: var(--og-space-5);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-library__state p {
@@ -495,7 +510,11 @@
   overflow: hidden;
   padding: 0;
   border-radius: var(--og-radius-sheet);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
   color: var(--og-ink);
 }
 
@@ -539,7 +558,11 @@
   margin-bottom: var(--og-space-5);
   padding: var(--og-space-4);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-import--quiet {

@@ -1296,7 +1296,7 @@ describe("reload, resume and stop (08 §2, §13)", () => {
     // (the tab bar every other surface has) and offers the action that starts a
     // ride. `Try again` used to retry a load that had nothing to load.
     expect(screen.getByTestId("ride-focus")).toHaveAttribute("data-status", "absent");
-    expect(screen.getByTestId("ride-recovery")).toHaveTextContent("No ride in progress");
+    expect(screen.getByTestId("ride-recovery")).toHaveTextContent("Ready to ride?");
     // The card is the same empty-state one My rides opens with, and the app's
     // own bar (the bottom tab bar on a phone) is around it.
     expect(screen.getByTestId("ride-recovery").closest(".og-empty-state")).not.toBeNull();

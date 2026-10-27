@@ -10,7 +10,7 @@
   gap: var(--og-space-5);
   min-height: 100%;
   padding: var(--og-space-5) var(--og-space-5) var(--og-space-6);
-  background: var(--og-bg);
+  background: transparent;
 }
 
 .og-route-detail > * {

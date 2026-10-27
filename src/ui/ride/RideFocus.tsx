@@ -170,9 +170,7 @@ const RECOVERY_COPY: Readonly<Record<Exclude<RideFocusStoreStatus, "ready" | "ab
  * No session at all is not a failure: nothing was being tracked, so there is
  * nothing to retry. The card says so and offers the one thing that starts one.
  */
-const NO_RIDE_HEADLINE = "No ride in progress";
-const NO_RIDE_COPY =
-  "Plan a route in the planner and press Start ride, or record a ride as you go — it opens here.";
+const NO_RIDE_HEADLINE = "Ready to ride?";
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -695,8 +693,8 @@ export function RideFocus({
     screen offered a dead "Try again" on a blank page with no tab bar, so a
     rider who opened /ride was stranded). It keeps the app's
     frame — the shared bar, which is the bottom tab bar on a phone — and the
-    same invitation card the My rides library opens with: a headline, one line
-    that says what to do, and Plan a ride. Ride mode below drops all of it.
+    same invitation card the My rides library opens with: a headline, Plan a
+    ride and Find a ride. Ride mode below drops all of it.
   */
   if (status === "absent") {
     return (
@@ -707,7 +705,6 @@ export function RideFocus({
             <h1 id="og-ride-empty-title" data-testid="ride-recovery">
               {NO_RIDE_HEADLINE}
             </h1>
-            <p>{NO_RIDE_COPY}</p>
             {statusMessage === null ? null : (
               <p className="og-ride__empty-note" data-testid="ride-empty-note" role="status">
                 {statusMessage}
@@ -724,6 +721,9 @@ export function RideFocus({
               */}
               <Link className="og-primary" href={exitHref} data-testid="ride-plan-ride">
                 Plan a ride
+              </Link>
+              <Link className="og-secondary" href="/explore">
+                Find a ride
               </Link>
             </div>
           </div>

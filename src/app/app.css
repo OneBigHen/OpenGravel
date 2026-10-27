@@ -19,6 +19,29 @@ body {
   -webkit-font-smoothing: antialiased;
   word-spacing: 0.08em;
 }
+
+/* The backdrop every non-map page sits on (DESIGN.md §2, v4): a green and plum
+   wash plus a faint topographic sheet, fixed behind the content so the glass
+   cards have terrain to frost. Two fixed layers rather than
+   background-attachment: fixed, which iOS Safari ignores. Map screens cover it. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+body::before {
+  background: var(--og-backdrop-wash);
+}
+
+body::after {
+  background: var(--og-topo-ink);
+  -webkit-mask: url("/textures/topo.svg") 0 0 / 640px 640px repeat;
+  mask: url("/textures/topo.svg") 0 0 / 640px 640px repeat;
+}
 button,
 input,
 select,

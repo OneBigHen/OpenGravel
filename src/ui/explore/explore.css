@@ -8,7 +8,7 @@
   gap: var(--og-space-4);
   min-height: 100%;
   padding-bottom: var(--og-space-6);
-  background: var(--og-bg);
+  background: transparent;
 }
 
 .og-explore > :not(.og-appbar) {

@@ -74,8 +74,10 @@
   gap: var(--og-space-5);
   min-height: 64px;
   padding: var(--og-space-2) var(--og-space-5);
-  border-bottom: 1px solid var(--og-line);
-  background: var(--og-surface);
+  border-bottom: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-appbar__brand {
@@ -109,12 +111,14 @@
   }
 }
 
-/* Phones and tablets: the docked tab bar. Every page and the planner sheet
-   reserve its measured height (PrimaryNav publishes it; a larger text size can
-   wrap a label onto a second line). */
+/* Phones and tablets: a floating glass tab bar (DESIGN.md §2, v4) — a pill
+   inset from the edges so the map runs around and under it. Every page and
+   the planner sheet reserve its measured height plus the gap below it
+   (PrimaryNav publishes it; a larger text size can wrap a label). */
 @media (max-width: 1180px) and (min-height: 501px) {
   :root {
-    --og-tabbar-h: var(--og-tabbar-measured-h, calc(56px + var(--og-safe-bottom)));
+    --og-tabbar-gap: max(var(--og-space-2), calc(var(--og-safe-bottom) - 14px));
+    --og-tabbar-h: var(--og-tabbar-measured-h, calc(60px + var(--og-tabbar-gap)));
   }
 
   .og-appbar {
@@ -129,15 +133,18 @@
   .og-planner__nav-shell,
   .og-planner .og-planner__nav-shell {
     position: fixed;
-    inset: auto 0 0;
+    inset: auto max(calc(var(--og-space-2) + var(--og-safe-right)), calc(50% - 230px)) var(--og-tabbar-gap)
+      max(calc(var(--og-space-2) + var(--og-safe-left)), calc(50% - 230px));
     z-index: var(--og-z-nav);
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    min-height: calc(56px + var(--og-safe-bottom));
-    padding: 0 var(--og-safe-right) var(--og-safe-bottom) var(--og-safe-left);
-    border-top: 1px solid var(--og-line);
+    gap: var(--og-space-1);
+    min-height: 60px;
+    padding: var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: 24px;
     background: var(--og-glass);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
     -webkit-backdrop-filter: var(--og-glass-blur);
     backdrop-filter: var(--og-glass-blur);
   }
@@ -151,23 +158,28 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    min-height: 56px;
+    min-height: 50px;
     padding: 0;
-    border-radius: 0;
+    border-radius: 20px;
     font-size: var(--og-text-caption);
-    line-height: 1.3;
+    line-height: 1.25;
+  }
+
+  .og-planner__nav a:hover,
+  .og-planner__settings-link:hover {
+    background: var(--og-press);
   }
 
   .og-planner__nav a[aria-current="page"],
-  .og-planner__settings-link[aria-current="page"],
-  .og-planner__nav a:hover,
-  .og-planner__settings-link:hover {
-    background: none;
+  .og-planner__settings-link[aria-current="page"] {
+    color: var(--og-primary-text);
+    background: var(--og-primary-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--og-primary) 22%, transparent);
   }
 
   .og-nav__icon {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
   }
 
   .og-nav__label--tab-only {

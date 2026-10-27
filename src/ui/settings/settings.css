@@ -4,7 +4,7 @@
 .og-settings {
   min-height: 100%;
   padding-bottom: var(--og-space-6);
-  background: var(--og-bg);
+  background: transparent;
 }
 
 .og-settings > :not(.og-appbar) {
@@ -14,7 +14,7 @@
 
 .og-settings__header {
   margin-top: var(--og-space-5);
-  margin-bottom: var(--og-space-5);
+  margin-bottom: var(--og-space-4);
 }
 
 .og-settings__header h1 {
@@ -27,7 +27,26 @@
 
 .og-settings__layout {
   display: grid;
-  gap: var(--og-space-5);
+  gap: var(--og-space-4);
+}
+
+/* Tablet and desktop: two balanced columns of groups instead of one narrow
+   strip down the middle of a wide screen. */
+@media (min-width: 761px) {
+  .og-settings > :not(.og-appbar) {
+    width: min(1120px, calc(100% - 2 * var(--og-space-5)));
+  }
+
+  .og-settings__layout {
+    display: block;
+    columns: 2;
+    column-gap: var(--og-space-5);
+  }
+
+  .og-settings__group {
+    break-inside: avoid;
+    margin-bottom: var(--og-space-5);
+  }
 }
 
 /* A group: a small label, an optional hint, then one card of rows. */
@@ -68,8 +87,12 @@
 
 .og-settings__card {
   overflow: hidden;
+  border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-card);
-  background: var(--og-surface);
+  background: var(--og-glass-dense);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
 }
 
 .og-settings__card > * + * {
@@ -489,7 +512,7 @@
 @media (max-width: 760px) {
   .og-settings__header {
     margin-top: calc(var(--og-safe-top) + var(--og-space-4));
-    margin-bottom: var(--og-space-4);
+    margin-bottom: var(--og-space-3);
   }
 
   .og-settings__field-row {

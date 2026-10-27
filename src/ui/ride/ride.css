@@ -1810,6 +1810,7 @@
 .og-ride--state {
   display: flex;
   flex-direction: column;
+  background: transparent;
   padding-bottom: var(--og-tabbar-h, var(--og-safe-bottom, 0px));
   overflow-x: hidden;
   overflow-y: auto;
@@ -2298,13 +2299,27 @@
 }
 .og-ride .og-ride__empty {
   grid-template-columns: minmax(0, 1fr);
-  width: min(calc(100% - 32px - var(--og-safe-left, 0px) - var(--og-safe-right, 0px)), 520px);
-  max-width: 520px;
+  width: min(calc(100% - 32px - var(--og-safe-left, 0px) - var(--og-safe-right, 0px)), 440px);
+  max-width: 440px;
   margin: auto;
-  border: 1px solid var(--og-line-strong);
-  background: var(--og-surface);
+  border: 1px solid var(--og-glass-edge);
+  background: var(--og-glass-dense);
   color: var(--og-ink);
-  box-shadow: var(--og-shadow-float);
+  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+}
+
+.og-ride .og-ride__empty h1 {
+  font-size: var(--og-text-headline);
+}
+
+/* Phone: the card sits where a thumb is, just above the tab bar, like the
+   planner's sheet — not floating in the middle of an empty screen. */
+@media (max-width: 760px) {
+  .og-ride .og-ride__empty {
+    margin: auto auto var(--og-space-3);
+  }
 }
 
 .og-ride .og-ride__empty-note {
