@@ -665,10 +665,31 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         </label>
         {/* One row of chips at every width: the two decisions a rider makes
             while scanning (how far, how far from me), one surface choice, and
-            "twisty". Everything else is one press away in Filters, which is the
-            last chip in the row so search keeps the whole width above it, and no
-            decision is asked for twice. */}
+            "twisty". Everything else is one press away in Filters, which leads
+            the row so it never scrolls out of reach and search keeps the whole
+            width above it; no decision is asked for twice. */}
         <div className="og-explore__quick" role="group" aria-label="Quick filters">
+          {/* The first chip opens the rest, so it never scrolls out of reach. A
+              rider who has narrowed the list sees how many of the sheet's own
+              filters are on, without a second row of controls above the rides. */}
+          <button
+            ref={filtersToggleRef}
+            type="button"
+            className="og-explore__quick-chip og-explore__filters-toggle"
+            data-filter={filterCount > 0 ? "on" : undefined}
+            aria-expanded={filtersOpen}
+            aria-controls="og-explore-filters"
+            aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+              <circle cx="16" cy="7" r="2" />
+              <circle cx="10" cy="17" r="2" />
+            </svg>
+            <span className="og-explore__filters-label">Filters</span>
+            {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
+          </button>
           <button type="button" className="og-explore__quick-chip" aria-pressed={query.sort === "near"} onClick={() => {
             if (query.sort === "near") updateQuery({ sort: "recommended" });
             else if (origin === undefined) sortByLocation();
@@ -705,27 +726,6 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
             onClick={() => updateQuery({ curvy: query.curvy === true ? undefined : true })}
           >
             Twisty
-          </button>
-          {/* The last chip opens the rest. A rider who has narrowed the list
-              sees how many of the sheet's own filters are on, without a second
-              row of controls above the rides. */}
-          <button
-            ref={filtersToggleRef}
-            type="button"
-            className="og-explore__quick-chip og-explore__filters-toggle"
-            data-filter={filterCount > 0 ? "on" : undefined}
-            aria-expanded={filtersOpen}
-            aria-controls="og-explore-filters"
-            aria-label={`Filters${filterCount > 0 ? `, ${filterCount} on` : ""}`}
-            onClick={() => setFiltersOpen((open) => !open)}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-              <circle cx="16" cy="7" r="2" />
-              <circle cx="10" cy="17" r="2" />
-            </svg>
-            <span className="og-explore__filters-label">Filters</span>
-            {filterCount > 0 ? <span className="og-explore__filters-count" aria-hidden="true">{filterCount}</span> : null}
           </button>
         </div>
         {filtersOpen ? (

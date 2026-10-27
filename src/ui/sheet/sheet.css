@@ -273,6 +273,13 @@
     max-height: var(--og-sheet-half);
   }
 
+  /* A place card is as tall as its buttons, up to half: no empty glass under
+     Directions / Add stop / Save / Share. */
+  .og-planner .og-planner__sheet[data-detent="half"]:has(.og-place-sheet) {
+    height: auto;
+    max-height: var(--og-sheet-half);
+  }
+
   .og-planner .og-planner__sheet[data-detent="full"] {
     height: var(--og-sheet-full);
     max-height: none;

@@ -155,11 +155,11 @@ describe("Explore UI", () => {
     const follows = (first: Element, second: Element): boolean =>
       (first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
 
-    // One row of chips, and each names one decision: how near, how long, what
-    // surface, how twisty — then the one chip that opens the rest. Length and
+    // One row of chips: first the one that opens the rest, then each names one
+    // decision: how near, how long, what surface, how twisty. Length and
     // surface open the sheet on their own row.
     expect(within(screen.getByRole("group", { name: "Quick filters" })).getAllByRole("button").map((chip) => chip.textContent?.trim()))
-      .toEqual(["Near me", "Length", "Paved/gravel", "Twisty", "Filters"]);
+      .toEqual(["Filters", "Near me", "Length", "Paved/gravel", "Twisty"]);
     // The date chips and both pickers live in the panel, not above the list.
     expect(filters).toContainElement(screen.getByRole("group", { name: "When" }));
     expect(filters).toContainElement(screen.getByRole("combobox", { name: "Filter by region" }));
@@ -212,10 +212,11 @@ describe("Explore UI", () => {
     expect(toggle).toHaveFocus();
   });
 
-  it("gives search the whole width on its own row and puts Filters last in the chip row", () => {
+  it("gives search the whole width on its own row and puts Filters first in the chip row", () => {
     // At 320px the search field shared a row with the Filters button and was
     // squeezed to "Search re…". Search now takes the width of the page on its
-    // own line, and the button that opens the rest is the last chip in the row.
+    // own line, and the button that opens the rest leads the chip row, so it
+    // never scrolls out of reach on a phone.
     render(<ExplorePanel entries={[entry]} />);
     const search = screen.getByRole("searchbox", { name: "Search routes" });
     const toolbar = search.closest(".og-explore__toolbar") as HTMLElement;
@@ -224,7 +225,7 @@ describe("Explore UI", () => {
 
     expect(search.closest(".og-explore__search")?.parentElement).toBe(toolbar);
     expect(chips).not.toContainElement(search.closest(".og-explore__search") as HTMLElement);
-    expect(chips.lastElementChild).toBe(toggle);
+    expect(chips.firstElementChild).toBe(toggle);
     expect(toggle).toHaveClass("og-explore__quick-chip");
 
     // The count speaks only for the filters the chips cannot show.

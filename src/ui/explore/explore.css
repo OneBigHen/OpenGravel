@@ -990,14 +990,3 @@
   }
 }
 
-/* Filters never scrolls out of reach: it rides the right edge of the chip row. */
-.og-explore__filters-toggle {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  border: 1px solid var(--og-glass-edge);
-  background: var(--og-glass-dense);
-  box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
-  -webkit-backdrop-filter: var(--og-glass-blur);
-  backdrop-filter: var(--og-glass-blur);
-}
