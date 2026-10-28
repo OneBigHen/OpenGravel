@@ -71,3 +71,13 @@ export function LayerIcon({
     </svg>
   );
 }
+
+/** The bare line icon, in the current text colour, for chips and buttons. */
+export function LayerGlyph({ id, size = 18, className }: { readonly id: string; readonly size?: number; readonly className?: string }) {
+  const path = (PATHS as Readonly<Record<string, ReactNode>>)[id];
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {path ?? <circle cx="12" cy="12" r="6" />}
+    </svg>
+  );
+}

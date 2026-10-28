@@ -648,6 +648,13 @@
     color: var(--og-on-primary);
   }
 
+  /* Remembered places float over the map on the clear home sheet: solid cards. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-shortcuts__card {
+    border-color: var(--og-line);
+    background: var(--og-surface);
+    box-shadow: var(--og-shadow-float);
+  }
+
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-planner__error {
     padding: var(--og-space-2) var(--og-space-3);
     border-radius: var(--og-radius-control);

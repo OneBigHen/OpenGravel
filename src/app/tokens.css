@@ -36,8 +36,8 @@
      topo backdrop is frosted. --og-glass for chrome (tab bar, search, map
      buttons), --og-glass-dense for sheets and cards that hold sentences and
      ride numbers. Text on either stays at full ink. */
-  --og-glass: hsl(48 33% 98% / 72%);
-  --og-glass-dense: hsl(48 33% 98% / 86%);
+  --og-glass: hsl(48 33% 98% / 90%);
+  --og-glass-dense: hsl(48 33% 98% / 95%);
   --og-glass-blur: blur(24px) saturate(170%);
   --og-glass-edge: hsl(155 25% 15% / 12%);
   --og-glass-highlight: inset 0 1px 0 hsl(0 0% 100% / 70%);
@@ -98,8 +98,8 @@
 
   --og-shadow-float: 0 1px 2px rgb(0 0 0 / 40%), 0 6px 18px rgb(0 0 0 / 36%);
 
-  --og-glass: hsl(155 18% 9% / 66%);
-  --og-glass-dense: hsl(155 18% 9% / 82%);
+  --og-glass: hsl(155 18% 10% / 88%);
+  --og-glass-dense: hsl(155 18% 10% / 94%);
   --og-glass-blur: blur(24px) saturate(150%);
   --og-glass-edge: hsl(145 25% 92% / 11%);
   --og-glass-highlight: inset 0 1px 0 hsl(145 25% 92% / 7%);
@@ -222,4 +222,18 @@ body {
     --og-glass-dense: var(--og-surface);
     --og-glass-blur: none;
   }
+}
+
+/* Owner, 2026-10-27: glass along the bottom made the words hard to read over
+   the map. Everything docked at the bottom (tab bar, planner and ride sheets,
+   the home pills, the layers sheet) is the solid surface again; the floating
+   chrome at the top keeps its glass. */
+.og-planner__nav-shell,
+.og-planner__dock,
+.og-layers__panel,
+.og-ride__sheet {
+  --og-glass: var(--og-surface);
+  --og-glass-dense: var(--og-surface);
+  --og-glass-blur: none;
+  --og-glass-well: var(--og-surface-2);
 }
