@@ -88,7 +88,8 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   });
   // Solid, not glass (owner 2026-10-27: glass along the bottom was hard to
   // read): an opaque surface with a hairline on top.
-  expect(barStyle.background).toMatch(/^rgb\(/);
+  // A 94–98 % tint reads as solid; anything thinner is glass again.
+  expect(surfaceAlpha(barStyle.background)).toBeGreaterThanOrEqual(0.94);
   expect(barStyle.backdrop).toBe("none");
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
   await expect(sheet).toHaveAttribute("data-idle", "true");
@@ -320,3 +321,10 @@ test("swiping the shared handle visits all three detents", async ({ page }) => {
   await touchDrag(page, "sheet-handle", 80);
   await expect(sheet).toHaveAttribute("data-detent", "peek");
 });
+
+/** Alpha of a computed colour: `rgb(…)` is opaque, `rgba(…)`/`color(… / a)` carry it last. */
+function surfaceAlpha(color: string): number {
+  if (color.startsWith("rgb(")) return 1;
+  const match = /\/\s*([\d.]+)\)$/.exec(color) ?? /,\s*([\d.]+)\)$/.exec(color);
+  return match === null ? 0 : Number.parseFloat(match[1] ?? "0");
+}
