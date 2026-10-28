@@ -32,6 +32,21 @@ export function formatDuration(seconds: number): string {
   return minutes === 0 ? `${hours} h` : `${hours} h ${minutes} min`;
 }
 
+/** `96 h+` reads in days: `273600 → "3 d 4 h"`; shorter spans read like {@link formatDuration}. */
+export function formatLongDuration(seconds: number): string {
+  if (!isKnownMeasurement(seconds) || seconds < 86_400) return formatDuration(seconds);
+  const hours = Math.round(seconds / 3600);
+  const days = Math.floor(hours / 24);
+  const rest = hours % 24;
+  return rest === 0 ? `${days} d` : `${days} d ${rest} h`;
+}
+
+/** `4383.6 m → "14,382 ft"`: whole feet with a comma every three digits, locale-free. */
+export function formatFeet(meters: number): string {
+  if (!Number.isFinite(meters)) return UNKNOWN_VALUE;
+  return `${String(Math.round(meters * 3.28084)).replace(/\B(?=(\d{3})+(?!\d))/g, ",")} ft`;
+}
+
 /** `125529 → "78 mi"`, sub-10-mile values keep one decimal; unknown stays unknown. */
 export function formatDistance(meters: number): string {
   if (!isKnownMeasurement(meters)) return UNKNOWN_VALUE;

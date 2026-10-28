@@ -1,3 +1,4 @@
+import { planHike } from "./hike-plan";
 import { geometryFunRecommendation } from "@/application/planner/geometry-fun";
 import { loopDirtTarget } from "@/application/planner/atlas-dirt-loops";
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
@@ -798,6 +799,8 @@ async function planRideAttempt(
 ): Promise<PlanServiceResult> {
   const parsed = parseRoutePlanRequestBody(input);
   if (!parsed.ok) return { ok: false, error: validationFailure(parsed.issues) };
+
+  if (parsed.value.request.profile === "hike") return planHike(parsed.value, deps);
 
   const versions = deps.versions ?? DEFAULT_PLAN_VERSIONS;
   const provider = boundedRouteProvider(deps.provider ?? graphHopperProviderFromEnv(deps.env ?? process.env));

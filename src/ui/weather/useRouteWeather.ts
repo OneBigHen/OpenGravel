@@ -15,6 +15,8 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   isRouteWeatherReport,
+  ROUTE_WEATHER_SAMPLES,
+  routeLineMeters,
   type RouteWeatherReport,
 } from "@/application/weather/route-weather";
 import type { Coordinate } from "@/domain/ride/types";
@@ -100,6 +102,9 @@ async function load(key: string, subject: RouteWeatherSubject): Promise<RouteWea
         line: subject.line.map((point) => ({ lon: point.lon, lat: point.lat })),
         departureTime: subject.departureTime,
         durationSeconds: subject.durationSeconds,
+        // NWS forecasts in ~2.5 km cells: closer samples repeat one reading, so a
+        // short trip asks for start and finish rather than six identical columns.
+        samples: Math.min(ROUTE_WEATHER_SAMPLES, Math.max(2, Math.floor(routeLineMeters(subject.line) / 5_000) + 1)),
         ...(timeZone === undefined ? {} : { timeZone }),
       }),
     });

@@ -23,11 +23,7 @@ import { useRouteScrub } from "@/ui/stores/route-scrub-store";
 
 type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 
-export interface HikeActivityProps {
-  readonly drawing: boolean;
-  readonly sketch: { readonly onStartDrawing: () => void; readonly onUndo: () => void; readonly onCancel: () => void; readonly onDone: () => void };
-  readonly onEnterHike: () => void;
-}
+export type HikeActivityProps = ComponentProps<typeof HikeActivityControls>;
 
 export interface PlannerWorkspaceFrameProps {
   readonly document: RideDocument;

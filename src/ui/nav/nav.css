@@ -404,6 +404,18 @@
   box-shadow: var(--og-shadow-float);
 }
 
+/* Desktop: the planner panel owns the left 432 px and the route inspector the
+   right column, so the card sits at the bottom of the map just right of the
+   panel: clear of the inspector and of the middle of the map, where a hiker
+   places points (pinned top-right, it sat exactly where the inspector opens). */
+@media (min-width: 1181px) {
+  .og-hike-card {
+    top: auto;
+    bottom: calc(var(--og-safe-bottom) + var(--og-space-5, 24px));
+    left: 448px;
+  }
+}
+
 .og-hike-card__head {
   display: flex;
   align-items: center;
@@ -471,3 +483,8 @@
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
+
+.og-hike-card__action:disabled { opacity: 0.5; cursor: default; }
+.og-hike-card__note p { margin: var(--og-space-1) 0; }
+.og-hike-card__note strong { color: var(--og-ink); font-size: var(--og-text-body); font-variant-numeric: tabular-nums; }
+.og-hike-card__hint { color: var(--og-ink-3, var(--og-ink-2)); font-size: var(--og-text-caption); }

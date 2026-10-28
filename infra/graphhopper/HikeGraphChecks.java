@@ -15,7 +15,7 @@ public class HikeGraphChecks {
         hopper.setEncodedValuesString("foot_access,foot_priority,foot_average_speed,foot_road_access,hike_rating,foot_network,road_class,road_environment");
         hopper.setProfiles(new Profile("hike").setCustomModel(Jackson.newObjectMapper().readValue(new File(args[2]), CustomModel.class)));
         hopper.importOrLoad();
-        boolean[] expected = {true, true, false, false, false, true, false, false, false, false, false, false, true, true, false, false};
+        boolean[] expected = {true, true, true, false, false, true, true, true, false, false, false, false, true, true, false, false};
         for (int i = 0; i < expected.length; i++) {
             double lat = 40 + i * 0.02;
             GHResponse response = hopper.route(new GHRequest(lat, -75, lat, -74.98).setProfile("hike"));
@@ -29,7 +29,9 @@ public class HikeGraphChecks {
         GHResponse inside = hopper.route(new GHRequest(40.0026, -75, 40.0026, -74.98).setProfile("hike"));
         if (inside.hasErrors()) throw new AssertionError("eligible trail inside 300 m rejected");
         GHResponse remote = hopper.route(new GHRequest(40.0032, -75, 40.0032, -74.98).setProfile("hike"));
-        if (!remote.hasErrors()) throw new AssertionError("remote point silently snapped beyond 300 m");
+        if (remote.hasErrors()) throw new AssertionError("remote trail within 2 km rejected");
+        GHResponse tooFar = hopper.route(new GHRequest(39.97, -75, 39.97, -74.98).setProfile("hike"));
+        if (!tooFar.hasErrors()) throw new AssertionError("point beyond 2 km accepted");
         GHResponse network = hopper.route(new GHRequest(40.24, -75, 40.24, -74.98).setProfile("hike").setPathDetails(List.of("foot_network")));
         if (network.hasErrors() || network.getBest().getPathDetails().get("foot_network").stream().anyMatch(d -> d.getValue().toString().equalsIgnoreCase("missing")))
             throw new AssertionError("nested hiking relation did not beat shorter ordinary path");

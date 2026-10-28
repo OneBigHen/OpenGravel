@@ -159,7 +159,7 @@ export function withOfflineFallback<P extends RouteCandidateProvider>(primary: P
       try {
         return await primary.candidates(request, signal);
       } catch (error) {
-        if (signal.aborted || !isPlannerUnreachable(error)) throw error;
+        if (request.profile === "hike" || signal.aborted || !isPlannerUnreachable(error)) throw error;
         return fallback(request, signal, error);
       }
     },

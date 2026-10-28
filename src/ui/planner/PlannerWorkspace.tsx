@@ -85,7 +85,7 @@ import {
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
-  usePlannerActiveRoute,
+  usePlannerHikeActivity, usePlannerActiveRoute,
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
@@ -742,6 +742,7 @@ export function PlannerWorkspace({
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
+  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps);
   return (
     <PlannerWorkspaceFrame
       trip={tripCard}
@@ -760,8 +761,7 @@ export function PlannerWorkspace({
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
       glance={mapGlance(glance.map)}
-      topSearch={placeFlow.top} activity={{ drawing: activeTool === "sketch", sketch: sketchPanelProps, onEnterHike: () => planningSessionStore.getState().cancel() }}
-      toast={placeFlow.toast}
+      topSearch={placeFlow.top} activity={hikeActivity}
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene: { ...scene, places: placeFlow.pins },

@@ -105,6 +105,7 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       OGV_ROUTE_PLAN_FIXTURE: "1",
+      OGV_HIKE_GRAPHHOPPER_URL: "http://127.0.0.1:3340",
       // The gate plans many rides from one address; its own per-client API
       // budgets would turn the next spec's plan into a 429. The flag lifts
       // those windows for this server only (`src/server/rate-limit.ts`).

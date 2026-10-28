@@ -47,7 +47,7 @@ function parsePoints(body: unknown): readonly Coordinate[] | null {
 }
 
 /** A gentle, deterministic ridge-and-valley line keyed on position (tests only). */
-function fixtureElevations(points: readonly Coordinate[]): ElevationResult {
+export function fixtureElevations(points: readonly Coordinate[]): ElevationResult {
   return {
     availability: "available",
     elevationsMeters: points.map((point, index) =>

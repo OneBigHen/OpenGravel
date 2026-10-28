@@ -142,6 +142,7 @@ function toProviderCandidate(
   return {
     providerId: API_PROVIDER_ID,
     profile: candidate.provider.profile,
+    ...(candidate.hike === undefined ? {} : { hike: candidate.hike }),
     geometry: candidate.geometry.map(copyCoordinate),
     distanceMeters: candidate.distanceMeters,
     durationSeconds: candidate.durationSeconds,

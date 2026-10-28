@@ -1,3 +1,4 @@
+import { getActivityMode } from "@/application/map/activity-mode";
 /**
  * The client composition root (02-ARCHITECTURE-CONTRACT §7, §8, §17).
  *
@@ -332,7 +333,7 @@ export function createClientPlanningService(
         const record = await geometryStore.get(ref);
         return record?.payload ?? null;
       },
-      profileFor: options.profileFor ?? graphHopperProfileFor,
+      profileFor: options.profileFor ?? ((intent) => getActivityMode() === "hike" ? "hike" : graphHopperProfileFor(intent)),
       includeAlternatives: options.includeAlternatives ?? true,
     },
     geometryStore,

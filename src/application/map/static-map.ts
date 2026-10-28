@@ -11,6 +11,7 @@
 import type { Coordinate } from "@/domain/ride/types";
 
 const STYLE = "mapbox/outdoors-v12";
+const NIGHT_STYLE = "mapbox/navigation-night-v1";
 const MAX_POINTS = 80;
 const ROUTE_COLOR = "d65a36";
 
@@ -49,6 +50,10 @@ export interface StaticRouteMapOptions {
   /** CSS pixels; the image is requested at 2x. */
   readonly width: number;
   readonly height: number;
+  /** Line colour as six hex digits; the ember route colour by default. */
+  readonly color?: string;
+  /** Draw on the night navigation style so a Night list is not a wall of daylight. */
+  readonly night?: boolean;
 }
 
 /** The image URL, or `null` when the line cannot be drawn. */
@@ -56,11 +61,12 @@ export function staticRouteMapUrl(line: readonly Coordinate[], options: StaticRo
   if (line.length < 2) return null;
   const encoded = encodeURIComponent(encodePolyline(thin(line)));
   // A white casing under the ember line, so the route reads over any terrain.
-  const overlay = `path-6+ffffff-0.9(${encoded}),path-3+${ROUTE_COLOR}-1(${encoded})`;
+  const casing = options.night === true ? "1b2421" : "ffffff";
+  const overlay = `path-6+${casing}-0.9(${encoded}),path-3+${options.color ?? ROUTE_COLOR}-1(${encoded})`;
   const width = Math.max(64, Math.min(1280, Math.round(options.width)));
   const height = Math.max(64, Math.min(1280, Math.round(options.height)));
   const padding = Math.round(Math.min(width, height) * 0.12);
-  return `https://api.mapbox.com/styles/v1/${STYLE}/static/${overlay}/auto/${width}x${height}@2x`
+  return `https://api.mapbox.com/styles/v1/${options.night === true ? NIGHT_STYLE : STYLE}/static/${overlay}/auto/${width}x${height}@2x`
     + `?padding=${padding}&logo=false&attribution=false&access_token=${encodeURIComponent(options.token)}`;
 }
 

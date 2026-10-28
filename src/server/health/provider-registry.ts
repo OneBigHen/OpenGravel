@@ -54,6 +54,7 @@ export interface ProviderState extends ProviderDescriptor {
 }
 
 const FAILURE_BEHAVIOR: Readonly<Record<string, string>> = {
+  "graphhopper-hike": "Hike routing unavailable; never fall back to a motorcycle or offline road graph.",
   graphhopper: "Bounded routing failure; existing hosted fallback may be attempted. Never fabricate route geometry.",
   "graphhopper-hosted": "Unavailable or exhausted fallback leaves the existing primary routing path and error behavior intact.",
   photon: "Place and address search reports unavailable; nearby-business answers stay independent and no result is fabricated.",
@@ -94,6 +95,7 @@ function descriptor(
 /** Valhalla is retained explicitly as absent, not advertised as a fallback. */
 export const PROVIDER_REGISTRY: readonly ProviderDescriptor[] = [
   descriptor("graphhopper", "GraphHopper", "operational", ["route planning", "rerouting"], ["GRAPHHOPPER_URL"], "Deployed routing graph", { required: true, canHardGateRouting: true }),
+  descriptor("graphhopper-hike", "GraphHopper hiking", "operational", ["hike planning", "trail snapping"], ["OGV_HIKE_GRAPHHOPPER_URL", "OGV_HIKE_GRAPHHOPPER_API_KEY"], "Deployed foot graph", { canHardGateRouting: true }),
   descriptor("graphhopper-hosted", "GraphHopper hosted fallback", "operational", ["bounded routing fallback"], ["GRAPHHOPPER_API_KEY", "GRAPHHOPPER_HOSTED_DAILY_BUDGET"], "Supported hosted requests", { canHardGateRouting: true }),
   descriptor("photon", "Photon", "enrichment", ["location search"], ["PHOTON_URL"], "Configured Photon index or public endpoint"),
   descriptor("valhalla", "Valhalla", "operational", [], [], "No production composition"),
@@ -123,6 +125,7 @@ function configuration(item: ProviderDescriptor, env: ProviderEnv): Pick<Provide
   switch (item.id) {
     case "graphhopper": case "photon": case "nws": case "wikimedia": case "overpass": configured = true; break; // Keyless/default compositions.
     case "valhalla": disabled = true; break;
+    case "graphhopper-hike": configured = present(env, "OGV_HIKE_GRAPHHOPPER_URL"); break;
     case "graphhopper-hosted": configured = present(env, "GRAPHHOPPER_API_KEY"); break;
     case "tomtom": configured = present(env, "TOMTOM_API_KEY") || present(env, "TOMTOM_TRAFFIC_API_KEY"); break;
     case "mapbox-token": configured = isPublicMapboxToken(env.NEXT_PUBLIC_MAPBOX_TOKEN); break;
