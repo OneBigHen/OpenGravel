@@ -63,6 +63,7 @@ export function SettingsClient() {
     [rideFocusPointer],
   );
   const library = useMemo(() => createSettingsLibraryService(repository), [repository]);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [garage, setGarage] = useState<Garage>(createGarage);
   const [consent, setConsent] = useState<TelemetryConsentState>({ status: "unacknowledged" });
   const [satellitePreferred, setSatellitePreferred] = useState(false);
@@ -96,9 +97,20 @@ export function SettingsClient() {
       const home = homeStorage.read();
       setHomeSaved(home.status === "found");
       setHomeLabel(home.status === "found" ? home.label : null);
+      setSettingsReady(true);
     });
     return () => window.cancelAnimationFrame(frame);
   }, [garageStorage, consentStore, homeStorage]);
+
+  // Garage hydration changes the layout above these shortcuts. Reposition after
+  // that commit so a Next.js hash jump does not leave the heading offscreen.
+  useEffect(() => {
+    if (!settingsReady) return;
+    const id = window.location.hash.slice(1);
+    if (id !== "settings-offline-title" && id !== "settings-bikes-title") return;
+    const frame = window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [settingsReady]);
 
   useEffect(() => {
     const changed = (event: Event) => setConsent((event as CustomEvent<TelemetryConsentState>).detail);

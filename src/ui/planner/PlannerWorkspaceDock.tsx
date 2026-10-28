@@ -462,7 +462,7 @@ export function PlannerWorkspaceDock({
             <button type="button" data-testid="back-to-options" onClick={() => selectedOption === null ? setSheetView("choices") : setSelectedOption(null)}>‹ {selectedOption === null ? "Route options" : "Options"}</button>
             <h2 tabIndex={-1} data-sheet-focus>{activeSheetView === "edit" ? "Edit ride" : "Options"}</h2>
           </div> : null}
-          {hasChoices && (!optionsMode || activeSheetView === "choices") ? (
+          {hasChoices ? (
             <PlannerResultPanel
               {...results}
               showOptions={optionsMode}

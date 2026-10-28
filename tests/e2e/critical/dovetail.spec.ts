@@ -3,7 +3,7 @@ import { useConnectedRouteFixture } from "./connected-route-fixture";
 import { expectDrawnScene, fractionOf, plannerMap, settledExtent } from "./map-helpers";
 
 // Synthetic layer geometry verifies the card-to-command connection, not live road data.
-test.use({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, hasTouch: true });
+test.use({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, hasTouch: true, geolocation: { latitude: 40.8757, longitude: -75.7324 }, permissions: ["geolocation"] });
 
 async function openRoad(page: Page): Promise<void> {
   let target: { lon: number; lat: number } | null = null;
@@ -89,10 +89,27 @@ test("directions keep saved work, briefing, current bike and departure controls 
   await expect(page.getByTestId("named-ride-title")).toBeAttached();
   await expect(page.getByTestId("open-share")).toBeAttached();
   await expect(page.getByTestId("prepare-toggle")).toBeAttached();
+  await page.getByTestId("named-ride-title").fill("Weekend route");
   await page.getByTestId("route-options-settings").click();
   await page.getByRole("button", { name: /^Bike/ }).click();
   await expect(page.getByRole("link", { name: /Manage bikes in Garage/ })).toBeVisible();
   await page.getByTestId("back-to-options").click();
   await page.getByRole("button", { name: /Time, loop and sunset/ }).click();
-  await expect(page.getByTestId("departure-in-3h")).toBeVisible();
+  await expect(page.getByRole("radio", { name: "In 3 h", exact: true })).toBeVisible();
+  await page.getByTestId("back-to-options").click();
+  await page.getByTestId("back-to-options").click();
+  await expect(page.getByTestId("named-ride-title")).toHaveValue("Weekend route");
+  await page.unrouteAll({ behavior: "wait" });
+});
+
+
+test("camera provenance stays visible in the phone layers sheet", async ({ page }) => {
+  await page.goto("/");
+  await settledExtent(page);
+  await page.getByRole("button", { name: "Layers", exact: true }).click();
+  await page.getByTestId("map-layer-traffic-cameras").click();
+  const provenance = page.getByTestId("camera-provenance");
+  await provenance.scrollIntoViewIfNeeded();
+  await expect(provenance).toBeInViewport();
+  await expect(provenance).toContainText(/Observed|Observation time unknown/);
 });
