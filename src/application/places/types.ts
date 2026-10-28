@@ -22,7 +22,11 @@ export function asPlaceId(value: string): PlaceId {
   return value as PlaceId;
 }
 
-export type PlaceKind = "happy_hour" | "event";
+export type PlaceKind = "happy_hour" | "event" | "venue";
+
+/** Bounded business categories the advisor may ask for along a planned route. */
+export const PLACE_CATEGORIES = ["brewery", "coffee", "diner", "restaurant"] as const;
+export type PlaceCategory = (typeof PLACE_CATEGORIES)[number];
 
 /**
  * Where the place is in its day, relative to the provider's clock:
@@ -54,6 +58,8 @@ export interface NearbyPlace {
   readonly timeZone?: string | null;
   /** 0–5, or `null` when the source has no rating. */
   readonly rating: number | null;
+  /** Supplied review total; absent means the source did not report one. */
+  readonly reviewCount?: number | null;
   readonly popular: boolean;
   /** Only an explicit `true` is a claim; `null` means "not known". */
   readonly dogFriendly: boolean | null;
@@ -92,6 +98,10 @@ export type PlaceWindow = "now" | "today" | "week";
 export interface PlaceQuery {
   readonly kinds: readonly PlaceKind[];
   readonly window: PlaceWindow;
+  /** Optional category query, kept separate from time-bound event kinds. */
+  readonly categories?: readonly PlaceCategory[];
+  /** Optional rider-supplied town or vicinity phrase. */
+  readonly vicinity?: string | null;
 }
 
 export const DEFAULT_PLACE_QUERY: PlaceQuery = {

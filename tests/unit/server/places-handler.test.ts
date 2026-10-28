@@ -86,6 +86,40 @@ describe("places handler", () => {
     expect(source.calls).toBe(1);
   });
 
+  it("forwards bounded category and vicinity searches to the configured places provider", async () => {
+    let observed: { readonly bufferMiles: number; readonly categories?: readonly string[]; readonly vicinity?: string | null } | null = null;
+    const venue = {
+      ...available.places[0]!,
+      id: asPlaceId("venue:coffee-1"),
+      kind: "venue" as const,
+      name: "Coffee Shop",
+      category: "Coffee Shop",
+      rating: 4.6,
+      reviewCount: 87,
+      routeMile: 25,
+      offRouteMiles: 0.4,
+    };
+    const result = await handlePlacesAlongRequest({
+      line: [{ lon: -75.4, lat: 40.1 }, { lon: -75.2, lat: 40.1 }],
+      bufferMiles: 5,
+      categories: ["coffee"],
+      vicinity: "Jim Thorpe, PA",
+    }, {
+      source: {
+        id: "fake-places",
+        inExtent: async () => available,
+        alongRoute: async (request, query) => {
+          observed = { bufferMiles: request.bufferMiles, ...(query.categories === undefined ? {} : { categories: query.categories }), vicinity: query.vicinity };
+          return { ...available, places: [venue] };
+        },
+      },
+    });
+
+    expect(result.status).toBe(200);
+    expect(observed).toEqual({ bufferMiles: 5, categories: ["coffee"], vicinity: "Jim Thorpe, PA" });
+    expect(result.body).toMatchObject({ availability: "available", places: [{ name: "Coffee Shop", rating: 4.6, reviewCount: 87 }] });
+  });
+
   it("serves the fixture in fixture mode, filtered to the viewport", async () => {
     const source = await defaultPlacesSource({ OGV_PLACES_FIXTURE: "1" });
     expect(source?.id).toBe("fixture");

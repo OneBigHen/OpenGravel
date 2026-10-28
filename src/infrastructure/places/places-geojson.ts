@@ -27,7 +27,7 @@ export interface ParsedPlacesCollection {
 
 type Json = Record<string, unknown>;
 
-const KINDS: readonly PlaceKind[] = ["happy_hour", "event"];
+const KINDS: readonly PlaceKind[] = ["happy_hour", "event", "venue"];
 const STATUSES: readonly PlaceStatus[] = ["now", "later", "done", "day", "upcoming"];
 
 function record(value: unknown): value is Json {
@@ -75,12 +75,14 @@ export function parsePlaceFeature(feature: unknown): NearbyPlace | null {
   const lat = finite(coords[1]);
   if (lon === null || lat === null || lon < -180 || lon > 180 || lat < -90 || lat > 90) return null;
   const kind = props["kind"];
-  const status = props["status"];
-  if (!KINDS.includes(kind as PlaceKind) || !STATUSES.includes(status as PlaceStatus)) return null;
+  if (!KINDS.includes(kind as PlaceKind)) return null;
+  const status = props["status"] ?? (kind === "venue" ? "day" : null);
+  if (!STATUSES.includes(status as PlaceStatus)) return null;
   const name = text(props["name"]);
   const url = httpsUrl(props["url"]);
   if (name === "" || url === null) return null;
   const rating = finite(props["rating"]);
+  const reviewCount = finite(props["review_count"]);
   const specials = Array.isArray(props["specials"])
     ? props["specials"].filter((s): s is string => typeof s === "string" && s.trim() !== "").slice(0, 5)
     : [];
@@ -89,7 +91,7 @@ export function parsePlaceFeature(feature: unknown): NearbyPlace | null {
     kind: kind as PlaceKind,
     name,
     coordinate: { lon, lat },
-    category: text(props["category"], kind === "event" ? "Event" : "Bar"),
+    category: text(props["category"], kind === "event" ? "Event" : kind === "venue" ? "Place" : "Bar"),
     label: text(props["label"]),
     status: status as PlaceStatus,
     city: text(props["city"]),
@@ -100,6 +102,7 @@ export function parsePlaceFeature(feature: unknown): NearbyPlace | null {
     endUtc: kind === "event" ? optionalText(props["end_utc"]) : null,
     timeZone: text(props["timezone"], "UTC"),
     rating: rating !== null && rating >= 0 && rating <= 5 ? rating : null,
+    ...(reviewCount !== null && Number.isInteger(reviewCount) && reviewCount >= 0 ? { reviewCount } : {}),
     popular: props["popular"] === true,
     dogFriendly: flag(props["dog"]),
     patio: flag(props["patio"]),
