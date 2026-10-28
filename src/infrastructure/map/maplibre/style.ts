@@ -272,6 +272,14 @@ function selectedRouteColor(palette: MapPalette, strong: boolean): string {
 }
 
 /**
+ * Hike mode's palette: the chosen line is the earthy trail brown with a paper
+ * edge instead of the ride plum, so a walked route never reads as a ridden one.
+ */
+export function hikeRoutePalette(palette: MapPalette): MapPalette {
+  return { ...palette, routePlum: palette.trailBrown, routePlumStrong: palette.paper };
+}
+
+/**
  * The chosen line's casing colour: its own strong tint, unless the surface has
  * overridden the casing (Ride Focus in daylight gives the line a dark edge).
  *
