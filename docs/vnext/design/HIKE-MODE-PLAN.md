@@ -24,6 +24,16 @@ Unknown stays unknown. A trail with no surface or visibility data is never shown
 2. **Hike map style.** Transform the base style at load (the same mechanism as the Rider style in map Wave 3): trails drawn bold by type (footway, path, track, hiking route relations in a coloured casing), contours and hillshade on by default, roads quieter, trailheads, shelters, water, summits and viewpoints promoted.
 3. **Hike layers and sets** in the catalog: Trails, Trailheads, Water sources (`natural=spring`, `amenity=drinking_water`), Shelters and campsites, Summits, Public land (exists), Hunting season (PA State Game Lands), Trail closures.
 
+## Core: Breadcrumb (off-trail waypoint routes)
+
+A first-class planning mode for both hikers and ADV riders, beside the router and the pen. Gaia and onX have it; AllTrails barely does. Ours is free and fully offline.
+
+- **Drop waypoints** by tapping the map (or long-press → "Add breadcrumb"), drag to move, tap to delete or rename, undo/redo. Each leg between two waypoints is either a **straight line** (off trail, the default when there is no trail or road) or **snapped** to the trail/road network when the user chooses it and a graph is available (online, or offline graph tiles).
+- **Numbers that update as you tap:** distance per leg and total, elevation profile from the DEM (Mapterhorn online, cached terrain tiles offline), gain/loss, max grade, Tobler time (H1 item 6). Steep legs (>30 % grade) are flagged; legs that cross water or private land are flagged when that data is on the device. Unknown stays unknown.
+- **Runs on the phone.** No server is needed to build a breadcrumb route, so it works with no signal. Saved like any route (My rides / My hikes), exported as GPX with waypoints, and navigable: follow the line with distance and bearing to the next waypoint and an off-line alert.
+- **Breadcrumb trail while moving.** The recorder draws the user's own track as they go; **Back to start** turns it into a reversed route to follow home (the classic lost-hiker save), also offline.
+- Works in Ride mode too (ADV off-road, private land with permission), with a clear note that straight-line legs are not roads.
+
 ## H1: trail data we can trust
 
 4. **Trail catalog pipeline** (offline job on powerplex, output served by our API): OSM `route=hiking|foot` relations and named `highway=path|footway|track` ways, plus USFS National Forest System Trails and NPS trails (both public domain), plus PA DCNR state park and forest trails. Merge by geometry, keep the best name and every source.
