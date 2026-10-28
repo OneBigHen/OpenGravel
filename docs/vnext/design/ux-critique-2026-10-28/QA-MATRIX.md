@@ -1,5 +1,7 @@
 # Acceptance matrix and adversarial journeys
 
+> For hiking, also use [HIKING-ACCEPTANCE.md](HIKING-ACCEPTANCE.md) (20 scenarios, foot-route edge fixtures) and [RUNTIME-VERIFICATION.md](RUNTIME-VERIFICATION.md) (inconclusive live discoverability check).
+
 > Gate for subsequent implementation PRs. This document itself introduces no passing tests and no verified screenshot assets. **Do not tick a case without execution evidence.** Record browser/device, route fixture/provider, commit SHA and screenshot/test link.
 
 ## Baseline matrix
@@ -166,3 +168,7 @@ Score each screen from 0–5 independently in:
 **Release bar:** no P0 remaining; every critical journey passes; no screen under 4/5 in the first four categories; no false-data or safety regression; screenshots + tests + open limitations attached to implementation PR.
 
 This is a **review rubric**, not a fabricated baseline score. Claude must score real before/after evidence and state which dimensions remain weak.
+
+## Hiking-specific extension
+
+**Do not consider J05 sufficient for hiking acceptance by itself.** Require the dedicated [HIKING-ACCEPTANCE.md](HIKING-ACCEPTANCE.md) tests covering Hike mode discovery, point placement, filter-before-pagination, GPS denial, disconnected/multipart trails, remote foot-router snaps, road detours, trailheads, source-vs-planned geometry, and offline capability truth. Run [ACTIVITY-COHERENCE.md](ACTIVITY-COHERENCE.md) parity checks so the Ride UI does not leak into Hike and vice versa.
