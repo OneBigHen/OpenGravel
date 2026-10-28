@@ -5,7 +5,8 @@
     z-index: var(--og-z-float);
     top: calc(var(--og-safe-top) + 124px);
     left: calc(var(--og-safe-left) + var(--og-space-3));
-    right: calc(var(--og-safe-right) + var(--og-space-3));
+    /* Stop short of the right-hand button column (Layers sits at the same height). */
+    right: calc(var(--og-safe-right) + var(--og-space-4) + var(--og-touch) + var(--og-space-2));
     display: flex;
     align-items: flex-start;
     flex-direction: column;
@@ -24,6 +25,7 @@
     cursor: pointer;
   }
   .og-route-context { width: 100%; min-width: 0; display: flex; justify-content: space-between; align-items: center; gap: var(--og-space-1); padding: 0 var(--og-space-3); font-variant-numeric: tabular-nums; text-align: left; white-space: nowrap; }
+  .og-route-context > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .og-route-context-row .og-map-ask__trigger { color: var(--og-primary-text); padding: 0 var(--og-space-4); font-size: var(--og-text-meta); }
   .og-planner:has(.og-shared-sheet[data-detent="full"]) .og-route-context-row, .og-planner:has(.og-layers[data-open="true"]) .og-route-context-row { display: none; }
 }
