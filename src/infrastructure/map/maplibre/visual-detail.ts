@@ -77,6 +77,14 @@ export function skySpec(night: boolean): Readonly<Record<string, unknown>> {
       };
 }
 
+/** MapLibre's own default light, put back when the map lies flat again. */
+export const DEFAULT_LIGHT: Readonly<Record<string, unknown>> = {
+  anchor: "viewport",
+  position: [1.15, 210, 30],
+  color: "#ffffff",
+  intensity: 0.5,
+};
+
 /** Late-afternoon sun from the west-southwest, so extruded walls read in relief. */
 export const SUN_LIGHT: Readonly<Record<string, unknown>> = {
   anchor: "map",

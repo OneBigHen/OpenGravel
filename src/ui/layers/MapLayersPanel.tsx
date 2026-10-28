@@ -97,7 +97,7 @@ function MapStyleRows({ style }: { readonly style: MapStyleChoice }) {
                 <span className="og-layers__look-art" aria-hidden="true">
                   {preview === null ? null : (
                     // eslint-disable-next-line @next/next/no-img-element -- a remote static map, not an optimisable asset
-                    <img src={preview} alt="" width={112} height={112} loading="lazy" decoding="async" />
+                    <img src={preview} alt="" width={112} height={112} loading="lazy" decoding="async" onError={(event) => { event.currentTarget.hidden = true; }} />
                   )}
                 </span>
                 <span className="og-layers__name">{LOOK_LABEL[option]}</span>
@@ -106,6 +106,7 @@ function MapStyleRows({ style }: { readonly style: MapStyleChoice }) {
           );
         })}
       </ul>
+      {lookPreviewUrl("map") === null ? null : <p className="og-layers__credit">Previews © Mapbox © OpenStreetMap</p>}
     </section>
   );
 }

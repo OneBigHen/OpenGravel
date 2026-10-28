@@ -41,14 +41,15 @@ const CHIP_ICON: Readonly<Record<SearchChip["id"], string>> = {
 };
 
 /**
- * What a rider reaches for first at this hour: coffee in the morning, gas
- * through the day, food at supper, a bed late. Gas is never far from the front.
+ * What a rider reaches for first at this hour: gas first always, then coffee
+ * in the morning, food at midday and supper, a bed late.
  */
 function chipOrder(hour: number): readonly SearchChip["id"][] {
-  if (hour >= 5 && hour < 10) return ["coffee", "gas", "food", "moto", "lodging"];
+  // Gas never moves; what follows it is what this hour asks for.
+  if (hour >= 5 && hour < 10) return ["gas", "coffee", "food", "moto", "lodging"];
   if (hour >= 10 && hour < 16) return ["gas", "food", "coffee", "moto", "lodging"];
-  if (hour >= 16 && hour < 21) return ["food", "gas", "lodging", "coffee", "moto"];
-  return ["lodging", "gas", "food", "coffee", "moto"];
+  if (hour >= 16 && hour < 21) return ["gas", "food", "lodging", "coffee", "moto"];
+  return ["gas", "lodging", "food", "coffee", "moto"];
 }
 
 /** The chips in this hour's order, after mount so the server render matches. */

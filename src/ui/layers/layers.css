@@ -212,7 +212,7 @@
    ring and a green name. */
 .og-layers__group .og-layers__looks {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(76px, 92px));
   flex-direction: row;
   gap: var(--og-space-3);
   margin-top: var(--og-space-2);
@@ -300,6 +300,12 @@
   font-size: var(--og-text-meta);
   font-weight: 600;
   line-height: 1.2;
+}
+
+.og-layers__credit {
+  margin: var(--og-space-2) 0 0;
+  color: var(--og-ink-2);
+  font-size: 11px;
 }
 
 /* Quick sets and map view: square icon tiles, four across. */

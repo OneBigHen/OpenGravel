@@ -142,6 +142,7 @@ import {
   TERRAIN_SOURCE_ID,
   buildingExtrusionLayerSpec,
   skySpec,
+  DEFAULT_LIGHT,
   SUN_LIGHT,
   buildingInsertion,
   hillshadeBeforeId,
@@ -1567,11 +1568,11 @@ export async function createMapLibreHost(
         // A tilted map gets a sky and horizon haze, and a low sun that models
         // the extruded towns; flat again, the style's own sky and light return.
         map.setSky?.(terrainOn ? skySpec(basemapLook === "night") : undefined);
-        if (terrainOn) map.setLight?.(SUN_LIGHT);
+        map.setLight?.(terrainOn ? SUN_LIGHT : DEFAULT_LIGHT);
       }
       if (terrainOn && terrainPitchBefore === null) {
         terrainPitchBefore = map.getPitch?.() ?? 0;
-        map.easeTo?.({ pitch: Math.max(55, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
+        map.easeTo?.({ pitch: Math.max(45, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
       } else if (!terrainOn && terrainPitchBefore !== null) {
         map.easeTo?.({ pitch: terrainPitchBefore, duration: options.reducedMotion === true ? 0 : 300 });
         terrainPitchBefore = null;

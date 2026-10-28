@@ -79,7 +79,9 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
   // Rounded so panning a few streets does not refetch; the route caches too.
   const lat = Math.round(at.lat * 10) / 10;
   const lon = Math.round(at.lon * 10) / 10;
-  const [snapshot, setSnapshot] = useState<WeatherSnapshot | null>(null);
+  // Keyed by where it was fetched, so a pan never shows another place's weather.
+  const [loaded, setLoaded] = useState<{ readonly key: string; readonly snapshot: WeatherSnapshot | null } | null>(null);
+  const key = `${lat},${lon}`;
   const [now, setNow] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -97,7 +99,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
     const load = (): void => {
       fetch(`/api/weather?lat=${lat}&lon=${lon}`, { signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
-        .then((body: { snapshot?: WeatherSnapshot } | null) => setSnapshot(body?.snapshot ?? null))
+        .then((body: { snapshot?: WeatherSnapshot } | null) => setLoaded({ key: `${lat},${lon}`, snapshot: body?.snapshot ?? null }))
         .catch(() => {});
     };
     load();
@@ -124,6 +126,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
     };
   }, [open]);
 
+  const snapshot = loaded?.key === key ? loaded.snapshot : null;
   if (snapshot === null || now === null) return null;
   const upcoming = snapshot.forecast.filter((period) => Date.parse(period.endTime) > now).slice(0, 8);
   const current = upcoming[0];
@@ -132,9 +135,11 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
   const day = sunState(place, now) !== "night";
   const sunsetIso = calculateSunset(place, localNoon(lon, now))?.sunset ?? null;
   const sunsetMs = sunsetIso === null ? null : Date.parse(sunsetIso);
-  // After dark the next light is what matters: tomorrow's sunrise.
-  const sunriseIso = sunsetMs !== null && sunsetMs > now ? null : calculateSunrise(place, localNoon(lon, now, 1));
-  const light = sunsetMs !== null && sunsetMs > now ? `Sunset ${clock(sunsetMs)}` : sunriseIso === null ? null : `Sunrise ${clock(sunriseIso)}`;
+  // The next change of light: sunset by day; before dawn today's sunrise,
+  // after dark tomorrow's.
+  const sunriseToday = calculateSunrise(place, localNoon(lon, now));
+  const nextSunrise = sunriseToday !== null && Date.parse(sunriseToday) > now ? sunriseToday : calculateSunrise(place, localNoon(lon, now, 1));
+  const light = day && sunsetMs !== null && sunsetMs > now ? `Sunset ${clock(sunsetMs)}` : nextSunrise === null ? null : `Sunrise ${clock(nextSunrise)}`;
   const sky = skyOf(current.shortForecast);
   const note = headsUp(snapshot, upcoming.slice(0, 6), sunsetMs, now, day);
   const summary = `${current.temperatureF}°, ${current.shortForecast}${note === null ? "" : `. ${note.text}`}`;
@@ -157,7 +162,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
         <section className="og-conditions__panel" aria-label="Conditions in the next hours">
           <header>
             <strong>{current.shortForecast}</strong>
-            <span>{current.windMph ? `Wind ${current.windMph} mph` : "Calm"}{light === null ? "" : ` · ${light}`}</span>
+            <span>{[current.windMph === undefined ? null : current.windMph === 0 ? "Calm" : `Wind ${current.windMph} mph`, light].filter(Boolean).join(" · ")}</span>
           </header>
           {snapshot.alerts.map((alert) => (
             <p key={`${alert.event}-${alert.onset ?? ""}`} className="og-conditions__alert">{alert.event}{alert.ends === null ? "" : ` until ${clock(alert.ends)}`}</p>
@@ -175,7 +180,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
               );
             })}
           </ol>
-          <p className="og-conditions__source">National Weather Service forecast</p>
+          <p className="og-conditions__source">Forecast near the map center · National Weather Service · {clock(snapshot.fetchedAt)}</p>
         </section>
       ) : null}
     </div>
