@@ -42,5 +42,8 @@ export function usePlannedHikeSummary(hike: HikeActivityProps, ui: PlannerUiStor
     const detent = ui.getState().sheetDetent;
     if (detent === "peek" || detent === "mini") ui.getState().setSheetDetent("half");
   }, [plannedId, ui]);
-  return planned === null ? null : { candidate: planned, returnToStart: hike.returnToStart, onReturnToStart: hike.onReturnToStart, canPlan: hike.canPlan, onPlan: hike.onPlan, onDraw: hike.sketch.onStartDrawing, ...(onBreadcrumb === undefined ? {} : { onBreadcrumb }) };
+  return planned === null ? null : { candidate: planned, returnToStart: hike.returnToStart, onReturnToStart: hike.onReturnToStart, canPlan: hike.canPlan, onPlan: hike.onPlan, onDraw: hike.sketch.onStartDrawing, ...(onBreadcrumb === undefined ? {} : {
+    // Waypoints are tapped on the map, so the sheet drops out of the way first.
+    onBreadcrumb: () => { ui.getState().setSheetDetent("peek"); onBreadcrumb(); },
+  }) };
 }
