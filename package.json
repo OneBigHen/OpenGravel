@@ -25,7 +25,8 @@
     "audit:env": "node scripts/qa/audit-env-example.mjs",
     "audit:production-env": "node scripts/qa/audit-production-env.mjs",
     "experiment:jev-frontier": "node --conditions=react-server --import tsx scripts/jev-frontier-replay.ts",
-    "shots": "node scripts/og-shots/index.mjs"
+    "shots": "node scripts/og-shots/index.mjs",
+    "catalog:trails": "node --import tsx infra/trails/build-trails.ts"
   },
   "dependencies": {
     "@protomaps/basemaps": "^5.7.2",

@@ -1,0 +1,77 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "TRAIL_NAME": "Hawk Mountain Trail",
+        "TRAIL_NO": "F-101",
+        "ADMIN_ORG": "USDA Forest Service",
+        "TRAIL_STATUS": "EXISTING"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -75.98,
+            40.61
+          ],
+          [
+            -75.979,
+            40.611
+          ],
+          [
+            -75.978,
+            40.612
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "TRAIL_NAME": "Kutztown Rail Trail",
+        "TRAIL_NO": "F-205",
+        "TRAIL_STATUS": "EXISTING"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -75.78,
+            40.51
+          ],
+          [
+            -75.779,
+            40.5102
+          ],
+          [
+            -75.778,
+            40.5105
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "TRAIL_NAME": "Proposed Ridge Connector",
+        "TRAIL_NO": "F-999",
+        "TRAIL_STATUS": "PROPOSED"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            -75.95,
+            40.63
+          ],
+          [
+            -75.948,
+            40.632
+          ]
+        ]
+      }
+    }
+  ]
+}
