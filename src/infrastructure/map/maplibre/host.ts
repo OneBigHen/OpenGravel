@@ -54,6 +54,7 @@
  */
 
 import { getActivityMode, subscribeActivityMode } from "@/application/map/activity-mode";
+import { solarPositionAt, type SolarPosition } from "@/application/map/solar-position";
 import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
@@ -155,6 +156,7 @@ import {
 } from "@/infrastructure/map/maplibre/visual-detail";
 import type { MapLibreProtocolHost } from "@/infrastructure/map/offline-basemap";
 import { declutterTargets, gasOnlyFilter } from "@/infrastructure/map/maplibre/ride-declutter";
+import { sunLighting } from "@/infrastructure/map/maplibre/sun-lighting";
 import { NIGHT_CONTRAST_BASE_STYLE_URL, toNightContrast } from "@/infrastructure/map/night-contrast-style";
 import { toNightLegible } from "@/infrastructure/map/night-legible-style";
 
@@ -188,6 +190,31 @@ export const MAP_EXTENT_ATTRIBUTE = "data-map-extent";
 
 /** The camera generation, bumped on every completed camera move. */
 export const MAP_CAMERA_ATTRIBUTE = "data-map-camera";
+
+/**
+ * The sun the map is lit by, as `azimuth,altitude,tone` (or `unknown`).
+ *
+ * Published so a gate can prove the light came from the calculation rather than
+ * from a fixed constant, and so a report can say which hour a screenshot shows.
+ */
+export const MAP_SUN_ATTRIBUTE = "data-map-sun";
+
+/**
+ * How often the map re-reads the sun while the rider holds it still.
+ *
+ * Two minutes is a small fraction of a degree at almost every hour, and a
+ * chained timeout costs nothing next to the DEM and tile work already running.
+ */
+const SUN_REFRESH_MS = 120_000;
+
+/**
+ * A pan of this many degrees re-reads the sun.
+ *
+ * Latitude changes the altitude directly and longitude shifts solar time, so
+ * both axes count; half a degree is about 55 km, far short of a ride but far
+ * more than the drift the two-minute clock already covers.
+ */
+const SUN_PAN_DEGREES = 0.5;
 
 /**
  * The map's rotation in whole degrees, clockwise from north.
@@ -893,6 +920,15 @@ export async function createMapLibreHost(
   const terrainApplied = new WeakMap<MapLibreMap, boolean>();
   const layerStatusListeners = new Set<(status: MapLayerDrawStatus) => void>();
   const layerStates = new Map<MapLayerDrawStatus["layerId"], MapLayerDrawStatus["state"]>();
+  /**
+   * The sun the current renderer was last lit by, so a scene sync that changes
+   * nothing about the light does not touch the style again.
+   */
+  let sunApplied: { readonly map: MapLibreMap; readonly key: string } | null = null;
+  /** The chained clock that re-reads the sun, or `null`. */
+  let sunClock: ReturnType<typeof setTimeout> | null = null;
+  /** The centre the light was computed for, for the pan trigger. */
+  let sunCentre: { readonly lat: number; readonly lon: number } | null = null;
   let terrainFailed = false;
   let terrainHasContent = false;
   let terrainRequested = false;
@@ -1585,6 +1621,88 @@ export async function createMapLibreHost(
   }
 
   /**
+   * The sun over the middle of what the rider is looking at.
+   *
+   * The map's centre, not the rider's fix: the light falls on the ground in
+   * front of them, and a rider panning to the next valley sees that valley's
+   * hour. `null` when the renderer cannot report a camera, which is an unknown
+   * hour rather than noon.
+   */
+  function sunOverMap(map: MapLibreMap): { readonly sun: SolarPosition | null; readonly centre: { readonly lat: number; readonly lon: number } | null } {
+    const centre = map.getCenter?.();
+    if (centre === undefined) return { sun: null, centre: null };
+    const coordinate = { lat: centre.lat, lon: centre.lng };
+    return { sun: solarPositionAt(coordinate, Date.now()), centre: coordinate };
+  }
+
+  /**
+   * Re-reads the sun after a couple of minutes, so a map the rider is holding
+   * still still turns gold when the sun does. One chained timeout rather than an
+   * interval: a disposed host leaves nothing running, and an undrawn light does
+   * not keep a timer alive.
+   */
+  function scheduleSunRefresh(): void {
+    if (disposed || sunClock !== null) return;
+    sunClock = setTimeout(() => {
+      sunClock = null;
+      const current = attempt;
+      if (disposed || current === null || !current.styleReady) return;
+      applySunLighting(current.map);
+    }, SUN_REFRESH_MS);
+  }
+
+  /**
+   * Lights the map from the real sun (MAP-EXPERIENCE-NEXT Wave 3, item 10).
+   *
+   * Hillshade takes the sun's bearing whenever the relief layer is drawn; the
+   * sky and the 3D light take its whole position while terrain is up. Both are
+   * renderer detail and never touch the camera, the scene or the ride. A light
+   * that cannot be set is ignored rather than reported: the map still draws and
+   * a rider cannot act on a warm sun that failed to apply.
+   */
+  function applySunLighting(map: MapLibreMap): void {
+    const hillshade = map.getLayer(HILLSHADE_LAYER_ID) !== undefined;
+    if (!terrainOn && !hillshade) {
+      // Nothing of ours is lit, so the attribute stops describing the map.
+      container.removeAttribute(MAP_SUN_ATTRIBUTE);
+      return;
+    }
+    const { sun, centre } = sunOverMap(map);
+    sunCentre = centre;
+    const lighting = sunLighting(sun, basemapLook === "night");
+    // A 0.1° step is below anything the eye reads on a screen, so a 1 Hz ride
+    // scene sync only re-lights the map when the sun has actually moved.
+    const key = [
+      terrainOn ? "3d" : "flat",
+      basemapLook,
+      hillshade ? "shade" : "noshade",
+      lighting.tone,
+      sun === null ? "unknown" : `${sun.azimuth.toFixed(1)}/${sun.altitude.toFixed(1)}`,
+    ].join("|");
+    if (sunApplied !== null && sunApplied.map === map && sunApplied.key === key) return;
+    sunApplied = { map, key };
+    try {
+      if (hillshade) {
+        // The bearing is the sun's own azimuth, anchored to the ground: a relief
+        // that turned with the viewport would flip when the rider rotated.
+        map.setPaintProperty?.(HILLSHADE_LAYER_ID, "hillshade-illumination-direction", lighting.hillshade.direction);
+        map.setPaintProperty?.(HILLSHADE_LAYER_ID, "hillshade-illumination-anchor", lighting.hillshade.anchor);
+      }
+      if (terrainOn) {
+        map.setLight?.(lighting.light);
+        map.setSky?.(lighting.sky);
+      }
+      container.setAttribute(
+        MAP_SUN_ATTRIBUTE,
+        sun === null ? "unknown" : `${sun.azimuth.toFixed(1)},${sun.altitude.toFixed(1)},${lighting.tone}`,
+      );
+    } catch {
+      // Decoration, not a fact the rider plans on: the map keeps drawing.
+    }
+    scheduleSunRefresh();
+  }
+
+  /**
    * Terrain detail is one bounded renderer feature: raised ground, subtle
    * hillshade and high-zoom building extrusion. It never moves the camera.
    *
@@ -1631,12 +1749,17 @@ export async function createMapLibreHost(
       // A provider result, selection or status update must not restart DEM work.
       if (terrainApplied.get(map) !== terrainOn || newDem) {
         terrainApplied.set(map, terrainOn);
+        // The block below resets the light to a default; the sun replaces it.
+        sunApplied = null;
         map.setTerrain(terrainOn ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
         // A tilted map gets a sky and horizon haze, and a low sun that models
         // the extruded towns; flat again, the style's own sky and light return.
         map.setSky?.(terrainOn ? skySpec(basemapLook === "night") : undefined);
         map.setLight?.(terrainOn ? SUN_LIGHT : DEFAULT_LIGHT);
       }
+      // The sun's own position replaces the two defaults above as soon as it can
+      // be computed, and is refreshed again whenever the clock or a pan moves it.
+      applySunLighting(map);
       if (requested) reportTerrain(!newDem && terrainHasContent && map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true ? "ready" : "loading");
       else if (terrainTimer !== null) { clearTimeout(terrainTimer); terrainTimer = null; }
 
@@ -2234,6 +2357,14 @@ export async function createMapLibreHost(
     current.viewportSettled = true;
     publishCamera(current.map);
     publishViewport(current.map);
+    // A long pan changes the sun's angle over the ground now on screen.
+    const centre = current.map.getCenter?.();
+    if (
+      centre !== undefined
+      && (sunCentre === null
+        || Math.abs(centre.lat - sunCentre.lat) >= SUN_PAN_DEGREES
+        || Math.abs(centre.lng - sunCentre.lon) >= SUN_PAN_DEGREES)
+    ) applySunLighting(current.map);
   }
 
   /** Publishes the camera while it moves, for the rider's instruments (05 §9). */
@@ -2446,6 +2577,8 @@ export async function createMapLibreHost(
   function prepare(current: HostAttempt): void {
     if (disposed || attempt !== current || current.styleReady) return;
     current.styleReady = true;
+    // A fresh renderer has no light of ours yet.
+    sunApplied = null;
     hikeOriginalRoadOpacity.clear();
     hikeAddedLayers.clear();
     const openedWhereItWas = current.openedWhereItWas;
@@ -2525,6 +2658,8 @@ export async function createMapLibreHost(
   function restoreStyle(current: HostAttempt): void {
     if (disposed || attempt !== current) return;
     current.fingerprints = null;
+    // The style carried the light: the next sync has to set it again.
+    sunApplied = null;
     // A new style carries its own filters: forget what was hidden in the old one.
     rideDeclutterApplied = null;
     rideDeclutterOriginals.clear();
@@ -3024,7 +3159,12 @@ export async function createMapLibreHost(
       palette = readMapPalette(container);
       if (!nightAvailable() || drawingOfflineBasemap) {
         const map = attempt?.map;
-        if (map !== undefined) syncNightScrim(map);
+        if (map !== undefined) {
+          syncNightScrim(map);
+          // The scrim is the night look, so the light and sky follow the look
+          // even though no dark style is being loaded.
+          applySunLighting(map);
+        }
         return;
       }
       void (async () => {
@@ -3080,6 +3220,11 @@ export async function createMapLibreHost(
       if (disposed) return;
       unsubscribeActivity();
       if (terrainTimer !== null) clearTimeout(terrainTimer);
+      if (sunClock !== null) {
+        clearTimeout(sunClock);
+        sunClock = null;
+      }
+      sunApplied = null;
       layerStatusListeners.clear();
       disposed = true;
       if (changedSpanExpiry !== null) {
@@ -3098,6 +3243,7 @@ export async function createMapLibreHost(
       container.removeAttribute(MAP_EXTENT_ATTRIBUTE);
       container.removeAttribute(MAP_CAMERA_ATTRIBUTE);
       container.removeAttribute(MAP_BEARING_ATTRIBUTE);
+      container.removeAttribute(MAP_SUN_ATTRIBUTE);
       container.removeAttribute(MAP_ERROR_ATTRIBUTE);
       container.removeAttribute(MAP_LOAD_ATTRIBUTE);
       container.removeAttribute(MAP_LOAD_REASON_ATTRIBUTE);
