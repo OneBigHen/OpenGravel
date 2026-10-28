@@ -98,7 +98,7 @@ import {
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
-  usePlannerScene,
+  useBreadcrumbScene, usePlannerBreadcrumbView, usePlannerScene,
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
@@ -230,6 +230,7 @@ export function PlannerWorkspace({
   const retrySave = useStore(rideDocumentStore, (state) => state.retrySave);
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [refineEditing, setRefineEditing] = useState(false);
+  const { breadcrumb, bar: breadcrumbBar, mapGlance, dockGlance, mapProps: breadcrumbMapProps } = usePlannerBreadcrumbView({ document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions });
   const [rideStart, setRideStart] = useState<{
     readonly state: "idle" | "starting";
     readonly message: string | null;
@@ -413,7 +414,7 @@ export function PlannerWorkspace({
     finishStroke: finishSketchGesture,
   } = sketchAuthoring;
 
-  const scene = usePlannerScene(
+  const scene = useBreadcrumbScene(breadcrumb.project, usePlannerScene(
     {
       document,
       session,
@@ -429,7 +430,7 @@ export function PlannerWorkspace({
       riderPosition,
     },
     { refineEditing, activeTool, placementTool },
-  );
+  ));
 
   const selectedRef = useMemo(
     () => (selectedObject === null ? null : itineraryRefFor(document, selectedObject)),
@@ -758,18 +759,16 @@ export function PlannerWorkspace({
       }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
-      glance={glance.map}
+      glance={mapGlance(glance.map)}
       topSearch={placeFlow.top}
       toast={placeFlow.toast}
-      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
+      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene: { ...scene, places: placeFlow.pins },
         onViewport: placeFlow.onViewport,
-        onPointAction: placeFlow.pointAction,
+        ...breadcrumbMapProps(placeFlow, handleIntent, placementTool === "idle" && activeTool === "pan"),
         directionsWhenEmpty: places !== undefined && activeRoute === null,
-        longPressEnabled: placementTool === "idle" && activeTool === "pan",
         addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,
-        onIntent: (intent) => { if (!placeFlow.intercept(intent)) handleIntent(intent); },
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
         dimmed: planning && session.phase !== "alternatives-loading" && session.phase !== "primary-ready",
@@ -791,8 +790,8 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
-          glance={glance.dock}
-          editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
+          glance={dockGlance(glance.dock)}
+          editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{

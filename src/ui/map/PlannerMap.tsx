@@ -274,6 +274,7 @@ const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
  * hears about a change a rider could actually see.
  */
 export interface CameraView {
+  readonly center?: Coordinate;
   readonly bearing: number;
   readonly zoom: number;
   readonly minZoom: number;
@@ -283,6 +284,7 @@ export interface CameraView {
 
 function cameraViewOf(camera: MapCameraState): CameraView {
   return {
+    ...(camera.center === undefined ? {} : { center: camera.center }),
     bearing: Math.round(camera.bearing),
     zoom: Math.round(camera.zoom * 100) / 100,
     minZoom: camera.minZoom,
@@ -296,6 +298,8 @@ function cameraViewOf(camera: MapCameraState): CameraView {
 function sameCameraView(previous: CameraView | null, next: CameraView): boolean {
   return (
     previous !== null &&
+    previous.center?.lon === next.center?.lon &&
+    previous.center?.lat === next.center?.lat &&
     previous.bearing === next.bearing &&
     previous.zoom === next.zoom &&
     previous.minZoom === next.minZoom &&
@@ -945,6 +949,7 @@ const CONTROL_COLUMN_PX = 56;
 const POINT_ROWS = [
   { action: "start", label: "Start here", path: "M7 21V3l12 4-12 4" },
   { action: "stop", label: "Add stop here", path: "M12 5v14M5 12h14" },
+  { action: "breadcrumb", label: "Add breadcrumb", path: "M12 21s-6-5.4-6-10.5a6 6 0 0 1 12 0C18 15.6 12 21 12 21zM12 7.5v6M9 10.5h6" },
   { action: "finish", label: "Finish here", path: "M6 21V3h13v9H6M10 3v9M15 3v9" },
   { action: "loop", label: "Loop from here", path: "M19 8a8 8 0 1 0 1 7M19 3v5h-5" },
   { action: "info", label: "What's here?", path: "M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },

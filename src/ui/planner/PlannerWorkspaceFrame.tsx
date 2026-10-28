@@ -201,7 +201,7 @@ export function PlannerWorkspaceFrame({
           />
           {tripMode ? trip : topSearch}
           {glance}
-          {editBar === undefined || desktop || (phone && compact) ? null : <PlannerMapEditBar {...editBar} />}
+          {editBar === undefined || desktop || (phone && compact && editBar.breadcrumb?.editing !== true && document.intent.breadcrumb == null && (document.intent.finish !== null || hasDrawnRoute)) ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (
             <span className="og-map__retrying" data-testid="map-retry-chip" role="status">
               Retrying the map…

@@ -83,6 +83,7 @@ const DOCUMENTED_COMMAND_TYPES: readonly string[] = [
   "roadSpan.create",
   "roadSpan.update",
   "roadSpan.remove",
+  "breadcrumb.set",
   "sketch.commit",
   "sketch.clear",
   "longTrip.set",

@@ -158,6 +158,7 @@ export interface PreparationProviderRegistry {
    * readiness, scoring or the ride document.
    */
   readonly elevationProfile?: ElevationSource;
+  readonly breadcrumbElevationProfile?: ElevationSource;
   /** Wire-shaped alias accepted at the application boundary. */
   readonly ["offline-route"]?: OfflineRouteProvider;
 }

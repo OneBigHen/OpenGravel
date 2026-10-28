@@ -49,6 +49,7 @@ export function usePlanCommand(input: PlanCommandInput): () => void {
     restoreSettled = true,
   } = input;
   const plan = useCallback((): void => {
+    if (document.intent.breadcrumb != null) return;
     markRevisionAttempted(document.revision);
     void planningSessionStore.getState().begin({
       rideId: document.rideId,

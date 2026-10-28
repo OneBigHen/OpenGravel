@@ -1,3 +1,4 @@
+import type { BreadcrumbRoute } from "@/domain/breadcrumb/types";
 /**
  * Typed commands for changes authored by the rider.
  *
@@ -163,6 +164,7 @@ export type RideCommand =
       readonly direction?: RoadSpanConstraint["direction"];
     })
   | (RideCommandBase<"roadSpan.remove"> & { readonly spanId: RoadSpanId })
+  | (RideCommandBase<"breadcrumb.set"> & { readonly breadcrumb: BreadcrumbRoute | null })
   | (RideCommandBase<"sketch.commit"> & { readonly sketch: SketchIntent })
   | (RideCommandBase<"sketch.clear"> & Record<never, never>)
   | (RideCommandBase<"longTrip.set"> & { readonly value: LongTripIntent | null })
@@ -232,6 +234,7 @@ export const RIDE_COMMAND_TYPES = {
   "roadSpan.create": true,
   "roadSpan.update": true,
   "roadSpan.remove": true,
+  "breadcrumb.set": true,
   "sketch.commit": true,
   "sketch.clear": true,
   "longTrip.set": true,

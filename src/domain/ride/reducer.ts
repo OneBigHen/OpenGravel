@@ -1,3 +1,4 @@
+import { breadcrumbIssues, reverseBreadcrumb } from "@/domain/breadcrumb/route";
 /**
  * The fenced reducer for authored ride state (02-ARCHITECTURE-CONTRACT §5,
  * 03-DOMAIN-MODEL §25–§27).
@@ -235,6 +236,11 @@ function withArrivalIntent(
  * Applies one operation to an intent. Never touches history, revision, or
  * timestamps; that is `applyRideCommand`'s job.
  */
+/** Clears a breadcrumb only when one exists, so absent stays absent (no-op detection). */
+function noBreadcrumb(intent: RideIntent): { readonly breadcrumb?: null } {
+  return intent.breadcrumb == null ? {} : { breadcrumb: null };
+}
+
 function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOutcome {
   switch (command.type) {
     case "ride.create": {
@@ -264,7 +270,7 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       // A cleared loop is no longer a loop either: × on the route goes back to
       // the home screen (Google's close), and Undo clear brings the loop back.
       return applyChange(
-        { ...intent, shape: intent.shape === "loop" ? "destination" : intent.shape, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [], sketch: null },
+        { ...intent, shape: intent.shape === "loop" ? "destination" : intent.shape, start: keepStart ? intent.start : null, finish: null, stops: [], shaping: [], sketch: null, ...noBreadcrumb(intent) },
         true,
       );
     }
@@ -281,6 +287,7 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
           finish,
           stops: [...intent.stops].reverse(),
           shaping: [...intent.shaping].reverse(),
+          ...(intent.breadcrumb == null ? {} : { breadcrumb: reverseBreadcrumb(intent.breadcrumb) }),
           // The reversed ride traverses each span the other way. `either` is
           // direction-agnostic and stays as authored.
           roadSpans: intent.roadSpans.map((span) => ({
@@ -310,7 +317,7 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
         const issues = rejectCoordinateIssues(validateCoordinate(point.coordinate));
         if (issues !== null) return issues;
       }
-      return applyChange({ ...intent, shape: "destination", sketch: null,
+      return applyChange({ ...intent, shape: "destination", sketch: null, ...noBreadcrumb(intent),
         start: command.start === null ? null : { ...command.start, kind: "start" },
         finish: { ...command.finish, kind: "finish" },
         stops: command.keepWaypoints === true ? intent.stops : [],
@@ -319,7 +326,7 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
     case "ride.loopFrom": {
       const issues = rejectCoordinateIssues(validateCoordinate(command.start.coordinate));
       if (issues !== null) return issues;
-      return applyChange({ ...intent, shape: "loop", sketch: null,
+      return applyChange({ ...intent, shape: "loop", sketch: null, ...noBreadcrumb(intent),
         start: { ...command.start, kind: "start" }, finish: null, stops: [], shaping: [],
         time: { kind: "budget", targetMinutes: 60, toleranceMinutes: 15 } }, true);
     }
@@ -798,8 +805,14 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       );
     }
 
+    case "breadcrumb.set": {
+      const issues = command.breadcrumb === null ? [] : breadcrumbIssues(command.breadcrumb);
+      if (issues.length > 0) return fail("invalid-breadcrumb", issues.join("; "));
+      return applyChange({ ...intent, breadcrumb: command.breadcrumb }, false);
+    }
+
     case "sketch.commit":
-      return applyChange({ ...intent, sketch: command.sketch }, true);
+      return applyChange({ ...intent, sketch: command.sketch, ...noBreadcrumb(intent) }, true);
 
     case "sketch.clear":
       return applyChange({ ...intent, sketch: null }, true);

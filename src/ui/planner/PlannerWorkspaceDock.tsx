@@ -288,7 +288,7 @@ export function PlannerWorkspaceDock({
             as the desktop bar, only laid out as a 48 px row instead of a pill
             over the map.
           */}
-          {phone && compact && editBar !== undefined && !idle ? (
+          {phone && compact && editBar !== undefined && editBar.breadcrumb?.editing !== true && results.actions.document.intent.breadcrumb == null && (results.actions.document.intent.finish !== null || editBar.scene.routes.some((route) => route.geometry.length >= 2)) ? (
             <div className="og-phone-edittools" data-testid="phone-edit-tools">
               <PlannerMapEditBar {...editBar} />
             </div>

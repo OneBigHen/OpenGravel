@@ -1939,3 +1939,29 @@ describe("PlannerWorkspace — the phone sheet head", () => {
     expect(screen.getByTestId("status-line").closest(".og-planner__sheet")).not.toBeNull();
   });
 });
+
+describe("breadcrumb authoring", () => {
+  it("adds, moves, names and undoes waypoints without calling the router", async () => {
+    const workspace = await renderWorkspace(pendingFetcher());
+    fireEvent.click(screen.getByTestId("map-edit-open"));
+    fireEvent.click(screen.getByTestId("map-edit-breadcrumb"));
+    clickMap(120, 120);
+    clickMap(180, 180);
+    expect(workspace.posts).toHaveLength(0);
+    const route = workspace.rideDocumentStore.getState().document.intent.breadcrumb!;
+    expect(route.waypoints).toHaveLength(2);
+    const first = route.waypoints[0]!;
+    const target = { lat: first.coordinate.lat + 0.01, lon: first.coordinate.lon };
+    emitIntent({ type: "pointer-down", pointerId: 1, coordinate: first.coordinate, ref: { kind: "point", pointId: first.id as never } });
+    emitIntent({ type: "gesture-commit", tool: "point-drag", geometry: [first.coordinate, target] });
+    expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.coordinate).toEqual(target);
+    emitIntent({ type: "object-click", coordinate: target, ref: { kind: "point", pointId: first.id as never } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Waypoint 1" }), { target: { value: "Ridge" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBe("Ridge");
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "Redo" }));
+    expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBe("Ridge");
+  });
+});

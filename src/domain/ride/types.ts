@@ -1,3 +1,4 @@
+import type { BreadcrumbRoute } from "@/domain/breadcrumb/types";
 /**
  * The authored ride model (03-DOMAIN-MODEL §2–§19).
  *
@@ -344,6 +345,8 @@ export interface RideIntent {
   readonly avoidAreas: readonly AvoidArea[];
   readonly roadSpans: readonly RoadSpanConstraint[];
   readonly sketch: SketchIntent | null;
+  /** Optional for documents saved before breadcrumb authoring existed. */
+  readonly breadcrumb?: BreadcrumbRoute | null;
   readonly longTrip: LongTripIntent | null;
 }
 

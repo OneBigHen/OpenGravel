@@ -31,6 +31,13 @@ import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideSessionId } from "@/domain/ride-session/ids";
 import type { RouteInstruction, SpeedLimitSpan } from "@/domain/route/types";
 import { isRouteInstruction, isSpeedLimitSpans, MAX_ROUTE_INSTRUCTIONS } from "@/domain/route/types";
+import type { Coordinate } from "@/domain/ride/types";
+
+export interface BreadcrumbNavigationWaypoint {
+  readonly coordinate: Coordinate;
+  readonly name: string | null;
+  readonly distanceAlongMeters: number;
+}
 
 export interface RideFocusPointer {
   readonly version: 1;
@@ -48,6 +55,7 @@ export interface RideFocusPointer {
   readonly instructions?: readonly RouteInstruction[];
   /** Posted speed limits along the route line (NV-04); absent on older pointers. */
   readonly speedLimits?: readonly SpeedLimitSpan[];
+  readonly breadcrumbWaypoints?: readonly BreadcrumbNavigationWaypoint[];
   /** Accepted suggestion plans retained for an unrecorded ride summary, never a GPS track. */
   readonly acceptedSuggestionGeometryRefs?: readonly GeometryRef[];
   /** Keeps a failed trace deletion recoverable after the session reference clears. */
@@ -121,5 +129,12 @@ export function isRideFocusPointer(value: unknown): value is RideFocusPointer {
       instructions.some((instruction) => !isRouteInstruction(instruction)))
   ) return false;
   if (parsed["speedLimits"] !== undefined && !isSpeedLimitSpans(parsed["speedLimits"])) return false;
+  const waypoints = parsed["breadcrumbWaypoints"];
+  if (waypoints !== undefined && (!Array.isArray(waypoints) || waypoints.length < 2 || waypoints.length > 2048 || waypoints.some((point: unknown) => {
+    if (typeof point !== "object" || point === null) return true;
+    const waypoint = point as Record<string, unknown>;
+    const coordinate = waypoint["coordinate"] as Partial<Coordinate> | null;
+    return coordinate == null || typeof coordinate.lat !== "number" || !Number.isFinite(coordinate.lat) || Math.abs(coordinate.lat) > 90 || typeof coordinate.lon !== "number" || !Number.isFinite(coordinate.lon) || Math.abs(coordinate.lon) > 180 || (waypoint["name"] !== null && typeof waypoint["name"] !== "string") || typeof waypoint["distanceAlongMeters"] !== "number" || !Number.isFinite(waypoint["distanceAlongMeters"]) || waypoint["distanceAlongMeters"] < 0;
+  }))) return false;
   return isNonEmptyString(parsed["updatedAt"]);
 }

@@ -1083,6 +1083,7 @@ export async function createMapLibreHost(
     const center = map.getCenter?.();
     if (zoom === undefined || bearing === undefined || center === undefined) return null;
     return {
+      center: { lon: center.lng, lat: center.lat },
       bearing,
       zoom,
       minZoom: map.getMinZoom?.() ?? 0,

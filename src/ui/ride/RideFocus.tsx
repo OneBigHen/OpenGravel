@@ -123,6 +123,8 @@ import type { RideSafety } from "@/application/safety/ride-safety";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
 import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
 import type { StoreApi } from "zustand/vanilla";
+import { bearingTo } from "@/domain/breadcrumb/route";
+import { haversine } from "@/domain/geometry/analysis";
 
 
 export interface RideFocusProps {
@@ -289,6 +291,9 @@ export function RideFocus({
   const lastError = useStore(store, (state) => state.lastError);
   const viewModel = useStore(store, (state) => state.viewModel);
   const navigation = useStore(store, (state) => state.navigation);
+  const breadcrumbWaypoints = useStore(store, (state) => state.breadcrumbWaypoints);
+  const recordedLine = useStore(store, (state) => state.recordedLine);
+  const backtrackBusy = useStore(store, (state) => state.backtrackBusy);
   const suggestions = useStore(store, (state) => state.suggestions);
   const liveSuggestion = useStore(store, (state) => state.liveSuggestion);
   const rideOffer = useStore(store, (state) => state.rideOffer);
@@ -563,9 +568,9 @@ export function RideFocus({
   }, [availableRouteLine, progressFraction]);
 
   const scene = useMemo(
-    () => ({
-      ...buildRideScene({
-        routeId: navigation?.plan.route?.routeId ?? null,
+    () => {
+      const projected = buildRideScene({
+        routeId: navigation?.plan.route?.routeId ?? (breadcrumbWaypoints !== null && (navigation?.activity === "track" || navigation?.resumeActivity === "track") ? asRouteCandidateId("route_breadcrumb") : null),
         routeLine: availableRouteLine,
         progressFraction,
         onRoute,
@@ -583,12 +588,15 @@ export function RideFocus({
           // travel, so a north-up map turns the view without turning the arrow.
           heading: rideBearing,
         },
-      }),
+      });
+      return {
+      ...projected,
+      routes: breadcrumbWaypoints === null || recordedLine.length < 2 || navigation?.recordingId === null ? projected.routes : [...projected.routes, { id: asRouteCandidateId("route_recording"), role: null, geometry: recordedLine, state: "travelled" as const }],
       // Optional like the rest of `MapScene`: a ride with nothing to show
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
-    }),
-    [availableRouteLine, liveSuggestion, navigation, onRoute, progressFraction, rideBearing, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
+    }; },
+    [availableRouteLine, breadcrumbWaypoints, liveSuggestion, navigation, onRoute, progressFraction, recordedLine, rideBearing, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
   );
 
   const selectRideInterest = rideInterest.select;
@@ -768,12 +776,16 @@ export function RideFocus({
   }
 
   const { guidance, position, progress, secondary, warnings, controls, recording, speedLimit } = viewModel;
+  const followingBreadcrumb = breadcrumbWaypoints !== null && (navigation?.activity === "track" || navigation?.resumeActivity === "track");
+  const breadcrumbPosition = navigation?.position.quality === "fresh-good" || navigation?.position.quality === "fresh-poor" ? navigation.position.coordinate : null;
+  const breadcrumbAlong = progress.fraction === null || breadcrumbWaypoints === null ? 0 : progress.fraction * (breadcrumbWaypoints.at(-1)?.distanceAlongMeters ?? 0);
+  const nextBreadcrumb = breadcrumbWaypoints === null ? null : breadcrumbWaypoints.find((point, index) => index > 0 && point.distanceAlongMeters > breadcrumbAlong + 15) ?? breadcrumbWaypoints.at(-1) ?? null;
   const critical = warnings.filter((warning) => warning.severity === "critical");
   const gpsUnavailable = critical.some((warning) => warning.id === "gps-unavailable");
   const sheetCritical = critical.filter((warning) => warning.id !== "gps-unavailable");
   // Free Ride has no route: no maneuver to wait for and no ETA or distance to
   // go, so those boxes stay off the screen instead of saying so (UX rework 2).
-  const routeless = viewModel.activity === "free" || (navigation?.plan.route ?? null) === null;
+  const routeless = !followingBreadcrumb && (viewModel.activity === "free" || (navigation?.plan.route ?? null) === null);
   const caution = warnings.filter(
     (warning) => warning.severity === "caution" && warning.id !== "wake-lock",
   );
@@ -903,7 +915,15 @@ export function RideFocus({
         a fixed box the stream only rewrites; everything else is in the sheet.
       */}
       <header ref={topRef} className="og-ride__top">
-        {terminal !== null || (routeless && guidance.kind === "waiting" && position.tone === "good") ? null : (
+        {terminal !== null ? null : followingBreadcrumb ? (
+          <div className="og-ride__maneuver" data-testid="breadcrumb-guidance" role="status" aria-live="polite">
+            {breadcrumbPosition === null || nextBreadcrumb === null ? <p className="og-ride__maneuver-action">Waiting for location</p> : <>
+              <p className="og-ride__maneuver-distance">{formatDistance(haversine(breadcrumbPosition, nextBreadcrumb.coordinate))}</p>
+              <p className="og-ride__maneuver-action">{Math.round(bearingTo(breadcrumbPosition, nextBreadcrumb.coordinate)) % 360}° to {nextBreadcrumb.name || "next waypoint"}</p>
+              {navigation?.offRouteState === "off-route" || navigation?.offRouteState === "rejoining" ? <p className="og-ride__off-route-distance" data-testid="breadcrumb-off-line">Off the line · return to the route</p> : null}
+            </>}
+          </div>
+        ) : (routeless && guidance.kind === "waiting" && position.tone === "good") ? null : (
           <div
             className="og-ride__maneuver"
             data-testid="ride-maneuver"
@@ -1556,6 +1576,7 @@ export function RideFocus({
               <strong data-testid="recording-average-speed">{recording.averageSpeedText}</strong>
             </div>
             <p data-testid="recording-elapsed">{recording.elapsedTimeText} total</p>
+            {terminal === null ? <button type="button" className="og-ride__action" data-testid="breadcrumb-back-to-start" disabled={backtrackBusy || recordedLine.length < 2 || navigation?.activity === "paused"} onClick={() => void store.getState().backToStart()}>{backtrackBusy ? "Preparing return…" : "Back to start"}</button> : null}
             {recording.waitingForFix && terminal === null ? <p role="status">Waiting for the first GPS fix.</p> : null}
             {recording.saveWarningText === null ? null : (
               <div className="og-ride__recording-warning" role="alert" data-testid="recording-save-warning">

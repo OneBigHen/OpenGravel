@@ -306,6 +306,7 @@ function matches(record: RideRecord, filter: RideListFilter): boolean {
  * stays unnamed: a role word ("Start") would be a name they did not give.
  */
 export function waypointsFromIntent(intent: RideIntent): readonly ExportWaypoint[] {
+  if (intent.breadcrumb != null) return intent.breadcrumb.waypoints.map((point) => ({ name: point.name?.trim() || null, coordinate: point.coordinate }));
   const waypoints: ExportWaypoint[] = [];
   if (intent.start !== null) {
     waypoints.push({ name: intent.start.label?.trim() || null, coordinate: intent.start.coordinate });

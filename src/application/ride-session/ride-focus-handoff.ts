@@ -38,6 +38,8 @@ import type { RideSessionCommandResult, RideSessionController } from "./ride-ses
 import type { RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import type { RideRepositoryPort } from "@/application/persistence/ride-repository";
 import { SKETCH_PREVIEW_RIDE_REFUSAL } from "@/application/planner/sketch-preview";
+import type { GeometryStore } from "@/application/geometry/geometry-store";
+import { breadcrumbLine, breadcrumbMeasurements } from "@/application/breadcrumb/measurements";
 
 /**
  * Why a `Start ride` was refused. Every code is a state the rider can act on,
@@ -263,6 +265,33 @@ export interface PlannerRideActions {
   readonly start: (request: RideHandoffRequest) => Promise<RideStartOutcome>;
   readonly record: (document: RideDocument) => Promise<RecordingPreparationOutcome>;
   readonly freeRide: (document: RideDocument) => Promise<RideStartOutcome>;
+  readonly startBreadcrumb?: (document: RideDocument) => Promise<RideStartOutcome>;
+}
+
+export async function startBreadcrumbFromPlanner(input: { readonly document: RideDocument; readonly rides: RideRepositoryPort; readonly geometry: GeometryStore; readonly controller: RideSessionController; readonly pointer: RideFocusPointerPort; readonly now: string }): Promise<RideStartOutcome> {
+  const route = input.document.intent.breadcrumb;
+  if (route == null || route.waypoints.length < 2 || route.waypoints.length > 2048) return { outcome: "rejected", sessionId: null, message: "Add at least two waypoints before following this route." };
+  const existing = input.pointer.read();
+  if (existing.status === "found") return { outcome: "rejected", sessionId: existing.pointer.sessionId, message: "A ride is already in progress. Open it before starting another." };
+  if (existing.status !== "absent") return { outcome: "rejected", sessionId: null, message: "The current ride could not be checked. Open Ride first." };
+  try {
+    const saved = await input.rides.saveRide(input.document, { writerToken: crypto.randomUUID(), baseRevision: input.document.revision });
+    if (!saved.ok) throw new Error("Ride could not be saved");
+    const line = breadcrumbLine(route);
+    const stored = await input.geometry.put({ kind: "line", coordinates: line }, { kind: "route", now: input.now });
+    const started = await input.controller.start({ activity: "track", rideId: input.document.rideId, rideRevision: input.document.revision, at: input.now });
+    if (started.outcome === "rejected" || started.state === null || started.persistence !== "durable") return { outcome: "rejected", sessionId: null, message: "The route could not be started." };
+    let along = 0;
+    const lengths = breadcrumbMeasurements(route, null).legs;
+    const breadcrumbWaypoints = route.waypoints.map((point, index) => {
+      if (index > 0) along += lengths[index - 1]!.distanceMeters;
+      return { coordinate: point.coordinate, name: point.name?.trim() || null, distanceAlongMeters: along };
+    });
+    input.pointer.write({ sessionId: started.state.sessionId, rideId: input.document.rideId, routeGeometryRef: stored.geometryRef, breadcrumbWaypoints, updatedAt: input.now });
+    return { outcome: "started", sessionId: started.state.sessionId, message: null };
+  } catch {
+    return { outcome: "rejected", sessionId: null, message: "The route could not be saved for Ride. Try again." };
+  }
 }
 
 /** Checkpoints the current authoring revision before Ride Focus loads it. */

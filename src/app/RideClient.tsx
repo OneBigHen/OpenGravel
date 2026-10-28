@@ -17,6 +17,7 @@ import type { PositionSource } from "@/application/ride-session/position-pipelin
 import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
 import { createFerrostarPositionSource } from "@/infrastructure/native/ferrostar-position-source";
 import { buildGuidedNavigationRoute } from "@/application/ride-session/navigation-route";
+import { saveBacktrack } from "@/application/breadcrumb/backtrack";
 import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
 import { createFreeRideTelemetry, recordingPositionFromFix } from "@/application/ride-session/free-ride-telemetry";
 import { createGuidedReroutePlanner } from "@/application/ride-session/guided-reroute";
@@ -249,6 +250,7 @@ export function RideClient({
       riderSettings: createLocalStorageRiderSettings(),
       freeRideTelemetry,
       recording,
+      saveBacktrack: (input) => saveBacktrack({ ...input, rides, geometry }),
       saveSuggestionLine: async (line) => (await geometry.put({ kind: "line", coordinates: [...line] }, { kind: "route" })).geometryRef,
       saveFreeRideSummary: async ({ state, telemetry, acceptedGeometryRefs }) => {
         const loaded = await rides.loadRide(state.plan.rideId);
@@ -354,7 +356,8 @@ export function RideClient({
             if (appliedState.recordingId === null) return;
             // Raw device values only: a derived speed is recomputed by the
             // recording's own filter, never stored as if the device said it.
-            await recording.append(recordingPositionFromFix(fix, appliedState.pausedDurationMs));
+            const result = await recording.append(recordingPositionFromFix(fix, appliedState.pausedDurationMs));
+            if (result.outcome === "accepted") store.getState().acceptRecordedPoint(fix.coordinate);
           },
         });
         return navigationEngine;

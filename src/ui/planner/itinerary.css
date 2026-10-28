@@ -444,7 +444,7 @@
 
 .og-point__input {
   min-width: 110px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--og-space-2);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-control);
@@ -673,6 +673,11 @@
   pointer-events: auto;
 }
 
+@media (max-width: 760px) {
+  .og-planner .og-planner__map-slot > .og-editbar { display: grid; top: calc(var(--og-safe-top) + 8.5rem); }
+  .og-planner__map-slot > .og-editbar .og-editbar__row { max-width: calc(100vw - 1rem); overflow-x: auto; }
+}
+
 .og-editbar__row {
   display: flex;
   gap: 2px;
@@ -774,7 +779,7 @@
 }
 
 @media (max-width: 760px) {
-  .og-editbar:is([data-mode="drawing"], [data-mode="placing"]) {
+.og-editbar:is([data-mode="drawing"], [data-mode="placing"], [data-mode="breadcrumb"]) {
     right: var(--og-space-3);
     left: var(--og-space-3);
     max-width: none;
@@ -795,6 +800,47 @@
     margin-top: var(--og-space-6);
   }
 }
+
+.og-breadcrumb-editor {
+  position: absolute;
+  z-index: 8;
+  top: 6rem;
+  left: 1rem;
+  width: min(20rem, calc(100% - 2rem));
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--og-surface, #fff);
+  color: var(--og-text, #222);
+  box-shadow: 0 8px 30px #0003;
+}
+.og-breadcrumb-editor label { display: block; font-weight: 700; }
+.og-breadcrumb-editor input { width: 100%; min-height: 44px; margin-block: .5rem; }
+.og-breadcrumb-editor__actions { display: flex; gap: .5rem; }
+.og-breadcrumb-editor__actions button { min-height: 44px; flex: 1; }
+.og-breadcrumb-editor :focus-visible { outline: 3px solid #d65c32; outline-offset: 2px; }
+
+.og-breadcrumb-summary {
+  position: absolute;
+  z-index: 5;
+  right: 1rem;
+  bottom: 1rem;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: 36vh;
+  overflow: auto;
+  padding: .85rem 1rem;
+  border-radius: 1rem;
+  background: var(--og-glass);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+  backdrop-filter: var(--og-glass-blur);
+}
+.og-breadcrumb-summary header, .og-breadcrumb-summary__stats { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.og-breadcrumb-summary p { margin: .4rem 0; font-size: var(--og-text-meta); }
+.og-breadcrumb-summary summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.og-breadcrumb-summary li button { min-height: 44px; }
+.og-breadcrumb-summary__actions button, .og-breadcrumb-summary__actions input { min-height: 44px; }
+.og-breadcrumb-summary__actions form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.og-breadcrumb-summary :focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: 2px; }
 
 /* --------------------------------------------------------------------------
    An update that could not be planned: what failed, and the way out.

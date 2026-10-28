@@ -64,6 +64,7 @@ export interface RideRecordingWorkflow {
   recover(recordingId: RecordingId): Promise<RecordingRecoveryOutcome>;
   append(position: RecordingPosition): Promise<RecordingAppendResult>;
   retry(): Promise<RecordingAppendResult>;
+  trace?(): Promise<readonly Coordinate[] | null>;
   finish(at: string): Promise<RecordingWorkflowFinishOutcome>;
   discard(at: string): Promise<RecordingDiscardResult>;
 }
@@ -149,6 +150,15 @@ export function createRideRecordingWorkflow(
       return snapshot === undefined
         ? null
         : { ...snapshot, libraryCommitted, sourceDeleted };
+    },
+
+    async trace(): Promise<readonly Coordinate[] | null> {
+      if (recording === null || recordingId === null) return null;
+      await recording.flush();
+      if (recording.snapshot().bufferedPointCount > 0) return null;
+      const points: Coordinate[] = [];
+      const scan = await options.recordings.scan(recordingId, (batch) => { points.push(...batch.map((point) => point.coordinate)); });
+      return scan.status === "complete" ? points : null;
     },
 
     async start(rideId, rideRevision, at, suggestions = "off"): Promise<RecordingStartResult> {
