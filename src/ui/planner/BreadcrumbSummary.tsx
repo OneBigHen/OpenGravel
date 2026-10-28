@@ -10,7 +10,7 @@ import { useElevationProfile } from "@/ui/planner/useElevationProfile";
 function distance(meters: number): string { return `${(meters / 1609.344).toFixed(1)} mi`; }
 function duration(seconds: number): string { const minutes = Math.round(seconds / 60); return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`; }
 
-export function BreadcrumbSummary({ route, revision, source }: { readonly route: BreadcrumbRoute; readonly revision: number; readonly source?: ElevationSource | undefined }) {
+export function BreadcrumbSummary({ route, revision, source, onToggleSnap, snapping, snapError }: { readonly route: BreadcrumbRoute; readonly revision: number; readonly source?: ElevationSource | undefined; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null }) {
   const line = useMemo(() => breadcrumbLine(route), [route]);
   const elevation = useElevationProfile(source, `breadcrumb-${revision}`, line);
   const profile = elevation?.status === "ready" ? elevation.profile : null;
@@ -27,7 +27,8 @@ export function BreadcrumbSummary({ route, revision, source }: { readonly route:
           <span>{measurements.maxGradePercent === null ? "Grade unknown" : `Max grade ${Math.round(measurements.maxGradePercent)}%`}</span>
         </div>
         <ElevationProfileChart state={elevation ?? { status: "unavailable", reason: "Elevation unknown" }} line={line} waypoints={route.waypoints.map((point, index) => ({ coordinate: point.coordinate, label: point.name || `Waypoint ${index + 1}` }))} />
-        <details><summary>Legs ({route.legs.length})</summary><ol>{measurements.legs.map((leg, index) => <li key={route.waypoints[index]!.id}>Leg {index + 1} · {distance(leg.distanceMeters)}{leg.maxGradePercent !== null && leg.maxGradePercent > 30 ? " · Steep (>30%)" : ""}</li>)}</ol></details>
+        <details><summary>Legs ({route.legs.length})</summary><ol>{measurements.legs.map((leg, index) => <li key={route.waypoints[index]!.id}>Leg {index + 1} · {distance(leg.distanceMeters)}{leg.maxGradePercent !== null && leg.maxGradePercent > 30 ? " · Steep (>30%)" : ""} <button type="button" disabled={snapping !== null} onClick={() => onToggleSnap(index)}>{snapping === index ? "Finding route…" : route.legs[index]!.kind === "snapped" ? "Use straight line" : "Snap to trail or road"}</button></li>)}</ol></details>
+        {snapError === null ? null : <p role="status">{snapError}</p>}
       </>}
     </section>
   );

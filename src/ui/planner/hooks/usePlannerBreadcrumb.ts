@@ -7,6 +7,7 @@ import type { BreadcrumbRoute, BreadcrumbWaypoint } from "@/domain/breadcrumb/ty
 import { newCommandId } from "@/domain/ride/ids";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
+import { snapBreadcrumbLeg } from "@/application/breadcrumb/snap";
 
 function replaceWaypoints(route: BreadcrumbRoute | null | undefined, waypoints: readonly BreadcrumbWaypoint[]): BreadcrumbRoute {
   const next = straightBreadcrumb(waypoints);
@@ -25,6 +26,8 @@ export function usePlannerBreadcrumb(document: RideDocument, store: RideDocument
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragPreview, setDragPreview] = useState<{ id: string; coordinate: Coordinate } | null>(null);
+  const [snapping, setSnapping] = useState<number | null>(null);
+  const [snapError, setSnapError] = useState<string | null>(null);
   const drag = useRef<string | null>(null);
   const route = document.intent.breadcrumb ?? null;
 
@@ -42,6 +45,26 @@ export function usePlannerBreadcrumb(document: RideDocument, store: RideDocument
     if (current == null) return;
     const points = current.waypoints.flatMap((point) => point.id === id ? [update(point)].filter((item): item is BreadcrumbWaypoint => item !== null) : [point]);
     commit(replaceWaypoints(current, points), label);
+  }, [store, commit]);
+  const toggleSnap = useCallback(async (index: number): Promise<void> => {
+    const current = store.getState().document;
+    const currentRoute = current.intent.breadcrumb;
+    const leg = currentRoute?.legs[index];
+    if (currentRoute == null || leg === undefined) return;
+    setSnapError(null);
+    if (leg.kind === "snapped") {
+      const straight = straightBreadcrumb(currentRoute.waypoints).legs[index]!;
+      commit({ ...currentRoute, legs: currentRoute.legs.map((value, position) => position === index ? straight : value) }, "Made breadcrumb leg straight");
+      return;
+    }
+    setSnapping(index);
+    try {
+      const geometry = await snapBreadcrumbLeg(current, index, AbortSignal.timeout(30000));
+      if (store.getState().document.revision !== current.revision) { setSnapError("The route changed. Try snapping this leg again."); return; }
+      commit({ ...currentRoute, legs: currentRoute.legs.map((value, position) => position === index ? { kind: "snapped", geometry } : value) }, "Snapped breadcrumb leg");
+    } catch {
+      setSnapError("Trail or road snapping is unavailable for this leg. The straight line remains.");
+    } finally { setSnapping(null); }
   }, [store, commit]);
   const pointId = useCallback((ref: MapObjectRef | null): string | null => {
     if (ref?.kind !== "point") return null;
@@ -80,5 +103,5 @@ export function usePlannerBreadcrumb(document: RideDocument, store: RideDocument
     const geometry = route.legs.flatMap((leg, index) => index === 0 ? [...leg.geometry] : leg.geometry.slice(1));
     return { ...scene, routes: geometry.length < 2 ? [] : [{ id: "breadcrumb_route" as never, role: null, geometry, state: "selected" }], selectedRouteId: "breadcrumb_route" as never, points, preview: null };
   }, [route, dragPreview]);
-  return { route, editing, selected, setSelected, setEditing, add, edit, intercept, project };
+  return { route, editing, selected, setSelected, setEditing, add, edit, intercept, project, toggleSnap, snapping, snapError };
 }

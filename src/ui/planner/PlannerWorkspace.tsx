@@ -813,7 +813,7 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
-          glance={breadcrumb.route === null ? glance.dock : <BreadcrumbSummary route={breadcrumb.route} revision={document.revision} source={preparationProviders?.breadcrumbElevationProfile} />}
+          glance={breadcrumb.route === null ? glance.dock : <BreadcrumbSummary route={breadcrumb.route} revision={document.revision} source={preparationProviders?.breadcrumbElevationProfile} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} />}
           editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
