@@ -361,6 +361,7 @@ export function PlannerMap({
   clusterControls,
 }: PlannerMapProps) {
   const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
+  const menuOpenedAtRef = useRef(Number.NEGATIVE_INFINITY);
   /**
    * The point whose emergency card is open. Held separately from the long-press
    * menu so closing the menu (which the card replaces) keeps the coordinate the
@@ -549,11 +550,17 @@ export function PlannerMap({
       if (!controlled || controlledLookRef.current !== resolved) setLook(resolved);
       unsubscribe = host.onIntent((intent) => {
         if (intent.type === "map-long-press") {
-          if (longPressEnabledRef.current && activeToolRef.current === "pan") setPointMenu(intent);
+          if (longPressEnabledRef.current && activeToolRef.current === "pan") {
+            menuOpenedAtRef.current = performance.now();
+            setPointMenu(intent);
+          }
           return;
         }
-        if (intent.type === "camera-changed" || intent.type === "gesture-cancel" ||
-            intent.type === "object-click" || intent.type === "map-click") setPointMenu(null);
+        // Lifting the finger that held the map nudges the camera and, on iOS,
+        // fires a late tap; neither is the rider dismissing the menu it opened.
+        const settling = performance.now() - menuOpenedAtRef.current < MENU_SETTLE_MS;
+        if (!settling && (intent.type === "camera-changed" || intent.type === "gesture-cancel" ||
+            intent.type === "object-click" || intent.type === "map-click")) setPointMenu(null);
         intentRef.current(intent);
       });
       // A renderer failure is reported up rather than only painted on the
@@ -988,6 +995,9 @@ export { DEFAULT_MAP_EXTENT };
  * zoom buttons never sit on top of each other.
  */
 const CONTROL_COLUMN_PX = 56;
+
+/** How long after a hold opens the menu its own release cannot close it. */
+const MENU_SETTLE_MS = 700;
 
 const POINT_ROWS = [
   { action: "start", label: "Start here", path: "M7 21V3l12 4-12 4" },
