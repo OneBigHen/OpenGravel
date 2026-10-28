@@ -453,6 +453,10 @@ export const OVERPASS_MIRRORS = [
 ] as const;
 
 function overpassLayer(tags: Record<string, unknown>, layers: readonly MapLayerId[]): MapLayerId | null {
+  if (layers.includes("water-sources") && (tags["natural"] === "spring" || tags["amenity"] === "drinking_water")) return "water-sources";
+  if (layers.includes("trailheads") && tags["information"] === "trailhead") return "trailheads";
+  if (layers.includes("shelters") && (tags["amenity"] === "shelter" || tags["tourism"] === "camp_site")) return "shelters";
+  if (layers.includes("summits") && tags["natural"] === "peak") return "summits";
   return layers.includes("public-land") && (tags["boundary"] === "protected_area" || tags["leisure"] === "nature_reserve" || tags["boundary"] === "national_park") ? "public-land" : null;
 }
 
@@ -470,7 +474,7 @@ export function parseOverpass(payload: unknown, layers: readonly MapLayerId[]): 
     return point === null ? [] : [{
       id: `osm:${text(element["type"]) ?? "x"}/${String(element["id"])}`,
       layerId,
-      name: text(tags["name"]) ?? text(tags["ref"]) ?? text(tags["operator"]) ?? "Protected area",
+      name: text(tags["name"]) ?? text(tags["ref"]) ?? text(tags["operator"]) ?? (layerId === "public-land" ? "Protected area" : layerId.replace("-", " ")),
       detail: text(tags["operator"]) ?? text(tags["protection_title"]),
       weight: null,
       geometry: { type: "Point", coordinates: point },
@@ -479,16 +483,22 @@ export function parseOverpass(payload: unknown, layers: readonly MapLayerId[]): 
 }
 
 export function overpassQuery(bounds: MapLayerBounds, layers: readonly MapLayerId[]): string | null {
-  if (!layers.includes("public-land")) return null;
+  const selectors: string[] = [];
+  if (layers.includes("public-land")) selectors.push(...PUBLIC_LAND_SELECTORS);
+  if (layers.includes("water-sources")) selectors.push('nwr["natural"="spring"]', 'nwr["amenity"="drinking_water"]');
+  if (layers.includes("trailheads")) selectors.push('nwr["information"="trailhead"]');
+  if (layers.includes("shelters")) selectors.push('nwr["amenity"="shelter"]', 'nwr["tourism"="camp_site"]');
+  if (layers.includes("summits")) selectors.push('nwr["natural"="peak"]');
+  if (selectors.length === 0) return null;
   const bbox = `${bounds.south},${bounds.west},${bounds.north},${bounds.east}`;
-  return `[out:json][timeout:12];(${PUBLIC_LAND_SELECTORS.map((selector) => `${selector}(${bbox});`).join("")});out center 400;`;
+  return `[out:json][timeout:12];(${selectors.map((selector) => `${selector}(${bbox});`).join("")});out center 400;`;
 }
 
 export const overpassProvider: LayerProvider = {
   id: "osm",
   // Not registered with the handler: public land calls `load` directly as its
   // fallback, so no requested layer is served through this provider id.
-  layers: [],
+  layers: ["trailheads", "water-sources", "shelters", "summits"],
   ttlMs: 60 * 60_000,
   async load(bounds, layers, context) {
     const query = overpassQuery(bounds, layers);

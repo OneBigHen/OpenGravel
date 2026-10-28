@@ -38,6 +38,8 @@ export interface InfoFeature {
   readonly detail: string | null;
   /** A number the map styles by (curvature rating, incident magnitude), if any. */
   readonly weight: number | null;
+  /** A validated OSM route colour, when the relation publishes one. */
+  readonly color?: string;
   /** A local derived presentation variant, without changing the source layer. */
   readonly overlay?: "road-history";
   /** Optional media shown in the feature card (traffic camera still/video today). */
@@ -46,7 +48,7 @@ export interface InfoFeature {
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority";
+export type InfoProvider = "osm" | "osm-hiking-routes" | "pa-game-lands" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority";
 
 export interface LayerFreshness {
   readonly layerId: MapLayerId;

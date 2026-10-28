@@ -7,6 +7,7 @@
  * through the sketch commands and trigger planning from the applied revision.
  */
 
+import { getActivityMode } from "@/ui/stores/activity-mode";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useStore } from "zustand";
 
@@ -136,6 +137,7 @@ export function usePlannerSketch(input: {
   }, [geometryStore]);
   const schedulePreview = useCallback((): void => {
     stopPreviewTimer();
+    if (getActivityMode() === "hike") return;
     previewTimer.current = setTimeout(() => {
       previewTimer.current = null;
       const ui = plannerUiStore.getState();

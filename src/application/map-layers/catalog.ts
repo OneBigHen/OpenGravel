@@ -11,6 +11,7 @@
 export type MapLayerCategory = "view" | "roads" | "conditions" | "stops" | "access";
 
 export type MapLayerId =
+  | "trails" | "trailheads" | "water-sources" | "shelters" | "summits" | "hunting-season" | "trail-closures"
   | "terrain-3d"
   | "hillshade"
   | "contours"
@@ -70,6 +71,13 @@ export const MAP_LAYER_CATEGORIES: readonly { readonly id: MapLayerCategory; rea
 ];
 
 export const MAP_LAYERS: readonly MapLayerDefinition[] = [
+  { id: "trails", name: "Trails", category: "roads", kind: "features", legend: "Paths and hiking route relations", source: "OpenStreetMap basemap, Overpass and OSM API", caveat: "Community-mapped routes are incomplete; access and conditions are not verified. Relation casings require an online connection.", minZoom: 11, color: "#a34d38", glyph: "∿" },
+  { id: "trailheads", name: "Trailheads", category: "stops", kind: "features", legend: "Mapped trailheads", source: "OpenStreetMap via Overpass", caveat: "Community data; access and facilities are not verified. Online only.", minZoom: 11, color: "#52704b", glyph: "▲" },
+  { id: "water-sources", name: "Water sources", category: "stops", kind: "features", legend: "Springs and drinking water", source: "OpenStreetMap via Overpass", caveat: "Water availability and potability are not verified. Online only.", minZoom: 11, color: "#397c96", glyph: "●" },
+  { id: "shelters", name: "Shelters and campsites", category: "stops", kind: "features", legend: "Mapped shelters and campsites", source: "OpenStreetMap via Overpass", caveat: "Availability and access are not verified. Online only.", minZoom: 11, color: "#796446", glyph: "⌂" },
+  { id: "summits", name: "Summits", category: "stops", kind: "features", legend: "Mapped peaks", source: "OpenStreetMap via Overpass", caveat: "Community data may be incomplete. Online only.", minZoom: 11, color: "#7b4fa0", glyph: "▲" },
+  { id: "hunting-season", name: "PA State Game Lands", category: "access", kind: "features", legend: "Season dates: check PGC", source: "Pennsylvania Game Commission · State Game Land Boundaries", caveat: "Boundary publication dates are shown with each feature; boundaries are generalized. Season dates are not included: check the Pennsylvania Game Commission. Online only.", minZoom: 9, color: "#b45309", glyph: "!" },
+  { id: "trail-closures", name: "Trail closures", category: "access", kind: "features", legend: "Not available yet", source: "TODO: trail closure sources", caveat: "No closure feed connected. Check the land manager before visiting.", minZoom: 9, color: "#a83e32", glyph: "!" },
   {
     id: "mvum", name: "Forest Service roads", category: "access", kind: "features",
     legend: "Green open to motorcycles, red closed",
@@ -325,6 +333,7 @@ export interface MapLayerLens {
 }
 
 export const MAP_LAYER_LENSES: readonly MapLayerLens[] = [
+  { id: "hiking", name: "Hiking", hint: "Trails, terrain and trail stops", glyph: "▲", layers: ["trails", "trailheads", "water-sources", "shelters", "summits", "viewpoints", "hillshade", "contours"] },
   { id: "fun", name: "Fun roads", hint: "Twisty, dirt and views", glyph: "∿", layers: ["great-roads", "gravel", "viewpoints", "hillshade"] },
   { id: "weather", name: "Weather", hint: "Rain and alerts", glyph: "☂", layers: ["weather-radar", "weather"] },
   { id: "traffic", name: "Traffic", hint: "Slowdowns and road work", glyph: "≋", layers: ["traffic-flow", "live-traffic", "work-zones"] },

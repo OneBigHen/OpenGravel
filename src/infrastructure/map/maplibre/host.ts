@@ -53,6 +53,7 @@
  * placement armed — the behaviour the 4.0 review found.
  */
 
+import { getActivityMode, subscribeActivityMode } from "@/application/map/activity-mode";
 import { INFO_HIT_LAYERS, INFO_LAYER_IDS, TRAFFIC_FLOW_SOURCE_ID, infoFeatureCollection } from "./info-layers";
 import {
   LONG_PRESS_MS,
@@ -2441,13 +2442,16 @@ export async function createMapLibreHost(
   function prepare(current: HostAttempt): void {
     if (disposed || attempt !== current || current.styleReady) return;
     current.styleReady = true;
+    hikeOriginalRoadOpacity.clear();
+    hikeAddedLayers.clear();
     const openedWhereItWas = current.openedWhereItWas;
     // The opening camera has been consumed by the constructor.
     restoredCamera = null;
+    applyHikeStyle(current.map);
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
-    if (terrainOn) applyTerrain(current.map);
+    if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     if (latestFollow !== null) {
       runFollow(current, latestFollow.camera, latestFollow.insets, false);
@@ -2462,6 +2466,58 @@ export async function createMapLibreHost(
     if (current.viewportSettled) publishViewport(current.map);
   }
 
+  const hikeOriginalRoadOpacity = new Map<string, unknown>();
+  const hikeAddedLayers = new Set<string>();
+  function applyHikeStyle(map: MapLibreMap): void {
+    for (const id of hikeAddedLayers) if (map.getLayer(id) !== undefined) map.removeLayer(id);
+    hikeAddedLayers.clear();
+    for (const [id, value] of hikeOriginalRoadOpacity) if (map.getLayer(id) !== undefined) map.setPaintProperty?.(id, "line-opacity", value ?? null);
+    hikeOriginalRoadOpacity.clear();
+    if (getActivityMode() !== "hike") return;
+    const layers = map.getStyle?.()?.layers ?? [];
+    const roadLayers = layers.filter((layer) => layer.type === "line" && ["transportation", "road", "roads"].includes(layer["source-layer"] ?? "") && layer.source !== undefined);
+    for (const layer of roadLayers) {
+      if (/path|trail|track|foot|pedestrian|rail/i.test(layer.id)) continue;
+      const original = layer.paint?.["line-opacity"];
+      hikeOriginalRoadOpacity.set(layer.id, original);
+      const opacity = typeof original === "number" || Array.isArray(original) ? original : 1;
+      map.setPaintProperty?.(layer.id, "line-opacity", ["*", opacity, 0.55]);
+    }
+    const before = layers.find((layer) => layer.type === "symbol")?.id;
+    const roads = [...new Map(roadLayers.map((layer) => [`${layer.source}:${layer["source-layer"]}`, layer])).values()];
+    roads.forEach((road, index) => {
+      const protomaps = road["source-layer"] === "roads";
+      const filter = protomaps
+        ? ["any", ["==", ["get", "kind"], "path"], ["in", ["get", "kind_detail"], ["literal", ["path", "footway", "track", "steps", "bridleway"]]]]
+        : ["in", ["get", "class"], ["literal", ["path", "track", "pedestrian"]]];
+      const common = { type: "line", source: road.source, "source-layer": road["source-layer"], filter, minzoom: 10, layout: { "line-cap": "round", "line-join": "round" } };
+      const casing = `og-hike-trail-casing-${index}`, line = `og-hike-trails-${index}`;
+      map.addLayer({ id: casing, ...common, paint: { "line-color": "#f4ead2", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2.5, 16, 6] } }, before);
+      map.addLayer({ id: line, ...common, paint: { "line-color": ["match", ["coalesce", ["get", protomaps ? "kind_detail" : "class"], ""], "track", "#987343", "footway", "#477967", "#b24d37"], "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 16, 3.5] } }, before);
+      hikeAddedLayers.add(casing); hikeAddedLayers.add(line);
+    });
+    const poiLayers = layers.filter((layer) => layer.source !== undefined && ["poi", "poi_label", "pois", "mountain_peak", "natural_label"].includes(layer["source-layer"] ?? ""));
+    const pois = [...new Map(poiLayers.map((layer) => [`${layer.source}:${layer["source-layer"]}`, layer])).values()];
+    const fonts = placeFontStack(map);
+    pois.forEach((poi, index) => {
+      const kind = ["coalesce", ["get", "maki"], ["get", "subclass"], ["get", "kind"], ["get", "type"], ["get", "class"], ""];
+      const values = ["trailhead", "shelter", "alpine_hut", "camp_site", "campsite", "spring", "drinking_water", "drinking-water", "water", "peak", "mountain", "summit", "viewpoint"];
+      const filter = ["any", ...["maki", "subclass", "kind", "type", "class"].map((property) => ["in", ["get", property], ["literal", values]])];
+      const common = { source: poi.source, "source-layer": poi["source-layer"], filter, minzoom: 11 };
+      const circle = `og-hike-poi-${index}`;
+      map.addLayer({ id: circle, type: "circle", ...common, paint: { "circle-color": ["match", kind, "spring", "#397c96", "drinking_water", "#397c96", "drinking-water", "#397c96", "water", "#397c96", "peak", "#7b4fa0", "mountain", "#7b4fa0", "summit", "#7b4fa0", "viewpoint", "#7b4fa0", "#47785b"], "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 15, 5], "circle-stroke-color": "#f4ead2", "circle-stroke-width": 1.5 } });
+      hikeAddedLayers.add(circle);
+      if (fonts !== null) {
+        const label = `og-hike-poi-label-${index}`;
+        map.addLayer({ id: label, type: "symbol", ...common, minzoom: 12, layout: { "text-field": ["coalesce", ["get", "name"], ""], "text-font": fonts, "text-size": 11, "text-offset": [0, 0.8], "text-anchor": "top", "text-optional": true }, paint: { "text-color": basemapLook === "night" ? "#f4ead2" : "#263e32", "text-halo-color": basemapLook === "night" ? "#15251e" : "#f4ead2", "text-halo-width": 1.5 } });
+        hikeAddedLayers.add(label);
+      }
+    });
+  }
+  const unsubscribeActivity = subscribeActivityMode(() => {
+    if (attempt?.styleReady) { applyHikeStyle(attempt.map); applyTerrain(attempt.map); }
+  });
+
   /** A style reset drops all renderer images, sources and layers; restore the same scene. */
   function restoreStyle(current: HostAttempt): void {
     if (disposed || attempt !== current) return;
@@ -2469,10 +2525,13 @@ export async function createMapLibreHost(
     // A new style carries its own filters: forget what was hidden in the old one.
     rideDeclutterApplied = null;
     rideDeclutterOriginals.clear();
+    hikeOriginalRoadOpacity.clear();
+    hikeAddedLayers.clear();
+    applyHikeStyle(current.map);
     addSources(current.map);
     addSatellite(current.map);
     addOverlayLayers(current.map);
-    if (terrainOn) applyTerrain(current.map);
+    if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     placeAttribution();
     publishCamera(current.map);
@@ -3016,6 +3075,7 @@ export async function createMapLibreHost(
 
     dispose(): void {
       if (disposed) return;
+      unsubscribeActivity();
       if (terrainTimer !== null) clearTimeout(terrainTimer);
       layerStatusListeners.clear();
       disposed = true;

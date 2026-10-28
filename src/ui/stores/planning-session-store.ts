@@ -16,6 +16,7 @@
  * from the session, and geometry comes from the store the pipeline wrote to.
  */
 
+import { getActivityMode } from "@/ui/stores/activity-mode";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import type {
@@ -91,6 +92,7 @@ export function createPlanningSessionStore(
       snapshot: service.snapshot(),
       geometry: {},
       begin: async (input: ClientPlanningBeginInput): Promise<void> => {
+        if (getActivityMode() === "hike") return;
         await service.begin(input);
       },
       cancel: (): void => {

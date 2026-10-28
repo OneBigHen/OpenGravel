@@ -30,10 +30,13 @@ import {
 
 import { authorityProvider } from "./authority";
 import { publicLandProvider } from "./public-land";
+import { hikingRoutesProvider } from "./hiking-routes";
+import { paGameLandsProvider } from "./pa-game-lands";
 import { fireProvider } from "./fire";
 import { terrainProvider } from "./terrain";
 import { trafficCamerasProvider } from "./traffic-cameras";
 import {
+  overpassProvider,
   knownRoadsProvider,
   nwsAlertsProvider,
   tomtomIncidentsProvider,
@@ -150,6 +153,9 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     terrainProvider,
     fireProvider,
     publicLandProvider,
+    paGameLandsProvider,
+    hikingRoutesProvider,
+    overpassProvider,
     authorityProvider,
     tomtomStopsProvider,
     tomtomIncidentsProvider,

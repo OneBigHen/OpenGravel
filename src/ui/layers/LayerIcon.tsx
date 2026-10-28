@@ -8,9 +8,17 @@ import type { ReactNode } from "react";
 
 import type { MapLayerId } from "@/application/map-layers";
 
-type IconKey = MapLayerId | "fun" | "stops" | "traffic";
+type IconKey = MapLayerId | "fun" | "stops" | "traffic" | "hiking";
 
 const PATHS: Readonly<Record<IconKey, ReactNode>> = {
+  "hiking": <><path d="m2 19 7-10 4 6 3-4 6 8Z" /><path d="M8 21h8" /></>,
+  "trails": <path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6" />,
+  "trailheads": <path d="M12 3 3 20h18Z" />,
+  "water-sources": <path d="M12 3C9 8 6 11 6 15a6 6 0 0 0 12 0c0-4-3-7-6-12Z" />,
+  "shelters": <path d="M3 20 12 5l9 15Z" />,
+  "summits": <path d="M2 20 12 4l10 16Z" />,
+  "hunting-season": <path d="M12 3 2 20h20ZM12 10v5" />,
+  "trail-closures": <path d="M4 4l16 16M20 4 4 20" />,
   "fun": <path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6" />,
   "great-roads": <path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6" />,
   "gravel": <><path d="M4 20 10 4M20 20 14 4" /><path d="M12 7v2M12 12v2M12 17v2" /></>,
