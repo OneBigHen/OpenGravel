@@ -63,6 +63,10 @@ export function HikeResultsMap({ trails, origin, selected, onSelect, mapboxToken
         map.on("mouseleave", "trails-hit", () => { map.getCanvas().style.cursor = ""; });
         ready.current = true;
         frame(maplibregl);
+        // Credits stay one tap away instead of covering the bottom of the map.
+        const attribution = ref.current?.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact");
+        attribution?.classList.remove("maplibregl-compact-show");
+        attribution?.removeAttribute("open");
       });
     });
     function frame(maplibregl: typeof import("maplibre-gl")) {
