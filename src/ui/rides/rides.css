@@ -734,6 +734,22 @@
   border-radius: var(--og-radius-control);
 }
 
+/* Opening a file as a breadcrumb: an alternative way in, never the default. */
+.og-import__breadcrumb {
+  display: grid;
+  gap: var(--og-space-2);
+  justify-items: start;
+  padding: var(--og-space-3);
+  border: 1px dashed var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+}
+
+.og-import__breadcrumb p {
+  max-width: 720px;
+  color: var(--og-ink-2);
+}
+
 .og-import__options fieldset {
   display: grid;
   gap: var(--og-space-2);

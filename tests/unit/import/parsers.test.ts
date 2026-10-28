@@ -197,3 +197,30 @@ describe("ordinary GPX uploads", () => {
     expect(() => parseGpx('<gpx version="1.1"><extensions>' + '<x/>'.repeat(500_001) + '</extensions></gpx>')).toThrow(/element.*limit/i);
   });
 });
+
+  it("keeps named route and track points so they can become breadcrumb waypoints", () => {
+    const parsed = parseGpx(`<?xml version="1.0"?>
+      <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+        <rte><name>Sunday grinder</name>
+          <rtept lat="40" lon="-75"><name>Fuel</name></rtept>
+          <rtept lat="40.01" lon="-75.01"/>
+          <rtept lat="40.02" lon="-75.02"><name>Ice cream</name></rtept>
+        </rte>
+        <trk><name>Unnamed line</name><trkseg>
+          <trkpt lat="39" lon="-74"/><trkpt lat="39.001" lon="-74.001"/>
+        </trkseg></trk>
+      </gpx>`);
+
+    // Tracks are parsed before routes, and only named points carry names.
+    expect(parsed.tracks[0]?.sourceKind).toBe("track");
+    expect(parsed.tracks[0]?.pointNames).toBeUndefined();
+    expect(parsed.tracks[1]?.sourceKind).toBe("route");
+    expect(parsed.tracks[1]?.pointNames).toEqual([["Fuel", null, "Ice cream"]]);
+  });
+
+  it("bounds an oversized point name instead of carrying it", () => {
+    const long = "x".repeat(4_096);
+    const parsed = parseGpx(`<gpx version="1.1"><rte><rtept lat="40" lon="-75"><name>${long}</name></rtept><rtept lat="40.01" lon="-75.01"/></rte></gpx>`);
+    expect(parsed.tracks[0]?.pointNames?.[0]?.[0]?.length).toBeLessThan(long.length);
+    expect(parsed.warnings.join(" ")).toMatch(/point name.*truncated/i);
+  });

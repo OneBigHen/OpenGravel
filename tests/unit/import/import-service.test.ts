@@ -6,6 +6,7 @@ import { createImportService } from "@/application/import/import-service";
 import { UniqueRideAlreadyExistsError } from "@/application/library/library-service";
 import type { LibraryServicePort, NamedRide } from "@/application/library/library-service";
 import { createRideDocument } from "@/domain/ride/create";
+import { parseGpx } from "@/infrastructure/import/gpx-parser";
 import type { ParsedImport } from "@/application/import/types";
 
 const GPX = `<?xml version="1.0"?><gpx version="1.1"><trk><name>Morning</name><trkseg><trkpt lat="40" lon="-75"/><trkpt lat="40.001" lon="-75.001"/></trkseg></trk></gpx>`;
@@ -18,6 +19,29 @@ const parsed: ParsedImport = {
   }],
   warnings: [],
 };
+
+function gpxParser(): { parse: (bytes: ArrayBuffer, filename: string) => Promise<ParsedImport> } {
+  return {
+    parse: async (bytes, filename) => parseGpx(new TextDecoder().decode(bytes), { filename }),
+  };
+}
+
+/** A cue sheet: named waypoints, no track. */
+const CUE_SHEET = `<?xml version="1.0"?>
+<gpx version="1.1" creator="test" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="40" lon="-75"><name>Trailhead</name></wpt>
+  <wpt lat="40.01" lon="-75.01"><name>Named pass</name></wpt>
+  <wpt lat="40.02" lon="-75.02"/>
+</gpx>`;
+
+function denseTrackGpx(points: number): string {
+  const trkpts = Array.from({ length: points }, (_value, index) => {
+    const lat = (40 + index * 0.0001 + Math.sin(index / 25) * 0.002).toFixed(6);
+    const lon = (-75 - index * 0.0001).toFixed(6);
+    return `<trkpt lat="${lat}" lon="${lon}"/>`;
+  }).join("");
+  return `<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Recorded Sunday</name><trkseg>${trkpts}</trkseg></trk></gpx>`;
+}
 
 const switchBackParsed = {
   tracks: [{
@@ -433,5 +457,108 @@ describe("ImportService", () => {
     const outcome = await service.importFile(file(), { trackRoute: "route-along" });
     expect(outcome.document.intent.shaping).toHaveLength(2);
     expect(outcome.warnings.at(-1)).toMatch(/may deviate from the original track/);
+  });
+});
+
+describe("importing a file as a breadcrumb", () => {
+  it("previews a cue sheet instead of refusing it as having no track", async () => {
+    const service = createImportService({
+      blobStore: blobStore(new Map()),
+      geometryStore: createMemoryGeometryStore(),
+      libraryService: library(),
+      parse: gpxParser(),
+    });
+
+    const preview = await service.previewFile(file(CUE_SHEET, "application/gpx+xml", "cue-sheet.gpx"));
+    expect(preview.parsed.tracks).toEqual([]);
+    expect(preview.parsed.waypoints).toHaveLength(3);
+
+    // The ordinary track import still has nothing to save from this file.
+    await expect(service.importFile(file(CUE_SHEET, "application/gpx+xml", "cue-sheet.gpx")))
+      .rejects.toMatchObject({ code: "no-usable-geometry" });
+  });
+
+  it("saves a cue sheet's named waypoints as a straight-leg breadcrumb ride", async () => {
+    const saved: NamedRide[] = [];
+    const libraryService = library(saved);
+    const service = createImportService({
+      blobStore: blobStore(new Map()),
+      geometryStore: createMemoryGeometryStore(),
+      libraryService,
+      parse: gpxParser(),
+    });
+
+    const outcome = await service.importFileAsBreadcrumb(file(CUE_SHEET, "application/gpx+xml", "cue-sheet.gpx"));
+
+    expect(outcome.candidate.source).toBe("waypoints");
+    expect(outcome.candidate.waypointCount).toBe(3);
+    expect(outcome.warnings.join(" ")).toMatch(/preserved 3 gpx waypoints/i);
+    const document = saved[0]!.document;
+    expect(document.title).toBe("cue-sheet");
+    expect(document.intent.breadcrumb?.waypoints.map((point) => point.name)).toEqual(["Trailhead", "Named pass", undefined]);
+    expect(document.intent.breadcrumb?.legs.map((leg) => leg.kind)).toEqual(["straight", "straight"]);
+
+    const options = vi.mocked(libraryService.saveNamed).mock.calls[0]![1];
+    // The ride keeps its source file and the breadcrumb line it can export.
+    expect(options.originalsRef).toBe(outcome.artifact.originalRef);
+    expect(options.plannedRoute?.geometry).toHaveLength(3);
+    expect(options.importData?.tracks).toEqual([]);
+    expect(options.importData?.waypoints).toHaveLength(3);
+    expect(options.bundleSummary?.distanceMeters).toBeGreaterThan(2_000);
+  });
+
+  it("thins a dense track and keeps the source track with the saved breadcrumb", async () => {
+    const saved: NamedRide[] = [];
+    const libraryService = library(saved);
+    const service = createImportService({
+      blobStore: blobStore(new Map()),
+      geometryStore: createMemoryGeometryStore(),
+      libraryService,
+      parse: gpxParser(),
+    });
+
+    const outcome = await service.importFileAsBreadcrumb(
+      file(denseTrackGpx(300), "application/gpx+xml", "recorded.gpx"),
+    );
+
+    expect(outcome.candidate.source).toBe("track");
+    expect(outcome.candidate.sourcePointCount).toBe(300);
+    expect(outcome.candidate.waypointCount).toBeLessThanOrEqual(50);
+    expect(outcome.warnings.join(" ")).toMatch(/Thinned 300 source points to \d+ breadcrumb waypoints/);
+    const breadcrumb = saved[0]!.document.intent.breadcrumb!;
+    expect(breadcrumb.waypoints).toHaveLength(outcome.candidate.waypointCount);
+    expect(breadcrumb.legs.every((leg) => leg.kind === "straight")).toBe(true);
+    const options = vi.mocked(libraryService.saveNamed).mock.calls[0]![1];
+    expect(options.importData?.tracks).toHaveLength(1);
+    expect(options.importData?.warnings?.join(" ")).toMatch(/straight lines, not roads/);
+  });
+
+  it("refuses a candidate id the file does not contain", async () => {
+    const service = createImportService({
+      blobStore: blobStore(new Map()),
+      geometryStore: createMemoryGeometryStore(),
+      libraryService: library(),
+      parse: gpxParser(),
+    });
+
+    await expect(service.importFileAsBreadcrumb(
+      file(CUE_SHEET, "application/gpx+xml", "cue-sheet.gpx"),
+      { candidateId: "track_4" },
+    )).rejects.toMatchObject({ code: "no-usable-geometry" });
+  });
+
+  it("honours a caller's own waypoint budget", async () => {
+    const service = createImportService({
+      blobStore: blobStore(new Map()),
+      geometryStore: createMemoryGeometryStore(),
+      libraryService: library(),
+      parse: gpxParser(),
+    });
+
+    const outcome = await service.importFileAsBreadcrumb(
+      file(denseTrackGpx(300), "application/gpx+xml", "recorded.gpx"),
+      { maxWaypoints: 8 },
+    );
+    expect(outcome.candidate.waypointCount).toBeLessThanOrEqual(8);
   });
 });

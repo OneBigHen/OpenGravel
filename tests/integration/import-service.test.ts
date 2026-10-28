@@ -210,3 +210,62 @@ describe("GPX export round trips through the importer", () => {
     expect(source?.plannedRoute?.geometry.length).toBeLessThanOrEqual(line.length);
   });
 });
+
+describe("opening an imported GPX as a breadcrumb, durably", () => {
+  function fileFor(xml: string, name: string): ImportFile {
+    const bytes = new TextEncoder().encode(xml);
+    return {
+      name,
+      type: "application/gpx+xml",
+      size: bytes.byteLength,
+      arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+    };
+  }
+
+  function service() {
+    sequence += 1;
+    const database = new VNextDatabase(`opengravel-breadcrumb-import-${sequence}`);
+    const blobStore = createIndexedDbImportBlobStore({ database });
+    const geometryStore = createIndexedDbGeometryStore({ databaseName: database.name });
+    const repository = createRideRepository({ database });
+    const library = createLibraryService(repository, {
+      now: () => "2026-10-07T12:00:00.000Z",
+      blobStore,
+      geometryStore,
+    });
+    const imports = createImportService({
+      blobStore,
+      geometryStore,
+      libraryService: library,
+      parse: { parse: (bytes, filename, options) => parseImportBytes(bytes, filename, options) },
+      now: () => "2026-10-07T12:00:00.000Z",
+    });
+    return { library, imports };
+  }
+
+  it("saves a waypoint-only GPX as a breadcrumb ride that opens again", async () => {
+    const { library, imports } = service();
+    const xml = `<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+      <wpt lat="40" lon="-75"><name>Trailhead</name></wpt>
+      <wpt lat="40.01" lon="-75.01"/>
+      <wpt lat="40.02" lon="-75.02"><name>Water</name></wpt>
+    </gpx>`;
+    const preview = await imports.previewFile(fileFor(xml, "cue-sheet.gpx"));
+    expect(preview.parsed.tracks).toEqual([]);
+
+    const outcome = await imports.importFileAsBreadcrumb(fileFor(xml, "cue-sheet.gpx"));
+    expect((await library.listRides())).toHaveLength(1);
+
+    const reopened = await library.openRide(outcome.namedRide.document.rideId);
+    expect(reopened.intent.breadcrumb?.waypoints.map((point) => point.name)).toEqual(["Trailhead", undefined, "Water"]);
+    expect(reopened.intent.breadcrumb?.waypoints[0]?.coordinate).toEqual({ lon: -75, lat: 40 });
+    expect(reopened.intent.breadcrumb?.legs.every((leg) => leg.kind === "straight")).toBe(true);
+
+    // The saved ride still carries its source file and its own export line.
+    const source = await library.loadExportSource(outcome.namedRide.document.rideId);
+    expect(source?.originalFilename).toBe("cue-sheet.gpx");
+    expect(source?.plannedRoute?.geometry).toHaveLength(3);
+    expect(source?.plannedRoute?.geometry[0]).toEqual({ lon: -75, lat: 40 });
+    expect(source?.waypoints.map((waypoint) => waypoint.name)).toEqual(["Trailhead", null, "Water"]);
+  });
+});

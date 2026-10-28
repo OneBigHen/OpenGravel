@@ -237,6 +237,28 @@ export function simplifyIndices(
 }
 
 /**
+ * The kept vertex indices of the shape-preserving fit used by
+ * {@link resampleSketchCorridor}, in along-line order.
+ *
+ * Indices address the usable (finite-coordinate) positions of `corridor`, so a
+ * caller that carries per-point data — a name, an elevation — can keep it
+ * aligned with the simplified line. Both ends are always kept.
+ */
+export function resampleSketchCorridorIndices(
+  corridor: readonly Coordinate[],
+  maxPoints: number,
+): number[] {
+  const clean = corridor.filter(usable);
+  const limit = Math.max(2, Math.trunc(maxPoints));
+  if (clean.length <= limit) return clean.map((_point, index) => index);
+  const importance = douglasPeuckerImportance(clean);
+  const ranked = Array.from(importance.keys()).sort(
+    (a, b) => (importance[b] as number) - (importance[a] as number) || a - b,
+  );
+  return ranked.slice(0, limit).sort((a, b) => a - b);
+}
+
+/**
  * Fits a corridor to at most `maxPoints` positions, keeping its shape (06 §18).
  *
  * The most important vertices survive: exactly what Douglas–Peucker would keep
@@ -249,16 +271,9 @@ export function resampleSketchCorridor(
   maxPoints: number,
 ): Coordinate[] {
   const clean = corridor.filter(usable);
-  const limit = Math.max(2, Math.trunc(maxPoints));
-  if (clean.length <= limit) return clean.map(copy);
-  const importance = douglasPeuckerImportance(clean);
-  const ranked = Array.from(importance.keys()).sort(
-    (a, b) => (importance[b] as number) - (importance[a] as number) || a - b,
+  return resampleSketchCorridorIndices(clean, maxPoints).map(
+    (index) => copy(clean[index] as Coordinate),
   );
-  return ranked
-    .slice(0, limit)
-    .sort((a, b) => a - b)
-    .map((index) => copy(clean[index] as Coordinate));
 }
 
 /** The drawn heading at `along`, measured over ± the heading window. */

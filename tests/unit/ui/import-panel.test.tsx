@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { ImportPanel } from "@/ui/import/ImportPanel";
 import type { ImportServicePort } from "@/application/import/import-service";
+import { importBreadcrumbCandidates } from "@/application/import/import-breadcrumb";
 import type { ParsedImport } from "@/application/import/types";
 
 const parsed = {
@@ -11,15 +12,26 @@ const parsed = {
     { name: "South", segments: [[{ lon: -75.01, lat: 40.01 }, { lon: -75.011, lat: 40.011 }]], timestamps: [[null, null]], elevation: [[null, null]] },
   ],
   warnings: ["A source coordinate was corrected."],
-} as const;
+} as const satisfies ParsedImport;
+
+/** A cue sheet: named waypoints and no track at all. */
+const waypointOnly = {
+  tracks: [],
+  warnings: ["Preserved 3 GPX waypoints as metadata; they are not merged into the source track geometry."],
+  waypoints: [
+    { name: "Trailhead", coordinate: { lon: -75, lat: 40 }, elevation: null, timestamp: null },
+    { name: "Named pass", coordinate: { lon: -75.01, lat: 40.01 }, elevation: null, timestamp: null },
+    { name: "Water", coordinate: { lon: -75.02, lat: 40.02 }, elevation: null, timestamp: null },
+  ],
+} as const satisfies ParsedImport;
 
 afterEach(() => cleanup());
 
-function service(): ImportServicePort {
+function service(preview: ParsedImport = parsed): ImportServicePort {
   return {
     previewFile: vi.fn(async (_file, options) => {
       options?.onProgress?.({ phase: "parsing", points: 1, tracks: 1, segments: 1 });
-      return { parsed, sizeBytes: 3 };
+      return { parsed: preview, sizeBytes: 3 };
     }),
     importFile: vi.fn(async (_file, options) => {
       options?.onProgress?.({ phase: "complete", points: 4, tracks: 2, segments: 2 });
@@ -35,6 +47,18 @@ function service(): ImportServicePort {
       };
     }),
     importSwitchBackBatch: vi.fn().mockResolvedValue({ totalCount: 0, importedCount: 0, files: [] }),
+    importFileAsBreadcrumb: vi.fn(async (file, options) => {
+      const candidate = importBreadcrumbCandidates(preview, { maxWaypoints: options?.maxWaypoints })[0];
+      if (candidate === undefined) throw new Error("no breadcrumb candidate");
+      return {
+        parsed: preview,
+        artifact: { artifactId: "import_2", filename: file.name, mime: "application/gpx+xml", sizeBytes: 1, importedAt: "2026-09-17T12:00:00.000Z", originalRef: "geo_original" as never },
+        candidate,
+        document: {} as never,
+        namedRide: {} as never,
+        warnings: preview.warnings,
+      };
+    }),
     evaluateTrackSelection: vi.fn((_parsed: ParsedImport, indices: readonly number[]) => ({
       canCombine: indices.length > 1 && indices.every((index, position) => index === position),
       reason: indices.length > 1 ? "Only adjacent selected tracks within the gap tolerance can be one ride." : "Select at least two tracks to combine them into one ride.",
@@ -147,4 +171,63 @@ it("shows the chosen file's name in the drop zone", async () => {
   render(<ImportPanel service={service()} />);
   fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [file] } });
   expect(await screen.findByTestId("import-file-name")).toHaveTextContent("Selected file: north-loop.gpx");
+});
+
+it("offers a breadcrumb when the file has waypoints but no track", async () => {
+  const importService = service(waypointOnly);
+  const file = new File([new TextEncoder().encode("gpx")], "cue-sheet.gpx", { type: "application/gpx+xml" });
+  const onImported = vi.fn();
+  render(<ImportPanel service={importService} onImported={onImported} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [file] } });
+  await screen.findByText("No track in this file");
+  expect(screen.getByText("GPX waypoints")).toBeInTheDocument();
+  expect(screen.getByText(/straight legs between them/i)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open as breadcrumb" }));
+  await waitFor(() => expect(importService.importFileAsBreadcrumb).toHaveBeenCalledWith(file, expect.objectContaining({ candidateId: "waypoints" })));
+  const result = await screen.findByTestId("breadcrumb-import-result");
+  expect(result).toHaveTextContent("Breadcrumb saved");
+  expect(result).toHaveTextContent("3 waypoints added to My rides");
+  expect(result).toHaveTextContent(/straight\s+lines between waypoints, not roads/i);
+  expect(onImported).toHaveBeenCalledTimes(1);
+});
+
+it("keeps the waypoint names on the breadcrumb candidates it offers", async () => {
+  render(<ImportPanel service={service(waypointOnly)} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [new File(["gpx"], "cue.gpx")] } });
+  const options = await screen.findAllByRole("radio", { name: /open .* as a breadcrumb/i });
+  expect(options).toHaveLength(1);
+  expect(options[0]).toBeChecked();
+  expect(screen.getByText("3 waypoints")).toBeInTheDocument();
+});
+
+it("offers the single selected track as a breadcrumb without replacing the track import", async () => {
+  const importService = service();
+  render(<ImportPanel service={importService} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [new File(["gpx"], "ride.gpx")] } });
+  await screen.findByText("North");
+  fireEvent.click(screen.getByLabelText("Select South"));
+  // One track left selected: the breadcrumb alternative appears, the ordinary
+  // track import stays the primary choice.
+  expect(screen.getByRole("button", { name: "Import separately" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open as breadcrumb" }));
+  await waitFor(() => expect(importService.importFileAsBreadcrumb).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ candidateId: "track_0" })));
+  expect(await screen.findByTestId("breadcrumb-import-result")).toHaveTextContent("2 waypoints added to My rides");
+});
+
+it("offers the file's named waypoints as a breadcrumb beside its tracks", async () => {
+  const withWaypoints: ParsedImport = { ...parsed, waypoints: waypointOnly.waypoints };
+  const importService = service(withWaypoints);
+  render(<ImportPanel service={importService} />);
+  fireEvent.change(screen.getByLabelText("Import GPX, KML, or KMZ"), { target: { files: [new File(["gpx"], "track-and-waypoints.gpx")] } });
+  await screen.findByText("North");
+
+  // The track import choices stay primary; the named waypoints are an extra way in.
+  expect(screen.getByRole("button", { name: "Import separately" })).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: "Open GPX waypoints as a breadcrumb" })).toBeChecked();
+  fireEvent.click(screen.getByRole("button", { name: "Open as breadcrumb" }));
+  await waitFor(() => expect(importService.importFileAsBreadcrumb).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ candidateId: "waypoints" }),
+  ));
 });

@@ -27,6 +27,15 @@ import {
   type ParsedImportTrack,
 } from "./types";
 import type { GeometryRef } from "@/domain/ride/ids";
+import { breadcrumbLine } from "@/application/breadcrumb/measurements";
+import { lineDistance } from "@/domain/breadcrumb/route";
+import type { RideDocument } from "@/domain/ride/types";
+import {
+  importBreadcrumbCandidates,
+  importBreadcrumbDocument,
+  pickImportBreadcrumbCandidate,
+  type ImportBreadcrumbCandidate,
+} from "./import-breadcrumb";
 import { switchBackImportReport, switchBackTrackToRideDocument } from "./switchback-import";
 
 export type ImportFlowErrorCode =
@@ -123,6 +132,28 @@ export interface ImportOutcome {
   readonly documents: readonly ReturnType<typeof importToRideDocument>[];
   readonly namedRides: readonly NamedRide[];
   readonly document: ReturnType<typeof importToRideDocument>;
+  readonly namedRide: NamedRide;
+  readonly warnings: readonly string[];
+}
+
+export interface ImportBreadcrumbOptions {
+  /** Which source in the file to open; defaults to the first the file offers. */
+  readonly candidateId?: string;
+  /** Waypoint budget for a thinned track; defaults to the breadcrumb bound. */
+  readonly maxWaypoints?: number;
+  /** Replaces the source name as the saved ride's title. */
+  readonly title?: string | null;
+  readonly now?: string;
+  readonly signal?: AbortSignal;
+  readonly onProgress?: (progress: ImportProgress) => void;
+}
+
+/** One imported source opened as an authored breadcrumb route and saved. */
+export interface ImportBreadcrumbOutcome {
+  readonly artifact: ImportArtifact;
+  readonly parsed: ParsedImport;
+  readonly candidate: ImportBreadcrumbCandidate;
+  readonly document: RideDocument;
   readonly namedRide: NamedRide;
   readonly warnings: readonly string[];
 }
@@ -314,7 +345,11 @@ export class ImportService {
       const sizeBytes = bytes.byteLength;
       const parsed = await this.parser.parse(bytes, file.name, options);
       throwIfImportCancelled(options.signal);
-      if (parsed.tracks.length === 0) throw new ImportFlowError("no-usable-geometry", "The file has no usable track geometry.");
+      // A cue-sheet or waypoint export has no track at all; it is still a file
+      // the rider can open, as a breadcrumb, so preview must not refuse it.
+      if (parsed.tracks.length === 0 && importBreadcrumbCandidates(parsed).length === 0) {
+        throw new ImportFlowError("no-usable-geometry", "The file has no usable track or waypoint geometry.");
+      }
       return { parsed, sizeBytes };
     } catch (error: unknown) {
       throw classifyImportError(error, file.name);
@@ -471,6 +506,110 @@ export class ImportService {
     }
   }
 
+  /**
+   * Opens one source in the file as an authored breadcrumb route and saves it.
+   *
+   * The waypoints are the file's own `<wpt>`s, its `<rtept>`s or a thinned
+   * track; the legs between them are straight and say so. The original file and
+   * the source track's geometry stay with the saved ride, so nothing about the
+   * source is lost by thinning it for editing.
+   */
+  async importFileAsBreadcrumb(
+    file: ImportFile,
+    options: ImportBreadcrumbOptions = {},
+  ): Promise<ImportBreadcrumbOutcome> {
+    const refs: GeometryRef[] = [];
+    let artifact: ImportArtifact | null = null;
+    try {
+      const bytes = await readFile(file, options.signal);
+      const sourceBytes = new Uint8Array(bytes.slice(0));
+      const parsed = await this.parser.parse(bytes, file.name, options);
+      throwIfImportCancelled(options.signal);
+      const candidate = pickImportBreadcrumbCandidate(
+        importBreadcrumbCandidates(parsed, { maxWaypoints: options.maxWaypoints }),
+        options.candidateId,
+      );
+      if (candidate === null) {
+        throw new ImportFlowError(
+          "no-usable-geometry",
+          options.candidateId === undefined
+            ? "This file has no track or waypoints that can become a breadcrumb route."
+            : "The chosen points are no longer in this file. Choose it again.",
+        );
+      }
+      artifact = await createImportArtifactFromBytes(file, sourceBytes, parsed, {
+        blobStore: this.blobStore,
+        now: options.now ?? this.now(),
+      });
+      throwIfImportCancelled(options.signal);
+      const sourceTrack = candidate.trackIndex === null ? undefined : parsed.tracks[candidate.trackIndex];
+      const importTracks = sourceTrack === undefined
+        ? []
+        : await persistTrackData([sourceTrack], this.geometryStore, options.signal, artifact.importedAt, refs);
+      throwIfImportCancelled(options.signal);
+      const warnings: readonly string[] = [
+        ...parsed.warnings,
+        ...(candidate.thinned
+          ? [`Thinned ${candidate.sourcePointCount.toLocaleString()} source points to ${candidate.waypointCount} breadcrumb waypoints; the legs between them are straight lines, not roads.`]
+          : []),
+        ...(candidate.segmentCount > 1
+          ? [`The source has ${candidate.segmentCount} separate segments; the breadcrumb joins them with straight legs.`]
+          : []),
+      ];
+      const document = importBreadcrumbDocument(artifact, candidate, {
+        now: artifact.importedAt,
+        ...(options.title === undefined ? {} : { title: options.title }),
+      });
+      throwIfImportCancelled(options.signal);
+      const line = breadcrumbLine(candidate.route);
+      const importData: ImportRideData = {
+        originalRef: artifact.originalRef,
+        tracks: importTracks,
+        waypoints: parsed.waypoints ?? [],
+        ...(warnings.length === 0 ? {} : { warnings }),
+      };
+      const fromFile = file.name.replace(/\.(?:gpx|kml|kmz)$/i, "");
+      const saved = await this.libraryService.saveNamed(document, {
+        title: document.title ?? (fromFile === "" ? "Imported breadcrumb" : fromFile),
+        originalsRef: artifact.originalRef,
+        importData,
+        ...(line.length < 2 ? {} : { plannedRoute: { geometry: line } }),
+        bundleSummary: { distanceMeters: lineDistance(line) },
+      });
+      return {
+        artifact,
+        parsed,
+        candidate,
+        document: saved.document,
+        namedRide: saved,
+        warnings,
+      };
+    } catch (error: unknown) {
+      // The save is the last step, so a failure leaves only the artifact and the
+      // source geometry to reclaim; a ride row never committed.
+      const rollbackFailures: string[] = [];
+      for (const ref of refs) {
+        try {
+          await this.geometryStore.remove(ref);
+        } catch (rollbackError: unknown) {
+          rollbackFailures.push(`geometry ${ref}: ${rollbackError instanceof Error ? rollbackError.message : "delete failed"}`);
+        }
+      }
+      if (artifact !== null && this.blobStore.remove !== undefined) {
+        try {
+          await this.blobStore.remove(artifact.originalRef);
+        } catch (rollbackError: unknown) {
+          rollbackFailures.push(`original ${artifact.originalRef}: ${rollbackError instanceof Error ? rollbackError.message : "delete failed"}`);
+        }
+      }
+      const classified = classifyImportError(error, file.name);
+      if (rollbackFailures.length === 0) throw classified;
+      const residue = `Import cleanup failed (${rollbackFailures.join("; ")}). Partial data may remain and should be removed before retrying.`;
+      if (classified instanceof ImportFlowError) throw new ImportFlowError(classified.code, `${classified.reason} ${residue}`, classified.title);
+      throw new ImportFlowError("persist-failed", `${classified.message} ${residue}`);
+    }
+  }
+
   /** Imports every selected SwitchBack file in order, isolating failures by file. */
   async importSwitchBackBatch(
     files: readonly ImportFile[],
@@ -523,6 +662,7 @@ export class ImportService {
 export interface ImportServicePort {
   readonly previewFile: ImportService["previewFile"];
   readonly importFile: ImportService["importFile"];
+  readonly importFileAsBreadcrumb: ImportService["importFileAsBreadcrumb"];
   readonly importSwitchBackBatch: ImportService["importSwitchBackBatch"];
   readonly evaluateTrackSelection: ImportService["evaluateTrackSelection"];
 }

@@ -6,10 +6,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MAX_FILE_BYTES } from "@/application/import/limits";
 import {
   ImportFlowError,
+  type ImportBreadcrumbOutcome,
   type ImportFileOptions,
   type ImportOutcome,
   type ImportServicePort,
 } from "@/application/import/import-service";
+import { importBreadcrumbCandidates, type ImportBreadcrumbCandidate } from "@/application/import/import-breadcrumb";
 import type { ImportFile } from "@/application/import/import-artifact";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ImportProgress, ParsedImport, ParsedImportTrack } from "@/application/import/types";
@@ -17,8 +19,8 @@ import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 export interface ImportPanelProps {
   readonly service: ImportServicePort;
-  readonly onImported?: (outcome: ImportOutcome) => Promise<void> | void;
-  readonly onOpenInPlanner?: (outcome: ImportOutcome) => Promise<void> | void;
+  readonly onImported?: (outcome: ImportOutcome | ImportBreadcrumbOutcome) => Promise<void> | void;
+  readonly onOpenInPlanner?: (outcome: ImportOutcome | ImportBreadcrumbOutcome) => Promise<void> | void;
   readonly gapToleranceMeters?: number;
   /**
    * `quiet` drops the card's own heading and drop zone: the page that hosts it
@@ -33,7 +35,17 @@ export interface ImportPanelProps {
   readonly onInitialFileHandled?: () => void;
 }
 
-type ImportPanelPhase = "idle" | "parsing" | "chooser" | "options" | "importing" | "success";
+type ImportPanelPhase =
+  | "idle"
+  | "parsing"
+  | "chooser"
+  | "options"
+  | "importing"
+  | "success"
+  /** A file with no track: only its waypoints or route can be opened. */
+  | "breadcrumb"
+  | "breadcrumb-saving"
+  | "breadcrumb-saved";
 type ImportChoice = "separate" | "combine";
 
 const ERROR_LABELS: Readonly<Record<ImportFlowError["code"], string>> = {
@@ -139,6 +151,45 @@ function TrackPreview({ track, tracks, selected, onToggle }: {
   );
 }
 
+/** The source's own name, else what the points are, never an invented place. */
+function breadcrumbSourceLabel(candidate: ImportBreadcrumbCandidate): string {
+  const name = candidate.name.trim();
+  if (name !== "") return name;
+  return candidate.source === "waypoints" ? "GPX waypoints" : "Imported points";
+}
+
+function breadcrumbCounts(candidate: ImportBreadcrumbCandidate): string {
+  const waypoints = `${candidate.waypointCount} waypoint${candidate.waypointCount === 1 ? "" : "s"}`;
+  return candidate.thinned
+    ? `${waypoints} · thinned from ${candidate.sourcePointCount.toLocaleString()} points`
+    : waypoints;
+}
+
+function BreadcrumbCandidateRow({ candidate, selected, onSelect }: {
+  readonly candidate: ImportBreadcrumbCandidate;
+  readonly selected: boolean;
+  readonly onSelect: () => void;
+}) {
+  const label = breadcrumbSourceLabel(candidate);
+  return (
+    <li className="og-import__track" data-selected={selected}>
+      <label className="og-import__track-select">
+        <input
+          type="radio"
+          name="og-import-breadcrumb"
+          aria-label={`Open ${label} as a breadcrumb`}
+          checked={selected}
+          onChange={onSelect}
+        />
+        <span>
+          <strong>{label}</strong>
+          <small>{breadcrumbCounts(candidate)}</small>
+        </span>
+      </label>
+    </li>
+  );
+}
+
 export function ImportPanel({
   service,
   onImported,
@@ -159,6 +210,8 @@ export function ImportPanel({
   const [error, setError] = useState<{ readonly code: ImportFlowError["code"]; readonly reason: string } | null>(null);
   const [warning, setWarning] = useState<{ readonly code: "refresh-failed"; readonly reason: string } | null>(null);
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
+  const [breadcrumbOutcome, setBreadcrumbOutcome] = useState<ImportBreadcrumbOutcome | null>(null);
+  const [breadcrumbCandidateId, setBreadcrumbCandidateId] = useState<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const operationRef = useRef(0);
@@ -175,6 +228,30 @@ export function ImportPanel({
     [parsed, selected, service, gapToleranceMeters],
   );
   const canCombine = selectionDecision.canCombine;
+  const breadcrumbCandidates = useMemo(
+    () => parsed === null ? [] : importBreadcrumbCandidates(parsed),
+    [parsed],
+  );
+  /** The single selected track, when the rider may open that one as a breadcrumb. */
+  const selectedTrackBreadcrumb = useMemo(() => {
+    if (parsed === null || selectedTracks.length !== 1) return null;
+    const trackIndex = parsed.tracks.indexOf(selectedTracks[0]!);
+    return breadcrumbCandidates.find((candidate) => candidate.trackIndex === trackIndex) ?? null;
+  }, [parsed, selectedTracks, breadcrumbCandidates]);
+  /**
+   * The ways this file's points can become a breadcrumb here: its own `<wpt>`
+   * list (names kept) and, when exactly one track is selected, that track.
+   */
+  const breadcrumbChoices = useMemo(() => {
+    if (parsed === null) return [];
+    return [
+      ...breadcrumbCandidates.filter((candidate) => candidate.source === "waypoints"),
+      ...(selectedTrackBreadcrumb === null ? [] : [selectedTrackBreadcrumb]),
+    ];
+  }, [parsed, breadcrumbCandidates, selectedTrackBreadcrumb]);
+  const chosenBreadcrumb = breadcrumbChoices.find((candidate) => candidate.id === breadcrumbCandidateId)
+    ?? breadcrumbChoices[0]
+    ?? null;
 
   function reset(): void {
     operationRef.current += 1;
@@ -190,6 +267,8 @@ export function ImportPanel({
     setError(null);
     setWarning(null);
     setOutcome(null);
+    setBreadcrumbOutcome(null);
+    setBreadcrumbCandidateId(null);
   }
 
   async function previewFile(nextFile: File): Promise<void> {
@@ -213,6 +292,8 @@ export function ImportPanel({
     setWarning(null);
     setProgress(null);
     setOutcome(null);
+    setBreadcrumbOutcome(null);
+    setBreadcrumbCandidateId(null);
     setPhase("parsing");
     try {
       const preview = await service.previewFile(asImportFile(nextFile), {
@@ -222,7 +303,9 @@ export function ImportPanel({
       if (operation !== operationRef.current) return;
       setParsed(preview.parsed);
       setSelected(new Set(preview.parsed.tracks.map((_, index) => index)));
-      setPhase("chooser");
+      // The first breadcrumb candidate is the default choice, so no id needs to
+      // be stored here; the panel derives it from the parsed file.
+      setPhase(preview.parsed.tracks.length === 0 ? "breadcrumb" : "chooser");
     } catch (caught: unknown) {
       if (operation !== operationRef.current) return;
       setError(errorDetails(caught));
@@ -296,6 +379,45 @@ export function ImportPanel({
     }
   }
 
+  /**
+   * Opens one source in the file as an authored breadcrumb route. It is a real
+   * saved ride, not a preview: the points stay editable, snappable and
+   * followable, and the legs are straight until the rider says otherwise.
+   */
+  async function openAsBreadcrumb(candidateId: string): Promise<void> {
+    if (file === null) return;
+    operationRef.current += 1;
+    const operation = operationRef.current;
+    controllerRef.current?.abort();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setBreadcrumbCandidateId(candidateId);
+    setError(null);
+    setWarning(null);
+    setProgress(null);
+    setPhase("breadcrumb-saving");
+    try {
+      const nextOutcome = await service.importFileAsBreadcrumb(asImportFile(file), {
+        candidateId,
+        signal: controller.signal,
+        onProgress: setProgress,
+      });
+      if (operation !== operationRef.current) return;
+      setBreadcrumbOutcome(nextOutcome);
+      setPhase("breadcrumb-saved");
+      try {
+        emitTelemetry("import_completed", { source: "import" });
+        await onImported?.(nextOutcome);
+      } catch {
+        setWarning({ code: "refresh-failed", reason: "The breadcrumb was saved, but the library view could not refresh yet." });
+      }
+    } catch (caught: unknown) {
+      if (operation !== operationRef.current) return;
+      setError(errorDetails(caught));
+      setPhase(parsed !== null && parsed.tracks.length > 0 ? "chooser" : "breadcrumb");
+    }
+  }
+
   return (
     <section
       className={quiet ? "og-import og-import--quiet" : "og-import"}
@@ -303,7 +425,7 @@ export function ImportPanel({
     >
       {quiet ? (
         // During a parse or a save the flow already offers the way out below.
-        phase === "idle" || phase === "parsing" || phase === "importing" ? null : (
+        phase === "idle" || phase === "parsing" || phase === "importing" || phase === "breadcrumb-saving" ? null : (
           <div className="og-import__quiet-head">
             <button type="button" className="og-secondary" onClick={reset}>Start over</button>
           </div>
@@ -373,12 +495,61 @@ export function ImportPanel({
         </section>
       ) : null}
 
-      {phase === "parsing" || phase === "importing" ? (
+      {phase === "parsing" || phase === "importing" || phase === "breadcrumb-saving" ? (
         <section className="og-import__progress" aria-live="polite">
-          <p role="status">{phase === "parsing" ? "Reading and parsing in a worker…" : "Saving your imported ride…"}</p>
+          <p role="status">
+            {phase === "parsing"
+              ? "Reading and parsing in a worker…"
+              : phase === "importing"
+              ? "Saving your imported ride…"
+              : "Saving your breadcrumb route…"}
+          </p>
           <progress max={1} value={progress?.phase === "complete" ? 1 : undefined} />
           <small>{progressText(progress)}</small>
           <button type="button" className="og-secondary" onClick={reset}>Cancel import</button>
+        </section>
+      ) : null}
+
+      {parsed !== null && phase === "breadcrumb" ? (
+        <section className="og-import__chooser" aria-labelledby="og-import-breadcrumb-title">
+          <div className="og-import__chooser-head">
+            <div>
+              <h3 id="og-import-breadcrumb-title">No track in this file</h3>
+              <p>
+                These are waypoints or a route, not a recorded line. Open them as a breadcrumb:
+                one waypoint per point, straight legs between them. Nothing here says the legs
+                follow a road or a trail.
+              </p>
+            </div>
+            <div className="og-import__selection-actions">
+              <button type="button" className="og-secondary" onClick={reset}>Choose another file</button>
+            </div>
+          </div>
+          <ul className="og-import__tracks" aria-label="Points that can become a breadcrumb">
+            {breadcrumbChoices.map((candidate) => (
+              <BreadcrumbCandidateRow
+                key={candidate.id}
+                candidate={candidate}
+                selected={chosenBreadcrumb?.id === candidate.id}
+                onSelect={() => setBreadcrumbCandidateId(candidate.id)}
+              />
+            ))}
+          </ul>
+          <div className="og-import__choice-actions">
+            <button
+              type="button"
+              className="og-primary"
+              disabled={chosenBreadcrumb === null}
+              onClick={() => { if (chosenBreadcrumb !== null) void openAsBreadcrumb(chosenBreadcrumb.id); }}
+            >
+              Open as breadcrumb
+            </button>
+            {chosenBreadcrumb === null ? null : (
+              <small>
+                {chosenBreadcrumb.waypointCount} waypoints saved to My rides; you can drag, rename or snap them there.
+              </small>
+            )}
+          </div>
         </section>
       ) : null}
 
@@ -402,6 +573,32 @@ export function ImportPanel({
           {selectedTracks.length > 1 && !canCombine ? (
             <p className="og-import__warning">The selected tracks have a gap larger than {gapToleranceMeters} m. Import them separately; no connector will be created.</p>
           ) : null}
+          {breadcrumbChoices.length === 0 ? null : (
+            <div className="og-import__breadcrumb">
+              <p>
+                <strong>Or open points as a breadcrumb.</strong> Straight legs between waypoints,
+                not roads: useful for a line you want to edit or follow offline.
+              </p>
+              <ul className="og-import__tracks" aria-label="Points that can become a breadcrumb">
+                {breadcrumbChoices.map((candidate) => (
+                  <BreadcrumbCandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    selected={chosenBreadcrumb?.id === candidate.id}
+                    onSelect={() => setBreadcrumbCandidateId(candidate.id)}
+                  />
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="og-secondary"
+                disabled={chosenBreadcrumb === null}
+                onClick={() => { if (chosenBreadcrumb !== null) void openAsBreadcrumb(chosenBreadcrumb.id); }}
+              >
+                Open as breadcrumb
+              </button>
+            </div>
+          )}
           {phase === "chooser" ? (
             <div className="og-import__choice-actions">
               <button type="button" className="og-primary" disabled={selectedTracks.length === 0} onClick={() => choose("separate")}>Import separately</button>
@@ -425,6 +622,27 @@ export function ImportPanel({
             <button type="button" className="og-primary" disabled={selectedTracks.length === 0} onClick={() => void importSelected()}>{choice === "combine" ? "Import as one ride" : "Import selected tracks"}</button>
             <button type="button" className="og-secondary" onClick={() => setPhase("chooser")}>Back to track choices</button>
           </div>
+        </section>
+      ) : null}
+
+      {phase === "breadcrumb-saved" && breadcrumbOutcome !== null ? (
+        <section className="og-import__success" role="status" data-testid="breadcrumb-import-result">
+          <h3>Breadcrumb saved</h3>
+          <p>
+            {breadcrumbOutcome.candidate.waypointCount} waypoints added to My rides. Legs are straight
+            lines between waypoints, not roads: check access and conditions before you follow it.
+          </p>
+          {breadcrumbOutcome.warnings.length > 0 ? (
+            <div>
+              <strong>Warnings kept with this breadcrumb</strong>
+              <ul>{breadcrumbOutcome.warnings.map((note) => <li key={note}>{note}</li>)}</ul>
+            </div>
+          ) : <p>No import warnings.</p>}
+          {onOpenInPlanner !== undefined ? (
+            <button type="button" className="og-primary" onClick={() => void onOpenInPlanner(breadcrumbOutcome)}>
+              Open in planner
+            </button>
+          ) : null}
         </section>
       ) : null}
 
