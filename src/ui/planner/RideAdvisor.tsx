@@ -4,11 +4,10 @@
  * The ride advisor, inside the planner rather than floating over the map
  * (UX rework 2, #7/#13).
  *
- * The rider types into the same box they search with ("Where to, or describe a
- * ride"). A description goes to the advisor; its proposal appears inline in the
- * sheet as a short summary with one **Plan it** button, and applying it plans
- * the route. The state lives in one provider so the search field (which asks)
- * and the inline card (which answers) share a single conversation.
+ * The composer, Map Ask sheet and planned-ride panel share one advisor session.
+ * A proposal appears as an interpretation with one **Plan it** button, and
+ * applying it uses the normal route-planning path. Map place search remains a
+ * separate flow from this session.
  */
 
 import {
@@ -20,8 +19,10 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { appendAdvisorExchange, type AdvisorExchange } from "@/application/advisor/advisor-conversation";
 import { summarizeAdvisorRide } from "@/application/advisor/advisor-ride-summary";
@@ -38,7 +39,9 @@ import type {
 } from "@/application/advisor";
 import type { AdvisorProposalChange } from "@/application/advisor/advisor-proposal-commands";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
+import { ARRIVAL_INTENT_LABELS } from "@/ui/planner/arrival-intent";
 import "./advisor-conversation.css";
+import "./advisor-ask-sheet.css";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /** What happens after an applied proposal, in the rider's words. */
@@ -46,8 +49,8 @@ export type AdvisorAppliedNext =
   | { readonly kind: "planning" }
   | { readonly kind: "needs-point"; readonly point: "start" | "finish" };
 
-/** Where the rider asked from: the composer (no ride yet) or the planned ride's sheet. */
-export type AdvisorSurface = "composer" | "ride";
+/** Where the rider asked from: the composer, Map Ask, or the planned ride's sheet. */
+export type AdvisorSurface = "composer" | "ride" | "map";
 
 export interface RideAdvisor {
   /** Send a ride description or answer the latest clarification. */
@@ -63,7 +66,7 @@ export interface RideAdvisor {
   readonly message: string | null;
   readonly messageIsError: boolean;
   readonly recovery: AdvisorRecovery;
-  apply(): void;
+  apply(): AdvisorAppliedNext | null;
   dismiss(): void;
   retry(): void;
   /** Re-validates the last draft against the ride as it is now; no model call. */
@@ -200,12 +203,12 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const proposalIsStale = proposal !== null && proposal.command.baseRevision !== revision;
 
   const apply = useCallback(() => {
-    if (proposal === null) return;
+    if (proposal === null) return null;
     if (proposal.command.baseRevision !== store.getState().document.revision) {
       const state = advisorRiderState("stale-revision");
       fail(state.message, state.recovery);
       setProposal(null);
-      return;
+      return null;
     }
     const result = store.getState().dispatch(proposal.command);
     setProposal(null);
@@ -218,10 +221,11 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       // Planning speaks for itself on the map; only a missing point needs words.
       setMessage(next.kind === "planning" ? null : `Now set your ${next.point === "finish" ? "destination" : "start"} to plan this ride.`);
       setMessageIsError(false);
-      return;
+      return next;
     }
     const state = advisorRiderState(result.outcome === "stale" ? "stale-revision" : "invalid-request");
     fail(state.message, state.recovery);
+    return null;
   }, [proposal, store, fail]);
 
   const dismiss = useCallback(() => {
@@ -349,7 +353,7 @@ export function replacedSettings(changes: readonly AdvisorProposalChange[]): rea
   return changes
     .filter((change) => change.field !== "shape")
     .map(changeWas)
-    .filter((before) => !/^(no |none\b|not set\b)/i.test(before));
+    .filter((before, index, all) => !/^(no |none\b|not set\b)/i.test(before) && all.indexOf(before) === index);
 }
 
 export function changeWas(change: AdvisorProposalChange): string {
@@ -401,7 +405,17 @@ function AdvisorSlowHint() {
  * the times the composer has no search field to type into (a loop's start is
  * already set, say).
  */
-export function AdvisorInline({ askBox = false, surface = "composer" }: { readonly askBox?: boolean; readonly surface?: AdvisorSurface }) {
+export function AdvisorInline({
+  askBox = false,
+  surface = "composer",
+  hideForm = false,
+  onPlan,
+}: {
+  readonly askBox?: boolean;
+  readonly surface?: AdvisorSurface;
+  readonly hideForm?: boolean;
+  readonly onPlan?: () => void;
+}) {
   const advisor = useRideAdvisor();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -459,14 +473,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             <AdvisorMark />
             <span>Proposed ride</span>
           </p>
-          <ul className="og-advisor__changes" aria-label="What this sets">
-            {proposal.changes.map((change) => (
-              <li key={change.field}>
-                {changeChip(change)}
-                <span className="og-visually-hidden">, was {changeWas(change)}</span>
-              </li>
-            ))}
-          </ul>
+          <AdvisorInterpretation proposal={proposal} />
           {replacedSettings(proposal.changes).length === 0 ? null : (
             <p className="og-advisor__was" aria-hidden="true">Replaces {replacedSettings(proposal.changes).join(", ")}</p>
           )}
@@ -486,7 +493,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
                 Refresh
               </button>
             ) : (
-              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={advisor.apply}>
+              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={() => { if (advisor.apply()?.kind === "planning") onPlan?.(); }}>
                 Plan it
               </button>
             )}
@@ -514,7 +521,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
           </button>
         </div>
       ) : null}
-      {(askBox && open || !idle) ? (
+      {!hideForm && (askBox && open || !idle) ? (
         <form
           className="og-advisor__form"
           onSubmit={(event) => {
@@ -542,6 +549,194 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
         </form>
       ) : null}
     </section>
+  );
+}
+
+function AdvisorInterpretation({ proposal }: { readonly proposal: ReadyAdvisorProposal }) {
+  const intent = proposal.interpretation;
+  const routeShape = intent.shape === "loop" ? "Loop" : intent.shape === "destination" ? "To a destination" : "Open ride";
+  const start = intent.start === null ? "No start set" : `From ${intent.start}`;
+  const destination = intent.shape === "loop"
+    ? `Returns to ${intent.start ?? "start"}`
+    : intent.shape === "destination"
+      ? intent.finish === null ? "No destination set" : `To ${intent.finish}`
+      : "No fixed destination";
+  const style = [
+    ROAD_WORDS[intent.roadCharacter],
+    SURFACE_WORDS[intent.surface],
+    TERRAIN_WORDS[intent.terrain],
+    NOVELTY_WORDS[intent.novelty],
+    intent.avoidHighways ? "No highways" : null,
+    intent.tollPolicy === "avoid" ? "No tolls" : null,
+    TRAFFIC_WORDS[intent.traffic],
+  ].filter((value): value is string => typeof value === "string");
+  const stops = intent.stops.length === 0
+    ? ["No stops"]
+    : intent.stops.map((stop) => `${stop.label ?? "Unnamed stop"}${stop.arrivalIntent == null ? "" : ` · ${ARRIVAL_INTENT_LABELS[stop.arrivalIntent]}`}`);
+  const unknowns = [
+    ...intent.unknowns,
+    ...(intent.start === null ? ["A start point is still needed to route this ride."] : []),
+    ...(intent.shape === "destination" && intent.finish === null ? ["A destination is still needed to route this ride."] : []),
+    "The route and deadline feasibility are checked after planning.",
+  ];
+
+  return (
+    <div className="og-advisor__interpretation" data-testid="advisor-interpretation">
+      <h3>Interpretation</h3>
+      <dl>
+        <div><dt>Route</dt><dd>{routeShape} · {start} · {destination}</dd></div>
+        <div><dt>Style</dt><dd>{style.join(" · ")}</dd></div>
+        <div><dt>Stops</dt><dd>{stops.join(", ")}</dd></div>
+        <div><dt>Departure</dt><dd>{intent.departure}</dd></div>
+        <div><dt>{intent.time.kind === "budget" ? "Time target" : "Deadline"}</dt><dd>{intent.timeLabel}</dd></div>
+      </dl>
+      <div className="og-advisor__unknowns">
+        <h4>Unknowns</h4>
+        <ul>{unknowns.map((unknown, index) => <li key={`${index}-${unknown}`}>{unknown}</li>)}</ul>
+      </div>
+    </div>
+  );
+}
+
+const MAP_ASK_EXAMPLES = [
+  "Two hours of twisty backroads, no highways",
+  "Loop from Jim Thorpe, back by 6",
+  "Ride to Jim Thorpe and arrive by 4",
+] as const;
+
+/** Dedicated map entry: the place search and its readQuery heuristic stay independent. */
+export function MapAdvisorAsk() {
+  const advisor = useRideAdvisor();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const wasOpen = useRef(false);
+
+  useEffect(() => {
+    if (open) {
+      wasOpen.current = true;
+      inputRef.current?.focus();
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  function close(): void {
+    if (advisor?.surface === "map" && (advisor.pending || advisor.proposal !== null || advisor.message !== null)) {
+      advisor.dismiss();
+    }
+    setOpen(false);
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const prompt = text.trim();
+    if (prompt.length < 2 || advisor === null || advisor.pending) return;
+    advisor.ask(prompt, "map");
+  }
+
+  function containFocus(event: ReactKeyboardEvent<HTMLElement>): void {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key !== "Tab" || dialogRef.current === null) return;
+    const controls = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex='-1'])")];
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
+  return (
+    <>
+      <div className="og-map-ask">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="og-map-ask__trigger"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Ask to plan a ride"
+        data-testid="map-ask-open"
+        onClick={() => setOpen(true)}
+      >
+        <AdvisorMark /> Ask
+      </button>
+      </div>
+      {!open || typeof document === "undefined" ? null : createPortal(
+        <div
+          className="og-map-ask__scrim"
+          data-testid="map-ask-scrim"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}
+        >
+          <section
+            ref={dialogRef}
+            className="og-map-ask__sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="og-map-ask-title"
+            aria-describedby="og-map-ask-description"
+            data-testid="map-ask-sheet"
+            onKeyDown={containFocus}
+          >
+            <header className="og-map-ask__header">
+              <div>
+                <p className="og-map-ask__eyebrow"><AdvisorMark /> Plan a ride</p>
+                <h2 id="og-map-ask-title">Describe a ride</h2>
+              </div>
+              <button type="button" className="og-map-ask__close" aria-label="Close Ask" onClick={close}>×</button>
+            </header>
+            <p id="og-map-ask-description" className="og-map-ask__description">
+              Tell us where to go, the kind of roads you want, and when you need to be back.
+            </p>
+            <div className="og-map-ask__examples" role="group" aria-label="Example ride descriptions">
+              {MAP_ASK_EXAMPLES.map((example) => (
+                <button key={example} type="button" onClick={() => { setText(example); inputRef.current?.focus(); }}>
+                  {example}
+                </button>
+              ))}
+            </div>
+            <form className="og-map-ask__form" onSubmit={submit}>
+              <label htmlFor="og-map-ask-prompt">Your ride</label>
+              <div className="og-map-ask__input-row">
+                <input
+                  ref={inputRef}
+                  id="og-map-ask-prompt"
+                  type="text"
+                  data-testid="map-ask-prompt"
+                  aria-label="Describe a ride"
+                  placeholder="e.g. A two-hour loop on backroads"
+                  maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
+                  autoComplete="off"
+                  enterKeyHint="go"
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                />
+                <button type="submit" className="og-primary" disabled={advisor === null || advisor.pending || text.trim().length < 2}>
+                  {advisor?.pending ? "Sending…" : "Send"}
+                </button>
+              </div>
+            </form>
+            {advisor === null ? (
+              <p className="og-map-ask__unavailable" role="status">
+                Ask is unavailable right now. You can still search for a place or set your start and destination in Plan.
+              </p>
+            ) : <AdvisorInline surface="map" hideForm onPlan={() => setOpen(false)} />}
+          </section>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 

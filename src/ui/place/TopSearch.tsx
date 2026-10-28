@@ -4,7 +4,7 @@ import type { PlaceMatch } from "@/application/geocoding/place-search";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { useRideAdvisor } from "@/ui/planner/RideAdvisor";
+import { MapAdvisorAsk } from "@/ui/planner/RideAdvisor";
 import { AppMenu } from "@/ui/nav/AppMenu";
 import { LayerGlyph } from "@/ui/layers/LayerIcon";
 import { useEffect, useState } from "react";
@@ -77,7 +77,6 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   /** Enter on words that match many places shows them as a list. */
   readonly onSearchList?: (query: string, places: readonly PlaceMatch[]) => void;
 }) {
-  const advisor = useRideAdvisor();
   const chips = useChipOrder();
   return <div className="og-top-search" data-testid="top-search">
     <div className="og-top-search__row">
@@ -86,10 +85,10 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
       <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={search.port} bias={bias}
         onPick={(place, query) => search.onPick("finish", place, query)}
         {...(onSearchList === undefined ? {} : { onSubmitList: onSearchList })}
-        {...(search.remembered === undefined ? {} : { remembered: search.remembered })}
-        {...(advisor === null ? {} : { describe: (text: string) => advisor.ask(text) })}/>
+        {...(search.remembered === undefined ? {} : { remembered: search.remembered })}/>
       {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : <ConditionsPill at={bias}/>}
     </div>
+    <MapAdvisorAsk />
     <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">

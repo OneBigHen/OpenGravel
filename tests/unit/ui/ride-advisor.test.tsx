@@ -8,7 +8,7 @@ import { createRideDocument } from "@/domain/ride/create";
 import { newCommandId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
+import { AdvisorInline, AdvisorRideAsk, MapAdvisorAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
 
 afterEach(() => cleanup());
@@ -102,6 +102,78 @@ function setup(
   );
   return { store, client, port };
 }
+
+function setupMapAsk(options: {
+  readonly enabled?: boolean;
+  readonly places?: readonly PlaceMatch[];
+  readonly client?: AdvisorProposalClient;
+} = {}) {
+  const store = createRideDocumentStore({ document: createRideDocument() });
+  const client: AdvisorProposalClient = options.client ?? {
+    request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+  };
+  const port = places(options.places);
+  render(
+    <RideAdvisorProvider enabled={options.enabled ?? true} store={store} client={client}>
+      <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={port} onPick={() => undefined} />
+      <MapAdvisorAsk />
+    </RideAdvisorProvider>,
+  );
+  return { store, client, port };
+}
+
+describe("Map Ask entry and place search", () => {
+  it("opens a focused Describe a ride sheet and sends directly without readQuery", async () => {
+    const { client } = setupMapAsk();
+    fireEvent.click(screen.getByTestId("map-ask-open"));
+    const input = screen.getByTestId("map-ask-prompt");
+    expect(input).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Describe a ride" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Example ride descriptions" })).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "good beer" } });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledOnce());
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("good beer");
+    expect(await screen.findByTestId("advisor-interpretation")).toHaveTextContent("Unknowns");
+    expect(screen.getByTestId("advisor-interpretation")).toHaveTextContent("The route and deadline feasibility are checked after planning.");
+  });
+
+  it("keeps the map search place-only for businesses and ordinary addresses", async () => {
+    const { client, port } = setupMapAsk({ places: [OLD_MILL_GAP] });
+    const input = screen.getByTestId("top-place-search");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "good beer" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalledWith("good beer", expect.any(Object)));
+    expect(screen.queryByTestId("place-option-describe")).toBeNull();
+    expect(client.request).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "1234 Old Mill Gap Road, Stroudsburg, PA 18360" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalledWith("1234 Old Mill Gap Road, Stroudsburg, PA 18360", expect.any(Object)));
+    expect(client.request).not.toHaveBeenCalled();
+  });
+
+  it("allows short text in Ask and restores focus when Escape closes the sheet", async () => {
+    const { client } = setupMapAsk();
+    const trigger = screen.getByTestId("map-ask-open");
+    fireEvent.click(trigger);
+    const input = screen.getByTestId("map-ask-prompt");
+    fireEvent.change(input, { target: { value: "Go" } });
+    expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledOnce());
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByTestId("map-ask-sheet")).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("states that Ask is unavailable while leaving manual planning available", () => {
+    setupMapAsk({ enabled: false });
+    fireEvent.click(screen.getByTestId("map-ask-open"));
+    expect(screen.getByRole("status")).toHaveTextContent("Ask is unavailable right now");
+    expect(screen.getByRole("status")).toHaveTextContent("set your start and destination in Plan");
+    expect(screen.getByTestId("map-ask-prompt")).toBeEnabled();
+  });
+});
 
 describe("one box for where to and describe a ride", () => {
   it("is a plain place search when the deployment has no advisor", () => {
