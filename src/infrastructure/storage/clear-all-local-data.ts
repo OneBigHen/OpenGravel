@@ -16,11 +16,12 @@ import { FREE_RIDE_TELEMETRY_STORAGE_KEY } from "@/infrastructure/storage/free-r
 import { invalidatePlaceMemoryCaches, PLACE_MEMORY_STORAGE_KEY } from "@/infrastructure/storage/place-memory-storage";
 import { LIVE_RIDER_NAME_STORAGE_KEY, LIVE_SESSION_STORAGE_KEY } from "@/application/live/storage-keys";
 
-import { HIKE_EXPLORE_ORIGIN_KEY } from "@/application/map/explore-origin";
+import { HIKE_EXPLORE_ORIGIN_KEY, HIKE_EXPLORE_STATE_KEY } from "@/application/map/explore-origin";
 import { KEPT_ROUTE_STORAGE_KEY } from "@/application/explore/ride-this";
 export const LOCAL_DATA_STORAGE_KEYS = [
   KEPT_ROUTE_STORAGE_KEY,
   HIKE_EXPLORE_ORIGIN_KEY,
+  HIKE_EXPLORE_STATE_KEY,
   GARAGE_STORAGE_KEY,
   SATELLITE_PREFERENCE_KEY,
   TELEMETRY_CONSENT_STORAGE_KEY,
@@ -93,7 +94,7 @@ export async function clearAllLocalData(
       }
     }
   }
-  try { if (typeof window !== "undefined") window.sessionStorage.removeItem(HIKE_EXPLORE_ORIGIN_KEY); } catch (error: unknown) { failures.push(error); }
+  try { if (typeof window !== "undefined") window.sessionStorage.removeItem(HIKE_EXPLORE_ORIGIN_KEY); window.sessionStorage.removeItem(HIKE_EXPLORE_STATE_KEY); } catch (error: unknown) { failures.push(error); }
   // A mounted place-memory store keeps its own copy; drop it so the saved
   // places cannot reappear from memory after the keys are gone.
   invalidatePlaceMemoryCaches();

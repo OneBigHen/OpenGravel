@@ -15,7 +15,7 @@ import { applyRideCommand } from "@/domain/ride/reducer";
 import { createMapterhornElevationSource } from "@/infrastructure/elevation/mapterhorn-source";
 import { buildElevationProfile, sampleLine, type ElevationProfile } from "@/application/elevation/profile";
 import { matchHikeFilters, rankHikes, profileTimeSeconds, type HikeFilters } from "@/application/hikes/discovery";
-import { readExploreOrigin } from "@/application/map/explore-origin";
+import { HIKE_EXPLORE_STATE_KEY as EXPLORE_STATE_KEY, readExploreOrigin } from "@/application/map/explore-origin";
 import { trailBreadcrumb } from "@/application/hikes/trail-breadcrumb";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { readMapPalette } from "@/infrastructure/map/maplibre/style";
@@ -27,6 +27,25 @@ import { formatFeet, formatLongDuration } from "@/application/planner/measuremen
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { setActivityMode } from "@/ui/stores/activity-mode";
+
+/** Driving directions in the device's maps app (Apple Maps on Apple devices). */
+function directionsUrl(point: Coordinate): string {
+  const destination = `${point.lat.toFixed(6)},${point.lon.toFixed(6)}`;
+  const apple = typeof navigator !== "undefined" && /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+  return apple ? `https://maps.apple.com/?daddr=${destination}&dirflg=d` : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+}
+
+type ExploreState = { filters: Partial<HikeFilters>; search: string; limit: number; showFilters: boolean; scrollY: number };
+function readExploreState(): ExploreState | null {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(EXPLORE_STATE_KEY) ?? "null") as Partial<ExploreState> | null;
+    if (!value || typeof value !== "object") return null;
+    return { filters: typeof value.filters === "object" && value.filters !== null ? value.filters : {}, search: typeof value.search === "string" ? value.search : "", limit: typeof value.limit === "number" && value.limit >= 50 ? value.limit : 50, showFilters: value.showFilters === true, scrollY: typeof value.scrollY === "number" ? value.scrollY : 0 };
+  } catch { return null; }
+}
+function writeExploreState(state: ExploreState): void {
+  try { sessionStorage.setItem(EXPLORE_STATE_KEY, JSON.stringify(state)); } catch { /* Storage is optional. */ }
+}
 
 function linesOf(feature: TrailFeature): Coordinate[][] {
   const lines = feature.geometry.type === "LineString" ? [feature.geometry.coordinates] : feature.geometry.coordinates;
@@ -173,6 +192,20 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(50);
   const [search, setSearch] = useState("");
+  // Back from a trail page returns to the same list: search, filters, page and scroll.
+  const restoredScroll = useRef<number | null>(null);
+  useEffect(() => {
+    const saved = readExploreState();
+    if (saved === null) return;
+    queueMicrotask(() => { setFilters({ ...initial, ...saved.filters }); setSearch(saved.search); setLimit(saved.limit); setShowFilters(saved.showFilters); });
+    restoredScroll.current = saved.scrollY;
+  }, []);
+  useEffect(() => { writeExploreState({ filters, search, limit, showFilters, scrollY: window.scrollY }); }, [filters, search, limit, showFilters]);
+  useEffect(() => {
+    const keep = () => writeExploreState({ filters, search, limit, showFilters, scrollY: window.scrollY });
+    window.addEventListener("pagehide", keep);
+    return () => { keep(); window.removeEventListener("pagehide", keep); };
+  }, [filters, search, limit, showFilters]);
   function locate() {
     if (!navigator.geolocation) { setStatus("Location is unavailable on this device."); return; }
     setStatus("Finding your location…");
@@ -206,6 +239,12 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const { features, profiles, loading } = useHikeData(page);
   const results = page.filter((h) => matchHikeFilters(h, filters, profiles.get(h.id)) === true);
   const more = ranked.length - page.length;
+  useEffect(() => {
+    const y = restoredScroll.current;
+    if (y === null || results.length === 0) return;
+    restoredScroll.current = null;
+    requestAnimationFrame(() => window.scrollTo(0, y));
+  }, [results.length]);
   const update = (key: keyof Filters, value: string | boolean) => setFilters((old) => ({ ...old, [key]: value }));
   return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><header className="og-explore__header"><div className="og-explore__heading-row"><div><h1>Explore hikes</h1><p className="og-hike__sub">{origin ? originLabel : "Find a trail near you"}</p></div><AppMenu className="og-page-menu" /></div><label className="og-hike__search">Search trails<input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(50); }} placeholder="Trail name" /></label><div className="og-hike__tools"><button onClick={locate}>⌖ {origin ? "Use my location" : "Find my location"}</button><button onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}>Filters {showFilters ? "−" : "+"}</button></div></header>
     {showFilters && <section className="og-hike__filters" aria-label="Hike filters">{hikes.some((h) => h.shape && h.shape !== "unknown") && <label>Shape<select value={filters.shape} onChange={(e) => update("shape", e.target.value)}><option value="">Any shape</option><option value="loop">Loop</option><option value="out-and-back">Out and back</option></select></label>}<label>Length<select value={filters.length} onChange={(e) => update("length", e.target.value)}><option value="">Any length</option><option value="3">Up to 3 mi</option><option value="5">Up to 5 mi</option><option value="10">Up to 10 mi</option></select></label><label>Gain<select value={filters.gain} onChange={(e) => update("gain", e.target.value)}><option value="">Any gain</option><option value="500">Up to 500 ft</option><option value="1000">Up to 1,000 ft</option></select></label><label>Time<select value={filters.time} onChange={(e) => update("time", e.target.value)}><option value="">Any time</option><option value="2">Up to 2 hours</option><option value="4">Up to 4 hours</option></select></label>{([ ["dogs", "Dogs reported OK"], ["kids", "Short and easy"] ] as const).map(([key, label]) => <label className="og-hike__check" key={key}><input type="checkbox" checked={filters[key]} onChange={(e) => update(key, e.target.checked)} />{label}</label>)}<p>Filters match mapped facts only. Short and easy means up to 3 miles, 500 feet of gain and the easiest OSM hiking grade, not a check that a trail suits children. Dog access comes from OpenStreetMap tags; check posted rules.</p><button onClick={() => setFilters(initial)}>Clear filters</button></section>}
@@ -243,5 +282,5 @@ export function HikeDetail({ id, mapboxToken }: { id: string; mapboxToken?: stri
   async function share() {
     try { if (navigator.share) await navigator.share({ title: hike ? nameOf(hike) : "Trail", url: window.location.href }); else { await navigator.clipboard.writeText(window.location.href); setStatus("Trail link copied."); } } catch { setStatus("Could not share the trail link."); }
   }
-  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><div className="og-hike__detail"><div className="og-hike__detail-top"><Link href="/explore" className="og-hike__back">‹ Explore hikes</Link><AppMenu className="og-page-menu" /></div>{hike ? <><div className="og-hike__title"><p>TRAIL GUIDE</p><h1>{nameOf(hike)}</h1>{hike.operator && <span>{hike.operator}</span>}{hike.shape && hike.shape !== "unknown" && <span> · {hike.shape === "out-and-back" ? "Out and back" : hike.shape === "point-to-point" ? "Point to point" : "Loop"}</span>}</div><TrailMap feature={feature} {...(mapboxToken ? { mapboxToken } : {})} /><div className="og-hike__stats"><div><strong>{miles(hike.lengthMeters)}</strong><span>Length</span></div>{(profile || hike.elevationGainMeters !== null) && <div><strong>{formatFeet((hike.elevationGainMeters ?? profile?.climbMeters)!)}</strong><span>Gain</span></div>}{time && <div><strong>{time}</strong><span>Time</span></div>}</div>{(hike.sacScale || profile || hike.dog || hike.surface) && <section className="og-hike__section"><h2>About this trail</h2>{hike.sacScale && <p><strong>Difficulty: {hike.sacScale}.</strong> This is the mapped OSM hiking scale; terrain and conditions can vary.</p>}{profile && <p>Estimated with Tobler’s hiking function using terrain elevation and grade. Surface, conditions and your pace are not included.</p>}{(hike.dog || hike.surface) && <p>{[hike.dog && `Dogs: ${hike.dog}`, hike.surface && `Surface: ${hike.surface}`].filter(Boolean).join(" · ")}</p>}</section>}{elevation && elevation.status !== "unavailable" && <section className="og-hike__section"><h2>Elevation profile</h2><ElevationProfileChart state={elevation} line={lines[0]} /></section>}{hike.trailheads.length > 0 && <section className="og-hike__section"><h2>Trailhead &amp; parking</h2>{hike.trailheads.map((head, i) => <p key={i}>{head.name ?? (head.kind === "parking" ? "Parking" : "Trailhead")} · {Math.round(head.distanceMeters)} m from a trail end<br /><span>{head.coordinate.lat.toFixed(5)}, {head.coordinate.lon.toFixed(5)}</span></p>)}</section>}<section className="og-hike__section"><h2>Sources</h2>{hike.operator && <p>Operator: {hike.operator}</p>}{hike.sources.map((source) => <p key={`${source.sourceId}-${source.recordId}`}>{source.url ? <a href={source.url}>{source.sourceLabel} · {source.recordId} ↗</a> : `${source.sourceLabel} · ${source.recordId}`}{source.licence && <> · {source.licenceUrl ? <a href={source.licenceUrl}>{source.licence}</a> : source.licence}</>}</p>)}</section><div className="og-hike__actions">{lines.length === 1 ? <><button className="og-hike__primary" data-testid="hike-open-on-map" onClick={() => void openBreadcrumb()}>Plan this hike on the map</button><p>Opens the mapped trail line as your hike plan, ready to edit or re-plan on trails. It is saved to My rides.</p></> : feature ? <p>This trail is mapped as separate pieces that do not join, so it cannot open as one plan yet.</p> : null}<p>Trail downloads are not available yet. Before you lose signal, download the area in <Link href="/settings#settings-offline-title">Offline maps</Link>.</p><button onClick={() => void share()}>Share</button></div></> : <p>{status || "Loading trail…"}</p>}{status && hike && <p role="status">{status}</p>}</div></main>;
+  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><div className="og-hike__detail"><div className="og-hike__detail-top"><Link href="/explore" className="og-hike__back">‹ Explore hikes</Link><AppMenu className="og-page-menu" /></div>{hike ? <><div className="og-hike__title"><p>TRAIL GUIDE</p><h1>{nameOf(hike)}</h1>{hike.operator && <span>{hike.operator}</span>}{hike.shape && hike.shape !== "unknown" && <span> · {hike.shape === "out-and-back" ? "Out and back" : hike.shape === "point-to-point" ? "Point to point" : "Loop"}</span>}</div><TrailMap feature={feature} {...(mapboxToken ? { mapboxToken } : {})} /><div className="og-hike__stats"><div><strong>{miles(hike.lengthMeters)}</strong><span>Length</span></div>{(profile || hike.elevationGainMeters !== null) && <div><strong>{formatFeet((hike.elevationGainMeters ?? profile?.climbMeters)!)}</strong><span>Gain</span></div>}{time && <div><strong>{time}</strong><span>Time</span></div>}</div>{(hike.sacScale || profile || hike.dog || hike.surface) && <section className="og-hike__section"><h2>About this trail</h2>{hike.sacScale && <p><strong>Difficulty: {hike.sacScale}.</strong> This is the mapped OSM hiking scale; terrain and conditions can vary.</p>}{profile && <p>Estimated with Tobler’s hiking function using terrain elevation and grade. Surface, conditions and your pace are not included.</p>}{(hike.dog || hike.surface) && <p>{[hike.dog && `Dogs: ${hike.dog}`, hike.surface && `Surface: ${hike.surface}`].filter(Boolean).join(" · ")}</p>}</section>}{elevation && elevation.status !== "unavailable" && <section className="og-hike__section"><h2>Elevation profile</h2><ElevationProfileChart state={elevation} line={lines[0]} /></section>}{hike.trailheads.length > 0 && <section className="og-hike__section"><h2>Trailhead &amp; parking</h2>{hike.trailheads.map((head, i) => <div className="og-hike__trailhead" key={i}><p><strong>{head.name ?? (head.kind === "parking" ? "Parking" : "Trailhead")}</strong><br /><span>{head.kind === "parking" ? "Mapped parking" : "Mapped trailhead"} · {head.distanceMeters < 30 ? "at a trail end" : `${Math.round(head.distanceMeters)} m from a trail end`}</span></p><a className="og-hike__directions" href={directionsUrl(head.coordinate)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${head.name ?? (head.kind === "parking" ? "parking" : "the trailhead")} (opens your maps app)`}>Directions ↗</a></div>)}<p className="og-hike__fine">From OpenStreetMap. Opening hours, fees and road access are not checked.</p></section>}<section className="og-hike__section"><h2>Sources</h2>{hike.operator && <p>Operator: {hike.operator}</p>}{hike.sources.map((source) => <p key={`${source.sourceId}-${source.recordId}`}>{source.url ? <a href={source.url}>{source.sourceLabel} · {source.recordId} ↗</a> : `${source.sourceLabel} · ${source.recordId}`}{source.licence && <> · {source.licenceUrl ? <a href={source.licenceUrl}>{source.licence}</a> : source.licence}</>}</p>)}</section><div className="og-hike__actions">{lines.length === 1 ? <><button className="og-hike__primary" data-testid="hike-open-on-map" onClick={() => void openBreadcrumb()}>Plan this hike on the map</button><p>Opens the mapped trail line as your hike plan, ready to edit or re-plan on trails. It is saved to My rides.</p></> : feature ? <p>This trail is mapped as separate pieces that do not join, so it cannot open as one plan yet.</p> : null}<p>Trail downloads are not available yet. Before you lose signal, download the area in <Link href="/settings#settings-offline-title">Offline maps</Link>.</p><button onClick={() => void share()}>Share</button></div></> : <p>{status || "Loading trail…"}</p>}{status && hike && <p role="status">{status}</p>}</div></main>;
 }
