@@ -11,7 +11,7 @@ function position(point: Coordinate) {
   const latitude = Math.max(-85.0511, Math.min(85.0511, point.lat)) * Math.PI / 180;
   const x = ((point.lon + 180) / 360) * scale;
   const y = (1 - Math.asinh(Math.tan(latitude)) / Math.PI) / 2 * scale;
-  return { tileX: Math.floor(x), tileY: Math.floor(y), pixelX: Math.floor((x % 1) * TILE_SIZE), pixelY: Math.floor((y % 1) * TILE_SIZE) };
+  return { pixelX: x * TILE_SIZE - 0.5, pixelY: y * TILE_SIZE - 0.5 };
 }
 
 export function createMapterhornElevationSource(): ElevationSource {
@@ -41,9 +41,11 @@ export function createMapterhornElevationSource(): ElevationSource {
   return {
     async elevations(points, signal): Promise<ElevationResult> {
       try {
-        const elevationsMeters = await Promise.all(points.map(async (point) => {
-          const pos = position(point);
-          const url = `https://tiles.mapterhorn.com/${ZOOM}/${pos.tileX}/${pos.tileY}.webp`;
+        const sample = async (pixelX: number, pixelY: number): Promise<number> => {
+          const tileCount = 2 ** ZOOM;
+          const tileX = ((Math.floor(pixelX / TILE_SIZE) % tileCount) + tileCount) % tileCount;
+          const tileY = Math.max(0, Math.min(tileCount - 1, Math.floor(pixelY / TILE_SIZE)));
+          const url = `https://tiles.mapterhorn.com/${ZOOM}/${tileX}/${tileY}.webp`;
           let tile = tiles.get(url);
           if (tile === undefined) {
             tile = load(url, signal);
@@ -52,8 +54,19 @@ export function createMapterhornElevationSource(): ElevationSource {
             if (tiles.size > CACHE_LIMIT) tiles.delete(tiles.keys().next().value!);
           }
           const image = await tile;
-          const offset = (pos.pixelY * image.width + pos.pixelX) * 4;
+          const x = ((pixelX % TILE_SIZE) + TILE_SIZE) % TILE_SIZE;
+          const y = ((pixelY % TILE_SIZE) + TILE_SIZE) % TILE_SIZE;
+          const offset = (y * image.width + x) * 4;
           return image.data[offset]! * 256 + image.data[offset + 1]! + image.data[offset + 2]! / 256 - 32768;
+        };
+        const elevationsMeters = await Promise.all(points.map(async (point) => {
+          const pos = position(point);
+          const x = Math.floor(pos.pixelX);
+          const y = Math.floor(pos.pixelY);
+          const fractionX = pos.pixelX - x;
+          const fractionY = pos.pixelY - y;
+          const [northWest, northEast, southWest, southEast] = await Promise.all([sample(x, y), sample(x + 1, y), sample(x, y + 1), sample(x + 1, y + 1)]);
+          return (northWest! * (1 - fractionX) + northEast! * fractionX) * (1 - fractionY) + (southWest! * (1 - fractionX) + southEast! * fractionX) * fractionY;
         }));
         return { availability: "available", elevationsMeters };
       } catch {

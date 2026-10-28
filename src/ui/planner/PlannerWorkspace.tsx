@@ -754,7 +754,7 @@ export function PlannerWorkspace({
     count: breadcrumb.route?.waypoints.length ?? 0,
     canUndo: document.history.cursor >= 0,
     canRedo: document.history.cursor < document.history.entries.length - 1,
-    onStart: () => { planningSessionStore.getState().cancel(); breadcrumb.setEditing(true); plannerUiStore.getState().setSheetDetent("peek"); },
+    onStart: () => { planningSessionStore.getState().cancel(); breadcrumb.setEditing(true); plannerUiStore.getState().setCameraUserOwned(true); plannerUiStore.getState().setSheetDetent("peek"); },
     onDone: () => breadcrumb.setEditing(false),
     onAddCenter: () => { if (mapCenter !== null) breadcrumb.add(mapCenter); },
     onUndo: () => rideDocumentStore.getState().undo(),
@@ -787,7 +787,7 @@ export function PlannerWorkspace({
         scene: { ...scene, places: placeFlow.pins },
         onViewport: placeFlow.onViewport,
         onPointAction: (action, coordinate) => {
-          if (action === "breadcrumb") { planningSessionStore.getState().cancel(); breadcrumb.add(coordinate); breadcrumb.setEditing(true); plannerUiStore.getState().setSheetDetent("peek"); }
+          if (action === "breadcrumb") { planningSessionStore.getState().cancel(); breadcrumb.add(coordinate); breadcrumb.setEditing(true); plannerUiStore.getState().setCameraUserOwned(true); plannerUiStore.getState().setSheetDetent("peek"); }
           else placeFlow.pointAction(action, coordinate);
         },
         directionsWhenEmpty: places !== undefined && activeRoute === null,
@@ -816,7 +816,7 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
-          glance={breadcrumb.route === null ? glance.dock : <BreadcrumbSummary route={breadcrumb.route} document={document} libraryService={libraryService} source={preparationProviders?.breadcrumbElevationProfile} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />}
+          glance={breadcrumb.route === null ? glance.dock : <BreadcrumbSummary route={breadcrumb.route} document={document} editing={breadcrumb.editing} libraryService={libraryService} source={preparationProviders?.breadcrumbElevationProfile} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />}
           editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
