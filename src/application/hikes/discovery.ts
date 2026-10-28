@@ -31,3 +31,24 @@ export function profileTimeSeconds(profile: ElevationProfile): number {
     return total + (distance > 0 ? (toblerSeconds(distance, (point.elevationMeters - previous.elevationMeters) / distance) ?? 0) : 0);
   }, 0);
 }
+
+export type HikeFilters = { readonly length: string; readonly gain: string; readonly time: string; readonly dogs: boolean; readonly kids: boolean };
+
+/**
+ * Whether a hike meets the filters: true, false, or "unknown" while its gain
+ * or time still waits on a measured profile. Catalog facts decide first, so a
+ * page of results is never spent on hikes the catalog already rules out.
+ */
+export function matchHikeFilters(hike: HikeRecord, filters: HikeFilters, profile?: ElevationProfile): boolean | "unknown" {
+  if (filters.length && hike.lengthMeters > Number(filters.length) * 1609.344) return false;
+  if (filters.dogs && hike.dog !== "yes" && hike.dog !== "leashed") return false;
+  if (filters.kids && (hike.lengthMeters > 4828 || hike.sacScale !== "hiking")) return false;
+  const gain = hike.elevationGainMeters ?? profile?.climbMeters ?? null;
+  const seconds = hike.toblerMinutes != null ? hike.toblerMinutes * 60 : profile ? profileTimeSeconds(profile) : null;
+  const gainLimit = filters.gain ? Number(filters.gain) / 3.28084 : filters.kids ? 152.4 : null;
+  const timeLimit = filters.time ? Number(filters.time) * 3600 : null;
+  if (gainLimit !== null && gain !== null && gain > gainLimit) return false;
+  if (timeLimit !== null && seconds !== null && seconds > timeLimit) return false;
+  if ((gainLimit !== null && gain === null) || (timeLimit !== null && seconds === null)) return "unknown";
+  return true;
+}

@@ -395,7 +395,7 @@
   left: var(--og-space-4);
   display: grid;
   gap: var(--og-space-2);
-  width: min(320px, calc(100% - 88px));
+  width: min(360px, calc(100% - 88px));
   padding: var(--og-space-3);
   border: 1px solid var(--og-glass-edge);
   border-radius: var(--og-radius-card);
@@ -419,9 +419,10 @@
 .og-hike-card__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--og-space-2);
 }
+
+.og-hike-card__head .og-hike-card__actions { margin-left: auto; flex-wrap: nowrap; }
 
 .og-hike-card__title {
   display: inline-flex;
@@ -434,6 +435,11 @@
 }
 
 .og-hike-card__exit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-1);
+  min-width: var(--og-touch);
   min-height: var(--og-touch);
   padding: 0 var(--og-space-2);
   border: 0;
@@ -485,6 +491,36 @@
 }
 
 .og-hike-card__action:disabled { opacity: 0.5; cursor: default; }
+.og-hike-card__exit svg { display: none; }
+.og-hike-card[data-state="planned"] .og-hike-card__exit { margin-left: auto; }
+
+/* The how-to line, dismissible once read. */
+.og-hike-card__tip {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+.og-hike-card__tip > span { flex: 1; }
+.og-hike-card__tip-close {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  margin: calc(var(--og-space-2) * -1) calc(var(--og-space-2) * -1) calc(var(--og-space-2) * -1) 0;
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: transparent;
+  color: var(--og-ink-2);
+  cursor: pointer;
+}
+.og-hike-card__tip-close:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
 .og-hike-card__note p { margin: var(--og-space-1) 0; }
 .og-hike-card__note strong { color: var(--og-ink); font-size: var(--og-text-body); font-variant-numeric: tabular-nums; }
 .og-hike-card__hint { color: var(--og-ink-3, var(--og-ink-2)); font-size: var(--og-text-caption); }
@@ -495,7 +531,21 @@
 .og-hike-card[data-state="planned"] .og-hike-card__head { gap: var(--og-space-3); }
 @media (max-width: 1180px) {
   .og-hike-card[data-state="planned"]:not([data-error]) { display: none; }
-  .og-hike-card { gap: var(--og-space-1); padding: var(--og-space-2) var(--og-space-3); }
+  /* Phones: one slim row under the chips, the exit an icon. */
+  .og-hike-card {
+    gap: var(--og-space-1);
+    width: auto;
+    max-width: calc(100% - 88px);
+    padding: var(--og-space-1) var(--og-space-1) var(--og-space-1) var(--og-space-3);
+  }
+  .og-hike-card__exit { padding: 0; }
+  .og-hike-card__exit svg { display: block; }
+  .og-hike-card__exit-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .og-hike-card__action { padding: 0 var(--og-space-3); }
+  .og-hike-card__tip { padding-bottom: var(--og-space-1); }
+}
+@media (max-width: 399px) {
+  .og-hike-card__title-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 }
 @media (min-width: 1181px) {
   .og-hike-card[data-state="planned"] { width: auto; }

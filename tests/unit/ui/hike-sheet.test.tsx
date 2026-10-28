@@ -4,7 +4,7 @@
  * Rider mode is untouched (asserted alongside).
  */
 import type { PlannerActiveRoute } from "@/ui/planner/hooks/usePlannerActiveRoute";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RouteCandidate } from "@/domain/route/types";
@@ -105,6 +105,26 @@ describe("the hike card", () => {
     expect(card).toHaveTextContent("Press and hold the map to set a start and finish");
     expect(screen.getByTestId("hike-draw-start")).toBeInTheDocument();
     expect(screen.getByTestId("hike-exit")).toHaveTextContent("Back to riding");
+  });
+
+  it("idle: the how-to tip can be dismissed and stays dismissed", async () => {
+    window.localStorage.removeItem("og-hike-tip-dismissed");
+    act(() => setActivityMode("hike"));
+    const { unmount } = render(<HikeActivityControls {...props()} />);
+    fireEvent.click(screen.getByTestId("hike-tip-dismiss"));
+    expect(screen.getByTestId("hike-card")).not.toHaveTextContent("Press and hold");
+    expect(screen.getByTestId("hike-plan")).toBeInTheDocument();
+    unmount();
+    render(<HikeActivityControls {...props()} />);
+    await waitFor(() => expect(screen.queryByTestId("hike-tip-dismiss")).toBeNull());
+    window.localStorage.removeItem("og-hike-tip-dismissed");
+  });
+
+  it("idle with both ends set: the tip says to plan", () => {
+    act(() => setActivityMode("hike"));
+    render(<HikeActivityControls {...props({ canPlan: true })} />);
+    expect(screen.getByTestId("hike-card")).toHaveTextContent("Start and finish set");
+    expect(screen.getByTestId("hike-plan")).toBeEnabled();
   });
 
   it("planned: only the title and exit remain; the numbers are in the sheet", () => {
