@@ -167,6 +167,15 @@ describe("command line", () => {
     expect(() => parseArgs(["--osm", OSM, "--out", "out", "--trailhead-radius", "-5"])).toThrow(/positive number of metres/);
   });
 
+  it("accepts the cached DEM options and rejects invalid zooms and misspelled flags", () => {
+    const options = parseArgs(["--osm", OSM, "--out", "out", "--dem-cache", "/tmp/dem", "--dem-zoom", "13"]);
+    expect(options.demCache).toBe("/tmp/dem");
+    expect(options.demZoom).toBe(13);
+    expect(() => parseArgs(["--osm", OSM, "--out", "out", "--dem-cache", "/tmp/dem", "--dem-zoom", "11"])).toThrow(/12–14/);
+    expect(() => parseArgs(["--osm", OSM, "--out", "out", "--dem-zoom", "13"])).toThrow(/requires --dem-cache/);
+    expect(() => parseArgs(["--osm", OSM, "--out", "out", "--dem-cahce", "bad"])).toThrow(/unknown option/);
+  });
+
   it("accepts the documented flags", () => {
     expect(parseArgs(["--osm", OSM, "--usfs", USFS, "--nps", NPS, "--out", "out", "--trailhead-radius", "250"])).toEqual({
       osm: OSM,

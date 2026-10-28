@@ -1,6 +1,6 @@
 graphhopper:
-  datareader.file: pennsylvania-hike-strict.osm.pbf
-  graph.location: graph-cache-strict
+  datareader.file: pennsylvania-hike-quality.osm.pbf
+  graph.location: graph-cache-quality
   custom_models.directory: custom-models
   profiles:
     - name: hike
@@ -8,11 +8,12 @@ graphhopper:
   profiles_ch: []
   profiles_lm:
     - profile: hike
-  graph.encoded_values: foot_access,foot_priority,foot_average_speed,foot_road_access,hike_rating,foot_network,road_class
+  graph.encoded_values: foot_access,foot_priority,foot_average_speed,foot_road_access,hike_rating,foot_network,road_class,road_environment,surface
   import.osm.ignored_highways: construction
   prepare.lm.threads: 4
   prepare.subnetworks.threads: 4
   prepare.min_network_size: 100
+  routing.snap_preventions_default: motorway,trunk
   routing.non_ch.max_waypoint_distance: 1000000
 server:
   application_connectors:

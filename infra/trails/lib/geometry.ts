@@ -263,21 +263,20 @@ export function assembleLines(segments: readonly Line[]): Coordinate[][] {
 }
 
 /** True when `part` appears as a contiguous run of vertices inside `line`, either way. */
+// A statewide parent relation may contain hundreds of thousands of vertices.
+// Cache its canonical string so each candidate doesn't reformat the entire route.
+const containmentKeys = new WeakMap<Line, string>();
+function containmentKey(line: Line): string {
+  let key = containmentKeys.get(line);
+  if (key === undefined) {
+    key = `|${line.map(vertexKey).join("|")}|`;
+    containmentKeys.set(line, key);
+  }
+  return key;
+}
+
 export function isContainedIn(part: Line, line: Line): boolean {
-  const haystack = line.map(vertexKey);
-  const partKeys = part.map(vertexKey);
-  return [partKeys, [...partKeys].reverse()].some((needle) => {
-    if (needle.length > haystack.length) return false;
-    for (let start = 0; start + needle.length <= haystack.length; start += 1) {
-      let matched = true;
-      for (let offset = 0; offset < needle.length; offset += 1) {
-        if (needle[offset] !== haystack[start + offset]) {
-          matched = false;
-          break;
-        }
-      }
-      if (matched) return true;
-    }
-    return false;
-  });
+  if (part.length > line.length) return false;
+  const haystack = containmentKey(line);
+  return haystack.includes(containmentKey(part)) || haystack.includes(`|${[...part].reverse().map(vertexKey).join("|")}|`);
 }

@@ -16,7 +16,13 @@ import type {
   TrailFeature,
   TrailFeatureCollection,
   TrailSourceId,
+  TrailMeasurements,
 } from "./types";
+
+const UNKNOWN_MEASUREMENTS: TrailMeasurements = {
+  elevationGainMeters: null, elevationLossMeters: null, maxGradePercent: null,
+  toblerMinutes: null, elevationMeasuredShare: 0, elevationSource: null, timeMethod: null,
+};
 
 function coordinatesOf(lines: readonly (readonly Coordinate[])[]): readonly (readonly [number, number])[][] {
   return lines.map((line) => line.map((coordinate) => [coordinate.lon, coordinate.lat] as const));
@@ -43,6 +49,7 @@ export function toFeature(trail: Trail): TrailFeature {
       dog: trail.attributes.dog,
       access: trail.attributes.access,
       lengthMeters: trail.lengthMeters,
+      ...(trail.measurements ?? UNKNOWN_MEASUREMENTS),
       sources: trail.sources,
       conflicts: trail.conflicts,
       trailheads: trail.trailheads,
@@ -83,9 +90,7 @@ export function toHikeRecord(trail: Trail): HikeRecord | null {
     trailheadCount: trail.trailheads.length,
     trailheads: trail.trailheads,
     sources: trail.sources,
-    // H1 item 5 computes these from the DEM; until then they are unknown.
-    elevationGainMeters: null,
-    elevationLossMeters: null,
+    ...(trail.measurements ?? UNKNOWN_MEASUREMENTS),
   };
 }
 

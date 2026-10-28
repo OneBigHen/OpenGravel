@@ -50,6 +50,36 @@ function osmFeature(type: "node" | "way" | "relation", id: number, geometry: unk
 }
 
 describe("relation assembly", () => {
+  it("recursively expands nested relations in member order and terminates cycles/missing members", () => {
+    const features: OsmFeature[] = [
+      osmFeature("way", 1, { type: "LineString", coordinates: [[0, 0], [0.001, 0]] }, { highway: "path" }),
+      osmFeature("way", 2, { type: "LineString", coordinates: [[0.001, 0], [0.002, 0]] }, { highway: "path" }),
+      osmFeature("relation", 10, null, { type: "superroute", route: "hiking", name: "Parent" }, {
+        members: [{ type: "relation", ref: 11 }, { type: "way", ref: 2 }, { type: "relation", ref: 999 }],
+      }),
+      osmFeature("relation", 11, null, { type: "route" }, {
+        members: [{ type: "way", ref: 1 }, { type: "relation", ref: 10 }, { type: "way", ref: 999 }],
+      }),
+    ];
+    const result = ingestOsm(features);
+    expect(result.trails[0]?.lines).toEqual([line([[0, 0], [0.001, 0], [0.002, 0]])]);
+    expect(result.relationIssues).toEqual({ cycles: 1, missingRelations: 1, missingWays: 1 });
+  });
+
+  it("expands a repeated sibling without mistaking it for a cycle and preserves disconnected parts", () => {
+    const result = ingestOsm([
+      osmFeature("way", 1, { type: "LineString", coordinates: [[0, 0], [0.001, 0]] }, { highway: "path" }),
+      osmFeature("way", 2, { type: "LineString", coordinates: [[1, 0], [1.001, 0]] }, { highway: "path" }),
+      osmFeature("relation", 11, null, {}, { members: [{ type: "way", ref: 1 }] }),
+      osmFeature("relation", 10, null, { route: "foot" }, { members: [
+        { type: "relation", ref: 11 }, { type: "way", ref: 2 }, { type: "relation", ref: 11, role: "backward" },
+      ] }),
+    ]);
+    expect(result.trails[0]?.lines).toHaveLength(3);
+    expect(result.trails[0]?.lines[2]).toEqual(line([[0.001, 0], [0, 0]]));
+    expect(result.relationIssues.cycles).toBe(0);
+  });
+
   it("joins member ways through a shared node and leaves a real gap as two lines", () => {
     const joined = assembleLines([line([[0, 0], [0.001, 0]]), line([[0.001, 0], [0.002, 0]])]);
     expect(joined).toHaveLength(1);
