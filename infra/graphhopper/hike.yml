@@ -1,0 +1,31 @@
+graphhopper:
+  datareader.file: pennsylvania-hike-strict.osm.pbf
+  graph.location: graph-cache-strict
+  custom_models.directory: custom-models
+  profiles:
+    - name: hike
+      custom_model_files: [ogv-hike.json]
+  profiles_ch: []
+  profiles_lm:
+    - profile: hike
+  graph.encoded_values: foot_access,foot_priority,foot_average_speed,foot_road_access,hike_rating,foot_network,road_class
+  import.osm.ignored_highways: construction
+  prepare.lm.threads: 4
+  prepare.subnetworks.threads: 4
+  prepare.min_network_size: 100
+  routing.non_ch.max_waypoint_distance: 1000000
+server:
+  application_connectors:
+    - type: http
+      port: 8995
+      bind_host: 127.0.0.1
+  admin_connectors:
+    - type: http
+      port: 8996
+      bind_host: 127.0.0.1
+  request_log:
+    appenders: []
+logging:
+  level: INFO
+  appenders:
+    - type: console

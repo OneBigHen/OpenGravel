@@ -8,7 +8,7 @@ import {
   polygonCentre,
   undirectedLineSignature,
 } from "../../../../infra/trails/lib/geometry";
-import { ingestOsm, osmiumCommands, readFeatureFile } from "../../../../infra/trails/lib/osm-input";
+import { ingestOsm, osmiumCommands, readFeatureFile, readOplRelations } from "../../../../infra/trails/lib/osm-input";
 import { USFS_TRAILS, ingestExternal } from "../../../../infra/trails/lib/external";
 import { clusterCandidates, mergeTrails } from "../../../../infra/trails/lib/merge";
 import { PlaceGrid, attachTrailheads } from "../../../../infra/trails/lib/trailhead";
@@ -169,13 +169,28 @@ describe("OSM ingestion", () => {
 
   it("documents the osmium commands it would run for a PBF", () => {
     const commands = osmiumCommands("pa.osm.pbf", "/tmp/work").map((command) => command.join(" "));
-    expect(commands).toHaveLength(4);
+    expect(commands).toHaveLength(5);
     expect(commands[0]).toContain("tags-filter");
-    expect(commands[0]).toContain("--add-referenced");
+    expect(commands[0]).not.toContain("--omit-referenced");
     expect(commands[0]).toContain("r/route=hiking,foot");
-    expect(commands[1]).toContain("--geometry-types=linestring");
-    expect(commands[2]).toContain("n/highway=trailhead");
-    expect(commands[3]).toContain("--geometry-types=point,polygon");
+    expect(commands[1]).toContain("relations.opl");
+    expect(commands[2]).toContain("--geometry-types=linestring");
+    expect(commands[3]).toContain("n/highway=trailhead");
+    expect(commands[4]).toContain("--geometry-types=point,polygon");
+  });
+
+  it("reads real OPL relations and assembles their member ways", async () => {
+    const relations = await readOplRelations("tests/fixtures/trails/relations.opl");
+    const trails = ingestOsm([...relations, {
+      properties: { "@type": "way", "@id": 12 },
+      geometry: { type: "LineString", coordinates: [[-76, 40], [-75.99, 40]] },
+    }, {
+      properties: { "@type": "way", "@id": 13 },
+      geometry: { type: "LineString", coordinates: [[-75.99, 40], [-75.98, 40]] },
+    }]).trails;
+    expect(trails).toHaveLength(1);
+    expect(trails[0]?.attributes.name).toBe("Ridge Trail");
+    expect(trails[0]?.lines[0]).toHaveLength(3);
   });
 
   it("reads the sequence fixture and refuses nothing silently", async () => {

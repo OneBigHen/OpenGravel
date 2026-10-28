@@ -37,28 +37,31 @@ node --import tsx infra/trails/build-trails.ts --osm <input> --out <dir>
 There is no OSM protobuf reader in `node_modules`, so the job never parses a
 `.osm.pbf` itself. It runs `osmium-tool` — the same tool
 `infra/maps/scripts/fetch-osm.sh` already needs — and reads the GeoJSON sequence
-osmium writes. Four passes, exactly as printed by the script:
+osmium writes. Five commands, exactly as printed by the script:
 
 ```sh
 # 1. hiking/foot routes and walking ways, plus every object they reference
-osmium tags-filter --overwrite --add-referenced \
+osmium tags-filter --overwrite \
   -o "$WORK/trails.osm.pbf" region.osm.pbf \
   r/route=hiking,foot \
   w/highway=path,footway,track,steps,bridleway,cycleway,pedestrian
 
-# 2. those trails as lines, with the OSM type and id kept as properties
+# 2. route relation member lists (route relations are not exported as lines)
+osmium cat --overwrite -t relation -f opl -o "$WORK/relations.opl" "$WORK/trails.osm.pbf"
+
+# 3. those trails as lines, with the OSM type and id kept as properties
 osmium export --overwrite --no-progress -f geojsonseq \
   --geometry-types=linestring -a type,id \
   -o "$WORK/trails.geojsonseq" "$WORK/trails.osm.pbf"
 
-# 3. trailheads and parking only, so the point export does not carry every
+# 4. trailheads and parking only, so the point export does not carry every
 #    node of every trail way
-osmium tags-filter --overwrite --add-referenced \
+osmium tags-filter --overwrite \
   -o "$WORK/trails-places.osm.pbf" region.osm.pbf \
   n/highway=trailhead n/amenity=parking \
   w/highway=trailhead w/amenity=parking a/amenity=parking
 
-# 4. those places as points (and parking areas as polygons; the centroid is used)
+# 5. those places as points (and parking areas as polygons; the centroid is used)
 osmium export --overwrite --no-progress -f geojsonseq \
   --geometry-types=point,polygon -a type,id \
   -o "$WORK/trails-places.geojsonseq" "$WORK/trails-places.osm.pbf"
@@ -76,9 +79,9 @@ trailhead/parking features.
 
 From OSM:
 
-- every `route=hiking` and `route=foot` relation (member ways assembled in
+- every `route=hiking` and `route=foot` relation (direct member ways assembled in
   member order into continuous lines; a gap between members stays a gap, it is
-  never bridged);
+  never bridged. Nested relation members are not expanded);
 - every **named** `highway=path|footway|track` way (as a `LineString`).
 
 A trail whose whole line is already part of a strictly longer OSM trail is
