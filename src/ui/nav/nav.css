@@ -404,6 +404,15 @@
   box-shadow: var(--og-shadow-float);
 }
 
+/* Desktop: the planner panel owns the left 400 px, so the card sits beside it,
+   under the route context line, instead of underneath the panel. */
+@media (min-width: 1181px) {
+  .og-hike-card {
+    top: calc(var(--og-safe-top) + 72px);
+    left: 420px;
+  }
+}
+
 .og-hike-card__head {
   display: flex;
   align-items: center;
