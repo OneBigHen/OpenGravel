@@ -136,7 +136,7 @@ function LayerTile({
   readonly status: MapLayerStatus;
   readonly onToggle: () => void;
 }) {
-  const busy = status === "loading" || status === "zoom-in" || status === "unavailable" || status === "stale" || status === "flat-offline";
+  const busy = status === "loading" || status === "zoom-in" || status === "zoom-out" || status === "unavailable" || status === "stale" || status === "flat-offline";
   return (
     <li>
       <button
@@ -165,6 +165,8 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
       return null;
     case "zoom-in":
       return "Zoom in";
+    case "zoom-out":
+      return "Zoom out";
     case "loading":
       return layer.id === "terrain-3d" ? "Loading terrain" : "Loading…";
     case "unavailable":

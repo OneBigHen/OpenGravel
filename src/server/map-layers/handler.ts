@@ -35,6 +35,7 @@ import { paGameLandsProvider } from "./pa-game-lands";
 import { fireProvider } from "./fire";
 import { terrainProvider } from "./terrain";
 import { trafficCamerasProvider } from "./traffic-cameras";
+import { windProvider } from "./wind";
 import {
   overpassProvider,
   knownRoadsProvider,
@@ -141,6 +142,9 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
       name: `${definition.name} (fixture)`,
       detail: definition.legend,
       weight: 5,
+      // Browser gates switch the weather set on: give the wind layer an arrow to
+      // draw instead of an icon-less point no renderer can show.
+      ...(layerId === "wind" ? { wind: { speedMph: 18, gustMph: 32, fromDegrees: 250 } } : {}),
       geometry: layerId === "great-roads" || layerId === "gravel"
         ? { type: "LineString", coordinates: [[lon - dx, lat + offset * dy], [lon + dx, lat + offset * dy]] }
         : { type: "Point", coordinates: [lon + offset * dx, lat - dy] },
@@ -161,6 +165,7 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     tomtomIncidentsProvider,
     trafficCamerasProvider,
     nwsAlertsProvider,
+    windProvider,
     knownRoadsProvider(knownRoadsFromEnv(env), gravelAtlasFromEnv(env)),
   ];
 }

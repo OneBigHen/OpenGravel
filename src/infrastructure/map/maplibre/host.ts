@@ -90,6 +90,7 @@ import type {
 } from "@/application/map/map-host";
 import type { PlaceId } from "@/application/places/types";
 import { RADAR_ATTRIBUTION } from "@/application/map-layers/radar";
+import { meanWindArrowDirectionDeg } from "@/application/map-layers/wind";
 import { clampInsetsToViewport, type MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
 import { metersPerPixelAt } from "@/application/map/scale";
@@ -127,6 +128,7 @@ import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
 import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
+import { createWindArrowImages } from "@/infrastructure/map/maplibre/wind-arrow-image";
 import { planSceneSync, type SceneFingerprints } from "@/infrastructure/map/maplibre/scene-diff";
 import {
   HIT_LAYER_IDS,
@@ -881,6 +883,8 @@ export async function createMapLibreHost(
   const placePillImages = createPlacePillImages(palette);
   const puckImage = createPuckImage(palette);
   const markerImages = [...createMarkerImages(), ...createSearchPinImages()];
+  /** One arrow image per wind strength band (map-experience wave 3, item 13). */
+  const windArrowImages = createWindArrowImages(palette);
   const searchLabelImages = new WeakMap<MapLibreMap, Set<string>>();
   /**
    * Which tone the route arrow image in the current renderer was drawn in.
@@ -1376,6 +1380,18 @@ export async function createMapLibreHost(
         recordError({ kind: "renderer", detail: `image:${image.id}` });
       }
     }
+    // The wind arrows: without their images the layer draws nothing, which reads
+    // as "no wind" — so a band image that cannot be added drops the layer instead.
+    let windArrowsReady = true;
+    for (const image of windArrowImages) {
+      if (map.hasImage(image.id)) continue;
+      try {
+        map.addImage(image.id, image.data, image.options as unknown as PlacePillImage["options"]);
+      } catch {
+        windArrowsReady = false;
+        recordError({ kind: "renderer", detail: `image:${image.id}` });
+      }
+    }
     // Selected search names are raster images too: empty basemaps and failed
     // glyph servers must not erase the place a rider just picked.
     const previousLabels = searchLabelImages.get(map) ?? new Set<string>();
@@ -1436,6 +1452,7 @@ export async function createMapLibreHost(
       if (isPlaceSymbolLayer(layer.id) && !placeImagesReady) continue;
       if (layer.id === MAP_LAYER_IDS.pointPin && !pinsReady) continue;
       if (layer.id === MAP_LAYER_IDS.routeArrow && !arrowReady) continue;
+      if (layer.id === INFO_LAYER_IDS.windArrow && !windArrowsReady) continue;
       if (layer.id === MAP_LAYER_IDS.riderHeading && !puckReady) continue;
       // Info labels need the basemap's glyphs; without them the dots still draw.
       if ((layer.id === INFO_LAYER_IDS.label || layer.id === MAP_LAYER_IDS.routeLabel) && fonts === null) continue;
@@ -1703,6 +1720,81 @@ export async function createMapLibreHost(
   }
 
   /**
+   * A gentle drift on the wind arrows (map-experience wave 3, item 13).
+   *
+   * The arrows already point downwind and are sized by speed; the drift is the
+   * one thing a still map cannot say — that the air is moving. It is a layer-wide
+   * translation along the view's mean downwind direction, which keeps it honest
+   * for a coherent wind field without pretending to animate each reading: a
+   * couple of pixels, once per few seconds, and never at all under
+   * `prefers-reduced-motion`.
+   */
+  const WIND_DRIFT_AMPLITUDE_PX = 2.4;
+  const WIND_DRIFT_PERIOD_MS = 3_600;
+  let windDriftFrame: number | null = null;
+  let windDriftDirection: number | null = null;
+  // Read live, not once: the OS setting can change while the map is open, and a
+  // loop the rider asked us not to run must stop when it does.
+  const windMotionQuery = typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)")
+    : null;
+  const windMotionAllowed = (): boolean => options.reducedMotion !== true && windMotionQuery?.matches !== true;
+
+  function stopWindDrift(map: MapLibreMap | null): void {
+    if (windDriftFrame !== null) {
+      if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(windDriftFrame);
+      windDriftFrame = null;
+    }
+    windDriftDirection = null;
+    if (map === null || map.getLayer(INFO_LAYER_IDS.windArrow) === undefined) return;
+    try {
+      map.setPaintProperty?.(INFO_LAYER_IDS.windArrow, "icon-translate", [0, 0]);
+    } catch {
+      // Cosmetic: an arrow that cannot be reset is still an arrow.
+    }
+  }
+
+  function syncWindDrift(map: MapLibreMap, scene: MapScene): void {
+    const readings = (scene.infoLayers?.features ?? [])
+      .filter((feature) => feature.layerId === "wind" && feature.wind !== undefined && feature.wind !== null)
+      .map((feature) => feature.wind!);
+    const direction = !windMotionAllowed() || map.getLayer(INFO_LAYER_IDS.windArrow) === undefined
+      ? null
+      : meanWindArrowDirectionDeg(readings);
+    if (direction === null) {
+      if (windDriftFrame !== null || windDriftDirection !== null) stopWindDrift(map);
+      return;
+    }
+    // A running loop at the same mean direction is already right; a new view with
+    // a different wind restarts from zero rather than jumping.
+    if (windDriftFrame !== null && windDriftDirection === direction) return;
+    stopWindDrift(map);
+    windDriftDirection = direction;
+    if (typeof requestAnimationFrame !== "function") return;
+    let startedAt: number | null = null;
+    const step = (timestamp: number): void => {
+      if (!windMotionAllowed()) {
+        stopWindDrift(map);
+        return;
+      }
+      startedAt ??= timestamp;
+      const phase = Math.sin(((timestamp - startedAt) / WIND_DRIFT_PERIOD_MS) * Math.PI * 2);
+      const bearing = map.getBearing?.() ?? 0;
+      const radians = ((direction - bearing) * Math.PI) / 180;
+      try {
+        map.setPaintProperty?.(INFO_LAYER_IDS.windArrow, "icon-translate", [
+          Math.sin(radians) * WIND_DRIFT_AMPLITUDE_PX * phase,
+          -Math.cos(radians) * WIND_DRIFT_AMPLITUDE_PX * phase,
+        ]);
+        windDriftFrame = requestAnimationFrame(step);
+      } catch {
+        stopWindDrift(null);
+      }
+    };
+    windDriftFrame = requestAnimationFrame(step);
+  }
+
+  /**
    * Terrain detail is one bounded renderer feature: raised ground, subtle
    * hillshade and high-zoom building extrusion. It never moves the camera.
    *
@@ -1839,6 +1931,7 @@ export async function createMapLibreHost(
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
     syncRadarTiles(current.map, scene.infoLayers?.radarTiles ?? null);
     syncLayerRasters(current.map, scene);
+    syncWindDrift(current.map, scene);
     applyTerrain(current.map);
     armChangedSpanExpiry(current, scene.changedSpan ?? null);
     publishScene(scene);
@@ -2519,6 +2612,8 @@ export async function createMapLibreHost(
    */
   function teardownAttempt(current: HostAttempt | null): void {
     if (current === null) return;
+    // The arrows' drift loop belongs to this renderer: stop it before the map goes.
+    stopWindDrift(null);
     clearWatchdog(current);
     const camera = readCameraBounds(current);
     if (camera !== null) restoredCamera = camera;
@@ -3219,6 +3314,7 @@ export async function createMapLibreHost(
     dispose(): void {
       if (disposed) return;
       unsubscribeActivity();
+      stopWindDrift(null);
       if (terrainTimer !== null) clearTimeout(terrainTimer);
       if (sunClock !== null) {
         clearTimeout(sunClock);

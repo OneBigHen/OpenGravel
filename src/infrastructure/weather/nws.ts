@@ -4,6 +4,7 @@ import type {
   WeatherForecastPeriod,
   WeatherSnapshot,
 } from "@/application/preparation/providers";
+import type { WindInterval, WindSeries } from "@/application/map-layers/wind";
 
 export const NWS_BASE_URL = "https://api.weather.gov";
 /** Compatibility export for callers/tests that imported the historical constant. */
@@ -312,6 +313,126 @@ export async function fetchHourlyForecast(
   // to fail as "malformed" and only the fixture ever showed weather.
   return parseNwsForecast(
     await requestJson(`${baseUrl}/gridpoints/${grid.office}/${grid.x},${grid.y}/forecast/hourly`, options),
+  );
+}
+
+// --- Wind grid (map-experience wave 3, item 13) -----------------------------
+
+/**
+ * The National Weather Service's raw gridpoint forecast carries wind as three
+ * series of `validTime`/`value` windows: sustained speed, direction and — where
+ * the office publishes it — gusts. `/forecast/hourly` has a single wind number
+ * per hour for one point; the grid is what lets one cell answer one reading at
+ * an instant, and it is what the map's coarse arrow grid is built from.
+ */
+
+/** NWS gridpoint speeds arrive in km/h; the map speaks mph. */
+const WIND_SPEED_TO_MPH: Readonly<Record<string, number>> = {
+  "wmoUnit:km_h-1": 0.621371192,
+  "wmoUnit:mph": 1,
+  "wmoUnit:m_s-1": 2.236936292,
+  "wmoUnit:kn": 1.150779448,
+};
+
+const ISO_DURATION = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?)?$/;
+
+/** An ISO 8601 duration ("PT3H", "P1DT6H") in milliseconds, or `null`. */
+export function parseIsoDurationMs(text: string): number | null {
+  const match = ISO_DURATION.exec(text.trim());
+  if (match === null) return null;
+  const [, days, hours, minutes, seconds] = match;
+  if (days === undefined && hours === undefined && minutes === undefined && seconds === undefined) return null;
+  const milliseconds = (((Number(days ?? 0) * 24 + Number(hours ?? 0)) * 60 + Number(minutes ?? 0)) * 60
+    + Number(seconds ?? 0)) * 1_000;
+  return Number.isFinite(milliseconds) && milliseconds > 0 ? milliseconds : null;
+}
+
+/**
+ * One grid window: `start/PT3H` or `start/end`. A window we cannot read is
+ * skipped by the parser rather than guessed at, because a value attached to the
+ * wrong hour is worse than no arrow.
+ */
+export function parseGridValidTime(value: unknown): { readonly startMs: number; readonly endMs: number } | null {
+  if (typeof value !== "string") return null;
+  const slash = value.indexOf("/");
+  if (slash <= 0 || slash === value.length - 1) return null;
+  const startMs = Date.parse(value.slice(0, slash));
+  if (!Number.isFinite(startMs)) return null;
+  const rest = value.slice(slash + 1).trim();
+  const endMs = rest.startsWith("P")
+    ? startMs + (parseIsoDurationMs(rest) ?? Number.NaN)
+    : Date.parse(rest);
+  if (!Number.isFinite(endMs) || endMs <= startMs) return null;
+  return { startMs, endMs };
+}
+
+function windIntervals(
+  group: unknown,
+  field: string,
+  scale: number,
+  bounds?: { readonly min: number; readonly max: number },
+): readonly WindInterval[] {
+  const container = record(group);
+  if (container === null) return [];
+  const values = container["values"];
+  if (values === undefined || values === null) return [];
+  if (!Array.isArray(values)) throw new WeatherProviderError(`NWS wind ${field} is malformed.`, "malformed");
+  const intervals: WindInterval[] = [];
+  for (const entry of values) {
+    const item = record(entry);
+    if (item === null) continue;
+    const window = parseGridValidTime(item["validTime"]);
+    if (window === null) continue;
+    const raw = item["value"];
+    // NWS publishes `null` for a window it has no value for: unknown, not zero.
+    if (raw === null || raw === undefined) continue;
+    const number = finiteNumber(raw, `wind ${field}`);
+    if (bounds !== undefined && (number < bounds.min || number > bounds.max)) {
+      throw new WeatherProviderError(`NWS wind ${field} is malformed.`, "malformed");
+    }
+    intervals.push({ ...window, value: Math.round(number * scale * 100) / 100 });
+  }
+  return intervals;
+}
+
+/**
+ * Parses a `/gridpoints/{office}/{x},{y}` answer into the wind series the map
+ * samples. Throws when the payload has no wind speed group at all — that is not
+ * a wind grid — and keeps an unpublished gust series empty, which the map reads
+ * as "gusts unknown".
+ */
+export function parseNwsWindGrid(payload: unknown): WindSeries {
+  const properties = record(record(payload)?.["properties"]);
+  if (properties === null) throw new WeatherProviderError("NWS wind grid is malformed.", "malformed");
+  const speedGroup = record(properties["windSpeed"]);
+  if (speedGroup === null) throw new WeatherProviderError("NWS wind grid is malformed.", "malformed");
+  const unit = speedGroup["uom"];
+  const scale = typeof unit === "string" ? WIND_SPEED_TO_MPH[unit] : undefined;
+  if (scale === undefined) throw new WeatherProviderError("NWS wind speed unit is malformed.", "malformed");
+  return {
+    speedMph: windIntervals(speedGroup, "speed", scale, { min: 0, max: 400 }),
+    gustMph: windIntervals(properties["windGust"], "gust", scale, { min: 0, max: 500 }),
+    fromDegrees: windIntervals(properties["windDirection"], "direction", 1, { min: 0, max: 360 }),
+  };
+}
+
+/**
+ * The wind series for one coordinate: `/points` resolves the office and grid
+ * square, then the gridpoint resource publishes the windows. Two upstream reads,
+ * which is why the caller caches the result per cell.
+ */
+export async function fetchWindGridSeries(
+  lat: number,
+  lon: number,
+  options: FetchSnapshotOptions = {},
+): Promise<WindSeries> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    throw new WeatherProviderError("Weather coordinates are outside geographic bounds.", "invalid-coordinate");
+  }
+  const baseUrl = options.baseUrl ?? NWS_BASE_URL;
+  const grid = parseNwsPoints(await requestJson(`${baseUrl}/points/${lat},${lon}`, options));
+  return parseNwsWindGrid(
+    await requestJson(`${baseUrl}/gridpoints/${grid.office}/${grid.x},${grid.y}`, options),
   );
 }
 

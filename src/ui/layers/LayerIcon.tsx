@@ -25,6 +25,7 @@ const PATHS: Readonly<Record<IconKey, ReactNode>> = {
   "road-history": <><path d="M4 18a8 8 0 1 1 3 2" /><path d="M4 13v5h5" /><path d="M12 8v4l3 2" /></>,
   "weather": <><path d="M7 17a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 10 3.5 3.5 0 1 1 17.5 17Z" /></>,
   "weather-radar": <><path d="M7 14a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 7 3.5 3.5 0 1 1 17.5 14Z" /><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3" /></>,
+  "wind": <><path d="M3 9h11a3 3 0 1 0-3-3" /><path d="M3 15h14a3 3 0 1 1-3 3" /><path d="M3 12h7" /></>,
   "traffic": <><rect x="8" y="3" width="8" height="18" rx="3" /><circle cx="12" cy="7.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="12" cy="16.5" r="1.2" /></>,
   "traffic-flow": <><path d="M4 8h12M4 12h16M4 16h9" /><path d="m17 5 3 3-3 3" /></>,
   "live-traffic": <><path d="M12 3 2 20h20Z" /><path d="M12 10v4M12 17v.5" /></>,

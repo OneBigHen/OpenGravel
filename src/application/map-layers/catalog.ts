@@ -8,6 +8,8 @@
  * is community-mapped is how a rider ends up on a closed forest road.
  */
 
+import { WIND_ATTRIBUTION } from "./wind";
+
 export type MapLayerCategory = "view" | "roads" | "conditions" | "stops" | "access";
 
 export type MapLayerId =
@@ -21,6 +23,7 @@ export type MapLayerId =
   | "traffic-cameras"
   | "weather"
   | "weather-radar"
+  | "wind"
   | "active-fire"
   | "great-roads"
   | "gravel"
@@ -54,6 +57,11 @@ export interface MapLayerDefinition {
   readonly caveat: string;
   /** The zoom below which the layer does not load (the view would be too big). */
   readonly minZoom: number;
+  /**
+   * The zoom above which the layer stops drawing, when its data cannot honestly
+   * say anything finer than the arrow grid it came from.
+   */
+  readonly maxZoom?: number;
   /** A palette colour name the map and the panel both use for this layer. */
   readonly color: string;
   /** Optional existing theme token for SVG swatches and presentation accents. */
@@ -105,6 +113,13 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     source: "RainViewer (NOAA NEXRAD and other national radar feeds)",
     caveat: "Animated frames: two hours back plus a 30-minute nowcast, scrubbed with the timeline in the map. Stale frames are labelled. Radar gaps, beam blockage and a missing frame do not mean clear weather. Online only.",
     minZoom: 4, color: "#397c96", colorToken: "--og-signal-blue", glyph: "☂",
+  },
+  {
+    id: "wind", name: "Wind", category: "conditions", kind: "features",
+    legend: "Arrows point downwind; size and colour mean speed",
+    source: WIND_ATTRIBUTION,
+    caveat: "US only. A coarse forecast grid — one arrow per ~10 km, never more than 25 — read from the same NWS cache as the weather pill, showing the forecast for the hour at each cell. No arrow means no reading, not calm; gusts are printed only when NWS publishes them. Shown from zoom 8 to 12, where the grid is meaningful. Online only.",
+    minZoom: 8, maxZoom: 12, color: "#397c96", glyph: "➤",
   },
   {
     id: "hillshade", name: "Hill shading", category: "view", kind: "view",
@@ -335,7 +350,7 @@ export interface MapLayerLens {
 export const MAP_LAYER_LENSES: readonly MapLayerLens[] = [
   { id: "hiking", name: "Hiking", hint: "Trails, terrain and trail stops", glyph: "▲", layers: ["trails", "trailheads", "water-sources", "shelters", "summits", "viewpoints", "hillshade", "contours"] },
   { id: "fun", name: "Fun roads", hint: "Twisty, dirt and views", glyph: "∿", layers: ["great-roads", "gravel", "viewpoints", "hillshade"] },
-  { id: "weather", name: "Weather", hint: "Rain and alerts", glyph: "☂", layers: ["weather-radar", "weather"] },
+  { id: "weather", name: "Weather", hint: "Rain, wind and alerts", glyph: "☂", layers: ["weather-radar", "wind", "weather"] },
   { id: "traffic", name: "Traffic", hint: "Slowdowns and road work", glyph: "≋", layers: ["traffic-flow", "live-traffic", "work-zones"] },
   { id: "stops", name: "Gas and food", hint: "Fuel, food, coffee", glyph: "⛽", layers: ["fuel", "food", "coffee"] },
 ];
