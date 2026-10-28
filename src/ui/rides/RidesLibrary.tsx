@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AppBar } from "@/ui/nav/AppBar";
+import { AppMenu } from "@/ui/nav/AppMenu";
 import {
   type LibraryServicePort,
   type RideSummary,
@@ -478,6 +479,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
         >
           Import GPX
         </button>
+        <AppMenu className="og-page-menu" />
         <input
           ref={importFileInput}
           className="sr-only"

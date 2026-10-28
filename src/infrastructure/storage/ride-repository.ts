@@ -41,6 +41,7 @@ import {
 } from "./db";
 import { createLocalStorageBootstrapPointer } from "./bootstrap-pointer";
 import { createLocalStorageRideFocusPointer } from "./ride-focus-pointer";
+import { preparedRouteGeometryRefs } from "@/application/explore/ride-this";
 
 export type {
   LoadRideResult,
@@ -789,5 +790,11 @@ export function createRideRepository(options: RideRepositoryOptions = {}): RideR
 const rideFocusPointer = createLocalStorageRideFocusPointer();
 export const rideRepository: RideRepository = createRideRepository({
   bootstrapPointer: createLocalStorageBootstrapPointer(),
-  protectedGeometryRefs: () => rideFocusGeometryRefs(rideFocusPointer),
+  // A catalog ride's own line ("Ride this") lives outside every library row;
+  // this shared instance sweeps at startup too, so it must spare that line or
+  // a reload finds the ride with no line behind it.
+  protectedGeometryRefs: () => {
+    const refs = rideFocusGeometryRefs(rideFocusPointer);
+    return refs === null ? null : [...refs, ...preparedRouteGeometryRefs()];
+  },
 });

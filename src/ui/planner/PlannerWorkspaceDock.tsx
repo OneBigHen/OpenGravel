@@ -466,7 +466,7 @@ export function PlannerWorkspaceDock({
               {history}
             </div>
           ) : null}
-          {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop} {...(planning ? { onCancelPlanning } : {})} />}
+          {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop && (detent === "peek" || Boolean(placeSheet))} {...(planning ? { onCancelPlanning } : {})} />}
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? <RideStylePanel model={composer.rideStyle} expanded/> : null}
           {(!optionsMode || activeSheetView !== "choices") && <PlannerRefineWorkspace {...refine} />}

@@ -148,7 +148,10 @@ test("200 percent text keeps navigation labels and the planner sheet separate", 
   }).toBeGreaterThanOrEqual(0);
   const size = await page.getByTestId("sheet-scroll").evaluate(element => ({ width: element.clientWidth, content: element.scrollWidth }));
   expect(size.content).toBeLessThanOrEqual(size.width + 1);
-  for (const link of await nav.locator("a").all()) await expect(link).toBeInViewport({ ratio: 1 });
+  // Settings lives in the named Menu on phones (mobile UX handoff); the bar's
+  // visible links are the three places.
+  await expect(nav.locator("a:visible")).toHaveCount(3);
+  for (const link of await nav.locator("a:visible").all()) await expect(link).toBeInViewport({ ratio: 1 });
 });
 
 test("320px library segments remain usable with 200 percent text", async ({ page }) => {

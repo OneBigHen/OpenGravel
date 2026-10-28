@@ -42,6 +42,17 @@ import { asRouteCandidateId } from "@/domain/route/ids";
 export const PREPARED_ROUTE_STORAGE_KEY = "opengravel.explore.ride-this";
 
 /**
+ * The catalog line a ride was opened with, kept past the handoff (one ride at a
+ * time, in localStorage). Without it a reload re-planned the unchanged ride
+ * through its checkpoints and silently replaced the published line: Loyalsock
+ * State Forest Loop opened at 96 mi / 3 h 30 and came back from a reload as
+ * 92 mi / 4 h 33 / 62 % dirt (mobile UX handoff, 2026-10-27). It is dropped
+ * as soon as the ride is edited, because from then on the planner's answer is
+ * the ride's own.
+ */
+export const KEPT_ROUTE_STORAGE_KEY = "opengravel.explore.kept-route";
+
+/**
  * How long a prepared route waits for the planner. The planner is a client-side
  * navigation away, so this only has to cover a slow phone; an older record is a
  * leftover and is ignored rather than applied to whatever ride is open.
@@ -78,6 +89,15 @@ function browserStorage(): PreparedRouteStorage | null {
   if (typeof window === "undefined") return null;
   try {
     return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function keptStorage(): PreparedRouteStorage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
   } catch {
     return null;
   }
@@ -187,6 +207,8 @@ export function takePreparedRoute(options: {
   readonly now?: () => string;
   readonly storage?: PreparedRouteStorage | null;
   readonly maxAgeMs?: number;
+  /** Where the line is kept past this read; localStorage by default. */
+  readonly keep?: PreparedRouteStorage | null;
 } = {}): PreparedRoute | null {
   const storage = options.storage === undefined ? browserStorage() : options.storage;
   if (storage === null) return null;
@@ -209,7 +231,52 @@ export function takePreparedRoute(options: {
   const now = Date.parse((options.now ?? ((): string => new Date().toISOString()))());
   const maxAge = options.maxAgeMs ?? PREPARED_ROUTE_TTL_MS;
   if (!Number.isFinite(now) || now - Date.parse(prepared.preparedAt) > maxAge) return null;
+  const keep = options.keep === undefined ? keptStorage() : options.keep;
+  try {
+    keep?.setItem(KEPT_ROUTE_STORAGE_KEY, JSON.stringify(prepared));
+  } catch {
+    // Not keeping it only costs a replan after a reload, as before.
+  }
   return prepared;
+}
+
+/**
+ * The catalog line kept for the ride the planner is about to restore, or
+ * `null`. Only the ride it was prepared for qualifies; whether that ride is
+ * still unchanged is decided when the planner asks to plan it
+ * (`withPreparedRoute`).
+ */
+export function readKeptRoute(
+  rideId: string | null,
+  options: { readonly storage?: PreparedRouteStorage | null } = {},
+): PreparedRoute | null {
+  if (rideId === null) return null;
+  const storage = options.storage === undefined ? keptStorage() : options.storage;
+  let raw: string | null = null;
+  try {
+    raw = storage?.getItem(KEPT_ROUTE_STORAGE_KEY) ?? null;
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const kept = parsePreparedRoute(parsed);
+  return kept !== null && kept.rideId === rideId ? kept : null;
+}
+
+/** The ride was edited (or replaced): its catalog line is no longer its answer. */
+export function forgetKeptRoute(options: { readonly storage?: PreparedRouteStorage | null } = {}): void {
+  const storage = options.storage === undefined ? keptStorage() : options.storage;
+  try {
+    storage?.removeItem(KEPT_ROUTE_STORAGE_KEY);
+  } catch {
+    // Nothing to do: a store that cannot be written cannot hold a stale line.
+  }
 }
 
 /**
@@ -319,6 +386,10 @@ export function preparedRouteSession(prepared: PreparedRoute): PlanningSessionSn
 export function withPreparedRoute(
   service: ClientPlanningService,
   prepared: PreparedRoute | null,
+  options: {
+    /** The ride moved on from its catalog line (an edit, or another ride). */
+    readonly onDiverged?: () => void;
+  } = {},
 ): ClientPlanningService {
   if (prepared === null) return service;
   const preparedSession = preparedRouteSession(prepared);
@@ -339,6 +410,16 @@ export function withPreparedRoute(
       return ownsAnswer(inner) ? preparedSession : inner;
     },
     begin: (input): Promise<void> => {
+      // The same ride at the same revision is the catalog ride, unchanged: a
+      // restore after a reload asks for it again, and re-planning it would
+      // replace the published line with a different one. Keep the line.
+      if (!live && input.rideId === prepared.rideId && input.rideRevision === prepared.rideRevision) {
+        return Promise.resolve();
+      }
+      // An edit (or another ride) owns the answer from now on.
+      if (input.rideId !== prepared.rideId || input.rideRevision !== prepared.rideRevision) {
+        options.onDiverged?.();
+      }
       live = true;
       return service.begin(input);
     },
@@ -371,8 +452,10 @@ export function withPreparedRoute(
  */
 let pendingPreparedRoute: PreparedRoute | null | undefined;
 
-export function takePreparedRouteOnce(): PreparedRoute | null {
-  if (pendingPreparedRoute === undefined) pendingPreparedRoute = takePreparedRoute();
+export function takePreparedRouteOnce(activeRideId: string | null = null): PreparedRoute | null {
+  if (pendingPreparedRoute === undefined) {
+    pendingPreparedRoute = takePreparedRoute() ?? readKeptRoute(activeRideId);
+  }
   return pendingPreparedRoute;
 }
 
@@ -384,6 +467,21 @@ export function takePreparedRouteOnce(): PreparedRoute | null {
  * the life of the page, which is exactly as long as the ride that uses it.
  */
 export function preparedRouteGeometryRefs(): readonly GeometryRef[] {
-  const prepared = takePreparedRouteOnce();
-  return prepared === null ? [] : [prepared.geometryRef];
+  const refs = new Set<GeometryRef>();
+  // Read without consuming: the sweep can run before the planner has taken the
+  // handoff, and must not decide what this page load opens.
+  if (pendingPreparedRoute != null) refs.add(pendingPreparedRoute.geometryRef);
+  // The kept line outlives the page: a reload opens the ride on it again.
+  const kept = readAnyKeptRoute();
+  if (kept !== null) refs.add(kept.geometryRef);
+  return [...refs];
+}
+
+function readAnyKeptRoute(): PreparedRoute | null {
+  try {
+    const raw = keptStorage()?.getItem(KEPT_ROUTE_STORAGE_KEY) ?? null;
+    return raw === null ? null : parsePreparedRoute(JSON.parse(raw));
+  } catch {
+    return null;
+  }
 }

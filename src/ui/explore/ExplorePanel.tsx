@@ -6,6 +6,7 @@ import { PA_RIDING_AREAS, parsePaRidingArea } from "@/application/explore/riding
 import { staticRouteMapUrl } from "@/application/map/static-map";
 
 import { AppBar } from "@/ui/nav/AppBar";
+import { AppMenu } from "@/ui/nav/AppMenu";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
 import { routeFacts } from "@/ui/explore/route-facts";
@@ -619,6 +620,7 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
         <div className="og-explore__heading">
           <h1>Explore</h1>
         </div>
+        <AppMenu className="og-page-menu" />
         {/* AQ-06, AQ-07: a real tab list — arrow keys move, one tab stop, and
             each tab owns the panel below. */}
         <div

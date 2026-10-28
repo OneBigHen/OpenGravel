@@ -27,7 +27,7 @@ export interface PrimaryNavItem {
 
 /** The app's three places. Every surface shows the same nav in the same order. */
 export const PRIMARY_NAV_ITEMS: readonly PrimaryNavItem[] = [
-  { href: "/", label: "Plan" },
+  { href: "/", label: "Map" },
   { href: "/explore", label: "Explore" },
   { href: "/rides", label: "My rides" },
 ];
@@ -58,12 +58,11 @@ function NavIcon({ href }: { readonly href: string }) {
   };
   switch (href) {
     case "/":
-      // A route between two points.
+      // A folded map: the map is home, and planning starts on it.
       return (
         <svg {...common}>
-          <circle cx="6" cy="18" r="2.2" />
-          <circle cx="18" cy="6" r="2.2" />
-          <path d="M8 17c5-1 3-6 8-9" />
+          <path d="M9 4.5 3.5 6.6v13l5.5-2.1 6 2.1 5.5-2.1v-13L15 6.6z" />
+          <path d="M9 4.5v13M15 6.6v13" />
         </svg>
       );
     case "/explore":

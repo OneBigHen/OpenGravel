@@ -840,6 +840,23 @@
     margin-top: calc(var(--og-safe-top) + var(--og-space-4));
   }
 
+  /* Title, Import and the Menu share one row down to 320px. */
+  .og-rides__header {
+    flex-wrap: nowrap;
+    gap: var(--og-space-2);
+  }
+
+  .og-rides__header > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .og-rides__header .og-rides__import {
+    flex: none;
+    padding-inline: var(--og-space-3);
+    white-space: nowrap;
+  }
+
   .og-library__intro,
   .og-import .og-eyebrow,
   .og-library__imports .og-import__header p {

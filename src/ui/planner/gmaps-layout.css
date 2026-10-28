@@ -387,6 +387,15 @@
   font-size: var(--og-text-headline);
 }
 
+/* A picked place is a destination: its name is the sheet's title. */
+.og-planner .og-place-sheet h2#place-sheet-title {
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
 .og-planner .og-place-sheet .og-place-sheet__close {
   top: var(--og-space-1);
   right: 0;
@@ -573,4 +582,198 @@
 .og-result-row__go:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
+}
+
+/* Home (mobile UX handoff, 2026-10-27): with nothing planned there is no
+   sheet slab over the map. Loop, Record and Free Ride float as three glass
+   pills just above the tab bar, at thumb height; the map runs behind them.
+   The Sheet stays mounted (and keyboard-reachable), it just draws nothing. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] {
+    padding-top: var(--og-space-2);
+    padding-bottom: var(--og-space-2);
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  /* The grab handle stays: a small glass pill centred over the pills, so the
+     full planner (From / To, ride style) is one swipe or tap away. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__handle {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 24px;
+    min-height: 24px;
+    margin: 0 auto var(--og-space-1);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-pill);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    pointer-events: auto;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__handle::before {
+    top: 9px;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body > *,
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride, .og-shortcuts > *, .og-advisor) {
+    pointer-events: auto;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    min-height: 48px;
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-pill);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    font-weight: 700;
+  }
+
+  /* Loop is the home's main way in: the one green pill. */
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__loop-quick {
+    border-color: var(--og-primary);
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-composer__loop-quick svg {
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-planner__error {
+    padding: var(--og-space-2) var(--og-space-3);
+    border-radius: var(--og-radius-control);
+    background: var(--og-glass-dense);
+  }
+}
+
+/* Route preview (mobile UX handoff, 2026-10-27): the chosen ride reads as a
+   hero, like Google's directions sheet: its name as a plum eyebrow, the time
+   large in green, distance beside it, the measured reason under. The other
+   candidates stay compact rows under it, one tap to switch. */
+.og-route-options .og-phone-choice[data-selected="true"] {
+  align-items: flex-start;
+  padding: var(--og-space-3) var(--og-space-3) var(--og-space-3) var(--og-space-2);
+  background: transparent;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__swatch {
+  width: 5px;
+  height: auto;
+  align-self: stretch;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__role {
+  color: var(--og-route);
+  font-size: var(--og-text-caption);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--og-space-3);
+  row-gap: 2px;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dot {
+  display: none;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__time {
+  color: var(--og-primary-text);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dist {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__reason {
+  flex-basis: 100%;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__check {
+  display: none;
+}
+
+/* The alternatives under the hero: a hairline apart, quiet until tapped. */
+.og-route-options .og-phone-alternatives > li:not(:has(.og-phone-choice[data-selected="true"])) {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-route-options .og-phone-choice:not([data-selected="true"]) .og-phone-choice__role::after {
+  content: " ›";
+  color: var(--og-ink-2);
+  font-weight: 500;
+}
+
+/* The selected ride leads the list wherever the planner ranked it. */
+.og-route-options .og-phone-alternatives > li:has(.og-phone-choice[data-selected="true"]) {
+  order: -1;
+}
+
+.og-route-options__start .og-primary {
+  border-radius: var(--og-radius-pill);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+/* Small phones: the three home pills keep their words on one line. */
+@media (max-width: 360px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    gap: 4px;
+    font-size: var(--og-text-caption);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Pulled up from home: the quick starts stay pills, Record and Free Ride
+   side by side, instead of three tall grey slabs. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-plan-actions__record-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--og-space-2);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
+    border-radius: var(--og-radius-pill);
+    font-weight: 700;
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-composer__loop-quick {
+    border-color: var(--og-primary);
+    background: var(--og-primary);
+    color: var(--og-on-primary);
+  }
+
+  .og-planner .og-planner__sheet[data-idle="true"]:not([data-detent="peek"]) .og-composer__loop-quick svg {
+    color: var(--og-on-primary);
+  }
 }

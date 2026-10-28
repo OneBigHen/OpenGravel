@@ -30,8 +30,8 @@ glossy app. The map is the hero; chrome is calm and solid.
   fixed topographic backdrop (`body::before/::after`, `public/textures/topo.svg`) so the glass
   has terrain to frost. Solid only when the browser has no backdrop blur or the rider asks for
   reduced transparency (tokens.css handles both). No glow, no gradients on controls.
-- **No dead space.** The tab bar and the Plan sheet float (inset 8px, 24px corners) with map
-  between them; lists are compact rows (Explore: 96px thumbnail rows); wide screens use their
+- **No dead space.** The tab bar is docked (Google Maps layout, 2026-10-27) and the Plan
+  sheet sits flush on it; lists are compact rows (Explore: 96px thumbnail rows); wide screens use their
   width (Settings in two columns, route page = 420px pane + full-height map); an empty or idle
   state sits at thumb height, never alone in the middle of a blank screen.
 - One primary action colour (forest green). The chosen route is plum. Everything else is
@@ -93,7 +93,20 @@ Breakpoints (only these): phone `< 761px`, tablet `761–1180px`, desktop `≥ 1
 ## 5. Screens
 
 Phone layout: small-screen-v2 §2–§6 (map ≥ 60 % while planning, ≥ 80 % riding; one sheet
-with peek/half/full; ≤ 2 floating map controls; floating glass tab bar, hidden while riding).
+with peek/half/full; ≤ 2 floating map controls; glass tab bar docked to the bottom edge,
+hidden while riding and while a route is on the map).
+
+Navigation (phones and tablets): the tab bar holds three places, **Map · Explore · My rides**.
+Settings and the Day / Night switch live behind a named **Menu** button (AppMenu) in the
+top bar of every page: beside the search on the map, at the end of the title row on Explore
+and My rides. Desktop and landscape phones keep Settings in their top bar.
+
+Home (nothing planned): no sheet slab. Loop (green), Record and Free Ride float as three glass
+pills just above the tab bar; the map runs behind them.
+
+Route preview: the chosen ride is a hero — its name as a plum eyebrow, the time large in
+green, distance beside it, the measured reason under; other candidates are quiet rows under
+it, one tap to switch. Start is a full-width green pill.
 
 Desktop (≥ 1181px): left planning rail 400px, map fills the rest, the same sheet content
 lives in the rail; tab destinations are a top bar. Tablet: phone layout with a wider sheet
@@ -133,6 +146,15 @@ the primary button.
   efficient". v4 = glass everywhere (§2), topo backdrop, floating tab bar and sheet, compact
   Explore rows, map-first route page, two-column Settings on wide screens. Supersedes v3's
   "solid sheets and cards" and small-screen-v2's docked tab bar.
+
+- 2026-10-27 Owner: Google Maps layout — tab bar docked to the bottom edge, Plan sheet flush on
+  it, From / To card while a route is on the map (#162, #163). Supersedes v4's floating tab bar.
+- 2026-10-27 Owner (mobile UX handoff, PR #165, "full authority, make a sleek gorgeous routing
+  app"): three-tab bar (Map · Explore · My rides), Settings + Day / Night behind a named Menu on
+  every page, chromeless home with floating Loop / Record / Free Ride pills, route-preview hero,
+  ride Menu sheet as one grouped list. The concept images were direction, not specs: their
+  floating tab bar was not adopted (the owner's own docked choice stands) and no ride control
+  was removed. "Ride this" keeps the catalog line across reloads until the rider edits it.
 
 ## Open proposals
 

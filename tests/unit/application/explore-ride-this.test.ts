@@ -19,6 +19,9 @@ import {
   preparedRouteSession,
   PREPARED_ROUTE_STORAGE_KEY,
   PREPARED_ROUTE_TTL_MS,
+  KEPT_ROUTE_STORAGE_KEY,
+  forgetKeptRoute,
+  readKeptRoute,
   preparedRouteGeometryRefs,
   takePreparedRoute,
   takePreparedRouteOnce,
@@ -208,6 +211,7 @@ describe("Explore ride-this handoff", () => {
     // told to keep it instead of reclaiming it as an orphan.
     expect(preparedRouteGeometryRefs()).toEqual(["geometry-1"]);
     window.sessionStorage.clear();
+    window.localStorage.removeItem(KEPT_ROUTE_STORAGE_KEY);
   });
 
   it("answers with the prepared route, and claims no score or evidence for it", async () => {
@@ -250,6 +254,54 @@ describe("Explore ride-this handoff", () => {
     expect(inner.begin).toHaveBeenCalledOnce();
     expect(service.snapshot().committedBundle).toBeNull();
     expectedEmpty(service.snapshot());
+  });
+
+  // Live bug 2026-10-27 (mobile UX handoff): Loyalsock State Forest Loop opened
+  // at the catalog's 96 mi / 3 h 30, and a reload re-planned the unchanged ride
+  // through its checkpoints into 92 mi / 4 h 33 / 62 % dirt, replacing the
+  // published line without a word.
+  it("keeps the catalog line through a reload while the ride is unchanged", async () => {
+    const { storage, document } = await prepared();
+    const kept = memoryStorage();
+    const first = takePreparedRoute({ now: () => NOW, storage, keep: kept });
+    expect(first).not.toBeNull();
+    // Reload: the session handoff is spent, the kept line is not.
+    expect(takePreparedRoute({ now: () => NOW, storage, keep: kept })).toBeNull();
+    const again = readKeptRoute(document.rideId, { storage: kept });
+    expect(again).toEqual(first);
+    // Only for the ride it was prepared for.
+    expect(readKeptRoute("ride-other", { storage: kept })).toBeNull();
+    expect(readKeptRoute(null, { storage: kept })).toBeNull();
+
+    // The restored ride asks to plan itself at the same revision: no replan.
+    const inner = idleService();
+    const diverged = vi.fn();
+    const service = withPreparedRoute(inner.service, again, { onDiverged: diverged });
+    await service.begin({ rideId: document.rideId, rideRevision: again!.rideRevision, intent: document.intent });
+    expect(inner.begin).not.toHaveBeenCalled();
+    expect(diverged).not.toHaveBeenCalled();
+    expect(service.snapshot().committedBundle?.candidates[0]?.distanceMeters).toBe(27_500);
+  });
+
+  it("tells the storage sweep to spare the kept line, so a reload still has it", () => {
+    window.localStorage.setItem(KEPT_ROUTE_STORAGE_KEY, JSON.stringify({
+      version: 1, rideId: "ride-kept", rideRevision: 0, geometryRef: "geometry-kept",
+      distanceMeters: 154_478, durationSeconds: 12_600, preparedAt: NOW,
+    }));
+    expect(preparedRouteGeometryRefs()).toContain("geometry-kept");
+    window.localStorage.removeItem(KEPT_ROUTE_STORAGE_KEY);
+  });
+
+  it("drops the kept line once the ride is edited, and plans the edit", async () => {
+    const { storage, document } = await prepared();
+    const kept = memoryStorage();
+    const record = takePreparedRoute({ now: () => NOW, storage, keep: kept })!;
+    const inner = idleService();
+    const service = withPreparedRoute(inner.service, record, { onDiverged: () => forgetKeptRoute({ storage: kept }) });
+    await service.begin({ rideId: document.rideId, rideRevision: record.rideRevision + 1, intent: document.intent });
+    expect(inner.begin).toHaveBeenCalledOnce();
+    expect(kept.getItem(KEPT_ROUTE_STORAGE_KEY)).toBeNull();
+    expect(readKeptRoute(document.rideId, { storage: kept })).toBeNull();
   });
 
   it("keeps answering plainly when no route was prepared", () => {
