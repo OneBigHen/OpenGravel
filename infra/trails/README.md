@@ -346,7 +346,7 @@ At most six nearest qualifying photos are kept (metadata candidates capped at
 including the list thumbnail. Crowded cells saturating the 500-result provider
 limit and unavailable calls are counted: coverage is not claimed complete.
 Descriptions and photo arrays are detail-only in the list API; one fully credited
-thumbnail remains on cards. Mapillary is omitted when no token is configured.
+thumbnail remains on cards. No Mapillary stage was implemented or run; no token was configured.
 
 `--photo-cell-limit N` is an explicit checkpoint option for media runs; the final
 run omits it. Stats distinguish total occupied cells, requested cells, successful

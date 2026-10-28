@@ -30,7 +30,9 @@ try {
     await page.getByRole('button',{name:/^Filters/}).click();
     await expect(page.getByLabel('Waterfall',{exact:true})).toBeVisible();
     await expect(page.getByLabel('Views',{exact:true})).toBeVisible();
-    await page.locator('.og-hike__filters').evaluate(el=>el.scrollIntoView({block:'start'}));
+    await page.evaluate(()=>window.scrollTo(0,0));
+    await expect(page.getByLabel('Waterfall',{exact:true})).toBeInViewport();
+    await expect(page.getByLabel('Views',{exact:true})).toBeInViewport();
     await page.screenshot({path:join(out,`${theme}-filters.png`),animations:'disabled'});
    }
    const response=await page.request.get(`${base}/api/hikes?id=${encodeURIComponent(area.id)}`);
@@ -39,6 +41,7 @@ try {
    await expect(page.getByRole('heading',{name:hike.name,exact:true})).toBeVisible();
    await page.locator('.og-hike__map canvas').waitFor();
    await page.waitForTimeout(2500);
+   await page.evaluate(()=>window.scrollTo(0,0));
    await page.screenshot({path:join(out,`${theme}-${area.key}-trail.png`),animations:'disabled'});
    await expect(page.getByRole('heading',{name:'Along the trail',exact:true})).toBeVisible();
    await page.locator('.og-hike__features').evaluate(el=>el.closest('section').scrollIntoView({block:'start'}));
