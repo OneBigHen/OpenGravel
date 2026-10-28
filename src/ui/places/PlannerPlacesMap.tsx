@@ -26,6 +26,11 @@ export interface PlannerPlacesProps {
   readonly onOpenPlace?: (place: NearbyPlace) => void;
   /** "Add as stop" on a place card: the existing typed stop command. */
   readonly onAddStop: (place: NearbyPlace) => void;
+  /**
+   * Map taps are armed for placing points (Breadcrumb): a tap on a pin is a tap
+   * on the map there, so it adds a waypoint instead of opening the place.
+   */
+  readonly inert?: boolean;
 }
 
 /**
@@ -49,7 +54,7 @@ export function PlannerPlacesMap({
 
 function PlannerMapWithPlaces({
   map,
-  places: { source, onAddStop, onOpenPlace },
+  places: { source, onAddStop, onOpenPlace, inert = false },
   layers,
 }: {
   readonly map: PlannerMapProps;
@@ -78,6 +83,7 @@ function PlannerMapWithPlaces({
   const { onIntent } = map;
   const intercept = useCallback(
     (intent: MapIntent): void => {
+      if (intent.type === "place-click" && inert) { onIntent({ type: "map-click", coordinate: intent.coordinate }); return; }
       if (intent.type === "place-click" && intent.placeId.startsWith("search:")) { onIntent(intent); return; }
       if (intent.type === "place-click" && onOpenPlace !== undefined) {
         const place = places.scenePlaces?.some((p) => p.id === intent.placeId);
@@ -86,7 +92,7 @@ function PlannerMapWithPlaces({
       const forwarded = interceptIntent(intent);
       if (forwarded !== null) onIntent(forwarded);
     },
-    [interceptIntent, onIntent, onOpenPlace, places],
+    [inert, interceptIntent, onIntent, onOpenPlace, places],
   );
   const { clear } = places;
   const addStop = useCallback(

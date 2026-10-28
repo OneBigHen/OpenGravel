@@ -203,7 +203,7 @@ export function PlannerWorkspaceFrame({
             {...map}
             scene={scene}
             hint={hint}
-            places={places}
+            places={places === undefined || editBar?.breadcrumb?.editing !== true ? places : { ...places, inert: true }}
             layers={layers}
             clusterControls={clusterControls}
           />
