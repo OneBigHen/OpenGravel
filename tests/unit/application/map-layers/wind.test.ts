@@ -104,12 +104,12 @@ describe("the wind reading at an instant", () => {
 describe("the wind arrow style", () => {
   it("grades speed into bands a rider can tell apart by size and colour", () => {
     const style = (mph: number) => windArrowStyle(mph);
-    expect(style(0)).toMatchObject({ band: "calm", tone: "sage", size: 0.62 });
+    expect(style(0)).toMatchObject({ band: "calm", tone: "sage", size: 0.7 });
     expect(style(7.9)).toMatchObject({ band: "calm" });
-    expect(style(8)).toMatchObject({ band: "breeze", tone: "signal", size: 0.78 });
+    expect(style(8)).toMatchObject({ band: "breeze", tone: "signal", size: 0.82 });
     expect(style(15.9)).toMatchObject({ band: "breeze" });
-    expect(style(16)).toMatchObject({ band: "strong", tone: "gold", size: 0.94 });
-    expect(style(25)).toMatchObject({ band: "gale", tone: "ember", size: 1.12 });
+    expect(style(16)).toMatchObject({ band: "strong", tone: "gold", size: 0.96 });
+    expect(style(25)).toMatchObject({ band: "gale", tone: "ember", size: 1.14 });
     // Size and colour only ever move together.
     expect(style(30)!.size).toBeGreaterThan(style(3)!.size);
   });
@@ -139,7 +139,8 @@ describe("the wind arrow style", () => {
     expect(windArrowProperties(reading())).toEqual({
       direction: 70,
       icon: windArrowImageId("strong"),
-      size: 0.94,
+      size: 0.96,
+      speed: 18,
     });
   });
 });
@@ -216,7 +217,7 @@ describe("the wind layer on the renderer", () => {
     } as unknown as MapScene;
     const collection = infoFeatureCollection(scene);
     expect(collection.features[0]).toMatchObject({
-      properties: { id: "wind:-75.4,40.1", layerId: "wind", direction: 70, icon: "ogv-wind-arrow-strong", size: 0.94 },
+      properties: { id: "wind:-75.4,40.1", layerId: "wind", direction: 70, icon: "ogv-wind-arrow-strong", size: 0.96 },
     });
   });
 });

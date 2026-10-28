@@ -194,8 +194,16 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
         "icon-padding": 0,
+        // The speed sits under the arrow, upright, so the reading is legible at a glance.
+        "text-field": ["to-string", ["get", "speed"]],
+        "text-font": ["Open Sans Bold"],
+        "text-size": 12,
+        "text-offset": [0, 1.6],
+        "text-rotation-alignment": "viewport",
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
       },
-      paint: { "icon-opacity": 0.92 },
+      paint: { "icon-opacity": 0.92, "text-color": palette.ink, "text-halo-color": palette.paper, "text-halo-width": 1.5 },
     },
     {
       id: INFO_LAYER_IDS.label,

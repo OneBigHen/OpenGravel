@@ -244,10 +244,10 @@ export interface WindBandDefinition {
  * rider who cannot tell two sizes apart.
  */
 export const WIND_BANDS: readonly WindBandDefinition[] = [
-  { band: "calm", fromMph: 0, tone: "sage", size: 0.62, words: "Light" },
-  { band: "breeze", fromMph: 8, tone: "signal", size: 0.78, words: "Breezy" },
-  { band: "strong", fromMph: 16, tone: "gold", size: 0.94, words: "Strong" },
-  { band: "gale", fromMph: 25, tone: "ember", size: 1.12, words: "Gale" },
+  { band: "calm", fromMph: 0, tone: "sage", size: 0.7, words: "Light" },
+  { band: "breeze", fromMph: 8, tone: "signal", size: 0.82, words: "Breezy" },
+  { band: "strong", fromMph: 16, tone: "gold", size: 0.96, words: "Strong" },
+  { band: "gale", fromMph: 25, tone: "ember", size: 1.14, words: "Gale" },
 ];
 
 /** The band a speed draws in, or `null` when the speed is unknown. */
@@ -277,6 +277,7 @@ export function windArrowProperties(
     direction: windArrowRotationDeg(reading.fromDegrees),
     icon: windArrowImageId(style.band),
     size: style.size,
+    speed: Math.round(reading.speedMph),
   };
 }
 

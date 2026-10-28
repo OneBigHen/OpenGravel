@@ -29,13 +29,13 @@ export interface WindArrowImage {
   readonly options: { readonly pixelRatio: number };
 }
 
-/** Image edge in device pixels: an 18 CSS px arrow with a rim, at pixelRatio 2. */
-const SIZE = 36;
+/** Image edge in device pixels: a 36 CSS px box with a rim, at pixelRatio 2. */
+const SIZE = 72;
 const PIXEL_RATIO = 2;
 const SUPERSAMPLE = 4;
 const CENTRE = SIZE / 2;
-/** Baked shape scale: a ~15 CSS px arrow at icon-size 1, before the band's factor. */
-const SHAPE_SCALE = 2.2;
+/** Baked shape scale: a ~30 CSS px arrow at icon-size 1, before the band's factor. */
+const SHAPE_SCALE = 4.4;
 
 type Rgb = readonly [number, number, number];
 
@@ -89,7 +89,7 @@ function arrowImage(definition: WindBandDefinition, palette: MapPalette): WindAr
   const fill = rgb(palette[TONE_SLOT[definition.tone]], [57, 124, 150]);
   const rim = rgb(palette.ink, [22, 29, 28]);
   const shape = arrowShape(SHAPE_SCALE, 0);
-  const rimShape = arrowShape(SHAPE_SCALE, 0.9);
+  const rimShape = arrowShape(SHAPE_SCALE, 1.8);
   const data = new Uint8Array(SIZE * SIZE * 4);
   const samples = SUPERSAMPLE * SUPERSAMPLE;
   for (let y = 0; y < SIZE; y += 1) {
