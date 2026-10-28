@@ -34,10 +34,30 @@ export interface AdvisorProposalChange {
   readonly after: string;
 }
 
+/** Rider-readable, fully projected interpretation after applying the proposal in memory. */
+export interface AdvisorProposalInterpretation {
+  readonly shape: RideIntent["shape"];
+  readonly start: string | null;
+  readonly finish: string | null;
+  readonly stops: readonly { readonly label: string | null | undefined; readonly arrivalIntent: RideIntent["stops"][number]["arrivalIntent"] }[];
+  readonly roadCharacter: RideIntent["roadCharacter"];
+  readonly novelty: NonNullable<RideIntent["noveltyPreference"]>;
+  readonly surface: RideIntent["surface"]["preference"];
+  readonly terrain: RideIntent["terrain"]["level"];
+  readonly avoidHighways: boolean;
+  readonly tollPolicy: RideIntent["tollPolicy"];
+  readonly traffic: RideIntent["traffic"];
+  readonly departure: string;
+  readonly time: TimeIntent;
+  readonly timeLabel: string;
+  readonly unknowns: readonly string[];
+}
+
 export interface ReadyAdvisorProposal {
   readonly status: "ready";
   readonly command: Extract<RideCommand, { type: "proposal.apply" }>;
   readonly changes: readonly AdvisorProposalChange[];
+  readonly interpretation: AdvisorProposalInterpretation;
   readonly notes: readonly string[];
   readonly summary: string;
 }
@@ -433,6 +453,23 @@ export function buildAdvisorProposal(
     status: "ready",
     command: effectiveCommand,
     changes,
+    interpretation: {
+      shape: validation.document.intent.shape,
+      start: validation.document.intent.start?.label ?? null,
+      finish: validation.document.intent.finish?.label ?? null,
+      stops: validation.document.intent.stops.map((stop) => ({ label: stop.label, arrivalIntent: stop.arrivalIntent })),
+      roadCharacter: validation.document.intent.roadCharacter,
+      novelty: validation.document.intent.noveltyPreference ?? "balanced",
+      surface: validation.document.intent.surface.preference,
+      terrain: validation.document.intent.terrain.level,
+      avoidHighways: validation.document.intent.avoidHighways,
+      tollPolicy: validation.document.intent.tollPolicy,
+      traffic: validation.document.intent.traffic,
+      departure: departureLabel(validation.document.intent.departure, draft.timeZone),
+      time: validation.document.intent.time,
+      timeLabel: timeLabel(validation.document.intent.time),
+      unknowns: draft.notes,
+    },
     notes: draft.notes,
     summary: "Review the proposed changes before applying them.",
   };
