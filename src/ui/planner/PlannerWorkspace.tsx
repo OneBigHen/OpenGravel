@@ -878,6 +878,7 @@ export function PlannerWorkspace({
               onRouteTraffic: setRouteTraffic,
             },
             sheetExpanded: sheetDetent === "expanded",
+            hike: hikeActivity.candidate?.provider.profile === "hike" ? { candidate: hikeActivity.candidate, returnToStart: hikeActivity.returnToStart, onReturnToStart: hikeActivity.onReturnToStart, canPlan: hikeActivity.canPlan, onPlan: hikeActivity.onPlan, onDraw: hikeActivity.sketch.onStartDrawing } : null,
           }}
           refine={{
             onExpandedChange: setRefineEditing,

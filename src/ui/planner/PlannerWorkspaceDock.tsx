@@ -30,6 +30,7 @@ import { SketchPanel } from "./SketchPanel";
 import { Sheet } from "@/ui/sheet/Sheet";
 import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
@@ -156,6 +157,7 @@ export function PlannerWorkspaceDock({
   refine,
   glance,
 }: PlannerWorkspaceDockProps) {
+  const hiking = useActivityMode() === "hike";
   const hasChoices = viewModel.routeCards.length > 0;
   // Nothing asked for yet: the phone sheet shrinks to "Where to?" and a row of
   // quick starts (Trail Glass). Any destination, loop or plan grows it back.
@@ -433,12 +435,14 @@ export function PlannerWorkspaceDock({
               {sheetDetent === "mini"
                 ? "Show planner"
                 : hasChoices
-                  ? sheetDetent !== "expanded" && viewModel.routeCards.length > 1
-                    ? "Compare rides"
-                    : "Ride choices"
+                  ? hiking
+                    ? "Hike details"
+                    : sheetDetent !== "expanded" && viewModel.routeCards.length > 1
+                      ? "Compare rides"
+                      : "Ride choices"
                   : "Ride style"}
             </span>
-            {viewModel.routeCards.length === 0 ? null : (
+            {viewModel.routeCards.length === 0 || hiking ? null : (
               <span className="og-sheet__handle-count" data-testid="ride-choices-count">
                 {viewModel.routeCards.length}
               </span>

@@ -713,6 +713,7 @@ function AskDialogFocus({ dialogRef, inputRef, onClose }: {
 /** Dedicated map entry: the place search and its readQuery heuristic stay independent. */
 export function MapAdvisorAsk() {
   const advisor = useRideAdvisor();
+  const activity = useActivityMode();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -744,6 +745,8 @@ export function MapAdvisorAsk() {
     advisor.ask(prompt, "map");
   }
 
+  // The advisor plans rides on the road graph; a hiker plans on the hike card.
+  if (activity === "hike") return null;
   return (
     <>
       <div className="og-map-ask">
