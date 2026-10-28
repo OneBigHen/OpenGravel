@@ -288,6 +288,8 @@ export interface RideFocusViewModel {
   readonly mapPosition: { readonly coordinate: Coordinate; readonly quality: PositionQuality } | null;
   /** The three-slot instrument strip (RIDE-INSTRUMENT-STRIP §12). */
   readonly metrics: RideMetricStripModel;
+  /** The climb so far from the recording's or Free Ride's altitude samples ("820 ft"), or `null` when the device gave none. */
+  readonly climbGainText: string | null;
 }
 
 /**
@@ -1056,6 +1058,13 @@ function controlsOf(
   };
 }
 
+/** The climb so far, in the rider's units; `null` until a fix carried an altitude. */
+function climbGainOf(telemetry: RecordingTelemetry | null, units: "imperial" | "metric"): string | null {
+  if (telemetry === null || telemetry.elevation.sampleCount === 0) return null;
+  const meters = telemetry.elevation.gainMeters;
+  return units === "metric" ? `${Math.round(meters)} m` : `${Math.round(meters * FEET_PER_METER)} ft`;
+}
+
 const ACTIVITY_LABEL: Readonly<Record<SessionNavigationState["activity"], string>> = {
   guided: "Guided ride",
   free: "Free ride",
@@ -1234,6 +1243,10 @@ export function buildRideFocusViewModel(
       nowMs: Date.parse(now),
       overLimit: speedLimit?.over === true,
     }),
+    climbGainText: climbGainOf(
+      input.recordingTelemetry ?? input.liveTelemetry ?? null,
+      input.riderSettings?.units ?? "imperial",
+    ),
   };
 }
 

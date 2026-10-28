@@ -263,6 +263,7 @@ export function SettingsClient() {
     spotifySetup={<SpotifySetupSection readClientId={readSpotifyClientId} saveClientId={saveSpotifyClientId} clearClientId={clearSpotifyClientId} nativePlayer={spotifyPlayer} />}
     garage={garage}
     showNavScreen={inApp}
+    showLiveActivity={inApp}
     onGarageChange={saveGarage}
     telemetryConsent={consent}
     onTelemetryConsentChange={saveConsent}

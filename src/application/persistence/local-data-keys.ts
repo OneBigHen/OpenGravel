@@ -13,6 +13,9 @@ export const APPEARANCE_STORAGE_KEY = "og-appearance";
 /** Ride-screen choice in the iPhone app (`nav-screen.ts`). */
 export const NAV_SCREEN_STORAGE_KEY = "og-nav-screen";
 
+/** "off" when the rider turned the Lock Screen Live Activity off (`live-activity-setting.ts`). */
+export const LIVE_ACTIVITY_STORAGE_KEY = "og-live-activity";
+
 /** The rider's mute-the-voice choice (`voice-mute.ts`). */
 export const VOICE_MUTED_STORAGE_KEY = "ogv.ride.voiceMuted";
 
