@@ -786,7 +786,10 @@ export function PlannerWorkspace({
       map={{
         scene: { ...scene, places: placeFlow.pins },
         onViewport: placeFlow.onViewport,
-        onPointAction: placeFlow.pointAction,
+        onPointAction: (action, coordinate) => {
+          if (action === "breadcrumb") { planningSessionStore.getState().cancel(); breadcrumb.add(coordinate); breadcrumb.setEditing(true); plannerUiStore.getState().setSheetDetent("peek"); }
+          else placeFlow.pointAction(action, coordinate);
+        },
         directionsWhenEmpty: places !== undefined && activeRoute === null,
         longPressEnabled: !breadcrumb.editing && placementTool === "idle" && activeTool === "pan",
         addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,

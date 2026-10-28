@@ -482,7 +482,7 @@ export interface MapScene {
  * committed it) or as `gesture-cancel` (it was dropped); there is no third
  * outcome, and neither is a tap.
  */
-export type MapPointAction = "start" | "stop" | "finish" | "loop" | "info";
+export type MapPointAction = "start" | "stop" | "finish" | "loop" | "info" | "breadcrumb";
 
 export type MapIntent =
   | { readonly type: "map-long-press"; readonly coordinate: Coordinate; readonly pixel: { readonly x: number; readonly y: number }; readonly authorityFeatureId: string | null }
