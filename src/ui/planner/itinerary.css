@@ -916,6 +916,28 @@
   }
 }
 
+/* Drawing on a phone: the toolbar stops short of the Layers / 3D / Locate
+   column (it sat under 3D, which covered Done), so Undo, Clear and Cancel show
+   as icons; their words stay as the accessible names. */
+@media (max-width: 760px) {
+  .og-planner .og-planner__map-slot > .og-editbar[data-mode="drawing"] {
+    right: calc(var(--og-space-4) + var(--og-touch) + var(--og-space-2));
+  }
+  .og-planner__map-slot > .og-editbar[data-mode="drawing"] .og-editbar__btn:not(.og-editbar__btn--go) {
+    min-width: var(--og-touch);
+    padding: 0;
+    justify-content: center;
+  }
+  .og-planner__map-slot > .og-editbar[data-mode="drawing"] .og-editbar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 /* The breadcrumb tools are one compact glass card that stops short of the
    Layers / Locate column on the right, so nothing covers those buttons. */
 @media (max-width: 1180px) {

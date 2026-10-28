@@ -54,7 +54,7 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
   await page.getByTestId("hike-there-and-back").check();
   await page.getByTestId("hike-plan").click();
-  await expect(summary).toContainText(/\b3(\.0)? mi\b/);
+  await expect(summary).toContainText(/(?<![\d.])3(\.0)? mi\b/);
   failure = "no-route";
   await page.getByTestId("hike-plan").click();
   await expect(page.getByTestId("hike-card")).toContainText("No trail route between these points.");
