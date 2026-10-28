@@ -10,8 +10,10 @@ test("route context opens conditions and keeps Ask reachable", async ({ page }) 
   await settledExtent(page);
   await directionsTo(page);
   const context = page.getByTestId("route-context");
-  await expect(context).toContainText(/mi.*arrive/);
-  await expect(context).toHaveAttribute("aria-label", /before sunrise/);
+  // At 393 px the daylight fact outranks the arrival time on screen; the full
+  // line, arrival included, stays the button's accessible name.
+  await expect(context).toContainText(/mi.*before sunrise/);
+  await expect(context).toHaveAttribute("aria-label", /arrive.*before sunrise/);
   const ask = page.getByTestId("map-ask-open");
   await expect(ask).toBeVisible();
   for (const width of [320, 393]) {
