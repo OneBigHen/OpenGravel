@@ -72,3 +72,5 @@
 .og-hike__photos img { display: block; width: 100%; height: auto; max-height: 260px; object-fit: contain; border-radius: var(--og-radius-control); }
 .og-hike__photos figcaption { font-size: var(--og-text-caption); color: var(--og-ink-2); line-height: 1.5; margin-top: var(--og-space-2); overflow-wrap: anywhere; }
 .og-hike__section h3 { font-size: var(--og-text-body); margin-bottom: var(--og-space-2); }
+.og-hike__badges { display: flex; flex-wrap: wrap; gap: var(--og-space-1); }
+.og-hike__badges > span { border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); padding: var(--og-space-1) var(--og-space-2); }

@@ -16,7 +16,8 @@ export function featureKind(p: Record<string, unknown>): TrailFeatureKind | null
   if (p.waterway === "waterfall" || p.natural === "waterfall") return "waterfall";
   if (p.tourism === "viewpoint") return "viewpoint";
   if (p.natural === "peak") return "peak";
-  if (p["tower:type"] === "observation" || p["tower:type"] === "watchtower" || p["tower:type"] === "fire") return "fire-tower";
+  if (p["tower:type"] === "fire") return "fire-tower";
+  if (p["tower:type"] === "observation" || p["tower:type"] === "watchtower") return "observation-tower";
   if (p.natural === "water" || p.waterway === "river") return "water";
   if (p.natural === "cave_entrance") return "cave";
   if (p.historic && p.historic !== "no") return "historic";

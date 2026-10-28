@@ -240,7 +240,7 @@ encounter on an exact tie). Features retain coordinates, OSM id/link, ODbL licen
 kind, offset and distance along the stored geometry. Multipart offsets sum only
 retained lines, never gaps, and retain a line index. Proximity does not establish
 access or a connecting path. A peak alone does not establish a view: Views matches
-mapped viewpoints and observation/fire towers only. Missing features do not
+mapped viewpoints and observation/watch/fire towers only. Missing features do not
 match positive filters. No claim of feature completeness is made.
 
 The compact on-disk artifacts carry details; `/api/hikes` drops full feature
@@ -248,9 +248,10 @@ lists unless an `id` is requested. Batched geometry drops features too. Cards us
 only kinds/count; detail pages show the attributed feature list.
 
 Park association samples segment midpoints at ≤250 m intervals, measures the
-share of retained trail length inside OSM polygons (respecting holes), and chooses
-the smallest bounding-box area among named parks/reserves/protected areas covering
-at least 50%. A short trail crossing can be missed by the sampling resolution.
+share of retained trail length inside OSM polygons (respecting holes), and keeps named parks/reserves/protected areas covering at least 50%. The primary
+area has the greatest sampled coverage, with the smallest bounding-box area as
+tiebreaker. All containing area names remain searchable, so a nested natural area
+does not hide the surrounding state park. Full area lists are detail-only. A short trail crossing can be missed by the sampling resolution.
 Nearest town is the nearest mapped city/town/village point within 50 km of the
 stored line's start, by straight-line distance, not road distance.
 
@@ -378,3 +379,12 @@ catalog directories are inputs only and remain unchanged.
 requests. Missing cached responses are explicit gaps in its stats. This supports
 rebuilding around corrected catalog facts without repeating the provider search;
 preserve the full fetch run's `media-stats.json` separately when doing so.
+`--skip-errors PREVIOUS_MEDIA_STATS` reuses successes and records earlier failed
+URLs as deferred, while still fetching newly needed cells/metadata. This is used
+when rebuilding around the newly reviewed DCNR release after a full regional
+media fetch; its failure evidence is kept in `media-fetch-stats.json`. Omit the
+flag on a later refresh to retry those unavailable requests.
+
+Observation/watchtowers retain their own kind; they are not labelled fire towers
+unless the OSM tower type explicitly says fire. Proximity does not establish
+that any tower or viewpoint can be entered.

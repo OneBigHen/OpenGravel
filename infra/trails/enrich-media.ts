@@ -17,11 +17,14 @@ type Json=Record<string,unknown>;
 const agent=process.env.WIKIMEDIA_USER_AGENT ?? 'OpenGravelTrailCatalog/1.0 (https://github.com/OneBigHen/OpenGravel)';
 const errors:{url:string;error:string}[]=[];
 const unavailableHosts=new Set<string>();
+const cacheOnly=process.argv.includes("--cache-only");
+let previousErrorUrls=new Set<string>();
 async function api(cache:string,host:string,params:Record<string,string>):Promise<Json> {
   const url=`https://${host}/w/api.php?${new URLSearchParams({action:'query',format:'json',formatversion:'2',maxlag:'5',...params})}`;
-  if(unavailableHosts.has(host)){errors.push({url,error:'Host unavailable after repeated replication lag'});return {};}
   const path=join(cache,createHash('sha256').update(url).digest('hex')+'.json');
   if(existsSync(path)) return JSON.parse(readFileSync(path,'utf8')) as Json;
+  if(previousErrorUrls.has(url)){errors.push({url,error:'Previous full fetch failed; retry deferred'});return {};}
+  if(cacheOnly || unavailableHosts.has(host)){errors.push({url,error:cacheOnly?'No successful response cached':'Host unavailable after repeated replication lag'});return {};}
   for(let retry=0;retry<3;retry++) {
     try {
       const response=await fetch(url,{headers:{'User-Agent':agent,'Api-User-Agent':agent},signal:AbortSignal.timeout(45000)});
@@ -35,6 +38,7 @@ async function api(cache:string,host:string,params:Record<string,string>):Promis
       if(params.gslimit==='500' && String(e).includes('cirrussearch-too-busy')) {
         const fallback=await api(cache,host,{...params,gslimit:'100'});
         if(fallback.query){const result={...fallback,ogvResultLimit:100};writeFileSync(path,JSON.stringify(result));return result;}
+        return fallback;
       }
       if(retry===2){if(String(e).includes('maxlag'))unavailableHosts.add(host);errors.push({url,error:String(e)});console.error('media request unavailable',String(e));return {};}
       await new Promise(r=>setTimeout(r,1000*(retry+1)));
@@ -57,6 +61,7 @@ async function main() {
   const paths=args.flatMap((v,i)=>v==='--context' && args[i+1]?[args[i+1]!]:[]);
   if(!args.includes('--base')||!args.includes('--out')||!args.includes('--cache')||!base||!out||!cache)throw new Error('--base DIR --out DIR --cache DIR [--context FILE]');
   if(resolve(base)===resolve(out))throw new Error('base and output must differ');
+  if(args.includes('--skip-errors')){const file=value('--skip-errors');if(!file)throw new Error('--skip-errors needs a stats file');const previous=JSON.parse(readFileSync(file,'utf8')) as {errors?:{url:string}[]};previousErrorUrls=new Set((previous.errors ?? []).map(e=>e.url));}
   mkdirSync(cache,{recursive:true});
   const catalog=JSON.parse(readFileSync(join(base,'hikes.json'),'utf8')) as HikeCatalog;
   const collection=JSON.parse(readFileSync(join(base,'trails.geojson'),'utf8')) as TrailFeatureCollection;

@@ -5,7 +5,7 @@ export interface CommonsPage {
   readonly imageinfo?: readonly {readonly thumburl?:string;readonly descriptionurl?:string;readonly thumbwidth?:number;readonly thumbheight?:number;readonly mime?:string;readonly extmetadata?:Readonly<Record<string,{readonly value?:string}>>}[];
 }
 export function plainCredit(html:string):string {
-  return html.replace(/<[^>]*>/g," ").replace(/&#(\d+);/g,(_,n:string)=>String.fromCodePoint(Number(n))).replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/\s+/g," ").trim();
+  return html.replace(/<[^>]*>/g," ").replace(/&#(\d+);/g,(raw,n:string)=>Number(n)<=0x10ffff?String.fromCodePoint(Number(n)):raw).replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&nbsp;/g," ").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/\s+/g," ").trim();
 }
 export function commonsPhoto(page:CommonsPage,coordinate:TrailPhoto['coordinate']):Omit<TrailPhoto,'distanceFromTrailMeters'>|null {
   const info=page.imageinfo?.[0],meta=info?.extmetadata;

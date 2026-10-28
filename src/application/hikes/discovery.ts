@@ -41,7 +41,7 @@ export type HikeFilters = { readonly length: string; readonly gain: string; read
  */
 export function matchHikeFilters(hike: HikeRecord, filters: HikeFilters, profile?: ElevationProfile): boolean | "unknown" {
   if (filters.waterfall && !hike.featureKinds?.includes("waterfall")) return false;
-  if (filters.views && !hike.featureKinds?.includes("viewpoint") && !hike.featureKinds?.includes("fire-tower")) return false;
+  if (filters.views && !hike.featureKinds?.includes("viewpoint") && !hike.featureKinds?.includes("fire-tower") && !hike.featureKinds?.includes("observation-tower")) return false;
   if (filters.shape && hike.shape !== filters.shape) return false;
   if (filters.length && hike.lengthMeters > Number(filters.length) * 1609.344) return false;
   if (filters.dogs && hike.dog !== "yes" && hike.dog !== "leashed") return false;

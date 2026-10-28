@@ -63,10 +63,12 @@ export function trailContext(lines: readonly (readonly Coordinate[])[], index: R
       }
     }
   }
-  const park=[...shares].filter(([,n])=> length>0 && n/length>=.5).sort((a,b)=>a[0].area-b[0].area || a[0].place.name.localeCompare(b[0].place.name))[0];
+  const covered=[...shares].filter(([,n])=> length>0 && n/length>=.5).sort((a,b)=>b[1]-a[1] || a[0].area-b[0].area || a[0].place.name.localeCompare(b[0].place.name));
+  const parks=covered.map(([p,n])=>({...p.place,sampledShare:Math.round(n/length*100)/100}));
+  const park=parks[0] ?? null;
   const start=lines[0]?.[0];
   const nearest=start ? index.towns.map(t=>({...t,distance:haversine(start,t.point)})).sort((a,b)=>a.distance-b.distance || a.place.name.localeCompare(b.place.name))[0] : undefined;
-  return { park:park ? {...park[0].place,sampledShare:Math.round(park[1]/length*100)/100} : null, nearestTown:nearest && nearest.distance<=50000 ? {...nearest.place,distanceMeters:Math.round(nearest.distance)} : null };
+  return { park, parks, parkNames:[...new Set(parks.map(p=>p.name))], nearestTown:nearest && nearest.distance<=50000 ? {...nearest.place,distanceMeters:Math.round(nearest.distance)} : null };
 }
 export function catalogDifficulty(hike: Pick<HikeRecord,"sacScale"|"lengthMeters"|"elevationGainMeters"|"elevationMeasuredShare"> & Partial<Pick<HikeRecord,"officialDifficulty"|"officialDifficultyCode"|"sources">>): CatalogDifficulty | null {
   if(hike.officialDifficulty) return {label:hike.officialDifficulty,basis:"official",sourceUrl:hike.sources?.find(s=>s.sourceId!=="osm")?.url ?? "https://www.usa.gov/government-works"};

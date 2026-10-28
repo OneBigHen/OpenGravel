@@ -2,11 +2,11 @@ import {test,expect} from '@playwright/test';
 const none={length:'',gain:'',time:'',shape:'',dogs:false,kids:false};
 const origin={lon:-75,lat:40};
 const source={sourceId:'osm',sourceLabel:'OpenStreetMap',recordId:'way/1',url:'https://www.openstreetmap.org/way/1',licence:'ODbL 1.0',licenceUrl:'https://www.openstreetmap.org/copyright'};
-const hike=(i:number)=>({id:`osm:way/${i}`,name:`Ridge ${i}`,ref:null,operator:null,lengthMeters:2000,sacScale:null,surface:null,trailVisibility:null,dog:null,access:null,bbox:[-75,40,-74.99,40.01],start:origin,end:{lon:-74.99,lat:40.01},trailheadCount:0,trailheads:[],sources:[source],elevationGainMeters:100,elevationLossMeters:100,maxGradePercent:10,toblerMinutes:60,elevationMeasuredShare:1,elevationSource:'test',timeMethod:'test',shape:'loop',featureKinds:[] as string[],park:{name:i===60?'Falls Preserve':'Ridge Park',source},...(i===60?{featureKinds:['waterfall','viewpoint']}: {})});
+const hike=(i:number)=>({id:`osm:way/${i}`,name:`Ridge ${i}`,ref:null,operator:null,lengthMeters:2000,sacScale:null,surface:null,trailVisibility:null,dog:null,access:null,bbox:[-75,40,-74.99,40.01],start:origin,end:{lon:-74.99,lat:40.01},trailheadCount:0,trailheads:[],sources:[source],elevationGainMeters:100,elevationLossMeters:100,maxGradePercent:10,toblerMinutes:60,elevationMeasuredShare:1,elevationSource:'test',timeMethod:'test',shape:'loop',featureKinds:[] as string[],park:{name:i===60?'Falls Preserve':'Ridge Park',source},...(i===60?{featureKinds:['waterfall','viewpoint'],parkNames:['Falls Preserve','Outer State Park']}: {})});
 test.use({viewport:{width:393,height:852}});
 test('hike feature and park filters apply before paging, survive Back, and unknowns do not match',async({page})=>{
  await page.addInitScript(({origin,none})=>{localStorage.setItem('og-activity-mode','hike');sessionStorage.setItem('opengravel.hike.explore-origin',JSON.stringify(origin));sessionStorage.setItem('opengravel.hike.explore-state',JSON.stringify({filters:none,limit:50}));},{origin,none});
- const hikes=Array.from({length:61},(_,i)=>hike(i));
+ const hikes=[...Array.from({length:61},(_,i)=>hike(i)),{...hike(61),name:'Ridge 60',lengthMeters:4000}];
  await page.route('**/api/hikes?*',async route=>{const id=new URL(route.request().url()).searchParams.get('id');await route.fulfill({json:{enabled:true,hikes:id?hikes.filter(h=>h.id===id):hikes}});});
  await page.route('**/api/hikes/geometry?*',route=>{const id=new URL(route.request().url()).searchParams.get('id'); return id ? route.fulfill({status:404,json:{error:'Fixture geometry unavailable'}}) : route.fulfill({json:{features:[]}});});
  await page.goto('/explore');
@@ -18,6 +18,8 @@ test('hike feature and park filters apply before paging, survive Back, and unkno
  await page.getByLabel('Views',{exact:true}).check();
  await expect(page.locator('.og-hike__card')).toHaveCount(1);
  await page.getByLabel('Search trails and parks').fill('Falls Preserve');
+ await expect(page.locator('.og-hike__card')).toHaveCount(1);
+ await page.getByLabel('Search trails and parks').fill('Outer State Park');
  await expect(page.locator('.og-hike__card')).toHaveCount(1);
  await page.getByLabel('Search trails and parks').fill('Not mapped');
  await expect(page.locator('.og-hike__card')).toHaveCount(0);

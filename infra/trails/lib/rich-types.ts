@@ -1,7 +1,7 @@
 import type { Coordinate } from "../../../src/domain/ride/types";
 import type { TrailSource } from "./types";
 
-export type TrailFeatureKind = "waterfall" | "viewpoint" | "peak" | "fire-tower" | "water" | "cave" | "historic" | "shelter" | "campsite" | "drinking-water" | "toilets" | "parking" | "trailhead";
+export type TrailFeatureKind = "waterfall" | "viewpoint" | "peak" | "fire-tower" | "observation-tower" | "water" | "cave" | "historic" | "shelter" | "campsite" | "drinking-water" | "toilets" | "parking" | "trailhead";
 export interface AlongTrailFeature {
   readonly id: string;
   readonly kind: TrailFeatureKind;
@@ -27,6 +27,8 @@ export interface RichHike {
   readonly fieldSources?: Readonly<Record<string, TrailSource>>;
   readonly officialEvidence?: readonly { readonly source: TrailSource; readonly attributes: Readonly<Record<string,string | null>> }[];
   readonly park?: CatalogPlace | null;
+  readonly parks?: readonly CatalogPlace[];
+  readonly parkNames?: readonly string[];
   readonly nearestTown?: CatalogPlace | null;
   readonly difficulty?: CatalogDifficulty | null;
   readonly featureKinds?: readonly TrailFeatureKind[];
