@@ -149,9 +149,13 @@ export function usePlannerCamera(input: {
             const bottomSheet = box.top > map.top
               && box.left - map.left <= FLOATING_SHEET_INSET_PX
               && map.right - box.right <= FLOATING_SHEET_INSET_PX;
-            return toRect(bottomSheet
-              ? { left: map.left, top: box.top, width: map.width, height: Math.max(box.height, map.bottom - box.top) }
-              : box);
+            if (bottomSheet) {
+              return toRect({ left: map.left, top: box.top, width: map.width, height: Math.max(box.height, map.bottom - box.top) });
+            }
+            // A tablet's card floats at the bottom left, above the tab bar: the
+            // strip under it is hidden too, so it covers down to the map's edge.
+            const lowCard = box.top > map.top + map.height / 3;
+            return toRect(lowCard ? { left: box.left, top: box.top, width: box.width, height: Math.max(box.height, map.bottom - box.top) } : box);
           })(),
           header: header === null ? null : toRect(header.getBoundingClientRect()),
           overlays: [
