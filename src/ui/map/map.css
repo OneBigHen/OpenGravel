@@ -581,3 +581,21 @@
     opacity: 0.6;
   }
 }
+
+.og-map__dimension {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--og-glass);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  box-shadow: var(--og-shadow-float);
+  cursor: pointer;
+}
+.og-map__dimension:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }

@@ -464,8 +464,8 @@
 }
 
 .og-layers__about {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   margin-right: var(--og-space-1);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-pill);
@@ -704,3 +704,14 @@
     transform: none;
   }
 }
+
+/* Compact first screen keeps the first conditions row in reach. */
+.og-layers__active { color: var(--og-ink-2); font-size: var(--og-text-caption); font-weight: 600; white-space: nowrap; }
+.og-layers__group h3 { margin-top: 10px; }
+.og-layers__group .og-layers__looks { grid-template-columns: repeat(auto-fill, 84px); gap: 12px; margin-top: 6px; }
+.og-layers__group .og-layers__lenses,
+.og-layers__group .og-layers__tiles { gap: 4px 8px; margin-top: 6px; }
+.og-layers__look, .og-layers__tile, .og-layers__lens { gap: 3px; }
+.og-layers__lens-state { color: var(--og-ink-2); font-size: var(--og-text-caption); font-weight: 600; line-height: 1.2; }
+.og-layers__lens-state[data-state="on"], .og-layers__lens-state[data-state="partial"] { color: var(--og-primary-text); }
+.og-layers__tile .og-layers__status { white-space: normal; line-height: 1.2; }

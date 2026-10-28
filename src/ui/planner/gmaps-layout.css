@@ -784,3 +784,25 @@
     color: var(--og-on-primary);
   }
 }
+
+/* The home sheet and navigation form one continuous, nearly opaque dock. */
+@media (max-width: 1180px) and (min-height: 501px) {
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] {
+    border-width: 1px 0 0;
+    border-color: var(--og-line);
+    border-radius: 24px 24px 0 0;
+    background: color-mix(in srgb, var(--og-surface) 97%, transparent);
+    box-shadow: 0 -6px 24px rgb(0 0 0 / 0.12);
+    pointer-events: auto;
+  }
+  .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__handle {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .og-planner:has(.og-planner__sheet[data-idle="true"][data-detent="peek"]) .og-planner__nav-shell {
+    border-top: 0;
+    background: color-mix(in srgb, var(--og-surface) 97%, transparent);
+  }
+}

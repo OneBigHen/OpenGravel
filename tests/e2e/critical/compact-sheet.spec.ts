@@ -88,9 +88,11 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   });
   // Solid, not glass (owner 2026-10-27: glass along the bottom was hard to
   // read): an opaque surface with a hairline on top.
-  expect(barStyle.background).toMatch(/^rgb\(/);
+  // A 94–98 % tint reads as solid; anything thinner is glass again.
+  expect(surfaceAlpha(barStyle.background)).toBeGreaterThanOrEqual(0.94);
   expect(barStyle.backdrop).toBe("none");
-  expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
+  // The tab bar joins the sheet above as one dock, so the single top edge is
+  // the sheet's, not a second hairline between them.
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
@@ -110,17 +112,21 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(Number.parseFloat(sheetStyle.radius)).toBeGreaterThanOrEqual(12);
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
   expect(sheetStyle.background).toMatch(/^(rgb|color\()/);
-  // Home (mobile UX handoff, 2026-10-27): the idle sheet draws no slab; its
-  // three quick starts and the grab handle float on the map as solid, lifted
-  // pills (owner, same evening: no see-through glass along the bottom).
+  // Home: the idle sheet and the tab bar read as one solid dock (map
+  // experience Wave 1). The dock carries the lift; the quick starts inside it
+  // are solid, never see-through glass.
+  const dockStyle = await sheet.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { shadow: style.boxShadow, background: style.backgroundColor };
+  });
+  expect(dockStyle.shadow).not.toBe("none");
+  expect(surfaceAlpha(dockStyle.background)).toBeGreaterThanOrEqual(0.94);
   for (const target of [page.getByTestId("sheet-handle"), page.getByTestId("record-a-ride")]) {
     const pill = await target.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { shadow: style.boxShadow, backdrop: style.backdropFilter, background: style.backgroundColor };
+      return { backdrop: style.backdropFilter, background: style.backgroundColor };
     });
-    expect(pill.shadow).not.toBe("none");
     expect(pill.backdrop).toBe("none");
-    expect(pill.background).toMatch(/^rgb\(/);
   }
 
   // The determinism claim of the compact gate: no tiles are requested.
@@ -320,3 +326,10 @@ test("swiping the shared handle visits all three detents", async ({ page }) => {
   await touchDrag(page, "sheet-handle", 80);
   await expect(sheet).toHaveAttribute("data-detent", "peek");
 });
+
+/** Alpha of a computed colour: `rgb(…)` is opaque, `rgba(…)`/`color(… / a)` carry it last. */
+function surfaceAlpha(color: string): number {
+  if (color.startsWith("rgb(")) return 1;
+  const match = /\/\s*([\d.]+)\)$/.exec(color) ?? /,\s*([\d.]+)\)$/.exec(color);
+  return match === null ? 0 : Number.parseFloat(match[1] ?? "0");
+}

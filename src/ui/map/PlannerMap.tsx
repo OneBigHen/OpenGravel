@@ -232,6 +232,7 @@ export interface PlannerMapProps {
   readonly onViewport?: (extent: MapExtent) => void;
   /** Show the ground in 3D with a tilted camera (phase 8 map layers). */
   readonly terrain3d?: boolean;
+  readonly onToggleTerrain3d?: () => void;
   readonly onLayerStatus?: (status: MapLayerDrawStatus) => void;
   /**
    * Extra controls for the bottom of the map's control column, rendered after
@@ -347,6 +348,7 @@ export function PlannerMap({
   onLoadStatus,
   onViewport,
   terrain3d = false,
+  onToggleTerrain3d,
   onLayerStatus,
   retryToken = 0,
   clusterControls,
@@ -892,6 +894,7 @@ export function PlannerMap({
       */}
       <div className="og-map__cluster" data-testid="map-cluster">
         <MapCompass bearing={cameraView?.bearing ?? 0} onFaceNorth={faceNorth} />
+        {onToggleTerrain3d === undefined ? null : <button type="button" className="og-map__dimension" data-testid="map-dimension" aria-label={terrain3d ? "Switch to 2D" : "Switch to 3D"} aria-pressed={terrain3d} onClick={onToggleTerrain3d}>{terrain3d ? "2D" : "3D"}</button>}
         <MapZoomControls
           zoom={cameraView?.zoom ?? 0}
           minZoom={cameraView?.minZoom ?? Number.NEGATIVE_INFINITY}

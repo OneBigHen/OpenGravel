@@ -48,7 +48,7 @@ import {
   type RadarTimelineState,
 } from "@/application/map-layers";
 
-export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "stale" | "unavailable";
+export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "stale" | "unavailable" | "flat-offline";
 
 /**
  * The animated rain radar as the map's timeline sees it (map-experience wave 3):
