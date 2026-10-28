@@ -21,7 +21,7 @@ describe("closeout layers sheet", () => {
     expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/Partial/);
     expect(screen.getByText("5 active")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("map-lens-weather"));
-    expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "weather"]);
+    expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "wind", "weather"]);
   });
   it("gives a quick set tile one icon, its words and its state", () => {
     const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;

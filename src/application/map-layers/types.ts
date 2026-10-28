@@ -7,6 +7,7 @@
 import type { AlongStopsResult } from "./along";
 import type { MapLayerId } from "./catalog";
 import type { RadarFrameList } from "./radar";
+import type { WindReading } from "./wind";
 
 export type LngLat = readonly [number, number];
 
@@ -44,11 +45,16 @@ export interface InfoFeature {
   readonly overlay?: "road-history";
   /** Optional media shown in the feature card (traffic camera still/video today). */
   readonly media?: InfoMedia | null;
+  /**
+   * The wind reading at a `wind` layer point (map-experience wave 3). Absent or
+   * `null` means unknown — the arrow is not drawn and the card claims nothing.
+   */
+  readonly wind?: WindReading | null;
   readonly geometry: InfoGeometry;
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "osm-hiking-routes" | "pa-game-lands" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority";
+export type InfoProvider = "osm" | "osm-hiking-routes" | "pa-game-lands" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority" | "wind";
 
 export interface LayerFreshness {
   readonly layerId: MapLayerId;

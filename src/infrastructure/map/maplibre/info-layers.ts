@@ -7,7 +7,7 @@
  * source the host inserts under the basemap's labels, like satellite imagery.
  */
 
-import { MAP_LAYERS, type InfoFeature } from "@/application/map-layers";
+import { MAP_LAYERS, windArrowProperties, type InfoFeature } from "@/application/map-layers";
 import type { MapScene } from "@/application/map/types";
 
 import type { MapLayerSpec, MapPalette } from "./style";
@@ -26,6 +26,8 @@ export const INFO_LAYER_IDS = {
   lineCasing: "ogv-info-line-casing",
   point: "ogv-info-point",
   pointSelected: "ogv-info-point-selected",
+  /** The wind layer's arrows (map-experience wave 3, item 13). */
+  windArrow: "ogv-info-wind-arrow",
   label: "ogv-info-label",
 } as const;
 
@@ -33,6 +35,7 @@ export const INFO_LAYER_IDS = {
 export const INFO_HIT_LAYERS = [
   INFO_LAYER_IDS.pointSelected,
   INFO_LAYER_IDS.point,
+  INFO_LAYER_IDS.windArrow,
   INFO_LAYER_IDS.line,
   "ogv-info-surface",
   INFO_LAYER_IDS.slope,
@@ -148,7 +151,8 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       id: INFO_LAYER_IDS.point,
       type: "circle",
       source: INFO_SOURCE_ID,
-      filter: ["all", isPoint, ["!=", ["get", "selected"], true]],
+      // Wind points are arrows, not dots: they must never be drawn twice.
+      filter: ["all", isPoint, ["!=", ["get", "layerId"], "wind"], ["!=", ["get", "selected"], true]],
       paint: {
         // Small at overview zooms so a busy layer never buries the ride.
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 11, 4, 14, 7],
@@ -161,7 +165,7 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       id: INFO_LAYER_IDS.pointSelected,
       type: "circle",
       source: INFO_SOURCE_ID,
-      filter: ["==", ["get", "selected"], true],
+      filter: ["all", ["==", ["get", "selected"], true], ["!=", ["get", "layerId"], "wind"]],
       paint: {
         "circle-radius": 10,
         "circle-color": colourByLayer(palette),
@@ -170,10 +174,42 @@ export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
       },
     },
     {
+      // Wind arrows (map-experience wave 3, item 13): an image per strength band,
+      // turned downwind by the reading. The size and image are the reading's own
+      // projection ({@link windArrowProperties}), so the layer has no scale of its own.
+      id: INFO_LAYER_IDS.windArrow,
+      type: "symbol",
+      source: INFO_SOURCE_ID,
+      filter: ["all", isPoint, ["==", ["get", "layerId"], "wind"]],
+      minzoom: 8,
+      // The catalogue stops the layer at zoom 12; the renderer's own maxzoom is
+      // exclusive, so 13 keeps every zoom the layer is on for.
+      maxzoom: 13,
+      layout: {
+        "icon-image": ["get", "icon"],
+        "icon-rotate": ["coalesce", ["get", "direction"], 0],
+        "icon-rotation-alignment": "map",
+        "icon-pitch-alignment": "map",
+        "icon-size": ["case", ["==", ["get", "selected"], true], ["*", ["get", "size"], 1.3], ["get", "size"]],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+        "icon-padding": 0,
+        // The speed sits under the arrow, upright, so the reading is legible at a glance.
+        "text-field": ["to-string", ["get", "speed"]],
+        "text-font": ["Open Sans Bold"],
+        "text-size": 12,
+        "text-offset": [0, 1.6],
+        "text-rotation-alignment": "viewport",
+        "text-allow-overlap": true,
+        "text-ignore-placement": true,
+      },
+      paint: { "icon-opacity": 0.92, "text-color": palette.ink, "text-halo-color": palette.paper, "text-halo-width": 1.5 },
+    },
+    {
       id: INFO_LAYER_IDS.label,
       type: "symbol",
       source: INFO_SOURCE_ID,
-      filter: isPoint,
+      filter: ["all", isPoint, ["!=", ["get", "layerId"], "wind"]],
       minzoom: 13,
       layout: {
         "text-field": ["get", "name"],
@@ -212,6 +248,7 @@ export function infoFeatureCollection(scene: MapScene): {
         weight: feature.weight ?? 0,
         ...(feature.color === undefined ? {} : { color: feature.color }),
         ...(feature.overlay === undefined ? {} : { overlay: feature.overlay }),
+        ...windArrowProperties(feature.wind),
         selected: feature.id === layers.selectedId,
       },
       geometry: feature.geometry,

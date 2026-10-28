@@ -1,12 +1,13 @@
 /**
  * The process-local cache behind the weather routes.
  *
- * `/api/weather` answers one snapshot for a point and `/api/weather/route`
- * answers the hourly forecast at several points along a route. Both ask the
- * same upstream for the same area, so they share one bounded map: a route
- * request warms the conditions pill and vice versa. Keeping the map here (and
- * not inside either route) is what lets the two endpoints reuse it without one
- * importing the other's route module.
+ * `/api/weather` answers one snapshot for a point, `/api/weather/route` answers
+ * the hourly forecast at several points along a route, and the map's wind layer
+ * reads the gridpoint wind series for its arrow grid. All three ask the same
+ * upstream for the same area, so they share one bounded map: a route request
+ * warms the conditions pill and vice versa. Keeping the map here (and not inside
+ * either route) is what lets the endpoints reuse it without one importing the
+ * other's route module.
  *
  * Keys are rounded to the cell the weather route has always used (0.05°, a few
  * kilometres) because a National Weather Service forecast covers a grid cell,
@@ -27,8 +28,8 @@ export const WEATHER_CACHE_TTL_MS = Math.min(
   WEATHER_FORECAST_CACHE_TTL_MS,
 );
 
-/** What a cache entry holds; the two weather endpoints never share a key. */
-export type WeatherCacheKind = "snapshot" | "forecast";
+/** What a cache entry holds; the weather endpoints never share a key. */
+export type WeatherCacheKind = "snapshot" | "forecast" | "wind";
 
 /** One rounded forecast cell and the key it is stored under. */
 export interface WeatherCell {

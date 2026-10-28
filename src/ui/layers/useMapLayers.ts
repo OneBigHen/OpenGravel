@@ -49,7 +49,7 @@ import {
   type RadarTimelineState,
 } from "@/application/map-layers";
 
-export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "stale" | "unavailable" | "flat-offline";
+export type MapLayerStatus = "off" | "zoom-in" | "zoom-out" | "loading" | "ready" | "stale" | "unavailable" | "flat-offline";
 
 /**
  * The animated rain radar as the map's timeline sees it (map-experience wave 3):
@@ -103,6 +103,7 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   "live-traffic": "tomtom",
   "traffic-cameras": "traffic-cameras",
   weather: "nws",
+  wind: "wind",
   "active-fire": "firms",
   "great-roads": "roads",
   gravel: "roads",
@@ -432,7 +433,10 @@ export function useMapLayers(
 
   const zoom = extent === null || typeof window === "undefined" ? 0 : zoomOf(extent, window.innerWidth);
   const loadable = useMemo(
-    () => (source === undefined ? [] : featureLayerIds(enabled).filter((id) => zoom >= mapLayer(id).minZoom)),
+    () => (source === undefined ? [] : featureLayerIds(enabled).filter((id) => {
+      const definition = mapLayer(id);
+      return zoom >= definition.minZoom && zoom <= (definition.maxZoom ?? Number.POSITIVE_INFINITY);
+    })),
     [enabled, source, zoom],
   );
   const loadKey = extent === null ? "" : `${refresh}|${loadable.join(",")}|${[extent.minLon, extent.minLat, extent.maxLon, extent.maxLat].map((value) => value.toFixed(3)).join(",")}`;
@@ -521,11 +525,13 @@ export function useMapLayers(
       record[id] =
         zoom < definition.minZoom
           ? "zoom-in"
-          : pending && loadable.includes(id)
-            ? "loading"
-            : provider !== undefined && unavailable.has(provider)
-              ? "unavailable"
-              : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
+          : zoom > (definition.maxZoom ?? Number.POSITIVE_INFINITY)
+            ? "zoom-out"
+            : pending && loadable.includes(id)
+              ? "loading"
+              : provider !== undefined && unavailable.has(provider)
+                ? "unavailable"
+                : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
     }
     return record;
   }, [drawStatus, enabled, extent, loadable, pending, radarFresh, radarList, radarUnavailable, result, unavailable, zoom]);

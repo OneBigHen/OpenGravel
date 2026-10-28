@@ -519,9 +519,10 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     const map = currentMap();
     map.fire("load");
 
-    // Eight pill images, the rider's heading arrow, the three ride pins and the
-    // route's direction arrow (05 §11), plus six font-independent search pins.
-    expect(map.images.size).toBe(19);
+    // Eight pill images, the rider's heading arrow, the three ride pins, the
+    // route's direction arrow (05 §11), four wind strength bands
+    // (map-experience wave 3), plus six font-independent search pins.
+    expect(map.images.size).toBe(23);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.placeSelected)).toBe(true);
     expect(map.layers.has(MAP_LAYER_IDS.riderHeading)).toBe(true);
@@ -531,7 +532,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     map.fire("style.load");
 
     expect(fake.state.imageAdds).toHaveLength(firstImageAdds * 2);
-    expect(map.images.size).toBe(19);
+    expect(map.images.size).toBe(23);
     expect(map.layers.has(MAP_LAYER_IDS.placePill)).toBe(true);
     host.dispose();
   });
@@ -650,6 +651,47 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("drifts the wind arrows only while motion is allowed", async () => {
+    const windScene = scene({
+      infoLayers: {
+        features: [{
+          id: "wind:-75.200,40.100",
+          layerId: "wind",
+          name: "W 18 mph",
+          detail: "Gusts 32 mph",
+          weight: 18,
+          wind: { speedMph: 18, gustMph: 32, fromDegrees: 250 },
+          geometry: { type: "Point", coordinates: [-75.2, 40.1] },
+        }],
+        trafficFlowTiles: null,
+        selectedId: null,
+        visible: ["wind"],
+      },
+    });
+    const drifting = fake.state.paintCalls.filter((call) => call.id === "ogv-info-wind-arrow" && call.name === "icon-translate");
+
+    const still = await createMapLibreHost(container(), { ...OPTIONS, reducedMotion: true });
+    const stillMap = currentMap();
+    stillMap.fire("load");
+    still.applyScene(windScene);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(fake.state.paintCalls.filter((call) => call.id === "ogv-info-wind-arrow" && call.name === "icon-translate")).toHaveLength(0);
+    still.dispose();
+
+    const moving = await createMapLibreHost(container(), OPTIONS);
+    const movingMap = currentMap();
+    movingMap.fire("load");
+    moving.applyScene(windScene);
+    await vi.waitFor(() => expect(
+      fake.state.paintCalls.filter((call) => call.id === "ogv-info-wind-arrow" && call.name === "icon-translate").length,
+    ).toBeGreaterThan(drifting.length));
+    moving.dispose();
+    // Disposing stops the loop: nothing keeps writing paint on a dead map.
+    const settled = fake.state.paintCalls.length;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(fake.state.paintCalls.length).toBe(settled);
   });
 
   it("keeps an active terrain mesh across scene updates and tilts only on a toggle", async () => {

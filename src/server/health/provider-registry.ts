@@ -10,6 +10,7 @@ import { isPublicMapboxToken } from "@/infrastructure/map/basemap";
 import { advisorTransportSettingsFromEnv } from "@/infrastructure/advisor/config";
 import { offlineRegionRoot, readActiveManifest, isSafeRegionId } from "@/server/offline/region-files";
 import { nwsAlertsProvider, overpassProvider, tomtomIncidentsProvider, tomtomStopsProvider } from "@/server/map-layers/providers";
+import { windProvider } from "@/server/map-layers/wind";
 import { trafficCamerasProvider, relevantTrafficCameraAdapters } from "@/server/map-layers/traffic-cameras";
 import { roadAuthoritySourcesFromEnv } from "@/server/planning/road-authority";
 import { isSpotifyClientId } from "@/server/spotify/config";
@@ -97,7 +98,7 @@ export const PROVIDER_REGISTRY: readonly ProviderDescriptor[] = [
   descriptor("photon", "Photon", "enrichment", ["location search"], ["PHOTON_URL"], "Configured Photon index or public endpoint"),
   descriptor("valhalla", "Valhalla", "operational", [], [], "No production composition"),
   descriptor("tomtom", "TomTom", "operational", ["traffic", "incidents", "map stops", "place search POIs"], ["TOMTOM_API_KEY", "TOMTOM_TRAFFIC_API_KEY"], "Provider coverage; minor roads may be absent", { visibleOnMap: true, cacheTtls: { "map-stops": tomtomStopsProvider.ttlMs, "map-incidents": tomtomIncidentsProvider.ttlMs } }),
-  descriptor("nws", "National Weather Service", "operational", ["ride weather", "weather alerts"], ["NWS_USER_AGENT"], "US; map alerts check the viewport center", { visibleOnMap: true, cacheTtls: { "map-alerts": nwsAlertsProvider.ttlMs } }),
+  descriptor("nws", "National Weather Service", "operational", ["ride weather", "weather alerts", "wind arrows"], ["NWS_USER_AGENT"], "US; map alerts check the viewport center", { visibleOnMap: true, cacheTtls: { "map-alerts": nwsAlertsProvider.ttlMs, "map-wind": windProvider.ttlMs } }),
   descriptor("curvature-db", "Curvature catalogue", "derived", ["known curvy roads", "Great Roads layer"], ["CURVATURE_DB_PATH"], "Installed regional catalogue", { artifact: "sqlite", visibleOnMap: true }),
   descriptor("gravel-atlas", "Gravel Atlas", "community", ["known gravel corridors", "gravel layer"], ["GRAVEL_ATLAS_DB_PATH"], "Installed verified corridor catalogue", { artifact: "sqlite", visibleOnMap: true }),
   descriptor("places", "Places service", "enrichment", ["nearby events", "ride places"], ["OGV_PLACES_API_URL", "OGV_PLACES_API_KEY"], "Configured service coverage"),

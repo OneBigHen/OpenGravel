@@ -4,3 +4,4 @@ export * from "./along";
 export * from "./road-history";
 export * from "./ride-road";
 export * from "./radar";
+export * from "./wind";
