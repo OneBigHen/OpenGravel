@@ -673,6 +673,12 @@
   color: var(--og-primary-text);
 }
 
+/* The emergency disc is the one control that is not about the ride. */
+.og-ride__rail-button[data-tone="danger"],
+.og-ride__rail-button[data-tone="danger"] svg {
+  color: var(--og-danger);
+}
+
 /* Zoom: two 56px halves of one pill — gloves can't pinch. */
 .og-ride__rail-zoom {
   display: flex;

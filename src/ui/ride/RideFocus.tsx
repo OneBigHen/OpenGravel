@@ -89,6 +89,7 @@ import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
 import type { RideSummaryStat } from "@/application/ride-metrics/ride-summary";
 import type { PlacesSource } from "@/application/places";
+import type { Coordinate } from "@/domain/ride/types";
 import type { BasemapMode, MapHost, MapHostFactory, MapLoadStatus } from "@/application/map/map-host";
 import type { MapIntent } from "@/application/map/types";
 import {
@@ -119,6 +120,8 @@ import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
 import { RideMusicEntry } from "@/ui/ride/RideMusicEntry";
 import { RideSafetyOverlay, RideSafetyPanel } from "@/ui/ride/RideSafetyPanel";
+import { EmergencyCard } from "@/ui/safety/EmergencyCard";
+import { readRoadsNear } from "@/application/safety/emergency-roads";
 import type { RideSafety } from "@/application/safety/ride-safety";
 import { RIDE_METRIC_PRESETS, RIDE_METRIC_REGISTRY } from "@/application/ride-metrics/registry";
 import type { SpotifyPlayerPort } from "@/application/ride-session/ports/spotify-player";
@@ -271,6 +274,18 @@ function farText(meters: number): string {
   return formatDistance(meters);
 }
 
+/**
+ * How fresh the emergency card's fix is, in the card itself. A position read
+ * aloud to a dispatcher must not pass a 90-second-old fix off as the present.
+ */
+function positionAgeText(ageMs: number | null): string {
+  if (ageMs === null || !Number.isFinite(ageMs)) return "Your position from this device's GPS.";
+  const seconds = Math.max(0, Math.round(ageMs / 1000));
+  if (seconds <= 1) return "Your position from this device's GPS, just now.";
+  if (seconds < 60) return `Your position from this device's GPS, updated ${seconds} s ago.`;
+  return `Your position from this device's GPS, updated ${Math.round(seconds / 60)} min ago.`;
+}
+
 export function RideFocus({
   store,
   mapHostFactory,
@@ -357,6 +372,8 @@ export function RideFocus({
   const [stopFinderHold, setStopFinderHold] = useState(false);
   /** The finish card's GPX download failed, said in the card rather than swallowed. */
   const [exportError, setExportError] = useState<string | null>(null);
+  /** The emergency card is open over the ride (HIKE-MODE-PLAN H4 §19). */
+  const [emergencyOpen, setEmergencyOpen] = useState(false);
   /** The "your screen may sleep" line is one the rider can put away for the ride. */
   const [screenNoteDismissed, setScreenNoteDismissed] = useState(false);
 
@@ -536,6 +553,20 @@ export function RideFocus({
   // against, and re-keying on the route id (not the line) is what keeps a
   // route-line correction from re-triggering the one-shot prefetch.
   const guidedRouteId = navigation?.activity === "guided" ? navigation.plan.route?.routeId ?? null : null;
+  /**
+    The nearest road for the emergency card, asked only when the card opens.
+    The ride map holds no road features of its own, so this is the one optional
+    read on an otherwise offline card: offline, it says "unknown" and the
+    coordinates, altitude, 911 and sharing still work.
+  */
+  const emergencyRoadRequest = useMemo(
+    () =>
+      mapLayersSource === undefined
+        ? undefined
+        : (point: Coordinate, signal: AbortSignal) => readRoadsNear(mapLayersSource, point, signal),
+    [mapLayersSource],
+  );
+
   const rideInterest = useRideInterest({
     discoverSource,
     mapLayersSource,
@@ -1266,6 +1297,21 @@ export function RideFocus({
                 middle of the screen and under the maneuver card.
               */}
               <div className="og-ride__rail-actions" role="group" aria-label="Route and voice">
+              {/* The way out: coordinates, 911 and sharing, one press away. */}
+              <button
+                type="button"
+                className="og-ride__rail-button"
+                data-testid="ride-emergency"
+                data-tone="danger"
+                aria-label="Emergency: where am I?"
+                title="Emergency"
+                onClick={(): void => setEmergencyOpen(true)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 8v8M8 12h8" />
+                </svg>
+              </button>
               {/* Google's search on the nav screen: gas, food and anywhere
                   along the rest of the route, one tap from the map. */}
               {terminal !== null || !rerouteAvailable || navigation?.activity !== "guided" ? null : (
@@ -2167,6 +2213,20 @@ export function RideFocus({
         )}
       </footer>
       {safety === undefined ? null : <RideSafetyOverlay safety={safety} />}
+      {emergencyOpen ? (
+        <EmergencyCard
+          coordinate={navigation?.position.coordinate ?? null}
+          altitudeMeters={navigation?.position.altitudeMeters ?? null}
+          accuracyMeters={navigation?.position.accuracyMeters ?? null}
+          note={
+            navigation?.position.coordinate == null
+              ? "Waiting for this device's GPS."
+              : positionAgeText(navigation.position.ageMs)
+          }
+          {...(emergencyRoadRequest === undefined ? {} : { roadRequest: emergencyRoadRequest })}
+          onClose={(): void => setEmergencyOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }

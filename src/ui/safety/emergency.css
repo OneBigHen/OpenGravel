@@ -1,0 +1,348 @@
+/* --------------------------------------------------------------------------
+   "Where am I / Emergency" (HIKE-MODE-PLAN H4 §19).
+
+   A full-height modal card rather than the usual bottom sheet: it is opened in
+   the worst moment the app sees, it must be readable with one glance and one
+   thumb, and it must not share the screen with map chrome that can steal a
+   press. Everything wears the Day/Night tokens, so the card is legible in the
+   dark without a second palette, and every control is at least 44 px.
+   -------------------------------------------------------------------------- */
+
+.og-emergency {
+  position: fixed;
+  inset: 0;
+  z-index: var(--og-z-overlay);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.og-emergency__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--og-scrim);
+}
+
+.og-emergency__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+  width: min(560px, 100%);
+  max-height: 100dvh;
+  margin: 0 auto;
+  padding: max(var(--og-space-3), var(--og-safe-top)) var(--og-space-3)
+    calc(var(--og-space-3) + var(--og-safe-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--og-radius-sheet) var(--og-radius-sheet) 0 0;
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-sheet);
+  animation: og-emergency-in var(--og-dur-base) var(--og-ease);
+}
+
+.og-emergency__panel:focus-visible {
+  outline: none;
+}
+
+.og-emergency__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  padding-top: var(--og-space-1);
+}
+
+.og-emergency__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-emergency__eyebrow {
+  margin: 0;
+  color: var(--og-danger);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.og-emergency__title {
+  margin: 0;
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.og-emergency__close {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: var(--og-touch);
+  block-size: var(--og-touch);
+  min-height: var(--og-touch);
+  padding: 0;
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  cursor: pointer;
+}
+
+.og-emergency__note {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-emergency__nofix {
+  margin: 0;
+  padding: var(--og-space-3);
+  border: 1px dashed var(--og-line-strong);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* The coordinate rows: label and value on the left, a 44 px copy on the right. */
+.og-emergency__formats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-emergency__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+  padding: var(--og-space-2);
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-emergency__row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-emergency__row-label {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-emergency__row-value {
+  margin: 0;
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  line-height: 1.3;
+  /* A grid reference is read digit by digit; it must never wrap mid-reference. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.og-emergency__copy {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.og-emergency__copy:disabled {
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Altitude, accuracy and the nearest road, as one scannable block. */
+.og-emergency__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--og-space-2);
+  margin: 0;
+}
+
+.og-emergency__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--og-space-2);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-emergency__fact--wide {
+  grid-column: 1 / -1;
+}
+
+.og-emergency__fact dt {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-emergency__fact dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  margin: 0;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.og-emergency__fact dd[data-known="false"] {
+  color: var(--og-ink-2);
+}
+
+.og-emergency__road-name {
+  font-weight: 700;
+}
+
+.og-emergency__road-detail {
+  color: var(--og-ink-2);
+  font-weight: 600;
+}
+
+/* Call first: it is the action the card exists for, and it is the widest. */
+.og-emergency__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--og-space-2);
+}
+
+.og-emergency__call,
+.og-emergency__share {
+  display: grid;
+  grid-auto-flow: column;
+  place-content: center;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: var(--og-space-2) var(--og-space-3);
+  border: 0;
+  border-radius: var(--og-radius-control);
+  font: inherit;
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.og-emergency__call {
+  background: var(--og-record);
+  color: var(--og-ink);
+}
+
+.og-emergency__share {
+  border: 1px solid var(--og-line-strong);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+}
+
+.og-emergency__share:disabled {
+  color: var(--og-ink-2);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.og-emergency__status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-emergency__status[data-tone="done"] {
+  color: var(--og-primary-text);
+}
+
+.og-emergency__status[data-tone="error"] {
+  color: var(--og-danger);
+}
+
+.og-emergency__offline {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  line-height: 1.4;
+}
+
+.og-emergency :is(button, a):focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Wider than a phone: the call and share sit side by side. */
+@media (min-width: 480px) {
+  .og-emergency__actions {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+
+/* Phone landscape: less height to spend, so the type steps down one notch. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-emergency__panel {
+    max-height: 100dvh;
+  }
+
+  .og-emergency__title {
+    font-size: var(--og-text-headline);
+  }
+
+  .og-emergency__call,
+  .og-emergency__share {
+    min-height: var(--og-touch);
+    font-size: var(--og-text-body);
+  }
+}
+
+@keyframes og-emergency-in {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-emergency__panel {
+    animation: none;
+  }
+}
