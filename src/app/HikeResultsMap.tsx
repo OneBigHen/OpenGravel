@@ -2,7 +2,7 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
-import type { TrailFeature } from "../../../infra/trails/lib/types";
+import type { TrailFeature } from "../../infra/trails/lib/types";
 import type { Coordinate } from "@/domain/ride/types";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { readMapPalette } from "@/infrastructure/map/maplibre/style";
