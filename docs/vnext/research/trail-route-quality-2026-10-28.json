@@ -1,0 +1,870 @@
+{
+  "sourceSha256": "2ec5209b40267c339b84a3476c7eecb027550a18d38b1ddf4ba1a5d3cc59225a",
+  "graph": {
+    "path": "/mnt/wsl/ogv-data/ghbuild-hike/graph-cache-quality",
+    "nodes": 3123618,
+    "edges": 3978423,
+    "ignoredJunctionBarriers": 0,
+    "snapLimitMeters": 300
+  },
+  "catalog": {
+    "before": {
+      "trails": 16484,
+      "bySource": {
+        "osm": 16484,
+        "usfs": 0,
+        "nps": 0
+      },
+      "withTrailhead": 6353,
+      "merged": 708
+    },
+    "after": {
+      "trails": 16433,
+      "bySource": {
+        "osm": 16433,
+        "usfs": 0,
+        "nps": 0
+      },
+      "withTrailhead": 6335,
+      "merged": 709
+    },
+    "measurements": {
+      "elevationGainMeters": {
+        "known": 16433,
+        "unknown": 0,
+        "median": 8,
+        "min": 0,
+        "max": 36850
+      },
+      "elevationLossMeters": {
+        "known": 16433,
+        "unknown": 0,
+        "median": 7,
+        "min": 0,
+        "max": 36599
+      },
+      "maxGradePercent": {
+        "known": 16340,
+        "unknown": 93,
+        "median": 0.0,
+        "min": -72.1,
+        "max": 76.7
+      },
+      "toblerMinutes": {
+        "known": 16433,
+        "unknown": 0,
+        "median": 6.2,
+        "min": 0,
+        "max": 17267.4
+      }
+    }
+  },
+  "files": {
+    "/mnt/wsl/ogv-data/trails/2026-10-28/trails.geojson": {
+      "bytes": 103798787,
+      "sha256": "bbc780d5ba9f57144031ee7c9936be074a103ce7262027298f411afaca0ec568"
+    },
+    "/mnt/wsl/ogv-data/trails/2026-10-28/hikes.json": {
+      "bytes": 29945383,
+      "sha256": "8a8e36381ed2baa5a47331e4db5ed16a8e9f1ef866e321fa8f6cbdd245ddd77c"
+    }
+  },
+  "probes": [
+    {
+      "area": "Hawk Mountain",
+      "before": {
+        "area": "Hawk Mountain",
+        "points": [
+          [
+            40.6343,
+            -75.9878
+          ],
+          [
+            40.642,
+            -75.994
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 546.069,
+        "timeSeconds": 393.17,
+        "snapMeters": [
+          1.3,
+          659.7
+        ],
+        "pathTrackPercent": 0.0,
+        "trailPercent": 0.0,
+        "maxRoadClass": "tertiary",
+        "metersByClass": {
+          "service": 130.1317935306055,
+          "tertiary": 415.8655951955032
+        }
+      },
+      "after": {
+        "area": "Hawk Mountain",
+        "points": [
+          [
+            40.6343,
+            -75.9878
+          ],
+          [
+            40.642,
+            -75.994
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "trailsOnly": {
+        "area": "Hawk Mountain",
+        "points": [
+          [
+            40.6343,
+            -75.9878
+          ],
+          [
+            40.642,
+            -75.994
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "error": "Cannot find point 1: 40.642,-75.994",
+      "trailsOnlyError": "Cannot find point 1: 40.642,-75.994"
+    },
+    {
+      "area": "Lehigh Gorge",
+      "before": {
+        "area": "Lehigh Gorge",
+        "points": [
+          [
+            40.97,
+            -75.715
+          ],
+          [
+            40.942,
+            -75.718
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 40059.843,
+        "timeSeconds": 28848.878,
+        "snapMeters": [
+          149.6,
+          46.2
+        ],
+        "pathTrackPercent": 37.26,
+        "trailPercent": 59.49,
+        "maxRoadClass": "secondary",
+        "metersByClass": {
+          "cycleway": 7871.592506248251,
+          "path": 11870.063264154487,
+          "track": 3057.183431193317,
+          "service": 5827.315471805436,
+          "footway": 1021.4994253124029,
+          "steps": 12.071339342360238,
+          "residential": 5063.333256202139,
+          "tertiary": 1495.701230208622,
+          "secondary": 1743.4236990310985,
+          "unclassified": 2097.3936632405175
+        }
+      },
+      "after": {
+        "area": "Lehigh Gorge",
+        "points": [
+          [
+            40.97,
+            -75.715
+          ],
+          [
+            40.942,
+            -75.718
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 38329.459,
+        "timeSeconds": 27597.213,
+        "snapMeters": [
+          149.6,
+          48.0
+        ],
+        "pathTrackPercent": 10.52,
+        "trailPercent": 66.51,
+        "maxRoadClass": "secondary",
+        "metersByClass": {
+          "cycleway": 21396.483508398735,
+          "service": 2877.7349770362994,
+          "residential": 4623.323548469223,
+          "footway": 61.56228182186207,
+          "path": 4033.4864648689336,
+          "tertiary": 1495.701230208622,
+          "secondary": 1743.4236990310985,
+          "unclassified": 2097.3936632405175
+        }
+      },
+      "trailsOnly": {
+        "area": "Lehigh Gorge",
+        "points": [
+          [
+            40.97,
+            -75.715
+          ],
+          [
+            40.942,
+            -75.718
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "error": null,
+      "trailsOnlyError": "Connection between locations not found"
+    },
+    {
+      "area": "Jim Thorpe",
+      "before": {
+        "area": "Jim Thorpe",
+        "points": [
+          [
+            40.8697,
+            -75.7408
+          ],
+          [
+            40.879,
+            -75.752
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 4882.059,
+        "timeSeconds": 3515.084,
+        "snapMeters": [
+          18.8,
+          51.9
+        ],
+        "pathTrackPercent": 0.0,
+        "trailPercent": 19.81,
+        "maxRoadClass": "trunk",
+        "metersByClass": {
+          "trunk": 20.15244178647726,
+          "tertiary": 405.4880693430859,
+          "service": 633.5270940426669,
+          "residential": 2855.838488261501,
+          "footway": 44.39880138742858,
+          "cycleway": 922.538057612454
+        }
+      },
+      "after": {
+        "area": "Jim Thorpe",
+        "points": [
+          [
+            40.8697,
+            -75.7408
+          ],
+          [
+            40.879,
+            -75.752
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "trailsOnly": {
+        "area": "Jim Thorpe",
+        "points": [
+          [
+            40.8697,
+            -75.7408
+          ],
+          [
+            40.879,
+            -75.752
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "error": "Cannot find point 1: 40.879,-75.752",
+      "trailsOnlyError": "Cannot find point 1: 40.879,-75.752"
+    },
+    {
+      "area": "Delaware Water Gap",
+      "before": {
+        "area": "Delaware Water Gap",
+        "points": [
+          [
+            40.972,
+            -75.127
+          ],
+          [
+            40.986,
+            -75.133
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 2359.572,
+        "timeSeconds": 1698.893,
+        "snapMeters": [
+          160.6,
+          207.0
+        ],
+        "pathTrackPercent": 49.66,
+        "trailPercent": 59.44,
+        "maxRoadClass": "tertiary",
+        "metersByClass": {
+          "tertiary": 840.7769377898367,
+          "service": 116.16749040074613,
+          "footway": 230.71936169376337,
+          "path": 1171.8202473465462
+        }
+      },
+      "after": {
+        "area": "Delaware Water Gap",
+        "points": [
+          [
+            40.972,
+            -75.127
+          ],
+          [
+            40.986,
+            -75.133
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 2179.202,
+        "timeSeconds": 1569.026,
+        "snapMeters": [
+          252.5,
+          207.0
+        ],
+        "pathTrackPercent": 53.77,
+        "trailPercent": 64.36,
+        "maxRoadClass": "tertiary",
+        "metersByClass": {
+          "footway": 230.71936169376337,
+          "service": 76.74062172378285,
+          "tertiary": 699.9342584846245,
+          "path": 1171.8202473465462
+        }
+      },
+      "trailsOnly": {
+        "area": "Delaware Water Gap",
+        "points": [
+          [
+            40.972,
+            -75.127
+          ],
+          [
+            40.986,
+            -75.133
+          ]
+        ],
+        "status": "unavailable"
+      },
+      "error": null,
+      "trailsOnlyError": "Connection between locations not found"
+    },
+    {
+      "area": "Ricketts Glen",
+      "before": {
+        "area": "Ricketts Glen",
+        "points": [
+          [
+            41.327,
+            -76.287
+          ],
+          [
+            41.338,
+            -76.279
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 2834.961,
+        "timeSeconds": 2041.172,
+        "snapMeters": [
+          51.4,
+          17.8
+        ],
+        "pathTrackPercent": 74.49,
+        "trailPercent": 97.27,
+        "maxRoadClass": "service",
+        "metersByClass": {
+          "footway": 645.8686918172465,
+          "service": 77.47997071286922,
+          "path": 2111.6517842669246
+        }
+      },
+      "after": {
+        "area": "Ricketts Glen",
+        "points": [
+          [
+            41.327,
+            -76.287
+          ],
+          [
+            41.338,
+            -76.279
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 3297.614,
+        "timeSeconds": 2374.284,
+        "snapMeters": [
+          51.4,
+          42.1
+        ],
+        "pathTrackPercent": 23.65,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "footway": 2517.626911996386,
+          "path": 779.8507338787119
+        }
+      },
+      "trailsOnly": {
+        "area": "Ricketts Glen",
+        "points": [
+          [
+            41.327,
+            -76.287
+          ],
+          [
+            41.338,
+            -76.279
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 3297.614,
+        "timeSeconds": 2374.284,
+        "snapMeters": [
+          51.4,
+          42.1
+        ],
+        "pathTrackPercent": 23.65,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "footway": 2517.626911996386,
+          "path": 779.8507338787119
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    },
+    {
+      "area": "Trexler Border Trail",
+      "before": {
+        "area": "Trexler Border Trail",
+        "points": [
+          [
+            40.6661008,
+            -75.6376817
+          ],
+          [
+            40.6543663,
+            -75.6338782
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1883.6,
+        "timeSeconds": 1356.192,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1883.6804143108839
+        }
+      },
+      "after": {
+        "area": "Trexler Border Trail",
+        "points": [
+          [
+            40.6661008,
+            -75.6376817
+          ],
+          [
+            40.6543663,
+            -75.6338782
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1883.6,
+        "timeSeconds": 1356.192,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1883.6804143108839
+        }
+      },
+      "trailsOnly": {
+        "area": "Trexler Border Trail",
+        "points": [
+          [
+            40.6661008,
+            -75.6376817
+          ],
+          [
+            40.6543663,
+            -75.6338782
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1883.6,
+        "timeSeconds": 1356.192,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1883.6804143108839
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    },
+    {
+      "area": "Jacobsburg red trail",
+      "before": {
+        "area": "Jacobsburg red trail",
+        "points": [
+          [
+            40.790973,
+            -75.291031
+          ],
+          [
+            40.7833118,
+            -75.2873553
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 981.056,
+        "timeSeconds": 706.36,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 981.0139661841611
+        }
+      },
+      "after": {
+        "area": "Jacobsburg red trail",
+        "points": [
+          [
+            40.790973,
+            -75.291031
+          ],
+          [
+            40.7833118,
+            -75.2873553
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 981.056,
+        "timeSeconds": 706.36,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 981.0139661841611
+        }
+      },
+      "trailsOnly": {
+        "area": "Jacobsburg red trail",
+        "points": [
+          [
+            40.790973,
+            -75.291031
+          ],
+          [
+            40.7833118,
+            -75.2873553
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 981.056,
+        "timeSeconds": 706.36,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 981.0139661841611
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    },
+    {
+      "area": "Pine Creek Rail Trail",
+      "before": {
+        "area": "Pine Creek Rail Trail",
+        "points": [
+          [
+            41.7620895,
+            -77.2989009
+          ],
+          [
+            41.7773896,
+            -77.3088232
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1925.373,
+        "timeSeconds": 1386.268,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1925.3698613822182
+        }
+      },
+      "after": {
+        "area": "Pine Creek Rail Trail",
+        "points": [
+          [
+            41.7620895,
+            -77.2989009
+          ],
+          [
+            41.7773896,
+            -77.3088232
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1925.373,
+        "timeSeconds": 1386.268,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1925.3698613822182
+        }
+      },
+      "trailsOnly": {
+        "area": "Pine Creek Rail Trail",
+        "points": [
+          [
+            41.7620895,
+            -77.2989009
+          ],
+          [
+            41.7773896,
+            -77.3088232
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1925.373,
+        "timeSeconds": 1386.268,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1925.3698613822182
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    },
+    {
+      "area": "Shades of Death Trail",
+      "before": {
+        "area": "Shades of Death Trail",
+        "points": [
+          [
+            41.0254975,
+            -75.7072208
+          ],
+          [
+            41.0264842,
+            -75.6911632
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1558.534,
+        "timeSeconds": 1122.145,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 0.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "footway": 1558.6441072907812
+        }
+      },
+      "after": {
+        "area": "Shades of Death Trail",
+        "points": [
+          [
+            41.0254975,
+            -75.7072208
+          ],
+          [
+            41.0264842,
+            -75.6911632
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1558.533,
+        "timeSeconds": 1122.144,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 0.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "footway": 1558.6441072907812
+        }
+      },
+      "trailsOnly": {
+        "area": "Shades of Death Trail",
+        "points": [
+          [
+            41.0254975,
+            -75.7072208
+          ],
+          [
+            41.0264842,
+            -75.6911632
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1558.533,
+        "timeSeconds": 1122.144,
+        "snapMeters": [
+          0.1,
+          0.0
+        ],
+        "pathTrackPercent": 0.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "footway": 1558.6441072907812
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    },
+    {
+      "area": "Bushkill Colony Trail",
+      "before": {
+        "area": "Bushkill Colony Trail",
+        "points": [
+          [
+            41.2422941,
+            -75.098542
+          ],
+          [
+            41.234432,
+            -75.102298
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1064.521,
+        "timeSeconds": 766.455,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1064.5117503030363
+        }
+      },
+      "after": {
+        "area": "Bushkill Colony Trail",
+        "points": [
+          [
+            41.2422941,
+            -75.098542
+          ],
+          [
+            41.234432,
+            -75.102298
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1064.521,
+        "timeSeconds": 766.455,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1064.5117503030363
+        }
+      },
+      "trailsOnly": {
+        "area": "Bushkill Colony Trail",
+        "points": [
+          [
+            41.2422941,
+            -75.098542
+          ],
+          [
+            41.234432,
+            -75.102298
+          ]
+        ],
+        "status": "routed",
+        "distanceMeters": 1064.521,
+        "timeSeconds": 766.455,
+        "snapMeters": [
+          0.0,
+          0.0
+        ],
+        "pathTrackPercent": 100.0,
+        "trailPercent": 100.0,
+        "maxRoadClass": "none",
+        "metersByClass": {
+          "path": 1064.5117503030363
+        }
+      },
+      "error": null,
+      "trailsOnlyError": null
+    }
+  ],
+  "demCache": {
+    "tiles": 1781,
+    "bytes": 168876488,
+    "manifest": "/mnt/wsl/ogv-data/dem-cache/mapterhorn/manifest-2026-10-28.json",
+    "manifestSha256": "bbdda2749e8419f970720d46dccfc9f7da8d5330b79bf1552043b145c7dcb411"
+  }
+}
