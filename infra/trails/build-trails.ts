@@ -30,7 +30,7 @@ import { join, resolve } from "node:path";
 
 import { NPS_TRAILS, USFS_TRAILS, readExternalSource } from "./lib/external";
 import { mergeTrails } from "./lib/merge";
-import { exportOsm, ingestOsm, osmiumCommands, readFeatureFile } from "./lib/osm-input";
+import { exportOsm, ingestOsm, osmiumCommands, readFeatureFile, readOplRelations } from "./lib/osm-input";
 import { serialize, toFeatureCollection, toHikeCatalog } from "./lib/output";
 import { DEFAULT_TRAILHEAD_RADIUS_METERS } from "./lib/trailhead";
 import type { PlaceCandidate, Trail, TrailCandidate, TrailFeatureCollection, HikeCatalog } from "./lib/types";
@@ -60,6 +60,7 @@ export function isPbf(path: string): boolean {
 interface ResolvedSources {
   readonly osmFiles: readonly string[];
   readonly placeFiles: readonly string[];
+  readonly relationsFile?: string;
 }
 
 /** A PBF is exported through osmium into two GeoJSON sequences; plain files are read as they are. */
@@ -71,10 +72,11 @@ export async function resolveSources(
   if (workDir === null) {
     return { osmFiles: [input.osm], placeFiles: input.osmPlaces === undefined ? [] : [input.osmPlaces] };
   }
-  log(`exporting ${input.osm} with osmium (4 passes)`);
+  log(`exporting ${input.osm} with osmium (5 passes)`);
   const exported = await exportOsm(input.osm, workDir);
   return {
     osmFiles: [exported.linesPath],
+    relationsFile: exported.relationsPath,
     placeFiles: [exported.placesPath, ...(input.osmPlaces === undefined ? [] : [input.osmPlaces])],
   };
 }
@@ -93,6 +95,7 @@ export async function buildTrailCatalog(input: BuildInput): Promise<BuildResult>
     for (const path of sources.osmFiles) {
       const features = await readFeatureFile(path);
       log(`osm: ${features.length} features from ${path}`);
+      if (sources.relationsFile !== undefined) features.push(...await readOplRelations(sources.relationsFile));
       const ingest = ingestOsm(features);
       candidates.push(...ingest.trails);
       places.push(...ingest.places);

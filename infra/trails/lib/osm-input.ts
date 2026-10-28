@@ -9,7 +9,7 @@
  *
  * Two exports are made from the PBF:
  *  - trail lines: `route=hiking|foot` relations and `highway=path|footway|track`
- *    ways, with `--add-referenced` so relation members and node geometry are
+ *    ways, with referenced objects so relation members and node geometry are
  *    present for osmium to assemble; and
  *  - places: trailhead and parking objects only, so the point export does not
  *    carry every node of every member way.
@@ -357,9 +357,39 @@ function asOsmFeature(value: unknown): OsmFeature | null {
   return null;
 }
 
+/** Decode osmium OPL's %hex% escaped Unicode codepoints. */
+function decodeOpl(value: string): string {
+  return value.replace(/%([0-9a-fA-F]+)%/g, (_, code: string) => String.fromCodePoint(parseInt(code, 16)));
+}
+
+/** Route relations are not emitted as lines by osmium export; read their members separately. */
+export async function readOplRelations(path: string): Promise<OsmFeature[]> {
+  const features: OsmFeature[] = [];
+  for await (const line of createInterface({ input: createReadStream(path, "utf8") })) {
+    const parts = line.split(" ");
+    const id = parts[0];
+    if (!id?.startsWith("r")) continue;
+    const tags = parts.find((part) => part.startsWith("T"))?.slice(1) ?? "";
+    const memberText = parts.find((part) => part.startsWith("M"))?.slice(1) ?? "";
+    const properties: Record<string, unknown> = { "@type": "relation", "@id": id.slice(1) };
+    for (const tag of tags.split(",")) {
+      const equals = tag.indexOf("=");
+      if (equals >= 0) properties[decodeOpl(tag.slice(0, equals))] = decodeOpl(tag.slice(equals + 1));
+    }
+    properties.members = memberText.split(",").flatMap((member) => {
+      const match = /^([nwr])(\d+)@/.exec(member);
+      if (!match) return [];
+      return [{ type: match[1] === "w" ? "way" : match[1] === "r" ? "relation" : "node", ref: match[2] }];
+    });
+    features.push({ properties, geometry: null });
+  }
+  return features;
+}
+
 export interface OsmiumExport {
   readonly linesPath: string;
   readonly placesPath: string;
+  readonly relationsPath: string;
 }
 
 /** The osmium invocations for a PBF, quoted for the README. */
@@ -368,18 +398,19 @@ export function osmiumCommands(pbfPath: string, workDir = "/tmp"): readonly (rea
   const placesPbf = `${workDir}/trails-places.osm.pbf`;
   return [
     [
-      "tags-filter", "--overwrite", "--add-referenced", "-o", trailsPbf, pbfPath,
+      "tags-filter", "--overwrite", "-o", trailsPbf, pbfPath,
       "r/route=hiking,foot",
       // Walking ways, plus the pedestrian ways a route relation may use as a
       // link, so osmium can assemble a relation without holes in the middle.
       "w/highway=path,footway,track,steps,bridleway,cycleway,pedestrian",
     ],
+    ["cat", "--overwrite", "-t", "relation", "-f", "opl", "-o", `${workDir}/relations.opl`, trailsPbf],
     [
       "export", "--overwrite", "--no-progress", "-f", "geojsonseq",
       "--geometry-types=linestring", "-a", "type,id", "-o", `${workDir}/trails.geojsonseq`, trailsPbf,
     ],
     [
-      "tags-filter", "--overwrite", "--add-referenced", "-o", placesPbf, pbfPath,
+      "tags-filter", "--overwrite", "-o", placesPbf, pbfPath,
       "n/highway=trailhead", "n/amenity=parking",
       "w/highway=trailhead", "w/amenity=parking", "a/amenity=parking",
     ],
@@ -396,7 +427,7 @@ export async function exportOsm(pbfPath: string, workDir: string): Promise<Osmiu
   for (const args of commands) {
     await runOsmium(args, pbfPath);
   }
-  return { linesPath: `${workDir}/trails.geojsonseq`, placesPath: `${workDir}/trails-places.geojsonseq` };
+  return { linesPath: `${workDir}/trails.geojsonseq`, placesPath: `${workDir}/trails-places.geojsonseq`, relationsPath: `${workDir}/relations.opl` };
 }
 
 async function runOsmium(args: readonly string[], pbfPath: string): Promise<void> {
