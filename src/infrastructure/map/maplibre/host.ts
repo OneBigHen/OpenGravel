@@ -406,6 +406,9 @@ const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
   MAP_LAYER_IDS.routeProposed,
   MAP_LAYER_IDS.routeCasing,
   MAP_LAYER_IDS.routeSelected,
+  MAP_LAYER_IDS.routeOffRouteCasing,
+  MAP_LAYER_IDS.routeOffRoute,
+  MAP_LAYER_IDS.routeOffRouteSteep,
   MAP_LAYER_IDS.routeAfterSunset,
   MAP_LAYER_IDS.routeSurface,
 ]);

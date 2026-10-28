@@ -46,6 +46,7 @@ export function usePlannerBreadcrumb(document: RideDocument, store: RideDocument
     const points = current.waypoints.flatMap((point) => point.id === id ? [update(point)].filter((item): item is BreadcrumbWaypoint => item !== null) : [point]);
     commit(replaceWaypoints(current, points), label);
   }, [store, commit]);
+  const clear = useCallback((): void => { setSelected(null); setEditing(false); commit(null, "Cleared breadcrumb"); }, [commit]);
   const toggleSnap = useCallback(async (index: number): Promise<void> => {
     const current = store.getState().document;
     const currentRoute = current.intent.breadcrumb;
@@ -99,9 +100,9 @@ export function usePlannerBreadcrumb(document: RideDocument, store: RideDocument
   }, [add, edit, editing, pointId]);
   const project = useCallback((scene: MapScene): MapScene => {
     if (route === null) return scene;
-    const points = route.waypoints.map((point) => ({ id: point.id as never, kind: "shaping" as const, coordinate: dragPreview?.id === point.id ? dragPreview.coordinate : point.coordinate, label: point.name ?? null }));
+    const points = route.waypoints.map((point) => ({ id: point.id as never, kind: "shaping" as const, tone: "trail" as const, coordinate: dragPreview?.id === point.id ? dragPreview.coordinate : point.coordinate, label: point.name ?? null }));
     const geometry = route.legs.flatMap((leg, index) => index === 0 ? [...leg.geometry] : leg.geometry.slice(1));
-    return { ...scene, routes: geometry.length < 2 ? [] : [{ id: "breadcrumb_route" as never, role: null, geometry, state: "selected" }], selectedRouteId: "breadcrumb_route" as never, points, preview: null };
+    return { ...scene, routes: geometry.length < 2 ? [] : [{ id: "breadcrumb_route" as never, role: null, geometry, state: "selected", offRoute: { steep: [] } }], selectedRouteId: "breadcrumb_route" as never, points, preview: null };
   }, [route, dragPreview]);
-  return { route, editing, selected, setSelected, setEditing, add, edit, intercept, project, toggleSnap, snapping, snapError };
+  return { route, editing, selected, setSelected, setEditing, add, edit, clear, intercept, project, toggleSnap, snapping, snapError };
 }

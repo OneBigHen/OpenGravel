@@ -120,6 +120,16 @@ export const ROUTE_AFTER_SUNSET_FEATURE_STATE = "after-sunset";
  */
 export const ROUTE_SUNSET_MARKER_FEATURE_STATE = "sunset-marker";
 
+/**
+ * The state of the steep stretches of an off-route (Breadcrumb) line. They ride in
+ * the routes source under a state no other route layer matches, drawn over the
+ * line they annotate in a heavier dash.
+ */
+export const ROUTE_OFF_ROUTE_FEATURE_STATE = "off-route";
+
+/** See above: the steep stretches of that line. */
+export const ROUTE_STEEP_FEATURE_STATE = "off-route-steep";
+
 /** One route line plus the role the bundle assigned it. */
 export interface RouteScene {
   readonly id: RouteCandidateId;
@@ -160,6 +170,12 @@ export interface RouteScene {
    * line exactly as it was before this annotation existed.
    */
   readonly daylight?: RouteDaylightScene;
+  /**
+   * Present on a straight-line Breadcrumb path: the line is not a road, so it is
+   * drawn dashed with its own casing instead of as the planned route. `steep`
+   * lists the legs measured steeper than the honest threshold, in travel order.
+   */
+  readonly offRoute?: { readonly steep: readonly (readonly Coordinate[])[] };
 }
 
 /**
@@ -257,6 +273,8 @@ export interface PointScene {
   readonly kind: PointSceneKind;
   readonly coordinate: Coordinate;
   readonly label: string | null;
+  /** `trail` draws a shaping dot as an off-route waypoint (Breadcrumb). */
+  readonly tone?: "trail";
 }
 
 /** One avoid area, with its rings already read from the geometry store. */

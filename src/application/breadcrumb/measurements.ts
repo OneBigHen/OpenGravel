@@ -2,6 +2,11 @@ import type { ElevationProfile } from "@/application/elevation/profile";
 import { lineDistance, toblerSeconds } from "@/domain/breadcrumb/route";
 import type { BreadcrumbRoute } from "@/domain/breadcrumb/types";
 
+/** A leg steeper than this is flagged on the map and in the card. */
+export const STEEP_LEG_PERCENT = 30;
+/** Past this the card says "Very steep". */
+export const VERY_STEEP_PERCENT = 45;
+
 export function breadcrumbLine(route: BreadcrumbRoute) {
   return route.legs.flatMap((leg, index) => index === 0 ? [...leg.geometry] : leg.geometry.slice(1));
 }

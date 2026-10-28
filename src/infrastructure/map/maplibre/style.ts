@@ -29,7 +29,7 @@ import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
 import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
 import { PUCK_IMAGE_ID } from "./puck-image";
 import { MARKER_IMAGE_IDS, ROUTE_ARROW_IMAGE_ID } from "./marker-images";
-import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
+import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_OFF_ROUTE_FEATURE_STATE, ROUTE_STEEP_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 
 /** The tokens the cartography uses, as literal CSS colour values. */
 export interface MapPalette {
@@ -154,6 +154,9 @@ export const MAP_LAYER_IDS = {
   routeProposed: "ogv-route-proposed",
   routeCasing: "ogv-route-casing",
   routeSelected: "ogv-route-selected",
+  routeOffRouteCasing: "ogv-route-off-route-casing",
+  routeOffRoute: "ogv-route-off-route",
+  routeOffRouteSteep: "ogv-route-off-route-steep",
   routeAfterSunset: "ogv-route-after-sunset",
   routeSurface: "ogv-route-surface",
   routeArrow: "ogv-route-arrow",
@@ -250,6 +253,7 @@ function equals(key: string, value: string | boolean): unknown {
 }
 
 const LINE_LAYOUT = { "line-join": "round", "line-cap": "round" } as const;
+const OFF_ROUTE_LAYOUT = { "line-join": "round", "line-cap": "butt" } as const;
 
 /** The palette's width multiplier, clamped to a sane range (1 when unreadable). */
 function emphasisOf(palette: MapPalette): number {
@@ -313,6 +317,8 @@ function surfaceBandColor(palette: MapPalette): unknown {
  */
 export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
   const dashed = { "line-dasharray": [2, 2] } as const;
+  // A Breadcrumb line is selected too, but it is not a road: it has its own state and layers.
+  const offRouteSelected = equals("state", ROUTE_OFF_ROUTE_FEATURE_STATE);
   return [
     {
       // The road just ridden (08 §5): the same answer as the selected line, cut
@@ -420,6 +426,46 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         "line-color": selectedRouteColor(palette, false),
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 15, 8 * emphasisOf(palette), 17, 13 * emphasisOf(palette)],
+      },
+    },
+    {
+      // An off-route (Breadcrumb) path: a paper casing under a dashed trail-brown
+      // core, so it reads as a footpath over open ground, never as the green
+      // planned road. Steep legs are redrawn over it in the record colour with a
+      // tighter dash. Butt caps keep the dashes crisp.
+      id: MAP_LAYER_IDS.routeOffRouteCasing,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: offRouteSelected,
+      layout: OFF_ROUTE_LAYOUT,
+      paint: {
+        "line-color": palette.paper,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 8, 15, 10, 17, 14],
+        "line-opacity": 0.92,
+      },
+    },
+    {
+      id: MAP_LAYER_IDS.routeOffRoute,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: offRouteSelected,
+      layout: OFF_ROUTE_LAYOUT,
+      paint: {
+        "line-color": palette.trailBrown,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 15, 5, 17, 8],
+        "line-dasharray": [2, 1.4],
+      },
+    },
+    {
+      id: MAP_LAYER_IDS.routeOffRouteSteep,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", ROUTE_STEEP_FEATURE_STATE),
+      layout: OFF_ROUTE_LAYOUT,
+      paint: {
+        "line-color": palette.ember,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 4, 15, 5, 17, 8],
+        "line-dasharray": [2, 1.4],
       },
     },
     {
@@ -550,10 +596,10 @@ export function pointLayers(palette: MapPalette): readonly MapLayerSpec[] {
       source: MAP_SOURCE_IDS.points,
       filter: equals("kind", "shaping"),
       paint: {
-        "circle-radius": 4,
-        "circle-color": palette.goldenHour,
-        "circle-stroke-color": palette.ink,
-        "circle-stroke-width": 1,
+        "circle-radius": ["case", ["==", ["get", "tone"], "trail"], 6, 4],
+        "circle-color": ["case", ["==", ["get", "tone"], "trail"], palette.paper, palette.goldenHour],
+        "circle-stroke-color": ["case", ["==", ["get", "tone"], "trail"], palette.trailBrown, palette.ink],
+        "circle-stroke-width": ["case", ["==", ["get", "tone"], "trail"], 3, 1],
       },
     },
     {

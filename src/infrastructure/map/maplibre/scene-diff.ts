@@ -175,13 +175,13 @@ export function fingerprintScene(scene: MapScene): SceneFingerprints {
         (route) =>
           `${route.id}|${route.state}|${route.role ?? "none"}|${route.tint ?? 0}|${route.label === undefined ? "" : `${route.label.text}@${coordinateKey(route.label.at)}`}|${(route.surface ?? [])
             .map((run) => `${run.kind}:${run.from.toFixed(4)}-${run.to.toFixed(4)}`)
-            .join(",")}|${route.daylight === undefined ? "" : `${route.daylight.label}@${route.daylight.sunsetIso}|${geometryKey(route.daylight.afterSunset)}`}|${geometryKey(route.geometry)}`,
+            .join(",")}|${route.daylight === undefined ? "" : `${route.daylight.label}@${route.daylight.sunsetIso}|${geometryKey(route.daylight.afterSunset)}`}|${route.offRoute === undefined ? "" : `off:${route.offRoute.steep.map(geometryKey).join("/")}`}|${geometryKey(route.geometry)}`,
       )
       .join(";"),
     points: scene.points
       .map(
         (point) =>
-          `${point.id}|${point.kind}|${coordinateKey(point.coordinate)}|${point.label ?? ""}`,
+          `${point.id}|${point.kind}|${coordinateKey(point.coordinate)}|${point.label ?? ""}|${point.tone ?? ""}`,
       )
       .concat(
         scene.preview === null

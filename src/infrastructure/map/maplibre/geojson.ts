@@ -27,7 +27,7 @@ import {
   isDrawableRoute,
 } from "@/application/map/drawable";
 import type { MapObjectRef, MapScene, PointScene, RouteScene } from "@/application/map/types";
-import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
+import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_OFF_ROUTE_FEATURE_STATE, ROUTE_STEEP_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 import type { PlaceScene } from "@/application/places/place-scene";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -99,13 +99,26 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
       id: index,
       properties: {
         id: route.id,
-        state: route.state,
+        state: route.offRoute !== undefined && route.state === "selected" ? ROUTE_OFF_ROUTE_FEATURE_STATE : route.state,
         role: route.role,
         tint: route.tint ?? 0,
         selected: isSelected(scene.selectedObject, { kind: "route", routeId: route.id }),
         ...(surface === null ? {} : { surface }),
       },
       geometry: { type: "LineString", coordinates: line(route.geometry) },
+    });
+  });
+  // The steep legs of an off-route path: separate features, drawn over the line.
+  scene.routes.forEach((route) => {
+    if (route.offRoute === undefined || !isDrawableRoute(route)) return;
+    route.offRoute.steep.forEach((leg) => {
+      if (leg.length < 2) return;
+      features.push({
+        type: "Feature",
+        id: features.length + scene.routes.length * 4,
+        properties: { id: route.id, state: ROUTE_STEEP_FEATURE_STATE },
+        geometry: { type: "LineString", coordinates: line(leg) },
+      });
     });
   });
   // Label points ride the same source (line layers ignore points), so a route
@@ -321,6 +334,7 @@ export function pointFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
       id: point.id,
       kind: point.kind,
       label: point.label,
+      ...(point.tone === undefined ? {} : { tone: point.tone }),
       selected: isSelected(scene.selectedObject, refFor(point)),
       ...(point.kind === "stop" ? { order: String((stopNumber += 1)) } : {}),
     },
