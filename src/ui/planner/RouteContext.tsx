@@ -73,7 +73,11 @@ function ContextLine({ distance, durationLabel, arrival, daylight, onOpen }: {
   const base = `${distance} · ${durationLabel}`;
   const withArrival = arrival === null ? base : `${base} · arrive ${arrival}`;
   const full = daylight === null ? withArrival : `${withArrival} · ${daylight}`;
-  const shortLight = daylight === null ? withArrival : `${withArrival} · ${daylight.includes("before sunrise") ? "before sunrise" : daylight.includes("before dark") ? "before dark" : daylight.includes("after dark") ? "after dark" : daylight}`;
+  const lightWord = daylight === null ? null : daylight.includes("before sunrise") ? "before sunrise" : daylight.includes("before dark") ? "before dark" : daylight.includes("after dark") ? "after dark" : daylight;
+  const shortLight = lightWord === null ? withArrival : `${withArrival} · ${lightWord}`;
+  // On a narrow phone the arrival time goes before the daylight: being out after
+  // dark is the fact a rider cannot afford to lose.
+  const baseLight = lightWord === null ? base : `${base} · ${lightWord}`;
   useEffect(() => {
     const button = ref.current;
     if (button === null) return;
@@ -83,14 +87,14 @@ function ContextLine({ distance, durationLabel, arrival, daylight, onOpen }: {
       const style = getComputedStyle(button);
       context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
       const available = button.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 20;
-      setText([full, shortLight, withArrival, base, distance].find((candidate) => context.measureText(candidate).width <= available) ?? distance);
+      setText([full, shortLight, baseLight, withArrival, base, distance].find((candidate) => context.measureText(candidate).width <= available) ?? distance);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(button);
     void document.fonts.ready.then(measure);
     measure();
     return () => observer.disconnect();
-  }, [base, distance, full, shortLight, withArrival]);
+  }, [base, baseLight, distance, full, shortLight, withArrival]);
   return <button ref={ref} className="og-route-context" type="button" data-testid="route-context" aria-label={full} aria-haspopup="dialog" onClick={onOpen}><span>{text}</span><span aria-hidden="true">›</span></button>;
 }
 
