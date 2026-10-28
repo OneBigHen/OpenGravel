@@ -166,6 +166,30 @@ describe("Map Ask entry and place search", () => {
     expect(trigger).toHaveFocus();
   });
 
+  it("cancels an in-flight Map Ask and keeps its text when reopened", async () => {
+    let signal: AbortSignal | undefined;
+    setupMapAsk({
+      client: {
+        request: (_request, requestSignal) => {
+          signal = requestSignal;
+          return new Promise(() => undefined);
+        },
+      },
+    });
+    const trigger = screen.getByTestId("map-ask-open");
+    fireEvent.click(trigger);
+    const input = screen.getByTestId("map-ask-prompt");
+    fireEvent.change(input, { target: { value: "A short twisty loop" } });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(screen.getByTestId("advisor-working")).toBeInTheDocument());
+
+    fireEvent.keyDown(input, { key: "Escape" });
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    expect(screen.getByTestId("map-ask-prompt")).toHaveValue("A short twisty loop");
+  });
+
   it("states that Ask is unavailable while leaving manual planning available", () => {
     setupMapAsk({ enabled: false });
     fireEvent.click(screen.getByTestId("map-ask-open"));
