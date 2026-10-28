@@ -73,15 +73,12 @@ test("breadcrumb hands its ordered waypoints to the foot router", async ({ page 
   await page.getByTestId("hike-plan").click();
   await expect(page.getByTestId("hike-route-summary")).toBeVisible();
   // On a phone the planned hike's sheet owns the route, so Breadcrumb starts there.
-  // Zoom in first: at the planned hike's framing the three taps sit within one
-  // waypoint marker of each other, and a tap on a marker selects it instead.
-  await page.mouse.move(196, 300);
-  for (let step = 0; step < 4; step += 1) { await page.mouse.wheel(0, -240); await page.waitForTimeout(150); }
-  await page.waitForTimeout(600);
   await page.getByTestId("hike-breadcrumb").click();
-  await clickMapAtCoordinate(page, start);
+  // Well apart: at the planned hike's framing a tap on (or next to) a waypoint
+  // marker selects that waypoint instead of adding one.
+  await clickMapAtCoordinate(page, { lon: -75.446, lat: 40.142 });
   await clickMapAtCoordinate(page, { lon: -75.436, lat: 40.136 });
-  await clickMapAtCoordinate(page, finish);
+  await clickMapAtCoordinate(page, { lon: -75.426, lat: 40.129 });
   await page.getByRole("toolbar", { name: "Breadcrumb", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
   await page.getByTestId("breadcrumb-plan-trails").click();
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
