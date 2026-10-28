@@ -61,15 +61,15 @@ const LOOK_PREVIEW_STYLE: Readonly<Record<BasemapLook, string>> = {
 };
 
 /**
- * A small still of each look over the same ridge and river (Hawk Mountain and
- * the Little Schuylkill), drawn by the Static Images API only when the sheet
+ * A small still of each look over the same ridges and river (the Lehigh Gorge
+ * at Jim Thorpe), drawn by the Static Images API only when the sheet
  * opens; the browser keeps it after that. Without a public token the card
  * shows a drawn swatch instead.
  */
 function lookPreviewUrl(look: BasemapLook): string | null {
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   if (token === undefined || !token.startsWith("pk.")) return null;
-  return `https://api.mapbox.com/styles/v1/${LOOK_PREVIEW_STYLE[look]}/static/-75.985,40.64,12.2,0/112x112@2x?attribution=false&logo=false&access_token=${encodeURIComponent(token)}`;
+  return `https://api.mapbox.com/styles/v1/${LOOK_PREVIEW_STYLE[look]}/static/-75.74,40.87,11.3,0/112x112@2x?attribution=false&logo=false&access_token=${encodeURIComponent(token)}`;
 }
 
 /** Map type as picture cards, Google-style: one tap changes the basemap. */
@@ -113,13 +113,14 @@ function MapStyleRows({ style }: { readonly style: MapStyleChoice }) {
 /** The colour each quick set wears on its tile. */
 const LENS_TINT: Readonly<Record<string, string>> = {
   fun: "var(--og-route)",
-  weather: "var(--og-signal-blue)",
-  traffic: "var(--og-ember)",
-  stops: "var(--og-golden-hour)",
+  weather: "#397c96",
+  traffic: "#d65a36",
+  stops: "#b45309",
 };
 
+/** The catalog's own hex: several of its colour tokens did not survive the v3 token rename. */
 function layerTint(layer: MapLayerDefinition): string {
-  return layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`;
+  return layer.color;
 }
 
 /** A map view layer as a square tile: icon over its name, the state under. */

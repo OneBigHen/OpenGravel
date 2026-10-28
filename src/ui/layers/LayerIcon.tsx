@@ -61,7 +61,7 @@ export function LayerIcon({
       <g
         transform="translate(8 8)"
         fill="none"
-        stroke={on ? "var(--og-paper)" : tint}
+        stroke={on ? "var(--og-on-primary)" : tint}
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
