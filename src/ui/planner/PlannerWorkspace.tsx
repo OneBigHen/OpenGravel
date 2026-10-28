@@ -737,7 +737,7 @@ export function PlannerWorkspace({
   });
 
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
-    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle}
+    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle} route={activeRoute}
       onCancelPlanning={handleCancel} onClearRide={() => { placeFlow.closeOptions(); history.onClearRide(); }}
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;

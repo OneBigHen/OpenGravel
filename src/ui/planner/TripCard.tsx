@@ -9,6 +9,8 @@
  * the route (the sheet then offers Undo clear); ⇅ turns an A → B ride around.
  */
 
+import { RouteContext } from "./RouteContext";
+import type { PlannerActiveRoute } from "./hooks/usePlannerActiveRoute";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
 import type { RideDocument } from "@/domain/ride/types";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
@@ -48,8 +50,9 @@ export function TripCard({ startLabel, finishLabel, loop, onEdit, onClose, close
 }
 
 /** The card as the planner composes it: the ride's ends, its shape and its actions. */
-export function PlannerTripCard({ document, viewModel, rideStyle, onCancelPlanning, onClearRide, onEditRide }: {
+export function PlannerTripCard({ document, viewModel, rideStyle, route, onCancelPlanning, onClearRide, onEditRide }: {
   readonly document: RideDocument;
+  readonly route: PlannerActiveRoute | null;
   readonly viewModel: PlannerViewModel;
   readonly rideStyle: RideStyleControlsModel;
   readonly onCancelPlanning: () => void;
@@ -59,7 +62,7 @@ export function PlannerTripCard({ document, viewModel, rideStyle, onCancelPlanni
   const endLabel = (end: RideDocument["intent"]["start"], fallback: string): string =>
     end?.provenance.type === "gps" ? "Your location" : end?.label ?? fallback;
   const hasRide = viewModel.routeCards.length > 0;
-  return <TripCard
+  return <><TripCard
     startLabel={endLabel(document.intent.start, viewModel.startLabel)}
     finishLabel={endLabel(document.intent.finish, viewModel.finishLabel)}
     loop={rideStyle.view.shape === "loop"}
@@ -75,5 +78,5 @@ export function PlannerTripCard({ document, viewModel, rideStyle, onCancelPlanni
         window.document.querySelector<HTMLElement>(".og-planner__sheet .og-composer")?.scrollIntoView({ block: "start" });
       }, 280);
     }}
-  />;
+  />{route === null ? null : <RouteContext route={route} intent={document.intent} />}</>;
 }
