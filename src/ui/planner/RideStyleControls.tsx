@@ -23,6 +23,7 @@ import { useId, useState, useSyncExternalStore } from "react";
 import type { ArrivalTarget } from "@/application/planner/arrive-by";
 import { loopMinutesUntilSunset } from "@/application/planner/loop-until-sunset";
 import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, LoopHeading, NoveltyPreference, RideIntent, RoadCharacterIntent, SurfaceIntent, TrafficPreference } from "@/domain/ride/types";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 export type RideShapeChoice = "destination" | "loop";
 export type SurfaceChoice = SurfaceIntent["preference"];
@@ -193,6 +194,7 @@ function ChipGroup<T extends string>({
 /** `To a destination | Loop`: the first choice a rider makes about a ride. */
 export function RideShapeSwitch({ model }: { readonly model: RideStyleControlsModel }) {
   const name = useId();
+  const hiking = useActivityMode() === "hike";
   return (
     <ChipGroup<RideShapeChoice>
       name={name}
@@ -200,7 +202,7 @@ export function RideShapeSwitch({ model }: { readonly model: RideStyleControlsMo
       legendHidden
       options={["destination", "loop"]}
       value={model.view.shape}
-      labelFor={(shape) => (shape === "loop" ? "Loop from start" : "To a destination")}
+      labelFor={(shape) => (shape === "loop" ? "Loop from start" : hiking ? "To a finish" : "To a destination")}
       onChange={model.actions.setShape}
       testId="ride-shape"
     />

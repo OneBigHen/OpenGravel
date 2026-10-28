@@ -21,6 +21,12 @@ import { RIDE_EXPORT_AVAILABLE, SaveIndicator } from "@/ui/planner/SaveIndicator
 import { UpdateFailureBanner } from "@/ui/planner/UpdateFailureBanner";
 import type { PlannerUpdateHighlight } from "@/ui/planner/usePlannerAnswerLifecycle";
 import { MAP_ERROR_NOTICE } from "@/ui/map/PlannerMap";
+import { useActivityMode } from "@/ui/stores/activity-mode";
+
+/** The planner's status in a hiker's words ("Hike ready.", "Finding your hike…"). */
+export function hikeStatus(message: string): string {
+  return message.replace(/\bRide\b/g, "Hike").replace(/\bride\b/g, "hike").replace("Finding other roads…", "Checking other trails…");
+}
 
 export interface PlannerWorkspaceStatusProps {
   readonly statusMessage: string;
@@ -69,6 +75,7 @@ export function PlannerWorkspaceStatus({
   mapLoadStatus,
   onRetryMap,
 }: PlannerWorkspaceStatusProps) {
+  const hiking = useActivityMode() === "hike";
   return (
     <>
       <p
@@ -77,7 +84,7 @@ export function PlannerWorkspaceStatus({
         role="status"
         aria-live="polite"
       >
-        {statusMessage}
+        {hiking ? hikeStatus(statusMessage) : statusMessage}
       </p>
 
       <SaveIndicator state={saveStatus.state} />

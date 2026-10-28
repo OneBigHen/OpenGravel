@@ -34,7 +34,7 @@ export function usePlannerHikeActivity(document: RideDocument, store: RideDocume
  * planned hike also opens the sheet to half, as a new ride does, so its time,
  * climb and Start hike are on screen instead of folded under the map.
  */
-export function usePlannedHikeSummary(hike: HikeActivityProps, ui: PlannerUiStore): HikeSummaryModel | null {
+export function usePlannedHikeSummary(hike: HikeActivityProps, ui: PlannerUiStore, onBreadcrumb?: () => void): HikeSummaryModel | null {
   const planned = hike.candidate?.provider.profile === "hike" ? hike.candidate : null;
   const plannedId = planned?.id ?? null;
   useEffect(() => {
@@ -42,5 +42,5 @@ export function usePlannedHikeSummary(hike: HikeActivityProps, ui: PlannerUiStor
     const detent = ui.getState().sheetDetent;
     if (detent === "peek" || detent === "mini") ui.getState().setSheetDetent("half");
   }, [plannedId, ui]);
-  return planned === null ? null : { candidate: planned, returnToStart: hike.returnToStart, onReturnToStart: hike.onReturnToStart, canPlan: hike.canPlan, onPlan: hike.onPlan, onDraw: hike.sketch.onStartDrawing };
+  return planned === null ? null : { candidate: planned, returnToStart: hike.returnToStart, onReturnToStart: hike.onReturnToStart, canPlan: hike.canPlan, onPlan: hike.onPlan, onDraw: hike.sketch.onStartDrawing, ...(onBreadcrumb === undefined ? {} : { onBreadcrumb }) };
 }

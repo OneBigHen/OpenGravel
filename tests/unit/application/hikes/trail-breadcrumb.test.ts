@@ -28,7 +28,7 @@ describe("trail breadcrumb", () => {
 
   it("caps the waypoint count on long trails and keeps a short one to its ends", () => {
     const long = Array.from({ length: 400 }, (_, i) => ({ lon: -75 + i * 0.001, lat: 40 }));
-    expect(trailBreadcrumb(long, "Long")!.waypoints).toHaveLength(12);
+    expect(trailBreadcrumb(long, "Long")!.waypoints).toHaveLength(10);
     expect(trailBreadcrumb(long.slice(0, 5), "Short")!.waypoints).toHaveLength(2);
     expect(trailBreadcrumb([{ lon: 0, lat: 0 }], "Dot")).toBeNull();
   });

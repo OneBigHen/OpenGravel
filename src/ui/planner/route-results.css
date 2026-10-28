@@ -761,3 +761,9 @@
     display: inline;
   }
 }
+
+/* Hike mode: charts and route tints follow the trail-brown hike line. */
+.og-planner[data-activity="hike"],
+.og-planner[data-activity="hike"] :is(.og-elevation-slot, .og-elevation) {
+  --og-route-tint: var(--og-map-brown);
+}

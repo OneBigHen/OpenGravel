@@ -77,7 +77,16 @@ describe("the hike summary", () => {
     expect(hike.onPlan).toHaveBeenCalledOnce();
     fireEvent.click(screen.getByTestId("hike-draw-start"));
     expect(hike.onDraw).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId("hike-breadcrumb")).toBeNull();
     expect(screen.queryByText(/roads:/i)).toBeNull();
+  });
+
+  it("offers Breadcrumb when the planner has the tool", () => {
+    act(() => setActivityMode("hike"));
+    const onBreadcrumb = vi.fn();
+    renderPanel(model({ onBreadcrumb }));
+    fireEvent.click(screen.getByTestId("hike-breadcrumb"));
+    expect(onBreadcrumb).toHaveBeenCalledOnce();
   });
 
   it("is not shown in rider mode even when a hike model is passed", () => {

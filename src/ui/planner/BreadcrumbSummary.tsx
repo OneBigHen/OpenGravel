@@ -57,7 +57,7 @@ export function BreadcrumbSummary({ route, document, libraryService, elevation, 
         <span className="og-breadcrumb-summary__distance">{distance(measurements.totalMeters)}</span>
         <button type="button" className="og-breadcrumb-summary__clear" onClick={onClear}>Clear</button>
       </header>
-      <p className="og-breadcrumb-summary__note">{editing ? "Straight-line legs, not roads." : "Straight-line legs are not roads. Check access and conditions."}</p>
+      <p className="og-breadcrumb-summary__note">{route.legs.every((leg) => leg.kind === "recorded") ? "Follows the mapped trail line. Check access and conditions." : editing ? "Straight-line legs, not roads." : "Straight-line legs are not roads. Check access and conditions."}</p>
       {line.length < 2 ? <p>Add another waypoint to make a route.</p> : <>
         <div className="og-breadcrumb-summary__stats">
           <span>{profile === null ? "Elevation unknown" : `↑ ${Math.round(profile.climbMeters * 3.28084)} ft · ↓ ${Math.round(profile.descentMeters * 3.28084)} ft`}</span>

@@ -20,6 +20,7 @@ import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/Map
 import type { PlannerLocateMe } from "@/ui/planner/usePlannerPlaces";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "@/ui/planner/usePhonePlanner";
 import { useRouteScrub } from "@/ui/stores/route-scrub-store";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 
@@ -91,6 +92,7 @@ export function PlannerWorkspaceFrame({
   // The desktop rail owns the edit tools (beside undo/redo); every other tier
   // keeps them over the map, where the sheet can fold over them.
   const desktop = useDesktopPlanner();
+  const hiking = useActivityMode() === "hike";
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
   useSnapBackAfterKeyboard();
@@ -169,11 +171,11 @@ export function PlannerWorkspaceFrame({
     </>
   );
   return (
-    <main id="main" className="og-planner" data-trip={tripMode ? "true" : undefined}>
+    <main id="main" className="og-planner" data-trip={tripMode ? "true" : undefined} data-activity={hiking ? "hike" : undefined}>
       <header className="og-planner__header" ref={headerRef}>
         <div className="og-planner__identity">
           <h1>OpenGravel</h1>
-          <p className="og-tagline">Find the ride worth taking.</p>
+          <p className="og-tagline">{hiking ? "Find the trail worth walking." : "Find the ride worth taking."}</p>
           {document.title !== null ? (
             <p className="og-planner__ride-context og-planner__ride-title" data-testid="active-ride-title" title={document.title}>
               {document.title}
