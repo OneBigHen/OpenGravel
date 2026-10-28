@@ -29,7 +29,8 @@ import {
 import { prepareRoute, type RoutePreparationContext } from "@/application/preparation/prepare-route";
 import { daylightLine } from "@/application/preparation/daylight-line";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
-import type { BikeConstraintSnapshot, Coordinate, DepartureIntent } from "@/domain/ride/types";
+import type { BikeConstraintSnapshot, Coordinate, DepartureIntent, TimeIntent } from "@/domain/ride/types";
+import { deadlineFeasibility } from "@/application/planner/deadline-feasibility";
 import {
   arrivalFromInput,
   arrivalInputValue,
@@ -58,6 +59,8 @@ export interface RouteTrafficLabel {
 export interface PlannerPreparationProps {
   readonly route: (PlannerPreparationRoute & { readonly routeId: string }) | null;
   readonly departure: DepartureIntent;
+  /** Full time intent, including loop return-by deadlines. */
+  readonly timeTarget?: TimeIntent;
   readonly bike: BikeConstraintSnapshot;
   readonly bikes?: readonly BikeProfile[];
   readonly providers?: PreparationProviderRegistry;
@@ -322,6 +325,7 @@ function DepartureRow({
 export function PlannerPreparation({
   route,
   departure,
+  timeTarget,
   bike,
   bikes = [],
   providers,
@@ -349,6 +353,13 @@ export function PlannerPreparation({
   );
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
   const open = userOpen ?? wide;
+  const timeFeasibility = route === null || timeTarget === undefined
+    ? null
+    : deadlineFeasibility(timeTarget, departure, route.durationSeconds);
+
+  function moment(value: Date): string {
+    return value.toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
 
   // Arrive-by: the departure follows from the chosen route's time (NV-09).
   const arrivalDeparture =
@@ -457,6 +468,20 @@ export function PlannerPreparation({
 
   return (
     <>
+      {timeFeasibility === null ? null : (
+        <p
+          className="og-prepare__deadline"
+          data-testid="ride-time-feasibility"
+          data-feasibility={timeFeasibility.status}
+          role={timeFeasibility.status === "missed" ? "alert" : "status"}
+        >
+          {timeFeasibility.status === "missed"
+            ? `This route is estimated to miss your ${timeTarget?.kind === "returnBy" ? "return-by" : "arrive-by"} deadline. Estimated ${timeTarget?.kind === "returnBy" ? "back" : "arrival"}: ${moment(timeFeasibility.estimatedArrival)}.`
+            : timeFeasibility.scheduledDeparture !== null
+              ? `Leave ${timeFeasibility.scheduledDeparture.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} to arrive by ${moment(timeFeasibility.deadline)}.`
+              : `Estimated ${timeTarget?.kind === "returnBy" ? "back" : "arrival"}: ${moment(timeFeasibility.estimatedArrival)} · meets your deadline.`}
+        </p>
+      )}
       {/* FT-03: the ride's conditions in one line under Start, without opening
           anything. The checks below do not repeat it. */}
       {route === null || glance.length === 0 ? null : (

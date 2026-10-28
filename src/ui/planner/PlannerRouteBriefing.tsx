@@ -45,6 +45,7 @@ export function PlannerRouteBriefing({
     <PlannerPreparation
       route={route}
       departure={ride.intent.departure}
+      timeTarget={ride.intent.time}
       bike={ride.intent.bike}
       bikes={bikes}
       providers={providers}
