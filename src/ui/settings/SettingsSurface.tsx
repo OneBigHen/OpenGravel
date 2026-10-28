@@ -19,6 +19,7 @@ import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
 import { AppearanceRow } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
 import { InstallSection } from "@/ui/settings/InstallSection";
+import { LiveActivityRow } from "@/ui/settings/LiveActivityRow";
 import { NavScreenRow } from "@/ui/settings/NavScreenSection";
 import { Chevron, SettingsGroup, SettingsRowButton } from "@/ui/settings/SettingsGroup";
 
@@ -38,6 +39,8 @@ export interface SettingsSurfaceProps {
   readonly garage: Garage;
   /** In the app: choose OpenGravel's ride screen or the native one. */
   readonly showNavScreen?: boolean;
+  /** The Lock Screen Live Activity switch: the iPhone app only. */
+  readonly showLiveActivity?: boolean;
   readonly onGarageChange: (garage: Garage) => void;
   readonly telemetryConsent?: TelemetryConsentState;
   readonly onTelemetryConsentChange?: (state: TelemetryConsentState) => void;
@@ -112,6 +115,7 @@ export function SettingsSurface({
   spotifySetup,
   garage,
   showNavScreen = false,
+  showLiveActivity = false,
   onGarageChange,
   telemetryConsent = { status: "unacknowledged" },
   onTelemetryConsentChange,
@@ -254,6 +258,7 @@ export function SettingsSurface({
         <SettingsGroup id="settings-display-title" label="Display">
           <AppearanceRow />
           {showNavScreen ? <NavScreenRow /> : null}
+          {showLiveActivity ? <LiveActivityRow /> : null}
         </SettingsGroup>
 
         <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-label">Planning activity</span><ActivitySwitch /></div></SettingsGroup>

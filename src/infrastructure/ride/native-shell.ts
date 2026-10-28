@@ -12,7 +12,6 @@
 import type { PositionSource } from "@/application/ride-session/position-pipeline";
 import { spokenManeuver } from "@/application/ride-session/ride-focus-view-model";
 import type { SpeechPort } from "@/application/ride-session/speech";
-import type { RideActivityPort, RideActivityState } from "@/application/ride-session/ride-activity";
 
 interface KeepAwakePlugin {
   keepAwake(): Promise<void>;
@@ -201,31 +200,6 @@ export function nativeShellSpeech(scope: unknown = globalThis): SpeechPort | und
     speak: (cue) => plugin.speak({ text: spokenManeuver(cue), lang: "en-US", rate: 1, category: "playback" }),
     speakText: (text) => plugin.speak({ text, lang: "en-US", rate: 1, category: "playback" }),
     cancel: () => plugin.stop(),
-  };
-}
-
-interface RideActivityPlugin {
-  start(options: { readonly title: string; readonly state: RideActivityState }): Promise<unknown>;
-  update(options: { readonly state: RideActivityState; readonly alertTitle?: string; readonly alertBody?: string }): Promise<unknown>;
-  end(): Promise<unknown>;
-}
-
-/**
- * The ride's Live Activity (Lock Screen, Dynamic Island) through the app's own
- * RideActivity plugin. `undefined` outside the shell or in an app build that
- * predates the plugin.
- */
-export function nativeShellRideActivity(scope: unknown = globalThis): RideActivityPort | undefined {
-  const capacitor = (scope as { readonly Capacitor?: CapacitorGlobal & { readonly Plugins?: { readonly RideActivity?: RideActivityPlugin } } } | undefined)?.Capacitor;
-  if (capacitor?.isNativePlatform?.() !== true) return undefined;
-  const plugin = capacitor.Plugins?.RideActivity;
-  if (typeof plugin?.start !== "function" || typeof plugin.update !== "function" || typeof plugin.end !== "function") return undefined;
-  return {
-    start: async (title, state) => { await plugin.start({ title, state }); },
-    update: async (state, alert) => {
-      await plugin.update(alert === undefined ? { state } : { state, alertTitle: alert.title, alertBody: alert.body });
-    },
-    end: async () => { await plugin.end(); },
   };
 }
 

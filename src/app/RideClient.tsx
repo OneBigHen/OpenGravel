@@ -21,7 +21,7 @@ import { saveBacktrack } from "@/application/breadcrumb/backtrack";
 import { createRideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
 import { createFreeRideTelemetry, recordingPositionFromFix } from "@/application/ride-session/free-ride-telemetry";
 import { createGuidedReroutePlanner } from "@/application/ride-session/guided-reroute";
-import { createRideActivitySync } from "@/application/ride-session/ride-activity";
+import { createLiveActivitySync, type LiveActivityInput } from "@/application/native/live-activity";
 import { followingManeuverOf, liveManeuverOf } from "@/application/ride-session/ride-focus-view-model";
 import { haptic } from "@/infrastructure/native/native-feel";
 import { createClientFreeRideServices } from "@/application/free-ride/client-services";
@@ -36,10 +36,12 @@ import { createBrowserPositionSource } from "@/infrastructure/ride/browser-posit
 import { createBrowserSpeech } from "@/infrastructure/ride/browser-speech";
 import { isVoiceMuted, mutableSpeech, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import { readNavScreen } from "@/ui/navigation/nav-screen";
+import { LIVE_ACTIVITY_CHANGE_EVENT, readLiveActivityEnabled } from "@/ui/navigation/live-activity-setting";
+import { getActivityMode } from "@/application/map/activity-mode";
+import { nativeShellLiveActivity } from "@/infrastructure/native/live-activity-bridge";
 import {
   inNativeShell,
   nativeShellPositionSource,
-  nativeShellRideActivity,
   nativeShellSpeech,
   withTurnAlerts,
 } from "@/infrastructure/ride/native-shell";
@@ -179,8 +181,8 @@ export function RideClient({
   const homeLocation = useMemo(() => createHomeLocationStorage(), []);
   const { store, rides, library, activitySync, safety } = useMemo(() => {
     // The ride on the Lock Screen and Dynamic Island, inside the iOS app only.
-    const rideActivity = nativeShellRideActivity();
-    const activitySync = rideActivity === undefined ? null : createRideActivitySync(rideActivity);
+    const rideActivity = nativeShellLiveActivity();
+    const activitySync = rideActivity === undefined ? null : createLiveActivitySync(rideActivity, { enabled: readLiveActivityEnabled });
     const geometry = createIndexedDbGeometryStore();
     const rides = createRideRepository({
       protectedGeometryRefs: () => rideFocusGeometryRefs(pointer),
@@ -443,8 +445,22 @@ export function RideClient({
 
   useEffect(() => {
     if (activitySync === null) return;
-    activitySync.sync(store.getState().viewModel);
-    return store.subscribe((state) => activitySync.sync(state.viewModel));
+    const input = (state: ReturnType<typeof store.getState>): LiveActivityInput => ({
+      viewModel: state.viewModel,
+      navigation: state.navigation,
+      breadcrumbWaypoints: state.breadcrumbWaypoints,
+      hiking: getActivityMode() === "hike",
+    });
+    activitySync.sync(input(store.getState()));
+    const unsubscribe = store.subscribe((state) => activitySync.sync(input(state)));
+    // The rider turning the switch off ends it now, not at the next fix.
+    const onSetting = (): void => activitySync.sync(input(store.getState()));
+    window.addEventListener(LIVE_ACTIVITY_CHANGE_EVENT, onSetting);
+    return () => {
+      unsubscribe();
+      window.removeEventListener(LIVE_ACTIVITY_CHANGE_EVENT, onSetting);
+      activitySync.dispose();
+    };
   }, [store, activitySync]);
 
   /*
