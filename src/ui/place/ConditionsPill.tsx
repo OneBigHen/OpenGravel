@@ -75,7 +75,7 @@ function headsUp(snapshot: WeatherSnapshot, upcoming: readonly WeatherForecastPe
   return null;
 }
 
-export function ConditionsPill({ at }: { readonly at: Coordinate }) {
+export function ConditionsPill({ at, embedded = false }: { readonly at: Coordinate; readonly embedded?: boolean }) {
   // Rounded so panning a few streets does not refetch; the route caches too.
   const lat = Math.round(at.lat * 10) / 10;
   const lon = Math.round(at.lon * 10) / 10;
@@ -127,10 +127,10 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
   }, [open]);
 
   const snapshot = loaded?.key === key ? loaded.snapshot : null;
-  if (snapshot === null || now === null) return null;
+  if (snapshot === null || now === null) return embedded ? <p>Conditions at the start are unavailable.</p> : null;
   const upcoming = snapshot.forecast.filter((period) => Date.parse(period.endTime) > now).slice(0, 8);
   const current = upcoming[0];
-  if (current === undefined || current.temperatureF === null || current.temperatureF === undefined) return null;
+  if (current === undefined || current.temperatureF === null || current.temperatureF === undefined) return embedded ? <p>Conditions at the start are unavailable.</p> : null;
   const place = { lat, lon };
   const day = sunState(place, now) !== "night";
   const sunsetIso = calculateSunset(place, localNoon(lon, now))?.sunset ?? null;
@@ -146,7 +146,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
 
   return (
     <div className="og-conditions" ref={root} data-testid="conditions">
-      <button
+      {embedded ? null : <button
         type="button"
         className="og-conditions__pill"
         data-tone={note?.tone ?? "none"}
@@ -157,8 +157,8 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
         <SkyGlyph sky={sky} night={!day} />
         <span className="og-conditions__temp">{current.temperatureF}°</span>
         {note === null ? null : <span className="og-conditions__note">{note.text}</span>}
-      </button>
-      {open ? (
+      </button>}
+      {open || embedded ? (
         <section className="og-conditions__panel" aria-label="Conditions in the next hours">
           <header>
             <strong>{current.shortForecast}</strong>
