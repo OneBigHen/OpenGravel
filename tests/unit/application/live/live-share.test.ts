@@ -174,6 +174,20 @@ describe("starting a live link", () => {
     expect(JSON.parse(harness.stored ?? "null")).toEqual({ credentials: CREATED, buffer: [], alert: null });
   });
 
+  it("sends the planned line and the expected finish, and omits what was not shared", async () => {
+    const route = { segments: [[{ lon: LON, lat: LAT }, { lon: LON + 0.01, lat: LAT + 0.01 }]] };
+    const plan = { expectedFinishAt: NOW + 3 * 3_600_000 };
+    const harness = setup();
+    await harness.session.start({ riderName: "Sam", route, plan });
+    expect(harness.calls[0]?.body).toEqual({ riderName: "Sam", route, plan });
+
+    // A rider who shared neither keeps the original body: the format a page
+    // written before either existed still reads.
+    const bare = setup();
+    await bare.session.start({ riderName: "Sam" });
+    expect(bare.calls[0]?.body).toEqual({ riderName: "Sam" });
+  });
+
   it("arms one send interval at the documented cadence", async () => {
     const harness = await sharing();
     expect(harness.intervalCount()).toBe(1);

@@ -9,7 +9,7 @@
  * the whole flow runs in a test without a network or a minute of waiting.
  */
 
-import type { LiveAlertReason, LivePoint, LiveRouteGeometry } from "@/domain/live/types";
+import type { LiveAlertReason, LiveExpectedFinish, LivePoint, LiveRouteGeometry } from "@/domain/live/types";
 
 /** How often buffered positions go out. The server accepts one call per 3 s. */
 export const LIVE_SEND_INTERVAL_MS = 10_000;
@@ -60,7 +60,12 @@ export interface LiveShareSession {
   snapshot(): LiveShareSnapshot;
   subscribe(listener: (snapshot: LiveShareSnapshot) => void): () => void;
   /** Creates the link (or resumes a stored one). Resolves to the follow URL. */
-  start(input: { readonly riderName: string; readonly route?: LiveRouteGeometry | null }): Promise<string | null>;
+  start(input: {
+    readonly riderName: string;
+    readonly route?: LiveRouteGeometry | null;
+    /** The finish time the rider expects, when they gave one. */
+    readonly plan?: LiveExpectedFinish | null;
+  }): Promise<string | null>;
   /** One position from the ride's GPS. Ignored unless sharing. */
   accept(fix: { readonly atMs: number; readonly lat: number; readonly lon: number; readonly speedMps: number | null; readonly headingDeg: number | null; readonly accuracyM: number | null }): void;
   /** Tells followers something is wrong, now. */
@@ -185,14 +190,18 @@ export function createLiveShareSession(deps: LiveShareDeps): LiveShareSession {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    async start({ riderName, route = null }) {
+    async start({ riderName, route = null, plan = null }) {
       if (credentials !== null) return credentials.followUrl;
       publish({ status: "starting", error: null });
       try {
         const response = await deps.fetch("/api/live", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ riderName, ...(route === null ? {} : { route }) }),
+          body: JSON.stringify({
+            riderName,
+            ...(route === null ? {} : { route }),
+            ...(plan === null ? {} : { plan }),
+          }),
         });
         if (!response.ok) {
           const body = (await response.json().catch(() => ({}))) as { message?: string; error?: { message?: string } };

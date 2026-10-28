@@ -36,7 +36,7 @@ const IDLE_CRASH: RideSafetySnapshot["crash"] = {
 function fakeSafety(overrides: Partial<RideSafetySnapshot> = {}) {
   const state: RideSafetySnapshot = { live: OFF_LIVE, crash: IDLE_CRASH, ...overrides };
   const listeners = new Set<(snapshot: RideSafetySnapshot) => void>();
-  const startSharing = vi.fn<() => Promise<string | null>>(async () => FOLLOW_URL);
+  const startSharing = vi.fn<NonNullable<RideSafety["startSharing"]>>(async () => FOLLOW_URL);
   const stopSharing = vi.fn(async () => undefined);
   const imOkay = vi.fn();
   const alertNow = vi.fn();
@@ -129,12 +129,106 @@ describe("RideSafetyPanel — before sharing", () => {
         url: FOLLOW_URL,
       });
     });
-    expect(startSharing).toHaveBeenCalledWith({ riderName: "Sam" });
+    expect(startSharing).toHaveBeenCalledWith({ riderName: "Sam", route: null, plan: null });
     // The link only exists once the server made it, so the share comes second.
     const sharingOrder = startSharing.mock.invocationCallOrder[0] as number;
     const shareOrder = share.mock.invocationCallOrder[0] as number;
     expect(sharingOrder).toBeLessThan(shareOrder);
     expect(window.localStorage.getItem(LIVE_RIDER_NAME_STORAGE_KEY)).toBe("Sam");
+  });
+
+  it("offers an expected finish defaulting to the route's estimate plus the margin", async () => {
+    stubShare();
+    const { safety, startSharing } = fakeSafety();
+    const routeLine = [
+      { lon: -75.4, lat: 40.1 },
+      { lon: -75.41, lat: 40.11 },
+      { lon: -75.42, lat: 40.12 },
+    ];
+    render(<RideSafetyPanel safety={safety} routeLine={routeLine} remainingDurationSeconds={90 * 60} />);
+
+    const field = screen.getByLabelText("Expected finish (optional)");
+    // The route has an hour and a half left, so the default lands there plus half
+    // an hour — never a number the panel invented on its own.
+    const chosen = (field as HTMLInputElement).value;
+    expect(chosen).toMatch(/^\d{2}:\d{2}$/);
+    expect(screen.getByTestId("ride-live-finish-note")).toHaveTextContent("plus 30 min");
+
+    fireEvent.change(screen.getByLabelText("Your name for the link"), { target: { value: "Sam" } });
+    fireEvent.click(screen.getByRole("button", { name: "Share live location" }));
+
+    await waitFor(() => {
+      expect(startSharing).toHaveBeenCalledTimes(1);
+    });
+    const shared = startSharing.mock.calls[0]?.[0];
+    expect(shared?.riderName).toBe("Sam");
+    expect(shared?.route?.segments).toEqual([routeLine]);
+    const minutesFromNow = ((shared?.plan?.expectedFinishAt ?? 0) - Date.now()) / 60_000;
+    expect(minutesFromNow).toBeGreaterThan(118);
+    expect(minutesFromNow).toBeLessThan(122);
+    // A whole minute, the shape the time field carries.
+    expect((shared?.plan?.expectedFinishAt ?? 1) % 60_000).toBe(0);
+  });
+
+  it("sends no expected finish when the rider shares none", async () => {
+    stubShare();
+    const { safety, startSharing } = fakeSafety();
+    render(<RideSafetyPanel safety={safety} />);
+
+    // With no route there is no estimate to start from, so the field is empty
+    // and the panel says what that means.
+    expect(screen.getByLabelText("Expected finish (optional)")).toHaveValue("");
+    expect(screen.getByTestId("ride-live-finish-note")).toHaveTextContent("only your live location");
+
+    fireEvent.click(screen.getByRole("button", { name: "Share live location" }));
+
+    await waitFor(() => {
+      expect(startSharing).toHaveBeenCalledWith(expect.objectContaining({ plan: null, route: null }));
+    });
+  });
+
+  it("shares the finish time the rider picked, and warns when it is already behind the clock", async () => {
+    // A fixed afternoon, so "16:40" means one exact instant.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date(2026, 9, 3, 15, 0, 0));
+    try {
+      stubShare();
+      const { safety, startSharing } = fakeSafety();
+      render(<RideSafetyPanel safety={safety} />);
+
+      const field = screen.getByLabelText("Expected finish (optional)");
+      fireEvent.change(field, { target: { value: "16:40" } });
+      expect(screen.getByTestId("ride-live-finish-note")).not.toHaveTextContent("already passed");
+
+      fireEvent.click(screen.getByRole("button", { name: "Share live location" }));
+      await waitFor(() => {
+        expect(startSharing).toHaveBeenCalledTimes(1);
+      });
+      const plan = startSharing.mock.calls[0]?.[0].plan;
+      expect(plan?.expectedFinishAt).toBe(new Date(2026, 9, 3, 16, 40, 0).getTime());
+
+      // A time behind the clock is not silently moved: it is shared as the
+      // rider's own claim, and the follower page reads it as overdue.
+      fireEvent.change(field, { target: { value: "14:00" } });
+      expect(screen.getByTestId("ride-live-finish-note")).toHaveTextContent("already passed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lets the rider clear the finish time again", async () => {
+    stubShare();
+    const { safety, startSharing } = fakeSafety();
+    render(<RideSafetyPanel safety={safety} routeLine={[{ lon: -75.4, lat: 40.1 }, { lon: -75.41, lat: 40.11 }]} remainingDurationSeconds={600} />);
+
+    const field = screen.getByLabelText("Expected finish (optional)");
+    expect((field as HTMLInputElement).value).not.toBe("");
+    fireEvent.change(field, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Share live location" }));
+
+    await waitFor(() => {
+      expect(startSharing).toHaveBeenCalledWith(expect.objectContaining({ plan: null }));
+    });
   });
 
   it("falls back to the clipboard when the device has no share sheet", async () => {
@@ -182,7 +276,7 @@ describe("RideSafetyPanel — before sharing", () => {
       expect(startSharing).toHaveBeenCalledTimes(1);
     });
     // No link was made, so there is nothing to send and no name was learned.
-    expect(startSharing).toHaveBeenCalledWith({ riderName: "Your rider" });
+    expect(startSharing).toHaveBeenCalledWith({ riderName: "Your rider", route: null, plan: null });
     expect(share).not.toHaveBeenCalled();
   });
 

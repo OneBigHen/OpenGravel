@@ -198,6 +198,72 @@ describe("live ride creation", () => {
     }
   });
 
+  it("stores the rider's expected finish, and answers with none when they shared none", async () => {
+    const time = clock();
+    const target = store({ now: time.now });
+    const shared = time.now() + 95 * 60_000;
+    const handles = await startRide(target, time.now, {
+      riderName: "Sam",
+      plan: { expectedFinishAt: shared },
+    });
+    expect((await followed(target, handles)).plan).toEqual({ expectedFinishAt: shared });
+
+    // A link made without a finish time carries no expectation at all: the
+    // follower page must never read that as on time.
+    const plain = await startRide(target, time.now, { riderName: "Kit" });
+    expect(await followed(target, plain)).toMatchObject({ plan: null });
+  });
+
+  it("refuses an expected finish that is not a bounded instant", async () => {
+    const time = clock();
+    const target = store({ now: time.now });
+    const now = time.now();
+    const invalid: unknown[] = [
+      { expectedFinishAt: "in an hour" },
+      { expectedFinishAt: now + 1.5 },
+      { expectedFinishAt: Number.NaN },
+      { expectedFinishAt: now + 25 * 3_600_000 },
+      { expectedFinishAt: now - 7 * 3_600_000 },
+      { expectedFinishAt: null },
+      { at: now + 60_000 },
+      now + 60_000,
+      [],
+      "16:40",
+    ];
+    for (const plan of invalid) {
+      const response = await handleCreateLiveRide(
+        new Request("https://live.test/api/live", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ riderName: "Sam", plan }),
+        }),
+        target,
+        { now: time.now, env: ENV },
+      );
+      expect(response.status, JSON.stringify(plan)).toBe(400);
+      expect(await response.json()).toMatchObject({ message: expect.stringContaining("expected finish") });
+    }
+
+    // One shared ride from the rider, and no partially created ones from the refusals.
+    const handles = await startRide(target, time.now);
+    expect(await followed(target, handles)).toMatchObject({ riderName: "Sam", plan: null });
+  });
+
+  it("accepts an expected finish a little in the past, and one a day ahead", async () => {
+    const time = clock();
+    const target = store({ now: time.now });
+    const justPassed = await startRide(target, time.now, {
+      riderName: "Late",
+      plan: { expectedFinishAt: time.now() - 5 * 60_000 },
+    });
+    expect((await followed(target, justPassed)).plan).toEqual({ expectedFinishAt: time.now() - 5 * 60_000 });
+    const farAhead = await startRide(target, time.now, {
+      riderName: "Long",
+      plan: { expectedFinishAt: time.now() + 24 * 3_600_000 },
+    });
+    expect((await followed(target, farAhead)).plan).not.toBeNull();
+  });
+
   it("refuses a body that is not JSON or is too large", async () => {
     const time = clock();
     const target = store({ now: time.now });

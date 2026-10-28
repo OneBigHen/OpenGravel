@@ -19,7 +19,7 @@ import {
   type CrashAlertSnapshot,
 } from "@/application/safety/crash-alert";
 import { createCrashDetector, type CrashDetector } from "@/domain/safety/crash-detector";
-import type { LiveRouteGeometry } from "@/domain/live/types";
+import type { LiveExpectedFinish, LiveRouteGeometry } from "@/domain/live/types";
 
 export interface RideSafetySnapshot {
   readonly live: LiveShareSnapshot;
@@ -41,7 +41,11 @@ export interface RideSafety {
   /** The countdown as of now, for a screen that ticks the seconds. */
   crashNow(): CrashAlertSnapshot;
   subscribe(listener: (snapshot: RideSafetySnapshot) => void): () => void;
-  startSharing(input: { readonly riderName: string; readonly route?: LiveRouteGeometry | null }): Promise<string | null>;
+  startSharing(input: {
+    readonly riderName: string;
+    readonly route?: LiveRouteGeometry | null;
+    readonly plan?: LiveExpectedFinish | null;
+  }): Promise<string | null>;
   stopSharing(): Promise<void>;
   acceptFix(fix: RideSafetyFix): void;
   acceptMotion(sample: { readonly atMs: number; readonly x: number; readonly y: number; readonly z: number }): void;

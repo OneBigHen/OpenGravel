@@ -1843,7 +1843,12 @@ export function RideFocus({
         )}
 
         {safety === undefined || terminal !== null ? null : (
-          <RideSafetyPanel safety={safety} {...(requestMotion === undefined ? {} : { requestMotion })} />
+          <RideSafetyPanel
+            safety={safety}
+            routeLine={availableRouteLine}
+            remainingDurationSeconds={viewModel?.secondary.remainingDurationSeconds ?? null}
+            {...(requestMotion === undefined ? {} : { requestMotion })}
+          />
         )}
 
         {terminal !== null || stopConfirm ? null : (

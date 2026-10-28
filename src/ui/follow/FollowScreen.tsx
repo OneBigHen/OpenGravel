@@ -208,6 +208,11 @@ export function FollowScreen({
           <div className={styles.copy}>
             <p className={styles.title} role="status" aria-live="polite">{card.title}</p>
             <p className={styles.detail}>{card.detail}</p>
+            {card.plan === null ? null : (
+              <p className={styles.plan} data-late={card.plan.late ? "true" : undefined} data-testid="follow-plan">
+                {card.plan.text}
+              </p>
+            )}
             {ended ? (
               <p className={styles.ended} role="status">
                 This live link has ended. Ask {snapshot.riderName} for a new one next ride.
