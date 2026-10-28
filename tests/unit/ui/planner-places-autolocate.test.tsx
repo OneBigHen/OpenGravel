@@ -37,6 +37,16 @@ describe("a fresh ride opens on the rider", () => {
     await waitFor(() => expect(rideDocumentStore.getState().document.intent.start?.coordinate).toEqual(HERE));
   });
 
+  it("leaves a ride with a breadcrumb alone (a trail opened from Explore keeps its frame and has no Start)", async () => {
+    const base = createRideDocument();
+    const line = [{ lon: -75.99, lat: 40.63 }, { lon: -75.98, lat: 40.64 }];
+    const document = { ...base, intent: { ...base.intent, breadcrumb: { waypoints: [{ id: "a", coordinate: line[0]! }, { id: "b", coordinate: line[1]! }], legs: [{ kind: "recorded" as const, geometry: line }] } } };
+    const { rideDocumentStore, position } = mount("granted", document);
+    await waitFor(() => expect(position.permission).not.toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(rideDocumentStore.getState().document.intent.start).toBeNull();
+  });
+
   it("never prompts for location on load", async () => {
     const { rideDocumentStore, position } = mount("prompt");
     await waitFor(() => expect(position.permission).toHaveBeenCalled());
