@@ -65,11 +65,9 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
 
 // Breadcrumbs are a phone workflow. The hike card is now a slim strip (and steps
 // aside once a hike is planned), and the summary lives in the sheet. Still
-// fixme: this flow has not been run in a browser since the redesign; un-fixme it
-// once it has passed on a real run.
 test.describe("on a phone", () => {
 test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
-test.fixme("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
+test("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
   await placeEndpoint(page, "start", start);
   await placeEndpoint(page, "finish", finish);
   await page.getByTestId("hike-plan").click();
