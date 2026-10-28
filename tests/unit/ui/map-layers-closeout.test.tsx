@@ -14,10 +14,12 @@ describe("closeout layers sheet", () => {
   it("turns a whole lens on with one tap", () => {
     const onToggleLens = vi.fn();
     const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
-    render(<MapLayersPanel enabled={["great-roads", "gravel", "viewpoints", "hillshade"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onToggleLens={onToggleLens} onClearAll={vi.fn()} />);
+    render(<MapLayersPanel enabled={["great-roads", "gravel", "viewpoints", "hillshade", "weather-radar"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onToggleLens={onToggleLens} onClearAll={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Layers" }));
-    expect(screen.getByTestId("map-lens-fun")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByTestId("map-lens-weather")).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByTestId("map-lens-fun")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("map-lens-weather")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("map-lens-weather")).toHaveAccessibleName(/Partial/);
+    expect(screen.getByText("5 active")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("map-lens-weather"));
     expect(onToggleLens).toHaveBeenCalledWith(["weather-radar", "weather"]);
   });
@@ -29,7 +31,7 @@ describe("closeout layers sheet", () => {
       expect(lens.querySelectorAll(".og-layers__swatch")).toHaveLength(1);
       expect(lens.querySelectorAll(".og-layers__swatch svg")).toHaveLength(1);
       expect(lens.querySelectorAll(".og-layers__name")).toHaveLength(1);
-      expect(lens.querySelectorAll(".og-layers__legend")).toHaveLength(1);
+      expect(lens.querySelectorAll(".og-layers__lens-state")).toHaveLength(1);
       // Nothing else may sit in the tile: a leftover badge or absolutely
       // positioned circle was what once covered the icon.
       expect(lens.children).toHaveLength(3);
@@ -48,6 +50,15 @@ describe("closeout layers sheet", () => {
     fireEvent.click(screen.getByRole("button", { name: "About Public land" }));
     expect(screen.getByText(/OpenStreetMap fallback · Retrieved/)).toBeInTheDocument();
     expect(screen.getByText("None here")).toBeInTheDocument();
+  });
+  it.each([
+    ["loading", "Loading terrain"],
+    ["unavailable", "Terrain unavailable"],
+    ["flat-offline", "Flat offline"],
+  ] as const)("describes terrain state %s", (state, label) => {
+    panel({ "terrain-3d": state });
+    fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
   it("puts the basemap style in the sheet when the map does not own it", () => {
     const onChoose = vi.fn();

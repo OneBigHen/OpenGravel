@@ -136,7 +136,7 @@ function LayerTile({
   readonly status: MapLayerStatus;
   readonly onToggle: () => void;
 }) {
-  const busy = status === "loading" || status === "zoom-in" || status === "unavailable" || status === "stale";
+  const busy = status === "loading" || status === "zoom-in" || status === "unavailable" || status === "stale" || status === "flat-offline";
   return (
     <li>
       <button
@@ -166,9 +166,11 @@ function statusText(layer: MapLayerDefinition, status: MapLayerStatus, count: nu
     case "zoom-in":
       return "Zoom in";
     case "loading":
-      return "Loading…";
+      return layer.id === "terrain-3d" ? "Loading terrain" : "Loading…";
     case "unavailable":
-      return "Unavailable";
+      return layer.id === "terrain-3d" ? "Terrain unavailable" : "Unavailable";
+    case "flat-offline":
+      return "Flat offline";
     case "stale":
       return "Out of date";
     case "ready":
@@ -291,6 +293,7 @@ export function MapLayersPanel({
         <section className="og-layers__panel" id={panelId} aria-label="Map layers">
           <header className="og-layers__head">
             <h2>Layers</h2>
+            <span className="og-layers__active" aria-live="polite">{active} active</span>
             {active === 0 ? null : (
               <button type="button" className="og-layers__clear" onClick={onClearAll}>
                 Clear all
@@ -307,13 +310,15 @@ export function MapLayersPanel({
               <h3>Quick sets</h3>
               <ul className="og-layers__lenses" aria-label="Quick layer sets">
                 {MAP_LAYER_LENSES.map((lens) => {
-                  const on = lens.layers.every((id) => enabled.includes(id));
+                  const count = lens.layers.filter((id) => enabled.includes(id)).length;
+                  const on = count === lens.layers.length;
+                  const state = on ? "On" : count === 0 ? "Off" : "Partial";
                   return (
                     <li key={lens.id}>
                       <button
                         type="button"
-                        role="switch"
-                        aria-checked={on}
+                        aria-pressed={on}
+                        aria-label={`${lens.name}: ${state}. ${lens.hint}`}
                         className="og-layers__lens"
                         data-on={on ? "true" : "false"}
                         data-testid={`map-lens-${lens.id}`}
@@ -321,7 +326,7 @@ export function MapLayersPanel({
                       >
                         <span className="og-layers__swatch"><LayerIcon id={lens.id} tint={LENS_TINT[lens.id] ?? "var(--og-primary)"} on={on} size={48} /></span>
                         <span className="og-layers__name">{lens.name}</span>
-                        <span className="og-layers__legend">{lens.hint}</span>
+                        <span className="og-layers__lens-state" data-state={state.toLowerCase()} aria-hidden="true">{on ? "✓" : count > 0 ? "◐" : "○"} {state}</span>
                       </button>
                     </li>
                   );
