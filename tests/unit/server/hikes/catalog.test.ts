@@ -9,6 +9,16 @@ describe("hike catalog API", () => {
     expect((await listHikes(new URL("http://localhost/?bbox=1,2,0,3"), undefined)).status).toBe(400);
     expect((await listHikes(new URL("http://localhost/"), undefined)).body).toEqual({ enabled: false, hikes: [] });
   });
+  it("keeps detail feature lists off list responses", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hikes-rich-"));
+    const path = join(dir,"hikes.json");
+    const hike = { id:"rich",bbox:[-76,40,-75,41],featureKinds:["waterfall"],features:[{ id:"fall" }] };
+    try {
+      await writeFile(path,JSON.stringify({version:1,hikes:[hike]}));
+      expect((await listHikes(new URL("http://localhost/"),path)).body).toEqual({enabled:true,hikes:[{ id:"rich",bbox:hike.bbox,featureKinds:["waterfall"] }]});
+      expect((await listHikes(new URL("http://localhost/?id=rich"),path)).body).toEqual({enabled:true,hikes:[hike]});
+    } finally { await rm(dir,{recursive:true,force:true}); }
+  });
   it("filters intersections, reloads changed files, and reports invalid data", async () => {
     const dir = await mkdtemp(join(tmpdir(), "hikes-test-"));
     const path = join(dir, "hikes.json");

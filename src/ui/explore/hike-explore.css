@@ -60,3 +60,8 @@
 .og-hike__area li button { display: grid; width: 100%; justify-items: start; padding: var(--og-space-2) var(--og-space-4); text-align: left; }
 .og-hike__area li span { color: var(--og-ink-2); font-size: var(--og-text-meta); }
 .og-hike__area p { margin: 0; color: var(--og-ink-2); font-size: var(--og-text-meta); }
+
+.og-hike__features { list-style: none; padding: 0; display: grid; gap: 14px; }
+.og-hike__features li { display: flex; align-items: center; gap: 12px; }
+.og-hike__feature-icon { width: 30px; text-align: center; font-size: 20px; color: var(--og-accent); }
+.og-hike__features small { display: block; font-size: 12px; opacity: .75; margin-top: 3px; }

@@ -8,6 +8,7 @@
  */
 
 import type { Coordinate } from "../../../src/domain/ride/types";
+import type { RichHike } from "./rich-types";
 import type { HikeShape } from "../../../src/domain/hike/types";
 
 /** Sources this job can merge. Order in `SOURCE_PRIORITY` decides field winners. */
@@ -111,7 +112,7 @@ export interface TrailMeasurements {
   readonly timeMethod: string | null;
 }
 
-export interface HikeRecord extends TrailMeasurements {
+export interface HikeRecord extends TrailMeasurements, RichHike {
   readonly id: string;
   readonly name: string | null;
   readonly ref: string | null;
@@ -159,7 +160,7 @@ export interface TrailFeature {
   readonly properties: TrailProperties;
 }
 
-export interface TrailProperties extends TrailAttributes, TrailMeasurements {
+export interface TrailProperties extends TrailAttributes, TrailMeasurements, RichHike {
   readonly id: string;
   readonly lengthMeters: number;
   readonly sources: readonly TrailSource[];

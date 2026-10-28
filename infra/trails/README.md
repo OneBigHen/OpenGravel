@@ -224,3 +224,25 @@ The hike index includes a geometry-derived `shape` for continuous lines using
 `src/domain/hike/shape.ts`. Disconnected multipart records are `unknown`; no
 connector is invented. Shape describes the mapped line and is not proof of a
 walkable itinerary. Older catalogs lack this field and do not match shape filters.
+
+## Rich catalog (2026-10-28)
+
+Keep input/export/cache/output files on `/mnt/wsl/ogv-data`. Export open OSM
+context once with `infra/trails/export-context.sh REGION.osm.pbf context.geojsonseq`,
+then run `node --max-old-space-size=20000 --import tsx infra/trails/enrich-trails.ts
+--base MEASURED_CATALOG --context context.geojsonseq --out NEW_CATALOG` (on one
+line). Repeat `--context` for another region. The input catalog is never changed.
+
+Features use segment-to-segment or point-to-segment distance within **100 m**,
+including crossings between vertices. Lake polygons use their shorelines. Each
+OSM object appears at most once per trail at its closest encounter (earliest
+encounter on an exact tie). Features retain coordinates, OSM id/link, ODbL licence,
+kind, offset and distance along the stored geometry. Multipart offsets sum only
+retained lines, never gaps, and retain a line index. Proximity does not establish
+access or a connecting path. A peak alone does not establish a view: Views matches
+mapped viewpoints and observation/fire towers only. Missing features do not
+match positive filters. No claim of feature completeness is made.
+
+The compact on-disk artifacts carry details; `/api/hikes` drops full feature
+lists unless an `id` is requested. Batched geometry drops features too. Cards use
+only kinds/count; detail pages show the attributed feature list.
