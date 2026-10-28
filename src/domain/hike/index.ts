@@ -24,7 +24,7 @@ export type {
   HikeTrailhead,
 } from "./types";
 export { buildHikeProfile, lineLengthMeters, profileLengthMeters } from "./profile";
-export { MIN_GRADE_RUN_METERS, computeHikeStats } from "./stats";
+export { MIN_GRADE_RUN_METERS, MIN_GRADE_WINDOW_METERS, computeHikeStats } from "./stats";
 export { SHAPE_LIMITS, classifyShape } from "./shape";
 export { TOBLER, toblerSpeedKmh, toblerTime } from "./time";
 export type { ToblerFactors, ToblerOptions, ToblerTimeEstimate } from "./time";

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  MIN_GRADE_WINDOW_METERS,
   buildHikeProfile,
   computeHikeStats,
   lineLengthMeters,
@@ -60,8 +61,9 @@ describe("computeHikeStats", () => {
     // 30 m over a 1111.95 m run is 2.698% uphill.
     expect(stats.maxGrade?.percent).toBeCloseTo((30 / STEP_METERS) * 100, 9);
     expect(stats.maxGrade?.direction).toBe("up");
-    expect(stats.maxGrade?.runMeters).toBeCloseTo(STEP_METERS, 6);
-    expect(stats.maxGrade?.atMeters).toBe(0);
+    // The window ends on the summit sample and reaches back 100 m into the climb.
+    expect(stats.maxGrade?.runMeters).toBe(MIN_GRADE_WINDOW_METERS);
+    expect(stats.maxGrade?.atMeters).toBeCloseTo(STEP_METERS - MIN_GRADE_WINDOW_METERS, 6);
     expect(stats.highestPoint?.elevationMeters).toBe(130);
     expect(stats.highestPoint?.distanceMeters).toBeCloseTo(STEP_METERS, 6);
     expect(stats.highestPoint?.coordinate).toEqual(north(1));
@@ -85,7 +87,7 @@ describe("computeHikeStats", () => {
     expect(stats.gainMeters).toBeCloseTo(20, 9);
     expect(stats.lossMeters).toBe(0);
     expect(stats.maxGrade?.percent).toBeCloseTo((20 / STEP_METERS) * 100, 9);
-    expect(stats.maxGrade?.atMeters).toBeCloseTo(2 * STEP_METERS, 6);
+    expect(stats.maxGrade?.atMeters).toBeCloseTo(3 * STEP_METERS - MIN_GRADE_WINDOW_METERS, 6);
     expect(stats.elevation.measuredSegments).toBe(1);
     expect(stats.elevation.unmeasuredSegments).toBe(2);
     expect(stats.elevation.knownSamples).toBe(3);

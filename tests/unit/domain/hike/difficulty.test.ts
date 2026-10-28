@@ -71,7 +71,7 @@ describe("difficultyFromNumbers", () => {
     expect(difficulty.unknownParts).toEqual([]);
     expect(difficulty.parts).toHaveLength(5);
     expect(difficulty.explanation).toBe(
-      "Easy: 3.0 km, 100 m gain, worst grade 8% up, surface mapped for 100% of the line (mostly gravel), SAC T1 hiking on 100% of the line.",
+      "Easy: 3.0 km, 100 m gain, worst grade about 8% up, surface mapped for 100% of the line (mostly gravel), SAC T1 hiking on 100% of the line.",
     );
   });
 
