@@ -124,6 +124,7 @@ import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import { usePlannerBreadcrumb } from "@/ui/planner/hooks/usePlannerBreadcrumb";
 import { BreadcrumbWaypointEditor } from "@/ui/planner/BreadcrumbWaypointEditor";
+import { BreadcrumbSummary } from "@/ui/planner/BreadcrumbSummary";
 export interface PlannerWorkspaceProps {
   /** Injected containers for tests and embedding; the singletons by default. */
   readonly rideDocumentStore?: RideDocumentStore;
@@ -812,7 +813,7 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
-          glance={breadcrumb.route === null ? glance.dock : null}
+          glance={breadcrumb.route === null ? glance.dock : <BreadcrumbSummary route={breadcrumb.route} revision={document.revision} source={preparationProviders?.breadcrumbElevationProfile} />}
           editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}

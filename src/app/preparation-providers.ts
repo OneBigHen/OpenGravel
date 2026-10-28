@@ -1,6 +1,7 @@
 import { createHttpPlacesSource } from "@/infrastructure/places/http-places-source";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
 import { createHttpElevationSource } from "@/infrastructure/elevation/http-elevation-source";
+import { createMapterhornElevationSource } from "@/infrastructure/elevation/mapterhorn-source";
 import { createNwsWeatherProvider } from "@/application/preparation/weather-provider";
 import { createTomTomTrafficPreparationProvider } from "@/application/preparation/traffic-provider";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
@@ -24,5 +25,6 @@ export function createAppPreparationProviders(
       ? mapLayers
       : createRoadHistoryMapLayersSource(mapLayers, options.roadHistory),
     elevationProfile: createHttpElevationSource(assetBasePath === undefined ? {} : { basePath: assetBasePath }),
+    breadcrumbElevationProfile: createMapterhornElevationSource(),
   };
 }

@@ -814,6 +814,26 @@
 .og-breadcrumb-editor__actions button { min-height: 44px; flex: 1; }
 .og-breadcrumb-editor :focus-visible { outline: 3px solid #d65c32; outline-offset: 2px; }
 
+.og-breadcrumb-summary {
+  position: absolute;
+  z-index: 5;
+  right: 1rem;
+  bottom: 10rem;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: 42vh;
+  overflow: auto;
+  padding: .85rem 1rem;
+  border-radius: 1rem;
+  background: var(--og-glass);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+  backdrop-filter: var(--og-glass-blur);
+}
+.og-breadcrumb-summary header, .og-breadcrumb-summary__stats { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+.og-breadcrumb-summary p { margin: .4rem 0; font-size: .8rem; }
+.og-breadcrumb-summary summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.og-breadcrumb-summary :focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: 2px; }
+
 /* --------------------------------------------------------------------------
    An update that could not be planned: what failed, and the way out.
    -------------------------------------------------------------------------- */
