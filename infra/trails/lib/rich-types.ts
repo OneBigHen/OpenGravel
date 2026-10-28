@@ -16,8 +16,26 @@ export interface AlongTrailFeature {
   readonly wikidata?: string;
 }
 export interface RichHike {
+  readonly park?: CatalogPlace | null;
+  readonly nearestTown?: CatalogPlace | null;
+  readonly difficulty?: CatalogDifficulty | null;
   readonly featureKinds?: readonly TrailFeatureKind[];
   readonly featureCount?: number;
   /** Detail only: omitted by the list API. */
   readonly features?: readonly AlongTrailFeature[];
+}
+export interface CatalogPlace {
+  readonly name: string;
+  readonly source: TrailSource;
+  readonly wikipedia?: string;
+  readonly wikidata?: string;
+  readonly distanceMeters?: number;
+  readonly sampledShare?: number;
+}
+export interface CatalogDifficulty {
+  readonly label: string;
+  readonly basis: "osm" | "official" | "derived";
+  readonly score?: number;
+  readonly method?: string;
+  readonly sourceUrl: string;
 }

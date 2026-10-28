@@ -246,3 +246,20 @@ match positive filters. No claim of feature completeness is made.
 The compact on-disk artifacts carry details; `/api/hikes` drops full feature
 lists unless an `id` is requested. Batched geometry drops features too. Cards use
 only kinds/count; detail pages show the attributed feature list.
+
+Park association samples segment midpoints at ≤250 m intervals, measures the
+share of retained trail length inside OSM polygons (respecting holes), and chooses
+the smallest bounding-box area among named parks/reserves/protected areas covering
+at least 50%. A short trail crossing can be missed by the sampling resolution.
+Nearest town is the nearest mapped city/town/village point within 50 km of the
+stored line's start, by straight-line distance, not road distance.
+
+When no mapped SAC rating exists, complete nonnegative DEM gain and positive
+length permit the [Shenandoah exertion formula](https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm):
+`sqrt(2 * gain_feet * distance_miles)`. Bands use `<50`, `<100`, `<150`, `<200`,
+then ≥200: Easiest, Moderate, Moderately strenuous, Strenuous, Very strenuous.
+These are estimated exertion bands, not overall technical difficulty. They omit
+surface, scrambling, exposure, weather and personal fitness; even the source
+warns that steep short hikes can be underrated. No missing gain is treated as 0.
+The existing domain's richer live difficulty model is unchanged. This catalog
+fallback uses the retained line/direction, not a presumed return journey.
