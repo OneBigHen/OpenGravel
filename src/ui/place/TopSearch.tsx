@@ -151,10 +151,10 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
         {...(search.remembered === undefined ? {} : { remembered: search.remembered })}/>
       {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : <ConditionsPill at={bias}/>}
     </div>
-    <MapAdvisorAsk />
     <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">
+      <MapAdvisorAsk />
       {chips.map(({ chip, label, smart }) => <button key={smart ? `smart:${chip.id}` : chip.id} type="button" data-chip={chip.id} data-smart={smart ? "true" : undefined} data-testid={smart ? `smart-chip-${chip.id}` : `search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
         <LayerGlyph id={CHIP_ICON[chip.id]} className="og-search-chips__glyph"/>{label}
       </button>)}
