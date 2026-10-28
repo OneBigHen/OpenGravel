@@ -239,6 +239,7 @@ function requestFieldIssues(value: Record<string, unknown>, issues: ValidationIs
       ),
     );
   }
+  if (value["hikeReturnToStart"] !== undefined && typeof value["hikeReturnToStart"] !== "boolean") issues.push(issue("invalid-value", "request.hikeReturnToStart", "must be boolean"));
   const profile = value["profile"];
   if (
     typeof profile !== "string" ||
@@ -845,6 +846,7 @@ export function parseRoutePlanRequestBody(
 
   const request: ProviderRouteRequest = {
     requestId: requestSource["requestId"] as string,
+    ...(typeof requestSource["hikeReturnToStart"] === "boolean" ? { hikeReturnToStart: requestSource["hikeReturnToStart"] } : {}),
     origin: toCoordinate(requestSource["origin"]),
     ...(typeof requestSource["originHeadingDegrees"] === "number"
       ? { originHeadingDegrees: requestSource["originHeadingDegrees"] }

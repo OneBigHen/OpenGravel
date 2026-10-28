@@ -16,7 +16,7 @@
  * from the session, and geometry comes from the store the pipeline wrote to.
  */
 
-import { getActivityMode } from "@/ui/stores/activity-mode";
+import { getActivityMode, subscribeActivityMode } from "@/ui/stores/activity-mode";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import type {
@@ -56,7 +56,9 @@ export function createPlanningSessionStore(
   const service = options.service ?? createClientPlanningService();
   const store = createStore<PlanningSessionState>((set, get) => {
     const refresh = (): void => {
-      const snapshot = service.snapshot();
+      const raw = service.snapshot();
+      const matches = (bundle: typeof raw.committedBundle) => bundle === null || bundle.candidates.every(c => (c.provider.profile === "hike") === (getActivityMode() === "hike"));
+      const snapshot = { ...raw, committedBundle: matches(raw.committedBundle) ? raw.committedBundle : null, lastGoodBundle: matches(raw.lastGoodBundle) ? raw.lastGoodBundle : null };
       set({ snapshot });
       const bundle = snapshot.committedBundle ?? snapshot.lastGoodBundle;
       if (bundle === null) return;
@@ -87,12 +89,14 @@ export function createPlanningSessionStore(
     };
 
     service.subscribe(refresh);
+    subscribeActivityMode(() => { service.cancel(); refresh(); });
 
     return {
       snapshot: service.snapshot(),
       geometry: {},
       begin: async (input: ClientPlanningBeginInput): Promise<void> => {
-        if (getActivityMode() === "hike") return;
+        // Freehand hiking drawings remain offline until explicitly handed to routing.
+        if (getActivityMode() === "hike" && input.intent.sketch !== null) return;
         await service.begin(input);
       },
       cancel: (): void => {

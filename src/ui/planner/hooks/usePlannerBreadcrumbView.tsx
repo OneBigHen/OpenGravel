@@ -1,5 +1,7 @@
 "use client";
 
+import { newCommandId } from "@/domain/ride/ids";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { LibraryServicePort } from "@/application/library/library-service";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
@@ -28,6 +30,7 @@ interface Wiring {
 /** Everything the planner workspace needs to host Breadcrumb mode, in one place. */
 export function usePlannerBreadcrumbView(wiring: Wiring) {
   const { document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions } = wiring;
+  const activity = useActivityMode();
   const base = usePlannerBreadcrumb(document, rideDocumentStore);
   const baseRoute = base.route;
   const baseProject = base.project;
@@ -68,7 +71,11 @@ export function usePlannerBreadcrumbView(wiring: Wiring) {
     <>{route === null ? base : null}{selectedWaypoint === undefined ? null : <BreadcrumbWaypointEditor key={selectedWaypoint.id} point={selectedWaypoint} index={selectedIndex} onClose={() => setSelected(null)} onSave={(name) => { edit(selectedWaypoint.id, (point) => ({ ...point, name: name.trim() }), "Renamed breadcrumb waypoint"); setSelected(null); }} onRemove={() => { edit(selectedWaypoint.id, () => null, "Removed breadcrumb waypoint"); setSelected(null); }} />}</>
   );
   const dockGlance = (base: ReactNode): ReactNode => route === null ? base : (
-    <BreadcrumbSummary route={route} document={document} editing={breadcrumb.editing} libraryService={libraryService} elevation={elevation} measurements={measurements} onClear={breadcrumb.clear} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />
+    <BreadcrumbSummary onPlanTrails={activity !== "hike" || route.waypoints.length < 2 || route.waypoints.length > 10 ? undefined : () => {
+      const current = rideDocumentStore.getState().document;
+      const result = rideDocumentStore.getState().dispatch({ type: "breadcrumb.plan", selectedAt: new Date().toISOString(), commandId: newCommandId(), rideId: current.rideId, baseRevision: current.revision, source: "rider", label: "Plan breadcrumb on trails" });
+      if (result.outcome === "applied") { setEditing(false); void planningSessionStore.getState().begin({ rideId: result.document.rideId, rideRevision: result.document.revision, intent: result.document.intent }); }
+    }} route={route} document={document} editing={breadcrumb.editing} libraryService={libraryService} elevation={elevation} measurements={measurements} onClear={breadcrumb.clear} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />
   );
   /** Map handlers: breadcrumb gets first refusal, everything else falls through. */
   const mapProps = (fallback: { readonly pointAction: (action: MapPointAction, coordinate: Coordinate) => void; readonly intercept: (intent: MapIntent) => boolean }, handleIntent: (intent: MapIntent) => void, longPressWhenIdle: boolean) => ({

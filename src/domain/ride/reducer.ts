@@ -49,7 +49,7 @@ import { breadcrumbIssues, reverseBreadcrumb } from "@/domain/breadcrumb/route";
 import { defaultRideIntent } from "./create";
 import { deepFreeze } from "../util/freeze";
 import { appendHistoryEntry, recordProposalApplied } from "./history";
-import { newHistoryEntryId } from "./ids";
+import { newHistoryEntryId, newPointId, newStopId } from "./ids";
 import type {
   RideCommand,
   RideCommandOp,
@@ -304,6 +304,18 @@ function applyOperation(intent: RideIntent, command: RideCommandOp): OperationOu
       );
     }
 
+    case "hike.returnToStart.set": {
+      if (typeof command.enabled !== "boolean") return fail("invalid-value", "return to start must be boolean");
+      return applyChange({ ...intent, hikeReturnToStart: command.enabled }, true);
+    }
+    case "breadcrumb.plan": {
+      const points = intent.breadcrumb?.waypoints;
+      if (!points || points.length < 2 || points.length > 10) return fail("invalid-waypoints", "Plan between 2 and 10 breadcrumb waypoints.");
+      const endpoint = (index: number, kind: "start" | "finish") => ({ id: newPointId(), kind, coordinate: points[index]!.coordinate, label: points[index]!.name ?? "Breadcrumb waypoint", provenance: { type: "map" as const, selectedAt: command.selectedAt } });
+      return applyChange({ ...intent, shape: "destination", breadcrumb: null, sketch: null,
+        start: endpoint(0, "start"), finish: endpoint(points.length - 1, "finish"), shaping: [],
+        stops: points.slice(1, -1).map(point => ({ id: newStopId(), kind: "stop" as const, coordinate: point.coordinate, label: point.name ?? "Breadcrumb waypoint", provenance: { type: "map" as const, selectedAt: command.selectedAt } })) }, true);
+    }
     case "ride.shape.set": {
       if (!RIDE_SHAPES.includes(command.shape)) {
         return fail("invalid-trip-shape", `unknown trip shape "${String(command.shape)}"`);

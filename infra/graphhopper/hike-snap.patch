@@ -28,4 +28,4 @@
 -            if (!snap.isValid())
 +            Snap snap = locationIndex.findClosest(point.lat, point.lon, strictEdgeFilter);
 +            if (!snap.isValid() || com.graphhopper.util.DistanceCalcEarth.DIST_EARTH.calcDist(
-+                    point.lat, point.lon, snap.getSnappedPoint().lat, snap.getSnappedPoint().lon) > 300)
++                    point.lat, point.lon, snap.getSnappedPoint().lat, snap.getSnappedPoint().lon) > 2000)

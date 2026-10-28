@@ -97,6 +97,8 @@ export interface ProviderDiagnostic {
  * is a durable answer for this question (`false`).
  */
 export type PlanningErrorCode =
+  | "hike-routing-unavailable"
+  | "no-trail-route"
   | "no-route"
   | "provider-unavailable"
   | "constraint-conflict";

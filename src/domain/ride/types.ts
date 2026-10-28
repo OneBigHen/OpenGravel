@@ -319,6 +319,8 @@ export interface RideHistoryIndex {
 /** Everything the rider authored about the ride (§3). */
 export interface RideIntent {
   readonly shape: "destination" | "loop" | "open";
+  /** Return along the outbound hiking line; distinct from loop discovery. */
+  readonly hikeReturnToStart?: boolean;
   readonly start: RidePoint | null;
   readonly finish: RidePoint | null;
   readonly stops: readonly StopPoint[];

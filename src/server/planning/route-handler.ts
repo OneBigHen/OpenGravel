@@ -61,6 +61,7 @@ export function httpStatusForPlanErrorCode(code: string): number {
     case "validation":
     case "missing-input":
       return 400;
+    case "no-trail-route":
     case "no-route":
     case "outside-coverage":
       return 422;
@@ -68,6 +69,7 @@ export function httpStatusForPlanErrorCode(code: string): number {
       return 409;
     case "provider-timeout":
       return 504;
+    case "hike-routing-unavailable":
     case "provider-unavailable":
     case "network":
       return 502;

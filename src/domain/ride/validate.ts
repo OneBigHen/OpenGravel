@@ -411,6 +411,8 @@ export function validateRideIntent(intent: RideIntent): string[] {
     ...validateSurfaceIntent(intent.surface),
   ];
 
+  if (intent.hikeReturnToStart !== undefined && typeof intent.hikeReturnToStart !== "boolean") issues.push("hikeReturnToStart must be boolean");
+
   const discriminants: readonly (readonly [string, string, readonly string[]])[] = [
     ["shape", intent.shape, RIDE_SHAPES],
     ["roadCharacter", intent.roadCharacter, ROAD_CHARACTERS],

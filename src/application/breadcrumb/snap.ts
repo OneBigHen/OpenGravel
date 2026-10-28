@@ -1,3 +1,4 @@
+import { getActivityMode } from "@/application/map/activity-mode";
 import { createClientRouteCandidateProvider } from "@/application/planner/client-planning-service";
 import type { ProviderRouteRequest } from "@/application/planner/route-provider";
 import { haversine } from "@/domain/geometry/analysis";
@@ -14,7 +15,7 @@ export async function snapBreadcrumbLeg(document: RideDocument, index: number, s
   const intent = document.intent;
   const request: ProviderRouteRequest = {
     requestId: crypto.randomUUID(), origin: start, destination: end, stops: [], shaping: [], avoidPolygons: [],
-    profile: profileFor(intent),
+    profile: getActivityMode() === "hike" ? "hike" : profileFor(intent),
     options: { includeAlternatives: false, avoidHighways: intent.avoidHighways, tollPolicy: intent.tollPolicy, surfacePreference: intent.surface.preference, roadCharacter: intent.roadCharacter, traffic: intent.traffic, bike: { category: intent.bike.category, maintainedGravel: intent.bike.maintainedGravel, roughTracks: intent.bike.roughTracks }, vehicle: "motorcycle" },
   };
   const answer = await provider.candidates(request, signal);

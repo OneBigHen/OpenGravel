@@ -18,7 +18,7 @@ function WarningMark() {
   return <svg className="og-breadcrumb-summary__warn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5zM12 10v4.5M12 17.6v.1" /></svg>;
 }
 
-export function BreadcrumbSummary({ route, document, libraryService, elevation, measurements, onToggleSnap, snapping, snapError, onStart, onClear, editing }: { readonly route: BreadcrumbRoute; readonly document: RideDocument; readonly libraryService?: LibraryServicePort | undefined; readonly elevation: ElevationProfileState | null | undefined; readonly measurements: Measurements | null; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null; readonly onStart?: (() => Promise<string | null>) | undefined; readonly onClear: () => void; readonly editing: boolean }) {
+export function BreadcrumbSummary({ route, document, libraryService, elevation, measurements, onToggleSnap, snapping, snapError, onStart, onClear, editing, onPlanTrails }: { readonly onPlanTrails?: (() => void) | undefined; readonly route: BreadcrumbRoute; readonly document: RideDocument; readonly libraryService?: LibraryServicePort | undefined; readonly elevation: ElevationProfileState | null | undefined; readonly measurements: Measurements | null; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null; readonly onStart?: (() => Promise<string | null>) | undefined; readonly onClear: () => void; readonly editing: boolean }) {
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [startState, setStartState] = useState<"idle" | "starting">("idle");
@@ -72,6 +72,7 @@ export function BreadcrumbSummary({ route, document, libraryService, elevation, 
         <div className="og-breadcrumb-summary__actions">
           {onStart === undefined ? null : <button type="button" disabled={startState === "starting"} onClick={() => { setStartState("starting"); setStartError(null); void onStart().then((error) => { setStartError(error); setStartState("idle"); }, () => { setStartError("Could not start following this route."); setStartState("idle"); }); }}>{startState === "starting" ? "Starting…" : "Follow breadcrumb"}</button>}
           {startError === null ? null : <p role="alert">{startError}</p>}
+          {onPlanTrails === undefined ? null : <button type="button" data-testid="breadcrumb-plan-trails" onClick={onPlanTrails}>Plan on trails</button>}
           <button type="button" onClick={exportGpx}>Export GPX</button>
           {libraryService === undefined ? null : <form onSubmit={(event) => { event.preventDefault(); void save(); }}><label htmlFor="breadcrumb-title">Save to My rides</label><input id="breadcrumb-title" value={title} onChange={(event) => { setTitle(event.target.value); setSaveState("idle"); }} placeholder="Route name" /><button type="submit" disabled={title.trim() === "" || saveState === "saving"}>Save</button></form>}
           {saveState === "saved" ? <p role="status">Saved to My rides.</p> : saveState === "failed" ? <p role="alert">Could not save this route. Try again.</p> : null}

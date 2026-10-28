@@ -88,6 +88,8 @@ export interface RideEndpointPayload {
 export type RideCommand =
   | (RideCommandBase<"ride.create"> & { readonly bike?: BikeConstraintSnapshot })
   | (RideCommandBase<"ride.clear"> & Record<never, never>)
+  | (RideCommandBase<"hike.returnToStart.set"> & { readonly enabled: boolean })
+  | (RideCommandBase<"breadcrumb.plan"> & { readonly selectedAt: string })
   | (RideCommandBase<"ride.reverse"> & Record<never, never>)
   | (RideCommandBase<"ride.shape.set"> & {
       readonly shape: RideIntent["shape"];
@@ -201,6 +203,8 @@ export const RIDE_COMMAND_TYPES = {
   "ride.create": true,
   "ride.clear": true,
   "ride.reverse": true,
+  "hike.returnToStart.set": true,
+  "breadcrumb.plan": true,
   "ride.shape.set": true,
   "ride.directions": true,
   "ride.loopFrom": true,
