@@ -508,6 +508,7 @@ export function PlannerMap({
     let unsubscribeViewport: (() => void) | null = null;
     let unsubscribeCamera: (() => void) | null = null;
     let lastHikeCenter: Coordinate | undefined;
+    let hikeSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
     void (async () => {
       // A surface that insists on a look (the ride follows Day/Night) neither
@@ -575,7 +576,17 @@ export function PlannerMap({
       // The camera's bearing, zoom and scale, for the compass, the zoom buttons
       // and the scale rule. A host without a camera (a test double) reports
       // nothing and the column simply has no instruments to show.
-      unsubscribeCamera = host.onCamera?.((camera) => { updateCamera(camera); if (getActivityMode() === "hike" && camera.center) lastHikeCenter = camera.center; }) ?? null;
+      unsubscribeCamera = host.onCamera?.((camera) => {
+        updateCamera(camera);
+        if (getActivityMode() !== "hike" || !camera.center) return;
+        lastHikeCenter = camera.center;
+        // Saved as the camera moves, not only on unmount: a reload or a direct
+        // link to Explore never unmounts, and an early effect re-run would
+        // otherwise leave the opening camera behind as "where I was looking".
+        const center = camera.center;
+        if (hikeSaveTimer !== null) clearTimeout(hikeSaveTimer);
+        hikeSaveTimer = setTimeout(() => { hikeSaveTimer = null; saveExploreOrigin(center); }, 300);
+      }) ?? null;
       // The scene may have changed while the renderer was loading; the refs hold
       // the current values, so the map never starts a frame — or a tool — behind.
       host.dispatch({ type: "long-press-enabled", enabled: longPressEnabledRef.current });
@@ -590,6 +601,7 @@ export function PlannerMap({
 
     return () => {
       disposed = true;
+      if (hikeSaveTimer !== null) clearTimeout(hikeSaveTimer);
       if (lastHikeCenter) saveExploreOrigin(lastHikeCenter);
       unsubscribe?.();
       unsubscribeError?.();
