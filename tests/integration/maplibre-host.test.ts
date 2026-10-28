@@ -445,7 +445,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     const trails = fake.state.layerSpecs.filter((layer) => String(layer["id"]).startsWith("og-hike-trails-"));
     expect(trails.map((layer) => layer["source-layer"]).sort()).toEqual(["road", "roads", "transportation"]);
     expect(fake.state.layerSpecs.filter((layer) => /^og-hike-poi-\d+$/.test(String(layer["id"])))).toHaveLength(3);
-    expect(fake.state.paintCalls).toContainEqual({ id: "road-major", name: "line-opacity", value: ["*", 0.8, 0.55] });
+    expect(fake.state.paintCalls).toContainEqual({ id: "road-major", name: "line-opacity", value: 0.8 * 0.55 });
     expect(fake.state.paintCalls.some((call) => call.id === "road-path")).toBe(false);
     setActivityMode("ride");
     expect(fake.state.paintCalls).toContainEqual({ id: "road-major", name: "line-opacity", value: 0.8 });

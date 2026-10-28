@@ -123,6 +123,7 @@ import {
 } from "@/infrastructure/map/maplibre/geojson";
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
+import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { planSceneSync, type SceneFingerprints } from "@/infrastructure/map/maplibre/scene-diff";
@@ -2480,8 +2481,7 @@ export async function createMapLibreHost(
       if (/path|trail|track|foot|pedestrian|rail/i.test(layer.id)) continue;
       const original = layer.paint?.["line-opacity"];
       hikeOriginalRoadOpacity.set(layer.id, original);
-      const opacity = typeof original === "number" || Array.isArray(original) ? original : 1;
-      map.setPaintProperty?.(layer.id, "line-opacity", ["*", opacity, 0.55]);
+      map.setPaintProperty?.(layer.id, "line-opacity", scaleOpacity(original, 0.55));
     }
     const before = layers.find((layer) => layer.type === "symbol")?.id;
     const roads = [...new Map(roadLayers.map((layer) => [`${layer.source}:${layer["source-layer"]}`, layer])).values()];
