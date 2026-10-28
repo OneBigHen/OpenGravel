@@ -86,9 +86,10 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     const style = getComputedStyle(element);
     return { backdrop: style.backdropFilter, background: style.backgroundColor, borderTopWidth: style.borderTopWidth };
   });
-  // Glass over the map: a blurred, mostly opaque surface with a hairline on top.
-  expect(barStyle.background).toMatch(/^(rgb|color\()/);
-  expect(barStyle.backdrop).toMatch(/blur/);
+  // Solid, not glass (owner 2026-10-27: glass along the bottom was hard to
+  // read): an opaque surface with a hairline on top.
+  expect(barStyle.background).toMatch(/^rgb\(/);
+  expect(barStyle.backdrop).toBe("none");
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
@@ -110,14 +111,16 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
   expect(sheetStyle.background).toMatch(/^(rgb|color\()/);
   // Home (mobile UX handoff, 2026-10-27): the idle sheet draws no slab; its
-  // three quick starts and the grab handle are the glass, floating on the map.
+  // three quick starts and the grab handle float on the map as solid, lifted
+  // pills (owner, same evening: no see-through glass along the bottom).
   for (const target of [page.getByTestId("sheet-handle"), page.getByTestId("record-a-ride")]) {
-    const glass = await target.evaluate((element) => {
+    const pill = await target.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { shadow: style.boxShadow, backdrop: style.backdropFilter };
+      return { shadow: style.boxShadow, backdrop: style.backdropFilter, background: style.backgroundColor };
     });
-    expect(glass.shadow).not.toBe("none");
-    expect(glass.backdrop).toMatch(/blur/);
+    expect(pill.shadow).not.toBe("none");
+    expect(pill.backdrop).toBe("none");
+    expect(pill.background).toMatch(/^rgb\(/);
   }
 
   // The determinism claim of the compact gate: no tiles are requested.

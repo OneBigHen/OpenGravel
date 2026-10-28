@@ -6,6 +6,10 @@ import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { useRideAdvisor } from "@/ui/planner/RideAdvisor";
 import { AppMenu } from "@/ui/nav/AppMenu";
+import { LayerGlyph } from "@/ui/layers/LayerIcon";
+import { useEffect, useState } from "react";
+
+import { ConditionsPill } from "./ConditionsPill";
 
 /** Searches a place category near the rider. Every chip here runs a search. */
 export const SEARCH_CHIPS = [
@@ -27,14 +31,38 @@ export const LAYER_CHIPS = [
 ] as const;
 export type LayerChip = (typeof LAYER_CHIPS)[number];
 
-/** A pump drawn as a line glyph, so it looks the same on every phone. */
-function GasPump() {
-  return <svg className="og-search-chips__glyph" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/>
-    <path d="M3 21h11"/>
-    <path d="M7.5 7h3"/>
-    <path d="M13 9h2.5a2 2 0 0 1 2 2v5a1.5 1.5 0 0 0 3 0V9l-2-3"/>
-  </svg>;
+/** Each chip's icon from the layers set, so the two surfaces read as one. */
+const CHIP_ICON: Readonly<Record<SearchChip["id"], string>> = {
+  gas: "fuel",
+  food: "food",
+  coffee: "coffee",
+  lodging: "lodging",
+  moto: "repair",
+};
+
+/**
+ * What a rider reaches for first at this hour: gas first always, then coffee
+ * in the morning, food at midday and supper, a bed late.
+ */
+function chipOrder(hour: number): readonly SearchChip["id"][] {
+  // Gas never moves; what follows it is what this hour asks for.
+  if (hour >= 5 && hour < 10) return ["gas", "coffee", "food", "moto", "lodging"];
+  if (hour >= 10 && hour < 16) return ["gas", "food", "coffee", "moto", "lodging"];
+  if (hour >= 16 && hour < 21) return ["gas", "food", "lodging", "coffee", "moto"];
+  return ["gas", "lodging", "food", "coffee", "moto"];
+}
+
+/** The chips in this hour's order, after mount so the server render matches. */
+function useChipOrder(): readonly SearchChip[] {
+  const [hour, setHour] = useState<number | null>(null);
+  useEffect(() => {
+    const read = (): void => setHour(new Date().getHours());
+    read();
+    const timer = window.setInterval(read, 10 * 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (hour === null) return SEARCH_CHIPS;
+  return chipOrder(hour).map((id) => SEARCH_CHIPS.find((chip) => chip.id === id)!);
 }
 
 export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear, onChip, onLayer, onSearchList }: {
@@ -50,6 +78,7 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   readonly onSearchList?: (query: string, places: readonly PlaceMatch[]) => void;
 }) {
   const advisor = useRideAdvisor();
+  const chips = useChipOrder();
   return <div className="og-top-search" data-testid="top-search">
     <div className="og-top-search__row">
     <div className="og-top-search__bar">
@@ -59,13 +88,13 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
         {...(onSearchList === undefined ? {} : { onSubmitList: onSearchList })}
         {...(search.remembered === undefined ? {} : { remembered: search.remembered })}
         {...(advisor === null ? {} : { describe: (text: string) => advisor.ask(text) })}/>
-      {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : null}
+      {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : <ConditionsPill at={bias}/>}
     </div>
     <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">
-      {SEARCH_CHIPS.map((chip) => <button key={chip.id} type="button" data-testid={`search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
-        {chip.id === "gas" ? <GasPump/> : null}{chip.label}
+      {chips.map((chip) => <button key={chip.id} type="button" data-chip={chip.id} data-testid={`search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
+        <LayerGlyph id={CHIP_ICON[chip.id]} className="og-search-chips__glyph"/>{chip.label}
       </button>)}
       <span className="og-search-chips__divider" aria-hidden="true"/>
       <span className="og-search-chips__layers" role="group" aria-label="Map layers">

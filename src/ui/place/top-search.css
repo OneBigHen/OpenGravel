@@ -26,6 +26,8 @@
   }
 
   .og-top-search__row {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: var(--og-space-2);
@@ -50,10 +52,11 @@
     gap: var(--og-space-3);
     min-height: 52px;
     padding: 0 var(--og-space-2) 0 var(--og-space-4);
+    border: 1px solid var(--og-glass-edge);
     border-radius: var(--og-radius-card);
     background: var(--og-glass);
     color: var(--og-ink);
-    box-shadow: var(--og-shadow-float);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
     -webkit-backdrop-filter: var(--og-glass-blur);
     backdrop-filter: var(--og-glass-blur);
     pointer-events: auto;
@@ -151,14 +154,14 @@
     gap: var(--og-space-2);
     min-height: 40px;
     padding: 0 var(--og-space-4);
-    border: 0;
+    border: 1px solid var(--og-glass-edge);
     border-radius: var(--og-radius-pill);
     background: var(--og-glass);
     color: var(--og-ink);
     font: inherit;
     font-size: var(--og-text-meta);
     font-weight: 600;
-    box-shadow: var(--og-shadow-float);
+    box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
     -webkit-backdrop-filter: var(--og-glass-blur);
     backdrop-filter: var(--og-glass-blur);
     cursor: pointer;
@@ -178,8 +181,24 @@
 
   .og-search-chips__glyph {
     flex: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Each category wears its own colour, like the layers sheet. */
+  .og-search-chips button[data-chip="gas"] .og-search-chips__glyph { color: #0f766e; }
+  .og-search-chips button[data-chip="food"] .og-search-chips__glyph { color: #c2410c; }
+  .og-search-chips button[data-chip="coffee"] .og-search-chips__glyph { color: #92603a; }
+  .og-search-chips button[data-chip="lodging"] .og-search-chips__glyph { color: #9d174d; }
+  .og-search-chips button[data-chip="moto"] .og-search-chips__glyph { color: #475569; }
+
+  :root[data-theme="night"] .og-search-chips button[data-chip] .og-search-chips__glyph {
+    filter: brightness(1.7) saturate(0.9);
+  }
+
+  .og-search-chips button[aria-pressed="true"] .og-search-chips__glyph {
+    color: currentColor;
+    filter: none;
   }
 
   .og-search-chips__divider {
@@ -329,5 +348,169 @@
   /* Typing a search: the home pills step away, like Google's. */
   .og-planner:has(.og-top-search input:focus, .og-top-search .og-place-search__list:not([hidden])) .og-planner__sheet[data-idle="true"] {
     visibility: hidden;
+  }
+
+  /* Live conditions in the search bar: temperature, sky, and the one thing to
+     know next. */
+  .og-conditions {
+    position: relative;
+    flex: none;
+  }
+
+  .og-conditions__pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    min-width: var(--og-touch);
+    padding: 0 10px 0 8px;
+    border: 0;
+    border-radius: var(--og-radius-pill);
+    background: var(--og-surface-2);
+    color: var(--og-ink);
+    font: inherit;
+    font-size: var(--og-text-meta);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+
+  .og-conditions__pill:focus-visible {
+    outline: var(--og-focus-width) solid var(--og-focus-ring);
+    outline-offset: var(--og-focus-offset);
+  }
+
+  .og-conditions__glyph {
+    flex: none;
+    color: var(--og-ink-2);
+  }
+
+  .og-conditions__sun {
+    stroke: #e0a21b;
+  }
+
+  .og-conditions__rain {
+    stroke: #3b82c4;
+  }
+
+  .og-conditions__bolt {
+    stroke: #e0a21b;
+  }
+
+  .og-conditions__note {
+    max-width: 92px;
+    overflow: hidden;
+    padding-left: 6px;
+    border-left: 1px solid var(--og-line-strong);
+    font-size: var(--og-text-caption);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-conditions__pill[data-tone="alert"] {
+    background: var(--og-danger);
+    color: var(--og-surface);
+  }
+
+  .og-conditions__pill[data-tone="alert"] .og-conditions__glyph {
+    color: var(--og-surface);
+  }
+
+  .og-conditions__pill[data-tone="warn"] .og-conditions__note {
+    color: #b45309;
+  }
+
+  .og-conditions__pill[data-tone="info"] .og-conditions__note {
+    color: var(--og-primary-text);
+  }
+
+  .og-conditions__panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: calc(-1 * var(--og-space-2));
+    z-index: var(--og-z-overlay);
+    width: min(300px, calc(100vw - 2 * var(--og-space-4)));
+    padding: var(--og-space-3);
+    border: 1px solid var(--og-glass-edge);
+    border-radius: var(--og-radius-card);
+    background: var(--og-glass-dense);
+    box-shadow: var(--og-glass-highlight), var(--og-glass-shadow);
+    -webkit-backdrop-filter: var(--og-glass-blur);
+    backdrop-filter: var(--og-glass-blur);
+    color: var(--og-ink);
+  }
+
+  .og-conditions__panel header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: var(--og-space-2);
+  }
+
+  .og-conditions__panel header strong {
+    font-family: var(--og-face-display);
+    font-size: var(--og-text-body);
+  }
+
+  .og-conditions__panel header span,
+  .og-conditions__source {
+    color: var(--og-ink-2);
+    font-size: var(--og-text-caption);
+  }
+
+  .og-conditions__alert {
+    margin: 0 0 var(--og-space-2);
+    padding: 6px 10px;
+    border-radius: var(--og-radius-control);
+    background: var(--og-danger);
+    color: var(--og-surface);
+    font-size: var(--og-text-caption);
+    font-weight: 700;
+  }
+
+  .og-conditions__hours {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .og-conditions__hours li {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    border-radius: var(--og-radius-control);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .og-conditions__hours li:first-child {
+    background: var(--og-glass-well);
+  }
+
+  .og-conditions__hour {
+    color: var(--og-ink-2);
+    font-size: var(--og-text-caption);
+    font-weight: 600;
+  }
+
+  .og-conditions__hour-temp {
+    font-size: var(--og-text-meta);
+    font-weight: 700;
+  }
+
+  .og-conditions__hour-rain {
+    min-height: 1em;
+    color: #3b82c4;
+    font-size: var(--og-text-caption);
+    font-weight: 700;
+  }
+
+  .og-conditions__source {
+    margin: var(--og-space-2) 0 0;
   }
 }

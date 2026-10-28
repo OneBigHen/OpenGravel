@@ -141,6 +141,9 @@ import {
   TERRAIN_EXAGGERATION,
   TERRAIN_SOURCE_ID,
   buildingExtrusionLayerSpec,
+  skySpec,
+  DEFAULT_LIGHT,
+  SUN_LIGHT,
   buildingInsertion,
   hillshadeBeforeId,
   hillshadeLayerSpec,
@@ -341,6 +344,8 @@ interface MapLibreMap {
   isSourceLoaded?(sourceId: string): boolean;
   getPitch?(): number;
   setTerrain?(terrain: { readonly source: string; readonly exaggeration?: number } | null): void;
+  setSky?(sky: Readonly<Record<string, unknown>> | undefined): void;
+  setLight?(light: Readonly<Record<string, unknown>>): void;
   easeTo?(options: Readonly<Record<string, unknown>>): void;
   moveLayer(id: string, beforeId?: string): void;
   setStyle?(style: unknown, options?: Record<string, unknown>): void;
@@ -1551,7 +1556,7 @@ export async function createMapLibreHost(
       if (terrainOn && map.getLayer(BUILDING_EXTRUSION_LAYER_ID) === undefined) {
         const insertion = buildingInsertion(styleLayers);
         if (insertion !== null) {
-          map.addLayer(buildingExtrusionLayerSpec(insertion.source), belowOverlay(map, insertion.beforeId));
+          map.addLayer(buildingExtrusionLayerSpec(insertion.source, basemapLook === "night"), belowOverlay(map, insertion.beforeId));
         }
       }
 
@@ -1560,10 +1565,14 @@ export async function createMapLibreHost(
       if (terrainApplied.get(map) !== terrainOn || newDem) {
         terrainApplied.set(map, terrainOn);
         map.setTerrain(terrainOn ? { source: TERRAIN_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION } : null);
+        // A tilted map gets a sky and horizon haze, and a low sun that models
+        // the extruded towns; flat again, the style's own sky and light return.
+        map.setSky?.(terrainOn ? skySpec(basemapLook === "night") : undefined);
+        map.setLight?.(terrainOn ? SUN_LIGHT : DEFAULT_LIGHT);
       }
       if (terrainOn && terrainPitchBefore === null) {
         terrainPitchBefore = map.getPitch?.() ?? 0;
-        map.easeTo?.({ pitch: Math.max(55, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
+        map.easeTo?.({ pitch: Math.max(45, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
       } else if (!terrainOn && terrainPitchBefore !== null) {
         map.easeTo?.({ pitch: terrainPitchBefore, duration: options.reducedMotion === true ? 0 : 300 });
         terrainPitchBefore = null;
