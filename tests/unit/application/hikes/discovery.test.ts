@@ -4,7 +4,7 @@ import type { HikeRecord } from "../../../../infra/trails/lib/types";
 import type { ElevationProfile } from "@/application/elevation/profile";
 
 function hike(id: string, name: string, lengthMeters: number, lon: number): HikeRecord {
-  return { id, name, ref: null, operator: null, lengthMeters, sacScale: null, surface: null, trailVisibility: null, dog: null, access: null, bbox: [lon, 40, lon + .001, 40.001], start: { lon, lat: 40 }, end: { lon: lon + .001, lat: 40.001 }, trailheadCount: 0, trailheads: [], sources: [], elevationGainMeters: null, elevationLossMeters: null };
+  return { id, name, ref: null, operator: null, lengthMeters, sacScale: null, surface: null, trailVisibility: null, dog: null, access: null, bbox: [lon, 40, lon + .001, 40.001], start: { lon, lat: 40 }, end: { lon: lon + .001, lat: 40.001 }, trailheadCount: 0, trailheads: [], sources: [], elevationGainMeters: null, elevationLossMeters: null, maxGradePercent: null, toblerMinutes: null, elevationMeasuredShare: 0, elevationSource: null, timeMethod: null };
 }
 describe("hike discovery", () => {
   it("hides fragments, groups nearby names without merging distant hikes, and favors a substantial nearby trail", () => {
