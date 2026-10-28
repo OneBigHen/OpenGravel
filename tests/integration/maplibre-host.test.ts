@@ -581,7 +581,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     const first = "https://tilecache.rainviewer.com/v2/radar/1/256/{z}/{x}/{y}/2/1_1.png";
     host.applyScene(withRadar(first));
     const source = map.sources.get("ogv-radar-tiles");
-    expect(source).toMatchObject({ type: "raster", tiles: [first], tileSize: 256, maxzoom: 10, attribution: "RainViewer" });
+    expect(source).toMatchObject({ type: "raster", tiles: [first], tileSize: 256, maxzoom: 7, attribution: "RainViewer" });
     expect(map.layers.has("ogv-radar-tiles")).toBe(true);
     // Same frame again: no re-upload, no new source.
     host.applyScene(withRadar(first));

@@ -1546,10 +1546,10 @@ export async function createMapLibreHost(
         type: "raster",
         tiles: [tiles],
         tileSize: 256,
-        // RainViewer publishes radar imagery to about zoom 10 for 256 px tiles;
-        // past that the renderer overzooms one tile instead of asking for
-        // tiles the provider does not have.
-        maxzoom: 10,
+        // RainViewer's free tiles stop at zoom 7: from zoom 8 it serves a
+        // "Zoom Level Not Supported" placeholder image. Past 7 the renderer
+        // overzooms the last real tile instead.
+        maxzoom: 7,
         attribution: RADAR_ATTRIBUTION,
       });
       const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
