@@ -56,7 +56,7 @@
 
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Coordinate } from "@/domain/ride/types";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
@@ -767,6 +767,22 @@ export function PlannerMap({
   /** The compass's one job: turn the map north-up again. */
   const faceNorth = useCallback((): void => hostRef.current?.faceNorth?.(), []);
 
+  /**
+   * The sunset marker's meaning in words (MAP-EXPERIENCE-NEXT Wave 2, item 8).
+   *
+   * A MapLibre canvas is one image to a screen reader: the disc drawn where the
+   * light runs out has no text of its own, so the sentence the marker means is
+   * rendered here and referenced from the map's accessible description. Absent
+   * when the scene carries no daylight answer — a ride wholly in daylight, or a
+   * sun calculation that declined to answer — because then there is no marker to
+   * explain.
+   */
+  const sunsetLabel = scene.routes.find((route) => route.daylight !== undefined)?.daylight?.label ?? null;
+  // Unique per instance: a page can hold more than one map (Explore behind a
+  // sheet, a road preview), and two elements sharing an id would leave a screen
+  // reader describing the wrong one.
+  const sunsetLabelId = `${useId()}sunset`;
+
   return (
     <div
       className="og-map-host"
@@ -790,8 +806,15 @@ export function PlannerMap({
         data-map-load="loading"
         role="application"
         aria-label={label}
+        aria-describedby={sunsetLabel === null ? undefined : sunsetLabelId}
         onContextMenu={handleContextMenu}
       />
+
+      {sunsetLabel === null ? null : (
+        <p id={sunsetLabelId} className="og-visually-hidden" data-testid="map-sunset-label">
+          {sunsetLabel}
+        </p>
+      )}
 
       {pointMenu !== null && longPressEnabled && activeTool === "pan" ? (
         <MapPointMenu intent={pointMenu} scene={scene} container={containerRef}

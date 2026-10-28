@@ -27,7 +27,7 @@ import {
   isDrawableRoute,
 } from "@/application/map/drawable";
 import type { MapObjectRef, MapScene, PointScene, RouteScene } from "@/application/map/types";
-import { ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
+import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 import type { PlaceScene } from "@/application/places/place-scene";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -124,10 +124,50 @@ export function routeFeatureCollection(scene: MapScene): GeoJsonFeatureCollectio
   // geometry, so one upload keeps it on the route, and the casing/core/arrow
   // layers pass over it (they filter on `selected`, never `surface`).
   const bandId = scene.routes.length * 2;
-  surfaceBandFeatures(scene).forEach((feature, offset) => {
+  const bands = surfaceBandFeatures(scene);
+  bands.forEach((feature, offset) => {
     features.push({ ...feature, id: bandId + offset });
   });
+  // The after-sunset stretch and its marker ride here too, for the same reason:
+  // they are readings of the line drawn from the same scene, and one upload keeps
+  // them on it (MAP-EXPERIENCE-NEXT Wave 2, item 8).
+  afterSunsetFeatures(scene).forEach((feature, offset) => {
+    features.push({ ...feature, id: bandId + bands.length + offset });
+  });
   return features.length === 0 ? EMPTY : { type: "FeatureCollection", features };
+}
+
+/**
+ * The selected line's after-sunset stretch, plus the marker where the light runs
+ * out (MAP-EXPERIENCE-NEXT Wave 2, item 8).
+ *
+ * The geometry is the projection's own `daylight.afterSunset` line, not a share
+ * of the route re-cut here: the split was made on the ETA profile, and only the
+ * calculation that made it knows where the boundary really is. A scene whose
+ * route carries no `daylight` (a whole ride in daylight, or an unknown sun
+ * calculation) produces nothing at all — never a guessed dusk.
+ */
+function afterSunsetFeatures(scene: MapScene): readonly GeoJsonFeature[] {
+  const features: GeoJsonFeature[] = [];
+  for (const route of scene.routes) {
+    if (route.state !== "selected" || route.daylight === undefined || !isDrawableRoute(route)) continue;
+    const { afterSunset, sunsetAt } = route.daylight;
+    if (isDrawableLine(afterSunset)) {
+      features.push({
+        type: "Feature",
+        id: 0,
+        properties: { id: route.id, state: ROUTE_AFTER_SUNSET_FEATURE_STATE },
+        geometry: { type: "LineString", coordinates: line(afterSunset) },
+      });
+    }
+    features.push({
+      type: "Feature",
+      id: 0,
+      properties: { id: route.id, state: ROUTE_SUNSET_MARKER_FEATURE_STATE },
+      geometry: { type: "Point", coordinates: position(sunsetAt) },
+    });
+  }
+  return features;
 }
 
 /**
