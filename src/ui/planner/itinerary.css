@@ -1103,3 +1103,11 @@
     transition: none;
   }
 }
+
+/* Phones: the card keeps the essentials and the main actions; the chart, legs,
+   export and save open under More so the map keeps most of the screen. */
+.og-breadcrumb-summary__more-toggle { display: none; }
+@media (max-width: 760px) {
+  .og-breadcrumb-summary__main .og-breadcrumb-summary__more-toggle { display: inline-flex; align-items: center; }
+  .og-breadcrumb-summary:not([data-more]) .og-breadcrumb-summary__extra { display: none; }
+}

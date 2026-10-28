@@ -20,6 +20,9 @@ function WarningMark() {
 
 export function BreadcrumbSummary({ route, document, libraryService, elevation, measurements, onToggleSnap, snapping, snapError, onStart, onClear, editing, onPlanTrails }: { readonly onPlanTrails?: (() => void) | undefined; readonly route: BreadcrumbRoute; readonly document: RideDocument; readonly libraryService?: LibraryServicePort | undefined; readonly elevation: ElevationProfileState | null | undefined; readonly measurements: Measurements | null; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null; readonly onStart?: (() => Promise<string | null>) | undefined; readonly onClear: () => void; readonly editing: boolean }) {
   const [title, setTitle] = useState("");
+  // Phones show the essentials and the main actions; the chart, legs, export
+  // and save open under More, so the map keeps most of the screen.
+  const [more, setMore] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [startState, setStartState] = useState<"idle" | "starting">("idle");
   const [startError, setStartError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function BreadcrumbSummary({ route, document, libraryService, elevation, 
     downloadExport(new TextEncoder().encode(xml), exportFilename(exportTitle, "planned-track"));
   };
   return (
-    <section className="og-breadcrumb-summary" aria-label="Breadcrumb route" data-testid="breadcrumb-summary" data-editing={editing ? "true" : undefined}>
+    <section className="og-breadcrumb-summary" aria-label="Breadcrumb route" data-testid="breadcrumb-summary" data-editing={editing ? "true" : undefined} data-more={more ? "true" : undefined}>
       <header>
         <strong>Breadcrumb</strong>
         <span className="og-breadcrumb-summary__distance">{distance(measurements.totalMeters)}</span>
@@ -65,17 +68,22 @@ export function BreadcrumbSummary({ route, document, libraryService, elevation, 
           {steepness === null ? <span>{maxGrade === null ? "Grade unknown" : `Max grade about ${maxGrade}%`}</span> : null}
         </div>
         {steepness === null || maxGrade === null ? null : <p className="og-breadcrumb-summary__warn" role="note" data-testid="breadcrumb-steep"><WarningMark /><span><strong>{steepness}: about {maxGrade}% max grade.</strong>{editing ? "" : " Steep legs are orange on the map. Check them before you go."}</span></p>}
+        {editing ? (profile === null ? null : <BreadcrumbProfile profile={profile} steepSpans={steepSpans} />) : <>
+        <div className="og-breadcrumb-summary__actions og-breadcrumb-summary__main">
+          {onStart === undefined ? null : <button type="button" disabled={startState === "starting"} onClick={() => { setStartState("starting"); setStartError(null); void onStart().then((error) => { setStartError(error); setStartState("idle"); }, () => { setStartError("Could not start following this route."); setStartState("idle"); }); }}>{startState === "starting" ? "Starting…" : "Follow breadcrumb"}</button>}
+          {onPlanTrails === undefined ? null : <button type="button" data-testid="breadcrumb-plan-trails" onClick={onPlanTrails}>Plan on trails</button>}
+          <button type="button" className="og-breadcrumb-summary__more-toggle" data-testid="breadcrumb-more" aria-expanded={more} onClick={() => setMore(!more)}>{more ? "Less" : "More"}</button>
+          {startError === null ? null : <p role="alert">{startError}</p>}
+        </div>
+        <div className="og-breadcrumb-summary__extra">
         {profile === null ? (elevation?.status === "loading" ? <p className="og-breadcrumb-summary__quiet">Reading elevation…</p> : null) : <BreadcrumbProfile profile={profile} steepSpans={steepSpans} />}
-        {editing ? null : <>
         <details><summary>Legs ({route.legs.length})</summary><ol>{measurements.legs.map((leg, index) => <li key={route.waypoints[index]!.id}>Leg {index + 1} · {distance(leg.distanceMeters)}{leg.maxGradePercent !== null && leg.maxGradePercent > STEEP_LEG_PERCENT ? ` · Steep (about ${Math.round(leg.maxGradePercent)}%)` : ""} <button type="button" disabled={snapping !== null} onClick={() => onToggleSnap(index)}>{snapping === index ? "Finding route…" : route.legs[index]!.kind === "snapped" ? "Use straight line" : "Snap to trail or road"}</button></li>)}</ol></details>
         {snapError === null ? null : <p role="status">{snapError}</p>}
         <div className="og-breadcrumb-summary__actions">
-          {onStart === undefined ? null : <button type="button" disabled={startState === "starting"} onClick={() => { setStartState("starting"); setStartError(null); void onStart().then((error) => { setStartError(error); setStartState("idle"); }, () => { setStartError("Could not start following this route."); setStartState("idle"); }); }}>{startState === "starting" ? "Starting…" : "Follow breadcrumb"}</button>}
-          {startError === null ? null : <p role="alert">{startError}</p>}
-          {onPlanTrails === undefined ? null : <button type="button" data-testid="breadcrumb-plan-trails" onClick={onPlanTrails}>Plan on trails</button>}
           <button type="button" onClick={exportGpx}>Export GPX</button>
           {libraryService === undefined ? null : <form onSubmit={(event) => { event.preventDefault(); void save(); }}><label htmlFor="breadcrumb-title">Save to My rides</label><input id="breadcrumb-title" value={title} onChange={(event) => { setTitle(event.target.value); setSaveState("idle"); }} placeholder="Route name" /><button type="submit" disabled={title.trim() === "" || saveState === "saving"}>Save</button></form>}
           {saveState === "saved" ? <p role="status">Saved to My rides.</p> : saveState === "failed" ? <p role="alert">Could not save this route. Try again.</p> : null}
+        </div>
         </div>
         </>}
       </>}
