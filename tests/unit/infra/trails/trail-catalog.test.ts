@@ -361,7 +361,17 @@ describe("trailheads", () => {
   it("labels the place with its source so the rider can see where it came from", () => {
     const [trailhead] = attachTrailheads([route], new PlaceGrid([place("node/1", 0, 0.0002)]));
     expect(trailhead?.sources).toEqual([
-      { sourceId: "osm", sourceLabel: "OpenStreetMap", recordId: "node/1", url: null },
+      { sourceId: "osm", sourceLabel: "OpenStreetMap", recordId: "node/1", url: null, licence: "ODbL 1.0", licenceUrl: "https://www.openstreetmap.org/copyright" },
     ]);
+  });
+});
+
+describe("catalog shape", () => {
+  it("classifies a continuous loop and leaves disconnected lines unknown", async () => {
+    const { toHikeRecord } = await import("../../../../infra/trails/lib/output");
+    const candidate = trail("loop", [[0, 0], [0.01, 0], [0.01, 0.01], [0, 0.01], [0, 0]]);
+    const merged = mergeTrails([candidate], [])[0]!;
+    expect(toHikeRecord(merged)?.shape).toBe("loop");
+    expect(toHikeRecord({ ...merged, lines: [candidate.lines[0]!, line([[1, 1], [1.01, 1]])] })?.shape).toBe("unknown");
   });
 });

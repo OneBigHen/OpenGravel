@@ -9,7 +9,7 @@ import { haversine } from "@/domain/geometry/analysis";
  * trail whose ends sit close together is planned along the trail, not as the
  * shortcut between its ends.
  */
-export function trailBreadcrumb(line: readonly Coordinate[], name: string, spacingMeters = 800, maxWaypoints = 12): BreadcrumbRoute | null {
+export function trailBreadcrumb(line: readonly Coordinate[], name: string, spacingMeters = 800, maxWaypoints = 10): BreadcrumbRoute | null {
   if (line.length < 2) return null;
   const along = [0];
   for (let i = 1; i < line.length; i += 1) along.push(along[i - 1]! + haversine(line[i - 1]!, line[i]!));

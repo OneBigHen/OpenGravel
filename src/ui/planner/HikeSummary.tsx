@@ -18,10 +18,13 @@ export interface HikeSummaryModel {
   readonly canPlan: boolean;
   readonly onPlan: () => void;
   readonly onDraw: () => void;
+  /** Tap waypoints on the map, then Plan on trails. Absent where the planner has no breadcrumb tool. */
+  readonly onBreadcrumb?: () => void;
 }
 
 const NAV = "M12 3 5 20l7-3.5 7 3.5z";
 const PEN = "M4 20l4-1 11-11-3-3L5 16zM14 6l3 3";
+const PIN = "M12 21s-6-5.4-6-10.5a6 6 0 0 1 12 0C18 15.6 12 21 12 21z";
 const Glyph = ({ d }: { readonly d: string }) => <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 
 export function HikeSummary({ hike, start }: { readonly hike: HikeSummaryModel; readonly start: RideActionsProps["start"] }) {
@@ -53,6 +56,7 @@ export function HikeSummary({ hike, start }: { readonly hike: HikeSummaryModel; 
       <div className="og-hike-summary__buttons">
         <button type="button" data-testid="hike-plan" disabled={!hike.canPlan} onClick={hike.onPlan}>Re-plan</button>
         <button type="button" data-testid="hike-draw-start" onClick={hike.onDraw}><Glyph d={PEN} />Draw</button>
+        {hike.onBreadcrumb === undefined ? null : <button type="button" data-testid="hike-breadcrumb" onClick={hike.onBreadcrumb}><Glyph d={PIN} />Breadcrumb</button>}
       </div>
     </div>
   </section>;

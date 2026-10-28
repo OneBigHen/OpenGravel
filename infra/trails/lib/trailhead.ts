@@ -85,6 +85,8 @@ export function attachTrailheads(
             {
               sourceId: place.sourceId,
               sourceLabel: place.sourceId === "osm" ? "OpenStreetMap" : place.sourceId === "usfs" ? "USDA Forest Service" : "National Park Service",
+              licence: place.sourceId === "osm" ? "ODbL 1.0" : "Public domain (US federal government)",
+              licenceUrl: place.sourceId === "osm" ? "https://www.openstreetmap.org/copyright" : "https://www.usa.gov/government-works",
               recordId: place.recordId,
               url: place.url,
             },

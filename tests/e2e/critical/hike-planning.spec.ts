@@ -67,20 +67,18 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
 // aside once a hike is planned), and the summary lives in the sheet. Still
 test.describe("on a phone", () => {
 test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
-// fixme: on a phone a planned hike hides the map edit button (the sheet owns
-// the route), so this flow has no entry point yet; the trail page's "Plan this
-// hike on the map" opens a breadcrumb and Plan on trails instead.
-test.fixme("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
+test("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
   await placeEndpoint(page, "start", start);
   await placeEndpoint(page, "finish", finish);
   await page.getByTestId("hike-plan").click();
   await expect(page.getByTestId("hike-route-summary")).toBeVisible();
-  // The edit toolbar is the same accessible entry as riding.
-  await page.getByTestId("map-edit-open").click();
-  await page.getByTestId("map-edit-breadcrumb").click();
-  await clickMapAtCoordinate(page, start);
+  // On a phone the planned hike's sheet owns the route, so Breadcrumb starts there.
+  await page.getByTestId("hike-breadcrumb").click();
+  // Well apart: at the planned hike's framing a tap on (or next to) a waypoint
+  // marker selects that waypoint instead of adding one.
+  await clickMapAtCoordinate(page, { lon: -75.446, lat: 40.142 });
   await clickMapAtCoordinate(page, { lon: -75.436, lat: 40.136 });
-  await clickMapAtCoordinate(page, finish);
+  await clickMapAtCoordinate(page, { lon: -75.426, lat: 40.129 });
   await page.getByRole("toolbar", { name: "Breadcrumb", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
   await page.getByTestId("breadcrumb-plan-trails").click();
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);

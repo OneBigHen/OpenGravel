@@ -8,6 +8,7 @@
  */
 
 import { bboxOf, linesLengthMeters, longestLine } from "./geometry";
+import { classifyShape } from "../../../src/domain/hike/shape";
 import type { Coordinate } from "../../../src/domain/ride/types";
 import type {
   HikeCatalog,
@@ -87,6 +88,7 @@ export function toHikeRecord(trail: Trail): HikeRecord | null {
     bbox: bboxOf(trail.lines),
     start: ends.start,
     end: ends.end,
+    shape: trail.lines.length === 1 && trail.lines[0] ? classifyShape(trail.lines[0]).shape : "unknown",
     trailheadCount: trail.trailheads.length,
     trailheads: trail.trailheads,
     sources: trail.sources,

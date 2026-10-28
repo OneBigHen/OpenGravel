@@ -32,7 +32,7 @@ export function profileTimeSeconds(profile: ElevationProfile): number {
   }, 0);
 }
 
-export type HikeFilters = { readonly length: string; readonly gain: string; readonly time: string; readonly dogs: boolean; readonly kids: boolean };
+export type HikeFilters = { readonly length: string; readonly gain: string; readonly time: string; readonly shape?: string; readonly dogs: boolean; readonly kids: boolean };
 
 /**
  * Whether a hike meets the filters: true, false, or "unknown" while its gain
@@ -40,6 +40,7 @@ export type HikeFilters = { readonly length: string; readonly gain: string; read
  * page of results is never spent on hikes the catalog already rules out.
  */
 export function matchHikeFilters(hike: HikeRecord, filters: HikeFilters, profile?: ElevationProfile): boolean | "unknown" {
+  if (filters.shape && hike.shape !== filters.shape) return false;
   if (filters.length && hike.lengthMeters > Number(filters.length) * 1609.344) return false;
   if (filters.dogs && hike.dog !== "yes" && hike.dog !== "leashed") return false;
   if (filters.kids && (hike.lengthMeters > 4828 || hike.sacScale !== "hiking")) return false;

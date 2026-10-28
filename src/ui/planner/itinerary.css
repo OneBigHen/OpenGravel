@@ -810,15 +810,27 @@
   width: min(20rem, calc(100% - 2rem));
   padding: 1rem;
   border-radius: 1rem;
-  background: var(--og-surface, #fff);
-  color: var(--og-text, #222);
-  box-shadow: 0 8px 30px #0003;
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+/* Phones: below the breadcrumb toolbar and clear of the map buttons, above
+   them in the stack (it sat under the toolbar and the route card). */
+@media (max-width: 1180px) {
+  .og-planner .og-breadcrumb-editor {
+    z-index: var(--og-z-map-ui);
+    top: calc(var(--og-safe-top) + 14rem);
+    left: var(--og-space-3);
+    right: calc(var(--og-space-4) + var(--og-touch) + var(--og-space-2));
+    width: auto;
+  }
 }
 .og-breadcrumb-editor label { display: block; font-weight: 700; }
 .og-breadcrumb-editor input { width: 100%; min-height: 44px; margin-block: .5rem; }
 .og-breadcrumb-editor__actions { display: flex; gap: .5rem; }
 .og-breadcrumb-editor__actions button { min-height: 44px; flex: 1; }
-.og-breadcrumb-editor :focus-visible { outline: 3px solid #d65c32; outline-offset: 2px; }
+.og-breadcrumb-editor :focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
 
 .og-breadcrumb-summary {
   position: absolute;
@@ -1090,4 +1102,12 @@
   .og-point--itinerary {
     transition: none;
   }
+}
+
+/* Phones: the card keeps the essentials and the main actions; the chart, legs,
+   export and save open under More so the map keeps most of the screen. */
+.og-breadcrumb-summary__more-toggle { display: none; }
+@media (max-width: 760px) {
+  .og-breadcrumb-summary__main .og-breadcrumb-summary__more-toggle { display: inline-flex; align-items: center; }
+  .og-breadcrumb-summary:not([data-more]) .og-breadcrumb-summary__extra { display: none; }
 }

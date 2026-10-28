@@ -85,6 +85,8 @@ function sourceOf(candidate: TrailCandidate, label: string): TrailSource {
   return {
     sourceId: candidate.sourceId,
     sourceLabel: label,
+    licence: candidate.sourceId === "osm" ? "ODbL 1.0" : "Public domain (US federal government)",
+    licenceUrl: candidate.sourceId === "osm" ? "https://www.openstreetmap.org/copyright" : "https://www.usa.gov/government-works",
     recordId: candidate.recordId,
     url: candidate.url,
   };

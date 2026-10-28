@@ -8,6 +8,7 @@
  */
 
 import type { Coordinate } from "../../../src/domain/ride/types";
+import type { HikeShape } from "../../../src/domain/hike/types";
 
 /** Sources this job can merge. Order in `SOURCE_PRIORITY` decides field winners. */
 export type TrailSourceId = "osm" | "usfs" | "nps";
@@ -15,6 +16,8 @@ export type TrailSourceId = "osm" | "usfs" | "nps";
 export interface TrailSource {
   readonly sourceId: TrailSourceId;
   readonly sourceLabel: string;
+  readonly licence?: string;
+  readonly licenceUrl?: string;
   /** Stable id inside the source: `relation/123`, `way/456`, the USFS trail number, … */
   readonly recordId: string;
   readonly url: string | null;
@@ -123,6 +126,8 @@ export interface HikeRecord extends TrailMeasurements {
   readonly bbox: readonly [number, number, number, number];
   readonly start: Coordinate;
   readonly end: Coordinate;
+  /** Classification of the complete mapped line; unknown for disconnected parts. */
+  readonly shape?: HikeShape;
   readonly trailheadCount: number;
   readonly trailheads: readonly Trailhead[];
   readonly sources: readonly TrailSource[];

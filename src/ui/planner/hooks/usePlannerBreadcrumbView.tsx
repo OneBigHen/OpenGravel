@@ -2,7 +2,7 @@
 
 import { newCommandId } from "@/domain/ride/ids";
 import { useActivityMode } from "@/ui/stores/activity-mode";
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LibraryServicePort } from "@/application/library/library-service";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
 import type { MapIntent, MapPointAction, MapScene } from "@/application/map/types";
@@ -47,6 +47,17 @@ export function usePlannerBreadcrumbView(wiring: Wiring) {
   const breadcrumb = useMemo(() => ({ ...base, project }), [base, project]);
   const [mapCenter, setMapCenter] = useState<Coordinate | null>(null);
   const { route, selected, setEditing, setSelected, add, edit } = breadcrumb;
+  // A breadcrumb that arrives whole (a trail opened from Explore, a GPX import,
+  // a saved ride) is framed once; one being tapped out point by point is not.
+  const arrived = route !== null && !breadcrumb.editing;
+  const framed = useRef(false);
+  useEffect(() => {
+    if (!arrived) { if (route === null) framed.current = false; return; }
+    if (framed.current) return;
+    framed.current = true;
+    plannerUiStore.getState().setCameraUserOwned(false);
+    plannerUiStore.getState().requestFit(null);
+  }, [arrived, route, plannerUiStore]);
   const beginEditing = useCallback((): void => {
     planningSessionStore.getState().cancel();
     setEditing(true);

@@ -37,6 +37,11 @@ describe("hike discovery", () => {
       expect(matchHikeFilters(unknown, { ...none, gain: "500" }, flat)).toBe(true);
       expect(matchHikeFilters(unknown, none)).toBe(true);
     });
+    it("filters by mapped shape", () => {
+      const loopHike = { ...measured("loop", 100, 60), shape: "loop" as const };
+      expect(matchHikeFilters(loopHike, { ...none, shape: "loop" })).toBe(true);
+      expect(matchHikeFilters(loopHike, { ...none, shape: "out-and-back" })).toBe(false);
+    });
     it("short and easy needs the easy grade, 3 miles and 500 ft", () => {
       const easy = { ...measured("easy", 100, 60), sacScale: "hiking" };
       expect(matchHikeFilters(easy, { ...none, kids: true })).toBe(true);

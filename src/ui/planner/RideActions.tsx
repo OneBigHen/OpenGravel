@@ -288,7 +288,7 @@ export function RideActions({
             data-testid="named-ride-title"
             type="text"
             value={title}
-            placeholder="Name this ride to save it"
+            placeholder={hiking ? "Name this hike to save it" : "Name this ride to save it"}
             onChange={(event) => {
               setTitle(event.target.value);
               setSaveState("idle");

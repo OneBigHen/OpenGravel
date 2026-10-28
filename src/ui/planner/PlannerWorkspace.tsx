@@ -742,7 +742,7 @@ export function PlannerWorkspace({
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
-  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps), plannedHike = usePlannedHikeSummary(hikeActivity, plannerUiStore);
+  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps), plannedHike = usePlannedHikeSummary(hikeActivity, plannerUiStore, breadcrumbBar);
   return (
     <PlannerWorkspaceFrame
       trip={tripCard}

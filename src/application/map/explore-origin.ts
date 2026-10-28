@@ -1,5 +1,7 @@
 import type { Coordinate } from "@/domain/ride/types";
 export const HIKE_EXPLORE_ORIGIN_KEY = "opengravel.hike.explore-origin";
+/** Explore hikes' search, filters, page and scroll, so Back returns to the same list. */
+export const HIKE_EXPLORE_STATE_KEY = "opengravel.hike.explore-state";
 export function saveExploreOrigin(point: Coordinate): void {
   try { sessionStorage.setItem(HIKE_EXPLORE_ORIGIN_KEY, JSON.stringify(point)); } catch { /* Storage is optional. */ }
 }
