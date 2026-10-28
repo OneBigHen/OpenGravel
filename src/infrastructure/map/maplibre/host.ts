@@ -1590,7 +1590,15 @@ export async function createMapLibreHost(
   function applyTerrain(map: MapLibreMap): void {
     // The DEM is a network source; a downloaded basemap draws flat rather than
     // reporting a terrain failure the rider cannot fix without signal.
-    if (map.setTerrain === undefined || drawingOfflineBasemap) { reportTerrain("unavailable"); return; }
+    if (terrainOn && terrainPitchBefore === null) {
+      terrainPitchBefore = map.getPitch?.() ?? 0;
+      map.easeTo?.({ pitch: Math.max(40, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
+    } else if (!terrainOn && terrainPitchBefore !== null) {
+      map.easeTo?.({ pitch: terrainPitchBefore, duration: options.reducedMotion === true ? 0 : 300 });
+      terrainPitchBefore = null;
+    }
+    if (drawingOfflineBasemap) { terrainFailed = false; reportTerrain("flat-offline"); return; }
+    if (map.setTerrain === undefined) { reportTerrain("unavailable"); return; }
     try {
       const requested = terrainOn || latestScene?.infoLayers?.visible.includes("hillshade") === true;
       if (requested && !terrainRequested) terrainFailed = false;
@@ -1623,13 +1631,6 @@ export async function createMapLibreHost(
         // the extruded towns; flat again, the style's own sky and light return.
         map.setSky?.(terrainOn ? skySpec(basemapLook === "night") : undefined);
         map.setLight?.(terrainOn ? SUN_LIGHT : DEFAULT_LIGHT);
-      }
-      if (terrainOn && terrainPitchBefore === null) {
-        terrainPitchBefore = map.getPitch?.() ?? 0;
-        map.easeTo?.({ pitch: Math.max(45, terrainPitchBefore), duration: options.reducedMotion === true ? 0 : 300 });
-      } else if (!terrainOn && terrainPitchBefore !== null) {
-        map.easeTo?.({ pitch: terrainPitchBefore, duration: options.reducedMotion === true ? 0 : 300 });
-        terrainPitchBefore = null;
       }
       if (requested) reportTerrain(!newDem && terrainHasContent && map.isSourceLoaded?.(TERRAIN_SOURCE_ID) === true ? "ready" : "loading");
       else if (terrainTimer !== null) { clearTimeout(terrainTimer); terrainTimer = null; }

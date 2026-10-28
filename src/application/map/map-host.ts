@@ -139,7 +139,7 @@ export interface MapCameraState {
 /** Renderer acknowledgement, separate from successful provider transport. */
 export interface MapLayerDrawStatus {
   readonly layerId: MapLayerId;
-  readonly state: "loading" | "ready" | "unavailable";
+  readonly state: "loading" | "ready" | "unavailable" | "flat-offline";
 }
 
 export interface MapHost {

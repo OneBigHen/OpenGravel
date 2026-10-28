@@ -157,7 +157,12 @@ export function buildingExtrusionLayerSpec(source: string, night = false): Reado
     source,
     "source-layer": "building",
     minzoom: 14,
-    filter: ["all", ["!=", ["get", "hide_3d"], true], ["!=", ["get", "extrude"], "false"], ["!=", ["get", "underground"], "true"]],
+    filter: ["all",
+      ["!=", ["to-string", ["coalesce", ["get", "hide_3d"], false]], "true"],
+      ["!=", ["to-string", ["coalesce", ["get", "hide_3d"], 0]], "1"],
+      ["==", ["to-string", ["coalesce", ["get", "extrude"], "true"]], "true"],
+      ["!=", ["to-string", ["coalesce", ["get", "underground"], false]], "true"],
+    ],
     paint: {
       // Warm stone low, paler with height, like daylight on a town.
       "fill-extrusion-color": night

@@ -145,6 +145,7 @@ function LayeredMapWith({
         onIntent={intercept}
         onViewport={viewport}
         terrain3d={view.enabled.includes("terrain-3d")}
+        onToggleTerrain3d={() => view.toggle("terrain-3d")}
         onLayerStatus={view.onLayerStatus}
       />
       <div className="og-layers-overlay">
