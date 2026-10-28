@@ -29,7 +29,7 @@ import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
 import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
 import { PUCK_IMAGE_ID } from "./puck-image";
 import { MARKER_IMAGE_IDS, ROUTE_ARROW_IMAGE_ID } from "./marker-images";
-import { ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
+import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
 
 /** The tokens the cartography uses, as literal CSS colour values. */
 export interface MapPalette {
@@ -154,9 +154,11 @@ export const MAP_LAYER_IDS = {
   routeProposed: "ogv-route-proposed",
   routeCasing: "ogv-route-casing",
   routeSelected: "ogv-route-selected",
+  routeAfterSunset: "ogv-route-after-sunset",
   routeSurface: "ogv-route-surface",
   routeArrow: "ogv-route-arrow",
   routeLabel: "ogv-route-label",
+  routeSunsetMarker: "ogv-route-sunset-marker",
   changedSpan: "ogv-changed-span",
   pointShaping: "ogv-point-shaping",
   pointStop: "ogv-point-stop",
@@ -263,6 +265,17 @@ function emphasisOf(palette: MapPalette): number {
  */
 function selectedRouteColor(palette: MapPalette, strong: boolean): string {
   return strong ? palette.routePlumStrong : palette.routePlum;
+}
+
+/**
+ * The chosen line's casing colour: its own strong tint, unless the surface has
+ * overridden the casing (Ride Focus in daylight gives the line a dark edge).
+ *
+ * One reading, used by the casing layer and by the after-sunset veil that dims it,
+ * so the veil can never be a colour the line's edge is not.
+ */
+function routeCasingColor(palette: MapPalette): string {
+  return palette.routeCasing === "auto" ? selectedRouteColor(palette, true) : palette.routeCasing;
 }
 
 /**
@@ -391,7 +404,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "selected"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.routeCasing === "auto" ? selectedRouteColor(palette, true) : palette.routeCasing,
+        "line-color": routeCasingColor(palette),
         // Street zoom (riding) draws the line bold, like turn-by-turn apps;
         // overview zooms keep the planner's weight.
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
@@ -428,6 +441,28 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       },
     },
     {
+      // Where the light runs out (MAP-EXPERIENCE-NEXT Wave 2, item 8): the stretch
+      // of the chosen line ridden after sunset gets a dimmer casing, drawn over the
+      // line and its surface band so the road ahead reads lit and the road after
+      // dark recedes without disappearing. It is the line's **own** casing colour
+      // at reduced opacity rather than a new hue: a dimmer version of the edge the
+      // rider already reads, which darkens the bright core under it in both themes
+      // (Night's ink is near-white, so a palette "ink" veil would brighten it).
+      // Drawn under the direction arrows on purpose: which way to go is not a
+      // daylight fact.
+      id: MAP_LAYER_IDS.routeAfterSunset,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", ROUTE_AFTER_SUNSET_FEATURE_STATE),
+      layout: LINE_LAYOUT,
+      paint: {
+        "line-color": routeCasingColor(palette),
+        // As wide as the casing, so both the core and its edge dim together.
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
+        "line-opacity": 0.55,
+      },
+    },
+    {
       // Which way to go, without opening anything: chevrons laid along the
       // selected line by MapLibre's own line placement, so they follow a bend
       // instead of pointing at a bearing the geometry left behind. The spacing
@@ -456,7 +491,13 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       id: MAP_LAYER_IDS.routeLabel,
       type: "symbol",
       source: MAP_SOURCE_IDS.routes,
-      filter: ["==", ["geometry-type"], "Point"],
+      // Route names are point features of this source; the sunset marker is a point
+      // too, and it must never be drawn as a name with a plum pill behind it.
+      filter: [
+        "all",
+        ["==", ["geometry-type"], "Point"],
+        ["!=", ["get", "state"], ROUTE_SUNSET_MARKER_FEATURE_STATE],
+      ],
       layout: {
         "text-field": ["get", "label"],
         "text-font": ["Open Sans Bold"],
@@ -477,6 +518,24 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         // Alternatives' names recede a step, as their lines do.
         "icon-opacity": ["case", equals("state", "selected"), 1, 0.92],
         "text-opacity": ["case", equals("state", "selected"), 1, 0.82],
+      },
+    },
+    {
+      // Where the light runs out, on the line: a Golden Hour disc with a Paper
+      // ring, small enough not to read as a stop and warm enough to read as the
+      // sun. It is an annotation, not an object — never in HIT_LAYER_IDS, so a tap
+      // on it is a tap on the route beneath it — and its meaning is carried by the
+      // accessible label the surface renders beside the map, since a canvas has no
+      // text a screen reader can find.
+      id: MAP_LAYER_IDS.routeSunsetMarker,
+      type: "circle",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", ROUTE_SUNSET_MARKER_FEATURE_STATE),
+      paint: {
+        "circle-radius": 6.5,
+        "circle-color": palette.goldenHour,
+        "circle-stroke-color": palette.paper,
+        "circle-stroke-width": 2.5,
       },
     },
   ];

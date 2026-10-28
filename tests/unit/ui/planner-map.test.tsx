@@ -971,3 +971,49 @@ describe("the map's instruments (05 §9)", () => {
     expect(screen.queryByTestId("map-scale")).toBeNull();
   });
 });
+
+/**
+ * The sunset marker's accessible label (MAP-EXPERIENCE-NEXT Wave 2, item 8).
+ *
+ * The marker is a disc on a canvas, which a screen reader cannot read. The scene
+ * carries the sentence it means, and the surface names it as the map's
+ * description — only when there is a marker to explain.
+ */
+describe("the sunset marker's accessible label", () => {
+  function sceneWithDaylight(): MapScene {
+    const base = scene();
+    return {
+      ...base,
+      routes: base.routes.map((route) => ({
+        ...route,
+        daylight: {
+          afterSunset: [
+            { lon: -75.15, lat: 39.925 },
+            { lon: -75.1, lat: 39.95 },
+          ],
+          sunsetAt: { lon: -75.15, lat: 39.925 },
+          sunsetIso: "2026-09-17T22:12:00.000Z",
+          label: "Sunset around 6:12 PM",
+        },
+      })),
+    };
+  }
+
+  it("describes the map with where the light runs out", async () => {
+    await renderMap({ scene: sceneWithDaylight() });
+
+    const label = screen.getByTestId("map-sunset-label");
+    expect(label.textContent).toBe("Sunset around 6:12 PM");
+    // The map points at that sentence, and only that sentence, by its own id.
+    expect(screen.getByTestId("planner-map").getAttribute("aria-describedby")).toBe(label.id);
+    // The sentence is for assistive technology, not a caption on the map.
+    expect(screen.getByTestId("map-sunset-label").className).toBe("og-visually-hidden");
+  });
+
+  it("says nothing when the whole ride is in daylight", async () => {
+    await renderMap();
+
+    expect(screen.queryByTestId("map-sunset-label")).toBeNull();
+    expect(screen.getByTestId("planner-map").hasAttribute("aria-describedby")).toBe(false);
+  });
+});

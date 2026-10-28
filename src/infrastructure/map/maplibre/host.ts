@@ -87,6 +87,7 @@ import type {
   MapRenderError,
 } from "@/application/map/map-host";
 import type { PlaceId } from "@/application/places/types";
+import { RADAR_ATTRIBUTION } from "@/application/map-layers/radar";
 import { clampInsetsToViewport, type MapInsets } from "@/application/map/insets";
 import type { RideCamera } from "@/application/map/ride-camera";
 import { metersPerPixelAt } from "@/application/map/scale";
@@ -309,6 +310,9 @@ interface MapLibreLayerSpec {
 /** The satellite raster source and layer id (M3, OGV-D-265). */
 const SATELLITE_ID = "og-satellite";
 
+/** The animated rain radar's raster source and layer id (map-experience wave 3). */
+const RADAR_TILE_SOURCE_ID = "ogv-radar-tiles";
+
 interface MapLibreMap {
   getCanvas(): HTMLCanvasElement;
   getCanvasContainer(): HTMLElement;
@@ -325,7 +329,7 @@ interface MapLibreMap {
   project(coordinate: readonly [number, number]): { x: number; y: number };
   unproject(point: readonly [number, number]): { lng: number; lat: number };
   addSource(id: string, source: Record<string, unknown>): void;
-  getSource(id: string): { setData(data: unknown): void } | undefined;
+  getSource(id: string): { setData(data: unknown): void; setTiles?(tiles: readonly string[]): void } | undefined;
   addLayer(layer: unknown, beforeId?: string): void;
   addImage(id: string, image: PlacePillImage["data"], options: PlacePillImage["options"]): void;
   updateImage?(id: string, image: PlacePillImage["data"]): void;
@@ -400,6 +404,7 @@ const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
   MAP_LAYER_IDS.routeProposed,
   MAP_LAYER_IDS.routeCasing,
   MAP_LAYER_IDS.routeSelected,
+  MAP_LAYER_IDS.routeAfterSunset,
   MAP_LAYER_IDS.routeSurface,
 ]);
 
@@ -1507,6 +1512,54 @@ export async function createMapLibreHost(
     }
   }
 
+  /**
+   * One RainViewer radar frame as a raster under the labels (map-experience wave
+   * 3). The timeline swaps the frame, so the tiles are replaced in place when the
+   * renderer can do that; a renderer without `setTiles` (or a frame requested
+   * after a style rebuild) is redrawn from scratch. Attribution rides on the
+   * source, which is what the renderer's own attribution control reads.
+   */
+  const radarFrameDrawn = new WeakMap<MapLibreMap, string>();
+  function syncRadarTiles(map: MapLibreMap, tiles: string | null): void {
+    const id = RADAR_TILE_SOURCE_ID;
+    try {
+      if (tiles === null) {
+        if (map.getLayer(id) !== undefined) map.removeLayer(id);
+        if (map.getSource(id) !== undefined) map.removeSource(id);
+        radarFrameDrawn.delete(map);
+        return;
+      }
+      const source = map.getSource(id);
+      if (map.getLayer(id) !== undefined && radarFrameDrawn.get(map) === tiles && source !== undefined) {
+        map.setLayoutProperty?.(id, "visibility", "visible");
+        return;
+      }
+      if (source !== undefined && source.setTiles !== undefined && map.getLayer(id) !== undefined) {
+        source.setTiles([tiles]);
+        radarFrameDrawn.set(map, tiles);
+        map.setLayoutProperty?.(id, "visibility", "visible");
+        return;
+      }
+      if (map.getLayer(id) !== undefined) map.removeLayer(id);
+      if (source !== undefined) map.removeSource(id);
+      map.addSource(id, {
+        type: "raster",
+        tiles: [tiles],
+        tileSize: 256,
+        // RainViewer publishes radar imagery to about zoom 10 for 256 px tiles;
+        // past that the renderer overzooms one tile instead of asking for
+        // tiles the provider does not have.
+        maxzoom: 10,
+        attribution: RADAR_ATTRIBUTION,
+      });
+      const firstLabel = map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol")?.id;
+      map.addLayer({ id, type: "raster", source: id, paint: { "raster-opacity": 0.6, "raster-fade-duration": 0 } }, belowOverlay(map, firstLabel));
+      radarFrameDrawn.set(map, tiles);
+    } catch {
+      recordError({ kind: "source", detail: id });
+    }
+  }
+
   const radarScenes = new WeakMap<MapLibreMap, string>();
   function syncLayerRasters(map: MapLibreMap, scene: MapScene): void {
     const id = "ogv-radar";
@@ -1654,6 +1707,7 @@ export async function createMapLibreHost(
       current.map.getSource(sourceId)?.setData(sourceData(sourceId, scene));
     }
     syncTrafficFlow(current.map, scene.infoLayers?.trafficFlowTiles ?? null);
+    syncRadarTiles(current.map, scene.infoLayers?.radarTiles ?? null);
     syncLayerRasters(current.map, scene);
     applyTerrain(current.map);
     armChangedSpanExpiry(current, scene.changedSpan ?? null);

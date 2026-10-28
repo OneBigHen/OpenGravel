@@ -1,6 +1,9 @@
 "use client";
 
 import type { PlaceMatch } from "@/application/geocoding/place-search";
+import { sunState, type SunState } from "@/application/long-trip/daylight";
+import type { MapLayersSource } from "@/application/map-layers";
+import { smartChip, type SmartChipSuggestion } from "@/application/places";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
@@ -10,6 +13,7 @@ import { LayerGlyph } from "@/ui/layers/LayerIcon";
 import { useEffect, useState } from "react";
 
 import { ConditionsPill } from "./ConditionsPill";
+import { useRouteFuelGap, type FuelGapRoute } from "./useRouteFuelGap";
 
 /** Searches a place category near the rider. Every chip here runs a search. */
 export const SEARCH_CHIPS = [
@@ -52,20 +56,75 @@ function chipOrder(hour: number): readonly SearchChip["id"][] {
   return ["gas", "lodging", "food", "coffee", "moto"];
 }
 
-/** The chips in this hour's order, after mount so the server render matches. */
-function useChipOrder(): readonly SearchChip[] {
-  const [hour, setHour] = useState<number | null>(null);
+/** A chip as the row shows it: the search it runs, and the words on it. */
+export interface SearchChipRowItem {
+  readonly chip: SearchChip;
+  readonly label: string;
+  /** True for the one contextual chip after Gas. */
+  readonly smart: boolean;
+}
+
+function chipFor(id: SearchChip["id"]): SearchChip {
+  return SEARCH_CHIPS.find((chip) => chip.id === id)!;
+}
+
+function plain(chip: SearchChip): SearchChipRowItem {
+  return { chip, label: chip.label, smart: false };
+}
+
+/**
+ * The row as it renders: Gas first, then the hour's own next chip — unless a
+ * suggestion takes that slot (see `smartChip`). A suggestion never makes the
+ * row longer: the matched chip moves up instead of appearing twice, and when
+ * the suggestion is Gas itself the hour's next chip gives up its place.
+ */
+export function chipRow(
+  order: readonly SearchChip["id"][],
+  smart: SmartChipSuggestion | null,
+): readonly SearchChipRowItem[] {
+  const base = order.map(chipFor);
+  const first = base[0];
+  if (first === undefined) return [];
+  if (smart === null) return base.map(plain);
+  const matched = chipFor(smart.id);
+  const rest = base.slice(1).filter((chip) => chip.id !== matched.id);
+  const kept = matched.id === first.id ? rest.slice(1) : rest;
+  return [plain(first), { chip: matched, label: smart.label, smart: true }, ...kept.map(plain)];
+}
+
+/**
+ * The chips in this hour's order, after mount so the server render matches: the
+ * clock and the sun are the rider's, and the route's fuel gap arrives when the
+ * along-route fuel search answers.
+ */
+function useChipRow(
+  at: Coordinate,
+  route: FuelGapRoute | null,
+  mapLayers: MapLayersSource | undefined,
+): readonly SearchChipRowItem[] {
+  const [clock, setClock] = useState<{ readonly now: number; readonly sun: SunState | null } | null>(null);
   useEffect(() => {
-    const read = (): void => setHour(new Date().getHours());
+    const read = (): void => {
+      const now = Date.now();
+      setClock({ now, sun: sunState(at, now) });
+    };
     read();
     const timer = window.setInterval(read, 10 * 60_000);
     return () => window.clearInterval(timer);
-  }, []);
-  if (hour === null) return SEARCH_CHIPS;
-  return chipOrder(hour).map((id) => SEARCH_CHIPS.find((chip) => chip.id === id)!);
+  }, [at]);
+  const fuelGap = useRouteFuelGap(route, mapLayers);
+  if (clock === null) return SEARCH_CHIPS.map(plain);
+  return chipRow(
+    chipOrder(new Date(clock.now).getHours()),
+    smartChip({
+      now: clock.now,
+      sunState: clock.sun,
+      route: fuelGap === null ? null : { fuelGapMiles: fuelGap },
+    }),
+  );
 }
 
-export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear, onChip, onLayer, onSearchList }: {
+export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear, onChip, onLayer, onSearchList, route, mapLayers }: {
   readonly search: ComposerPlaceSearch;
   readonly bias: Coordinate;
   readonly selected: boolean;
@@ -76,9 +135,13 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   readonly onLayer: (chip: LayerChip) => void;
   /** Enter on words that match many places shows them as a list. */
   readonly onSearchList?: (query: string, places: readonly PlaceMatch[]) => void;
+  /** The open route, whose fuel gaps can earn the chip after Gas. */
+  readonly route?: FuelGapRoute | null;
+  /** The map-layer provider that answers the along-route fuel search. */
+  readonly mapLayers?: MapLayersSource | undefined;
 }) {
   const advisor = useRideAdvisor();
-  const chips = useChipOrder();
+  const chips = useChipRow(bias, route ?? null, mapLayers);
   return <div className="og-top-search" data-testid="top-search">
     <div className="og-top-search__row">
     <div className="og-top-search__bar">
@@ -93,8 +156,8 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
     <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">
-      {chips.map((chip) => <button key={chip.id} type="button" data-chip={chip.id} data-testid={`search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
-        <LayerGlyph id={CHIP_ICON[chip.id]} className="og-search-chips__glyph"/>{chip.label}
+      {chips.map(({ chip, label, smart }) => <button key={smart ? `smart:${chip.id}` : chip.id} type="button" data-chip={chip.id} data-smart={smart ? "true" : undefined} data-testid={smart ? `smart-chip-${chip.id}` : `search-chip-${chip.id}`} aria-pressed={activeChip === chip.id} onClick={() => onChip(chip)}>
+        <LayerGlyph id={CHIP_ICON[chip.id]} className="og-search-chips__glyph"/>{label}
       </button>)}
       <span className="og-search-chips__divider" aria-hidden="true"/>
       <span className="og-search-chips__layers" role="group" aria-label="Map layers">

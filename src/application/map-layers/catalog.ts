@@ -92,10 +92,10 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     minZoom: 5, color: "#bf4829", colorToken: "--og-ember-strong", glyph: "!",
   },
   {
-    id: "weather-radar", name: "Rain radar", category: "conditions", kind: "features",
-    legend: "Where it is raining right now",
-    source: "NOAA NEXRAD / Iowa Environmental Mesonet",
-    caveat: "CONUS mosaic, roughly 1 km resolution. Frame valid time shown. Stale after 15 minutes. Radar gaps and beam blockage do not mean clear weather. Online only.",
+    id: "weather-radar", name: "Rain radar", category: "conditions", kind: "raster",
+    legend: "Rain now, the last two hours, and a 30-minute nowcast",
+    source: "RainViewer (NOAA NEXRAD and other national radar feeds)",
+    caveat: "Animated frames: two hours back plus a 30-minute nowcast, scrubbed with the timeline in the map. Stale frames are labelled. Radar gaps, beam blockage and a missing frame do not mean clear weather. Online only.",
     minZoom: 4, color: "#397c96", colorToken: "--og-signal-blue", glyph: "☂",
   },
   {

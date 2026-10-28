@@ -30,6 +30,8 @@ coverage/
 /data/catalog-sources/
 /data/community-routes/
 /data/gpx-library/
+# Regional trail-catalog inputs and outputs (OSM extracts, agency downloads)
+/infra/trails/data/
 
 # misc
 .DS_Store

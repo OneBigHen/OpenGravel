@@ -296,6 +296,25 @@ async function requestJson(
   throw new WeatherProviderError("NWS request failed.", "network", { retryable: true });
 }
 
+export async function fetchHourlyForecast(
+  lat: number,
+  lon: number,
+  options: FetchSnapshotOptions = {},
+): Promise<readonly WeatherForecastPeriod[]> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    throw new WeatherProviderError("Weather coordinates are outside geographic bounds.", "invalid-coordinate");
+  }
+  const baseUrl = options.baseUrl ?? NWS_BASE_URL;
+  const points = await requestJson(`${baseUrl}/points/${lat},${lon}`, options);
+  const grid = parseNwsPoints(points);
+  // The hourly forecast (M4, OGV-D-266). The bare `/gridpoints/{office}/{x},{y}`
+  // resource is raw grid data with no `periods`, so every live request used
+  // to fail as "malformed" and only the fixture ever showed weather.
+  return parseNwsForecast(
+    await requestJson(`${baseUrl}/gridpoints/${grid.office}/${grid.x},${grid.y}/forecast/hourly`, options),
+  );
+}
+
 export async function fetchSnapshot(
   lat: number,
   lon: number,
@@ -304,15 +323,9 @@ export async function fetchSnapshot(
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     throw new WeatherProviderError("Weather coordinates are outside geographic bounds.", "invalid-coordinate");
   }
-  const baseUrl = options.baseUrl ?? NWS_BASE_URL;
-  const points = await requestJson(`${baseUrl}/points/${lat},${lon}`, options);
-  const grid = parseNwsPoints(points);
   const [forecast, alerts] = await Promise.all([
-    // The hourly forecast (M4, OGV-D-266). The bare `/gridpoints/{office}/{x},{y}`
-    // resource is raw grid data with no `periods`, so every live request used
-    // to fail as "malformed" and only the fixture ever showed weather.
-    requestJson(`${baseUrl}/gridpoints/${grid.office}/${grid.x},${grid.y}/forecast/hourly`, options).then(parseNwsForecast),
-    requestJson(`${baseUrl}/alerts/active?point=${lat},${lon}`, options).then(parseNwsAlerts),
+    fetchHourlyForecast(lat, lon, options),
+    requestJson(`${options.baseUrl ?? NWS_BASE_URL}/alerts/active?point=${lat},${lon}`, options).then(parseNwsAlerts),
   ]);
   return {
     fetchedAt: new Date().toISOString(),

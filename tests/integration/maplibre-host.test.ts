@@ -59,6 +59,8 @@ interface FakeRenderer {
     throwOnSource: string | null;
     throwOnLayer: string | null;
     dataWrites: { source: string; data: unknown }[];
+    /** `setTiles` calls made on an existing raster source, in order. */
+    tileWrites: { source: string; tiles: readonly string[] }[];
     removals: number;
     /** Pointer ids the host asked to capture, in order. */
     captures: number[];
@@ -110,6 +112,7 @@ const fake = vi.hoisted((): FakeRenderer => {
     throwOnSource: null,
     throwOnLayer: null,
     dataWrites: [],
+    tileWrites: [],
     removals: 0,
     captures: [],
     queryFeatures: [],
@@ -203,11 +206,14 @@ const fake = vi.hoisted((): FakeRenderer => {
       this.sources.set(id, source);
     }
 
-    getSource(id: string): { setData(data: unknown): void } | undefined {
+    getSource(id: string): { setData(data: unknown): void; setTiles(tiles: readonly string[]): void } | undefined {
       if (!this.sources.has(id)) return undefined;
       return {
         setData: (data: unknown): void => {
           state.dataWrites.push({ source: id, data });
+        },
+        setTiles: (tiles: readonly string[]): void => {
+          state.tileWrites.push({ source: id, tiles });
         },
       };
     }
@@ -561,6 +567,38 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     expect(map.layers.has("ogv-radar")).toBe(true);
     host.applyScene(scene());
     expect(map.sources.has("ogv-radar")).toBe(false);
+    host.dispose();
+  });
+
+  it("draws one rain radar frame, swaps it in place, and clears it with the layer", async () => {
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    map.fire("load");
+
+    const withRadar = (radarTiles: string | null) => scene({
+      infoLayers: { features: [], trafficFlowTiles: null, radarTiles, selectedId: null, visible: ["weather-radar"] },
+    });
+    const first = "https://tilecache.rainviewer.com/v2/radar/1/256/{z}/{x}/{y}/2/1_1.png";
+    host.applyScene(withRadar(first));
+    const source = map.sources.get("ogv-radar-tiles");
+    expect(source).toMatchObject({ type: "raster", tiles: [first], tileSize: 256, maxzoom: 10, attribution: "RainViewer" });
+    expect(map.layers.has("ogv-radar-tiles")).toBe(true);
+    // Same frame again: no re-upload, no new source.
+    host.applyScene(withRadar(first));
+    expect(map.sources.get("ogv-radar-tiles")).toBe(source);
+    expect(fake.state.tileWrites).toEqual([]);
+    // The next frame replaces the tiles on the same source.
+    const second = "https://tilecache.rainviewer.com/v2/radar/2/256/{z}/{x}/{y}/2/1_1.png";
+    host.applyScene(withRadar(second));
+    expect(map.sources.get("ogv-radar-tiles")).toBe(source);
+    expect(fake.state.tileWrites).toEqual([{ source: "ogv-radar-tiles", tiles: [second] }]);
+    // A style rebuild must redraw it rather than assume the old frame survived.
+    map.resetStyle();
+    map.fire("style.load");
+    expect(map.layers.has("ogv-radar-tiles")).toBe(true);
+    host.applyScene(withRadar(null));
+    expect(map.sources.has("ogv-radar-tiles")).toBe(false);
+    expect(map.layers.has("ogv-radar-tiles")).toBe(false);
     host.dispose();
   });
 

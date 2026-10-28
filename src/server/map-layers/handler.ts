@@ -31,7 +31,6 @@ import {
 import { authorityProvider } from "./authority";
 import { publicLandProvider } from "./public-land";
 import { fireProvider } from "./fire";
-import { radarProvider } from "./radar";
 import { terrainProvider } from "./terrain";
 import { trafficCamerasProvider } from "./traffic-cameras";
 import {
@@ -149,7 +148,6 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
 export function defaultProviders(env: Readonly<Record<string, string | undefined>>): readonly LayerProvider[] {
   return [
     terrainProvider,
-    radarProvider,
     fireProvider,
     publicLandProvider,
     authorityProvider,

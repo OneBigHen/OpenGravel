@@ -237,8 +237,8 @@ describe("layer snapshot freshness and concurrent requests", () => {
   });
   it("flags a cached frame when its observation ages past the stale threshold", async () => {
     let clock = 100_000;
-    const provider: LayerProvider = { id: "radar", layers: ["weather-radar"], ttlMs: 600_000, load: async () => [], snapshot: async () => ({ features: [], freshness: [{ layerId: "weather-radar", source: "NOAA", fetchedAt: new Date(clock).toISOString(), observedAt: new Date(clock).toISOString(), stale: false, staleAfterMs: 60_000, note: "Coverage gaps unknown" }] }) };
-    const url = new URL("http://x/api/map-layers?bbox=-75.6,39.9,-75,40.3&layers=weather-radar");
+    const provider: LayerProvider = { id: "firms", layers: ["active-fire"], ttlMs: 600_000, load: async () => [], snapshot: async () => ({ features: [], freshness: [{ layerId: "active-fire", source: "NASA FIRMS", fetchedAt: new Date(clock).toISOString(), observedAt: new Date(clock).toISOString(), stale: false, staleAfterMs: 60_000, note: "Coverage gaps unknown" }] }) };
+    const url = new URL("http://x/api/map-layers?bbox=-75.6,39.9,-75,40.3&layers=active-fire");
     await handleMapLayersRequest(url, { providers: [provider], env: {}, now: () => clock });
     clock += 61_000;
     const result = await handleMapLayersRequest(url, { providers: [provider], env: {}, now: () => clock });

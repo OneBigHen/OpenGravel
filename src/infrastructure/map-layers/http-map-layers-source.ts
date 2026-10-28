@@ -5,15 +5,17 @@ import { deriveTerrain } from "@/infrastructure/map-layers/terrain-worker";
  * every provider unavailable, never as an empty map.
  */
 
-import type {
-  AlongStopsResult,
-  InfoFeature,
-  LngLat,
-  InfoProvider,
-  MapLayerBounds,
-  MapLayerId,
-  MapLayersResult,
-  MapLayersSource,
+import {
+  isRadarFrameList,
+  type AlongStopsResult,
+  type InfoFeature,
+  type LngLat,
+  type InfoProvider,
+  type MapLayerBounds,
+  type MapLayerId,
+  type MapLayersResult,
+  type MapLayersSource,
+  type RadarFrameList,
 } from "@/application/map-layers";
 
 export interface HttpMapLayersSourceOptions {
@@ -61,6 +63,19 @@ export function createHttpMapLayersSource(options: HttpMapLayersSourceOptions = 
       }
     },
     trafficTileUrl: `${origin}${base}/api/map-tiles/traffic/{z}/{x}/{y}`,
+    async radarFrames(signal?: AbortSignal): Promise<RadarFrameList | null> {
+      try {
+        const response = await (options.fetch ?? fetch)(`${base}/api/map-layers/radar`, {
+          ...(signal === undefined ? {} : { signal }),
+        });
+        if (!response.ok) return null;
+        const body: unknown = await response.json();
+        return isRadarFrameList(body) ? body : null;
+      } catch (error) {
+        if (signal?.aborted === true) throw error;
+        return null;
+      }
+    },
     async load(bounds: MapLayerBounds, layers: readonly MapLayerId[], signal?: AbortSignal) {
       const params = new URLSearchParams({
         bbox: [bounds.west, bounds.south, bounds.east, bounds.north].map((value) => value.toFixed(5)).join(","),

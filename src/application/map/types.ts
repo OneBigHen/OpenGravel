@@ -31,6 +31,12 @@ export interface InfoLayersScene {
    * it. Carried in the scene so the host needs no knowledge of the app's routes.
    */
   readonly trafficFlowTiles: string | null;
+  /**
+   * One RainViewer radar frame as a raster tile template (`…/{z}/{x}/{y}`), or
+   * `null` to hide the rain layer. The frame changes with the timeline, so this
+   * is the current frame rather than a list; the host only has to draw it.
+   */
+  readonly radarTiles?: string | null;
   /** The feature whose card is open, drawn emphasised. */
   readonly selectedId: string | null;
   /** Layers whose features are drawn; lets the style colour by layer. */
@@ -96,6 +102,24 @@ export interface RouteSurfaceRunScene {
  */
 export const ROUTE_SURFACE_FEATURE_STATE = "surface";
 
+/**
+ * The feature `state` the after-sunset stretch carries.
+ *
+ * Same reasoning as {@link ROUTE_SURFACE_FEATURE_STATE}, for the same reasons: it
+ * is a second reading of the selected line (the part ridden with the sun down),
+ * one dedicated layer draws it dimmer than the daylight part, no route treatment
+ * or arrow layer may pick it up, and a tap on it is a tap on the route beneath.
+ */
+export const ROUTE_AFTER_SUNSET_FEATURE_STATE = "after-sunset";
+
+/**
+ * The feature `state` of the sunset marker point (MAP-EXPERIENCE-NEXT Wave 2,
+ * item 8). It rides the routes source with the line it annotates — line layers
+ * ignore points, and the point layers filter on their own `kind` — but the route
+ * label symbol layer must be told, or the marker would be drawn as a route name.
+ */
+export const ROUTE_SUNSET_MARKER_FEATURE_STATE = "sunset-marker";
+
 /** One route line plus the role the bundle assigned it. */
 export interface RouteScene {
   readonly id: RouteCandidateId;
@@ -129,6 +153,33 @@ export interface RouteScene {
    * means "not measured here", never "paved".
    */
   readonly surface?: readonly RouteSurfaceRunScene[];
+  /**
+   * The part of this line ridden after sunset, when it is known (MAP-EXPERIENCE-
+   * NEXT Wave 2, item 8). Present only for the selected route and only when the
+   * sun calculation answered; absent means "not known here", which draws the
+   * line exactly as it was before this annotation existed.
+   */
+  readonly daylight?: RouteDaylightScene;
+}
+
+/**
+ * Where the light runs out along a route, as the map draws it.
+ *
+ * The geometry is carried rather than a share of the line because the split was
+ * made on the ETA profile, which is cumulative in *time*: re-deriving it from a
+ * distance share in the renderer would place the boundary somewhere the
+ * calculation did not. Both halves of a crossing meet at `sunsetAt`, and the
+ * whole line is `afterSunset` for a ride that left after dark.
+ */
+export interface RouteDaylightScene {
+  /** The stretch ridden with the sun down, in travel order; never empty. */
+  readonly afterSunset: readonly Coordinate[];
+  /** Where the light runs out: the split point, or the start of a night departure. */
+  readonly sunsetAt: Coordinate;
+  /** The sunset the stretch is about, UTC ISO-8601. */
+  readonly sunsetIso: string;
+  /** The rider-readable label of the marker, e.g. "Sunset around 6:12 PM". */
+  readonly label: string;
 }
 
 /**

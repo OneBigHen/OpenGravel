@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { routeDaylightScene } from "@/application/map/route-daylight";
 import {
   DEFAULT_MAP_EXTENT,
   buildMapScene,
@@ -927,5 +928,83 @@ describe("avoid-area editing visuals (05 §21)", () => {
 
   it("carries no gesture when none is in flight", () => {
     expect(buildMapScene(sceneInput()).previewArea).toBeNull();
+  });
+});
+
+/**
+ * Daylight on the chosen line (MAP-EXPERIENCE-NEXT Wave 2, item 8).
+ *
+ * The split itself is computed outside the projection (`routeDaylightScene`, which
+ * needs a clock and one sun calculation per vertex); the projection's job is to
+ * attach that reading to the line it describes and nowhere else. A scene handed
+ * nothing draws exactly what it drew before.
+ */
+describe("buildMapScene — the after-sunset stretch", () => {
+  /** 18:30 EDT, 100 minutes before the answer's own end: it crosses sunset. */
+  const EVENING_DEPARTURE = "2026-09-17T22:30:00.000Z";
+  const SELECTED_LINE: readonly Coordinate[] = [ORIGIN, MIDPOINT, DESTINATION];
+
+  function daylightFor(departureAt: string) {
+    return routeDaylightScene(SELECTED_LINE, 6_000, departureAt, "America/New_York");
+  }
+
+  function readyScene(departureAt: string | null) {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A);
+    const b = candidate(ROUTE_B_ID, ROUTE_REF_B);
+    return buildMapScene(
+      sceneInput({
+        session: sessionWith({
+          phase: "ready",
+          committedBundle: bundle([a, b], ROUTE_A_ID),
+          lastGoodBundle: bundle([a, b], ROUTE_A_ID),
+          selectedRouteId: ROUTE_A_ID,
+        }),
+        daylight: departureAt === null ? null : daylightFor(departureAt),
+      }),
+    );
+  }
+
+  it("cuts the chosen line where the light runs out, and only the chosen one", () => {
+    const scene = readyScene(EVENING_DEPARTURE);
+    const selected = required(scene.routes[0]);
+    const alternative = required(scene.routes[1]);
+
+    expect(selected.daylight).toBeDefined();
+    const daylight = selected.daylight!;
+    expect(daylight.afterSunset.length).toBeGreaterThanOrEqual(2);
+    expect(daylight.afterSunset[0]).toEqual(daylight.sunsetAt);
+    expect(daylight.afterSunset.at(-1)).toEqual(DESTINATION);
+    // The lit part of the line ends where the dark part begins.
+    expect(daylight.sunsetAt.lon).toBeGreaterThan(ORIGIN.lon);
+    expect(daylight.label).toMatch(/^Sunset around \d{1,2}:\d{2} [AP]M$/);
+    expect(Number.isFinite(Date.parse(daylight.sunsetIso))).toBe(true);
+    // An alternative is compared by colour and time, not read for dusk.
+    expect(alternative.daylight).toBeUndefined();
+  });
+
+  it("annotates nothing without a departure, or on a line with no answer", () => {
+    expect(required(readyScene(null).routes[0]).daylight).toBeUndefined();
+    expect(buildMapScene(sceneInput()).routes).toEqual([]);
+  });
+
+  it("says nothing for a ride that finishes in daylight", () => {
+    // 10:00 EDT, under two hours of riding: the sun is still up at the finish.
+    const scene = readyScene("2026-09-17T14:00:00.000Z");
+
+    expect(required(scene.routes[0]).daylight).toBeUndefined();
+  });
+
+  it("draws no dusk on an answer that no longer addresses the document", () => {
+    const a = candidate(ROUTE_A_ID, ROUTE_REF_A);
+    const answeredEarlier = { ...bundle([a], ROUTE_A_ID), rideRevision: 2 };
+    const scene = buildMapScene(
+      sceneInput({
+        session: sessionWith({ committedBundle: answeredEarlier, selectedRouteId: ROUTE_A_ID }),
+        daylight: daylightFor(EVENING_DEPARTURE),
+      }),
+    );
+
+    expect(required(scene.routes[0]).state).toBe("previous");
+    expect(required(scene.routes[0]).daylight).toBeUndefined();
   });
 });

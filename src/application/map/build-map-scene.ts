@@ -64,6 +64,7 @@ import type {
   RoadSpanScene,
   RouteScene,
   RouteSurfaceRunScene,
+  RouteDaylightScene,
   SketchScene,
 } from "./types";
 
@@ -107,6 +108,14 @@ export interface MapSceneInput {
    * like the previews; `undefined` and `null` both mean "nothing to emphasise".
    */
   readonly changedSpan?: ChangedSpanScene | null;
+  /**
+   * The after-sunset reading of the chosen line (MAP-EXPERIENCE-NEXT Wave 2, item
+   * 8), or `null` when there is none. Computed by the caller — it needs a clock
+   * and one sun calculation per vertex, so it is memoized against the route rather
+   * than recomputed every frame — and attached to the selected route only: an
+   * alternative is compared by colour and time, never read for dusk.
+   */
+  readonly daylight?: RouteDaylightScene | null;
 }
 
 /** A geographic bounding box for camera fit (05 §8–§9). */
@@ -244,6 +253,7 @@ function routeScenes(
   bundle: RouteBundle | null,
   document: RideDocument,
   readGeometry: MapSceneInput["readGeometry"],
+  daylight: RouteDaylightScene | null,
 ): readonly RouteScene[] {
   if (bundle === null) return [];
   const stale = answerIsStale(bundle, document);
@@ -265,6 +275,10 @@ function routeScenes(
     // there to be compared by colour and time, and a second set of bands would
     // turn choosing into reading four maps at once.
     const surface = state === "selected" ? surfaceRunScenes(candidate) : undefined;
+    // Daylight is the same kind of annotation: it describes the line being
+    // ridden, and it is only attached to that line, and only when the sun
+    // calculation answered for it.
+    const daylightSplit = state === "selected" && daylight !== null ? daylight : undefined;
     return {
       id: candidate.id,
       role,
@@ -272,6 +286,7 @@ function routeScenes(
       state,
       tint: index,
       ...(surface === undefined ? {} : { surface }),
+      ...(daylightSplit === undefined ? {} : { daylight: daylightSplit }),
       ...(at === null
         ? {}
         : {
@@ -409,7 +424,7 @@ export function buildMapScene(input: MapSceneInput): MapScene {
     // Only the planner exists in this slice; `ride`/`explore` arrive with their
     // hosts, and claiming a mode nothing produces would be a lie.
     mode: "plan",
-    routes: routeScenes(bundle, input.document, input.readGeometry),
+    routes: routeScenes(bundle, input.document, input.readGeometry, input.daylight ?? null),
     selectedRouteId: bundle?.selectedRouteId ?? null,
     points: pointScenes(input.document),
     preview: input.preview ?? null,
