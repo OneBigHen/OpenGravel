@@ -102,10 +102,10 @@ export function osmUrl(recordId: string): string {
 }
 
 /** Member references as `{ type, ref }`, when the input carries them. */
-function memberRefs(properties: Record<string, unknown>): readonly { type: OsmObjectType; ref: string }[] {
+function memberRefs(properties: Record<string, unknown>): readonly { type: OsmObjectType; ref: string; role: string }[] {
   const raw = properties.members ?? properties["@members"];
   if (!Array.isArray(raw)) return [];
-  const members: { type: OsmObjectType; ref: string }[] = [];
+  const members: { type: OsmObjectType; ref: string; role: string }[] = [];
   for (const entry of raw) {
     if (typeof entry !== "object" || entry === null) continue;
     const member = entry as { type?: unknown; ref?: unknown; role?: unknown };
@@ -113,7 +113,7 @@ function memberRefs(properties: Record<string, unknown>): readonly { type: OsmOb
     if (type !== "node" && type !== "way" && type !== "relation") continue;
     if (member.ref === undefined || member.ref === null) continue;
     // Relation geometry only uses ways; a node member (a role=stop) is not a line.
-    members.push({ type, ref: String(member.ref) });
+    members.push({ type, ref: String(member.ref), role: typeof member.role === "string" ? member.role : "" });
   }
   return members;
 }
@@ -121,6 +121,7 @@ function memberRefs(properties: Record<string, unknown>): readonly { type: OsmOb
 export interface OsmIngest {
   readonly trails: readonly TrailCandidate[];
   readonly places: readonly PlaceCandidate[];
+  readonly relationIssues: { missingWays: number; missingRelations: number; cycles: number };
 }
 
 /**
@@ -132,8 +133,11 @@ export interface OsmIngest {
  */
 export function ingestOsm(features: readonly OsmFeature[]): OsmIngest {
   const wayLines = new Map<string, Coordinate[][]>();
+  const relations = new Map<string, OsmFeature>();
+  const relationIssues = { missingWays: 0, missingRelations: 0, cycles: 0 };
   for (const feature of features) {
     const type = osmObjectType(feature.properties);
+    if (type === "relation") relations.set(osmObjectId(feature.properties, type), feature);
     if (type !== "way") continue;
     wayLines.set(osmObjectId(feature.properties, type), linesFromGeometry(feature.geometry));
   }
@@ -150,7 +154,7 @@ export function ingestOsm(features: readonly OsmFeature[]): OsmIngest {
 
     if (type === "relation") {
       if (!HIKING_ROUTES.has(textTag(tags, "route") ?? "")) continue;
-      const lines = assembleRelation(feature, wayLines);
+      const lines = assembleRelation(feature, wayLines, relations, new Set(), relationIssues);
       if (lines.length === 0) continue;
       relationTrails.push({
         sourceId: "osm",
@@ -202,7 +206,7 @@ export function ingestOsm(features: readonly OsmFeature[]): OsmIngest {
     });
   }
 
-  return { trails: absorbContained([...relationTrails, ...wayTrails]), places };
+  return { trails: absorbContained([...relationTrails, ...wayTrails]), places, relationIssues };
 }
 
 /** ~5.5 km cells: long enough that most trails sit in one, short enough to prune. */
@@ -265,19 +269,39 @@ function placeKind(properties: Record<string, unknown>): TrailheadKind | null {
   return null;
 }
 
+/** Expand nested route/superroute members, with branch-local cycle detection. */
 function assembleRelation(
   feature: OsmFeature,
   wayLines: ReadonlyMap<string, Coordinate[][]>,
+  relations: ReadonlyMap<string, OsmFeature>,
+  ancestors: ReadonlySet<string>,
+  issues: { missingWays: number; missingRelations: number; cycles: number },
 ): Coordinate[][] {
+  const id = osmObjectId(feature.properties, "relation");
+  if (ancestors.has(id)) {
+    issues.cycles += 1;
+    return [];
+  }
   const members = memberRefs(feature.properties);
+  // Geometry-only input is supported, but missing referenced members never
+  // fall back to an unrelated geometry or an invented straight connector.
+  if (members.length === 0) return linesFromGeometry(feature.geometry);
+  const branch = new Set([...ancestors, id]);
   const segments: Coordinate[][] = [];
   for (const member of members) {
-    if (member.type !== "way") continue;
-    const lines = wayLines.get(`way/${member.ref}`);
-    if (lines === undefined) continue;
+    let lines: Coordinate[][] = [];
+    if (member.type === "way") {
+      const found = wayLines.get(`way/${member.ref}`);
+      if (found === undefined) issues.missingWays += 1;
+      else lines = found;
+    } else if (member.type === "relation") {
+      const child = relations.get(`relation/${member.ref}`);
+      if (child === undefined) issues.missingRelations += 1;
+      else lines = assembleRelation(child, wayLines, relations, branch, issues);
+    }
+    if (member.role === "backward") lines = [...lines].reverse().map((line) => [...line].reverse());
     segments.push(...lines);
   }
-  if (segments.length === 0) return linesFromGeometry(feature.geometry);
   return assembleLines(segments);
 }
 
@@ -379,7 +403,7 @@ export async function readOplRelations(path: string): Promise<OsmFeature[]> {
     properties.members = memberText.split(",").flatMap((member) => {
       const match = /^([nwr])(\d+)@/.exec(member);
       if (!match) return [];
-      return [{ type: match[1] === "w" ? "way" : match[1] === "r" ? "relation" : "node", ref: match[2] }];
+      return [{ type: match[1] === "w" ? "way" : match[1] === "r" ? "relation" : "node", ref: match[2], role: decodeOpl(member.slice(match[0].length)) }];
     });
     features.push({ properties, geometry: null });
   }

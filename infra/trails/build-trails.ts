@@ -12,9 +12,8 @@
  *  - `trails.geojson`: one feature per physical trail, merged across sources.
  *  - `hikes.json`: the compact index Explore and the API read.
  *
- * What this job does NOT do: elevation gain and loss, Tobler time, surface mix
- * and along-the-way features need a DEM and the OSM tag dump, and are H1 item 5.
- * They are written as `null`, never as zero.
+ * With --dem-cache, samples Mapterhorn DEM for gain/loss, 100 m grade and
+ * Tobler time. Without a DEM, these stay null.
  *
  * Usage:
  *   node --import tsx infra/trails/build-trails.ts \
@@ -28,6 +27,8 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import { createDemSource, type DemSource } from "./lib/dem";
+import { measureTrail } from "./lib/elevation";
 import { NPS_TRAILS, USFS_TRAILS, readExternalSource } from "./lib/external";
 import { mergeTrails } from "./lib/merge";
 import { exportOsm, ingestOsm, osmiumCommands, readFeatureFile, readOplRelations } from "./lib/osm-input";
@@ -43,6 +44,10 @@ export interface BuildInput {
   readonly usfs?: string;
   readonly nps?: string;
   readonly trailheadRadiusMeters?: number;
+  readonly demCache?: string;
+  readonly demZoom?: number;
+  /** Injectable DEM for reproducible measurements and failure tests. */
+  readonly demSource?: DemSource;
   /** Called with progress lines; the CLI prints them to stderr. */
   readonly log?: (message: string) => void;
 }
@@ -97,6 +102,7 @@ export async function buildTrailCatalog(input: BuildInput): Promise<BuildResult>
       log(`osm: ${features.length} features from ${path}`);
       if (sources.relationsFile !== undefined) features.push(...await readOplRelations(sources.relationsFile));
       const ingest = ingestOsm(features);
+      log(`relation expansion issues: ${JSON.stringify(ingest.relationIssues)}`);
       candidates.push(...ingest.trails);
       places.push(...ingest.places);
     }
@@ -126,7 +132,17 @@ export async function buildTrailCatalog(input: BuildInput): Promise<BuildResult>
     log(`skipped ${skippedNotOnGround} agency records marked proposed, planned or decommissioned`);
   }
 
-  const trails = mergeTrails(candidates, places, { trailheadRadiusMeters: input.trailheadRadiusMeters });
+  let trails: readonly Trail[] = mergeTrails(candidates, places, { trailheadRadiusMeters: input.trailheadRadiusMeters });
+  const dem = input.demSource ?? (input.demCache === undefined ? undefined : createDemSource({ cacheDir: input.demCache, zoom: input.demZoom, log }));
+  if (dem !== undefined) {
+    const measured: Trail[] = [];
+    for (const trail of trails) {
+      measured.push({ ...trail, measurements: await measureTrail(trail, dem, input.demZoom) });
+      if (measured.length % 250 === 0) log(`DEM: ${measured.length}/${trails.length} trails`);
+    }
+    trails = measured;
+    log(`DEM complete: ${trails.filter((trail) => trail.measurements?.toblerMinutes != null).length}/${trails.length} full profiles`);
+  }
   const result: BuildResult = {
     trails,
     trailsGeoJson: toFeatureCollection(trails),
@@ -154,6 +170,8 @@ export function writeCatalog(outDir: string, result: BuildResult): WriteResult {
 }
 
 interface CliOptions {
+  readonly demCache?: string;
+  readonly demZoom?: number;
   readonly osm: string;
   readonly outDir: string;
   readonly usfs?: string;
@@ -173,6 +191,11 @@ export function parseArgs(argv: readonly string[]): CliOptions {
     values.set(argument.slice(2), value);
     index += 1;
   }
+  const known = new Set(["osm", "out", "osm-places", "usfs", "nps", "trailhead-radius", "dem-cache", "dem-zoom"]);
+  for (const key of values.keys()) if (!known.has(key)) throw new Error(`unknown option --${key}`);
+  const demZoom = values.has("dem-zoom") ? Number(values.get("dem-zoom")) : undefined;
+  if (demZoom !== undefined && (!Number.isInteger(demZoom) || demZoom < 12 || demZoom > 14)) throw new Error("--dem-zoom must be 12–14");
+  if (demZoom !== undefined && !values.has("dem-cache")) throw new Error("--dem-zoom requires --dem-cache");
   const osm = values.get("osm");
   if (osm === undefined) throw new Error("--osm is required");
   const outDir = values.get("out");
@@ -188,6 +211,8 @@ export function parseArgs(argv: readonly string[]): CliOptions {
   return {
     osm,
     outDir,
+    demCache: values.get("dem-cache"),
+    demZoom,
     usfs: values.get("usfs"),
     nps: values.get("nps"),
     osmPlaces: values.get("osm-places"),
@@ -195,7 +220,7 @@ export function parseArgs(argv: readonly string[]): CliOptions {
   };
 }
 
-const USAGE = `usage: build-trails.ts --osm INPUT --out DIR [--usfs FILE] [--nps FILE] [--osm-places FILE] [--trailhead-radius METERS]
+const USAGE = `usage: build-trails.ts --osm INPUT --out DIR [--usfs FILE] [--nps FILE] [--osm-places FILE] [--trailhead-radius METERS] [--dem-cache DIR] [--dem-zoom 12|13|14]
 
 INPUT is a .osm.pbf (exported with osmium-tool) or an osmium-produced
 GeoJSON sequence. See infra/trails/README.md for the exact commands.`;
@@ -221,6 +246,8 @@ async function main(): Promise<void> {
   try {
     const result = await buildTrailCatalog({
       osm: options.osm,
+      demCache: options.demCache,
+      demZoom: options.demZoom,
       osmPlaces: options.osmPlaces,
       usfs: options.usfs,
       nps: options.nps,

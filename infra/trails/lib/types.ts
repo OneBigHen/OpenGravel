@@ -95,9 +95,20 @@ export interface Trail {
   readonly conflicts: readonly TrailConflict[];
   readonly trailheads: readonly Trailhead[];
   readonly lengthMeters: number;
+  readonly measurements?: TrailMeasurements;
 }
 
-export interface HikeRecord {
+export interface TrailMeasurements {
+  readonly elevationGainMeters: number | null;
+  readonly elevationLossMeters: number | null;
+  readonly maxGradePercent: number | null;
+  readonly toblerMinutes: number | null;
+  readonly elevationMeasuredShare: number;
+  readonly elevationSource: string | null;
+  readonly timeMethod: string | null;
+}
+
+export interface HikeRecord extends TrailMeasurements {
   readonly id: string;
   readonly name: string | null;
   readonly ref: string | null;
@@ -115,12 +126,7 @@ export interface HikeRecord {
   readonly trailheadCount: number;
   readonly trailheads: readonly Trailhead[];
   readonly sources: readonly TrailSource[];
-  /**
-   * Elevation gain and loss belong to H1 item 5 and need the DEM. They stay
-   * null here; a consumer must not read null as "flat".
-   */
-  readonly elevationGainMeters: number | null;
-  readonly elevationLossMeters: number | null;
+
 }
 
 export interface HikeCatalog {
@@ -148,7 +154,7 @@ export interface TrailFeature {
   readonly properties: TrailProperties;
 }
 
-export interface TrailProperties extends TrailAttributes {
+export interface TrailProperties extends TrailAttributes, TrailMeasurements {
   readonly id: string;
   readonly lengthMeters: number;
   readonly sources: readonly TrailSource[];

@@ -22,6 +22,21 @@ npm run catalog:trails -- \
 ```
 
 `--osm` is required, `--out` is required, `--usfs` and `--nps` are optional.
+`--dem-cache DIR` enables elevation and Tobler measurements; `--dem-zoom 12|13|14`
+selects resolution (default 12). Without a DEM, measurements remain null.
+
+The measured Pennsylvania build on powerplex uses the existing source PBF:
+
+```sh
+TMPDIR=/mnt/wsl/ogv-data/trails node --max-old-space-size=24000 --import tsx \
+  infra/trails/build-trails.ts \
+  --osm /mnt/wsl/ogv-data/trails/pennsylvania-latest.osm.pbf \
+  --out /mnt/wsl/ogv-data/trails/2026-10-28 \
+  --dem-cache /mnt/wsl/ogv-data/dem-cache --dem-zoom 12
+```
+
+Use the osmium PATH/library settings in [the hike router README](../graphhopper/README.md)
+on this machine. No packages are installed into shared `node_modules`.
 `--trailhead-radius METERS` overrides the 300 m default. The script prints its
 progress and the output paths to stderr, so `--out` can be the only file it
 writes.
@@ -83,6 +98,11 @@ From OSM:
   member order into continuous lines; a gap between members stays a gap, it is
   never bridged. Nested relation members are not expanded);
 - every **named** `highway=path|footway|track` way (as a `LineString`).
+
+Backward member roles reverse the child geometry. A branch-local ancestor set
+terminates cycles without dropping repeated siblings. Missing ways/relations and
+cycles are counted in the build log; a missing member never creates a straight
+connector. A clipped state extract can still leave long routes incomplete.
 
 A trail whose whole line is already part of a strictly longer OSM trail is
 absorbed into it instead of being listed again — that covers a named member way
@@ -152,10 +172,36 @@ Every attribute and every hike field is `null` when no source said anything:
 `access`, `elevationGainMeters`, `elevationLossMeters`. A consumer must read
 `null` as "not mapped", never as easy, open, flat or paved.
 
-**Not in this job:** elevation gain and loss, grade, Tobler time, surface and
-`sac_scale` mix, loop / out-and-back classification, and features along the way
-(water, viewpoints, summits). Those are H1 items 5 and 6 and need the DEM; they
-stay `null` here rather than being approximated from nothing.
+With `--dem-cache`, both artifacts carry `elevationGainMeters`,
+`elevationLossMeters`, `maxGradePercent` (signed; largest absolute grade),
+`toblerMinutes`, `elevationMeasuredShare`, `elevationSource` and `timeMethod`.
+Tiles come from [Mapterhorn](https://mapterhorn.com/), decoded with the existing
+`sharp` dependency: Terrarium RGB, **512 px** per tile, bilinear interpolation
+across tile boundaries. WebP originals are cached at
+`<dem-cache>/mapterhorn/<z>/<x>/<y>.webp`; decoded tiles use a bounded memory cache
+and at most six concurrent downloads. Tile errors are retried three times,
+reported, and left unknown rather than converted to sea level.
+
+Every geometry vertex is retained and long segments are densified to at most
+30 m. Each continuous part uses `src/domain/hike`’s `computeHikeStats` (exported from
+`stats.ts`) and its **100 m** grade window; shorter measured runs use their average,
+and a run under 5 m has null grade. Parts are measured separately: no distance,
+gain, grade or time crosses a geometry gap. A partial DEM keeps full-trail
+measurements null and records the measured share.
+
+Time sums the domain's Tobler function per measured segment, in the recorded
+geometry direction: `6 * exp(-3.5 * abs(slope + 0.05))` km/h. It excludes rests and
+personal pace. No surface/SAC multiplier is invented from missing tags; this is an
+explicitly labeled terrain baseline, not a calibrated promise of completion time.
+Gain/loss sum DEM changes without a noise deadband; source resolution and DEM
+noise affect the estimates. Multipart totals describe the retained pieces, not a
+verified continuous itinerary. Short closed loops retain their vertices rather
+than collapsing to identical endpoints during sampling.
+
+**Still outside this job:** surface/SAC distance mixes, calibrated terrain
+multipliers, loop/out-and-back classification and features along the way (water,
+viewpoints, summits). The catalog includes restricted trails as source records;
+record presence is not permission to enter or a routing eligibility decision.
 
 The output is deterministic: no build clock and no random ids, so the same inputs
 always produce identical bytes and a rebuild diff only shows real data changes.
@@ -163,7 +209,7 @@ always produce identical bytes and a rebuild diff only shows real data changes.
 ## Tests
 
 ```sh
-npx vitest run --maxWorkers=2 tests/unit/infra/trails
+npx vitest run --maxWorkers=8 tests/unit/infra/trails
 ```
 
 The fixtures under `tests/fixtures/trails/` are a tiny hand-written
