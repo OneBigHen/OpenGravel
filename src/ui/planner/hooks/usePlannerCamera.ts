@@ -154,7 +154,7 @@ export function usePlannerCamera(input: {
             }
             // A tablet's card floats at the bottom left, above the tab bar: the
             // strip under it is hidden too, so it covers down to the map's edge.
-            const lowCard = box.top > map.top + map.height / 3;
+            const lowCard = window.innerWidth <= 1180 && box.top > map.top + map.height / 3;
             return toRect(lowCard ? { left: box.left, top: box.top, width: box.width, height: Math.max(box.height, map.bottom - box.top) } : box);
           })(),
           header: header === null ? null : toRect(header.getBoundingClientRect()),
