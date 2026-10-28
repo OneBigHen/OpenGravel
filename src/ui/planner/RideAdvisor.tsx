@@ -55,6 +55,7 @@ import {
 import "./advisor-conversation.css";
 import "./advisor-ask-sheet.css";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 /** What happens after an applied proposal, in the rider's words. */
 export type AdvisorAppliedNext =
@@ -492,10 +493,12 @@ export function AdvisorInline({
   readonly onPlan?: () => void;
 }) {
   const advisor = useRideAdvisor();
+  const mode = useActivityMode();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [draftBase, setDraftBase] = useState("");
-  if (advisor === null) return null;
+  // The advisor plans rides on the road graph; a hiker plans on the hike card.
+  if (advisor === null || mode === "hike") return null;
   const { pending, proposal, proposalIsStale, message, messageIsError, recovery } = advisor;
   const composerText = draftBase === advisor.prompt ? draft : advisor.prompt;
   // Another surface owns the live conversation: this one stays quiet.
