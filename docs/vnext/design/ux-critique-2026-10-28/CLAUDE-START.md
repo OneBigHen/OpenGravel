@@ -20,16 +20,20 @@ READ THESE FILES FIRST, IN ORDER:
 3. docs/vnext/design/ux-critique-2026-10-28/SCREEN-BLUEPRINTS.md
 4. docs/vnext/design/ux-critique-2026-10-28/IMPLEMENTATION-GUIDE.md
 5. docs/vnext/design/ux-critique-2026-10-28/QA-MATRIX.md
-6. CLAUDE.md and DESIGN.md (DESIGN.md is locked)
-7. docs/vnext/HANDOFF-2026-10-28.md
-8. docs/vnext/design/mobile-ux-handoff/README.md and SPEC.md
-9. docs/superpowers/plans/2026-10-27-mobile-map-ux.md
-10. docs/architecture.md and the related current production/deploy handoff.
+6. docs/vnext/design/ux-critique-2026-10-28/HIKING-UX.md
+7. docs/vnext/design/ux-critique-2026-10-28/ACTIVITY-COHERENCE.md
+8. docs/vnext/design/ux-critique-2026-10-28/HIKING-ACCEPTANCE.md
+9. docs/vnext/design/ux-critique-2026-10-28/RUNTIME-VERIFICATION.md
+10. CLAUDE.md and DESIGN.md (DESIGN.md is locked)
+11. docs/vnext/HANDOFF-2026-10-28.md
+12. docs/vnext/design/mobile-ux-handoff/README.md and SPEC.md
+13. docs/superpowers/plans/2026-10-27-mobile-map-ux.md
+14. docs/architecture.md and the related current production/deploy handoff.
 
 CHECK OPEN PRs before touching source. PR #165 is an earlier visual-concept
 handoff and #98 is a test/polish agent brief. The concepts in #165 are visual
 inspiration, NOT accepted geometry, final code, actual map tiles or real data.
-Current main already includes many of their intended improvements. Use
+Current main already includes many of their intended improvements. A live browser walkthrough failed to locate Hike through the visited Map/Explore flow, but source clearly implements Hike; verify Settings > Activity, actual desktop/mobile Menu behavior, hydration and deployed revision before claiming the feature absent. Use
 current source as truth, not stale PR prose.
 
 BEGIN WITH EVIDENCE:
@@ -62,6 +66,10 @@ B. Route preview / comparison / editing:
    * Full expert controls remain accessible but aren't first-run clutter.
    * Back, reload and failure preserve draft, last-good route and intent.
 C. Explore and Hike:
+   * Use HIKING-UX.md and HIKING-ACCEPTANCE.md explicitly for trailhead,
+     multipart and long-distance trail, source geometry, GPS denied,
+     filter+pagination correctness, map overlay, road detours and offline truth.
+   * Evaluate Activity mode discoverability without bypassing locked DESIGN.md.
    * ≈96px legible scan-first route rows, source preserved, route/list map
      selection synchronized, filters/scroll restore on Back.
    * Fix the currently documented Hike card overlap on phones and
@@ -98,7 +106,8 @@ EVIDENCE-BASED VERIFICATION:
   build, relevant critical Playwright tests. Use actual shot tooling and
   keep fixture/live-provider results separate. Do not run resource-heavy
   commands concurrently on constrained verification nodes.
-- Run QA-MATRIX.md journeys J01–J09, prioritize P0 cases. Re-enable existing
+- Run QA-MATRIX.md journeys J01–J09 AND HIKING-ACCEPTANCE.md HQA-01–20,
+  prioritizing P0 cases. Re-enable existing
   hike-planning test.fixme only after the real scenario passes.
 - Maintain accessibility: keyboard, VoiceOver, dynamic type, reduced
   motion/transparency, predictable sheet/Back behavior.
