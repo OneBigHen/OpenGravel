@@ -8,6 +8,7 @@ describe("trail context", () => {
   });
   it("uses length samples rather than a park's bounding box, and includes attributed town distance", () => {
     const index=contextIndex([
+      {properties:{name:"Park","@type":"way","@id":1,leisure:"park"},geometry:{type:"LineString",coordinates:[[-75,40],[-74.99,40],[-74.99,40.01],[-75,40.01],[-75,40]]}},
       {properties:{name:"Park","@type":"way","@id":1,leisure:"park"},geometry:{type:"Polygon",coordinates:[[[-75,40],[-74.99,40],[-74.99,40.01],[-75,40.01],[-75,40]]]}},
       {properties:{name:"Outer State Park","@type":"way","@id":3,leisure:"park"},geometry:{type:"Polygon",coordinates:[[[-75.01,39.99],[-74.98,39.99],[-74.98,40.02],[-75.01,40.02],[-75.01,39.99]]]}},
       {properties:{name:"Town","@type":"node","@id":2,place:"town"},geometry:{type:"Point",coordinates:[-75,40]}}

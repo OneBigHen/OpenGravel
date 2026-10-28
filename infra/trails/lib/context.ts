@@ -31,17 +31,20 @@ export function contextIndex(features: readonly OsmFeature[]) {
     if (!textTag(f.properties,"name")) continue;
     const id=osmSource(f.properties).recordId;
     if (seen.has(id)) continue;
-    seen.add(id);
     const g=f.geometry as {type?:string;coordinates?:unknown} | null;
     if (!g) continue;
     if (["city","town","village"].includes(String(f.properties.place)) && g.type === "Point") {
       const [lon,lat]=g.coordinates as [number,number];
       towns.push({place:place(f),point:{lon,lat}});
+      seen.add(id);
     }
     if (!["protected_area","national_park"].includes(String(f.properties.boundary)) && !["park","nature_reserve"].includes(String(f.properties.leisure))) continue;
     const polygons = g.type === "Polygon" ? [g.coordinates as Polygon] : g.type === "MultiPolygon" ? g.coordinates as Polygon[] : [];
     const points=polygons.flatMap(poly => poly[0] ?? []);
     if (!points.length) continue;
+    // osmium can emit a way as both a line and an area. Only a valid area
+    // consumes the id; a line representation must not hide its polygon.
+    seen.add(id);
     const west=Math.min(...points.map(p=>p[0])),east=Math.max(...points.map(p=>p[0])),south=Math.min(...points.map(p=>p[1])),north=Math.max(...points.map(p=>p[1]));
     const park={place:place(f),polygons,area:(east-west)*(north-south)};
     for (const key of cellKeys({lon:west,lat:south},{lon:east,lat:north})) {
