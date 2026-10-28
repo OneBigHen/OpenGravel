@@ -307,6 +307,23 @@
   overflow-wrap: anywhere;
 }
 
+.og-prepare__deadline {
+  margin: var(--og-space-2) 0 0;
+  padding: var(--og-space-2) var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-primary-soft);
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.og-prepare__deadline[data-feasibility="missed"] {
+  background: var(--og-danger-soft, var(--og-surface-2));
+  color: var(--og-danger);
+  font-weight: 650;
+}
+
 .og-prepare__row {
   display: flex;
   align-items: center;

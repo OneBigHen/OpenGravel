@@ -48,7 +48,20 @@ export {
   buildAdvisorProposal,
   refreshAdvisorProposal,
   type AdvisorProposalBuildResult,
+  type AdvisorReadyProposal,
+  type AdvisorSearchProposal,
   type AdvisorProposalChange,
   type AdvisorProposalField,
   type ReadyAdvisorProposal,
 } from "./advisor-proposal-commands";
+export {
+  ADVISOR_ROUTE_POSITION_LABELS,
+  ADVISOR_STOP_CATEGORY_LABELS,
+  buildAdvisorStopSelectionCommand,
+  rankAdvisorStopCandidates,
+  routeLengthMiles,
+  type AdvisorRoutePosition,
+  type AdvisorStopCandidate,
+  type AdvisorStopSearchProposal,
+  type AdvisorStopSearchRequest,
+} from "./advisor-stops";

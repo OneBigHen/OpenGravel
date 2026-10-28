@@ -23,7 +23,7 @@ import type {
 } from "@/application/preparation/providers";
 import { DEFAULT_BIKE } from "@/domain/ride/create";
 import { createGarage } from "@/application/garage/garage-model";
-import type { Coordinate } from "@/domain/ride/types";
+import type { Coordinate, TimeIntent } from "@/domain/ride/types";
 import { departureFor, departureValue, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
 import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
@@ -85,6 +85,53 @@ describe("departure choices", () => {
 });
 
 describe("PlannerPreparation", () => {
+  function timeAt(date: Date, kind: "arriveBy" | "returnBy"): TimeIntent {
+    const pad = (value: number): string => String(value).padStart(2, "0");
+    return {
+      kind,
+      date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+      localTime: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+      toleranceMinutes: 15,
+    };
+  }
+
+  it("reports when the selected route cannot meet a return-by deadline", () => {
+    const dueSoon = new Date(Date.now() + 60 * 60_000);
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE, durationSeconds: 2 * 60 * 60 }}
+        departure={{ kind: "now" }}
+        timeTarget={timeAt(dueSoon, "returnBy")}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("ride-time-feasibility")).toHaveAttribute("data-feasibility", "missed");
+    expect(screen.getByRole("alert")).toHaveTextContent("estimated to miss your return-by deadline");
+  });
+
+  it("shows the departure time required by a feasible arrive-by route", () => {
+    const dueLater = new Date(Date.now() + 4 * 60 * 60_000);
+    render(
+      <PlannerPreparation
+        route={{ routeId: "route_a", ...ROUTE, durationSeconds: 60 * 60 }}
+        departure={{ kind: "now" }}
+        timeTarget={timeAt(dueLater, "arriveBy")}
+        bike={DEFAULT_BIKE}
+        offlineRoute={null}
+        onDepartureChange={vi.fn()}
+        onBikeChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("ride-time-feasibility")).toHaveAttribute("data-feasibility", "met");
+    expect(screen.getByTestId("ride-time-feasibility")).toHaveTextContent("Leave");
+    expect(screen.getByTestId("ride-time-feasibility")).toHaveTextContent("to arrive by");
+  });
+
   it("routes a selected garage bike through the bike-change action", () => {
     const base = createGarage().bikes[0]!;
     const trailBike = { ...base, id: "bike_trail", name: "Trail bike", fuelRangeMiles: 60, reserveMiles: 10 };

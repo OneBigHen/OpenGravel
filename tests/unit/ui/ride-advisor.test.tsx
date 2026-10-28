@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
+import { asPlaceId, type NearbyPlace, type PlacesSource } from "@/application/places";
+import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import { newCommandId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { AdvisorInline, AdvisorRideAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
+import { AdvisorInline, AdvisorRideAsk, MapAdvisorAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
 
 afterEach(() => cleanup());
@@ -80,6 +82,11 @@ function WhereTo({ port }: { readonly port: PlaceSearchPort }) {
   );
 }
 
+function AskStopSearch() {
+  const advisor = useRideAdvisor();
+  return <button type="button" onClick={() => advisor?.ask("coffee halfway")}>Ask for coffee</button>;
+}
+
 function setup(
   options: {
     readonly enabled?: boolean;
@@ -101,6 +108,122 @@ function setup(
     </RideAdvisorProvider>,
   );
   return { store, client, port };
+}
+
+function setupMapAsk(options: {
+  readonly enabled?: boolean;
+  readonly places?: readonly PlaceMatch[];
+  readonly client?: AdvisorProposalClient;
+} = {}) {
+  const store = createRideDocumentStore({ document: createRideDocument() });
+  const client: AdvisorProposalClient = options.client ?? {
+    request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+  };
+  const port = places(options.places);
+  render(
+    <RideAdvisorProvider enabled={options.enabled ?? true} store={store} client={client}>
+      <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={port} onPick={() => undefined} />
+      <MapAdvisorAsk />
+    </RideAdvisorProvider>,
+  );
+  return { store, client, port };
+}
+
+describe("Map Ask entry and place search", () => {
+  it("opens a focused Describe a ride sheet and sends directly without readQuery", async () => {
+    const { client } = setupMapAsk();
+    fireEvent.click(screen.getByTestId("map-ask-open"));
+    const input = screen.getByTestId("map-ask-prompt");
+    expect(input).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Describe a ride" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Example ride descriptions" })).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: "good beer" } });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledOnce());
+    expect(vi.mocked(client.request).mock.calls[0]?.[0].prompt).toBe("good beer");
+    expect(await screen.findByTestId("advisor-interpretation")).toHaveTextContent("Unknowns");
+    expect(screen.getByTestId("advisor-interpretation")).toHaveTextContent("The route and deadline feasibility are checked after planning.");
+  });
+
+  it("keeps the map search place-only for businesses and ordinary addresses", async () => {
+    const { client, port } = setupMapAsk({ places: [OLD_MILL_GAP] });
+    const input = screen.getByTestId("top-place-search");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "good beer" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalledWith("good beer", expect.any(Object)));
+    expect(screen.queryByTestId("place-option-describe")).toBeNull();
+    expect(client.request).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "1234 Old Mill Gap Road, Stroudsburg, PA 18360" } });
+    await waitFor(() => expect(port.search).toHaveBeenCalledWith("1234 Old Mill Gap Road, Stroudsburg, PA 18360", expect.any(Object)));
+    expect(client.request).not.toHaveBeenCalled();
+  });
+
+  it("allows short text in Ask and restores focus when Escape closes the sheet", async () => {
+    const { client } = setupMapAsk();
+    const trigger = screen.getByTestId("map-ask-open");
+    fireEvent.click(trigger);
+    const input = screen.getByTestId("map-ask-prompt");
+    fireEvent.change(input, { target: { value: "Go" } });
+    expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(client.request).toHaveBeenCalledOnce());
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByTestId("map-ask-sheet")).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("cancels an in-flight Map Ask and keeps its text when reopened", async () => {
+    let signal: AbortSignal | undefined;
+    setupMapAsk({
+      client: {
+        request: (_request, requestSignal) => {
+          signal = requestSignal;
+          return new Promise(() => undefined);
+        },
+      },
+    });
+    const trigger = screen.getByTestId("map-ask-open");
+    fireEvent.click(trigger);
+    const input = screen.getByTestId("map-ask-prompt");
+    fireEvent.change(input, { target: { value: "A short twisty loop" } });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(screen.getByTestId("advisor-working")).toBeInTheDocument());
+
+    fireEvent.keyDown(input, { key: "Escape" });
+    await waitFor(() => expect(signal?.aborted).toBe(true));
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    expect(screen.getByTestId("map-ask-prompt")).toHaveValue("A short twisty loop");
+  });
+
+  it("states that Ask is unavailable while leaving manual planning available", () => {
+    setupMapAsk({ enabled: false });
+    fireEvent.click(screen.getByTestId("map-ask-open"));
+    expect(screen.getByRole("status")).toHaveTextContent("Ask is unavailable right now");
+    expect(screen.getByRole("status")).toHaveTextContent("set your start and destination in Plan");
+    expect(screen.getByTestId("map-ask-prompt")).toBeEnabled();
+  });
+});
+
+
+function categorySearchDraft(document: RideDocument): AdvisorDraft {
+  const base = jimThorpeLoop(document);
+  return {
+    ...base,
+    fields: {
+      ...base.fields,
+      shape: null,
+      startPlace: null,
+      rideTimeKind: "unchanged",
+      rideTimeMinutes: null,
+      roadCharacter: null,
+      surfacePreference: null,
+      avoidHighways: null,
+      stopSearches: [{ category: "coffee", vicinity: null, routePosition: "halfway" }],
+    },
+    resolvedPlaces: { start: null, finish: null, stop: null },
+  };
 }
 
 describe("one box for where to and describe a ride", () => {
@@ -404,6 +527,106 @@ describe("the proposal card", () => {
     expect(proposal).toHaveTextContent("8:00 AM");
     expect(proposal.textContent).toMatch(/Leave /);
     expect(proposal.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe("advisor category stop selection", () => {
+  it("waits for a route, shows honest provider evidence, then adds the rider's selected stop and replans", async () => {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const listeners = new Set<() => void>();
+    let planningState = {
+      snapshot: { phase: "idle", committedBundle: null, lastGoodBundle: null },
+      geometry: {},
+    } as unknown as ReturnType<PlanningSessionStore["getState"]>;
+    const planningStore = {
+      getState: () => planningState,
+      getInitialState: () => planningState,
+      subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener); },
+    } as unknown as PlanningSessionStore;
+    const candidate: NearbyPlace = {
+      id: asPlaceId("venue:coffee-1"),
+      kind: "venue",
+      name: "Route Coffee",
+      coordinate: { lon: -74.5, lat: 40 },
+      category: "Coffee Shop",
+      label: "",
+      status: "day",
+      city: "Jim Thorpe",
+      address: "",
+      specials: [],
+      schedule: null,
+      rating: null,
+      popular: false,
+      dogFriendly: null,
+      patio: null,
+      url: "https://places.example/coffee",
+      mapsUrl: null,
+      sourceLabel: "Regional Places Index",
+      offRouteMiles: 0.4,
+      routeMile: 26,
+    };
+    const alongRoute = vi.fn(async () => ({
+      availability: "available" as const,
+      places: [candidate],
+      fetchedAt: "2026-10-26T12:00:00.000Z",
+      attribution: "Fake Places provider",
+    }));
+    const placesSource: PlacesSource = {
+      id: "fake-places",
+      inExtent: async () => ({ availability: "available", places: [], fetchedAt: "2026-10-26T12:00:00.000Z", attribution: "Fake Places provider" }),
+      alongRoute,
+    };
+    const onApplied = vi.fn(() => ({ kind: "planning" as const }));
+    const client: AdvisorProposalClient = {
+      request: vi.fn(async () => ({ ok: true as const, draft: categorySearchDraft(store.getState().document) })),
+    };
+    render(
+      <RideAdvisorProvider enabled store={store} client={client} planningStore={planningStore} placesSource={placesSource} onApplied={onApplied}>
+        <AskStopSearch />
+        <AdvisorInline askBox />
+      </RideAdvisorProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask for coffee" }));
+    await screen.findByTestId("advisor-proposal");
+    expect(screen.getByTestId("advisor-proposal")).toHaveTextContent("Coffee");
+
+    const routeId = "route:ready" as never;
+    const geometryRef = "geometry:route" as never;
+    const route = {
+      id: routeId,
+      geometryRef,
+      durationSeconds: 90 * 60,
+    } as never;
+    const bundle = {
+      rideId: store.getState().document.rideId,
+      rideRevision: store.getState().document.revision,
+      candidates: [route],
+      selectedRouteId: routeId,
+    } as never;
+    planningState = {
+      snapshot: { phase: "ready", committedBundle: bundle, lastGoodBundle: bundle },
+      geometry: { [geometryRef]: { kind: "line", coordinates: [{ lon: -75, lat: 40 }, { lon: -74, lat: 40 }] } },
+    } as unknown as ReturnType<PlanningSessionStore["getState"]>;
+    act(() => listeners.forEach((listener) => listener()));
+
+    fireEvent.click(screen.getByTestId("advisor-apply"));
+    expect(await screen.findByText("Source: Fake Places provider")).toBeInTheDocument();
+    expect(screen.getByText("Source: Regional Places Index")).toBeInTheDocument();
+    expect(screen.getByTestId("advisor-stop-picker")).toHaveTextContent("Not rated");
+    expect(alongRoute).toHaveBeenCalledWith(
+      expect.objectContaining({ bufferMiles: 5 }),
+      expect.objectContaining({ kinds: [], categories: ["coffee"], vicinity: null }),
+      expect.any(AbortSignal),
+    );
+    expect(onApplied).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: /Choose Route Coffee/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Add selected stops and replan" }));
+    expect(store.getState().document.intent.stops).toMatchObject([
+      { label: "Route Coffee, Jim Thorpe", arrivalIntent: "food", coordinate: candidate.coordinate },
+    ]);
+    expect(onApplied).toHaveBeenCalledTimes(2);
   });
 });
 

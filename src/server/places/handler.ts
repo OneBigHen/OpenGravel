@@ -19,7 +19,9 @@ import path from "node:path";
 
 import {
   MAX_PLACE_EXTENT_DEGREES,
+  PLACE_CATEGORIES,
   type PlaceExtent,
+  type PlaceCategory,
   type PlaceKind,
   type PlaceQuery,
   type PlacesResult,
@@ -33,7 +35,7 @@ export const PLACES_CACHE_TTL_MS = 60_000;
 export const PLACES_CACHE_MAX_ENTRIES = 256;
 export const MAX_ALONG_REQUEST_POINTS = 5000;
 
-const KINDS: readonly PlaceKind[] = ["happy_hour", "event"];
+const KINDS: readonly PlaceKind[] = ["happy_hour", "event", "venue"];
 const WINDOWS: readonly PlaceWindow[] = ["now", "today", "week"];
 
 export interface PlacesHandlerDeps {
@@ -63,11 +65,29 @@ function notConfigured(): PlacesHandlerResult {
   };
 }
 
-function parseKinds(raw: unknown): readonly PlaceKind[] | null {
-  const list = typeof raw === "string" ? raw.split(",") : Array.isArray(raw) ? raw : ["happy_hour", "event"];
+function parseKinds(raw: unknown, defaults = true): readonly PlaceKind[] | null {
+  const list = raw === undefined && defaults ? ["happy_hour", "event"] : typeof raw === "string" ? raw.split(",") : Array.isArray(raw) ? raw : [];
   const kinds = list.map((k) => (typeof k === "string" ? k.trim() : "")).filter((k) => k !== "");
-  if (kinds.length === 0 || !kinds.every((k) => KINDS.includes(k as PlaceKind))) return null;
+  if (!kinds.every((k) => KINDS.includes(k as PlaceKind))) return null;
   return [...new Set(kinds)] as PlaceKind[];
+}
+
+function parseCategories(raw: unknown): readonly PlaceCategory[] | null {
+  if (raw === undefined || raw === null || raw === "") return [];
+  const list = typeof raw === "string" ? raw.split(",") : Array.isArray(raw) ? raw : null;
+  if (list === null) return null;
+  const categories = list.map((value) => (typeof value === "string" ? value.trim() : ""));
+  return categories.length > 0 && categories.every((value) => (PLACE_CATEGORIES as readonly string[]).includes(value))
+    ? [...new Set(categories)] as PlaceCategory[]
+    : null;
+}
+
+function parseVicinity(raw: unknown): string | null | undefined {
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw !== "string" || raw.includes("\u0000")) return undefined;
+  const vicinity = raw.trim();
+  if (vicinity.length > 120) return undefined;
+  return vicinity === "" ? null : vicinity;
 }
 
 function parseWindow(raw: unknown): PlaceWindow | null {
@@ -150,15 +170,19 @@ export async function handlePlacesExtentRequest(
   const extent = parseExtent(url.searchParams.get("bbox"));
   if (typeof extent === "string") return validation(extent);
   const kinds = parseKinds(url.searchParams.get("kinds") ?? undefined);
-  if (kinds === null) return validation("kinds must be happy_hour and/or event.");
+  if (kinds === null || kinds.length === 0) return validation("kinds must include happy_hour, event or venue.");
+  const categories = parseCategories(url.searchParams.get("categories") ?? undefined);
+  if (categories === null) return validation("categories must be brewery, coffee, diner or restaurant.");
+  const vicinity = parseVicinity(url.searchParams.get("vicinity") ?? undefined);
+  if (vicinity === undefined) return validation("vicinity must be at most 120 characters.");
   const window = parseWindow(url.searchParams.get("when"));
   if (window === null) return validation("when must be now, today or week.");
   const source = await resolveSource(deps);
   if (source === null) return notConfigured();
 
-  const query: PlaceQuery = { kinds, window };
+  const query: PlaceQuery = { kinds, window, ...(categories.length === 0 ? {} : { categories }), ...(vicinity === null ? {} : { vicinity }) };
   const now = deps.now ?? Date.now;
-  const key = `${source.id}|${extent.west},${extent.south},${extent.east},${extent.north}|${[...kinds].sort().join(",")}|${window}`;
+  const key = `${source.id}|${extent.west},${extent.south},${extent.east},${extent.north}|${[...kinds].sort().join(",")}|${[...categories].sort().join(",")}|${vicinity ?? ""}|${window}`;
   const hit = cache.get(key);
   if (hit !== undefined && hit.expiresAt > now()) return { status: 200, body: hit.result };
 
@@ -189,12 +213,20 @@ export async function handlePlacesAlongRequest(
   if (typeof buffer !== "number" || !Number.isFinite(buffer) || buffer <= 0 || buffer > 10) {
     return validation("bufferMiles must be between 0 and 10.");
   }
-  const kinds = parseKinds(candidate["kinds"]);
-  if (kinds === null) return validation("kinds must be happy_hour and/or event.");
+  const categories = parseCategories(candidate["categories"]);
+  if (categories === null) return validation("categories must be brewery, coffee, diner or restaurant.");
+  const kinds = parseKinds(candidate["kinds"], categories.length === 0);
+  if (kinds === null || (kinds.length === 0 && categories.length === 0)) return validation("kinds or categories are required.");
+  const vicinity = parseVicinity(candidate["vicinity"]);
+  if (vicinity === undefined) return validation("vicinity must be at most 120 characters.");
   const window = parseWindow(candidate["window"]);
   if (window === null) return validation("window must be now, today or week.");
   const source = await resolveSource(deps);
   if (source === null) return notConfigured();
-  const result = await source.alongRoute({ line, bufferMiles: buffer }, { kinds, window }, signal);
+  const result = await source.alongRoute(
+    { line, bufferMiles: buffer },
+    { kinds, window, ...(categories.length === 0 ? {} : { categories }), ...(vicinity === null ? {} : { vicinity }) },
+    signal,
+  );
   return { status: ANSWERED, body: result };
 }

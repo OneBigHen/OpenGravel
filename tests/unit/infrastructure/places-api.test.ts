@@ -59,6 +59,25 @@ describe("places API contract 1.0", () => {
     });
   });
 
+  it("keeps a venue rating and review count only when the provider supplies them", () => {
+    const sample = FIXTURE.features[0] as Record<string, unknown>;
+    const base = sample["properties"] as Record<string, unknown>;
+    const parsed = parsePlaceFeature({
+      ...sample,
+      id: "venue:coffee-shop",
+      properties: { ...base, kind: "venue", status: undefined, category: "Coffee Shop", review_count: 87 },
+    });
+    expect(parsed).toMatchObject({ kind: "venue", category: "Coffee Shop", rating: 4.2, reviewCount: 87 });
+
+    const withoutReviews = parsePlaceFeature({
+      ...sample,
+      id: "venue:unrated",
+      properties: { ...base, kind: "venue", status: "day", category: "Cafe", rating: null },
+    });
+    expect(withoutReviews?.rating).toBeNull();
+    expect(withoutReviews).not.toHaveProperty("reviewCount");
+  });
+
   it("drops malformed features instead of half-mapping them", () => {
     const good = FIXTURE.features[0] as Record<string, unknown>;
     expect(parsePlaceFeature({ ...good, geometry: { type: "Point", coordinates: [999, 40] } })).toBeNull();
@@ -107,6 +126,28 @@ describe("places-api places source", () => {
     expect(denied).toMatchObject({ availability: "unavailable", retryable: false });
     expect(busy).toMatchObject({ availability: "unavailable", retryable: true });
     expect(JSON.stringify([denied, busy])).not.toContain("secret");
+  });
+
+  it("sends the requested business category and vicinity through the along-route provider call", async () => {
+    let sent: { readonly url: string; readonly body: unknown } | null = null;
+    const source = createPlacesApiSource({
+      baseUrl: "https://places.example",
+      fetch: async (input, init) => {
+        sent = { url: String(input), body: JSON.parse(String(init?.body)) as unknown };
+        return Response.json(FIXTURE);
+      },
+    });
+    const result = await source.alongRoute(
+      { line: [{ lon: -75.4, lat: 40.1 }, { lon: -75.2, lat: 40.1 }], bufferMiles: 5 },
+      { kinds: [], window: "today", categories: ["coffee"], vicinity: "Jim Thorpe, PA" },
+    );
+
+    expect(result.availability).toBe("available");
+    expect(sent).toMatchObject({
+      url: "https://places.example/api/v1/places/along",
+      body: { buffer_mi: 5, categories: ["coffee"], vicinity: "Jim Thorpe, PA" },
+    });
+    expect((sent as { body: Record<string, unknown> } | null)?.body).not.toHaveProperty("kinds");
   });
 
   it("thins a long line without reordering it", () => {

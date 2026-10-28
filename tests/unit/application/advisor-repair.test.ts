@@ -4,7 +4,7 @@
  * no place, and the rider saw "The advisor is unavailable right now."
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { advisorContextFromDocument, requestAdvisorDraft } from "@/application/advisor/advisor-proposal";
 import { createRideDocument } from "@/domain/ride/create";
@@ -39,6 +39,48 @@ describe("advisor reply repair", () => {
     expect(result.draft.fields.shape).toBe("loop");
     expect(result.draft.fields.surfacePreference).toBe("dirt-preferred");
     expect(result.draft.notes.join(" ")).toMatch(/town for the food stop/);
+  });
+
+  it("parses ordered category, vicinity and route-position searches without geocoding them", async () => {
+    const search = vi.fn(async () => ({ status: "ok" as const, places: [] }));
+    const result = await requestAdvisorDraft(
+      { prompt: "coffee halfway and a diner near the end", rideId: document.rideId, baseRevision: document.revision, context },
+      {
+        transport: {
+          send: async () => ({
+            ok: true as const,
+            text: JSON.stringify({
+              outcome: "proposal",
+              clarification: null,
+              fields: {
+                ...FIELDS,
+                shape: null,
+                startPlace: null,
+                rideTimeKind: "unchanged",
+                rideTimeMinutes: null,
+                surfacePreference: null,
+                stopPlace: null,
+                stopArrivalIntent: null,
+                stopSearches: [
+                  { category: "coffee", vicinity: null, routePosition: "halfway" },
+                  { category: "diner", vicinity: "Jim Thorpe, PA", routePosition: "near-end" },
+                ],
+              },
+              unmappedDetails: [],
+            }),
+          }),
+        } as never,
+        places: { search, reverse: async () => null },
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.draft.fields.stopSearches).toEqual([
+      { category: "coffee", vicinity: null, routePosition: "halfway" },
+      { category: "diner", vicinity: "Jim Thorpe, PA", routePosition: "near-end" },
+    ]);
+    expect(search).not.toHaveBeenCalled();
   });
 
   it("drops minutes that do not belong to the time kind", async () => {

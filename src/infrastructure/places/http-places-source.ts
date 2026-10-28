@@ -65,7 +65,14 @@ export function createHttpPlacesSource(options: HttpPlacesSourceOptions = {}): P
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ line: request.line, bufferMiles: request.bufferMiles, kinds: query.kinds, window: query.window }),
+          body: JSON.stringify({
+            line: request.line,
+            bufferMiles: request.bufferMiles,
+            kinds: query.kinds,
+            window: query.window,
+            ...(query.categories === undefined ? {} : { categories: query.categories }),
+            ...(query.vicinity === undefined || query.vicinity === null ? {} : { vicinity: query.vicinity }),
+          }),
         },
         signal,
       );

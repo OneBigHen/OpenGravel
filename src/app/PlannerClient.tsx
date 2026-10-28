@@ -36,6 +36,7 @@ import { createRideSessionController } from "@/application/ride-session/ride-ses
 import { markRideHandoff } from "@/infrastructure/storage/ride-handoff-marker";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
 import { createAppPreparationProviders } from "@/app/preparation-providers";
+import { createHttpPlacesSource } from "@/infrastructure/places/http-places-source";
 import { createBrowserPositionSource } from "@/infrastructure/ride/browser-position-source";
 import { inNativeShell, nativeShellPositionSource } from "@/infrastructure/ride/native-shell";
 import { createLocalStorageBootstrapPointer } from "@/infrastructure/storage/bootstrap-pointer";
@@ -156,6 +157,10 @@ export function PlannerClient({
     request: (...args) => import("@/infrastructure/advisor/advisor-api-client")
       .then(({ createAdvisorApiClient }) => createAdvisorApiClient().request(...args)),
   }), []);
+  const advisorPlacesSource = useMemo(
+    () => createHttpPlacesSource(assetBasePath === undefined ? {} : { basePath: assetBasePath }),
+    [assetBasePath],
+  );
   // The repository owns the hint cache too, so deleting a ride drops a hint that
   // names it and a deleted ride cannot be recovered on the next boot.
   const repository = useMemo(
@@ -376,6 +381,7 @@ export function PlannerClient({
       store={rideDocumentStore}
       client={advisorClient}
       planningStore={planningSessionStore}
+      placesSource={advisorPlacesSource}
       onApplied={planAfterAdvice}
     >
       <InstalledOfflineAreasProvider regions={offlineRegions}>

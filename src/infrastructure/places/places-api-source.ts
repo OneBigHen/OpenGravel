@@ -89,8 +89,9 @@ export function createPlacesApiSource(config: PlacesApiConfig): PlacesSource {
     inExtent(extent: PlaceExtent, query: PlaceQuery, signal?: AbortSignal) {
       const params = new URLSearchParams({
         bbox: [extent.west, extent.south, extent.east, extent.north].map((v) => v.toFixed(4)).join(","),
-        kinds: query.kinds.join(","),
-        when: query.window,
+        ...(query.kinds.length === 0 ? {} : { kinds: query.kinds.join(","), when: query.window }),
+        ...(query.categories === undefined ? {} : { categories: query.categories.join(",") }),
+        ...(query.vicinity === undefined || query.vicinity === null ? {} : { vicinity: query.vicinity }),
       });
       return call(`/places?${params.toString()}`, { method: "GET" }, signal);
     },
@@ -98,8 +99,9 @@ export function createPlacesApiSource(config: PlacesApiConfig): PlacesSource {
       const body = {
         coordinates: thinLine(request.line).map((c) => [Number(c.lon.toFixed(5)), Number(c.lat.toFixed(5))]),
         buffer_mi: request.bufferMiles,
-        kinds: query.kinds,
-        when: query.window,
+        ...(query.kinds.length === 0 ? {} : { kinds: query.kinds, when: query.window }),
+        ...(query.categories === undefined ? {} : { categories: query.categories }),
+        ...(query.vicinity === undefined || query.vicinity === null ? {} : { vicinity: query.vicinity }),
       };
       return call(
         "/places/along",

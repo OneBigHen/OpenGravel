@@ -7,7 +7,7 @@ import { smartChip, type SmartChipSuggestion } from "@/application/places";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ComposerPlaceSearch } from "@/ui/planner/usePlannerPlaces";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
-import { useRideAdvisor } from "@/ui/planner/RideAdvisor";
+import { MapAdvisorAsk } from "@/ui/planner/RideAdvisor";
 import { AppMenu } from "@/ui/nav/AppMenu";
 import { LayerGlyph } from "@/ui/layers/LayerIcon";
 import { useEffect, useState } from "react";
@@ -140,7 +140,6 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
   /** The map-layer provider that answers the along-route fuel search. */
   readonly mapLayers?: MapLayersSource | undefined;
 }) {
-  const advisor = useRideAdvisor();
   const chips = useChipRow(bias, route ?? null, mapLayers);
   return <div className="og-top-search" data-testid="top-search">
     <div className="og-top-search__row">
@@ -149,10 +148,10 @@ export function TopSearch({ search, bias, selected, activeChip, layerOn, onClear
       <PlaceSearchField slot="finish" testIdPrefix="top-place" placeholder="Search here" search={search.port} bias={bias}
         onPick={(place, query) => search.onPick("finish", place, query)}
         {...(onSearchList === undefined ? {} : { onSubmitList: onSearchList })}
-        {...(search.remembered === undefined ? {} : { remembered: search.remembered })}
-        {...(advisor === null ? {} : { describe: (text: string) => advisor.ask(text) })}/>
+        {...(search.remembered === undefined ? {} : { remembered: search.remembered })}/>
       {selected ? <button type="button" aria-label="Clear place" onClick={onClear}>×</button> : <ConditionsPill at={bias}/>}
     </div>
+    <MapAdvisorAsk />
     <AppMenu className="og-top-search__menu"/>
     </div>
     <div className="og-search-chips" aria-label="Nearby places">

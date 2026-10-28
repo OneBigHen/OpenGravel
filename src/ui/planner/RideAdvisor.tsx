@@ -4,11 +4,10 @@
  * The ride advisor, inside the planner rather than floating over the map
  * (UX rework 2, #7/#13).
  *
- * The rider types into the same box they search with ("Where to, or describe a
- * ride"). A description goes to the advisor; its proposal appears inline in the
- * sheet as a short summary with one **Plan it** button, and applying it plans
- * the route. The state lives in one provider so the search field (which asks)
- * and the inline card (which answers) share a single conversation.
+ * The composer, Map Ask sheet and planned-ride panel share one advisor session.
+ * A proposal appears as an interpretation with one **Plan it** button, and
+ * applying it uses the normal route-planning path. Map place search remains a
+ * separate flow from this session.
  */
 
 import {
@@ -22,9 +21,11 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { appendAdvisorExchange, type AdvisorExchange } from "@/application/advisor/advisor-conversation";
 import { summarizeAdvisorRide } from "@/application/advisor/advisor-ride-summary";
+import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import { cachedElevationClimb } from "./useElevationProfile";
 import { advisorRiderState } from "@/application/advisor/advisor-errors";
@@ -34,11 +35,25 @@ import type {
   AdvisorDraftResult,
   AdvisorProposalClient,
   AdvisorRecovery,
-  ReadyAdvisorProposal,
 } from "@/application/advisor";
 import type { AdvisorProposalChange } from "@/application/advisor/advisor-proposal-commands";
 import type { RideDocumentStore } from "@/ui/stores/ride-document-store";
+import { ARRIVAL_INTENT_LABELS } from "@/ui/planner/arrival-intent";
+import type { PlacesSource } from "@/application/places";
+import { isPlanningInFlight } from "@/application/planner/planner-view-model";
+import {
+  ADVISOR_ROUTE_POSITION_LABELS,
+  ADVISOR_STOP_CATEGORY_LABELS,
+  buildAdvisorStopSelectionCommand,
+  rankAdvisorStopCandidates,
+  routeLengthMiles,
+  type AdvisorReadyProposal,
+  type AdvisorStopCandidate,
+  type AdvisorStopSearchProposal,
+  type AdvisorStopSearchRequest,
+} from "@/application/advisor";
 import "./advisor-conversation.css";
+import "./advisor-ask-sheet.css";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 
 /** What happens after an applied proposal, in the rider's words. */
@@ -46,8 +61,8 @@ export type AdvisorAppliedNext =
   | { readonly kind: "planning" }
   | { readonly kind: "needs-point"; readonly point: "start" | "finish" };
 
-/** Where the rider asked from: the composer (no ride yet) or the planned ride's sheet. */
-export type AdvisorSurface = "composer" | "ride";
+/** Where the rider asked from: the composer, Map Ask, or the planned ride's sheet. */
+export type AdvisorSurface = "composer" | "ride" | "map";
 
 export interface RideAdvisor {
   /** Send a ride description or answer the latest clarification. */
@@ -57,17 +72,31 @@ export interface RideAdvisor {
   readonly prompt: string;
   readonly conversation: readonly AdvisorExchange[];
   readonly pending: boolean;
-  readonly proposal: ReadyAdvisorProposal | null;
+  readonly proposal: AdvisorReadyProposal | null;
   readonly proposalIsStale: boolean;
   /** A result line: an error, a clarification, or what happens next. */
   readonly message: string | null;
   readonly messageIsError: boolean;
   readonly recovery: AdvisorRecovery;
-  apply(): void;
+  apply(): AdvisorAppliedNext | null;
   dismiss(): void;
   retry(): void;
   /** Re-validates the last draft against the ride as it is now; no model call. */
   refresh(): void;
+  readonly stopSearches: AdvisorStopSearchFlow | null;
+  readonly documentStore: RideDocumentStore;
+  readonly planningStore?: PlanningSessionStore;
+  readonly placesSource?: PlacesSource;
+  dismissStopSearches(): void;
+  addSelectedStops(selected: readonly AdvisorStopCandidate[]): void;
+}
+
+export interface AdvisorStopSearchFlow {
+  readonly id: string;
+  readonly surface: AdvisorSurface;
+  readonly baseRevision: number;
+  readonly requests: readonly AdvisorStopSearchRequest[];
+  readonly timeBudgetMinutes: number | null;
 }
 
 const AdvisorContext = createContext<RideAdvisor | null>(null);
@@ -82,6 +111,8 @@ export interface RideAdvisorProviderProps {
   readonly store: RideDocumentStore;
   readonly client: AdvisorProposalClient;
   readonly planningStore?: PlanningSessionStore;
+  /** HTTP adapter for the existing `/api/places/along` boundary. */
+  readonly placesSource?: PlacesSource;
   /** Called once a proposal is applied: the planner plans, or names what is missing. */
   readonly onApplied?: () => AdvisorAppliedNext;
   readonly children: ReactNode;
@@ -96,7 +127,7 @@ export function RideAdvisorProvider(props: RideAdvisorProviderProps) {
 }
 
 /** Conversation and pending work belong to one ride, including across equal revisions. */
-function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, children }: RideAdvisorProviderProps) {
+function RideAdvisorSession({ enabled, store, client, planningStore, placesSource, onApplied, children }: RideAdvisorProviderProps) {
   const subscribe = useCallback((onChange: () => void) => store.subscribe(() => onChange()), [store]);
   const getRevision = useCallback(() => store.getState().document.revision, [store]);
   const revision = useSyncExternalStore(subscribe, getRevision, getRevision);
@@ -105,7 +136,8 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   const [conversation, setConversation] = useState<readonly AdvisorExchange[]>([]);
   const conversationRef = useRef<{ rideId: string; exchanges: readonly AdvisorExchange[] }>({ rideId: store.getState().document.rideId, exchanges: [] });
   const [pending, setPending] = useState(false);
-  const [proposal, setProposal] = useState<ReadyAdvisorProposal | null>(null);
+  const [proposal, setProposal] = useState<AdvisorReadyProposal | null>(null);
+  const [stopSearches, setStopSearches] = useState<AdvisorStopSearchFlow | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
   const [recovery, setRecovery] = useState<AdvisorRecovery>("none");
@@ -137,6 +169,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       setSurface(from);
       setPending(true);
       setProposal(null);
+      setStopSearches(null);
       setLastDraft(null);
       setMessage(null);
       setMessageIsError(false);
@@ -169,12 +202,19 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
           setLastDraft(result.draft);
           const built = buildAdvisorProposal(store.getState().document, result.draft);
           if (built.status !== "error") {
-            const reply = built.status === "ready" ? `Suggested: ${built.changes.map(changeChip).join(" · ")}.` : built.message;
-            const exchanges = appendAdvisorExchange(history, { riderRequest: text, reply, outcome: built.status === "ready" ? "proposal" : built.status });
+            const isProposal = built.status === "ready" || built.status === "search";
+            const summary = isProposal
+              ? [
+                  ...built.changes.map(changeChip),
+                  ...built.stopSearches.map((search) => `${ADVISOR_STOP_CATEGORY_LABELS[search.category]} ${ADVISOR_ROUTE_POSITION_LABELS[search.routePosition].toLowerCase()}`),
+                ].join(" · ")
+              : "";
+            const reply = isProposal ? `Suggested: ${summary}.` : built.message;
+            const exchanges = appendAdvisorExchange(history, { riderRequest: text, reply, outcome: isProposal ? "proposal" : built.status });
             conversationRef.current = { rideId: requestedDocument.rideId, exchanges };
             setConversation(exchanges);
           }
-          if (built.status === "ready") {
+          if (built.status === "ready" || built.status === "search") {
             emitTelemetry("advisor_proposal_ready", { capabilityStatus: "available" });
             setProposal(built);
           } else if (built.status === "error") {
@@ -197,20 +237,29 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     [client, store, planningStore, fail],
   );
 
-  const proposalIsStale = proposal !== null && proposal.command.baseRevision !== revision;
+  const proposalIsStale = proposal !== null && proposal.baseRevision !== revision;
 
   const apply = useCallback(() => {
-    if (proposal === null) return;
-    if (proposal.command.baseRevision !== store.getState().document.revision) {
+    if (proposal === null) return null;
+    if (proposal.baseRevision !== store.getState().document.revision) {
       const state = advisorRiderState("stale-revision");
       fail(state.message, state.recovery);
       setProposal(null);
-      return;
+      return null;
     }
-    const result = store.getState().dispatch(proposal.command);
+    const result = "command" in proposal ? store.getState().dispatch(proposal.command) : { outcome: "applied" as const };
     setProposal(null);
     setLastDraft(null);
     if (result.outcome === "applied") {
+      if (proposal.stopSearches.length > 0) {
+        setStopSearches({
+          id: crypto.randomUUID(),
+          surface,
+          baseRevision: store.getState().document.revision,
+          requests: proposal.stopSearches,
+          timeBudgetMinutes: proposal.timeBudgetMinutes,
+        });
+      }
       emitTelemetry("advisor_proposal_applied", { source: "advisor" });
       setRecovery("none");
       setPrompt("");
@@ -218,11 +267,40 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       // Planning speaks for itself on the map; only a missing point needs words.
       setMessage(next.kind === "planning" ? null : `Now set your ${next.point === "finish" ? "destination" : "start"} to plan this ride.`);
       setMessageIsError(false);
-      return;
+      return next;
     }
     const state = advisorRiderState(result.outcome === "stale" ? "stale-revision" : "invalid-request");
     fail(state.message, state.recovery);
-  }, [proposal, store, fail]);
+    return null;
+  }, [proposal, store, surface, fail]);
+
+  const dismissStopSearches = useCallback(() => setStopSearches(null), []);
+
+  const addSelectedStops = useCallback((selected: readonly AdvisorStopCandidate[]) => {
+    const flow = stopSearches;
+    if (flow === null) return;
+    const document = store.getState().document;
+    if (document.revision !== flow.baseRevision) {
+      setStopSearches(null);
+      fail("The ride changed while places were loading. Ask again to refresh the search.", "none");
+      return;
+    }
+    const command = buildAdvisorStopSelectionCommand(document, selected, flow.requests.length);
+    if (command === null) {
+      fail("Choose at least one place to add.", "none");
+      return;
+    }
+    const result = store.getState().dispatch(command);
+    if (result.outcome !== "applied") {
+      setStopSearches(null);
+      fail("The ride changed before these stops could be added. Ask again to refresh the search.", "none");
+      return;
+    }
+    setStopSearches(null);
+    const next = onAppliedRef.current?.() ?? { kind: "planning" as const };
+    setMessage(next.kind === "planning" ? "Stops added. Updating the route…" : `Now set your ${next.point === "finish" ? "destination" : "start"} to plan this ride.`);
+    setMessageIsError(false);
+  }, [stopSearches, store, fail]);
 
   const dismiss = useCallback(() => {
     if (proposal !== null) emitTelemetry("advisor_proposal_discarded");
@@ -230,6 +308,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
     requestGeneration.current += 1;
     setPending(false);
     setProposal(null);
+    setStopSearches(null);
     setLastDraft(null);
     setMessage(null);
     setRecovery("none");
@@ -247,7 +326,7 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
       const { refreshAdvisorProposal } = await import("@/application/advisor/advisor-proposal-commands");
       if (generation !== requestGeneration.current) return;
       const built = refreshAdvisorProposal(store.getState().document, lastDraft);
-      if (built.status === "ready") {
+      if (built.status === "ready" || built.status === "search") {
         setProposal(built);
         setMessage(null);
         setMessageIsError(false);
@@ -265,8 +344,8 @@ function RideAdvisorSession({ enabled, store, client, planningStore, onApplied, 
   }, [lastDraft, store, fail]);
 
   const value = useMemo<RideAdvisor>(
-    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh }),
-    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh],
+    () => ({ ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh, stopSearches, documentStore: store, planningStore, placesSource, dismissStopSearches, addSelectedStops }),
+    [ask, surface, prompt, conversation, pending, proposal, proposalIsStale, message, messageIsError, recovery, apply, dismiss, retry, refresh, stopSearches, store, planningStore, placesSource, dismissStopSearches, addSelectedStops],
   );
   return <AdvisorContext.Provider value={enabled ? value : null}>{children}</AdvisorContext.Provider>;
 }
@@ -349,7 +428,7 @@ export function replacedSettings(changes: readonly AdvisorProposalChange[]): rea
   return changes
     .filter((change) => change.field !== "shape")
     .map(changeWas)
-    .filter((before) => !/^(no |none\b|not set\b)/i.test(before));
+    .filter((before, index, all) => !/^(no |none\b|not set\b)/i.test(before) && all.indexOf(before) === index);
 }
 
 export function changeWas(change: AdvisorProposalChange): string {
@@ -401,7 +480,17 @@ function AdvisorSlowHint() {
  * the times the composer has no search field to type into (a loop's start is
  * already set, say).
  */
-export function AdvisorInline({ askBox = false, surface = "composer" }: { readonly askBox?: boolean; readonly surface?: AdvisorSurface }) {
+export function AdvisorInline({
+  askBox = false,
+  surface = "composer",
+  hideForm = false,
+  onPlan,
+}: {
+  readonly askBox?: boolean;
+  readonly surface?: AdvisorSurface;
+  readonly hideForm?: boolean;
+  readonly onPlan?: () => void;
+}) {
   const advisor = useRideAdvisor();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -411,7 +500,8 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
   const composerText = draftBase === advisor.prompt ? draft : advisor.prompt;
   // Another surface owns the live conversation: this one stays quiet.
   const idle = (!pending && proposal === null && message === null) || advisor.surface !== surface;
-  if (idle && !askBox) return null;
+  const hasStopFlow = advisor.stopSearches?.surface === surface;
+  if (idle && !askBox && !hasStopFlow) return null;
 
   function submit(): void {
     if (advisor === null || advisor.pending) return;
@@ -459,14 +549,18 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
             <AdvisorMark />
             <span>Proposed ride</span>
           </p>
-          <ul className="og-advisor__changes" aria-label="What this sets">
-            {proposal.changes.map((change) => (
-              <li key={change.field}>
-                {changeChip(change)}
-                <span className="og-visually-hidden">, was {changeWas(change)}</span>
-              </li>
-            ))}
-          </ul>
+          {proposal.status === "ready" ? <AdvisorInterpretation proposal={proposal} /> : null}
+          {proposal.stopSearches.length === 0 ? null : (
+            <ul className="og-advisor__stop-intents" aria-label="Places to find after routing">
+              {proposal.stopSearches.map((search, index) => (
+                <li key={`${index}-${search.category}`}>
+                  <strong>{ADVISOR_STOP_CATEGORY_LABELS[search.category]}</strong>
+                  <span>{ADVISOR_ROUTE_POSITION_LABELS[search.routePosition]}</span>
+                  {search.vicinity === null ? null : <span>near {search.vicinity}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
           {replacedSettings(proposal.changes).length === 0 ? null : (
             <p className="og-advisor__was" aria-hidden="true">Replaces {replacedSettings(proposal.changes).join(", ")}</p>
           )}
@@ -486,7 +580,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
                 Refresh
               </button>
             ) : (
-              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={advisor.apply}>
+              <button type="button" className="og-primary" data-testid="advisor-apply" onClick={() => { if (advisor.apply()?.kind === "planning") onPlan?.(); }}>
                 Plan it
               </button>
             )}
@@ -514,7 +608,7 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
           </button>
         </div>
       ) : null}
-      {(askBox && open || !idle) ? (
+      {!hideForm && (askBox && open || !idle) ? (
         <form
           className="og-advisor__form"
           onSubmit={(event) => {
@@ -541,7 +635,192 @@ export function AdvisorInline({ askBox = false, surface = "composer" }: { readon
           <button type="submit" className="og-secondary" disabled={pending || composerText.trim().length < 2}>Send</button>
         </form>
       ) : null}
+      {hasStopFlow ? <AdvisorStopPicker advisor={advisor} /> : null}
     </section>
+  );
+}
+
+function AdvisorInterpretation({ proposal }: { readonly proposal: Extract<AdvisorReadyProposal, { status: "ready" }> }) {
+  const intent = proposal.interpretation;
+  const routeShape = intent.shape === "loop" ? "Loop" : intent.shape === "destination" ? "To a destination" : "Open ride";
+  const start = intent.start === null ? "No start set" : `From ${intent.start}`;
+  const destination = intent.shape === "loop"
+    ? `Returns to ${intent.start ?? "start"}`
+    : intent.shape === "destination"
+      ? intent.finish === null ? "No destination set" : `To ${intent.finish}`
+      : "No fixed destination";
+  const style = [
+    ROAD_WORDS[intent.roadCharacter],
+    SURFACE_WORDS[intent.surface],
+    TERRAIN_WORDS[intent.terrain],
+    NOVELTY_WORDS[intent.novelty],
+    intent.avoidHighways ? "No highways" : null,
+    intent.tollPolicy === "avoid" ? "No tolls" : null,
+    TRAFFIC_WORDS[intent.traffic],
+  ].filter((value): value is string => typeof value === "string");
+  const stops = intent.stops.length === 0
+    ? ["No stops"]
+    : intent.stops.map((stop) => `${stop.label ?? "Unnamed stop"}${stop.arrivalIntent == null ? "" : ` · ${ARRIVAL_INTENT_LABELS[stop.arrivalIntent]}`}`);
+  const unknowns = [
+    ...intent.unknowns,
+    ...(intent.start === null ? ["A start point is still needed to route this ride."] : []),
+    ...(intent.shape === "destination" && intent.finish === null ? ["A destination is still needed to route this ride."] : []),
+    "The route and deadline feasibility are checked after planning.",
+  ];
+
+  return (
+    <div className="og-advisor__interpretation" data-testid="advisor-interpretation">
+      <h3>Interpretation</h3>
+      <dl>
+        <div><dt>Route</dt><dd>{routeShape} · {start} · {destination}</dd></div>
+        <div><dt>Style</dt><dd>{style.join(" · ")}</dd></div>
+        <div><dt>Stops</dt><dd>{stops.join(", ")}</dd></div>
+        <div><dt>Departure</dt><dd>{intent.departure}</dd></div>
+        <div><dt>{intent.time.kind === "budget" ? "Time target" : "Deadline"}</dt><dd>{intent.timeLabel}</dd></div>
+      </dl>
+      <div className="og-advisor__unknowns">
+        <h4>Unknowns</h4>
+        <ul>{unknowns.map((unknown, index) => <li key={`${index}-${unknown}`}>{unknown}</li>)}</ul>
+      </div>
+    </div>
+  );
+}
+
+const MAP_ASK_EXAMPLES = [
+  "Two hours of twisty backroads, no highways",
+  "Loop from Jim Thorpe, back by 6",
+  "Ride to Jim Thorpe and arrive by 4",
+] as const;
+
+/**
+ * Shared modal focus for the Ask sheet: trap Tab, Escape closes, focus goes
+ * back to the Ask button on close. Mounted inside the dialog so the ref is set
+ * when the hook runs; the text box takes focus first.
+ */
+function AskDialogFocus({ dialogRef, inputRef, onClose }: {
+  readonly dialogRef: { readonly current: HTMLElement | null };
+  readonly inputRef: { readonly current: HTMLInputElement | null };
+  readonly onClose: () => void;
+}) {
+  useDialogFocus(dialogRef, onClose);
+  useEffect(() => { inputRef.current?.focus(); }, [inputRef]);
+  return null;
+}
+
+/** Dedicated map entry: the place search and its readQuery heuristic stay independent. */
+export function MapAdvisorAsk() {
+  const advisor = useRideAdvisor();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
+  const wasOpen = useRef(false);
+
+  // Tapping a button does not focus it in Safari, so the shared hook may have
+  // no invoker to return to; send focus back to Ask explicitly.
+  useEffect(() => {
+    if (open) wasOpen.current = true;
+    else if (wasOpen.current) {
+      wasOpen.current = false;
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  function close(): void {
+    if (advisor?.surface === "map" && (advisor.pending || advisor.proposal !== null || advisor.message !== null)) {
+      advisor.dismiss();
+    }
+    setOpen(false);
+  }
+
+  function submit(event: React.FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    const prompt = text.trim();
+    if (prompt.length < 2 || advisor === null || advisor.pending) return;
+    advisor.ask(prompt, "map");
+  }
+
+  return (
+    <>
+      <div className="og-map-ask">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="og-map-ask__trigger"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Ask to plan a ride"
+        data-testid="map-ask-open"
+        onClick={() => setOpen(true)}
+      >
+        <AdvisorMark /> Ask
+      </button>
+      </div>
+      {!open || typeof document === "undefined" ? null : createPortal(
+        <div
+          className="og-map-ask__scrim"
+          data-testid="map-ask-scrim"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}
+        >
+          <section
+            ref={dialogRef}
+            className="og-map-ask__sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="og-map-ask-title"
+            aria-describedby="og-map-ask-description"
+            data-testid="map-ask-sheet"
+          >
+            <AskDialogFocus dialogRef={dialogRef} inputRef={inputRef} onClose={close} />
+            <header className="og-map-ask__header">
+              <div>
+                <p className="og-map-ask__eyebrow"><AdvisorMark /> Plan a ride</p>
+                <h2 id="og-map-ask-title">Describe a ride</h2>
+              </div>
+              <button type="button" className="og-map-ask__close" aria-label="Close Ask" onClick={close}>×</button>
+            </header>
+            <p id="og-map-ask-description" className="og-map-ask__description">
+              Tell us where to go, the kind of roads you want, and when you need to be back.
+            </p>
+            <div className="og-map-ask__examples" role="group" aria-label="Example ride descriptions">
+              {MAP_ASK_EXAMPLES.map((example) => (
+                <button key={example} type="button" onClick={() => { setText(example); inputRef.current?.focus(); }}>
+                  {example}
+                </button>
+              ))}
+            </div>
+            <form className="og-map-ask__form" onSubmit={submit}>
+              <label htmlFor="og-map-ask-prompt">Your ride</label>
+              <div className="og-map-ask__input-row">
+                <input
+                  ref={inputRef}
+                  id="og-map-ask-prompt"
+                  type="text"
+                  data-testid="map-ask-prompt"
+                  aria-label="Describe a ride"
+                  placeholder="e.g. A two-hour loop on backroads"
+                  maxLength={RIDE_DESCRIPTION_MAX_LENGTH}
+                  autoComplete="off"
+                  enterKeyHint="go"
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                />
+                <button type="submit" className="og-primary" disabled={advisor === null || advisor.pending || text.trim().length < 2}>
+                  {advisor?.pending ? "Sending…" : "Send"}
+                </button>
+              </div>
+            </form>
+            {advisor === null ? (
+              <p className="og-map-ask__unavailable" role="status">
+                Ask is unavailable right now. You can still search for a place or set your start and destination in Plan.
+              </p>
+            ) : <AdvisorInline surface="map" hideForm onPlan={() => setOpen(false)} />}
+          </section>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -553,6 +832,191 @@ const RIDE_ASKS: readonly { readonly label: string; readonly prompt: string }[] 
   { label: "Curvier", prompt: "Make this ride curvier" },
   { label: "No highways", prompt: "Avoid highways on this ride" },
 ];
+
+interface StopLookupState {
+  readonly flowId: string;
+  readonly attempt: number;
+  readonly routeKey: string;
+  readonly proposals: readonly AdvisorStopSearchProposal[];
+}
+
+interface StopSelectionState {
+  readonly flowId: string;
+  readonly attempt: number;
+  readonly byIndex: Readonly<Record<number, string>>;
+}
+
+function AdvisorStopPicker({ advisor }: { readonly advisor: RideAdvisor }) {
+  const flow = advisor.stopSearches;
+  const planningStore = advisor.planningStore;
+  const source = advisor.placesSource;
+  const subscribePlanning = useCallback((onChange: () => void) => planningStore?.subscribe(() => onChange()) ?? (() => undefined), [planningStore]);
+  const getPlanning = useCallback(() => planningStore?.getState() ?? null, [planningStore]);
+  const planning = useSyncExternalStore(subscribePlanning, getPlanning, getPlanning);
+  const subscribeDocument = useCallback((onChange: () => void) => advisor.documentStore.subscribe(() => onChange()), [advisor.documentStore]);
+  const getDocument = useCallback(() => advisor.documentStore.getState().document, [advisor.documentStore]);
+  const document = useSyncExternalStore(subscribeDocument, getDocument, getDocument);
+  const [lookup, setLookup] = useState<StopLookupState | null>(null);
+  const [selection, setSelection] = useState<StopSelectionState | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  const snapshot = planning?.snapshot;
+  const bundle = snapshot?.committedBundle ?? snapshot?.lastGoodBundle ?? null;
+  const selectedRoute = bundle?.candidates.find((candidate) => candidate.id === bundle.selectedRouteId);
+  const geometry = selectedRoute === undefined ? undefined : planning?.geometry[selectedRoute.geometryRef];
+  const routeReady = flow !== null && snapshot?.phase === "ready" && bundle !== null &&
+    bundle.rideRevision === document.revision && document.revision === flow.baseRevision && geometry?.kind === "line";
+  const routeKey = selectedRoute === undefined || bundle === null
+    ? null
+    : `${selectedRoute.id}|${selectedRoute.geometryRef}|${bundle.planningGeneration}`;
+
+  useEffect(() => {
+    if (flow === null || document.revision !== flow.baseRevision) return;
+    if (source === undefined || planning === null || snapshot === undefined || !routeReady || selectedRoute === undefined || geometry?.kind !== "line") {
+      return;
+    }
+
+    const controller = new AbortController();
+    const line = geometry.coordinates;
+    const miles = routeLengthMiles(line);
+    const routeDurationMinutes = selectedRoute.durationSeconds / 60;
+    void Promise.all(flow.requests.map(async (request): Promise<AdvisorStopSearchProposal> => {
+      const result = await source.alongRoute(
+        { line, bufferMiles: 5 },
+        { kinds: [], window: "today", categories: [request.category], vicinity: request.vicinity },
+        controller.signal,
+      );
+      if (result.availability === "unavailable") {
+        return { request, candidates: [], sourceLabel: "Places", unavailableReason: result.reason };
+      }
+      return {
+        request,
+        sourceLabel: result.attribution,
+        candidates: rankAdvisorStopCandidates({
+          request,
+          places: result.places,
+          attribution: result.attribution,
+          routeMiles: miles,
+          routeDurationMinutes,
+          timeBudgetMinutes: flow.timeBudgetMinutes,
+        }),
+      };
+    })).then((proposals) => {
+      if (!controller.signal.aborted) {
+        if (routeKey !== null) setLookup({ flowId: flow.id, attempt, routeKey, proposals });
+        setSelection(null);
+      }
+    }).catch(() => {
+      if (!controller.signal.aborted) {
+        setLookup({
+          flowId: flow.id,
+          attempt,
+          routeKey: routeKey ?? "",
+          proposals: flow.requests.map((request) => ({
+            request,
+            candidates: [],
+            sourceLabel: "Places",
+            unavailableReason: "Places are unavailable right now.",
+          })),
+        });
+        setSelection(null);
+      }
+    });
+    return () => controller.abort();
+  }, [attempt, document, flow, geometry, planning, routeKey, routeReady, selectedRoute, snapshot, source]);
+
+  if (flow === null) return null;
+  const stale = document.revision !== flow.baseRevision;
+  const currentLookup = routeReady && routeKey !== null && lookup?.flowId === flow.id &&
+    lookup.attempt === attempt && lookup.routeKey === routeKey ? lookup : null;
+  const proposals = currentLookup?.proposals ?? [];
+  const selected = selection?.flowId === flow.id && selection.attempt === attempt ? selection.byIndex : {};
+  const selectedCandidates = proposals.flatMap((proposal, index) =>
+    proposal.candidates.filter((candidate) => candidate.place.id === selected[index]),
+  );
+  const canAdd = currentLookup !== null && proposals.length === flow.requests.length && selectedCandidates.length > 0;
+
+  return (
+    <section className="og-advisor-stops" aria-label="Choose route stops" data-testid="advisor-stop-picker">
+      <h4>Choose places along the route</h4>
+      {stale ? <p role="status">The ride changed. Ask again to refresh these place searches.</p> : null}
+      {!stale && currentLookup === null ? (
+        <p role="status">
+          {snapshot !== undefined && isPlanningInFlight(snapshot.phase)
+            ? "Planning the route before searching places…"
+            : routeReady
+              ? "Searching places from the selected source along the planned route…"
+              : "Set a start and destination, then plan a route before searching for these stops."}
+        </p>
+      ) : null}
+      {currentLookup !== null ? (
+        <>
+          <p className="og-advisor-stops__note">Order uses only supplied ratings and review counts, estimated detour and your time budget. Missing ratings show as Not rated. Route time recalculates after you add stops.</p>
+          {proposals.map((proposal, index) => (
+            <section className="og-advisor-stops__group" key={String(index) + proposal.request.category}>
+              <h5>
+                Stop {index + 1}: {ADVISOR_STOP_CATEGORY_LABELS[proposal.request.category]} · {ADVISOR_ROUTE_POSITION_LABELS[proposal.request.routePosition]}
+                {proposal.request.vicinity === null ? "" : " · " + proposal.request.vicinity}
+              </h5>
+              <p className="og-advisor-stops__source">Source: {proposal.sourceLabel}</p>
+              {proposal.unavailableReason !== undefined ? <p role="status">Places are unavailable: {proposal.unavailableReason}</p> : null}
+              {proposal.unavailableReason === undefined && proposal.candidates.length === 0 ? <p>No matching places were returned. Try another area or search manually.</p> : null}
+              {proposal.candidates.length === 0 ? null : (
+                <ul className="og-advisor-stops__candidates">
+                  {proposal.candidates.map((candidate) => {
+                    const place = candidate.place;
+                    const rating = candidate.qualityEvidence?.rating;
+                    const reviews = candidate.qualityEvidence?.reviewCount;
+                    const quality = rating === undefined
+                      ? "Not rated" + (reviews === undefined ? "" : " · " + reviews + " reviews")
+                      : rating.toFixed(1) + " / 5" + (reviews === undefined ? "" : " · " + reviews + " reviews");
+                    const detour = place.offRouteMiles === null
+                      ? "Detour unavailable"
+                      : place.offRouteMiles < 0.1 ? "On route" : place.offRouteMiles.toFixed(1) + " mi off route";
+                    const time = candidate.detourMinutesEstimate === null
+                      ? ""
+                      : " · est. +" + Math.round(candidate.detourMinutesEstimate) + " min";
+                    const isSelected = selected[index] === place.id;
+                    return (
+                      <li key={place.id}>
+                        <button
+                          type="button"
+                          className={isSelected ? "og-advisor-stops__candidate is-selected" : "og-advisor-stops__candidate"}
+                          aria-pressed={isSelected}
+                          aria-label={"Choose " + place.name + ", " + quality + ", " + detour}
+                          onClick={() => setSelection({
+                            flowId: flow.id,
+                            attempt,
+                            byIndex: { ...selected, [index]: isSelected ? "" : place.id },
+                          })}
+                        >
+                          <strong>{place.name}</strong>
+                          <span>{place.category}{place.city === "" ? "" : " · " + place.city}</span>
+                          <span>{quality}</span>
+                          <span>{detour}{time}</span>
+                          <span className="og-advisor-stops__candidate-source">Source: {candidate.sourceLabel}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          ))}
+          <div className="og-advisor-stops__actions">
+            <button type="button" className="og-primary" disabled={!canAdd} onClick={() => advisor.addSelectedStops(selectedCandidates)}>
+              Add selected stops and replan
+            </button>
+            <button type="button" className="og-secondary" onClick={advisor.dismissStopSearches}>Cancel</button>
+          </div>
+        </>
+      ) : null}
+      {currentLookup?.proposals.some((proposal) => proposal.unavailableReason !== undefined) ? (
+        <button type="button" className="og-advisor__retry" onClick={() => setAttempt((value) => value + 1)}>Try places again</button>
+      ) : null}
+    </section>
+  );
+}
 
 /**
  * "Ask about this ride", under a planned ride: the advisor sees the selected
@@ -609,6 +1073,7 @@ export function AdvisorRideAsk() {
           </div>
         </form>
       )}
+      {!live && advisor.stopSearches?.surface === "ride" ? <AdvisorStopPicker advisor={advisor} /> : null}
     </section>
   );
 }
