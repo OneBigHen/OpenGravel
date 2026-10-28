@@ -67,7 +67,7 @@ function useHikeData(hikes: readonly HikeRecord[]) {
         while (cursor < hikes.length) {
           const hike = hikes[cursor++]!;
           const feature = featureCache.get(hike.id);
-          if (!feature || profileCache.has(hike.id)) continue;
+          if (!feature || profileCache.has(hike.id) || hike.toblerMinutes != null) continue;
           const lines = linesOf(feature);
           if (lines.length !== 1 || !lines[0]) continue;
           const samples = sampleLine(lines[0]);
@@ -136,7 +136,7 @@ function TrailMap({ feature, thumbnail = false, mapboxToken }: { feature: TrailF
 function HikeCard({ hike, origin, feature, profile, mapboxToken }: { hike: HikeRecord; origin: Coordinate; feature: TrailFeature | undefined; profile: ElevationProfile | undefined; mapboxToken?: string }) {
   const distance = haversine(origin, hike.start);
   const gain = profile?.climbMeters ?? hike.elevationGainMeters;
-  const facts = [miles(hike.lengthMeters), ...(gain == null ? [] : [`${Math.round(gain * 3.28084)} ft gain`]), ...(profile ? [`~${Math.max(1, Math.round(profileTimeSeconds(profile) / 60))}\u00a0min`] : [])];
+  const facts = [miles(hike.lengthMeters), ...(gain == null ? [] : [`${Math.round(gain * 3.28084)} ft gain`]), ...(profile ? [`~${Math.max(1, Math.round(profileTimeSeconds(profile) / 60))}\u00a0min`] : hike.toblerMinutes != null ? [`~${Math.max(1, Math.round(hike.toblerMinutes))}\u00a0min`] : [])];
   return <Link className="og-hike__card" href={`/explore/hikes/${encodeURIComponent(hike.id)}`}>
     <TrailMap feature={feature ?? null} thumbnail {...(mapboxToken ? { mapboxToken } : {})} />
     <span className="og-hike__card-body"><strong>{nameOf(hike)}</strong><span>{miles(distance)} to start</span><span>{facts.join(" · ")}</span>{hike.sacScale && <span>Difficulty: {hike.sacScale} (OSM)</span>}</span>
@@ -186,7 +186,8 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
     const profile = profiles.get(h.id);
     const gain = profile?.climbMeters ?? h.elevationGainMeters;
     if (filters.gain && (gain == null || gain > Number(filters.gain) / 3.28084)) return false;
-    if (filters.time && (!profile || profileTimeSeconds(profile) > Number(filters.time) * 3600)) return false;
+    const seconds = profile ? profileTimeSeconds(profile) : h.toblerMinutes == null ? null : h.toblerMinutes * 60;
+    if (filters.time && (seconds === null || seconds > Number(filters.time) * 3600)) return false;
     if (filters.kids && (gain == null || gain > 152.4)) return false;
     return true;
   });
@@ -206,7 +207,7 @@ export function HikeDetail({ id, mapboxToken }: { id: string; mapboxToken?: stri
   const lines = useMemo(() => feature ? linesOf(feature) : [], [feature]);
   const elevation = useElevationProfile(elevationSource, lines.length === 1 ? id : null, lines[0] ?? []);
   const profile = elevation?.status === "ready" ? elevation.profile : null;
-  const seconds = profile ? profileTimeSeconds(profile) : null;
+  const seconds = profile ? profileTimeSeconds(profile) : hike?.toblerMinutes == null ? null : hike.toblerMinutes * 60;
   const time = seconds === null ? null : `~${Math.max(1, Math.round(seconds / 60))} min`;
   async function openBreadcrumb() {
     const line = lines[0];
