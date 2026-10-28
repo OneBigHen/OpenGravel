@@ -86,9 +86,10 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
     const style = getComputedStyle(element);
     return { backdrop: style.backdropFilter, background: style.backgroundColor, borderTopWidth: style.borderTopWidth };
   });
-  // Glass over the map: a blurred, mostly opaque surface with a hairline on top.
-  expect(barStyle.background).toMatch(/^(rgb|color\()/);
-  expect(barStyle.backdrop).toMatch(/blur/);
+  // Solid, not glass (owner 2026-10-27: glass along the bottom was hard to
+  // read): an opaque surface with a hairline on top.
+  expect(barStyle.background).toMatch(/^rgb\(/);
+  expect(barStyle.backdrop).toBe("none");
   expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
