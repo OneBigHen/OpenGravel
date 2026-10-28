@@ -8,6 +8,7 @@ import { readFeatureFile, textTag, type OsmFeature } from './lib/osm-input';
 import { osmSource } from './lib/features';
 import { trailLines } from './lib/official';
 import { segments,segmentMatch,SegmentGrid } from './lib/spatial';
+import { readMediaCache } from './lib/media-cache';
 import { commonsPhoto,type CommonsPage } from './lib/media';
 import type { HikeCatalog,TrailFeatureCollection } from './lib/types';
 import type { TrailDescription,TrailPhoto } from './lib/rich-types';
@@ -19,15 +20,20 @@ const errors:{url:string;error:string}[]=[];
 const unavailableHosts=new Set<string>();
 const cacheOnly=process.argv.includes("--cache-only");
 let previousErrorUrls=new Set<string>();
+let nextRequestAt=0;
 async function api(cache:string,host:string,params:Record<string,string>):Promise<Json> {
   const url=`https://${host}/w/api.php?${new URLSearchParams({action:'query',format:'json',formatversion:'2',maxlag:'5',...params})}`;
   const path=join(cache,createHash('sha256').update(url).digest('hex')+'.json');
-  if(existsSync(path)) return JSON.parse(readFileSync(path,'utf8')) as Json;
+  if(existsSync(path)){try{return JSON.parse(readFileSync(path,'utf8')) as Json;}catch{errors.push({url,error:'Interrupted or invalid cached response'});}}
   if(previousErrorUrls.has(url)){errors.push({url,error:'Previous full fetch failed; retry deferred'});return {};}
-  if(cacheOnly || unavailableHosts.has(host)){errors.push({url,error:cacheOnly?'No successful response cached':'Host unavailable after repeated replication lag'});return {};}
+  if(cacheOnly || unavailableHosts.has(host)){errors.push({url,error:cacheOnly?'No successful response cached':'Host unavailable for the remainder of this run'});return {};}
   for(let retry=0;retry<3;retry++) {
     try {
+      const delay=Math.max(0,nextRequestAt-Date.now());nextRequestAt=Math.max(Date.now(),nextRequestAt)+1000;
+      if(delay)await new Promise(r=>setTimeout(r,delay));
+      if(unavailableHosts.has(host)){errors.push({url,error:'Host unavailable for the remainder of this run'});return {};}
       const response=await fetch(url,{headers:{'User-Agent':agent,'Api-User-Agent':agent},signal:AbortSignal.timeout(45000)});
+      if(response.status===429){unavailableHosts.add(host);errors.push({url,error:`HTTP 429; host deferred (Retry-After: ${response.headers.get('retry-after') ?? 'unspecified'})`});return {};}
       if(!response.ok)throw new Error(`HTTP ${response.status}`);
       const result=await response.json() as Json;
       if(result.error)throw new Error(JSON.stringify(result.error));
@@ -63,6 +69,7 @@ async function main() {
   if(resolve(base)===resolve(out))throw new Error('base and output must differ');
   if(args.includes('--skip-errors')){const file=value('--skip-errors');if(!file)throw new Error('--skip-errors needs a stats file');const previous=JSON.parse(readFileSync(file,'utf8')) as {errors?:{url:string}[]};previousErrorUrls=new Set((previous.errors ?? []).map(e=>e.url));}
   mkdirSync(cache,{recursive:true});
+  const recordCache=readMediaCache(cache);
   const catalog=JSON.parse(readFileSync(join(base,'hikes.json'),'utf8')) as HikeCatalog;
   const collection=JSON.parse(readFileSync(join(base,'trails.geojson'),'utf8')) as TrailFeatureCollection;
   const context:OsmFeature[]=(await Promise.all(paths.map(readFeatureFile))).flat();
@@ -80,16 +87,18 @@ async function main() {
   }
   const allSubjects=[...subjects.values()].flat();
   const wikidata=[...new Set(allSubjects.map(s=>s.wikidata).filter((s):s is string=>!!s && /^Q\d+$/.test(s)))].sort();
-  const entities=new Map<string,{descriptions?:{en?:{value:string}};sitelinks?:{enwiki?:{title:string}}}>();
-  for(let i=0;i<wikidata.length;i+=50) {
-    const result=await api(cache,'www.wikidata.org',{action:'wbgetentities',ids:wikidata.slice(i,i+50).join('|'),props:'descriptions|sitelinks',languages:'en',sitefilter:'enwiki'});
+  const entities=recordCache.entities;
+  const missingEntities=wikidata.filter(id=>!entities.has(id));
+  for(let i=0;i<missingEntities.length;i+=50) {
+    const result=await api(cache,'www.wikidata.org',{action:'wbgetentities',ids:missingEntities.slice(i,i+50).join('|'),props:'descriptions|sitelinks',languages:'en',sitefilter:'enwiki'});
     for(const [id,entity] of Object.entries((result.entities ?? {}) as Record<string,unknown>))entities.set(id,entity as NonNullable<ReturnType<typeof entities.get>>);
   }
   const titleFor=(s:Subject):string|undefined=>s.wikipedia?.startsWith('en:')?s.wikipedia.slice(3).replaceAll('_',' '):entities.get(s.wikidata ?? '')?.sitelinks?.enwiki?.title;
   const titles=[...new Set(allSubjects.map(titleFor).filter((t):t is string=>!!t))].sort();
-  const extracts=new Map<string,{text:string;title:string;revision?:number}>();
-  for(let i=0;i<titles.length;i+=20) {
-    const result=await api(cache,'en.wikipedia.org',{titles:titles.slice(i,i+20).join('|'),prop:'extracts|info',exintro:'1',explaintext:'1',exlimit:'20',exchars:'900',redirects:'1'});
+  const extracts=recordCache.extracts;
+  const missingTitles=titles.filter(title=>!extracts.has(title));
+  for(let i=0;i<missingTitles.length;i+=20) {
+    const result=await api(cache,'en.wikipedia.org',{titles:missingTitles.slice(i,i+20).join('|'),prop:'extracts|info',exintro:'1',explaintext:'1',exlimit:'20',exchars:'900',redirects:'1'});
     const query=result.query as {pages?:{title:string;extract?:string;lastrevid?:number}[];redirects?:{from:string;to:string}[];normalized?:{from:string;to:string}[]} | undefined;
     for(const page of query?.pages ?? [])if(page.extract)extracts.set(page.title,{text:page.extract,title:page.title,revision:page.lastrevid});
     for(const redirect of [...(query?.redirects ?? []),...(query?.normalized ?? [])].reverse()){const target=extracts.get(redirect.to);if(target)extracts.set(redirect.from,target);}
@@ -147,7 +156,9 @@ async function main() {
   }
   const wanted=[...new Set([...matches.values()].flat().map(m=>m.id))].sort((a,b)=>a-b);
   const photos=new Map<number,Omit<TrailPhoto,'distanceFromTrailMeters'>>();
-  const batches=Array.from({length:Math.ceil(wanted.length/50)},(_,i)=>wanted.slice(i*50,i*50+50));
+  for(const id of wanted){const page=recordCache.photos.get(id),g=geo.get(id);if(page && g){const photo=commonsPhoto(page,{lon:g.lon,lat:g.lat});if(photo)photos.set(id,photo);}}
+  const missingPhotos=wanted.filter(id=>!recordCache.photos.has(id));
+  const batches=Array.from({length:Math.ceil(missingPhotos.length/50)},(_,i)=>missingPhotos.slice(i*50,i*50+50));
   await workers(batches,async batch=>{
     const result=await api(cache,'commons.wikimedia.org',{pageids:batch.join('|'),prop:'imageinfo',iiprop:'url|extmetadata|mime',iiurlwidth:'640',iiextmetadatafilter:'Artist|LicenseShortName|LicenseUrl|AttributionRequired|Attribution|UsageTerms'});
     for(const page of (result.query as {pages?:CommonsPage[]}|undefined)?.pages ?? []) {

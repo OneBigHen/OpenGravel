@@ -388,3 +388,10 @@ flag on a later refresh to retry those unavailable requests.
 Observation/watchtowers retain their own kind; they are not labelled fire towers
 unless the OSM tower type explicitly says fire. Proximity does not establish
 that any tower or viewpoint can be entered.
+
+Successful Wikimedia responses are also indexed by entity ID, article title
+(including redirects), and Commons page ID. Rebatching after a catalog change
+therefore reuses existing extracts/credits rather than downloading them again.
+New requests are paced at one per second globally, at most two in flight. HTTP
+429 defers that host for the remainder of the run; existing cached records remain
+usable. Malformed/interrupted cache files are not treated as successful absence.
