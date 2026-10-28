@@ -91,7 +91,8 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   // A 94–98 % tint reads as solid; anything thinner is glass again.
   expect(surfaceAlpha(barStyle.background)).toBeGreaterThanOrEqual(0.94);
   expect(barStyle.backdrop).toBe("none");
-  expect(Number.parseFloat(barStyle.borderTopWidth)).toBeGreaterThan(0);
+  // The tab bar joins the sheet above as one dock, so the single top edge is
+  // the sheet's, not a second hairline between them.
   await expect(sheet).toHaveAttribute("data-idle", "true");
   expect(statusBox.y).toBeGreaterThanOrEqual(sheetBox.y - 1);
   expect(statusBox.y + statusBox.height).toBeLessThanOrEqual(sheetBox.y + sheetBox.height);
