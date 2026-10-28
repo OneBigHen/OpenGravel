@@ -26,6 +26,8 @@
   }
 
   .og-top-search__row {
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
     gap: var(--og-space-2);

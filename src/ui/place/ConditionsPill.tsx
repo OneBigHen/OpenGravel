@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { calculateSunset, sunState } from "@/application/long-trip/daylight";
+import { calculateSunrise, calculateSunset, sunState } from "@/application/long-trip/daylight";
 import type { WeatherForecastPeriod, WeatherSnapshot } from "@/application/preparation/providers";
 import type { Coordinate } from "@/domain/ride/types";
 
@@ -42,6 +42,12 @@ function SkyGlyph({ sky, night }: { readonly sky: Sky; readonly night: boolean }
       {sky === "snow" ? <>{cloud}<path d="M9 22h.01M13 22h.01M16 22h.01" /></> : null}
     </svg>
   );
+}
+
+/** Midday UTC on the observer's own (solar-local) calendar day, `days` ahead. */
+function localNoon(lon: number, now: number, days = 0): string {
+  const local = new Date(now + (lon / 15) * 3_600_000);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + days, 12)).toISOString();
 }
 
 function clock(iso: string | number): string {
@@ -124,8 +130,11 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
   if (current === undefined || current.temperatureF === null || current.temperatureF === undefined) return null;
   const place = { lat, lon };
   const day = sunState(place, now) !== "night";
-  const sunsetIso = calculateSunset(place, new Date(now).toISOString())?.sunset ?? null;
+  const sunsetIso = calculateSunset(place, localNoon(lon, now))?.sunset ?? null;
   const sunsetMs = sunsetIso === null ? null : Date.parse(sunsetIso);
+  // After dark the next light is what matters: tomorrow's sunrise.
+  const sunriseIso = sunsetMs !== null && sunsetMs > now ? null : calculateSunrise(place, localNoon(lon, now, 1));
+  const light = sunsetMs !== null && sunsetMs > now ? `Sunset ${clock(sunsetMs)}` : sunriseIso === null ? null : `Sunrise ${clock(sunriseIso)}`;
   const sky = skyOf(current.shortForecast);
   const note = headsUp(snapshot, upcoming.slice(0, 6), sunsetMs, now, day);
   const summary = `${current.temperatureF}°, ${current.shortForecast}${note === null ? "" : `. ${note.text}`}`;
@@ -148,7 +157,7 @@ export function ConditionsPill({ at }: { readonly at: Coordinate }) {
         <section className="og-conditions__panel" aria-label="Conditions in the next hours">
           <header>
             <strong>{current.shortForecast}</strong>
-            <span>{current.windMph ? `Wind ${current.windMph} mph` : "Calm"}{sunsetMs === null ? "" : ` · Sunset ${clock(sunsetMs)}`}</span>
+            <span>{current.windMph ? `Wind ${current.windMph} mph` : "Calm"}{light === null ? "" : ` · ${light}`}</span>
           </header>
           {snapshot.alerts.map((alert) => (
             <p key={`${alert.event}-${alert.onset ?? ""}`} className="og-conditions__alert">{alert.event}{alert.ends === null ? "" : ` until ${clock(alert.ends)}`}</p>
