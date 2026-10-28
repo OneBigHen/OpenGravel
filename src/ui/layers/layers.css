@@ -141,8 +141,7 @@
   text-transform: uppercase;
 }
 
-.og-layers__group ul,
-.og-layers__lenses {
+.og-layers__group ul {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -150,12 +149,7 @@
   list-style: none;
 }
 
-.og-layers__lenses {
-  margin-top: var(--og-space-2);
-}
-
-.og-layers__group li + li,
-.og-layers__lenses > li + li {
+.og-layers__group li + li {
   border-top: 1px solid var(--og-line);
 }
 
@@ -165,10 +159,9 @@
   align-items: center;
 }
 
-/* A row: a 40px swatch, the name with a meta line that wraps, then status
-   and the switch. */
-.og-layers__switch,
-.og-layers__lens {
+/* A row: the layer's icon tile, the name with a meta line that wraps, then
+   status and the switch. */
+.og-layers__switch {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto 44px;
   align-items: center;
@@ -185,32 +178,8 @@
   cursor: pointer;
 }
 
-.og-layers__switch--choice {
-  grid-template-columns: 40px minmax(0, 1fr) 24px;
-}
-
-.og-layers__switch--plain,
-.og-layers__lens {
+.og-layers__switch--plain {
   grid-template-columns: 40px minmax(0, 1fr) 44px;
-}
-
-.og-layers__lens .og-layers__swatch {
-  grid-row: 1 / span 2;
-}
-
-.og-layers__lens .og-layers__name {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.og-layers__lens .og-layers__legend {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.og-layers__lens .og-switch {
-  grid-column: 3;
-  grid-row: 1 / span 2;
 }
 
 .og-layers__swatch {
@@ -220,16 +189,179 @@
   width: 40px;
   height: 40px;
   border-radius: var(--og-radius-control);
-  background: color-mix(in srgb, var(--og-layer-color) 16%, var(--og-surface-2));
   color: var(--og-ink);
   font-size: var(--og-text-headline);
   font-weight: 700;
 }
 
-.og-layers__row[data-on="true"] .og-layers__swatch,
-.og-layers__lens[data-on="true"] .og-layers__swatch {
+.og-layers__swatch:not(:has(.og-layer-icon)) {
+  background: color-mix(in srgb, var(--og-layer-color) 16%, var(--og-surface-2));
+}
+
+.og-layers__row[data-on="true"] .og-layers__swatch:not(:has(.og-layer-icon)) {
   background: var(--og-layer-color);
   color: var(--og-on-primary);
+}
+
+.og-layer-icon {
+  display: block;
+  transition: transform 160ms ease;
+}
+
+/* Map type: three picture cards, Google-style. The chosen one wears a green
+   ring and a green name. */
+.og-layers__group .og-layers__looks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  flex-direction: row;
+  gap: var(--og-space-3);
+  margin-top: var(--og-space-2);
+}
+
+.og-layers__group .og-layers__looks > li + li,
+.og-layers__group .og-layers__tiles > li + li,
+.og-layers__lenses > li + li {
+  border-top: 0;
+}
+
+.og-layers__look,
+.og-layers__tile,
+.og-layers__lens {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.og-layers__look-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--og-line), var(--og-shadow-float);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+/* Drawn stand-ins when there is no token for the real stills. */
+.og-layers__look[data-look="map"] .og-layers__look-art {
+  background:
+    radial-gradient(circle at 30% 35%, hsl(96 30% 78%) 0 22%, transparent 23%),
+    linear-gradient(160deg, transparent 46%, hsl(200 45% 70%) 47% 53%, transparent 54%),
+    linear-gradient(35deg, transparent 58%, hsl(32 80% 62%) 59% 62%, transparent 63%),
+    hsl(60 25% 90%);
+}
+
+.og-layers__look[data-look="satellite"] .og-layers__look-art {
+  background:
+    radial-gradient(circle at 70% 30%, hsl(90 25% 32%) 0 30%, transparent 31%),
+    linear-gradient(160deg, transparent 46%, hsl(200 30% 28%) 47% 53%, transparent 54%),
+    hsl(80 22% 24%);
+}
+
+.og-layers__look[data-look="night"] .og-layers__look-art {
+  background:
+    linear-gradient(35deg, transparent 58%, hsl(40 70% 55%) 59% 61%, transparent 62%),
+    linear-gradient(160deg, transparent 46%, hsl(205 40% 22%) 47% 53%, transparent 54%),
+    hsl(210 25% 14%);
+}
+
+.og-layers__look-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.og-layers__look[data-on="true"] .og-layers__look-art {
+  box-shadow: 0 0 0 3px var(--og-primary), var(--og-shadow-float);
+}
+
+.og-layers__look[data-on="true"] .og-layers__name,
+.og-layers__tile[data-on="true"] .og-layers__name,
+.og-layers__lens[data-on="true"] .og-layers__name {
+  color: var(--og-primary-text);
+  font-weight: 700;
+}
+
+.og-layers__look .og-layers__name,
+.og-layers__tile .og-layers__name,
+.og-layers__lens .og-layers__name {
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* Quick sets and map view: square icon tiles, four across. */
+.og-layers__group .og-layers__lenses,
+.og-layers__group .og-layers__tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--og-space-3) var(--og-space-2);
+  margin: var(--og-space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.og-layers__tile .og-layers__swatch,
+.og-layers__lens .og-layers__swatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  transition: box-shadow 160ms ease;
+}
+
+.og-layers__tile[data-on="true"] .og-layers__swatch,
+.og-layers__lens[data-on="true"] .og-layers__swatch {
+  box-shadow: 0 0 0 3px var(--og-surface), 0 0 0 5px var(--og-primary);
+}
+
+.og-layers__lens .og-layers__legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.og-layers__tile .og-layers__status {
+  min-height: 1em;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+}
+
+@media (hover: hover) {
+  .og-layers__look:hover .og-layers__look-art,
+  .og-layers__tile:hover .og-layer-icon,
+  .og-layers__lens:hover .og-layer-icon {
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-layer-icon,
+  .og-layers__look-art,
+  .og-layers__tile .og-layers__swatch,
+  .og-layers__lens .og-layers__swatch {
+    transition: none;
+  }
+
+  .og-layers__look:hover .og-layers__look-art,
+  .og-layers__tile:hover .og-layer-icon,
+  .og-layers__lens:hover .og-layer-icon {
+    transform: none;
+  }
 }
 
 .og-layers__group--places .og-layers__swatch {

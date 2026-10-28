@@ -12,7 +12,7 @@ export const TERRAIN_SOURCE_ID = "og-terrain-dem";
 export const HILLSHADE_LAYER_ID = "og-terrain-hillshade";
 export const BUILDING_EXTRUSION_LAYER_ID = "og-buildings-3d";
 
-/** Existing production fallback until the PA/NJ DEM benchmark selects a source. */
+/** The old z14 Mapzen DEM, kept for reference by the elevation probe. */
 export const LEGACY_TERRARIUM_TILES =
   "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 
@@ -36,17 +36,54 @@ export interface BuildingInsertion {
   readonly beforeId: string | undefined;
 }
 
-/** Current low-risk DEM source. The builder will later replace this with our own TileJSON/PMTiles. */
+/** Mapterhorn's terrarium tiles: USGS 3DEP down to about 1 m in the US, 512 px to z16, free and keyless. */
+export const MAPTERHORN_TILES = "https://tiles.mapterhorn.com/{z}/{x}/{y}.webp";
+
+/**
+ * HD relief for 3D terrain and hill shading. Mapterhorn draws ridges and
+ * stream cuts the old z14 Mapzen tiles smeared, and costs no Mapbox quota.
+ */
 export function terrainSourceSpec(): Readonly<Record<string, unknown>> {
   return {
     type: "raster-dem",
-    tiles: [LEGACY_TERRARIUM_TILES],
+    tiles: [MAPTERHORN_TILES],
     encoding: "terrarium",
-    tileSize: 256,
-    maxzoom: 14,
-    attribution: "Elevation © Mapzen, AWS",
+    tileSize: 512,
+    maxzoom: 16,
+    attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>",
   };
 }
+
+/** Sky, horizon haze and ground fog for a tilted map, in the look's own light. */
+export function skySpec(night: boolean): Readonly<Record<string, unknown>> {
+  return night
+    ? {
+        "sky-color": "#0d1a24",
+        "horizon-color": "#30424f",
+        "fog-color": "#1a252c",
+        "sky-horizon-blend": 0.6,
+        "horizon-fog-blend": 0.55,
+        "fog-ground-blend": 0.75,
+        "atmosphere-blend": 0,
+      }
+    : {
+        "sky-color": "#8fbfe0",
+        "horizon-color": "#e8eef0",
+        "fog-color": "#eef1ec",
+        "sky-horizon-blend": 0.55,
+        "horizon-fog-blend": 0.6,
+        "fog-ground-blend": 0.82,
+        "atmosphere-blend": 0,
+      };
+}
+
+/** Late-afternoon sun from the west-southwest, so extruded walls read in relief. */
+export const SUN_LIGHT: Readonly<Record<string, unknown>> = {
+  anchor: "map",
+  position: [1.35, 230, 40],
+  color: "#fff6ea",
+  intensity: 0.42,
+};
 
 /**
  * Subtle relief under roads. It intentionally reuses the terrain source in the
@@ -101,32 +138,27 @@ export function buildingInsertion(layers: readonly HostedStyleLayer[]): Building
 }
 
 /** Native MapLibre extrusion: cheap, high-zoom orientation detail, never a 3D-model framework. */
-export function buildingExtrusionLayerSpec(source: string): Readonly<Record<string, unknown>> {
+export function buildingExtrusionLayerSpec(source: string, night = false): Readonly<Record<string, unknown>> {
+  // OpenMapTiles names heights render_height / render_min_height; Mapbox
+  // Streets (under Outdoors) names them height / min_height.
+  const height = ["coalesce", ["get", "render_height"], ["get", "height"], 6];
+  const base = ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0];
   return {
     id: BUILDING_EXTRUSION_LAYER_ID,
     type: "fill-extrusion",
     source,
     "source-layer": "building",
-    minzoom: 15,
-    filter: ["!=", ["get", "hide_3d"], true],
+    minzoom: 14,
+    filter: ["all", ["!=", ["get", "hide_3d"], true], ["!=", ["get", "extrude"], "false"], ["!=", ["get", "underground"], "true"]],
     paint: {
-      "fill-extrusion-color": "#d7d3c8",
-      "fill-extrusion-opacity": 0.72,
-      "fill-extrusion-height": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        15,
-        0,
-        16,
-        ["coalesce", ["get", "render_height"], 6],
-      ],
-      "fill-extrusion-base": [
-        "case",
-        [">=", ["zoom"], 16],
-        ["coalesce", ["get", "render_min_height"], 0],
-        0,
-      ],
+      // Warm stone low, paler with height, like daylight on a town.
+      "fill-extrusion-color": night
+        ? ["interpolate", ["linear"], height, 0, "#2c3a42", 60, "#3a4b55", 200, "#4b5f6b"]
+        : ["interpolate", ["linear"], height, 0, "#dcd5c6", 40, "#e6e0d3", 150, "#f1ede4"],
+      "fill-extrusion-opacity": 0.9,
+      "fill-extrusion-vertical-gradient": true,
+      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 14, 0, 15.5, height],
+      "fill-extrusion-base": ["interpolate", ["linear"], ["zoom"], 14, 0, 15.5, base],
     },
   };
 }

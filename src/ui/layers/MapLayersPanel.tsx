@@ -24,6 +24,7 @@ import {
 } from "@/application/map-layers";
 
 import type { MapLayerStatus } from "./useMapLayers";
+import { LayerIcon } from "./LayerIcon";
 import { LayerSwitch } from "./LayerSwitch";
 import { LOOK_LABEL, LOOK_NOTE, type BasemapLook } from "@/ui/map/basemap-look";
 
@@ -52,42 +53,107 @@ export interface MapLayersPanelProps {
   readonly settings?: ReactNode;
 }
 
-const LOOK_GLYPH: Readonly<Record<BasemapLook, string>> = {
-  map: "◱",
-  night: "☾",
-  satellite: "◉",
+/** Mapbox styles that picture each look, for the map type cards. */
+const LOOK_PREVIEW_STYLE: Readonly<Record<BasemapLook, string>> = {
+  map: "mapbox/outdoors-v12",
+  night: "mapbox/navigation-night-v1",
+  satellite: "mapbox/satellite-streets-v12",
 };
 
-/** Map style as radio rows: one tap changes the basemap and closes nothing. */
+/**
+ * A small still of each look over the same ridge and river (Hawk Mountain and
+ * the Little Schuylkill), drawn by the Static Images API only when the sheet
+ * opens; the browser keeps it after that. Without a public token the card
+ * shows a drawn swatch instead.
+ */
+function lookPreviewUrl(look: BasemapLook): string | null {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  if (token === undefined || !token.startsWith("pk.")) return null;
+  return `https://api.mapbox.com/styles/v1/${LOOK_PREVIEW_STYLE[look]}/static/-75.985,40.64,12.2,0/112x112@2x?attribution=false&logo=false&access_token=${encodeURIComponent(token)}`;
+}
+
+/** Map type as picture cards, Google-style: one tap changes the basemap. */
 function MapStyleRows({ style }: { readonly style: MapStyleChoice }) {
   return (
-    <section className="og-layers__group og-layers__group--style" aria-label="Map style">
-      <h3>Map style</h3>
-      <ul role="radiogroup" aria-label="Map style">
+    <section className="og-layers__group og-layers__group--style" aria-label="Map type">
+      <h3>Map type</h3>
+      <ul role="radiogroup" aria-label="Map type" className="og-layers__looks">
         {style.options.map((option) => {
           const on = style.look === option;
+          const preview = lookPreviewUrl(option);
           return (
-            <li key={option} className="og-layers__row" data-on={on ? "true" : "false"}>
+            <li key={option}>
               <button
                 type="button"
                 role="radio"
                 aria-checked={on}
-                className="og-layers__switch og-layers__switch--choice"
+                className="og-layers__look"
+                data-look={option}
+                data-on={on ? "true" : "false"}
                 data-testid={`sheet-map-style-${option}`}
+                title={LOOK_NOTE[option]}
                 onClick={() => style.onChoose(option)}
               >
-                <span className="og-layers__swatch" aria-hidden="true">{LOOK_GLYPH[option]}</span>
-                <span className="og-layers__text">
-                  <span className="og-layers__name">{LOOK_LABEL[option]}</span>
-                  <span className="og-layers__legend">{LOOK_NOTE[option]}</span>
+                <span className="og-layers__look-art" aria-hidden="true">
+                  {preview === null ? null : (
+                    // eslint-disable-next-line @next/next/no-img-element -- a remote static map, not an optimisable asset
+                    <img src={preview} alt="" width={112} height={112} loading="lazy" decoding="async" />
+                  )}
                 </span>
-                <span className="og-layers__check" aria-hidden="true">{on ? "✓" : null}</span>
+                <span className="og-layers__name">{LOOK_LABEL[option]}</span>
               </button>
             </li>
           );
         })}
       </ul>
     </section>
+  );
+}
+
+/** The colour each quick set wears on its tile. */
+const LENS_TINT: Readonly<Record<string, string>> = {
+  fun: "var(--og-route)",
+  weather: "var(--og-signal-blue)",
+  traffic: "var(--og-ember)",
+  stops: "var(--og-golden-hour)",
+};
+
+function layerTint(layer: MapLayerDefinition): string {
+  return layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`;
+}
+
+/** A map view layer as a square tile: icon over its name, the state under. */
+function LayerTile({
+  layer,
+  on,
+  status,
+  onToggle,
+}: {
+  readonly layer: MapLayerDefinition;
+  readonly on: boolean;
+  readonly status: MapLayerStatus;
+  readonly onToggle: () => void;
+}) {
+  const busy = status === "loading" || status === "zoom-in" || status === "unavailable" || status === "stale";
+  return (
+    <li>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        className="og-layers__tile"
+        data-on={on ? "true" : "false"}
+        data-testid={`map-layer-${layer.id}`}
+        title={layer.legend}
+        onClick={onToggle}
+      >
+        <span className="og-layers__swatch"><LayerIcon id={layer.id} tint={layerTint(layer)} on={on} size={48} /></span>
+        <span className="og-layers__name">{layer.name}</span>
+        <span className="og-layers__status" data-status={status} role="status" aria-live="polite">
+          {busy ? statusText(layer, status, 0) : null}
+        </span>
+      </button>
+    </li>
   );
 }
 
@@ -137,10 +203,7 @@ function LayerRow({
         data-testid={`map-layer-${layer.id}`}
         onClick={onToggle}
       >
-        <svg className="og-layers__swatch" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
-          <rect width="40" height="40" rx="12" fill={layer.colorToken === undefined ? layer.color : `var(${layer.colorToken})`} opacity={on ? 1 : 0.22} />
-          <text x="20" y="21" textAnchor="middle" dominantBaseline="middle" fill={on ? "var(--og-paper)" : "var(--og-ink)"}>{layer.glyph}</text>
-        </svg>
+        <span className="og-layers__swatch"><LayerIcon id={layer.id} tint={layerTint(layer)} on={on} /></span>
         <span className="og-layers__text">
           <span className="og-layers__name">{layer.name}</span>
           <span className="og-layers__legend">{layer.legend}</span>
@@ -225,7 +288,7 @@ export function MapLayersPanel({
       {open ? (
         <section className="og-layers__panel" id={panelId} aria-label="Map layers">
           <header className="og-layers__head">
-            <h2>Map layers</h2>
+            <h2>Layers</h2>
             {active === 0 ? null : (
               <button type="button" className="og-layers__clear" onClick={onClearAll}>
                 Clear all
@@ -238,6 +301,8 @@ export function MapLayersPanel({
           <div className="og-layers__body">
             {mapStyle === undefined ? null : <MapStyleRows style={mapStyle} />}
             {onToggleLens === undefined ? null : (
+              <section className="og-layers__group" aria-label="Quick sets">
+              <h3>Quick sets</h3>
               <ul className="og-layers__lenses" aria-label="Quick layer sets">
                 {MAP_LAYER_LENSES.map((lens) => {
                   const on = lens.layers.every((id) => enabled.includes(id));
@@ -252,17 +317,26 @@ export function MapLayersPanel({
                         data-testid={`map-lens-${lens.id}`}
                         onClick={() => onToggleLens(lens.layers)}
                       >
-                        <span className="og-layers__swatch" aria-hidden="true">{lens.glyph}</span>
+                        <span className="og-layers__swatch"><LayerIcon id={lens.id} tint={LENS_TINT[lens.id] ?? "var(--og-primary)"} on={on} size={48} /></span>
                         <span className="og-layers__name">{lens.name}</span>
                         <span className="og-layers__legend">{lens.hint}</span>
-                        <LayerSwitch on={on} />
                       </button>
                     </li>
                   );
                 })}
               </ul>
+              </section>
             )}
-            {MAP_LAYER_CATEGORIES.map((category) => (
+            {MAP_LAYER_CATEGORIES.map((category) => category.id === "view" ? (
+              <section key={category.id} className="og-layers__group" aria-label={category.name}>
+                <h3>{category.name}</h3>
+                <ul className="og-layers__tiles">
+                  {MAP_LAYERS.filter((layer) => layer.category === category.id).map((layer) => (
+                    <LayerTile key={layer.id} layer={layer} on={enabled.includes(layer.id)} status={status[layer.id]} onToggle={() => onToggle(layer.id)} />
+                  ))}
+                </ul>
+              </section>
+            ) : (
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>
                 <ul>

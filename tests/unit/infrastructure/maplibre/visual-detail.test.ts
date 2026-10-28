@@ -8,19 +8,33 @@ import {
   buildingInsertion,
   hillshadeBeforeId,
   hillshadeLayerSpec,
+  MAPTERHORN_TILES,
+  skySpec,
   terrainSourceSpec,
   type HostedStyleLayer,
 } from "@/infrastructure/map/maplibre/visual-detail";
 
 describe("MapLibre visual detail", () => {
-  it("keeps terrain realistic and on the existing bounded DEM contract", () => {
+  it("keeps terrain realistic and draws it from the HD Mapterhorn DEM", () => {
     expect(TERRAIN_EXAGGERATION).toBe(1.1);
     expect(terrainSourceSpec()).toMatchObject({
       type: "raster-dem",
+      tiles: [MAPTERHORN_TILES],
       encoding: "terrarium",
-      tileSize: 256,
-      maxzoom: 14,
+      tileSize: 512,
+      maxzoom: 16,
     });
+  });
+
+  it("gives a tilted map a sky in the look's own light", () => {
+    expect(skySpec(false)).toMatchObject({ "sky-color": expect.any(String), "fog-ground-blend": expect.any(Number) });
+    expect(skySpec(true)["sky-color"]).not.toBe(skySpec(false)["sky-color"]);
+  });
+
+  it("raises buildings from either basemap's height field", () => {
+    const paint = buildingExtrusionLayerSpec("composite").paint as Record<string, unknown>;
+    expect(JSON.stringify(paint["fill-extrusion-height"])).toContain('["get","height"]');
+    expect(JSON.stringify(paint["fill-extrusion-height"])).toContain('["get","render_height"]');
   });
 
   it("places hillshade below roads when the style exposes transportation", () => {
@@ -61,7 +75,7 @@ describe("MapLibre visual detail", () => {
       type: "fill-extrusion",
       source: "openfreemap",
       "source-layer": "building",
-      minzoom: 15,
+      minzoom: 14,
     });
   });
 
