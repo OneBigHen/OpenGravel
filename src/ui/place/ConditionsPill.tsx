@@ -127,10 +127,10 @@ export function ConditionsPill({ at, embedded = false }: { readonly at: Coordina
   }, [open]);
 
   const snapshot = loaded?.key === key ? loaded.snapshot : null;
-  if (snapshot === null || now === null) return embedded ? <p>Conditions at the start are unavailable.</p> : null;
+  if (snapshot === null || now === null) return embedded ? <p>No current conditions</p> : null;
   const upcoming = snapshot.forecast.filter((period) => Date.parse(period.endTime) > now).slice(0, 8);
   const current = upcoming[0];
-  if (current === undefined || current.temperatureF === null || current.temperatureF === undefined) return embedded ? <p>Conditions at the start are unavailable.</p> : null;
+  if (current === undefined || current.temperatureF === null || current.temperatureF === undefined) return embedded ? <p>No current conditions</p> : null;
   const place = { lat, lon };
   const day = sunState(place, now) !== "night";
   const sunsetIso = calculateSunset(place, localNoon(lon, now))?.sunset ?? null;

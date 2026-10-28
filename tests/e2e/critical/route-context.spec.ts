@@ -11,14 +11,28 @@ test("route context opens conditions and keeps Ask reachable", async ({ page }) 
   await directionsTo(page);
   const context = page.getByTestId("route-context");
   await expect(context).toContainText(/mi.*arrive/);
-  await expect(context).toContainText("before sunrise");
-  await expect(page.getByTestId("map-ask-open")).toBeVisible();
+  await expect(context).toHaveAttribute("aria-label", /before sunrise/);
+  const ask = page.getByTestId("map-ask-open");
+  await expect(ask).toBeVisible();
+  for (const width of [320, 393]) {
+    await page.setViewportSize({ width, height: 852 });
+    const dimensions = await context.evaluate((element) => {
+      const text = element.querySelector("span")!;
+      return { height: element.getBoundingClientRect().height, font: parseFloat(getComputedStyle(element).fontSize), textHeight: text.getBoundingClientRect().height, overflow: text.scrollWidth > text.clientWidth };
+    });
+    expect(dimensions.height).toBeGreaterThanOrEqual(44);
+    expect(dimensions.font).toBeGreaterThanOrEqual(14);
+    expect(dimensions.overflow).toBe(false);
+    expect(dimensions.textHeight).toBeLessThanOrEqual(24);
+    expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
   await context.click();
   const sheet = page.getByTestId("route-conditions");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("heading", { name: "Daylight" })).toBeVisible();
   await expect(sheet.getByRole("heading", { name: "Weather along the route" })).toBeVisible();
-  await expect(sheet).toContainText("does not include darkness before sunrise");
+  await expect(sheet).toContainText("In the dark the whole way");
+  await expect(sheet).toContainText("Sunrise");
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
   await expect(context).toBeFocused();
