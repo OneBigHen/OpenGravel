@@ -4,3 +4,4 @@ export * from "./place-scene";
 export * from "./along-route";
 export * from "./places-overlay";
 export * from "./preferences";
+export * from "./smart-chip";

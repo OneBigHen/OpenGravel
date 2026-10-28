@@ -458,7 +458,7 @@ export function PlannerWorkspace({
   } = stopAuthoring;
   const placeFlow = usePlaceFlow({ services: places, search: composerSearch,
     rider: riderPosition?.coordinate ?? null, locateStart, rideStore: rideDocumentStore,
-    uiStore: plannerUiStore, hasRoute: activeRoute !== null,
+    uiStore: plannerUiStore, hasRoute: activeRoute !== null, route: activeRoute, mapLayers: preparationProviders?.mapLayers,
     onMapPointAction: stopAuthoring.onMapPointAction,
     onDirectionsReady: (next) => {
       markRevisionAttempted(next.revision);

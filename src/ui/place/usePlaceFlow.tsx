@@ -8,6 +8,7 @@ import { isSaved } from "@/application/geocoding/place-memory";
 import type { LocateOutcome } from "@/application/geocoding/locate-once";
 import { DEFAULT_MAP_EXTENT, type MapExtent } from "@/application/map/build-map-scene";
 import type { MapIntent, MapPointAction } from "@/application/map/types";
+import type { MapLayersSource } from "@/application/map-layers";
 import { asPlaceId, type NearbyPlace } from "@/application/places";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
 import { directionsCommand, searchedEndpointCommand, insertStopCommand, placeStartCommand, type RideDocumentStore } from "@/ui/stores/ride-document-store";
@@ -18,6 +19,7 @@ import { haversine } from "@/domain/geometry/analysis";
 import { PlaceSheet } from "./PlaceSheet";
 import { RiderToast, type ToastNotice } from "./RiderToast";
 import { TopSearch, type LayerChip, type SearchChip } from "./TopSearch";
+import type { FuelGapRoute } from "./useRouteFuelGap";
 
 type Selection = { readonly place: PlaceMatch; readonly dropped: boolean; readonly slot: "start" | "finish" };
 /** A category chip, or the rider's own words run as a results list. */
@@ -45,7 +47,7 @@ function pinAt(coordinate: Coordinate): PlaceMatch {
   return { id: `dropped:${coordinate.lat}:${coordinate.lon}`, provider: "map", name: "Dropped pin", label: "Dropped pin", context: "", coordinate };
 }
 
-export function usePlaceFlow({ services, search, rider, locateStart, rideStore, uiStore, hasRoute, onMapPointAction, onDirectionsReady }: {
+export function usePlaceFlow({ services, search, rider, locateStart, rideStore, uiStore, hasRoute, route, mapLayers, onMapPointAction, onDirectionsReady }: {
   readonly onDirectionsReady: (document: RideDocument) => void;
   readonly services: PlannerPlaceServices | undefined;
   readonly search: ComposerPlaceSearch | undefined;
@@ -54,6 +56,10 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   readonly rideStore: RideDocumentStore;
   readonly uiStore: PlannerUiStore;
   readonly hasRoute: boolean;
+  /** The open route, whose fuel gaps can earn the chip after Gas. */
+  readonly route?: FuelGapRoute | null;
+  /** The map-layer provider that answers the along-route fuel search. */
+  readonly mapLayers?: MapLayersSource | undefined;
   readonly onMapPointAction: (action: MapPointAction, coordinate: Coordinate) => void;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -289,6 +295,6 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   return { composerSearch, sheet, dismissSheet: close, pins, intercept, pointAction, overlayPlace, optionsOpen,
     /** Leaves the Directions options view (the route was closed). */
     closeOptions: () => setOptionsOpen(false), onViewport: setExtent,
-    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} onSearchList={searchList} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer}/>,
+    top: search === undefined ? null : <TopSearch search={{ ...search, bias, onPick: pick }} onSearchList={searchList} bias={bias} selected={selection !== null || results !== null} activeChip={results?.chip.id ?? null} layerOn={(layer) => layers.enabled.includes(layer)} onClear={close} onChip={category} onLayer={toggleLayer} route={route ?? null} mapLayers={mapLayers}/>,
     toast: notice === null ? null : <RiderToast notice={notice} onDismiss={dismissToast}/> };
 }
