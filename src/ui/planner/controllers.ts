@@ -20,3 +20,4 @@ export { usePlannerStops } from "./hooks/usePlannerStops";
 export { usePlannerViewModel } from "./usePlannerViewModel";
 export { useRideGlance } from "./hooks/useRideGlance";
 export { usePlaceFlow } from "@/ui/place/usePlaceFlow";
+export { useBreadcrumbScene, usePlannerBreadcrumbView } from "@/ui/planner/hooks/usePlannerBreadcrumbView";

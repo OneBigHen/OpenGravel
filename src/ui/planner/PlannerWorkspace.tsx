@@ -98,7 +98,7 @@ import {
   usePlannerPlaces,
   usePlannerRideStyle,
   usePlannerRoadSpans,
-  usePlannerScene,
+  useBreadcrumbScene, usePlannerBreadcrumbView, usePlannerScene,
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
@@ -122,7 +122,6 @@ import {
 import type { AvoidAreaId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
-import { useBreadcrumbScene, usePlannerBreadcrumbView } from "@/ui/planner/hooks/usePlannerBreadcrumbView";
 export interface PlannerWorkspaceProps {
   /** Injected containers for tests and embedding; the singletons by default. */
   readonly rideDocumentStore?: RideDocumentStore;
