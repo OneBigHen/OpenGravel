@@ -22,5 +22,7 @@ describe("trail context", () => {
     expect(catalogDifficulty({...h,sacScale:"mountain_hiking"})).toMatchObject({basis:"osm",label:"mountain hiking"});
     expect(catalogDifficulty({...h,elevationGainMeters:null})).toBeNull();
     expect(catalogDifficulty({...h,elevationMeasuredShare:.99})).toBeNull();
+    expect(catalogDifficulty({...h,officialDifficultyCode:"2"})).toBeNull();
+    expect(catalogDifficulty({...h,sacScale:"hiking",officialDifficulty:"Difficult"})).toMatchObject({basis:"official",label:"Difficult"});
   });
 });

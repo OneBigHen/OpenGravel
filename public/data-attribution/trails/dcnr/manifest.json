@@ -1,0 +1,16 @@
+{
+  "sourceId": "dcnr",
+  "url": "https://data.pa.gov/resource/hguq-h588.json",
+  "licence": "Public domain (PA Open Data portal declaration: USGOV_WORKS)",
+  "licenceUrl": "https://data.pa.gov/Services-Near-You/Trails-Simple-Geometry/hguq-h588",
+  "recordCount": 683,
+  "sha256": "7aaa5528c433a3a17ae9482b7b5c118ad8aefef32c1e3acc0f447893e9d4d78f",
+  "metadataFiles": [
+    "portal.json",
+    "layer.json",
+    "manifest.json"
+  ],
+  "retrievedDate": "2026-10-28",
+  "coordinateReferenceSystem": "EPSG:4326; published Socrata GeoJSON",
+  "note": "Only this explicitly public-domain portal release; no grant inferred for other DCNR downloads."
+}

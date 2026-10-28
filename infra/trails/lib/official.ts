@@ -40,11 +40,16 @@ function decoded(p:Record<string,unknown>,keys:readonly string[],input:OfficialI
 export function normalizeOfficial(feature:OsmFeature,input:OfficialInput) {
   const p=feature.properties;
   const get=(keys:readonly string[])=>decoded(p,keys,input);
+  if (/^(1|yes|true)$/i.test(get(["water_trail"]) ?? "") || /^(water|water trail)$/i.test(get(["trltype","trail_type"]) ?? "")) return null;
   const name=get(["trlname","trail_name","name","name01","maplabel"]);
-  const status=get(["trlstatus","trail_status","status"]);
+  let status=get(["trlstatus","trail_status","status"]);
+  const officialStatusCode = status && /^\d+$/.test(status) ? status : null;
+  if(officialStatusCode) status=null;
   if(status && /proposed|planned|decommissioned/i.test(status)) return null;
   const lines=linesFromGeometry(feature.geometry); if(!lines.length || !name) return null;
-  const officialDifficulty=get(["trl_diff","difficulty","skill_level"]);
+  let officialDifficulty=get(["trl_diff","difficulty","skill_level"]);
+  const officialDifficultyCode = officialDifficulty && /^\d+$/.test(officialDifficulty) ? officialDifficulty : null;
+  if(officialDifficultyCode) officialDifficulty=null;
   let allowedUses=get(["trluse","allowed_terra_use"]);
   if(!allowedUses) {
     const uses=[["hiking_trl","Hiking"],["biking_trl","Bicycling"],["hbr_trl","Horse riding"],["type_hiking","Hiking"],["hiking","Hiking"]].flatMap(([key,label])=>/^(yes|y|1)$/i.test(get([key!]) ?? "")?[label!]:[]);
@@ -55,9 +60,9 @@ export function normalizeOfficial(feature:OsmFeature,input:OfficialInput) {
   const closed=status && /closed/i.test(status);
   const officialAccess=get(["opentopublic"]);
   const access=closed || /^(no|n|0)$/i.test(officialAccess ?? "") ? "no" : null;
-  const attrs={access,officialStatus:status,name,ref:get(["trail_no","trailid"]),operator:get(["unitname","mgmt","operator","managing_org","admin_org"]) ?? input.source.sourceLabel,surface:get(["trlsurface","trl_srface","trail_surface","surface"]),officialDifficulty,allowedUses};
+  const attrs={access,officialStatus:status,officialStatusCode,officialDifficultyCode,name,ref:get(["trail_no","ref"]),operator:get(["operator","mgmt","managing_org","admin_org"]),surface:get(["trlsurface","trl_srface","trail_surface","surface"]),officialDifficulty,allowedUses};
   const recordId=propertyValue(p,["objectid","featureid","globalid","fid"]); if(!recordId) throw new Error(`Official record lacks stable id: ${name}`);
-  const source={...input.source,recordId,url:`${input.source.url}/query?where=${encodeURIComponent(`OBJECTID=${recordId}`)}&outFields=*&f=pjson`};
+  const source={...input.source,recordId,url:input.source.sourceId === "dcnr" ? `${input.source.url}?objectid=${encodeURIComponent(recordId)}` : `${input.source.url}/query?where=${encodeURIComponent(`OBJECTID=${recordId}`)}&outFields=*&f=pjson`};
   return {attrs,source,lines};
 }
 export function mergeOfficial(base:readonly TrailFeature[],inputs:readonly OfficialInput[]) {

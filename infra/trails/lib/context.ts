@@ -68,9 +68,10 @@ export function trailContext(lines: readonly (readonly Coordinate[])[], index: R
   const nearest=start ? index.towns.map(t=>({...t,distance:haversine(start,t.point)})).sort((a,b)=>a.distance-b.distance || a.place.name.localeCompare(b.place.name))[0] : undefined;
   return { park:park ? {...park[0].place,sampledShare:Math.round(park[1]/length*100)/100} : null, nearestTown:nearest && nearest.distance<=50000 ? {...nearest.place,distanceMeters:Math.round(nearest.distance)} : null };
 }
-export function catalogDifficulty(hike: Pick<HikeRecord,"sacScale"|"lengthMeters"|"elevationGainMeters"|"elevationMeasuredShare"> & Partial<Pick<HikeRecord,"officialDifficulty"|"sources">>): CatalogDifficulty | null {
+export function catalogDifficulty(hike: Pick<HikeRecord,"sacScale"|"lengthMeters"|"elevationGainMeters"|"elevationMeasuredShare"> & Partial<Pick<HikeRecord,"officialDifficulty"|"officialDifficultyCode"|"sources">>): CatalogDifficulty | null {
   if(hike.officialDifficulty) return {label:hike.officialDifficulty,basis:"official",sourceUrl:hike.sources?.find(s=>s.sourceId!=="osm")?.url ?? "https://www.usa.gov/government-works"};
   if(hike.sacScale) return {label:hike.sacScale.replaceAll("_"," "),basis:"osm",sourceUrl:"https://wiki.openstreetmap.org/wiki/Key:sac_scale"};
+  if(hike.officialDifficultyCode) return null;
   const gain=hike.elevationGainMeters;
   if(gain===null || !Number.isFinite(gain) || gain<0 || hike.lengthMeters<=0 || hike.elevationMeasuredShare<1) return null;
   const score=Math.sqrt(2*gain*3.280839895*hike.lengthMeters/1609.344);

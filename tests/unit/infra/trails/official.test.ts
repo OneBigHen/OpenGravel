@@ -12,9 +12,13 @@ describe("official trail integration",()=>{
   expect(sameOfficialTrail([a],[[{lon:-75,lat:40.004},{lon:-75,lat:40.006}]])).toBe(false);
  });
  it("keeps difficulty separate from SAC and refuses proposed or nameless records",()=>{
+  expect(normalizeOfficial(raw,input)?.attrs.operator).toBeNull();
+  expect(normalizeOfficial({...raw,properties:{...raw.properties,DIFFICULTY:2,TRLSTATUS:1}},input)?.attrs).toMatchObject({officialDifficulty:null,officialDifficultyCode:"2",officialStatus:null,officialStatusCode:"1"});
   expect(normalizeOfficial({...raw,properties:{...raw.properties,DIFFICULTY:"Difficult"}},input)?.attrs).toMatchObject({officialDifficulty:"Difficult",allowedUses:"Hiking"});
   expect(normalizeOfficial({...raw,properties:{...raw.properties,TRLSTATUS:"Proposed"}},input)).toBeNull();
   expect(normalizeOfficial({...raw,properties:{OBJECTID:2}},input)).toBeNull();
+  expect(normalizeOfficial({...raw,properties:{...raw.properties,WATER_TRAIL:1}},input)).toBeNull();
+  expect(normalizeOfficial({...raw,properties:{...raw.properties,TRLSTATUS:"Closed"}},input)?.attrs.access).toBe("no");
  });
  it("preserves OSM identity and geometry while official fields win and conflicts retain both sources",()=>{
   const initial=mergeOfficial([],[{...input,features:[raw]}]).features[0]!;

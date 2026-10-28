@@ -283,7 +283,7 @@ ambiguous; differently segmented official/OSM trails conservatively remain
 separate. No partial-segment rating is projected onto an entire long relation.
 
 An official name, operator, surface, rating or readable use overrides OSM when
-present. First official value wins (NPS, then USFS, then NJDEP); conflicts and
+present. First official value wins (DCNR, then NPS, USFS, NJDEP); conflicts and
 field sources retain the evidence. Official difficulty is separate from SAC and
 takes precedence over both SAC and derived exertion. Unknown agency values stay
 null. Planned/proposed/decommissioned features are excluded. A mapped closed
@@ -299,15 +299,28 @@ NJDEP trail links those terms and metadata. The manifest links all supplied
 metadata files. The guide includes the NJDEP secondary-product disclaimer. The
 source CRS is documented and transformed correctly by ArcGIS `outSR=4326`.
 
-**PA DCNR gap:** the consolidated PASDA `DCNR_All_Trails62023.zip` contains
-conflicting metadata, including “Not for commercial resale” and “This information
-may not be commercially sold.” The separately checked official parks item
-`b75f13f1096445fe9759fb8ed59d8040` grants only demonstration, education, planning
-and monitoring uses; it does not clearly grant unrestricted redistribution of a
-merged ODbL database. The forest layer does not supply a clearer grant. No DCNR
-records are imported under the open-data-only rule; publicly queryable is not
-assumed to mean openly licensed. These restrictions are not relabelled public
-domain. Review a clear compatible grant before enabling a DCNR adapter.
+**PA DCNR release selection:** use only the separate [PA Open Data portal
+Trails Simple Geometry release](https://data.pa.gov/Services-Near-You/Trails-Simple-Geometry/hguq-h588).
+Its publisher metadata explicitly declares `licenseId: USGOV_WORKS` / “Public
+Domain U.S. Government”, with DCNR attribution. The fetcher requires that exact
+public-domain declaration and publishes the complete `portal.json` and manifest.
+The licence is recorded as the **PA portal's declaration**, not an assertion that
+state data automatically count as federal works. This release has 683 records,
+including park trail systems and major state forest routes, with simplified
+geometry and sometimes old per-record update dates. It is partial official
+coverage, not the complete current DCNR park/forest network.
+
+Do not infer that grant for the different legacy PASDA `DCNR_All_Trails62023.zip`,
+whose metadata include “Not for commercial resale”, or for the current Explore PA
+Trails website, whose terms restrict use to personal/non-commercial purposes.
+Those versions remain excluded. Later PASDA park metadata say no access/use
+constraints, but this job uses the explicit portal grant rather than extending
+it to a different download. Numeric DCNR ratings/statuses without an unambiguous
+historical legend are preserved as codes; they are not translated by guesswork.
+An undecoded official rating withholds derived exertion (a known OSM SAC rating
+can still be shown). Source priority is DCNR, NPS, USFS, NJDEP, then existing OSM
+values. Missing official operators remain unknown rather than naming the data
+publisher as trail operator.
 
 ### Wikimedia enrichment
 
@@ -360,3 +373,8 @@ Overlay official sources onto this combined OSM base, then enrich with **both**
 PA and NJ contexts, then run media enrichment without a cell limit. All job
 outputs/caches and intermediate catalogs stay on the data volume. Existing
 catalog directories are inputs only and remain unchanged.
+
+`--cache-only` assembles media from successful cached responses without network
+requests. Missing cached responses are explicit gaps in its stats. This supports
+rebuilding around corrected catalog facts without repeating the provider search;
+preserve the full fetch run's `media-stats.json` separately when doing so.

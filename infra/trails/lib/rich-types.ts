@@ -19,6 +19,8 @@ export interface RichHike {
   readonly descriptions?: readonly TrailDescription[];
   readonly photos?: readonly TrailPhoto[];
   readonly photo?: TrailPhoto;
+  readonly officialDifficultyCode?: string | null;
+  readonly officialStatusCode?: string | null;
   readonly officialStatus?: string | null;
   readonly officialDifficulty?: string | null;
   readonly allowedUses?: string | null;

@@ -40,9 +40,29 @@ def fetch(key, spec):
  manifest={'sourceId':key,'url':url,'licence':licence,'licenceUrl':licence_url,'recordCount':len(features),'sha256':hashlib.sha256(content).hexdigest(),'metadataFiles':['layer.json','manifest.json']+(['item.json','metadata.xml'] if key=='njdep' else []),'queryBbox':[-80.53,38.9,-73.88,42.27],'retrievedDate':'2026-10-28','coordinateReferenceSystem':'EPSG:4326; transformed by ArcGIS outSR from the documented source CRS'}
  (folder/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
  return manifest
+def fetch_dcnr():
+ folder=ROOT/'dcnr';folder.mkdir(parents=True,exist_ok=True)
+ portal=json.loads(request('https://data.pa.gov/api/views/hguq-h588.json'))
+ if portal.get('licenseId')!='USGOV_WORKS': raise RuntimeError('PA portal public-domain declaration changed; review before importing')
+ (folder/'portal.json').write_text(json.dumps(portal,indent=2)+'\n')
+ (folder/'layer.json').write_text(json.dumps({'fields':[{'name':c['fieldName'],'description':c.get('description')} for c in portal['columns']]},indent=2)+'\n')
+ endpoint='https://data.pa.gov/resource/hguq-h588'
+ expected=int(json.loads(request(endpoint+'.json',{'$select':'count(*)'}))[0]['count'])
+ features=[]
+ for offset in range(0,expected,500):
+  page=json.loads(request(endpoint+'.geojson',{'$limit':500,'$offset':offset,'$order':'objectid'}))
+  features.extend(page['features'])
+ if len(features)!=expected or len({f['properties']['objectid'] for f in features})!=expected: raise RuntimeError('Incomplete/duplicate PA portal download')
+ content=(json.dumps({'type':'FeatureCollection','features':features},separators=(',',':'))+'\n').encode()
+ (ROOT/'dcnr.geojson').write_bytes(content)
+ manifest={'sourceId':'dcnr','url':endpoint+'.json','licence':'Public domain (PA Open Data portal declaration: USGOV_WORKS)','licenceUrl':'https://data.pa.gov/Services-Near-You/Trails-Simple-Geometry/hguq-h588','recordCount':len(features),'sha256':hashlib.sha256(content).hexdigest(),'metadataFiles':['portal.json','layer.json','manifest.json'],'retrievedDate':'2026-10-28','coordinateReferenceSystem':'EPSG:4326; published Socrata GeoJSON','note':'Only this explicitly public-domain portal release; no grant inferred for other DCNR downloads.'}
+ (folder/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n');print(json.dumps(manifest),flush=True)
+
 ROOT.mkdir(parents=True,exist_ok=True)
 # Public-domain US Census state mask selects records, without clipping lines.
 state_url='https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/0/query'
 (ROOT/'states.geojson').write_bytes(request(state_url,{'where':"STATE IN ('42','34')",'f':'geojson','outFields':'STATE,NAME','outSR':4326,'maxAllowableOffset':.0001}))
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
  for result in executor.map(lambda kv:fetch(*kv),SOURCES.items()):print(json.dumps(result),flush=True)
+
+fetch_dcnr()

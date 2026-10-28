@@ -19,9 +19,9 @@ async function main() {
   const inputs:OfficialInput[]=[];
   const states = JSON.parse(readFileSync(join(sourceDir,'states.geojson'),'utf8')) as {features:{geometry:{type:string;coordinates:unknown}}[]};
   const polygons = states.features.flatMap(f => f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates as unknown[]) as Parameters<typeof insidePolygon>[1][];
-  for(const id of ['nps','usfs','njdep'] as const) {
+  for(const id of ['dcnr','nps','usfs','njdep'] as const) {
     const manifest=JSON.parse(readFileSync(join(sourceDir,id,'manifest.json'),'utf8')) as {url:string;licence:string;licenceUrl:string};
-    const source:TrailSource={sourceId:id,recordId:'',sourceLabel:id==='nps'?'National Park Service':id==='usfs'?'USDA Forest Service':'NJDEP Geographic Information System (GIS)',url:manifest.url,licence:manifest.licence,licenceUrl:manifest.licenceUrl,metadataUrl:`/data-attribution/trails/${id}/manifest.json`};
+    const source:TrailSource={sourceId:id,recordId:'',sourceLabel:id==='dcnr'?'PA DCNR via PA Open Data':id==='nps'?'National Park Service':id==='usfs'?'USDA Forest Service':'NJDEP Geographic Information System (GIS)',url:manifest.url,licence:manifest.licence,licenceUrl:manifest.licenceUrl,metadataUrl:`/data-attribution/trails/${id}/manifest.json`};
     inputs.push({source,features:(await readFeatureFile(join(sourceDir,id+'.geojson'))).filter(f => geometryLines(f.geometry).some(line => line.some(p => polygons.some(poly => insidePolygon(p,poly))))),metadata:JSON.parse(readFileSync(join(sourceDir,id,'layer.json'),'utf8')) as OfficialInput['metadata']});
   }
   const merged=mergeOfficial(collection.features,inputs);
@@ -43,7 +43,7 @@ async function main() {
   writeFileSync(join(out,'trails.geojson'),JSON.stringify({type:'FeatureCollection',features})+'\n');
   writeFileSync(join(out,'hikes.json'),JSON.stringify({version:1,counts:{trails:hikes.length,bySource,withTrailhead:hikes.filter(h=>h.trailheadCount>0).length,merged:hikes.filter(h=>h.sources.length>1).length},hikes})+'\n');
   writeFileSync(join(out,'official-stats.json'),JSON.stringify(merged.stats,null,2)+'\n');
-  for(const id of ['nps','usfs','njdep']) {
+  for(const id of ['dcnr','nps','usfs','njdep']) {
     const dest=join('public/data-attribution/trails',id);mkdirSync(dest,{recursive:true});cpSync(join(sourceDir,id),dest,{recursive:true});
     cpSync(join(sourceDir,id),join(out,'sources',id),{recursive:true});
   }

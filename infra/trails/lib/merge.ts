@@ -84,6 +84,7 @@ function isNearDuplicate(a: readonly Line[], aLength: number, b: readonly Line[]
 }
 
 function sourceOf(candidate: TrailCandidate, label: string): TrailSource {
+  if (candidate.sourceId === "dcnr" || candidate.sourceId === "njdep") throw new Error("State sources require reviewed terms through the official overlay");
   return {
     sourceId: candidate.sourceId,
     sourceLabel: label,
