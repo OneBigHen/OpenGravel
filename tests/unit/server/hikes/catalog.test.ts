@@ -16,6 +16,8 @@ describe("hike catalog API", () => {
       await writeFile(path, JSON.stringify({ version: 1, hikes: [{ id: "a", bbox: [-76, 40, -75, 41] }, { id: "b", bbox: [-80, 42, -79, 43] }] }));
       const result = await listHikes(new URL("http://localhost/?bbox=-76,40,-75,41"), path);
       expect(result.body).toEqual({ enabled: true, hikes: [{ id: "a", bbox: [-76, 40, -75, 41] }] });
+      expect((await listHikes(new URL("http://localhost/?id=b"), path)).body).toEqual({ enabled: true, hikes: [{ id: "b", bbox: [-80, 42, -79, 43] }] });
+      expect((await listHikes(new URL("http://localhost/?id=b&bbox=-76,40,-75,41"), path)).body).toEqual({ enabled: true, hikes: [] });
       await writeFile(path, "invalid");
       expect((await listHikes(new URL("http://localhost/"), path)).status).toBe(503);
     } finally { await rm(dir, { recursive: true, force: true }); }
