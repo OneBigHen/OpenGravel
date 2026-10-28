@@ -285,9 +285,20 @@
 }
 
 @media (orientation: landscape) and (max-height: 500px) {
-  .og-top-search .og-search-chips {
+  /* No room for the chip row on a landscape phone; Ask stays. */
+  .og-top-search .og-search-chips > :not(.og-map-ask) {
     display: none;
   }
+}
+
+/* Ask leads the chip row: a chip, tinted so it reads as the way to plan by
+   describing a ride rather than as one more place category. */
+.og-search-chips .og-map-ask__trigger {
+  min-width: 0;
+  min-height: 40px;
+  border-color: var(--og-primary);
+  color: var(--og-primary-text);
+  box-shadow: none;
 }
 
 :is(.og-top-search, .og-place-sheet, .og-category-results, .og-rider-toast) :is(button, input, h2):focus-visible {
