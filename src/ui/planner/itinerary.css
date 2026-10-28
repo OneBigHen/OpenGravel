@@ -879,7 +879,23 @@
 .og-breadcrumb-summary p { margin: .4rem 0; font-size: var(--og-text-meta); }
 .og-breadcrumb-summary summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .og-breadcrumb-summary li button { min-height: 44px; }
-.og-breadcrumb-summary__actions button, .og-breadcrumb-summary__actions input { min-height: 44px; }
+.og-breadcrumb-summary__actions { display: flex; flex-wrap: wrap; gap: var(--og-space-2); margin-top: var(--og-space-2); }
+.og-breadcrumb-summary__actions > p, .og-breadcrumb-summary__actions > form { flex-basis: 100%; }
+.og-breadcrumb-summary__actions button, .og-breadcrumb-summary__actions input { min-height: 44px; font: inherit; font-size: var(--og-text-meta); }
+.og-breadcrumb-summary__actions button, .og-breadcrumb-summary li button {
+  padding: 0 var(--og-space-4);
+  border: 1px solid var(--og-line-strong);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font-weight: 600;
+  cursor: pointer;
+}
+.og-breadcrumb-summary__actions > button:first-child:not(:last-child), .og-breadcrumb-summary__actions form button[type="submit"] { border-color: transparent; background: var(--og-primary); color: var(--og-on-primary); }
+.og-breadcrumb-summary button:disabled { opacity: 0.5; cursor: default; }
+.og-breadcrumb-summary__actions input { flex: 1; min-width: 0; padding: 0 var(--og-space-3); border: 1px solid var(--og-line-strong); border-radius: var(--og-radius-control); background: var(--og-surface); color: var(--og-ink); }
+.og-breadcrumb-summary__actions form label { flex-basis: 100%; font-size: var(--og-text-caption); color: var(--og-ink-2); }
+.og-breadcrumb-summary li { margin-block: var(--og-space-1); font-size: var(--og-text-meta); }
 .og-breadcrumb-summary__actions form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .og-breadcrumb-summary :focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: 2px; }
 
@@ -892,7 +908,7 @@
     right: auto;
     bottom: auto;
     width: auto;
-    max-height: 46dvh;
+    max-height: 56dvh;
     margin: 0 var(--og-space-3) var(--og-space-2);
     background: var(--og-glass-dense);
     border: 1px solid var(--og-glass-edge);

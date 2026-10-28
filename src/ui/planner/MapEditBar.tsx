@@ -290,7 +290,7 @@ export function PlannerMapEditBar({
     <MapEditBar
       {...(breadcrumb === undefined ? {} : { breadcrumb })}
       hasRoute={scene.routes.some((route) => route.geometry.length >= 2)}
-      hasWork={scene.routes.length > 0 || scene.points.length > 0 || (breadcrumb?.count ?? 0) > 0}
+      hasWork={scene.routes.length > 0 || scene.points.some((point) => point.kind !== "start") || (breadcrumb?.count ?? 0) > 0}
       drawing={activeTool === "sketch"}
       placingStop={placementTool === "place-stop"}
       strokes={sketchDraftStrokeCount(sketch.draft)}
