@@ -723,7 +723,7 @@ describe("a surface that insists on a look (the ride follows Day/Night)", () => 
 describe("the map point menu", () => {
   const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 100, y: 100 }, authorityFeatureId: null } as const;
 
-  it("offers all six rows at 48 px minimum and an inline disabled reason", async () => {
+  it("offers every row at 48 px minimum and an inline disabled reason", async () => {
     const style = document.createElement("style");
     style.textContent = `.og-map-point-menu__row {${cssRule(".og-map-point-menu__row")}}`;
     document.head.append(style);
@@ -731,7 +731,8 @@ describe("the map point menu", () => {
       const { factory } = await renderMap({ onPointAction: vi.fn(), addStopDisabledReason: "plan a start and finish first" });
       act(() => factory.hosts[0]?.emit(press));
       const buttons = screen.getByRole("dialog", { name: "Plan here" }).querySelectorAll("button");
-      expect(buttons).toHaveLength(6);
+      // The four ride-authoring actions, Add breadcrumb, What's here, and the emergency card.
+      expect(buttons).toHaveLength(7);
       for (const button of buttons) {
         expect(getComputedStyle(button).minHeight).toBe("48px");
         expect(button.querySelector("svg")).toHaveAttribute("width", "20");
@@ -757,6 +758,50 @@ describe("the map point menu", () => {
     fireEvent.click(screen.getByRole("button", { name: label }));
     expect(onPointAction).toHaveBeenCalledExactlyOnceWith(action, press.coordinate);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("opens the emergency card for the pressed point without editing the ride", async () => {
+    const onPointAction = vi.fn();
+    const { factory } = await renderMap({ onPointAction });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.click(screen.getByTestId("map-point-emergency"));
+    const card = screen.getByTestId("emergency-card");
+    expect(card).toHaveTextContent("Where is this point?");
+    // Decimal degrees of the press point, printed from the coordinate itself.
+    expect(screen.getByTestId("emergency-decimal")).toHaveTextContent("39.95000, -75.20000");
+    expect(onPointAction).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("map-point-menu")).toBeNull();
+    fireEvent.click(screen.getByTestId("emergency-close"));
+    expect(screen.queryByTestId("emergency-card")).toBeNull();
+  });
+
+  it("measures the nearest road from the map's own loaded features", async () => {
+    const base = scene(false);
+    const { factory } = await renderMap({ onPointAction: vi.fn(), scene: { ...base, infoLayers: {
+      trafficFlowTiles: null, selectedId: null, visible: ["great-roads"], features: [{
+        id: "curvy:9", layerId: "great-roads", name: "Ridge Road", detail: null, weight: 0.8,
+        // About 100 m north of the press point.
+        geometry: { type: "LineString", coordinates: [[-75.21, 39.9509], [-75.19, 39.9509]] },
+      }],
+    } } });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.click(screen.getByTestId("map-point-emergency"));
+    const road = screen.getByTestId("emergency-road");
+    expect(road).toHaveTextContent("Ridge Road");
+    expect(road).toHaveTextContent("330 ft north");
+    expect(road).toHaveAttribute("data-known", "true");
+  });
+
+  it("says the nearest road is unknown when no road layer is loaded", async () => {
+    const base = scene(false);
+    const { factory } = await renderMap({ onPointAction: vi.fn(), scene: { ...base, infoLayers: {
+      trafficFlowTiles: null, selectedId: null, visible: ["fuel"], features: [],
+    } } });
+    act(() => factory.hosts[0]?.emit(press));
+    fireEvent.click(screen.getByTestId("map-point-emergency"));
+    const road = screen.getByTestId("emergency-road");
+    expect(road).toHaveAttribute("data-known", "false");
+    expect(road).toHaveTextContent("No road data available here");
   });
 
   it("dismisses on outside press and Escape", async () => {

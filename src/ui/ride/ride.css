@@ -673,6 +673,12 @@
   color: var(--og-primary-text);
 }
 
+/* The emergency disc is the one control that is not about the ride. */
+.og-ride__rail-button[data-tone="danger"],
+.og-ride__rail-button[data-tone="danger"] svg {
+  color: var(--og-danger);
+}
+
 /* Zoom: two 56px halves of one pill — gloves can't pinch. */
 .og-ride__rail-zoom {
   display: flex;
@@ -1227,7 +1233,8 @@
   flex: 1 1 0;
 }
 
-.og-ride__safety-name {
+.og-ride__safety-name,
+.og-ride__safety-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1235,7 +1242,8 @@
   color: var(--og-ink-2);
 }
 
-.og-ride__safety-name input {
+.og-ride__safety-name input,
+.og-ride__safety-field input {
   min-height: 44px;
   padding: 8px 12px;
   border: 1px solid var(--og-line-strong);
@@ -1246,7 +1254,8 @@
   font-size: var(--og-text-body);
 }
 
-.og-ride__safety-name input:focus-visible {
+.og-ride__safety-name input:focus-visible,
+.og-ride__safety-field input:focus-visible {
   outline: 2px solid var(--og-primary);
   outline-offset: 2px;
 }

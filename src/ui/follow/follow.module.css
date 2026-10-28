@@ -108,6 +108,19 @@
   overflow-wrap: anywhere;
 }
 
+.plan {
+  font-size: var(--og-text-meta);
+  color: var(--og-ink-2);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Past the rider's own finish time: a caution, never the alert banner's red. */
+.plan[data-late="true"] {
+  color: var(--og-warn);
+  font-weight: 600;
+}
+
 .ended {
   font-size: var(--og-text-meta);
   color: var(--og-danger);
@@ -136,6 +149,10 @@
 .card[data-kind="stale"] .title,
 .card[data-kind="finished"] .title {
   color: var(--og-ink-2);
+}
+
+.card[data-kind="overdue"] .title {
+  color: var(--og-warn);
 }
 
 @media (max-width: 760px) {

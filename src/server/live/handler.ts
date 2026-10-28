@@ -12,6 +12,10 @@
  * - **The route is geometry, not a document.** At most 5,000 positions per
  *   ride, each a finite coordinate in range; anything else is refused instead
  *   of stored.
+ * - **The expected finish is the rider's own claim, bounded.** One instant,
+ *   within a day ahead and a few hours behind the request's own clock; a claim
+ *   outside that is a clock problem, and is refused rather than stored as a
+ *   promise the follower page would have to act on.
  * - **A point is a recent position, not history.** Points older than six hours
  *   or more than two minutes in the future are refused, so a follower's map can
  *   never be moved by a replayed or badly-clocked device.
@@ -25,6 +29,7 @@ import {
   isLiveAlertReason,
   isLiveRideStatus,
   type LiveAlert,
+  type LiveExpectedFinish,
   type LiveRideStatus,
   type LiveRouteGeometry,
 } from "@/domain/live/types";
@@ -33,6 +38,8 @@ import { clientKey } from "@/server/rate-limit";
 import {
   LIVE_MAX_POINTS_PER_CALL,
   LIVE_MAX_ROUTE_POINTS,
+  LIVE_PLAN_MAX_FUTURE_MS,
+  LIVE_PLAN_MAX_PAST_MS,
   LIVE_POINT_MAX_AGE_MS,
   LIVE_POINT_MAX_FUTURE_MS,
   newFollowToken,
@@ -163,6 +170,19 @@ function plannedRoute(value: unknown): LiveRouteGeometry | null | "invalid" {
   return { segments };
 }
 
+/**
+ * The rider's expected finish: `null` for "they shared none", or `"invalid"` for
+ * a claim this ride must not carry.
+ */
+function expectedFinish(value: unknown, now: number): LiveExpectedFinish | null | "invalid" {
+  if (value === undefined || value === null) return null;
+  if (!object(value) || !finite(value.expectedFinishAt, now - LIVE_PLAN_MAX_PAST_MS, now + LIVE_PLAN_MAX_FUTURE_MS)) {
+    return "invalid";
+  }
+  if (!Number.isSafeInteger(value.expectedFinishAt)) return "invalid";
+  return { expectedFinishAt: value.expectedFinishAt };
+}
+
 /** One position report, or `null` when anything about it is not a fix. */
 function livePoint(value: unknown, now: number): LivePointInput | null {
   if (!object(value)) return null;
@@ -217,6 +237,9 @@ export async function handleCreateLiveRide(
   if (name === null) return reply(400, "A rider name of 1 to 40 characters is required.");
   const route = plannedRoute(parsed.body.route);
   if (route === "invalid") return reply(400, "The planned route is not a valid line.");
+  const now = (options.now ?? Date.now)();
+  const plan = expectedFinish(parsed.body.plan, now);
+  if (plan === "invalid") return reply(400, "The expected finish time is not one this ride can claim.");
 
   const ride: CreatedLiveRide = {
     rideId: newLiveRideId(),
@@ -231,6 +254,7 @@ export async function handleCreateLiveRide(
     owner: liveOwnerHash(request),
     riderName: name,
     route,
+    plan,
   });
   if (result.state === "limited") {
     return result.reason === "owner-hourly"

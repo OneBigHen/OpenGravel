@@ -21,6 +21,7 @@ import "@/ui/explore/route-detail.css";
 import "@/ui/rides/rides.css";
 import "@/ui/ride/ride.css";
 import "@/ui/layers/layers.css";
+import "@/ui/safety/emergency.css";
 import "@/ui/places/places.css";
 import "@/ui/planner/gmaps-layout.css";
 import { version as appVersion } from "../../package.json";

@@ -169,3 +169,62 @@ describe("follower card", () => {
     expect(card.title).toBe("No update for 2 h — they may be out of signal");
   });
 });
+
+describe("a finish time the rider shared", () => {
+  const MINUTE = 60_000;
+
+  it("carries the expected finish and the time left on the card", () => {
+    const plan = { expectedFinishAt: NOW + 32 * MINUTE };
+    const card = followCard({ snapshot: snapshot({ plan }), now: NOW });
+    expect(card.kind).toBe("riding");
+    expect(card.plan?.late).toBe(false);
+    expect(card.plan?.text).toMatch(/^Expected finish \d{1,2}:\d{2}\s(?:AM|PM) · 32 min left$/);
+  });
+
+  it("says nothing about a finish when the link carried none", () => {
+    // A link made before finish times existed reads exactly like a rider who
+    // chose not to share one: no expectation, so no verdict.
+    expect(followCard({ snapshot: snapshot(), now: NOW }).plan).toBeNull();
+    expect(followCard({ snapshot: snapshot({ plan: null }), now: NOW }).plan).toBeNull();
+  });
+
+  it("turns the card overdue when the rider's own finish time has passed", () => {
+    const plan = { expectedFinishAt: NOW - 25 * MINUTE };
+    const last = point(NOW - 14 * MINUTE);
+    const card = followCard({ snapshot: snapshot({ plan, last, trail: trailOf([last]) }), now: NOW });
+    expect(card.kind).toBe("overdue");
+    expect(card.title).toBe("Overdue by 25 min");
+    expect(card.detail).toBe("Last seen 14 min ago · battery 62%");
+    expect(card.plan).toEqual({ text: expect.stringMatching(/^Expected finish /), late: true });
+    expect(card.alert).toBeNull();
+  });
+
+  it("stays overdue while the rider is still reporting past the finish", () => {
+    const plan = { expectedFinishAt: NOW - 70 * MINUTE };
+    const last = point(NOW - 20_000);
+    const card = followCard({ snapshot: snapshot({ plan, last, trail: trailOf([last]) }), now: NOW });
+    expect(card.kind).toBe("overdue");
+    expect(card.title).toBe("Overdue by 70 min");
+    expect(card.detail).toBe("Last seen 20 s ago · battery 62%");
+  });
+
+  it("is overdue before the first fix arrives, and says there is no location", () => {
+    const card = followCard({
+      snapshot: snapshot({ plan: { expectedFinishAt: NOW - 5 * MINUTE }, last: null, trail: [] }),
+      now: NOW,
+    });
+    expect(card.kind).toBe("overdue");
+    expect(card.title).toBe("Overdue by 5 min");
+    expect(card.detail).toBe("No location shared yet");
+  });
+
+  it("does not call a paused or stale rider on time, and does not call a finished one late", () => {
+    const plan = { expectedFinishAt: NOW - 30 * MINUTE };
+    expect(followCard({ snapshot: snapshot({ plan, status: "paused" }), now: NOW }).kind).toBe("overdue");
+    expect(followCard({ snapshot: snapshot({ plan, status: "alert", alert: { reason: "sos", at: NOW - MINUTE } }), now: NOW }).kind).toBe("alert");
+    const finished = followCard({ snapshot: snapshot({ plan, status: "finished" }), now: NOW });
+    expect(finished.kind).toBe("finished");
+    expect(finished.plan?.late).toBe(false);
+    expect(finished.plan?.text).toMatch(/^Expected finish /);
+  });
+});

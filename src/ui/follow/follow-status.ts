@@ -16,8 +16,13 @@
  * - **An alert is the rider's screen's claim**, so the banner names the reason it
  *   sent and never diagnoses anything itself. `rider-cancelled` is not dressed up
  *   as an emergency.
+ * - **A finish time the rider shared is a promise the clock judges.** Once it has
+ *   passed, the card says "overdue" and how long — with the age of the newest fix
+ *   beside it. It never softens that into "still riding" because a dot moved, and
+ *   it never invents an overrun for a link that carried no finish time at all.
  */
 
+import { expectedFinishState, timeLeftText, type ExpectedFinishState } from "@/domain/live/expected-finish";
 import type { LiveAlertReason, LiveFollowSnapshot, LiveTrailPoint } from "@/domain/live/types";
 import { LIVE_STALE_AFTER_MS } from "@/domain/live/types";
 
@@ -31,7 +36,7 @@ const STOPPED_AFTER_MS = 2 * 60_000;
 const MPH_PER_MPS = 2.2369362920544;
 
 /** The card's state. `waiting` is before the rider's first point arrives. */
-export type FollowCardKind = "waiting" | "riding" | "stopped" | "paused" | "stale" | "finished" | "alert";
+export type FollowCardKind = "waiting" | "riding" | "stopped" | "paused" | "stale" | "finished" | "overdue" | "alert";
 
 /** The red banner, when the rider's screen raised an alert. */
 export interface FollowAlertBanner {
@@ -54,6 +59,16 @@ export interface FollowCard {
   /** The supporting facts, e.g. "updated 40 s ago · 38 mph". Never empty. */
   readonly detail: string;
   readonly alert: FollowAlertBanner | null;
+  /** The rider's own expected finish, or `null` when they shared none. */
+  readonly plan: FollowPlanLine | null;
+}
+
+/** The rider's expected finish, as the card says it. */
+export interface FollowPlanLine {
+  /** e.g. "Expected finish 4:10 PM · 32 min left". */
+  readonly text: string;
+  /** True once the clock has passed it: the line is a warning, not a plan. */
+  readonly late: boolean;
 }
 
 export interface FollowCardInput {
@@ -131,13 +146,37 @@ function isEmergency(reason: LiveAlertReason): boolean {
 }
 
 /**
+ * The expected-finish line, or `null` when the rider shared no finish time.
+ *
+ * Inside the window it carries the time left, so a follower can answer "when
+ * will they be done" from the card. Past it, the line only states the time the
+ * rider gave: the overdue headline carries the lateness, and repeating it here
+ * would say the same thing twice.
+ */
+function planLine(state: ExpectedFinishState, locale: string): FollowPlanLine | null {
+  if (state.kind === "none") return null;
+  const at = clockText(state.expectedFinishAt, locale);
+  if (state.kind === "on-time") {
+    return { text: `Expected finish ${at} · ${timeLeftText(state.msLeft)} left`, late: false };
+  }
+  return { text: `Expected finish ${at}`, late: state.kind === "overdue" };
+}
+
+/**
  * The card for one snapshot. `alert` takes precedence over everything (it is the
- * reason a follower opens the link again), then `finished`, then a paused ride,
- * then stale, then stopped or riding.
+ * reason a follower opens the link again), then a finish time the clock has run
+ * past, then finished, then a paused ride, then stale, then stopped or riding.
  */
 export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput): FollowCard {
   const name = snapshot.riderName;
   const { last } = snapshot;
+  const finish = expectedFinishState({
+    plan: snapshot.plan,
+    status: snapshot.status,
+    lastFixAt: last === null ? null : last.t,
+    now,
+  });
+  const plan = planLine(finish, locale);
   if (snapshot.alert !== null) {
     const banner = alertSentence(snapshot.alert.reason, snapshot.alert.at, locale);
     return {
@@ -148,6 +187,24 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
         ? "No location was shared before the alert."
         : `Last location ${ageText(now - last.t)} ago${batteryText(last.battery) === null ? "" : ` · battery ${batteryText(last.battery)}`}`,
       alert: { text: banner, emergency: isEmergency(snapshot.alert.reason), at: snapshot.alert.at },
+      plan,
+    };
+  }
+  // The clock has passed the rider's own finish time and they have not said they
+  // are done. That is the most important thing this card can say — whether the
+  // fixes stopped before the finish or kept coming past it.
+  if (finish.kind === "overdue") {
+    const lateBattery = batteryText(last?.battery ?? null);
+    return {
+      kind: "overdue",
+      title: `Overdue by ${finish.minutesLate} min`,
+      // The age of the newest fix, said plainly: "overdue" answers "should they
+      // be back?" and this answers "when was I last sure they were moving?".
+      detail: last === null
+        ? "No location shared yet"
+        : `Last seen ${ageText(now - last.t)} ago${lateBattery === null ? "" : ` · battery ${lateBattery}`}`,
+      alert: null,
+      plan,
     };
   }
   if (last === null) {
@@ -156,6 +213,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
       title: `${name} is getting ready to ride`,
       detail: "No location yet — this page updates by itself.",
       alert: null,
+      plan,
     };
   }
   const age = Math.max(0, now - last.t);
@@ -166,6 +224,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
       title: `${name} finished the ride at ${clockText(snapshot.updatedAt, locale)}`,
       detail: `Last location ${ageText(age)} ago${battery === null ? "" : ` · battery ${battery}`}`,
       alert: null,
+      plan,
     };
   }
   if (snapshot.status === "paused") {
@@ -174,6 +233,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
       title: `${name} paused the ride`,
       detail: `Last update ${ageText(age)} ago${battery === null ? "" : ` · battery ${battery}`}`,
       alert: null,
+      plan,
     };
   }
   if (age > STALE_AFTER_MS) {
@@ -182,6 +242,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
       title: `No update for ${ageText(age)} — they may be out of signal`,
       detail: `Last location was at ${clockText(last.t, locale)}${battery === null ? "" : ` · battery ${battery}`}`,
       alert: null,
+      plan,
     };
   }
   const stopped = stoppedForMs(snapshot.trail);
@@ -191,6 +252,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
       title: `${name} is stopped`,
       detail: `stopped for ${ageText(stopped)} · updated ${ageText(age)} ago${battery === null ? "" : ` · battery ${battery}`}`,
       alert: null,
+      plan,
     };
   }
   const speed = last.speed !== null && last.speed >= STOPPED_SPEED_MPS ? speedText(last.speed) : null;
@@ -199,6 +261,7 @@ export function followCard({ snapshot, now, locale = "en-US" }: FollowCardInput)
     title: `${name} is riding`,
     detail: `updated ${ageText(age)} ago${speed === null ? "" : ` · ${speed}`}${battery === null ? "" : ` · battery ${battery}`}`,
     alert: null,
+    plan,
   };
 }
 

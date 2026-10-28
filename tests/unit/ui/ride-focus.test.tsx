@@ -1663,6 +1663,33 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
   });
 });
 
+describe("the emergency card (HIKE-MODE-PLAN H4)", () => {
+  it("is one press from the ride rail and carries the live fix, 911 and sharing", async () => {
+    await harness({ position: "fresh" });
+    fireEvent.click(screen.getByTestId("ride-emergency"));
+    expect(screen.getByTestId("emergency-card")).toBeInTheDocument();
+    // The rider's own fix, printed as decimal degrees and as a grid reference.
+    expect(screen.getByTestId("emergency-decimal")).toHaveTextContent("40.13850, -75.43850");
+    expect(screen.getByTestId("emergency-usng")).toHaveTextContent("18T VK 62645 43221");
+    expect(screen.getByTestId("emergency-accuracy")).toHaveTextContent("±6 m");
+    expect(screen.getByTestId("emergency-call")).toHaveAttribute("href", "tel:911");
+    // The ride map holds no road features of its own and no source is wired in
+    // this harness, so the road is honestly unknown rather than absent.
+    expect(screen.getByTestId("emergency-road")).toHaveTextContent("Unknown");
+    fireEvent.click(screen.getByTestId("emergency-close"));
+    expect(screen.queryByTestId("emergency-card")).toBeNull();
+  });
+
+  it("says the card is waiting for GPS instead of printing a position", async () => {
+    await harness({ position: "none" });
+    fireEvent.click(screen.getByTestId("ride-emergency"));
+    expect(screen.getByTestId("emergency-no-fix")).toHaveTextContent("No GPS fix yet");
+    expect(screen.queryByTestId("emergency-decimal")).toBeNull();
+    expect(screen.getByTestId("emergency-share")).toBeDisabled();
+    expect(screen.getByTestId("emergency-call")).toHaveAttribute("href", "tel:911");
+  });
+});
+
 describe("the sheet waits for the rider (audit 8)", () => {
   it("counts semantic clicks as activity and lets the rider ask to end again", async () => {
     await harness({ position: "fresh" });

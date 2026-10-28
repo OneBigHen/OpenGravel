@@ -36,6 +36,7 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   LiveAlert,
   LiveAlertReason,
+  LiveExpectedFinish,
   LiveFollowSnapshot,
   LivePoint,
   LiveRideStatus,
@@ -64,6 +65,17 @@ export const LIVE_POINT_MAX_AGE_MS = 6 * 3_600_000;
 export const LIVE_POINT_MAX_FUTURE_MS = 2 * 60_000;
 /** Planned-route positions one ride may carry. */
 export const LIVE_MAX_ROUTE_POINTS = 5_000;
+/**
+ * How far ahead an expected finish may be claimed. A live link expires 24 h after
+ * the last point, so a finish further out could never be answered by the same
+ * link.
+ */
+export const LIVE_PLAN_MAX_FUTURE_MS = 24 * 3_600_000;
+/**
+ * How far in the past one may be claimed. A rider who remembers to share late is
+ * honest about it; a claim about yesterday is not about this ride.
+ */
+export const LIVE_PLAN_MAX_PAST_MS = 6 * 3_600_000;
 
 const HOUR_MS = 3_600_000;
 /** 128 random bits, base64url: the public handle in a follow link. */
@@ -80,6 +92,8 @@ export interface CreateLiveRideInput {
   readonly owner: string;
   readonly riderName: string;
   readonly route: LiveRouteGeometry | null;
+  /** The rider's expected finish, absent when they shared none. */
+  readonly plan?: LiveExpectedFinish | null;
 }
 
 export type CreateLiveRideResult =
@@ -159,6 +173,7 @@ interface RideRow {
   readonly id: string;
   readonly rider_name: string;
   readonly route: string | null;
+  readonly plan: string | null;
   readonly status: string;
   readonly alert_reason: string | null;
   readonly alert_at: number | null;
@@ -203,7 +218,7 @@ export class SQLiteLiveRideStore {
     this.#db.exec(`PRAGMA busy_timeout=5000;
       CREATE TABLE IF NOT EXISTS live_rides (
         id TEXT PRIMARY KEY, token TEXT NOT NULL UNIQUE, secret_hash TEXT NOT NULL,
-        owner TEXT NOT NULL, rider_name TEXT NOT NULL, route TEXT,
+        owner TEXT NOT NULL, rider_name TEXT NOT NULL, route TEXT, plan TEXT,
         status TEXT NOT NULL, alert_reason TEXT, alert_at INTEGER,
         created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, last_point_at INTEGER,
         last_push_at INTEGER NOT NULL DEFAULT 0
@@ -217,6 +232,20 @@ export class SQLiteLiveRideStore {
       CREATE TABLE IF NOT EXISTS live_creations (owner TEXT NOT NULL, created_at INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS live_creations_owner ON live_creations(owner, created_at);
       CREATE INDEX IF NOT EXISTS live_rides_created ON live_rides(created_at);`);
+    this.#migrate();
+  }
+
+  /**
+   * Columns added after a database was first written. `CREATE TABLE IF NOT
+   * EXISTS` leaves an existing table alone, so a share created before the
+   * expected finish existed needs the column added in place; its rides keep
+   * `plan` NULL, which reads as "no expectation shared".
+   */
+  #migrate(): void {
+    const columns = this.#db.prepare("PRAGMA table_info(live_rides)").all() as unknown as readonly { readonly name: string }[];
+    if (!columns.some((column) => column.name === "plan")) {
+      this.#db.exec("ALTER TABLE live_rides ADD COLUMN plan TEXT");
+    }
   }
 
   /**
@@ -244,10 +273,11 @@ export class SQLiteLiveRideStore {
       }
       this.#db
         .prepare(`INSERT INTO live_rides
-          (id,token,secret_hash,owner,rider_name,route,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at)
-          VALUES(?,?,?,?,?,?,'riding',NULL,NULL,?,?,NULL,0)`)
+          (id,token,secret_hash,owner,rider_name,route,plan,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at)
+          VALUES(?,?,?,?,?,?,?,'riding',NULL,NULL,?,?,NULL,0)`)
         .run(input.id, input.token, liveSecretHash(input.secret), input.owner, input.riderName,
-          input.route === null ? null : JSON.stringify(input.route), now, now);
+          input.route === null ? null : JSON.stringify(input.route),
+          input.plan === undefined || input.plan === null ? null : JSON.stringify(input.plan), now, now);
       this.#db.prepare("INSERT INTO live_creations(owner,created_at) VALUES(?,?)").run(input.owner, now);
       this.#db.exec("COMMIT");
       return { state: "created" };
@@ -340,7 +370,7 @@ export class SQLiteLiveRideStore {
   followSnapshot(token: string): LiveFollowSnapshot | null {
     if (!FOLLOW_TOKEN.test(token)) return null;
     const row = this.#db
-      .prepare(`SELECT id,rider_name,route,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at
+      .prepare(`SELECT id,rider_name,route,plan,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at
         FROM live_rides WHERE token=?`)
       .get(token) as Omit<RideRow, "secret_hash"> | undefined;
     if (row === undefined) return null;
@@ -365,6 +395,7 @@ export class SQLiteLiveRideStore {
       last: last === undefined ? null : pointOf(last),
       trail: thinEvenly(trail, this.#trailPoints),
       route: row.route === null ? null : (JSON.parse(row.route) as LiveRouteGeometry),
+      plan: row.plan === null ? null : (JSON.parse(row.plan) as LiveExpectedFinish),
     };
   }
 
@@ -374,7 +405,7 @@ export class SQLiteLiveRideStore {
 
   #rideById(rideId: string): RideRow | undefined {
     return this.#db
-      .prepare(`SELECT id,rider_name,route,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at,secret_hash
+      .prepare(`SELECT id,rider_name,route,plan,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at,secret_hash
         FROM live_rides WHERE id=?`)
       .get(rideId) as RideRow | undefined;
   }

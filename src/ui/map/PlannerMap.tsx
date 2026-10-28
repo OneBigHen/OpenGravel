@@ -87,6 +87,11 @@ import {
   type BasemapLook,
 } from "@/ui/map/basemap-look";
 import { MapCompass, MapScaleBar, MapZoomControls } from "@/ui/map/MapControls";
+import {
+  roadLinesFromFeatures,
+  roadLayersVisible,
+} from "@/application/safety/emergency-roads";
+import { EmergencyCard } from "@/ui/safety/EmergencyCard";
 
 /**
  * The rider-facing copy for a renderer failure (05 §22, 4.0 review finding 1).
@@ -354,6 +359,25 @@ export function PlannerMap({
   clusterControls,
 }: PlannerMapProps) {
   const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
+  /**
+   * The point whose emergency card is open. Held separately from the long-press
+   * menu so closing the menu (which the card replaces) keeps the coordinate the
+   * rider asked about.
+   */
+  const [emergencyAt, setEmergencyAt] = useState<Coordinate | null>(null);
+  /**
+   * The road lines the emergency card can use: the map's own loaded layer
+   * features. Memoized on the layer scene so opening the card never rebuilds
+   * them per render, and the card can tell "no road in range" (layers on, none
+   * drawn) from "no road data" (layers off).
+   */
+  const emergencyRoads = useMemo(
+    () => ({
+      roads: roadLinesFromFeatures(scene.infoLayers?.features ?? []),
+      loaded: roadLayersVisible(scene.infoLayers?.visible ?? []),
+    }),
+    [scene.infoLayers],
+  );
   const [menuContext, setMenuContext] = useState("");
   const context = `${activeTool}:${rideRevision}:${longPressEnabled}`;
   // Reset during render so a cancelled menu cannot reappear when a tool changes back.
@@ -826,8 +850,20 @@ export function PlannerMap({
         <MapPointMenu intent={pointMenu} scene={scene} container={containerRef}
           directionsWhenEmpty={directionsWhenEmpty} insets={insets} addStopDisabledReason={addStopDisabledReason}
           onClose={() => setPointMenu(null)}
-          onAction={(action) => { onPointAction?.(action, pointMenu.coordinate); setPointMenu(null); }} />
+          onAction={(action) => { onPointAction?.(action, pointMenu.coordinate); setPointMenu(null); }}
+          onEmergency={() => { setEmergencyAt(pointMenu.coordinate); setPointMenu(null); }} />
       ) : null}
+
+      {emergencyAt === null ? null : (
+        <EmergencyCard
+          coordinate={emergencyAt}
+          title="Where is this point?"
+          note="The point you pressed on the map."
+          roads={emergencyRoads.roads}
+          roadsLoaded={emergencyRoads.loaded}
+          onClose={() => setEmergencyAt(null)}
+        />
+      )}
 
       {looks.length > 1 ? (
         <div className="og-map__look" ref={lookMenuRef}>
@@ -958,7 +994,7 @@ const POINT_ROWS = [
   { action: "info", label: "What's here?", path: "M12 11v6M12 7v1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0" },
 ] as const;
 
-function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopDisabledReason, onAction, onClose }: {
+function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopDisabledReason, onAction, onEmergency, onClose }: {
   readonly intent: PointMenuIntent;
   readonly scene: MapScene;
   readonly directionsWhenEmpty: boolean;
@@ -966,6 +1002,8 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
   readonly insets: MapInsets;
   readonly addStopDisabledReason: string | null;
   readonly onAction: (action: MapPointAction) => void;
+  /** Opens the emergency card for the pressed point. */
+  readonly onEmergency: () => void;
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -1036,7 +1074,24 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
           <span>{row.action === "finish" && directionsWhenEmpty ? "Directions to here" : row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
         </button>;
       })}
-
+      {/*
+        The emergency card for this point: coordinates three ways, and the
+        nearest mapped road, for a rider who needs to tell someone where they
+        are. It is a separate row from the ride-authoring actions because it
+        changes nothing about the ride.
+      */}
+      <button
+        type="button"
+        className="og-map-point-menu__row og-map-point-menu__row--emergency"
+        data-testid="map-point-emergency"
+        onClick={onEmergency}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 8v8M8 12h8" />
+        </svg>
+        <span>Where am I? Emergency</span>
+      </button>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 
 import type { LiveRouteGeometry } from "@/domain/live/types";
 import {
@@ -303,6 +304,65 @@ describe("live ride store", () => {
       expect(bytes).not.toContain(ride.secret);
     } finally {
       target.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a shared expected finish, and remembers none when the rider gave none", () => {
+    const time = clock();
+    const target = store({ now: time.now });
+    const expectedFinishAt = time.now() + 3 * 3_600_000;
+    const ride = { id: newLiveRideId(), token: newFollowToken(), secret: newOwnerSecret() };
+    target.createRide({
+      ...ride,
+      owner: OWNER,
+      riderName: "Sam",
+      route: null,
+      plan: { expectedFinishAt },
+    });
+    expect(target.followSnapshot(ride.token)?.plan).toEqual({ expectedFinishAt });
+    expect(target.followSnapshot(create(target).token)?.plan).toBeNull();
+  });
+
+  it("adds the expected-finish column to a database written before it existed", () => {
+    const directory = mkdtempSync(join(tmpdir(), "og-live-unit-"));
+    const path = join(directory, "live.sqlite");
+    const time = clock();
+    try {
+      // A live ride database exactly as the previous release left it: no
+      // `plan` column, and one ride already on disk.
+      const legacy = new DatabaseSync(path);
+      legacy.exec(`CREATE TABLE live_rides (
+        id TEXT PRIMARY KEY, token TEXT NOT NULL UNIQUE, secret_hash TEXT NOT NULL,
+        owner TEXT NOT NULL, rider_name TEXT NOT NULL, route TEXT,
+        status TEXT NOT NULL, alert_reason TEXT, alert_at INTEGER,
+        created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, last_point_at INTEGER,
+        last_push_at INTEGER NOT NULL DEFAULT 0
+      );`);
+      const token = newFollowToken();
+      legacy
+        .prepare(`INSERT INTO live_rides(id,token,secret_hash,owner,rider_name,route,status,alert_reason,alert_at,created_at,updated_at,last_point_at,last_push_at)
+          VALUES(?,?,?,?,?,NULL,'riding',NULL,NULL,?,?,NULL,0)`)
+        .run("live_legacy", token, "0".repeat(64), OWNER, "Sam", time.now(), time.now());
+      legacy.close();
+
+      const target = new SQLiteLiveRideStore(path, { now: time.now });
+      try {
+        // The old ride survives and reads as "no expectation shared".
+        expect(target.followSnapshot(token)).toMatchObject({ riderName: "Sam", plan: null });
+        const fresh = { id: newLiveRideId(), token: newFollowToken(), secret: newOwnerSecret() };
+        expect(target.createRide({
+          ...fresh,
+          owner: OWNER,
+          riderName: "Kit",
+          route: null,
+          plan: { expectedFinishAt: time.now() + 3_600_000 },
+        })).toEqual({ state: "created" });
+        expect(target.followSnapshot(fresh.token)?.plan).not.toBeNull();
+      } finally {
+        target.close();
+      }
+    } finally {
       rmSync(directory, { recursive: true, force: true });
     }
   });

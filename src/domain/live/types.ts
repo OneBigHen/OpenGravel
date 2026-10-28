@@ -41,6 +41,21 @@ export interface LiveRouteGeometry {
   readonly segments: readonly (readonly LiveCoordinate[])[];
 }
 
+/**
+ * The rider's own expectation for when they will be done, shared when they
+ * start the link.
+ *
+ * It is the rider's claim about the future, not the server's estimate and not a
+ * promise: the follower page says "overdue" when the clock runs past it, which
+ * is the one thing an expectation can honestly become. Nothing here is derived
+ * from the route server-side — the rider's screen computes the default from its
+ * own route estimate and the rider may change it.
+ */
+export interface LiveExpectedFinish {
+  /** Epoch milliseconds the rider expects to be finished. */
+  readonly expectedFinishAt: number;
+}
+
 /** One position report, as the rider's device measured it. */
 export interface LivePoint {
   /** Epoch milliseconds, from the rider's device clock. */
@@ -91,6 +106,12 @@ export interface LiveFollowSnapshot {
   readonly trail: readonly LiveTrailPoint[];
   /** The rider's planned route, or `null` when they shared none. */
   readonly route: LiveRouteGeometry | null;
+  /**
+   * The rider's expected finish, absent when they shared none. A link made
+   * before this field existed reads as "no expectation" — never as on time and
+   * never as overdue.
+   */
+  readonly plan?: LiveExpectedFinish | null;
 }
 
 /** True for a status the rider's screen may report. */

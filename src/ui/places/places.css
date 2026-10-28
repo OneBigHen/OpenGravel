@@ -716,6 +716,15 @@
   cursor: default;
 }
 
+/* The emergency row is not a ride edit: it is the way out, so it wears the
+   danger colour and sits under a hairline instead of in the authoring list. */
+.og-map-point-menu__row--emergency {
+  margin-top: var(--og-space-1);
+  border-top: 1px solid var(--og-line);
+  border-radius: 0 0 var(--og-radius-control) var(--og-radius-control);
+  color: var(--og-danger);
+}
+
 .og-map-point-menu__info {
   padding: var(--og-space-2) var(--og-space-3);
   font-size: var(--og-text-body);
