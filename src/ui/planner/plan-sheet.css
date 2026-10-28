@@ -404,3 +404,4 @@
 }
 .og-option-rows__row > span:last-child { color: var(--og-ink-2); text-align: right; }
 .og-option-rows__row:disabled { opacity: .7; }
+.og-shared-sheet:not([data-detent="full"]) .og-route-options__more { display: none; }

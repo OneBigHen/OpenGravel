@@ -1012,6 +1012,12 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // A touch hold opens the menu under the finger; the click the browser makes
+  // when that finger lifts must not choose whichever row ended up beneath it.
+  // A real tap presses inside the menu first; the hold's release never did.
+  const pressedInside = useRef(false);
+  useEffect(() => { pressedInside.current = false; }, [intent]);
+  const fresh = (event: React.MouseEvent): boolean => event.detail > 0 && !pressedInside.current;
 
   useLayoutEffect(() => {
     const menu = ref.current;
@@ -1069,12 +1075,12 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
 
   return (
     <div ref={ref} className="og-map-point-menu" role="dialog" aria-modal="true" aria-label="Plan here"
-      data-testid="map-point-menu">
+      data-testid="map-point-menu" onPointerDown={() => { pressedInside.current = true; }}>
       {POINT_ROWS.map((row) => {
         const reason = row.action === "stop" ? addStopDisabledReason : null;
         return <button key={row.action} type="button" className="og-map-point-menu__row"
           disabled={reason !== null}
-          onClick={() => onAction(row.action)}>
+          onClick={(event) => { if (!fresh(event)) onAction(row.action); }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={row.path} /></svg>
           <span>{row.action === "finish" && directionsWhenEmpty ? "Directions to here" : row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
         </button>;
@@ -1089,7 +1095,7 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
         type="button"
         className="og-map-point-menu__row og-map-point-menu__row--emergency"
         data-testid="map-point-emergency"
-        onClick={onEmergency}
+        onClick={(event) => { if (!fresh(event)) onEmergency(); }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />

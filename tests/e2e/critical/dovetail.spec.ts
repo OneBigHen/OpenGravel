@@ -89,6 +89,9 @@ test("directions keep saved work, briefing, current bike and departure controls 
   await expect(page.getByTestId("named-ride-title")).toBeAttached();
   await expect(page.getByTestId("open-share")).toBeAttached();
   await expect(page.getByTestId("prepare-toggle")).toBeAttached();
+  // Saved work lives in the full sheet; half height keeps the route on screen.
+  await page.getByTestId("sheet-handle").press("ArrowUp");
+  await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
   await page.getByTestId("named-ride-title").fill("Weekend route");
   await page.getByTestId("route-options-settings").click();
   await page.getByRole("button", { name: /^Bike/ }).click();
