@@ -51,6 +51,8 @@ export interface MapEditBarProps {
   };
   /** True when a ride is drawn, so there is something to edit. */
   readonly hasRoute: boolean;
+  /** False on an idle map with no route, point or breadcrumb: the Edit pill stays away. */
+  readonly hasWork?: boolean;
   /** True while the pen owns the map. */
   readonly drawing: boolean;
   /** True while the next tap places a stop. */
@@ -107,7 +109,7 @@ export function MapEditBar(props: MapEditBarProps) {
         <div className="og-editbar__row">
           <button type="button" className="og-editbar__btn" onClick={breadcrumb.onUndo} disabled={!breadcrumb.canUndo}>Undo</button>
           <button type="button" className="og-editbar__btn" onClick={breadcrumb.onRedo} disabled={!breadcrumb.canRedo}>Redo</button>
-          <button type="button" className="og-editbar__btn" onClick={breadcrumb.onAddCenter} disabled={!breadcrumb.centerAvailable}>Add at map centre</button>
+          <button type="button" className="og-editbar__btn" aria-label="Add at map centre" onClick={breadcrumb.onAddCenter} disabled={!breadcrumb.centerAvailable}>Add at centre</button>
           <button type="button" className="og-editbar__btn og-editbar__btn--go" onClick={breadcrumb.onDone}>Done</button>
         </div>
       </div>
@@ -167,6 +169,10 @@ export function MapEditBar(props: MapEditBarProps) {
       </div>
     );
   }
+
+  // No route and no tool armed: there is nothing to edit, so the pill stays away
+  // (Breadcrumb is reached from the long-press menu's "Add breadcrumb").
+  if (props.hasWork === false && !open) return null;
 
   if (!open) {
     return (
@@ -284,6 +290,7 @@ export function PlannerMapEditBar({
     <MapEditBar
       {...(breadcrumb === undefined ? {} : { breadcrumb })}
       hasRoute={scene.routes.some((route) => route.geometry.length >= 2)}
+      hasWork={scene.routes.length > 0 || scene.points.length > 0 || (breadcrumb?.count ?? 0) > 0}
       drawing={activeTool === "sketch"}
       placingStop={placementTool === "place-stop"}
       strokes={sketchDraftStrokeCount(sketch.draft)}

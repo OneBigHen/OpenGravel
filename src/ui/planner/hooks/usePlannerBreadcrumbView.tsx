@@ -5,6 +5,8 @@ import type { LibraryServicePort } from "@/application/library/library-service";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
 import type { MapIntent, MapPointAction, MapScene } from "@/application/map/types";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
+import { breadcrumbLine, breadcrumbMeasurements, STEEP_LEG_PERCENT } from "@/application/breadcrumb/measurements";
+import { useElevationProfile } from "@/ui/planner/useElevationProfile";
 import { usePlannerBreadcrumb } from "@/ui/planner/hooks/usePlannerBreadcrumb";
 import { BreadcrumbWaypointEditor } from "@/ui/planner/BreadcrumbWaypointEditor";
 import { BreadcrumbSummary } from "@/ui/planner/BreadcrumbSummary";
@@ -26,7 +28,20 @@ interface Wiring {
 /** Everything the planner workspace needs to host Breadcrumb mode, in one place. */
 export function usePlannerBreadcrumbView(wiring: Wiring) {
   const { document, rideDocumentStore, planningSessionStore, plannerUiStore, libraryService, preparationProviders, rideActions } = wiring;
-  const breadcrumb = usePlannerBreadcrumb(document, rideDocumentStore);
+  const base = usePlannerBreadcrumb(document, rideDocumentStore);
+  const baseRoute = base.route;
+  const baseProject = base.project;
+  const line = useMemo(() => baseRoute === null ? [] : breadcrumbLine(baseRoute), [baseRoute]);
+  const elevation = useElevationProfile(preparationProviders?.breadcrumbElevationProfile, `breadcrumb-${document.rideId}-${document.revision}`, line);
+  const profile = elevation?.status === "ready" ? elevation.profile : null;
+  const measurements = useMemo(() => baseRoute === null ? null : breadcrumbMeasurements(baseRoute, profile), [baseRoute, profile]);
+  /** Straight legs steeper than this are flagged on the map and in the card. */
+  const steep = useMemo(() => baseRoute === null || measurements === null ? [] : baseRoute.legs.filter((_, index) => (measurements.legs[index]?.maxGradePercent ?? 0) > STEEP_LEG_PERCENT).map((leg) => leg.geometry), [baseRoute, measurements]);
+  const project = useCallback((scene: MapScene): MapScene => {
+    const projected = baseProject(scene);
+    return { ...projected, routes: projected.routes.map((item) => item.offRoute === undefined ? item : { ...item, offRoute: { steep } }) };
+  }, [baseProject, steep]);
+  const breadcrumb = useMemo(() => ({ ...base, project }), [base, project]);
   const [mapCenter, setMapCenter] = useState<Coordinate | null>(null);
   const { route, selected, setEditing, setSelected, add, edit } = breadcrumb;
   const beginEditing = useCallback((): void => {
@@ -53,7 +68,7 @@ export function usePlannerBreadcrumbView(wiring: Wiring) {
     <>{route === null ? base : null}{selectedWaypoint === undefined ? null : <BreadcrumbWaypointEditor key={selectedWaypoint.id} point={selectedWaypoint} index={selectedIndex} onClose={() => setSelected(null)} onSave={(name) => { edit(selectedWaypoint.id, (point) => ({ ...point, name: name.trim() }), "Renamed breadcrumb waypoint"); setSelected(null); }} onRemove={() => { edit(selectedWaypoint.id, () => null, "Removed breadcrumb waypoint"); setSelected(null); }} />}</>
   );
   const dockGlance = (base: ReactNode): ReactNode => route === null ? base : (
-    <BreadcrumbSummary route={route} document={document} editing={breadcrumb.editing} libraryService={libraryService} source={preparationProviders?.breadcrumbElevationProfile} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />
+    <BreadcrumbSummary route={route} document={document} editing={breadcrumb.editing} libraryService={libraryService} elevation={elevation} measurements={measurements} onClear={breadcrumb.clear} onToggleSnap={(index) => void breadcrumb.toggleSnap(index)} snapping={breadcrumb.snapping} snapError={breadcrumb.snapError} onStart={rideActions?.startBreadcrumb === undefined ? undefined : async () => { const result = await rideActions.startBreadcrumb!(rideDocumentStore.getState().document); return result.outcome === "rejected" ? result.message : null; }} />
   );
   /** Map handlers: breadcrumb gets first refusal, everything else falls through. */
   const mapProps = (fallback: { readonly pointAction: (action: MapPointAction, coordinate: Coordinate) => void; readonly intercept: (intent: MapIntent) => boolean }, handleIntent: (intent: MapIntent) => void, longPressWhenIdle: boolean) => ({
