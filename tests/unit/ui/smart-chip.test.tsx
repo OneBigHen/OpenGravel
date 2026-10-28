@@ -104,8 +104,9 @@ describe("the chip after Gas in the top bar", () => {
     const smart = await screen.findByTestId("smart-chip-gas");
     expect(smart).toHaveTextContent("Fuel before the gap");
     expect(smart).toHaveAttribute("data-smart", "true");
-    // One chip after Gas, and the row stays the five chips it always had.
-    const labels = Array.from(chips().querySelectorAll("button")).map((button) => button.textContent);
+    // One chip after Gas, and the row stays the five chips it always had
+    // (Ask leads the row but is not a place chip).
+    const labels = Array.from(chips().querySelectorAll("button[data-chip]")).map((button) => button.textContent);
     expect(labels[0]).toBe("Gas");
     expect(labels[1]).toBe("Fuel before the gap");
     expect(screen.getAllByTestId(/^(search|smart)-chip-/u)).toHaveLength(5);
