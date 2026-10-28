@@ -115,7 +115,7 @@ async function main() {
     }
   }
   const geo=new Map<number,{pageid:number;title:string;lat:number;lon:number}>();
-  let searched=0,saturated=0;
+  let searched=0,saturated=0,successfulCells=0;
   const priorities=[{lon:-75.985,lat:40.638},{lon:-76.286,lat:41.328},{lon:-75.13,lat:40.99}];
   const score=(p:Coordinate)=>Math.min(...priorities.map(c=>Math.hypot((c.lon-p.lon)*.76,c.lat-p.lat)));
   const limit=args.includes('--photo-cell-limit')?Number(value('--photo-cell-limit')):Infinity;
@@ -123,6 +123,7 @@ async function main() {
   const searchCells=[...cells.values()].sort((a,b)=>score(a)-score(b) || a.lon-b.lon || a.lat-b.lat).slice(0,limit);
   await workers(searchCells,async p=>{
     const result=await api(cache,'commons.wikimedia.org',{list:'geosearch',gscoord:`${p.lat.toFixed(6)}|${p.lon.toFixed(6)}`,gsradius:'10000',gslimit:'500',gsnamespace:'6'});
+    if(result.query)successfulCells++;
     const pages=(result.query as {geosearch?:{pageid:number;title:string;lat:number;lon:number}[]}|undefined)?.geosearch ?? [];
     if(pages.length>=Number(result.ogvResultLimit ?? 500))saturated++;
     for(const page of pages)geo.set(page.pageid,page);
@@ -151,14 +152,14 @@ async function main() {
   });
   const hikes=catalog.hikes.map(h=>{
     const chosen=(matches.get(h.id) ?? []).flatMap(m=>{const photo=photos.get(m.id);return photo?[{...photo,distanceFromTrailMeters:Math.round(m.distance)}]:[];}).slice(0,6);
-    return {...withAttribution(h),descriptions:descriptions.get(h.id) ?? [],photos:chosen,...(chosen[0]?{photo:chosen[0]}:{})};
+    return {...withAttribution(h),descriptions:descriptions.get(h.id) ?? [],photos:chosen,photo:chosen[0]};
   });
   const rich=new Map(hikes.map(h=>[h.id,{descriptions:h.descriptions,photos:h.photos,photo:h.photo}]));
   mkdirSync(out,{recursive:true});
   writeFileSync(join(out,'hikes.json'),JSON.stringify({...catalog,hikes})+'\n');
   writeFileSync(join(out,'trails.geojson'),JSON.stringify({...collection,features:collection.features.map(f=>({...f,properties:{...withAttribution(f.properties),...rich.get(f.id)}}))})+'\n');
   if(existsSync(join(base,'sources')))cpSync(join(base,'sources'),join(out,'sources'),{recursive:true});
-  const stats={cells:cells.size,requestedCells:searchCells.length,searched,saturated,geotaggedFiles:geo.size,metadataFiles:wanted.length,usablePhotos:photos.size,trailsWithPhotos:hikes.filter(h=>h.photos.length).length,trailsWithDescriptions:hikes.filter(h=>h.descriptions.length).length,errors};
+  const stats={cells:cells.size,requestedCells:searchCells.length,searched,successfulCells,saturated,geotaggedFiles:geo.size,metadataFiles:wanted.length,usablePhotos:photos.size,trailsWithPhotos:hikes.filter(h=>h.photos.length).length,trailsWithDescriptions:hikes.filter(h=>h.descriptions.length).length,errors};
   writeFileSync(join(out,'media-stats.json'),JSON.stringify(stats,null,2)+'\n');console.error(JSON.stringify(stats));
 }
 if(process.argv[1] && resolve(process.argv[1]).endsWith('infra/trails/enrich-media.ts'))void main().catch((e:unknown)=>{console.error(e);process.exitCode=1;});

@@ -342,3 +342,21 @@ when counting saturation. Media coverage remains a bounded search, not proof
 that a place has no freely licensed photos. The final regional pass also
 recomputes end-based trailheads for new official trails from the combined OSM
 context, using the existing 300 m matcher.
+
+### New Jersey and cross-border records
+
+The existing Geofabrik New Jersey PBF is under
+`/mnt/wsl/ogv-data/trails/src/new-jersey-latest.osm.pbf`. Build it with the same
+`build-trails.ts` and DEM settings, then run `combine-catalogs.ts --input PA_BASE
+--input NJ_BASE --out COMBINED_BASE --dem-cache DEM_DIR` (all commands on one
+line). It unions **matching OSM IDs**, keeps existing traversals including return
+legs, removes exact shared edges from the additional extract, and joins only at
+shared vertices. It preserves gaps rather than drawing connectors. Changed
+geometries get new DEM measurements. The PA/NJ job shares 19 IDs; five gain
+additional geometry. It does not presume that same-name trails in different
+parks are one trail.
+
+Overlay official sources onto this combined OSM base, then enrich with **both**
+PA and NJ contexts, then run media enrichment without a cell limit. All job
+outputs/caches and intermediate catalogs stay on the data volume. Existing
+catalog directories are inputs only and remain unchanged.
