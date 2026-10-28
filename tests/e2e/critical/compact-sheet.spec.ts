@@ -112,17 +112,21 @@ test("the map fills the viewport and the composer is a bottom sheet", async ({
   expect(Number.parseFloat(sheetStyle.radius)).toBeGreaterThanOrEqual(12);
   expect(Number.parseFloat(sheetStyle.paddingBottom)).toBeGreaterThan(0);
   expect(sheetStyle.background).toMatch(/^(rgb|color\()/);
-  // Home (mobile UX handoff, 2026-10-27): the idle sheet draws no slab; its
-  // three quick starts and the grab handle float on the map as solid, lifted
-  // pills (owner, same evening: no see-through glass along the bottom).
+  // Home: the idle sheet and the tab bar read as one solid dock (map
+  // experience Wave 1). The dock carries the lift; the quick starts inside it
+  // are solid, never see-through glass.
+  const dock = await sheet.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { shadow: style.boxShadow, background: style.backgroundColor };
+  });
+  expect(dock.shadow).not.toBe("none");
+  expect(surfaceAlpha(dock.background)).toBeGreaterThanOrEqual(0.94);
   for (const target of [page.getByTestId("sheet-handle"), page.getByTestId("record-a-ride")]) {
     const pill = await target.evaluate((element) => {
       const style = getComputedStyle(element);
-      return { shadow: style.boxShadow, backdrop: style.backdropFilter, background: style.backgroundColor };
+      return { backdrop: style.backdropFilter, background: style.backgroundColor };
     });
-    expect(pill.shadow).not.toBe("none");
     expect(pill.backdrop).toBe("none");
-    expect(pill.background).toMatch(/^rgb\(/);
   }
 
   // The determinism claim of the compact gate: no tiles are requested.
