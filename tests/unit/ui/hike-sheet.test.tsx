@@ -3,6 +3,7 @@
  * the floating card is slim, and the rider-only controls step aside.
  * Rider mode is untouched (asserted alongside).
  */
+import type { PlannerActiveRoute } from "@/ui/planner/hooks/usePlannerActiveRoute";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -139,7 +140,7 @@ describe("the route context bar", () => {
   it("steps aside in hike mode", () => {
     act(() => setActivityMode("hike"));
     const ride = createRideDocument({ now: NOW });
-    const route = { routeId: asRouteCandidateId("route_hike_1"), geometry: [{ lon: -75.4, lat: 40.1 }, { lon: -75.39, lat: 40.11 }], distanceMeters: 13_500, durationSeconds: 10_020 };
+    const route = { routeId: asRouteCandidateId("route_hike_1"), geometry: [{ lon: -75.4, lat: 40.1 }, { lon: -75.39, lat: 40.11 }], distanceMeters: 13_500, durationSeconds: 10_020 } as unknown as PlannerActiveRoute;
     const { container } = render(<RouteContext route={route} intent={ride.intent} />);
     expect(container).toBeEmptyDOMElement();
   });
