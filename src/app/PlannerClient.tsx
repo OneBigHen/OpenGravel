@@ -25,6 +25,7 @@ import {
   prepareRecordingFromPlanner,
   RIDE_FOCUS_PATH,
   startFreeRideFromPlanner,
+  startBreadcrumbFromPlanner,
   startRideFromHandoff,
   type RideHandoffRequest,
   type RideStartOutcome,
@@ -363,6 +364,11 @@ export function PlannerClient({
     },
     [repository, rideSessions, router, libraryService],
   );
+  const startBreadcrumb = useCallback(async (document: RideDocument): Promise<RideStartOutcome> => {
+    const outcome = await startBreadcrumbFromPlanner({ document, rides: repository, geometry: geometryStore, controller: rideSessions.controller, pointer: rideSessions.pointer, now: new Date().toISOString() });
+    if (outcome.outcome !== "rejected") { blurFocusedField(); markRideHandoff(); router.push(RIDE_FOCUS_PATH); }
+    return outcome;
+  }, [repository, geometryStore, rideSessions, router]);
 
   return (
     <RideAdvisorProvider
@@ -385,7 +391,7 @@ export function PlannerClient({
           shareService={shareService}
           basemap={basemap}
           mapHostFactory={hostFactory}
-          rideActions={{ start: startRide, record: recordRide, freeRide: startFreeRide }}
+          rideActions={{ start: startRide, record: recordRide, freeRide: startFreeRide, startBreadcrumb }}
           {...(assetBasePath === undefined ? {} : { assetBasePath })}
         />
       </InstalledOfflineAreasProvider>

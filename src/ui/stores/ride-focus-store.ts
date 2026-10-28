@@ -99,7 +99,7 @@ import {
   type RideFocusTelemetryProvider,
   type RideFocusViewModel,
 } from "@/application/ride-session/ride-focus-view-model";
-import type { RideFocusPointer, RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
+import type { BreadcrumbNavigationWaypoint, RideFocusPointer, RideFocusPointerPort } from "@/application/persistence/ride-focus-pointer";
 import {
   createRiderSettings,
   withMetricSlots,
@@ -164,6 +164,7 @@ export type RideFocusStoreStatus =
   | "unavailable";
 
 export interface RideFocusStoreState {
+  readonly breadcrumbWaypoints: readonly BreadcrumbNavigationWaypoint[] | null;
   readonly status: RideFocusStoreStatus;
   /** A recovery note ("Ride restored — paused"), or `null`. */
   readonly statusMessage: string | null;
@@ -1803,6 +1804,7 @@ export function createRideFocusStore(
           const dropped = report.droppedEvents.length;
           set({
             status: "ready",
+            breadcrumbWaypoints: read.pointer.breadcrumbWaypoints ?? null,
             statusMessage: get().recordingCleanupPending
               ? "Recording cleanup is pending. Retry turning recording off before finishing this ride."
               : recordingMessage ?? (report.pausedByRecovery
@@ -1840,6 +1842,7 @@ export function createRideFocusStore(
     }
 
     return {
+      breadcrumbWaypoints: null,
       status: "loading",
       statusMessage: null,
       lastError: null,
