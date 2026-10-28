@@ -1,3 +1,4 @@
+import { breadcrumbIssues } from "@/domain/breadcrumb/route";
 /**
  * Pure validation for authored ride state (03-DOMAIN-MODEL §2–§13).
  *
@@ -478,6 +479,7 @@ export function validateRideIntent(intent: RideIntent): string[] {
     ...duplicateIdIssues("avoid area", intent.avoidAreas.map((area) => area.id)),
     ...duplicateIdIssues("road span", intent.roadSpans.map((span) => span.id)),
     ...sketchIssues(intent.sketch),
+    ...(intent.breadcrumb == null ? [] : breadcrumbIssues(intent.breadcrumb)),
   );
   return issues;
 }
