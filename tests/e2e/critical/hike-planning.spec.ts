@@ -56,6 +56,9 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect(page.getByTestId("hike-card")).toContainText("Hike routing unavailable.");
 });
 
+// Breadcrumbs are a phone workflow; desktop hike results are tracked in the handoff.
+test.describe("on a phone", () => {
+test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
 test("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
   await placeEndpoint(page, "start", start);
   await placeEndpoint(page, "finish", finish);
@@ -72,4 +75,5 @@ test("breadcrumb hands its ordered waypoints to the foot router", async ({ page 
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
   await expect(page.getByTestId("breadcrumb-summary")).toHaveCount(0);
   await expect(page.getByTestId("hike-route-summary")).toBeVisible();
+});
 });
