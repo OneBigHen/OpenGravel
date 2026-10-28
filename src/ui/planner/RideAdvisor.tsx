@@ -19,13 +19,13 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
 import { appendAdvisorExchange, type AdvisorExchange } from "@/application/advisor/advisor-conversation";
 import { summarizeAdvisorRide } from "@/application/advisor/advisor-ride-summary";
+import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import { cachedElevationClimb } from "./useElevationProfile";
 import { advisorRiderState } from "@/application/advisor/advisor-errors";
@@ -604,6 +604,21 @@ const MAP_ASK_EXAMPLES = [
   "Ride to Jim Thorpe and arrive by 4",
 ] as const;
 
+/**
+ * Shared modal focus for the Ask sheet: trap Tab, Escape closes, focus goes
+ * back to the Ask button on close. Mounted inside the dialog so the ref is set
+ * when the hook runs; the text box takes focus first.
+ */
+function AskDialogFocus({ dialogRef, inputRef, onClose }: {
+  readonly dialogRef: { readonly current: HTMLElement | null };
+  readonly inputRef: { readonly current: HTMLInputElement | null };
+  readonly onClose: () => void;
+}) {
+  useDialogFocus(dialogRef, onClose);
+  useEffect(() => { inputRef.current?.focus(); }, [inputRef]);
+  return null;
+}
+
 /** Dedicated map entry: the place search and its readQuery heuristic stay independent. */
 export function MapAdvisorAsk() {
   const advisor = useRideAdvisor();
@@ -614,11 +629,11 @@ export function MapAdvisorAsk() {
   const dialogRef = useRef<HTMLElement>(null);
   const wasOpen = useRef(false);
 
+  // Tapping a button does not focus it in Safari, so the shared hook may have
+  // no invoker to return to; send focus back to Ask explicitly.
   useEffect(() => {
-    if (open) {
-      wasOpen.current = true;
-      inputRef.current?.focus();
-    } else if (wasOpen.current) {
+    if (open) wasOpen.current = true;
+    else if (wasOpen.current) {
       wasOpen.current = false;
       triggerRef.current?.focus();
     }
@@ -636,25 +651,6 @@ export function MapAdvisorAsk() {
     const prompt = text.trim();
     if (prompt.length < 2 || advisor === null || advisor.pending) return;
     advisor.ask(prompt, "map");
-  }
-
-  function containFocus(event: ReactKeyboardEvent<HTMLElement>): void {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      close();
-      return;
-    }
-    if (event.key !== "Tab" || dialogRef.current === null) return;
-    const controls = [...dialogRef.current.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex='-1'])")];
-    const first = controls[0];
-    const last = controls.at(-1);
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last?.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first?.focus();
-    }
   }
 
   return (
@@ -687,8 +683,8 @@ export function MapAdvisorAsk() {
             aria-labelledby="og-map-ask-title"
             aria-describedby="og-map-ask-description"
             data-testid="map-ask-sheet"
-            onKeyDown={containFocus}
           >
+            <AskDialogFocus dialogRef={dialogRef} inputRef={inputRef} onClose={close} />
             <header className="og-map-ask__header">
               <div>
                 <p className="og-map-ask__eyebrow"><AdvisorMark /> Plan a ride</p>
