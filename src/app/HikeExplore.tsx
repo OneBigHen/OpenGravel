@@ -15,7 +15,8 @@ import { applyRideCommand } from "@/domain/ride/reducer";
 import { createMapterhornElevationSource } from "@/infrastructure/elevation/mapterhorn-source";
 import { buildElevationProfile, sampleLine, type ElevationProfile } from "@/application/elevation/profile";
 import { matchHikeFilters, rankHikes, profileTimeSeconds, type HikeFilters } from "@/application/hikes/discovery";
-import { HIKE_EXPLORE_STATE_KEY as EXPLORE_STATE_KEY, readExploreOrigin } from "@/application/map/explore-origin";
+import { HIKE_EXPLORE_STATE_KEY as EXPLORE_STATE_KEY, readExploreOrigin, saveExploreOrigin } from "@/application/map/explore-origin";
+import { createHttpPlaceSearch, type PlaceMatch } from "@/application/geocoding/place-search";
 import { trailBreadcrumb } from "@/application/hikes/trail-breadcrumb";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { readMapPalette } from "@/infrastructure/map/maplibre/style";
@@ -45,6 +46,25 @@ function readExploreState(): ExploreState | null {
 }
 function writeExploreState(state: ExploreState): void {
   try { sessionStorage.setItem(EXPLORE_STATE_KEY, JSON.stringify(state)); } catch { /* Storage is optional. */ }
+}
+
+/** Find hikes around a town, park or address, with no location permission needed. */
+function AreaSearch({ near, onPick }: { near: Coordinate | null; onPick: (place: PlaceMatch) => void }) {
+  const [query, setQuery] = useState("");
+  const [places, setPlaces] = useState<readonly PlaceMatch[] | null>(null);
+  const [note, setNote] = useState("");
+  async function run() {
+    setNote("Searching…");
+    const outcome = await createHttpPlaceSearch().search(query, near === null ? {} : { bias: near });
+    if (outcome.status === "unavailable") { setPlaces(null); setNote(outcome.reason); return; }
+    setPlaces(outcome.places.slice(0, 5));
+    setNote(outcome.places.length === 0 ? "No places found. Try a town or park name." : "");
+  }
+  return <form className="og-hike__area" role="search" aria-label="Find hikes near a place" onSubmit={(event) => { event.preventDefault(); void run(); }}>
+    <label>Find hikes near<span className="og-hike__area-row"><input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Town, park or address" data-testid="hike-area-input" /><button type="submit" disabled={query.trim().length < 2}>Search</button></span></label>
+    {note && <p role="status">{note}</p>}
+    {places && places.length > 0 && <ul>{places.map((place) => <li key={place.id}><button type="button" data-testid="hike-area-result" onClick={() => onPick(place)}><strong>{place.name}</strong>{place.context && <span>{place.context}</span>}</button></li>)}</ul>}
+  </form>;
 }
 
 function linesOf(feature: TrailFeature): Coordinate[][] {
@@ -187,7 +207,8 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const [origin, setOrigin] = useState<Coordinate | null>(null);
   const [originLabel, setOriginLabel] = useState("Near map centre");
   const [hikes, setHikes] = useState<HikeRecord[]>([]);
-  const [status, setStatus] = useState("Choose your location to find nearby hikes.");
+  const [status, setStatus] = useState("Search a town or park, or use your location, to find nearby hikes.");
+  const [areaOpen, setAreaOpen] = useState(false);
   const [filters, setFilters] = useState(initial);
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(50);
@@ -246,7 +267,7 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
     requestAnimationFrame(() => window.scrollTo(0, y));
   }, [results.length]);
   const update = (key: keyof Filters, value: string | boolean) => setFilters((old) => ({ ...old, [key]: value }));
-  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><header className="og-explore__header"><div className="og-explore__heading-row"><div><h1>Explore hikes</h1><p className="og-hike__sub">{origin ? originLabel : "Find a trail near you"}</p></div><AppMenu className="og-page-menu" /></div><label className="og-hike__search">Search trails<input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(50); }} placeholder="Trail name" /></label><div className="og-hike__tools"><button onClick={locate}>⌖ {origin ? "Use my location" : "Find my location"}</button><button onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}>Filters {showFilters ? "−" : "+"}</button></div></header>
+  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><header className="og-explore__header"><div className="og-explore__heading-row"><div><h1>Explore hikes</h1><p className="og-hike__sub">{origin ? originLabel : "Find a trail near you"}</p></div><AppMenu className="og-page-menu" /></div><label className="og-hike__search">Search trails<input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(50); }} placeholder="Trail name" /></label><div className="og-hike__tools"><button onClick={locate}>⌖ {origin ? "Use my location" : "Find my location"}</button><button onClick={() => setAreaOpen(!areaOpen)} aria-expanded={areaOpen || !origin} data-testid="hike-area-toggle">Change area</button><button onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}>Filters {showFilters ? "−" : "+"}</button></div>{areaOpen || !origin ? <AreaSearch near={origin} onPick={(place) => { setOrigin(place.coordinate); setOriginLabel(`Near ${place.name}`); saveExploreOrigin(place.coordinate); setLimit(50); setAreaOpen(false); }} /> : null}</header>
     {showFilters && <section className="og-hike__filters" aria-label="Hike filters">{hikes.some((h) => h.shape && h.shape !== "unknown") && <label>Shape<select value={filters.shape} onChange={(e) => update("shape", e.target.value)}><option value="">Any shape</option><option value="loop">Loop</option><option value="out-and-back">Out and back</option></select></label>}<label>Length<select value={filters.length} onChange={(e) => update("length", e.target.value)}><option value="">Any length</option><option value="3">Up to 3 mi</option><option value="5">Up to 5 mi</option><option value="10">Up to 10 mi</option></select></label><label>Gain<select value={filters.gain} onChange={(e) => update("gain", e.target.value)}><option value="">Any gain</option><option value="500">Up to 500 ft</option><option value="1000">Up to 1,000 ft</option></select></label><label>Time<select value={filters.time} onChange={(e) => update("time", e.target.value)}><option value="">Any time</option><option value="2">Up to 2 hours</option><option value="4">Up to 4 hours</option></select></label>{([ ["dogs", "Dogs reported OK"], ["kids", "Short and easy"] ] as const).map(([key, label]) => <label className="og-hike__check" key={key}><input type="checkbox" checked={filters[key]} onChange={(e) => update(key, e.target.checked)} />{label}</label>)}<p>Filters match mapped facts only. Short and easy means up to 3 miles, 500 feet of gain and the easiest OSM hiking grade, not a check that a trail suits children. Dog access comes from OpenStreetMap tags; check posted rules.</p><button onClick={() => setFilters(initial)}>Clear filters</button></section>}
     <section className="og-hike__results" aria-live="polite">{status && <p>{status}</p>}{origin && !status && <><p className="og-hike__count">{more > 0 ? `Showing ${results.length} of ${ranked.length} nearby trails` : `${results.length} ${results.length === 1 ? "trail" : "trails"} nearby`} · over 0.5 mi{loading ? " · measuring elevation…" : ""}</p>{results.length === 0 && !loading && <p>No matching trails with known data in these results.</p>}{results.map((h) => <HikeCard key={h.id} hike={h} origin={origin} feature={features.get(h.id)} profile={profiles.get(h.id)} {...(mapboxToken ? { mapboxToken } : {})} />)}{more > 0 && <button onClick={() => setLimit((previous) => previous + 50)}>Show {Math.min(50, more)} more trails</button>}</>}</section>
   </main>;

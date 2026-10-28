@@ -1,6 +1,6 @@
 .og-hike { padding-bottom: calc(var(--og-space-6) + 70px); }
 .og-hike__sub, .og-hike__count { color: var(--og-ink-2); font-size: var(--og-text-meta); margin: var(--og-space-2) 0; }
-.og-hike__tools { display: flex; gap: var(--og-space-2); }
+.og-hike__tools { display: flex; flex-wrap: wrap; gap: var(--og-space-2); }
 .og-hike__search { display: grid; gap: var(--og-space-1); font-size: var(--og-text-meta); color: var(--og-ink-2); }
 .og-hike__search input { min-height: var(--og-touch); width: 100%; padding: 0 var(--og-space-4); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); background: var(--og-glass-dense); color: var(--og-ink); font: inherit; font-size: var(--og-text-body); }
 .og-hike button, .og-hike select, .og-hike__back { min-height: var(--og-touch); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-control); padding: 0 var(--og-space-4); background: var(--og-glass-dense); color: var(--og-ink); font: inherit; }
@@ -52,3 +52,11 @@
 .og-hike__trailhead span { color: var(--og-ink-2); font-size: var(--og-text-meta); }
 .og-hike__directions { display: inline-flex; flex: none; align-items: center; min-height: var(--og-touch); padding: 0 var(--og-space-4); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); background: var(--og-surface); color: var(--og-primary-text, var(--og-ink)); font-weight: 600; text-decoration: none; }
 .og-hike__fine { color: var(--og-ink-2); font-size: var(--og-text-caption); }
+.og-hike__area { display: grid; gap: var(--og-space-2); margin-top: var(--og-space-3); }
+.og-hike__area label { display: grid; gap: var(--og-space-1); color: var(--og-ink-2); font-size: var(--og-text-meta); }
+.og-hike__area-row { display: flex; gap: var(--og-space-2); }
+.og-hike__area input { flex: 1; min-width: 0; min-height: var(--og-touch); padding: 0 var(--og-space-4); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); background: var(--og-glass-dense); color: var(--og-ink); font: inherit; font-size: var(--og-text-body); }
+.og-hike__area ul { display: grid; gap: var(--og-space-1); margin: 0; padding: 0; list-style: none; }
+.og-hike__area li button { display: grid; width: 100%; justify-items: start; padding: var(--og-space-2) var(--og-space-4); text-align: left; }
+.og-hike__area li span { color: var(--og-ink-2); font-size: var(--og-text-meta); }
+.og-hike__area p { margin: 0; color: var(--og-ink-2); font-size: var(--og-text-meta); }
