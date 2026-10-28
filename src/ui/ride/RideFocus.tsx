@@ -591,7 +591,7 @@ export function RideFocus({
       });
       return {
       ...projected,
-      routes: recordedLine.length < 2 || navigation?.recordingId === null ? projected.routes : [...projected.routes, { id: asRouteCandidateId("route_recording"), role: null, geometry: recordedLine, state: "travelled" as const }],
+      routes: breadcrumbWaypoints === null || recordedLine.length < 2 || navigation?.recordingId === null ? projected.routes : [...projected.routes, { id: asRouteCandidateId("route_recording"), role: null, geometry: recordedLine, state: "travelled" as const }],
       // Optional like the rest of `MapScene`: a ride with nothing to show
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
