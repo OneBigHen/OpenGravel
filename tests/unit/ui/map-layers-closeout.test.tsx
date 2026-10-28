@@ -80,3 +80,10 @@ describe("closeout layers sheet", () => {
     expect(screen.queryByRole("region", { name: "Map layers" })).not.toBeInTheDocument();
   });
 });
+
+it("shows camera source and unknown observation time in the layer sheet", () => {
+  const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
+  render(<MapLayersPanel enabled={["traffic-cameras"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onClearAll={vi.fn()} freshness={[{ layerId: "traffic-cameras", source: "511 cameras", observedAt: null, fetchedAt: "2026-10-03T12:30:00Z", stale: false, note: "Camera availability varies" }]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+  expect(screen.getByText(/511 cameras · Observation time unknown/)).toBeInTheDocument();
+});

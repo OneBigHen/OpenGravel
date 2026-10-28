@@ -120,3 +120,10 @@ describe("InfoFeatureCard ride this road", () => {
     expect(onRideRoad).not.toHaveBeenCalled();
   });
 });
+
+it("offers the selected road geometry for avoidance", () => {
+  const onAvoidRoad = vi.fn();
+  render(<InfoFeatureCard feature={TWISTY_ROAD} onClose={vi.fn()} onAvoidRoad={onAvoidRoad} />);
+  fireEvent.click(screen.getByRole("button", { name: "Avoid this road" }));
+  expect(onAvoidRoad).toHaveBeenCalledWith([{ lon: 0, lat: 0 }, { lon: 0.05, lat: 0 }, { lon: 0.1, lat: 0 }], "Pine Creek Road");
+});

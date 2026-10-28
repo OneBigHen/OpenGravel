@@ -68,6 +68,7 @@ test("small-phone ride style has a named entry and the plan stays visible while 
   await chooseEndpoints(page);
   await page.getByTestId("route-options-settings").click();
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
+  await page.getByRole("button", { name: /Ride style and lenses/ }).click();
   const replan = page.waitForRequest((request) => request.url().includes("/api/route-plan") && request.method() === "POST"
     && request.postDataJSON().request.options.roadCharacter === "curvy");
   await page.getByTestId("road-character-curvy").check();
@@ -78,6 +79,7 @@ test("small-phone ride style has a named entry and the plan stays visible while 
   // what has to stay visible in the edited sheet is the plan itself — its status
   // line and the ride it produces — rather than a commitment button the pick
   // already pressed.
+  await page.getByTestId("back-to-options").click();
   await page.getByTestId("back-to-options").click();
   await page.getByTestId("start-ride").scrollIntoViewIfNeeded();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");

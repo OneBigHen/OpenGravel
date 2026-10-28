@@ -378,7 +378,7 @@ export function LoopDirectionRow({ model }: { readonly model: RideStyleControlsM
 }
 
 /** Road character, surface, highways and tolls behind one summary row. */
-export function RideStylePanel({ model, expanded = false }: { readonly model: RideStyleControlsModel; readonly expanded?: boolean }) {
+export function RideStylePanel({ model, expanded = false, group = "all" }: { readonly model: RideStyleControlsModel; readonly expanded?: boolean; readonly group?: "all" | "style" | "surface" | "traffic" }) {
   const [open, setOpen] = useState(expanded);
   const panelId = useId();
   const characterName = useId();
@@ -412,7 +412,7 @@ export function RideStylePanel({ model, expanded = false }: { readonly model: Ri
         </span>
       </button>
       <div id={panelId} className="og-style__panel" data-open={open ? "true" : "false"}>
-        <ChipGroup<RoadCharacterIntent>
+        {group === "all" || group === "style" ? <><ChipGroup<RoadCharacterIntent>
           name={characterName}
           legend="Roads"
           options={ROAD_CHARACTERS}
@@ -430,7 +430,8 @@ export function RideStylePanel({ model, expanded = false }: { readonly model: Ri
           onChange={actions.setNoveltyPreference}
           testId="novelty-preference"
         />
-        <ChipGroup<SurfaceChoice>
+        </> : null}
+        {group === "all" || group === "surface" ? <ChipGroup<SurfaceChoice>
           name={surfaceName}
           legend="Surface"
           options={SURFACES}
@@ -439,7 +440,8 @@ export function RideStylePanel({ model, expanded = false }: { readonly model: Ri
           onChange={actions.setSurface}
           testId="surface-preference"
         />
-        <ChipGroup<TrafficPreference>
+        : null}
+        {group === "all" || group === "traffic" ? <><ChipGroup<TrafficPreference>
           name={trafficName}
           legend="Traffic"
           options={["protect-ride", "minimize-delay"]}
@@ -469,7 +471,7 @@ export function RideStylePanel({ model, expanded = false }: { readonly model: Ri
             />
             <span>Avoid tolls</span>
           </label>
-        </div>
+        </div></> : null}
       </div>
     </section>
   );

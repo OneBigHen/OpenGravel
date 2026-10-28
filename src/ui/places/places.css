@@ -416,12 +416,14 @@
 
 .og-info-card__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--og-space-3);
   margin-top: var(--og-space-2);
 }
 
 .og-info-card__add {
+  flex: 1 1 140px;
   min-height: var(--og-touch);
   padding: 0 var(--og-space-4);
   border: 0;
@@ -431,6 +433,11 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+
+.og-info-card__avoid {
+  background: var(--og-surface-2);
+  color: var(--og-ink);
 }
 
 .og-info-card__link {

@@ -10,6 +10,7 @@
 import { useCallback, useMemo, useRef } from "react";
 import { useStore } from "zustand";
 
+import { avoidHereRing } from "@/application/planner/avoid-here";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { MapObjectRef, PreviewAreaScene } from "@/application/map/types";
 import {
@@ -84,6 +85,7 @@ export interface PlannerAvoidAreasAuthoring {
   readonly panelProps: AvoidAreasPanelProjection;
   readonly moveConflictEndpoint: (conflict: AvoidAreaConflict) => void;
   readonly editConflictArea: (areaId: AvoidAreaId) => void;
+  avoidHere(coordinate: Coordinate): void;
   clearGesture(): void;
   cancelToolGesture(): void;
   beginPointerDown(coordinate: Coordinate, ref: MapObjectRef | null): boolean;
@@ -547,6 +549,7 @@ export function usePlannerAvoidAreas(input: {
     panelProps,
     moveConflictEndpoint,
     editConflictArea,
+    avoidHere: (coordinate) => { void commitNewAvoidArea([avoidHereRing(coordinate)]); },
     clearGesture,
     cancelToolGesture,
     beginPointerDown,

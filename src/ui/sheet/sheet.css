@@ -509,6 +509,11 @@
     min-height: 0;
   }
 
+  /* Keep preview state mounted while an options row owns the sheet. */
+  .og-planner .og-planner__sheet[data-directions="true"]:not([data-sheet-view="choices"]) .og-sheet__body > .og-route-options {
+    display: none;
+  }
+
   /* In a sheet, content is grouped rows divided by hairlines, not cards. */
   .og-planner .og-planner__sheet :is(.og-refine, .og-style, .og-prepare, .og-points, .og-along, .og-prepare__row, .og-elevation, .og-point-row, .og-refine__body > section) {
     padding: var(--og-space-2) 0;

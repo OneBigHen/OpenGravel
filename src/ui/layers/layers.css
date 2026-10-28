@@ -575,7 +575,7 @@
   }
 
   .og-layers__about,
-  .og-layers__caveat {
+  .og-layers__caveat:not(.og-layers__camera-source) {
     display: none;
   }
 }

@@ -153,6 +153,8 @@ for (const width of [320, 1024]) {
     await page.getByTestId("route-options-settings").click();
     await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
     await expectAboveSheet(page, connectedCoordinates());
+    // Options is a list of rows; Surface opens its own choice.
+    await page.getByRole("button", { name: /^Surface/ }).click();
     await expect(page.getByTestId("surface-preference")).toBeVisible();
     const replan = page.waitForRequest((request) => request.url().includes("/api/route-plan") && request.method() === "POST"
       && request.postDataJSON().request.options.surfacePreference === "pavement");

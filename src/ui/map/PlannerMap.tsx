@@ -361,6 +361,7 @@ export function PlannerMap({
   clusterControls,
 }: PlannerMapProps) {
   const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
+  const menuOpenedAtRef = useRef(Number.NEGATIVE_INFINITY);
   /**
    * The point whose emergency card is open. Held separately from the long-press
    * menu so closing the menu (which the card replaces) keeps the coordinate the
@@ -507,6 +508,7 @@ export function PlannerMap({
     let unsubscribeViewport: (() => void) | null = null;
     let unsubscribeCamera: (() => void) | null = null;
     let lastHikeCenter: Coordinate | undefined;
+    let hikeSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
     void (async () => {
       // A surface that insists on a look (the ride follows Day/Night) neither
@@ -549,11 +551,17 @@ export function PlannerMap({
       if (!controlled || controlledLookRef.current !== resolved) setLook(resolved);
       unsubscribe = host.onIntent((intent) => {
         if (intent.type === "map-long-press") {
-          if (longPressEnabledRef.current && activeToolRef.current === "pan") setPointMenu(intent);
+          if (longPressEnabledRef.current && activeToolRef.current === "pan") {
+            menuOpenedAtRef.current = performance.now();
+            setPointMenu(intent);
+          }
           return;
         }
-        if (intent.type === "camera-changed" || intent.type === "gesture-cancel" ||
-            intent.type === "object-click" || intent.type === "map-click") setPointMenu(null);
+        // Lifting the finger that held the map nudges the camera and, on iOS,
+        // fires a late tap; neither is the rider dismissing the menu it opened.
+        const settling = performance.now() - menuOpenedAtRef.current < MENU_SETTLE_MS;
+        if (!settling && (intent.type === "camera-changed" || intent.type === "gesture-cancel" ||
+            intent.type === "object-click" || intent.type === "map-click")) setPointMenu(null);
         intentRef.current(intent);
       });
       // A renderer failure is reported up rather than only painted on the
@@ -568,7 +576,17 @@ export function PlannerMap({
       // The camera's bearing, zoom and scale, for the compass, the zoom buttons
       // and the scale rule. A host without a camera (a test double) reports
       // nothing and the column simply has no instruments to show.
-      unsubscribeCamera = host.onCamera?.((camera) => { updateCamera(camera); if (getActivityMode() === "hike" && camera.center) lastHikeCenter = camera.center; }) ?? null;
+      unsubscribeCamera = host.onCamera?.((camera) => {
+        updateCamera(camera);
+        if (getActivityMode() !== "hike" || !camera.center) return;
+        lastHikeCenter = camera.center;
+        // Saved as the camera moves, not only on unmount: a reload or a direct
+        // link to Explore never unmounts, and an early effect re-run would
+        // otherwise leave the opening camera behind as "where I was looking".
+        const center = camera.center;
+        if (hikeSaveTimer !== null) clearTimeout(hikeSaveTimer);
+        hikeSaveTimer = setTimeout(() => { hikeSaveTimer = null; saveExploreOrigin(center); }, 300);
+      }) ?? null;
       // The scene may have changed while the renderer was loading; the refs hold
       // the current values, so the map never starts a frame — or a tool — behind.
       host.dispatch({ type: "long-press-enabled", enabled: longPressEnabledRef.current });
@@ -583,6 +601,7 @@ export function PlannerMap({
 
     return () => {
       disposed = true;
+      if (hikeSaveTimer !== null) clearTimeout(hikeSaveTimer);
       if (lastHikeCenter) saveExploreOrigin(lastHikeCenter);
       unsubscribe?.();
       unsubscribeError?.();
@@ -989,8 +1008,12 @@ export { DEFAULT_MAP_EXTENT };
  */
 const CONTROL_COLUMN_PX = 56;
 
+/** How long after a hold opens the menu its own release cannot close it. */
+const MENU_SETTLE_MS = 700;
+
 const POINT_ROWS = [
   { action: "start", label: "Start here", path: "M7 21V3l12 4-12 4" },
+  { action: "avoid", label: "Avoid here (200 m area)", path: "M4 4l16 16M20 4L4 20" },
   { action: "stop", label: "Add stop here", path: "M12 5v14M5 12h14" },
   { action: "breadcrumb", label: "Add breadcrumb", path: "M12 21s-6-5.4-6-10.5a6 6 0 0 1 12 0C18 15.6 12 21 12 21zM12 7.5v6M9 10.5h6" },
   { action: "finish", label: "Finish here", path: "M6 21V3h13v9H6M10 3v9M15 3v9" },
@@ -1011,6 +1034,12 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
   readonly onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // A touch hold opens the menu under the finger; the click the browser makes
+  // when that finger lifts must not choose whichever row ended up beneath it.
+  // A real tap presses inside the menu first; the hold's release never did.
+  const pressedInside = useRef(false);
+  useEffect(() => { pressedInside.current = false; }, [intent]);
+  const fresh = (event: React.MouseEvent): boolean => event.detail > 0 && !pressedInside.current;
 
   useLayoutEffect(() => {
     const menu = ref.current;
@@ -1068,12 +1097,12 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
 
   return (
     <div ref={ref} className="og-map-point-menu" role="dialog" aria-modal="true" aria-label="Plan here"
-      data-testid="map-point-menu">
+      data-testid="map-point-menu" onPointerDown={() => { pressedInside.current = true; }}>
       {POINT_ROWS.map((row) => {
         const reason = row.action === "stop" ? addStopDisabledReason : null;
         return <button key={row.action} type="button" className="og-map-point-menu__row"
           disabled={reason !== null}
-          onClick={() => onAction(row.action)}>
+          onClick={(event) => { if (!fresh(event)) onAction(row.action); }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={row.path} /></svg>
           <span>{row.action === "finish" && directionsWhenEmpty ? "Directions to here" : row.label}{reason === null ? null : <> <span className="og-map-point-menu__secondary">— {reason}</span></>}</span>
         </button>;
@@ -1088,7 +1117,7 @@ function MapPointMenu({ intent, container, directionsWhenEmpty, insets, addStopD
         type="button"
         className="og-map-point-menu__row og-map-point-menu__row--emergency"
         data-testid="map-point-emergency"
-        onClick={onEmergency}
+        onClick={(event) => { if (!fresh(event)) onEmergency(); }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <circle cx="12" cy="12" r="8.5" />

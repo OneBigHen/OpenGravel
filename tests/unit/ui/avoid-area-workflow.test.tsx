@@ -692,3 +692,12 @@ describe("the expanded sheet's scroll affordance", () => {
     expect(cssRuleRaw(".og-planner .og-planner__sheet .og-sheet__head", { inMedia: true })).toMatch(/flex:\s*none/);
   });
 });
+
+it("creates and undoes an avoid area from a map hold", async () => {
+  const workspace = await renderWorkspace();
+  workspace.emit({ type: "map-long-press", coordinate: START, pixel: { x: 500, y: 500 }, authorityFeatureId: null });
+  fireEvent.click(within(screen.getByTestId("map-point-menu")).getByRole("button", { name: "Avoid here (200 m area)" }));
+  await waitFor(() => expect(avoidAreas(workspace.rideDocumentStore)).toHaveLength(1));
+  fireEvent.click(screen.getByTestId("undo"));
+  expect(avoidAreas(workspace.rideDocumentStore)).toHaveLength(0);
+});

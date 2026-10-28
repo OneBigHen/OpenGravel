@@ -234,7 +234,9 @@ function LayerRow({
           {freshness === undefined ? null : <> {freshness.source} · {freshness.observedAt === null ? "Retrieved" : "Observed"} {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleString()} · {freshness.note}</>}
         </p>
       ) : null}
-      {on && freshness !== undefined && !about ? <p className="og-layers__caveat">
+      {on && !about && layer.id === "traffic-cameras" ? <p className="og-layers__caveat og-layers__camera-source" data-testid="camera-provenance">
+        {freshness?.source ?? layer.source} · {freshness?.observedAt == null ? "Observation time unknown" : `Observed ${new Date(freshness.observedAt).toLocaleString()}`}{freshness === undefined ? " · Retrieval time unknown" : ` · Retrieved ${new Date(freshness.fetchedAt).toLocaleString()}`}{freshness?.stale ? " · May be out of date" : ""}
+      </p> : on && freshness !== undefined && !about ? <p className="og-layers__caveat">
         {freshness.stale ? "May be out of date · " : ""}Updated {new Date(freshness.observedAt ?? freshness.fetchedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
       </p> : null}
       {extra}

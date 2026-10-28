@@ -178,3 +178,9 @@ describe("settings surface", () => {
     expect(regions.storedBytes).toHaveBeenCalledTimes(2);
   });
 });
+
+it("explains when offline downloads are unavailable", () => {
+  render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} />);
+  expect(screen.getByText("Offline downloads are unavailable on this device.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Offline areas" })).toHaveAttribute("id", "settings-offline-title");
+});

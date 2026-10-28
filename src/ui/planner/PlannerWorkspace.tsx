@@ -460,7 +460,7 @@ export function PlannerWorkspace({
   const placeFlow = usePlaceFlow({ services: places, search: composerSearch,
     rider: riderPosition?.coordinate ?? null, locateStart, rideStore: rideDocumentStore,
     uiStore: plannerUiStore, hasRoute: activeRoute !== null, route: activeRoute, mapLayers: preparationProviders?.mapLayers,
-    onMapPointAction: stopAuthoring.onMapPointAction,
+    onMapPointAction: (action, coordinate) => action === "avoid" ? avoidAreaAuthoring.avoidHere(coordinate) : stopAuthoring.onMapPointAction(action, coordinate),
     onDirectionsReady: (next) => {
       markRevisionAttempted(next.revision);
       void planningSessionStore.getState().begin({ rideId: next.rideId, rideRevision: next.revision, intent: next.intent });
@@ -755,7 +755,7 @@ export function PlannerWorkspace({
         source: preparationProviders.mapLayers,
         onAddStop: stopAuthoring.addStopAt,
         rideRoadReference,
-        onRideRoad: stopAuthoring.addRideRoad,
+        onRideRoad: stopAuthoring.addRideRoad, onAvoidRoad: roadSpanAuthoring.avoidRoad,
       }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}

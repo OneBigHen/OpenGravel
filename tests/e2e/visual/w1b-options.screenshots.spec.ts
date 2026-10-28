@@ -35,6 +35,8 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 375, height: 812 }
       await shot("route-options");
       await page.getByTestId("route-options-settings").click();
       await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
+      await shot("options-rows");
+      await page.getByRole("button", { name: /^Surface/ }).click();
       await expect(page.getByTestId("surface-preference")).toBeVisible();
       await shot("options-full");
       await page.unrouteAll({ behavior: "wait" });
