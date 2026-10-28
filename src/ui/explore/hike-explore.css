@@ -1,6 +1,8 @@
 .og-hike { padding-bottom: calc(var(--og-space-6) + 70px); }
 .og-hike__sub, .og-hike__count { color: var(--og-ink-2); font-size: var(--og-text-meta); margin: var(--og-space-2) 0; }
 .og-hike__tools { display: flex; gap: var(--og-space-2); }
+.og-hike__search { display: grid; gap: var(--og-space-1); font-size: var(--og-text-meta); color: var(--og-ink-2); }
+.og-hike__search input { min-height: var(--og-touch); width: 100%; padding: 0 var(--og-space-4); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); background: var(--og-glass-dense); color: var(--og-ink); font: inherit; font-size: var(--og-text-body); }
 .og-hike button, .og-hike select, .og-hike__back { min-height: var(--og-touch); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-control); padding: 0 var(--og-space-4); background: var(--og-glass-dense); color: var(--og-ink); font: inherit; }
 .og-hike button:focus-visible, .og-hike select:focus-visible, .og-hike a:focus-visible, .og-hike input:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
 .og-hike__filters, .og-hike__section { padding: var(--og-space-4); border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-card); background: var(--og-glass-dense); box-shadow: var(--og-glass-highlight), var(--og-glass-shadow); backdrop-filter: var(--og-glass-blur); }
