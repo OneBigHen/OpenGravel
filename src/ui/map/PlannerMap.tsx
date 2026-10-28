@@ -991,6 +991,7 @@ const CONTROL_COLUMN_PX = 56;
 
 const POINT_ROWS = [
   { action: "start", label: "Start here", path: "M7 21V3l12 4-12 4" },
+  { action: "avoid", label: "Avoid here (200 m area)", path: "M4 4l16 16M20 4L4 20" },
   { action: "stop", label: "Add stop here", path: "M12 5v14M5 12h14" },
   { action: "breadcrumb", label: "Add breadcrumb", path: "M12 21s-6-5.4-6-10.5a6 6 0 0 1 12 0C18 15.6 12 21 12 21zM12 7.5v6M9 10.5h6" },
   { action: "finish", label: "Finish here", path: "M6 21V3h13v9H6M10 3v9M15 3v9" },

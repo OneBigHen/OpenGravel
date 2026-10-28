@@ -34,6 +34,7 @@ type PlannerMapProps = ComponentProps<typeof PlannerMap>;
 export interface MapLayersProps {
   readonly source: MapLayersSource;
   readonly onAddStop?: (coordinate: Coordinate, name: string) => void;
+  readonly onAvoidRoad?: (geometry: readonly Coordinate[], name: string) => void;
   /** Where the rider is coming from, so a tapped road is entered at the near end. */
   readonly rideRoadReference?: Coordinate | null;
   /** Present when the host can add a road's two via points as stops. */
@@ -114,7 +115,7 @@ function LayeredMapWith({
     [layerViewport, onViewport],
   );
   const { select } = view;
-  const { onAddStop, onRideRoad, rideRoadReference } = layers;
+  const { onAddStop, onRideRoad, onAvoidRoad, rideRoadReference } = layers;
   const addStop = useMemo(
     () =>
       onAddStop === undefined
@@ -171,6 +172,7 @@ function LayeredMapWith({
             onAddStop={addStop}
             rideRoadReference={rideRoadReference}
             onRideRoad={rideRoad}
+            onAvoidRoad={onAvoidRoad === undefined ? undefined : (geometry, name) => { onAvoidRoad(geometry, name); select(null); }}
           />
         )}
       </div>

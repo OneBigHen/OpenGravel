@@ -167,6 +167,7 @@ export function usePlaceFlow({ services, search, rider, locateStart, rideStore, 
   }, [toast]);
 
   const pointAction = useCallback((action: MapPointAction, coordinate: Coordinate) => {
+    if (action === "avoid") { onMapPointAction(action, coordinate); return; }
     if (action === "info") { open(pinAt(coordinate), "finish", true); return; }
     if (action === "finish" && !hasRoute && services !== undefined) { void directions(pinAt(coordinate)); return; }
     edit(() => onMapPointAction(action, coordinate), action === "start" ? "Start set" : action === "stop" ? "Stop added" : action === "loop" ? "Loop set" : "Destination set");

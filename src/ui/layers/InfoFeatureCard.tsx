@@ -25,6 +25,7 @@ export interface InfoFeatureCardProps {
   readonly onClose: () => void;
   /** Present when the host can add a stop; only point features offer it. */
   readonly onAddStop?: ((coordinate: Coordinate, name: string) => void) | undefined;
+  readonly onAvoidRoad?: ((geometry: readonly Coordinate[], name: string) => void) | undefined;
   /** Where the rider is coming from, so a tapped road is entered at the near end. */
   readonly rideRoadReference?: Coordinate | null | undefined;
   /** Present when the host can add a road's two via points as stops. */
@@ -37,6 +38,7 @@ export function InfoFeatureCard({
   feature,
   onClose,
   onAddStop,
+  onAvoidRoad,
   rideRoadReference = null,
   onRideRoad,
 }: InfoFeatureCardProps) {
@@ -46,6 +48,7 @@ export function InfoFeatureCard({
     onRideRoad === undefined || !isRideRoadLayer(feature.layerId) || feature.geometry.type !== "LineString"
       ? null
       : rideRoadViaPoints(feature.geometry.coordinates, referenceLngLat(rideRoadReference));
+  const roadLine = isRideRoadLayer(feature.layerId) && feature.geometry.type === "LineString" && feature.geometry.coordinates.length >= 2 ? feature.geometry.coordinates.map(toCoordinate) : null;
   const searchHref = point === null || layer.category !== "stops"
     ? null
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${feature.name} ${point[1]},${point[0]}`)}`;
@@ -74,7 +77,7 @@ export function InfoFeatureCard({
       <p className="og-info-card__source">
         {layer.source}. {layer.caveat}
       </p>
-      {viaPoints === null && point === null ? null : (
+      {viaPoints === null && point === null && (roadLine === null || onAvoidRoad === undefined) ? null : (
         <div className="og-info-card__actions">
           {viaPoints === null || onRideRoad === undefined ? null : (
             <button
@@ -88,6 +91,7 @@ export function InfoFeatureCard({
               Ride this road
             </button>
           )}
+          {roadLine === null || onAvoidRoad === undefined ? null : <button type="button" className="og-info-card__add" onClick={() => onAvoidRoad(roadLine, feature.name)}>Avoid this road</button>}
           {point === null ? null : (
             <>
               {onAddStop === undefined || layer.category !== "stops" ? null : (

@@ -69,6 +69,7 @@ export interface PlannerRoadSpansAuthoring {
   readonly panelProps: RoadSpansPanelProjection;
   readonly roadTap: RoadTapOffer | null;
   routeThrough(road: RoadOpeningSummary): Promise<void>;
+  avoidRoad(geometry: readonly Coordinate[], name: string): void;
   zoomTo(spanId: RoadSpanId, scene: MapScene): void;
   clearGesture(): void;
   beginPointerDown(coordinate: Coordinate): void;
@@ -394,6 +395,13 @@ export function usePlannerRoadSpans(input: {
     preview,
     panelProps,
     roadTap,
+    avoidRoad: (geometry, name) => {
+      const first = geometry[0], last = geometry.at(-1);
+      if (first === undefined || last === undefined) return;
+      void authorRoadSpan({ document: rideDocumentStore.getState().document, geometry, anchors: [first, last], direction: "either", mode: "avoid", geometryStore, dispatch: (command) => rideDocumentStore.getState().dispatch(command), label: `Avoided ${name}` }).then((result) => {
+        plannerUiStore.getState().setRoadSpanError(result.outcome === "applied" ? null : roadSpanRefusalMessage(result));
+      });
+    },
     routeThrough,
     zoomTo,
     clearGesture,

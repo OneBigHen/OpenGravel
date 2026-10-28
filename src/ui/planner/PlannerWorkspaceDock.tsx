@@ -18,7 +18,12 @@ import {
   type RefObject,
 } from "react";
 
-import { RideStylePanel } from "./RideStyleControls";
+import { RideStylePanel, RideShapeSwitch, LoopTimeRow, LoopDirectionRow, ROAD_CHARACTER_LABELS, SURFACE_LABELS, TRAFFIC_LABELS, formatRideTime } from "./RideStyleControls";
+import { PlannerOptionRows, type PlannerOption } from "./PlannerOptionRows";
+import { StopsPanel } from "./StopsPanel";
+import { AvoidAreasPanel } from "./AvoidAreasPanel";
+import { RoadSpansPanel } from "./RoadSpansPanel";
+import { SketchPanel } from "./SketchPanel";
 import { Sheet } from "@/ui/sheet/Sheet";
 import type { MapObjectRef } from "@/application/map/types";
 import type { PlannerViewModel } from "@/application/planner/planner-view-model";
@@ -213,10 +218,17 @@ export function PlannerWorkspaceDock({
   // query, so they can never both render the bar).
   const desktop = useDesktopPlanner();
   const compact = useCompactPlanner();
+  const [selectedOption, setSelectedOption] = useState<PlannerOption | null>(null);
   const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");
   const optionsMode = showOptions && compact && hasChoices && !placeSheet;
   const activeSheetView = sheetDetent === "expanded" ? sheetView : "choices";
-  const openEditor = (next: "edit" | "options") => { setSheetView(next); onFullSheet?.(); };
+  const openEditor = (next: "edit" | "options") => { setSelectedOption(null); setSheetView(next); onFullSheet?.(); };
+  const onRefineExpandedChange = refine.onExpandedChange;
+  useEffect(() => {
+    if (!optionsMode) return;
+    const shaping = activeSheetView === "options" && (selectedOption === "stops" || selectedOption === "areas" || selectedOption === "roads" || selectedOption === "sketch");
+    onRefineExpandedChange?.(shaping || refine.forceOpen);
+  }, [optionsMode, activeSheetView, selectedOption, refine.forceOpen, onRefineExpandedChange]);
   const detent = compact ? sheetDetent === "expanded" ? "full" : sheetDetent === "half" || sheetDetent === "ride" ? "half" : "peek" : sheetDetent;
   useEffect(() => {
     if (!optionsMode || activeSheetView === "choices") return;
@@ -441,7 +453,7 @@ export function PlannerWorkspaceDock({
           */}
           {placeSheet ? <div className="og-place-sheet-slot">{placeSheet}</div> : null}
           {optionsMode && activeSheetView !== "choices" ? <div className="og-route-options__editor-head">
-            <button type="button" data-testid="back-to-options" onClick={() => setSheetView("choices")}>‹ Route options</button>
+            <button type="button" data-testid="back-to-options" onClick={() => selectedOption === null ? setSheetView("choices") : setSelectedOption(null)}>‹ {selectedOption === null ? "Route options" : "Options"}</button>
             <h2 tabIndex={-1} data-sheet-focus>{activeSheetView === "edit" ? "Edit ride" : "Options"}</h2>
           </div> : null}
           {hasChoices && (!optionsMode || activeSheetView === "choices") ? (
@@ -468,8 +480,18 @@ export function PlannerWorkspaceDock({
           ) : null}
           {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop && (detent === "peek" || Boolean(placeSheet))} {...(planning ? { onCancelPlanning } : {})} />}
           {hasChoices ? null : <PlannerResultPanel {...results} />}
-          {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? <RideStylePanel model={composer.rideStyle} expanded/> : null}
-          {(!optionsMode || activeSheetView !== "choices") && <PlannerRefineWorkspace {...refine} />}
+          {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? (selectedOption === null ? <PlannerOptionRows
+            values={{ style: ROAD_CHARACTER_LABELS[composer.rideStyle.view.roadCharacter], surface: SURFACE_LABELS[composer.rideStyle.view.surface], time: composer.rideStyle.view.shape === "loop" ? formatRideTime(composer.rideStyle.view.loopMinutes) : "Destination", traffic: TRAFFIC_LABELS[composer.rideStyle.view.traffic], stops: String(refine.summaryCounts.stops), areas: String(refine.summaryCounts.avoidAreas), roads: String(refine.summaryCounts.roadSpans), sketch: refine.summaryCounts.sketch ? "Drawn" : "None" }}
+            hasRoute={refine.roadSpans !== null} onSelect={setSelectedOption}
+            onBreadcrumb={editBar?.breadcrumb === undefined ? undefined : () => { editBar.breadcrumb?.onStart(); setSheetView("choices"); }} /> : <div className="og-option-content">
+              {selectedOption === "style" || selectedOption === "surface" || selectedOption === "traffic" ? <RideStylePanel model={composer.rideStyle} expanded group={selectedOption} /> : null}
+              {selectedOption === "time" ? <><RideShapeSwitch model={composer.rideStyle} />{composer.rideStyle.view.shape === "loop" ? <><LoopTimeRow model={composer.rideStyle} /><LoopDirectionRow model={composer.rideStyle} /></> : null}</> : null}
+              {selectedOption === "stops" ? <StopsPanel {...refine.stops} /> : null}
+              {selectedOption === "areas" ? <AvoidAreasPanel {...refine.avoidAreas} /> : null}
+              {selectedOption === "roads" && refine.roadSpans !== null ? <RoadSpansPanel {...refine.roadSpans} /> : null}
+              {selectedOption === "sketch" ? <SketchPanel {...refine.sketch} /> : null}
+            </div>) : null}
+          {(!optionsMode || activeSheetView === "edit") && <PlannerRefineWorkspace {...refine} />}
 
       </Sheet>
     </div>
