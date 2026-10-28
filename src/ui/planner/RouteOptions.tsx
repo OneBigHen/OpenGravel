@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import { riderRouteOptions } from "@/application/planner/rider-route-options";
 import type { RouteCandidateId } from "@/domain/route/ids";
@@ -31,6 +32,7 @@ export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onRever
         {riderRouteOptions(cards).map(({ card, label, reason }) => <RouteDecisionCard key={card.routeId} compact card={card} compactLabel={label} compactReason={reason} onSelect={onSelect}/>)}
       </ul>
       {onOptions === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-settings" onClick={onOptions}><span>Options</span><span>{optionsLabel} ›</span></button>}
+      <Link className="og-option-rows__row" href="/settings#settings-offline-title">Offline maps</Link>
     </div>
     {start === null ? null : <div className="og-route-options__start">
       <button type="button" className="og-primary" data-testid="start-ride" disabled={start.starting || start.refusal !== null} onClick={start.onStart}>{start.starting ? "Starting…" : "Start ride"}</button>

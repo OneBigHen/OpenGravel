@@ -345,7 +345,7 @@ export function SettingsSurface({
           )}
         </SettingsGroup>
 
-        {offlineRegions !== null ? <OfflineMapsSection regions={offlineRegions} /> : null}
+        {offlineRegions !== null ? <OfflineMapsSection regions={offlineRegions} /> : <SettingsGroup id="settings-offline-title" label="Offline areas"><p className="og-settings__card-block og-settings__note">Offline downloads are unavailable on this device.</p></SettingsGroup>}
 
         <SettingsGroup id="settings-usage-title" label="Usage data">
           {/* The whole disclosure stays one tap away rather than six lines of
