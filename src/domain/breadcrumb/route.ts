@@ -71,7 +71,7 @@ export function breadcrumbIssues(route: BreadcrumbRoute): string[] {
     if (point?.name !== undefined && typeof point.name !== "string") issues.push("Waypoint names must be text.");
   });
   route.legs.forEach((leg, index) => {
-    if (!leg || (leg.kind !== "straight" && leg.kind !== "snapped") || !Array.isArray(leg.geometry) || leg.geometry.length < 2 || !leg.geometry.every(validCoordinate)) {
+    if (!leg || (leg.kind !== "straight" && leg.kind !== "snapped" && leg.kind !== "recorded") || !Array.isArray(leg.geometry) || leg.geometry.length < 2 || !leg.geometry.every(validCoordinate)) {
       issues.push("Leg geometry is invalid.");
       return;
     }

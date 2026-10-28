@@ -9,7 +9,7 @@ export interface BreadcrumbWaypoint {
 
 export interface BreadcrumbLeg {
   /** Straight legs have no provider dependency; snapped legs retain their geometry. */
-  readonly kind: "straight" | "snapped";
+  readonly kind: "straight" | "snapped" | "recorded";
   readonly geometry: readonly Coordinate[];
 }
 

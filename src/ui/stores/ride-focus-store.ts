@@ -48,6 +48,7 @@ import type { Coordinate } from "@/domain/ride/types";
 import type { RouteWarning } from "@/domain/route/types";
 import {
   modeChangedEvent,
+  rideRevisedEvent,
   sessionAbandonedEvent,
   sessionCompletedEvent,
   sessionPausedEvent,
@@ -165,6 +166,8 @@ export type RideFocusStoreStatus =
 
 export interface RideFocusStoreState {
   readonly breadcrumbWaypoints: readonly BreadcrumbNavigationWaypoint[] | null;
+  readonly recordedLine: readonly Coordinate[];
+  readonly backtrackBusy: boolean;
   readonly status: RideFocusStoreStatus;
   /** A recovery note ("Ride restored — paused"), or `null`. */
   readonly statusMessage: string | null;
@@ -303,6 +306,8 @@ export interface RideFocusStoreActions {
   /** Starts a route-free recording in the existing RideSession authority. */
   startRecording(rideId: RideId, rideRevision: number): Promise<void>;
   stopRecording(): Promise<void>;
+  acceptRecordedPoint(coordinate: Coordinate): void;
+  backToStart(): Promise<void>;
   /** Changes the explicit route-free live-suggestion policy through a typed event. */
   setSuggestions(enabled: boolean): Promise<void>;
   /** Binds the offered ahead segment to this RideSession. */
@@ -415,6 +420,7 @@ export interface RideFocusStoreOptions {
   readonly reroutePlanner?: GuidedReroutePlanner;
   /** Replan by itself when the rider leaves the route (default on). */
   readonly autoReroute?: boolean;
+  readonly saveBacktrack?: (input: { readonly rideId: RideId; readonly coordinates: readonly Coordinate[]; readonly now: string }) => Promise<{ readonly revision: number; readonly geometryRef: GeometryRef; readonly line: readonly Coordinate[]; readonly waypoints: readonly BreadcrumbNavigationWaypoint[] }>;
   readonly createNavigationEngine?: (
     state: RideSessionState,
     routeLine: readonly Coordinate[],
@@ -1814,6 +1820,8 @@ export function createRideFocusStore(
                 : null),
           });
           await loadRouteLine(read.pointer.routeGeometryRef);
+          const recorded = await recording?.trace?.();
+          if (recorded !== undefined && recorded !== null) set({ recordedLine: recorded });
           await syncNavigationEngine(report.state);
           refresh();
           return;
@@ -1843,6 +1851,8 @@ export function createRideFocusStore(
 
     return {
       breadcrumbWaypoints: null,
+      recordedLine: NO_COORDINATES,
+      backtrackBusy: false,
       status: "loading",
       statusMessage: null,
       lastError: null,
@@ -1931,13 +1941,43 @@ export function createRideFocusStore(
           if (started.outcome !== "started") {
             set({ statusMessage: "The recording could not be started. Check device storage and try again.", lastError: "The recording could not be started." });
           } else {
-            set({ status: "ready", statusMessage: null, lastError: null });
+            set({ status: "ready", statusMessage: null, lastError: null, recordedLine: NO_COORDINATES });
           }
           await syncNavigationEngine();
           refresh();
         } finally {
           set({ recordingToggleBusy: false });
         }
+      },
+
+      acceptRecordedPoint(coordinate): void {
+        const line = get().recordedLine;
+        set({ recordedLine: [...line.slice(-9999), coordinate] });
+      },
+
+      async backToStart(): Promise<void> {
+        const state = controller.snapshot();
+        if (!running || state === null || state.recordingId === null || state.activity === "paused" || state.activity === "completed" || get().backtrackBusy || options.saveBacktrack === undefined || recording?.trace === undefined) return;
+        set({ backtrackBusy: true, lastError: null });
+        try {
+          const coordinates = await recording.trace();
+          if (coordinates === null || coordinates.length < 2) throw new Error("Wait for at least two saved GPS points before going back.");
+          const saved = await options.saveBacktrack({ rideId: state.plan.rideId, coordinates, now: now() });
+          const latest = controller.snapshot();
+          if (latest === null || latest.sessionId !== state.sessionId || latest.recordingId !== state.recordingId || latest.activity === "paused" || latest.activity === "completed") throw new Error("The ride changed. Try Back to start again.");
+          if (latest.activity !== "track") {
+            const changed = await controller.dispatch(modeChangedEvent("track", now()));
+            if (changed.outcome !== "applied" || changed.persistence !== "durable") throw new Error("The return route could not be started.");
+          }
+          const revised = await controller.dispatch(rideRevisedEvent({ rideRevision: saved.revision, route: null }, now()));
+          if (revised.outcome !== "applied" || revised.persistence !== "durable") throw new Error("The return route could not be attached to this ride.");
+          writePointer({ sessionId: state.sessionId, rideId: state.plan.rideId, routeGeometryRef: saved.geometryRef, breadcrumbWaypoints: saved.waypoints, updatedAt: now() });
+          set({ routeLine: saved.line, routeLineAvailable: true, breadcrumbWaypoints: saved.waypoints, freeRideStatusMessage: "Following your recorded track back to start.", freeRideError: null });
+          await syncNavigationEngine(revised.state ?? undefined);
+          refresh();
+        } catch (error) {
+          set({ lastError: error instanceof Error ? error.message : "The return route could not be created." });
+        } finally { set({ backtrackBusy: false }); }
       },
 
       async stopRecording(): Promise<void> {
@@ -1951,7 +1991,7 @@ export function createRideFocusStore(
             set({ recordingCleanupPending: true, statusMessage: "The recording could not be turned off. Retry before starting another recording or finishing.", lastError: "The recording could not be turned off." });
           } else {
             if (stopped.telemetryState !== undefined) freeRideTelemetry?.adoptRecording(state.sessionId, stopped.telemetryState);
-            set({ recordingCleanupPending: false, statusMessage: "Not recording. The track was discarded; ride statistics are kept.", lastError: null });
+            set({ recordingCleanupPending: false, recordedLine: NO_COORDINATES, statusMessage: "Not recording. The track was discarded; ride statistics are kept.", lastError: null });
           }
           refresh();
         } finally {
