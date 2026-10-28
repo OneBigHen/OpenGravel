@@ -1,0 +1,10 @@
+{
+  "priority": [
+    { "if": "!foot_access || foot_road_access == NO || foot_road_access == PRIVATE || hike_rating >= 3", "multiply_by": "0" },
+    { "else": "", "multiply_by": "foot_priority" },
+    { "if": "road_class == MOTORWAY || road_class == TRUNK || road_class == PRIMARY", "multiply_by": "0.1" },
+    { "else_if": "road_class == SECONDARY || road_class == TERTIARY", "multiply_by": "0.35" },
+    { "else_if": "road_class != PATH && road_class != FOOTWAY && road_class != TRACK && foot_network == MISSING", "multiply_by": "0.7" }
+  ],
+  "speed": [{ "if": "true", "limit_to": "foot_average_speed" }]
+}
