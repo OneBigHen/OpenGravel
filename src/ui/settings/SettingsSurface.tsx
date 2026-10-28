@@ -321,7 +321,7 @@ export function SettingsSurface({
           {editorOpen && editingId === null ? bikeEditor() : null}
         </SettingsGroup>
 
-        <SettingsGroup id="settings-home-title" label="Home" hint="Free Ride’s Head Home goes here.">
+        <SettingsGroup id="settings-home-title" label="Home" hint="Where Free Ride’s Head Home takes you.">
           <div className="og-settings__row">
             <span className="og-settings__row-text">
               <span className="og-settings__row-label">Home</span>
