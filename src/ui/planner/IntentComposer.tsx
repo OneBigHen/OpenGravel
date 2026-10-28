@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 /**
  * The intent composer (04-PLANNER-AND-WORKSPACE-UX §4, §8).
@@ -275,6 +276,7 @@ export function IntentComposer({
   rideStyle,
 }: IntentComposerProps) {
   const loop = rideStyle?.view.shape === "loop";
+  const hiking = useActivityMode() === "hike";
   const reverseRide = onReverse ?? rideStyle?.actions.reverse;
   const hasStart = viewModel.startLabel !== NO_START_LABEL;
   const hasFinish = viewModel.finishLabel !== NO_FINISH_LABEL;
@@ -460,7 +462,8 @@ export function IntentComposer({
           screen (a loop, or a destination already set) it offers its own. */}
       <AdvisorInline askBox={loop || !showFinishSearch} />
 
-      {rideStyle === undefined ? null : <RideStylePanel model={rideStyle} />}
+      {/* Roads, surface and traffic shape a ride; a hike is planned on the trail graph. */}
+      {rideStyle === undefined || hiking ? null : <RideStylePanel model={rideStyle} />}
 
       {/* Google's home shortcuts: Home, starred places and recents, one tap
           to a ride there. Only on the idle phone sheet, where the search is
@@ -488,7 +491,7 @@ export function IntentComposer({
 
       {/* Trail Glass idle sheet: on a phone with nothing planned, the shape
           switch is hidden and this one tap starts a loop from here. */}
-      {shapeModel === undefined || loop ? null : (
+      {shapeModel === undefined || loop || hiking ? null : (
         <button
           type="button"
           className="og-chip og-composer__loop-quick"

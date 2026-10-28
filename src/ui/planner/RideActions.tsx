@@ -36,6 +36,7 @@ import {
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
 import { shareSourceFromRide } from "@/domain/sharing/from-ride";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 const ShareSheet = dynamic(() => import("@/ui/sharing/ShareSheet").then((mod) => mod.ShareSheet), { loading: () => <p className="og-composer__reason" role="status">Opening sharing…</p> });
 
@@ -89,6 +90,8 @@ export function RideActions({
   const [shareOpen, setShareOpen] = useState(false);
   // The name the rider just saved under, so Share does not ask for it again (PQ-05).
   const [savedTitle, setSavedTitle] = useState<string | null>(null);
+  // Free Ride is a riding mode; a hiker records instead.
+  const hiking = useActivityMode() === "hike";
   const [recordingState, setRecordingState] = useState<"idle" | "starting">("idle");
   const [recordingError, setRecordingError] = useState<string | null>(null);
   const [freeRideState, setFreeRideState] = useState<"idle" | "starting">("idle");
@@ -228,7 +231,7 @@ export function RideActions({
           {recordingState === "starting" ? "Preparing…" : "Record"}
         </button>
           )}
-          {rideActions.freeRide === undefined ? null : (
+          {rideActions.freeRide === undefined || hiking ? null : (
             <button
               type="button"
               className="og-secondary og-plan-actions__free-ride"

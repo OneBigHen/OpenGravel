@@ -6,6 +6,7 @@ import { sunriseOnDepartureDay, sunsetOnDepartureDay } from "@/application/long-
 import { proportionalEtaProfile, splitRouteByDaylight } from "@/application/map/route-daylight";
 import { routeLineMeters } from "@/application/weather/route-weather";
 import type { RideDocument } from "@/domain/ride/types";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { ConditionsPill } from "@/ui/place/ConditionsPill";
 import { useRouteWeather } from "@/ui/weather/useRouteWeather";
@@ -23,7 +24,13 @@ function duration(seconds: number): string {
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} m`;
 }
 
-export function RouteContext({ route, intent }: { readonly route: PlannerActiveRoute; readonly intent: RideDocument["intent"] }) {
+/** A hike's numbers live in its summary; the ride context bar (daylight at road pace) steps aside. */
+export function RouteContext(props: { readonly route: PlannerActiveRoute; readonly intent: RideDocument["intent"] }) {
+  const activity = useActivityMode();
+  return activity === "hike" ? null : <RideRouteContext {...props} />;
+}
+
+function RideRouteContext({ route, intent }: { readonly route: PlannerActiveRoute; readonly intent: RideDocument["intent"] }) {
   const [open, setOpen] = useState(false);
   const departure = usePlannerDaylight({ departure: intent.departure, time: intent.time, durationSeconds: route.durationSeconds });
   const arrival = departure.departureAt === null ? null : Date.parse(departure.departureAt) + route.durationSeconds * 1000;

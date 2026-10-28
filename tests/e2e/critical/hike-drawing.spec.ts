@@ -17,7 +17,10 @@ test("a hike drawing remains on the map after reload without a road plan", async
   await page.keyboard.press("Escape");
   await expect(page.getByText("Press and hold the map to set a start and finish, or draw your hike.")).toBeVisible();
   await page.getByTestId("hike-draw-start").click();
-  await expect(page.getByTestId("hike-draw-done")).toBeVisible();
+  // On a phone the map's own edit toolbar owns drawing; the hike card steps aside.
+  await expect(page.getByTestId("map-edit-done")).toBeVisible();
+  await expect(page.getByTestId("hike-card")).toBeHidden();
+  await expect(page.getByTestId("map-edit-bar")).toContainText("Trace your hike on the map");
   // Let the camera settle out of the gesture quiet window before the stroke.
   await page.waitForTimeout(750);
   await page.mouse.move(70, 400);
@@ -28,7 +31,7 @@ test("a hike drawing remains on the map after reload without a road plan", async
   await page.mouse.up();
   await expect(map).toHaveAttribute("data-map-scene", /sketchDraft:1/);
   await page.waitForTimeout(1_500);
-  await page.getByTestId("hike-draw-done").click();
+  await page.getByTestId("map-edit-done").click();
   await expect(map).toHaveAttribute("data-map-scene", /sketch:1,sketchDraft:0/, { timeout: 15_000 });
   expect(planRequests).toBe(0);
   // The draft is written to disk shortly after the edit; a reload before then

@@ -135,10 +135,12 @@ import {
   MAP_LAYER_IDS,
   MAP_SOURCE_IDS,
   emptyBasemapStyle,
+  hikeRoutePalette,
   nightScrimLayer,
   osmBasemapStyle,
   overlayLayers,
   readMapPalette,
+  routeLayers as styleRouteLayers,
   type MapStyleSpec,
 } from "@/infrastructure/map/maplibre/style";
 import {
@@ -1448,7 +1450,7 @@ export async function createMapLibreHost(
         recordError({ kind: "renderer", detail: `image:${arrowImage.id}` });
       }
     }
-    for (const layer of overlayLayers(palette)) {
+    for (const layer of overlayLayers(getActivityMode() === "hike" ? hikeRoutePalette(palette) : palette)) {
       if (isPlaceSymbolLayer(layer.id) && !placeImagesReady) continue;
       if (layer.id === MAP_LAYER_IDS.pointPin && !pinsReady) continue;
       if (layer.id === MAP_LAYER_IDS.routeArrow && !arrowReady) continue;
@@ -2745,8 +2747,17 @@ export async function createMapLibreHost(
       }
     });
   }
+  /** The chosen line is trail brown on a hike and plum on a ride, switched live. */
+  function applyHikeRouteColors(map: MapLibreMap): void {
+    const active = getActivityMode() === "hike" ? hikeRoutePalette(palette) : palette;
+    for (const layer of styleRouteLayers(active)) {
+      if (layer.id !== MAP_LAYER_IDS.routeSelected && layer.id !== MAP_LAYER_IDS.routeCasing && layer.id !== MAP_LAYER_IDS.routeAfterSunset) continue;
+      const color = (layer.paint as Record<string, unknown> | undefined)?.["line-color"];
+      if (color !== undefined && map.getLayer(layer.id) !== undefined) map.setPaintProperty?.(layer.id, "line-color", color);
+    }
+  }
   const unsubscribeActivity = subscribeActivityMode(() => {
-    if (attempt?.styleReady) { applyHikeStyle(attempt.map); applyTerrain(attempt.map); }
+    if (attempt?.styleReady) { applyHikeStyle(attempt.map); applyHikeRouteColors(attempt.map); applyTerrain(attempt.map); }
   });
 
   /** A style reset drops all renderer images, sources and layers; restore the same scene. */

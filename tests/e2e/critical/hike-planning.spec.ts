@@ -40,6 +40,13 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect(summary).toContainText("ft");
   await expect(summary).toContainText("on roads");
   await expect(summary).toContainText("Starts 0.4 mi from the nearest trail");
+  // The result is a hike, not a ride: its own summary and Start, no rider chrome over the map.
+  await expect(summary).toContainText("HIKE");
+  await expect(page.getByTestId("start-hike")).toBeVisible();
+  await expect(page.getByText(/best ride/i)).toHaveCount(0);
+  await expect(page.getByTestId("start-ride")).toHaveCount(0);
+  await expect(page.getByTestId("route-context-row")).toHaveCount(0);
+  await expect(page.getByTestId("map-ask-open")).toHaveCount(0);
   expect(pointsSeen.at(-1)).toHaveLength(2);
   await openRefine(page);
   await page.getByTestId("add-stop").click();
@@ -47,7 +54,7 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
   await page.getByTestId("hike-there-and-back").check();
   await page.getByTestId("hike-plan").click();
-  await expect(summary).toContainText(/\b3(\.0)? mi\b/);
+  await expect(summary).toContainText(/(?<![\d.])3(\.0)? mi\b/);
   failure = "no-route";
   await page.getByTestId("hike-plan").click();
   await expect(page.getByTestId("hike-card")).toContainText("No trail route between these points.");
@@ -56,12 +63,13 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect(page.getByTestId("hike-card")).toContainText("Hike routing unavailable.");
 });
 
-// Breadcrumbs are a phone workflow. KNOWN GAP (docs/vnext/HANDOFF-2026-10-28.md §4):
-// on a phone the hike card covers the top of the map, so the hold that places the
-// start lands on the card; on desktop the rider inspector still owns hike results.
-// Un-fixme once the hike card is compact on phones.
+// Breadcrumbs are a phone workflow. The hike card is now a slim strip (and steps
+// aside once a hike is planned), and the summary lives in the sheet. Still
 test.describe("on a phone", () => {
 test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
+// fixme: on a phone a planned hike hides the map edit button (the sheet owns
+// the route), so this flow has no entry point yet; the trail page's "Plan this
+// hike on the map" opens a breadcrumb and Plan on trails instead.
 test.fixme("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
   await placeEndpoint(page, "start", start);
   await placeEndpoint(page, "finish", finish);

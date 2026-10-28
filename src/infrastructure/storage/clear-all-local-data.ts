@@ -44,6 +44,7 @@ export const LOCAL_DATA_STORAGE_KEYS = [
   MAP_LAYERS_STORAGE_KEY,
   `${MAP_LAYERS_STORAGE_KEY}.hike`,
   "og-activity-mode",
+  "og-hike-tip-dismissed",
   CAMERA_ROUTE_ONLY_STORAGE_KEY,
   SPOTIFY_CLIENT_ID_STORAGE_KEY,
   VOICE_MUTED_STORAGE_KEY,

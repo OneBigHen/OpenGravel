@@ -85,7 +85,7 @@ import {
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
-  usePlannerHikeActivity, usePlannerActiveRoute,
+  usePlannerHikeActivity, usePlannedHikeSummary, usePlannerActiveRoute,
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
@@ -742,7 +742,7 @@ export function PlannerWorkspace({
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
-  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps);
+  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps), plannedHike = usePlannedHikeSummary(hikeActivity, plannerUiStore);
   return (
     <PlannerWorkspaceFrame
       trip={tripCard}
@@ -878,6 +878,7 @@ export function PlannerWorkspace({
               onRouteTraffic: setRouteTraffic,
             },
             sheetExpanded: sheetDetent === "expanded",
+            hike: plannedHike,
           }}
           refine={{
             onExpandedChange: setRefineEditing,

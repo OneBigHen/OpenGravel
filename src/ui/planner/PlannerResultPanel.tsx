@@ -17,6 +17,8 @@ import { rideStyleSummary } from "./RideStyleControls";
 import { useCompactPlanner, usePhonePlanner } from "./usePhonePlanner";
 import { PhoneRideSummary, type PhoneRideQuickActions } from "./PhoneRideSummary";
 import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
+import { useActivityMode } from "@/ui/stores/activity-mode";
+import { HikeSummary, type HikeSummaryModel } from "./HikeSummary";
 
 // No route means there is no briefing or chart to draw. Keep their dependency
 // trees out of the first map interaction.
@@ -91,9 +93,13 @@ export interface PlannerResultPanelProps {
   readonly onExpandSheet?: () => void;
   /** The phone summary's quick actions: ride options, share, add stops, save. */
   readonly quick?: PhoneRideQuickActions;
+  /** The planned hike, shown instead of the ride summary while Hike mode is on. */
+  readonly hike?: HikeSummaryModel | null;
 }
 
-export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null }: PlannerResultPanelProps) {
+  const activity = useActivityMode();
+  const hikeView = activity === "hike" ? hike : null;
   const wide = useInspectorTier();
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
@@ -107,7 +113,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
   }, [route, onRouteTraffic]);
   const selectedCard = choices.cards.find((card) => card.isSelected);
   const tint = selectedCard?.tint ?? 0;
-  if (showOptions && compact && selectedCard !== undefined) return <RouteOptions
+  if (hikeView === null && showOptions && compact && selectedCard !== undefined) return <RouteOptions
     cards={choices.cards} onSelect={choices.onSelect} start={actions.start}
     startLabel={startLabel} finishLabel={finishLabel} onReverse={rideStyle?.actions.reverse}
     onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}>
@@ -118,8 +124,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     </RouteOptions>;
   const result = (
     <>
-      {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
-      {choices.cards.length === 0 ? null : (
+      {hikeView !== null ? <HikeSummary hike={hikeView} start={actions.start} /> : null}
+      {hikeView === null && phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
+      {hikeView !== null || choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
             <RouteDecisionCard
@@ -131,7 +138,7 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
           ))}
         </RouteChoices></div>
       )}
-      {choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
+      {hikeView !== null || choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {briefing.route === null || briefing.providers?.elevationProfile === undefined || choices.cards.length === 0 ? null : (
         <PlannerElevationProfile
           route={briefing.route}
@@ -153,16 +160,16 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
       )}
       <RideActions
         {...actions}
-        start={phone && selectedCard !== undefined ? null : actions.start}
-        {...(phone && selectedCard !== undefined ? { rideActions: undefined } : {})}
+        start={hikeView !== null || (phone && selectedCard !== undefined) ? null : actions.start}
+        {...(hikeView !== null || (phone && selectedCard !== undefined) ? { rideActions: undefined } : {})}
       />
-      {choices.cards.length === 0 ? null : <AdvisorRideAsk />}
-      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}
+      {hikeView !== null || choices.cards.length === 0 ? null : <AdvisorRideAsk />}
+      {hikeView !== null || briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}
     </>
   );
   if (!wide || inspector === null || choices.cards.length === 0) return result;
   return createPortal(
-    <section className="og-planner__inspector-body" aria-label="Your ride" data-testid="planner-inspector">
+    <section className="og-planner__inspector-body" aria-label={hikeView === null ? "Your ride" : "Your hike"} data-testid="planner-inspector">
       {result}
     </section>,
     inspector,
