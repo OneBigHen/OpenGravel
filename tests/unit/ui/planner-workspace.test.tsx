@@ -1890,6 +1890,9 @@ describe("PlannerWorkspace — the desktop plan", () => {
   it("puts the edit tools in the planning panel instead of over the map", async () => {
     stubTier(true);
     await renderWorkspace(unfetched());
+    // The idle map has no Edit pill; it appears once there is a start and finish.
+    expect(screen.queryByTestId("map-edit-bar")).toBeNull();
+    await placeBothPoints();
 
     const bar = screen.getByTestId("map-edit-bar");
     // Not in the map slot: the map is left to Layers and its instrument column.
@@ -1902,6 +1905,9 @@ describe("PlannerWorkspace — the desktop plan", () => {
   it("keeps them on the map below the desktop tier", async () => {
     stubTier(false);
     await renderWorkspace(unfetched());
+    // The idle map has no Edit pill; it appears once there is a start and finish.
+    expect(screen.queryByTestId("map-edit-bar")).toBeNull();
+    await placeBothPoints();
 
     expect(screen.getByTestId("map-edit-bar").closest(".og-planner__map-slot")).not.toBeNull();
     expect(screen.queryByTestId("sheet-edit-tools")).toBeNull();
@@ -1943,11 +1949,15 @@ describe("PlannerWorkspace — the phone sheet head", () => {
 describe("breadcrumb authoring", () => {
   it("adds, moves, names and undoes waypoints without calling the router", async () => {
     const workspace = await renderWorkspace(pendingFetcher());
+    // The idle map has no Edit pill (Breadcrumb starts from the long-press menu); with a start and finish placed it appears.
+    expect(screen.queryByTestId("map-edit-open")).toBeNull();
+    await placeBothPoints();
+    const postsBefore = workspace.posts.length;
     fireEvent.click(screen.getByTestId("map-edit-open"));
     fireEvent.click(screen.getByTestId("map-edit-breadcrumb"));
     clickMap(120, 120);
     clickMap(180, 180);
-    expect(workspace.posts).toHaveLength(0);
+    expect(workspace.posts).toHaveLength(postsBefore);
     const route = workspace.rideDocumentStore.getState().document.intent.breadcrumb!;
     expect(route.waypoints).toHaveLength(2);
     const first = route.waypoints[0]!;
@@ -1959,9 +1969,9 @@ describe("breadcrumb authoring", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Waypoint 1" }), { target: { value: "Ridge" } });
     fireEvent.click(screen.getByRole("button", { name: "Save name" }));
     expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBe("Ridge");
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    fireEvent.click(within(screen.getByTestId("map-edit-bar")).getByRole("button", { name: "Undo" }));
     expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBeUndefined();
-    fireEvent.click(screen.getByRole("button", { name: "Redo" }));
+    fireEvent.click(within(screen.getByTestId("map-edit-bar")).getByRole("button", { name: "Redo" }));
     expect(workspace.rideDocumentStore.getState().document.intent.breadcrumb?.waypoints[0]?.name).toBe("Ridge");
   });
 });

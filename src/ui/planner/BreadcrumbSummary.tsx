@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ElevationSource } from "@/application/elevation/profile";
-import { breadcrumbLine, breadcrumbMeasurements } from "@/application/breadcrumb/measurements";
+import { breadcrumbLine, VERY_STEEP_PERCENT, STEEP_LEG_PERCENT, type breadcrumbMeasurements } from "@/application/breadcrumb/measurements";
 import type { BreadcrumbRoute } from "@/domain/breadcrumb/types";
-import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
-import { useElevationProfile } from "@/ui/planner/useElevationProfile";
+import { BreadcrumbProfile } from "@/ui/planner/BreadcrumbProfile";
+import type { ElevationProfileState } from "@/ui/planner/useElevationProfile";
 import { waypointsFromIntent, type LibraryServicePort } from "@/application/library/library-service";
 import { buildPlannedTrackGpx, downloadExport, exportFilename, rideExportTitle } from "@/application/export/gpx-export";
 import type { RideDocument } from "@/domain/ride/types";
@@ -13,16 +12,31 @@ import type { RideDocument } from "@/domain/ride/types";
 function distance(meters: number): string { return `${(meters / 1609.344).toFixed(1)} mi`; }
 function duration(seconds: number): string { const minutes = Math.round(seconds / 60); return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr ${minutes % 60} min`; }
 
-export function BreadcrumbSummary({ route, document, libraryService, source, onToggleSnap, snapping, snapError, onStart, editing }: { readonly route: BreadcrumbRoute; readonly document: RideDocument; readonly libraryService?: LibraryServicePort | undefined; readonly source?: ElevationSource | undefined; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null; readonly onStart?: (() => Promise<string | null>) | undefined; readonly editing: boolean }) {
+type Measurements = ReturnType<typeof breadcrumbMeasurements>;
+
+function WarningMark() {
+  return <svg className="og-breadcrumb-summary__warn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3.5 22 20.5H2L12 3.5zM12 10v4.5M12 17.6v.1" /></svg>;
+}
+
+export function BreadcrumbSummary({ route, document, libraryService, elevation, measurements, onToggleSnap, snapping, snapError, onStart, onClear, editing }: { readonly route: BreadcrumbRoute; readonly document: RideDocument; readonly libraryService?: LibraryServicePort | undefined; readonly elevation: ElevationProfileState | null | undefined; readonly measurements: Measurements | null; readonly onToggleSnap: (index: number) => void; readonly snapping: number | null; readonly snapError: string | null; readonly onStart?: (() => Promise<string | null>) | undefined; readonly onClear: () => void; readonly editing: boolean }) {
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   const [startState, setStartState] = useState<"idle" | "starting">("idle");
   const [startError, setStartError] = useState<string | null>(null);
   const line = useMemo(() => breadcrumbLine(route), [route]);
-  const elevation = useElevationProfile(source, `breadcrumb-${document.rideId}-${document.revision}`, line);
   const profile = elevation?.status === "ready" ? elevation.profile : null;
-  const measurements = useMemo(() => breadcrumbMeasurements(route, profile), [route, profile]);
-  if (route.waypoints.length === 0) return null;
+  const steepSpans = useMemo(() => {
+    if (measurements === null) return [];
+    let from = 0;
+    return measurements.legs.flatMap((leg) => {
+      const range = { from, to: from + leg.distanceMeters };
+      from = range.to;
+      return (leg.maxGradePercent ?? 0) > STEEP_LEG_PERCENT ? [range] : [];
+    });
+  }, [measurements]);
+  if (route.waypoints.length === 0 || measurements === null) return null;
+  const maxGrade = measurements.maxGradePercent === null ? null : Math.round(measurements.maxGradePercent);
+  const steepness = maxGrade === null ? null : maxGrade >= VERY_STEEP_PERCENT ? "Very steep" : maxGrade > STEEP_LEG_PERCENT ? "Steep" : null;
   const save = async (): Promise<void> => {
     if (libraryService === undefined || title.trim() === "" || line.length < 2) return;
     setSaveState("saving");
@@ -37,17 +51,23 @@ export function BreadcrumbSummary({ route, document, libraryService, source, onT
     downloadExport(new TextEncoder().encode(xml), exportFilename(exportTitle, "planned-track"));
   };
   return (
-    <section className="og-breadcrumb-summary" aria-label="Breadcrumb route" data-testid="breadcrumb-summary">
-      <header><strong>Breadcrumb</strong><span>{distance(measurements.totalMeters)}</span></header>
-      <p>Straight-line legs are not roads. Check access and conditions.</p>
+    <section className="og-breadcrumb-summary" aria-label="Breadcrumb route" data-testid="breadcrumb-summary" data-editing={editing ? "true" : undefined}>
+      <header>
+        <strong>Breadcrumb</strong>
+        <span className="og-breadcrumb-summary__distance">{distance(measurements.totalMeters)}</span>
+        <button type="button" className="og-breadcrumb-summary__clear" onClick={onClear}>Clear</button>
+      </header>
+      <p className="og-breadcrumb-summary__note">{editing ? "Straight-line legs, not roads." : "Straight-line legs are not roads. Check access and conditions."}</p>
       {line.length < 2 ? <p>Add another waypoint to make a route.</p> : <>
         <div className="og-breadcrumb-summary__stats">
           <span>{profile === null ? "Elevation unknown" : `↑ ${Math.round(profile.climbMeters * 3.28084)} ft · ↓ ${Math.round(profile.descentMeters * 3.28084)} ft`}</span>
           <span>{measurements.timeSeconds === null ? "Time unknown" : `${duration(measurements.timeSeconds)} walking`}</span>
-          <span>{measurements.maxGradePercent === null ? "Grade unknown" : `Max grade ${Math.round(measurements.maxGradePercent)}%`}</span>
+          {steepness === null ? <span>{maxGrade === null ? "Grade unknown" : `Max grade ${maxGrade}%`}</span> : null}
         </div>
-        {editing ? null : <><ElevationProfileChart state={elevation ?? { status: "unavailable", reason: "Elevation unknown" }} line={line} waypoints={route.waypoints.map((point, index) => ({ coordinate: point.coordinate, label: point.name || `Waypoint ${index + 1}` }))} />
-        <details><summary>Legs ({route.legs.length})</summary><ol>{measurements.legs.map((leg, index) => <li key={route.waypoints[index]!.id}>Leg {index + 1} · {distance(leg.distanceMeters)}{leg.maxGradePercent !== null && leg.maxGradePercent > 30 ? " · Steep (>30%)" : ""} <button type="button" disabled={snapping !== null} onClick={() => onToggleSnap(index)}>{snapping === index ? "Finding route…" : route.legs[index]!.kind === "snapped" ? "Use straight line" : "Snap to trail or road"}</button></li>)}</ol></details>
+        {steepness === null || maxGrade === null ? null : <p className="og-breadcrumb-summary__warn" role="note" data-testid="breadcrumb-steep"><WarningMark /><span><strong>{steepness}: {maxGrade}% max grade.</strong>{editing ? "" : " Steep legs are orange on the map. Check them before you go."}</span></p>}
+        {profile === null ? (elevation?.status === "loading" ? <p className="og-breadcrumb-summary__quiet">Reading elevation…</p> : null) : <BreadcrumbProfile profile={profile} steepSpans={steepSpans} />}
+        {editing ? null : <>
+        <details><summary>Legs ({route.legs.length})</summary><ol>{measurements.legs.map((leg, index) => <li key={route.waypoints[index]!.id}>Leg {index + 1} · {distance(leg.distanceMeters)}{leg.maxGradePercent !== null && leg.maxGradePercent > STEEP_LEG_PERCENT ? ` · Steep (${Math.round(leg.maxGradePercent)}%)` : ""} <button type="button" disabled={snapping !== null} onClick={() => onToggleSnap(index)}>{snapping === index ? "Finding route…" : route.legs[index]!.kind === "snapped" ? "Use straight line" : "Snap to trail or road"}</button></li>)}</ol></details>
         {snapError === null ? null : <p role="status">{snapError}</p>}
         <div className="og-breadcrumb-summary__actions">
           {onStart === undefined ? null : <button type="button" disabled={startState === "starting"} onClick={() => { setStartState("starting"); setStartError(null); void onStart().then((error) => { setStartError(error); setStartState("idle"); }, () => { setStartError("Could not start following this route."); setStartState("idle"); }); }}>{startState === "starting" ? "Starting…" : "Follow breadcrumb"}</button>}
