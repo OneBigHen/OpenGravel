@@ -308,3 +308,37 @@ merged ODbL database. The forest layer does not supply a clearer grant. No DCNR
 records are imported under the open-data-only rule; publicly queryable is not
 assumed to mean openly licensed. These restrictions are not relabelled public
 domain. Review a clear compatible grant before enabling a DCNR adapter.
+
+### Wikimedia enrichment
+
+`node --max-old-space-size=20000 --import tsx infra/trails/enrich-media.ts --base
+ENRICHED_BASE --context OSM_CONTEXT --out NEW_CATALOG --cache WIKIMEDIA_CACHE`
+(on one line; repeat context for NJ) resolves explicit OSM Wikipedia/Wikidata
+links on trails, containing parks and notable features. It does not guess an
+article from a trail name. Up to four subjects retain their kind/name so a park
+article cannot be mistaken for a trail description. Plain introductory extracts
+retain Wikipedia contributors, article/revision links and CC BY-SA 4.0; Wikidata
+fallback descriptions retain CC0 and entity links. Requests use identifying UA,
+maxlag, at most two in flight, retries and a disk cache. Failed responses are
+reported in `media-stats.json` and never cached as a genuine absence.
+
+Commons geosearch checks occupied 0.15° × 0.10° cells with 10 km circles, then
+matches actual photo coordinates to **every trail segment within 300 m**.
+Only namespace-6 raster files with a 640 px **thumbnail URL**, author, recognized
+CC BY/CC BY-SA/CC0/public-domain licence URL and Commons description page qualify.
+An original URL is never a fallback, and no original bytes are downloaded.
+At most six nearest qualifying photos are kept (metadata candidates capped at
+30 per trail). Credits/attribution and per-file licences accompany every photo,
+including the list thumbnail. Crowded cells saturating the 500-result provider
+limit and unavailable calls are counted: coverage is not claimed complete.
+Descriptions and photo arrays are detail-only in the list API; one fully credited
+thumbnail remains on cards. Mapillary is omitted when no token is configured.
+
+`--photo-cell-limit N` is an explicit checkpoint option for media runs; the final
+run omits it. Stats distinguish total occupied cells, requested cells, successful
+or failed calls, and saturated result lists. On a busy Commons backend, a query
+may fall back from 500 to 100 candidates; its actual limit is cached and used
+when counting saturation. Media coverage remains a bounded search, not proof
+that a place has no freely licensed photos. The final regional pass also
+recomputes end-based trailheads for new official trails from the combined OSM
+context, using the existing 300 m matcher.

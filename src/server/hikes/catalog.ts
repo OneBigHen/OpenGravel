@@ -44,7 +44,13 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
     const id = url.searchParams.get("id");
     const hikes = cache.catalog.hikes.filter((hike) => (id === null || hike.id === id) && (bbox === null ||
       (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
-    return { status: 200, body: { enabled: true, hikes: id === null ? hikes.map((hike) => { const summary = { ...hike }; delete summary.features; delete summary.officialEvidence; delete summary.fieldSources; return summary; }) : hikes } };
+    return { status: 200, body: { enabled: true, hikes: id === null ? hikes.map((hike) => {
+      const detailFields = new Set(["features", "officialEvidence", "fieldSources", "descriptions", "photos", "trailheads", "conflicts"]);
+      const summary = Object.fromEntries(Object.entries(hike).filter(([key]) => !detailFields.has(key)));
+      // All source records remain on detail; cards retain one credited reference per provider.
+      if (hike.sources) summary.sources = [...new Map(hike.sources.map(source => [source.sourceId, source])).values()];
+      return summary;
+    }) : hikes } };
   } catch {
     return { status: 503, body: { enabled: true, error: "Hike catalog unavailable", hikes: [] } };
   }

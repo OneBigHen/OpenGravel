@@ -16,6 +16,9 @@ export interface AlongTrailFeature {
   readonly wikidata?: string;
 }
 export interface RichHike {
+  readonly descriptions?: readonly TrailDescription[];
+  readonly photos?: readonly TrailPhoto[];
+  readonly photo?: TrailPhoto;
   readonly officialStatus?: string | null;
   readonly officialDifficulty?: string | null;
   readonly allowedUses?: string | null;
@@ -43,4 +46,28 @@ export interface CatalogDifficulty {
   readonly score?: number;
   readonly method?: string;
   readonly sourceUrl: string;
+}
+export interface TrailDescription {
+  readonly subject: string;
+  readonly kind: "trail" | "park" | "feature";
+  readonly text: string;
+  readonly sourceUrl: string;
+  readonly author: string;
+  readonly licence: string;
+  readonly licenceUrl: string;
+  readonly revision?: number;
+}
+export interface TrailPhoto {
+  readonly pageId: number;
+  readonly title: string;
+  readonly thumbnailUrl: string;
+  readonly pageUrl: string;
+  readonly author: string;
+  readonly licence: string;
+  readonly licenceUrl: string;
+  readonly attribution?: string;
+  readonly coordinate: Coordinate;
+  readonly distanceFromTrailMeters: number;
+  readonly width: number;
+  readonly height: number;
 }

@@ -23,7 +23,7 @@ export async function GET(request: Request): Promise<Response> {
       });
       try { cache = { path, mtime: info.mtimeMs, features: await pending }; } finally { pending = undefined; }
     }
-    if (ids.length > 0) return Response.json({ features: ids.flatMap((key) => { const feature = cache!.features.get(key); if (!feature) return []; const properties = { ...feature.properties }; delete properties.features; delete properties.officialEvidence; delete properties.fieldSources; return [{ ...feature, properties }]; }) });
+    if (ids.length > 0) return Response.json({ features: ids.flatMap((key) => { const feature = cache!.features.get(key); if (!feature) return []; const detailFields = new Set(["features", "officialEvidence", "fieldSources", "descriptions", "photos", "photo", "trailheads", "conflicts"]); const properties = Object.fromEntries(Object.entries(feature.properties).filter(([key]) => !detailFields.has(key))); return [{ ...feature, properties }]; }) });
     const feature = cache.features.get(id!);
     return feature ? Response.json(feature) : Response.json({ error: "Trail geometry not found" }, { status: 404 });
   } catch {
