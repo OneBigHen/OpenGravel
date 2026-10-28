@@ -41,8 +41,9 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
       if (!isCatalog(data)) throw new Error("invalid catalog");
       cache = { path, mtime: info.mtimeMs, size: info.size, catalog: data };
     }
-    const hikes = cache.catalog.hikes.filter((hike) => bbox === null ||
-      (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1]));
+    const id = url.searchParams.get("id");
+    const hikes = cache.catalog.hikes.filter((hike) => (id === null || hike.id === id) && (bbox === null ||
+      (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
     return { status: 200, body: { enabled: true, hikes } };
   } catch {
     return { status: 503, body: { enabled: true, error: "Hike catalog unavailable", hikes: [] } };

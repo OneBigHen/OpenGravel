@@ -33,6 +33,8 @@ import { rememberListPosition } from "@/ui/explore/list-position";
 import { AppBar } from "@/ui/nav/AppBar";
 import type { BasemapMode, MapHostFactory } from "@/application/map/map-host";
 import { createMapLibreHost } from "@/infrastructure/map/maplibre/host";
+import { useActivityMode } from "@/ui/stores/activity-mode";
+import { HikeExplore } from "@/app/HikeExplore";
 import { hiddenRouteIds } from "@/ui/explore/hidden-routes";
 
 // The detail page owns the heavy detail-only modules (map host, preparation
@@ -55,7 +57,13 @@ type DetailState = { readonly id: string; readonly attempt: number } & (
   | { readonly status: "error"; readonly kind: "missing" | "unreachable" }
 );
 
-export function ExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: ExploreClientProps) {
+export function ExploreClient(props: ExploreClientProps) {
+  const mode = useActivityMode();
+  if (mode === "hike" && props.detailId === undefined) return <HikeExplore {...(props.mapboxToken ? { mapboxToken: props.mapboxToken } : {})} />;
+  return <RideExploreClient {...props} />;
+}
+
+function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: ExploreClientProps) {
   const router = useRouter();
   const hostFactory = useMemo<MapHostFactory>(
     () =>
