@@ -37,6 +37,18 @@ function readTipSeen(): boolean {
 }
 
 export interface MapEditBarProps {
+  readonly breadcrumb?: {
+    readonly editing: boolean;
+    readonly count: number;
+    readonly canUndo: boolean;
+    readonly canRedo: boolean;
+    readonly onStart: () => void;
+    readonly onDone: () => void;
+    readonly onAddCenter: () => void;
+    readonly onUndo: () => void;
+    readonly onRedo: () => void;
+    readonly centerAvailable: boolean;
+  };
   /** True when a ride is drawn, so there is something to edit. */
   readonly hasRoute: boolean;
   /** True while the pen owns the map. */
@@ -86,6 +98,21 @@ export function MapEditBar(props: MapEditBarProps) {
       // Private mode: the tip simply comes back next time.
     }
   };
+
+  if (props.breadcrumb?.editing) {
+    const breadcrumb = props.breadcrumb;
+    return (
+      <div className="og-editbar" data-mode="breadcrumb" data-testid="map-edit-bar" role="toolbar" aria-label="Breadcrumb">
+        <p className="og-editbar__status" aria-live="polite">Tap the map to add a waypoint · {breadcrumb.count} added</p>
+        <div className="og-editbar__row">
+          <button type="button" className="og-editbar__btn" onClick={breadcrumb.onUndo} disabled={!breadcrumb.canUndo}>Undo</button>
+          <button type="button" className="og-editbar__btn" onClick={breadcrumb.onRedo} disabled={!breadcrumb.canRedo}>Redo</button>
+          <button type="button" className="og-editbar__btn" onClick={breadcrumb.onAddCenter} disabled={!breadcrumb.centerAvailable}>Add at map centre</button>
+          <button type="button" className="og-editbar__btn og-editbar__btn--go" onClick={breadcrumb.onDone}>Done</button>
+        </div>
+      </div>
+    );
+  }
 
   if (drawing) {
     const status =
@@ -175,6 +202,11 @@ export function MapEditBar(props: MapEditBarProps) {
           <Icon path={PEN} />
           Draw
         </button>
+        {props.breadcrumb === undefined ? null : (
+          <button type="button" className="og-editbar__btn" data-testid="map-edit-breadcrumb" onClick={() => { setOpen(false); props.breadcrumb?.onStart(); }}>
+            <Icon path={PIN_PLUS} /> Breadcrumb
+          </button>
+        )}
         {hasRoute ? (
           <button
             type="button"
@@ -227,6 +259,7 @@ function readCoarsePointer(): boolean {
 }
 
 export interface PlannerMapEditBarProps {
+  readonly breadcrumb?: MapEditBarProps["breadcrumb"];
   readonly scene: MapScene;
   readonly activeTool: PointerTool;
   readonly placementTool: PlacementTool;
@@ -243,11 +276,13 @@ export function PlannerMapEditBar({
   sketch,
   onAddStop,
   onCancelPlacement,
+  breadcrumb,
 }: PlannerMapEditBarProps) {
   // A touch screen grabs the route line by a hold, so the tip says so.
   const touch = useSyncExternalStore(subscribeCoarsePointer, readCoarsePointer, () => false);
   return (
     <MapEditBar
+      {...(breadcrumb === undefined ? {} : { breadcrumb })}
       hasRoute={scene.routes.some((route) => route.geometry.length >= 2)}
       drawing={activeTool === "sketch"}
       placingStop={placementTool === "place-stop"}

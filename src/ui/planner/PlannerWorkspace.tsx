@@ -122,6 +122,8 @@ import {
 import type { AvoidAreaId } from "@/domain/ride/ids";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
+import { usePlannerBreadcrumb } from "@/ui/planner/hooks/usePlannerBreadcrumb";
+import { BreadcrumbWaypointEditor } from "@/ui/planner/BreadcrumbWaypointEditor";
 export interface PlannerWorkspaceProps {
   /** Injected containers for tests and embedding; the singletons by default. */
   readonly rideDocumentStore?: RideDocumentStore;
@@ -230,6 +232,8 @@ export function PlannerWorkspace({
   const retrySave = useStore(rideDocumentStore, (state) => state.retrySave);
   const [inspectorNode, setInspectorNode] = useState<HTMLElement | null>(null);
   const [refineEditing, setRefineEditing] = useState(false);
+  const [mapCenter, setMapCenter] = useState<Coordinate | null>(null);
+  const breadcrumb = usePlannerBreadcrumb(document, rideDocumentStore);
   const [rideStart, setRideStart] = useState<{
     readonly state: "idle" | "starting";
     readonly message: string | null;
@@ -413,7 +417,7 @@ export function PlannerWorkspace({
     finishStroke: finishSketchGesture,
   } = sketchAuthoring;
 
-  const scene = usePlannerScene(
+  const baseScene = usePlannerScene(
     {
       document,
       session,
@@ -430,6 +434,8 @@ export function PlannerWorkspace({
     },
     { refineEditing, activeTool, placementTool },
   );
+  const projectBreadcrumb = breadcrumb.project;
+  const scene = useMemo(() => projectBreadcrumb(baseScene), [baseScene, projectBreadcrumb]);
 
   const selectedRef = useMemo(
     () => (selectedObject === null ? null : itineraryRefFor(document, selectedObject)),
@@ -740,6 +746,20 @@ export function PlannerWorkspace({
       onCancelPlanning={handleCancel} onClearRide={() => { placeFlow.closeOptions(); history.onClearRide(); }}
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
+  const selectedWaypointIndex = breadcrumb.route?.waypoints.findIndex((point) => point.id === breadcrumb.selected) ?? -1;
+  const selectedWaypoint = breadcrumb.route?.waypoints[selectedWaypointIndex];
+  const breadcrumbBar = {
+    editing: breadcrumb.editing,
+    count: breadcrumb.route?.waypoints.length ?? 0,
+    canUndo: document.history.cursor >= 0,
+    canRedo: document.history.cursor < document.history.entries.length - 1,
+    onStart: () => { planningSessionStore.getState().cancel(); breadcrumb.setEditing(true); plannerUiStore.getState().setSheetDetent("peek"); },
+    onDone: () => breadcrumb.setEditing(false),
+    onAddCenter: () => { if (mapCenter !== null) breadcrumb.add(mapCenter); },
+    onUndo: () => rideDocumentStore.getState().undo(),
+    onRedo: () => rideDocumentStore.getState().redo(),
+    centerAvailable: mapCenter !== null,
+  };
 
   return (
     <PlannerWorkspaceFrame
@@ -758,18 +778,19 @@ export function PlannerWorkspace({
       }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
-      glance={glance.map}
+      glance={<>{breadcrumb.route === null ? glance.map : null}{selectedWaypoint === undefined ? null : <BreadcrumbWaypointEditor key={selectedWaypoint.id} point={selectedWaypoint} index={selectedWaypointIndex} onClose={() => breadcrumb.setSelected(null)} onSave={(name) => { breadcrumb.edit(selectedWaypoint.id, (point) => ({ ...point, name: name.trim() }), "Renamed breadcrumb waypoint"); breadcrumb.setSelected(null); }} onRemove={() => { breadcrumb.edit(selectedWaypoint.id, () => null, "Removed breadcrumb waypoint"); breadcrumb.setSelected(null); }} />}</>}
       topSearch={placeFlow.top}
       toast={placeFlow.toast}
-      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
+      editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{
         scene: { ...scene, places: placeFlow.pins },
         onViewport: placeFlow.onViewport,
         onPointAction: placeFlow.pointAction,
         directionsWhenEmpty: places !== undefined && activeRoute === null,
-        longPressEnabled: placementTool === "idle" && activeTool === "pan",
+        longPressEnabled: !breadcrumb.editing && placementTool === "idle" && activeTool === "pan",
         addStopDisabledReason: document.intent.start === null || document.intent.finish === null ? "plan a start and finish first" : null,
-        onIntent: (intent) => { if (!placeFlow.intercept(intent)) handleIntent(intent); },
+        onIntent: (intent) => { if (!breadcrumb.intercept(intent) && !placeFlow.intercept(intent)) handleIntent(intent); },
+        onCamera: (camera) => { if (camera.center !== undefined) setMapCenter(camera.center); },
         hostFactory: mapHostFactory,
         ...(assetBasePath === undefined ? {} : { assetBasePath }),
         dimmed: planning && session.phase !== "alternatives-loading" && session.phase !== "primary-ready",
@@ -791,8 +812,8 @@ export function PlannerWorkspace({
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
-          glance={glance.dock}
-          editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
+          glance={breadcrumb.route === null ? glance.dock : null}
+          editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{

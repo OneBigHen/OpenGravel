@@ -87,6 +87,7 @@ export function usePlannerAnswerLifecycle(input: {
    */
   const attemptedRevisionRef = useRef<number | null>(null);
   useEffect(() => {
+    if (document.intent.breadcrumb != null) return;
     const drawn = session.committedBundle ?? session.lastGoodBundle;
     if (drawn === null) return;
     if (drawn.rideRevision === document.revision) return;
@@ -121,6 +122,7 @@ export function usePlannerAnswerLifecycle(input: {
    */
   const restoredAttemptRef = useRef(false);
   useEffect(() => {
+    if (document.intent.breadcrumb != null) return;
     if (!restored || restoredAttemptRef.current) return;
     if ((session.committedBundle ?? session.lastGoodBundle) !== null) return;
     if (isPlanningInFlight(session.phase) || session.error !== null) return;

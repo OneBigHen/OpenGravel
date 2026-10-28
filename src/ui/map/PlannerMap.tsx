@@ -274,6 +274,7 @@ const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
  * hears about a change a rider could actually see.
  */
 export interface CameraView {
+  readonly center?: Coordinate;
   readonly bearing: number;
   readonly zoom: number;
   readonly minZoom: number;
@@ -283,6 +284,7 @@ export interface CameraView {
 
 function cameraViewOf(camera: MapCameraState): CameraView {
   return {
+    ...(camera.center === undefined ? {} : { center: camera.center }),
     bearing: Math.round(camera.bearing),
     zoom: Math.round(camera.zoom * 100) / 100,
     minZoom: camera.minZoom,
@@ -296,6 +298,8 @@ function cameraViewOf(camera: MapCameraState): CameraView {
 function sameCameraView(previous: CameraView | null, next: CameraView): boolean {
   return (
     previous !== null &&
+    previous.center?.lon === next.center?.lon &&
+    previous.center?.lat === next.center?.lat &&
     previous.bearing === next.bearing &&
     previous.zoom === next.zoom &&
     previous.minZoom === next.minZoom &&

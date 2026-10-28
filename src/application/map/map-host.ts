@@ -125,6 +125,7 @@ export interface MapHostOptions {
  * pixel, never a promise that a road is a given width.
  */
 export interface MapCameraState {
+  readonly center?: { readonly lon: number; readonly lat: number };
   /** Degrees clockwise from north, `-180..180`, as MapLibre reports it. */
   readonly bearing: number;
   readonly zoom: number;

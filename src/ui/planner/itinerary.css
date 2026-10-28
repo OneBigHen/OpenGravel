@@ -444,7 +444,7 @@
 
 .og-point__input {
   min-width: 110px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 var(--og-space-2);
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-control);
@@ -774,7 +774,7 @@
 }
 
 @media (max-width: 760px) {
-  .og-editbar:is([data-mode="drawing"], [data-mode="placing"]) {
+.og-editbar:is([data-mode="drawing"], [data-mode="placing"], [data-mode="breadcrumb"]) {
     right: var(--og-space-3);
     left: var(--og-space-3);
     max-width: none;
@@ -795,6 +795,24 @@
     margin-top: var(--og-space-6);
   }
 }
+
+.og-breadcrumb-editor {
+  position: absolute;
+  z-index: 8;
+  top: 6rem;
+  left: 1rem;
+  width: min(20rem, calc(100% - 2rem));
+  padding: 1rem;
+  border-radius: 1rem;
+  background: var(--og-surface, #fff);
+  color: var(--og-text, #222);
+  box-shadow: 0 8px 30px #0003;
+}
+.og-breadcrumb-editor label { display: block; font-weight: 700; }
+.og-breadcrumb-editor input { width: 100%; min-height: 44px; margin-block: .5rem; }
+.og-breadcrumb-editor__actions { display: flex; gap: .5rem; }
+.og-breadcrumb-editor__actions button { min-height: 44px; flex: 1; }
+.og-breadcrumb-editor :focus-visible { outline: 3px solid #d65c32; outline-offset: 2px; }
 
 /* --------------------------------------------------------------------------
    An update that could not be planned: what failed, and the way out.
