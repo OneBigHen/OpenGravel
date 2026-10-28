@@ -11,6 +11,14 @@
 3. [Architecture, execution sequence and safeguards](IMPLEMENTATION-GUIDE.md) — existing component ownership, CSS cleanup, route/data integrity, phases and verification.
 4. [Acceptance matrix and adversarial QA journeys](QA-MATRIX.md) — objective pass/fail conditions across responsive, modes, offline and ride lifecycle.
 5. [Copy-ready Claude/Opus start instructions](CLAUDE-START.md) — how to execute this handoff without losing existing functionality.
+6. [Hiking UX audit and new trail-planning interaction spec](HIKING-UX.md) — 16 hike findings and full map, Explore, trail detail, trailhead and route-warning guidance.
+7. [Cross-activity interface and state model](ACTIVITY-COHERENCE.md) — shared Map/Explore shell, distinct Ride/Hike meaning, routing and offline capability.
+8. [Hiking acceptance matrix](HIKING-ACCEPTANCE.md) — 20 hike-specific checks plus challenging GPS, catalog and graph fixtures.
+9. [Live runtime evidence caveat](RUNTIME-VERIFICATION.md) — why the public browser attempt did not find Hike, and how to verify source/deployment/discoverability.
+
+## Hiking UX addendum
+
+A second live desktop browser walkthrough did **not locate Hike mode** from its visited Map/Explore flow and did not reach Settings → Activity. This is inconclusive: the current GitHub source **does contain** `ActivitySwitch`, `HikeExplore`, `HikeActivityControls` and the dedicated foot router. Treat Hike discoverability and deployed-version parity as an explicit verification task, **not** a declaration that the feature is absent. See [RUNTIME-VERIFICATION.md](RUNTIME-VERIFICATION.md).
 
 ## Evidence provenance and limits
 
