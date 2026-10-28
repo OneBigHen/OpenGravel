@@ -131,8 +131,9 @@ describe("compact map chrome", () => {
     expect(declarationsFor(base, ".og-layers__legend")["white-space"]).toBeUndefined();
     const phone = mediaBlocks(sourceOf(), COMPACT);
     expect(declarationsFor(phone, ".og-layers__about")["display"]).toBe("none");
-    // Tile, words, switch: the switch keeps its own column, never over the icon.
-    expect(declarationsFor(base, ".og-layers__lens")["min-height"]).toBe("56px");
+    // Quick sets are square tiles: a 56px icon over the name, a full touch target.
+    expect(declarationsFor(base, ".og-layers__lens")["min-height"]).toBe("var(--og-touch)");
+    expect(declarationsFor(base, ".og-layers__lens .og-layers__swatch")["width"]).toBe("56px");
   });
 
   it("draws every sheet switch as a track with a knob that moves to the green", () => {
@@ -151,8 +152,8 @@ describe("compact map chrome", () => {
     // The old fake switch (a span with no knob of its own) must not come back.
     expect(css).not.toContain("og-layers__toggle");
     expect(css).not.toContain("og-layers__lens-glyph");
-    expect(declarationsFor([css], ".og-layers__lens .og-switch")["grid-column"]).toBe("3");
-    expect(declarationsFor([css], ".og-layers__lens .og-layers__swatch")["grid-row"]).toBe("1 / span 2");
+    // A chosen tile wears a green ring, so state never rests on the icon alone.
+    expect(declarationsFor([css], '.og-layers__lens[data-on="true"] .og-layers__swatch')["box-shadow"]).toContain("var(--og-primary)");
   });
 
   it("leaves the short phone's right edge to the wrapped instrument column", () => {

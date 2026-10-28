@@ -484,7 +484,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     host.applyScene(scene());
     host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["terrain-3d"] } }));
     expect(fake.state.terrainCalls).toHaveLength(calls);
-    expect(fake.state.easeCalls).toContainEqual(expect.objectContaining({ pitch: 55 }));
+    expect(fake.state.easeCalls).toContainEqual(expect.objectContaining({ pitch: 45 }));
     host.setTerrain3d?.(false);
     expect(fake.state.easeCalls.at(-1)).toMatchObject({ pitch: 0 });
     host.dispose();
@@ -580,7 +580,7 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
       source: "og-terrain-dem",
       exaggeration: 1.1,
     });
-    expect(fake.state.easeCalls).toEqual([expect.objectContaining({ pitch: 55 })]);
+    expect(fake.state.easeCalls).toEqual([expect.objectContaining({ pitch: 45 })]);
 
     host.setTerrain3d?.(false);
 

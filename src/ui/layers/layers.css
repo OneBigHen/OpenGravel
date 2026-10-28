@@ -305,7 +305,7 @@
 .og-layers__credit {
   margin: var(--og-space-2) 0 0;
   color: var(--og-ink-2);
-  font-size: 11px;
+  font-size: var(--og-text-caption);
 }
 
 /* Quick sets and map view: square icon tiles, four across. */
