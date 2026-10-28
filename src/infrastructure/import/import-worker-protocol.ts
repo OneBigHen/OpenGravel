@@ -76,6 +76,16 @@ function isParsedImport(value: unknown): value is ParsedImport {
     const timestamps = track["timestamps"];
     const elevations = track["elevation"];
     if (segments.length !== timestamps.length || segments.length !== elevations.length) return false;
+    const names = track["pointNames"];
+    if (names !== undefined) {
+      if (!Array.isArray(names) || names.length !== segments.length) return false;
+      const aligned = names.every((values, index) =>
+        Array.isArray(values) &&
+        values.length === (segments[index] as unknown[]).length &&
+        values.every((value) => value === null || typeof value === "string"),
+      );
+      if (!aligned) return false;
+    }
     return segments.every((segment, index) => {
       const timestampValues = timestamps[index];
       const elevationValues = elevations[index];

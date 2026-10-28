@@ -1,0 +1,137 @@
+/* Weather along the route (MAP-EXPERIENCE-NEXT Wave 2, item 7): the headline
+   under the elevation profile, then one cell per sampled hour. Inside a sheet a
+   group is a well, so this is one quiet block rather than another edged card.
+   Rain is the map's signal blue in both themes; an unknown reading is a
+   hatched track and a dash, never an empty (dry-looking) bar. */
+
+.og-route-weather-well {
+  padding: var(--og-space-3) var(--og-space-4);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface-2);
+}
+
+.og-route-weather {
+  --og-route-weather-rain: var(--og-map-signal);
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-route-weather__headline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--og-space-2);
+  margin: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.og-route-weather__glyph {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.og-route-weather__glyph[data-kind="dry"] { color: var(--og-warn); }
+.og-route-weather__glyph[data-kind="rain"] { color: var(--og-route-weather-rain); }
+.og-route-weather__glyph[data-kind="unknown"] { color: var(--og-ink-2); }
+
+/* Loading and unavailable: one quiet sentence, no skeleton to animate. */
+.og-route-weather__note {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+
+/* The strip scrolls rather than crushing its cells on a narrow phone. */
+.og-route-weather__cells {
+  display: flex;
+  align-items: flex-end;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.og-route-weather__cells::-webkit-scrollbar {
+  display: none;
+}
+
+.og-route-weather__cell {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 44px;
+  padding: 0 var(--og-space-2);
+  border-left: 1px solid var(--og-line);
+}
+
+.og-route-weather__cell:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.og-route-weather__hour {
+  color: var(--og-ink);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-route-weather__temp {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-route-weather__rain {
+  display: block;
+  height: 4px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-line);
+  overflow: hidden;
+}
+
+.og-route-weather__cell[data-rain="unknown"] .og-route-weather__rain {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--og-line-strong) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.og-route-weather__bar {
+  display: block;
+  height: 100%;
+  background: var(--og-route-weather-rain);
+}
+
+.og-route-weather__bar[data-rain="none"] { width: 0; }
+.og-route-weather__bar[data-rain="low"] { width: 30%; }
+.og-route-weather__bar[data-rain="mid"] { width: 65%; }
+.og-route-weather__bar[data-rain="high"] { width: 100%; }
+
+.og-route-weather__pct {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

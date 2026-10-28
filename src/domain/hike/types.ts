@@ -82,13 +82,14 @@ export interface HikeElevationPoint {
   readonly coordinate: Coordinate;
 }
 
-/** The steepest measured segment, signed: positive is uphill. */
+/** The steepest sustained grade, signed: positive is uphill. */
 export interface HikeGrade {
   /** Rise / run × 100; positive climbs, negative descends. */
   readonly percent: number;
   readonly direction: "up" | "down";
+  /** Length of the window (or of a shorter run) the grade was measured over. */
   readonly runMeters: number;
-  /** Along-line distance at the start of the segment. */
+  /** Along-line distance at the start of the measured window. */
   readonly atMeters: number;
 }
 
@@ -99,7 +100,10 @@ export interface HikeStats {
   readonly gainMeters: number | null;
   /** Sum of descents between adjacent known elevations; null when no segment has both. */
   readonly lossMeters: number | null;
-  /** Steepest measured segment of at least `MIN_GRADE_RUN_METERS`; null when none. */
+  /**
+   * Steepest sustained grade over at least `MIN_GRADE_WINDOW_METERS`, or the
+   * average of a shorter measured run; null when nothing is measurable.
+   */
   readonly maxGrade: HikeGrade | null;
   readonly highestPoint: HikeElevationPoint | null;
   readonly lowestPoint: HikeElevationPoint | null;

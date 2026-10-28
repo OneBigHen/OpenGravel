@@ -1,5 +1,5 @@
 import { type ImportLimitsOverride, resolveImportLimits } from "@/application/import/limits";
-import { boundedName, checkCancelled, coordinateFromAttributes, ensureTrackHasGeometry, fileFallbackName, finalProgress, makeParseState, parseElevation, parseTimestamp, pointSeen, segmentSeen, trackSeen, type ParseState } from "./helpers";
+import { boundedName, checkCancelled, coordinateFromAttributes, ensureTrackHasGeometry, fileFallbackName, finalProgress, makeParseState, parseElevation, parseTimestamp, pointName, pointSeen, segmentSeen, trackSeen, type ParseState } from "./helpers";
 import type { Coordinate } from "@/domain/ride/types";
 import type { ImportParseOptions, ParsedImport, ParsedImportTrack, ParsedImportWaypoint } from "./types";
 import { parseXmlDocument, childText, directChild, type XmlElement } from "./xml";
@@ -28,10 +28,11 @@ function parsedSegment(
   limits: ReturnType<typeof resolveImportLimits>,
   trackName: string,
   segmentIndex: number,
-): { coordinates: readonly { readonly lon: number; readonly lat: number }[]; timestamps: readonly (string | null)[]; elevation: readonly (number | null)[] } | null {
+): { coordinates: readonly { readonly lon: number; readonly lat: number }[]; timestamps: readonly (string | null)[]; elevation: readonly (number | null)[]; names: readonly (string | null)[] } | null {
   const coordinates: { lon: number; lat: number }[] = [];
   const timestamps: (string | null)[] = [];
   const elevation: (number | null)[] = [];
+  const names: (string | null)[] = [];
   elements.forEach((element, pointIndex) => {
     pointSeen(state, limits);
     const label = `${trackName} segment ${segmentIndex + 1} point ${pointIndex + 1}`;
@@ -40,12 +41,13 @@ function parsedSegment(
     coordinates.push(coordinate);
     timestamps.push(parseTimestamp(element, state, label, limits));
     elevation.push(parseElevation(element, state, label));
+    names.push(pointName(element, label, limits, state));
   });
   if (coordinates.length < 2) {
     state.warnings.push(`Ignored ${trackName} segment ${segmentIndex + 1}; it has fewer than two valid coordinates.`);
     return null;
   }
-  return { coordinates, timestamps, elevation };
+  return { coordinates, timestamps, elevation, names };
 }
 
 function parseTrack(
@@ -62,7 +64,7 @@ function parseTrack(
   const segmentElements = kind === "track"
     ? element.children.filter((child) => child.localName === "trkseg")
     : [element];
-  const segments: { readonly coordinates: readonly { readonly lon: number; readonly lat: number }[]; readonly timestamps: readonly (string | null)[]; readonly elevation: readonly (number | null)[] }[] = [];
+  const segments: { readonly coordinates: readonly { readonly lon: number; readonly lat: number }[]; readonly timestamps: readonly (string | null)[]; readonly elevation: readonly (number | null)[]; readonly names: readonly (string | null)[] }[] = [];
   if (kind === "track" && segmentElements.length === 0) {
     state.warnings.push(`Ignored track "${name}" because it contains no trkseg elements.`);
   }
@@ -81,6 +83,9 @@ function parseTrack(
         segments: segments.map((segment) => segment.coordinates),
         timestamps: segments.map((segment) => segment.timestamps),
         elevation: segments.map((segment) => segment.elevation),
+        ...(segments.some((segment) => segment.names.some((value) => value !== null))
+          ? { pointNames: segments.map((segment) => segment.names) }
+          : {}),
       }
     : null;
 }

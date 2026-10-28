@@ -245,7 +245,7 @@ function maxGradePart(stats: HikeStats, elevation: HikeElevationCoverage): HikeD
   return {
     part: "max-grade",
     rating,
-    explanation: `worst grade ${percent(grade)} ${stats.maxGrade.direction}`,
+    explanation: `worst grade about ${percent(grade)} ${stats.maxGrade.direction}`,
   };
 }
 

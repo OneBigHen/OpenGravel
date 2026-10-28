@@ -100,6 +100,8 @@ function renderPanel(
 }
 
 describe("PlannerResultPanel's deferred elevation chart", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("draws the authored points, the expanded density and the card's surface once the chart loads", async () => {
     renderPanel({ routeId: "route_firstload_expanded", sheetExpanded: true });
 
@@ -129,6 +131,48 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
     await screen.findByTestId("elevation-climb");
     expect(screen.getByTestId("elevation-profile")).toHaveAttribute("data-density", "compact");
     expect(screen.queryByTestId("elevation-waypoints")).not.toBeInTheDocument();
+  });
+
+  it("draws the weather along the route under the profile, from the ride's own departure", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        report: {
+          source: "nws",
+          samples: [
+            {
+              coordinate: { lon: -75.7, lat: 40.8 },
+              alongMeters: 0,
+              mile: 0,
+              elapsedSeconds: 0,
+              eta: "2026-06-21T14:00:00.000Z",
+              tempF: 71,
+              rainChancePct: 10,
+              windMph: 6,
+              shortForecast: "Sunny",
+            },
+          ],
+          headline: "Dry the whole way",
+          forecastAvailable: true,
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderPanel({ routeId: "route_weather_wiring", sheetExpanded: false });
+
+    // The strip is behind its own lazy boundary, beside the chart.
+    expect(await screen.findByTestId("planner-route-weather")).toBeInTheDocument();
+    expect(await screen.findByTestId("route-weather-headline")).toHaveTextContent("Dry the whole way");
+    expect(screen.getAllByTestId("route-weather-cell")).toHaveLength(1);
+
+    // The route is what the request is about: its line and its measured time.
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as {
+      readonly durationSeconds: number;
+      readonly line: readonly { readonly lon: number; readonly lat: number }[];
+    };
+    expect(body.durationSeconds).toBe(5_400);
+    expect(body.line[0]).toEqual({ lon: LINE[0]!.lon, lat: LINE[0]!.lat });
+    expect(body.line).toHaveLength(21);
   });
 });
 

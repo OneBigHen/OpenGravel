@@ -103,6 +103,25 @@ export function coordinateFromAttributes(
   return { lon: longitude, lat: latitude };
 }
 
+export function pointName(
+  element: XmlElement,
+  label: string,
+  limits: ImportLimits,
+  state: ParseState,
+): string | null {
+  const trimmed = childText(element, "name")?.trim() ?? "";
+  if (trimmed === "") return null;
+  const cap = Math.min(MAX_NAME_BYTES, limits.MAX_NAME_BYTES);
+  if (textBytes(trimmed) <= cap) return trimmed;
+  let result = "";
+  for (const character of trimmed) {
+    if (textBytes(result + character) > cap) break;
+    result += character;
+  }
+  state.warnings.push(`A point name in ${label} was truncated to ${cap} bytes.`);
+  return result === "" ? null : result;
+}
+
 export function parseElevation(
   element: XmlElement,
   state: ParseState,

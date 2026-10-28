@@ -21,7 +21,7 @@ import {
   type ExportMode,
   type ExportTrack,
 } from "@/application/export/gpx-export";
-import type { ImportOutcome, ImportServicePort } from "@/application/import/import-service";
+import type { ImportBreadcrumbOutcome, ImportOutcome, ImportServicePort } from "@/application/import/import-service";
 import { ImportPanel } from "./../import/ImportPanel";
 import { SwitchBackImportPanel } from "./../import/SwitchBackImportPanel";
 import { SavedRideGroupShare } from "./SavedRideGroupShare";
@@ -762,7 +762,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
             chrome="quiet"
             {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
             onImported={() => load()}
-            onOpenInPlanner={async (outcome: ImportOutcome) => {
+            onOpenInPlanner={async (outcome: ImportOutcome | ImportBreadcrumbOutcome) => {
               await library.openRide(outcome.namedRide.document.rideId);
               router.push("/");
             }}

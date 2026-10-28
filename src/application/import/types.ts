@@ -10,6 +10,14 @@ export interface ParsedImportTrack {
   readonly segments: readonly (readonly Coordinate[])[];
   readonly timestamps: readonly (readonly (string | null)[])[];
   readonly elevation: readonly (readonly (number | null)[])[];
+  /**
+   * Point names from `<trkpt>` / `<rtept>`, aligned with `segments`.
+   *
+   * Present only when the source names at least one point: a route export whose
+   * points are named ("Fuel", "Turn 3") can become a named breadcrumb, and a
+   * dense recorded track normally has nothing to keep.
+   */
+  readonly pointNames?: readonly (readonly (string | null)[])[];
 }
 
 /** A source waypoint stays metadata, never an invented track point. */

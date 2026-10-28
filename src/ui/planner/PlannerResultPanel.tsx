@@ -22,6 +22,9 @@ import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 // trees out of the first map interaction.
 const PlannerElevationProfile = dynamic(() => import("./PlannerElevationProfile").then((mod) => mod.PlannerElevationProfile), { loading: () => <p className="og-composer__reason" role="status">Loading elevation profile…</p> });
 const PlannerRouteBriefing = dynamic(() => import("./PlannerRouteBriefing").then((mod) => mod.PlannerRouteBriefing), { loading: () => <p className="og-composer__reason" role="status">Loading ride briefing…</p> });
+// Weather along the route loads with the profile it sits under: its request
+// starts after the first paint, and a slow provider never holds the ride back.
+const PlannerRouteWeather = dynamic(() => import("./PlannerRouteWeather").then((mod) => mod.PlannerRouteWeather), { loading: () => null });
 
 /**
  * The wide tier (MVP parity row 27): once there is a ride, its result — the
@@ -132,6 +135,15 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
           tint={tint}
           surface={selectedCard?.surfaceRuns}
           expandedBySheet={sheetExpanded}
+        />
+      )}
+      {/* The sampled weather sits under the profile it is read against, and
+          keeps answering when the profile provider does not. */}
+      {briefing.route === null ? null : (
+        <PlannerRouteWeather
+          route={briefing.route}
+          departure={briefing.ride.intent.departure}
+          time={briefing.ride.intent.time}
         />
       )}
       <RideActions
