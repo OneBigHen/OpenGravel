@@ -33,6 +33,9 @@ def fixture():
     for row in (12, 13):
         for offset, lon, delta in ((0, -75, 0), (1, -74.99, 0), (2, -74.98, 0), (3, -74.99, 0.002)):
             ET.SubElement(root, "node", id=str(200 + (row - 12) * 10 + offset), lat=str(40 + row * 0.02 + delta), lon=str(lon))
+    for row in (14, 15):
+        for offset, lon in enumerate((-75, -74.995, -74.985, -74.98)):
+            ET.SubElement(root, "node", id=str(220 + (row - 14) * 10 + offset), lat=str(40 + row * 0.02), lon=str(lon))
     way_tags = [{}, {}, {}, {}, {}, {}, {"access": "private", "foot": "designated"},
                 {"access": "no", "foot": "designated"}, {"sac_scale": "demanding_mountain_hiking"},
                 {"highway": "trunk", "foot": "yes"}, {"highway": "primary", "foot": "yes"}, {"foot": "no"}]
@@ -51,6 +54,13 @@ def fixture():
             way = ET.SubElement(root, "way", id=str(number))
             for ref in refs: ET.SubElement(way, "nd", ref=str(ref))
             ET.SubElement(way, "tag", k="highway", v=highway)
+    for row, road_class in ((14, "trunk"), (15, "motorway")):
+        base = 220 + (row - 14) * 10
+        for offset in range(3):
+            way = ET.SubElement(root, "way", id=str(base + offset))
+            for ref in (base + offset, base + offset + 1): ET.SubElement(way, "nd", ref=str(ref))
+            ET.SubElement(way, "tag", k="highway", v=road_class if offset == 1 else "path")
+            ET.SubElement(way, "tag", k="foot", v="yes")
     # Parent's network must reach its grandchild way in the actual GH graph.
     for relation_id, kind, ref in ((1, "relation", 2), (2, "way", 201)):
         relation = ET.SubElement(root, "relation", id=str(relation_id))

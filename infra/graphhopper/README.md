@@ -100,8 +100,9 @@ python3 infra/graphhopper/measure-hike.py --trails-only \
 ```
 
 The integration fixture imports a temporary hike graph with no web listener. It
-checks 12 access/barrier/SAC/road corridors, the 300 m snap cap, a nearer road versus
-a trail, nested hiking-network preference and a longer trail beating a short road.
+checks 16 access/barrier/SAC/road corridors, the 300 m snap cap, a nearer road versus
+a trail, nested hiking-network preference, a longer trail beating a short road, and
+motorway/trunk transit being forbidden between otherwise eligible trail endpoints.
 The probe script retains complete responses, geometry and details, reports
 length-weighted path/track and all-trail percentages, snaps, and maximum road class.
 `--trails-only` disables every non-trail class to diagnose graph connectivity;

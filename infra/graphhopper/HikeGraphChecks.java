@@ -15,7 +15,7 @@ public class HikeGraphChecks {
         hopper.setEncodedValuesString("foot_access,foot_priority,foot_average_speed,foot_road_access,hike_rating,foot_network,road_class,road_environment");
         hopper.setProfiles(new Profile("hike").setCustomModel(Jackson.newObjectMapper().readValue(new File(args[2]), CustomModel.class)));
         hopper.importOrLoad();
-        boolean[] expected = {true, true, false, false, false, true, false, false, false, false, false, false};
+        boolean[] expected = {true, true, false, false, false, true, false, false, false, false, false, false, true, true, false, false};
         for (int i = 0; i < expected.length; i++) {
             double lat = 40 + i * 0.02;
             GHResponse response = hopper.route(new GHRequest(lat, -75, lat, -74.98).setProfile("hike"));
@@ -37,6 +37,6 @@ public class HikeGraphChecks {
         if (trail.hasErrors() || trail.getBest().getPathDetails().get("road_class").stream().anyMatch(d -> !d.getValue().toString().equals("path")))
             throw new AssertionError("short road beat longer trail");
         hopper.close();
-        System.out.println("PASS: 12 access/barrier/SAC/road corridors, trail snapping/distance cap, nested network and trail preference");
+        System.out.println("PASS: 16 access/barrier/SAC/road corridors, trail snapping/distance cap, nested network and trail preference");
     }
 }
