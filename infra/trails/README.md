@@ -219,3 +219,8 @@ cover: relation assembly and gaps, absorbing member ways, unnamed/non-walking
 ways being dropped, exact and near duplicates, a three-source merge with a
 recorded conflict, unknown attributes staying `null`, trailheads inside and
 outside the radius, and byte-identical rebuilds.
+
+The hike index includes a geometry-derived `shape` for continuous lines using
+`src/domain/hike/shape.ts`. Disconnected multipart records are `unknown`; no
+connector is invented. Shape describes the mapped line and is not proof of a
+walkable itinerary. Older catalogs lack this field and do not match shape filters.
