@@ -91,7 +91,7 @@ export function InfoFeatureCard({
               Ride this road
             </button>
           )}
-          {roadLine === null || onAvoidRoad === undefined ? null : <button type="button" className="og-info-card__add" onClick={() => onAvoidRoad(roadLine, feature.name)}>Avoid this road</button>}
+          {roadLine === null || onAvoidRoad === undefined ? null : <button type="button" className="og-info-card__add og-info-card__avoid" onClick={() => onAvoidRoad(roadLine, feature.name)}>Avoid this road</button>}
           {point === null ? null : (
             <>
               {onAddStop === undefined || layer.category !== "stops" ? null : (

@@ -160,7 +160,10 @@ export function PlannerWorkspaceDock({
     !hasChoices &&
     !planning &&
     composer.viewModel.finishLabel === NO_FINISH_LABEL &&
-    composer.rideStyle?.view.shape !== "loop";
+    composer.rideStyle?.view.shape !== "loop" &&
+    refine.summaryCounts.avoidAreas === 0 &&
+    refine.summaryCounts.roadSpans === 0 &&
+    !refine.summaryCounts.sketch;
   const bodyRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     dockRef.current?.style.setProperty("--og-sheet-head-height", `${sheetHeadHeight}px`);
