@@ -101,10 +101,10 @@ export function toHikeCatalog(trails: readonly Trail[]): HikeCatalog {
     const record = toHikeRecord(trail);
     return record === null ? [] : [record];
   });
-  const bySource: Record<TrailSourceId, number> = { osm: 0, usfs: 0, nps: 0 };
+  const bySource: Partial<Record<TrailSourceId, number>> = { osm: 0, usfs: 0, nps: 0 };
   for (const trail of trails) {
     for (const sourceId of new Set(trail.sources.map((source) => source.sourceId))) {
-      bySource[sourceId] += 1;
+      bySource[sourceId] = (bySource[sourceId] ?? 0) + 1;
     }
   }
   return {

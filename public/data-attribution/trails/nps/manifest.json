@@ -1,0 +1,20 @@
+{
+  "sourceId": "nps",
+  "url": "https://mapservices.nps.gov/arcgis/rest/services/NationalDatasets/NPS_Public_Trails/FeatureServer/0",
+  "licence": "Public domain (US federal government)",
+  "licenceUrl": "https://www.usa.gov/government-works",
+  "recordCount": 2913,
+  "sha256": "935a3fba4a2ea31c439382ab22c9fd9b72576528d30849069952a0c67fe55916",
+  "queryBbox": [
+    -80.53,
+    38.9,
+    -73.88,
+    42.27
+  ],
+  "retrievedDate": "2026-10-28",
+  "coordinateReferenceSystem": "EPSG:4326; transformed by ArcGIS outSR from the documented source CRS",
+  "metadataFiles": [
+    "layer.json",
+    "manifest.json"
+  ]
+}

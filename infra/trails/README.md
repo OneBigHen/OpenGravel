@@ -263,3 +263,48 @@ surface, scrambling, exposure, weather and personal fitness; even the source
 warns that steep short hikes can be underrated. No missing gain is treated as 0.
 The existing domain's richer live difficulty model is unchanged. This catalog
 fallback uses the retained line/direction, not a presumed return journey.
+
+### Agency overlay
+
+`python3 infra/trails/fetch-official.py /mnt/wsl/ogv-data/trails/src/official`
+queries canonical USFS, NPS and NJDEP ArcGIS services. It first requests **all
+object IDs**, then downloads bounded ID batches, refusing truncated/missing
+batches. Metadata, dates, source URLs, CRS, hashes and licence terms accompany
+exports. US Census public-domain PA/NJ boundaries select intersecting records;
+lines remain complete rather than being silently clipped to the boundary.
+
+Run `node --max-old-space-size=20000 --import tsx infra/trails/merge-official.ts
+--base MEASURED_CATALOG --sources SOURCE_DIR --out NEW_BASE --dem-cache DEM_DIR`
+on one line, then run `enrich-trails.ts` against that new base. Only new lines need
+DEM measurement. Matched OSM IDs, geometry and DEM remain stable. Both directions
+must have ≥85% sampled length within 25 m of the other geometry, with length ratio
+≥0.8. Samples use ≤30 m spacing. Parallel trails closer than 25 m can still be
+ambiguous; differently segmented official/OSM trails conservatively remain
+separate. No partial-segment rating is projected onto an entire long relation.
+
+An official name, operator, surface, rating or readable use overrides OSM when
+present. First official value wins (NPS, then USFS, then NJDEP); conflicts and
+field sources retain the evidence. Official difficulty is separate from SAC and
+takes precedence over both SAC and derived exertion. Unknown agency values stay
+null. Planned/proposed/decommissioned features are excluded. A mapped closed
+status or explicit not-open-to-public becomes access=no, never open. Current
+access still requires checking the agency. Numeric USFS allowed-use codes without
+a decoded domain are withheld from readable uses.
+
+Federal sources are public domain. NJDEP permits redistribution with **all
+provided metadata** and the required GIS credit/disclaimer. The overlay copies
+layer metadata, the item record and the complete XML metadata to
+`public/data-attribution/trails/njdep/` and the catalog's `sources/njdep/`; every
+NJDEP trail links those terms and metadata. The manifest links all supplied
+metadata files. The guide includes the NJDEP secondary-product disclaimer. The
+source CRS is documented and transformed correctly by ArcGIS `outSR=4326`.
+
+**PA DCNR gap:** the consolidated PASDA `DCNR_All_Trails62023.zip` contains
+conflicting metadata, including “Not for commercial resale” and “This information
+may not be commercially sold.” The separately checked official parks item
+`b75f13f1096445fe9759fb8ed59d8040` grants only demonstration, education, planning
+and monitoring uses; it does not clearly grant unrestricted redistribution of a
+merged ODbL database. The forest layer does not supply a clearer grant. No DCNR
+records are imported under the open-data-only rule; publicly queryable is not
+assumed to mean openly licensed. These restrictions are not relabelled public
+domain. Review a clear compatible grant before enabling a DCNR adapter.

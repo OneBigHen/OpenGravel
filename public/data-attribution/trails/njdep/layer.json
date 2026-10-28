@@ -1,0 +1,1728 @@
+{
+  "currentVersion": 12,
+  "id": 63,
+  "name": "NJ State Park Service Trails",
+  "type": "Feature Layer",
+  "serviceItemId": "0eb7372cf7724f21ae359ad6d2900e24",
+  "cacheMaxAge": 30,
+  "displayField": "park_name",
+  "description": "",
+  "copyrightText": "",
+  "defaultVisibility": true,
+  "editFieldsInfo": {
+    "creationDateField": "CreationDate",
+    "creatorField": "Creator",
+    "editDateField": "EditDate",
+    "editorField": "Editor"
+  },
+  "editingInfo": {
+    "lastEditDate": 1788369770114,
+    "schemaLastEditDate": 1788369770114,
+    "dataLastEditDate": 1788369770114
+  },
+  "relationships": [],
+  "isDataVersioned": false,
+  "hasContingentValuesDefinition": false,
+  "supportsAppend": true,
+  "supportsCalculate": true,
+  "supportsASyncCalculate": true,
+  "supportsTruncate": true,
+  "supportsAttachmentsByUploadId": true,
+  "supportsAttachmentsResizing": true,
+  "supportsRollbackOnFailureParameter": true,
+  "supportsStatistics": true,
+  "supportsExceedsLimitStatistics": true,
+  "supportsAdvancedQueries": true,
+  "supportsValidateSql": true,
+  "supportsCoordinatesQuantization": true,
+  "supportsLayerOverrides": true,
+  "supportsTilesAndBasicQueriesMode": true,
+  "supportsFieldDescriptionProperty": true,
+  "supportsQuantizationEditMode": true,
+  "supportsColumnStoreIndex": true,
+  "supportsApplyEditsWithGlobalIds": true,
+  "supportsMultiScaleGeometry": true,
+  "supportsReturningQueryGeometry": true,
+  "enableNullGeometry": false,
+  "hasGeometryProperties": true,
+  "geometryProperties": {
+    "shapeLengthFieldName": "Shape__Length",
+    "units": "esriFeet"
+  },
+  "advancedQueryCapabilities": {
+    "supportsPagination": true,
+    "supportsPaginationOnAggregatedQueries": true,
+    "supportsQueryRelatedPagination": true,
+    "supportsQueryWithDistance": true,
+    "supportsOutDistance": true,
+    "supportsReturningQueryExtent": true,
+    "supportsStatistics": true,
+    "supportsOrderBy": true,
+    "supportsDistinct": true,
+    "supportsQueryWithResultType": true,
+    "supportsSqlExpression": true,
+    "supportsTimeRelation": true,
+    "supportsAdvancedQueryRelated": true,
+    "supportsCountDistinct": true,
+    "supportsPercentileStatistics": true,
+    "supportsApproxPercentileStatistics": true,
+    "supportsSpatialAggregationStatistics": true,
+    "supportsTrueCurve": true,
+    "supportedSpatialAggregationStatistics": [
+      "EnvelopeAggregate",
+      "CentroidAggregate",
+      "ConvexHullAggregate"
+    ],
+    "supportsLod": true,
+    "supportsQueryWithLodSR": false,
+    "supportedLodTypes": [
+      "geohash"
+    ],
+    "supportsReturningGeometryCentroid": false,
+    "supportsReturningGeometryEnvelope": true,
+    "supportsReturningGeometryProperties": true,
+    "supportsQueryWithDatumTransformation": true,
+    "supportsCurrentUserQueries": true,
+    "supportsHavingClause": true,
+    "supportsOutFieldSQLExpression": true,
+    "supportsMaxRecordCountFactor": true,
+    "supportsTopFeaturesQuery": true,
+    "supportsDisjointSpatialRel": true,
+    "supportsQueryWithCacheHint": true,
+    "supportedOperationsWithCacheHint": [
+      "query",
+      "queryTopFilter",
+      "queryAnalytics",
+      "queryAttachments",
+      "queryRelated",
+      "queryBins",
+      "queryPivot"
+    ],
+    "supportsQueryAnalytic": true,
+    "supportsQueryPivot": true,
+    "supportsQueryBins": true,
+    "supportsDefaultSR": true,
+    "supportsTranslations": false,
+    "supportsAggIds": true,
+    "supportsQueryWithCollation": true,
+    "supportsISODOW": true,
+    "supportsISOWeek": true,
+    "supportsFullTextSearch": true,
+    "fullTextSearchCapabilities": {
+      "supportsAccentSensitivity": true,
+      "supportsStopWords": true,
+      "supportsSearchOperator": true,
+      "supportsOperator": true
+    }
+  },
+  "advancedQueryAnalyticCapabilities": {
+    "supportsLinearRegression": true,
+    "supportsTrendlineRegression": true,
+    "supportsAsync": true,
+    "supportsPercentileAnalytic": true
+  },
+  "queryBinsCapabilities": {
+    "supportsAsync": true,
+    "supportsAutoIntervalBin": true,
+    "supportsFixedIntervalBin": true,
+    "supportsFixedBoundariesBin": true,
+    "supportsDateBin": true,
+    "supportsClassificationBin": true,
+    "supportsStackBy": true,
+    "supportsSplitBy": true,
+    "supportsFirstDayOfWeek": true,
+    "supportsSnapToData": true,
+    "supportsReturnFullIntervalBin": true,
+    "supportsReturnStackValueRange": true,
+    "supportsNormalization": true,
+    "supportedStatisticTypes": [
+      "COUNT",
+      "SUM",
+      "AVG",
+      "VAR",
+      "STDDEV",
+      "MIN",
+      "MAX",
+      "PERCENTILE_CONT",
+      "PERCENTILE_DISC",
+      "APPROX_PERCENTILE_CONT",
+      "APPROX_PERCENTILE_DISC",
+      "CentroidAggregate",
+      "EnvelopeAggregate",
+      "ConvexHullAggregate"
+    ],
+    "supportedNormalizationTypes": [
+      "boxCox",
+      "field",
+      "inverse",
+      "log",
+      "naturalLog",
+      "percentOfTotal",
+      "squareRoot"
+    ]
+  },
+  "supportedOperationsWithCollation": "query,addField,updateField",
+  "advancedEditingCapabilities": {
+    "supportedSqlFormatsInCalculate": [
+      "standard"
+    ],
+    "supportsAsyncApplyEdits": true,
+    "supportsReturnEditResults": true,
+    "supportsApplyEditsbyUploadID": true,
+    "supportedApplyEditsUploadIDFormats": "JSON,PBF",
+    "supportsTranslation": false,
+    "supportsMaxTranslations": 10
+  },
+  "infoInEstimates": [
+    "extent",
+    "count"
+  ],
+  "useStandardizedQueries": true,
+  "geometryType": "esriGeometryPolyline",
+  "minScale": 0,
+  "maxScale": 0,
+  "extent": {
+    "xmin": 194795.2119637616,
+    "ymin": 36147.63856103271,
+    "xmax": 621197.6911780946,
+    "ymax": 914113.27599895,
+    "spatialReference": {
+      "wkid": 102711,
+      "latestWkid": 3424
+    }
+  },
+  "spatialReference": {
+    "wkid": 102711,
+    "latestWkid": 3424
+  },
+  "drawingInfo": {
+    "renderer": {
+      "type": "simple",
+      "symbol": {
+        "type": "esriSLS",
+        "style": "esriSLSSolid",
+        "color": [
+          140,
+          140,
+          140,
+          255
+        ],
+        "width": 1
+      }
+    },
+    "scaleSymbols": true,
+    "transparency": 0,
+    "labelingInfo": [
+      {
+        "labelExpressionInfo": {
+          "expression": "$feature.trail_name",
+          "title": "Custom"
+        },
+        "labelPlacement": "esriServerLinePlacementAboveAlong",
+        "textLayout": "followFeature",
+        "deconflictionStrategy": "dynamic",
+        "allowOverrun": false,
+        "repeatLabel": false,
+        "lineConnection": "none",
+        "multiPart": "labelPerFeature",
+        "useClippedGeometry": true,
+        "stackLabel": false,
+        "removeDuplicates": "all",
+        "removeDuplicatesDistance": 216,
+        "useCodedValues": true,
+        "maxScale": 500,
+        "minScale": 24000,
+        "name": "Class 1",
+        "priority": -1,
+        "symbol": {
+          "type": "esriTS",
+          "color": [
+            0,
+            0,
+            0,
+            255
+          ],
+          "backgroundColor": null,
+          "borderLineColor": null,
+          "borderLineSize": null,
+          "verticalAlignment": "bottom",
+          "horizontalAlignment": "left",
+          "rightToLeft": false,
+          "angle": 0,
+          "xoffset": 0,
+          "yoffset": 0,
+          "kerning": true,
+          "haloColor": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "haloSize": 1,
+          "font": {
+            "family": "Arial",
+            "size": 10,
+            "style": "normal",
+            "weight": "bold",
+            "decoration": "none"
+          }
+        }
+      }
+    ]
+  },
+  "allowGeometryUpdates": true,
+  "trueCurveSupportMode": "OGC",
+  "supportedCurveTypes": [
+    "esriGeometryCircularArc"
+  ],
+  "supportedTrueCurvePbfFeatureEncodings": [
+    "esriCompressedShapeBuffer",
+    "esriDefault"
+  ],
+  "allowTrueCurvesUpdates": true,
+  "onlyAllowTrueCurveUpdatesByTrueCurveClients": true,
+  "hasAttachments": false,
+  "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+  "hasMetadata": true,
+  "hasM": false,
+  "hasZ": false,
+  "objectIdField": "objectid",
+  "uniqueIdField": {
+    "name": "objectid",
+    "isSystemMaintained": true
+  },
+  "globalIdField": "globalid",
+  "typeIdField": "",
+  "collation": {
+    "locale": "neutral",
+    "caseSensitive": false,
+    "accentSensitive": true
+  },
+  "fields": [
+    {
+      "name": "objectid",
+      "type": "esriFieldTypeOID",
+      "alias": "OBJECTID",
+      "sqlType": "sqlTypeOther",
+      "nullable": false,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "park_name",
+      "type": "esriFieldTypeString",
+      "alias": "Park Name",
+      "sqlType": "sqlTypeOther",
+      "length": 75,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "site_name",
+      "type": "esriFieldTypeString",
+      "alias": "Site Name",
+      "sqlType": "sqlTypeOther",
+      "length": 50,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "trail_name",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Name",
+      "sqlType": "sqlTypeOther",
+      "length": 75,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "trl_color",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Color",
+      "sqlType": "sqlTypeOther",
+      "length": 65,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "alt_trl_color",
+      "type": "esriFieldTypeString",
+      "alias": "Alt Trail Color",
+      "sqlType": "sqlTypeOther",
+      "length": 30,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "gen_color",
+      "type": "esriFieldTypeString",
+      "alias": "Generalized Color",
+      "sqlType": "sqlTypeOther",
+      "length": 20,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_GEN_COLOR",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Generalized Color",
+        "codedValues": [
+          {
+            "name": "Yellow",
+            "code": "Yellow"
+          },
+          {
+            "name": "White",
+            "code": "White"
+          },
+          {
+            "name": "Unmarked",
+            "code": "Unmarked"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unknown"
+          },
+          {
+            "name": "Teal",
+            "code": "Teal"
+          },
+          {
+            "name": "Red",
+            "code": "Red"
+          },
+          {
+            "name": "Purple",
+            "code": "Purple"
+          },
+          {
+            "name": "Pink",
+            "code": "Pink"
+          },
+          {
+            "name": "Orange",
+            "code": "Orange"
+          },
+          {
+            "name": "NA",
+            "code": "NA"
+          },
+          {
+            "name": "Lt Green",
+            "code": "Lt Green"
+          },
+          {
+            "name": "Lt Brown",
+            "code": "Lt Brown"
+          },
+          {
+            "name": "Lt Blue",
+            "code": "Lt Blue"
+          },
+          {
+            "name": "Green",
+            "code": "Green"
+          },
+          {
+            "name": "Gray",
+            "code": "Gray"
+          },
+          {
+            "name": "Brown",
+            "code": "Brown"
+          },
+          {
+            "name": "Blue",
+            "code": "Blue"
+          },
+          {
+            "name": "Black",
+            "code": "Black"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "blaze_type",
+      "type": "esriFieldTypeString",
+      "alias": "Blaze Type",
+      "sqlType": "sqlTypeOther",
+      "length": 35,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_BLAZE_TYPE",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Blaze Type",
+        "codedValues": [
+          {
+            "name": "Carsonite Post",
+            "code": "Carsonite Post"
+          },
+          {
+            "name": "Coated Rope",
+            "code": "Coated Rope"
+          },
+          {
+            "name": "Interpretive Wayside",
+            "code": "Interpretive Wayside"
+          },
+          {
+            "name": "Metal Blaze",
+            "code": "Metal Blaze"
+          },
+          {
+            "name": "NA",
+            "code": "NA"
+          },
+          {
+            "name": "Painted",
+            "code": "Painted"
+          },
+          {
+            "name": "Painted Blaze",
+            "code": "Painted Blaze"
+          },
+          {
+            "name": "Painted Tree",
+            "code": "Painted Tree"
+          },
+          {
+            "name": "Plastic Blaze",
+            "code": "Plastic Blaze"
+          },
+          {
+            "name": "Plastic in Tree",
+            "code": "Plastic in Tree"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unknown"
+          },
+          {
+            "name": "Unmarked",
+            "code": "Unmarked"
+          },
+          {
+            "name": "Wooden Post",
+            "code": "Wooden Post"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "blaze_desc",
+      "type": "esriFieldTypeString",
+      "alias": "Blaze Description",
+      "sqlType": "sqlTypeOther",
+      "length": 35,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "trail_surf_prim",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Surface Primary",
+      "sqlType": "sqlTypeOther",
+      "length": 254,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_SURFACE_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Trail Surface",
+        "codedValues": [
+          {
+            "name": "Aggregate",
+            "code": "Aggregate"
+          },
+          {
+            "name": "Asphalt",
+            "code": "Asphalt"
+          },
+          {
+            "name": "Boardwalk/Decking",
+            "code": "Boardwalk/Decking"
+          },
+          {
+            "name": "Compact Soil",
+            "code": "Compact Soil"
+          },
+          {
+            "name": "Compacted Stones",
+            "code": "Compacted Stones"
+          },
+          {
+            "name": "Dirt",
+            "code": "Dirt"
+          },
+          {
+            "name": "Dirt/Sand",
+            "code": "Dirt/Sand"
+          },
+          {
+            "name": "Grass",
+            "code": "Grass"
+          },
+          {
+            "name": "Gravel",
+            "code": "Gravel"
+          },
+          {
+            "name": "Gravel/Dirt",
+            "code": "Gravel/Dirt"
+          },
+          {
+            "name": "Loose Aggregate",
+            "code": "Loose Aggregate"
+          },
+          {
+            "name": "Loose Sand/Soft Dirt",
+            "code": "Loose Sand/Soft Dirt"
+          },
+          {
+            "name": "Natural",
+            "code": "Natural"
+          },
+          {
+            "name": "Paved",
+            "code": "Paved"
+          },
+          {
+            "name": "Rocky",
+            "code": "Rocky"
+          },
+          {
+            "name": "Roots",
+            "code": "Roots"
+          },
+          {
+            "name": "Sand",
+            "code": "Sand"
+          },
+          {
+            "name": "Shell",
+            "code": "Shell"
+          },
+          {
+            "name": "Soil",
+            "code": "Soil"
+          },
+          {
+            "name": "Solid Surface",
+            "code": "Solid Surface"
+          },
+          {
+            "name": "Stabilized Natural Surface",
+            "code": "Stabilized Natural Surface"
+          },
+          {
+            "name": "Stairs",
+            "code": "Stairs"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unknown"
+          },
+          {
+            "name": "Water",
+            "code": "Water"
+          },
+          {
+            "name": "Wood",
+            "code": "Wood"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "trail_surf_sec",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Surface Secondary",
+      "sqlType": "sqlTypeOther",
+      "length": 254,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_SURFACE_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Trail Surface",
+        "codedValues": [
+          {
+            "name": "Aggregate",
+            "code": "Aggregate"
+          },
+          {
+            "name": "Asphalt",
+            "code": "Asphalt"
+          },
+          {
+            "name": "Boardwalk/Decking",
+            "code": "Boardwalk/Decking"
+          },
+          {
+            "name": "Compact Soil",
+            "code": "Compact Soil"
+          },
+          {
+            "name": "Compacted Stones",
+            "code": "Compacted Stones"
+          },
+          {
+            "name": "Dirt",
+            "code": "Dirt"
+          },
+          {
+            "name": "Dirt/Sand",
+            "code": "Dirt/Sand"
+          },
+          {
+            "name": "Grass",
+            "code": "Grass"
+          },
+          {
+            "name": "Gravel",
+            "code": "Gravel"
+          },
+          {
+            "name": "Gravel/Dirt",
+            "code": "Gravel/Dirt"
+          },
+          {
+            "name": "Loose Aggregate",
+            "code": "Loose Aggregate"
+          },
+          {
+            "name": "Loose Sand/Soft Dirt",
+            "code": "Loose Sand/Soft Dirt"
+          },
+          {
+            "name": "Natural",
+            "code": "Natural"
+          },
+          {
+            "name": "Paved",
+            "code": "Paved"
+          },
+          {
+            "name": "Rocky",
+            "code": "Rocky"
+          },
+          {
+            "name": "Roots",
+            "code": "Roots"
+          },
+          {
+            "name": "Sand",
+            "code": "Sand"
+          },
+          {
+            "name": "Shell",
+            "code": "Shell"
+          },
+          {
+            "name": "Soil",
+            "code": "Soil"
+          },
+          {
+            "name": "Solid Surface",
+            "code": "Solid Surface"
+          },
+          {
+            "name": "Stabilized Natural Surface",
+            "code": "Stabilized Natural Surface"
+          },
+          {
+            "name": "Stairs",
+            "code": "Stairs"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unknown"
+          },
+          {
+            "name": "Water",
+            "code": "Water"
+          },
+          {
+            "name": "Wood",
+            "code": "Wood"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "trl_type_s",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Type",
+      "sqlType": "sqlTypeOther",
+      "length": 15,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_TYPE_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Trail Type",
+        "codedValues": [
+          {
+            "name": "Connector",
+            "code": "Connector"
+          },
+          {
+            "name": "Official",
+            "code": "Official"
+          },
+          {
+            "name": "Road",
+            "code": "Road"
+          },
+          {
+            "name": "Unofficial",
+            "code": "Unofficial"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "gis_total_length_mi",
+      "type": "esriFieldTypeDouble",
+      "alias": "Trail Total Length (Miles)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "gis_segment_length_mi",
+      "type": "esriFieldTypeDouble",
+      "alias": "Segment Total Length (Miles)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "trl_diff",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Difficulty",
+      "sqlType": "sqlTypeOther",
+      "length": 25,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_DIFFICULTY_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Trail Difficulty",
+        "codedValues": [
+          {
+            "name": "Easy",
+            "code": "Easy"
+          },
+          {
+            "name": "Easy to Moderate",
+            "code": "Easy to Moderate"
+          },
+          {
+            "name": "Moderate",
+            "code": "Moderate"
+          },
+          {
+            "name": "Moderate to Difficult",
+            "code": "Moderate to Difficult"
+          },
+          {
+            "name": "Difficult",
+            "code": "Difficult"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unknown"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "trail_desc",
+      "type": "esriFieldTypeString",
+      "alias": "Trail Description",
+      "sqlType": "sqlTypeOther",
+      "length": 100,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "hiking_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Hiking Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "biking_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Biking Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "hbr_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Horseback Riding Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "cross_country_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Cross Country Ski Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "snow_mobile_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Snow Mobile Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "rgnl_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Regional Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "moto_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Motorized Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "fitness_trl",
+      "type": "esriFieldTypeString",
+      "alias": "Fitness Trail",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "opdmd1",
+      "type": "esriFieldTypeString",
+      "alias": "OPDMD Cat 1",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "opdmd2",
+      "type": "esriFieldTypeString",
+      "alias": "OPDMD Cat 2",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "opdmd3",
+      "type": "esriFieldTypeString",
+      "alias": "OPDMD Cat 3",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "grade_max",
+      "type": "esriFieldTypeDouble",
+      "alias": "Grade Maximum (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "grade_mean",
+      "type": "esriFieldTypeDouble",
+      "alias": "Grade Average (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "grade_std_dev",
+      "type": "esriFieldTypeDouble",
+      "alias": "Grade Standard Deviation (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "xslope_max",
+      "type": "esriFieldTypeDouble",
+      "alias": "Cross Slope Maximum (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "xslope_mean",
+      "type": "esriFieldTypeDouble",
+      "alias": "Cross Slope Average (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "xslope_std_dev",
+      "type": "esriFieldTypeDouble",
+      "alias": "Cross Slope Standard Deviation (%)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "width_mean_in",
+      "type": "esriFieldTypeInteger",
+      "alias": "Trail Width Average (in)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "width_min_in",
+      "type": "esriFieldTypeInteger",
+      "alias": "Trail Width Minimum (in)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "access_compliance",
+      "type": "esriFieldTypeString",
+      "alias": "Access Compliance",
+      "sqlType": "sqlTypeOther",
+      "length": 254,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_ACCESS_COMPLIANCE",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "Access Compliance",
+        "codedValues": [
+          {
+            "name": "ABA",
+            "code": "ABA"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "access_desc",
+      "type": "esriFieldTypeString",
+      "alias": "Accessibility Description",
+      "sqlType": "sqlTypeOther",
+      "length": 255,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "firm_stable",
+      "type": "esriFieldTypeString",
+      "alias": "Firm and Stable",
+      "sqlType": "sqlTypeOther",
+      "length": 3,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "YesNo_UNK_3",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDuplicate",
+        "description": "A Yes/No/Unknown indicator",
+        "codedValues": [
+          {
+            "name": "Yes",
+            "code": "Yes"
+          },
+          {
+            "name": "No",
+            "code": "No"
+          },
+          {
+            "name": "Unknown",
+            "code": "Unk"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "gis_total_length_me",
+      "type": "esriFieldTypeDouble",
+      "alias": "Trail Total Length (Meters)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "gis_segment_length_me",
+      "type": "esriFieldTypeDouble",
+      "alias": "Segment Total Length (Meters)",
+      "sqlType": "sqlTypeOther",
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "park_website",
+      "type": "esriFieldTypeString",
+      "alias": "Park URL",
+      "sqlType": "sqlTypeOther",
+      "length": 100,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "feature_name",
+      "type": "esriFieldTypeString",
+      "alias": "Feature Name",
+      "sqlType": "sqlTypeOther",
+      "length": 100,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "feature_class",
+      "type": "esriFieldTypeString",
+      "alias": "Feature Class",
+      "sqlType": "sqlTypeOther",
+      "length": 100,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "region",
+      "type": "esriFieldTypeString",
+      "alias": "Region",
+      "sqlType": "sqlTypeOther",
+      "length": 10,
+      "nullable": true,
+      "editable": true,
+      "domain": {
+        "type": "codedValue",
+        "name": "TRAIL_REGION",
+        "mergePolicy": "esriMPTDefaultValue",
+        "splitPolicy": "esriSPTDefaultValue",
+        "description": "NJSPF&HS assigned region",
+        "codedValues": [
+          {
+            "name": "Northern",
+            "code": "Northern"
+          },
+          {
+            "name": "Central",
+            "code": "Central"
+          },
+          {
+            "name": "Southern",
+            "code": "Southern"
+          },
+          {
+            "name": "Coastal",
+            "code": "Coastal"
+          }
+        ]
+      },
+      "defaultValue": null
+    },
+    {
+      "name": "ownership",
+      "type": "esriFieldTypeString",
+      "alias": "Ownership",
+      "sqlType": "sqlTypeOther",
+      "length": 50,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "srce_type",
+      "type": "esriFieldTypeString",
+      "alias": "Source Type",
+      "sqlType": "sqlTypeOther",
+      "length": 40,
+      "nullable": true,
+      "editable": true,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "globalid",
+      "type": "esriFieldTypeGlobalID",
+      "alias": "GlobalID",
+      "sqlType": "sqlTypeOther",
+      "length": 38,
+      "nullable": false,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "last_edited_date",
+      "type": "esriFieldTypeDate",
+      "alias": "last_edited_date",
+      "sqlType": "sqlTypeOther",
+      "length": 8,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null,
+      "precision": 1
+    },
+    {
+      "name": "CreationDate",
+      "type": "esriFieldTypeDate",
+      "alias": "CreationDate",
+      "sqlType": "sqlTypeOther",
+      "length": 8,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null,
+      "precision": 1
+    },
+    {
+      "name": "Creator",
+      "type": "esriFieldTypeString",
+      "alias": "Creator",
+      "sqlType": "sqlTypeOther",
+      "length": 128,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "EditDate",
+      "type": "esriFieldTypeDate",
+      "alias": "EditDate",
+      "sqlType": "sqlTypeOther",
+      "length": 8,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null,
+      "precision": 1
+    },
+    {
+      "name": "Editor",
+      "type": "esriFieldTypeString",
+      "alias": "Editor",
+      "sqlType": "sqlTypeOther",
+      "length": 128,
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    },
+    {
+      "name": "Shape__Length",
+      "type": "esriFieldTypeDouble",
+      "alias": "Shape__Length",
+      "sqlType": "sqlTypeDouble",
+      "nullable": true,
+      "editable": false,
+      "domain": null,
+      "defaultValue": null
+    }
+  ],
+  "indexes": [
+    {
+      "name": "PK__NJ_STATE__5242E63219BB4F42",
+      "fields": "objectid",
+      "isAscending": true,
+      "isUnique": true,
+      "description": "",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "user_5506.NJ_STATE_PARK_SERVICE_TRAILS_H_NJ_STATE_PARK_SERVICE_TRAILS_Shape_sidx",
+      "fields": "shape",
+      "isAscending": true,
+      "isUnique": false,
+      "description": "",
+      "indexType": "Spatial"
+    },
+    {
+      "name": "FDO_globalid",
+      "fields": "globalid",
+      "isAscending": true,
+      "isUnique": true,
+      "description": "",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "Shape__Length_Index",
+      "fields": "Shape__Length",
+      "isAscending": true,
+      "isUnique": false,
+      "description": "",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "CreationDateIndex",
+      "fields": "CreationDate",
+      "isAscending": true,
+      "isUnique": false,
+      "description": "CreationDate Field index",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "CreatorIndex",
+      "fields": "Creator",
+      "isAscending": false,
+      "isUnique": false,
+      "description": "Creator Field index",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "EditDateIndex",
+      "fields": "EditDate",
+      "isAscending": true,
+      "isUnique": false,
+      "description": "EditDate Field index",
+      "indexType": "Attribute"
+    },
+    {
+      "name": "EditorIndex",
+      "fields": "Editor",
+      "isAscending": false,
+      "isUnique": false,
+      "description": "Editor Field index",
+      "indexType": "Attribute"
+    }
+  ],
+  "dateFieldsTimeReference": {
+    "timeZone": "UTC",
+    "timeZoneIANA": "Etc/UTC",
+    "respectsDaylightSaving": false
+  },
+  "preferredTimeReference": null,
+  "types": [],
+  "templates": [
+    {
+      "name": "NJ State Park Service Trails",
+      "description": "",
+      "drawingTool": "esriFeatureEditToolLine",
+      "prototype": {
+        "attributes": {
+          "ownership": null,
+          "srce_type": null,
+          "park_name": null,
+          "site_name": null,
+          "trail_name": null,
+          "trl_color": null,
+          "alt_trl_color": null,
+          "gen_color": null,
+          "blaze_type": null,
+          "blaze_desc": null,
+          "trail_surf_prim": null,
+          "trail_surf_sec": null,
+          "trl_type_s": null,
+          "gis_total_length_mi": null,
+          "gis_segment_length_mi": null,
+          "trl_diff": null,
+          "trail_desc": null,
+          "hiking_trl": null,
+          "biking_trl": null,
+          "hbr_trl": null,
+          "cross_country_trl": null,
+          "snow_mobile_trl": null,
+          "rgnl_trl": null,
+          "moto_trl": null,
+          "fitness_trl": null,
+          "opdmd1": null,
+          "opdmd2": null,
+          "opdmd3": null,
+          "grade_max": null,
+          "grade_mean": null,
+          "grade_std_dev": null,
+          "xslope_max": null,
+          "xslope_mean": null,
+          "xslope_std_dev": null,
+          "width_mean_in": null,
+          "width_min_in": null,
+          "access_compliance": null,
+          "access_desc": null,
+          "firm_stable": null,
+          "gis_total_length_me": null,
+          "gis_segment_length_me": null,
+          "park_website": null,
+          "feature_name": null,
+          "feature_class": null,
+          "region": null
+        }
+      }
+    }
+  ],
+  "supportedQueryFormats": "JSON, geoJSON, PBF",
+  "supportedAppendFormats": "sqlite,geoPackage,shapefile,filegdb,featureCollection,geojson,csv,excel,jsonl,featureService,pbf",
+  "supportedAppendSourceFilterFormats": "sqlite,geoPackage,shapefile,filegdb,featureService",
+  "supportedExportFormats": "csv,shapefile,sqlite,geoPackage,filegdb,featureCollection,geojson,kml,excel,parquet",
+  "supportedConvertFileFormats": "JSON,PBF,Parquet",
+  "supportedConvertContentFormats": "LayerEditCollection,FeatureCollection",
+  "supportedSpatialRelationships": [
+    "esriSpatialRelIntersects",
+    "esriSpatialRelContains",
+    "esriSpatialRelCrosses",
+    "esriSpatialRelEnvelopeIntersects",
+    "esriSpatialRelIndexIntersects",
+    "esriSpatialRelOverlaps",
+    "esriSpatialRelTouches",
+    "esriSpatialRelWithin",
+    "esriSpatialRelDisjoint",
+    "esriSpatialRelRelation"
+  ],
+  "guidFormat": "",
+  "supportsContingentValues": true,
+  "supportsEditingContingentValues": true,
+  "supportedContingentValuesFormats": "JSON, PBF",
+  "supportsFieldGroups": true,
+  "supportedSyncDataOptions": 260,
+  "hasStaticData": false,
+  "maxRecordCount": 2000,
+  "standardMaxRecordCount": 2000,
+  "maxIdsCount": 1000000,
+  "standardMaxRecordCountNoGeometry": 32000,
+  "tileMaxRecordCount": 4000,
+  "maxRecordCountFactor": 1,
+  "capabilities": "Query,Extract"
+}

@@ -12,13 +12,14 @@ import type { RichHike } from "./rich-types";
 import type { HikeShape } from "../../../src/domain/hike/types";
 
 /** Sources this job can merge. Order in `SOURCE_PRIORITY` decides field winners. */
-export type TrailSourceId = "osm" | "usfs" | "nps";
+export type TrailSourceId = "osm" | "usfs" | "nps" | "dcnr" | "njdep";
 
 export interface TrailSource {
   readonly sourceId: TrailSourceId;
   readonly sourceLabel: string;
   readonly licence?: string;
   readonly licenceUrl?: string;
+  readonly metadataUrl?: string;
   /** Stable id inside the source: `relation/123`, `way/456`, the USFS trail number, … */
   readonly recordId: string;
   readonly url: string | null;
@@ -139,7 +140,7 @@ export interface HikeCatalog {
   readonly version: 1;
   readonly counts: {
     readonly trails: number;
-    readonly bySource: Readonly<Record<TrailSourceId, number>>;
+    readonly bySource: Readonly<Partial<Record<TrailSourceId, number>>>;
     readonly withTrailhead: number;
     readonly merged: number;
   };

@@ -1,0 +1,20 @@
+{
+  "sourceId": "usfs",
+  "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublish_01/MapServer/0",
+  "licence": "Public domain (US federal government)",
+  "licenceUrl": "https://www.usa.gov/government-works",
+  "recordCount": 471,
+  "sha256": "ee03dfaf1c2002609a214c4f9fdc96ee13d8b04c982b64be1ad8099235eccad1",
+  "queryBbox": [
+    -80.53,
+    38.9,
+    -73.88,
+    42.27
+  ],
+  "retrievedDate": "2026-10-28",
+  "coordinateReferenceSystem": "EPSG:4326; transformed by ArcGIS outSR from the documented source CRS",
+  "metadataFiles": [
+    "layer.json",
+    "manifest.json"
+  ]
+}

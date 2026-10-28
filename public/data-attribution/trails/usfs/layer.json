@@ -1,0 +1,1076 @@
+{
+  "currentVersion": 11.5,
+  "cimVersion": "3.5.0",
+  "id": 0,
+  "name": "Trans_Trail_NFS_Publish",
+  "type": "Feature Layer",
+  "description": "The TrailNFS_Publish Layer is designed to provide information about National Forest System trail locations and characteristics to the public. When fully realized, it will describe trail locations, basic characteristics of the trail, and where and when various trail uses are prohibited, allowed and encouraged. Because the data readiness varies between Forests, each Forest will approve which level of attribute subset are published for that forest. Forests can provide no information or one of three attribute subsets describing trails. The attribute subsets include TrailNFS_Centerline which includes the location and trail name and number; TrailNFS_Basic which adds information about basic trail characteristics; and TrailNFS_Mgmt which adds information about where and when users are prohibited, allowed, and encouraged. When a Forest chooses to provide the highest attribute subset, TrailNFS_Mgmt, these attributes must be consistent with the Forest's published Motorized Vehicle Use Map (MVUM).",
+  "geometryType": "esriGeometryPolyline",
+  "sourceSpatialReference": {
+    "wkid": 4269,
+    "latestWkid": 4269,
+    "xyTolerance": 8.983152841195215e-09,
+    "zTolerance": 0.001,
+    "mTolerance": 0.001,
+    "falseX": -400,
+    "falseY": -400,
+    "xyUnits": 999999999.9999999,
+    "falseZ": -100000,
+    "zUnits": 10000,
+    "falseM": -100000,
+    "mUnits": 10000
+  },
+  "spatialReference": {
+    "wkid": 4269,
+    "latestWkid": 4269,
+    "xyTolerance": 8.98315284119521e-09,
+    "zTolerance": 0.001,
+    "mTolerance": 0.001,
+    "falseX": -400,
+    "falseY": -400,
+    "xyUnits": 999999999.9999999,
+    "falseZ": -100000,
+    "zUnits": 10000,
+    "falseM": -100000,
+    "mUnits": 10000
+  },
+  "copyrightText": "USDA Forest Service",
+  "parentLayer": null,
+  "subLayers": [],
+  "minScale": 288895.277144,
+  "maxScale": 0,
+  "referenceScale": 0.0,
+  "drawingInfo": {
+    "renderer": {
+      "type": "simple",
+      "symbol": {
+        "type": "esriSLS",
+        "style": "esriSLSSolid",
+        "color": [
+          0,
+          0,
+          0,
+          255
+        ],
+        "width": 1
+      }
+    },
+    "scaleSymbols": true,
+    "transparency": 0,
+    "labelingInfo": null
+  },
+  "defaultVisibility": true,
+  "extent": {
+    "xmin": -149.99743348199996,
+    "ymin": 18.271771344000058,
+    "xmax": -65.74393194699996,
+    "ymax": 61.13142429700008,
+    "spatialReference": {
+      "wkid": 4269,
+      "latestWkid": 4269,
+      "xyTolerance": 8.98315284119521e-09,
+      "zTolerance": 0.001,
+      "mTolerance": 0.001,
+      "falseX": -400,
+      "falseY": -400,
+      "xyUnits": 999999999.9999999,
+      "falseZ": -100000,
+      "zUnits": 10000,
+      "falseM": -100000,
+      "mUnits": 10000
+    }
+  },
+  "hasAttachments": false,
+  "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+  "displayField": "TRAIL_NAME",
+  "typeIdField": null,
+  "subtypeFieldName": null,
+  "subtypeField": null,
+  "defaultSubtypeCode": null,
+  "fields": [
+    {
+      "name": "objectid",
+      "type": "esriFieldTypeOID",
+      "alias": "OBJECTID",
+      "domain": null
+    },
+    {
+      "name": "trail_name",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_NAME",
+      "length": 30,
+      "domain": null
+    },
+    {
+      "name": "trail_type",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_TYPE",
+      "length": 5,
+      "domain": null
+    },
+    {
+      "name": "trail_cn",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_CN",
+      "length": 34,
+      "domain": null
+    },
+    {
+      "name": "bmp",
+      "type": "esriFieldTypeDouble",
+      "alias": "BMP",
+      "domain": null
+    },
+    {
+      "name": "emp",
+      "type": "esriFieldTypeDouble",
+      "alias": "EMP",
+      "domain": null
+    },
+    {
+      "name": "segment_length",
+      "type": "esriFieldTypeDouble",
+      "alias": "SEGMENT_LENGTH",
+      "domain": null
+    },
+    {
+      "name": "admin_org",
+      "type": "esriFieldTypeString",
+      "alias": "ADMIN_ORG",
+      "length": 10,
+      "domain": null
+    },
+    {
+      "name": "managing_org",
+      "type": "esriFieldTypeString",
+      "alias": "MANAGING_ORG",
+      "length": 10,
+      "domain": null
+    },
+    {
+      "name": "security_id",
+      "type": "esriFieldTypeString",
+      "alias": "SECURITY_ID",
+      "length": 4,
+      "domain": null
+    },
+    {
+      "name": "attributesubset",
+      "type": "esriFieldTypeString",
+      "alias": "ATTRIBUTESUBSET",
+      "length": 50,
+      "domain": null
+    },
+    {
+      "name": "national_trail_designation",
+      "type": "esriFieldTypeInteger",
+      "alias": "NATIONAL_TRAIL_DESIGNATION",
+      "domain": null
+    },
+    {
+      "name": "trail_class",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_CLASS",
+      "length": 1,
+      "domain": null
+    },
+    {
+      "name": "accessibility_status",
+      "type": "esriFieldTypeString",
+      "alias": "ACCESSIBILITY_STATUS",
+      "length": 40,
+      "domain": null
+    },
+    {
+      "name": "trail_surface",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_SURFACE",
+      "length": 40,
+      "domain": null
+    },
+    {
+      "name": "surface_firmness",
+      "type": "esriFieldTypeString",
+      "alias": "SURFACE_FIRMNESS",
+      "length": 20,
+      "domain": null
+    },
+    {
+      "name": "typical_trail_grade",
+      "type": "esriFieldTypeString",
+      "alias": "TYPICAL_TRAIL_GRADE",
+      "length": 20,
+      "domain": null
+    },
+    {
+      "name": "typical_tread_width",
+      "type": "esriFieldTypeString",
+      "alias": "TYPICAL_TREAD_WIDTH",
+      "length": 30,
+      "domain": null
+    },
+    {
+      "name": "minimum_trail_width",
+      "type": "esriFieldTypeString",
+      "alias": "MINIMUM_TRAIL_WIDTH",
+      "length": 15,
+      "domain": null
+    },
+    {
+      "name": "typical_tread_cross_slope",
+      "type": "esriFieldTypeString",
+      "alias": "TYPICAL_TREAD_CROSS_SLOPE",
+      "length": 10,
+      "domain": null
+    },
+    {
+      "name": "special_mgmt_area",
+      "type": "esriFieldTypeString",
+      "alias": "SPECIAL_MGMT_AREA",
+      "length": 50,
+      "domain": null
+    },
+    {
+      "name": "terra_base_symbology",
+      "type": "esriFieldTypeString",
+      "alias": "TERRA_BASE_SYMBOLOGY",
+      "length": 5,
+      "domain": null
+    },
+    {
+      "name": "mvum_symbol",
+      "type": "esriFieldTypeInteger",
+      "alias": "MVUM_SYMBOL",
+      "domain": null
+    },
+    {
+      "name": "terra_motorized",
+      "type": "esriFieldTypeString",
+      "alias": "TERRA_MOTORIZED",
+      "length": 3,
+      "domain": null
+    },
+    {
+      "name": "snow_motorized",
+      "type": "esriFieldTypeString",
+      "alias": "SNOW_MOTORIZED",
+      "length": 3,
+      "domain": null
+    },
+    {
+      "name": "water_motorized",
+      "type": "esriFieldTypeString",
+      "alias": "WATER_MOTORIZED",
+      "length": 3,
+      "domain": null
+    },
+    {
+      "name": "allowed_terra_use",
+      "type": "esriFieldTypeString",
+      "alias": "ALLOWED_TERRA_USE",
+      "length": 6,
+      "domain": null
+    },
+    {
+      "name": "allowed_snow_use",
+      "type": "esriFieldTypeString",
+      "alias": "ALLOWED_SNOW_USE",
+      "length": 3,
+      "domain": null
+    },
+    {
+      "name": "hiker_pedestrian_managed",
+      "type": "esriFieldTypeString",
+      "alias": "HIKER_PEDESTRIAN_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "hiker_pedestrian_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "HIKER_PEDESTRIAN_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "hiker_pedestrian_disc",
+      "type": "esriFieldTypeString",
+      "alias": "HIKER_PEDESTRIAN_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "hiker_pedestrian_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "HIKER_PEDESTRIAN_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "hiker_pedestrian_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "HIKER_PEDESTRIAN_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "pack_saddle_managed",
+      "type": "esriFieldTypeString",
+      "alias": "PACK_SADDLE_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "pack_saddle_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "PACK_SADDLE_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "pack_saddle_disc",
+      "type": "esriFieldTypeString",
+      "alias": "PACK_SADDLE_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "pack_saddle_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "PACK_SADDLE_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "pack_saddle_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "PACK_SADDLE_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "bicycle_managed",
+      "type": "esriFieldTypeString",
+      "alias": "BICYCLE_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "bicycle_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "BICYCLE_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "bicycle_disc",
+      "type": "esriFieldTypeString",
+      "alias": "BICYCLE_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "bicycle_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "BICYCLE_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "bicycle_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "BICYCLE_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motorcycle_managed",
+      "type": "esriFieldTypeString",
+      "alias": "MOTORCYCLE_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motorcycle_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "MOTORCYCLE_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motorcycle_disc",
+      "type": "esriFieldTypeString",
+      "alias": "MOTORCYCLE_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motorcycle_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "MOTORCYCLE_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motorcycle_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "MOTORCYCLE_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "atv_managed",
+      "type": "esriFieldTypeString",
+      "alias": "ATV_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "atv_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "ATV_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "atv_disc",
+      "type": "esriFieldTypeString",
+      "alias": "ATV_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "atv_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "ATV_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "atv_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "ATV_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "fourwd_managed",
+      "type": "esriFieldTypeString",
+      "alias": "FOURWD_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "fourwd_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "FOURWD_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "fourwd_disc",
+      "type": "esriFieldTypeString",
+      "alias": "FOURWD_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "fourwd_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "FOURWD_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "fourwd_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "FOURWD_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "trail_no",
+      "type": "esriFieldTypeString",
+      "alias": "TRAIL_NO",
+      "length": 30,
+      "domain": null
+    },
+    {
+      "name": "snowcoach_snowcat_managed",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWCOACH_SNOWCAT_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowcoach_snowcat_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWCOACH_SNOWCAT_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowcoach_snowcat_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWCOACH_SNOWCAT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowcoach_snowcat_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWCOACH_SNOWCAT_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowcoach_snowcat_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWCOACH_SNOWCAT_RESTRICTED",
+      "length": 255,
+      "domain": null
+    },
+    {
+      "name": "snowmobile_managed",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWMOBILE_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowmobile_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWMOBILE_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowmobile_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWMOBILE_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowmobile_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWMOBILE_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowmobile_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWMOBILE_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowshoe_managed",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWSHOE_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowshoe_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWSHOE_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowshoe_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWSHOE_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowshoe_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWSHOE_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "snowshoe_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "SNOWSHOE_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "xcountry_ski_managed",
+      "type": "esriFieldTypeString",
+      "alias": "XCOUNTRY_SKI_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "xcountry_ski_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "XCOUNTRY_SKI_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "xcountry_ski_disc",
+      "type": "esriFieldTypeString",
+      "alias": "XCOUNTRY_SKI_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "xcountry_ski_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "XCOUNTRY_SKI_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "xcountry_ski_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "XCOUNTRY_SKI_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motor_watercraft_managed",
+      "type": "esriFieldTypeString",
+      "alias": "MOTOR_WATERCRAFT_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motor_watercraft_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "MOTOR_WATERCRAFT_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motor_watercraft_disc",
+      "type": "esriFieldTypeString",
+      "alias": "MOTOR_WATERCRAFT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motor_watercraft_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "MOTOR_WATERCRAFT_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "motor_watercraft_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "MOTOR_WATERCRAFT_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "nonmotor_watercraft_managed",
+      "type": "esriFieldTypeString",
+      "alias": "NONMOTOR_WATERCRAFT_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "nonmotor_watercraft_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "NONMOTOR_WATERCRAFT_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "nonmotor_watercraft_disc",
+      "type": "esriFieldTypeString",
+      "alias": "NONMOTOR_WATERCRAFT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "nonmotor_watercraft_accpt_disc",
+      "type": "esriFieldTypeString",
+      "alias": "NONMOTOR_WATERCRAFT_ACCPT_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "nonmotor_watercraft_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "NONMOTOR_WATERCRAFT_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "gis_miles",
+      "type": "esriFieldTypeDouble",
+      "alias": "GIS_MILES",
+      "domain": null
+    },
+    {
+      "name": "e_bike_class1_managed",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS1_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class1_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS1_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class1_disc",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS1_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class1_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS1_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class2_managed",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS2_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class2_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS2_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class2_disc",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS2_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class2_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS2_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class3_managed",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS3_MANAGED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class3_accpt",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS3_ACCPT",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class3_disc",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS3_DISC",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "e_bike_class3_restricted",
+      "type": "esriFieldTypeString",
+      "alias": "E_BIKE_CLASS3_RESTRICTED",
+      "length": 100,
+      "domain": null
+    },
+    {
+      "name": "globalid",
+      "type": "esriFieldTypeGlobalID",
+      "alias": "globalid",
+      "length": 38,
+      "domain": null
+    },
+    {
+      "name": "shape",
+      "type": "esriFieldTypeGeometry",
+      "alias": "SHAPE",
+      "domain": null
+    },
+    {
+      "name": "st_length(shape)",
+      "type": "esriFieldTypeDouble",
+      "alias": "st_length(shape)",
+      "domain": null
+    }
+  ],
+  "geometryField": {
+    "name": "shape",
+    "type": "esriFieldTypeGeometry",
+    "alias": "SHAPE"
+  },
+  "indexes": [
+    {
+      "name": "i313accessibilit",
+      "fields": "accessibility_status",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313attributesub",
+      "fields": "attributesubset",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313atv_accpt_di",
+      "fields": "atv_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313atv_managed",
+      "fields": "atv_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313atv_restrict",
+      "fields": "atv_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313bicycle_accp",
+      "fields": "bicycle_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313bicycle_mana",
+      "fields": "bicycle_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313bicycle_rest",
+      "fields": "bicycle_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313fourwd_accpt",
+      "fields": "fourwd_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313fourwd_manag",
+      "fields": "fourwd_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313fourwd_restr",
+      "fields": "fourwd_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313hiker_pedest",
+      "fields": "hiker_pedestrian_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313hiker_pedest_1",
+      "fields": "hiker_pedestrian_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313hiker_pedest_2",
+      "fields": "hiker_pedestrian_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313motorcycle_a",
+      "fields": "motorcycle_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313motorcycle_m",
+      "fields": "motorcycle_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313motorcycle_r",
+      "fields": "motorcycle_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313national_tra",
+      "fields": "national_trail_designation",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313pack_saddle_",
+      "fields": "pack_saddle_managed",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313pack_saddle__1",
+      "fields": "pack_saddle_accpt_disc",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313pack_saddle__2",
+      "fields": "pack_saddle_restricted",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "i313trail_type21",
+      "fields": "trail_type,attributesubset",
+      "isAscending": true,
+      "isUnique": false,
+      "description": ""
+    },
+    {
+      "name": "r285_sde_rowid_uk",
+      "fields": "objectid",
+      "isAscending": true,
+      "isUnique": true,
+      "description": ""
+    },
+    {
+      "name": "uuid_285",
+      "fields": "globalid",
+      "isAscending": true,
+      "isUnique": true,
+      "description": ""
+    },
+    {
+      "name": "a230_ix1",
+      "fields": "shape",
+      "isAscending": true,
+      "isUnique": true,
+      "description": ""
+    }
+  ],
+  "subtypes": [],
+  "relationships": [],
+  "canModifyLayer": true,
+  "canScaleSymbols": false,
+  "hasLabels": false,
+  "capabilities": "Map,Query,Data",
+  "maxRecordCount": 2000,
+  "maxSelectionCount": 2000,
+  "supportsStatistics": true,
+  "supportsExceedsLimitStatistics": true,
+  "supportsAdvancedQueries": true,
+  "supportedQueryFormats": "JSON, geoJSON, PBF",
+  "isDataVersioned": false,
+  "ownershipBasedAccessControlForFeatures": {
+    "allowOthersToQuery": true
+  },
+  "useStandardizedQueries": true,
+  "supportedSpatialRelationships": [
+    "esriSpatialRelIntersects",
+    "esriSpatialRelContains",
+    "esriSpatialRelCrosses",
+    "esriSpatialRelEnvelopeIntersects",
+    "esriSpatialRelIndexIntersects",
+    "esriSpatialRelOverlaps",
+    "esriSpatialRelTouches",
+    "esriSpatialRelWithin",
+    "esriSpatialRelRelation"
+  ],
+  "advancedQueryCapabilities": {
+    "useStandardizedQueries": true,
+    "supportsStatistics": true,
+    "supportsPercentileStatistics": true,
+    "supportsHavingClause": true,
+    "supportsOrderBy": true,
+    "supportsDistinct": true,
+    "supportsCountDistinct": true,
+    "supportsAdvancedQueryRelated": true,
+    "supportsQueryRelatedPagination": true,
+    "supportsPagination": true,
+    "supportsLod": false,
+    "supportsQueryWithLodSR": false,
+    "supportsTrueCurve": true,
+    "supportsQueryWithDatumTransformation": true,
+    "supportsReturningQueryExtent": true,
+    "supportsQueryWithDistance": true,
+    "supportsSqlExpression": true,
+    "supportsTimeRelation": true,
+    "supportsSqlFormat": false,
+    "supportsQueryAnalytic": true,
+    "supportsCurrentUserQueries": true
+  },
+  "supportsDatumTransformation": true,
+  "advancedQueryAnalyticCapabilities": {
+    "supportsLinearRegression": true,
+    "supportsAsync": false,
+    "supportsPercentileAnalytic": false
+  },
+  "dateFieldsTimeReference": null,
+  "preferredTimeReference": null,
+  "datesInUnknownTimezone": false,
+  "hasGeometryProperties": true,
+  "geometryProperties": {
+    "shapeLengthFieldName": "st_length(shape)",
+    "units": "esriDecimalDegrees",
+    "mapUnits": {
+      "uwkid": 9102
+    }
+  },
+  "hasMetadata": true,
+  "isDataArchived": false,
+  "archivingInfo": {
+    "supportsQueryWithHistoricMoment": false,
+    "startArchivingMoment": -1
+  },
+  "supportsCoordinatesQuantization": true,
+  "supportsDynamicLegends": true
+}

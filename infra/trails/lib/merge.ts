@@ -36,12 +36,14 @@ import type {
 import { ATTRIBUTE_FIELDS } from "./types";
 
 /** Lower wins. OSM first: it is the freshest and the routing base. */
-export const SOURCE_PRIORITY: Readonly<Record<TrailSourceId, number>> = { osm: 0, usfs: 1, nps: 2 };
+export const SOURCE_PRIORITY: Readonly<Record<TrailSourceId, number>> = { osm: 0, usfs: 1, nps: 2, dcnr: 3, njdep: 4 };
 
 export const SOURCE_LABELS: Readonly<Record<TrailSourceId, string>> = {
   osm: "OpenStreetMap",
   usfs: "USDA Forest Service",
   nps: "National Park Service",
+  dcnr: "PA DCNR",
+  njdep: "NJDEP Geographic Information System (GIS)",
 };
 
 /** Sources that digitized the same ground never line up vertex for vertex. */

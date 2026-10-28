@@ -1,0 +1,1898 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><metadata>
+    <Esri>
+        <ArcGISFormat>1.0</ArcGISFormat>
+        <ArcGISProfile>FGDC</ArcGISProfile>
+        <DataProperties>
+            <itemProps>
+                <imsContentType export="True">002</imsContentType>
+            <portalDetails><thumbnailURL>https://www.arcgis.com/sharing/rest/content/items/0eb7372cf7724f21ae359ad6d2900e24/info/thumbnail/thumbnail.JPEG</thumbnailURL></portalDetails></itemProps>
+        </DataProperties>
+        <scaleRange>
+            <minScale>150000000</minScale>
+            <maxScale>5000</maxScale>
+        </scaleRange>
+    </Esri>
+    <dataIdInfo>
+        <idAbs>&lt;div style="text-align:Left;"&gt;&lt;div&gt;&lt;p&gt;&lt;span&gt;This data set contains over 1,000 miles of official recreational trails on land owned and managed by New Jersey State Parks (NJSP). Data collection was a cooperative effort between New Jersey Department of Environmental Protection (NJDEP) employees, volunteers, Dovetail Trail Consulting, and non-profit agencies resulting in varying degrees of spatial accuracy and detail. Due to the varied mapping sources this data is not intended for orienteering purposes.&lt;/span&gt;&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;</idAbs>
+        <idCitation>
+            <resTitle>New Jersey State Park Service - Parks and Forests Trail System, Edition 20260902 (Land_use_trails)</resTitle>
+            <presForm>
+                <PresFormCd value="005"/>
+            </presForm>
+            <presForm>
+                <fgdcGeoform>vector digital data</fgdcGeoform>
+            </presForm>
+            <otherCitDet>The NJDEP may distribute GIS data in a variety of formats, such as the ESRI shapefile and/or various versions of the file geodatabase format. The data also may be available for viewing on various profiles of the NJ GeoWeb online mapping application.</otherCitDet>
+            <citRespParty>
+                <rpOrgName>New Jersey Department of Environmental Protection (NJDEP)</rpOrgName>
+                <role>
+                    <RoleCd value="006"/>
+                </role>
+            </citRespParty>
+            <citRespParty>
+                <rpOrgName>NJ Department of Environmental Protection (NJDEP)</rpOrgName>
+                <rpCntInfo>
+                    <cntAddress>
+                        <delPoint>Trenton, NJ</delPoint>
+                    </cntAddress>
+                </rpCntInfo>
+                <role>
+                    <RoleCd value="010"/>
+                </role>
+            </citRespParty>
+        </idCitation>
+        <dataExt>
+            <geoEle>
+                <GeoBndBox>
+                    <westBL>-75.587089</westBL>
+                    <eastBL>-73.899178</eastBL>
+                    <northBL>41.357794</northBL>
+                    <southBL>38.924577</southBL>
+                    <exTypeCode>true</exTypeCode>
+                </GeoBndBox>
+            </geoEle>
+        </dataExt>
+        <dataExt>
+            <exDesc>publication date</exDesc>
+            <tempEle>
+                <TempExtent>
+                    <exTemp>
+                        <TM_Period>
+                            <tmBegin>2003-01-01</tmBegin>
+                        </TM_Period>
+                    </exTemp>
+                </TempExtent>
+            </tempEle>
+        </dataExt>
+        <idPoC>
+            <rpPosName>GIS Specialist</rpPosName>
+            <rpCntInfo>
+                <cntPhone>
+                    <voiceNum>609-984-6014</voiceNum>
+                </cntPhone>
+                <cntAddress addressType="postal">
+                    <delPoint>501 E State Street
+				Mail Code 501-04
+                PO Box 420</delPoint>
+                    <city>Trenton</city>
+                    <adminArea>New Jersey</adminArea>
+                    <postCode>08625-0420</postCode>
+                    <country>US</country>
+                    <eMailAdd>Heather.Korski@dep.nj.gov</eMailAdd>
+                </cntAddress>
+            </rpCntInfo>
+            <rpCntInfo>
+                <cntPhone>
+                    <voiceNum>609-950-7072</voiceNum>
+                </cntPhone>
+                <cntAddress addressType="postal">
+                    <delPoint>501 E State Street
+				Mail Code 501-04
+                PO Box 420</delPoint>
+                    <city>Trenton</city>
+                    <adminArea>New Jersey</adminArea>
+                    <postCode>08625-0420</postCode>
+                    <country>US</country>
+                    <eMailAdd>madison.voorhees@dep.nj.gov</eMailAdd>
+                </cntAddress>
+            </rpCntInfo>
+            <role>
+                <RoleCd value="007"/>
+            </role>
+            <role>
+                <RoleCd value="007"/>
+            </role>
+        </idPoC>
+        <searchKeys>
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+        <keyword>Recreation</keyword><keyword>Biking</keyword><keyword>Hiking</keyword><keyword>Parks</keyword><keyword>NJDEP</keyword><keyword>Land_use_trails</keyword><keyword>Recreation Areas</keyword><keyword>Forests</keyword><keyword>Horseback Riding</keyword><keyword>Trails</keyword><keyword>State Park Service</keyword><keyword>society</keyword><keyword>New Jersey</keyword><keyword>Warren County</keyword><keyword>Burlington County</keyword><keyword>Cumberland County</keyword><keyword>Salem County</keyword><keyword>USA</keyword><keyword>Somerset County</keyword><keyword>Monmouth County</keyword><keyword>Middlesex County</keyword><keyword>Ocean County</keyword><keyword>Sussex County</keyword><keyword>Cape May County</keyword><keyword>Bergen County</keyword><keyword>Mercer County</keyword><keyword>Camden County</keyword><keyword>Morris County</keyword><keyword>Atlantic Coast</keyword><keyword>Passaic County</keyword><keyword>Hudson County</keyword><keyword>Atlantic County</keyword><keyword>Hunterdon County</keyword><keyword>2003</keyword><keyword>2014</keyword><keyword>2015</keyword><keyword>2013</keyword><keyword>2004</keyword><keyword>2008</keyword><keyword>2006</keyword><keyword>2011</keyword><keyword>2005</keyword><keyword>2012</keyword><keyword>NJDEPTrentonMetadata</keyword></searchKeys>
+        <themeKeys>
+            <keyword>Recreation</keyword>
+            <keyword>Biking</keyword>
+            <keyword>Hiking</keyword>
+            <keyword>Parks</keyword>
+            <keyword>NJDEP</keyword>
+            <keyword>Land_use_trails</keyword>
+            <keyword>Recreation Areas</keyword>
+            <keyword>Forests</keyword>
+            <keyword>Horseback Riding</keyword>
+            <keyword>Trails</keyword>
+            <keyword>State Park Service</keyword>
+        </themeKeys>
+        <themeKeys>
+            <thesaName>
+                <resTitle>ISO 19115 Topic Category</resTitle>
+            </thesaName>
+            <keyword>society</keyword>
+        </themeKeys>
+        <idPurp>The purpose is to provide NJSP with a manageable, graphic inventory of trails within the NJSPS system. Besides in-house trail management this data was created for the production of trail maps for hikers, bikers, and horseback riders for safe navigation through official trails in the NJSP. Objective accessibility information was also added for users to determine whether a trail would be user-friendly for them based on their own abilities. These maps are available at https://dep.nj.gov/parksandforests. The data has value to the public, federal, state, county and municipal government agencies, trail organizations and non-profits for local and regional planning decisions for outings, constructing trail connections, land acquisition for trail corridors etc… This data is not intended for orienteering purposes.</idPurp>
+        <resConst>
+            <Consts>
+                <useLimit>&lt;DIV STYLE="text-align:Left;"&gt;&lt;DIV&gt;&lt;P&gt;&lt;SPAN&gt;This data should not be used for orienteering purposes even though the trails have been reviewed for accuracy. Trails may be altered or closed depending on weather conditions, always check https://www.nj.gov/dep/parksandforests/parks/park_advisories_web.html for the most up to date trail information.     New Jersey Department of Environmental Protection (NJDEP) Data Distribution Agreement.  The data provided herein are distributed subject to the following conditions and restrictions: NJDEP assumes no responsibility to maintain them in any manner or form and disclaims any duty or obligation to either maintain availability of or to update the data.    Terms of Agreement    1. All data is provided, as is, without any representation or warranty of any kind, implied, expressed or statutory including, but not limited to, the warranties of non-infringement of third party rights, title, merchantability or fitness for a particular use, freedom from computer virus nor are any such warranties to be implied with respect to the digital data layers furnished hereunder. User is responsible for understanding the accuracy limitations of all digital data layers provided herein, as documented in the accompanying cross-reference files (see SUPPLEMENTAL INFORMATION). Any reproduction or manipulation of the above data must ensure that the coordinate reference system remains intact.    2. Digital data received from the NJDEP may not be reproduced or redistributed without all the metadata provided.     3. Any maps, publications, reports, or other documents produced as a result of this project that utilize this digital data will credit the NJDEP's Geographic Information System (GIS) as the source of the data with the following credit/disclaimer: "This (map/publication/report) was developed using New Jersey Department of Environmental Protection Geographic Information System digital data, but this secondary product has not been verified by NJDEP and is not state-authorized or endorsed."    4. NJDEP makes no warranty that digital data are free of Copyright or Trademark claims or other restrictions or limitations on free use or display. Making a copy of this data may be subject to the copyright of trademark laws.&lt;/SPAN&gt;&lt;/P&gt;&lt;/DIV&gt;&lt;/DIV&gt;</useLimit>
+            </Consts>
+        </resConst>
+        <resConst>
+            <LegConsts>
+                <accessConsts>
+                    <RestrictCd value="008"/>
+                </accessConsts>
+                <useLimit>See "Use Constraints"</useLimit>
+                <othConsts>A downloadable version of this layer is also available. See https://gisdata-njdep.opendata.arcgis.com/ to explore NJDEP's downloadable GIS dataset collection.</othConsts>
+            </LegConsts>
+        </resConst>
+        <dataChar>
+            <CharSetCd Sync="FALSE" value="004"/>
+        </dataChar>
+        <spatRpType>
+            <SpatRepTypCd value="001"/>
+        </spatRpType>
+        <idStatus>
+            <ProgCd value="007"/>
+        </idStatus>
+        <suppInfo>For more information on Parks go to: https://dep.nj.gov/parksandforests/. Accessibility information will continue to be added as collected, this is an ongoing NJ State Park initiative.</suppInfo>
+        <resMaint>
+            <maintFreq>
+                <MaintFreqCd value="009"/>
+            </maintFreq>
+        </resMaint>
+        <placeKeys>
+            <keyword>New Jersey</keyword>
+            <keyword>Warren County</keyword>
+            <keyword>Burlington County</keyword>
+            <keyword>Cumberland County</keyword>
+            <keyword>Salem County</keyword>
+            <keyword>USA</keyword>
+            <keyword>Somerset County</keyword>
+            <keyword>Monmouth County</keyword>
+            <keyword>Middlesex County</keyword>
+            <keyword>Ocean County</keyword>
+            <keyword>Sussex County</keyword>
+            <keyword>Cape May County</keyword>
+            <keyword>Bergen County</keyword>
+            <keyword>Mercer County</keyword>
+            <keyword>Camden County</keyword>
+            <keyword>Morris County</keyword>
+            <keyword>Atlantic Coast</keyword>
+            <keyword>Passaic County</keyword>
+            <keyword>Hudson County</keyword>
+            <keyword>Atlantic County</keyword>
+            <keyword>Hunterdon County</keyword>
+        </placeKeys>
+        <tempKeys>
+            <keyword>2003</keyword>
+            <keyword>2014</keyword>
+            <keyword>2015</keyword>
+            <keyword>2013</keyword>
+            <keyword>2004</keyword>
+            <keyword>2008</keyword>
+            <keyword>2006</keyword>
+            <keyword>2011</keyword>
+            <keyword>2005</keyword>
+            <keyword>2012</keyword>
+        </tempKeys>
+        <tpCat>
+            <TopicCatCd value="016"/>
+        </tpCat>
+        <tpCat>
+            <TopicCatCd value="018"/>
+        </tpCat>
+    </dataIdInfo>
+    <mdHrLv>
+        <ScopeCd value="005"/>
+    </mdHrLv>
+    <Binary>
+        <Thumbnail>
+            <Data EsriPropertyType="PictureX">/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAGQAlgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD79ooor4IAooooAKKKKAOX8b6xqumXXhyDSdXn0WW+v3glurWKGSTYLeV9qiVHUZZFyducUq/8JkcBviFr6sTjBtNN/wDkSofHAJ17wVjI/wCJpL0GT/x5z1rSJ8pC5DAZ5PJ/+vXvYSTjRVu5lJu45LXxHbxr9p+JXiFpD/BFaaaMfibSqlx/wk6sfK+IviHb0DG100/+2lWt2XR2YAEZJP50kFvJfuI4kJDHO49B06fn+leg6krJIlNtmdjxl5jD/hYuulQcHFlpuc/+AlWRb+L40Jm+JOuoc4C/Y9NJ/wDSSt06Tc28zwxw+aoThs4Xke9QXemXsQjEseMkKMH+tUpS0Q25LUx2HioqNvxH19Sege003k+2LT0qES+KwvPxI19nOBtWy03r9PsmavGLcx8xlDMOi5BA7gGpAI0xsIjOOx+6KUptdSeaRnRN4vcLn4h6+M8nFnpuf/STiplTxaULN8RfEGM4GLTTT/7aVYMyP91S/GSccdKmiaXy/lJUEEjIzmpVSUnoHM0tykLfxcv+s+IviBT6fY9N/wDkSpBaeLf+ii+IT3x9k03OP/ASthdyjJAiQgAySn5vwFSSoVGYZxkAFgVAGPT2rS8luw5mYKxeKg4B+IviFh3ItNN/T/RKbLF4rRS3/CxPEWc4C/Y9N5/H7JitUSxGbltw4yfak+0JEcDBQdDmkpyS1FzPuULaz8WSkK/xH1/dgHi100D/ANJKBb+KpZ2SP4h+I2xx/wAemmdf/AStbbHdMmNyIv3nJI69hVqNFsoJLooGVT8sYIUYzVxcm7D5nbcoxaB4sGwzfETxEoCBpFFrpvH4/ZP0pz+HfFGxXT4k+IWXPT7Lphz+P2Sun3y3cTRcRFlGCvXPf/8AXTrO38hXR5OQQRjPGfTNaXZsuxymmaN4lvYyX+IniVHU7GH2bTMbvb/Q6ZqOj+Jor9bO1+IviN5SoJ3WumYH/kpWvezyaXfMI0E6OTKUJ7gY7fhxVuwuGdxK3li5mwcYOUHTA9aUm76MUHfR7oxbbw34nfJk+JHiMIh2s4tdMAJ9v9E+lVb3TfEVpOyH4keI8KMkfZdNO70wfslb2q6g+nJHBC2Nud7Njkn0/Gs6Mfa5RPNuldsDGc47c57VlKbukmXJqzSMFbbxfINy/ETXypfAH2TTen1+yVZk0rxhGgdviD4hEeMs32bTeDnGP+PSulgLxFGKZG3K8cCnX19NLaHh4dp544YdKqNR7MyaaV7nMXmleL4GUr8RfEHlngl7XTBg/X7JVAnxZ9oEa/EbX5MEhitppvH4/ZK39RnnlTBQsPugnBXkdfwquI2EaKmdo6bVAyK151CN57vb/MxcpylaJl+R4wGM/EXXsH0tNNPH/gJQU8WAc/EbX+v/AD6ab/8AIlaWHUMRk9vlOaR5Qiguu4/r+FcanUeiZre25lAeLmbanxG1/A+8xs9N/D/l0phPjIYI+IWvnPYWmm9f/AStjyy0WAAH5+RiP50bipAIAYDn2rR1XFWZHvb3McTeLAwDfEXXw3cfZNN4/wDJSpHHi1IwT8RtfyRn/jz03j/yUrRIE2VCswHPyjJp2ly2GsXV7bxX9tLfWJX7VaxzK8tuWB2eYgO5M44BAzg0c7mvdY05GZEvjCQMR8RdewMAf6JpvJP/AG6dKtG18VmL938RPELPng/ZdMx/6SVsQWXnt98GHknHG49z7VraPZieGQfKyNxk801Ub2NIxk93Yw9L0PxNc2xln+JXiEEf887XTcf+klOTQPFE5BT4jeIBF3doNNJx7AWf9a6ZYCzJHCfKXaS7Y59P/wBVTGP7IQFUyI3B4GF9P8+1aJyWrNbK1kczc6Br9qVL/EnxGiHjc1tpnJ7Y/wBDqH+wfExiZx8SfEJ2g5BttMGD6f8AHpW3qmnTXSl2kWRRgIBwfWs6e4FnAkcgLBs5iQ5Jx6+2azdRozbadjLXSfFHylviR4g+6Cy/ZtNBU+h/0SqE8Xiu2uZo2+I+vsu3MRW00059j/onWthrqS3tizLteY5bPPJ7D6VXIMsSs5zJ99Ez05AGfxNVTqScrPZmc5aaPVGfJbeMIgm/4ia+rEZcfZNN4/8AJSoAfFrIWPxG18Adc2mm9O3/AC6VtanKksioucsSWb8ahgjP3hkFRtGO/PU/0rPncVuO7crIy8+L1fD/ABG15R/16ab6Zx/x6VfbTfF4ijZfiTrjM2CSLbTcYP8A26VaksW+csmzawCnkk980/S/Oknwj4TIUyHgEA8Y/wA8V1Wbhe+q3MozlzWfUy5LfxdBgv8AEfXirDKlbXTcdfX7J7VLBp/jG7lVY/iLr4BJOTaaacKB3P2Tv2rVewiWPaZnlBLFl27RkHtV2y1K10uOPbAXdhg4P86zlUUJNLVFxTesmZM2jeKobeMt8R/EHmsTkC20wgDt/wAulUF0zxw7Ep8QdfdOuBa6ZnH1+y10OrX4uRt/HIHGKbp0jxDCFQpGMk8+1ZKpK5q3G+lzmwvizzGU/EXxAuOebTTf/kSnSx+K0Ax8RvEHI6/ZNNP/ALaVrSwTzytJsyynA2jI9x9Ks20Bn5f92QQhQjp2zT5pPWLM1J3sY8ln4rQKv/CxvESykZO6z03H4f6JUVrb+LLiTYfiPr64PJ+yabgD/wABK6HUry6kJgaPZ5fyg9iOmc0/QrMbI7mTcNp5yMrknFO8nfUd25WRmwaL4pkuzE3xF8SKnYm00zLD6fZOPanXmh+JYSAvxI8RK24AB7bTOfXn7J09662yjV5ZpZDuKtsDHsBWFq8q3N46qS8pUSGPGcKenP0AOPetI81nLsa1GopJM5+SLxJ5T7PiP4i3g4ybXTCD9P8ARKrunixCf+Lja+fQi003n/yUrYuowrqigg9xnj/61QodjMvcH+lYc8mnqYOTuZoTxZtJPxF8QZHYWmm5P/kpRBF4vmRv+Lja+GUZP+iab09f+PT9K0/M2Ekbc9mIzViSSN4S1uWR0UndnbkAE/z7e9a05OT5X1Bye66GIkPjF5Cg+IuvD3Nppv8A8iU5IPFpk2v8SNeTtn7JpvH/AJKVp5E9qJlIMjt8y4xg8VLaWsYuWaUjC4465pz54S5W9hRlKWqMu3sfGE74HxD8QsoGSVtNNOP/ACUqSbT/ABZHZS3A+I2vYWRkUC2007sdP+XSum0lIizvCDtVzHyDjI7YqeFSq36iKKZklLbG4A3KD1pwbadzdxdlZnHw2fi5yi/8LD8QSO2AQlrpvy/+SlWU0rxXcnbD8R/EAcdQ1rpvr/16V0bE2csSkpEhYOc/woOSc+nSoI7i3hkRzccyMu3YBlienSi1RpNIlK28jHOk+Jo1V5fiL4jSMg5b7PpnBGcj/j0qvcWPipP3ifELxJ5RXIL2mmDH4/ZK6+e4togXnnCIku5SW+8cdvWsbWLy1W4mVpfOJXeUZvlHoD6k+3T2rSMZ1HaKYqjUFfmMay0/xddybT8R/EC5Hyn7Fpv/AMiVNd6T4ttGMj/EXxAsODgPa6aCSBnGfsnoKhOv3XHksIM7chOny9P/AK/rUNxq93dALJcSMoOQueBn0/OvRp5dVunOWhwyxsErJO5j/EDVPF3hbwJe6rZ/EbXW1KHTrm9Ec1nprIDHE7LkfZRxuUcZ5GeaKz/ifcS3fw/8VPM/mOuh3iA9OBbyYoru+rQgrNHOsRKeqZ6NRRRX5Me2FFFFABRRRQBx/j0sNZ8GkdtTl6f9ec9bVpDPdsEhTcyjnd0NZHja3a613wZEoUk6nNw3TH2OeuntdLn2tKXJCDJVRhVHrx1//XXv4Nc1JepjJPmLGj+H2ldZpjkL8oB55B9K6GeESxjaMMPuhRjmqOmgadAyTsFKqZAGI5HYjnmqz64babEiI5U5KpJ8w9ueK9blsuxUWomzBMxhGVUS8g47fX0qO6864hRFYKxkTk9OoP8ASshfEUTRzOsbIpP3yMnpjA7VWn8RPFNlHjk2r924X5lzjJ+XrQpRvuXJqxuzSzLcAtCBGMgMDwazNSvozLJGbBWYj5XC5I+vFVo/E7XDhDDHKOuxMk/rW4j208as0LK23K7gfmzx8p71HK5bE3T2OVi0+8mVNsLhDjb8vUVdtEk026VXxIxUgHGcf410ccMlqlvGrJlEG5e4OBVSTSZJGaYybJC2OeQFoceXSJPs+pgXlq6uiFyjEZYSA7WH1qkY5UywkbaowFCkgj6+ldfcrFAiyXT73AKjjpVBYPtumhJDygO3HUD3/So5BOOtjCgtxEApTzJJF3EEYUewp9vC6PhlQFOckZrbh0rdDHJKxQ4HI5zx2p8ems8ka/MQDkg8Hnik4taC5W9SjZKLzAUO+zjceQPw7VoYhtnhLMJix8vYOucgZ5qa5hS3VJYWVYyMYUcMM1j3MkVyZGkRQAc7842ntz2rSLUX7wO6Wh0F1bTyzRCFwkW0nIHzg+x+lUry6S6UKrOs0KnzJN2ET1Pv7VRh1S6niMabyuQDKBzg8dPXNa0GmP5arMiRIuAAG3Nwc544ySOvYVrq1rsaLXUhsNJTcLgoQN25pbhSZJD9OgFM1fUvLV0UkTEA5H8PH+eKt6jeBkkRNpIGS+eB+PrXLPIXOVbcSeWPWuec+kSpPkXKupXKbbjMpySR87cn3ro9Nu0YLHA8YO3GWAOa54FcEls5p0VyI2BBCA9hxWal5amEHZ+RtajfsCxU72yVxjAHp09ao/2i7QhGbJPHPGBVOR5A4Dk85IIGc1EV/dYUnnvmraa94nn6GgQfsAbcDI53AAdBnjkVUdl+YODnnBxwB71NJfBVCNzxhQOMD1qpu875sAr2z1NJuzva4Nt6XDcqseW443VKkuxmOemMk9Onao2XC7FHJNIw/dng8njnPehLmVyb8uxMJ5E3AAMpHUjNZ+ueJNO8L6Le6trN5a6XpNjC09zd3bBY4UHUsf8AOSccmrbFwFHX2HXtXmXiEv8AEH4uaT4aWJJND8KiHX9Z82Tie5kWUWEAQZ3bHRp23cArF1PSeVNpGinIr6F4X1X44XEeu+M7V9L8HQz3D6L4fCXVldXMZwsV3ekSqclQzxxbV2+ZlskCtC28BeAtP1O3m8K2lpo95oE7WFwvh2KOO9LOok8iSbOcucMVlLE5LnnBPceI9eg0GykvbuZIbeCN7i4nmPEaKCTk9vWneH7K3vfs0DWhgubm5OpwvC3yTRGLCvJjud5KqeRjPcCvOni+et7ChPllFq+m/l89joVJzjzVI+676nXaVpMcqqIriSWReTFOgV8Z9ejcfT6CtcztvZYowUCjaSdo9fx/D2qAXPlWW+PK+WpZ8cbiBzXG+NYvEuu/ZrrwjqllaeILVgWs9V3Gz1WPBBhZly0LgncsqA+jKwOK9qOiuRtodm9ybOZVKmQuRyDyfeo7yS6bUIfJGIgMsAOcn1/CuG8G/F2x1rxL/wAI1rVtceF/GMMRkbQtVA82RBw0ttKvyXUWf44+RxuVDxXa32oWUNuwMxdnUjgngdzSva9w6FbVJCLpimdy4VVU8NnrxVZHjlgjQlVYv95Tz9azrm6cyB49yq44JPO3t+JqCPbHCWPC8gE56dzWPNdWSI5ne72JtQmS8m/dnIC7Y1J4PPJ/H+lRxKsUjF2YlSPvfdJ7c1GeWO4jaSDtA5x2qWW18mKO4ulbynkw+xucHOcfyrSnGUqqgiW1yuVi9aaM8zpNK6EDGEU5LAd/pnNT2VvEDmSJ1HVs9FxS3ysDDLaSr9mA2RmM8Y7c1QguptoJcAhipLH5R65PT8aXI23psa80U9C093brcTy+ZuWNgEK+mOeKp33zyJ5JMaDLbFPc+9MCm7mkKouM/wAPAPr+FSXSmCfblHLAZHI2n+tW9NE7P+vxMG243ewj6hOYvLBbp0ZcKR9MVX8vMS4G0kkknoadu8yTk5GDg+1Ak+cZIxyBntWM5a2QR8xFIcHcCMDkDnilBKyKQAckECmSoyMTgDAwQRU0bK+4KMMrbvy7fjQoptNCu1ob9qksESSuPL3f3e3tUklqtwQ7lPMC4LNwGHXn6etMtY3W22luJCC2QSR2Bx6dqRrOSNHt8qrXDsVLMcqo+Y/hx0reCszq5WlexLcRjVijxgPgdGOAKQzLpunTRT4AI+VAcgdsD8avCRY4GfiCMZd2bgCuN8Q+IRqT+RAq/Zo2DJIR87H1B7V0YahKtP3djOvUhh43lv2OmklFoLeyiDEuCXKgDC+ppptvPmkkMZ8sx7N4AXgYwAep6Vz8/i6QqnlRYk27XeQ7s9MY9Mc/nVQ+JdQ8zcsoVAMCMD5QPp3/ABruWBrSVlocssZRvd6mz9miuYn8l1UplnLDJph0KaL94GGP4uMYHqayLjXrq5hiVFWKRWLNLGApY/yqmuoXUcokFzLvD78s5PzetKOV1LXb1MnjKV/hOiutIYRrKpVozyxAOFHrQ9nGYQ8UoVjwNzAk9OMVgXOq3d6GDSGOItu2KSADjHHt7e9UxOIGDKzblOQydj7VUMqe8pEyxsE/didaz2ttfT28rRxBgFEj8ZbjcT+R/Sqcmq2VhfKY5FuY2OC0S42DOO454z+dc6801y2XZ+eryHcxpNuDxkn1Nd8cBTTTl0OeWLk7pI27PxRPZSOOJoSzttfgtngZP0AqC4167ubmSWNjCrgDYp4IXgZ9T71m/ZzMwz+PX8qDGsBwJQJ2Y4yNwH4V1rD0k+bl1Of29Rq1zSnS91C3Ms8qrBHgEyEKCTyPrnjpWazgMViJcdCR8oIqa4muL4q11dPOEPyAkALnrgDpUaouwhSMA8BR0H9auEGlZkTld3Q+5ubi9YGaQvt+6Oir7AdqiEY5yBmn4wBzmkrRRSVkQ23qxMAew9hQEznApyjJFWr62jtrS2l8wmWQspj9AMc/rSckmk+oJN3aOS+I2R8O/Fn/AGBr3/0nkop3xG5+Hfiw/wDUHvv/AEnkorOe5tT2PSKKKK/GD6YKKKKACiiigDmfFU0cHiXwS8rlEGqS/MBnB+xz4+tdBLrN1I22Nmw64AAwSvufT681zHjhM654Mzz/AMTOb8P9DnrdJ3jIJBx+Ne/g5uFHTuYz3sbNvobzwJLe3aqcZCA5ApmsJYWVksUTLLljvfP3B9en4VkzTTEBPnOM/e+6Pwqv5Ab95cMz7TwDwo/CuzmTQm+iRc02xn1q4URlordW++Rzj1x2rpLTQrPTEO6LzDgFpHwfrmubt9Qe2A8ozICP4ASMZq+viO6uEZGjDBhtyybc579etaQUXoVF8urRqSRSLB5lvbxW8TjIKruk2n9Mmnx3ktnalnWTIUAKB27Cren3n2izDYw64TAOTnHGfrVsR4UKOcetbSV3poaxStczbS8STfJIrcfd+XmobrxDBGTHtfd24xz71pSjbJGuItrt8wfqeM/L6mqmoaLFqDBiNp6sw61LUktBa9DHW4mv1LXC7YS+3ccYPsK0jKqmQLEYgnp3Hf8ASptLgto4DCqhzExUn8eMn6VJf6jFaJhiMZGVTljVJWfoQlpdslzFLGjLgqACuOcD2pryIJkYMPu9ApyaxI9SuZ4hDbW8m7PMoUhRyTyT1pI9HvZCWkuVTJJKFuB+AqZS1dilK60RLe3xMwjVAwQ4RI+xx3PSqBdPMElwQpY/Jj0HUCpxZSwHz5JWYb/L6cHJxgVKLa5t3lEdpscgbiwzgdsf4UlFtXIbY5dYW2eNY7YcAnf5eCPfNQyalNqlwECSCIDorbcfWp5bd3CRySLu/iwvP6/0qkNYhsVkggj3uwwxxwD9aiT6NhdkLXDIzxBH8s5VS4xn1qkjDYEAwRyT6U8zSMV3Hdg5A/pSqg+bIz8pAb1+lRpK9tEZ30RC6qpB7DofWlA2dsktg+g9qQLslXf8y+vv709nRAy7xxk4Hf8ACqSe27ZmS28sZmRZuUJ5I6illEauxHzAkt+JNQxk5GUY5OWxxke1XHSOGzczIN8mNpU5I45//XQ04qxoveVzNIDOSCSw5ABzipGAdeMZHp0pRCIAFB+Y8kihBtQjHPIyayTdvQTWozaD83JI4zn86dJnbwOT90CmthCGPQcGqer6zZ6Fo91qt/cJaWFjC9xc3MrYSKJFLMx+igmtFq0ydiS/vrbSrG5vr64jtbW1hee4nmbCRRqCzux7AAEn2FeXeAfEcdvD4h+JGsQ3sU/iS4Eej6ebY/a5NMtwRaRxwfeLSl5LgqfmHnrkDFVdKGoftG6da3t5DHo3wvlKTjTpXjmu9dKtu23OxisEAITdBkyOQVk2AFG9ZvfFn9iaho1ksFyft88lvDcQwB/IYRs7O79Y1YLtyOpwKfLLWzs/yNYSpwknUV11K+meHm1Uwalq9vPa6pc26sdGupVdbPdhiJtuVeQED5VOB3ziu6gkntFnL/vJX+Yu/c4rxX4x/ES88FWvhqy0W5tbXxBrmrw2tlLf3SW9tDHH+8nluXf/AJZCNShUfMzSIFweR6D8G/Fs3izws0Gsy2j+KdPZ7bV4LOMoiNubYYlLN+6dNrIwYhhk8HIDVKEZuq42cuve3mdyjUrUfaRkmo6W6xXTTs+/c66OfzYYwgVznJhUZGQCevfnFZ5uYrMtNdRLJdthvLIx5YH06GtCOeGzkEZxE0avIT6cYwPzz+FebfEn4hWfgnR5dXv4pbq5mkS2s9PtR+/v7mQ4it4l7uxHXooDMcKpNXNcySOFuxyfxf1q88cXVto99o1pr0ZlA02xuJprGc3CsoN3FeRfPF5YJBIBJ/Q6t34uk8Nw6daQadrPiHSEJt7zWrmeB7iEKMiRxhPNGRhmQFhwSCSay9B8O+IrK2tZte3axr2ryS/borC4aGx01WBJiifO5VVcR+ao3yMoJAGMZvjyO0+Fk3hSGXSf7Q0K3heHT4I58OZDC6l52IJJYnufmCnqevzWDnmMpTp15+9Gb5E7JSuvdin2v8797CxVOXNGpQS5JJOWrbVtG/Lq35I9I0PxRpfi/TP7T0TULXVrOUmNLmzlEiblyGGR0IPBBwR6VsOGayhG0qi8j3P9a8l8ET3Pjr4cvr1vc22g313cCW1gtowgVUmVJUJDDzcYYhuM8HAxWzpnxSvfChktPiVaW2kWTFYYfF2ll5dHlUkYMjEF7Mtx/rcx88Sdq6Mux1XGOaqU+SUXtdPur7LR20uj0cVgvqv7tzTl1XpY9AggNxebh80YP3gOp9q1bp57yyuYBDFFDtC5Y4xyOfzrU023sYY4xC6MmA0bhwwdCOCCOCD6im3VrC0PlryJJUz3AG4f4V7tK6qKVzj9m+Rqxy2k3EllcvY3O5EdgpjYdGyOfy/OtTUtNFi7fPvBbJQDt0A/WqPiABNdgG8thlPmP1PzfnWzBDLfXjM6fK7A7WPYZ5rvxtpqNRKza/E5cPHWVPtoZELtbEqAFDY3HByP88VHPcNK33VUBsEKKtzlTqU8UT740PzEng47fgaqyIqrICdxfG3aDjPWvNtZ8s9zVu60IsjfgjkjIOP0zSMGBQhN3zdauWOmTX0nyAADrz1rVj0z5gjqFCnDHrzUJdSowbZkz2spZRkguwzkfpU0enOGTAxIx2Atx1Nal/cW9pBDJPhQpbHcswHA471kT+LIA6Klq0sa8/M23LdiPxrtpYWrUs4LQVSVKk3zS1N2e6TTraNnkCrEQSx6sOmB68kVX1vUZLVIb1UWaIKVDZBG5ugyPpzXF3l7JqFw80vUkkL2XPYe1RSTsI1QyNsHRCePyr2qWXKNnN37nBUx904wVkWrvWby7aXzJ32yn5kU4X6Y/CqgHFHFFexGMYK0UeVKUpO8ncAMCiiiqJEZAx5pwXA4pKOcUAJI+D/eb+6BmkCMOyxr7LT0HzYz9cVdg0ye4ETBPLgdtolbhfzqZSUVdjUXJ2RBFC8rKqKWZuFGOpqxeaRPpypJdFVG7AjVgWc46ewHetbU4M2EsNnGUt4GG6Q53SvnaQPYda5+eWaR285mLFtxDZ69M/WuanVlVd1ovxN501TVnqx9xcNNL+6jEUZHChsnoMkn61WVNrAkAn1qWEI0qCRykZOGIGTj6VYv4IIkhmt2lMUucB1+6Qemfy/Ot+ZRaiZWck5FXODkDJx0pAOm5cE+lCgsQAOT0FW2065SPd5L43BOBk5PQY659qqUox3ZKi3sirgA9fwNNfPHoT2p8gaORkYEOpwQexqMkiRcH149+1VuIk3+U28DBBBA6961/EGt2erRRiGzZJkbPmtheO4wOvSsQgkkk8mlrKVKMpqb3RpGpKMXFdTnviSxPw68Wf8AYGvf/SeSim/Ehh/wrvxYO/8AY17/AOk8lFKe5pT2PS6KKK/GD6UKKKKACiiigDlfGID+IvBKlxGP7UlyxGcD7HPmtuURRjHnyM/91QAAO3SsDxyQuueDCxZV/tOXlc5/485/StdThSVV9o6mV8A/XvX0GCV6RhNtMUMAFCoxH96QgUOzhsqI0wepPT8TUckq4XJHOTtRTz+VXtM0SbUJAzxokZI3YTBx9TXXreyQld6XKsCSX8yxRTMxJxtgUgfUmut0jQo9OAMiiST1LZq3a2qWaGG3RTIvDMeAp/z2qwI50yRKsh9GXAPp071vCnbVs1jGzKtsjG9uWAIIcIAeei5/qavowb7vzfTtVK1uI4rNJppAAdzyM394nn/PtVSfxRZo52ZYKPvqaqTUWbc0bam0VUYaQAkdABnH41EbpH3xkDA4weM/jWPBrQvi3lW00z4zg8bvoKtWe6T99iPDAAIVOQe+c96V21dISaZLM/lTwyqdoY+W/HY9P1/nToZdomaQeVl8/MASRgd/wqne3Ea5jLxNJkARngckelUtRureykjMsbXbn5gScJ6ZC/49a1V+W70IcoxZq/bEmby4Ue4c5+YONo/Hp+FKI5NmWVbXsOju2Pc8CsG41y4nz9nCRQj5QDyx+ij/ABqo7XTlBcyzBD8338HGfQVjKfLpYXtE9ToWuLOPMs1zJcFTuCvztPsABUMt5eXpC2sDrC2Pmbj8fWqNvqGm2AHlQSSSEfeZsnNaNrryyOAEKcD5SMc1Dm5bsacWyrNpcpRjOzMCpZnB7elZDWphjykMqKDzs5H54ruR/qsfLg9u5rGvlTTLSSMpIInOSSRnn0zScFYc12OfgwJmDbm46swGKkku4XcFUDKBgbqbN5EjIozGv/TTqfoBUMs0KSFYi/I5ZgBk57GoUbxa7GHNZizSFQQFDe23g1LbFZJo1k/dIcZIQcU2IGOPzATgNyc5/wD101Zot+HYSEk52g/hUp3Vgb1JgYzGSIWkzwCeO/tVa5uldhHISTHwFQE4q9HNJeL9htk2IQMknk/j2qNrOK2hI8wGQOVUKM4x/OrcfuC7sV5YWWON/mIfs3XFQxgszIiFnzngZq5CJLtJN4wgPU8HNXLOWHTnLxYnmAIdA2MAjjB+v86UI3uhyhezKK2bhCznjGNo5Yd+leRePdYt/ij4ub4b6BfGLTIIpJvF2p2kay+TblVVLBHZWRJpy+WGCyRKxwpdTXW+JobmfxxHa6rqqyaVc2BubXQtIylxcsHXfNcTk5SNeFCqBkkklsYDtV8YeHPhloMNldNpfhbSmdpbfSrGII07k5JSJfnmkLHkgHJPJ708PzVZtU07L1vf0t+JlV/dK9TTseaDwLpX7MFlb6r4L0trH4exRxweINHikkkaCNcBdTiU7iXQE+eOskY38tH83deLfGLXos9K8NwXOvapqFoLuGLSJFWP7OxAS4kuPuxQnJIYZZ8YUGn6h4/169gWy8O+A9fXWLzCQXPiC0FpYwKcnzZZAzFQMfcxvPAwM1zPwt0Nf2ZfEVroOozRXPhrxK9vbW+uyKsf2LUwjAWTjA2W8pybfHCOzRH76Z63hYqm/rHXpff1t/w5lGtKc0qXTrb/AD6lzXfDjfCrwo3ivxSun+NfGOpG10Y/2uQlnBHI4Xy44trHYD874Uu+0scAYHY/B74ZWHwhs9TnttUh1B9YWGeQW1skcUUqh93lFfuw/MNsfRcZySxrn/jP4gvrC70g6TMrSaZqdsdRnlAkS3juZFgUYJB3kSMRg8AHPGAe8lkttPjkBeK3sYFLMXISNUTksx7KAM+nFcUcTWq4iUJ/AkkvXrZeWx9DUjHDYCm6atKblzPq7NWT++//AAyF17XYPDul3t7qMhjg4ZmK5OCcKij+JmJAAHJJAr5i8fvrsXxF+HfjXW9F1i81wa3drpWj6FA9wbGxS3dTakErE1xdNIhkmkKoiJtVsJlvU/DCXfxe8Q2Pj7VlntfDenSGXwtpUvyiT5cf2rMvd3Vz5KN/q4zvwHk+X0iOV9rxmTyo+GZc4GOw9K1blGV3oktTxXo+9zhPBHxP/wCEo1HXNFvNFl8OeLdMYu+hajdRPLNbuN0NzG8eVeJzuBK52MjK3QE0/F1le+ONMuNNS9ttO1YmKNbdEaYecrqx+YgfIqndwBklR0NReIvhf4H8b/ELU/tVpbN4rtbOzkuNb0qZ4dRtJA06xBLhGzEypuBReCHG4EHFQj4efETwVp2q33g7x/f+JmSCS4t9B8X6empSSyrHkRx3UbwyLvYYG7cAWGAOc8kqUsRUoYiXu8kuazS191pd7WvdNFJRtKCd7q3lur/5Gn4T8OCG08EWehXtlr2gWeny282owuXk8xNvBGSQpcsSp/urXr2jxnTIGikg3Rygq+RkODwQQRgj26V434N+IfiCUQeM9H8O3/iHwd4jso5JtKs7aOLVdEvIHaCdBE5Tz0LoQyhtyujMAytx1vhb46aVr+vWWjX+heKfCVzqL+Rp8nijRXsYbyfazm3jclgZAqlsHG4Z27ipAMLg/qfM/tTbbe9+3ySSsehia6xM+df1q22/O7M9/hHe+CL6e/8AhlqVtoEXmvJL4Xv976NdeojC5eyYkn54QU5y0TVs+F/jJp2t+I7Pwt4gs7jwb4wdfMGjarKh+2bejWc6ny7pM5OEIcAfMi5rtk0kXZlRnKnOcj14NYXinw5ofi2C80XX9Ittb0+dFSWGdN6A9ip6ow6hlIYHoRXqRje8n0OJycUk+outwsmvxhl8zey7XZuDzyK6SFkV5gUGDlsjnnGO9eK+D477wx8ZtQ8GR63e+I/Dun6RbanAuqHz7zT2kmkjS3a5+9OhWJnBlzIuBl2B49sMRniXBUORnJ9OlVXqOUacV0X6l0YcrnLz/QqWWiR2lysihPL2bSjHPbknPf8AwrPurCVLoooMileGHpW4UkVY8/vGXrkckVz3iPXZ4bg28RCEINxHJznoMdO+RWdOnPFT5epNV06NPmeiNLSrFdPZZpJNoYELu4Xn/wCtWdqPimJXVotsrbiSUyB3Ax9eDWBcXtxdeUGlZRGoVQGOOmPw49KriHA5Iz9K92llsI61Hc8mpjnblpKyJLm6e7laV2ZnYksT3J64FQ5AJycU/wAtd3OXJ5JJ/pRnHQDH0r2IxUVZHmNuTuxu7ijftBIAzjGTThyRVn7JIIjKY8IoyWPXHHI9eooclHdgk5bFUbiMnk0cg1e/su6MqRrDJvddy4Gdy+oPTFSHQtRA3fYpsHoQM1HtYLTmRfs59jNJI7UAH0IrSXRL7Pz28kY6fvPlH61Lb+G9RnwVtsL6s64/nUuvSTs5Ifsaj2izJxRjPXv2rp4/BVw6gyXEMR/uhS361qab4StbJledjcyg5AIwoP07/jXPPG0YrR3OiGEqy3VjE0bwpJfRrNK32eEg7QB87e4z0FaGs3tjbIuku8tvbKgLPGNxYdQM+/eo/EHid7aeS0tArAEiR2OeSOVH0rnphNfXUUSyC4z9xwCDyc459CT1rnjGpWkqlV2j0NpSp0k4UtX1NfSNWluom09EjRniIBmJIYjoAOnI7dM1meTHeXW8RvDDtw235tjAdyevNdDZ6HAZEiaBXaMAmQEjJHv6VK+kzzud8SQqSclRgZrhni4QbdFas3VCc0lMwbHSbe7trwCZnnhOwKFwCTyOvXP9azCkrgjDbYgSwPRPU+31rt7k6dotpLFcyEF8ZQD5j9BXN3PiMgyCwt47RZOHkIDO49+wrswtbEVLuSuc9alShbUZ9hh0xN17KVnI3RxxNluvB9OffipLrxRPK0z28K28syBJJs5LY746A+9Yx3O7O5LuxyWPJJpMHNd6oJvmqO7OR1mlaGiFHAAAyKbyWpST0oX7wrqMB3YetJQaBQBz3xHGfh34s/7A17/6TyUUfEb/AJJ34r/7A97/AOk8lFc9Tc3p7HpNFFFfjR9MFFFFABRRRQByfjVwmueDSQSDqcw+U4P/AB5z960VzczLFD5ssjHA24IH1JrM8cqJNc8GA8j+1Jev/XnPWyZEgUYjB5wDnr/KvdwlvZK7MZ7m1Y6HZ2KK186iRv4d2W/MVpwXumRoEjneMf3AxGK560sLy9dVQpbb/ul/vH8BzXQWnhm3tl33Upupuvz9F/DpXqxbWyCN29EX3uYre23R4YE/KF7n1JPWqCSareSko0MEQ4IJ5+uOtaUUcFuBtCoF4AAzj6en4UkkEE/zPAHYjO9sA/n1rRpPdmrTM5rNbdSl4ou7eQ73Kqflb1x6HufWiLZeJtt1jtbbOEdl+Z8Hqo/kTTLy+kk8q0RybmVQpwRiMdCx75NaEemxfdcmVhgDJ4UYxgAcYrVxild7kat6CwJa2pYLIN7Eb2JJJ+ppzWNnOd7RRyMxJL9Cfx/ComS2t2KJAHwQCWQH9T1qFrmG2mkbEUUYCAlhgA89B68VCl1TK8mFkklqHtzbq6B22sAOh9c0y40yO4uBPdQkMMDfEx2/ivX8abL4isQdoLupOQIo/wCpqrL4nuVkZIrUhvvAsR07cVDmpbq5HurS5n6rpotZxLC+9GwVkDZK+3tUFqq3V2Q7tIzkKX3YP5nIp9/eXlwVWUJDv6BVyTn8BWxp9pZ2Vo0cjF5WGSQcnd7H2rFNOVlsTy3ehnP5KubaHOEODIuMn68U+1urS0uWMcZu2A2lmbCqanNjcTEkQuACSWJyT/j9KprpvmkHO9t2B82e/XFLSIJSudFcaxDa2izPMMMMrHHglqwr1o7siRT9njIYhM7mJPOT2FR38FxaxxHMksSZU7cYJz1NQ2On3eqy5MbQwDOZGHA/pVyutEhym5sinZWTbgKvGVQYz7k9arWiFsFVUckbiOTVqeKzhOxTJctyA7HCfgB1qzZaZLLEsLbY4DkiTb83AyRnoKlKTuupna7KMzllSNWZwM5EY6n61JagQnAiEgyOCO5HQmthdJa2CxxgRIB800g5PPQLjn6mtIww2Tb9jzMRnJG7nHp0FaRhaPvFuLctOhStrKad1z5UZVh8sXp3y3SotQ022julKyHOf7ucH0zmr9zdqYzvkWAjkR5w+foPesO91ppYVXyzFLnCyMRn/vnvQ2krA7ItzRRwW43SnJY5CLxjvz2/nWVJcSXcjJbxFIk4+Uc1o2dlLrJjLb4oV7vyX5/StuLTra3jWOOEKF5X3Pv61klzO72NHFs8F+Lmiax4I1KH4kaUm+ysLCez8RIG3yNY7TJFcpEzKssltLlthILRyzAHOAe/+HXwt8M/DPSoZdNtornV5IgJtanTzbu6bkly55XJYnaMAA496s/F/wAd6J4I8LWqa54d1DxPb67cjRU0XS7NbmW8eWOQtGUd0TayI+QzDPQZJFcr8NtL8Z+FfgJZwNb+Z4jihcabp+rThri1tzL/AKPb3UgADyxQlVdhwWTGT949MJThHki7JkSpw+Nxu0a+tfFXQLXX20IalBJrQwFs40YhZGzsSR1G1GbBIDEEgHir2saZpfirwVqeneIdOS+066g8m8sZQJFbcOUBxyQ2MMAMHBGCKyvBXhZvClvqaz3S3NxfavdarNOsPljdM+QmO+0YGfXpirvxN8e6T4A8Ha14jvnnhs9MtzcStbxB5ZGyFRFUkDc7sqgE4+bniuapyx5pU5OTa0Wi1t+r+6wQblyuSs+vnr/kcP468E28HhL/AIRg2NzLqtsVv4pYtQF5d6jKqLJukJCKXLJt+bBIXKkdpNY8YHx74b13wt4Tjg1rxlJpxiu4tSs5l021kkCRypPKAY96LMzeQshZtpGRyR6Po1vdy+D9Cj1zTodLu4tsk9jGwlSGbByCw+83OM9Ac4zwa34Y9kK/ct7QEudnyrz6AcH3rhwmHq4epKrN6zs2tLJpW0aS09d2XzRqXurLf77brvokcv4T8MHQNA0nw6bie8ttJs4LOKS4f95ceVGsYdj3JC5/Gtq4sHwZJIYoBAgZE+/uGeBg9T+lai3CNCGlf73z7Rj5R/D09OKoec16VwrOxbdhuTjoAfavUlZ3jPW5KjFbPUw9O0mO3iNvDEsbHLcgDdnksxHcnkmsfxj8W/CHwTudMXxZ4ks9Gvr+NpbaKZJJAyIQCzeWrbV3FVBOMk4HNd+NLWOVXK5Eb+a69nJHH4CvJdbmn0L9p/wTf2Vst0PEegXmi3m9XBtrezc3STIw43GS4WMocbgQcjbg5xhCKSj06DjSVNWRZ/ZD8Taf4j+DlqtnMks1lqF7DqPlSpNAt5JcPczLBKjsskINwAhU/dABCkECT9ozUT4e8LeHvGEYje08K+I9P1O4tHO0XEbym1cDIxuUXQdM4G5RzV3Wfgd/YF/e678N9QHhXVbkpcXGjSIG0O+dAFPnWqgGN3UKpmiKt8qkh8EHJ1j4haH478E+M/CvxA0y68N69a6Lc3WpeHnusSS20aFzcWNyFCzxggbZEGUYAOing7X6m6iu57RH+7nuUyreWx+737H9QabawR/YYVEak7QQAO5/rXB/Aq88V6v8HPCF/wCNWt18V3WkxS3xt5FdH3AlJCVAXe6FHYKNoYsBximfF/4gah4H+GmqanoyK2u3Xk6VosRUnzL+4YQwEjHQO2/02ofWnrsJpPU5/wCCzR+IPE3xI8XmJBFqPiGays5EO7zbWyRbRGHfBaKY+nOR1r1sLtVB8oH3h37YGPTr/OuU+HPgW2+GvgTRvD1lK0lvpdrFapKy4MxACvI3uzZb6sTWzr2opp+8q2ZnUxxuGwFI5P0HNHK6tRRh6F3VKm3L1MrWPEbxkQWrkzI37x2HGRwRiufCvNIzcs7tk+pJrS0XRV1aSXzLpYnY7l3DlyT1wa6Tw1pf9ny3sU0StJG4USnuMcY9B1r31Olg4OMFeSPAcauLmnJ6M5ObSbi0VWnVYVbgF3FaFjplrd6e8jmRpYshgjBTn2zwR710V5osE86mWV44wcja2CD0/kT+dQWWhNaX63EUpZVjER3fxAfdOfUfrXFPHznHs/I2jhFGW10c9Fp01xDbQPbyKWkwJmwMBj0x36itC/8ABz26E283nYGcMmM/jXWiBSqlgoCjAyBgfSlLBgoXBGRwDxWTx1WPw6HTHB02rS1PPX8P3kAcyxeWVUttzkkewHeuy0SxS106FSm7ZljkDOSc9KkubpzdhFgdkhw5Kjg5B4/r+FX96Bwm4bmGVGeo9qVfE1KyXMOjh4UpNojdFii+VVUKPlAHQU25WRkJgIDjIwRUkjJwDz8wGKhunIaFkYAKxLADJOQQOPx/lXDu9zta93YpzSyxQpIrhlXG5X5NTDWbcjgsWA6KM4ppgi1C3K8ON3Lx8EU6bTLdrfylbb7KetSnZC5XfQrtr21lUxx5JwSrkgfkKo6tqN3KG+zXiQAqF2BCST35xWlBYAWoWNSqhjgOeW9yfSppEtbS3kLsFCLubn64/wDrVpCc4yvFIylC6tJnDTeH7hApiKzKwGSPl2k9jmuk0TQJbOFHeRBLw4Upkqec/wBPyNZ2payfs11aiNYbaXbs+0AhwMDOFxk8g1kW2tT6cjpZyOgfqz4P5Cve5cRXpcsmkeTehRndanaajqS6KI/P4glOC6H5l65J9RwOnvXO6v4ymvI3htoxDGePMPLEZ4x6VgSyyTyeZLI0j/3mOTTCMmtqOBp07OWrMauLnO6johSxkJZmLN3JOTSAUuMUV6VktEcIUUUUAGOc0n8VLRmgAooooA574jf8k78V/wDYHvf/AEnkoo+I3/JO/Ff/AGB73/0nkorGe5tT2PSaKKK/GD6cKKKKACiiigDlfGVrLeeIPBUMKq0japLjd0H+hz812tj4YSwZLicG6dQc4OcHPGB6f55rk/Ed2LLxR4KlYAgalMOfeznrqZNea7kIUlUGPlVsk/THSvocDyqldoiVjVZvMMczNBbMByC2SfXkYzUU+oNbghDEwB+82R9ByayRbXl3Mwgtgm7nfLzVxPC5dxJcT+e45J27gPYdsV6SnKWysT7z2H2t8t+WVYvOYnG/cWx+fA6dqv29nJZsGRyyYw8eTz7gnv7U+3t1szEsbEo/ykE5APY+3pVm4mWGNndgqIOWY4AHrWiut9S1FdTAs5UhudRubpAkgdVw4JIGOAMdec1al14R2jEBIWA6Svg/ktQ2dqdTea7P7uOV8qHXqoAAP48/hWjJpdiYgrxrtBB6YyfWrqrUiHNbQxW1ZLqAo10oPUleCT+pqG2ubJ5PvB5Rz8z5z7HP861v7B02cBlDkequcfqaY3hmyUbld4QvUluv1rBJp3QOMii8tvHen/R0IA/hYbc+tT/a4JmZLdUedsZYgEAegA/qTVPUdL0+1hkcztKwHyliDz/dA7mo7C0ENsJ5UQzSZCbiSqD1wO9OyWjM7u5bmF3KHZvLzGxQllXPTn+dFlfG2DGSWODHTykGevcnP6VVKpdSxoZQjkYLbSST647Vb/4RzeD5krqoIwzAc+vArPmbfumiQ261tHJCo0gBxukfgfQVTivhHI/lCTzXPUgYUk9ef8KvXdlaWmY1ZXbrtJAx7YHNV4Ly3hcyrB5kgJJVFzj0H/66He/vMTbvYcs8dpcKGLTzyjJj6LnscVZtdP1DUUDXTlEHICAcf0FZVlG8+otLLC53vkbj8wP+cV1s10sEQaUg4HTOf8/Sr3XvDgr6vYjttHtbSIB9rkep5P1NGo3UIgK3LRxW44z1IPbA71l3uu+cyxWSmWduSR0T64qxa6Gr3nmX0hupSoZQ3AXnkAUrt/CXfohYNQ+0NEgPmbyBvAILe/PSr32JnUkkLnjkl/58fpUkkMa8KArYG0qvQjkVEJLlXQyqix52nnOc9Pp6H61rG7VhtW3M5fCcBl/eXMz9SwGAPpxUkOiWNrL5kcLNGAysxySDnqf1/Ktj5QAAARznAqG0DGHPTDsM+p3HmpUUtWgcV0GWU6yTSIiYjGNjkcMOh/Ksrxp450b4faMNU1u4kgtGnitI1t7eS4lmnkbbHHHHGrO7MTwFB6HsK1r1diNLvYNEpbdnA+nNeV+O7O31f9oj4Ypb7tUudMstRvrqykZWtrKBlVIr0Lni484CGNsN8jTjjGapJbrYpu2jOd1PxXp/7Q3irStLsY5H8A6FfQ6tqN3dn7K2qXcWJbS2igkUTGNJgkjyEIC0QRd3zY9autbnMhiaNVyMIMDcQegHvSeINGfUdYgu47C3luAqhrl1G84OV+YjOAff6UupJY+G9OutU1K+tLO2sYjPe3166xwW0YGSzOx2qAM9SKipdv3djni6jbUvwOa8d69aeAfC2peJPENybHTNNt2urqRYywiRfYcs5JACjksQBya8p8Cate/HrxQZvEdvH4V0nwdqEd6PA14N2qG8UbrW91A52BBkyRRxb0LAM0hKbB1ttYzfHnxFY+MLyN38AaJJ5vh2wuFKf2peBip1OaJgDsj24tkYfxNNjmPF3xh8OrfxtqmmaxpmqS+HvEmlkra63ZQxzHyWOZLadG+WeFyM+W33XAZSrDNZqPK7DbUXY7fypdTXGDFATnnhn+gNSXEbSWMKmVFiUZjgHP0ya8913V/iZ4Itbm+nk0v4gaco/ex6NYtp+rRx55aOJpXhn2rklQ0bHHy5PBzfBni74h/ETw5pmreF/D+kaJ4c1Sxju7LVvFV+11cyRMiskn2O2HDEHOJJlIPBFNN3sl8x8nW56TbQ3N2rBGEax87mOMn6VZ0W4aG6VAS0jHnNeU3fwX1XxPaXFn4j+IPifVpZYm/c6TKmi2kLFTghLcCR9pOR5krdBkGtz4Ia5qS+G7jw9r+w+L/C06aRqEqytJ9tCxI0N6Cyg7Z0O/JBwwdckqahxs/d6Cjpqz2aFCZhG2AzMMH0JPSvFfgrj4m6/J8XtUv8yXsV3pPhzT4flhsdLF1gucgNJNO9skjMcBRtRRgEtveOvi7aeBnstLXTbvxL4n1bzBpvh7TgDcXpQfOST8sUK5AeZyEXcByxCnyz4Xp4i/Z08Ew+GfFHhu+1jTInkurXWPB1tNqNra+dIzyWZtyTNCsLvsjKq0bJtI2EMo0veJvzX1R9MuPNkABA3HJIPUCvAv2yrnw7L4H8KaX4igMtpqHiSzkuZ44ZJJLLToW83UJ90X7yKP7OrRvImMLN8x2k10+i/H7wxpsNra+LY9X8Band7dtt4s057NBuIVVE677cnkDHm5ycEAg1F8UvAfiq88cw+LvCWr2FnNB4fudIuYbuxe8uVQSi4H2RN6x+ZIyLG3mHGApGSMU1ZPU0s2rpHMaP8WJfjLqU+jfB7xBp+keE9BtYob7xEuni4aOVlZILG2tpdi8InmM7grtMQUNuyMn4afDae7+Md3ptt4s17xL4C8F3a6hPHq88dw1x4lkWQTASgL+6hjkVzEAESaT5QNpA9H+GOt6TB8NdJ+ItxbabaXev6dZanqM1lDsF5dGBAWJ+8SMeWN2doXGcCov2e/Ddx4P+Cfh7TbhI7fWLwyX97AMsEluZnnlXdnLbTIw3EknbnNaKpBycU9V09ROE+VSto+p6Fd3F4YCYLcNFlimchy2crx6Hnn/9dVJ9IudYtFZpoPLb95iOM8E9OScjHpW9A8zpueNAyZQADg4/pTLRFiEkaYCElgEXgg+lNVXTsoqzXUHT57tvQpaRp0ctjZtND5E9vIRluuQSDgnsetaYdVl3jfLuAXcBxwT/AI0LEN6lhk88E57dalZQ6lT3GBUynKbbYo04U7JFeWNJn+ZGZvQdqkzL86kKF9F5IFKflUHgbTg4GOP8mkaRfNAz8uMEj9P61kapLoiOOI+VtIJHYHijyMpEcjjA6YqV5dqlsALnG4moAsjXB3cLkAdvehpDTZa2t/z0YdPQVm2V9FNKY5yTcqTkEYwCelNTWdPeWSN7pUdGKfNgZOM8H9KpXXiG00u72vEZmcb2ZWyQccD9K6Y0asnyqOpyzqwiubm0NW4uI43VVXcGcDIHAP8AnFS287TRBwqrgAliOM98VxmpeK5buMxwR+QPMEpkLZfI6ew7flVRdQvJrIwTXRjtW/v9Tznjua745fLlvJ2OOWPje0Vc7azjlaec7o9hY8AZGeOT+dZ1x4mlgS4T7KQ8eV+0IR5Wfqa5aPV5LS1a2ti3lMSWMijn8B26daou7ysDIxcjgZ6D6DtXTSy9Jty2OarjfdSgb/8AwlV5EhT7SspBzmOMflk9Bye1Z91r15cTTOJmiExBZUPp0/yKoY9qK9ONCnHVI8+VepLRsTGSSTlj1J5JpcUUV0GAUd6KKACiiigAooooAO1FApCcCgBaKB0ooA574jf8k78V/wDYHvf/AEnkoo+I3/JO/Fn/AGBr3/0nkorGe5tT2PSaGYKpZiFUDJJ6AUUy4h+0QSRZ2+YjJnGcZBGf1r8YPpzjvD3xr+H3i3WYtI0Pxx4f1jVZt3l2VjqUUsz4BLYRWJOACT9K7SvgL9hz9lXwx8KvjV4ofxNdXf8Awszw7eXA06xmIihn06QBYr6NOr7gZFOGYLnBAOK+/tp9D+VdFenGnK0HcBKKzfEPiTTvCtlBdapcfZIJrqGyjdlJ3TSyCONePVmA9q0yMEj0rnsBzfiWxXUvFPgmBjx/aUx/KznNejWelQaegSNcmuC1RtvjHwSSSo/tGfkD/pznrurrVILbeu8Bxzg8sPw7fjX0eAV6Nx6bsXUr8WaAFWeRjgDsKbcXVxHBGUjUseo5asZLmLULhpVheZ8Y3lwFDemTxXQWtv5VrGqZDAevGf613q7ZO5DHM0lo5nAgPYhe+eOPrVKGVdXJedovs0TlQM43uO5HpzU2p3b2e1Y3Vp5JBHukPyoT61JY6FHaxKkzCVh944xk5zz3710w92N38iHdysh51CMMFt1MsnTCLgAfWpHjvJU+URxHHG47j+dL9ujO+O2jMzrgYRTgH3P51Q1LVnhtzEpBuFJDSA4XI9KmV4q9h8y6sjnh1YRkF/KUcZVRk/Tkf5NUJfMinQzXjADGF+6wPryTiqj3NxcMfNn8zsQWyP51HbIJbxY1bIA3FAFGB6kkVi5t7fmY3uasf2CaQzlZLmUj5cKT+p71Xu1lhkkBZxGeokIwo9AP61Be3WShjaTAGNxfAA9MdOfX8s0+20q51EKzZQBMqGU5P0Geazd5OxfTQgF3sTMbLv7kL8x9z6fjUtvqepXGVtmeUHjI5HT1/wAK3bXw1bQxJ9oUXEg9Rhf++RxWoFjtojtRYwBwAKai73KUHbVnN2mixXJU3NwAzgN5atjP17mtuGztdNhfYojXHzfNgEVlXmpRzKY4tsUwbcJVXOO56/8A1qyrvV5toUNuGcFw2S/b/OK19y90RzKHQsXmsvDJIsEJyWOMqARk55OKdp+kza0xe8uAIQP9VA/f3qjDZ3ty4eO3LHsWG0AficmtXSdNns7rfdzYbG4LHkZP9cVhrKfvFRTfQ27Gxg0+NY7eA7AeWbjJqS83CMSpEGlQ7kQH5j6gfUU4un+1x03A0okGdzbse4PNbxai9DflurFSK/8AMl8ogIx5VW4O4dR7/hVlmRlZZHVQ4AHzYOD/APXpJVS5K7k3/wB3jkfj2qGG1iZWV4448cEFRkj1zT5o30BRlbUnhkVEZH4kU8gDk+h/H/GoTGtzcsynythBJVsMxIzz+FRCKaKGae32xQFBgMfmwM8jjjNMjJuIkEbSOkjBWckKDk+gH+fSr0TtchO62LM9wkTNlmkYgYjU5z7f/rrxrW4JR+0z4Zh0S+m0+8l0OS61wuUa01DT4ZmSO3hjZM+cs9xuMiMmxCM7y6gerXl8IPtEC4hUDaMc5z1x718+/F7SPEWofHvwTp3hrWf7El1Lw3qNtLd3V15UmjwC5tjcXlpGRiW5kQ+UMnEe1ZCMKc5Jp3SK59T1H4ifGK38OXsXhfQIk8TeP71N1rodtNtFumcG4vJQGFtAvJLONzY2orscVy+l/BuHWb231rx5qTeP/EkLiW1S5TytK047t2y1tAdpGQv7yfzJG2KSRjFbvwdHwqGn3Gg/DvUvD00VuA9xBo95HPcy4JHnTuCZJWJzmVy2STzzXon9ixoI/JZoo0OQByT71LuthNuR5mfEnivUPEdnDZ6TdaDZMXM19qsCyYbYQFWIPliGKndnBxXaaN4Ri0fTLez+0m8kjT95M4+Z3PVjj1Oa37m3kW3YxoHkBDDdgdOelcj4t0zVNXv/ALVp9xDJatZG1ksSDHcRyM33oZQRsJVmDAg9EwRg50xVWCpKUaduXtq/8/kcmEwfJUlKrUcm9r6JeSS0/rcXx0X8M+BvE2o6fbRXt7b6TeTxJPP9njLrA5AMn8A45bt1qp8GbO10z4G+A9OgMs8UfhzT442kgELsPs0fzOq5Ck5yQCe/J6nestIn0/wnd299bJqjfZJVawlIkS4UI37pt2QwYfKc8HJzXAfsm26j4BeBryPzMappv9pvb7WSOzE7mX7LAr8rDCzNHGMn5FBBwRWNCTnTU2rX1s+nqd0opOy2PVJhGsoxIkZC9ccE18421944s/jL8R/7L8Dya1rN7qUCQeItWuzZ6Tb6NHBF9liEiq7zMJJbxjFEm4MSWblSfo27iEpXkZ6MHB/zzXl/jH4nx6JrF94W8MaFq3jDxekUTNYaTDtgshNkxNdXUg8qBSqs3zbmwM7DkZNdbIUlrZo8k+Dnibxr4F8c6BZ+K/AXn+L/ABpqc2nap4rutajlkljgSeUfZrZQzR2cageWmVAVtznzGG76nisms4JXkYyEFWJUgcZHArwPwf4d+Ns3iu+8WeIvCHhN9fjim0/R7eXxNItlptq7K0m1YrZ3kkkMce+RiDhAqqi5z2niNfjn/ZN1NpUvw9N9HCXh05oL+T7U4IPlmdpEWIFcjdsOCVPAzWiWqbC1tEeja7oFj4i0C90zULcX+n3tu9tc2kxLpcQyKVeNh3DKSPyr45+Ivivwf4djt9I+HfxN8fW3iG5uxor6tcXmo6no9raJ+7umZ543gdkQOI2gJk85FG7h69b8b+Pvi7H4F8Q6ovw30HRNGsdKubhxr3itvtyIkEjSNttIJE4XAHz5JyeODXpHwM0i78L/AAY8B6bcRLYXNloNjBNZW8m6KORbdAwXGB1zyOpq9E7las+c/B7eOvFXxZRYNCj0P4G6NpEen6Faalp91Y3k7bEZHMU6guy7Wy3C4k/iJwv1f4ds1tNPhV4QjsF444IHt7VU8WvELRLic5nEoeIZ5Pr+H+FXdK1ldStPMaNoiGzk9G55INbOlGNLnpwtd6u2/YxjNuq4zney0XbuacxUJuY7VHJyapQalBM6xwyRu/UJu5KmsrW9WS+guIYZ4w0XzhdxJlHpj+n5VjWcUFpJE11ItsU3ELICXU44OBznoQK0hheePM3qZyxPJLlS0O7YZdfmwTnbjqf8iowhe5ZNzYVRn6n/AOsP1rAHiSzWxkjgumjmYY8x05Lf3iPeqdlqUUVvc+bqUeLhxuIZiyj/AGeMg85prCys20J4mKaSZ0k1zBCFkaVUQ7XPmHHByKoJrtraXMnmS7YyFCkISH46rjjuKzF1a2hQj7THcRBcbpiW3vjJITGev4c1mya1blkItfNMZzGT8oyepPXJHGPpWtLCXdnFmdXFe7pJHQjxELiJo7a0muHmY7N3yrg+/wDnoayLi41aa78i5uEgEwI2FgFYdO3NZd1rF1dtuZwnGPkGKgjvJ4xIBKcOQWyASce55r04YTlTsl+Z5ssTzNXb/IkawYTyIrCVYyQ0kYJXjr1xUTQrGAXlTOfup8x/w/WmSSvP/rXaQDoGPAptd8VLqzjbj0Q9nQHEYPTGZMEg+oHT881G+XfcxLMepJyaWg8VaRFwHFFAORRTEFFFFABRRRQAUUE4oHNABRRRQAUUUHigAooHNFABRQBiigDnviN/yTvxX/2B73/0nkoo+I3/ACTvxX/2B73/ANJ5KKxnubU9j0moL9zHY3LqSpWF2BHbCk5qejGa/GD6c/Knwp+yF+1D8VtO8N+Px8RfsV00Mk+lSarrtyL21hlPOCqNsDqFOAemM+ldj/wxx+2D/wBFqX/wpr3/AON19b/HP9sP4X/s9QvbeINbW61hPlGh6SqzXY5XO5chY8BgfnK5GcZrf/Z6/aD8O/tJ+CrjxR4ZtNRs9PgvXsWj1JESQuqqxICswxhx3r1ZYivy87gregHw0f2Yv2ifAnxA+GviD4h+OG8aeGbHxXpxlt01ie7+zO0oRZSkqqMZO3IyRu6YzX6at95vqa4DwV8bPCfxD8beKvCGm3Mg8QeGpxHeWN7A0MjLgETRq4y0eTgMO49CCe+rjr1ZVGlNWsByvjFpv+Eg8FiCPzJTqcwC5xn/AEOfrXS2enCRn+1D7QyHGxTtjU/T+L8awvEe8+KPBSoWDNqU6/L15s5676GwWJULAu+cYclh9cH+tezgUnR1ZnJXZEyQR2siIhZwvmbYlyqEdDxwOlJcyXdxK6wzi2QH1x064OPX0qS/aWCOR2n2xcbUxwAOuBxWJagXmxZDKkOcBVTgc/1Nem7NWSFzWdmX54fM01UWVJykiyGNCQW55wT3q3BYxajF5rXEzof4Gbofp/SoDPHp0kVtCEFy7Mpnk6KByT79elTR31toVjFGrNwcmVlC7iSckZ9/TNapSVNXB2UtTRj01IVYMXZW4KbsA/liucksPnknlQRwEkqCRgVPda2zIxUuvPDynahHrzyf0rDvLyS8lUGSS7IPCniMfQVzytJ2FKStsOnk877pCR5wZO30UdzVYHcmyBGCHJJHLv7k/wBam+xscS3sqxAY+THT2ArTsdHubsB4FW0tn5MsnLt9B+FYOKuSk2VLLZpr+Y6RmU8hZc+np/U1bj8RSNMmcShCWRIxkg/hWraafa+VIrRr5oJDPxuIPQ596mt9Mt7UOyxbFYctI2Qa1tJOyNlTdjGk1S9ZTKtrcopOQdp6fSqrXOoXA2rbzlScZlyAc11ZdmQKu+NmwFBXAA7n8KU2aKRvkeQqQ2Wbv+H8qfsnu2HLfqcsmg6hdKjOyRqf4ADlfr2rZ0/w1bWbb5CZpsg72GSPpWwOT60ZySOv16GhU0tS0orZEFrGpaUgBSGPy45X/wCscA0YH2sbiOEOSfrx/I0ye4Fo88zL9yLOBxuAOev4/rRp4lWAS3ZVZpPmKkY2+g/Cum2nMRfVIk8l3JbeeTnpiptoPO3P0GaZNewxKvzCRieQpxgetY2v6hG+ITOY4zg4Ufe9s1g2luU3yo2JHfcURcMMEsfuj0+p9qheKV2KyTxsv8YCYYc8Ec1gQHHCzAQKN7F2yc+9Taa9wwM9pGJhI2wtnaMY6mj2nRIhSd9TTltReXxDFkhVMiPHJweuKluIEto1l3EMPurIcgH1x60WzIrEAgu+A5XsfrT723EnkysCWhbdwMnHQ1a7IuS67lO8ggs7b7UYFMu4EtjknPuaxvEXg7wp8TtMFj4i0Ow8SQ27GaODVbZJhE5BG5CwO04OMjqDg5FamsXsEi+VHKryEEtj5sDvmqGjWdxbt9pZSsS5O4nkj6dPf8alQlfQzcleyPPfiJ4HtNY0JpbXOia3o6NcaXqunxIlxZPGhKquBzGQNrRH5WU4x0x6P8MfFjeOfh34b1+Qx/aNQ06C4nWE5RJWjUuo+jE8dqd4zu/7H8J63qcMUdy9vp1zMkSjLSusTMAPUnFc98HLhrf4ceHHuJIJr27022mdrQ4gLNEp+Qdl5wMU26sYRjypxu7u+q02t1v6kQ5I1Hdu7Xy3PQ2YIACeTVJEElws/kMTnacjkHsR/L8qLbzrnd5sWznA3CrgQKgGOCMUJ9To3PE/FvjPw78edZi+Hvh/XItT0iOWabxe+nzEGK1glMR0+QjDI08ylHXhvKil7MCfXtPsIobeJLdFtLWKMQQ20MYjjjiXhVUAfKMADAwAAABxXkvhi3074V/HPxtpL2NrHbeNFTxVYzJGPMmuo1S3v4nbvtItpVBPAmkxjFeqaLPPeSz3Ejbo5D8q9lAqudLREvV2ZyHxU8S6roVx4X0HQ7qLTL7xLfvp8eqXkZmis9sTSZWPo8jbSEViFJBJ4GDy1hYS/s9eJLu+1PV7rVvBviS4gOoazqlxunsNQEfliaZsBRBKqRpkYEbKgxtPGl8Rr8+KfiX4P0TwztuPE+gah/aF5dNb+dbabayQvFIs3zL+8kVxsjB3ZAY4XrnX/jPxL8Wb/W/Amlae3h42F0+n+IvEGbe9hhiKhhBbI25XuJonUlZEKwhiXDHaD6EqiowhGS+Ja999Hf8AI5YUJ4iVSpCXwNW1/S+uu57PbzxXUEVxb3CzQyIHSRW3IykZBB7j3FRXFx+7Z/uogyXJwKwfCvhiz8J+G9J8P6I9wukaRZR2cHmy+e7LEgRNztyzYUAk9TWnDbS6jCkt3Kp2EssMagKGwRk9+OePWvPdNO7vp+J3Kpa11r+B5D4s8J2HxZ+Nt94X1yTUNT8LaT4dtb+fSra8kt7Nrue4lC/aFjZfO3QwkiNyU27iVO4V6vqnie207ckJWSckfKgyqj3PHb0/pXzV4h+KOhfBX4jeNrrWrmWDw74i1W1a31q1fz0jkW0ji+ySxqTKAphlKFUZMF8kEEnWh+PHhO81Gax0/wDtbWJ1kMdudI0i5vI73apaR7aSJWSVI8EOQ3ykEYJwD34Snh68FW9onE82tiamsacfn/kemahqE2p3TzztuZjwOyjsBVc8/Ssjwz4t0Xxpp32/QdVtNWtON0lpKH8skZCuv3kb/ZYAjByODXmPhz4t+IrX9ozXfh14pt9Ojsru0bUfDd1Zq6PLAoDOkgYnewUtll4DRsMfMtfQ3hBJLY8a0pNt7nt51OWONY4Aluqrt3RoN7epLdeaqE9SeT60nNLg960UVHZGbk5bsM5oooqhB3o70UUALSUdKOtABRnFFFABRRQT7UAFFFFABRRRQAUtJRQAUUUUAFFFFABRRRQAUUUUAFFFFAHPfEb/AJJ34r/7A97/AOk8lFHxG/5J34r/AOwPe/8ApPJRWM9zansek1FdSNFazyIdrpGzKfQgEipaGAYEEBgeCD3HpX4wtz6c+DP2IP2VPBfxS8KD4yfEC0i8a+KPEmoXN15V/GDa2372SNgYh8rljk/MMD5doGOfWP2EtNtNG8P/ABZsLC2is7G1+IWrQwW0ChY4o1KBVUDgAAYAryzxPbfGT9iLxbrU3w88H2/jn4U6/rjaimlWkMkt5pxZQ0yKIgPKVsEKcMqhBnBJz4P8EP8Ago23whg8Z26/DyfVZfEfiS815MX5j8g3BGIiPLO7aR14z6V7MqdSvGTi7p2tqB9NftQa7J8MP20PgP4j0NVj1TxGZdC1XdI2y6tTLGiK6g87fMLD3C5zgV9mngke9fnd8APhP8Uv2o/2jLL4zfF7Qz4Z0rw6UTT9JmtZbUyyoN0YjRjv2qzeYXbO4/LyOn6IHJ69a4sSlHlhe7S1AxdTAPjPwRngf2jPkj/rznrttXknwkcC7Izy8ucBR6k15x4zdl1/wWY9+8apLjyzg5+xz12SayqQpHdymVkwQhcDn355r1sC17GzZEpW0LtvBEIQHmLQbSC/Tf6getVpdVisWa2t4/OUqFVCSPrmmf2/CzuoVsMCFiHOM9Tx7VVmspGJEOnTpz95c/kea7+dKzjqQ7vYftD3QkvGuMxnaSI96vnngjp2/KpLs2xCmzhfJPLBcsPck9Kh/si7uCCbA4PGHfAGPxq9p0J/tW6hKhRFGiyrFnaWJ46+1aKTqJ6bFKN/mYr2K+aWkd95JAWMeYx/HtW1YaO/lI6wRwHP35ss+PpW1DGluvlW8YiGe61KI8nLPk/TFZJNmipKOsigmlWsMjTtGJJVO4ySjO36DtRHHtkMsJ32oxuG37vXJA/LirUmbkmEJ+53AOc9cckfQ9KcLZ493kvsGciPqo+npzXRGKitdwb193RDEs/NYyyFlLAEKrYx6ZPXNSJaqjF3ZpiTlRIc7R6D/OaURTN96QKf9hc8/jT4oDG2TIz8chgOPfgUNtbMVr7jizAkj+VQG9jjGZA0Z9GQ1aBB74qlqd79htC4ZRI7bUBPP1FTdLcp6ISG2Z4Q0zSBmG7aW+6fb0NRfbms7hIrraI3JEUvTdgZ+b0/rWXbX08NwuJvtG4ZZWft7Vu29xFe7sFW2nG04xmnGopbozWu25XmIuLhCZV8pTuATB5HPX0x/Km3kdtFciVlLSHhBvJH1x+n4VYa3jZ/PRAACG+XjdjvVGZE1S6kkiZ2ZFCxiQFVU/1qJO+xo42FNmmsKWaZ/KzjCcDPeob7Q7eFCypLI5XtzuHoT2/CtSyiMMRUuHYEnIGBms3V01OS7VbbJhwDhSABj1z+NQ0raktaalO00m6md1aMwRHgnIPFakht9LjiBykMbBHJ6HIwM+vNW7JJBCPOAD98GqOo2T3KvJATIGx8hbgMDwR+Iq4JQabWhLVlpuX7yQQ28jZUYHU4FZcfiSNlKhS75x97k1UuBqGo2KxTKqNG5EjNhVOPXn8atabpRMKtsRJAP9c4559u/rQ4yuCk5bIZJbzalexSTxlYx8yxDALY7n/69blvC0cQViDnJYDkc9vpSWypEhJOXP3iepPvUEuoCScQRAlv4mPCrnp9T7Vau1ZDsou7GX1lZ3Uc8TwRy7kKuoAyQwx+HGa8V0b4X/FTwLs0vw/4o8PX3hmygSLTo9c0+T7VGq5xC5hIDDG1N+eFGdpOc+6RJHFCu0HGOAeT9TSOWcELy+OhGAK2hXlTTitU++plUw8ajUno120OO+GfxAm8c6bqMd/YrpGvaPeyadqenLL5iwTKAwKsQCyOjK6kgEg+xrN8dfHrwV4IvL3Rrzxdo9n4jS0aeLT5pTJcAlTsYwIC+3JHbn8RXnvxbvPFfwm+Il94q0m00s+HvEtva2+o6hqTXDW+nXUCyKksyQKX2OrIm8YC7fmIyDXT/AzS719X8TeJrvxBompt4njsrxYfD1rLDa/uI2gMyNJI7vvAjUngfulOMk0sRBRanHSMtvXqhUKkpJ05br+kzyCDwF44l+GfhD41+KvGfijXfFei2dt4hn8M3FhbWVvFbyRj7fb/AGeKIP5gt3lAy55jXK5xj2y4/aV+Haobfw/rT+M7lOPs3hWxn1ZkGAdz/Z0YKAGUn5s88AmvUJbdZYiGAc+rc15z4/8AGcXw9uNG0DQdHTUNd1djFpWmJlINysoeSQIPkijVizNjgDA5IrOnCU5qMUaVJKnFtni/w01dPiifCXhXTdY1eGS7j1LXvHrWF0bO7N0ZFhihmcASRLI4kASPa3lwrkqOv0t4d8LaR4K8OppekaXbaTpNurCO0s0EaKpOWJ9STyWOSSckmvKP2fdQ8O2V/qPh/UooNK+LMPntrEF5A0d1dRG5lZZ4Gf8A19s33ldCcAqHwwNe3LC0W/EpdGGApxx61riJKVVyW39f0icPFwpRg/6/rqNFwlvArsNu4cIozx2AFUk2ySAvNsuXbPkoRkEnpnv0FXwuL1sgZKAJgcjB5A+vHSvGvEWmv8dNQvdF0u7mtvAEE7Qa1rFlKY31ZlO2TT7aRefKBys0ykdDEhyXK4Suo27mvxSRlfDTRrHxJ8YNR8TeHJ7ifwBp1vc2Nte3MvmW89/JLH5508HJEKCJ43lBCuzFU3BGavb9OWy0DSILLTrWGx0+3GyO1sohDCi9RsRQFAz6Cn2GmW2laXDp1lbQ21nbQrBBaW6COOKNRtREUcKoAAAHAxStMkdmDcRlQB83lqSEx6+lYUqUaUfZ0lZdvUtuyUXslZeSOD8dfCXRPG99Dr1j9p8PeJ4/lGv6KUhunjzkxzBlKXEZ/uyq2M5Uqea+dfH3w98U+DvjP8K/GOs+K9L8RWtnqUnhsv8A2a1ndFL6N1UOqO0TMJI1+ZQnXG09vsKGFdUBMnzWikGNF+USfX1HT615F+0TLcppHhG1gtUW2uPGWjQrjhtqztIzgHoAIjx+I9K9OhKcZKKl8jirRTTk0aqnIB60AktihRgDij+MfWvqz50cwxSU5/vGm0AHeiiigAoxRRQAUUUUALmkoooAKKKKACiiigAooooAKKKKACiiigAoooJwKACiigjIoAKKKKAOe+I3/JO/Ff8A2B73/wBJ5KKPiN/yTvxX/wBge9/9J5KKxnubU9j0mob5itlcspIYQuQQenympqZMqNDKsuPKKMHycDaQc/pmvxhbn05+en7N/wDwUK13wt4K0m3+LvhrXH0F5mtLPx3Hau8UwD4VZeAHKgPl1JJ2/dJya+0Phf8AE/4d/GbSG1PwXquka7bofnFvEgliOSBvjKhkJ2kjIGQM10PhTRNBsfBukaXosVvceHbe0SOyRCJojAFwpDHO4Efxd6+Nv2kvgn+z98KPEEXim18ey/BfxeyMbY+GJidzshCO1tHkhMKwO3aDk5OTXofu60mopxfkB9zkk9ST75zSV+XfwC/4KXfEBPGEmh+IdFu/idpEtxJ5F5plgINSWFSCX8qPKMBGrNs65Jy+BX3l8DP2lvAn7Qujm78LamVvo9/2jRr7bFfW4U4y8QJ+XkfMCRyOc1jWwtWj8S0A7PXYIbnxb4ISfBj/ALSmJ3NgcWc9d9bR6fDBuggiUA42qg3ZzXDatt/4TDwTuXcP7Rn4/wC3OevQltAeRHHEBwAFGfWvZwDXsdVrcpRvqQG482MtFCI3kHyvgEgHuffGTzTvIndGVbh+RjcVHB+v5cD0q4FEYyxzx1PGPXNIQhwxOO+4cfrXpXfQaUUZr2+oW6DbIs7HKnjnB759qqNBJp0gvFBnYIRKhGGkQc5HuK1bi5jikVHn2nqQRkn8BWbI4uBcS7ROUb5dxPAx24/StFOSV2tPzIkorrr+RpWd1FcIk0MivERjKdj6HPeknBublIQQsDIxYqwyTx2rIisZ7oPdW8nlzMAGBb5Gx6ipdNu5Lq8+yXCeRcwqWbDbt3bj0HSnGN7yp6r8hOado1N/wNmIopWOIARgcAU28uJYIi0KK2B1Y4quqLDJsQ+ZLnOwPyPr6Cn+RLcHfIx2dFVW49yemT/KstXuW1ZaGRP4mnik2hFk2gZwDyT2ps3iK6KPGsWxz32nIBrdOnWxQgwr0xkD9aZBCIZnVgsjFQ24oASenP5VPK3szOz6s5621u+jtynkli3C4Q8D2qxavqM8cQkQIoIZTIvTqMH1rZ2SWu4xnfHnd5Z4YeuCPx4qWS7hijVt2d/3FUZZ/YCq5ZXumKytaRTs3E7utxDGrxn7+3aCPWo1iK37IkRSFeQwXjHerZBmnLOig42hByV75J9amkgPIycd93f8amS1NYpWMq6a8ZlEFyhiUnAQHJ+tVmElvI0glMSKB8q4Az16VXvon0+Yxx7mUscAckf596T7JcXLpuhdI1+Ytj7wH8qyUnfQyadtS/B4kEsfzRhXK/Lj19cVpW0oFuu5/m6nceK5O9QrdtGiGCMcfMMsffFLbyPFKjRybvm4UZ6/Sq55b2JjKzszsmbK7lZcdfY1TmF9FNIYI43jbkKxPB74+tOW0+0RRyGMRTIdwUHA3dsgVNayl2dXTyjuxt649Pz/AKVstro10ehQRpZJp0mg2TsqjbGdwHXDHt/+qtUn96Djg5HNRAj7U3/XMY496nZS8XOB6ZPenLWwQVhCgIOcKKrT20rTM0E4jDclWXIzjH8h0oM6PcASZHI8sEfK2R1+uQRU5+ZCSdgHU9MUJ8o7XIo0miBG2N+fvbjk/wCFJFfRO21wYnJ4V8AmrCskgJG1gO45FMneJVAk2hXITDDgk9BTVno0J33uJFCsUrOuAT0PevH7nxFpvwp+OkWm6hexado/i7T1XS2uJCsMF5bufNgT+BPMWVHA4yVI9APVoWFkwtV2vj5l+bkLkk5+gqh4q8I6D490CfR/EWkW2t6VOcva3cO9CezDurDswwR60KNJTTqxv27q/VeYnzuLdN2f5+TL+t6vZeHdJu9T1S+jsNOtIjPcXVyQsccY6sT6V518JLK61e51r4halpUkGp+InT7DFMEWe00xFAt4myflZvmlZR3kAPI482fwT4X+EvxA0bw94o1y5/4VxMJNU0WDWr0m1t9TjdSbadm4dQjpJAHOMpJnJUE/RGieJNJ8T291NpOoWWsQwXDW872Nwk6RTLgtG7KSA4yCVPIyOK6E1Sh7qfvdfL/g9Tkp+0ryvUSjy9Lp/P8AyMnx38PtH+Julw2uom9s7uzlM9jqenTta3+nTFSvmwTLyjYJB6qwJVgwJFeV+ONc8Ufs3Q2niTVfHr+L/BVxqllZahB4pt1W8smuJVgEtvcWyKuwFg5ikjPCnawLV1nxF/aM8A+ArvUNNm8RWd94usgFj8MafMs2pXMzrmKBYVydzkqAWwF3AsQCM5fhj4FXmo6/YeN/iNqZ8X+MLXbcWWnYKaRocud22ztwcM6k4+0yb5WKggqMAc2jO3WO5hat47139o3RrnSPANhqeh+GdRZIZfG2p77JZbbev2gafCQJ5GkjDxiYiNF37lZiK63Xr3/hCptE8H+F7abQbS3054rLT7LTt9rsTCxwxyAYVxjPPRSWOea78XE5tx9q3CbO/cwyQKqN4glQuwtHeRj95lIUYzgDiubE0pYii4Qlyt9VuRGdOMv3iuvWxuKGmgjZgol2gkA8e4BrMk1CJndWiOFJAjcfL9T6n60+y1gyRPI9sY8Yz84HX600xWszSXKNHI7NjY5wcjt9avWEb3+Y207JF61uJmJ82NY8gcDt2FeR/HO9+3/ED4X+H0Y5W9vdfnVSP9XbWxhQkdcGW7Tp3WvWJLqO0ikMo2AAEkA4HtmvDtSuk8T/ALQHiDUInd7bQ9CstLjBJx5ty7XUpHphFtxj6134Km51YvoZYqajSa6nTgYGPSkfgA+hzS0EZBFfWnzArDnPrSUD7oB7UUAFLn3NIB70UAHWiiigAooooAKKKKACiiigAooooAKKCPeigAoooIzQAUUCigAo70UmeaAFooooAKKKKAOe+I3/ACTvxX/2B73/ANJ5KKPiN/yTvxX/ANge9/8ASeSisZ7m1PY9JqDUBmwuv+uMn/oJqekdQ6srAMrAgqe471+MLR3Ppz8kfgno37WXxz8AaJoHhXX9Q0T4f2s8sFrrM1wtoqKm4bPMX99JGA20AArnjjHH0V8Mv+CUngfQb2G/8deI9S8a3UcjH7OmbW2dMfKrclyQ2TwwB9K9C+KP7fPwX/Z+1ePwhG1zqU+nZtZbHw5ao0NhtAxGSWVO/RCcYIODXF/8Pafg/wD9AXxX/wCAkH/x2vZlLFTV6UOVPsB9beEPh54X+H1ibLwz4d0vQLQuZDDp1okKlyAC3yjqQAPevkb/AIKE2ng34OaFpXxQ8P3Vt4T+Ltvfxtpdzp6rHLqiZVZ0nQD95GIx1bjouecGJf8Agpn4U+JXirwd4T8CabrVnq2s69Y2k91qcMKRxWzSr5uAGbcWX5e2N2c8V9ceNfhZ4N+I0ls3irwtpHiM2m5bc6pZpOYgx+YLuHGcDP0rjXtMPUUq19QMHwb4vn8U6F8IPEt+kcd1qaLezpFwgeTTpWYLntk16q3iQNcHdJ5VuoBLIuT7nkV514msbXR77wHY2NtFaWdtfyQw28KBY40WynCqq9AAOAK6KG2a8kxuMhPO0n5R/ia9XBzape7tdmU5Wdka6a2WVQsHqS7sTu5z8wz+lVI2l1C9jjUBS53MV7A+3pW0mlQ3dnFCHBZcfeOB7/WtC1sYrVWEEaowHL4xlsda725ye44wvuV7ue30m25jEkoGAFGCaxItQlkmMiMyKpIJ/wAa6e6sYLyIJMgkx3Jx9TWHqOnw/afLilaOFVBdSRj2A7/4VfJzbsU7rVEceuRoAFTvhtv8XvUdoqrfPqOGa1ddkobkr/iMgZx0pi6XNcyGQQm1tQd3A59sDvXRWWnrGm6blxlRGeiDnjjrnNaUZcjb6EuEqiV+hajRTEiptCYyNnTFPZSTkYyeoPSsK3u20fzLddktrG5EYYlWA6kA9CB0HSrA8QbYlkeznjVjgMwG3rgZOaqUG5Wi7mkaitqaMswtwGkwFJCgjJ5PQUyzG7zZvnG9vl39duBxjt3pUcM6NK4bb90KpA5HXvn2p7EE5RCCf4sYzWbairI2tzasl5AHT15rOjfddTtbojOSFZlwB9Sf6CrN3JIkJPVj8o2feyeBipbeMQQRon3QMZHenF2QnG7Io7aTbl5nBznMfA/HOc04R3O75ZkIHQ7Du/nipiSeD0qrqMU09v5UJCbvvNnoKOay2E0MlsXeM+dLHgZbftIb8OaCRC0UduQGk7yHrj0HemabZmzPlSSNLJt3BmJ6dDUVzIkchREWcD5vKJwVPTII7e1Fk/i0JUnFaEr2ttBJLMY1llYZ3c5bHaqdpZJeI7vAsCk5GBypq15bXKK9tAsGRn5lwG47gUzSrsPJLGYtkgbABPUYznJqeVrVbCupNXC3jvonyZw0eekq4JwfUetTXRmYrKVWML991cHKjn+nT61PPPHCMujkscDPLH2Hp9aQneMKiKccAnP6AU1NRK9m9kRQXCG9l+bgoM+YMEEdufY1PHPFPJsWZXcDO0EfyqnLbLCXkmCs8h6so4+gp00xkEavCZS2dhwOPf2qXOLL5Wt3qW5AjB4i21TyCpwR9PxFMt5XlRvl3H7pJ6Ejgn9KjiuY4tokUo7AAtkdf8aXTmdrdN2FIG0leNxHXNGriO8VIS8iFqjSxt5cnG4KBhvb61ZJIHKhh6N2omi82F0zgMMdKrLep5cjXEkcRh/1p3jAwMliew781T1VxLe3QY++ITzYBjdtxQLg9u/4VkePfHujeAPD39o6u9z5Es0dnDbWNpLdXNxNIcJHFFErO7EgnCjoCegriZvjhN4tlkh+H/hLUfiBYxyeTcazZXlvZ6aH/upcTsPPx/EYVcL6k8VPoXgHxXr/AIvsPFfxAubGV9L/AHujeHNEmd7LT5yksbzyySKrXE+yUoHwqIN21csTQk3qxtqOiOE8Q/ES0+Lng7xB4W8KeE77x3Je/wCjG9uI3sdM0+ZgFQzTTbJd0X3ysSO67ccFgK3fBH7Mlh4M8CeGtL8PeJ9W0DxBobTuutWDApNLNsM6S2r5ikhconyMMrgFWVua9jnuDLIJD5kb42kTMRkdcA8/hTZCk0yukKFwMHHzAj8Of5fjXXKrOpFx2X6nKqUKbUt5foeC+Ar/AMbfD746n/hNfDOlWFv4zhazOtaDcB7S81S2QtHIsb/vYGuLSPDRuWG61QBm7+2eMfG3h/wD4ebWdcvI7Ox3LHHtQvNcSt9yGGNctLK+CFjQFmPQdTWJ8U/AF5458AaxpmnXP2PxCAl5o13I5ZbS/hcS20nsBKqg46qWHc1xnwP8Pjx9pmjfE/xdfrq3iWa3ljtbBIvJsvDpLlLm2t4iSwmV0aKSdyZG2bRsX5TzSSNlKRmr4Vv/AIwqus/EixktNMLltL8Fi5dEsIyMCW8eJx59yynJXJjhztUM2XMs37O3w+mLKuj6laRMAM2Wv6hAQfVTHcAj39q9N1Nba2nO1tw74HHtVCOwutQubcWly0SxyCWWEDIdQeV9BkEiuGrUqQV4QcndaLt317bmSfNL3nY4Pwno8Xwk+K9l4fju7y68I+KtNkFrb6nqs95JY3lmC8oLTyMfLlhlXo3DQcg7s16F4itdM1DQxef2rDpOi2DtNeX0VxD5MEKoxZnkYlEUdSc5Az0qbXfh54f8b6f9k8S6JYa1DA/mJFqdok6o3TIVwcHHGR2rmbr9nD4aX2r6ffDwXosEltKsnl6bF9kjuAjBkWeGMiOdVcK4WQMAyg44rarRjXpunUV090dFKcoNTXQ0vgj41j8a6BqOmvHeLqeh3p0u7F6g3TKUWSGdMMwaKWF0dWzkg8gdK8y+EF02v6LrfipwwfxPrt/qqbgQRb+b5FsuOwEEEXHvWz8fvBHh5rTxd4vuNc1e0hi0k3WtaLY3QjtNa+yI8luk5xvQ7gEby2TzEO18gVX+FXh0+EPhj4R0Rt/mafpFpbv5mN29YV3Z992a9/LqfLJux5WY1ederOqPWig8mkr3jxAoIPailHBoAaHycYxS0pORg80n3eoz9KACigHiigAooooAKKKKACiiigAooooAKKKM0AFHSjOKOvNABRRRQAUppBk9qKAFpCcUUUAGaKKKAOe+I3/JO/Ff/YHvf/SeSij4jf8AJO/Ff/YHvf8A0nkorGe5tT2PSahvFL2dwqgljE4AHUnacVNSg4Oe4r8YWh9OfDn7DH7IHw6vfhDY+MPFnhKPXPFupzXkd4mvRmVbcpOyeWIW4VhsBJI3ZYjOK1fhh8CvhrZftafGDwrr3gXw80d1aabrHh7TZ9PjkjWzEZjnkjGCEHm4BU4J64xXY+Df2dPiD8Nf2qtS8WeG/FEUfwo1uSe+1Lw9NcyF1upU+dkjYFcmQK+8EHBIx6y/tefs7+J/H9xofxF+GOpto3xQ8Lq32QxhVGoQnkwOx6kc7Q3y8sCOcj03V5qjTnpJfcBwN98P/hp+y/8AtSeDtK/4RbRZ9B8fXMtxp0lzYK9xoepRlQvkSgFvKkZlAQ/cbkEDivtY9T61+e3we/Zp+Pnxl+Ofhzx18er+40208IyR3On2wMG64lDbwqJF8iLuALseSAAPUfoTnkmscTZOK5ru2oHL+LSi+I/BZkiMw/tKYhB3P2OfFdtplgLtW81QuOigj5TXJa5H5ni3wSANx/tKc49f9Dnr0JMwRlY4vIiAz5jgHA+letl8b0k/Mh76kcZKHakfnFfkV1IAz9P60rrPIUSGV2KsFdvlVF9SB3IqWENEA5LyxY+UhclfwFMku2MbJbwF5E+9HwCBk+/BODivXje97DkrKzZHPZtFHvaeaVsgKhbIbJHBFSQ6RERG8y+bKo7gYB/CpWtTMd1wwMYIIiB+XI6Z9/p6VHc3hmn+zIh8w4LEtjaM89PUZ4pSadkxKNveJmVZLhCCRHECzem7oB+HWq83724w0bmNRuIUkZJGOcdqkd0R0jWMOUyfLi/h+tR2c48pCxCTS5V1kOX68ZHbj+dJqSXMuhqmr8r6kn9nZlR2IiVBhUUDAHpRPaQSxyQNGGiZdrbzyfpUsb7JGR3DEn92zdxgcfUHNJOi5MjE57Emos4u4nqrIyPDV20U11pkkhd7Zzs3dWT/ADitqSVYFy3PIAHUknoKw7qzljvvt1vNFFcFcMsg4ce57dBzRDrj3V4scq/ZWiG7Y+CCemQfSuqdqj9pH5nNCTprkl8jTjtZZpUlvCGaPDRqrEBTk8keuMCpZXbzvLhUFhyzbsAfX1NUINWkZWLGNyWKgqT8uD39fXitO3WNIwFYsDyWzkk+tYN33Nov+UYy3AQkzRD6ocfzpoV8Z86THqhX+gqxMFlTymXhhllJ601QEXIwF9qnXoaepHH5cO9izSu3VnXHToOBVK4gE1urohhdjuZhwQMdD65HGKvQTefErlXTcMhTgcdjT+hOQPbNGqd2FotaIitnZ4EZY9oKg/M2AKqXMqWt4xlzvaMbSidcE8ZqWS1eJ43iVigzmMOevGMZ/HikSVZx+9hlDtyAV5A9arlbvYhvZdR4mDwFyNiHqTx+ftUsiMI1eNY24zg/xD2NRRh7mzOHG4E4OMbsdNw7e4pzXnkxlp4ZU2/eO3Kj8fT/ADipULPuW56diAxSM+AxikbnYVDBvelt45Y5VSVdh5+dOVPp/k1X1Iz3VvHLAGiKngHnj1qa2N09usbqolUht7Dg8+nrSbT0JjfmHXFjHLJuchCcHA6UsBY3dxGpG7Cnae3uR2J9KmWUN8rxurn+90/A0y1Xz75wu2IKVjYr/FnGTj2qbONzVKLGavqNroWlXepajdx2Wn2cTTXN3KwSKFFBLMzHgAAE5J7V83fD7xzJ+1feGz1TUE8LeGJoGv38HCzubfVNXsS+yNrieZUVoCR+8S2DA7gjyFThtP4V+CNF+Neiw+PviAtx4nv7u+vFh07U5C1lpHk3ksaWyWqnywyCFdzOrOzZyegHS/Gu81bwH4r0n4raf4fm8YaX4f0HVLS/sLS7RLqGORoJ/Pt0kGHbFuyMoYEhlwDg1so8uqIcr+6z1i20eDR7e3h0uCKytrdFjSzgQRwhAMBVUDCAcYAwOBWT4g8Zw6XNHbx2s11eOEKwqQoYs4XaGP8AFgkgAHOK0fDfiCx8ZaDY6vplzHdabewrNFPBKkiupHQMhIODkHB6girtzp9tdsC8EZkjYPHIUUsjAYDKccEAnn3rlrqrVSUJcuurtfQuHLT1tfyBbiN5hGkifL1Q8N+R5qSdpRExiUeYPug9KPKEkSrMqSMBydvGfb0qvMEtULxyiIc/LkEMe2M9PwrostrmWu7H3V2LeMZB8wjgAcA15H4Ptf8AhEPjH4y8KPOFsPEKJ4u0yIfKQ7FYdRQAnnEqwzHHT7SfrXc3t5/pZVp/Pc/MYlfG38BXlH7Qely6f4e0TxxZtd2V14UvRf3Mti4SY6c7It6qse3lgOQcg+V9CM7roOCUpqNR8q76/oe16tBaxxiYxhgmEYd+nFR6fKLnfIgS2tkz86kKyDHOT3H4Vi292HVwrJLBLyGVsqy9QVPoetbTQQW9pGVyrsoJQHr9aiM7SujHcuuWieNyRLG4CeYCPmB5Gfx/nUlwyJHJNKNsQG4Oikso9sVnw6giW/2aVCQRtBBB61cGoTRQs8lu8iqgO+Ahi30XrW6am0zRP3WeLftK6vc6/wDCu78PwRpEda1XT9FkYpkSLPdxBxs6/wCrWXPpiuhchnZgMAkkD2rkPi666h4/+H1hiWCaTxDNqTwbcfurawnPz9h880R+uK60cCvqsNBRT5f60PnsRJyauLnNIfQUYorsOQOfWjhTjqaKUHFABwPrQCRSNwOuSfWigA7k0Zoo4PbFABnNFGCemPxoKnvx9KACigUUAFFFFABRRRQAUUUHjpQAUUHpQKACilpKAA80YxRnFNZv0oAUnmgZNUptUiiYhcyEenQVSuNblzmNAg9+TVcrZN0jbJwe9RvKqcFgGPOM84rnJNallPL4P+zxWe9+BefaZF8yZEKxHksM9cdqfIHMS/EHUw3w/wDGKSlQE0m9CuDwc28mAKK4/wAfzs/w+8UKEUM2mXhJHUDyXPWisqkVc3pvQ+iqK534jeME+H3gDxJ4nktjeJo2nz6g1uH2eYI0LFc4OM464rldI/aY+FWs6TZX8PxD8NJFdQpMqTanFG6hgDhlYggj0IBr8XUJSV0rn1B6ZXMfErwVL8Q/BmoaDB4g1bwvLdbSuq6JMIbqEqwYbWOcA4wfUE1i/wDDQ3wu/wCijeFv/BvB/wDFUf8ADQ3wu/6KN4W/8G8H/wAVVKFSLukwPh/xb8M/jj+zr8dfhM2q/FzXfGXg3XfENpp800l5LGDKZMtBJCztkMgJBzg4Ocd/0ib7x+pr4/8A2q/ij4O8c+I/gRZ+HPFWja9eQ/EOwmkg02+jndE2ONxCkkDJAz719gN9449a6MQ3KMHJWev5gYOssyeMfAxQgN/ac3J6Y+xz5r0C9kDyRxNnBBYgnrjoPp/hXnfiID/hKPBRyARqUxUnpn7JNivQbqJr2RIlONxJ3dwvOT/nua9nAK9BW8xxdrtl87iMAKo9+arRDF1cneMttAUDk4H8uatqgiRUXooAHOeKgm2xzxzOFCAFd+Oh9z6YyPrXoRW6CT6lbUJ7iCB3hjLsQAoxyPqaraVpk8dwXml2zbQ2AOnJGMmtgyIEL7tygE/LzWSj3d3fNMyiOJFzGi4O8H+8fXHOOlVCGrZnN6rqaDOlpATFHlVxlj9epP41XGmQx26sQpmHJnUnPJznPX/GrKyi6g4Q7GBUg9fQjHrUcLEs8LEFlXKsDyy//WxzTu7OxSSum9hyO7q6DDTIcYPAx2P41B/aSiRY5EdXLYxjI/PpS2tuZJTdvJ+8cfdXpjoOe/Sp7mGK5t3jmXchHIqWw1GlIrsNwCM4J+nrXP6rpy212t1PCXgIKlUYcZ7n1FWljmsNzQKZYcg/vG2f/rqeO4ttSQw3MQL8g5HTNEJcruZTtNWe4Wktv5AGxD/CoRcZPpzWhE7W8ojOArDK4HQ45Fc1b3sOkasEllMkAUpHJj5VbODn36ZNdHOC0BfJV0BdSP8APQ1o6fJa/UcJKSfdD7mRi0catsLk5dRyABmmyFbWEBUzgYVPX2qSWETRgEsp4IKnBB+tUl+1TXQEhj8qDJZlbhj2yO2BmktV6Ft2fqXbWIw20SHBZVwSOf1qRiuOn40wlm6ABffqfwpSpwBuI/Ksm76mqSS3EaZjOEwMbCzMTjHOAKUyrggHdnsv+NQkLHdIT0KN19cg/wAqWSaUYaONJIsZwD8xGOoB4qrN7CTSIpJ3hmVkTiQ7SAR17GpYZHnUg/IO+OSapzzWt7C68gxjceow2OOPWr0G5bdTJhTgEgdqTWmok9dCqLI2+GjZ5FXnYOv1X/Co3ntLCNr15AIQm55GbG1TzkkngfWuP+MHxr8N/BXwZqXiLxFcNHbWijZbQsgnuZGICQxBmAZ2JGFz0yTwK5jR/glcfEGYeIPi5bQ6xeSGQ23hEkT6VpETEbUKfduLjA+eds8syoFTq0rpOWiHZJ2WrOw1j4ueDNDsk1LVvGPhrTLKN8+dPrEHpgKoDck5+6Mk9K4/SviX428f3c154F8L6VF4VchrXWPF9xc2MmpZAPmW9vHCz+Vg4DylScZC45rtdA+DPgbwzqLajo3gfw1o2psoQX1ho1tBMoA+XDKgPGBjnsK6q3laLbFL/rQQiuSSrcDkccH261ScbOyFZ3V9Dxj9nnXm8Lya18PPE8sFr4+ttSv9XnSEPHDqsVxcG4+22gfloh54jZQSY2QhuoJ9mMfnXZ27omZMll478nHfOa8t/aIurPw4vw98U30YaPQ/F1gZJUx9ojS58y0IjB5YFp496jkxq5wdtesAxzJDcQssg25V0bKupHYjgjuKyTd7mrtZI8p0eFvhT8aU0W3kt18N+Ojf6qlqECG01SGKBpvK5+5PGJJWTHEkbsDhzXqE+ppHMqqA6t1YHpXmn7Qt7a+HdA8N+L7h1t4vDHiKwvruZ2CbLOVzZ3BJIPyiO6LH/c6jrWnrvjnw14f12LSdR8SaPp+osQsdnd6hDHMxP3fkLA89uOc8Zok30OeTcTqJdbmMrosavHkjPqKxdW1m00qS2gvZ0tHvJgkEc74EkmPupnufTvWnZ6fDdTEmUqy8svQg981D4mktr9rW2KpcJFIsyoy7gjpyrj3B6ehqYu9+Z6GUrtX6nE+OfAD+N7Wzs7TW73w55d3FPLPpreXJPHuG+IuCCARnkd8cEVs+NfFmlS3OnaH/AGfqF48zNpzxOo8oxYw7MehyvUZHDH0rMuPHGmP4mTw9bTxPrTQNcvGys/lxrxuO37oJ4BbGcHGa3reB7GHeVDtIxYtjaN5PIx7Vy18PVcb03yt21tfT/gnTi6terhFQ9ok09NE2tVe/yVld6X2PO/gRcT6V4e1DwZfyGbUvB96dIEjEs0tlgSWMxJAyWt2jBP8Aejf0r1bEckyI8hRScMw5wK8o8Wq3g34r+GvFG8xWHiEL4Y1Q9FE5LSadMecffM0Gf+m6DoK9N3vCdrAlz14rS9ndHLbQi8VeGp9Wsw+m63Npd5G6FJ4yoBC4+UqQQQQMHjofXmt1rm6stOcyoA8MRcSR8qWx1+n/ANaq2m3FukEqznMpOBuHAHpVPxDqjx2S2cZwJjkgjnZ25z+H0FdWGw6qYjmT1dr9tPIudX2dFnnd/aPe+OtMvZoIZlt7G52XTsxmjkkeMMo7bWVRknnKgDvW5WH4a1vT/FsS61pd59qs5VeBQQVZSkhUkoQCMkHGecDpW5X1eFcZRlKOzk+t9tP02Pn68ZQkoy3sv8woooPNdhzhQTjtmilY4wKAE7c0Uuc0lABRRRQAucUZzSUUAFGeaKKACiiigAo70UUAKOtITgilAwc/pTMZ5z+FADjyeelFJjdzTgcUAFB60hOKQtg0AIzdKy9Uujv8lTx1Y/0qW81EISkfL4wW9KyS2QWPXNaRj1ZDfYRjgZ6Cs++vkgXLHavrVqWWsTWbc3du237wHArQgry3zK9vIvKSg/NV6OPAVnbBYdTwKo2l2txZLbNhW27MhQSDT7K7SXTZWWDbLExjZ2l3dO+O1AGL4/uIf+EF8RhHdv8AiUXhPyYA/cuBzRWV8Qr0nwd4ojJyBpd2eOn+ocUVz1Nzop7HuHxu8OX/AIx+DfjnQdKgNzqep6Ld2dtCCAXkkiZVGSQOp7mvkPSP+CRXw5Gk2Q1LxZ4lfUfJT7S1v5CRmTHzbVKEgZzgEn61940V+M069SkrQdj6s+Gf+HRfwt/6GrxX/wB92/8A8bo/4dF/C3/oavFf/fdv/wDG6+5qK1+uV/5wPhSD/gmP4f8Ahd4t8GeLvBGt6zqmpaP4gsbq4s9SMJR7ZZV8xlKhcFR83fIBAGTX3Y33j9TSUVhUrTq253ewGFrUIm8WeClK7wdRn+XOM/6HPXoFqZIr7ynZXbyuWU9we47Hn/Pbz/WpzB4v8EsFLn+0pwAOvNnPXpUMPlFyZN7scsQuAeMf0r6LL9KH3ierRKMYPr60FlJIz14x61DLI7TCKL5XA3MxHC+n5/0qKOO6UOGeIA9CoOa9DlKuVlRrSeY2pBDNvZTyB6j2PepYEk8uNEIRVzkjnAzwB+FVbXSp1km37VR/4kc7h6/nWnE4UCPgMoxtA+6P8aG29yIrUh3Q2sbJJKcsctluSTgU6NoJI0ZeAh4+bBBHasnxCj+R5hhA2Hhwefas+LUGvLIJF8kmMEc4Ye/vSu9yHKz5TdaUwlWtzG0TP84Azj/ayPwq5BMsyZxgjtWFoysPLCOEOASCP0q5eWF19rD20qxxdSjKDg1Kd1qaXd7mjNHHcrsY+4AqrcabFMijhQg+8OD+dZkEL2cpkvZxgvghc5GRWqNQtJkCrOMH36/WjbViupblWW0tdR02S2ChUIIVm4G7sfzqvol80uheXM+ZNxhDevYf/rq1fwyyQrGSFUHjZ1rGbTzYNHNGWmhLZmRTnacfe+nJropz5oOm990Yyi4yUkjd1DVfKl8iNWaRh94Dhc981YtwIlWJSzn7zM3U9yTVaxlS9lWbY3TCbTxitMADgAKB6VlLsdEf5rlaf5JA6s+7cC6jJ+XoeP8ACnxzhhGwyY5DtDYxg+49+lNuSEkhboxbGc9B1P16VAxyLmIR/ulTegyOD1/mAapWaVyW7PQrahcb5IZEUkb9jxFiCD/gcVqI2UXgKSPujt7VTmto/MBLYWUAqzcjdnI+mc1JIpQMz3DcDogC/wCNEkl1CPNqxsFtCBdAhV3SNk9Cc+9UrjVBZ28r7gSigxvMcA5OB+XGT6VYtLLan7xnfkmNJP8Almuep9/rXkXxmvI/H/inwr8NLaaR7PVrqS51tLUhWOlQRuZwz7TsjklMEBPBbzHUEckXGPNJ31SG3yRSWjZhfC/4caT8c/BfiHxt4ntPOuPFsN5Y6PczQpNNpmkN5kMRhSRWRJZPnmZsEtvRSSEArrv2ddR1FvCDeEvEN3azeJvANyvh29mtZSy3caQRtb3JVvmTzYmQ4bPzI/zNzXo+jJaaVp1vZ2FjBplhbxiK3toYlihijHAWNVG1VHTHArkfiF8LYPGGp2niTw7qyeGPiBYoI7PXo4vNEsIJJtruEMouLc5b5CQVJ3IyMM1EpScm2UoxSVmeiDL57L+ppJ442hdHGY2Ugj1ryO9+J3jr4brbTePvDOkXOgfa0tbnxL4bvpnWFZDiOd7J4mkjjBwsh8xtuVYZXO3q/A3xi8G/E68vbHw5rseoXdrGJZbdoZYJPKLFBKiyohePcpXzEyuRjOcVk43WpSeo3xZ8I/CXxF8Mt4Z8W6LB4h0eO6S9jtL9nfZIrFlcNkNkEsOv3SQeDiuP+FusL8MPH9/8IL2a3+wxWn9s+F53bynkspZ5g9iFPDvasuAY+kMkOVUjn1q7lkeBpIMNNEWBB/UVz/izwTpPxQ8O29nrEcyNb3Ed5Z3tpL5N1ZXMbZSaCUDMbg8ZHBBKkEEilFRilFLRA23J3NCdba/n1Ox1KGO5tbhfKaGVBJHJGy4Ksp4IIJBB4OTXKSfBzwN4e0K50/TPAXhq20u4Ui6t00mArLk/xgqSw57k47Yrlb3UPFXwT8X6Bb6v4nvfGnhDX7kaV/aGsW9ut/pt++Tb75IUjWWGY/uslAyOI+SGOPStf8Y6R4W8Janr2vajHpel2URlvLu4BKxrkYwBksSSFVQCWZgACSBRJ66GaV1ZngcHiu6/Zqsbyw124e58AC7ih0LVbi5zJp8crbRYXLOSzLGQTHLk5Q7G5QE+pS6uTqBEbb2aDKREc7y3B/Ln6c1zPhn4cah421mHx94w02SN/KdNC8MaiikaRbuNrSzx/MrXcy/fJz5SN5Q53lqNp8KF8J6fNpnh26uvs07yJpmm3MxaOwDL81vC33hBnJCHPl5wvygKPHxlaphOWqndXs0/PRNPpra977+R04SnCrVUKmi/rf8ApGbb+ItG8N/GGKx0/WrS9fxBbSx6lZCVTJbz2kW6OQY5VWTehU5yQCv8VeoaTeh9Lha4f96WXapH8TLnAH4H8BXj/hP4N6Dqelxw+KYV1HWfDt0CNQeVldLpSS7KQ2TEzBSqE4IUcDpXpFhrCXt/5jRsHsV8m5fZtCyMFPfHGOeP71e5DF08Rh01q9n291tXXk0cc8FXjXm3s3dX395J29bvpc5T9p64muP2dvHyWayHUYrATWjRDDrMs0TROp7MrhSD2IBr1zUG+z3bE8gsefTmvMfj/OE+CHjIFQwFknB/67xV6feTfbtQmwgALsBgdOTXNeLWiM7PZmhaWVs9q0jJuJHJPHP/AOqud1SNn1SGeRQ1tIwSPy2I4XHrz3zW6iiS2NpKdoPzbsfKvt7Zrxv4+eJLzWdLsvBGjSvHqviiRrBLyMEPZ2QXN5dZ4K7IjtTP/LSWMV6mAUlNtLSxlinHlUblL4T6wvirTNR8RWWnQaV4d1O7eTRoY4RHJNagkC5lA4BmfdIqjohTJJJx3VQWNlb6dZW1naxCC1tokghhHRI1AVV/AACpxX09OCpxUUeJVqSrTc5O7YUUUo7nvWhkJQcZFB6470YoAKBzmlHelPAAoAbRS9KSgAooooAKM84oJxzRjFABRRRQAuM03b7mlooAQDHegDmlPFZN5rLaZdkXMeLZlysiKSc+mBQBrZ/Ck3VWtL6G9eRYn8zy8BmA4BPbPrVoLQBHNMIYy7EBay7jUXlBVMRqfTrTtRmjklKjcSvGSeBWexxwO9aRj1ZDYrtngc+pqpdXSxZ5NTSMI4zg496yryQLDKwOTsIyeg960IEa63P94HJ9fekaVQPmIBOcGs3SUM+myjzf3o6EnjcTxzUqXkcYgTI80KwJJyTzjP50AU7x4rS6W5RlERbEgA7Y/nSJIlsRaqrATo0zEAZLY4GfSprlGms0ydqltw3c56jpWXJaOIFdZ5WlL+UrcHAIwOvYDPNVGPM7A3YzvFtlIngXxIXlfd/ZF3lMjH+oc0VQ8WReR8P/ABC8m5UOkXYjznLDyX+b8aKmpSaZrSlofWNFFFfhR9cFFFFABRRRQBiasjSeMPBIWQxN/aFxhxjg/Yp67sRPCwSWS52g5EyMNpzxzxx2rhtT58Y+Cedv/Exn5/7cp69HSNRHt6jHIJ619Nl0mqNvMTjfUI4lhBVQV9yck04kgZU/pUNuxgKwSbQQAqP2cY/n7VM7qoVchcnHNejLcpMqz3a207eYG+YDy/THf9amicEYUZyM7iaWULMpDKHU8YNULfFndygs8q7QykgnaM9KW+ovh3LTCK5R0lQHHDqe1YU+jRSyPNYyC2ROGU55I9qu6lcOlzC9uQGcbHPsSOvpiqywJYyx3ExYxPn95j5SaTcmvd2M203ZmY73FpefI+S4yAo610mnPd+RiVMt1Bfpisstbrq3mSEOjoCu7PA71qnVBtAhiMp6AJ0+tRomEFZsZqkMbW4jaIEyHlR0PtUFn4ehijYuCh6q27JWknlinLsJDDKDkJJkjPr7VZ0yaaVjHOQWUZ25zkdj9MVS8irRlLUqGwuGkHlymaHJ3jAU57Y9q0I7KZIQiTRxjudm7+vNWDHHDufG3IyT6VTh1My3RjjZXU9NoxinzW16j5ehS0u5l0q5XTroqI9uYZcEbhnofQ1oXN7JFINkeYj95iDWXrs8ZsZXnwpRgYz3Ldu/Q4qhJ4x3ifbEYiYvkOd2HrqVCpiFz016mDq06HuTfoa8E730pQkFlO8nODGPX8cYpJ72E3DBF3eapj+UZYHnGB3rPsJ5LbT4wVdp7n5pc8lv7uPTiprNY2v1DKyrB8zMCcmT047DPfvWKg1Pl3tuV7W6T7m0IPNTbIjhcAbAeB7ZoS12EEM6qvIUtu7dacl9HKpMSSy/7qYx+eKqAXkm/fAyuQQrhlUbfRhk8j2pKDSbNudXRl+KpJoo7O2Ct5Mzgy7BywGPl/LPFee/s2aLoGk6fr6TXllqXxGlnLeLLgSmS6Zi7m3R8gFYFiIEaKAgw+MncT6dqFpdTRxrM0UsDBi24nCcZD54wR9e9eJaJpkPiz9pLS4ysFjL4b8Py38s7AC61CO7eS3SFSBnyI2jkdgTzI0eB1au9Ri8OrO1vxucTlJV3db/AIHtWiatdy2khe2aeCN9iyoQCQPUd62Li3jmQDYpYkHONp/PrTEVbRVt7ZN21QFjH3UHYk9aq3k4gYLNK0zqOFC7QSe5x1rkqyjJ8y0R0QThGzdyykxs5QsTlxzhVYl19uvSuc+IvgGz8fWdu7X1zofiKxJk0rxBYhftmnyHqULAh42wA8LZR14I4BHNeNPiVqmla5aeEvBWm2WueN763W8+y3srw2Om2m4g3V46AsqMVKRooLyNnA2ozDa8EfFG18YXF1o13aS+HPF9gwGoaBfOpmgXOBPEw4nt2yNkycHcAQrAqM2r2aNU9Lsy/h38Tbu91ubwn4wtrbRfHdpE0k0NsT9l1W3B+W9sixy0RPDxkl4WO1sjazdk1w7XbxGMYzkHHHPrXnf7UFjBJ8I9T1G1R4fEFhJbro+q2x23OmXk08dvHcRv1AUyguo4dAysCDitHwB481jTNaPgbx4kFt4rt43ez1SBDFY6/boPmuIMkiOVRzLblt0fLKWjIYZvVXQ2uYzfjlo7eKPh5q0H26DTL7S3i1uz1G+c/ZrW4tJFuI3l5GIsx4c54Vm64xWL8J7fVPjW+h+OvFminQNAsVivtC8MXjB5lu9nOo3PbcNzLBH/AAKfMbEjAJNbW837ROoR6pNKG+Fem3IlsbaFjjxLcxvxPIev2KJ1/doOJ2XeSYwof0y9nWYKgAUqeBnvUqy33MtYM3rm5+yxO4G5Oo54zXC+M4L/AMTWcMVpPFp0kMhkEyhlYHHykMvI5Az7ZrZivFSJCHZnJI8scgfX+VRmUXDbCpVj2FceJowxNP2VVaP9Gn+aRvCvKElUp7o8Sf4gv8K7m1T4nWlho1lcRh18W2dw0umPcqgaSOfcivbt1KM4KuBjcG4r1O1SC4db63mW4t7yNXDxMHjlUqCrqRwQQRz0IIrZOkXMbsBGWUgqVYZDqRypHcEHBBry7TPhd40+EVrYw/D3XE1bQbRjCngzxUyRW9vbFtypaXkUJljKMSFWXzFKHbxtU100oRSUVojCU6k7czba7nK/Fa1v9W0/xTo32fWZYTaLbrbxllt3XeJN6ggKSAoyd3Yjjv8AQ1pZ+ZvufPWOHJYtn5cHvmvmPUPHXxK8aeKfDmkfFLwNL8NvAEPiJLPUp7DUIr2HVp3ZH09HdowVtWkQRyOhyzsiMACa+m7t4fENsLXTbkRRx48y2WPaWUdMD29K58Hl1SnXqVJzvCTT66dPQ9DHYynWjHljaSVvXzM3xN4kgt4B9nult7SKN3uLh2CKFUZYsT0UAEk+leNfCsXPjC71D4iarbSQXeuKLfSbe4BElno8bk2yEHkNKS1w3f8AeID9wYh+KM8XxA8RR/DTTnaa0eOC+8UT7gBbWBbK2hx/y1uSoXb2i8xj1UH0lQB0CqOwUYA+lfc0KUIJKGyPkK1SUr827FxzxRRQOK7TlClHQ0lL60AIev1ooooAKUcZPc/pR0o6e1ACUueKDSUAFGfaijJz04oAaetOpo5b2p4HGTQAlFFLigBKKKM0AH1rO8Q232rR7tFA3iNnQnswGQf0rQJqnq9vJe6VdwRtskkiZQw96aEZ/g66FzpMbKqqjqHwAQST1J9Tmt3Nee6bqeq6HYQW8ESyrENjRvxxknIq23jmO7Gy5iayKnlSST+NW43ZKZt6hKklwxQDA4+tVGdUBkc4+tV4NQhuEDq+dw3KuMEj6VXuJGlfJ4wM47CtCRl3d+aSfuoPuj+tU2lWaJt33SMfWoLm4dmWMjOTjceMDvSrdwSWzMhUQRNhnoERNbReVbwQh1WAiTjjzDz19+wqvZtASkUOzzJGfa7uCcA4LN/P8qulvLMbhQwPOeuRWNeWkUj3jyRx+Yybky2OQ2efQU0ruwCSyLDZyBrjzI0lEKZ+8/POB/nvUBla4vtpIggAKgA5OD2pkaPZWM1w9wLSNMeUJMFyxHUDr3NPtgs0ss0UYSJEBMsjckjniu2NNR1MXJswfEgEvhHxMHO2KLR7tEDH758lyPoB/SirXjCEN4H1+QHap0q7fBHJ/cPiisK3xHRS2Z9U0UUV+Bn2IUUUUAFFFFAGDrcoi8W+CSVZv+JlMAFHJP2OevR/NkbASIoO7ScAfgOTXnuqNt8ZeCOCc6jP93r/AMeU9ehSuTIIwxRGXr/FmvpMvaVH5js+hQnMt5cGHczx5G5hjA+nvV9WM0LbuSPlLY4JHXFMZbbToyxYKBxyeT7D3p1lk26Zbdn5m2nPJOSP1r09WtSErMqwXT27BZSvls2N2en1qhf6hHJfGNjiNQFG0HJzzyen0rVU/abeWK8iQKH2kg4Deh9q502azX9xFaKUjXB2Ft2T/ER+lFrRlrsZzk9EatkhWQ+XhUOTtckggd8/WqeoTNI28ykybuVUjAHtWjZ2j2sCSTEKoPJPuMZP09Kq/wBhpEpkV3lZgTnbxWEtlY05G9gutJS8svPhdo5EQ7Uj5yepH+fWoNF1iAJGpADZ25HY1p2EjlWh8obc4bPbiqyeHbdLhpGkdH7YAAA/+tWikpRs9xOEubmgXruOG5gdVVd68gnjmqS+dHGrM22WNsgE8sO4H4VZlsMbZfNIlHRnHBX6dqjN7BHcRpdskbOCUckBT9CacYtyvHUtpJe9oWjPEVEhbjbnLdMdelRWVjbbEuEQorjcCeMg859qqa2ttDp+9IhcGZTFFtfKgtwCPxx0qhfyTrBCJpU2wR7W2nByOuR+FXKn7ql1uQ6qTsT+JNLk1Ly2iuU8oyALGy9GIxnP4fzrkoLR5b0W5Q7w21lHbB55q5e63I4VLdmRFIbf0JI6H2pdJ0q41WbzmDvEzEP8+1pPUA/jX0OH56ND97oeLWca1Vci1L+y71SczQ2wltFcEISUaQdBt9B9K6GwFvaxlJLRbSRTlkT5s+hyOT9auW9sLQBVdvLCgJE/OzA6A1OyLJjIzg5B9K8Oc01yxWh61Om46vcOpJ9e9RXM/wBmjDldyZ+bHUe4Hf6VOTxiqd9CZQhMmyJTllA++eMA+3WsF5nSjP13UxH4fuHtzvcKEOQflycZ/nXhfwQ1r+0vjz8STq2uaPZavmDQtI0EDZqElnApuTc4ZsyJIbliPLXAEZzkqcfQOoW8N/MLZivKneo+9t6gY7Z9xXlPxL+GekeI7Z9J1qzF7aFlntpgzRTwOpOySKVCHjkQk4dSCPxNeph4Rq0/ZRdnuedWnKnP2sldbHqF/rFj4b0/UL/VrqDTNLs086bUb+4WOJUC5Z3c4CgeprybX/ijq3jLxha+H/hWfDnia6+ynUNT1i+vZJdN0yB8Lb5a3DebNId7rDuXKRMWZQQT458TvG+qad4Fv/h74q1G91e5tPFOg6hYavfpFdXF9o7ajbHc6AJ5skM48hgilyJIXIIYmvr7RvDmleHftg0vR7HRzdTfaLpLG2jhWWXABdtgG9sKBuPOAOeK4KsHF2ludcJKaTWxi+CPAtv4FtMLcS6lq1/MZ9U1i5wJ7+4KY8x8cKBtCpGvyooCqOudfWfDOma9NFNe2kUs0UMtssxUeYIZQBLEG6hX2rkAjlVPVQavXi77SUHsu7qRyOf6U241C3tQvmOFLAFQKylZx1NU+VnzH8UvHcNlNonwwv8ATbqx8RSeMtIk0XTb9/Pt9c06O9ikeSK42hSsaI7vGcPG0aggqwZvf/iV8N/Dvxa8H6l4X8UWC6no18pDozFHRudskbjlJBnIYcjJ6gkG1rqw6haQz+XDLJaP9phMkas0b4I3JnlW2lhkc4Jq/pt3JNZrLMcZXcDnnFZwhGlCMYKyWgk1flPL/B/inUvAl5p3gP4gSxJNIy2Ph/xNBGsFrrSKh2Qui4W3u1RcGLhJMbou6L2WpWMMbhll3lhwAc1H4/0/RfG/hi/8PatZxappV/H5dxbSg7SAQVII5VlYBldSGVgCCCAa80+Fuqa3aeIvFPgnWb6bXv8AhHfsctpr04zcXFvcRuyRXJACtcR+WdzqPnV42PzFqiaUtSZSWx3qZinXdwrHGfStBiIJSkbO2DwQtV2ZDIVPQDknkg+oq0LqWfy3VlQkBsjqalr3bmUWkzdsrgbBGxZiByduMfWsi9snuCSxc7W9T61btLjDB/NkVmGGJUYz+NF1J/Z9s8sx8+3XBZsYcE9gO9aRTnZLc6Wly8z2Ob+I3gzTfH3gLWvC17ctbx31sVadMGS3JGUlHoUYKwPYqK8V+IMfxU+FHw8k120+IltqviC4lgsdO0x/DtskV/ezSqkcLYYyKjAli6uSFDMOle5R20l1cB3kWdplUAD78YJ5C49ieD6dK8lvvELfGDx9p0+mXKP4G8G3MotruFty6rqgjeFijcAw2yPIm4ZDyscHEXPu0qTilSi733PLnNa1WrW2ND4feCY/A+hPavcnUNWvJ2vtV1Ns7r68cDzJTnoOAqL/AAoiKOldPQBgY6UV7ySSsjxG23dhRRRTAKUd/ekooACeaCaWkoAXPFB4P0pKMEf40AKR+Jo7UnamnJ7UAPppbBI70m0nqfwFKAF6DFAAgp3WjFJ0oABRu4wOaCSevSjAAwKAEPAyaM8ZpO9FABTZJUhQs5AUdahu7tLdSN2ZMcKKyHkZ2BdtxxirUbkt2Eutlw8h2AB/Tt71h6voqTQJHFEkrEEFpBnb1JatvOeKhlxtbPIrUzOCuEeGYPDJI0YQBeCCMf0461o6Pe3Fx9pmB8xcfKCc07U4LyfUQLRQoAyW29PbNZ0j3emRALKsABwdpGSSeBk00r6AzoLmyeaziluFNuSThV6kVmLpiLiK3UvIXL+W7ExgAcbhUo1WS4RYpJGlkQYB7E+lLO0oiMQk8st97acZHpSasBDFFd3cEsjmMiH5ZHDh2dzzgYrKlkk3Ps2LyBvZc/pS3Lm0ube205GkLqwLbioLn+I+oAqtL5NtMsMzrGY0AHlsWWQ9zmumnBP3jOT6CuI0uPPZmuHVw26UcHb0ABrUZPtTRxCL/XPmQJ0Cg5rHtIZdVuVjUlYUbc79gP8AGuhmlVHjiggkOW+aRsBVX0rqMzm/iDexf8Ip4tBjJI0m6CqFwB+5f+lFXfHkUNv4J8S7mXzDpN5uz1JMD4orkrfEjqpbM+laKKK/Aj7EKKKKACiiigDE1aZIPGHglnO1RqM/J/68569AnvY/IkKEOyjdhgeR/wDXrznxCkj+LPA4hYo/9qTc+32OfNekugiRpSQJQoDPt6/hX0mX/wAG3mLXoV7GCK6t45mQs55Qyck+/NSrZJGjCNnTnkxNjP4dKp30F/FKJbUKS33oweh7/hV2wvFuk5BVxwwPY+mK9LVbBFp6NFK+0a3khcoXEhPGWJP5Vlf2U2nFbgOzwEDdIPX6DnFdDqFvLdBVjfYoOW7Y+lVkijjaPYWMbttbzDkMT3/Op1ejE4Rb00Kttq817K0cWFTaAQw5PHvWpZSrHEsLkBkGFyMblA4NZ13JHYTxyyoVQpxJjI3ehqwtxDdRDbuLgjaAACD2IqU+XfqaRjd8qepejcYYDkoSCM9KbPJuxyFOMqG/nWZeXy6aieayiTlRuHys3XggHpVu2nt7y3knE0bRkbGJbO32NPlk43toapxUnd6llSCnmMQM9N3r/ntWP4jEf2OdY7VHMkfzOkYYqexx1x7+9Spc7JBZSjz4JULxu+cgZA2n19iOcVyGp3ztcOkU8xt0LIm88jJ5GR1Feng6DlPRnm4quox1RqebF/wjNpN5ghkt5cxR7ywkIPcevPXsKz7q/uteuxFEhwzZWNeTnvz/AJFZ/mboRG3RSWXAHU4ySfoK6HwnpdwZDdqyqq4UxEffU/0x0969acIUIupLdXt8zy4ylWagtupLonh+2e3VrlBJOzENHIcbeSOMfStM+EbL7SJAHWPHMauQAe5B6/hW0FAP3QO+cUteDPE1JScr7nsxw9OKSsZsOjFXjl8+bzkGCWfeCc9eR6emKufZJGdd1w7JjlNoG76mp88gCopZ4ll2s5BT5iM8/lWTlKRsoxiU74pYhTGzRtycsxYY9CM1H9qkuY4gcx+Zhh3I9/z/AK0y/huL27iC24EeMbnPb3FXbK2eEu8jq+/kbO1Zu/UhX5tBY4fKjPlqsTfxE9T3OayPE9k+qacsoVYjF86rjczZ4x7dq2bmIuCqnZ5gKlu3tn/PepZo45FYSAFSpUk+lbUajpyUuo61NTjy9GeB/EL4b6L8RdKWy1qwjlurVjNp94QyXGn3IHyTwupDo6sFOVIztANV/D3xu8Q6L/Y+g/ELwpf2ksRs9Ln8W2NwlzpN1cy7I452BZJ1EknyuChETyKGZg26vT/EGy/tI7xFCunDMRtMidFb8+Pxrh/GHhax8b+FtV0DUvNFjqVu1vK1u+yVAejo38LqQGVuzKDX0UqccTHntaR4SqSw8uTeJ7FHp6K5jM8wkUYZFkOApPA/T68VHqOntKBJH5ahVC/MO1fOsPxA+Knwykttf8Ya7o/iPw3bXtvY6jb6XpDxTmwbETanI+WYTozLJJEimPYr7cHmvf8ASvEumeJtLGraTq1hrWj3KBre5sZRPC/OCRIhIPPbqO9eBXo1IvlmexTnCcbxIXvBaIgVN8gbJJ5A9qntdVSVJ1KbnBLhD3B7Y9iKpQSG+t5GWJkZCx3sMIy9jnt2606RzDJDIvy7HHyuMhieMDH4+/FYwpyjLkkhc/VDL8xSOzCIwggHZ3XjvXk/w+mN/wDF74q6xG8XkW8+m6Akcf8AE1va+fI7ju+68CA9lQCvVfFd5Do1q0tzNb2VjapLPcTTE7EiVSzSMw5GAGJ9ga8N8L/AXULPQLbW9M+JGqab441NYrzW9b0yRL3TtVneMbpfsU4MKgoYwjKqMqIg9c8LmueUWrdvProXbS57Su2fO9Tgg/d6ngnitCwtTqNuJY8ZXCsq8YNeQR6b8YtAhlsrfXPB3jSDaXhvfEOnz6fdq3B2ulnmJ14OCArfMM5282R4h+OtzcafNafD3wLbxLIIriVvFk7MATjzFUWaZjXIJU5YgEKM4NdlOEXHVkW97TU9qZ4YCgXaFjBeTcc7AB1Nc34v8daV4Jtm1jWdWttK0FE2tNfMqxySdVRB953boFQMx6AV4p49+IvxN8EWja3qOv8AhnS9SmaW10bwTZ2UupR6zIquSBIuyd5idp+RVjiGBJuyWFzwj4E1O71S18W+Pb6DxD43EeY3ijKWOkbkUPDZQlmEfI+aYkyOc/MFIUejhsLKTuZ18RGEUkJ4j8V+I/jhaW+mWOgap4N8IXMh/tHV9QnFnqOpWWDmCG2XMtt5pIVnkZHWMMFUFgV7TTdMtNG0210/T7WCwsbWJYYLW2jEcUMajCoijgKB0AqzRjNe/SoxpKyPEq1pVXqH1oyCeOaXjvzSDrjGBW5iFFAOaOtABSLSleaXGTxQAlGQaDknGSF/nQBtPFABg9xQelA+uaX6fnQAmP8A9VFGKKACiiigBc/iaTbk5NFBGfpQAvY0lA4oPSgBpPJqO4l8iBpME49KeRn2NZV/eGdmjXIjU/nVJXYm7FVpGlYszFj6mmkGlUcUjsFXJOBWxmNY4HNVppAOM8U2a667fwrOnvAvB69zQIsm68lTg4+lc3qVml0zBYzKzkFmduBg+npirr3XmHAORVfYSZAzEBhyB6UAZN1czG5mlMgj+VVTC8v7+laOmqzQCMRq8pVnYK5O1ffI4qrqtu9z5S2+QkHzkHk8dTTL9TNpjXkkmzMiKiw5BkGM4Pqa64pVFruZtuLISjzzsxwEjBx6Z/8Ar01JgkJ8pIjIu9dzRhuSPf0qCysL+R/Ke3njiZyd8gwBj09TW9EEt4REsexEB69c+p963SSVkRuO0mySwsJiXLOMEqR1JHJpY53vAJApVBzuPf6Un2gzRAADbjBxUsLRhANvGOAP60xGB47Z28F+JnGedKvOT/1weirnjuMDwH4lx0/sq7/9EPRXHW+I6qWzPo+iiivwM+xCiiigAooooAxNVOPGfgc9QNSnJ/8AAOevQEDXF+z5/dxLtAzxv9fy4rzzXEeXxb4KSNzGzajONw7f6FPXpEMYs1EaoSMcE9j9a+lwDtQuNLm0HZM29RlSh2/jWLqsclu4nUqfLYbtvy7gTzk1peeqXU4YkZdAAO/y9v8APanXjKxKOodWVtymvS2ZnL3okVjN9qtGVzuJ4OPT2pwEZe2iDbgrFscZyAcf59qybWC40qdgkLTQ43nDdOTx7mr0V0LtHEUbRSoN6mQAYOP5dqlJrUqLUlZ7lm+jSWF4pVDo3QenvVaz0o2reWkjjIxu6ke2f8PSrULiSFinEzfLzyV9RUltHJFGFaQH3xWdm3qdOkdVuV5SLa3kyBKyAlWlIOOO1czeQS6HeJI1xi1u2PmLGuAF/iG3J9ePSuvVflBddyAnJ/Hv+lUL7Ror6J1kcMBkoAfu+49668NVVN2ls9zlxMHJXjujF1DxFp95byg225UAMIclXDY6cdveubmneUIrH5EyFUfwgnPFXda0xLCdmhYtbtyoKkFfY56/Ws0HPNfS4anTUOansfPV51JStUJ7K0a+u4oFzmRguQOg7n8s16NarGioqAKEAjHqVHAzXHeFruGzu2DA+dIVRWyBgE/N+PT8K7O6l+zDzC0cYJOWc4GcfLk9ua8rMJylUUeh6OCjFQcupZZsKSTwBkmoYzJcqrndDEeVA+8R7+n0qOa8MNorlVeVwNsecbif1/8A1UQw3NurIrQ4L5A+bCjHOPXmvMUdLs9Fu7JpYhu3GR1BGMBsCoTaQrOmI1AkBBx1JHI565681MvnM/7wR7MdicimXssaWrsW44wenPbmkm4sGk1cDbeYHVmcrnALSMOPwpbe3EIJLJ6blGM/UdM1RxcahCjhwpJ+ZQcBalmjWBEiSUBRkuW5AHUE/l+tJOTdhXW6RJOyOpYXYJBBUKygD/Gnpbo3zLLKvY4kPJ/z6UG3a4UiTZsYYxEv3geoJPb6VGoNrdiJeImUbQex9Ppjmm3bZlxXNoyLUNODWUyIWbEblFfGASD3x6mvOK9A8S391YWgNup2MjbpAudvT3469a4A19Bl6lyNvZnhY7l50kAJUggkEHgjtXFWEB+GPxX8LXeiTSWWj+L9YbTNZ0eMoLSW4e0kaG8SPHyTbrZVYqR5it8wLAGu1Jyay/EnhrTPF+jz6VrFnHf2ExVnhkJGGVgyOrKQyurAMrKQVIBBBrurUlWg4s5KNR0pqRqax+0P4W03xHq2lWuk+KNbvLC4FpPPoegT3VtJOuN8InAEZePd8wLALyMkgitT4e/FTR/irq+s2un2mqaZeaC8K3unaxYvaXETTIWhcqcgqyq+GDEcVyvhbwxp3g3w/Z6LpULw2FopWNZZXmdizF2Z3clnZmZmZmJJLEnrWR4g+EngvxVrB1XV/C+mahqbKqvdzQ/vHCjChiCN2BwN2cdsV5v9n2jpLU7/AK6m7OOhrfHePUvE2p6Z8LNJiisb/wAY6dftcapdTFBZ2EJhS6kjQKTJMVuQsanaoOSxwMHuJvD1lp2rq1msyQRqkSq0pYuqgKM59AAB9K+fPEXwVsvBWpWXj3wXq2o+Hte8KWl3NYWN1qE1xpDRNGGmt5IJGby4pBGAxjKkHDDlRX0n4a1f/hIfCGj69cRSWr6lZQXotZMF4PNiV/LLYySu7BPHTtXz+Oyyk3D6wk+V3Xk+530q6qRfs/mJ9ogt3YW6iWZuUJT5kP8AWq+va9beENIk1TUn8u3iIBZ3VRvLBUXJIGWdlUerMBWjYSrE/wAluULMF83GSM/y+teH61Mfip8Wb4T4u/CPgm8NvaRyRgLdayOZZT/eW2VljXPHmvI2MxqRpQoSxD5U7FTqKhHne5L4H8J3sF9e+KPEogm8Zaqu25eAlorC3yWjsbfd92JM5YjHmSFnbqAOxo2gd6CMEetfZQgoRUUfNzk5vmYUGiirJDHfFLt3D5jkelGCeAcZpM5OBz70AL949AB7UZpvJ47UpA25PX0oAAc+wo3enIo2luox7U7gcelADR0oxilPTPSjHGaADIAwKM8UnOcd/WgDHegA5z7UUZPSigAooPFBPFAB0pcYGe3egHsKQ5zgdPWgBMZ+lDdKXNNk9PWgCpe3HkwkA/O/A9h61kE7RR4jvxZRzTFhtiUf/XH1rAk8W2yooiBZ2O3J+6Dj/wCvW0VZGb3Nm7vorGItIwU46HrWDe6wzXECfNibhFUdaxtZuJZWl/0vziVyUXGAO5zSkyXNjaymQxrGfLjVRycc5PrkVRJpvqSGNCFcAkgcZyR1qmD58hZnIXHC4pJJ7edttqHgJTAUkHHrn0+lLErquAv4nvQBLDCsLfOQGbmoZZwAxU54qvcTGJnkkbrxk1mxtLdwSusrJuIULjA2561cYOQm0g1O4EUCotwqtJxK3cD0pNGnlnPlxgGKFlw7KGUevB74rMSwk1K7EasNrORuDcAdzXaWVrDZ2Rhj+6mVGB19z65rtjFRVjFu5mNLI+sxI073DKjZcn5cseo/DH5VLPoz2cpWS4Eods4TOQMd/f2qdLZUm8zOPSpCHu5irMAjfdUcEt2yasQgiVEUKcr6VPGo7jn1FCw3d1LHHDFEWUfOWbav19etOjR0ldZZImdRuIiycjpxQBkeO1P/AAgfibn/AJhV5z/2weim+OriOTwT4ojUjKaVeZHXb+4fjPrRXHW+I6qWzPpCiiivwM+xCiiigAooooAwdbnS28X+CHkIVRqc45/68569Fju/tTERjIXnf2+leW+NFSTXvBqyEKn9pS8nn/l0nrutHv0WOQIQAPu72z3r6PBaUE/NkqTUrGy8SC4juCoywEecc8nj9T+tMuXFvcwthvnGzIHU9vp35pkYec7Q8bENkLng4559Of5U0Sm9i2bh5i8lcYIYdOtenF3SZbirtIsoWGSxJ9AD1NRXSMbfcq5dcFMdd2eo+lOjZplU5KseGVhjGOtLJ5kxQxHaq8EH1rO7i9TXTlujAbXpVunlSPbztdOhP4VtWN5/aFt5gU5P8Oe1QSeH43RsNls5XIxg5459Ks6eFi84LH5eMZTuDjmr5bq5zRck7MZJfS27DdDlGJON3zZ9MYqvc35vbXzLOJrnqrBDhhj69fTFZgk865eMu+4tlCD8wGfX8xUgs30mcSwI0NryJIFkLbD13DufeiPL11YpSk9tjH1K9e4tLiCfdA0ZjKQyKQzHJyf1rF6V3GqGzuEaK9KqEUtvJ56DB/Xg9K462tmkuUhwQWYKDj1OM19JgqkPZtJWseLiqclJO9xIJGt7iORThkYMD75rotc1ab+0ktbbEhjlDLuG7ax6Ke3B5/EVkapZJpOsvC0ZeFXDBc43Jxxz/OtDTbu0fxG3kRH7LMoTbjG3gYz+IH860rcs7VbXsmKleF6d7anQ6fDNC0kkwk+0ucLJPt2qTyVGDwCR/KtK2iljQ+a+5j+VSBQVIYBgezc04sK+anLmdz34x5VYaear3Cq0sSsoIXLn8Bx+p/SppJVjXccnPAA6k9gKjiiYx5csrudzgH9PwpLTUb10IZZXW38w7Y145HO0dzTQ/mWzRrFIzt1O08nPUmpJIllWS1iyiYw7gZxnsPf+VOuIgIyS7vjoHY4H5VStFa7mbTbE8q33H5No5wpbCn6DNILGOSJGU+W+4OHUcjHQc9qz59Nle4WQEeQBnaflAPcAVsqNqgAYA4rNSlc0STi1YytXuFi0S4judzPs2ksPvH147d/avPa9NuZFu43gjG7na74wFGcHr17jiuQ8SeHl0xvPtjm3J5XOTGT/AE9693A1YwvCWjZ5GMpyl761SMHvR3o70vevbPIEo70UcgigDjPi6lxqXgm88Oaex/tjxOw0GwUdpLgFXf6RxCaQnsIzXt62CWzwWMJ/0S2RYoY8cBFUKo49hXk3wl0uXxt8U/EXjC4AfS/DTS+G9ETOQ1wQjahckeufLt17gRS/3q9dufskEbpLL/rDhUViGbLAH3xnrXzGNqutV9nHZH0GFo+zp80vU5/xv46svh1ouo6zrEEyxWZWK1jsF826vZZCFighTo0jvtCg8DqSACR5f8I/DepeEvh1oelaw8cmrQxO926NuJlkkaRtz8b3y+GfADMGYAAioLu4m+J/xgvtSu8LoPgW5k0rSrUIQJNSaIC7uWJ+95aSCBOwLTHrjHccAcdK9XB0eSPP3POxdbnfIIBjJ70YxS9h6n9KOPxr0jgE74pRSD/JooADyenH1o6Y5zRRigBd2BwPxpNo6k0Z2jijbzzyaAFBz06CkIAByaMf/roKjrQAZy3r6CjnPPelBA6DmkJJ69KAD7o4oPIoooAKKKKAAcilAzSHihzsHXmgALYOKCaAmBk9aO+etACfdWoZpvLjaQ84HAqVj3rG8Uaymjafxt+1TfLApH8XqfQCmtxHP+LbiBbYxOySZfOG4B9z7Vy0OmPqyyIksMSqfuRjHbOfeqskzTK7Tv8Aa1OTuBPX/Cpo7UCMsZ43D8bIWyAQMj61uZEyQpEruAXCcgIuflxgj27/AJVEkgt7WSLLMEkzExOAVI5H602/t/KtpWWMyZHlkxk8cZGRmq32gHQ7YowEpO5dwGFcdD79CPyrSMObYTdjZjlW28vEEPlEbpZf4iD3x2qObU44GxEQUxwM5/Wsy3P2jYPOZiNwk3DAGeox+VQMyRhoJGLMowi8DcO1bxopbkOfYLiaW8ndiNsaLnJ4FU7idlQwqSCc8Zxmpbq8ZYTbxhDKzbWIGcD0H+NbOkaQbGza9ugHuJAdiuM++a3StoiBulaGmm2UUskQF1Ku75hnaB0+la00Yj8xh8qjB5PWkVjcoOck8k1I6eYrKTnIximIBtNt8qlxkN17ioZEaIeaQDyG68irFoBGu1h8wXt0FSSK7KyqE+YYwR933+tAEDSIckxyBjgYVeMZp4+xtcrI0YDYwQzDlevOO9NiIeMRsAxznB5pfJQ8YXHU55zQBk+P3jn8BeJ44kiWJNKvCeOF/cPjA9SaKi8eRRf8IL4l+RMjSrwgcn/lg/bpRXHW+JHVS2Z9IUUUV+Bn2IUUUUAFFFFAGDrcIuPF3giMjIOpT/8ApHPXbQeH7ZJJshiWHGDj8a4rW5vI8W+CnHONRn/9I567hbxEjYSN5XzEks2CRnJxX0GBv7LQ0io2u2R2ynTLsoyA7z+7JPUelW7NkE88hziSRgM+2B17/wD66SeBbyAGRTIv3l+b9R71Ws53jneGRC7pyoPRlJxkduCMV6d7rRFKCvdvQvq0cYYo3LZ69ST1P5VINyMAFVQRwDT4icFiysxJ+70HtSsSZF57H8qWr1bHdbWILqRoUWQ4G1hzu7dD/n2qLyNuok7gGkjzgDjg4P8AMUajcgWUxCFmVvLK98njNMNy9xdQLGpQrksWHQYIH51rbSzOdy10K99prJNvjxGu08kAgnsMelPt7wwXkltchIfl3I65Kt6jJ/lU1yZvm8wRuoOYwo5P1rC1q9i+yzQ3mA7fvIljbLBsDAI7YzmroQU5ctjKpNwTlcwtfie31GaJpzKqE7cNnCk5A9vpWr4Us2FvcXe0yvAPkjzgbiM5/AVzs0ryMzuzO5/iY5JrdtpJovDN00UjReXMhBHHsee+a+lrQaoqHojxKU06rn6s0NaubWezVpljkuE8vf5hO5Q3TpyOp6+lWdIsrW0tVuLQsyyYHmEfe5wV9eTXEvMzlzn7wAPPXFdT4f1BjYW1qAqhZNynjJ5PY9Tnn2Arir4d0qVkzro4hVKl2jrPmQtglkHY9ajuGMYRxjZnDZ9D0P4VBBLJum3liOgMg2kYHTH49qtqgMYzg8c5rw7csrM9i/NG5XyGvGIG7ylCgf3Sep/LFTTS+VHnG5jwqd2PYVVs/Lhvrm2QMu1UYBum3GOPbIqa5OZbZRkkybjj0AOf6Vo17yRmnoEdqoBckiduWkXgk/TpinGBmyhkdkYYIYDJ+hqYnC4xz7VFcymK3kdcFlGR7VCk2yrJIprAZrZWWUx4OcAAg4OBjPTI9KfJbmfcsc0xf7rTbtoUewAwTU1yiw23lptUgBQzfXr/ADpzSeSscUWGz8sY5OB3J+gq1Jt6C5Vy6hNHFFalCNkKjGF/lWTfWUbwTedFLEShAOcjGDwccfn3rTNo8oKzTNKh6oFAB74+lNuNt9KbdgssQBMoHTngD+dVBqMlIznHmVjzEAjr17/Wir2saY+lXrQsQykblYHPBqgRyDX10JKcVJHzMouEnFjqjuL2LToJLyckQ26mZyqljtUbjgDknAPA60/vQQGXBGQeopyvyvl3ErXV9hn7PBk8O/s8+FLnVvIsmNi+oapLvwltPPK9xMJC33SGlO7dgjBB6Vyet/HC4+Ll1Novwn1/T5tMhBj1PxtZgXUNiWAIgs8/LLdFfmJbMcOVLb2ISm6h8HfBuranHfX+gwahNEiRpHeSyywKqnKjyWcxkgjOSpNdbbWdvZIwt4IoA7l2ESBAWPUnA5JwOa8TDYCorTxDXN1te34nsV8bFrlo3t5md4W8Lab4L0G10fSoGgs7cNjzJGkkkdmLPJI7cvI7FmZ25ZmJPWtYA96SlHevdSsrI8Zu7uxCf/1UmM9fxoznHanY4zQA05JwBgegpe5HpR1oxgYHSgApeB9aSjAXk/gKAFGQOOPekAx70Eljk/lR1oAXFJjNL/L1NJQAUUoxikoAX60lGSTQMntxQAUUEgYpDk8CgBYxuJY/dFICWYt+VKckADoKXgcd6AEbJbnvRnH4UE46nNVP7QhkuVgDEu2eNp7UATSOFV5HO2NRkk+leTeKdeXxDqBKD9xGSEycVuePtVV50hjupIlVSriP+LPP9K4xCyoM4kjz0ZcNjt/+qtYqxDfQu2kUqwq8OyQBstG4HmDH9OaSWWBbcSJOHZtysHQLgev1p8TIm47mTjG0cEnrkVQlnDIztkJIMNuIyR3JreEOZmTdgs9Xaeee2TdKkiKPU7h6f/XqtEqRXEFuVZQ5IQ9w2cEH2zRLIWmghURxlWygHQYxkZHPIpRD5V7DdqxdQ4lyVwNoPI+uOtdqio7GTdyxBF9lvHtzyWRkLFefMBzkkdz/AEqtKYwGkbY8iONu/kMR2rTOkrKJZzJ5QeYyRMDkkev86XRNPaCR52SUzfvWR7iP5VPmfLgFyT8ucdAeuBjBidTka0uaQhzp6kukadDYk3ckGTJ8yLJxtHvWlezG4cPKcBhgbTj8BUVyZnSJgs0kjqrOIpNuJPlyGOCQv3gcfjxRCl3dWszSxwLNmQRtLEC+3KFMjOO7jjrtBrN10naz+4pUm1e6JYXVpNifiR057VbVCufXt7VQiF5HLAW8vHlBpiEAG7cPkHPGATz32+9WL8TrLG0XmSI0kavGCuFUMxZhn1GAR9PQ0e3Vr2f3AqWtrosqAGBHfp/jTjxx3NULF79Iv9NUzO8sYASMIsa7V3kndnrvJ7g4FIJb/wA6dnQPFG8ZUIoVpAFfeo5PBITB6jdjPFT9YVvhf3Fexf8AMvvLoQnnIPqT1oMScHPJ7VS1Sa+jgIsoVeVWjBlmUlWBC7iApJPO76VfC/McDj61tCop9LGU4cvUwfHqbfAnibAH/IJvMn/tg9FL4+G3wH4mGMD+yrzA/wC2D0VhW+JG1LZn0Xg+h/Kk6djX4l2/7SHxauRM7/E7xTb28K7mkGoSMSScKo5rsvD3x4+Kdnp/+mfEjxFczsBIPM1FyMHoK/IszyqOWc0ZVlKSdrK+/wDwD262Y06MbtXfY/YIUuDX5/fC/wAe+Pbfw3Hfap4t17UNV1Mj7PZ3F65EaDocHp6k16Pp3jfxRZ2Sq/ibULy4LFpJmnYqW7hR2A7V4co8iuzevi44eEHNavW3Vep9dUAZr5KvvEfiLXERT4g1q0KjAa2vnTP1wavWPi/xDZkRS+IdQkGwKHknYnI9T61ldHH/AGpT/lZ9Gaqobxj4IVuh1Kcf+Sc9ehgBIwpizzxx1+tfE994m8S39xZTw+I9TsbyzlM0FxG8chjJRkPyyo6nKsR0yM8VPJ8RviMhDD4j64+OCfsun8f+S1exhcXTpU+WW5vTzOi176Z9nRq1ujZUlFyRz90dcYrP027ik1fUCj7woUnJ6Yzn6YzXxxqnxc8f6XZyXM3xK1tIol3u5tNPwAP+3avMdb/ac+JHhnSL/Vrnx/qsMF1J5ltafYtPEsvHG4/ZupxnHQV6dPGUZ33+47aGJhib+z2jq77H6T+a0zBliOzPXoaWaRrfDH951J55AHcfTNfj5F+3X8fdZ1Qm18fT2tkjHDyaVYOR7A/Zxk+9azfto/HZhmf4hXGATsxpdgp6f9cKipjMPSdpHBVzjD0nyN3+R+sOqur25fIAOBlX6qDml0y4SVpJFdAjkKvOSQoxX5Kw/tf/ABmGoWUM/j64WGWZFlm/sixPloxxnHkV7RF8XPinGTHafEzUIJiSVd9PsGXPqQbetaeMpVIXi2ehgqn9oJ1KK0R+gWpLv2gEIUdQW6Egjt+IrK8TG1tLa5L7JLmVVCmRfnHGOPbH6/WvhGP41/FuO3WLUPihf3V7yGNvpunogGemPs5J+teY+Pv2rfiZbz+Rpfj3Ub67QlZbi4srLYgBwQFFuMn9K6aeMoUpKc20kPG03hqLnUaS8z9Chyyr3zmrE91LcJDG75iiGET8Sc/rX5v+Hv2nvihNoGpalqfxFuFVVK2YgsLASStg5OzyeRnFY2nftWfHGSCS8i8Z3bpagPLMulWJVD6HMGDj0r1p53hrJ8rfyPnZQlTUXvzK9lq7eZ+rz+DyNPEaTR/aywYschQv938/zxU3hayEEcomjRp0dl3bQSoHbP16Cvykg/bX+OUjfaE+Jdycr8udIsORnOOYK3fCH7avj6zguv7c+IWsWtwZMgWOm2JWRcddv2c4PuK8r+2KdaMoOT+46sNicLVqpQdmu+h+rkczSpIDtJXKtg/d46H3qwDkD6V+dWhftMeLfEcSJo3xbvDIybmjls9PDjPAyptgSa8k8WftmfHvwlf3Wn3nxFu4r23lKbf7GsCJUJ+R1/0fpV4eMcVJqEkrK+rse/VaoU1OTuvLU/WPUZBayQXRZfkypQj5nBxwO+R1x3p1vG8t41wysoI2puOML1Py9smvyBH7aP7Q0kAuk+JojnB2bH0Wwb5c5GD5FULH/goT8dbDxFDBq3xCnk04yBX8jSdPR8Z5wfIPStsMli3Knh2pSinf0R5lPGUK07Rkfsw3zDAOPpVYfvrpkwSkYGQRwTzX55eF/wBqnxb4vIjsfivqqTtkrBLY6crsB3A+zV1Nt8XfiW0bu3xF1kO/JCWmncYH/XtXBKvGlJxmmn6HurDTmk4tNep90XGdqgLvYtgfXB6+1NQJAELZzGoTcemT/jgV8B6p8dfidAqvb/EbV7l4uWYWOngITxgf6NXLeNf2h/jZaaWbrQ/iLfXdzBICYDpunyMVPBwPs45qViYJBUwtSEHO17H6SuPtDujkiEYBXpuPXr6e1SReVENke1QvO1RivyKvv2yvjlb3SrdfEC9yGG6BtKsYnPrj9x1FdNo37XPxbuF+0WnxAvb5CMMhs7CKRG7Z/wBGPFbUKn1lNU+nTqfK1c5wuHly1rx9Ufpx4l0pbyyZoYR5xkUsQQpbt369a4a4tZLSUxyrtfGfqD3r4Q/4ab+M93agj4mX0V2BkeZpNg0ef9029bHwu+PvxD+IV5eaT4h8eajDrNqxCS2tlYRpOvfC/Zuo69e9e2sRLL6d6yvHyPJWb4HHzaoyfMvLc+0h94HNL0r5ouPE/jGxCNd/EDW4oWPBFrYZb/yWqiPGvjiWWQR+MPEBj/5Zs0NgD+P+jVz/AOsOE7P7jZSi9mfUlH5V8o634+8daKbVB40125urg/LAILBcAdWb/RuB0rNj8f8AxILs0nxB1EJ2RLOyJX6k2/Nejhsxp4pc1OLt3OLE43D4XSpLXt1PsDvSgZ6V8b3XxG+JEMxWL4iaiUxnLWVjx/5L0yL4lfEbcqyfEXUAWGQos7EH/wBJ67/bLseb/bmDXV/cfZIB79aUkAc18T6/8XfiLpMMSxePdUe4mcRxg2djjJ7n/R+gqlqfxc+KMGkzyRfEm9t7tQRG02nWLIzdgR5FCqpuyRX9t4PS8mr+R9y5CgZ69hSE1+ZmtfHn9pXTP3lt43S+jIyWj0qyVh+BirjLT9uP412+orDqXjeaJFbbKF0myDr74MNejQw08RpTav2vqe1h61HFK9GomfrQCO3QUh5Nfmpb/tcfE4bD/wALAuL6OTBHkWNijr/wEwV1emftHfEHVrcSwfES+yH2MrWViG/L7PWFanVoS5akGjnxeKhg9aqdu6V0foBRXwUnxz+KmVDePL/OeT9hsQAPXP2frUcvx9+J1tqdvbv4/vXiuVZI3NlYqVlAyAR5HIIrjqV1Si5yWiOXB5phcbXjh6crSltdWPvmivkLUPiP49j0eDULXx9rDQ3FvujZrSwIjlP3Q3+j9DXj/hv9ov446xpK3snjCfHnvEVFlZL8o4z/AMe571z0cdTr35L6Hu5lS/sqCqYlpJn6O0CvzZ8RftZ/E7w9dGzk8fzy3O0fMllZbUz6/uP0rgL39t/42i/a3sfHMs6ltqZ0qyLN26CGvaoYatXpuqlaK6vQ5qElXh7SOi8z9ZQKTdzgV+emg/Hr4vxW8MmtfFB2kkQM0VtptggTPbd5Jz+VJqX7UfjvS3Pm/Ee7/wB1bKyZ8fQW9edOvCCbk9PVHkSzbCqfJG7fkmfob05PWkGTzX5r3n7XPxPmGLPxlqUQzw09hYksPUKIOn41UX9rP4wGNyfHU29SRtOnWeD+Pk8V49TPcFTlyuV/Q644ylJX1R+mp4HFJyPx9a/M/Qv2p/jLr1zcBPHk8CRttGNNsmJOPUwVtp+0T8YEkCz/ABCujx0Gm2IJ/wDIFYy4hwcXyq7fki/rVK9r/gfofd3cNjbvNPIscSjLM3auGn+Ikt7OsVnAw8xSuWA6Z65+lfGVx8aPilriLay+MtTu1cg+Wum2a598+QK6DTdX8XzWcRv/ABhqKXLAlxFa2a7fbiCvRwuZ0sVfljJW7qxy18xw+HSc5Hul7P8AaLyV25XPBB6+hqe1VI45Z5GZYQuCc8mvnm81zxa1xtg8Xaoy4wGMFngY4/54UjeIfG0kCxy+LtTVAduPs1mB/wCia9NYmF9Uzz/7cwfd/ce/iYXkkitv+Ru5JZ+PwxTGlQIqlQ4PCx45B9+a8B/4SDxnbXBceMNUY7cF1t7QnHv+5qGXxZ4uRtv/AAmmo7SD922tB1/7Y11rGU1smYvO8H1b+4+jNN0yS9hQuUgt1OAzADaO+Mck8VtxeVbxtEqjypDuIIxzjBP418wReNvGcjqsnjLUwsKApi0swoHt+461wnib4+eOrO/mt9O8X37rCQHkktrNtx7gDye1c2JzfD4WHtKt0jpw+Z4fEy5abf3H29Y2pOnoJBtZBgEHGV6Dj6VNEgRu+zpXwEn7T/j6CJTP42uyrEqClnZ4H/kGtKD9pbx1GC9z4wvzt6qbWzT8iIK8lcU4BuzUl8j0+eC6n3iQBjgD39KWOI4HAAPQV8daT+0VdX0SG58d69ayOe9nZsgP1Fv0rs5fF/iqeQRWvxGvnlZdwQ29lyuMg/6ivZpZph66vTdzgq4+jR+O6+R9JtF/tbz7DAqVQFweo9a+Xm8T/EhXIXxnqTY/u2ln/wDGKpyePfiDaXRjm8Y6qFBHItLP/wCMVv8AXafZnL/bGF7v7j6sI4PY/wAqQJkA+navknxH4/8AiTZ27XGm+NNRl8s5aKWzssyD0B8jg1zVv8YPi7cwGU+KbiFjyttJb2e8r258jGan6/TvazLWa4SS5uY+2lG446VIuV4U/pXwXq/xx+LLWrx6b43uLXVYhlrK80+zJf8A3W8kZrgb79qj476ZZ/a7jxTLFD5hiLtplmVDjqv+q6100MRCvLljv5nqYarSxXwTV+zP0S8f8eBPE3f/AIlV5z/2weivlz9lX4z6l+0P4903wF4x8ZaxbvrDS2jpaRWkX2mMwyF1U+QSrYB/DpRXlYrHxpVXTqQaa7n0FLAzUbqS1Pmfwpp72OhxrJEHMp8yVWXJLc4/SvXfhx8PhqVxHreqWX/EvhYC1th8xvJuwC/3Qf5Vn/DfwHeeM9VAkLR6PZH99MpG5+4jz3J7+lfRPggafqNo+pRshNsxtIrePpZheCP949zX4/Oc605Ymru3c83D0XSj9fxCvf4V59/RFnStOm04tJcFW1OZcSMo+WFO0ae3r6mte1hb7wIVP7uKt+TGwZkGXPP1pFG0AGuSUnJ3ZwzqyrSc5u7ZNbFlkGCTkcZqSKzEwPmZB68063QKd3UjoBUsxZgCpAx1xUDiu41wZ/l6MO/qKigt0md1b7ijL9sVFPPlgBkY71meJ9UisdFvZ3uUswIm3yO2ABjr9RVpXdhcyueefEXxZbxrdXNy4Ph3ThufaMm4lB4UDuB+pr5j8U6/qvxU8QS3L3DWujW52Jar1I9M+p7mrXjbxHf65oXkXFxIukWQxFGnys5z/rW9z6VFor2tlZRxQyNFuQNhjjcT3xXourGhRvT3vb/M9HG4+FLDqhhXp1fdjmCWiJHFEI9i/cPOas2KtdB5nhRY4Bucs3X2FPismuDIZpQuPmBk7n0rPETswJiTEnITO4Y/+tXkfFqz5RXbuyze3cuqSMUhMMRUBAOAvp+Vd14f+LUmmWcNr4kgdwq7Bc2o3ByOhYdQTXCx2qW0pkNzuKjKoTuUVo+FbW08T+J49O1K4kt45EbYYlwJHHQZ7cZ/KurDVJqXLHqfQZRisTQrqnh2ve77Ht8uuWs/hmfWY3Uwx2pmiIXa444/XFfPSJNeuJJmKT7TvZG+8zckZ9M17/r3hzPw/wBQ0uycRMbfyoXZuQQM4/HFeI6Lo+qapqFtp62s1vdTMqEyQsVj9WbjoK6sVGc+VJH0/EdLEYh0KcI3v+Zo+DPhvceK7izvGeGz0xZmS6ZH2yJt/gAx39RWz8W/Ac2iJZSWscreHYUwIbdyUik7vIB1z6mvXNL8FW+h6Za6fbx+ZAvzzTt95nPV/wD61WksES4aKNvtELDZKH5Vh7itlFKPKj2aWT04YR0dpSWrX9bHyTLC7fvFbd/s56inRbNwYQFGXue1dt8QPAcvh3W7i6tLaV9KuHMkaxxsVhOcFTjpk8iodA8C6r4mKmx0+ZlzgyTqY4l+pPX8K8ydKalypXPzetleKhiHQjBtnHyRyx3QeL5Zcblkzhl/GtPSBd6pqlrYz3ccgu5PKElwc7HPTLda9Gk+AWsRRmSa4sWGMn5m+WtbwT8HxBrFvdahco0MD+bHFApCsw6bia1p0ql1zLQ9TC5Lj3VjCrH3L66nJv8AA/xOUZWjgaJW6pcjD/nyK4Dxj4C1Hwncl57O1Elwjt82Hc7etfTvjDxJ4f0u4e1vtWis5Uw8kWcYB6ZwK8O8c65DrV9qeoWbte2FrB5NtKwIDDq5APvX2PD+VrEY2F4vk3e9rHvYrKsDg4OdNvm7XOd+BfhmTX/GNheRAQLakzFC5OQDgqo9TX2P4K0zXPGmqSaVo2km8vwjSwWkTqrFF68sQOMjv3r89vCfxD1XwbrEd/p1wYSjEhcZAz14Nfb3/BO74o638Q/2qdJF/Lvsk0a/dEChQGIjzwOv419NnXD1f288TD+Fa++3kdeAxtOhS5Le8z1X/hnz4nSToknge6W2kBMqLPb53fXzK8l8dGb4a+Nh4U8S6dJoWsTQrcW8FyADLET95XUlW6YODweDX624HpXxL/wVI/Z+n+InwhtPH+gWzP4q8FSG6HkR5lnsiR5qfKpZtpw4HA+8TXyTwkbaM9VY6beq0PlzxX8N5PiHZ6fbpi2uWlVYGwA7uxCqCT6kgdRWto/7BPxU0zU5bs6RdpIqbIzC8GH/AN8GTkUvwT8bQfEHQ/B+oQOTM9/ZrKAN2GEyZ+lfrIoG3pWWHoWlz7NHJmOEwteSnUpqV0fiDqGryeGfGus+GNbiaLWtIne3vIYT5vkuvUHbnGM+4rv/AIUfCzx14ymu/FHw+8M/8JHb5W1uH82KMxMAD8hZwQxUjPHpXm/jnJ/4KC/F9BJ5aNq94Gx3G4V9j/s0ftN/Cb9nDRPEGneOvE9t4ZvtUv1vIYGtppfNQRKpb92jAcgjtXq1MS6qeHqq6PkI8KYalUWLw8nFdUZ+ifCn4uXs0Q1j4carDGg2xkXdpJt+v7yug1j4VfE+zSGLS/Ad3NOwINzNNb7Ix648zJPtX0V8Jf2xvg98dPFTeG/A3jK317Wltnuzax2k8RESFQzZeNRwWXvnmvZZBmJuOxry/wCzqHMpWPT/ALOp9Gz8j/CHj3TvGV9fC11N9RvYZDHdSScFWUkFcdgCDwOK9b0z4JeP9Z0+21HT/C13e6fcxCaGaGaECRSODhnBGfevgP4JanqVh488af2ffCzJvJixZAwI81uMV+5f7Nskk/wG8ByTMryto9uWZBgE7B0r6GM/ZUo8isj4mnktLFZjWo1Zt8qT89T4oT9nH4n3Ekrz+C74IfuR/aLfPXv+8rO1j4IfEPwjpN3q+p+C9TNrbcubcR3MmwkAYSNmdjz0ANfcvxn/AGkfhz+z3DpUvxB8SQ+HY9VaRbNpbeWXzTHtLj92jYxvXrjrWP8ACn9sD4O/G/WZdI8G+O9N1bVExizffbTS5DH92sqqZOFJO3OAOaj6zPser/qngv5pfh/kfl54i1RbrxVcLqMN1pd/Aohh0+/je3nVCAd5jYAgtx26Yqa5vbgwBLkpIuQFjGDjHfNfqt8av2e/BXx58NXOm+KNIhluGiZLbVYUCXlk5x+8ilxlSCq8dCBggjIr8rPjR4F1r9mD4zP4E11bnUfDd4om0PxFdRBGu49o3IxXjehJVhx0BwARXXQxK+GW58xm/DNahB1sPLmiunVITSdPv9X1iz07Tw8t/qEy26Wu4Au7kKoUnA5JArofG37AnxK8WF3Hgi9guMcXIuLbLEdNwEnNP+FsOz4reBy0ZJfXLJgwbO0eelfr0uNoravip0Jp03qHDGVwxcZ13NxlF20/U/DG4/4J5/tCaRcf6L4FubtM8GC9tl/HmTirUf7DH7RckyTTfDm/81ANrrqFqCPylr9UPiX+298Evg/4zvvCni/xxb6Nr9kENxZyWdxIU3oHX5kjKnKsDwe9cx/w8q/Zt/6KZaf+C+7/APjNdn+sOKceWcYy9UfqCwsFHlk7n5meN9K+IP7Ni6NbfE7w3daXBqpdbNp7iKR5Nm3fgozdNy9fWuw+HngDWP2hrLUpfAOhza5caWYpJxvjhMLtkx5LMOu1unYU/wD4Kp/tJ/Dj9oWX4bj4eeJYvEZ0xr37WIbeaIxeZ5Oz/WIuc7W6ele2f8EbUljk+KSSo6ELpnDqR2n9aw9rHE4erVaSatotnc+erZDgniYVYXjK99H28jW8L/s4/EqfwLeaZrPg3U7SSTd5aQ3Fu7x5GeD5nZq801v9mb422HhoadoXwz1I3Gza08t5aZyOMj97361+p/i3xTpXgbwxqniDW7pbDR9MtpLu7unUsIokUs7EKCTgAngV4f4S/b//AGf/ABxr9rouk/ErS2v7nIiW7imtYyQM4MkqKgOBxk89BzXgYaX1abnFX9T6TH4almSprEK/Jt/wT8Z/iH8GviD8PfER03xl4Z1Hw9cPMIftOoREWrSMm8KJ1zGxxk8Meh9K7PwN8M00TTWeVoX1l8n7TCA6xgjAwT14r91tc8O6V4u0efTdXsLXVtNuUKS2t3EssUikYIKnIIINfkj+3H8Mrb9k346aJL4b/wBG8EeLonlh05pN/wBinRgJUjBHyxHehUZOMsBgAV9HUzipikqVVWj2Wx8znWX4qph39UlZLW3e39bHgWr6BNotzFbTQRyo4JSZP48dcjse9U2MVvIqMFXHIUqPz/8A116jrNjbeItPWOVZd8g3wPFgFD61HoegWWlWTxyAzvISJJZgC7n0+lfJ4jIpVa7cZ2g/zPzynmcVT/eL3+x5tDfmCVgW3x4JION30HtT7i6SKwa4mMLDr8px+FekQ+HdLhtvLNjCsbAkgqNx/wAaop4R0jT5jeRwR+REN5RyWQe5U1wy4bmrNVFbqXDNaLdnFnNeBVgGnJMrFXYl2UsOp5r27wNptsuiRXu2Oae4Yu8m0EjsF/DFeF+I7zRtThmeygure6Vv3NxCu1X9QR6VhRePLrQ5WgS5uo9jfKEkaMFvXFTgsMsLi2qf7266bo9P2NXHU3GCcW3sz6vkv4grCIbpAcbcYqlculsp+1zpEZTgIzgV856T8VtWsZXe51K4Ic8qwGc9scf1rprXxbZ6nMjPIJnkGTJI24/gTXpYvN1hNHSkn5qx539jVE/30rfI9Mn8YaXorrBLI2/HSNS4/EinTa/BquWsJlmCEbmBxg+mOtcKVKRK0IAU9MDrVTwg11FrtublV883IRXxgFD1BHfivPw2fyrV1TlDRuw6uU01SfI3dHqSauywFCAJW6kc1myIWnYvhfp61Nri3X29DZrHECo6rwTULfaPtu6Vo1XYN4Xk5xX2y0PkpJ9TK8Y6lcaZ4WuZrbMc4ABYc9TivFL/AHTTR2C4DSsVclyCydSAfWvYfiCofwvfIrELgDI69RzXmOieGbzxRrkWkw+bcXcswFu23n357D1NfD5+37anG+lj6/JIKVLT4myq+nwxW5gltlRR8gSMZG0ep/Ws6w0H+0LspaCa8YncyJGXUkdAa+zfA/7MOi2EENz4gB1XUCoLR7j5Kn0C9/xr1zS/C+l6DCqWOnW1qq8BViUfyFfMQvHdn6BhcorWvVna5+eSeF9StrZ0uLOWziVMDzIJFX3JOAKk0bxReaDJDFNvn2kEEkkgYwAr9QPY1+kF1bW88SxSQRSoyfMGQHNeZ+NP2c/B/i+RpfsTaTcuPmmsTsz9V6V00cRUw8+elKxticgVWLSd/X/M+bfDvxXF0yLHqPlSqcPHdsFP4HoRXXw+PmwZHSOcMeNpDil8T/sTyiOd9G1ZLwvyIrpNjj2DDjP4V4/4q8C6/wDDrUUhv7C7tFAwJhlWI9Qw4b+dfSUs+aSVWF/Q+KxXDdWjeUbr8Ue4m+g1G1EwjVHcfMg6LVc6TBdAs8S5HyjHBH414x4d8b39hduEmbUbVMNJleRn07HFeqaX4lhvoo54SZraUY3Jzg+mOxr6HDY2ji1+7evbqfG4vA1sM7zWhd1PwvZ3Q2yW8c4Ix+9GSPxrk9V+HVje6NdaaEEVrMSTGnI3H+LPrXchHvrJ9rMokG0MfT0rlJLG50tnkLmFlJGWYkGvQitbnHGdWm1KEmrGL+yD8M9T8D/tlfC+S4TzLN9UmWK4BzkfZZ/ve9Fe1/sstdXvx/8AA5mKSxJevIp6lT9nl6fnRXPmFapXnF1HdpWP2nh/Mp4zCc9Vap29djy34keNP+FW6NB4N8KJFDI8QM92ACYQSf8Ax81xfwr+Id94J8UQ3F3O8+lXH7q7jzkAH/lpj1FebTw+I9NuLp3kW/uCxE63QZZA+O4PPSq8Pipw5t7tDYA84ccN+Nfm9WnUqPmpNSS7b/duY5ji62Mrc0Pgjsl29D9C7S6jvII54ZQ8Uqh0dDkMCOCDUgUZJHOK+cfgL8WDa3Fr4e1HP2W4bZYyhsrE39wn0PavocOWDqWxgkHtXnuLTOBd0W0dnbcAVxxkUss3kKxdu1LHO72ZjUYVOpFch488Z6d4T0x5tQl2YAwOuT6AdzQouTNHcXXPE0OjWtxeXU6WtrECzSMeOK+bPiH8Tbvx7OyxJImkwNmOBzgyn/no/t6CqfjnxxeeObsiSMW2nxfNDab+/wDef1P8q4HXPtGo3MFjGwhLHNwyN29D7V1UqXtp+zhpbVvsjBP2j5Iv1Ymp6tJrU403T1F3b4zNNGfunPc9+RW6luqouYRnA+8O/Q1Vs9Jg0uHyYVKRk8BePxq/FbSwTbVO7cRyxyv1xWVetCajCmrRX4vuzjrVFK0IbI63wR4CbxXYavcT+cUjiKRiNgGaTHAGaoP4C16Hw/cX1wpsIrSIu63JxI5HULjsfWuy+E3it7HVJNBukDRXBM1pMuNpYL8yn8siu58daVc614W1CxtVWW5uIjGqu2AR3Ga64U6coLS59/gcswmKwMKkVdpP5s+b1ujJD5cUauWHIA2mm20BiljAgljKHdv8z5lbsR7V3Fv8HfEM8K+bBbQAHA8yfHHsADmuws/gnpn9jGKWWQ6jgN9tycq3oB/d9q5I4eb12PBw2R46pJytyW2uZPg74rGFE0zX3WSWRlSO7RcDrj5/T617LooQiYCHaRht7YOR7H0r541f4f6/p2pLZpZfaYnYqtyuPLcep/u4r37wvMbfSbeOS5FxFGixeZkHBUAHJ9K76TqOL9otT7vJ6uMnGVLGR1js+5uMFlGR3H5VjWOlT2mos4kxblmynXOa3UjEi7gylSOuetMZ0jY4U8Uk2j6XlbKzQRo2VPGclTyDUN4y25jmMrQxIei/dP1FaCIshJPQ06eGJosMm7nqe1A3BHy9+0D491C18SSWIu7mCGONWt4YnKrLn7z5H8qs/BH4s3msXr6Rqt3kKvmQSsfmOOqEnrxUv7VaWcVvYJ9hWK8kZmW73fwD+HHua+e7I6hp9ws0UgXPzKFGSe9frWV5XQzXJlFQUZraR8VicRUwmNcua67H0P8AGXVdNtPGMUlnA11dtHnUYIlDjaOFJHYim6N4B129RrpRDJpV2DiF/kaFMYyc+tY3wM8TxX/jqGD7Okk08bRzTuMv6nr719NSWME6Oqp5e5SmQOMYxXgYrH4zImsBB/Drfe9/0OyhhaWY82Il16HxPq/wrt75LnUNPutsKFx5eM5IbB2mvqn/AIJpfD3UPBf7UFi91I3ly6NebVK/KcrGeD61yEvwfv7W2ayiu44rNZdxfaSzKWyR7H3r6i/ZCga0+POjwNEoVdMuwjr6bU616WP4jeIp08PRldSjaWnU5qOXSgpTqq1tj7p8aeIB4S8I65rpgN0NMsZ70wK20yeXGz7c9s7cZ96z/hz440v4rfD/AEHxVpLrPpWtWMd5CTkgq6gkEEDocjkdqrfGj/kj/jn/ALAN/wD+k71+eP8AwRt/aIa+0bWvhDq05aWzDapoxY9YiR58Y4/hYhsk/wAWAK+fLPNPiF8Pbn9lD9t2HwzExg8HeKdVttS0cEkqiyXKb4xlicq5K5OM9uK/Yofdr50/bN/Z0b45+GvCGp6Za+f4m8J+ILLVbIKcNLEJ4/PjzkAZQbsnONnA5r6LH3T+NSopNstyckk+h+HPjVVf/goV8XFYBgdYvAd3+8K7Dxv8K/D3jGaE65aGR4xhMZGM+lcp4rge5/4KIfFtEfyz/bF4ckf7Qr6At9Am1q2e7Msc0ittKZwR9M9q8rEy5at0e1g4KdKzRd/4J/8Awr8L/D/9oxJdLtxbX0uh3igFyWaPfCScHtnFfpnJ/q2+hr82/wBjmG7tv2z7y2vWBaDw7cCFM52RloT+pzX6Rv8A6tvoa7MNNzhdnjVakZ1JKKtZ2+4/nJ8B200/jzxWYVuGZbyb/j36/wCtbiv3l/ZYDj9nX4diRXV/7EtsiT7wOwdfevxD+BcRl+IHjUg4xdzf+jG5r9xv2bBj4C+A/wDsD2/X/cFd3sFCPteZ69Oh8tha/NmtelbZLU+DP+C2sYm0v4OxkkK95qKnH+7b18mWf7NuhanPA+kahd6fLFApNzE/7xZ2AwFI5AA6/WvrL/gttJ5WmfBxwMlbzUTj/gNvXxbo/iPUdJktbu3vZbW4RRKpVyVbPYjuD6V5OMxHsOXXc9ytjqGCcfbRvc/Xj9hH4w618SPhZJoPiny28TeEpU0m4uDc+ZLfRLGPKumU/MCw4JPBZWx6Vyn/AAVL+E9r8QP2XtX1+OyuLjX/AAnLHqenyWcW+VVLqkwOASI9hLtjH+rBPAriv+CZ/i2Dxn4p+Il/9gNnei2sI5XGNkmGmxt74619W/tMnH7OvxQxn/kV9T6f9esldtGftIKSOhyp1fepu8WflD+zDd2viTxL8LtU+0XSTy67ZRSRmXflllUgnI4HBr9qAOK/n+/Y28RXqfED4eaety0drH4osHMQH32M6Dk+gBNf0BDpSp1HNyi3ezMqawyclh4KNt7K2p+TH7Y/7EvxT+L/AO2T4l8U6d4JutW8HXq2oS9iuoED7baNGwGcNwykdK5c/wDBNvxSj7T8N9RdMffF5B1+nmV+jnxK/bY+Cfwi8ZX3hXxd44tNH1+yCG4s5Lad2TegdclUI5VgeveuY/4eSfs4f9FLsv8AwCuf/jVdsKnIrWTPOxeX/W5qftZR9HY/Lrx98BPD/wAD/Hen6F4w0abQtauIVvLa2lkWQtEWZQ3ylh95SMe1fev/AATOvoLq8+ISQbtsSWA/eJtcj99jNfFP/BQf47eBfjb+1L4L8ReCtWj8T6JaaRb2txJDC6DzBPMxTDhTnDKfxr7n/wCCc19od/fePZNGV4v3dgJYnLfKf32ODRLFJ/urWbOChkzo4qGI9u5ct9JPXXse+/tdf8mu/FfHX/hGdQ/9ENX4g/B74M6B44+FEuqXtvIdRNxLbJKrHg7CVOPbFfvV8Y/AMnxT+FPi7wfFerp0mu6Xcact20fmCEyxld5XIzjOcZFfInwO/wCCZr/DHwu3h7WvHCaxp0k5nd7LTzbzdOilnYD346VyVFJr3T6um43fP2Pd/wBiDV9T1n9lvwDNq17/AGhdRWbWq3G0AtFFK8cQOOpEaIM9TjJr5p/4LRBU+AngqYKvmr4mQK+BuA+zy9D+A/Svvbw14fsPB/h3TtE0yD7Np2nW6W1vEDnbGihVGe5wOtfjZ/wVW+Ntv8Zf2iNG8BaI6XNh4SVrae4hbcJLuUq0oBDFWCAIucAht4PStlqzkf7uneb2WrPPtO8YX1rpWjW1okUkhtElnaXJJyOAPc1n6rqN9r90HuCI405WCLOFPcn1Nb+p+EBFoFvLZOYby0tlAlYfKyqOVYfnzXHXMuHsmlYqJGBcDgkdcV5GcV8bRn7NytB7W8j8gw0cPVk6lJa3epp22vappMm2GYTxA5MU53cegPUU/UfEd54nuobLyRZ2rkGQxtksB2J7DNTXeiQXDLNalrSabCkAjGPXHrSafogtb2O4Fy0jKCjR7cdCOcV4n9q4lUXS9o2n951Rw9Dn9ryq/oaMfhdIrjcWMj5HBPArRfQraUOLi2hkzwG2DNajBRGroRuYZzTCS6/M1eCpyTumdUfd1TOR1n4d6XqRMkRe1kGSvln5c/SuS8L2dza6xd2MypNDA+BjufXPavVrkJbxPIz7VCk7vTiuL8IRxTxz3AXL3M7SB8HJXoK9dY/EVcLKlWk5RVrX1s/I6pVZOlJSd1odPHqI06GJGXecbj/siuv03wnLItrqd5cJBGGSdYY0JfrkAnNcoLeOV0yPmGM+hFXrrxhq+h6WllZyQ3BkkEURuFJZFJwe/IFb5O8Kq/8AtC10t6nnVlWdG1Fq/n2PRb++gnghMa7nJyVHBFYrOBIWPAB+bFYk+r+IZUi8i6tbZ41wWFvndgdRzV6PVnPha1vdURItSmyAYBnzDnjavqR2r9RTS0Z8PKjKavF39Buvrb3GmXcV04jieIhixxWh+zTYRT+PIpSokdLJipI7k7c/XFeYa1ay32tyXc0zT2zxK8aMceXg4Ix65ru/2fvEkHhv4mRTalP5NhcxC2jkbhY33ZGfQHpmvz/OcWq2IVJRty9e59xw/RWHrw5nvr6aH2YoO3nAPTmmCTDkMM+9SS8hTkFexHOaVIDK+0L82M18+fsSXYmmULcckjAxSks3CnINRXofznPOM9areY4BbHSgrUv2yATfMOTVTxR4R0vxnolzp2q2q3Fq69D1U+oPapYbnIXJwa1rYeZA/uCKLlSipRsz8+/F3hFfBPi7VNEgk8yK2fEUhGCUPIz74rF0LVZ/B+pGRCRB/rXEhyj4/hNdb8ZzcSfGfXEgkCxxNGJEI6/JXKXdsb2TymYfZmXDLj5sg8Vgqs8PW56bsz8nx1OKr1IW0vsesaNqdrrWli90yRo/tW7KZOUYDt+NYIg1C9LwS7pUZsln5YEdq5Dwzr0/hW/eAYMEnJjB++g6kehFew2GqWl5ZG5s9rp5fmIB1Jx396/T8tzGONp3+0t0fDY7BOhLmj8L/qx1P7LliNM+PvgdfOKhrqVRGecnyJaKX9maG+k/aE8ET3AbY15Idp6L+4lorqxDvJH3PCytg5/4n+SK/wAXfhHY+ONPku7YJba1CpKTqv3/APZf1H8q+QdT0yR7q4sL+yAuYGMciN1Vh1/CvvyQ+SdwHJ4IJ614/wDGL4Nx+JDceIdJ+TVo4tjWowEuMD17N2zX5dG/R2ZU4OXw7nx99lbwvqiYnlFnM2Y1JIEb9jmvrj4QfFKHxLpUNpqF0iaxCoRlkbHnjoGGep9a+btY0n7VZXEN1bTW9xb5Jhn4ZGFZmg6iZ7CC5Mjm4jPRFI5HTmu6c/bUVVmtU7Pz7MtVW4c01qtH/mfa3i/4raZ8ObBpdQc+bMhENuoy0rdh9PevlXxV451LxVqb32osL1XJMKKcJAvoB3PvVOTVzq8rT6hd3FzcFQv79y5UAdBmqiTwKrsWCoOTIw2qgrz5S+zE5qtbn92JDd6pbWGnzTyTYVRuVNuCx7KPxqv4YsoHlGoX5kS/uQSY+TtHaqWntP411z7NaRebaRttjgVcGZ88KD719CXnwvhsvhlcooYa2gW7du6SL1j+mCR+des8O6NL2afvSV3+i/VntYLK6uIpTUOiu/0R4+YEjDsmGyTggkg/h2rq/h14TbxPri23nMLWCMyXE0Zww7AL9TXL2Uq3C/vmCHA+RF7H1r2j4UWVhpvhC+mivIbfUtS3+XEXHyhQQuBn1zXm4anzzs+hz5LhI4nF2qq6jqzi7+78LfCLWJL46lLrOpqzNDa5XZETx8x7HBrF1D9qq7uLeSGztLa0ccRvJl9p9fevE/GDzDWJ4pZN+HOSOjHJyfzrCJzwePev33LeEsEsPGda8m1fsj6j65Ojenh0oR7I9tt/G2t+K4JZtQ128SRs/wCpmKR4+gr6K8E3E6+ENNNxKzyeSoaSUksfc5r5m+C3i6LwglxeXWnC9d08qGMAbgc53DP5V3uv/GfWNdjEFjZro0GPmmlPmP8A8BAGBX5JmFGjg8ZWpRndJuw8DjaODc62IrXb+zvY5bxzcXHiDxNqEl3O9yiTtGhDkKiA8LtHH41P4K8Zz/DvUJGhtHu9OucLcW4Y8ejKfUeneqWl2lxqlzHa2UUuoXVxIThflJbqSx7fjSXi31nNNa3lu1vcxviSBwNyeleC51Yv2i2Pl5YzG067x0L8t9L7eh9R6B4mh1nR4dQgcS28iBwE/hH0rVFyrnKuNwAJBPI+teFfAjxELTW77TLrERuk81Iz0OOCPbsa9fZkiubjNo0jHlnzx7Cu+NpxUkfrOAxqxmHhWXU3LeU7gcg1DqOpXdtLEY4xLDnLgDkGqlvJPJbgxSRlh1XGNvtVl7+O3ZPNkCnvx1NKx6nMmjyj9pTw5pus+CW1Gdj9t05gYdrcjceVIr5qtJF1CWytt6WpdljMxORk8Zr6Y+NGs2EXgLVJLiFDPOBEhPQtnhs+1eV/CT4LL4wlstam1aCfTUfMttEpWRWHQfn3r9JyLM44HLavtW1r7r87Hx2Y4d1sVGMFrbU9g+GfwP03wd5epxXktxqQBU3Eg6ZOflXtkV6eDyV3BiOw70wQiK0EQY427c5/KixtMQRh1BlTIL56jtX55iMRUxNR1Ksm2+rPpqMIUIpQVkMu5ngjBUBsnaVduDXqP7KaKnx/0sqoTfp15leuPlSvML2NH2rKuUbjNeq/srR/Z/jto6JETF/Z14PMz0+VMCnhn+9RGJlzU5H198aP+SP+Of8AsBX/AP6TvX8/n7OHi7VPhtr+meNNEfbqmgX6XkcfH71Rw8fII+ZCy8jjIPav6A/jQf8Aiz/jn/sBX/8A6TvX89XwZKNp15GeS7j5T0I+tepjqjpUeePRo+HzGo6NDnj0aP6I/h3440z4l+CND8UaRKJtM1azjvIGGfusAccgHg5HTtXSYwK/O7/gl18aTZ3GufCPU5xth36toe4cmJj/AKREOOdrENkno2B0r9EMjFdVKoqsFNdTtoVVXpqpHqfiD4nYR/8ABRH4tv3XWLwj/voV7dcXImjCxbos/eK8GvO/CHh+w8Wf8FWvHOi6nC0+n3/iG8hmRJChK7WPBHI5Ar78P7DHhtdWvbq38U69BaTyF4rEmF0gX+6rMhYgerEmuOvQlUnzRPbw+JjRhyyPHP2OfDBk/aBGueVI0sOi3MEs6qdoVni2Bj2PynH0NffUn+rb6VxHwv8Ag94e+E9hNDpEUj3VyEFze3DbpZyo4z2A5JwMDJNeeftrftCaT+zz8AfE+rXGopba7e2klho1tHceVcTXMi7Q0ZAJBjDeZnGPl6gkV10abpwszhrTjUm5RR+NvwKlVPH/AI1DSeWGu5hnGf8Alq1fuJ+zWwb4CeAyM4/se36/7gr8Nv2bdHnmtdV1O6LzvevglycsepbPua/cn9mw/wDFhvAfb/iT2/H/AAAV6lRWoRPh8BOM86xLi+iPgn/gtyM6P8Hv+vvUv/QbevirT4P9EtwUGWRcDqelft18fP2Wvh3+0vDokXj7SZ9Uj0Z5ZLMQXstvsMgUPny2Gc7F6+lUPhf+xx8JvhDqv9p+H/C0X9oLjyrm/le7eDAYZjMhOwkMQSOvFfP4zCyxLjZ2se1mGCljHFRdrHnv/BPH4IXnwo+EEuq61p/2LXPEVx9rdJoAk8VuBiJHOSSMZcDjG/BGaof8FRPi5bfDL9lPxBp8eqT6frfiVo9LsVtHCyOpcNODyD5ZiDqxGfvgHrXvXxm+Ovgr4A+D7zxD4y1u20u0t4XlitmkX7TdFcfu4Y85diWUccDcM4HNfiD8efjd8QP2+Pi0t9JCbHw5p7NHpel7j5NjCTyzHHzSvgbm9gBwBXbCMaFNRWyPToUfZQjShrYi/Y806S0+Jfw7lKrsn8SWDDPUYuEFf0Bj7tfjL8CPgdqnhr4l+Appr2DyLXXLCQRxRE5AnTuTX7NDpXHg+ZucpdWc2Gw1ehKcq6tzO6Pwm/4KK6ZFq37e3jW2nUvE6WWVHf8A0SKvH3+HOixycw717/Pgqfp3r9uviJ+wp8Hfip8Tbzx94k8O3F/4lu/L864GozojbECL+7VgowqgdO1S2/7DvwhtVKxeH541PULqE3/xVPEUKtWfNCdkTXwk68+ZVXFeR+KmlfDCziljuYtOvMg/JIkLsM/lX6Q/8Ep9Mv8AT7j4km9tZrYONP8ALM64LL++968w/wCCkGiab+y3qnw1HgeKayh1mS7W/S5upJhIsflbR8xO3G9ulfQH/BOrxHZ+IbjxvJbTxzOkFh5nlNkKT5xxmsKWHlTrRlOV2aUsupU37Z1HKS7n1P8AFvx8vwr+GHirxi9k2pJoWm3GomzWQRmYRIW2BiDtzjGcGvzuh/4La2twm6L4O38ijqU1tSP/AERX3F+13/ya58V/+xZ1D/0Q1fkz+wxpNjqvw91cXNlb3Ei3mAZYwx5UjvXqVJ8kbnqUKXt58l7Fn41/8FCPjt+07pV/4X8O6MvhXw5fmSGaHSI3NxNAzAqkk7cj5Rg7NobJ4xXm3wr+DcXgnVBqHit57PWOfLhuYiFLnuH6E19XfYpLfwfdxaFBHa6jBDIilYwANjleMDrgcV5Y2s6rqukCF7w6jZTDc0OpRrLjuSM8rg+hq8JOpWk3TSduh8/xLLDYPDxoV6ko+0+0ldej6lDxZos+r+H7pIbgxOWUsu7bvUHkfQ15xkWcu+4sJbeKIBA8oyFHt2x+Nej20Ij/ANd5tiFKp56kzWuCw5KsQy/gTXY6h8PNV0eTzLuzjuNMKkG4th5sLccgr1H5UZhh8PjZKNaThLz2Py+nSrYKn+4aq031jv8ANbnjUesre+SbWKJ0BGHc859qkaeCzlnZbjDN13tjk9cVreJ/DeipplxcW9ymnXCklEgbaHPptPftXN6bBLqtszJafazbkCVxghWxyB618fisqrYeooQ96/Y6aNWNWDmk1bvoalnrIhhCxSDk43Nzuq7pmpFpZFmO5v4cCqcfgTWLlw8UMFtJkFXmbJUD0UU648A6raCSW21JLi4Y5aN12hz6A9qUclxk48yhYHi6MHZzRcubieWzuIZYjEzRsEI71jeEdTkOlwweWDNC5ilQ9VIqOTVVmtTHdTTQXkWVaPH+rOfmzSWEUDWxmiZw5bOc5J5+8a8p81OEqUlrc7/aWg4/M6yMJu65HTAFUdYt47X7PfLtc2bmQxSd1xzg+tW1uI4QilsO6kqxHHA5zWBq6vci3lnkSOXbvMZ+4wB6H68U8NJ060ZrSzKWsXFrc9EtJxqVnDcwkLFNFuU45CkVkSKNJS1ghmkuiA0dqXG1Yjxks3fHtUH/AAnGn2thbywlZ5XXb5EQ+ZT3GKy9S8T3mrR2629ikASVZDJcPwMdwB69K/V6+Nw1GCdSaufIYfB4hVH7lou+5nyoxuLp/tDTNGxi4GCcHJP4k1QN06QSySsVQqQUI64HFW9QEsurTXRnQM5AKRjAGP5/Wql/G9ypIQM68hc8Z96/L8XUVXEzqRd02fQxvGSv0sfZ/g+aabwfogS6mAe0iydxOflrTZ9QtkkWC4upBjoG/rXnf7N/j288SaBcaZf2aI2leXbx3MabfMyM4/CvU9Xme3jTYhO9sFS3eqer0P07D1PaU4zT0K41K+MaSiSSSTIUA9ceuelWJfEdzbvEsnlSKRzucIw/PrVa2srnyjIeUblwrYBPt71g+I/hfpnjVkvdS821u4kMcdzC54HXBXofxq4qLdpOyOiVScYtw1Z6Daa/aPOVO2VAgbckgNPbxvBbtLHHEdwA255DcdK+V9d8Pz6Dc6jp8V0RqFoQFnh/ds4Iyrf0Nb/hKS18W6HFLK0zygeXMpnfKuOGHX/Oa9Otl/soRqKV4yMMrzB5jUqYdrknDdP80ebfGa8jv/ifrcsDFPMaPfJH0J28iudiTyJEBlb5VGU9ffNew33wb0DUbacxQy2lxGwPnxStnk9SD1/GsBvg7qa+YIb23uI1+68qlWI9DivGq4ablzRPMzDIMY6sqtNKSfY8y1+Mi2eRRyAAGAO8Gut+GuqyadqKWdztaO5wqAH7jgcfnWdeW8umXstleRG3uI+qMM5HYj1B9ayJtSuNB8QWeqRIJYYGBOOmDwfyzmtMurTw2Ljd21sz4bFYecFKjVjr28z7B/Z7jK/HLwazAAtdydf+uEtFQ/s469b6l8ZvBAUCQm7bBUdCbeU5or9Mr/Ej0uGf91n/AIv0Q7zmGXlk2x8BVY85qc3cceFkbIYY9jUN1pQfT1l8oE7uHz1rKljIjSPBCg5yTzX5ilc2a6nFfFn4L/8ACZWv9o6K6Jq8OflJGJ1/uHtn0NfLL2mqeBtWuNI1XRrqAh2ZDIoH4Buh/CvtqGRoXykjI3YsMj8quSpp+txrDqVrBd7OR5yZGfxrqhVUYyjON0xXTTUle58KTag7W7zjTmjdD/qpz1PtiqNzY6lr17bpchLKychmhTnePrX3zc+EvDRhd/7HsgGUsWMC8YU18dLDbyyXcu421qZWwVwBtDHH5ij6zClH93BJ99W/xMpSVFXhHU774K+DLfSLdvEDeSbeAFLNMhlBH3pGPY9h9K1NZ+PtsbO4tLHSmvo13K93IVQOemM4yRXlEN2bPTri2t9TmttKmbzGtEY7XIPUj3qlZapbXjNC0LxRsNyNJHhHpPEtx9xa9T3o55KhhY0cHGz+03rqOtrU7FAchZHJTauNoyTt+nNR6nbx29ncBpUEkYJjI4KH2Arc0W1SdpZz5nlohYiXtgHGK8Z1vWZ/tbgSlUyec5JOTXs8P5NPOsRJKfLy6/ieDhaM685VHKxmX0zzXB808rxzUBAPXiuu8KeFrfXQ13eGd48YUoQMt3qv4k8G/wBmqJ7IySQZw0Tcuv8AiK/baPEuX0sUstlL3o6X6XPbVen7T2Tep1Hwi0ybxPejT0mijkkcKjSAHb+HWul8UeHdT0G8urK7D2pRiodVOxl7FT0qj+zJ4el1Xxkk0cjwiAl3KgZAHTOfc1W+NvxB1W7+IGoxRXTpbQN9n8oN8pC8ZxX5zjcnWdZxXp4dpdb/AHfqdNTL6FTDutO6k3o16Hofw41g6B4J1yUiK+urAh4oTgPggfMSOSB6/WuL1K9v9Wu7vUL+eNrq5fc0iDjHYCuM8MeLZGvZBcSNbB4/LM0LbW29wR3FddDpGn3bxhL+MW8q58yeQCMenP8AQV8vmmW4rAVFhsQrefR/M5cXWq4mnSwjbsvLfzFsYZtPuoLw3Lx3sWZI8kAKfX3HtX0romuf274f064lCqZo1bEX8TY/xzXzay6at2IC5ksvMjR3cEZXgMV74r6XsLO3sbWGGyiRbNFCxoc/dxxj8K83DxcVJXuj3+G4Tpe1g5XinYFnjsJGl89oxz5hbgfU5rPvfGGiPEDc6rZpg8F5lDHn0zXz/wCLLWa78S6i8jSyFZ3AWV2IAz0xnFYOqTW2mWkk8reXOQY4zIoIHHGKqNVzqKlCN23YdfiVQqujTp3adtz2n9oC10zW/hhHcWN15m64T7MkHzea5ONuBXkvwQ+Kc/grUl8PzWCzxX10kbB/keJs4NedaJ4uvNLvrWcSNcx2swnWGQ5UsD1xXvmnftDeDZ9Riu7zw6Eu2IMkwiQsrY5IOOa/TZ5ZisFgnhpUvawlrdfZZ1wxMMRWVbm5JLT1PohSIyrvMiIcAKzACrsQwcHv0IPFeBfFXxHpmvaT4e+zXTtDco9yknO1k6DOPQ1haT4+8S+GolOl3Qu7OEDFtcneJB3xnkY9q/LqtRU5+zkddfPMPhcR7CqtNNfU+lL0vF/qwhYdQ1cf4o+Jfj7wHAdb+G8o0/xRaq0ayzWyTr5bYD/K4KknA5xxUvgfxQ3jXw3BqV7btY4BLFc7Tg44rob64ji2JBA0wdch8ZBFdNN8klJHv+5Xp3WzR4n4p/bD/a91PwpqkGratbvpF3ayW9zjSLRcxOpVuQmRkE814F8MNDn0TR7mK6iDSTuPkHYfWvpj4s6XrGq+G3bSjdR26SA3trG3zPGOSAPbuK8is1S7EjQImEXJcDgfWpx2LnOChbRn5xxJKWHtQivdfUfp3iHxF4A8Qaf4v8J3v9n+JtJkMtlcOiyIGKlSCrZDAhjwRiu0sf8AgoV+1jqWppp0HiW0a5c4RP7FtPmPsfLrgp5YEiLO+SPm28hT9a9O8IfCTXl1HTbue5tYbUOtyskALueM7c9uDWWCxdWmuSKvE4cjliqj9lSjzRT18rnA+Ao/jPYfGHXfitI8dp46uJZL1L2S2jKPcuCGbysbOhPGMV79c/8ABVz4/aPm3ufhj4cmlhAWSXybo7iByeJMc9ePWukuNLmR/KMS7IgSr5ILE9zVafSH3E/ZxIAVwzY7jk166xkk7tH6S8DFqyZ554s/4KtftDeLtHW10Dwro/hu6EysdQ07T5Lh9uDlCszOgByO2eK+WPFWh/ET4meI1174h6lqt/e3TqDcatI7Ow4G1d3AAGAAOwr7xg0K2trSSKGOMMXLAogTn1rH8Y6aPEGg3VrLGbqWSJkQIo2q4HHPrnFV9ccna1jir5fN0ZcsrSseYaDplp4L8Px20duqWsMQIVR8zMff1NTL+2B+0/4GNp4Z8NeILC30uzhWKzsTplrJJDEB8qMWQkkD1OazLe8vJFtRFa3AwwjCXQwHmA5YDuqYz7nFWJ9Gk8nKSE3qSecsrH70oOQxPXr29K+nnzYrSl8MfxZ+OYDEQyGXtMYm6lV6rtG+782a837af7ZUMaO2t2gV+n/Ens//AI3WT4n/AGtP2w/Feh3OlXPiKW0huQFabTbG3tbhcMD8ksaBl6YyD0yO9dt4c1Yavo0U80DSz/NHKGPCODgge3tW/DBDDAzw5Eo5xgnH0zXzksROLaaP2qnh6NaEakHdPVHy9J8A/iN8XvES638QPEt3qd1Kq+Zc6ldNPOQAFC5YnHAA/Cvf/h74OtPh5pMWmaTYRHZxJIRlpD9a6aEEBvNkkzIAMKCQo9aTXbmex0UeVL5QaaNGeP5WKlsdeveuV1Z15KD6m1T2WCozr2vypv7iK71LxJpFsLvRJXtdUgkW4sWkiDrHMh3ISDwRkDg8GuGf9s39sz7YbdNatXbdtUjRrPDf+Q69B8HXZttU1K2muZDBFHHKkcjbsbsgnJ57U20mt470SSSA28cm0ewz1rTnnhZSp9jnwtWjm2Hp4qF0pI87k/bV/bLilMbaxb7xwQNGs/8A43Th+2j+2YzbRrNtu9Do1n/8br0PVYQ18SI0fdl92OT71XVkSOO6KmKTJXbirWKm+hu8FTXU+cPjR4i/aC/ag1DQIviE8OojSHk+ySJaQ24i8zbvz5ajdnYvXpV/wj8ePi3+zat/b/D7VbbSrq7McWoRyWUNwXMW7aR5inA+ZunXNfQVuLZ8Fw0UoY8E8fWvB/iD4avdG1jUdQuLYtp80xaO6iBZACOQ393n1rkr16l1UitUfPZxhp4enHEUE24v8BnjL9uf9pv4g+EdY8N6zr1tdaRq1pJZ3cKaTaxl4ZFKsNyoCuQTyOa6P9h+Kbw9aavpN2vlyyKlztYdMMQcH8RXmlk6faH8uRSGG3gjkdeK9N/Z81QWnxGNtGS8c8UkTSbsgkc4A/AVhHH1K8uSS0PJyjNq1XGQpzirM9W8b+JIfC/h7U9PgkkXVbu4lihWPJcZYMW46ABq88iheKBY/LTaqhQ2eQPet34pkWnj9eNz3UTFVzjLELj/ANBNZmjeHpvE+t2mjRPNEk6mW6kU58uMHkD3Y8V9fgnSwuGliJM+U4xr18fmkMDa0Y7fPdkQ0nW9f0W8vrDT5LiwhVkbLbWkx3jX+ICvevhi6658NNM1eXUY4Gli8tzIQqhwMHnPqDVmzSPS7BLSG2CwxJ5ar2wBjFeafDWS20PxVrnhbVZdsNvKbuwhmP7gRyc5x7HivlMRjJ5jL39Lbeh6WS5VSdRUIO1+5L4j8NaV4g8T3wltLTUIcxTPc+VnagzuCsOmTgcVzy/CrRNSfXbXTYTpdqsqZiicbSWX5j82cHkV7LbWdxrniyG30+yZ5ZLNnMC4yAjAdPT5q4Wyjuptc8SWyRRhEvvmikPJ2qnce+a2hKdJJxZ+pRyzC+yjQqwUrd12PJfEf7O2q2CC40nxpetsI2Q3KlhH9WB6Hp0qo3hH4peH7FbkWdp4isyA5e2bEpHcYOK+mJ4S88100kbSGNQQOVUAVjy+JdHSymHmtJIcqqR8EnHXOOma76eY14Wu7+pw4nh3LMSrTpI+SfF3iK4tNRtJNU8N3ujXrkmUtEcSqBx25wawG8U6d9lltJ7qSF3DbAY9oKnqfY19cX0cHiy8tYb2zXUYlZiNzDMefSsy++DPhTxHqEZt7d45IGZWgU5V+OvzdMe1cOI9hiqntKkLPyf/AADwKvCsYNLDvRbXep83aZbQy6OqLf3cjcAOZMDb7Gqt9pdus/mTTzyqibThyVznjJ7Yr6IvPgnoRigSYzW+5sL5bDBUHt2rlr/4Ca2ty9xpkkU+nuHlQOPLn46AfwtXlKFeD5oyvb+ux5lbI8yornjaXktzx5PAF47NO9xJJZghw1sykE46Ejn9K1RaR74xCxYoRlQ+dw9DWndaFe6FqTi9im02diRuizHx7r3FTzFG3LILO9CqWQSpsk/ErxXTiK9LHSXt6ji13V1+Fj5XETxCly1VqvkZUcghuZN8RDA4VS2asJKiK77WyBkhRkn6VVs7zSGuCl3p/k7+VnspixDHrkGodctjYSxyWWrrMjnCxMhWQfUd/wAK455c5R56M1NLtv8AccS96dmrP+uqPqf9nqC11HwJaS2UginNw7XGOu8Ho34Yr2G/tpXCK+G5zkV8M/C34q6t8NrzUDbrFNFebWaAvsKuO4znt2r1Zf2rNetoQ0vhq1kToG+1EMT78Yrndluz7vDY/DUqMYTlZ2PbvF/imz8GaXJdaheQWlspIbzWz9MAdTXjmp/tS2UKsmn6dd3ycgcCFTx155/SvIfF3irUvi14wgnvoks3unWCCBHLRwgfxe598V6DZfCfw5bW8ayxy3MqLh3eQ/Mcdetevg8BUxsXKm0kurPFzDP4YaXLTOc8S/G2DX7uO61HwxHcTY2q5uiGC++BWDJ8S7CCQPZaC+lvvyz2moMhfPrxzXqdl8OfDVo58vR4ZgyjJmy/9aux+FNEWP8Ad6JZJjoBCBxXrRyfEJWdVW+Z4i4jnGXtI797IwPhT8R4dV8Qz2dxLLbwy2jSOLq7EgcqcggtjGK7+TxxotrCpTUoShJGEYPn8BmrHw40LRbW81e1fS7YMm2aJigJRWGCoz710Is7aP7lrAqg8BYl4/SvKrUXQk6cndo/bsnqTxWApV3K/Nqed+M5fD/j2xj8t7hLqP8A1dxHaSEqfT7vT2rxHxJpmsaVbsk2l6gIUHzXCwHyipOCxxzX1wh8uT5AFGOwxSajEL+wntZsFJkaNifcYrkdOEpJyWxlmeSUcwXtJ6SXVfqZ37K2lx23xi8BmIsEWckZ4z/o0nb8aKf+ypqq/wDC6PB9nPuS6ju5YWjI6FYZR/IUV95NqSi12Pyjh+nKjSrU57qbX5H/2Q==</Data>
+        </Thumbnail>
+    </Binary>
+    <mdChar>
+        <CharSetCd value="004"/>
+    </mdChar>
+    <mdDateSt Sync="TRUE">20260902</mdDateSt>
+    <mdContact>
+        <rpIndName>Heather Korski</rpIndName>
+        <rpOrgName>New Jersey DEP, Parks and Forestry</rpOrgName>
+        <rpPosName>GIS Specialist</rpPosName>
+        <rpCntInfo>
+            <cntAddress addressType="postal">
+                <eMailAdd>Heather.Korski@dep.nj.gov</eMailAdd>
+                <delPoint>501 E State Street
+				Mail Code 501-04
+                PO Box 420</delPoint>
+                <city>Trenton</city>
+                <adminArea>New Jersey</adminArea>
+                <postCode>08625</postCode>
+                <country>US</country>
+            </cntAddress>
+            <cntPhone>
+                <voiceNum>609-984-6014</voiceNum>
+            </cntPhone>
+        </rpCntInfo>
+        <role>
+            <RoleCd value="007"/>
+        </role>
+    </mdContact>
+    <dqInfo>
+        <dqScope>
+            <scpLvl>
+                <ScopeCd value="005"/>
+            </scpLvl>
+        </dqScope>
+        <dataLineage>
+            <dataSource>
+                <srcDesc>Hunterdon County provided the GPSed trails for Horseshoe Bend Preserve, part of the Delaware and Raritan Canal State Park.</srcDesc>
+                <srcMedName>
+                    <MedNameCd value="none"/>
+                </srcMedName>
+                <srcCitatn>
+                    <resTitle>Horseshoe Bend Preserve</resTitle>
+                    <resAltTitle>HBP - Hunt Co</resAltTitle>
+                    <date>
+                        <pubDate>2014-08-23</pubDate>
+                    </date>
+                    <citRespParty>
+                        <rpOrgName>Hunterdon County</rpOrgName>
+                        <role>
+                            <RoleCd value="006"/>
+                        </role>
+                    </citRespParty>
+                    <presForm>
+                        <PresFormCd value="005"/>
+                    </presForm>
+                    <presForm>
+                        <fgdcGeoform>vector digital data</fgdcGeoform>
+                    </presForm>
+                    <otherCitDet>Hunterdon County provided the State Park Service, Delaware and Raritan Canal's Resource Interpretive Specialist with their map version of the Preserve in an .mxd. The trail shapefiles were exported and edited for correctness.</otherCitDet>
+                </srcCitatn>
+                <srcExt>
+                    <exDesc>ground condition</exDesc>
+                    <tempEle>
+                        <TempExtent>
+                            <exTemp>
+                                <TM_Instant>
+                                    <tmPosition>2014-08-23</tmPosition>
+                                </TM_Instant>
+                            </exTemp>
+                        </TempExtent>
+                    </tempEle>
+                </srcExt>
+            </dataSource>
+            <dataSource>
+                <srcDesc>Burlington County provided the entire Trail System in Rancocas State Park.</srcDesc>
+                <srcMedName>
+                    <MedNameCd value="none"/>
+                </srcMedName>
+                <srcCitatn>
+                    <resTitle>Rancocas State Park - Hainesport Trails</resTitle>
+                    <resAltTitle>RSP - Burl Co</resAltTitle>
+                    <date>
+                        <pubDate>2014-06-27</pubDate>
+                    </date>
+                    <citRespParty>
+                        <rpOrgName>Burlington County Department of Information Technology GIS Section</rpOrgName>
+                        <role>
+                            <RoleCd value="006"/>
+                        </role>
+                    </citRespParty>
+                    <presForm>
+                        <PresFormCd value="005"/>
+                    </presForm>
+                    <presForm>
+                        <fgdcGeoform>vector digital data</fgdcGeoform>
+                    </presForm>
+                    <otherCitDet>Burlington County provided the entire Hainesport Trail System in Rancocas State Park from recreational GPS data collected by a GIS County employee.</otherCitDet>
+                    <citOnlineRes>
+                        <linkage>https://www.co.burlington.nj.us/</linkage>
+                    </citOnlineRes>
+                </srcCitatn>
+                <srcExt>
+                    <exDesc>ground condition</exDesc>
+                    <tempEle>
+                        <TempExtent>
+                            <exTemp>
+                                <TM_Instant>
+                                    <tmPosition>2014-06-27</tmPosition>
+                                </TM_Instant>
+                            </exTemp>
+                        </TempExtent>
+                    </tempEle>
+                </srcExt>
+            </dataSource>
+            <dataSource>
+                <srcDesc>NYNJTC provided the Appalachian Trail GPS data for High Point State Park and Stokes State Forest.</srcDesc>
+                <srcMedName>
+                    <MedNameCd value="none"/>
+                </srcMedName>
+                <srcCitatn>
+                    <resTitle>Appalachian Trail</resTitle>
+                    <resAltTitle>AT - NYNJTC</resAltTitle>
+                    <date>
+                        <pubDate>2003-01-01</pubDate>
+                    </date>
+                    <citRespParty>
+                        <rpOrgName>New York - New Jersey Trails Conference (NYNJTC)</rpOrgName>
+                        <role>
+                            <RoleCd value="006"/>
+                        </role>
+                    </citRespParty>
+                    <presForm>
+                        <PresFormCd value="005"/>
+                    </presForm>
+                    <presForm>
+                        <fgdcGeoform>vector digital data</fgdcGeoform>
+                    </presForm>
+                    <otherCitDet>NYNJTC provided the entire tri-state area section of the Appalachian Trail. Early data was collected with a recreational GPS and more recent data was collected with a professional GPS.</otherCitDet>
+                    <citOnlineRes>
+                        <linkage>https://www.nynjtc.org/</linkage>
+                    </citOnlineRes>
+                </srcCitatn>
+                <srcExt>
+                    <exDesc>ground condition</exDesc>
+                    <tempEle>
+                        <TempExtent>
+                            <exTemp>
+                                <TM_Instant>
+                                    <tmPosition>2003-01-01</tmPosition>
+                                </TM_Instant>
+                            </exTemp>
+                        </TempExtent>
+                    </tempEle>
+                </srcExt>
+            </dataSource>
+            <dataSource>
+                <srcDesc>JORBA provided a variety of biking trails in the southern section of Allaire State Park.</srcDesc>
+                <srcMedName>
+                    <MedNameCd value="none"/>
+                </srcMedName>
+                <srcCitatn>
+                    <resTitle>Allaire Bike Trails</resTitle>
+                    <resAltTitle>ASP - JORBA</resAltTitle>
+                    <date>
+                        <pubDate>2012-01-01</pubDate>
+                    </date>
+                    <citRespParty>
+                        <rpOrgName>Jersey Off Road Bicycle Association (JORBA)</rpOrgName>
+                        <role>
+                            <RoleCd value="006"/>
+                        </role>
+                    </citRespParty>
+                    <presForm>
+                        <PresFormCd value="005"/>
+                    </presForm>
+                    <presForm>
+                        <fgdcGeoform>vector digital data</fgdcGeoform>
+                    </presForm>
+                    <otherCitDet>JORBA provided a variety of biking trails in the southern section of Allaire State Park collected with a recreational GPS.</otherCitDet>
+                    <citOnlineRes>
+                        <linkage>https://www.jorba.org/</linkage>
+                    </citOnlineRes>
+                </srcCitatn>
+                <srcExt>
+                    <exDesc>ground condition</exDesc>
+                    <tempEle>
+                        <TempExtent>
+                            <exTemp>
+                                <TM_Instant>
+                                    <tmPosition>2012-01-01</tmPosition>
+                                </TM_Instant>
+                            </exTemp>
+                        </TempExtent>
+                    </tempEle>
+                </srcExt>
+            </dataSource>
+            <dataSource>
+                <srcDesc>Provided updated GPS and new accessibility data for several parks in the central region.</srcDesc>
+                <srcMedName>
+                    <MedNameCd value="none"/>
+                </srcMedName>
+                <srcCitatn>
+                    <resTitle>Allaire, Monmouth, Cheesequake State Parks, and Forest Resource Education Center Accessibility Assessment</resTitle>
+                    <resAltTitle>Accessibility Assessment</resAltTitle>
+                    <date>
+                        <pubDate>2025-01-01</pubDate>
+                    </date>
+                    <citRespParty>
+                        <rpOrgName>Dovetail Trail Consulting</rpOrgName>
+                        <role>
+                            <RoleCd value="006"/>
+                        </role>
+                    </citRespParty>
+                    <presForm>
+                        <PresFormCd value="005"/>
+                    </presForm>
+                    <presForm>
+                        <fgdcGeoform>vector digital data</fgdcGeoform>
+                    </presForm>
+                </srcCitatn>
+                <srcExt>
+                    <exDesc>ground condition</exDesc>
+                    <tempEle>
+                        <TempExtent>
+                            <exTemp>
+                                <TM_Instant>
+                                    <tmPosition>2025-01-01</tmPosition>
+                                </TM_Instant>
+                            </exTemp>
+                        </TempExtent>
+                    </tempEle>
+                </srcExt>
+            </dataSource>
+            <prcStep>
+                <stepDesc>In 2003 state volunteers, employees, and non-profits began hiking and biking New Jersey’s State Park trails. They collected data by using recreational global positioning systems (GPS) and professional GPS devices. A consistent attribute table and data dictionary developed overtime to best present the collected data. The raw data is then transferred from the GPS device to a shapefile to be georeferenced using 2002/07/12 Imagery (Natural and/or Infrared) and the Statewide_Hillshade layers. As park by park is completed a large aerial image with all data on top is brought to Park employees to verify the accuracy and check for any missing data. In coordination with this feedback changes are made to the shapefile and additional GPSing is done if needed. Once all is finalized the park’s shapefile can be copied to the final trails dataset and the topology tool is conducted to check for overlaps, spurs/overshoots, and intersections.</stepDesc>
+                <stepDateTm>2012-01-31</stepDateTm>
+            </prcStep>
+            <prcStep>
+                <stepDesc>All newly collected data was gathered with a Trimble Geo7x and georeferenced to 2012 or 2015 orthoimagery. Any preexisting line changes that occurred were referenced from 2015 orthoimagery. The topology tool was conducted to check for overlaps, spurs/overshoots, and intersections.</stepDesc>
+                <stepDateTm>2016-06-17</stepDateTm>
+            </prcStep>
+            <prcStep>
+                <stepDesc>Added the new RGNL_TRL (Regional Trail) field to state if a trail goes through multiple regions. Also added new data collected with a Trimble Geo7X. This trails layer did not always include regional trails in their entirety. It will be beneficial for users to see this regional trail field to know if a trail continues outside of state lands.</stepDesc>
+                <stepDateTm>2016-09-15</stepDateTm>
+            </prcStep>
+            <prcStep>
+                <stepDesc>Updated attributes, edited trail features, and added a few trails per superintendent requests. Changes occurred in Allaire, Appalachian Trail, Cape May Point, Double Trouble, Island Beach, Long Pond, Monmouth Battlefield, Norvin Green, Ramapo Mountain, Round Valley, Stokes, Wawayanda, and Worthington. Any trail adjustments were based on 2015 orthoimagery.</stepDesc>
+                <stepDateTm>2017-08-15</stepDateTm>
+            </prcStep>
+            <prcStep>
+                <stepDesc>Starting in 2025, New Jersey State Parks had Dovetail Trail Consulting assess some of the trails in the central region. They used mobile applications such as Gaia, Avenza, and Sensor Logger to collect data, they provided us with updated trail and new accessibility data in a geodatabase format. The NJ State Park Trail Data was updated to include Dovetail’s accessibility data providing objective information about the trails such as slope, cross slope, and trail width. The collection of accessibility data is incomplete but NJ State Parks will continue to add accessibility information as it is collected.</stepDesc>
+                <stepDateTm>2025-01-01</stepDateTm>
+            </prcStep>
+        </dataLineage>
+        <report type="DQQuanAttAcc">
+            <measDesc>The database was thoroughly reviewed for consistency and correctness; it was also maintained throughout production. The data was checked for accuracy in multiple ways. GPS data was reviewed after post-processing on top of one or more of 2002/07/12 Imagery (Natural and/or Infrared) and Statewide_Hillshade layers at 1:500 to 1:1500 scales. Data was then cross-checked by the Park Superintendent and other Park experts. Topology check was conducted for overlaps, spurs/overshoots, and intersections.</measDesc>
+        </report>
+        <report type="DQConcConsis">
+            <measDesc>The data was checked for accuracy in multiple ways. GPS data was reviewed after post-processing on top of one or more of 2002 or newer Imagery (Natural and/or Infrared) and Statewide_Hillshade layers at 1:500 to 1:1500 scales. Data was then cross-checked by the Park Superintendent and other Park experts. Topology check was conducted for overlaps, spurs/overshoots, and intersections.</measDesc>
+        </report>
+        <report type="DQCompOm">
+            <measDesc>Data is available statewide for New Jersey. This dataset is not comprehensive; missing data will be populated on a regular basis. Additionally, new, realigned, or closed trails will require the dataset to be updated on an as needed basis.</measDesc>
+        </report>
+    </dqInfo>
+    <distInfo>
+        <distributor>
+            <distorCont>
+                <rpOrgName>NJDEP/DOIT/BGIS</rpOrgName>
+                <role>
+                    <RoleCd value="005"/>
+                </role>
+                <rpCntInfo>
+                    <cntAddress addressType="both">
+                        <eMailAdd>gisnet@dep.nj.gov</eMailAdd>
+                        <delPoint>401 East State Street, First Floor, PO Box 428</delPoint>
+                        <city>Trenton</city>
+                        <adminArea>New Jersey</adminArea>
+                        <postCode>08625-0428</postCode>
+                        <country>US</country>
+                    </cntAddress>
+                    <cntPhone>
+                        <voiceNum>609-777-0672</voiceNum>
+                        <faxNum>609-292-2900</faxNum>
+                    </cntPhone>
+                </rpCntInfo>
+            </distorCont>
+            <distorOrdPrc>
+                <ordInstr>none</ordInstr>
+            </distorOrdPrc>
+            <distorFormat>
+                <formatName>DEP distributes ESRI .SHP and/or GDB. Some data may be NJ GeoWeb "display only" layers.</formatName>
+                <formatVer>latest version</formatVer>
+                <fileDecmTech>WinZip</fileDecmTech>
+            </distorFormat>
+        </distributor>
+    </distInfo>
+    <eainfo>
+        <detailed>
+            <enttyp>
+                <enttypl>Land_use_trails</enttypl>
+                <enttypd>NJDEP State Park Service, Parks and Forests Trail System</enttypd>
+                <enttypds>NJDEP, State Park Service</enttypds>
+            </enttyp>
+            <attr>
+                <attrlabl>OBJECTID</attrlabl>
+                <attrdef>Internal feature number.</attrdef>
+                <attrdefs>Esri</attrdefs>
+                <attrdomv>
+                    <udom>Sequential unique whole numbers that are automatically generated.</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>PARK_NAME (Alias: Park Name)</attrlabl>
+                <attrdef>Park or Forest name assigned by Green Acres.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>SITE_NAME (Alias: Site Name)</attrlabl>
+                <attrdef>Specific Area within the Park</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRAIL_NAME (Alias: Trail Name)</attrlabl>
+                <attrdef>Trail, Path, Connector, or Road Name</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRL_COLOR (Alias: Trail Color)</attrlabl>
+                <attrdef>Color of Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>ALT_TRL_COLOR (Alias: Alt Trail Color)</attrlabl>
+                <attrdef>Alternate Color of Trail i.e., two trails cover the same area</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GEN_COLOR (Alias: Generalized Color)</attrlabl>
+                <attrdef>Trail Color as represented in Parks by Nature Mobile Application</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yellow</edomv>
+                        <edomvd>Yellow</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>White</edomv>
+                        <edomvd>White</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unmarked</edomv>
+                        <edomvd>Unmarked</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unknown</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Teal</edomv>
+                        <edomvd>Teal</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Red</edomv>
+                        <edomvd>Red</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Purple</edomv>
+                        <edomvd>Purple</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Pink</edomv>
+                        <edomvd>Pink</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Orange</edomv>
+                        <edomvd>Orange</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>NA</edomv>
+                        <edomvd>NA</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Lt Green</edomv>
+                        <edomvd>Lt Green</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Lt Brown</edomv>
+                        <edomvd>Lt Brown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Lt Blue</edomv>
+                        <edomvd>Lt Blue</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Green</edomv>
+                        <edomvd>Green</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Gray</edomv>
+                        <edomvd>Gray</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Brown</edomv>
+                        <edomvd>Brown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Blue</edomv>
+                        <edomvd>Blue</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Black</edomv>
+                        <edomvd>Black</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>BLAZE_TYPE (Alias: Blaze Type)</attrlabl>
+                <attrdef>Type of blaze used to mark the trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Carsonite Post</edomv>
+                        <edomvd>Carsonite Post</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Coated Rope</edomv>
+                        <edomvd>Coated Rope</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Interpretive Wayside</edomv>
+                        <edomvd>Interpretive Wayside</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Metal Blaze</edomv>
+                        <edomvd>Metal Blaze</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>NA</edomv>
+                        <edomvd>NA</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Painted</edomv>
+                        <edomvd>Painted</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Painted Blaze</edomv>
+                        <edomvd>Painted Blaze</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Painted Tree</edomv>
+                        <edomvd>Painted Tree</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Plastic Blaze</edomv>
+                        <edomvd>Plastic Blaze</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Plastic in Tree</edomv>
+                        <edomvd>Plastic in Tree</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unknown</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unmarked</edomv>
+                        <edomvd>Unmarked</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Wooden Post</edomv>
+                        <edomvd>Wooden Post</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>BLAZE_DESC (Alias: Blaze Description)</attrlabl>
+                <attrdef>Blaze Description</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRAIL_SURF_PRIM (Alias: Trail Surface Primary)</attrlabl>
+                <attrdef>Primary trail surface</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Aggregate</edomv>
+                        <edomvd>Aggregate</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Asphalt</edomv>
+                        <edomvd>Asphalt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Boardwalk/Decking</edomv>
+                        <edomvd>Boardwalk/Decking</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Compact Soil</edomv>
+                        <edomvd>Compact Soil</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Compacted Stones</edomv>
+                        <edomvd>Compacted Stones</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Dirt</edomv>
+                        <edomvd>Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Dirt/Sand</edomv>
+                        <edomvd>Dirt/Sand</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Grass</edomv>
+                        <edomvd>Grass</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Gravel</edomv>
+                        <edomvd>Gravel</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Gravel/Dirt</edomv>
+                        <edomvd>Gravel/Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Loose Aggregate</edomv>
+                        <edomvd>Loose Aggregate</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Loose Sand/Soft Dirt</edomv>
+                        <edomvd>Loose Sand/Soft Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Natural</edomv>
+                        <edomvd>Natural</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Paved</edomv>
+                        <edomvd>Paved</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Rocky</edomv>
+                        <edomvd>Rocky</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Roots</edomv>
+                        <edomvd>Roots</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Sand</edomv>
+                        <edomvd>Sand</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Shell</edomv>
+                        <edomvd>Shell</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Soil</edomv>
+                        <edomvd>Soil</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Solid Surface</edomv>
+                        <edomvd>Solid Surface</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Stabilized Natural Surface</edomv>
+                        <edomvd>Stabilized Natural Surface</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Stairs</edomv>
+                        <edomvd>Stairs</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unknown</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Water</edomv>
+                        <edomvd>Water</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Wood</edomv>
+                        <edomvd>Wood</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRAIL_SURF_SEC (Alias: Trail Surface Secondary)</attrlabl>
+                <attrdef>Secondary trail surface</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Aggregate</edomv>
+                        <edomvd>Aggregate</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Asphalt</edomv>
+                        <edomvd>Asphalt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Boardwalk/Decking</edomv>
+                        <edomvd>Boardwalk/Decking</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Compact Soil</edomv>
+                        <edomvd>Compact Soil</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Compacted Stones</edomv>
+                        <edomvd>Compacted Stones</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Dirt</edomv>
+                        <edomvd>Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Dirt/Sand</edomv>
+                        <edomvd>Dirt/Sand</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Grass</edomv>
+                        <edomvd>Grass</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Gravel</edomv>
+                        <edomvd>Gravel</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Gravel/Dirt</edomv>
+                        <edomvd>Gravel/Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Loose Aggregate</edomv>
+                        <edomvd>Loose Aggregate</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Loose Sand/Soft Dirt</edomv>
+                        <edomvd>Loose Sand/Soft Dirt</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Natural</edomv>
+                        <edomvd>Natural</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Paved</edomv>
+                        <edomvd>Paved</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Rocky</edomv>
+                        <edomvd>Rocky</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Roots</edomv>
+                        <edomvd>Roots</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Sand</edomv>
+                        <edomvd>Sand</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Shell</edomv>
+                        <edomvd>Shell</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Soil</edomv>
+                        <edomvd>Soil</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Solid Surface</edomv>
+                        <edomvd>Solid Surface</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Stabilized Natural Surface</edomv>
+                        <edomvd>Stabilized Natural Surface</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Stairs</edomv>
+                        <edomvd>Stairs</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unknown</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Water</edomv>
+                        <edomvd>Water</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Wood</edomv>
+                        <edomvd>Wood</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRL_TYPE_S (Alias: Trail Type)</attrlabl>
+                <attrdef>State Trail Type</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Connector</edomv>
+                        <edomvd>Connector</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Official</edomv>
+                        <edomvd>Official</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Road</edomv>
+                        <edomvd>Road</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unofficial</edomv>
+                        <edomvd>Unofficial</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GIS_TOTAL_LENGTH_MI (Alias: Trail Total Length (Miles))</attrlabl>
+                <attrdef>Trail total length in miles within a facility area.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GIS_SEGMENT_LENGTH_MI (Alias: Segment Total Length (Miles))</attrlabl>
+                <attrdef>Trail segment length in miles, divided by trail junctures and facility ownership. If trail is designated as regional, then total is based on total trail length within New Jersey.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRL_DIFF (Alias: Trail Difficulty)</attrlabl>
+                <attrdef>Difficulty of Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Easy</edomv>
+                        <edomvd>Very little elevation gain, under 200’ under 2 miles</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Easy to Moderate</edomv>
+                        <edomvd>Some elevation gain, approx. 200’-400’ appropriate for youth</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Moderate</edomv>
+                        <edomvd>Some significant elevation gain, approx. 400- 700’, and steeper ascents and descents</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Moderate to Difficult</edomv>
+                        <edomvd>Approx. 700’-1000’ elevation gain, may have challenging terrain in parts of the trail, may have steeper ascents/descents</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Difficult</edomv>
+                        <edomvd>At least 1,000’elevation gain, and/or a particularly steep ascent or descent that an average hiker might find extremely difficult</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unknown</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>TRAIL_DESC (Alias: Trail Description)</attrlabl>
+                <attrdef>Trail description</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>HIKING_TRL (Alias: Hiking Trail)</attrlabl>
+                <attrdef>Hiking Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>BIKING_TRL (Alias: Biking Trail)</attrlabl>
+                <attrdef>Biking trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>HBR_TRL (Alias: Horseback Riding Trail)</attrlabl>
+                <attrdef>Horseback Riding Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>CROSS_COUNTRY_TRL (Alias: Cross Country Ski Trail)</attrlabl>
+                <attrdef>Cross Country Ski Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>SNOW_MOBILE_TRL (Alias: Snow Mobile Trail)</attrlabl>
+                <attrdef>Snow Mobile Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>RGNL_TRL (Alias: Regional Trail)</attrlabl>
+                <attrdef>Regional Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>MOTO_TRL (Alias: Motorized Trail)</attrlabl>
+                <attrdef>Motorized Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>FITNESS_TRL (Alias: Fitness Trail)</attrlabl>
+                <attrdef>Fitness Trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OPDMD1 (Alias: OPDMD Cat 1)</attrlabl>
+                <attrdef>“Other power-drive mobility devices” or “OPDMD” applies to all people who use wheelchairs or OPDMD devices to visit the lands, trails, and facilities managed by the New Jersey State Park Service. See the NJSPS Interim Policy (2.36) for further information. OPDMD Category 1 shall not exceed 24 inches wide, 48 inches in length, or 300lbs in weight.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OPDMD2 (Alias: OPDMD Cat 2)</attrlabl>
+                <attrdef>“Other power-drive mobility devices” or “OPDMD” applies to all people who use wheelchairs or OPDMD devices to visit the lands, trails, and facilities managed by the New Jersey State Park Service. See the NJSPS Interim Policy (2.36) for further information. OPDMD Category 2 shall not exceed 36 inches wide, 60 inches in length, or 350lbs in weight.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OPDMD3 (Alias: OPDMD Cat 3)</attrlabl>
+                <attrdef>“Other power-drive mobility devices” or “OPDMD” applies to all people who use wheelchairs or OPDMD devices to visit the lands, trails, and facilities managed by the New Jersey State Park Service. See the NJSPS Interim Policy (2.36) for further information. OPDMD Category 3 shall not exceed 48 inches wide, 60 inches in length, or 500lbs in weight.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GRADE_MAX (Alias: Grade Maximum (%))</attrlabl>
+                <attrdef>Describes the maximum grade (running slope) percentage encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GRADE_MEAN (Alias: Grade Average (%))</attrlabl>
+                <attrdef>Describes the typical, or mean grade (running slope) percentage encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GRADE_STD_DEV (Alias: Grade Standard Deviation (%))</attrlabl>
+                <attrdef>Provides an average distance of each raw data point from the summarized (GRADE_mean) of each trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>XSLOPE_MAX (Alias: Cross Slope Maximum (%))</attrlabl>
+                <attrdef>Describes the maximum cross slope percentage encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>XSLOPE_MEAN (Alias: Cross Slope Average (%))</attrlabl>
+                <attrdef>Describes the typical, or mean cross slope percentage encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>XSLOPE_STD_DEV (Alias: Cross Slope Standard Deviation (%))</attrlabl>
+                <attrdef>Provides an average distance of each raw data point from the summarized (XSLOPE_mean) of each trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>WIDTH_MEAN_IN (Alias: Trail Width Average (in))</attrlabl>
+                <attrdef>Describes the typical, or mean clear tread width (trail width) in inches encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>WIDTH_MIN_IN (Alias: Trail Width Minimum (in))</attrlabl>
+                <attrdef>Describes the minimum clear tread width (trail width) in inches encountered on any trail segment</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>ACCESS_COMPLIANCE (Alias: Access Compliance)</attrlabl>
+                <attrdef>Specifies whether a given segment is within the compliance categories of ADA, ABA, or neither</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>ABA</edomv>
+                        <edomvd>ABA</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>ACCESS_DESC (Alias: Accessibility Description)</attrlabl>
+                <attrdef>Accessibility description</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>FIRM_STABLE (Alias: Firm and Stable)</attrlabl>
+                <attrdef>Specifies with a Yes or No if a trail segment is firm and stable or not as understood in ABA guidelines. https://www.access-board.gov/aba/. A firm trail surface resists deformation by indentation. A stable trail surface is not permanently affected by expected weather conditions and can sustain normal wear and tear from the expected uses between planned maintenances.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Yes</edomv>
+                        <edomvd>Yes</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>No</edomv>
+                        <edomvd>No</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Unk</edomv>
+                        <edomvd>Unknown</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GIS_TOTAL_LENGTH_ME (Alias: Trail Total Length (Meters))</attrlabl>
+                <attrdef>Trail Total Length (Meters) within a facility area. If trail is designated as regional, then total is based on total trail length within New Jersey.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>GIS_SEGMENT_LENGTH_ME (Alias: Segment Total Length (Meters))</attrlabl>
+                <attrdef>Length of each trail segment measured in NAD 1983 StatePlane New Jersey FIPS 2900 (US Feet) coordinate system, using meters, divided by trail junctures and facility ownership. If trail is designated as regional, then total is based on total trail length within New Jersey.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>COMMENTS (Alias: Comments)</attrlabl>
+                <attrdef>Any comment that specifically applies to the trail</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>PARK_WEBSITE (Alias: Park URL)</attrlabl>
+                <attrdef>Park URL</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>FEATURE_NAME (Alias: Feature Name)</attrlabl>
+                <attrdef>Feature Name</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>FEATURE_CLASS (Alias: Feature Class)</attrlabl>
+                <attrdef>Feature Class</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>REGION (Alias: Region)</attrlabl>
+                <attrdef>Region</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <edom>
+                        <edomv>Northern</edomv>
+                        <edomvd>Northern</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Central</edomv>
+                        <edomvd>Central</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Southern</edomv>
+                        <edomvd>Southern</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+                <attrdomv>
+                    <edom>
+                        <edomv>Coastal</edomv>
+                        <edomvd>Coastal</edomvd>
+                        <edomvds>NJDEP</edomvds>
+                    </edom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OWNERSHIP (Alias: Ownership)</attrlabl>
+                <attrdef>Ownership</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OSOURCE (Alias: OSOURCE)</attrlabl>
+                <attrdef>Person or Organization who created or collected data.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>OSRCE_TYPE (Alias: OSRCE_TYPE)</attrlabl>
+                <attrdef>Method Used to Collect or Create Originial Data</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>O_DATE (Alias: O_DATE)</attrlabl>
+                <attrdef>Date originial data was received or collected.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>SRCE_TYPE (Alias: Source Type)</attrlabl>
+                <attrdef>Data source used to refine line placement.</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>CREATED_USER (Alias: created_user)</attrlabl>
+                <attrdef>Created User</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>CREATED_DATE (Alias: created_date)</attrlabl>
+                <attrdef>Created Date</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>LAST_EDITED_USER (Alias: last_edited_user)</attrlabl>
+                <attrdef>Last Edited User</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>LAST_EDITED_DATE (Alias: last_edited_date)</attrlabl>
+                <attrdef>Last Edited Date</attrdef>
+                <attrdefs>NJDEP</attrdefs>
+                <attrdomv>
+                    <udom>Unique value</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>Shape</attrlabl>
+                <attrdef>Feature geometry.</attrdef>
+                <attrdefs>Esri</attrdefs>
+                <attrdomv>
+                    <udom>Coordinates defining the features.</udom>
+                </attrdomv>
+                <begdatea>2003</begdatea>
+                <enddatea>2015</enddatea>
+            </attr>
+            <attr>
+                <attrlabl>GLOBALID</attrlabl>
+                <attrdef>Internal feature number.</attrdef>
+                <attrdefs>ESRI</attrdefs>
+                <attrdomv>
+                    <udom>Unique ID</udom>
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>Shape_Length</attrlabl>
+                <attrdef>Length of feature in internal units.</attrdef>
+                <attrdefs>Esri</attrdefs>
+                <attrdomv>
+                    <udom>Positive real numbers that are automatically generated.</udom>
+                </attrdomv>
+                <begdatea>2003</begdatea>
+                <enddatea>2015</enddatea>
+            </attr>
+        </detailed>
+    </eainfo>
+    <spatRepInfo>
+        <VectSpatRep>
+            <geometObjs>
+                <geoObjTyp>
+                    <GeoObjTypCd value="002"/>
+                </geoObjTyp>
+                <geoObjCnt>3889</geoObjCnt>
+            </geometObjs>
+        </VectSpatRep>
+    </spatRepInfo>
+    <mdStanName>ArcGIS Metadata</mdStanName>
+    <mdStanVer>1.0</mdStanVer>
+</metadata>

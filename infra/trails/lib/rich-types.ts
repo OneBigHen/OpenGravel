@@ -16,6 +16,11 @@ export interface AlongTrailFeature {
   readonly wikidata?: string;
 }
 export interface RichHike {
+  readonly officialStatus?: string | null;
+  readonly officialDifficulty?: string | null;
+  readonly allowedUses?: string | null;
+  readonly fieldSources?: Readonly<Record<string, TrailSource>>;
+  readonly officialEvidence?: readonly { readonly source: TrailSource; readonly attributes: Readonly<Record<string,string | null>> }[];
   readonly park?: CatalogPlace | null;
   readonly nearestTown?: CatalogPlace | null;
   readonly difficulty?: CatalogDifficulty | null;
