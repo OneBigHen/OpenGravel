@@ -1,5 +1,5 @@
-import { open, readFile, stat } from "node:fs/promises";
-import { detailsPathFor, summaryPathFor, type DetailPointer } from "./catalog-split";
+import { readFile, stat } from "node:fs/promises";
+import { detailsPathFor, readJsonLine, summaryPathFor, type DetailPointer } from "./catalog-split";
 import type { HikeRecord } from "../../../infra/trails/lib/types";
 
 type Box = readonly [number, number, number, number];
@@ -50,7 +50,7 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
     if (split && id !== null) {
       const match = cache.catalog.hikes.find((hike) => hike.id === id && (bbox === null || (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
       const pointer = (match as { detail?: DetailPointer } | undefined)?.detail;
-      return { status: 200, body: { enabled: true, hikes: pointer === undefined ? [] : [await readDetail(detailsPathFor(path), pointer)] } };
+      return { status: 200, body: { enabled: true, hikes: pointer === undefined ? [] : [await readJsonLine(detailsPathFor(path), pointer)] } };
     }
     const hikes = cache.catalog.hikes.filter((hike) => (id === null || hike.id === id) && (bbox === null ||
       (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
@@ -63,16 +63,5 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
     }) : hikes } };
   } catch {
     return { status: 503, body: { enabled: true, error: "Hike catalog unavailable", hikes: [] } };
-  }
-}
-
-async function readDetail(path: string, pointer: DetailPointer): Promise<unknown> {
-  const file = await open(path, "r");
-  try {
-    const buffer = Buffer.alloc(pointer.length);
-    await file.read(buffer, 0, pointer.length, pointer.offset);
-    return JSON.parse(buffer.toString("utf8"));
-  } finally {
-    await file.close();
   }
 }

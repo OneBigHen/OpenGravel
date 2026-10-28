@@ -1,11 +1,20 @@
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { TrailFeatureCollection } from "../../../../../infra/trails/lib/types";
+import { featureIndexPathFor, featureLinesPathFor, readJsonLine, type DetailPointer } from "@/server/hikes/catalog-split";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 let pending: Promise<Map<string, TrailFeatureCollection["features"][number]>> | undefined;
 let cache: { path: string; mtime: number; features: Map<string, TrailFeatureCollection["features"][number]> } | undefined;
+let indexCache: { path: string; mtime: number; index: Record<string, DetailPointer> } | undefined;
+
+/** A list response carries the line and light properties, not the trail page's detail. */
+function listFeature(feature: TrailFeatureCollection["features"][number]) {
+  const detailFields = new Set(["parks", "features", "officialEvidence", "fieldSources", "descriptions", "photos", "photo", "trailheads", "conflicts"]);
+  const properties = Object.fromEntries(Object.entries(feature.properties).filter(([key]) => !detailFields.has(key)));
+  return { ...feature, properties };
+}
 
 export async function GET(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams;
@@ -15,6 +24,16 @@ export async function GET(request: Request): Promise<Response> {
   if (!process.env.OGV_HIKES_PATH) return Response.json({ error: "Catalog unavailable" }, { status: 503 });
   const path = join(dirname(process.env.OGV_HIKES_PATH), "trails.geojson");
   try {
+    const indexPath = featureIndexPathFor(path);
+    if (await stat(indexPath).then(() => true, () => false)) {
+      // Split catalog: only the small id → line index lives in memory.
+      const indexInfo = await stat(indexPath);
+      if (!indexCache || indexCache.path !== indexPath || indexCache.mtime !== indexInfo.mtimeMs) indexCache = { path: indexPath, mtime: indexInfo.mtimeMs, index: JSON.parse(await readFile(indexPath, "utf8")) as Record<string, DetailPointer> };
+      const read = async (key: string) => { const pointer = indexCache!.index[key]; return pointer === undefined ? null : await readJsonLine(featureLinesPathFor(path), pointer) as TrailFeatureCollection["features"][number]; };
+      if (ids.length > 0) return Response.json({ features: (await Promise.all(ids.map(read))).flatMap((feature) => feature === null ? [] : [listFeature(feature)]) });
+      const feature = await read(id!);
+      return feature ? Response.json(feature) : Response.json({ error: "Trail geometry not found" }, { status: 404 });
+    }
     const info = await stat(path);
     if (!cache || cache.path !== path || cache.mtime !== info.mtimeMs) {
       pending ??= readFile(path, "utf8").then((raw) => {
@@ -23,7 +42,7 @@ export async function GET(request: Request): Promise<Response> {
       });
       try { cache = { path, mtime: info.mtimeMs, features: await pending }; } finally { pending = undefined; }
     }
-    if (ids.length > 0) return Response.json({ features: ids.flatMap((key) => { const feature = cache!.features.get(key); if (!feature) return []; const detailFields = new Set(["parks", "features", "officialEvidence", "fieldSources", "descriptions", "photos", "photo", "trailheads", "conflicts"]); const properties = Object.fromEntries(Object.entries(feature.properties).filter(([key]) => !detailFields.has(key))); return [{ ...feature, properties }]; }) });
+    if (ids.length > 0) return Response.json({ features: ids.flatMap((key) => { const feature = cache!.features.get(key); return feature ? [listFeature(feature)] : []; }) });
     const feature = cache.features.get(id!);
     return feature ? Response.json(feature) : Response.json({ error: "Trail geometry not found" }, { status: 404 });
   } catch {

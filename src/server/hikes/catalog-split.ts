@@ -33,3 +33,25 @@ export function splitRecord<T extends object>(record: T, offset: number): { summ
   if (sources) summary.sources = [...new Map(sources.map((source) => [source.sourceId, source])).values()];
   return { summary: { ...(summary as T), detail: { offset, length: Buffer.byteLength(line) - 1 } }, line };
 }
+
+/** Trail lines, split the same way: `trails.index.json` maps id → line in `trails.features.jsonl`. */
+export function featureIndexPathFor(geojsonPath: string): string {
+  return geojsonPath.replace(/\.geojson$/, ".index.json");
+}
+
+export function featureLinesPathFor(geojsonPath: string): string {
+  return geojsonPath.replace(/\.geojson$/, ".features.jsonl");
+}
+
+/** Reads `length` bytes at `offset` of a JSON-lines file and parses that record. */
+export async function readJsonLine(path: string, pointer: DetailPointer): Promise<unknown> {
+  const { open } = await import("node:fs/promises");
+  const file = await open(path, "r");
+  try {
+    const buffer = Buffer.alloc(pointer.length);
+    await file.read(buffer, 0, pointer.length, pointer.offset);
+    return JSON.parse(buffer.toString("utf8"));
+  } finally {
+    await file.close();
+  }
+}
