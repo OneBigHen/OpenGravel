@@ -28,6 +28,7 @@ import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
 import { formatFeet, formatLongDuration } from "@/application/planner/measurements";
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import { createRideRepository } from "@/infrastructure/storage/ride-repository";
+import { HikeResultsMap } from "@/ui/explore/HikeResultsMap";
 import { setActivityMode } from "@/ui/stores/activity-mode";
 
 /** Driving directions in the device's maps app (Apple Maps on Apple devices). */
@@ -192,11 +193,11 @@ function TrailMap({ feature, thumbnail = false, mapboxToken }: { feature: TrailF
   }, [feature, thumbnail, visible, theme, mapboxToken]);
   return <div className={thumbnail ? "og-hike__thumb" : "og-hike__map"} ref={ref} role={thumbnail ? "img" : "region"} aria-label={feature ? "Map of trail" : "Trail map unavailable"}>{!feature && <span>Map unavailable</span>}</div>;
 }
-function HikeCard({ hike, origin, feature, profile, mapboxToken }: { hike: HikeRecord; origin: Coordinate; feature: TrailFeature | undefined; profile: ElevationProfile | undefined; mapboxToken?: string }) {
+function HikeCard({ hike, origin, feature, profile, mapboxToken, selected = false }: { hike: HikeRecord; origin: Coordinate; feature: TrailFeature | undefined; profile: ElevationProfile | undefined; mapboxToken?: string; selected?: boolean }) {
   const distance = haversine(origin, hike.start);
   const gain = hike.elevationGainMeters ?? profile?.climbMeters;
   const facts = [miles(hike.lengthMeters), ...(gain == null ? [] : [`${formatFeet(gain)} gain`]), ...(hike.toblerMinutes != null ? [hikeTime(hike.toblerMinutes * 60)] : profile ? [hikeTime(profileTimeSeconds(profile))] : [])];
-  return <Link className="og-hike__card" href={`/explore/hikes/${encodeURIComponent(hike.id)}`}>
+  return <Link className="og-hike__card" data-selected={selected ? "true" : undefined} href={`/explore/hikes/${encodeURIComponent(hike.id)}`}>
     <TrailThumb feature={feature ?? null} {...(mapboxToken ? { mapboxToken } : {})} />
     <span className="og-hike__card-body"><strong>{nameOf(hike)}</strong><span>{miles(distance)} to start</span><span>{hike.lengthMeters > LONG_TRAIL_METERS ? `Long-distance trail · ${miles(hike.lengthMeters)} in all` : facts.join(" · ")}</span>{hike.shape && hike.shape !== "unknown" && <span>{hike.shape === "out-and-back" ? "Out and back" : hike.shape === "point-to-point" ? "Point to point" : "Loop"}</span>}{hike.sacScale && <span>Difficulty: {hike.sacScale} (OSM)</span>}</span>
   </Link>;
@@ -214,6 +215,8 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const [showFilters, setShowFilters] = useState(false);
   const [limit, setLimit] = useState(50);
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"list" | "map">("list");
+  const [selected, setSelected] = useState<string | null>(null);
   // Back from a trail page returns to the same list: search, filters, page and scroll.
   const restoredScroll = useRef<number | null>(null);
   useEffect(() => {
@@ -261,6 +264,9 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const { features, profiles, loading } = useHikeData(page);
   const results = page.filter((h) => matchHikeFilters(h, filters, profiles.get(h.id)) === true);
   const more = ranked.length - page.length;
+  const mapTrails = useMemo(() => results.flatMap((h) => { const feature = features.get(h.id); return feature ? [{ id: h.id, feature }] : []; }), [results, features]);
+  // On the map view the tapped trail leads the list under the map.
+  const listed = view === "map" && selected !== null ? [...results.filter((h) => h.id === selected), ...results.filter((h) => h.id !== selected)] : results;
   useEffect(() => {
     const y = restoredScroll.current;
     if (y === null || results.length === 0) return;
@@ -268,9 +274,9 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
     requestAnimationFrame(() => window.scrollTo(0, y));
   }, [results.length]);
   const update = (key: keyof Filters, value: string | boolean) => setFilters((old) => ({ ...old, [key]: value }));
-  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><header className="og-explore__header"><div className="og-explore__heading-row"><div><h1>Explore hikes</h1><p className="og-hike__sub">{origin ? originLabel : "Find a trail near you"}</p></div><AppMenu className="og-page-menu" /></div><label className="og-hike__search">Search trails<input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(50); }} placeholder="Trail name" /></label><div className="og-hike__tools"><button onClick={locate}>⌖ {origin ? "Use my location" : "Find my location"}</button><button onClick={() => setAreaOpen(!areaOpen)} aria-expanded={areaOpen || !origin} data-testid="hike-area-toggle">Change area</button><button onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}>Filters {showFilters ? "−" : "+"}</button></div>{areaOpen || !origin ? <AreaSearch near={origin} onPick={(place) => { setOrigin(place.coordinate); setOriginLabel(`Near ${place.name}`); saveExploreOrigin(place.coordinate); setLimit(50); setAreaOpen(false); }} /> : null}</header>
+  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><header className="og-explore__header"><div className="og-explore__heading-row"><div><h1>Explore hikes</h1><p className="og-hike__sub">{origin ? originLabel : "Find a trail near you"}</p></div><AppMenu className="og-page-menu" /></div><label className="og-hike__search">Search trails<input type="search" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(50); }} placeholder="Trail name" /></label><div className="og-hike__tools"><button onClick={locate}>⌖ {origin ? "Use my location" : "Find my location"}</button><button onClick={() => setAreaOpen(!areaOpen)} aria-expanded={areaOpen || !origin} data-testid="hike-area-toggle">Change area</button><button onClick={() => setShowFilters(!showFilters)} aria-expanded={showFilters}>Filters {showFilters ? "−" : "+"}</button><span className="og-hike__view" role="group" aria-label="Show trails as"><button type="button" aria-pressed={view === "list"} onClick={() => setView("list")}>List</button><button type="button" aria-pressed={view === "map"} data-testid="hike-view-map" onClick={() => setView("map")}>Map</button></span></div>{areaOpen || !origin ? <AreaSearch near={origin} onPick={(place) => { setOrigin(place.coordinate); setOriginLabel(`Near ${place.name}`); saveExploreOrigin(place.coordinate); setLimit(50); setAreaOpen(false); }} /> : null}</header>
     {showFilters && <section className="og-hike__filters" aria-label="Hike filters">{hikes.some((h) => h.shape && h.shape !== "unknown") && <label>Shape<select value={filters.shape} onChange={(e) => update("shape", e.target.value)}><option value="">Any shape</option><option value="loop">Loop</option><option value="out-and-back">Out and back</option></select></label>}<label>Length<select value={filters.length} onChange={(e) => update("length", e.target.value)}><option value="">Any length</option><option value="3">Up to 3 mi</option><option value="5">Up to 5 mi</option><option value="10">Up to 10 mi</option></select></label><label>Gain<select value={filters.gain} onChange={(e) => update("gain", e.target.value)}><option value="">Any gain</option><option value="500">Up to 500 ft</option><option value="1000">Up to 1,000 ft</option></select></label><label>Time<select value={filters.time} onChange={(e) => update("time", e.target.value)}><option value="">Any time</option><option value="2">Up to 2 hours</option><option value="4">Up to 4 hours</option></select></label>{([ ["dogs", "Dogs reported OK"], ["kids", "Short and easy"] ] as const).map(([key, label]) => <label className="og-hike__check" key={key}><input type="checkbox" checked={filters[key]} onChange={(e) => update(key, e.target.checked)} />{label}</label>)}<p>Filters match mapped facts only. Short and easy means up to 3 miles, 500 feet of gain and the easiest OSM hiking grade, not a check that a trail suits children. Dog access comes from OpenStreetMap tags; check posted rules.</p><button onClick={() => setFilters(initial)}>Clear filters</button></section>}
-    <section className="og-hike__results" aria-live="polite">{status && <p>{status}</p>}{origin && !status && <><p className="og-hike__count">{more > 0 ? `Showing ${results.length} of ${ranked.length} nearby trails` : `${results.length} ${results.length === 1 ? "trail" : "trails"} nearby`} · over 0.5 mi{loading ? " · measuring elevation…" : ""}</p>{results.length === 0 && !loading && <p>No matching trails with known data in these results.</p>}{results.map((h) => <HikeCard key={h.id} hike={h} origin={origin} feature={features.get(h.id)} profile={profiles.get(h.id)} {...(mapboxToken ? { mapboxToken } : {})} />)}{more > 0 && <button onClick={() => setLimit((previous) => previous + 50)}>Show {Math.min(50, more)} more trails</button>}</>}</section>
+    {view === "map" && origin && !status ? <HikeResultsMap trails={mapTrails} origin={origin} selected={selected} onSelect={setSelected} {...(mapboxToken ? { mapboxToken } : {})} /> : null}<section className="og-hike__results" aria-live="polite">{status && <p>{status}</p>}{origin && !status && <><p className="og-hike__count">{more > 0 ? `Showing ${results.length} of ${ranked.length} nearby trails` : `${results.length} ${results.length === 1 ? "trail" : "trails"} nearby`} · over 0.5 mi{loading ? " · measuring elevation…" : ""}</p>{results.length === 0 && !loading && <p>No matching trails with known data in these results.</p>}{listed.map((h) => <HikeCard key={h.id} selected={view === "map" && h.id === selected} hike={h} origin={origin} feature={features.get(h.id)} profile={profiles.get(h.id)} {...(mapboxToken ? { mapboxToken } : {})} />)}{more > 0 && <button onClick={() => setLimit((previous) => previous + 50)}>Show {Math.min(50, more)} more trails</button>}</>}</section>
   </main>;
 }
 
