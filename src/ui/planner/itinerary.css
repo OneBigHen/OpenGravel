@@ -833,6 +833,8 @@
 .og-breadcrumb-summary p { margin: .4rem 0; font-size: .8rem; }
 .og-breadcrumb-summary summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .og-breadcrumb-summary li button { min-height: 44px; }
+.og-breadcrumb-summary__actions button, .og-breadcrumb-summary__actions input { min-height: 44px; }
+.og-breadcrumb-summary__actions form { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .og-breadcrumb-summary :focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: 2px; }
 
 /* --------------------------------------------------------------------------
