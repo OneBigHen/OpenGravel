@@ -137,6 +137,13 @@ describe("the hike card", () => {
     expect(screen.queryByTestId("hike-plan")).toBeNull();
   });
 
+  it("steps aside like a planned hike while a breadcrumb owns the sheet", () => {
+    act(() => setActivityMode("hike"));
+    render(<HikeActivityControls {...props({ breadcrumb: true })} />);
+    expect(screen.getByTestId("hike-card")).toHaveAttribute("data-state", "planned");
+    expect(screen.queryByTestId("hike-plan")).toBeNull();
+  });
+
   it("keeps an error visible when planned", () => {
     act(() => setActivityMode("hike"));
     render(<HikeActivityControls {...props({ candidate, error: "No trail route between these points." })} />);

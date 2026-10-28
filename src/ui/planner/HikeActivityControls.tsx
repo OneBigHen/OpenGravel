@@ -17,8 +17,10 @@ function readTipDismissed(): boolean {
  * On phones it is one slim row (title, Draw, Plan, exit) so it does not cover
  * the map a hiker presses and holds on; the how-to line can be dismissed.
  */
-export function HikeActivityControls({ drawing, sketch, onEnterHike, candidate, error, canPlan, onPlan }: {
+export function HikeActivityControls({ drawing, sketch, onEnterHike, candidate, breadcrumb = false, error, canPlan, onPlan }: {
   readonly candidate: RouteCandidate | null;
+  /** A breadcrumb (such as a trail opened from Explore) is on the map: its sheet owns the actions. */
+  readonly breadcrumb?: boolean;
   readonly error: string | null;
   readonly canPlan: boolean;
   readonly returnToStart: boolean;
@@ -39,10 +41,10 @@ export function HikeActivityControls({ drawing, sketch, onEnterHike, candidate, 
   useEffect(() => { if (readTipDismissed()) queueMicrotask(() => setTipDismissed(true)); }, []);
   if (mode !== "hike") return null;
   const hike = candidate?.provider.profile === "hike" ? candidate : null;
-  // Planned: the numbers live in the bottom sheet (phones) or the inspector
-  // (wide), so the card shrinks to its title and exit, and is hidden on phones
-  // unless it has something to say (an error) or the rider is drawing.
-  const state = drawing ? "drawing" : hike === null ? "idle" : "planned";
+  // Planned (or a breadcrumb is open): the numbers and actions live in the
+  // bottom sheet (phones) or the inspector (wide), so the card shrinks to its
+  // title and exit, and is hidden on phones unless it carries an error.
+  const state = drawing ? "drawing" : hike === null && !breadcrumb ? "idle" : "planned";
   const dismissTip = () => {
     setTipDismissed(true);
     try { window.localStorage.setItem(TIP_KEY, "1"); } catch { /* the tip just comes back next time */ }

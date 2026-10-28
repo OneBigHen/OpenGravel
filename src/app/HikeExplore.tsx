@@ -16,6 +16,7 @@ import { createMapterhornElevationSource } from "@/infrastructure/elevation/mapt
 import { buildElevationProfile, sampleLine, type ElevationProfile } from "@/application/elevation/profile";
 import { matchHikeFilters, rankHikes, profileTimeSeconds, type HikeFilters } from "@/application/hikes/discovery";
 import { readExploreOrigin } from "@/application/map/explore-origin";
+import { trailBreadcrumb } from "@/application/hikes/trail-breadcrumb";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { readMapPalette } from "@/infrastructure/map/maplibre/style";
 import { hillshadeBeforeId, hillshadeLayerSpec, terrainSourceSpec } from "@/infrastructure/map/maplibre/visual-detail";
@@ -228,8 +229,9 @@ export function HikeDetail({ id, mapboxToken }: { id: string; mapboxToken?: stri
     try {
       const now = new Date().toISOString();
       const base = createRideDocument({ now, title: nameOf(hike), provenance: { type: "catalog", sourceId: hike.id } });
-      const first = line[0]!; const last = line[line.length - 1]!;
-      const applied = applyRideCommand(base, { type: "breadcrumb.set", commandId: newCommandId(), rideId: base.rideId, baseRevision: base.revision, source: "map", label: "Open trail on the map", breadcrumb: { waypoints: [{ id: "trail-start", coordinate: first }, { id: "trail-end", coordinate: last }], legs: [{ kind: "recorded", geometry: line }] } }, { now });
+      const breadcrumb = trailBreadcrumb(line, nameOf(hike));
+      if (breadcrumb === null) throw new Error();
+      const applied = applyRideCommand(base, { type: "breadcrumb.set", commandId: newCommandId(), rideId: base.rideId, baseRevision: base.revision, source: "map", label: "Open trail on the map", breadcrumb }, { now });
       if (applied.outcome !== "applied") throw new Error();
       const saved = await createRideRepository().saveRide(applied.document, { writerToken: `hike-${crypto.randomUUID()}` });
       if (!saved.ok) throw new Error();

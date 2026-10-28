@@ -13,6 +13,7 @@ import type { PlannerUiStore } from "@/ui/stores/planner-ui-store";
 export function usePlannerHikeActivity(document: RideDocument, store: RideDocumentStore, planning: PlanningSessionStore, session: PlanningSessionSnapshot, candidate: RouteCandidate | null, drawing: boolean, sketch: HikeActivityProps["sketch"]): HikeActivityProps {
   return {
     drawing, sketch, candidate,
+    breadcrumb: document.intent.breadcrumb != null,
     onEnterHike: () => planning.getState().cancel(),
     error: session.error?.code === "hike-routing-unavailable" ? "Hike routing unavailable." : session.error?.code === "no-trail-route" ? "No trail route between these points." : null,
     canPlan: document.intent.start !== null && (document.intent.finish !== null || document.intent.shape === "loop"),
