@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
+import { asPlaceId, type NearbyPlace, type PlacesSource } from "@/application/places";
+import type { PlanningSessionStore } from "@/ui/stores/planning-session-store";
 import type { PlaceMatch, PlaceSearchPort } from "@/application/geocoding/place-search";
 import { createRideDocument } from "@/domain/ride/create";
 import { newCommandId } from "@/domain/ride/ids";
@@ -78,6 +80,11 @@ function WhereTo({ port }: { readonly port: PlaceSearchPort }) {
       {...(advisor === null ? {} : { describe: advisor.ask })}
     />
   );
+}
+
+function AskStopSearch() {
+  const advisor = useRideAdvisor();
+  return <button type="button" onClick={() => advisor?.ask("coffee halfway")}>Ask for coffee</button>;
 }
 
 function setup(
@@ -198,6 +205,26 @@ describe("Map Ask entry and place search", () => {
     expect(screen.getByTestId("map-ask-prompt")).toBeEnabled();
   });
 });
+
+
+function categorySearchDraft(document: RideDocument): AdvisorDraft {
+  const base = jimThorpeLoop(document);
+  return {
+    ...base,
+    fields: {
+      ...base.fields,
+      shape: null,
+      startPlace: null,
+      rideTimeKind: "unchanged",
+      rideTimeMinutes: null,
+      roadCharacter: null,
+      surfacePreference: null,
+      avoidHighways: null,
+      stopSearches: [{ category: "coffee", vicinity: null, routePosition: "halfway" }],
+    },
+    resolvedPlaces: { start: null, finish: null, stop: null },
+  };
+}
 
 describe("one box for where to and describe a ride", () => {
   it("is a plain place search when the deployment has no advisor", () => {
@@ -500,6 +527,106 @@ describe("the proposal card", () => {
     expect(proposal).toHaveTextContent("8:00 AM");
     expect(proposal.textContent).toMatch(/Leave /);
     expect(proposal.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe("advisor category stop selection", () => {
+  it("waits for a route, shows honest provider evidence, then adds the rider's selected stop and replans", async () => {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const listeners = new Set<() => void>();
+    let planningState = {
+      snapshot: { phase: "idle", committedBundle: null, lastGoodBundle: null },
+      geometry: {},
+    } as unknown as ReturnType<PlanningSessionStore["getState"]>;
+    const planningStore = {
+      getState: () => planningState,
+      getInitialState: () => planningState,
+      subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener); },
+    } as unknown as PlanningSessionStore;
+    const candidate: NearbyPlace = {
+      id: asPlaceId("venue:coffee-1"),
+      kind: "venue",
+      name: "Route Coffee",
+      coordinate: { lon: -74.5, lat: 40 },
+      category: "Coffee Shop",
+      label: "",
+      status: "day",
+      city: "Jim Thorpe",
+      address: "",
+      specials: [],
+      schedule: null,
+      rating: null,
+      popular: false,
+      dogFriendly: null,
+      patio: null,
+      url: "https://places.example/coffee",
+      mapsUrl: null,
+      sourceLabel: "Regional Places Index",
+      offRouteMiles: 0.4,
+      routeMile: 26,
+    };
+    const alongRoute = vi.fn(async () => ({
+      availability: "available" as const,
+      places: [candidate],
+      fetchedAt: "2026-10-26T12:00:00.000Z",
+      attribution: "Fake Places provider",
+    }));
+    const placesSource: PlacesSource = {
+      id: "fake-places",
+      inExtent: async () => ({ availability: "available", places: [], fetchedAt: "2026-10-26T12:00:00.000Z", attribution: "Fake Places provider" }),
+      alongRoute,
+    };
+    const onApplied = vi.fn(() => ({ kind: "planning" as const }));
+    const client: AdvisorProposalClient = {
+      request: vi.fn(async () => ({ ok: true as const, draft: categorySearchDraft(store.getState().document) })),
+    };
+    render(
+      <RideAdvisorProvider enabled store={store} client={client} planningStore={planningStore} placesSource={placesSource} onApplied={onApplied}>
+        <AskStopSearch />
+        <AdvisorInline askBox />
+      </RideAdvisorProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ask for coffee" }));
+    await screen.findByTestId("advisor-proposal");
+    expect(screen.getByTestId("advisor-proposal")).toHaveTextContent("Coffee");
+
+    const routeId = "route:ready" as never;
+    const geometryRef = "geometry:route" as never;
+    const route = {
+      id: routeId,
+      geometryRef,
+      durationSeconds: 90 * 60,
+    } as never;
+    const bundle = {
+      rideId: store.getState().document.rideId,
+      rideRevision: store.getState().document.revision,
+      candidates: [route],
+      selectedRouteId: routeId,
+    } as never;
+    planningState = {
+      snapshot: { phase: "ready", committedBundle: bundle, lastGoodBundle: bundle },
+      geometry: { [geometryRef]: { kind: "line", coordinates: [{ lon: -75, lat: 40 }, { lon: -74, lat: 40 }] } },
+    } as unknown as ReturnType<PlanningSessionStore["getState"]>;
+    act(() => listeners.forEach((listener) => listener()));
+
+    fireEvent.click(screen.getByTestId("advisor-apply"));
+    expect(await screen.findByText("Source: Fake Places provider")).toBeInTheDocument();
+    expect(screen.getByText("Source: Regional Places Index")).toBeInTheDocument();
+    expect(screen.getByTestId("advisor-stop-picker")).toHaveTextContent("Not rated");
+    expect(alongRoute).toHaveBeenCalledWith(
+      expect.objectContaining({ bufferMiles: 5 }),
+      expect.objectContaining({ kinds: [], categories: ["coffee"], vicinity: null }),
+      expect.any(AbortSignal),
+    );
+    expect(onApplied).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: /Choose Route Coffee/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Add selected stops and replan" }));
+    expect(store.getState().document.intent.stops).toMatchObject([
+      { label: "Route Coffee, Jim Thorpe", arrivalIntent: "food", coordinate: candidate.coordinate },
+    ]);
+    expect(onApplied).toHaveBeenCalledTimes(2);
   });
 });
 

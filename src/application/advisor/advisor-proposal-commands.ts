@@ -12,6 +12,7 @@ import { newCommandId, newPointId, newStopId } from "@/domain/ride/ids";
 import type { RideDocument, RideIntent, TimeIntent } from "@/domain/ride/types";
 import { advisorRiderState, type AdvisorErrorClass } from "./advisor-errors";
 import type { AdvisorDraft } from "./advisor-proposal";
+import type { AdvisorStopSearchRequest } from "./advisor-stops";
 
 export type AdvisorProposalField =
   | "shape"
@@ -56,14 +57,31 @@ export interface AdvisorProposalInterpretation {
 export interface ReadyAdvisorProposal {
   readonly status: "ready";
   readonly command: Extract<RideCommand, { type: "proposal.apply" }>;
+  readonly baseRevision: number;
   readonly changes: readonly AdvisorProposalChange[];
   readonly interpretation: AdvisorProposalInterpretation;
+  readonly stopSearches: readonly AdvisorStopSearchRequest[];
+  readonly timeBudgetMinutes: number | null;
   readonly notes: readonly string[];
   readonly summary: string;
 }
 
+/** A search-only proposal applies no ride mutation before the rider picks a place. */
+export interface AdvisorSearchProposal {
+  readonly status: "search";
+  readonly baseRevision: number;
+  readonly changes: readonly [];
+  readonly stopSearches: readonly AdvisorStopSearchRequest[];
+  readonly timeBudgetMinutes: number | null;
+  readonly notes: readonly string[];
+  readonly summary: string;
+}
+
+export type AdvisorReadyProposal = ReadyAdvisorProposal | AdvisorSearchProposal;
+
 export type AdvisorProposalBuildResult =
   | ReadyAdvisorProposal
+  | AdvisorSearchProposal
   | { readonly status: "answer"; readonly message: string }
   | { readonly status: "clarification"; readonly message: string }
   | { readonly status: "unsupported"; readonly message: string }
@@ -153,6 +171,27 @@ function timeFromDraft(draft: AdvisorDraft): TimeIntent | null {
       return { kind: fields.rideTimeKind, localTime, date, toleranceMinutes: 15 };
     }
   }
+}
+
+function timeBudgetMinutes(intent: RideIntent, timeZone: string, now: Date): number | null {
+  if (intent.time.kind === "budget") return intent.time.targetMinutes;
+  if (intent.time.kind !== "returnBy" && intent.time.kind !== "arriveBy") return null;
+  const deadline = finiteLocalDateTimeToIso(intent.time.date, intent.time.localTime, timeZone);
+  if (deadline === null) return null;
+  const departure = intent.departure.kind === "future" ? Date.parse(intent.departure.at) : now.getTime();
+  return Number.isFinite(departure) ? Math.max(0, (Date.parse(deadline) - departure) / 60_000) : null;
+}
+
+function searchOnlyProposal(document: RideDocument, draft: AdvisorDraft, now: Date, intent = document.intent): AdvisorSearchProposal {
+  return {
+    status: "search",
+    baseRevision: document.revision,
+    changes: [],
+    stopSearches: draft.fields.stopSearches ?? [],
+    timeBudgetMinutes: timeBudgetMinutes(intent, draft.timeZone, now),
+    notes: draft.notes,
+    summary: "Choose places to add, then replan.",
+  };
 }
 
 function base(document: RideDocument, label: string) {
@@ -406,7 +445,12 @@ export function buildAdvisorProposal(
   if (fields.trafficPreference !== null) {
     operations.push({ ...base(document, "Set traffic preference"), type: "trafficPreference.set", traffic: fields.trafficPreference });
   }
-  if (operations.length === 0) return { status: "unsupported", message: "The advisor did not find a ride setting to change." };
+  const stopSearches = fields.stopSearches ?? [];
+  if (operations.length === 0) {
+    return stopSearches.length > 0
+      ? searchOnlyProposal(document, draft, now)
+      : { status: "unsupported", message: "The advisor did not find a ride setting to change." };
+  }
 
   const command: Extract<RideCommand, { type: "proposal.apply" }> = {
     ...base(document, "Apply ride description"),
@@ -417,9 +461,17 @@ export function buildAdvisorProposal(
   const validation = applyRideCommand(document, command, options.now === undefined ? {} : { now: options.now });
   if (validation.outcome === "stale") return failure("stale-revision");
   if (validation.outcome === "invalid") return failure("invalid-request");
-  if (validation.outcome === "noop") return { status: "unsupported", message: "This ride already matches those settings." };
+  if (validation.outcome === "noop") {
+    return stopSearches.length > 0
+      ? searchOnlyProposal(document, draft, now)
+      : { status: "unsupported", message: "This ride already matches those settings." };
+  }
   const changes = changesFor(document.intent, validation.document.intent, draft.timeZone);
-  if (changes.length === 0) return { status: "unsupported", message: "This ride already matches those settings." };
+  if (changes.length === 0) {
+    return stopSearches.length > 0
+      ? searchOnlyProposal(document, draft, now, validation.document.intent)
+      : { status: "unsupported", message: "This ride already matches those settings." };
+  }
   const changedFields = new Set(changes.map((change) => change.field));
   const operationField: Partial<Record<RideCommandOp["type"], AdvisorProposalField>> = {
     "ride.shape.set": "shape",
@@ -452,24 +504,27 @@ export function buildAdvisorProposal(
   return {
     status: "ready",
     command: effectiveCommand,
+    baseRevision: document.revision,
     changes,
     interpretation: {
-      shape: validation.document.intent.shape,
-      start: validation.document.intent.start?.label ?? null,
-      finish: validation.document.intent.finish?.label ?? null,
-      stops: validation.document.intent.stops.map((stop) => ({ label: stop.label, arrivalIntent: stop.arrivalIntent })),
-      roadCharacter: validation.document.intent.roadCharacter,
-      novelty: validation.document.intent.noveltyPreference ?? "balanced",
-      surface: validation.document.intent.surface.preference,
-      terrain: validation.document.intent.terrain.level,
-      avoidHighways: validation.document.intent.avoidHighways,
-      tollPolicy: validation.document.intent.tollPolicy,
-      traffic: validation.document.intent.traffic,
-      departure: departureLabel(validation.document.intent.departure, draft.timeZone),
-      time: validation.document.intent.time,
-      timeLabel: timeLabel(validation.document.intent.time),
+      shape: effectiveValidation.document.intent.shape,
+      start: effectiveValidation.document.intent.start?.label ?? null,
+      finish: effectiveValidation.document.intent.finish?.label ?? null,
+      stops: effectiveValidation.document.intent.stops.map((stop) => ({ label: stop.label, arrivalIntent: stop.arrivalIntent })),
+      roadCharacter: effectiveValidation.document.intent.roadCharacter,
+      novelty: effectiveValidation.document.intent.noveltyPreference ?? "balanced",
+      surface: effectiveValidation.document.intent.surface.preference,
+      terrain: effectiveValidation.document.intent.terrain.level,
+      avoidHighways: effectiveValidation.document.intent.avoidHighways,
+      tollPolicy: effectiveValidation.document.intent.tollPolicy,
+      traffic: effectiveValidation.document.intent.traffic,
+      departure: departureLabel(effectiveValidation.document.intent.departure, draft.timeZone),
+      time: effectiveValidation.document.intent.time,
+      timeLabel: timeLabel(effectiveValidation.document.intent.time),
       unknowns: draft.notes,
     },
+    stopSearches,
+    timeBudgetMinutes: timeBudgetMinutes(effectiveValidation.document.intent, draft.timeZone, now),
     notes: draft.notes,
     summary: "Review the proposed changes before applying them.",
   };

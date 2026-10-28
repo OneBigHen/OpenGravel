@@ -96,6 +96,36 @@ describe("advisor proposal commands", () => {
     });
   });
 
+  it("keeps generic category stops as ordered searches instead of applying a fabricated place", () => {
+    const document = createRideDocument({ rideId: RIDE_ID, now: NOW });
+    const stopSearches = [
+      { category: "coffee", vicinity: null, routePosition: "halfway" },
+      { category: "diner", vicinity: "Jim Thorpe, PA", routePosition: "near-end" },
+    ] as const;
+    const fields: AdvisorDraft["fields"] = {
+      ...draft().fields,
+      shape: null,
+      startPlace: null,
+      finishPlace: null,
+      stopPlace: null,
+      stopArrivalIntent: null,
+      stopSearches,
+      rideTimeKind: "unchanged",
+      rideTimeMinutes: null,
+      roadCharacter: null,
+      surfacePreference: null,
+      avoidHighways: null,
+      departureKind: "unchanged",
+    };
+    const result = buildAdvisorProposal(document, draft({ fields, resolvedPlaces: { start: null, finish: null, stop: null } }), { now: NOW });
+
+    expect(result.status).toBe("search");
+    if (result.status !== "search") return;
+    expect("command" in result).toBe(false);
+    expect(result.stopSearches).toEqual(stopSearches);
+    expect(result.summary).toMatch(/Choose places/);
+  });
+
   it("preserves every field the proposal did not mention", () => {
     const document = createRideDocument({ rideId: RIDE_ID, now: NOW });
     const before = document.intent;
