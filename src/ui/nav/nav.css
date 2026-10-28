@@ -405,11 +405,13 @@
 }
 
 /* Desktop: the planner panel owns the left 432 px and the route inspector the
-   right column, so the card sits just right of the panel, under the Layers pill
-   (pinned right, it sat exactly where the inspector opens). */
+   right column, so the card sits at the bottom of the map just right of the
+   panel: clear of the inspector and of the middle of the map, where a hiker
+   places points (pinned top-right, it sat exactly where the inspector opens). */
 @media (min-width: 1181px) {
   .og-hike-card {
-    top: calc(var(--og-safe-top) + 137px);
+    top: auto;
+    bottom: calc(var(--og-safe-bottom) + var(--og-space-5, 24px));
     left: 448px;
   }
 }
