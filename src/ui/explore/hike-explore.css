@@ -74,3 +74,10 @@
 .og-hike__section h3 { font-size: var(--og-text-body); margin-bottom: var(--og-space-2); }
 .og-hike__badges { display: flex; flex-wrap: wrap; gap: var(--og-space-1); }
 .og-hike__badges > span { border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-pill); padding: var(--og-space-1) var(--og-space-2); }
+.og-hike__view { display: inline-flex; gap: 0; }
+.og-hike__view button { border-radius: 0; }
+.og-hike__view button:first-child { border-radius: var(--og-radius-control) 0 0 var(--og-radius-control); }
+.og-hike__view button:last-child { border-radius: 0 var(--og-radius-control) var(--og-radius-control) 0; border-left: 0; }
+.og-hike__view button[aria-pressed="true"] { background: var(--og-primary); border-color: transparent; color: var(--og-on-primary); }
+.og-hike__results-map { height: min(52vh, 460px); margin-block: var(--og-space-3); overflow: hidden; border: 1px solid var(--og-glass-edge); border-radius: var(--og-radius-card); background: var(--og-surface-2); }
+.og-hike__card[data-selected="true"] { border-color: var(--og-map-brown); box-shadow: 0 0 0 2px var(--og-map-brown); }

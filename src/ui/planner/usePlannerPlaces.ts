@@ -277,7 +277,10 @@ export function usePlannerPlaces(input: {
   useEffect(() => {
     if (autoLocated.current || position === undefined) return;
     autoLocated.current = true;
-    if (start !== null || finish !== null) return;
+    // A ride with a breadcrumb or a drawn line is not empty either: a trail
+    // opened from Explore has neither start nor finish, and must keep its frame.
+    const blank = (document: RideDocument): boolean => document.intent.start === null && document.intent.finish === null && document.intent.breadcrumb == null && document.intent.sketch == null;
+    if (!blank(rideDocumentStore.getState().document)) return;
     let cancelled = false;
     // The rider's own action always wins over this background fill: if they
     // set a start or destination, or left the planner (Record, Just ride),
@@ -286,7 +289,7 @@ export function usePlannerPlaces(input: {
     // garage's bike, and in the iOS app the first fix lands after both.
     const stillFresh = (): boolean => {
       const document = rideDocumentStore.getState().document;
-      return !cancelled && document.intent.start === null && document.intent.finish === null;
+      return !cancelled && blank(document);
     };
     const askAllowed = autoLocateMode === "ask";
     void position.permission().then(async (permission) => {
