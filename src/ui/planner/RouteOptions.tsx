@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import { riderRouteOptions } from "@/application/planner/rider-route-options";
 import type { RouteCandidateId } from "@/domain/route/ids";
@@ -8,6 +9,7 @@ import type { RideActionsProps } from "./RideActions";
 import { RouteDecisionCard } from "./RouteDecisionCard";
 
 export interface RouteOptionsProps {
+  readonly children?: ReactNode;
   readonly cards: readonly RouteCardVm[];
   readonly startLabel: string;
   readonly finishLabel: string;
@@ -20,7 +22,7 @@ export interface RouteOptionsProps {
 }
 const shortName = (label: string) => label.split(",")[0]?.trim() || label;
 
-export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onReverse, onEdit, onOptions, optionsLabel, start }: RouteOptionsProps) {
+export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onReverse, onEdit, onOptions, optionsLabel, start, children }: RouteOptionsProps) {
   return <section className="og-route-options" data-testid="route-options" aria-label="Route options">
     <div className="og-route-options__header">
       <h2 data-testid="route-options-header" tabIndex={-1} data-sheet-focus>{shortName(startLabel)} → {shortName(finishLabel)}</h2>
@@ -33,6 +35,7 @@ export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onRever
       </ul>
       {onOptions === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-settings" onClick={onOptions}><span>Options</span><span>{optionsLabel} ›</span></button>}
       <Link className="og-option-rows__row" href="/settings#settings-offline-title">Offline maps</Link>
+      {children}
     </div>
     {start === null ? null : <div className="og-route-options__start">
       <button type="button" className="og-primary" data-testid="start-ride" disabled={start.starting || start.refusal !== null} onClick={start.onStart}>{start.starting ? "Starting…" : "Start ride"}</button>

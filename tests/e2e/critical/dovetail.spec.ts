@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { useConnectedRouteFixture } from "./connected-route-fixture";
 import { expectDrawnScene, fractionOf, plannerMap, settledExtent } from "./map-helpers";
 
 // Synthetic layer geometry verifies the card-to-command connection, not live road data.
@@ -72,4 +73,26 @@ test("route detail keeps its primary action readable beside the offline shortcut
   await offline.click();
   await expect(page).toHaveURL(/\/settings#settings-offline-title$/);
   await expect(page.getByRole("heading", { name: "Offline areas" })).toBeInViewport();
+});
+
+
+test("directions keep saved work, briefing, current bike and departure controls reachable", async ({ page, context }) => {
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 40.8757, longitude: -75.7324 });
+  await useConnectedRouteFixture(page);
+  await page.goto("/");
+  await settledExtent(page);
+  await page.getByTestId("search-chip-gas").click();
+  await page.getByTestId("category-result").first().click();
+  await page.getByTestId("place-directions").click();
+  await expect(page.getByTestId("route-options")).toBeVisible();
+  await expect(page.getByTestId("named-ride-title")).toBeAttached();
+  await expect(page.getByTestId("open-share")).toBeAttached();
+  await expect(page.getByTestId("prepare-toggle")).toBeAttached();
+  await page.getByTestId("route-options-settings").click();
+  await page.getByRole("button", { name: /^Bike/ }).click();
+  await expect(page.getByRole("link", { name: /Manage bikes in Garage/ })).toBeVisible();
+  await page.getByTestId("back-to-options").click();
+  await page.getByRole("button", { name: /Time, loop and sunset/ }).click();
+  await expect(page.getByTestId("departure-in-3h")).toBeVisible();
 });

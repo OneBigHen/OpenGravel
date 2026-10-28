@@ -19,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ElevationResult, ElevationSource } from "@/application/elevation/profile";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { SurfaceRun } from "@/application/roads/engine-road-evidence";
+import { buildCorridorPackManifest } from "@/domain/offline/capabilities";
 import { createRideDocument, defaultRideIntent } from "@/domain/ride/create";
 import { newPointId, newStopId } from "@/domain/ride/ids";
 import type { Coordinate, RideDocument } from "@/domain/ride/types";
@@ -217,4 +218,19 @@ describe("PlannerResultPanel on a phone", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back to ride" }));
     expect(onExpandSheet).toHaveBeenCalledTimes(1);
   });
+});
+
+it("keeps saved work and route context available in the compact directions preview", async () => {
+  vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }));
+  const ride = rideWithWaypoints();
+  try {
+    render(<PlannerResultPanel showOptions inspector={null}
+      choices={{ cards: [card("directions-context")], explanation: null, onSelect: vi.fn() }}
+      actions={{ document: ride, libraryService: undefined, shareService: undefined, start: null, route: { routeKey: "directions-context", rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, summary: { distanceMeters: 48000, durationSeconds: 5400 }, instructionsAvailable: false, pack: buildCorridorPackManifest({ rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, createdAt: NOW, dataRefs: [] }) } }}
+      briefing={{ route: { routeId: "directions-context", geometry: LINE, distanceMeters: 48000, durationSeconds: 5400 }, ride, bikes: [], providers: { elevationProfile: ELEVATION_SOURCE }, offlineRoute: null, actions: { setBike: vi.fn(), setDeparture: vi.fn(), setArriveBy: vi.fn() }, onRouteTraffic: vi.fn() }} />);
+    expect(screen.getByTestId("named-ride-title")).toBeInTheDocument();
+    expect(screen.getByTestId("open-share")).toBeInTheDocument();
+    await screen.findByTestId("prepare-toggle");
+    await screen.findByTestId("elevation-profile");
+  } finally { vi.unstubAllGlobals(); }
 });

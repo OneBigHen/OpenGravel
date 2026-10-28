@@ -26,6 +26,7 @@ import {
   plannerPreparationContext,
   type PlannerPreparationRoute,
 } from "@/application/preparation/planner-context";
+import { enrichPlannerPreparationForLongTrip } from "@/application/preparation/long-trip";
 import { prepareRoute, type RoutePreparationContext } from "@/application/preparation/prepare-route";
 import { daylightLine } from "@/application/preparation/daylight-line";
 import type { PreparationProviderRegistry } from "@/application/preparation/providers";
@@ -217,7 +218,7 @@ function subscribeToWidth(onChange: () => void): () => void {
   return () => query?.removeEventListener("change", onChange);
 }
 
-function DepartureRow({
+export function DepartureRow({
   departure,
   onChange,
   arrival,
@@ -452,7 +453,7 @@ export function PlannerPreparation({
   const offlineSnapshot = offline?.routeKey === offlineRouteKey ? offline.snapshot : null;
 
   const current = briefing !== null && briefing.key === briefingKey ? briefing : null;
-  const preparation = current === null ? null : prepareRoute({ ...current.context, providers: providers ?? {} });
+  const preparation = current === null ? null : enrichPlannerPreparationForLongTrip(prepareRoute({ ...current.context, providers: providers ?? {} }), current.context, bike);
   const glance = preparation === null || current === null ? [] : glanceParts(preparation, current.context);
   const weatherShown = preparation !== null
     && preparation.items.some((item) => item.kind === "weather" && item.state !== "unavailable");

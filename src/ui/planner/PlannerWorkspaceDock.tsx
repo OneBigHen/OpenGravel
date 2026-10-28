@@ -19,6 +19,9 @@ import {
 } from "react";
 
 import { RideStylePanel, RideShapeSwitch, LoopTimeRow, LoopDirectionRow, ROAD_CHARACTER_LABELS, SURFACE_LABELS, TRAFFIC_LABELS, formatRideTime } from "./RideStyleControls";
+import Link from "next/link";
+import { arrivalTargetOf } from "@/application/planner/arrive-by";
+import { DepartureRow, RideBikeControl } from "./PlannerPreparation";
 import { PlannerOptionRows, type PlannerOption } from "./PlannerOptionRows";
 import { StopsPanel } from "./StopsPanel";
 import { AvoidAreasPanel } from "./AvoidAreasPanel";
@@ -484,11 +487,12 @@ export function PlannerWorkspaceDock({
           {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop && (detent === "peek" || Boolean(placeSheet))} {...(planning ? { onCancelPlanning } : {})} />}
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? (selectedOption === null ? <PlannerOptionRows
-            values={{ style: ROAD_CHARACTER_LABELS[composer.rideStyle.view.roadCharacter], surface: SURFACE_LABELS[composer.rideStyle.view.surface], time: composer.rideStyle.view.shape === "loop" ? formatRideTime(composer.rideStyle.view.loopMinutes) : "Destination", traffic: TRAFFIC_LABELS[composer.rideStyle.view.traffic], stops: String(refine.summaryCounts.stops), areas: String(refine.summaryCounts.avoidAreas), roads: String(refine.summaryCounts.roadSpans), sketch: refine.summaryCounts.sketch ? "Drawn" : "None" }}
+            values={{ bike: results.briefing.bikes.find((bike) => bike.id === results.briefing.ride.intent.bike.bikeId)?.name ?? "Saved bike", style: ROAD_CHARACTER_LABELS[composer.rideStyle.view.roadCharacter], surface: SURFACE_LABELS[composer.rideStyle.view.surface], time: composer.rideStyle.view.shape === "loop" ? formatRideTime(composer.rideStyle.view.loopMinutes) : "Destination", traffic: TRAFFIC_LABELS[composer.rideStyle.view.traffic], stops: String(refine.summaryCounts.stops), areas: String(refine.summaryCounts.avoidAreas), roads: String(refine.summaryCounts.roadSpans), sketch: refine.summaryCounts.sketch ? "Drawn" : "None" }}
             hasRoute={refine.roadSpans !== null} onSelect={setSelectedOption}
             onBreadcrumb={editBar?.breadcrumb === undefined ? undefined : () => { editBar.breadcrumb?.onStart(); setSheetView("choices"); }} /> : <div className="og-option-content">
               {selectedOption === "style" || selectedOption === "surface" || selectedOption === "traffic" ? <RideStylePanel model={composer.rideStyle} expanded group={selectedOption} /> : null}
-              {selectedOption === "time" ? <><RideShapeSwitch model={composer.rideStyle} />{composer.rideStyle.view.shape === "loop" ? <><LoopTimeRow model={composer.rideStyle} /><LoopDirectionRow model={composer.rideStyle} /></> : null}</> : null}
+              {selectedOption === "time" ? <><RideShapeSwitch model={composer.rideStyle} />{composer.rideStyle.view.shape === "loop" ? <><LoopTimeRow model={composer.rideStyle} /><LoopDirectionRow model={composer.rideStyle} /></> : null}<DepartureRow departure={results.briefing.ride.intent.departure} onChange={results.briefing.actions.setDeparture} arrival={arrivalTargetOf(results.briefing.ride.intent.time)} onArrivalChange={composer.rideStyle.view.shape === "destination" ? results.briefing.actions.setArriveBy : undefined} /></> : null}
+              {selectedOption === "bike" ? <><RideBikeControl bike={results.briefing.ride.intent.bike} bikes={results.briefing.bikes} onChange={results.briefing.actions.setBike} /><Link className="og-option-rows__row" href="/settings#settings-bikes-title">Manage bikes in Garage ›</Link></> : null}
               {selectedOption === "stops" ? <StopsPanel {...refine.stops} /> : null}
               {selectedOption === "areas" ? <AvoidAreasPanel {...refine.avoidAreas} /> : null}
               {selectedOption === "roads" && refine.roadSpans !== null ? <RoadSpansPanel {...refine.roadSpans} /> : null}

@@ -110,7 +110,12 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
   if (showOptions && compact && selectedCard !== undefined) return <RouteOptions
     cards={choices.cards} onSelect={choices.onSelect} start={actions.start}
     startLabel={startLabel} finishLabel={finishLabel} onReverse={rideStyle?.actions.reverse}
-    onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}/>;
+    onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}>
+      <AdvisorRideAsk />
+      <RideActions {...actions} start={null} rideActions={undefined} />
+      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
+      {briefing.route === null || briefing.providers?.elevationProfile === undefined ? null : <PlannerElevationProfile route={briefing.route} source={briefing.providers.elevationProfile} intent={briefing.ride.intent} tint={tint} surface={selectedCard.surfaceRuns} expandedBySheet={false} />}
+    </RouteOptions>;
   const result = (
     <>
       {phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
