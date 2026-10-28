@@ -6,6 +6,7 @@
 
 import type { AlongStopsResult } from "./along";
 import type { MapLayerId } from "./catalog";
+import type { RadarFrameList } from "./radar";
 
 export type LngLat = readonly [number, number];
 
@@ -96,6 +97,12 @@ export interface MapLayersSource {
   ): Promise<MapLayersResult>;
   /** The URL template for the traffic-flow raster tiles, `{z}/{x}/{y}` style. */
   readonly trafficTileUrl: string | null;
+  /**
+   * The RainViewer frame list for the animated rain layer. `null` means the
+   * route could not answer; the layer then reads as unavailable rather than as
+   * a dry map.
+   */
+  radarFrames?(signal?: AbortSignal): Promise<RadarFrameList | null>;
   /** Stops of one layer within about a mile of a route, in route order. */
   along?(
     line: readonly LngLat[],

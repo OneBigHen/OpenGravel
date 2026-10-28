@@ -10,7 +10,7 @@
  * "zoom in" instead of pretending the layer is empty.
  */
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
 import type { MapExtent } from "@/application/map/build-map-scene";
@@ -21,11 +21,21 @@ import {
 } from "@/application/map/preferences";
 import {
   MAP_LAYERS,
+  RADAR_FRAME_INTERVAL_MS,
+  RADAR_LIST_REFRESH_MS,
+  advanceRadarTimeline,
   clampLayerBounds,
   featureLayerIds,
+  initialRadarTimeline,
   isMapLayerId,
+  latestFrameIndex,
   mapLayer,
   projectAlong,
+  radarFrameLabel,
+  radarFreshness,
+  radarTileTemplate,
+  scrubRadarTimeline,
+  setRadarPlaying,
   type InfoFeature,
   type LayerFreshness,
   type LayerRaster,
@@ -33,9 +43,30 @@ import {
   type InfoProvider,
   type MapLayerId,
   type MapLayersSource,
+  type RadarFrame,
+  type RadarFrameList,
+  type RadarTimelineState,
 } from "@/application/map-layers";
 
 export type MapLayerStatus = "off" | "zoom-in" | "loading" | "ready" | "stale" | "unavailable";
+
+/**
+ * The animated rain radar as the map's timeline sees it (map-experience wave 3):
+ * the frame list, the frame on screen, whether it is playing, and the two
+ * actions that move it. Empty `frames` with `unavailable` means the list could
+ * not be read — never that the sky is clear.
+ */
+export interface RadarView {
+  readonly frames: readonly RadarFrame[];
+  readonly index: number;
+  readonly playing: boolean;
+  /** "2:40 PM" for an observed frame, "+20 min" for a nowcast frame. */
+  readonly label: string;
+  readonly unavailable: boolean;
+  readonly loading: boolean;
+  readonly scrub: (index: number) => void;
+  readonly togglePlay: () => void;
+}
 
 export interface MapLayersView {
   readonly freshness: readonly LayerFreshness[];
@@ -43,6 +74,8 @@ export interface MapLayersView {
   readonly status: Readonly<Record<MapLayerId, MapLayerStatus>>;
   readonly counts: Readonly<Record<MapLayerId, number>>;
   readonly scene: InfoLayersScene | undefined;
+  /** `null` while the rain radar layer is off; the timeline renders only then. */
+  readonly radar: RadarView | null;
   readonly selected: InfoFeature | null;
   readonly cameraRouteOnly: boolean;
   readonly cameraRouteAvailable: boolean;
@@ -67,7 +100,6 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   "live-traffic": "tomtom",
   "traffic-cameras": "traffic-cameras",
   weather: "nws",
-  "weather-radar": "radar",
   "active-fire": "firms",
   "great-roads": "roads",
   gravel: "roads",
@@ -217,6 +249,158 @@ export function useMapLayers(
     () => false,
   );
 
+  /*
+   * The rain radar's frame list and timeline (map-experience wave 3). The list
+   * comes from our own cached route, never from RainViewer; the frame on screen
+   * is projected into the scene as one tile template, and the timeline is UI
+   * state here so the map stays a renderer.
+   *
+   * Staleness is stamped when the list is read, inside the async callback: a
+   * render must stay pure, and the list is re-read every five minutes anyway.
+   */
+  const reducedMotion = useReducedMotion();
+  const radarOn = enabled.includes("weather-radar");
+  const [radarList, setRadarList] = useState<RadarFrameList | null>(null);
+  const [radarFresh, setRadarFresh] = useState<LayerFreshness | null>(null);
+  const [radarFailure, setRadarFailure] = useState(false);
+  const [radarTimeline, setRadarTimeline] = useState<RadarTimelineState | null>(null);
+  // The previous list, so a refresh keeps the rider on the frame they were
+  // looking at instead of silently moving them to a different time.
+  const radarShownFrames = useRef<readonly RadarFrame[]>([]);
+  const radarReadable = source?.radarFrames !== undefined;
+
+  useEffect(() => {
+    if (source === undefined || source.radarFrames === undefined) return;
+    const readFrames = source.radarFrames.bind(source);
+    const controller = new AbortController();
+    const forget = (): void => {
+      radarShownFrames.current = [];
+      setRadarList(null);
+      setRadarFresh(null);
+      setRadarFailure(false);
+      setRadarTimeline(null);
+    };
+    // Switched off: forget the frames, so switching on again starts at "now".
+    if (!radarOn) {
+      forget();
+      return;
+    }
+    const read = (): void => {
+      void readFrames(controller.signal).then(
+        (list) => {
+          if (controller.signal.aborted) return;
+          if (list === null || list.frames.length === 0) {
+            setRadarList(null);
+            setRadarFresh(null);
+            setRadarFailure(true);
+            return;
+          }
+          setRadarFailure(false);
+          const previous = radarShownFrames.current;
+          radarShownFrames.current = list.frames;
+          setRadarList(list);
+          setRadarFresh(radarFreshness(list, Date.now()));
+          setRadarTimeline((current) => {
+            if (current === null) return current;
+            const shown = previous[current.index];
+            const sameTime = shown === undefined ? -1 : list.frames.findIndex((frame) => frame.time === shown.time);
+            return {
+              index: sameTime >= 0 ? sameTime : Math.min(current.index, list.frames.length - 1),
+              playing: current.playing,
+            };
+          });
+        },
+        () => {
+          if (controller.signal.aborted) return;
+          setRadarList(null);
+          setRadarFresh(null);
+          setRadarFailure(true);
+        },
+      );
+    };
+    read();
+    const timer = setInterval(read, RADAR_LIST_REFRESH_MS);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [radarOn, source]);
+
+  // A fresh list starts the timeline at the frame that reads as "now". Reduced
+  // motion starts it paused: an animation nobody asked for is what that setting
+  // asks us not to run.
+  useEffect(() => {
+    if (radarList === null) return;
+    const reference = Date.parse(radarList.generatedAt);
+    const start = (): void => {
+      setRadarTimeline((current) => current ?? initialRadarTimeline(radarList.frames, reference, reducedMotion));
+    };
+    start();
+  }, [radarList, reducedMotion]);
+
+  const radarPlaying = radarTimeline?.playing === true;
+  const radarFrameCount = radarList?.frames.length ?? 0;
+  useEffect(() => {
+    if (!radarPlaying || reducedMotion || radarFrameCount < 2) return;
+    const timer = setInterval(() => {
+      setRadarTimeline((current) => (current === null ? current : advanceRadarTimeline(current, radarFrameCount)));
+    }, RADAR_FRAME_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [radarFrameCount, radarPlaying, reducedMotion]);
+
+  // Reduced motion can arrive mid-loop (the OS setting changes): stop, keep the frame.
+  useEffect(() => {
+    if (!reducedMotion) return;
+    const stop = (): void => {
+      setRadarTimeline((current) => (current === null || !current.playing ? current : setRadarPlaying(current, false, 0)));
+    };
+    stop();
+  }, [reducedMotion]);
+
+  const scrubRadar = useCallback((index: number): void => {
+    setRadarTimeline((current) => {
+      const count = radarList?.frames.length ?? 0;
+      if (current === null || count === 0) return current;
+      return scrubRadarTimeline(index, count);
+    });
+  }, [radarList]);
+
+  const toggleRadarPlay = useCallback((): void => {
+    setRadarTimeline((current) => {
+      const count = radarList?.frames.length ?? 0;
+      if (current === null || count === 0) return current;
+      return setRadarPlaying(current, !current.playing, count);
+    });
+  }, [radarList]);
+
+  const radarReferenceMs = radarList === null ? 0 : Date.parse(radarList.generatedAt);
+  const radarIndex = radarList === null
+    ? 0
+    : Math.min(radarTimeline?.index ?? latestFrameIndex(radarList.frames, radarReferenceMs), Math.max(0, radarFrameCount - 1));
+  const radarFrame = radarList === null ? null : radarList.frames[radarIndex] ?? null;
+  const radarTiles = radarOn && radarList !== null && radarFrame !== null
+    ? radarTileTemplate(radarList.host, radarFrame.path)
+    : null;
+  const radarUnavailable = !radarReadable || radarFailure;
+  const radarView = useMemo<RadarView | null>(() => {
+    if (!radarOn) return null;
+    const frames = radarList?.frames ?? [];
+    const frame = frames[radarIndex] ?? null;
+    return {
+      frames,
+      index: radarIndex,
+      playing: radarPlaying && !reducedMotion,
+      label: frame === null ? "" : radarFrameLabel(frame, radarReferenceMs),
+      unavailable: radarUnavailable,
+      loading: !radarUnavailable && radarList === null,
+      scrub: scrubRadar,
+      togglePlay: toggleRadarPlay,
+    };
+  }, [
+    radarOn, radarList, radarIndex, radarPlaying, reducedMotion, radarReferenceMs,
+    radarUnavailable, scrubRadar, toggleRadarPlay,
+  ]);
+
   const cameraRouteAvailable = cameraRoute !== null && cameraRoute.length >= 2;
   const toggleCameraRouteOnly = useCallback((): void => {
     setCameraRouteOnlyNow(!cameraRouteOnlyNow());
@@ -312,6 +496,16 @@ export function useMapLayers(
         record[id] = drawStatus[id] ?? "loading";
         continue;
       }
+      // The rain radar's own frame list decides its row: a layer that could not
+      // read frames is unavailable, not a clear map (map-experience wave 3).
+      if (id === "weather-radar") {
+        record[id] = radarUnavailable
+          ? "unavailable"
+          : radarList === null
+            ? "loading"
+            : radarFresh?.stale === true ? "stale" : "ready";
+        continue;
+      }
       if (definition.kind === "raster") {
         record[id] = zoom >= definition.minZoom || extent === null ? "ready" : "zoom-in";
         continue;
@@ -327,16 +521,21 @@ export function useMapLayers(
               : result?.freshness.some((entry) => entry.layerId === id && (entry.stale)) ? "stale" : "ready";
     }
     return record;
-  }, [drawStatus, enabled, extent, loadable, pending, result, unavailable, zoom]);
+  }, [drawStatus, enabled, extent, loadable, pending, radarFresh, radarList, radarUnavailable, result, unavailable, zoom]);
 
   const trafficFlow = enabled.includes("traffic-flow") && source?.trafficTileUrl != null ? source.trafficTileUrl : null;
   const scene = useMemo<InfoLayersScene | undefined>(
     () =>
       enabled.length === 0
         ? undefined
-        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, selectedId, visible: enabled.filter((id) => mapLayer(id).kind === "view" || status[id] === "ready" || status[id] === "stale") },
-    [enabled, features, result, selectedId, status, trafficFlow],
+        : { rasters: (result?.rasters ?? []).filter((raster) => enabled.includes(raster.layerId)), features, trafficFlowTiles: trafficFlow, radarTiles, selectedId, visible: enabled.filter((id) => mapLayer(id).kind === "view" || status[id] === "ready" || status[id] === "stale") },
+    [enabled, features, radarTiles, result, selectedId, status, trafficFlow],
   );
+
+  const freshness = useMemo(() => {
+    const loaded = result?.freshness ?? [];
+    return radarOn && radarFresh !== null ? [...loaded, radarFresh] : loaded;
+  }, [radarFresh, radarOn, result]);
 
   const selected = useMemo(
     () => (selectedId === null ? null : features.find((feature) => feature.id === selectedId) ?? null),
@@ -354,8 +553,9 @@ export function useMapLayers(
 
   return {
     enabled,
-    freshness: result?.freshness ?? [],
+    freshness,
     status,
+    radar: radarView,
     counts,
     scene,
     selected,
@@ -370,4 +570,22 @@ export function useMapLayers(
     onLayerStatus,
     interceptIntent,
   };
+}
+
+/**
+ * `prefers-reduced-motion`, live. The OS setting can change while the map is
+ * open, and the radar loop must stop the moment it does — that is the setting's
+ * whole point — so this subscribes instead of reading once.
+ */
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = (): void => setReduced(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+  return reduced;
 }

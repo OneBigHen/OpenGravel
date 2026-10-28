@@ -54,6 +54,7 @@ export function createRoadHistoryMapLayersSource(
   return {
     trafficTileUrl: source.trafficTileUrl,
     ...(source.along === undefined ? {} : { along: source.along.bind(source) }),
+    ...(source.radarFrames === undefined ? {} : { radarFrames: source.radarFrames.bind(source) }),
     async load(bounds, layers, signal): Promise<MapLayersResult> {
       const historyRequested = layers.includes("road-history");
       const originalLayers = withoutHistoryLayer(layers);

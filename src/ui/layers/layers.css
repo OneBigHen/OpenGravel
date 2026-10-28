@@ -597,3 +597,110 @@
     max-height: calc(100dvh - 76px);
   }
 }
+
+/* --------------------------------------------------------------------------
+   Rain radar timeline (map-experience wave 3, item 12): one compact pill in
+   the map, shown only while the Rain radar layer is on. Play/pause is a 48px
+   disc; the scrubber's whole row is 48px tall so a thumb can grab it.
+   -------------------------------------------------------------------------- */
+.og-radar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--og-tabbar-h, 0px) + var(--og-space-4) + var(--og-safe-bottom));
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  width: min(340px, calc(100% - 2 * var(--og-space-4)));
+  min-height: var(--og-touch);
+  padding: var(--og-space-1) var(--og-space-3) var(--og-space-1) var(--og-space-1);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  box-shadow: var(--og-glass-highlight), var(--og-shadow-float);
+  -webkit-backdrop-filter: var(--og-glass-blur);
+  backdrop-filter: var(--og-glass-blur);
+  transform: translateX(-50%);
+}
+
+.og-radar[data-state="unavailable"],
+.og-radar[data-state="loading"] {
+  padding: 0 var(--og-space-4);
+}
+
+.og-radar__note {
+  flex: 1;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-align: center;
+}
+
+.og-radar__play {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  border: 0;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+  cursor: pointer;
+}
+
+.og-radar__play:focus-visible,
+.og-radar__scrub:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-radar__scrub {
+  flex: 1;
+  min-width: 0;
+  height: var(--og-touch);
+  margin: 0;
+  accent-color: var(--og-primary);
+  cursor: pointer;
+}
+
+.og-radar__time {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 62px;
+  line-height: 1.15;
+}
+
+.og-radar__time-label {
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.og-radar__time-meta {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  white-space: nowrap;
+}
+
+/* Phones: the planning sheet docks over the bottom of the map, so the timeline
+   rides above its peek height instead of hiding behind it. A taller sheet can
+   still cover the timeline: the sheet is the rider's, and collapsing it brings
+   the control back. */
+@media (max-width: 760px) {
+  .og-radar {
+    bottom: calc(var(--og-tabbar-h, 0px) + 168px + var(--og-safe-bottom));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .og-radar {
+    right: calc(var(--og-safe-right) + var(--og-space-3));
+    bottom: var(--og-space-3);
+    left: auto;
+    width: min(320px, 52vw);
+    transform: none;
+  }
+}

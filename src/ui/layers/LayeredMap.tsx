@@ -24,6 +24,7 @@ import {
 import { PlannerMap } from "@/ui/map/PlannerMap";
 
 import { MapLayersPanel, type MapStyleChoice } from "./MapLayersPanel";
+import { RadarTimeline } from "./RadarTimeline";
 import { useMapLayers } from "./useMapLayers";
 
 const InfoFeatureCard = dynamic(() => import("./InfoFeatureCard").then((mod) => mod.InfoFeatureCard), { loading: () => <p className="og-composer__reason" role="status">Loading map details…</p> });
@@ -161,6 +162,7 @@ function LayeredMapWith({
           {...(mapStyleInSheet ? { mapStyle } : {})}
           {...(panelSettings === undefined ? {} : { settings: panelSettings })}
         />
+        {view.radar === null ? null : <RadarTimeline radar={view.radar} />}
         {view.selected === null ? null : (
           <InfoFeatureCard
             feature={view.selected}

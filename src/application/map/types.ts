@@ -31,6 +31,12 @@ export interface InfoLayersScene {
    * it. Carried in the scene so the host needs no knowledge of the app's routes.
    */
   readonly trafficFlowTiles: string | null;
+  /**
+   * One RainViewer radar frame as a raster tile template (`…/{z}/{x}/{y}`), or
+   * `null` to hide the rain layer. The frame changes with the timeline, so this
+   * is the current frame rather than a list; the host only has to draw it.
+   */
+  readonly radarTiles?: string | null;
   /** The feature whose card is open, drawn emphasised. */
   readonly selectedId: string | null;
   /** Layers whose features are drawn; lets the style colour by layer. */

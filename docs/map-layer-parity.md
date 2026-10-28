@@ -406,17 +406,23 @@ This is evidence, not a promise that a road is open today.
 New layer id: `weather-radar`
 
 Source:
-- NWS public GIS / radar OGC services.
-
-NWS states radar products are available as OGC-compliant services:
-https://radar.weather.gov/locations
-https://www.weather.gov/gis/cloudgiswebservices
+- RainViewer public API (`weather-maps.json`) for the frame list, and its tile
+  CDN for the frames themselves. RainViewer composites national radar feeds,
+  including NOAA NEXRAD in the United States.
+- The frame list is read by our own `/api/map-layers/radar` route with a
+  five-minute server cache, so clients never call RainViewer's metadata API.
 
 Behavior:
-- animated frames are optional; first implementation can be latest mosaic.
-- route must remain visible over radar.
-- timestamp required.
-- cache briefly.
+- animated frames: two hours of past frames plus a 30-minute nowcast, scrubbed
+  with a timeline control in the map.
+- one frame is drawn as a raster under the basemap labels; the route stays
+  visible above it.
+- each frame shows its own valid time ("2:40 PM"), and a nowcast frame is
+  labelled as an offset ("+20 min") rather than a clock time.
+- reduced motion pauses the loop; nothing autoplays there.
+- attribution "RainViewer" in the map's attribution control.
+- a list that cannot be read reports unavailable; radar gaps and a missing
+  frame are never "clear".
 - online only.
 
 ### P0 — Active fires
@@ -1024,7 +1030,7 @@ never route eligibility or scoring.
 | Hillshade | Existing AWS Mapzen Terrarium raster DEM | Roughly 30–90 m source resolution varies by region; source survey date unknown. Reuses 3D terrain DEM without tilting the map. |
 | Contours | Same Terrarium elevation adapter; small browser worker | 20 m intervals, index lines every 100 m. A bounded 65 × 65 sampled view grid; actual sampling spacing is disclosed. Not survey contours. |
 | Terrain slope | Same grid; derived gradient | Percent terrain gradient, not road grade. Tan below 10%, amber 10–25%, ember above 25%. Does not describe road passability. |
-| Weather radar | NOAA NEXRAD mosaic through Iowa Environmental Mesonet WMS-T | One current available archive frame, exact valid time, refreshed each minute; stale after 15 minutes. CONUS only. Radar gaps remain unknown. |
+| Weather radar | RainViewer frame list and tiles; the list is cached five minutes on our route | Two hours of past frames plus a 30-minute nowcast, exact per-frame valid time, stale after 20 minutes without a new frame. RainViewer coverage follows its radar feeds, not a promise of global coverage. Radar gaps, beam blockage and a missing frame remain unknown. |
 | Active fire | NASA FIRMS VIIRS SNPP NRT area CSV | Last 48 hours, UTC acquisition time and source confidence on each detection, nominal 375 m footprint. **Hotspots are not road closures.** Requires server-only `NASA_FIRMS_MAP_KEY`. |
 | Public/protected land | USGS PAD-US Public Access feature service | Generalized polygons including holes; bounded pagination. Ownership/protection is not motorized access. Source boundary survey dates unknown. If primary fails, row says unavailable and explicitly labeled OSM centres provide supplementary context. |
 | Legal motorized access | Shared routing road-authority coordinator's USFS MVUM snapshots | Existing normalized designations, motorcycle classes and seasonal windows; unknown and stale states preserved. Seasonal evaluation uses the canonical UTC-date policy. Requires `OGV_ROAD_AUTHORITY=on`. |
@@ -1048,7 +1054,7 @@ screenshots and physical-device acceptance remain reviewer checks.
 Source references:
 
 - [MapLibre contour worker reference](https://github.com/onthegomap/maplibre-contour) informed the choice of a small bounded GeoJSON worker rather than adding a vector-tile dependency.
-- [IEM NEXRAD mosaic documentation](https://mesonet.agron.iastate.edu/docs/nexrad_mosaic/).
+- [RainViewer public API documentation](https://www.rainviewer.com/api.html).
 - [NASA FIRMS area API](https://firms.modaps.eosdis.nasa.gov/api/area/).
 - [USGS PAD-US web services](https://www.usgs.gov/programs/gap-analysis-project/science/pad-us-web-services), using its maintained Public Access feature-layer view.
 
