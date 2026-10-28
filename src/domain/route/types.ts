@@ -270,6 +270,7 @@ export type RouteEvidence = Readonly<Record<string, EvidenceValue<unknown>>>;
 
 /** One route the pipeline produced (§14), ready for eligibility and scoring. */
 export interface RouteCandidate {
+  readonly hike?: import("../hike/route-summary").HikeRouteSummary;
   readonly id: RouteCandidateId;
   /** Diagnostics only — never rider copy (Rule E / VNX-007). */
   readonly provider: ProviderProvenance;

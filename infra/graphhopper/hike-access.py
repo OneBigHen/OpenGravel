@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Build a hike-only derivative: strict access, foot barriers, nested hiking routes.
+"""Build a hike-only derivative: foot-specific access, foot barriers, nested hiking routes.
 
 Requires pyosmium 4.3.2. Never changes the source extract. Blocked barrier nodes
 are copied 0.5 m down every incident segment, avoiding GH11's junction exception.
 Unrestricted gates/stiles are passable, as in GH's FootAccessParser. A locked
-barrier needs an explicit foot allowance. Relation access restrictions propagate
-conservatively to every descendant way in this strict profile.
+barrier needs an explicit foot allowance. Relation access restrictions propagate to descendants without explicit foot permission.
 """
 import argparse
 from collections import Counter
@@ -20,7 +19,7 @@ ALLOWED = {"yes", "designated", "official", "permissive", "destination"}
 
 
 def strict_access(obj):
-    if obj.tags.get("access") not in RESTRICTED:
+    if obj.tags.get("access") not in RESTRICTED or obj.tags.get("foot") in ALLOWED:
         return obj
     tags = dict(obj.tags)
     tags["foot"] = "no"
@@ -28,10 +27,12 @@ def strict_access(obj):
 
 
 def blocked(tags):
-    if tags.get("access") in RESTRICTED or tags.get("foot") in RESTRICTED:
+    if tags.get("foot") in RESTRICTED:
         return True
     if tags.get("foot") in ALLOWED:
         return False
+    if tags.get("access") in RESTRICTED:
+        return True
     return tags.get("locked") == "yes" or tags.get("barrier") in {"fence", "wall"}
 
 
@@ -143,7 +144,7 @@ class Copier(osmium.SimpleHandler):
                 self.writer.add_node(node)
             self.wrote_nodes = True
         tags = dict(strict_access(way).tags)
-        if way.id in self.restricted_ways:
+        if way.id in self.restricted_ways and tags.get("foot") not in ALLOWED:
             tags["foot"] = "no"
             self.counts["relation_restricted_ways"] += 1
         if tags != dict(way.tags):

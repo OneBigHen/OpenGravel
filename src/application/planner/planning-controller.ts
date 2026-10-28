@@ -242,6 +242,8 @@ export const NOTE_NORMALIZATION_FAILED = "normalization-failed";
  * answer, not a broken deployment.
  */
 const ANSWERED_FAILURE_CODES: readonly string[] = [
+  "hike-routing-unavailable",
+  "no-trail-route",
   "no-route",
   "outside-coverage",
   "validation",
@@ -317,6 +319,7 @@ async function stubCandidate(
     id: newRouteCandidateId(),
     provider: { providerId: candidate.providerId, profile: candidate.profile },
     geometryRef: record.geometryRef,
+    ...(candidate.hike === undefined ? {} : { hike: candidate.hike }),
     distanceMeters: candidate.distanceMeters,
     durationSeconds: candidate.durationSeconds,
     ...(candidate.instructions === undefined ? {} : { instructions: candidate.instructions }),
@@ -471,6 +474,8 @@ function closedSignal(): { readonly promise: Promise<void>; close: () => void } 
  * nothing is lost by choosing one for the surface.
  */
 const ANSWER_PRIORITY: readonly PlanningErrorCode[] = [
+  "hike-routing-unavailable",
+  "no-trail-route",
   "constraint-conflict",
   "no-route",
 ];

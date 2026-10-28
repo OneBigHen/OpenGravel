@@ -74,8 +74,8 @@ class HikeAccessTest(unittest.TestCase):
     def test_barrier_policy(self):
         for barrier in ("gate", "stile", "kissing_gate", "lift_gate", "cycle_barrier", "bollard"):
             self.assertFalse(access.blocked({"barrier": barrier}))
-        self.assertTrue(access.blocked({"barrier": "gate", "access": "no", "foot": "designated"}))
-        self.assertTrue(access.blocked({"barrier": "gate", "access": "private", "foot": "yes"}))
+        self.assertFalse(access.blocked({"barrier": "gate", "access": "no", "foot": "designated"}))
+        self.assertFalse(access.blocked({"barrier": "gate", "access": "private", "foot": "yes"}))
         self.assertTrue(access.blocked({"barrier": "stile", "foot": "no"}))
         self.assertTrue(access.blocked({"barrier": "gate", "locked": "yes"}))
         self.assertFalse(access.blocked({"barrier": "gate", "locked": "yes", "foot": "yes"}))
@@ -108,7 +108,7 @@ class HikeAccessTest(unittest.TestCase):
             nodes = {int(n.attrib["id"]): n for n in root.findall("node")}
             tags = lambda n: {t.attrib["k"]: t.attrib["v"] for t in n.findall("tag")}
             self.assertNotIn("barrier", tags(nodes[2]))  # passable gate
-            for way_id in (5, 6, 7, 8, 9, 10):  # both ways at each blocked junction
+            for way_id in (7, 8, 9, 10):  # both ways at each blocked junction
                 way = root.find(f"way[@id='{way_id}']")
                 refs = [int(n.attrib["ref"]) for n in way.findall("nd")]
                 self.assertEqual(len(refs), 3)
@@ -116,7 +116,7 @@ class HikeAccessTest(unittest.TestCase):
                 self.assertEqual(tags(nodes[blocker])["foot"], "no")
                 self.assertEqual(tags(nodes[blocker])["barrier"], "fence")
             for way_id in (13, 14, 15, 16):
-                self.assertEqual(tags(root.find(f"way[@id='{way_id}']"))["foot"], "no")
+                self.assertEqual(tags(root.find(f"way[@id='{way_id}']"))["foot"], "designated")
 
 
 def integration(jar, overlay):

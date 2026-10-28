@@ -191,6 +191,7 @@ export interface ProviderSketch {
  * rather than geometry handles.
  */
 export interface ProviderRouteRequest {
+  readonly hikeReturnToStart?: boolean;
   readonly requestId: string;
   readonly origin: Coordinate;
   /**
@@ -253,6 +254,7 @@ export type ProviderInstruction = RouteInstruction;
  * trusts that a requested shaping point was honored.
  */
 export interface ProviderCandidate {
+  readonly hike?: import("@/domain/hike/route-summary").HikeRouteSummary;
   readonly providerId: string;
   /** The internal profile that produced this candidate. */
   readonly profile: string;

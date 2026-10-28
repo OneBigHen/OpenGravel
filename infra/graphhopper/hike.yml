@@ -1,6 +1,6 @@
 graphhopper:
-  datareader.file: pennsylvania-hike-quality.osm.pbf
-  graph.location: graph-cache-quality
+  datareader.file: pennsylvania-hike-v3.osm.pbf
+  graph.location: graph-cache-v3
   custom_models.directory: custom-models
   profiles:
     - name: hike
@@ -20,10 +20,7 @@ server:
     - type: http
       port: 8995
       bind_host: 127.0.0.1
-  admin_connectors:
-    - type: http
-      port: 8996
-      bind_host: 127.0.0.1
+  admin_connectors: []
   request_log:
     appenders: []
 logging:

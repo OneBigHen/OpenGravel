@@ -442,6 +442,7 @@ export async function buildProviderRequest(
     : undefined;
   const request = deepFreeze<ProviderRouteRequest>({
     requestId: context.requestId ?? mintRequestId(),
+    ...(intent.hikeReturnToStart === undefined ? {} : { hikeReturnToStart: intent.hikeReturnToStart }),
     origin: copyCoordinate(origin),
     destination: copyCoordinate(destination),
     ...(destinationLabel ? { destinationLabel } : {}),
@@ -588,6 +589,7 @@ function canonicalIntentStructure(
     // north is a different question from the same loop asked for "any way").
     identityVersion: 3,
     shape: intent.shape,
+    hikeReturnToStart: intent.hikeReturnToStart ?? false,
     start: canonicalPoint(intent.start),
     finish: canonicalPoint(intent.finish),
     stops: intent.stops.map((stop) => canonicalCoordinate(stop.coordinate)),

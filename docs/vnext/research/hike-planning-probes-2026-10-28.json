@@ -1,0 +1,771 @@
+{
+  "probes-planning-before.jsonl": [
+    {
+      "area": "Hawk Mountain",
+      "points": [
+        [
+          40.6343,
+          -75.9878
+        ],
+        [
+          40.642,
+          -75.994
+        ]
+      ],
+      "status": "unavailable"
+    },
+    {
+      "area": "Lehigh Gorge",
+      "points": [
+        [
+          40.97,
+          -75.715
+        ],
+        [
+          40.942,
+          -75.718
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 38329.459,
+      "timeSeconds": 27597.213,
+      "snapMeters": [
+        149.6,
+        48.0
+      ],
+      "pathTrackPercent": 10.52,
+      "trailPercent": 66.51,
+      "maxRoadClass": "secondary",
+      "metersByClass": {
+        "cycleway": 21396.483508398735,
+        "service": 2877.7349770362994,
+        "residential": 4623.323548469223,
+        "footway": 61.56228182186207,
+        "path": 4033.4864648689336,
+        "tertiary": 1495.701230208622,
+        "secondary": 1743.4236990310985,
+        "unclassified": 2097.3936632405175
+      }
+    },
+    {
+      "area": "Jim Thorpe",
+      "points": [
+        [
+          40.8697,
+          -75.7408
+        ],
+        [
+          40.879,
+          -75.752
+        ]
+      ],
+      "status": "unavailable"
+    },
+    {
+      "area": "Delaware Water Gap",
+      "points": [
+        [
+          40.972,
+          -75.127
+        ],
+        [
+          40.986,
+          -75.133
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 2179.202,
+      "timeSeconds": 1569.026,
+      "snapMeters": [
+        252.5,
+        207.0
+      ],
+      "pathTrackPercent": 53.77,
+      "trailPercent": 64.36,
+      "maxRoadClass": "tertiary",
+      "metersByClass": {
+        "footway": 230.71936169376337,
+        "service": 76.74062172378285,
+        "tertiary": 699.9342584846245,
+        "path": 1171.8202473465462
+      }
+    },
+    {
+      "area": "Ricketts Glen",
+      "points": [
+        [
+          41.327,
+          -76.287
+        ],
+        [
+          41.338,
+          -76.279
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 3297.614,
+      "timeSeconds": 2374.284,
+      "snapMeters": [
+        51.4,
+        42.1
+      ],
+      "pathTrackPercent": 23.65,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 2517.626911996386,
+        "path": 779.8507338787119
+      }
+    },
+    {
+      "area": "Trexler Border Trail",
+      "points": [
+        [
+          40.6661008,
+          -75.6376817
+        ],
+        [
+          40.6543663,
+          -75.6338782
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1883.6,
+      "timeSeconds": 1356.192,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1883.6804143108839
+      }
+    },
+    {
+      "area": "Jacobsburg red trail",
+      "points": [
+        [
+          40.790973,
+          -75.291031
+        ],
+        [
+          40.7833118,
+          -75.2873553
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 981.056,
+      "timeSeconds": 706.36,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 981.0139661841611
+      }
+    },
+    {
+      "area": "Pine Creek Rail Trail",
+      "points": [
+        [
+          41.7620895,
+          -77.2989009
+        ],
+        [
+          41.7773896,
+          -77.3088232
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1925.373,
+      "timeSeconds": 1386.268,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1925.3698613822182
+      }
+    },
+    {
+      "area": "Shades of Death Trail",
+      "points": [
+        [
+          41.0254975,
+          -75.7072208
+        ],
+        [
+          41.0264842,
+          -75.6911632
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1558.533,
+      "timeSeconds": 1122.144,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 0.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 1558.6441072907812
+      }
+    },
+    {
+      "area": "Bushkill Colony Trail",
+      "points": [
+        [
+          41.2422941,
+          -75.098542
+        ],
+        [
+          41.234432,
+          -75.102298
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1064.521,
+      "timeSeconds": 766.455,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1064.5117503030363
+      }
+    }
+  ],
+  "probes-planning-v3.jsonl": [
+    {
+      "area": "Hawk Mountain",
+      "points": [
+        [
+          40.6343,
+          -75.9878
+        ],
+        [
+          40.642,
+          -75.994
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1290.707,
+      "timeSeconds": 929.309,
+      "snapMeters": [
+        41.9,
+        63.5
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1290.6825639641045
+      }
+    },
+    {
+      "area": "Lehigh Gorge",
+      "points": [
+        [
+          40.97,
+          -75.715
+        ],
+        [
+          40.942,
+          -75.718
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 38329.459,
+      "timeSeconds": 27597.213,
+      "snapMeters": [
+        149.6,
+        48.0
+      ],
+      "pathTrackPercent": 10.52,
+      "trailPercent": 66.51,
+      "maxRoadClass": "secondary",
+      "metersByClass": {
+        "cycleway": 21396.483508398735,
+        "service": 2877.7349770362994,
+        "residential": 4623.323548469223,
+        "footway": 61.56228182186207,
+        "path": 4033.4864648689336,
+        "tertiary": 1495.701230208622,
+        "secondary": 1743.4236990310985,
+        "unclassified": 2097.3936632405175
+      }
+    },
+    {
+      "area": "Jim Thorpe",
+      "points": [
+        [
+          40.8697,
+          -75.7408
+        ],
+        [
+          40.879,
+          -75.752
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 4096.679,
+      "timeSeconds": 2954.705,
+      "snapMeters": [
+        51.3,
+        628.4
+      ],
+      "pathTrackPercent": 4.58,
+      "trailPercent": 81.21,
+      "maxRoadClass": "tertiary",
+      "metersByClass": {
+        "tertiary": 376.10644644617304,
+        "service": 219.39071023676178,
+        "residential": 174.1580748778884,
+        "path": 187.63551182995556,
+        "footway": 304.79816796766227,
+        "steps": 10.603052775037007,
+        "cycleway": 2823.8191572626974
+      }
+    },
+    {
+      "area": "Delaware Water Gap",
+      "points": [
+        [
+          40.972,
+          -75.127
+        ],
+        [
+          40.986,
+          -75.133
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 2179.202,
+      "timeSeconds": 1569.026,
+      "snapMeters": [
+        252.5,
+        207.0
+      ],
+      "pathTrackPercent": 53.77,
+      "trailPercent": 64.36,
+      "maxRoadClass": "tertiary",
+      "metersByClass": {
+        "footway": 230.71936169376337,
+        "service": 76.74062172378285,
+        "tertiary": 699.9342584846245,
+        "path": 1171.8202473465462
+      }
+    },
+    {
+      "area": "Ricketts Glen",
+      "points": [
+        [
+          41.327,
+          -76.287
+        ],
+        [
+          41.338,
+          -76.279
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 3297.614,
+      "timeSeconds": 2374.284,
+      "snapMeters": [
+        51.4,
+        42.1
+      ],
+      "pathTrackPercent": 23.65,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 2517.626911996386,
+        "path": 779.8507338787119
+      }
+    },
+    {
+      "area": "Trexler Border Trail",
+      "points": [
+        [
+          40.6661008,
+          -75.6376817
+        ],
+        [
+          40.6543663,
+          -75.6338782
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1883.6,
+      "timeSeconds": 1356.192,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1883.6804143108839
+      }
+    },
+    {
+      "area": "Jacobsburg red trail",
+      "points": [
+        [
+          40.790973,
+          -75.291031
+        ],
+        [
+          40.7833118,
+          -75.2873553
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 981.056,
+      "timeSeconds": 706.36,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 981.0139661841611
+      }
+    },
+    {
+      "area": "Pine Creek Rail Trail",
+      "points": [
+        [
+          41.7620895,
+          -77.2989009
+        ],
+        [
+          41.7773896,
+          -77.3088232
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1925.373,
+      "timeSeconds": 1386.268,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1925.3698613822182
+      }
+    },
+    {
+      "area": "Shades of Death Trail",
+      "points": [
+        [
+          41.0254975,
+          -75.7072208
+        ],
+        [
+          41.0264842,
+          -75.6911632
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1558.533,
+      "timeSeconds": 1122.144,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 0.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 1558.6441072907812
+      }
+    },
+    {
+      "area": "Bushkill Colony Trail",
+      "points": [
+        [
+          41.2422941,
+          -75.098542
+        ],
+        [
+          41.234432,
+          -75.102298
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1064.521,
+      "timeSeconds": 766.455,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1064.5117503030363
+      }
+    }
+  ],
+  "probes-planning-v3-trails-only.jsonl": [
+    {
+      "area": "Hawk Mountain",
+      "points": [
+        [
+          40.6343,
+          -75.9878
+        ],
+        [
+          40.642,
+          -75.994
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1290.707,
+      "timeSeconds": 929.309,
+      "snapMeters": [
+        41.9,
+        63.5
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1290.6825639641045
+      }
+    },
+    {
+      "area": "Lehigh Gorge",
+      "points": [
+        [
+          40.97,
+          -75.715
+        ],
+        [
+          40.942,
+          -75.718
+        ]
+      ],
+      "status": "unavailable"
+    },
+    {
+      "area": "Jim Thorpe",
+      "points": [
+        [
+          40.8697,
+          -75.7408
+        ],
+        [
+          40.879,
+          -75.752
+        ]
+      ],
+      "status": "unavailable"
+    },
+    {
+      "area": "Delaware Water Gap",
+      "points": [
+        [
+          40.972,
+          -75.127
+        ],
+        [
+          40.986,
+          -75.133
+        ]
+      ],
+      "status": "unavailable"
+    },
+    {
+      "area": "Ricketts Glen",
+      "points": [
+        [
+          41.327,
+          -76.287
+        ],
+        [
+          41.338,
+          -76.279
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 3297.614,
+      "timeSeconds": 2374.284,
+      "snapMeters": [
+        51.4,
+        42.1
+      ],
+      "pathTrackPercent": 23.65,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 2517.626911996386,
+        "path": 779.8507338787119
+      }
+    },
+    {
+      "area": "Trexler Border Trail",
+      "points": [
+        [
+          40.6661008,
+          -75.6376817
+        ],
+        [
+          40.6543663,
+          -75.6338782
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1883.6,
+      "timeSeconds": 1356.192,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1883.6804143108839
+      }
+    },
+    {
+      "area": "Jacobsburg red trail",
+      "points": [
+        [
+          40.790973,
+          -75.291031
+        ],
+        [
+          40.7833118,
+          -75.2873553
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 981.056,
+      "timeSeconds": 706.36,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 981.0139661841611
+      }
+    },
+    {
+      "area": "Pine Creek Rail Trail",
+      "points": [
+        [
+          41.7620895,
+          -77.2989009
+        ],
+        [
+          41.7773896,
+          -77.3088232
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1925.373,
+      "timeSeconds": 1386.268,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1925.3698613822182
+      }
+    },
+    {
+      "area": "Shades of Death Trail",
+      "points": [
+        [
+          41.0254975,
+          -75.7072208
+        ],
+        [
+          41.0264842,
+          -75.6911632
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1558.533,
+      "timeSeconds": 1122.144,
+      "snapMeters": [
+        0.1,
+        0.0
+      ],
+      "pathTrackPercent": 0.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "footway": 1558.6441072907812
+      }
+    },
+    {
+      "area": "Bushkill Colony Trail",
+      "points": [
+        [
+          41.2422941,
+          -75.098542
+        ],
+        [
+          41.234432,
+          -75.102298
+        ]
+      ],
+      "status": "routed",
+      "distanceMeters": 1064.521,
+      "timeSeconds": 766.455,
+      "snapMeters": [
+        0.0,
+        0.0
+      ],
+      "pathTrackPercent": 100.0,
+      "trailPercent": 100.0,
+      "maxRoadClass": "none",
+      "metersByClass": {
+        "path": 1064.5117503030363
+      }
+    }
+  ],
+  "artifacts": {
+    "probes-planning-before.jsonl": {
+      "bytes": 36708,
+      "sha256": "5d81e780dcc2c33c2386f67f4151480e9e9d6c71ae7b8e995ed452ce80015953"
+    },
+    "probes-planning-v3.jsonl": {
+      "bytes": 43778,
+      "sha256": "10cf2a8055ade1121e048b12ecb4e98c41bdfc61a7cef2d9b764c0f241f5fb2a"
+    },
+    "probes-planning-v3-trails-only.jsonl": {
+      "bytes": 19147,
+      "sha256": "ae5efda27a361149def45198535130704e89cd5f5b95a4fdfc7d0e7354ce4eee"
+    }
+  }
+}

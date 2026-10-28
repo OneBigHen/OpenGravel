@@ -494,6 +494,8 @@ export function mapRefForItineraryRef(
 
 /** Rider copy per §29 error class; never "Something went wrong". */
 const ERROR_COPY: Readonly<Record<PlanningErrorCode, string>> = {
+  "hike-routing-unavailable": "Hike routing unavailable. Try again when the trail router is available.",
+  "no-trail-route": "No trail route between these points. Try another trailhead or waypoint.",
   // The owner review's copy: a failed plan says what failed and what to do next,
   // in one quiet line (no exclamation, no blame, no "oops").
   "no-route": "No legal route to this destination — try another point.",

@@ -1,0 +1,27 @@
+# Template: replace paths/user for the production host before installation.
+[Unit]
+Description=OpenGravel hiking GraphHopper
+After=network.target
+
+[Service]
+Type=simple
+User=opengravel
+Group=opengravel
+WorkingDirectory=/var/lib/opengravel/graphhopper-hike
+Environment="HIKE_JAR=/opt/opengravel/graphhopper-hike/graphhopper-web-11.0.jar"
+Environment="HIKE_SNAP_OVERLAY=/opt/opengravel/graphhopper-hike/hike-snap.jar"
+Environment="HIKE_CONFIG=/etc/opengravel/graphhopper-hike/hike.yml"
+Environment="HIKE_GRAPH=/var/lib/opengravel/graphhopper-hike/graph-cache-v3"
+EnvironmentFile=-/etc/opengravel/graphhopper-hike/service.env
+ExecStart=/usr/bin/java -Xms256m -Xmx1g -Ddw.graphhopper.graph.location=${HIKE_GRAPH} -cp ${HIKE_SNAP_OVERLAY}:${HIKE_JAR} com.graphhopper.application.GraphHopperApplication server ${HIKE_CONFIG}
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/opengravel/graphhopper-hike
+
+[Install]
+WantedBy=multi-user.target

@@ -17,7 +17,7 @@ def distance(a, b):
     return 12742000 * math.asin(min(1, math.sqrt(h)))
 
 
-def measure(probe, trails_only=False):
+def measure(probe, trails_only=False, url="http://127.0.0.1:8995"):
     payload = {"profile": "hike", "points": [p[::-1] for p in probe["points"]],
                "points_encoded": False, "instructions": False,
                "details": ["road_class", "foot_road_access", "hike_rating", "foot_network"]}
@@ -25,7 +25,7 @@ def measure(probe, trails_only=False):
         payload.update({"ch.disable": True, "lm.disable": True, "custom_model": {"priority": [{
             "if": "road_class != PATH && road_class != FOOTWAY && road_class != TRACK && road_class != STEPS && road_class != BRIDLEWAY && road_class != CYCLEWAY && road_class != PEDESTRIAN",
             "multiply_by": "0"}]}})
-    req = urllib.request.Request("http://127.0.0.1:8995/route", json.dumps(payload).encode(), {"Content-Type": "application/json"})
+    req = urllib.request.Request(url.rstrip("/") + "/route", json.dumps(payload).encode(), {"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=90) as response:
             raw = json.load(response)
@@ -50,12 +50,13 @@ def measure(probe, trails_only=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--url", default="http://127.0.0.1:8995")
     parser.add_argument("--trails-only", action="store_true", help="diagnose connectivity with every non-trail class forbidden")
     args = parser.parse_args()
     probes = json.loads(Path(__file__).with_name("probes.json").read_text())
     with open(args.out, "w") as output:
         for probe in probes:
-            result = measure(probe, args.trails_only)
+            result = measure(probe, args.trails_only, args.url)
             output.write(json.dumps(result) + "\n")
             output.flush()
             print(json.dumps({k: v for k, v in result.items() if k != "response"}), flush=True)

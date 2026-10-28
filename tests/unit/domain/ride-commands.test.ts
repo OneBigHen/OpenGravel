@@ -50,6 +50,8 @@ const DOCUMENTED_COMMAND_TYPES: readonly string[] = [
   "ride.create",
   "ride.clear",
   "ride.reverse",
+  "hike.returnToStart.set",
+  "breadcrumb.plan",
   "ride.shape.set",
   "ride.directions",
   "ride.loopFrom",

@@ -94,11 +94,11 @@ async function probeRouter(
 export async function checkHealth(deps: HealthDeps = {}): Promise<HealthReport> {
   const env = envOf(deps);
   const fetcher = deps.fetcher ?? fetch;
-  const [router, providers] = await Promise.all([probeRouter(
+  const [router, providers, hikeRouter] = await Promise.all([probeRouter(
     graphHopperUrlFromEnv(env),
     fetcher,
     deps.timeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS,
-  ), providerStates(env)]);
+  ), providerStates(env), env.OGV_HIKE_GRAPHHOPPER_URL?.trim() ? probeRouter(env.OGV_HIKE_GRAPHHOPPER_URL.trim(), fetcher, deps.timeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS) : Promise.resolve(null)]);
   const checkedAt = (deps.now ?? ((): string => new Date().toISOString()))();
   return {
     buildId: env.OGV_BUILD_ID ?? DEFAULT_BUILD_ID,
@@ -112,6 +112,9 @@ export async function checkHealth(deps: HealthDeps = {}): Promise<HealthReport> 
       status: router.status === "available" ? "ok" : "unavailable",
       lastSuccess: router.status === "available" ? checkedAt : null,
       lastFailureCategory: router.reason,
+    } : provider.id === "graphhopper-hike" && hikeRouter !== null ? {
+      ...provider, evidence: "probe", status: hikeRouter.status === "available" ? "ok" : "unavailable",
+      lastSuccess: hikeRouter.status === "available" ? checkedAt : null, lastFailureCategory: hikeRouter.reason,
     } : provider),
   };
 }
