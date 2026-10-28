@@ -10,6 +10,7 @@
  * "zoom in" instead of pretending the layer is empty.
  */
 
+import { getActivityMode, subscribeActivityMode } from "@/ui/stores/activity-mode";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
@@ -96,6 +97,8 @@ const LOAD_DEBOUNCE_MS = 450;
 
 /** Which provider serves each feature layer, to read `unavailable` per layer. */
 const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
+  trails: "osm-hiking-routes", "hunting-season": "pa-game-lands",
+  trailheads: "osm", "water-sources": "osm", shelters: "osm", summits: "osm",
   hillshade: "hillshade", contours: "terrain", slope: "terrain",
   "live-traffic": "tomtom",
   "traffic-cameras": "traffic-cameras",
@@ -119,17 +122,20 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
 /** The enabled-layer choice as an external store, so SSR and hydration agree. */
 const enabledListeners = new Set<() => void>();
 let enabledSnapshot: readonly MapLayerId[] | null = null;
+let enabledMode = getActivityMode();
 const cameraRouteListeners = new Set<() => void>();
 let cameraRouteSnapshot: boolean | null = null;
 const NONE: readonly MapLayerId[] = [];
 
 function subscribeEnabled(listener: () => void): () => void {
   enabledListeners.add(listener);
-  return () => enabledListeners.delete(listener);
+  const unsubscribe = subscribeActivityMode(listener);
+  return () => { enabledListeners.delete(listener); unsubscribe(); };
 }
 
 function enabledNow(): readonly MapLayerId[] {
-  if (enabledSnapshot === null) enabledSnapshot = readEnabled();
+  const mode = getActivityMode();
+  if (enabledSnapshot === null || enabledMode !== mode) { enabledMode = mode; enabledSnapshot = readEnabled(); }
   return enabledSnapshot;
 }
 
@@ -147,8 +153,8 @@ export function enableMapLayer(id: MapLayerId): void {
 
 function readEnabled(): readonly MapLayerId[] {
   try {
-    const raw = window.localStorage.getItem(MAP_LAYERS_STORAGE_KEY);
-    if (raw === null) return [];
+    const raw = window.localStorage.getItem(getActivityMode() === "hike" ? `${MAP_LAYERS_STORAGE_KEY}.hike` : MAP_LAYERS_STORAGE_KEY);
+    if (raw === null) return getActivityMode() === "hike" ? ["trails", "hillshade", "contours"] : [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((id): id is MapLayerId => typeof id === "string" && isMapLayerId(id)) : [];
   } catch {
@@ -158,7 +164,7 @@ function readEnabled(): readonly MapLayerId[] {
 
 function writeEnabled(ids: readonly MapLayerId[]): void {
   try {
-    window.localStorage.setItem(MAP_LAYERS_STORAGE_KEY, JSON.stringify(ids));
+    window.localStorage.setItem(getActivityMode() === "hike" ? `${MAP_LAYERS_STORAGE_KEY}.hike` : MAP_LAYERS_STORAGE_KEY, JSON.stringify(ids));
   } catch {
     // A per-device convenience: private mode just forgets the choice.
   }
@@ -492,6 +498,7 @@ export function useMapLayers(
     const record = emptyRecord<MapLayerStatus>("off");
     for (const id of enabled) {
       const definition = mapLayer(id);
+      if (id === "trail-closures") { record[id] = "unavailable"; continue; }
       if (definition.kind === "view") {
         record[id] = drawStatus[id] ?? "loading";
         continue;

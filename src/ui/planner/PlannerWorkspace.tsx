@@ -760,7 +760,7 @@ export function PlannerWorkspace({
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}
       glance={mapGlance(glance.map)}
-      topSearch={placeFlow.top}
+      topSearch={placeFlow.top} activity={{ drawing: activeTool === "sketch", sketch: sketchPanelProps, onEnterHike: () => planningSessionStore.getState().cancel() }}
       toast={placeFlow.toast}
       editBar={{ scene, activeTool, placementTool, sketch: sketchPanelProps, breadcrumb: breadcrumbBar, onAddStop: stopsPanelProps.onAddStop, onCancelPlacement: () => plannerUiStore.getState().cancelPlacement() }}
       map={{

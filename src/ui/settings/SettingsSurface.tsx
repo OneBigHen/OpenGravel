@@ -1,5 +1,6 @@
 "use client";
 
+import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
 import { Fragment, useState, type ReactNode } from "react";
 import { AppBar } from "@/ui/nav/AppBar";
 import {
@@ -255,6 +256,7 @@ export function SettingsSurface({
           {showNavScreen ? <NavScreenRow /> : null}
         </SettingsGroup>
 
+        <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-label">Planning activity</span><ActivitySwitch /></div></SettingsGroup>
         <SettingsGroup id="settings-map-title" label="Map">
           <div className="og-settings__row">
             <span className="og-settings__row-text">

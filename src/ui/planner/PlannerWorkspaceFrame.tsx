@@ -7,6 +7,7 @@
  * renderer and receives the existing MapIntent callback from the workspace.
  */
 
+import { HikeActivityControls } from "@/ui/planner/HikeActivityControls";
 import { useEffect, type ComponentProps, type ReactNode, type RefObject } from "react";
 
 import type { RideDocument } from "@/domain/ride/types";
@@ -21,6 +22,12 @@ import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "@/ui/plan
 import { useRouteScrub } from "@/ui/stores/route-scrub-store";
 
 type PlannerMapProps = ComponentProps<typeof PlannerMap>;
+
+export interface HikeActivityProps {
+  readonly drawing: boolean;
+  readonly sketch: { readonly onStartDrawing: () => void; readonly onUndo: () => void; readonly onCancel: () => void; readonly onDone: () => void };
+  readonly onEnterHike: () => void;
+}
 
 export interface PlannerWorkspaceFrameProps {
   readonly document: RideDocument;
@@ -46,6 +53,8 @@ export interface PlannerWorkspaceFrameProps {
   /** The route-editing bar over the map (Draw, Add stop, the pen's controls). */
   readonly editBar?: PlannerMapEditBarProps | undefined;
   readonly topSearch?: ReactNode;
+  /** The ride/hike switch and the hike drawing controls. */
+  readonly activity?: HikeActivityProps | undefined;
   /** The phone's From / To card, while a ride is on the map; it replaces the search. */
   readonly trip?: ReactNode;
   readonly toast?: ReactNode;
@@ -78,6 +87,7 @@ export function PlannerWorkspaceFrame({
   editBar,
   children,
   topSearch,
+  activity,
   trip = null,
   toast,
 }: PlannerWorkspaceFrameProps) {
@@ -200,6 +210,7 @@ export function PlannerWorkspaceFrame({
             clusterControls={clusterControls}
           />
           {tripMode ? trip : topSearch}
+          {activity === undefined ? null : <HikeActivityControls {...activity} />}
           {glance}
           {editBar === undefined || desktop || (phone && compact && editBar.breadcrumb?.editing !== true && document.intent.breadcrumb == null && (document.intent.finish !== null || hasDrawnRoute)) ? null : <PlannerMapEditBar {...editBar} />}
           {retryingMap ? (

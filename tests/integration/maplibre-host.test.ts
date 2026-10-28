@@ -46,6 +46,7 @@ import {
   overlayLayers,
 } from "@/infrastructure/map/maplibre/style";
 import { asPlaceId } from "@/application/places/types";
+import { setActivityMode } from "@/ui/stores/activity-mode";
 
 /** Every knob the fake renderer needs, plus what it observed. */
 interface FakeRenderer {
@@ -76,6 +77,9 @@ interface FakeRenderer {
     easeCalls: Record<string, unknown>[];
     /** Every style passed to `setStyle`, in order. */
     styles: unknown[];
+    basemapLayers: Record<string, unknown>[];
+    layerSpecs: Record<string, unknown>[];
+    paintCalls: { id: string; name: string; value: unknown }[];
   };
   readonly Map: new (options: Record<string, unknown>) => FakeMapInstance;
   setWorkerUrl(url: string): void;
@@ -121,6 +125,9 @@ const fake = vi.hoisted((): FakeRenderer => {
     terrainCalls: [],
     easeCalls: [],
     styles: [],
+    basemapLayers: [],
+    layerSpecs: [],
+    paintCalls: [],
   };
 
   class FakeMap implements FakeMapInstance {
@@ -189,8 +196,8 @@ const fake = vi.hoisted((): FakeRenderer => {
       };
     }
 
-    getStyle(): { readonly glyphs?: string } {
-      return state.glyphs === null ? {} : { glyphs: state.glyphs };
+    getStyle(): { readonly glyphs?: string; readonly layers: readonly Record<string, unknown>[] } {
+      return state.glyphs === null ? { layers: state.basemapLayers } : { glyphs: state.glyphs, layers: state.basemapLayers };
     }
 
     project(): { x: number; y: number } {
@@ -222,7 +229,10 @@ const fake = vi.hoisted((): FakeRenderer => {
       const id = (layer as { id: string }).id;
       if (state.throwOnLayer === id) throw new Error(`layer ${id} could not be added`);
       this.layers.add(id);
+      state.layerSpecs.push(layer as Record<string, unknown>);
     }
+
+    setPaintProperty(id: string, name: string, value: unknown): void { state.paintCalls.push({ id, name, value }); }
 
     addImage(name: string): void {
       state.imageAdds.push(name);
@@ -407,12 +417,41 @@ afterEach(() => {
   fake.state.sourceLoaded = false;
   fake.state.easeCalls = [];
   fake.state.styles.length = 0;
+  fake.state.basemapLayers.length = 0;
+  fake.state.layerSpecs.length = 0;
+  fake.state.paintCalls.length = 0;
   offlineBasemap.prepare.mockReset();
   offlineBasemap.prepare.mockResolvedValue(null);
   document.body.innerHTML = "";
 });
 
 describe("MapLibreHost — the real host against a fake renderer", () => {
+  it("applies and restores hike cartography for hosted and offline vector schemas", async () => {
+    fake.state.basemapLayers.push(
+      { id: "road-major", type: "line", source: "composite", "source-layer": "road", paint: { "line-opacity": 0.8 } },
+      { id: "road-path", type: "line", source: "composite", "source-layer": "road" },
+      { id: "street", type: "line", source: "openmaptiles", "source-layer": "transportation" },
+      { id: "offline-roads-major", type: "line", source: "offline", "source-layer": "roads" },
+      { id: "mapbox-poi", type: "symbol", source: "composite", "source-layer": "poi_label" },
+      { id: "peaks", type: "symbol", source: "openmaptiles", "source-layer": "mountain_peak" },
+      { id: "offline-poi", type: "symbol", source: "offline", "source-layer": "pois" },
+    );
+    const host = await createMapLibreHost(container(), OPTIONS);
+    const map = currentMap();
+    for (const layer of fake.state.basemapLayers) map.layers.add(String(layer["id"]));
+    map.fire("load");
+    expect(fake.state.layerSpecs.some((layer) => String(layer["id"]).startsWith("og-hike-"))).toBe(false);
+    setActivityMode("hike");
+    const trails = fake.state.layerSpecs.filter((layer) => String(layer["id"]).startsWith("og-hike-trails-"));
+    expect(trails.map((layer) => layer["source-layer"]).sort()).toEqual(["road", "roads", "transportation"]);
+    expect(fake.state.layerSpecs.filter((layer) => /^og-hike-poi-\d+$/.test(String(layer["id"])))).toHaveLength(3);
+    expect(fake.state.paintCalls).toContainEqual({ id: "road-major", name: "line-opacity", value: ["*", 0.8, 0.55] });
+    expect(fake.state.paintCalls.some((call) => call.id === "road-path")).toBe(false);
+    setActivityMode("ride");
+    expect(fake.state.paintCalls).toContainEqual({ id: "road-major", name: "line-opacity", value: 0.8 });
+    expect([...map.layers].some((id) => id.startsWith("og-hike-"))).toBe(false);
+    host.dispose();
+  });
   it("adds every source and overlay layer once the style loads", async () => {
     const element = container();
     const host = await createMapLibreHost(element, OPTIONS);

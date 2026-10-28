@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { setAppearanceMode, type AppearanceMode } from "@/ui/appearance/appearance";
 import { useAppearanceMode } from "@/ui/appearance/use-appearance";
+import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
 
 const MODES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [
   { mode: "auto", label: "Auto" },
@@ -72,6 +73,7 @@ export function AppMenu({ className }: { readonly className?: string }) {
       {open ? (
         <div className="og-appmenu__panel" id={panelId} role="group" aria-label="Menu">
           <p className="og-appmenu__title">OpenGravel</p>
+          <ActivitySwitch />
           <div className="og-appmenu__modes" role="radiogroup" aria-label="Appearance">
             {MODES.map((entry) => (
               <button

@@ -345,3 +345,129 @@
 .og-appmenu__link svg {
   color: var(--og-ink-2);
 }
+
+/* --------------------------------------------------------------------------
+   Ride / Hike switch (hike mode H0): same segmented look as the appearance
+   modes, in the app menu and in Settings.
+   -------------------------------------------------------------------------- */
+.og-activity-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  min-width: 152px;
+  padding: 3px;
+  border-radius: var(--og-radius-control);
+  background: var(--og-glass-well);
+}
+
+.og-activity-switch button {
+  min-height: 40px;
+  border: 0;
+  border-radius: calc(var(--og-radius-control) - 3px);
+  background: transparent;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-activity-switch button[aria-checked="true"] {
+  background: var(--og-surface);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-activity-switch button:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
+
+.og-appmenu__panel .og-activity-switch {
+  margin-bottom: var(--og-space-1);
+}
+
+/* Hike mode's card on the map, under the search bar and chips. */
+.og-hike-card {
+  position: absolute;
+  z-index: 9;
+  top: calc(var(--og-safe-top) + 125px);
+  left: var(--og-space-4);
+  display: grid;
+  gap: var(--og-space-2);
+  width: min(320px, calc(100% - 88px));
+  padding: var(--og-space-3);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-card);
+  background: var(--og-glass-dense);
+  color: var(--og-ink);
+  box-shadow: var(--og-shadow-float);
+}
+
+.og-hike-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-2);
+}
+
+.og-hike-card__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  margin: 0;
+  color: var(--og-primary);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+}
+
+.og-hike-card__exit {
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-2);
+  border: 0;
+  background: transparent;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.og-hike-card__note {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-hike-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2);
+}
+
+.og-hike-card__action {
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-4);
+  border: 1px solid var(--og-glass-edge);
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-hike-card__action--primary {
+  border-color: transparent;
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
+.og-hike-card__exit:focus-visible,
+.og-hike-card__action:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+}
