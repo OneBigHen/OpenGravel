@@ -723,7 +723,7 @@ describe("a surface that insists on a look (the ride follows Day/Night)", () => 
 describe("the map point menu", () => {
   const press = { type: "map-long-press", coordinate: { lon: -75.2, lat: 39.95 }, pixel: { x: 100, y: 100 }, authorityFeatureId: null } as const;
 
-  it("offers all five rows at 48 px minimum and an inline disabled reason", async () => {
+  it("offers all six rows at 48 px minimum and an inline disabled reason", async () => {
     const style = document.createElement("style");
     style.textContent = `.og-map-point-menu__row {${cssRule(".og-map-point-menu__row")}}`;
     document.head.append(style);
@@ -731,7 +731,7 @@ describe("the map point menu", () => {
       const { factory } = await renderMap({ onPointAction: vi.fn(), addStopDisabledReason: "plan a start and finish first" });
       act(() => factory.hosts[0]?.emit(press));
       const buttons = screen.getByRole("dialog", { name: "Plan here" }).querySelectorAll("button");
-      expect(buttons).toHaveLength(5);
+      expect(buttons).toHaveLength(6);
       for (const button of buttons) {
         expect(getComputedStyle(button).minHeight).toBe("48px");
         expect(button.querySelector("svg")).toHaveAttribute("width", "20");

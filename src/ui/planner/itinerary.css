@@ -835,7 +835,7 @@
   backdrop-filter: var(--og-glass-blur);
 }
 .og-breadcrumb-summary header, .og-breadcrumb-summary__stats { display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
-.og-breadcrumb-summary p { margin: .4rem 0; font-size: .8rem; }
+.og-breadcrumb-summary p { margin: .4rem 0; font-size: var(--og-text-meta); }
 .og-breadcrumb-summary summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .og-breadcrumb-summary li button { min-height: 44px; }
 .og-breadcrumb-summary__actions button, .og-breadcrumb-summary__actions input { min-height: 44px; }
