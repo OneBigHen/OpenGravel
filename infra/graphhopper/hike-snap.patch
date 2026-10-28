@@ -1,0 +1,31 @@
+--- a/ViaRouting.java
++++ b/ViaRouting.java
+@@ -63,3 +63,5 @@
+-        EdgeFilter strictEdgeFilter = snapPreventions.isEmpty()
+-                ? snapFilter
+-                : new SnapPreventionEdgeFilter(snapFilter, roadClassEnc, roadEnvEnc, snapPreventions);
++        // Isolated hike server: a road must never substitute for the requested trail.
++        EdgeFilter strictEdgeFilter = edge -> snapFilter.accept(edge) && switch (edge.get(roadClassEnc)) {
++            case PATH, FOOTWAY, TRACK, STEPS, BRIDLEWAY, CYCLEWAY, PEDESTRIAN -> true;
++            default -> false;
++        };
+@@ -70,16 +72,3 @@
+-            Snap snap = null;
+-            if (placeIndex < headings.size() && !Double.isNaN(headings.get(placeIndex))) {
+-                if (!pointHints.isEmpty() && !Helper.isEmpty(pointHints.get(placeIndex)))
+-                    throw new IllegalArgumentException("Cannot specify heading and point_hint at the same time. " +
+-                            "Make sure you specify either an empty point_hint (String) or a NaN heading (double) for point " + placeIndex);
+-                snap = locationIndex.findClosest(point.lat, point.lon, new HeadingEdgeFilter(directedSnapFilter, headings.get(placeIndex), point));
+-            } else if (!pointHints.isEmpty()) {
+-                snap = locationIndex.findClosest(point.lat, point.lon, new NameSimilarityEdgeFilter(strictEdgeFilter,
+-                        pointHints.get(placeIndex), point, 170));
+-            } else if (!snapPreventions.isEmpty()) {
+-                snap = locationIndex.findClosest(point.lat, point.lon, strictEdgeFilter);
+-            }
+-
+-            if (snap == null || !snap.isValid())
+-                snap = locationIndex.findClosest(point.lat, point.lon, snapFilter);
+-            if (!snap.isValid())
++            Snap snap = locationIndex.findClosest(point.lat, point.lon, strictEdgeFilter);
++            if (!snap.isValid() || com.graphhopper.util.DistanceCalcEarth.DIST_EARTH.calcDist(
++                    point.lat, point.lon, snap.getSnappedPoint().lat, snap.getSnappedPoint().lon) > 300)
