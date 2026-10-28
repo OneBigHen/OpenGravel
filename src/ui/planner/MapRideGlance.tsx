@@ -32,6 +32,7 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { UNKNOWN_VALUE } from "@/application/planner/measurements";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 
 /** Feet in a metre, for the climb the elevation profile measured. */
@@ -218,6 +219,7 @@ export function MapRideGlance({
 }: MapRideGlanceProps): ReactElement | null {
   const statement = statementFor(summary, planning);
   const announced = useGlanceAnnouncement(statement);
+  const hiking = useActivityMode() === "hike";
   // No route, nothing being planned and nothing failed: there is no ride to
   // summarise, and an empty pill would be a claim about a ride that does not exist.
   if (summary === null && !planning && !failed) return null;
@@ -236,6 +238,8 @@ export function MapRideGlance({
   );
 
   if (summary === null && !planning) {
+    // A hike's failure is explained in the sheet; the pill would sit on top of it.
+    if (hiking) return null;
     return (
       <div
         className={`${className} og-glance--failed`}

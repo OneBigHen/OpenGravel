@@ -10,6 +10,7 @@
  */
 
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 export interface RefineSectionProps {
   readonly forceOpen: boolean;
@@ -27,12 +28,14 @@ export function RefineSection({ forceOpen, summary, onExpandedChange, children }
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const expanded = open || forceOpen;
+  const hiking = useActivityMode() === "hike";
+  const title = hiking ? "Change this hike" : "Change this ride";
   useEffect(() => {
     onExpandedChange?.(expanded);
   }, [expanded, onExpandedChange]);
 
   return (
-    <section className="og-refine" data-testid="refine-section" aria-label="Change this ride">
+    <section className="og-refine" data-testid="refine-section" aria-label={title}>
       <button
         type="button"
         className="og-refine__toggle"
@@ -42,9 +45,9 @@ export function RefineSection({ forceOpen, summary, onExpandedChange, children }
         disabled={forceOpen}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="og-refine__title">Change this ride</span>
+        <span className="og-refine__title">{title}</span>
         <span className="og-refine__summary">
-          {summary ?? "Stops, no-go areas, roads, draw"}
+          {summary ?? (hiking ? "Stops and drawing" : "Stops, no-go areas, roads, draw")}
         </span>
         <span className="og-refine__chevron" aria-hidden="true">
           {expanded ? "⌃" : "⌄"}
