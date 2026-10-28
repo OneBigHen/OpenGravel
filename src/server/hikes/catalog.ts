@@ -1,4 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
+import { open, readFile, stat } from "node:fs/promises";
+import { detailsPathFor, summaryPathFor, type DetailPointer } from "./catalog-split";
 import type { HikeRecord } from "../../../infra/trails/lib/types";
 
 type Box = readonly [number, number, number, number];
@@ -35,17 +36,26 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
   try { bbox = parseBbox(url.searchParams.get("bbox")); } catch { return { status: 400, body: { error: "Invalid bbox: expected west,south,east,north" } }; }
   if (!path) return { status: 200, body: { enabled: false, hikes: [] } };
   try {
-    const info = await stat(path);
-    if (!cache || cache.path !== path || cache.mtime !== info.mtimeMs || cache.size !== info.size) {
-      const data: unknown = JSON.parse(await readFile(path, "utf8"));
+    // A split catalog keeps only the summary in memory (see catalog-split.ts).
+    const summaryPath = summaryPathFor(path);
+    const split = await stat(summaryPath).then(() => true, () => false);
+    const source = split ? summaryPath : path;
+    const info = await stat(source);
+    if (!cache || cache.path !== source || cache.mtime !== info.mtimeMs || cache.size !== info.size) {
+      const data: unknown = JSON.parse(await readFile(source, "utf8"));
       if (!isCatalog(data)) throw new Error("invalid catalog");
-      cache = { path, mtime: info.mtimeMs, size: info.size, catalog: data };
+      cache = { path: source, mtime: info.mtimeMs, size: info.size, catalog: data };
     }
     const id = url.searchParams.get("id");
+    if (split && id !== null) {
+      const match = cache.catalog.hikes.find((hike) => hike.id === id && (bbox === null || (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
+      const pointer = (match as { detail?: DetailPointer } | undefined)?.detail;
+      return { status: 200, body: { enabled: true, hikes: pointer === undefined ? [] : [await readDetail(detailsPathFor(path), pointer)] } };
+    }
     const hikes = cache.catalog.hikes.filter((hike) => (id === null || hike.id === id) && (bbox === null ||
       (hike.bbox[0] <= bbox[2] && hike.bbox[2] >= bbox[0] && hike.bbox[1] <= bbox[3] && hike.bbox[3] >= bbox[1])));
     return { status: 200, body: { enabled: true, hikes: id === null ? hikes.map((hike) => {
-      const detailFields = new Set(["parks", "features", "officialEvidence", "fieldSources", "descriptions", "photos", "trailheads", "conflicts"]);
+      const detailFields = new Set(["parks", "features", "officialEvidence", "fieldSources", "descriptions", "photos", "trailheads", "conflicts", "detail"]);
       const summary = Object.fromEntries(Object.entries(hike).filter(([key]) => !detailFields.has(key)));
       // All source records remain on detail; cards retain one credited reference per provider.
       if (hike.sources) summary.sources = [...new Map(hike.sources.map(source => [source.sourceId, source])).values()];
@@ -53,5 +63,16 @@ export async function listHikes(url: URL, path: string | undefined): Promise<{ s
     }) : hikes } };
   } catch {
     return { status: 503, body: { enabled: true, error: "Hike catalog unavailable", hikes: [] } };
+  }
+}
+
+async function readDetail(path: string, pointer: DetailPointer): Promise<unknown> {
+  const file = await open(path, "r");
+  try {
+    const buffer = Buffer.alloc(pointer.length);
+    await file.read(buffer, 0, pointer.length, pointer.offset);
+    return JSON.parse(buffer.toString("utf8"));
+  } finally {
+    await file.close();
   }
 }
