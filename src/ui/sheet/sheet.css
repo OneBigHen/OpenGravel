@@ -497,7 +497,8 @@
     max-height: max(var(--og-sheet-half), 56dvh);
   }
 
-  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options) {
+  /* A hike shows its own summary where a ride shows Route options. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"] .og-sheet__body > :not(.og-route-options, .og-hike-summary) {
     display: none;
   }
 
