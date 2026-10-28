@@ -91,6 +91,8 @@ import {
   roadLinesFromFeatures,
   roadLayersVisible,
 } from "@/application/safety/emergency-roads";
+import { saveExploreOrigin } from "@/application/map/explore-origin";
+import { getActivityMode } from "@/application/map/activity-mode";
 import { EmergencyCard } from "@/ui/safety/EmergencyCard";
 
 /**
@@ -504,6 +506,7 @@ export function PlannerMap({
     let unsubscribeLayerStatus: (() => void) | null = null;
     let unsubscribeViewport: (() => void) | null = null;
     let unsubscribeCamera: (() => void) | null = null;
+    let lastHikeCenter: Coordinate | undefined;
 
     void (async () => {
       // A surface that insists on a look (the ride follows Day/Night) neither
@@ -565,7 +568,7 @@ export function PlannerMap({
       // The camera's bearing, zoom and scale, for the compass, the zoom buttons
       // and the scale rule. A host without a camera (a test double) reports
       // nothing and the column simply has no instruments to show.
-      unsubscribeCamera = host.onCamera?.((camera) => updateCamera(camera)) ?? null;
+      unsubscribeCamera = host.onCamera?.((camera) => { updateCamera(camera); if (getActivityMode() === "hike" && camera.center) lastHikeCenter = camera.center; }) ?? null;
       // The scene may have changed while the renderer was loading; the refs hold
       // the current values, so the map never starts a frame — or a tool — behind.
       host.dispatch({ type: "long-press-enabled", enabled: longPressEnabledRef.current });
@@ -580,6 +583,7 @@ export function PlannerMap({
 
     return () => {
       disposed = true;
+      if (lastHikeCenter) saveExploreOrigin(lastHikeCenter);
       unsubscribe?.();
       unsubscribeError?.();
       unsubscribeStatus?.();

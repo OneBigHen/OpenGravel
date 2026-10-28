@@ -59,7 +59,7 @@ type DetailState = { readonly id: string; readonly attempt: number } & (
 
 export function ExploreClient(props: ExploreClientProps) {
   const mode = useActivityMode();
-  if (mode === "hike" && props.detailId === undefined) return <HikeExplore />;
+  if (mode === "hike" && props.detailId === undefined) return <HikeExplore {...(props.mapboxToken ? { mapboxToken: props.mapboxToken } : {})} />;
   return <RideExploreClient {...props} />;
 }
 

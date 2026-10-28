@@ -51,6 +51,11 @@ const APP_WRITTEN_KEYS = [
 ] as const;
 
 describe("clearAllLocalData", () => {
+  it("clears the hike map center from session storage", async () => {
+    sessionStorage.setItem("opengravel.hike.explore-origin", "location");
+    await clearAllLocalData({ removeItem: () => undefined }, async () => undefined);
+    expect(sessionStorage.getItem("opengravel.hike.explore-origin")).toBeNull();
+  });
   it("removes every app-owned local-storage key and deletes the VNext database", async () => {
     const values = new Map<string, string>(APP_WRITTEN_KEYS.map((key) => [key, "present"]));
     const storage = {
