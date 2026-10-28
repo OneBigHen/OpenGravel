@@ -36,7 +36,7 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await placeEndpoint(page, "finish", finish);
   await page.getByTestId("hike-plan").click();
   const summary = page.getByTestId("hike-route-summary");
-  await expect(summary).toContainText("Tobler");
+  await expect(summary).toContainText("walking time from grade");
   await expect(summary).toContainText("ft");
   await expect(summary).toContainText("on roads");
   await expect(summary).toContainText("Starts 0.4 mi from the nearest trail");
@@ -47,7 +47,7 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
   await page.getByTestId("hike-there-and-back").check();
   await page.getByTestId("hike-plan").click();
-  await expect(summary).toContainText("3.0 mi");
+  await expect(summary).toContainText(/\b3(\.0)? mi\b/);
   failure = "no-route";
   await page.getByTestId("hike-plan").click();
   await expect(page.getByTestId("hike-card")).toContainText("No trail route between these points.");

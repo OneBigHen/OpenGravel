@@ -22,13 +22,17 @@ import { hillshadeBeforeId, hillshadeLayerSpec, terrainSourceSpec } from "@/infr
 import { mapboxRequestUrl } from "@/infrastructure/map/basemap";
 import { useElevationProfile } from "@/ui/planner/useElevationProfile";
 import { ElevationProfileChart } from "@/ui/planner/ElevationProfileChart";
+import { formatFeet, formatLongDuration } from "@/application/planner/measurements";
+import { staticRouteMapUrl } from "@/application/map/static-map";
 import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 
 function linesOf(feature: TrailFeature): Coordinate[][] {
   const lines = feature.geometry.type === "LineString" ? [feature.geometry.coordinates] : feature.geometry.coordinates;
   return lines.map((line) => line.map(([lon, lat]) => ({ lon, lat })));
 }
-function miles(meters: number): string { return `${(meters / 1609.344).toFixed(1)} mi`; }
+function miles(meters: number): string { const value = meters / 1609.344; return `${value >= 100 ? Math.round(value).toLocaleString("en-US") : value.toFixed(1)} mi`; }
+/** "~1 h 19 min", "~3 d 4 h": an estimate, never false precision. */
+function hikeTime(seconds: number): string { return `~${formatLongDuration(Math.max(60, seconds))}`; }
 function nameOf(hike: HikeRecord): string { return hike.name ?? hike.ref ?? "Unnamed trail"; }
 function useGeometry(id: string) {
   const [feature, setFeature] = useState<TrailFeature | null>(null);
@@ -89,6 +93,19 @@ function useHikeData(hikes: readonly HikeRecord[]) {
   return { features, profiles, loading };
 }
 
+/**
+ * A list thumbnail is one cached static image: fifty cards cannot each hold a
+ * live WebGL map (browsers drop contexts past ~16 and the cards go blank).
+ */
+function TrailThumb({ feature, mapboxToken }: { feature: TrailFeature | null; mapboxToken?: string }) {
+  const theme = useResolvedTheme();
+  const longest = feature === null ? [] : linesOf(feature).reduce<readonly Coordinate[]>((best, line) => line.length > best.length ? line : best, []);
+  const url = mapboxToken === undefined ? null : staticRouteMapUrl(longest, { token: mapboxToken, width: 104, height: 104, color: theme === "night" ? "c9a98c" : "776353", night: theme === "night" });
+  if (url === null) return <TrailMap feature={feature} thumbnail {...(mapboxToken ? { mapboxToken } : {})} />;
+  return <div className="og-hike__thumb" role="img" aria-label="Map of trail">
+    {/* eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it. */}
+    <img src={url} alt="" width={104} height={104} loading="lazy" decoding="async" /></div>;
+}
 function TrailMap({ feature, thumbnail = false, mapboxToken }: { feature: TrailFeature | null; thumbnail?: boolean; mapboxToken?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(!thumbnail);
@@ -135,10 +152,10 @@ function TrailMap({ feature, thumbnail = false, mapboxToken }: { feature: TrailF
 }
 function HikeCard({ hike, origin, feature, profile, mapboxToken }: { hike: HikeRecord; origin: Coordinate; feature: TrailFeature | undefined; profile: ElevationProfile | undefined; mapboxToken?: string }) {
   const distance = haversine(origin, hike.start);
-  const gain = profile?.climbMeters ?? hike.elevationGainMeters;
-  const facts = [miles(hike.lengthMeters), ...(gain == null ? [] : [`${Math.round(gain * 3.28084)} ft gain`]), ...(profile ? [`~${Math.max(1, Math.round(profileTimeSeconds(profile) / 60))}\u00a0min`] : hike.toblerMinutes != null ? [`~${Math.max(1, Math.round(hike.toblerMinutes))}\u00a0min`] : [])];
+  const gain = hike.elevationGainMeters ?? profile?.climbMeters;
+  const facts = [miles(hike.lengthMeters), ...(gain == null ? [] : [`${formatFeet(gain)} gain`]), ...(hike.toblerMinutes != null ? [hikeTime(hike.toblerMinutes * 60)] : profile ? [hikeTime(profileTimeSeconds(profile))] : [])];
   return <Link className="og-hike__card" href={`/explore/hikes/${encodeURIComponent(hike.id)}`}>
-    <TrailMap feature={feature ?? null} thumbnail {...(mapboxToken ? { mapboxToken } : {})} />
+    <TrailThumb feature={feature ?? null} {...(mapboxToken ? { mapboxToken } : {})} />
     <span className="og-hike__card-body"><strong>{nameOf(hike)}</strong><span>{miles(distance)} to start</span><span>{facts.join(" · ")}</span>{hike.sacScale && <span>Difficulty: {hike.sacScale} (OSM)</span>}</span>
   </Link>;
 }
@@ -184,9 +201,9 @@ export function HikeExplore({ mapboxToken }: { mapboxToken?: string }) {
   const { features, profiles, loading } = useHikeData(page);
   const results = page.filter((h) => {
     const profile = profiles.get(h.id);
-    const gain = profile?.climbMeters ?? h.elevationGainMeters;
+    const gain = h.elevationGainMeters ?? profile?.climbMeters;
     if (filters.gain && (gain == null || gain > Number(filters.gain) / 3.28084)) return false;
-    const seconds = profile ? profileTimeSeconds(profile) : h.toblerMinutes == null ? null : h.toblerMinutes * 60;
+    const seconds = h.toblerMinutes != null ? h.toblerMinutes * 60 : profile ? profileTimeSeconds(profile) : null;
     if (filters.time && (seconds === null || seconds > Number(filters.time) * 3600)) return false;
     if (filters.kids && (gain == null || gain > 152.4)) return false;
     return true;
@@ -207,8 +224,8 @@ export function HikeDetail({ id, mapboxToken }: { id: string; mapboxToken?: stri
   const lines = useMemo(() => feature ? linesOf(feature) : [], [feature]);
   const elevation = useElevationProfile(elevationSource, lines.length === 1 ? id : null, lines[0] ?? []);
   const profile = elevation?.status === "ready" ? elevation.profile : null;
-  const seconds = profile ? profileTimeSeconds(profile) : hike?.toblerMinutes == null ? null : hike.toblerMinutes * 60;
-  const time = seconds === null ? null : `~${Math.max(1, Math.round(seconds / 60))} min`;
+  const seconds = hike?.toblerMinutes != null ? hike.toblerMinutes * 60 : profile ? profileTimeSeconds(profile) : null;
+  const time = seconds === null ? null : hikeTime(seconds);
   async function openBreadcrumb() {
     const line = lines[0];
     if (lines.length !== 1 || !line || line.length < 2 || !hike) return;
@@ -226,5 +243,5 @@ export function HikeDetail({ id, mapboxToken }: { id: string; mapboxToken?: stri
   async function share() {
     try { if (navigator.share) await navigator.share({ title: hike ? nameOf(hike) : "Trail", url: window.location.href }); else { await navigator.clipboard.writeText(window.location.href); setStatus("Trail link copied."); } } catch { setStatus("Could not share the trail link."); }
   }
-  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><div className="og-hike__detail"><div className="og-hike__detail-top"><Link href="/explore" className="og-hike__back">‹ Explore hikes</Link><AppMenu className="og-page-menu" /></div>{hike ? <><div className="og-hike__title"><p>TRAIL GUIDE</p><h1>{nameOf(hike)}</h1>{hike.operator && <span>{hike.operator}</span>}</div><TrailMap feature={feature} {...(mapboxToken ? { mapboxToken } : {})} /><div className="og-hike__stats"><div><strong>{miles(hike.lengthMeters)}</strong><span>Length</span></div>{(profile || hike.elevationGainMeters !== null) && <div><strong>{Math.round((profile?.climbMeters ?? hike.elevationGainMeters!) * 3.28084)} ft</strong><span>Gain</span></div>}{time && <div><strong>{time}</strong><span>Time</span></div>}</div>{(hike.sacScale || profile || hike.dog || hike.surface) && <section className="og-hike__section"><h2>About this trail</h2>{hike.sacScale && <p><strong>Difficulty: {hike.sacScale}.</strong> This is the mapped OSM hiking scale; terrain and conditions can vary.</p>}{profile && <p>Estimated with Tobler’s hiking function using terrain elevation and grade. Surface, conditions and your pace are not included.</p>}{(hike.dog || hike.surface) && <p>{[hike.dog && `Dogs: ${hike.dog}`, hike.surface && `Surface: ${hike.surface}`].filter(Boolean).join(" · ")}</p>}</section>}{elevation && elevation.status !== "unavailable" && <section className="og-hike__section"><h2>Elevation profile</h2><ElevationProfileChart state={elevation} line={lines[0]} /></section>}{hike.trailheads.length > 0 && <section className="og-hike__section"><h2>Trailhead &amp; parking</h2>{hike.trailheads.map((head, i) => <p key={i}>{head.name ?? (head.kind === "parking" ? "Parking" : "Trailhead")} · {Math.round(head.distanceMeters)} m from a trail end<br /><span>{head.coordinate.lat.toFixed(5)}, {head.coordinate.lon.toFixed(5)}</span></p>)}</section>}<section className="og-hike__section"><h2>Sources</h2>{hike.operator && <p>Operator: {hike.operator}</p>}{hike.sources.map((source) => <p key={`${source.sourceId}-${source.recordId}`}>{source.url ? <a href={source.url}>{source.sourceLabel} · {source.recordId} ↗</a> : `${source.sourceLabel} · ${source.recordId}`}</p>)}</section><div className="og-hike__actions"><button className="og-hike__primary" onClick={() => void openBreadcrumb()} disabled={lines.length !== 1}>Open as breadcrumb</button>{feature && lines.length !== 1 && <p>This trail has multiple separate segments; breadcrumb opening is not available for it yet.</p>}<button disabled>Download for offline</button><p>Trail corridor downloads are not available yet.</p><button onClick={() => void share()}>Share</button></div></> : <p>{status || "Loading trail…"}</p>}{status && hike && <p role="status">{status}</p>}</div></main>;
+  return <main id="main" className="og-explore og-hike"><AppBar current="/explore" /><div className="og-hike__detail"><div className="og-hike__detail-top"><Link href="/explore" className="og-hike__back">‹ Explore hikes</Link><AppMenu className="og-page-menu" /></div>{hike ? <><div className="og-hike__title"><p>TRAIL GUIDE</p><h1>{nameOf(hike)}</h1>{hike.operator && <span>{hike.operator}</span>}</div><TrailMap feature={feature} {...(mapboxToken ? { mapboxToken } : {})} /><div className="og-hike__stats"><div><strong>{miles(hike.lengthMeters)}</strong><span>Length</span></div>{(profile || hike.elevationGainMeters !== null) && <div><strong>{formatFeet((hike.elevationGainMeters ?? profile?.climbMeters)!)}</strong><span>Gain</span></div>}{time && <div><strong>{time}</strong><span>Time</span></div>}</div>{(hike.sacScale || profile || hike.dog || hike.surface) && <section className="og-hike__section"><h2>About this trail</h2>{hike.sacScale && <p><strong>Difficulty: {hike.sacScale}.</strong> This is the mapped OSM hiking scale; terrain and conditions can vary.</p>}{profile && <p>Estimated with Tobler’s hiking function using terrain elevation and grade. Surface, conditions and your pace are not included.</p>}{(hike.dog || hike.surface) && <p>{[hike.dog && `Dogs: ${hike.dog}`, hike.surface && `Surface: ${hike.surface}`].filter(Boolean).join(" · ")}</p>}</section>}{elevation && elevation.status !== "unavailable" && <section className="og-hike__section"><h2>Elevation profile</h2><ElevationProfileChart state={elevation} line={lines[0]} /></section>}{hike.trailheads.length > 0 && <section className="og-hike__section"><h2>Trailhead &amp; parking</h2>{hike.trailheads.map((head, i) => <p key={i}>{head.name ?? (head.kind === "parking" ? "Parking" : "Trailhead")} · {Math.round(head.distanceMeters)} m from a trail end<br /><span>{head.coordinate.lat.toFixed(5)}, {head.coordinate.lon.toFixed(5)}</span></p>)}</section>}<section className="og-hike__section"><h2>Sources</h2>{hike.operator && <p>Operator: {hike.operator}</p>}{hike.sources.map((source) => <p key={`${source.sourceId}-${source.recordId}`}>{source.url ? <a href={source.url}>{source.sourceLabel} · {source.recordId} ↗</a> : `${source.sourceLabel} · ${source.recordId}`}</p>)}</section><div className="og-hike__actions"><button className="og-hike__primary" onClick={() => void openBreadcrumb()} disabled={lines.length !== 1}>Open as breadcrumb</button>{feature && lines.length !== 1 && <p>This trail has multiple separate segments; breadcrumb opening is not available for it yet.</p>}<button disabled>Download for offline</button><p>Trail corridor downloads are not available yet.</p><button onClick={() => void share()}>Share</button></div></> : <p>{status || "Loading trail…"}</p>}{status && hike && <p role="status">{status}</p>}</div></main>;
 }

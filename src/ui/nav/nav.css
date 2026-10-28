@@ -478,3 +478,5 @@
 }
 .og-hike-card__action:disabled { opacity: 0.5; cursor: default; }
 .og-hike-card__note p { margin: var(--og-space-1) 0; }
+.og-hike-card__note strong { color: var(--og-ink); font-size: var(--og-text-body); font-variant-numeric: tabular-nums; }
+.og-hike-card__hint { color: var(--og-ink-3, var(--og-ink-2)); font-size: var(--og-text-caption); }

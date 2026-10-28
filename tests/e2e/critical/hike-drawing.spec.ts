@@ -15,7 +15,7 @@ test("a hike drawing remains on the map after reload without a road plan", async
   await page.getByTestId("app-menu").click();
   await page.getByTestId("activity-hike").click();
   await page.keyboard.press("Escape");
-  await expect(page.getByText("Choose a start and destination, or draw your hike.")).toBeVisible();
+  await expect(page.getByText("Press and hold the map to set a start and finish, or draw your hike.")).toBeVisible();
   await page.getByTestId("hike-draw-start").click();
   await expect(page.getByTestId("hike-draw-done")).toBeVisible();
   // Let the camera settle out of the gesture quiet window before the stroke.

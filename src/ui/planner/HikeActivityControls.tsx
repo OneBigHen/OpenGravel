@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import type { RouteCandidate } from "@/domain/route/types";
+import { formatDistance, formatDuration, formatFeet } from "@/application/planner/measurements";
 import { setActivityMode, useActivityMode } from "@/ui/stores/activity-mode";
 
 /**
@@ -29,7 +30,6 @@ export function HikeActivityControls({ drawing, sketch, onEnterHike, candidate, 
   }, [mode]);
   if (mode !== "hike") return null;
   const hike = candidate?.provider.profile === "hike" ? candidate : null;
-  const feet = (meters: number | null | undefined) => meters == null ? "unknown" : `${Math.round(meters * 3.28084)} ft`;
   return (
     <section className="og-hike-card" aria-label="Hiking" data-testid="hike-card">
       <div className="og-hike-card__head">
@@ -41,11 +41,11 @@ export function HikeActivityControls({ drawing, sketch, onEnterHike, candidate, 
         </p>
         <button type="button" className="og-hike-card__exit" data-testid="hike-exit" onClick={() => setActivityMode("ride")}>Back to riding</button>
       </div>
-      <p className="og-hike-card__note" role="status">Choose a start and destination, or draw your hike.</p>
+      {hike === null ? <p className="og-hike-card__note" role="status">Press and hold the map to set a start and finish, or draw your hike.</p> : null}
       {error === null ? null : <p className="og-hike-card__note" role="alert">{error}</p>}
       {hike === null ? null : <div data-testid="hike-route-summary" className="og-hike-card__note">
-        <strong>{(hike.distanceMeters / 1609.344).toFixed(1)} mi · {Math.round(hike.durationSeconds / 60)} min (Tobler)</strong>
-        <p>↑ {feet(hike.hike?.gainMeters)} · ↓ {feet(hike.hike?.lossMeters)}</p>
+        <strong>{formatDistance(hike.distanceMeters)} · ~{formatDuration(hike.durationSeconds)}</strong>
+        {hike.hike?.gainMeters == null ? null : <p>↑ {formatFeet(hike.hike.gainMeters)}{hike.hike.lossMeters == null ? null : <> · ↓ {formatFeet(hike.hike.lossMeters)}</>} <span className="og-hike-card__hint">walking time from grade</span></p>}
         {hike.warnings.map(warning => <p key={warning.id}>{warning.message}</p>)}
       </div>}
       <label className="og-hike-card__note"><input type="checkbox" data-testid="hike-there-and-back" checked={returnToStart} onChange={event => onReturnToStart(event.target.checked)} /> There and back</label>
