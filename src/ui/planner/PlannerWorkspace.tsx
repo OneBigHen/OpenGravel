@@ -85,7 +85,7 @@ import {
 import type { LibraryServicePort } from "@/application/library/library-service";
 import { selectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import {
-  usePlannerHikeActivity, usePlannerActiveRoute,
+  usePlannerHikeActivity, usePlannedHikeSummary, usePlannerActiveRoute,
   usePlannerAnswerLifecycle,
   usePlannerAvoidAreas,
   usePlannerCamera,
@@ -742,15 +742,7 @@ export function PlannerWorkspace({
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;
 
-  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps);
-  // A freshly planned hike opens the sheet to half, as a new ride does, so its
-  // time, climb and Start hike are on screen instead of folded under the map.
-  const plannedHikeId = hikeActivity.candidate?.provider.profile === "hike" ? hikeActivity.candidate.id : null;
-  useEffect(() => {
-    if (plannedHikeId === null) return;
-    const detent = plannerUiStore.getState().sheetDetent;
-    if (detent === "peek" || detent === "mini") plannerUiStore.getState().setSheetDetent("half");
-  }, [plannedHikeId, plannerUiStore]);
+  const hikeActivity = usePlannerHikeActivity(document, rideDocumentStore, planningSessionStore, session, selectedCandidate, activeTool === "sketch", sketchPanelProps), plannedHike = usePlannedHikeSummary(hikeActivity, plannerUiStore);
   return (
     <PlannerWorkspaceFrame
       trip={tripCard}
@@ -886,7 +878,7 @@ export function PlannerWorkspace({
               onRouteTraffic: setRouteTraffic,
             },
             sheetExpanded: sheetDetent === "expanded",
-            hike: hikeActivity.candidate?.provider.profile === "hike" ? { candidate: hikeActivity.candidate, returnToStart: hikeActivity.returnToStart, onReturnToStart: hikeActivity.onReturnToStart, canPlan: hikeActivity.canPlan, onPlan: hikeActivity.onPlan, onDraw: hikeActivity.sketch.onStartDrawing } : null,
+            hike: plannedHike,
           }}
           refine={{
             onExpandedChange: setRefineEditing,

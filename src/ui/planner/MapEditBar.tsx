@@ -24,6 +24,7 @@ import type { MapScene } from "@/application/map/types";
 import { sketchDraftStrokeCount } from "@/application/planner/sketch-draft";
 import type { SketchPanelProps } from "@/ui/planner/SketchPanel";
 import type { PlacementTool } from "@/ui/stores/planner-ui-store";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 
 const TIP_KEY = "opengravel-edit-tip-seen";
 
@@ -87,6 +88,7 @@ const CLOSE = "M6 6l12 12M18 6L6 18";
 
 export function MapEditBar(props: MapEditBarProps) {
   const { hasRoute, drawing, placingStop } = props;
+  const hiking = useActivityMode() === "hike";
   const storedSeen = useSyncExternalStore(subscribeNothing, readTipSeen, () => true);
   const [dismissed, setDismissed] = useState(false);
   // The idle tools stay tucked behind one button so the map is not cluttered.
@@ -121,7 +123,7 @@ export function MapEditBar(props: MapEditBarProps) {
       props.snapStatus === "snapping"
         ? "Finding roads…"
         : props.strokes === 0
-          ? "Trace your ride on the map"
+          ? hiking ? "Trace your hike on the map" : "Trace your ride on the map"
           : props.snapStatus === "snapped"
             ? "On roads. Keep drawing or tap Done"
             : "Keep drawing, or tap Done";

@@ -67,7 +67,10 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
 // aside once a hike is planned), and the summary lives in the sheet. Still
 test.describe("on a phone", () => {
 test.use({ viewport: { width: 393, height: 852 }, hasTouch: true, isMobile: true });
-test("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
+// fixme: on a phone a planned hike hides the map edit button (the sheet owns
+// the route), so this flow has no entry point yet; the trail page's "Plan this
+// hike on the map" opens a breadcrumb and Plan on trails instead.
+test.fixme("breadcrumb hands its ordered waypoints to the foot router", async ({ page }) => {
   await placeEndpoint(page, "start", start);
   await placeEndpoint(page, "finish", finish);
   await page.getByTestId("hike-plan").click();

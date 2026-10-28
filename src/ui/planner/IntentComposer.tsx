@@ -491,7 +491,7 @@ export function IntentComposer({
 
       {/* Trail Glass idle sheet: on a phone with nothing planned, the shape
           switch is hidden and this one tap starts a loop from here. */}
-      {shapeModel === undefined || loop ? null : (
+      {shapeModel === undefined || loop || hiking ? null : (
         <button
           type="button"
           className="og-chip og-composer__loop-quick"

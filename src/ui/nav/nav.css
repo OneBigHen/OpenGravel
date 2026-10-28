@@ -531,6 +531,8 @@
 .og-hike-card[data-state="planned"] .og-hike-card__head { gap: var(--og-space-3); }
 @media (max-width: 1180px) {
   .og-hike-card[data-state="planned"]:not([data-error]) { display: none; }
+  /* Drawing: the map's edit toolbar owns Undo / Cancel / Done here. */
+  .og-hike-card[data-state="drawing"]:not([data-error]) { display: none; }
   /* Phones: one slim row under the chips, the exit an icon. */
   .og-hike-card {
     gap: var(--og-space-1);
@@ -608,7 +610,7 @@
 }
 .og-hike-summary__warnings li {
   padding: var(--og-space-1) var(--og-space-3);
-  border-left: 3px solid var(--og-map-gold, var(--og-line-strong));
+  border: 1px solid var(--og-map-gold, var(--og-line-strong));
   border-radius: var(--og-radius-control);
   background: var(--og-surface-2, transparent);
   color: var(--og-ink-2);
