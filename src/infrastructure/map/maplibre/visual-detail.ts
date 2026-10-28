@@ -55,7 +55,12 @@ export function terrainSourceSpec(): Readonly<Record<string, unknown>> {
   };
 }
 
-/** Sky, horizon haze and ground fog for a tilted map, in the look's own light. */
+/**
+ * Sky, horizon haze and ground fog for a tilted map, in the look's own light.
+ *
+ * This is the static fallback for a map whose sun position is unknown; the
+ * sun-driven sky (golden hour, dusk) lives in `sun-lighting.ts`.
+ */
 export function skySpec(night: boolean): Readonly<Record<string, unknown>> {
   return night
     ? {
@@ -86,7 +91,13 @@ export const DEFAULT_LIGHT: Readonly<Record<string, unknown>> = {
   intensity: 0.5,
 };
 
-/** Late-afternoon sun from the west-southwest, so extruded walls read in relief. */
+/**
+ * The late-afternoon sun, used only when the map cannot compute one.
+ *
+ * `sun-lighting.ts` replaces this with the real sun's bearing and altitude; the
+ * constant stays so an unknown hour is lit by a known, honest default rather
+ * than by a made-up midday.
+ */
 export const SUN_LIGHT: Readonly<Record<string, unknown>> = {
   anchor: "map",
   position: [1.35, 230, 40],

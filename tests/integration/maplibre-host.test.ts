@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MapHost } from "@/application/map/map-host";
 import type { MapIntent, MapScene } from "@/application/map/types";
+import { solarPositionAt } from "@/application/map/solar-position";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import type { PointId } from "@/domain/ride/ids";
 import {
@@ -34,6 +35,7 @@ import {
   MAP_LOAD_ATTRIBUTE,
   MAP_LOAD_REASON_ATTRIBUTE,
   MAP_SCENE_ATTRIBUTE,
+  MAP_SUN_ATTRIBUTE,
   MAX_AUTOMATIC_RETRIES,
   TILE_STARVATION_MS,
   classifyMapError,
@@ -46,6 +48,8 @@ import {
   overlayLayers,
 } from "@/infrastructure/map/maplibre/style";
 import { asPlaceId } from "@/application/places/types";
+import { DEFAULT_LIGHT } from "@/infrastructure/map/maplibre/visual-detail";
+import { sunToneAt } from "@/infrastructure/map/maplibre/sun-lighting";
 import { setActivityMode } from "@/ui/stores/activity-mode";
 
 /** Every knob the fake renderer needs, plus what it observed. */
@@ -80,6 +84,11 @@ interface FakeRenderer {
     basemapLayers: Record<string, unknown>[];
     layerSpecs: Record<string, unknown>[];
     paintCalls: { id: string; name: string; value: unknown }[];
+    /** The centre the fake camera reports, which is the point the map is lit for. */
+    center: { lng: number; lat: number };
+    /** `setLight` / `setSky` writes, in order. */
+    lightCalls: Readonly<Record<string, unknown>>[];
+    skyCalls: unknown[];
   };
   readonly Map: new (options: Record<string, unknown>) => FakeMapInstance;
   setWorkerUrl(url: string): void;
@@ -93,6 +102,7 @@ interface FakeMapInstance {
   fire(event: string, payload?: unknown): void;
   resetStyle(): void;
   getBounds(): { toArray(): readonly (readonly [number, number])[] };
+  getCenter(): { readonly lng: number; readonly lat: number };
   getCanvas(): HTMLCanvasElement;
   getCanvasContainer(): HTMLElement;
 }
@@ -128,6 +138,9 @@ const fake = vi.hoisted((): FakeRenderer => {
     basemapLayers: [],
     layerSpecs: [],
     paintCalls: [],
+    center: { lng: -75.1, lat: 40.05 },
+    lightCalls: [],
+    skyCalls: [],
   };
 
   class FakeMap implements FakeMapInstance {
@@ -194,6 +207,18 @@ const fake = vi.hoisted((): FakeRenderer => {
           [-74.9, 40.2],
         ],
       };
+    }
+
+    getCenter(): { readonly lng: number; readonly lat: number } {
+      return state.center;
+    }
+
+    setLight(light: Readonly<Record<string, unknown>>): void {
+      state.lightCalls.push(light);
+    }
+
+    setSky(sky: unknown): void {
+      state.skyCalls.push(sky);
     }
 
     getStyle(): { readonly glyphs?: string; readonly layers: readonly Record<string, unknown>[] } {
@@ -420,6 +445,9 @@ afterEach(() => {
   fake.state.basemapLayers.length = 0;
   fake.state.layerSpecs.length = 0;
   fake.state.paintCalls.length = 0;
+  fake.state.center = { lng: -75.1, lat: 40.05 };
+  fake.state.lightCalls.length = 0;
+  fake.state.skyCalls.length = 0;
   offlineBasemap.prepare.mockReset();
   offlineBasemap.prepare.mockResolvedValue(null);
   document.body.innerHTML = "";
@@ -518,6 +546,110 @@ describe("MapLibreHost — the real host against a fake renderer", () => {
     expect(fake.state.terrainCalls.at(-1)).toBeNull();
     expect(fake.state.easeCalls).toEqual([]);
     host.dispose();
+  });
+
+  it("aims standalone hillshade from the sun but leaves a flat map's light alone", async () => {
+    vi.useFakeTimers({ now: new Date("2026-06-21T21:00:00Z") });
+    try {
+      const host = await createMapLibreHost(container(), OPTIONS);
+      const map = currentMap();
+      map.fire("load");
+      host.applyScene(scene({ infoLayers: { features: [], trafficFlowTiles: null, selectedId: null, visible: ["hillshade"] } }));
+
+      const sun = solarPositionAt({ lat: 40.05, lon: -75.1 }, Date.parse("2026-06-21T21:00:00Z"));
+      const direction = fake.state.paintCalls.find((call) => call.name === "hillshade-illumination-direction");
+      expect(direction?.id).toBe("og-terrain-hillshade");
+      expect(Number(direction?.value)).toBeCloseTo((sun as { azimuth: number }).azimuth, 4);
+      expect(
+        fake.state.paintCalls.find((call) => call.name === "hillshade-illumination-anchor")?.value,
+      ).toBe("map");
+      // No terrain, so the style's own flat light stays: relief is lit, ground is not modelled.
+      expect(fake.state.lightCalls.at(-1)).toEqual(DEFAULT_LIGHT);
+      host.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("lights tilted terrain and its sky from the sun over the map's centre", async () => {
+    vi.useFakeTimers({ now: new Date("2026-06-21T21:00:00Z") });
+    try {
+      const element = container();
+      const host = await createMapLibreHost(element, OPTIONS);
+      const map = currentMap();
+      map.fire("load");
+      host.setTerrain3d?.(true);
+
+      const sun = solarPositionAt({ lat: 40.05, lon: -75.1 }, Date.parse("2026-06-21T21:00:00Z"));
+      expect(sun).not.toBeNull();
+      const { azimuth, altitude } = sun as { azimuth: number; altitude: number };
+
+      const light = fake.state.lightCalls.at(-1);
+      expect(light?.["anchor"]).toBe("map");
+      const position = light?.["position"] as readonly number[];
+      expect(position[1]).toBeCloseTo(azimuth, 4);
+      expect(position[2]).toBeCloseTo(90 - altitude, 4);
+      // The sky came from the same altitude: a midday blue at this hour.
+      expect(fake.state.skyCalls.at(-1)).toMatchObject({ "sky-color": "#8fbfe0" });
+      // The machine-readable hour, for a gate or a report.
+      expect(element.getAttribute(MAP_SUN_ATTRIBUTE)).toBe(
+        `${azimuth.toFixed(1)},${altitude.toFixed(1)},${sunToneAt(altitude)}`,
+      );
+      host.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-reads the sun as the clock moves on and after a long pan", async () => {
+    vi.useFakeTimers({ now: new Date("2026-06-21T21:00:00Z") });
+    try {
+      const element = container();
+      const host = await createMapLibreHost(element, OPTIONS);
+      const map = currentMap();
+      map.fire("load");
+      host.setTerrain3d?.(true);
+
+      const first = fake.state.lightCalls.at(-1)?.["position"] as readonly number[];
+      const writes = fake.state.lightCalls.length;
+
+      // Sunset is hours away, but two minutes still moves the bearing westward.
+      vi.advanceTimersByTime(120_000);
+      expect(fake.state.lightCalls.length).toBeGreaterThan(writes);
+      const later = fake.state.lightCalls.at(-1)?.["position"] as readonly number[];
+      expect(later[1]).toBeGreaterThan(first[1] as number);
+
+      // A pan north is a different sun over the ground now on screen.
+      fake.state.center = { lng: -75.1, lat: 42.5 };
+      map.fire("moveend");
+      const panned = fake.state.lightCalls.at(-1)?.["position"] as readonly number[];
+      const expected = solarPositionAt({ lat: 42.5, lon: -75.1 }, Date.now());
+      expect(panned[1]).toBeCloseTo((expected as { azimuth: number }).azimuth, 4);
+      expect(panned[2]).toBeCloseTo(90 - (expected as { altitude: number }).altitude, 4);
+      // Further north at the same instant: a lower sun, so a more grazing polar angle.
+      expect(panned[2]).toBeGreaterThan(later[2] as number);
+      host.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops the sun clock when the map is disposed", async () => {
+    vi.useFakeTimers({ now: new Date("2026-06-21T21:00:00Z") });
+    try {
+      const host = await createMapLibreHost(container(), OPTIONS);
+      const map = currentMap();
+      map.fire("load");
+      host.setTerrain3d?.(true);
+      const writes = fake.state.lightCalls.length;
+
+      host.dispose();
+      vi.advanceTimersByTime(600_000);
+
+      expect(fake.state.lightCalls.length).toBe(writes);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps an active terrain mesh across scene updates and tilts only on a toggle", async () => {
