@@ -16,6 +16,7 @@ public class RideActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     public let jsName = "RideActivity"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isSupported", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "start", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "update", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "end", returnType: CAPPluginReturnPromise),
@@ -36,6 +37,11 @@ public class RideActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         #endif
         call.resolve(["available": false])
+    }
+
+    /// The same answer as `isAvailable`, under the name the web port uses.
+    @objc func isSupported(_ call: CAPPluginCall) {
+        isAvailable(call)
     }
 
     @objc func start(_ call: CAPPluginCall) {
@@ -119,15 +125,22 @@ public class RideActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     private static func state(from call: CAPPluginCall) -> RideActivityAttributes.ContentState? {
         guard let values = call.getObject("state") else { return nil }
         let text = { (key: String) in values[key] as? String ?? "" }
-        let progress = (values["progress"] as? NSNumber)?.doubleValue ?? -1
+        let number = { (key: String, fallback: Double) in (values[key] as? NSNumber)?.doubleValue ?? fallback }
         return RideActivityAttributes.ContentState(
+            kind: text("kind").isEmpty ? "guided" : text("kind"),
             glyph: text("glyph"),
             distance: text("distance"),
             action: text("action"),
             road: text("road"),
             eta: text("eta"),
             remaining: text("remaining"),
-            progress: progress
+            progress: number("progress", -1),
+            warning: text("warning"),
+            elapsedSeconds: number("elapsedSeconds", -1),
+            distanceDone: text("distanceDone"),
+            speed: text("speed"),
+            gain: text("gain"),
+            toStart: text("toStart")
         )
     }
     #endif
@@ -150,6 +163,7 @@ enum RideActivityStore {
     @available(iOS 16.2, *)
     static func state(from guidance: OpenGravelGuidanceSnapshot) -> RideActivityAttributes.ContentState {
         RideActivityAttributes.ContentState(
+            kind: "guided",
             glyph: guidance.glyph,
             distance: guidance.distance,
             action: guidance.action,
@@ -160,6 +174,25 @@ enum RideActivityStore {
         )
     }
     #endif
+
+    /// The app is going away: end every activity so none outlives the ride it
+    /// described. Called from `applicationWillTerminate`, which gives the process
+    /// a moment, so this blocks briefly instead of firing a task and returning.
+    static func endAll() {
+        #if canImport(ActivityKit)
+        guard #available(iOS 16.2, *) else { return }
+        nativeDriving = false
+        current = nil
+        let finished = DispatchSemaphore(value: 0)
+        Task {
+            for activity in Activity<RideActivityAttributes>.activities {
+                await activity.end(nil, dismissalPolicy: .immediate)
+            }
+            finished.signal()
+        }
+        _ = finished.wait(timeout: .now() + 2)
+        #endif
+    }
 
     /// Native guidance changed; `nil` hands the activity back to the web.
     static func native(_ guidance: OpenGravelGuidanceSnapshot?) {
