@@ -130,7 +130,7 @@ jobs:
         with:
           node-version: 24
       - name: download lane outputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: qa-out
           merge-multiple: true
