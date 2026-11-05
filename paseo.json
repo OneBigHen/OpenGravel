@@ -1,0 +1,9 @@
+{
+  "worktree": {
+    "setup": "npm ci --prefer-offline --no-audit --no-fund"
+  },
+  "scripts": {
+    "check": { "command": "npm run typecheck && npm run lint && npm test && npm run build" },
+    "web": { "command": "npm run dev", "type": "service" }
+  }
+}
