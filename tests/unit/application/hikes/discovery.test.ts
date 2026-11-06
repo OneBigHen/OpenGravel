@@ -42,6 +42,13 @@ describe("hike discovery", () => {
       expect(matchHikeFilters(loopHike, { ...none, shape: "loop" })).toBe(true);
       expect(matchHikeFilters(loopHike, { ...none, shape: "out-and-back" })).toBe(false);
     });
+    it("requires positive feature evidence for Waterfall and Views", () => {
+      const basic = measured("a",100,60);
+      expect(matchHikeFilters(basic,{ ...none,waterfall:true })).toBe(false);
+      expect(matchHikeFilters({...basic,featureKinds:["waterfall"]},{ ...none,waterfall:true })).toBe(true);
+      expect(matchHikeFilters({...basic,featureKinds:["peak"]},{ ...none,views:true })).toBe(false);
+      expect(matchHikeFilters({...basic,featureKinds:["fire-tower"]},{ ...none,views:true })).toBe(true);
+    });
     it("short and easy needs the easy grade, 3 miles and 500 ft", () => {
       const easy = { ...measured("easy", 100, 60), sacScale: "hiking" };
       expect(matchHikeFilters(easy, { ...none, kids: true })).toBe(true);

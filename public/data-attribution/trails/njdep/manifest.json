@@ -1,0 +1,22 @@
+{
+  "sourceId": "njdep",
+  "url": "https://services1.arcgis.com/QWdNfRs7lkPq4g4Q/arcgis/rest/services/NJ_State_Park_Service_Trails_h/FeatureServer/63",
+  "licence": "NJDEP Data Distribution Agreement",
+  "licenceUrl": "https://www.arcgis.com/home/item.html?id=0eb7372cf7724f21ae359ad6d2900e24",
+  "recordCount": 3068,
+  "sha256": "aabd71ab0805af367cac5d62c0908628edebbe05906fa983dd308cabd726efb2",
+  "queryBbox": [
+    -80.53,
+    38.9,
+    -73.88,
+    42.27
+  ],
+  "retrievedDate": "2026-10-28",
+  "coordinateReferenceSystem": "EPSG:4326; transformed by ArcGIS outSR from the documented source CRS",
+  "metadataFiles": [
+    "layer.json",
+    "manifest.json",
+    "item.json",
+    "metadata.xml"
+  ]
+}

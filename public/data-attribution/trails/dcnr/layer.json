@@ -1,0 +1,112 @@
+{
+  "fields": [
+    {
+      "name": "the_geom",
+      "description": "The Geometrical point"
+    },
+    {
+      "name": "objectid",
+      "description": "Object Identification"
+    },
+    {
+      "name": "name01",
+      "description": "Local Name of the Trail"
+    },
+    {
+      "name": "name02",
+      "description": "Name of larger trail network that contains trail"
+    },
+    {
+      "name": "name03",
+      "description": "Name of second larger trail network that contains trail"
+    },
+    {
+      "name": "from",
+      "description": "Place name for beginning point of trail"
+    },
+    {
+      "name": "to",
+      "description": "Place name for the ending point of trail"
+    },
+    {
+      "name": "status",
+      "description": "Status of trail segment"
+    },
+    {
+      "name": "description",
+      "description": "Brief description of trail and any interesting experiences/vistas found on trail"
+    },
+    {
+      "name": "ada_access",
+      "description": "Is the trail segment ADA accessible"
+    },
+    {
+      "name": "update",
+      "description": "Date trail was last updated in database"
+    },
+    {
+      "name": "comments",
+      "description": "Additional Other Comments "
+    },
+    {
+      "name": "method",
+      "description": "Status of trail segment (Listed as no longer used in their data"
+    },
+    {
+      "name": "acct_id",
+      "description": "Unique numeric ID for trail point feature"
+    },
+    {
+      "name": "accolade",
+      "description": "Recognized accolades (such as trail of the year)"
+    },
+    {
+      "name": "water_trail",
+      "description": "Is the trail a water trail"
+    },
+    {
+      "name": "description_for_web",
+      "description": "Web description of trail"
+    },
+    {
+      "name": "difficulty",
+      "description": "Difficulty rating of the trail"
+    },
+    {
+      "name": "miles",
+      "description": "Mileage of the trail segment"
+    },
+    {
+      "name": "trailid",
+      "description": "Identification that is needed for the Website"
+    },
+    {
+      "name": "railine",
+      "description": "Is trail located on a former rail corridor?"
+    },
+    {
+      "name": "rort",
+      "description": "Is trail segment on a road or trail?"
+    },
+    {
+      "name": "shape_stlength",
+      "description": "Shape st Length"
+    },
+    {
+      "name": "inline_fid",
+      "description": "In Line FID"
+    },
+    {
+      "name": "simlnflag",
+      "description": "SimLnFlag"
+    },
+    {
+      "name": "maxsimptol",
+      "description": "MaxSimpTol"
+    },
+    {
+      "name": "minsimptol",
+      "description": "MinSimpTol"
+    }
+  ]
+}

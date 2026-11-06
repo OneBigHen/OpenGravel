@@ -1,0 +1,1992 @@
+{
+  "id": "hguq-h588",
+  "name": "Trails Simple Geometry",
+  "assetType": "dataset",
+  "attribution": "Department of Conservation and Natural Resources",
+  "averageRating": 0,
+  "category": "Services Near You",
+  "createdAt": 1647611100,
+  "description": "Trail Access Lines geospatial data.",
+  "diciBackend": false,
+  "displayType": "table",
+  "downloadCount": 182,
+  "hideFromCatalog": false,
+  "hideFromDataJson": false,
+  "licenseId": "USGOV_WORKS",
+  "locked": false,
+  "newBackend": true,
+  "numberOfComments": 0,
+  "oid": 38285655,
+  "provenance": "official",
+  "publicationAppendEnabled": false,
+  "publicationDate": 1647611102,
+  "publicationGroup": 18619703,
+  "publicationStage": "published",
+  "rowsUpdatedAt": 1647611122,
+  "tableId": 18619703,
+  "totalTimesRated": 0,
+  "viewCount": 1000,
+  "viewLastModified": 1757600420,
+  "viewType": "tabular",
+  "approvals": [
+    {
+      "reviewedAt": 1647611103,
+      "reviewedAutomatically": true,
+      "state": "approved",
+      "submissionId": 4518624,
+      "submissionObject": "public_audience_request",
+      "submissionOutcome": "change_audience",
+      "submittedAt": 1647611103,
+      "targetAudience": "public",
+      "workflowId": 2176,
+      "submissionDetails": {
+        "permissionType": "READ"
+      },
+      "submissionOutcomeApplication": {
+        "endedAt": 1647611103,
+        "failureCount": 0,
+        "startedAt": 1647611103,
+        "status": "success"
+      },
+      "submitter": {
+        "id": "8aix-hks7",
+        "displayName": "Darsala"
+      }
+    }
+  ],
+  "clientContext": {
+    "clientContextVariables": [],
+    "inheritedVariables": {}
+  },
+  "columns": [
+    {
+      "id": 557543681,
+      "name": "The Geom",
+      "dataTypeName": "multiline",
+      "description": "The Geometrical point",
+      "fieldName": "the_geom",
+      "position": 1,
+      "renderTypeName": "multiline",
+      "tableColumnId": 141430738,
+      "format": {}
+    },
+    {
+      "id": 557543682,
+      "name": "Object ID",
+      "dataTypeName": "number",
+      "description": "Object Identification",
+      "fieldName": "objectid",
+      "position": 2,
+      "renderTypeName": "number",
+      "tableColumnId": 141430739,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "684",
+        "null": "0",
+        "top": [
+          {
+            "item": "1",
+            "count": "1"
+          },
+          {
+            "item": "2",
+            "count": "1"
+          },
+          {
+            "item": "3",
+            "count": "1"
+          },
+          {
+            "item": "4",
+            "count": "1"
+          },
+          {
+            "item": "5",
+            "count": "1"
+          },
+          {
+            "item": "6",
+            "count": "1"
+          },
+          {
+            "item": "7",
+            "count": "1"
+          },
+          {
+            "item": "8",
+            "count": "1"
+          },
+          {
+            "item": "9",
+            "count": "1"
+          },
+          {
+            "item": "10",
+            "count": "1"
+          },
+          {
+            "item": "11",
+            "count": "1"
+          },
+          {
+            "item": "12",
+            "count": "1"
+          },
+          {
+            "item": "13",
+            "count": "1"
+          },
+          {
+            "item": "14",
+            "count": "1"
+          },
+          {
+            "item": "15",
+            "count": "1"
+          },
+          {
+            "item": "16",
+            "count": "1"
+          },
+          {
+            "item": "17",
+            "count": "1"
+          },
+          {
+            "item": "18",
+            "count": "1"
+          },
+          {
+            "item": "19",
+            "count": "1"
+          },
+          {
+            "item": "20",
+            "count": "1"
+          }
+        ],
+        "smallest": "1",
+        "count": "683",
+        "cardinality": "683"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543683,
+      "name": "Trail Local Name",
+      "dataTypeName": "text",
+      "description": "Local Name of the Trail",
+      "fieldName": "name01",
+      "position": 3,
+      "renderTypeName": "text",
+      "tableColumnId": 141430740,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "Zacharias Creek Trail",
+        "null": "0",
+        "top": [
+          {
+            "item": "Connector Trail",
+            "count": "3"
+          },
+          {
+            "item": "Mill Creek Trail",
+            "count": "2"
+          },
+          {
+            "item": "Overlook Trail",
+            "count": "2"
+          },
+          {
+            "item": "Fischer's Park Nature Trail",
+            "count": "1"
+          },
+          {
+            "item": "Mahoning Shadow Trail",
+            "count": "1"
+          },
+          {
+            "item": "Cedar Creek Parkway Trails",
+            "count": "1"
+          },
+          {
+            "item": "BicyclePA Route G",
+            "count": "1"
+          },
+          {
+            "item": "Tredway Trail",
+            "count": "1"
+          },
+          {
+            "item": "Carroll Commons Park Path",
+            "count": "1"
+          },
+          {
+            "item": "Darlington Trail",
+            "count": "1"
+          },
+          {
+            "item": "Wolgemuth Park Trail",
+            "count": "1"
+          },
+          {
+            "item": "Tidal Delaware Water Trail",
+            "count": "1"
+          },
+          {
+            "item": "Mummau Park Trail",
+            "count": "1"
+          },
+          {
+            "item": "Conestoga Trail",
+            "count": "1"
+          },
+          {
+            "item": "Mill Run Trail",
+            "count": "1"
+          },
+          {
+            "item": "Conodoguinet Creek Water Trail",
+            "count": "1"
+          },
+          {
+            "item": "Reed Run Nature Preserve Trail",
+            "count": "1"
+          },
+          {
+            "item": "Lake Loop Trail",
+            "count": "1"
+          },
+          {
+            "item": "Heart of Lancaster",
+            "count": "1"
+          },
+          {
+            "item": "Hidden Valley Passage",
+            "count": "1"
+          }
+        ],
+        "smallest": "202 Parkway Trail",
+        "count": "683",
+        "cardinality": "679"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543684,
+      "name": "Larger Trail Name",
+      "dataTypeName": "text",
+      "description": "Name of larger trail network that contains trail",
+      "fieldName": "name02",
+      "position": 4,
+      "renderTypeName": "text",
+      "tableColumnId": 141430741,
+      "cachedContents": {
+        "non_null": "238",
+        "largest": "Windolph Landing",
+        "null": "445",
+        "top": [
+          {
+            "item": "N/A",
+            "count": "14"
+          },
+          {
+            "item": "Blue Spruce Park",
+            "count": "9"
+          },
+          {
+            "item": "Loyalsock State Forest",
+            "count": "8"
+          },
+          {
+            "item": "Erie to Pittsburgh Trail",
+            "count": "8"
+          },
+          {
+            "item": "Valley Forge",
+            "count": "8"
+          },
+          {
+            "item": "Quebec Run Wild Area of Braddock Division of Forbes State Forest",
+            "count": "7"
+          },
+          {
+            "item": "Blacklick Valley Natural Area",
+            "count": "7"
+          },
+          {
+            "item": "Allegheny National Forest Trails",
+            "count": "6"
+          },
+          {
+            "item": "Sproul State Forest",
+            "count": "5"
+          },
+          {
+            "item": "Elk State Forest Trails",
+            "count": "4"
+          },
+          {
+            "item": "Tuna Valley Trails",
+            "count": "4"
+          },
+          {
+            "item": "Delaware State Forest",
+            "count": "4"
+          },
+          {
+            "item": "<Null>",
+            "count": "3"
+          },
+          {
+            "item": "Little Pine State Park Trails",
+            "count": "3"
+          },
+          {
+            "item": "Caledonia State Park Trails",
+            "count": "3"
+          },
+          {
+            "item": "Mid State Trail",
+            "count": "3"
+          },
+          {
+            "item": "Buchanan State Forest",
+            "count": "3"
+          },
+          {
+            "item": "Moshannon State Forest",
+            "count": "3"
+          },
+          {
+            "item": "Parker Dam State Park Trails",
+            "count": "3"
+          },
+          {
+            "item": "Black Moshannon State Park Trails",
+            "count": "2"
+          }
+        ],
+        "smallest": "AFT",
+        "count": "683",
+        "cardinality": "134"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543685,
+      "name": "Second Larger Trail Name",
+      "dataTypeName": "text",
+      "description": "Name of second larger trail network that contains trail",
+      "fieldName": "name03",
+      "position": 5,
+      "renderTypeName": "text",
+      "tableColumnId": 141430742,
+      "cachedContents": {
+        "non_null": "56",
+        "largest": "Youghiogheny River Trail",
+        "null": "627",
+        "top": [
+          {
+            "item": "LCC Trails",
+            "count": "18"
+          },
+          {
+            "item": "N/A",
+            "count": "17"
+          },
+          {
+            "item": "<Null>",
+            "count": "4"
+          },
+          {
+            "item": "Great Eastern Trail",
+            "count": "1"
+          },
+          {
+            "item": "Hess Recreation Area",
+            "count": "1"
+          },
+          {
+            "item": "John James Audubon Center",
+            "count": "1"
+          },
+          {
+            "item": "Medrad Trail",
+            "count": "1"
+          },
+          {
+            "item": "Moores Run Trail",
+            "count": "1"
+          },
+          {
+            "item": "Parker Dam State Park",
+            "count": "1"
+          },
+          {
+            "item": "PA Wilds",
+            "count": "1"
+          },
+          {
+            "item": "S.B. Elliott State Park",
+            "count": "1"
+          },
+          {
+            "item": "Summit Trail",
+            "count": "1"
+          },
+          {
+            "item": "Susquehannock Trail",
+            "count": "1"
+          },
+          {
+            "item": "Theodore Parker Natural Area",
+            "count": "1"
+          },
+          {
+            "item": "Thornhurst Snowmobile Trails",
+            "count": "1"
+          },
+          {
+            "item": "Worlds End State Park",
+            "count": "1"
+          },
+          {
+            "item": "Bald Barren Trail",
+            "count": "1"
+          },
+          {
+            "item": "Youghiogheny River Trail",
+            "count": "1"
+          },
+          {
+            "item": "Big Woods Trail",
+            "count": "1"
+          },
+          {
+            "item": "Gallitzin State Forest Trails",
+            "count": "1"
+          }
+        ],
+        "smallest": "Bald Barren Trail",
+        "count": "683",
+        "cardinality": "20"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543686,
+      "name": "From",
+      "dataTypeName": "text",
+      "description": "Place name for beginning point of trail",
+      "fieldName": "from",
+      "position": 6,
+      "renderTypeName": "text",
+      "tableColumnId": 141430743,
+      "cachedContents": {
+        "non_null": "409",
+        "largest": "York City - John Rudy Park (planned: Hanover)",
+        "null": "274",
+        "top": [
+          {
+            "item": "Circuit",
+            "count": "11"
+          },
+          {
+            "item": "Loop",
+            "count": "10"
+          },
+          {
+            "item": "N/A",
+            "count": "8"
+          },
+          {
+            "item": "Blue Spruce Park",
+            "count": "7"
+          },
+          {
+            "item": "Loops",
+            "count": "6"
+          },
+          {
+            "item": "Parker Lane",
+            "count": "4"
+          },
+          {
+            "item": "Pymatuning State Park",
+            "count": "3"
+          },
+          {
+            "item": "Ansonia",
+            "count": "3"
+          },
+          {
+            "item": "Johnstown",
+            "count": "2"
+          },
+          {
+            "item": "Pine Grove Furnace State Park",
+            "count": "2"
+          },
+          {
+            "item": "Rte 441",
+            "count": "2"
+          },
+          {
+            "item": "Pine Ridge Park",
+            "count": "2"
+          },
+          {
+            "item": "Downingtown",
+            "count": "2"
+          },
+          {
+            "item": "Birdsboro",
+            "count": "2"
+          },
+          {
+            "item": "NY border",
+            "count": "2"
+          },
+          {
+            "item": "Schuylkill River Trail",
+            "count": "2"
+          },
+          {
+            "item": "Frackville",
+            "count": "2"
+          },
+          {
+            "item": "1415 Scalpy Hollow Dr",
+            "count": "2"
+          },
+          {
+            "item": "Buttermilk Falls",
+            "count": "2"
+          },
+          {
+            "item": "Stump Rd",
+            "count": "2"
+          }
+        ],
+        "smallest": "1415 Scalpy Hollow Dr",
+        "count": "683",
+        "cardinality": "348"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543687,
+      "name": "To",
+      "dataTypeName": "text",
+      "description": "Place name for the ending point of trail",
+      "fieldName": "to",
+      "position": 7,
+      "renderTypeName": "text",
+      "tableColumnId": 141430744,
+      "cachedContents": {
+        "non_null": "368",
+        "largest": "Zinns Mill Rd, Lebanon",
+        "null": "315",
+        "top": [
+          {
+            "item": "N/A",
+            "count": "15"
+          },
+          {
+            "item": "Loop Trail",
+            "count": "7"
+          },
+          {
+            "item": "Loop",
+            "count": "5"
+          },
+          {
+            "item": "Appalachian Trail",
+            "count": "4"
+          },
+          {
+            "item": "Susquehanna River",
+            "count": "3"
+          },
+          {
+            "item": "Blacklick Trail",
+            "count": "3"
+          },
+          {
+            "item": "Horse-Shoe Trail",
+            "count": "2"
+          },
+          {
+            "item": "Chickies Rock",
+            "count": "2"
+          },
+          {
+            "item": "Saltsburg",
+            "count": "2"
+          },
+          {
+            "item": "Stump Rd",
+            "count": "2"
+          },
+          {
+            "item": "Freeport",
+            "count": "2"
+          },
+          {
+            "item": "Circut",
+            "count": "2"
+          },
+          {
+            "item": "1415 Scalpy Hollow Dr",
+            "count": "2"
+          },
+          {
+            "item": "Easton",
+            "count": "2"
+          },
+          {
+            "item": "Oil City",
+            "count": "2"
+          },
+          {
+            "item": "Emlenton",
+            "count": "2"
+          },
+          {
+            "item": "White Haven",
+            "count": "2"
+          },
+          {
+            "item": "Loyalsock State Forest",
+            "count": "2"
+          },
+          {
+            "item": "Pine Ridge Park",
+            "count": "2"
+          },
+          {
+            "item": "Jim Thorpe",
+            "count": "2"
+          }
+        ],
+        "smallest": "1415 Scalpy Hollow Dr",
+        "count": "683",
+        "cardinality": "320"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543688,
+      "name": "Status",
+      "dataTypeName": "number",
+      "description": "Status of trail segment",
+      "fieldName": "status",
+      "position": 8,
+      "renderTypeName": "number",
+      "tableColumnId": 141430745,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "2",
+        "null": "0",
+        "top": [
+          {
+            "item": "1",
+            "count": "682"
+          },
+          {
+            "item": "2",
+            "count": "1"
+          }
+        ],
+        "smallest": "1",
+        "count": "683",
+        "cardinality": "2"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543689,
+      "name": "Description",
+      "dataTypeName": "text",
+      "description": "Brief description of trail and any interesting experiences/vistas found on trail",
+      "fieldName": "description",
+      "position": 9,
+      "renderTypeName": "text",
+      "tableColumnId": 141430746,
+      "cachedContents": {
+        "non_null": "681",
+        "largest": "Yellow Breeches Creek originates on South Mountain, in Michaux State Forest, Cumberland County, near Walnut Bottom.  From there, the Yellow Breeches flows through the limestone-rich Cumberland Valley and joins the Susquehanna River near New Cumberland. The main stem of the Yellow Breeches drains about 219 square miles of forested areas, farm land, and suburbs.  Most of the developed land is currently congregated in the lower watershed, with forested areas in the headwaters and on the hilltops.  Agriculture dominates the fertile valley areas, lending a pastoral setting to the middle section of the stream.  In 1992, the Yellow Breeches was designated as a Pennsylvania Scenic River. The portion of the mainstem designated as the water trail is characterized mainly by long shady pools with occasional dams and riffle areas. There are three sections for a total of approximately 13 miles.  The first trip begins at South Middleton Township Park, and the third trip ends at New Cumberland Borough Park.",
+        "null": "2",
+        "top": [
+          {
+            "item": "BicyclePA routes were designed by experienced bicyclists to provide bicycling members of the traveling public who wish to traverse the state with a guide to some of the Commonwealth\u2019s highways and rail-trails. Few of these routes contain bike lanes or other facilities designed specifically for bicyclists traveling within the four corners of the Commonwealth. Every bicyclist is responsible for his or her personal safety and welfare and for remaining alert and mindful of conditions on the roads or trails. BicyclePA users are expected to be licensed drivers or persons at least sixteen years of age who have several years of road bicycling experience.",
+            "count": "7"
+          },
+          {
+            "item": "The Quebec Run Wild Area is located along the eastern slope of Chestnut Ridge, in Fayette County. This heavily forested 7,441 acre area of land extends eastward to Big Sandy Creek. Nearly all of the Quebec Run and Tebolt Run watersheds are encompassed by the Wild Area. No development of a permanent nature will be permitted in this area, so as to retain the undeveloped \u201cwild\u201d character. The general public can use this area for hiking, hunting, fishing, and the pursuit of peace and solitude. Big Sandy Creek and Mill Run are stocked with trout, and the lower reaches of Quebec and Tebolt Runs contain native trout. The forest is mixed mesophitic. Sugar and red maple, along with yellow-poplar, line the moist north and east-facing slopes. Mixed oaks occupy the warmer and drier south and west sides of the hills. Rhododendron thickets share the wet creek bottoms with hemlock. Mountain laurel, dogwood, sassafras and greenbriar occur throughout. An area of pitch pine can be found growing in the rocky surface near Miller Trail. This forest is mostly third growth, resulting from extensive timber harvesting by the Summit Lumber Co. of Uniontown around 1938-40. Many of the old logging roads and tram roads are in evidence, along with the dark brown sawdust piles that give mute testimony to the once active portable sawmills. An abandoned farm field near the east end of Brocker and Tebolt Trails is reverting to brush and forestland. Several acres were planted with spruce and larch. This area contains many miles of maintained trails. Combinations of these trails provide different loops to the user.",
+            "count": "6"
+          },
+          {
+            "item": "Marshall Township\u2019s Trails System provides a variety of exercise and exploration options.  Look for our trailhead markers throughout the Township. The trails are designed to connect residents to our parks and other amenities. The trails vary in material types and width to accommodate all users: Asphalt Trails (Bikes, Joggers, Walkers, Strollers), Gravel Trails (Joggers, Walkers, Mountain Bikes), Earthen Trails (Hikers), No Motorized Vehicles are Permitted on Any Trails.",
+            "count": "4"
+          },
+          {
+            "item": "Snowmobile riding is available on many state forest roads are open for joint use of snowmobiles and licensed motorized vehicles. Call the snowmobile hotline at 1-877-766-6253 to obtain up-to-date information on trail conditions. Snowmobile trails are open from the end of antlerless deer season until April 1 each year. All snowmobiles must be registered to use the trail. All riders are required to wear safety equipment.",
+            "count": "4"
+          },
+          {
+            "item": "The most notable feature in the park is Chickies Rock, a massive outcropping of quartzite rock towering 200 feet above the river. The vista offers impressive views of York County, the borough of Marietta, and farmlands of northwestern Lancaster County. Chickies Rock Park is also a collection of historical treasures. The area once boasted seven iron furnaces and rolling mills, a canal and a local trolley line. Remnants of several furnaces, canal walls, and trolley-line grades are still visible. Chickies Rock Park's name is derived from the American Indian word \"Chiquesalunga\" meaning place of the crayfish. The park includes Chiques Creek, Donegal Creek, and selected points to the Susquehanna River.",
+            "count": "3"
+          },
+          {
+            "item": "Moshannon State Forest provides a 208-mile integrated system of designated state forest roads and specially constructed and groomed snowmobile trails. During winter months, these trails and roads are sometimes inaccessible by conventional vehicles. Maps of the trails are available from the district office.",
+            "count": "3"
+          },
+          {
+            "item": "The Delaware State Forest maintains nearly one hundred and fifteen miles of snowmobile trails which are open to the public. This system provides trails for both long and short rides. Trail grooming is conducted on about seventy miles of this trail network. Groomed trail systems include the snowmobile trail system at the Promised Land Tract \u2013 which connects to Promised Land State Park. The Edgemere Snowmobile Trail System, predominately in Porter Township, Pike County, is also groomed. Dixon Miller Recreation Area and Snow Hill Snowmobile Trail system offer Snow Machine enthusiasts additional opportunities to recreate on their snowmobiles. Snowmobiles must be registered, covered by liability insurance, and riders must wear helmets. Trail maps and information may be obtained by contacting the district office in Swiftwater or from this web site.",
+            "count": "3"
+          },
+          {
+            "item": "There are 90 miles of snowmobile trails available, mostly on joint-use roads. Maps for ATV and snowmobile trails are available on the Buchanan Maps web page, from the district office or on DCNR's All-Terrain Vehicles and Snowmobiles web pages.",
+            "count": "3"
+          },
+          {
+            "item": "The rugged terrain of Tobyhanna and Gouldsboro state parks makes for challenging but rewarding hiking. All trails are blazed. Double blazes indicates a change of direction or a junction of two trails.  Most sections of the trails are relatively flat and easy, but there are sections where proper footwear will be neeed to negotiate rocky areas.",
+            "count": "2"
+          },
+          {
+            "item": "Michaux State Forest offers approximately 132 miles of snowmobile trails.",
+            "count": "2"
+          },
+          {
+            "item": "Follows ridge on northern side of Blue Spruce Park.",
+            "count": "2"
+          },
+          {
+            "item": "Fishing Creek is a designated high-quality cold-water fishery. Fishing Creek Trails are great for everyone because the waterways and forests around the trails have a variety of fish, flower, and tree species.",
+            "count": "2"
+          },
+          {
+            "item": "A snowmobile trail system of more than 100 miles provides excellent snowmobiling during snowy winter months.",
+            "count": "2"
+          },
+          {
+            "item": "Kettle Creek State Park consists of 1,793 acres along Kettle Creek in western Clinton County. The park is in a valley surrounded by mountainous terrain and wilderness. Novice and experienced hikers will find an abundance of trails in the park area. Short day-hikes are possible on the many park trails. Backpackers can enjoy the 53-mile Donut Hole Trail with an access parking lot across from the Lower Campground. This trail connects onto several other trail systems. Trail maps are available at the park office.",
+            "count": "2"
+          },
+          {
+            "item": "Forbes State Forest has over 115 miles of groomed state forest roads and trails open for snowmobiling. Contact the district office for a copy of the Laurel Highlands Snowmobile Trail System map, showing designated trails, or download the map from our maps page.",
+            "count": "2"
+          },
+          {
+            "item": "The Rothrock offers about 200 miles of roads and trails for snowmobiling. Some trails are better suited for these activities than others. The Colerain, Stone Creek, Alan Seeger, Pine Hill, Galbraith Gap, and Kepler Road trailheads are plowed for winter access by recreational users. Please visit the Snowmobiles Information web page for more information on riding opportunities within the State Forest system.",
+            "count": "2"
+          },
+          {
+            "item": "Weiser State Forest is located in the ridge-and-valley region of eastern PA. The forest covers almost 30,000 acres on 16 tracts throughout the region. Weiser also encompasses a series of river islands on the Susquehanna River called the Sheets Island Archipelago. Snowmobiling is a favorite winter activities on the Weiser State Forest Port Clinton, Haldeman and Greenland tracts. 20 miles of joint-use roads and 20.5 miles of shared-use trails are open for snowmobiles on the. Properly registered snowmobiles may be operated on the day following the official closing of fire arms deer season. In addition, an eight mile connector trail has been established in cooperation with the Pennsylvania State Game Commission across State Game Lands 210. Maps showing the roads, trails, and access areas are available from the district office.",
+            "count": "2"
+          },
+          {
+            "item": "The Loyalsock State Forest's Cross-Country Ski Trails are composed of five loops of trails suitable for hiking and cross-country skiing. Portions of these trails are also suitable for biking and equestrian use. The Hawkeye Ski Trail is a 7.23-mile red blazed trail. It is particularly noted for its beauty in winter, but is a pleasant hike any time of year. Portions of this trail are also ideal for biking or horseback riding. Also in the area are the Sand Spring, Sharp Shinned, and Cherry Ridge Trails. The Sand Spring Trail is best suited for hiking and cross country skiing. At 2.96 miles the Sand Spring offers an easy walk with views of the wetlands that are protected in the Devil\u2019s Elbow Natural Area to the north. The Sharp Shinned trail is 2.39 miles long and connects the Hawkeye with the Old Loggers Path. This trail can be used to make alternate loops. The Cherry Ridge Trail is a 5.71-mile trail found on the other side of Ellenton Ridge Road. This trail is relatively easy and offers a peaceful setting. Following administrative roads on the eastern and southern portions it eventually follows an old grade on its western side, where it passes sections of serene hemlock stands as well as boulders and rock outcroppings. For a map of these trails visit: http://www.dcnr.state.pa.us/cs/groups/public/documents/document/dcnr_20027896.pdf.",
+            "count": "2"
+          },
+          {
+            "item": "Pine Grove Furnace State Park provides trailheads for the following hiking trails: Buck Ridge Trail: 6 miles - This trail through the Michaux State Forest connects Kings Gap Environmental Education Center and Pine Grove Furnace State Park. The trailhead is across from the park office and is marked with orange paint blazes. Creek Trail: 0.5-mile - Begin at the amphitheater and wind past vernal ponds and a stand of white pine along Mountain Creek near the camping area. Mountain Creek Trail: 1.4-mile - This trail is a link between the bicycle trail to Fuller Lake and the Icehouse Road to Laurel Lake. The trail affords the hiker an alternate path to Laurel Lake Day Use area other than the paved roadway. This trail winds along scenic Mountain Creek. The trail meanders through forests and wetlands as it follows Mountain Creek downstream to Laurel Lake. Deer, heron, waterfowl and beaver can be seen along this trail. Koppenhaver Trail: 1-mile - Begin this scenic, yellow-blazed loop trail at the far end of Fuller Ball Field. The footpath crosses Toms Run and passes through stands of mature pines and hemlocks. Pole Steeple Trail: 0.75-mile - This blue-blazed Michaux State Forest trail contains some steep climbs. The entire park can be viewed from the Pole Steeple Overlook, which is a quartzite rock outcropping. The trail begins at the Pole Steeple parking lot, along the Railroad Road by Laurel Lake, and proceeds up Piney Mountain to the rocky overlook. The steep grade and sheer drop may stress some individuals. Parents are advised to closely supervise children, especially when they are on the rocks and ledges. Swamp Trail: 0.25-mile - Investigate a small, forested swamp filled with interesting plants and animals. The trail begins and ends on the bicycle path.",
+            "count": "2"
+          },
+          {
+            "item": "The Five Bridges Trail uses a portion of the former Pittsburgh and Shawmut Railroad corridor which ran from Brockway to Brookville.  It starts out with several narrow cuts through shale hillsides near Brockway and then it traverses a wetlands area as it runs along Mill Creek and crosses it with five bridges.  The trail begins about one mile outside of Brockway and runs for 8 miles to Allens Mills. Beavers have made dams along Mill Creek and today it is a scenic wetland area with many species of birds including grouse and herons. The trail is being improved and volunteers are welcome.",
+            "count": "1"
+          }
+        ],
+        "smallest": "0.75-mile - This blue-blazed Michaux State Forest trail contains some steep climbs. The entire park can be viewed from the Pole Steeple Overlook, which is a quartzite rock outcropping. The trail begins at the Pole Steeple parking lot, along the Railroad Road by Laurel Lake, and proceeds up Piney Mountain to the rocky overlook.  The steep grade and sheer drop may stress some individuals. Parents are advised to closely supervise children, especially when they are on the rocks and ledges.",
+        "count": "683",
+        "cardinality": "645"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543690,
+      "name": "ADA Access",
+      "dataTypeName": "number",
+      "description": "Is the trail segment ADA accessible",
+      "fieldName": "ada_access",
+      "position": 10,
+      "renderTypeName": "number",
+      "tableColumnId": 141430747,
+      "cachedContents": {
+        "non_null": "646",
+        "largest": "1",
+        "null": "37",
+        "top": [
+          {
+            "item": "0",
+            "count": "475"
+          },
+          {
+            "item": "1",
+            "count": "171"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "2"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543691,
+      "name": "Update",
+      "dataTypeName": "date",
+      "description": "Date trail was last updated in database",
+      "fieldName": "update",
+      "position": 11,
+      "renderTypeName": "date",
+      "tableColumnId": 141430748,
+      "cachedContents": {
+        "non_null": "644",
+        "largest": "2021-10-08T00:00:00.000Z",
+        "null": "39",
+        "top": [
+          {
+            "item": "2011-09-23T00:00:00.000Z",
+            "count": "98"
+          },
+          {
+            "item": "2011-05-27T00:00:00.000Z",
+            "count": "37"
+          },
+          {
+            "item": "2016-10-21T00:00:00.000Z",
+            "count": "21"
+          },
+          {
+            "item": "2016-07-22T00:00:00.000Z",
+            "count": "21"
+          },
+          {
+            "item": "2010-07-14T00:00:00.000Z",
+            "count": "21"
+          },
+          {
+            "item": "2016-07-19T00:00:00.000Z",
+            "count": "18"
+          },
+          {
+            "item": "2016-07-21T00:00:00.000Z",
+            "count": "17"
+          },
+          {
+            "item": "2011-06-08T00:00:00.000Z",
+            "count": "15"
+          },
+          {
+            "item": "2016-07-20T00:00:00.000Z",
+            "count": "15"
+          },
+          {
+            "item": "2011-11-11T00:00:00.000Z",
+            "count": "9"
+          },
+          {
+            "item": "2016-10-26T00:00:00.000Z",
+            "count": "9"
+          },
+          {
+            "item": "2016-08-09T00:00:00.000Z",
+            "count": "7"
+          },
+          {
+            "item": "2016-11-21T00:00:00.000Z",
+            "count": "6"
+          },
+          {
+            "item": "2016-08-05T00:00:00.000Z",
+            "count": "6"
+          },
+          {
+            "item": "2011-10-19T00:00:00.000Z",
+            "count": "6"
+          },
+          {
+            "item": "2016-08-26T00:00:00.000Z",
+            "count": "6"
+          },
+          {
+            "item": "2016-07-13T00:00:00.000Z",
+            "count": "5"
+          },
+          {
+            "item": "2011-08-05T00:00:00.000Z",
+            "count": "5"
+          },
+          {
+            "item": "2010-09-22T00:00:00.000Z",
+            "count": "5"
+          },
+          {
+            "item": "2017-08-22T00:00:00.000Z",
+            "count": "5"
+          }
+        ],
+        "smallest": "2007-12-07T00:00:00.000Z",
+        "count": "683",
+        "cardinality": "219"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543692,
+      "name": "Comments",
+      "dataTypeName": "text",
+      "description": "Additional Other Comments ",
+      "fieldName": "comments",
+      "position": 12,
+      "renderTypeName": "text",
+      "tableColumnId": 141430749,
+      "cachedContents": {
+        "non_null": "32",
+        "largest": "Updated 6/29/16 - ExplorePATrails",
+        "null": "651",
+        "top": [
+          {
+            "item": "Garmin eTrex Summit HC",
+            "count": "19"
+          },
+          {
+            "item": "Digitize using Bing Maps",
+            "count": "1"
+          },
+          {
+            "item": "Garmin eTrex Summit HC; corrected with aerial photographs",
+            "count": "1"
+          },
+          {
+            "item": "GPS SCS",
+            "count": "1"
+          },
+          {
+            "item": "NEPA has an easement on the first 8 miles of the O&W",
+            "count": "1"
+          },
+          {
+            "item": "Not bike friendly-poor drainage & large ballast stone",
+            "count": "1"
+          },
+          {
+            "item": "Parts managed by susquehanna gateway heritage area, lancaster county, and lcswma",
+            "count": "1"
+          },
+          {
+            "item": "Passes by boulders",
+            "count": "1"
+          },
+          {
+            "item": "Picnic table and picnic shelter available",
+            "count": "1"
+          },
+          {
+            "item": "Rest rooms and drinking water available",
+            "count": "1"
+          },
+          {
+            "item": "The trail cuts through scenic woodlands complete with a meandering creek, a pretty waterfall and open fields of flowers.",
+            "count": "1"
+          },
+          {
+            "item": "Trail along Lake Towhee",
+            "count": "1"
+          },
+          {
+            "item": "Digitized from Blacklick Valley Natural Area park map",
+            "count": "1"
+          },
+          {
+            "item": "Updated 6/29/16 - ExplorePATrails",
+            "count": "1"
+          }
+        ],
+        "smallest": "Digitized from Blacklick Valley Natural Area park map",
+        "count": "683",
+        "cardinality": "14"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543693,
+      "name": "Method",
+      "dataTypeName": "number",
+      "description": "Status of trail segment (Listed as no longer used in their data",
+      "fieldName": "method",
+      "position": 13,
+      "renderTypeName": "number",
+      "tableColumnId": 141430750,
+      "cachedContents": {
+        "non_null": "447",
+        "largest": "5",
+        "null": "236",
+        "top": [
+          {
+            "item": "1",
+            "count": "325"
+          },
+          {
+            "item": "2",
+            "count": "118"
+          },
+          {
+            "item": "0",
+            "count": "1"
+          },
+          {
+            "item": "3",
+            "count": "1"
+          },
+          {
+            "item": "4",
+            "count": "1"
+          },
+          {
+            "item": "5",
+            "count": "1"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "6"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543694,
+      "name": "Acct ID",
+      "dataTypeName": "number",
+      "description": "Unique numeric ID for trail point feature",
+      "fieldName": "acct_id",
+      "position": 14,
+      "renderTypeName": "number",
+      "tableColumnId": 141430751,
+      "cachedContents": {
+        "non_null": "99",
+        "largest": "6376397",
+        "null": "584",
+        "top": [
+          {
+            "item": "1000000",
+            "count": "7"
+          },
+          {
+            "item": "6015263",
+            "count": "1"
+          },
+          {
+            "item": "6016803",
+            "count": "1"
+          },
+          {
+            "item": "6016875",
+            "count": "1"
+          },
+          {
+            "item": "6016883",
+            "count": "1"
+          },
+          {
+            "item": "6016892",
+            "count": "1"
+          },
+          {
+            "item": "6016894",
+            "count": "1"
+          },
+          {
+            "item": "6016900",
+            "count": "1"
+          },
+          {
+            "item": "6016902",
+            "count": "1"
+          },
+          {
+            "item": "6016903",
+            "count": "1"
+          },
+          {
+            "item": "6016911",
+            "count": "1"
+          },
+          {
+            "item": "6016926",
+            "count": "1"
+          },
+          {
+            "item": "6016930",
+            "count": "1"
+          },
+          {
+            "item": "6016934",
+            "count": "1"
+          },
+          {
+            "item": "6016943",
+            "count": "1"
+          },
+          {
+            "item": "6016945",
+            "count": "1"
+          },
+          {
+            "item": "6016955",
+            "count": "1"
+          },
+          {
+            "item": "6016957",
+            "count": "1"
+          },
+          {
+            "item": "6016961",
+            "count": "1"
+          },
+          {
+            "item": "6016968",
+            "count": "1"
+          }
+        ],
+        "smallest": "983",
+        "count": "683",
+        "cardinality": "93"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543695,
+      "name": "Accolade",
+      "dataTypeName": "text",
+      "description": "Recognized accolades (such as trail of the year)",
+      "fieldName": "accolade",
+      "position": 15,
+      "renderTypeName": "text",
+      "tableColumnId": 141430752,
+      "cachedContents": {
+        "non_null": "50",
+        "largest": "Wild turkey, deer and small game abound as you walk through the four-mile level trail.",
+        "null": "633",
+        "top": [
+          {
+            "item": "One of the most popular hiking areas in southwestern PA - Bruce Sundquist",
+            "count": "7"
+          },
+          {
+            "item": "2009 River of the Year",
+            "count": "2"
+          },
+          {
+            "item": "1988, 1992, 2005 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1991 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1992 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1995, 2001 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1997, 2007 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1998, 2008 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "1999, 2014 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2000 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2002, 2011 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2010 - Awarded: National Recreation Trail",
+            "count": "1"
+          },
+          {
+            "item": "2014 Trail of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2015 River of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2015 Trail of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2016 Trail of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2017 Trail of the Year",
+            "count": "1"
+          },
+          {
+            "item": "2018 Trail of the Year",
+            "count": "1"
+          },
+          {
+            "item": "A smooth trail to a rugged and beautiful surprise!",
+            "count": "1"
+          },
+          {
+            "item": "Beautiful area, bring your camera!",
+            "count": "1"
+          }
+        ],
+        "smallest": "1983, 1984, 1996 River of the Year",
+        "count": "683",
+        "cardinality": "43"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543696,
+      "name": "Water Trail",
+      "dataTypeName": "number",
+      "description": "Is the trail a water trail",
+      "fieldName": "water_trail",
+      "position": 16,
+      "renderTypeName": "number",
+      "tableColumnId": 141430753,
+      "cachedContents": {
+        "non_null": "682",
+        "largest": "1",
+        "null": "1",
+        "top": [
+          {
+            "item": "0",
+            "count": "655"
+          },
+          {
+            "item": "1",
+            "count": "27"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "2"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543697,
+      "name": "Description of Web",
+      "dataTypeName": "text",
+      "description": "Web description of trail",
+      "fieldName": "description_for_web",
+      "position": 17,
+      "renderTypeName": "text",
+      "tableColumnId": 141430754,
+      "cachedContents": {
+        "non_null": "4",
+        "largest": "Tucked in the side of Conococheague Mountain, Big Spring State Forest Picnic Area is a quaint picnic and hiking area. A short loop trail leads to a partially completed railroad tunnel with historic interpretation at the trailhead. The park also provides access to the Iron Horse Trail for day and overnight hiking. The park takes its name from nearby Big Spring, whose waters form the scenic Shermans Creek.",
+        "null": "679",
+        "top": [
+          {
+            "item": "A National Recreation Trail, the Ghost Town Trail is named for the numerous old mining towns along the corridor that were served by the Ebenburg & Backlick Railroad and Cambria & Indiana Railroad. The trail winds though the scenic Blacklick Creek watershed, passing interpretive signs and historical artifacts including mining slag, railroad ties, and discarded rail cars. Just west of Vintondale is Eliza Furnace, one of Pennsylvania\u2019s best-preserved iron blast furnaces. You\u2019re likely to encounter deer and chipmunks in the morning. Once the sun gets high, watch for the occasional snake on the warm pathway. Portions of the trail run though game lands; wear blaze orange during hunting season. At Saylor Park in Black Lick there are signs directing trail users to the Hoodlebug Trail. A 110 page guidebook on the Ghost Town Trail is available for purchase by going to www.indianacountyparks.org and clicking on the \"Our Trails\" tab.",
+            "count": "1"
+          },
+          {
+            "item": "The first trail of its type in the nation, this unique route climbs the hillside between the top and bottom of the famous Johnstown Inclined Plane. Along the way, hikers will find eight steel sculptures created by nationally renowned sculptor, James Wolfe, who crafted each piece using remnants produced by the local Bethlehem Steel plant. The premiere piece is a 40-foot installation directly below the incline\u2019s observation deck.",
+            "count": "1"
+          },
+          {
+            "item": "The Hoodlebug Trail follows the path of the 1856-era Indiana Branch of the Pennsylvania Railroad, which ran from Blairsville north to the town of Indiana, Pa. \u201cHoodlebug\u201d was the nickname for the self-propelled passenger coach that traveled on the line until 1940. The corridor has been important for many years: as part of a network of Native American trails, as a railroad branch line, and now as a trail used for recreation and commuting. Dense forest lines the much of the trail. The southern section, however, flanks a sound barrier wall by RT 56. South of Homer City, the last mile of trail parallels a creek and takes on a wilderness setting. The Hoodlebug Trail connects to the Ghost Town Trail in Black Lick. An eight mile on-road route from Black Lick through Blairsville connects to the West Penn Trail. A 122 page guidebook is now available for the Hoodlebug Trail. It can be purchased by going to www.indianacountyparks.org and clicking on the \"Our Trails\" tab.",
+            "count": "1"
+          },
+          {
+            "item": "Tucked in the side of Conococheague Mountain, Big Spring State Forest Picnic Area is a quaint picnic and hiking area. A short loop trail leads to a partially completed railroad tunnel with historic interpretation at the trailhead. The park also provides access to the Iron Horse Trail for day and overnight hiking. The park takes its name from nearby Big Spring, whose waters form the scenic Shermans Creek.",
+            "count": "1"
+          }
+        ],
+        "smallest": "A National Recreation Trail, the Ghost Town Trail is named for the numerous old mining towns along the corridor that were served by the Ebenburg & Backlick Railroad and Cambria & Indiana Railroad. The trail winds though the scenic Blacklick Creek watershed, passing interpretive signs and historical artifacts including mining slag, railroad ties, and discarded rail cars. Just west of Vintondale is Eliza Furnace, one of Pennsylvania\u2019s best-preserved iron blast furnaces. You\u2019re likely to encounter deer and chipmunks in the morning. Once the sun gets high, watch for the occasional snake on the warm pathway. Portions of the trail run though game lands; wear blaze orange during hunting season. At Saylor Park in Black Lick there are signs directing trail users to the Hoodlebug Trail. A 110 page guidebook on the Ghost Town Trail is available for purchase by going to www.indianacountyparks.org and clicking on the \"Our Trails\" tab.",
+        "count": "683",
+        "cardinality": "4"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543698,
+      "name": "Difficulty",
+      "dataTypeName": "number",
+      "description": "Difficulty rating of the trail",
+      "fieldName": "difficulty",
+      "position": 18,
+      "renderTypeName": "number",
+      "tableColumnId": 141430755,
+      "cachedContents": {
+        "non_null": "225",
+        "largest": "3",
+        "null": "458",
+        "top": [
+          {
+            "item": "1",
+            "count": "197"
+          },
+          {
+            "item": "2",
+            "count": "25"
+          },
+          {
+            "item": "3",
+            "count": "3"
+          }
+        ],
+        "smallest": "1",
+        "count": "683",
+        "cardinality": "3"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543699,
+      "name": "Miles",
+      "dataTypeName": "number",
+      "description": "Mileage of the trail segment",
+      "fieldName": "miles",
+      "position": 19,
+      "renderTypeName": "number",
+      "tableColumnId": 141430756,
+      "cachedContents": {
+        "non_null": "681",
+        "largest": "496.81079102",
+        "null": "2",
+        "top": [
+          {
+            "item": "2.85054373",
+            "count": "1"
+          },
+          {
+            "item": "6.00787163",
+            "count": "1"
+          },
+          {
+            "item": "0.77325513",
+            "count": "1"
+          },
+          {
+            "item": "8.37372724",
+            "count": "1"
+          },
+          {
+            "item": "17.98586134",
+            "count": "1"
+          },
+          {
+            "item": "33.52727613",
+            "count": "1"
+          },
+          {
+            "item": "1.51373586",
+            "count": "1"
+          },
+          {
+            "item": "0.40819928",
+            "count": "1"
+          },
+          {
+            "item": "34.73289552",
+            "count": "1"
+          },
+          {
+            "item": "4.75686984",
+            "count": "1"
+          },
+          {
+            "item": "0.79706019",
+            "count": "1"
+          },
+          {
+            "item": "19.87949157",
+            "count": "1"
+          },
+          {
+            "item": "2.71441793",
+            "count": "1"
+          },
+          {
+            "item": "2.28651786",
+            "count": "1"
+          },
+          {
+            "item": "1.98138686",
+            "count": "1"
+          },
+          {
+            "item": "9.19715996",
+            "count": "1"
+          },
+          {
+            "item": "0.89643298",
+            "count": "1"
+          },
+          {
+            "item": "26.52156473",
+            "count": "1"
+          },
+          {
+            "item": "40.71275555",
+            "count": "1"
+          },
+          {
+            "item": "0.63785103",
+            "count": "1"
+          }
+        ],
+        "smallest": "0.10728185",
+        "count": "683",
+        "cardinality": "681"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543700,
+      "name": "Trail ID",
+      "dataTypeName": "number",
+      "description": "Identification that is needed for the Website",
+      "fieldName": "trailid",
+      "position": 20,
+      "renderTypeName": "number",
+      "tableColumnId": 141430757,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "1021",
+        "null": "0",
+        "top": [
+          {
+            "item": "2",
+            "count": "1"
+          },
+          {
+            "item": "3",
+            "count": "1"
+          },
+          {
+            "item": "4",
+            "count": "1"
+          },
+          {
+            "item": "5",
+            "count": "1"
+          },
+          {
+            "item": "6",
+            "count": "1"
+          },
+          {
+            "item": "7",
+            "count": "1"
+          },
+          {
+            "item": "8",
+            "count": "1"
+          },
+          {
+            "item": "9",
+            "count": "1"
+          },
+          {
+            "item": "10",
+            "count": "1"
+          },
+          {
+            "item": "12",
+            "count": "1"
+          },
+          {
+            "item": "14",
+            "count": "1"
+          },
+          {
+            "item": "15",
+            "count": "1"
+          },
+          {
+            "item": "16",
+            "count": "1"
+          },
+          {
+            "item": "17",
+            "count": "1"
+          },
+          {
+            "item": "18",
+            "count": "1"
+          },
+          {
+            "item": "19",
+            "count": "1"
+          },
+          {
+            "item": "20",
+            "count": "1"
+          },
+          {
+            "item": "22",
+            "count": "1"
+          },
+          {
+            "item": "23",
+            "count": "1"
+          },
+          {
+            "item": "24",
+            "count": "1"
+          }
+        ],
+        "smallest": "2",
+        "count": "683",
+        "cardinality": "683"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543701,
+      "name": "Rail Line",
+      "dataTypeName": "number",
+      "description": "Is trail located on a former rail corridor?",
+      "fieldName": "railine",
+      "position": 21,
+      "renderTypeName": "number",
+      "tableColumnId": 141430758,
+      "cachedContents": {
+        "non_null": "679",
+        "largest": "1",
+        "null": "4",
+        "top": [
+          {
+            "item": "0",
+            "count": "536"
+          },
+          {
+            "item": "1",
+            "count": "143"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "2"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543702,
+      "name": "Road or Trail Segment",
+      "dataTypeName": "number",
+      "description": "Is trail segment on a road or trail?",
+      "fieldName": "rort",
+      "position": 22,
+      "renderTypeName": "number",
+      "tableColumnId": 141430759,
+      "cachedContents": {
+        "non_null": "627",
+        "largest": "4",
+        "null": "56",
+        "top": [
+          {
+            "item": "1",
+            "count": "414"
+          },
+          {
+            "item": "3",
+            "count": "162"
+          },
+          {
+            "item": "2",
+            "count": "49"
+          },
+          {
+            "item": "4",
+            "count": "1"
+          },
+          {
+            "item": "0",
+            "count": "1"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "5"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543703,
+      "name": "Shape St Length()",
+      "dataTypeName": "number",
+      "description": "Shape st Length",
+      "fieldName": "shape_stlength",
+      "position": 23,
+      "renderTypeName": "number",
+      "tableColumnId": 141430760,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "8.4389827677858023",
+        "null": "0",
+        "top": [
+          {
+            "item": "0.16403189531027793",
+            "count": "1"
+          },
+          {
+            "item": "0.0034731052907930882",
+            "count": "1"
+          },
+          {
+            "item": "0.037318253698447032",
+            "count": "1"
+          },
+          {
+            "item": "0.11232729811926019",
+            "count": "1"
+          },
+          {
+            "item": "0.059627826224684398",
+            "count": "1"
+          },
+          {
+            "item": "0.04714093917782175",
+            "count": "1"
+          },
+          {
+            "item": "0.24985503995971473",
+            "count": "1"
+          },
+          {
+            "item": "0.017415432929299576",
+            "count": "1"
+          },
+          {
+            "item": "0.29779297003914779",
+            "count": "1"
+          },
+          {
+            "item": "0.12806985486867722",
+            "count": "1"
+          },
+          {
+            "item": "0.40255462176112666",
+            "count": "1"
+          },
+          {
+            "item": "0.063273239895175054",
+            "count": "1"
+          },
+          {
+            "item": "0.0078297554094300791",
+            "count": "1"
+          },
+          {
+            "item": "0.66539853799106308",
+            "count": "1"
+          },
+          {
+            "item": "0.1651046060933343",
+            "count": "1"
+          },
+          {
+            "item": "4.8155457451427921",
+            "count": "1"
+          },
+          {
+            "item": "0.075292746443013397",
+            "count": "1"
+          },
+          {
+            "item": "0.039354674948589026",
+            "count": "1"
+          },
+          {
+            "item": "0.015719777414509205",
+            "count": "1"
+          },
+          {
+            "item": "0.066374443262445529",
+            "count": "1"
+          }
+        ],
+        "smallest": "0.0020232344726890342",
+        "count": "683",
+        "cardinality": "683"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543704,
+      "name": "In Line FID",
+      "dataTypeName": "number",
+      "description": "In Line FID",
+      "fieldName": "inline_fid",
+      "position": 24,
+      "renderTypeName": "number",
+      "tableColumnId": 141430761,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "17456",
+        "null": "0",
+        "top": [
+          {
+            "item": "12688",
+            "count": "1"
+          },
+          {
+            "item": "12689",
+            "count": "1"
+          },
+          {
+            "item": "12690",
+            "count": "1"
+          },
+          {
+            "item": "12691",
+            "count": "1"
+          },
+          {
+            "item": "12692",
+            "count": "1"
+          },
+          {
+            "item": "12693",
+            "count": "1"
+          },
+          {
+            "item": "12694",
+            "count": "1"
+          },
+          {
+            "item": "12695",
+            "count": "1"
+          },
+          {
+            "item": "12696",
+            "count": "1"
+          },
+          {
+            "item": "12697",
+            "count": "1"
+          },
+          {
+            "item": "12698",
+            "count": "1"
+          },
+          {
+            "item": "12699",
+            "count": "1"
+          },
+          {
+            "item": "12700",
+            "count": "1"
+          },
+          {
+            "item": "12701",
+            "count": "1"
+          },
+          {
+            "item": "12702",
+            "count": "1"
+          },
+          {
+            "item": "12703",
+            "count": "1"
+          },
+          {
+            "item": "12704",
+            "count": "1"
+          },
+          {
+            "item": "12705",
+            "count": "1"
+          },
+          {
+            "item": "12706",
+            "count": "1"
+          },
+          {
+            "item": "12707",
+            "count": "1"
+          }
+        ],
+        "smallest": "12688",
+        "count": "683",
+        "cardinality": "683"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543705,
+      "name": "SimLnFlag",
+      "dataTypeName": "number",
+      "description": "SimLnFlag",
+      "fieldName": "simlnflag",
+      "position": 25,
+      "renderTypeName": "number",
+      "tableColumnId": 141430762,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "1",
+        "null": "0",
+        "top": [
+          {
+            "item": "0",
+            "count": "410"
+          },
+          {
+            "item": "1",
+            "count": "273"
+          }
+        ],
+        "smallest": "0",
+        "count": "683",
+        "cardinality": "2"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543706,
+      "name": "MaxSimpTol",
+      "dataTypeName": "number",
+      "description": "MaxSimpTol",
+      "fieldName": "maxsimptol",
+      "position": 26,
+      "renderTypeName": "number",
+      "tableColumnId": 141430763,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "0.00027411",
+        "null": "0",
+        "top": [
+          {
+            "item": "0.00027411",
+            "count": "683"
+          }
+        ],
+        "smallest": "0.00027411",
+        "count": "683",
+        "cardinality": "1"
+      },
+      "format": {}
+    },
+    {
+      "id": 557543707,
+      "name": "MinSimpTol",
+      "dataTypeName": "number",
+      "description": "MinSimpTol",
+      "fieldName": "minsimptol",
+      "position": 27,
+      "renderTypeName": "number",
+      "tableColumnId": 141430764,
+      "cachedContents": {
+        "non_null": "683",
+        "largest": "0.00027411",
+        "null": "0",
+        "top": [
+          {
+            "item": "0.00027411",
+            "count": "683"
+          }
+        ],
+        "smallest": "0.00027411",
+        "count": "683",
+        "cardinality": "1"
+      },
+      "format": {}
+    }
+  ],
+  "grants": [
+    {
+      "inherited": false,
+      "type": "viewer",
+      "flags": [
+        "public"
+      ]
+    }
+  ],
+  "license": {
+    "name": "Public Domain U.S. Government",
+    "termsLink": "https://www.usa.gov/government-works"
+  },
+  "metadata": {
+    "custom_fields": {
+      "Data Management": {
+        "Update Frequency": "Monthly",
+        "Business Owner": "Office of Administration (OA)"
+      }
+    },
+    "arcgis_connection": {
+      "url": "https://maps.dcnr.pa.gov/agsprod/rest/services/BRC/EPAT_SimplifiedGeometry/MapServer/1"
+    },
+    "rowLabel": "Single Trail Line",
+    "availableDisplayTypes": [
+      "table",
+      "fatrow",
+      "page"
+    ]
+  },
+  "owner": {
+    "id": "6jh9-ydjy",
+    "displayName": "Jere Matthews",
+    "profileImageUrlLarge": "/api/users/6jh9-ydjy/profile_images/LARGE",
+    "profileImageUrlMedium": "/api/users/6jh9-ydjy/profile_images/THUMB",
+    "profileImageUrlSmall": "/api/users/6jh9-ydjy/profile_images/TINY",
+    "screenName": "Jere Matthews",
+    "type": "interactive",
+    "flags": [
+      "acceptedEula",
+      "mayBeStoriesCoOwner"
+    ]
+  },
+  "query": {},
+  "rights": [
+    "read"
+  ],
+  "tableAuthor": {
+    "id": "6jh9-ydjy",
+    "displayName": "Jere Matthews",
+    "profileImageUrlLarge": "/api/users/6jh9-ydjy/profile_images/LARGE",
+    "profileImageUrlMedium": "/api/users/6jh9-ydjy/profile_images/THUMB",
+    "profileImageUrlSmall": "/api/users/6jh9-ydjy/profile_images/TINY",
+    "screenName": "Jere Matthews",
+    "type": "interactive",
+    "flags": [
+      "acceptedEula",
+      "mayBeStoriesCoOwner"
+    ]
+  },
+  "tags": [
+    "trails",
+    "service",
+    "trail",
+    "conservation",
+    "natural",
+    "resource",
+    "hike",
+    "dcnr"
+  ],
+  "flags": [
+    "default",
+    "ownerMayBeContacted",
+    "restorable",
+    "restorePossibleForType"
+  ]
+}

@@ -224,3 +224,174 @@ The hike index includes a geometry-derived `shape` for continuous lines using
 `src/domain/hike/shape.ts`. Disconnected multipart records are `unknown`; no
 connector is invented. Shape describes the mapped line and is not proof of a
 walkable itinerary. Older catalogs lack this field and do not match shape filters.
+
+## Rich catalog (2026-10-28)
+
+Keep input/export/cache/output files on `/mnt/wsl/ogv-data`. Export open OSM
+context once with `infra/trails/export-context.sh REGION.osm.pbf context.geojsonseq`,
+then run `node --max-old-space-size=20000 --import tsx infra/trails/enrich-trails.ts
+--base MEASURED_CATALOG --context context.geojsonseq --out NEW_CATALOG` (on one
+line). Repeat `--context` for another region. The input catalog is never changed.
+
+Features use segment-to-segment or point-to-segment distance within **100 m**,
+including crossings between vertices. Lake polygons use their shorelines. Each
+OSM object appears at most once per trail at its closest encounter (earliest
+encounter on an exact tie). Features retain coordinates, OSM id/link, ODbL licence,
+kind, offset and distance along the stored geometry. Multipart offsets sum only
+retained lines, never gaps, and retain a line index. Proximity does not establish
+access or a connecting path. A peak alone does not establish a view: Views matches
+mapped viewpoints and observation/watch/fire towers only. Missing features do not
+match positive filters. No claim of feature completeness is made.
+
+The compact on-disk artifacts carry details; `/api/hikes` drops full feature
+lists unless an `id` is requested. Batched geometry drops features too. Cards use
+only kinds/count; detail pages show the attributed feature list.
+
+Park association samples segment midpoints at ≤250 m intervals, measures the
+share of retained trail length inside OSM polygons (respecting holes), and keeps named parks/reserves/protected areas covering at least 50%. The primary
+area has the greatest sampled coverage, with the smallest bounding-box area as
+tiebreaker. All containing area names remain searchable, so a nested natural area
+does not hide the surrounding state park. Full area lists are detail-only. A short trail crossing can be missed by the sampling resolution.
+Nearest town is the nearest mapped city/town/village point within 50 km of the
+stored line's start, by straight-line distance, not road distance.
+
+When no mapped SAC rating exists, complete nonnegative DEM gain and positive
+length permit the [Shenandoah exertion formula](https://www.nps.gov/shen/planyourvisit/how-to-determine-hiking-difficulty.htm):
+`sqrt(2 * gain_feet * distance_miles)`. Bands use `<50`, `<100`, `<150`, `<200`,
+then ≥200: Easiest, Moderate, Moderately strenuous, Strenuous, Very strenuous.
+These are estimated exertion bands, not overall technical difficulty. They omit
+surface, scrambling, exposure, weather and personal fitness; even the source
+warns that steep short hikes can be underrated. No missing gain is treated as 0.
+The existing domain's richer live difficulty model is unchanged. This catalog
+fallback uses the retained line/direction, not a presumed return journey.
+
+### Agency overlay
+
+`python3 infra/trails/fetch-official.py /mnt/wsl/ogv-data/trails/src/official`
+queries canonical USFS, NPS and NJDEP ArcGIS services. It first requests **all
+object IDs**, then downloads bounded ID batches, refusing truncated/missing
+batches. Metadata, dates, source URLs, CRS, hashes and licence terms accompany
+exports. US Census public-domain PA/NJ boundaries select intersecting records;
+lines remain complete rather than being silently clipped to the boundary.
+
+Run `node --max-old-space-size=20000 --import tsx infra/trails/merge-official.ts
+--base MEASURED_CATALOG --sources SOURCE_DIR --out NEW_BASE --dem-cache DEM_DIR`
+on one line, then run `enrich-trails.ts` against that new base. Only new lines need
+DEM measurement. Matched OSM IDs, geometry and DEM remain stable. Both directions
+must have ≥85% sampled length within 25 m of the other geometry, with length ratio
+≥0.8. Samples use ≤30 m spacing. Parallel trails closer than 25 m can still be
+ambiguous; differently segmented official/OSM trails conservatively remain
+separate. No partial-segment rating is projected onto an entire long relation.
+
+An official name, operator, surface, rating or readable use overrides OSM when
+present. First official value wins (DCNR, then NPS, USFS, NJDEP); conflicts and
+field sources retain the evidence. Official difficulty is separate from SAC and
+takes precedence over both SAC and derived exertion. Unknown agency values stay
+null. Planned/proposed/decommissioned features are excluded. A mapped closed
+status or explicit not-open-to-public becomes access=no, never open. Current
+access still requires checking the agency. Numeric USFS allowed-use codes without
+a decoded domain are withheld from readable uses.
+
+Federal sources are public domain. NJDEP permits redistribution with **all
+provided metadata** and the required GIS credit/disclaimer. The overlay copies
+layer metadata, the item record and the complete XML metadata to
+`public/data-attribution/trails/njdep/` and the catalog's `sources/njdep/`; every
+NJDEP trail links those terms and metadata. The manifest links all supplied
+metadata files. The guide includes the NJDEP secondary-product disclaimer. The
+source CRS is documented and transformed correctly by ArcGIS `outSR=4326`.
+
+**PA DCNR release selection:** use only the separate [PA Open Data portal
+Trails Simple Geometry release](https://data.pa.gov/Services-Near-You/Trails-Simple-Geometry/hguq-h588).
+Its publisher metadata explicitly declares `licenseId: USGOV_WORKS` / “Public
+Domain U.S. Government”, with DCNR attribution. The fetcher requires that exact
+public-domain declaration and publishes the complete `portal.json` and manifest.
+The licence is recorded as the **PA portal's declaration**, not an assertion that
+state data automatically count as federal works. This release has 683 records,
+including park trail systems and major state forest routes, with simplified
+geometry and sometimes old per-record update dates. It is partial official
+coverage, not the complete current DCNR park/forest network.
+
+Do not infer that grant for the different legacy PASDA `DCNR_All_Trails62023.zip`,
+whose metadata include “Not for commercial resale”, or for the current Explore PA
+Trails website, whose terms restrict use to personal/non-commercial purposes.
+Those versions remain excluded. Later PASDA park metadata say no access/use
+constraints, but this job uses the explicit portal grant rather than extending
+it to a different download. Numeric DCNR ratings/statuses without an unambiguous
+historical legend are preserved as codes; they are not translated by guesswork.
+An undecoded official rating withholds derived exertion (a known OSM SAC rating
+can still be shown). Source priority is DCNR, NPS, USFS, NJDEP, then existing OSM
+values. Missing official operators remain unknown rather than naming the data
+publisher as trail operator.
+
+### Wikimedia enrichment
+
+`node --max-old-space-size=20000 --import tsx infra/trails/enrich-media.ts --base
+ENRICHED_BASE --context OSM_CONTEXT --out NEW_CATALOG --cache WIKIMEDIA_CACHE`
+(on one line; repeat context for NJ) resolves explicit OSM Wikipedia/Wikidata
+links on trails, containing parks and notable features. It does not guess an
+article from a trail name. Up to four subjects retain their kind/name so a park
+article cannot be mistaken for a trail description. Plain introductory extracts
+retain Wikipedia contributors, article/revision links and CC BY-SA 4.0; Wikidata
+fallback descriptions retain CC0 and entity links. Requests use identifying UA,
+maxlag, at most two in flight, retries and a disk cache. Failed responses are
+reported in `media-stats.json` and never cached as a genuine absence.
+
+Commons geosearch checks occupied 0.15° × 0.10° cells with 10 km circles, then
+matches actual photo coordinates to **every trail segment within 300 m**.
+Only namespace-6 raster files with a 640 px **thumbnail URL**, author, recognized
+CC BY/CC BY-SA/CC0/public-domain licence URL and Commons description page qualify.
+An original URL is never a fallback, and no original bytes are downloaded.
+At most six nearest qualifying photos are kept (metadata candidates capped at
+30 per trail). Credits/attribution and per-file licences accompany every photo,
+including the list thumbnail. Crowded cells saturating the 500-result provider
+limit and unavailable calls are counted: coverage is not claimed complete.
+Descriptions and photo arrays are detail-only in the list API; one fully credited
+thumbnail remains on cards. No Mapillary stage was implemented or run; no token was configured.
+
+`--photo-cell-limit N` is an explicit checkpoint option for media runs; the final
+run omits it. Stats distinguish total occupied cells, requested cells, successful
+or failed calls, and saturated result lists. On a busy Commons backend, a query
+may fall back from 500 to 100 candidates; its actual limit is cached and used
+when counting saturation. Media coverage remains a bounded search, not proof
+that a place has no freely licensed photos. The final regional pass also
+recomputes end-based trailheads for new official trails from the combined OSM
+context, using the existing 300 m matcher.
+
+### New Jersey and cross-border records
+
+The existing Geofabrik New Jersey PBF is under
+`/mnt/wsl/ogv-data/trails/src/new-jersey-latest.osm.pbf`. Build it with the same
+`build-trails.ts` and DEM settings, then run `combine-catalogs.ts --input PA_BASE
+--input NJ_BASE --out COMBINED_BASE --dem-cache DEM_DIR` (all commands on one
+line). It unions **matching OSM IDs**, keeps existing traversals including return
+legs, removes exact shared edges from the additional extract, and joins only at
+shared vertices. It preserves gaps rather than drawing connectors. Changed
+geometries get new DEM measurements. The PA/NJ job shares 19 IDs; five gain
+additional geometry. It does not presume that same-name trails in different
+parks are one trail.
+
+Overlay official sources onto this combined OSM base, then enrich with **both**
+PA and NJ contexts, then run media enrichment without a cell limit. All job
+outputs/caches and intermediate catalogs stay on the data volume. Existing
+catalog directories are inputs only and remain unchanged.
+
+`--cache-only` assembles media from successful cached responses without network
+requests. Missing cached responses are explicit gaps in its stats. This supports
+rebuilding around corrected catalog facts without repeating the provider search;
+preserve the full fetch run's `media-stats.json` separately when doing so.
+`--skip-errors PREVIOUS_MEDIA_STATS` reuses successes and records earlier failed
+URLs as deferred, while still fetching newly needed cells/metadata. This is used
+when rebuilding around the newly reviewed DCNR release after a full regional
+media fetch; its failure evidence is kept in `media-fetch-stats.json`. Omit the
+flag on a later refresh to retry those unavailable requests.
+
+Observation/watchtowers retain their own kind; they are not labelled fire towers
+unless the OSM tower type explicitly says fire. Proximity does not establish
+that any tower or viewpoint can be entered.
+
+Successful Wikimedia responses are also indexed by entity ID, article title
+(including redirects), and Commons page ID. Rebatching after a catalog change
+therefore reuses existing extracts/credits rather than downloading them again.
+New requests are paced at one per second globally, at most two in flight. HTTP
+429 defers that host for the remainder of the run; existing cached records remain
+usable. Malformed/interrupted cache files are not treated as successful absence.

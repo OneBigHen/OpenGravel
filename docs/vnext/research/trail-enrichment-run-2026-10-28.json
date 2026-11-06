@@ -1,0 +1,221 @@
+{
+  "trails": 27594,
+  "bySource": {
+    "osm": 23489,
+    "dcnr": 656,
+    "nps": 964,
+    "njdep": 2678,
+    "usfs": 272
+  },
+  "uniqueSourceReferences": {
+    "osm": 60365,
+    "dcnr": 656,
+    "nps": 998,
+    "njdep": 3067,
+    "usfs": 293
+  },
+  "featureMatches": {
+    "water": 18976,
+    "campsite": 3375,
+    "shelter": 3403,
+    "parking": 24795,
+    "waterfall": 464,
+    "toilets": 3228,
+    "peak": 691,
+    "viewpoint": 2454,
+    "observation-tower": 204,
+    "historic": 6795,
+    "drinking-water": 1002,
+    "trailhead": 1116,
+    "cave": 23
+  },
+  "totalFeatureMatches": 66526,
+  "uniqueFeatureObjects": {
+    "water": 7406,
+    "campsite": 1570,
+    "shelter": 1645,
+    "parking": 13546,
+    "waterfall": 182,
+    "toilets": 1421,
+    "peak": 331,
+    "viewpoint": 945,
+    "observation-tower": 73,
+    "historic": 2390,
+    "drinking-water": 420,
+    "trailhead": 482,
+    "cave": 9
+  },
+  "trailsWithFeatures": 13683,
+  "trailsWithPark": 17777,
+  "trailsWithTown": 27594,
+  "difficultyByBasis": {
+    "derived": 24337,
+    "unknown": 226,
+    "official": 2528,
+    "osm": 503
+  },
+  "trailsWithPhotos": 6773,
+  "photoMatches": 23679,
+  "uniquePhotos": 9977,
+  "trailsWithDescriptions": 11715,
+  "withCompleteElevation": 27594,
+  "withTrailhead": 11430,
+  "accessRestricted": 1642,
+  "artifacts": {
+    "hikes.json": {
+      "bytes": 140418612,
+      "gzipBytes": 11230136
+    },
+    "trails.geojson": {
+      "bytes": 204575063,
+      "gzipBytes": 33326667
+    }
+  },
+  "listPayloads": [
+    {
+      "area": "Hawk Mountain",
+      "records": 64,
+      "bytes": 128786,
+      "gzipBytes": 12071
+    },
+    {
+      "area": "Ricketts Glen",
+      "records": 54,
+      "bytes": 112537,
+      "gzipBytes": 9704
+    },
+    {
+      "area": "Delaware Water Gap",
+      "records": 185,
+      "bytes": 464413,
+      "gzipBytes": 36808
+    },
+    {
+      "area": "NJ northwest",
+      "records": 1519,
+      "bytes": 3326924,
+      "gzipBytes": 238826
+    }
+  ],
+  "mediaSearch": {
+    "cells": 1010,
+    "requestedCells": 1010,
+    "searched": 1010,
+    "successfulCells": 1008,
+    "saturated": 349,
+    "geotaggedFiles": 116782,
+    "metadataFiles": 20638,
+    "usablePhotos": 17997,
+    "trailsWithPhotos": 6773,
+    "trailsWithDescriptions": 11715
+  },
+  "mediaUnresolvedRequests": 5,
+  "officialInputs": {
+    "dcnr": {
+      "read": 683,
+      "accepted": 656,
+      "merged": 58,
+      "added": 598
+    },
+    "nps": {
+      "read": 1169,
+      "accepted": 998,
+      "merged": 95,
+      "added": 903
+    },
+    "usfs": {
+      "read": 293,
+      "accepted": 293,
+      "merged": 39,
+      "added": 254
+    },
+    "njdep": {
+      "read": 3067,
+      "accepted": 3067,
+      "merged": 717,
+      "added": 2350
+    }
+  },
+  "sha256": {
+    "hikes.json": "4123141d5b94cf51c63eee5aca94921f0bcf2da2258eeb0e4704dcd4f0767646",
+    "trails.geojson": "0f7660dd29ef8997929cc7ec02e06d1119b8110306afb026b4a0b0d5678bfe43"
+  },
+  "sourceHashes": {
+    "pennsylvania-latest.osm.pbf": "2ec5209b40267c339b84a3476c7eecb027550a18d38b1ddf4ba1a5d3cc59225a",
+    "new-jersey-latest.osm.pbf": "54775f1c5dfe6578cdb7c8f1d28b089511c89022a91b80990cf6756e2cb3fabc"
+  },
+  "browserChecks": [
+    {
+      "theme": "day",
+      "area": "hawk-mountain",
+      "id": "osm:way/28721859",
+      "name": "River of Rocks Trail",
+      "features": 2,
+      "photos": 6,
+      "descriptions": 0,
+      "sourceIds": [
+        "osm"
+      ]
+    },
+    {
+      "theme": "day",
+      "area": "ricketts-glen",
+      "id": "osm:relation/7712014",
+      "name": "Falls Trail",
+      "features": 35,
+      "photos": 6,
+      "descriptions": 1,
+      "sourceIds": [
+        "osm"
+      ]
+    },
+    {
+      "theme": "day",
+      "area": "delaware-water-gap",
+      "id": "njdep:6574",
+      "name": "Dunnfield Creek Trail",
+      "features": 2,
+      "photos": 6,
+      "descriptions": 1,
+      "sourceIds": [
+        "njdep"
+      ]
+    },
+    {
+      "theme": "night",
+      "area": "hawk-mountain",
+      "id": "osm:way/28721859",
+      "name": "River of Rocks Trail",
+      "features": 2,
+      "photos": 6,
+      "descriptions": 0,
+      "sourceIds": [
+        "osm"
+      ]
+    },
+    {
+      "theme": "night",
+      "area": "ricketts-glen",
+      "id": "osm:relation/7712014",
+      "name": "Falls Trail",
+      "features": 35,
+      "photos": 6,
+      "descriptions": 1,
+      "sourceIds": [
+        "osm"
+      ]
+    },
+    {
+      "theme": "night",
+      "area": "delaware-water-gap",
+      "id": "njdep:6574",
+      "name": "Dunnfield Creek Trail",
+      "features": 2,
+      "photos": 6,
+      "descriptions": 1,
+      "sourceIds": [
+        "njdep"
+      ]
+    }
+  ]
+}
