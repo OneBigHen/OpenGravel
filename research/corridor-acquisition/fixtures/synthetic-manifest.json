@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "studyId": "synthetic-validator-demonstration",
+  "protocolVersion": "v0.1",
+  "stage": "synthetic",
+  "codeCommit": "0000000000000000000000000000000000000000",
+  "graphFingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "roadEvidenceFingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "corridorSourceFingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "routerConfigFingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "callBudget": 4,
+  "policies": {
+    "control": "fixed-round-robin",
+    "treatment": "contextual-acquisition"
+  }
+}
