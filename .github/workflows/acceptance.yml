@@ -15,9 +15,7 @@
 name: acceptance
 
 on:
-  schedule:
-    # 06:00 US Eastern, daily.
-    - cron: "0 10 * * *"
+  # Nightly run switched off 2026-11-10 (failed 40 nights in a row). Manual runs only.
   workflow_dispatch:
 
 jobs:
