@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Iron Horse Grade. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.58,
+          "lat": 40.92
+        },
+        {
+          "lon": -75.5723814,
+          "lat": 40.9189849
+        },
+        {
+          "lon": -75.5709347,
+          "lat": 40.9251845
+        },
+        {
+          "lon": -75.5639022,
+          "lat": 40.9242475
+        },
+        {
+          "lon": -75.5624142,
+          "lat": 40.9306243
+        },
+        {
+          "lon": -75.5549128,
+          "lat": 40.9296248
+        },
+        {
+          "lon": -75.5536728,
+          "lat": 40.9349388
+        }
+      ],
+      "distanceMeters": 3909.9,
+      "durationSeconds": 313,
+      "instructions": [
+        {
+          "text": "Head 100 degrees on Iron Horse Grade",
+          "distanceMeters": 650.007589187005,
+          "durationSeconds": 52,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Rail Bed Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 699.9980645418043,
+          "durationSeconds": 56,
+          "geometryIndex": 1,
+          "roadName": "Rail Bed Road"
+        },
+        {
+          "text": "Turn right onto Grade Crossing",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 599.9562640923963,
+          "durationSeconds": 48,
+          "geometryIndex": 2,
+          "roadName": "Grade Crossing"
+        },
+        {
+          "text": "Turn left onto Trestle Lane",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 720.0032603668832,
+          "durationSeconds": 58,
+          "geometryIndex": 3,
+          "roadName": "Trestle Lane"
+        },
+        {
+          "text": "Turn right onto Cut Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 639.9087102353463,
+          "durationSeconds": 51,
+          "geometryIndex": 4,
+          "roadName": "Cut Road"
+        },
+        {
+          "text": "Turn left onto Summit Grade",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 600.0013905511918,
+          "durationSeconds": 48,
+          "geometryIndex": 5,
+          "roadName": "Summit Grade"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:iron-horse-grade:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

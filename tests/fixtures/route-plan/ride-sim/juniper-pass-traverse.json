@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Juniper Pass Traverse. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.86,
+          "lat": 40.68
+        },
+        {
+          "lon": -75.8528848,
+          "lat": 40.68
+        },
+        {
+          "lon": -75.8474342,
+          "lat": 40.6841335
+        },
+        {
+          "lon": -75.8428223,
+          "lat": 40.6806359
+        },
+        {
+          "lon": -75.8369525,
+          "lat": 40.6850873
+        },
+        {
+          "lon": -75.8317536,
+          "lat": 40.6811446
+        },
+        {
+          "lon": -75.8258242,
+          "lat": 40.6811446
+        }
+      ],
+      "distanceMeters": 3619.9,
+      "durationSeconds": 302,
+      "instructions": [
+        {
+          "text": "Head 90 degrees on Juniper Pass Road",
+          "distanceMeters": 599.9963375368598,
+          "durationSeconds": 50,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Pass Summit Lane",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 649.9989002858766,
+          "durationSeconds": 54,
+          "geometryIndex": 1,
+          "roadName": "Pass Summit Lane"
+        },
+        {
+          "text": "Turn right onto North Shoulder Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 549.9908580332803,
+          "durationSeconds": 46,
+          "geometryIndex": 2,
+          "roadName": "North Shoulder Road"
+        },
+        {
+          "text": "Turn left onto Old Toll Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 699.985216916123,
+          "durationSeconds": 58,
+          "geometryIndex": 3,
+          "roadName": "Old Toll Road"
+        },
+        {
+          "text": "Turn right onto South Grade",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 619.9842766580032,
+          "durationSeconds": 52,
+          "geometryIndex": 4,
+          "roadName": "South Grade"
+        },
+        {
+          "text": "Turn left onto Pass Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 499.9939841606048,
+          "durationSeconds": 42,
+          "geometryIndex": 5,
+          "roadName": "Pass Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:juniper-pass-traverse:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

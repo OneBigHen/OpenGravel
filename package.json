@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:architecture": "vitest run --project architecture",
+    "ride-sim": "vitest run --project ride-sim --reporter=default --reporter=./tests/ride-sim/pass-fail-reporter.ts",
     "test:real-router": "vitest run --config vitest.realrouter.config.mts",
     "test:e2e:critical": "playwright test --project=critical-chromium",
     "test:watch": "vitest",

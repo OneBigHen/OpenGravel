@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Pine Hollow Switchbacks. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.74,
+          "lat": 40.32
+        },
+        {
+          "lon": -75.74,
+          "lat": 40.3253959
+        },
+        {
+          "lon": -75.7341248,
+          "lat": 40.3257878
+        },
+        {
+          "lon": -75.7335594,
+          "lat": 40.3307153
+        },
+        {
+          "lon": -75.7274492,
+          "lat": 40.3303077
+        },
+        {
+          "lon": -75.7279426,
+          "lat": 40.334608
+        },
+        {
+          "lon": -75.720973,
+          "lat": 40.335545
+        }
+      ],
+      "distanceMeters": 3249.7,
+      "durationSeconds": 283,
+      "instructions": [
+        {
+          "text": "Head 0 degrees on Pine Hollow Road",
+          "distanceMeters": 599.9967046809775,
+          "durationSeconds": 52,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn right onto Sawmill Run",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 499.95942030422475,
+          "durationSeconds": 43,
+          "geometryIndex": 1,
+          "roadName": "Sawmill Run"
+        },
+        {
+          "text": "Turn left onto Hemlock Bend",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 550.0052798989951,
+          "durationSeconds": 48,
+          "geometryIndex": 2,
+          "roadName": "Hemlock Bend"
+        },
+        {
+          "text": "Turn right onto Deer Trail",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 519.919743597297,
+          "durationSeconds": 45,
+          "geometryIndex": 3,
+          "roadName": "Deer Trail"
+        },
+        {
+          "text": "Turn left onto Turkey Ridge",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 479.99703618549347,
+          "durationSeconds": 42,
+          "geometryIndex": 4,
+          "roadName": "Turkey Ridge"
+        },
+        {
+          "text": "Turn right onto Hollow Creek Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 599.8664374512305,
+          "durationSeconds": 52,
+          "geometryIndex": 5,
+          "roadName": "Hollow Creek Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:pine-hollow-switchbacks:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}
