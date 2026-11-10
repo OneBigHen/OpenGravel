@@ -7,7 +7,7 @@ const ACTIVITIES = [
   { mode: "hike", label: "Hike" },
 ] as const;
 
-/** Ride / Hike, as a two-way segmented control (app menu and Settings). */
+/** Ride / Hike, as a two-way segmented control. It lives in Settings; the map's first screen stays clear of it. */
 export function ActivitySwitch() {
   const mode = useActivityMode();
   return (

@@ -2,11 +2,42 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { addBike, createGarage } from "@/application/garage/garage-model";
 import type { InstalledOfflineRegion, OfflineRegionOffer, OfflineRegionsPort } from "@/application/offline/offline-regions";
+import { getActivityMode, setActivityMode } from "@/ui/stores/activity-mode";
+import { getFrontDoorOption, setFrontDoorOption } from "@/ui/stores/front-door-options";
 import { SettingsSurface } from "@/ui/settings/SettingsSurface";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  setFrontDoorOption("ask", false);
+  setFrontDoorOption("cameras", false);
+  setActivityMode("ride");
+});
 
 describe("settings surface", () => {
+  it("holds the side features the map's first screen no longer shows: hike switch, music, Ask and cameras", () => {
+    render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} spotifySetup={<section aria-label="Music"><button type="button">Connect Spotify</button></section>} />);
+    // Ride is the default; Hike is one tap away.
+    expect(getActivityMode()).toBe("ride");
+    expect(screen.getByTestId("activity-ride")).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(screen.getByTestId("activity-hike"));
+    expect(getActivityMode()).toBe("hike");
+    // Music is the page's own Music group (supplied by the host page).
+    expect(screen.getByRole("button", { name: "Connect Spotify" })).toBeInTheDocument();
+    // Ask and cameras are switches that start off and bring the feature back.
+    const front = screen.getByTestId("settings-front-door");
+    expect(front).toHaveTextContent("More on the map");
+    const ask = within(front).getByTestId("settings-ask-toggle");
+    const cameras = within(front).getByTestId("settings-cameras-toggle");
+    expect(ask).not.toBeChecked();
+    expect(cameras).not.toBeChecked();
+    fireEvent.click(ask);
+    fireEvent.click(cameras);
+    expect(getFrontDoorOption("ask")).toBe(true);
+    expect(getFrontDoorOption("cameras")).toBe(true);
+    expect(ask).toBeChecked();
+    fireEvent.click(ask);
+    expect(getFrontDoorOption("ask")).toBe(false);
+  });
   it("leaves an obsolete telemetry acknowledgement unchecked", () => {
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} telemetryConsent={{ status: "acknowledged", policyVersion: 0, acknowledgedAt: "2026-10-01T00:00:00Z" }} />);
     expect(screen.getByLabelText("I understand and acknowledge this collection")).not.toBeChecked();

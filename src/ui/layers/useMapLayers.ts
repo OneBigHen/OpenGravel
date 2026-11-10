@@ -11,6 +11,7 @@
  */
 
 import { getActivityMode, subscribeActivityMode } from "@/ui/stores/activity-mode";
+import { useFrontDoorOption } from "@/ui/stores/front-door-options";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import type { MapLayerDrawStatus } from "@/application/map/map-host";
@@ -234,7 +235,14 @@ export function useMapLayers(
   const onLayerStatus = useCallback(({ layerId, state }: MapLayerDrawStatus): void => {
     setDrawStatus((current) => current[layerId] === state ? current : { ...current, [layerId]: state });
   }, []);
-  const enabled = useSyncExternalStore(subscribeEnabled, enabledNow, () => NONE);
+  const chosen = useSyncExternalStore(subscribeEnabled, enabledNow, () => NONE);
+  // Traffic cameras stay out of Layers until Settings offers them (front door).
+  // The rider's own list is left alone, so turning them back on restores it.
+  const camerasOffered = useFrontDoorOption("cameras");
+  const enabled = useMemo(
+    () => (camerasOffered ? chosen : chosen.filter((id) => id !== "traffic-cameras")),
+    [camerasOffered, chosen],
+  );
   const [extent, setExtent] = useState<MapExtent | null>(null);
   const [result, setResult] = useState<{
     readonly rasters: readonly LayerRaster[];

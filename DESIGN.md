@@ -155,6 +155,11 @@ the primary button.
   ride Menu sheet as one grouped list. The concept images were direction, not specs: their
   floating tab bar was not adopted (the owner's own docked choice stands) and no ride control
   was removed. "Ride this" keeps the catalog line across reloads until the rider edits it.
+- 2026-11-10 Owner (90-day plan, milestone 3, "one clean front door"): the map's first screen is
+  search, Loop and Ride, with nothing else competing. The Ride / Hike switch left the Menu for
+  Settings (Ride stays the default); music already lives in Settings; traffic cameras and the AI Ask
+  button are now Settings switches, off by default, and put themselves back where they were when
+  turned on. No change to tokens or the glass recipe.
 
 ## Open proposals
 

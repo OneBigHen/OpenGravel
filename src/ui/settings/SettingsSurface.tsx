@@ -18,6 +18,7 @@ import { HomeSearch } from "./HomeSearch";
 import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
 import { AppearanceRow } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
+import { FrontDoorSection } from "@/ui/settings/FrontDoorSection";
 import { InstallSection } from "@/ui/settings/InstallSection";
 import { LiveActivityRow } from "@/ui/settings/LiveActivityRow";
 import { NavScreenRow } from "@/ui/settings/NavScreenSection";
@@ -262,6 +263,7 @@ export function SettingsSurface({
         </SettingsGroup>
 
         <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-label">Planning activity</span><ActivitySwitch /></div></SettingsGroup>
+        <FrontDoorSection />
         <SettingsGroup id="settings-map-title" label="Map">
           <div className="og-settings__row">
             <span className="og-settings__row-text">

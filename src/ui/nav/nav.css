@@ -348,7 +348,7 @@
 
 /* --------------------------------------------------------------------------
    Ride / Hike switch (hike mode H0): same segmented look as the appearance
-   modes, in the app menu and in Settings.
+   modes, in Settings (front door: it no longer sits in the app menu).
    -------------------------------------------------------------------------- */
 .og-activity-switch {
   display: grid;
@@ -361,7 +361,7 @@
 }
 
 .og-activity-switch button {
-  min-height: 40px;
+  min-height: var(--og-touch);
   border: 0;
   border-radius: calc(var(--og-radius-control) - 3px);
   background: transparent;

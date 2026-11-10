@@ -8,13 +8,14 @@ import { TopSearch } from "@/ui/place/TopSearch";
 import { usePlaceFlow } from "@/ui/place/usePlaceFlow";
 import { createRideDocumentStore, placeStartCommand } from "@/ui/stores/ride-document-store";
 import { createPlannerUiStore } from "@/ui/stores/planner-ui-store";
+import { setFrontDoorOption } from "@/ui/stores/front-door-options";
 import type { PlannerPlaceServices } from "@/ui/planner/usePlannerPlaces";
 
 const place: PlaceMatch = { id: "coffee", name: "Mountain Coffee", label: "Mountain Coffee, PA", context: "Jim Thorpe", coordinate: { lat: 40.87, lon: -75.73 }, provider: "test", openNow: true };
 const rider = { lat: 40.8757, lon: -75.7324 };
 const port = { search: vi.fn(async () => ({ status: "ok" as const, places: [place] })), reverse: vi.fn(async () => null) };
 const services: PlannerPlaceServices = { search: port, names: { nameFor: () => undefined, request: () => undefined, subscribe: () => () => undefined, version: () => 0 } };
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); setFrontDoorOption("ask", false); });
 
 function card(extra: Partial<Parameters<typeof PlaceSheet>[0]> = {}) {
   const handlers = { onDirections: vi.fn(), onSave: vi.fn(), onShare: vi.fn(), onClose: vi.fn() };
@@ -69,7 +70,16 @@ describe("universal place sheet", () => {
 });
 
 describe("top search and toast", () => {
-  it("renders one search, five place chips and two layer switches", () => {
+  it("opens on search, the five place chips, two layer switches and the Menu, with no Ask until Settings turns it on", () => {
+    render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={vi.fn()} onChip={vi.fn()} onLayer={vi.fn()}/>);
+    expect(screen.getByPlaceholderText("Search here")).toBeInTheDocument();
+    // Clear, five place chips, two layer switches and the named Menu: nothing else competes.
+    expect(screen.getAllByRole("button")).toHaveLength(9);
+    expect(screen.queryByRole("button", { name: "Ask to plan a ride" })).toBeNull();
+    expect(screen.queryByTestId("map-ask-open")).toBeNull();
+  });
+  it("renders one search, five place chips and two layer switches, and Ask once Settings has turned it on", () => {
+    setFrontDoorOption("ask", true);
     const onChip = vi.fn(), onClear = vi.fn(), onLayer = vi.fn();
     render(<TopSearch search={{ port, onPick: vi.fn() }} bias={rider} selected activeChip={null} layerOn={() => false} onClear={onClear} onChip={onChip} onLayer={onLayer}/>);
     expect(screen.getByPlaceholderText("Search here")).toBeInTheDocument();
