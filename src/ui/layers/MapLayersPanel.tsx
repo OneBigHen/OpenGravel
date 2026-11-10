@@ -27,6 +27,7 @@ import type { MapLayerStatus } from "./useMapLayers";
 import { LayerIcon } from "./LayerIcon";
 import { LayerSwitch } from "./LayerSwitch";
 import { LOOK_LABEL, LOOK_NOTE, type BasemapLook } from "@/ui/map/basemap-look";
+import { useFrontDoorOption } from "@/ui/stores/front-door-options";
 
 /** The basemap style rows the sheet owns on a phone. */
 export interface MapStyleChoice {
@@ -261,6 +262,9 @@ export function MapLayersPanel({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  // Traffic cameras are not offered here until Settings turns them on (front door).
+  const camerasOffered = useFrontDoorOption("cameras");
+  const offered = (layer: MapLayerDefinition): boolean => layer.id !== "traffic-cameras" || camerasOffered;
   // Escape closes the panel and hands focus back to Layers (PD-03).
   useEffect(() => {
     if (!open) return;
@@ -342,7 +346,7 @@ export function MapLayersPanel({
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>
                 <ul className="og-layers__tiles">
-                  {MAP_LAYERS.filter((layer) => layer.category === category.id).map((layer) => (
+                  {MAP_LAYERS.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
                     <LayerTile key={layer.id} layer={layer} on={enabled.includes(layer.id)} status={status[layer.id]} onToggle={() => onToggle(layer.id)} />
                   ))}
                 </ul>
@@ -351,7 +355,7 @@ export function MapLayersPanel({
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>
                 <ul>
-                  {MAP_LAYERS.filter((layer) => layer.category === category.id).map((layer) => (
+                  {MAP_LAYERS.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
                     <LayerRow
                       key={layer.id}
                       layer={layer}

@@ -11,6 +11,7 @@ import type { RouteCandidate } from "@/domain/route/types";
 import { createRideDocument } from "@/domain/ride/create";
 import { asRouteCandidateId } from "@/domain/route/ids";
 import { setActivityMode } from "@/ui/stores/activity-mode";
+import { setFrontDoorOption } from "@/ui/stores/front-door-options";
 import { HikeActivityControls } from "@/ui/planner/HikeActivityControls";
 import { PlannerResultPanel } from "@/ui/planner/PlannerResultPanel";
 import { RouteContext } from "@/ui/planner/RouteContext";
@@ -162,7 +163,8 @@ describe("the hike card", () => {
 });
 
 describe("rider-only controls", () => {
-  it("hides the Ask chip in hike mode and keeps it for riders", () => {
+  it("hides the Ask chip in hike mode and keeps it for riders who turned Ask on", () => {
+    setFrontDoorOption("ask", true);
     const { unmount } = render(<MapAdvisorAsk />);
     expect(screen.queryByTestId("map-ask-open")).not.toBeNull();
     unmount();

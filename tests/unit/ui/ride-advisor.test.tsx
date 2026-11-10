@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AdvisorProposalClient } from "@/application/advisor";
 import type { AdvisorDraft } from "@/application/advisor/advisor-proposal";
@@ -12,8 +12,16 @@ import type { RideDocument } from "@/domain/ride/types";
 import { PlaceSearchField } from "@/ui/planner/PlaceSearchField";
 import { AdvisorInline, AdvisorRideAsk, MapAdvisorAsk, RideAdvisorProvider, useRideAdvisor, type AdvisorAppliedNext } from "@/ui/planner/RideAdvisor";
 import { createRideDocumentStore } from "@/ui/stores/ride-document-store";
+import { setFrontDoorOption } from "@/ui/stores/front-door-options";
 
-afterEach(() => cleanup());
+// Ask is off until the rider turns it on in Settings (front door), and these
+// tests are about Ask itself, so they start with it on. The last describe
+// block below covers the default-off behaviour.
+beforeEach(() => setFrontDoorOption("ask", true));
+afterEach(() => {
+  cleanup();
+  setFrontDoorOption("ask", false);
+});
 
 function jimThorpeLoop(document: RideDocument): AdvisorDraft {
   return {
@@ -688,5 +696,40 @@ describe("waiting for the advisor", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Ask stays off the first screen until Settings turns it on (front door)", () => {
+  function setupAllAskEntries() {
+    const store = createRideDocumentStore({ document: createRideDocument() });
+    const client: AdvisorProposalClient = {
+      request: vi.fn(async () => ({ ok: true as const, draft: jimThorpeLoop(store.getState().document) })),
+    };
+    render(
+      <RideAdvisorProvider enabled store={store} client={client}>
+        <MapAdvisorAsk />
+        <AdvisorRideAsk />
+        <AdvisorInline askBox />
+      </RideAdvisorProvider>,
+    );
+  }
+
+  it("shows no Ask button, no Ask under a ride and no Describe a ride instead by default", () => {
+    setFrontDoorOption("ask", false);
+    setupAllAskEntries();
+    expect(screen.queryByTestId("map-ask-open")).toBeNull();
+    expect(screen.queryByTestId("advisor-ride-ask")).toBeNull();
+    expect(screen.queryByTestId("advisor-open")).toBeNull();
+  });
+
+  it("brings every Ask entry back when the rider turns Ask on, and removes them again when it is off", () => {
+    setupAllAskEntries();
+    expect(screen.getByTestId("map-ask-open")).toBeInTheDocument();
+    expect(screen.getByTestId("advisor-ride-ask")).toBeInTheDocument();
+    expect(screen.getByTestId("advisor-open")).toBeInTheDocument();
+    act(() => setFrontDoorOption("ask", false));
+    expect(screen.queryByTestId("map-ask-open")).toBeNull();
+    expect(screen.queryByTestId("advisor-ride-ask")).toBeNull();
+    expect(screen.queryByTestId("advisor-open")).toBeNull();
   });
 });

@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { setAppearanceMode, type AppearanceMode } from "@/ui/appearance/appearance";
 import { useAppearanceMode } from "@/ui/appearance/use-appearance";
-import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
 
 const MODES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [
   { mode: "auto", label: "Auto" },
@@ -18,6 +17,9 @@ const MODES: readonly { readonly mode: AppearanceMode; readonly label: string }[
  * the tab bar carries only Map, Explore and My rides, so Settings and the
  * Day / Night switch live behind one labelled button in the top bar of every
  * page. Wide screens keep Settings in their top bar and never show this.
+ *
+ * The Ride / Hike switch is not here: the front door is search, Loop and Ride,
+ * so the activity choice lives in Settings (milestone 3).
  */
 export function AppMenu({ className }: { readonly className?: string }) {
   const [open, setOpen] = useState(false);
@@ -73,7 +75,6 @@ export function AppMenu({ className }: { readonly className?: string }) {
       {open ? (
         <div className="og-appmenu__panel" id={panelId} role="group" aria-label="Menu">
           <p className="og-appmenu__title">OpenGravel</p>
-          <ActivitySwitch />
           <div className="og-appmenu__modes" role="radiogroup" aria-label="Appearance">
             {MODES.map((entry) => (
               <button

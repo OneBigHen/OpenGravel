@@ -3,8 +3,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LAYERS, type MapLayerId } from "@/application/map-layers";
 import { MapLayersPanel } from "@/ui/layers/MapLayersPanel";
 import type { MapLayerStatus } from "@/ui/layers/useMapLayers";
+import { setFrontDoorOption } from "@/ui/stores/front-door-options";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  setFrontDoorOption("cameras", false);
+});
 
 function panel(statusOverrides: Partial<Record<MapLayerId, MapLayerStatus>> = {}) {
   const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, statusOverrides[layer.id] ?? "off"])) as Record<MapLayerId, MapLayerStatus>;
@@ -82,6 +86,8 @@ describe("closeout layers sheet", () => {
 });
 
 it("shows camera source and unknown observation time in the layer sheet", () => {
+  // Traffic cameras are offered only after Settings turns them on (front door).
+  setFrontDoorOption("cameras", true);
   const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
   render(<MapLayersPanel enabled={["traffic-cameras"]} status={status} counts={Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onClearAll={vi.fn()} freshness={[{ layerId: "traffic-cameras", source: "511 cameras", observedAt: null, fetchedAt: "2026-10-03T12:30:00Z", stale: false, note: "Camera availability varies" }]} />);
   fireEvent.click(screen.getByRole("button", { name: "Layers" }));

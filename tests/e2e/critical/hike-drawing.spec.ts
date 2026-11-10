@@ -10,11 +10,17 @@ test("a hike drawing remains on the map after reload without a road plan", async
   await page.goto("/");
   const map = page.locator("[data-map-load]").first();
   await expect(map).toHaveAttribute("data-map-load", "ready", { timeout: 45_000 });
-  // Riders see no hike chrome on the map; the switch lives in the menu.
+  // Riders see no hike chrome on the map; the switch lives in Settings, one
+  // tap into the menu (front door: the menu no longer carries it).
   await expect(page.getByTestId("hike-card")).toHaveCount(0);
   await page.getByTestId("app-menu").click();
+  await expect(page.getByTestId("activity-hike")).toHaveCount(0);
+  await page.getByTestId("app-menu-settings").click();
+  await expect(page).toHaveURL(/\/settings$/);
   await page.getByTestId("activity-hike").click();
-  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("activity-hike")).toHaveAttribute("aria-checked", "true");
+  await page.getByTestId("primary-nav").getByRole("link", { name: "Map" }).click();
+  await expect(map).toHaveAttribute("data-map-load", "ready", { timeout: 45_000 });
   await expect(page.getByText("Press and hold the map to set a start and finish, or draw your hike.")).toBeVisible();
   await page.getByTestId("hike-draw-start").click();
   // On a phone the map's own edit toolbar owns drawing; the hike card steps aside.

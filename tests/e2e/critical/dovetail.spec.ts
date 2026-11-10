@@ -107,6 +107,9 @@ test("directions keep saved work, briefing, current bike and departure controls 
 
 
 test("camera provenance stays visible in the phone layers sheet", async ({ page }) => {
+  // Traffic cameras are offered in Layers only after Settings turns them on
+  // (front-door.spec.ts drives that switch); this spec is about their sheet.
+  await page.addInitScript(() => localStorage.setItem("og-front-door-cameras", "on"));
   await page.goto("/");
   await settledExtent(page);
   await page.getByRole("button", { name: "Layers", exact: true }).click();

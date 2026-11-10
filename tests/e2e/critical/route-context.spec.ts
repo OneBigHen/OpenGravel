@@ -5,6 +5,9 @@ import { plannerMap, settledExtent } from "./map-helpers";
 test("route context opens conditions and keeps Ask reachable", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.clock.setFixedTime(new Date("2026-10-28T08:00:00Z"));
+  // Ask is off on the front door until Settings turns it on (front-door.spec.ts
+  // drives that switch); this spec is about the Ask control itself.
+  await page.addInitScript(() => localStorage.setItem("og-front-door-ask", "on"));
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);

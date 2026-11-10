@@ -24,3 +24,11 @@ export const SPOTIFY_CLIENT_ID_STORAGE_KEY = "OGV_SPOTIFY_CLIENT_ID";
 
 /** Catalog routes this device has hidden from its own Explore list (a local preference). */
 export const HIDDEN_ROUTES_STORAGE_KEY = "opengravel.explore.hidden-routes";
+
+/**
+ * The two side features that stay off the first screen until the rider turns
+ * them on in Settings: the AI "Ask" button and the traffic-camera layer
+ * (`front-door-options.ts`). Only the "on" choice is stored.
+ */
+export const FRONT_DOOR_ASK_STORAGE_KEY = "og-front-door-ask";
+export const FRONT_DOOR_CAMERAS_STORAGE_KEY = "og-front-door-cameras";

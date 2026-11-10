@@ -21,6 +21,13 @@ describe("the named menu (mobile UX handoff)", () => {
     expect(button).toHaveFocus();
   });
 
+  it("keeps the Ride / Hike switch out of the menu: it lives in Settings", () => {
+    render(<AppMenu />);
+    fireEvent.click(screen.getByRole("button", { name: "Menu" }));
+    expect(screen.queryByRole("radiogroup", { name: "Activity" })).toBeNull();
+    expect(screen.queryByTestId("activity-hike")).toBeNull();
+  });
+
   it("leaves three places in the tab bar: Map, Explore, My rides", () => {
     render(<PrimaryNav current="/" />);
     const nav = screen.getByRole("navigation", { name: "Primary" });

@@ -56,6 +56,7 @@ import "./advisor-conversation.css";
 import "./advisor-ask-sheet.css";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 import { useActivityMode } from "@/ui/stores/activity-mode";
+import { useFrontDoorOption } from "@/ui/stores/front-door-options";
 
 /** What happens after an applied proposal, in the rider's words. */
 export type AdvisorAppliedNext =
@@ -494,6 +495,9 @@ export function AdvisorInline({
 }) {
   const advisor = useRideAdvisor();
   const mode = useActivityMode();
+  // "Describe a ride instead" is an Ask entry: Settings turns it on (front door).
+  const askOffered = useFrontDoorOption("ask");
+  const askEntry = askBox && askOffered;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [draftBase, setDraftBase] = useState("");
@@ -504,7 +508,7 @@ export function AdvisorInline({
   // Another surface owns the live conversation: this one stays quiet.
   const idle = (!pending && proposal === null && message === null) || advisor.surface !== surface;
   const hasStopFlow = advisor.stopSearches?.surface === surface;
-  if (idle && !askBox && !hasStopFlow) return null;
+  if (idle && !askEntry && !hasStopFlow) return null;
 
   function submit(): void {
     if (advisor === null || advisor.pending) return;
@@ -515,7 +519,7 @@ export function AdvisorInline({
 
   return (
     <section className="og-advisor" data-testid="advisor-inline" aria-label="Ride advisor" aria-live="polite">
-      {idle && askBox && !open ? (
+      {idle && askEntry && !open ? (
         <button type="button" className="og-advisor__ask" data-testid="advisor-open" onClick={() => setOpen(true)}>
           <AdvisorMark />
           Describe a ride instead
@@ -611,7 +615,7 @@ export function AdvisorInline({
           </button>
         </div>
       ) : null}
-      {!hideForm && (askBox && open || !idle) ? (
+      {!hideForm && (askEntry && open || !idle) ? (
         <form
           className="og-advisor__form"
           onSubmit={(event) => {
@@ -714,6 +718,8 @@ function AskDialogFocus({ dialogRef, inputRef, onClose }: {
 export function MapAdvisorAsk() {
   const advisor = useRideAdvisor();
   const activity = useActivityMode();
+  // Off the first screen until the rider turns Ask on in Settings (front door).
+  const offered = useFrontDoorOption("ask");
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -746,7 +752,7 @@ export function MapAdvisorAsk() {
   }
 
   // The advisor plans rides on the road graph; a hiker plans on the hike card.
-  if (activity === "hike") return null;
+  if (activity === "hike" || !offered) return null;
   return (
     <>
       <div className="og-map-ask">
@@ -1031,8 +1037,9 @@ function AdvisorStopPicker({ advisor }: { readonly advisor: RideAdvisor }) {
  */
 export function AdvisorRideAsk() {
   const advisor = useRideAdvisor();
+  const offered = useFrontDoorOption("ask");
   const [draft, setDraft] = useState("");
-  if (advisor === null) return null;
+  if (advisor === null || !offered) return null;
   const busy = advisor.pending;
   const live = advisor.surface === "ride" && (busy || advisor.proposal !== null || advisor.message !== null);
   function send(text: string): void {
