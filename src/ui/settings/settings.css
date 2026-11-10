@@ -225,6 +225,17 @@
   accent-color: var(--og-primary);
 }
 
+/* A row that is one switch: the planner's track-and-knob switch (ride-style.css)
+   on the right, the whole 56px row as the tap target. */
+.og-settings__row--switch {
+  cursor: pointer;
+}
+
+.og-settings__row--switch > .og-style__switch {
+  flex: none;
+  margin-left: auto;
+}
+
 .og-settings__row-actions {
   display: flex;
   flex-wrap: wrap;

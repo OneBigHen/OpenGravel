@@ -33,18 +33,22 @@ const ROWS: readonly {
 function FrontDoorRow({ option, label, meta, testId }: (typeof ROWS)[number]) {
   const on = useFrontDoorOption(option);
   return (
-    <label className="og-settings__row og-settings__row--check">
+    <label className="og-settings__row og-settings__row--switch">
       <span className="og-settings__row-text">
         <span className="og-settings__row-label">{label}</span>
         <span className="og-settings__row-meta">{meta}</span>
       </span>
-      <input
-        type="checkbox"
-        aria-label={label}
-        data-testid={testId}
-        checked={on}
-        onChange={(event) => setFrontDoorOption(option, event.target.checked)}
-      />
+      {/* The same track-and-knob switch as Avoid highways / Avoid tolls in the planner. */}
+      <span className="og-style__switch">
+        <input
+          type="checkbox"
+          role="switch"
+          aria-label={label}
+          data-testid={testId}
+          checked={on}
+          onChange={(event) => setFrontDoorOption(option, event.target.checked)}
+        />
+      </span>
     </label>
   );
 }

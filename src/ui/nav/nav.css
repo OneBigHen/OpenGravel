@@ -346,47 +346,6 @@
   color: var(--og-ink-2);
 }
 
-/* --------------------------------------------------------------------------
-   Ride / Hike switch (hike mode H0): same segmented look as the appearance
-   modes, in Settings (front door: it no longer sits in the app menu).
-   -------------------------------------------------------------------------- */
-.og-activity-switch {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px;
-  min-width: 152px;
-  padding: 3px;
-  border-radius: var(--og-radius-control);
-  background: var(--og-glass-well);
-}
-
-.og-activity-switch button {
-  min-height: var(--og-touch);
-  border: 0;
-  border-radius: calc(var(--og-radius-control) - 3px);
-  background: transparent;
-  color: var(--og-ink-2);
-  font: inherit;
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.og-activity-switch button[aria-checked="true"] {
-  background: var(--og-surface);
-  color: var(--og-ink);
-  box-shadow: var(--og-shadow-float);
-}
-
-.og-activity-switch button:focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
-}
-
-.og-appmenu__panel .og-activity-switch {
-  margin-bottom: var(--og-space-1);
-}
-
 /* Hike mode's card on the map, under the search bar and chips. */
 .og-hike-card {
   position: absolute;

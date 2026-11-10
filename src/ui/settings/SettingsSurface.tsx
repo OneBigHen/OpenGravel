@@ -262,7 +262,7 @@ export function SettingsSurface({
           {showLiveActivity ? <LiveActivityRow /> : null}
         </SettingsGroup>
 
-        <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-label">Planning activity</span><ActivitySwitch /></div></SettingsGroup>
+        <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-text"><span className="og-settings__row-label">Planning activity</span></span><ActivitySwitch /></div></SettingsGroup>
         <FrontDoorSection />
         <SettingsGroup id="settings-map-title" label="Map">
           <div className="og-settings__row">

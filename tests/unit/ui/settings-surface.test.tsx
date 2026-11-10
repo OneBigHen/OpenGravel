@@ -19,6 +19,12 @@ describe("settings surface", () => {
     // Ride is the default; Hike is one tap away.
     expect(getActivityMode()).toBe("ride");
     expect(screen.getByTestId("activity-ride")).toHaveAttribute("aria-checked", "true");
+    // Same segmented style as Day / Night (green when selected), not a second look.
+    const activity = screen.getByRole("radiogroup", { name: "Activity" });
+    expect(activity).toHaveClass("og-settings__segmented");
+    expect(within(activity).getAllByRole("radio")).toHaveLength(2);
+    for (const radio of within(activity).getAllByRole("radio")) expect(radio).toHaveClass("og-settings__segment");
+    expect(screen.getByRole("radiogroup", { name: "Day / Night" })).toHaveClass("og-settings__segmented");
     fireEvent.click(screen.getByTestId("activity-hike"));
     expect(getActivityMode()).toBe("hike");
     // Music is the page's own Music group (supplied by the host page).
@@ -30,6 +36,11 @@ describe("settings surface", () => {
     const cameras = within(front).getByTestId("settings-cameras-toggle");
     expect(ask).not.toBeChecked();
     expect(cameras).not.toBeChecked();
+    // Track-and-knob switches, the same ones as Avoid highways / Avoid tolls, not square checkboxes.
+    for (const control of [ask, cameras]) {
+      expect(control).toHaveAttribute("role", "switch");
+      expect(control.closest(".og-style__switch")).not.toBeNull();
+    }
     fireEvent.click(ask);
     fireEvent.click(cameras);
     expect(getFrontDoorOption("ask")).toBe(true);
