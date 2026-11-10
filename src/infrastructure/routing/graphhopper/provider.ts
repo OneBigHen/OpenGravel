@@ -44,6 +44,7 @@ import type {
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
+import { countDeadEndSpurs } from "@/domain/geometry/dead-end-spurs";
 import { GRAPHHOPPER_ENGINE_PROFILES } from "./profiles";
 import {
   REQUESTED_DETAILS,
@@ -110,6 +111,14 @@ interface SeedAnswer {
 const LOOP_CALIBRATION_PASSES = 2;
 const LOOP_SCALE_MIN = 0.25;
 const LOOP_SCALE_MAX = 2;
+/**
+ * Fresh seeds a loop gets when the engine's answer rides down a dead-end road
+ * and back. The engine's round trip picks a far point and, when that point
+ * sits at the end of a dead-end road, rides in and out; another seed picks
+ * another point. Every line is still the engine's own.
+ */
+const LOOP_RESEED_ATTEMPTS = 2;
+const LOOP_RESEED_STEP = 1_000_003;
 
 interface RouteAttempt {
   readonly response: Response;
@@ -122,6 +131,13 @@ export interface GraphHopperProviderOptions {
   readonly baseUrl: string;
   readonly riderModesEnabled?: boolean;
   readonly rideFormulaEnabled?: boolean;
+  /**
+   * Re-ask a loop with another seed when the engine's answer rides down a
+   * dead-end road and back. On by default (never on the hosted plan, which
+   * bills every call); a measurement that wants the engine's plain loop (the
+   * scorecard's fastest-route baseline) turns it off.
+   */
+  readonly reseedDeadEndLoops?: boolean;
   /** Injectable `fetch` for tests and server-side transports. */
   readonly fetcher?: typeof fetch;
   /**
@@ -421,15 +437,21 @@ export function createGraphHopperProvider(
       // A loop's distance is an estimate the engine does not honor exactly
       // (a 3 h ask came back 5 h 25 min): re-ask the same seed with the
       // distance scaled by how far the answer missed, and keep the closest.
-      const calibrated = async (seed: number | undefined): Promise<SeedAnswer> => {
-        let best = await answerFor(seed);
+      // The scale that produced the kept answer travels with it, so a fresh
+      // seed in the same country can start from what this one learned.
+      const calibrateSeed = async (
+        seed: number | undefined,
+        startScale = 1,
+      ): Promise<{ readonly answer: SeedAnswer; readonly scale: number }> => {
+        let best = await answerFor(seed, startScale === 1 ? undefined : startScale);
+        let bestScale = startScale;
         const discovery = request.discovery;
-        if (discovery === undefined) return best;
+        if (discovery === undefined) return { answer: best, scale: bestScale };
         const targetMs = discovery.targetMinutes * 60_000;
         const toleranceMs = discovery.toleranceMinutes * 60_000;
         const miss = (answer: SeedAnswer): number =>
           Math.abs((answer.paths[0]?.time ?? Number.POSITIVE_INFINITY) - targetMs);
-        let scale = 1;
+        let scale = startScale;
         for (let pass = 0; pass < LOOP_CALIBRATION_PASSES; pass += 1) {
           const time = best.paths[0]?.time;
           if (time === undefined || time <= 0 || miss(best) <= toleranceMs) break;
@@ -441,9 +463,39 @@ export function createGraphHopperProvider(
             if (signal.aborted) throw caught;
             break;
           }
-          if (miss(next) < miss(best)) best = next;
+          if (miss(next) < miss(best)) {
+            best = next;
+            bestScale = scale;
+          }
         }
-        return best;
+        return { answer: best, scale: bestScale };
+      };
+
+      const retraces = (answer: SeedAnswer): boolean => {
+        const coordinates = answer.paths[0]?.points?.coordinates ?? [];
+        return countDeadEndSpurs(coordinates.map(([lon, lat]) => ({ lon, lat }))) > 0;
+      };
+      // A loop that rides down a dead-end road and back is re-asked with
+      // another seed, and the first answer without that is kept. When every
+      // seed retraces, the first answer stands: the planner decides what to do
+      // with it, the adapter does not hide it.
+      const calibrated = async (seed: number | undefined): Promise<SeedAnswer> => {
+        const first = await calibrateSeed(seed);
+        // The hosted free plan bills every call, so it never gets the extra asks.
+        if (seed === undefined || options.reseedDeadEndLoops === false || hosted !== undefined || !retraces(first.answer)) {
+          return first.answer;
+        }
+        for (let attempt = 1; attempt <= LOOP_RESEED_ATTEMPTS; attempt += 1) {
+          let again: SeedAnswer;
+          try {
+            again = (await calibrateSeed((seed + attempt * LOOP_RESEED_STEP) % 2_147_483_647, first.scale)).answer;
+          } catch (caught) {
+            if (signal.aborted) throw caught;
+            continue;
+          }
+          if (!retraces(again)) return again;
+        }
+        return first.answer;
       };
 
       // A drawn route is chunked, reviewed against the drawing and repaired

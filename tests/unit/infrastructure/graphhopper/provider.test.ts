@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ProviderRouteRequest } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
+import { countDeadEndSpurs } from "@/domain/geometry/dead-end-spurs";
 import { createGraphHopperProvider } from "@/infrastructure/routing/graphhopper/provider";
 import { GraphHopperProviderError } from "@/infrastructure/routing/graphhopper/response-parser";
 
@@ -214,6 +215,134 @@ describe("GraphHopper provider", () => {
     for (const candidate of answer.candidates) {
       expect(Math.abs(candidate.durationSeconds - 180 * 60)).toBeLessThanOrEqual(27 * 60);
     }
+  });
+
+  describe("loops that ride down a dead-end road and back", () => {
+    // East of a fixed point by `east` metres, north by `north` metres.
+    const at = (east: number, north = 0): [number, number] => [
+      -77 + east / (111_195 * Math.cos((40 * Math.PI) / 180)),
+      40 + north / 111_195,
+    ];
+    // Ride 1 km east, 600 m down a side road to its end, back, then north.
+    const RETRACING = {
+      ...RESPONSE_FIXTURE,
+      paths: [{
+        ...RESPONSE_FIXTURE.paths[0],
+        points: { type: "LineString", coordinates: [at(-1000), at(0), at(600), at(0), at(0, 1000)] },
+      }],
+    };
+    const loop: ProviderRouteRequest = {
+      ...REQUEST,
+      destination: HARRISBURG,
+      discovery: { targetMinutes: 75, toleranceMinutes: 15 },
+    };
+    it("asks again with another seed and keeps the answer that does not retrace", async () => {
+      // The first answer for each of the three seeds retraces; the next ones do not.
+      let asked = 0;
+      const seeds: number[] = [];
+      const fetcher: typeof fetch = async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        seeds.push(Number(body["round_trip.seed"]));
+        asked += 1;
+        return jsonResponse(asked <= 3 ? RETRACING : RESPONSE_FIXTURE);
+      };
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+      const answer = await provider.candidates(loop, new AbortController().signal);
+
+      expect(asked).toBe(6);
+      expect(new Set(seeds).size).toBe(6);
+      expect(answer.candidates).toHaveLength(3);
+      for (const candidate of answer.candidates) {
+        expect(candidate.geometry).toHaveLength(RESPONSE_FIXTURE.paths[0]!.points.coordinates.length);
+        expect(countDeadEndSpurs(candidate.geometry)).toBe(0);
+      }
+    });
+
+    it("stops after two fresh seeds and hands back the first answer when every seed retraces", async () => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+      const answer = await provider.candidates(loop, new AbortController().signal);
+
+      // Three seeds, each asked once and then re-seeded twice.
+      expect(calls).toHaveLength(9);
+      expect(answer.candidates).toHaveLength(3);
+      expect(answer.candidates[0]!.geometry).toHaveLength(5);
+      expect(countDeadEndSpurs(answer.candidates[0]!.geometry)).toBe(1);
+    });
+
+    it("leaves the engine's plain loop alone when asked to", async () => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher, reseedDeadEndLoops: false });
+
+      const answer = await provider.candidates(loop, new AbortController().signal);
+
+      expect(calls).toHaveLength(3);
+      expect(answer.candidates).toHaveLength(3);
+    });
+
+    it("starts a fresh seed from the distance correction the first one learned", async () => {
+      // An engine whose loops run 1.8x the distance asked for, at 48 mph. The
+      // original seeds retrace; fresh seeds do not.
+      const originals = new Set<number>();
+      const asked: { seed: number; meters: number }[] = [];
+      const fetcher: typeof fetch = async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        const seed = Number(body["round_trip.seed"]);
+        const meters = Number(body["round_trip.distance"]);
+        if (asked.length < 3) originals.add(seed);
+        asked.push({ seed, meters });
+        const real = meters * 1.8;
+        const base = originals.has(seed) ? RETRACING : RESPONSE_FIXTURE;
+        const path = { ...base.paths[0], distance: real, time: Math.round((real / 21.4579) * 1000) };
+        return jsonResponse({ ...base, paths: [path] });
+      };
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+      const answer = await provider.candidates({
+        ...loop,
+        discovery: { targetMinutes: 180, toleranceMinutes: 27 },
+      }, new AbortController().signal);
+
+      const firstAsk = asked[0]!.meters;
+      const fresh = asked.filter((call) => !originals.has(call.seed));
+      expect(fresh.length).toBeGreaterThan(0);
+      // The fresh seed's first ask is already corrected, not the raw estimate.
+      expect(fresh[0]!.meters).toBeLessThan(firstAsk * 0.8);
+      expect(answer.candidates).toHaveLength(3);
+      for (const candidate of answer.candidates) {
+        expect(countDeadEndSpurs(candidate.geometry)).toBe(0);
+        expect(Math.abs(candidate.durationSeconds - 180 * 60)).toBeLessThanOrEqual(27 * 60);
+      }
+    });
+
+    it("never spends extra calls on the hosted plan, which bills each one", async () => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher, hosted: { apiKey: "key" } });
+
+      await provider.candidates(loop, new AbortController().signal);
+
+      expect(calls).toHaveLength(3);
+    });
+
+    it("does not ask twice about a loop that is fine", async () => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RESPONSE_FIXTURE)]);
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+      await provider.candidates(loop, new AbortController().signal);
+
+      expect(calls).toHaveLength(3);
+    });
+
+    it("never re-asks a point-to-point route", async () => {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RETRACING)]);
+      const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher });
+
+      await provider.candidates(REQUEST, new AbortController().signal);
+
+      expect(calls).toHaveLength(1);
+    });
   });
 
   it("describes itself in provider-internal vocabulary only", () => {

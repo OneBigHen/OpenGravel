@@ -9,6 +9,7 @@ import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormu
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import type { LoopHeadingPreference } from "@/application/planner/loop-heading";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
+import { deadEndSpurEligibility } from "@/application/planner/dead-end-spur-eligibility";
 import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
 import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { BALANCED_DETOUR_CAP, searchBalancedEnvelope } from "@/application/planner/balanced-search";
@@ -904,6 +905,7 @@ async function planRideAttempt(
       ...(atlasEvidence === null ? {} : { dirtAtlas: atlasEvidence }),
     });
   };
+  let spurMode: "reject" | "warn" = "reject";
   const rank = (
     from: readonly ProviderCandidate[],
     verdictFor: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null = roadVerdict,
@@ -946,7 +948,14 @@ async function planRideAttempt(
     additionalEligibilityFor: (candidate) => {
       const verdict = verdictFor(candidate);
       const riderVerdict = riderEnabled ? riderRoadEligibility(candidate, parsed.value.request.options) : { eligible: true, failures: [], warnings: [] };
-      return { eligible: riderVerdict.eligible && (verdict?.failures.length ?? 0) === 0, failures: [...riderVerdict.failures, ...(verdict?.failures ?? [])], warnings: verdict?.warnings ?? [] };
+      // A route that rides down a dead-end road and back is declined while any
+      // other route exists (see `rankPool` for the last-resort case).
+      const spurVerdict = riderEnabled ? deadEndSpurEligibility(candidate, parsed.value.request, spurMode) : { eligible: true, failures: [], warnings: [] };
+      return {
+        eligible: riderVerdict.eligible && spurVerdict.eligible && (verdict?.failures.length ?? 0) === 0,
+        failures: [...riderVerdict.failures, ...spurVerdict.failures, ...(verdict?.failures ?? [])],
+        warnings: [...(verdict?.warnings ?? []), ...spurVerdict.warnings],
+      };
     },
     // A loop's ride time is its budget (OGV-D-262): the discovery request is
     // only ever sent for a loop, so this never touches point-to-point planning.
@@ -981,7 +990,16 @@ async function planRideAttempt(
     ));
     return from.filter((_candidate, index) => !dropped.has(index));
   };
-  let pipeline = rank(candidates);
+  // The whole pool is ranked strictly: a route that retraces a dead-end road is
+  // dropped. Only when that leaves nothing is the best of them kept, with a
+  // warning, so a rider with no spur-free option still gets a route and the truth.
+  const rankPool = (from: readonly ProviderCandidate[]): ReturnType<typeof rank> => {
+    const strict = rank(from);
+    if (strict.candidates.length > 0 || !strict.diagnostics.some(entry => entry.eligibilityCode === "dead-end-spur")) return strict;
+    spurMode = "warn";
+    try { return rank(from); } finally { spurMode = "reject"; }
+  };
+  let pipeline = rankPool(candidates);
   if (fullPlan && riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
     const request = parsed.value.request;
     const wantsDirt = loopDirtTarget(request) > 0 || request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
@@ -1003,7 +1021,7 @@ async function planRideAttempt(
             riderCalls += 1;
             candidates = [...candidates, first];
             roads = await assessRoads(candidates);
-            pipeline = rank(candidates);
+            pipeline = rankPool(candidates);
           }
         }
       } catch {
@@ -1028,7 +1046,7 @@ async function planRideAttempt(
       riderCalls += atlasReport.providerCallsUsed;
       if (atlasReport.pool.length > 0) {
         candidates = [...candidates, ...atlasReport.pool.map(entry => entry.candidate)];
-        roads = await assessRoads(candidates); pipeline = rank(candidates);
+        roads = await assessRoads(candidates); pipeline = rankPool(candidates);
       }
     }
   }
@@ -1131,7 +1149,7 @@ async function planRideAttempt(
       laneDiagnostics = [...laneDiagnostics, ...more.lanes];
       // The alternatives may leave the first corridor; the feeds are cached.
       roads = await assessRoads(candidates);
-      pipeline = rank(candidates);
+      pipeline = rankPool(candidates);
     }
   }
   // The fun-route generator family (routing research Phase 7). Off by default;
@@ -1193,7 +1211,7 @@ async function planRideAttempt(
         if (result.pool.length > 0) {
           candidates = [...candidates, ...result.pool.map((entry) => entry.candidate)];
           roads = await assessRoads(candidates);
-          pipeline = rank(candidates);
+          pipeline = rankPool(candidates);
         }
       } catch {
         // A cancelled or failed family leaves the production answer untouched.

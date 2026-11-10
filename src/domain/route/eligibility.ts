@@ -59,7 +59,9 @@ export type EligibilityFailureCode =
   /** An authoritative, active closure on a road the route rides (route intelligence RI-1). */
   | "road-closed"
   /** A legal designation shuts a road the route rides to motorcycles (USFS MVUM, RI-1). */
-  | "access-prohibited";
+  | "access-prohibited"
+  /** The line rides down a branch for 300 m or more, turns around and returns the same way. */
+  | "dead-end-spur";
 
 /** Why a candidate is caveated but still legal. */
 export type EligibilityWarningCode =
@@ -74,7 +76,9 @@ export type EligibilityWarningCode =
   | "road-closure-reported"
   | "seasonal-access-unverified"
   /** A closure feed that covers the route did not answer: unknown, never clear. */
-  | "road-authority-unavailable";
+  | "road-authority-unavailable"
+  /** Every route found retraces a dead-end branch; this one is the best of them. */
+  | "dead-end-spur";
 
 /** One hard failure; `constraintId` names the authored constraint when one exists. */
 export interface RouteEligibilityFailure {
