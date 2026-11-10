@@ -1,0 +1,24 @@
+{
+  "fixture": true,
+  "id": "copper-ridge-serpentine",
+  "name": "Copper Ridge Serpentine",
+  "note": "A replay track: a route fixture plus the anchors each scenario needs. Positions are stepped at the recorded speeds; nothing here is a live answer.",
+  "routeFixture": "tests/fixtures/route-plan/ride-sim/copper-ridge-serpentine.json",
+  "speedMps": 13,
+  "sampleIntervalMs": 1000,
+  "noiseSeed": 1000003,
+  "scenarios": {
+    "missedTurn": {
+      "instructionIndex": 3,
+      "escapeMeters": 700
+    },
+    "noGps": {
+      "startMeters": 80,
+      "durationSeconds": 30
+    },
+    "stop": {
+      "startMeters": 1800,
+      "durationSeconds": 120
+    }
+  }
+}

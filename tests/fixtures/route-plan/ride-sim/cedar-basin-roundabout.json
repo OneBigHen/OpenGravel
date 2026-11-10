@@ -1,0 +1,94 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Cedar Basin Roundabout. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.92,
+          "lat": 41.02
+        },
+        {
+          "lon": -75.9116562,
+          "lat": 41.02
+        },
+        {
+          "lon": -75.9116562,
+          "lat": 41.0258456
+        },
+        {
+          "lon": -75.9033124,
+          "lat": 41.0258456
+        },
+        {
+          "lon": -75.9033124,
+          "lat": 41.0316912
+        },
+        {
+          "lon": -75.8949685,
+          "lat": 41.0316912
+        }
+      ],
+      "distanceMeters": 3399.8,
+      "durationSeconds": 272,
+      "instructions": [
+        {
+          "text": "Head 90 degrees on Cedar Basin Road",
+          "distanceMeters": 699.9981511318249,
+          "durationSeconds": 56,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Basin Entry Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 650.001063192844,
+          "durationSeconds": 52,
+          "geometryIndex": 1,
+          "roadName": "Basin Entry Road"
+        },
+        {
+          "text": "Enter the roundabout and take the second exit onto Cedar Circle",
+          "type": "roundabout",
+          "exitNumber": 2,
+          "distanceMeters": 699.9360216053997,
+          "durationSeconds": 56,
+          "geometryIndex": 2,
+          "roadName": "Cedar Circle"
+        },
+        {
+          "text": "Keep right onto Fork Road",
+          "type": "keep-right",
+          "distanceMeters": 650.0010631935513,
+          "durationSeconds": 52,
+          "geometryIndex": 3,
+          "roadName": "Fork Road"
+        },
+        {
+          "text": "Turn right onto Basin Exit Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 699.8822727465054,
+          "durationSeconds": 56,
+          "geometryIndex": 4,
+          "roadName": "Basin Exit Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 5
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:cedar-basin-roundabout:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

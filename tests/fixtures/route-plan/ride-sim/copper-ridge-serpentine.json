@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Copper Ridge Serpentine. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.62,
+          "lat": 40.12
+        },
+        {
+          "lon": -75.6105916,
+          "lat": 40.12
+        },
+        {
+          "lon": -75.6105916,
+          "lat": 40.1258456
+        },
+        {
+          "lon": -75.6023592,
+          "lat": 40.1258456
+        },
+        {
+          "lon": -75.6023592,
+          "lat": 40.1312415
+        },
+        {
+          "lon": -75.6088275,
+          "lat": 40.1312415
+        },
+        {
+          "lon": -75.6088275,
+          "lat": 40.1357381
+        }
+      ],
+      "distanceMeters": 3799.9,
+      "durationSeconds": 292,
+      "instructions": [
+        {
+          "text": "Head 90 degrees on Copper Ridge Road",
+          "distanceMeters": 799.9997575874503,
+          "durationSeconds": 62,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Mine Bank Lane",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 650.0010631935513,
+          "durationSeconds": 50,
+          "geometryIndex": 1,
+          "roadName": "Mine Bank Lane"
+        },
+        {
+          "text": "Turn right onto Old Quarry Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 699.9438537759497,
+          "durationSeconds": 54,
+          "geometryIndex": 2,
+          "roadName": "Old Quarry Road"
+        },
+        {
+          "text": "Turn left onto Furnace Hill Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 599.9967046816847,
+          "durationSeconds": 46,
+          "geometryIndex": 3,
+          "roadName": "Furnace Hill Road"
+        },
+        {
+          "text": "Turn left onto Cinder Path",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 549.9110147225244,
+          "durationSeconds": 42,
+          "geometryIndex": 4,
+          "roadName": "Cinder Path"
+        },
+        {
+          "text": "Turn right onto Ridge Line Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 499.99910714967007,
+          "durationSeconds": 38,
+          "geometryIndex": 5,
+          "roadName": "Ridge Line Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:copper-ridge-serpentine:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

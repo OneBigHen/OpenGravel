@@ -64,6 +64,27 @@ export default defineConfig({
           testTimeout: 30_000,
         },
       },
+      {
+        extends: true,
+        test: {
+          /*
+           * Ride simulation: committed tracks replayed through the real
+           * navigation stack. It never waits in real time (a 25-minute ride
+           * replays in a few hundred milliseconds), but fifty scenarios on
+           * shared hardware still deserve a deadline that measures the work
+           * rather than the load. One file, one worker: the suite is
+           * deterministic and CPU-bound, so parallel files would only make the
+           * printed pass/fail table harder to read.
+           */
+          name: "ride-sim",
+          environment: "node",
+          include: ["tests/ride-sim/**/*.test.ts"],
+          passWithNoTests: false,
+          fileParallelism: false,
+          testTimeout: 120_000,
+          hookTimeout: 30_000,
+        },
+      },
     ],
   },
 });

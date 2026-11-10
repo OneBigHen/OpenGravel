@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Alder Creek Bends. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -76.02,
+          "lat": 40.55
+        },
+        {
+          "lon": -76.0125689,
+          "lat": 40.551513
+        },
+        {
+          "lon": -76.0104246,
+          "lat": 40.5575937
+        },
+        {
+          "lon": -76.0035652,
+          "lat": 40.5561971
+        },
+        {
+          "lon": -76.0058627,
+          "lat": 40.5627122
+        },
+        {
+          "lon": -75.9984316,
+          "lat": 40.5642252
+        },
+        {
+          "lon": -75.9965936,
+          "lat": 40.5694372
+        }
+      ],
+      "distanceMeters": 3949.8,
+      "durationSeconds": 316,
+      "instructions": [
+        {
+          "text": "Head 75 degrees on Alder Creek Road",
+          "distanceMeters": 649.9980494571059,
+          "durationSeconds": 52,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Bend Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 699.9916579070823,
+          "durationSeconds": 56,
+          "geometryIndex": 1,
+          "roadName": "Bend Road"
+        },
+        {
+          "text": "Turn right onto Creek Ford Lane",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 599.9401572358775,
+          "durationSeconds": 48,
+          "geometryIndex": 2,
+          "roadName": "Creek Ford Lane"
+        },
+        {
+          "text": "Turn left onto Millrace Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 749.995070265319,
+          "durationSeconds": 60,
+          "geometryIndex": 3,
+          "roadName": "Millrace Road"
+        },
+        {
+          "text": "Turn right onto Shallow Run",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 649.8829092970838,
+          "durationSeconds": 52,
+          "geometryIndex": 4,
+          "roadName": "Shallow Run"
+        },
+        {
+          "text": "Turn left onto Bridge Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 599.9830358452084,
+          "durationSeconds": 48,
+          "geometryIndex": 5,
+          "roadName": "Bridge Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:alder-creek-bends:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}
