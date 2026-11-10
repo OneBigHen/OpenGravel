@@ -1,0 +1,95 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Slate Mesa Traverse. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -76.28,
+          "lat": 40.08
+        },
+        {
+          "lon": -76.2741823,
+          "lat": 40.0844514
+        },
+        {
+          "lon": -76.2795844,
+          "lat": 40.0885849
+        },
+        {
+          "lon": -76.2733512,
+          "lat": 40.0933542
+        },
+        {
+          "lon": -76.2791689,
+          "lat": 40.0978057
+        },
+        {
+          "lon": -76.2737667,
+          "lat": 40.1019391
+        }
+      ],
+      "distanceMeters": 3449.7,
+      "durationSeconds": 238,
+      "instructions": [
+        {
+          "text": "Head 45 degrees on Slate Mesa Road",
+          "distanceMeters": 699.9855190129194,
+          "durationSeconds": 48,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Mesa Spur",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 649.9675494248731,
+          "durationSeconds": 45,
+          "geometryIndex": 1,
+          "roadName": "Mesa Spur"
+        },
+        {
+          "text": "Turn right onto Flat Rock Lane",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 749.9288233948319,
+          "durationSeconds": 52,
+          "geometryIndex": 2,
+          "roadName": "Flat Rock Lane"
+        },
+        {
+          "text": "Turn left onto West Table Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 699.9247297720992,
+          "durationSeconds": 48,
+          "geometryIndex": 3,
+          "roadName": "West Table Road"
+        },
+        {
+          "text": "Turn right onto Mesa Traverse",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 649.9019476153292,
+          "durationSeconds": 45,
+          "geometryIndex": 4,
+          "roadName": "Mesa Traverse"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 5
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:slate-mesa-traverse:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

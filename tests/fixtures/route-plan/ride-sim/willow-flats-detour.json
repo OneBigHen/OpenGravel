@@ -1,0 +1,95 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Willow Flats Detour. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.2,
+          "lat": 40.78
+        },
+        {
+          "lon": -75.2083136,
+          "lat": 40.78
+        },
+        {
+          "lon": -75.2083136,
+          "lat": 40.7853959
+        },
+        {
+          "lon": -75.217221,
+          "lat": 40.7853959
+        },
+        {
+          "lon": -75.217221,
+          "lat": 40.7912415
+        },
+        {
+          "lon": -75.2255346,
+          "lat": 40.7912415
+        }
+      ],
+      "distanceMeters": 3399.8,
+      "durationSeconds": 252,
+      "instructions": [
+        {
+          "text": "Head 270 degrees on Willow Flats Road",
+          "distanceMeters": 699.9998543346436,
+          "durationSeconds": 52,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn right onto Detour Lane",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 599.9967046809775,
+          "durationSeconds": 44,
+          "geometryIndex": 1,
+          "roadName": "Detour Lane"
+        },
+        {
+          "text": "Turn left onto Flats Crossing",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 749.9365100371155,
+          "durationSeconds": 56,
+          "geometryIndex": 2,
+          "roadName": "Flats Crossing"
+        },
+        {
+          "text": "Turn right onto Ditch Bank Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 650.0010631935513,
+          "durationSeconds": 48,
+          "geometryIndex": 3,
+          "roadName": "Ditch Bank Road"
+        },
+        {
+          "text": "Turn left onto West Dike Road",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 699.8813750976586,
+          "durationSeconds": 52,
+          "geometryIndex": 4,
+          "roadName": "West Dike Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 5
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:willow-flats-detour:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

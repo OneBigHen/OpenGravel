@@ -1,0 +1,24 @@
+{
+  "fixture": true,
+  "id": "quartz-canyon-zigzag",
+  "name": "Quartz Canyon Zigzag",
+  "note": "A replay track: a route fixture plus the anchors each scenario needs. Positions are stepped at the recorded speeds; nothing here is a live answer.",
+  "routeFixture": "tests/fixtures/route-plan/ride-sim/quartz-canyon-zigzag.json",
+  "speedMps": 12,
+  "sampleIntervalMs": 1000,
+  "noiseSeed": 1007922,
+  "scenarios": {
+    "missedTurn": {
+      "instructionIndex": 3,
+      "escapeMeters": 700
+    },
+    "noGps": {
+      "startMeters": 1380,
+      "durationSeconds": 30
+    },
+    "stop": {
+      "startMeters": 350,
+      "durationSeconds": 120
+    }
+  }
+}

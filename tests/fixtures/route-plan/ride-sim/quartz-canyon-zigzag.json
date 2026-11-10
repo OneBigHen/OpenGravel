@@ -1,0 +1,108 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Quartz Canyon Zigzag. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.5,
+          "lat": 40.2
+        },
+        {
+          "lon": -75.4928622,
+          "lat": 40.2031476
+        },
+        {
+          "lon": -75.4963945,
+          "lat": 40.2078206
+        },
+        {
+          "lon": -75.4887468,
+          "lat": 40.2111931
+        },
+        {
+          "lon": -75.4925735,
+          "lat": 40.2162555
+        },
+        {
+          "lon": -75.4854356,
+          "lat": 40.2194031
+        },
+        {
+          "lon": -75.488968,
+          "lat": 40.2240762
+        }
+      ],
+      "distanceMeters": 3999.7,
+      "durationSeconds": 333,
+      "instructions": [
+        {
+          "text": "Head 60 degrees on Quartz Canyon Road",
+          "distanceMeters": 699.9840577588928,
+          "durationSeconds": 58,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Switchback Trail",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 599.986246837463,
+          "durationSeconds": 50,
+          "geometryIndex": 1,
+          "roadName": "Switchback Trail"
+        },
+        {
+          "text": "Turn right onto Bright Water Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 749.9252710630371,
+          "durationSeconds": 62,
+          "geometryIndex": 2,
+          "roadName": "Bright Water Road"
+        },
+        {
+          "text": "Turn left onto Mica Shelf Lane",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 649.9655130596738,
+          "durationSeconds": 54,
+          "geometryIndex": 3,
+          "roadName": "Mica Shelf Lane"
+        },
+        {
+          "text": "Turn right onto Canyon Rim Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 699.8655187715408,
+          "durationSeconds": 58,
+          "geometryIndex": 4,
+          "roadName": "Canyon Rim Road"
+        },
+        {
+          "text": "Turn left onto Narrows Grade",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 599.9641535375957,
+          "durationSeconds": 50,
+          "geometryIndex": 5,
+          "roadName": "Narrows Grade"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 6
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:quartz-canyon-zigzag:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

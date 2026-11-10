@@ -119,6 +119,10 @@ async function planFixtureRide(page: import("@playwright/test").Page): Promise<v
 }
 
 test.beforeEach(async ({ page }) => {
+  // Midday in Pennsylvania: a route planned after sunset is drawn in its
+  // after-dark colours (route-daylight.ts), so the pixel census below would
+  // depend on the hour CI happens to run.
+  await page.clock.setFixedTime(new Date("2026-10-28T16:00:00Z"));
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   // The renderer is up when it has published the camera it opened with.

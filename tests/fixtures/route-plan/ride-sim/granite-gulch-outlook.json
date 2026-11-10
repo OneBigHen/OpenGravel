@@ -1,0 +1,95 @@
+{
+  "fixture": true,
+  "note": "FIXTURE — deterministic ride-sim route for Granite Gulch Outlook. Not a live router answer; no network is used.",
+  "candidates": [
+    {
+      "providerId": "fixture",
+      "profile": "motorcycle_gravel",
+      "geometry": [
+        {
+          "lon": -75.34,
+          "lat": 40.46
+        },
+        {
+          "lon": -75.3323228,
+          "lat": 40.4566275
+        },
+        {
+          "lon": -75.3287769,
+          "lat": 40.4613006
+        },
+        {
+          "lon": -75.3205878,
+          "lat": 40.4577033
+        },
+        {
+          "lon": -75.3167464,
+          "lat": 40.4627657
+        },
+        {
+          "lon": -75.309581,
+          "lat": 40.4596181
+        }
+      ],
+      "distanceMeters": 3500,
+      "durationSeconds": 250,
+      "instructions": [
+        {
+          "text": "Head 120 degrees on Granite Gulch Road",
+          "distanceMeters": 750.0168450598827,
+          "durationSeconds": 54,
+          "type": "depart",
+          "geometryIndex": 0
+        },
+        {
+          "text": "Turn left onto Outlook Spur",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 600.0088692966,
+          "durationSeconds": 43,
+          "geometryIndex": 1,
+          "roadName": "Outlook Spur"
+        },
+        {
+          "text": "Turn right onto Boulder Run",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 800.0118528669834,
+          "durationSeconds": 57,
+          "geometryIndex": 2,
+          "roadName": "Boulder Run"
+        },
+        {
+          "text": "Turn left onto Gulch Rim Lane",
+          "type": "turn",
+          "maneuver": "left",
+          "distanceMeters": 649.9948506655023,
+          "durationSeconds": 46,
+          "geometryIndex": 3,
+          "roadName": "Gulch Rim Lane"
+        },
+        {
+          "text": "Turn right onto Hawkwatch Road",
+          "type": "turn",
+          "maneuver": "right",
+          "distanceMeters": 699.9905002509598,
+          "durationSeconds": 50,
+          "geometryIndex": 4,
+          "roadName": "Hawkwatch Road"
+        },
+        {
+          "text": "Arrive at your destination",
+          "distanceMeters": 0,
+          "durationSeconds": 0,
+          "type": "finish",
+          "geometryIndex": 5
+        }
+      ],
+      "providerMetadata": {
+        "fingerprint": "ride-sim:granite-gulch-outlook:v1",
+        "graph": "ride-sim-fixture",
+        "bestRide": true
+      }
+    }
+  ]
+}

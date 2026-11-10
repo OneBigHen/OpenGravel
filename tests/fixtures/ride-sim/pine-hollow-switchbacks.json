@@ -1,0 +1,24 @@
+{
+  "fixture": true,
+  "id": "pine-hollow-switchbacks",
+  "name": "Pine Hollow Switchbacks",
+  "note": "A replay track: a route fixture plus the anchors each scenario needs. Positions are stepped at the recorded speeds; nothing here is a live answer.",
+  "routeFixture": "tests/fixtures/route-plan/ride-sim/pine-hollow-switchbacks.json",
+  "speedMps": 11.5,
+  "sampleIntervalMs": 1000,
+  "noiseSeed": 1015841,
+  "scenarios": {
+    "missedTurn": {
+      "instructionIndex": 3,
+      "escapeMeters": 700
+    },
+    "noGps": {
+      "startMeters": 80,
+      "durationSeconds": 30
+    },
+    "stop": {
+      "startMeters": 2950,
+      "durationSeconds": 120
+    }
+  }
+}
