@@ -68,3 +68,7 @@ infra/maps/data/
 /shots-out/
 # Written by tests/e2e/visual/w1b-options.screenshots.spec.ts
 /w1b-shots/
+
+# Local route scorecard reports and authority snapshots
+/scorecard-out/
+/data/scorecard/
