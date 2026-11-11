@@ -5,7 +5,7 @@
 
 .og-ride {
   --og-ride-gap: 12px;
-  --og-ride-strip-h: 72px;
+  --og-ride-strip-h: 60px;
   --og-ride-strip-live-h: var(--og-ride-strip-h);
   position: fixed;
   inset: 0;
@@ -40,16 +40,18 @@
   pointer-events: auto;
 }
 
-/* The maneuver: arrow, distance, street. */
+/* The maneuver: arrow, distance, street, and the surface coming up as the
+   card's second row. 96px tall, growing only for a long road name. */
 .og-ride__maneuver {
   position: relative;
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   align-content: center;
   align-items: center;
-  column-gap: var(--og-space-4);
+  column-gap: var(--og-space-3);
+  row-gap: var(--og-space-1);
   min-height: 96px;
-  padding: var(--og-space-3) var(--og-space-4);
+  padding: var(--og-space-2) var(--og-space-4);
   border-radius: var(--og-radius-sheet);
   background: var(--og-primary);
   color: var(--og-on-primary);
@@ -66,13 +68,13 @@
   grid-row: 1 / span 2;
   grid-column: 1;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
 }
 
 .og-ride__maneuver-glyph {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   color: currentColor;
 }
 
@@ -100,6 +102,52 @@
   font-weight: 700;
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+.og-ride__maneuver-turn {
+  display: flex;
+  grid-column: 2;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--og-space-3);
+  min-width: 0;
+}
+
+.og-ride__maneuver-turn .og-ride__maneuver-distance {
+  flex: none;
+}
+
+.og-ride__maneuver-turn .og-ride__maneuver-action {
+  flex: 1 1 8em;
+  min-width: 0;
+}
+
+.og-ride__maneuver-surface {
+  display: flex;
+  grid-column: 2;
+  align-items: center;
+  gap: var(--og-space-3);
+  font-size: var(--og-text-body);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* The swatch wears the surface bar's colours (paved grey, gravel amber, dirt
+   ink, unknown hatched) inside a ring of the card's own text colour, so it
+   reads on the green in both themes. */
+.og-ride__surface-swatch {
+  flex: none;
+  width: 16px;
+  height: 8px;
+  border-radius: var(--og-radius-pill);
+  box-shadow: 0 0 0 2px var(--og-on-primary);
+}
+
+.og-ride__surface-swatch[data-surface="paved"] { background: var(--og-route-alt); }
+.og-ride__surface-swatch[data-surface="gravel"] { background: var(--og-warn); }
+.og-ride__surface-swatch[data-surface="dirt"] { background: var(--og-ink-2); }
+.og-ride__surface-swatch[data-surface="unknown"] {
+  background: repeating-linear-gradient(135deg, var(--og-ink-2) 0 2px, var(--og-on-primary) 2px 4px);
 }
 
 .og-ride__maneuver-road {
@@ -278,9 +326,7 @@
 }
 
 .og-ride__gps-badge path,
-.og-ride__strip-chevron path,
-.og-ride__strip-end path,
-.og-ride__recenter path {
+.og-ride__strip-end path {
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -349,36 +395,12 @@
   cursor: pointer;
 }
 
-.og-ride__strip-text {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
 .og-ride__strip-main {
   font-family: var(--og-face-display);
   font-size: var(--og-text-headline);
   font-weight: 700;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
-}
-
-.og-ride__strip-part {
-  overflow: hidden;
-  color: var(--og-ink-2);
-  font-family: var(--og-face-display);
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-.og-ride__strip-chevron {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin-left: auto;
-  color: var(--og-ink-2);
 }
 
 .og-ride__strip-end {
@@ -532,7 +554,7 @@
   line-height: 1;
 }
 
-:is(.og-ride__strip-summary, .og-ride__strip-end, .og-ride-metrics__slot, .og-ride-metrics__toggle, .og-ride__gps-badge, .og-ride__rail-button, .og-ride__recenter):focus-visible {
+:is(.og-ride__strip-summary, .og-ride__strip-end, .og-ride-metrics__slot, .og-ride-metrics__toggle, .og-ride__gps-badge, .og-ride__rail-button):focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: 2px;
 }
@@ -621,22 +643,19 @@
   gap: var(--og-space-3);
 }
 
-/* One column of 56px controls: compass, zoom pill, route, voice. */
-.og-ride__rail {
+/* One column of 56px controls: on a phone Recenter, Stops and Mute and
+   nothing else. The compass and zoom pill (.og-ride__rail-extra) are for
+   tablet and desktop. */
+.og-ride__rail,
+.og-ride__rail-extra {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: var(--og-space-3);
-  max-height: calc(100dvh - var(--og-ride-top-h, 120px) - var(--og-ride-strip-live-h) - 48px);
-  margin: -6px;
-  padding: 6px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
 }
 
-.og-ride__rail-actions {
-  display: contents;
+.og-ride__rail-extra {
+  display: none;
 }
 
 .og-ride__rail-button,
@@ -671,12 +690,6 @@
 
 .og-ride__rail-button[aria-pressed="true"] {
   color: var(--og-primary-text);
-}
-
-/* The emergency disc is the one control that is not about the ride. */
-.og-ride__rail-button[data-tone="danger"],
-.og-ride__rail-button[data-tone="danger"] svg {
-  color: var(--og-danger);
 }
 
 /* Zoom: two 56px halves of one pill — gloves can't pinch. */
@@ -720,29 +733,6 @@
   fill: var(--og-ink-2);
 }
 
-.og-ride__recenter {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--og-space-2);
-  min-height: var(--og-touch-ride);
-  padding: 0 var(--og-space-5);
-  border: 0;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
-  color: var(--og-ink);
-  font: inherit;
-  font-size: var(--og-text-body);
-  font-weight: 700;
-  box-shadow: var(--og-shadow-float);
-  cursor: pointer;
-}
-
-.og-ride__recenter svg {
-  width: 22px;
-  height: 22px;
-  color: var(--og-primary-text);
-}
-
 /* Tablet and desktop: the instrument keeps a phone's width at the left. */
 @media (min-width: 761px) {
   :is(.og-ride__top, .og-ride__strip) {
@@ -753,6 +743,10 @@
   .og-ride__float {
     left: calc(max(var(--og-ride-gap), var(--og-safe-left)) + 456px);
     bottom: max(var(--og-ride-gap), var(--og-safe-bottom));
+  }
+
+  .og-ride__rail-extra {
+    display: flex;
   }
 }
 
@@ -795,13 +789,8 @@
     align-items: center;
   }
 
-  .og-ride__rail-zoom {
-    flex-direction: row;
-  }
-
-  .og-ride__rail-zoom .og-map__zoom + .og-map__zoom {
-    border-top: 0;
-    border-left: 1px solid var(--og-line);
+  .og-ride__rail-extra {
+    display: none;
   }
 }
 
@@ -903,8 +892,6 @@
 }
 
 .og-ride__gps-badge path,
-.og-ride__recenter path,
-.og-ride__strip-chevron path,
 .og-ride__strip-end path {
   fill: none;
   stroke: currentColor;
@@ -983,12 +970,6 @@
 .og-ride__limit strong {
   font-size: var(--og-ride-text-readout);
   font-weight: 700;
-}
-
-.og-ride__recenter svg {
-  width: 22px;
-  height: 22px;
-  color: var(--og-warn);
 }
 
 .og-ride__strip-end svg {
@@ -1259,115 +1240,6 @@
   outline: 2px solid var(--og-primary);
   outline-offset: 2px;
 }
-
-.og-ride__spotify {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--og-line-strong);
-  border-radius: var(--og-radius-card);
-  background: var(--og-surface);
-}
-
-.og-ride__spotify-strip {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.og-ride__spotify-track strong,
-.og-ride__spotify-track span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.og-ride__spotify-track {
-  min-width: 0;
-}
-
-.og-ride__spotify-track span {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-ride__spotify-status {
-  margin: 2px 0 0;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-ride__spotify-art {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--og-radius-control);
-  object-fit: cover;
-}
-
-.og-ride__spotify-art--empty {
-  background: var(--og-surface);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-headline);
-}
-
-.og-ride__spotify-controls {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.og-ride__spotify-button {
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border: 0;
-  border-radius: var(--og-radius-pill);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.og-ride__spotify-button--primary {
-  background: var(--og-surface);
-}
-
-.og-ride__spotify-button:disabled {
-  opacity: 0.38;
-  cursor: default;
-}
-
-.og-ride__spotify-button:focus-visible,
-.og-ride__spotify-link:focus-visible {
-  outline: 2px solid var(--og-primary);
-  outline-offset: 2px;
-}
-
-.og-ride__spotify-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-}
-
-.og-ride__spotify-actions:empty {
-  display: none;
-}
-
-.og-ride__spotify-link {
-  padding: 6px 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: var(--og-text-meta);
-  text-decoration: underline;
-  cursor: pointer;
-}
 .og-ride__switch-rows {
   display: flex;
   flex-direction: column;
@@ -1519,10 +1391,6 @@
 .og-ride__action--primary {
   background: var(--og-primary);
   border-color: var(--og-primary);
-}
-
-.og-ride__action--danger {
-  border-color: var(--og-danger);
 }
 
 .og-ride__action--link {
@@ -2272,19 +2140,6 @@
   }
 }
 
-.og-ride__rail-button svg {
-  width: 26px;
-  height: 26px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.og-ride__rail-compass svg {
-  fill: currentColor;
-  stroke: none;
-}
 .og-ride__display {
   display: flex;
   gap: 8px;
@@ -2800,8 +2655,8 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: var(--og-touch);
-  height: var(--og-touch);
+  width: var(--og-touch-ride);
+  height: var(--og-touch-ride);
   padding: 0;
   border: 0;
   border-radius: var(--og-radius-pill);
@@ -2853,49 +2708,9 @@
   bottom: 0;
   left: 0;
   height: calc(var(--og-ride-strip-live-h) + max(var(--og-ride-gap), var(--og-safe-bottom)));
-  padding: var(--og-space-2) max(var(--og-space-3), var(--og-safe-right)) max(var(--og-ride-gap), var(--og-safe-bottom)) max(var(--og-space-3), var(--og-safe-left));
+  padding: var(--og-space-1) max(var(--og-space-3), var(--og-safe-right)) max(var(--og-ride-gap), var(--og-safe-bottom)) max(var(--og-space-3), var(--og-safe-left));
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -6px 24px rgb(0 0 0 / 0.22);
-}
-
-.og-ride__strip-stop {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: var(--og-touch-ride);
-  height: var(--og-touch-ride);
-  padding: 0;
-  border: 0;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-surface-2);
-  color: var(--og-ink);
-  cursor: pointer;
-}
-
-.og-ride__strip-stop svg {
-  width: 26px;
-  height: 26px;
-}
-
-.og-ride__strip-stop path {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-
-.og-ride__strip-stop:active {
-  background: var(--og-press);
-}
-
-.og-ride__strip-stop:focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
-}
-
-.og-ride__strip-stop:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Google's arrival is the green number in the bar. */
@@ -2931,11 +2746,6 @@
     padding-inline: max(var(--og-space-2), var(--og-safe-left));
   }
 
-  .og-ride__strip-stop {
-    width: var(--og-touch);
-    height: var(--og-touch);
-  }
-
   .og-ride-metrics__toggle {
     width: 40px;
   }
@@ -2952,8 +2762,10 @@
 /* Ride menu polish (mobile UX handoff, 2026-10-27): the controls sheet reads
    as one grouped list, not a stack of boxed buttons. Rows sit on the glass
    well, a hairline apart, label left, hint right, a chevron where a row
-   opens something. Every row keeps its 56px glove target. */
-.og-ride__sheet .og-ride__detour {
+   opens something. Every row keeps its 56px glove target. A group is
+   .og-ride__menu-group (Emergency, This ride, Sound, Screen, More) or the
+   stops block (.og-ride__detour). */
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) {
   gap: 0;
   overflow: hidden;
   border-radius: var(--og-radius-card);
@@ -2964,19 +2776,25 @@
   gap: 0;
 }
 
-.og-ride__sheet .og-ride__detour > * + * {
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) > * + *,
+.og-ride__menu-group .og-ride__more > :is(.og-ride__more-row, .og-ride__more) {
   border-top: 1px solid var(--og-line);
 }
 
-.og-ride__sheet .og-ride__detour .og-ride__sheet-row {
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) .og-ride__sheet-row {
   border: 0;
   border-radius: 0;
   background: transparent;
 }
 
+.og-ride__sheet .og-ride__sheet-row--primary {
+  background: var(--og-primary);
+  color: var(--og-on-primary);
+}
+
 .og-ride__sheet .og-ride__detour .og-ride__sheet-row::after,
-.og-ride__sheet .og-ride__detour .og-ride__more > summary::after,
-.og-ride__sheet .og-ride__style > summary::after {
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) summary::after,
+.og-ride__sheet .og-ride__more-row > .og-ride__sheet-row::after {
   content: "›";
   flex: none;
   color: var(--og-ink-2);
@@ -2984,11 +2802,11 @@
   line-height: 1;
 }
 
-.og-ride__sheet .og-ride__detour .og-ride__sheet-row-hint {
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) .og-ride__sheet-row-hint {
   margin-left: auto;
 }
 
-.og-ride__sheet .og-ride__detour .og-ride__more > summary {
+.og-ride__sheet :is(.og-ride__detour, .og-ride__menu-group) .og-ride__more > summary {
   justify-content: space-between;
   min-height: 56px;
   margin: 0;
@@ -3000,8 +2818,18 @@
   font-weight: 700;
 }
 
-.og-ride__sheet .og-ride__detour .og-ride__more[open] > summary::after {
+.og-ride__sheet :is(.og-ride__more[open] > summary, .og-ride__more-row > [aria-expanded="true"])::after {
   transform: rotate(90deg);
+}
+
+.og-ride__menu-group :is(.og-ride__display, .og-ride__details, .og-ride__safety, .og-ride-interest) {
+  margin: 0 var(--og-space-3) var(--og-space-3);
+}
+
+.og-ride__menu-group .og-ride__switch-row {
+  width: 100%;
+  padding: 0 var(--og-space-4);
+  border: 0;
 }
 
 .og-ride__sheet .og-ride__detour .og-ride__detour-actions {
@@ -3055,8 +2883,7 @@
   background: var(--og-glass-well);
 }
 
-.og-ride__sheet .og-ride__actions .og-ride__action:not(.og-ride__action--primary),
-.og-ride__sheet .og-ride__style > summary {
+.og-ride__sheet .og-ride__actions .og-ride__action:not(.og-ride__action--primary) {
   border-color: transparent;
   border-radius: var(--og-radius-card);
   background: var(--og-glass-well);
