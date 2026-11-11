@@ -117,8 +117,7 @@
 }
 
 /* A place card owns the whole sheet. */
-.og-planner__sheet[data-place="true"] .og-sheet__head > :not(.og-sheet__handle),
-.og-planner__sheet[data-place="true"] .og-sheet__body > :not(.og-place-sheet-slot) {
+.og-planner__sheet[data-place="true"] :is(.og-sheet__head > :not(.og-sheet__handle), .og-sheet__body > :not(.og-place-sheet-slot), .og-sheet__foot) {
   display: none;
 }
 
