@@ -57,6 +57,8 @@ export interface MapLayersPanelProps {
 /** Mapbox styles that picture each look, for the map type cards. */
 const LOOK_PREVIEW_STYLE: Readonly<Record<BasemapLook, string>> = {
   map: "mapbox/outdoors-v12",
+  // Night terrain is repainted from Outdoors at load time, so no hosted still
+  // exists; the old night style is the closest picture the Static API has.
   night: "mapbox/navigation-night-v1",
   satellite: "mapbox/satellite-streets-v12",
 };
