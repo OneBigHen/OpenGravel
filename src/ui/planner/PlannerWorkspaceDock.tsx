@@ -228,7 +228,9 @@ export function PlannerWorkspaceDock({
   const compact = useCompactPlanner();
   // The desktop rail ends in a fixed foot, so the action and its one-line reason
   // are never sliced by the panel edge however tall the options grow above them.
-  const commitment = desktop ? <PlanCommitment {...composer} loop={loopRide} /> : undefined;
+  const commitment = desktop
+    ? <PlanCommitment {...composer} loop={loopRide} {...(planning ? { onCancelPlanning } : {})} />
+    : undefined;
   const [selectedOption, setSelectedOption] = useState<PlannerOption | null>(null);
   const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");
   const optionsMode = showOptions && compact && hasChoices && !placeSheet;
