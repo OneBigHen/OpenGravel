@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { expectDrawnScene, plannerMap, pressPlan, settledExtent } from "../critical/map-helpers";
-import { chooseStart, directionsTo } from "../critical/search-helpers";
+import { directionsTo } from "../critical/search-helpers";
 
 /**
  * Screenshot baselines (world-class round, package 1): "the app cannot
@@ -69,10 +69,9 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
     }
   },
   "loop-planned": async (page, device) => {
+    // The start is the rider's own position (geolocation is granted).
     await coldLoad(page);
-    await chooseStart(page);
-    await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
-    if (device.compact && (await page.getByTestId("ride-shape-loop").count()) === 0) {
+    if (device.compact && !(await page.getByTestId("ride-shape-loop").isVisible())) {
       await page.getByTestId("loop-near-me").click();
     } else {
       await page.getByTestId("ride-shape-loop").check();
