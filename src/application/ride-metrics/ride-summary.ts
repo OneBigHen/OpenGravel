@@ -30,18 +30,53 @@ const MIN_MOVING_MS = 60_000;
 /** A few seconds at a light is not a stat: "Stopped" starts at a whole minute. */
 const MIN_STOPPED_MS = 60_000;
 
-function duration(ms: number): string {
+/** A number as a surface prints it: the figure and the unit beside it. */
+export interface RideStatText {
+  readonly value: string;
+  readonly unit: string;
+}
+
+export function duration(ms: number): string {
   const minutes = Math.round(ms / 60_000);
   const hours = Math.floor(minutes / 60);
   return hours > 0 ? `${hours}:${String(minutes % 60).padStart(2, "0")}` : `${minutes} min`;
 }
 
 /** `("25", "min")` / `("1:30", "h")`: the value and unit the grid's dd and small unit print. */
-function durationStat(ms: number): { readonly value: string; readonly unit: string } {
+export function durationStat(ms: number): RideStatText {
   const text = duration(ms);
   return text.endsWith(" min")
     ? { value: text.replace(/ min$/, ""), unit: "min" }
     : { value: text, unit: "h" };
+}
+
+/**
+ * A distance in the rider's unit, rounded the one way the app rounds: whole
+ * numbers from 10 up (9.97 reads "10", never "10.0"), tenths below.
+ */
+export function distanceStat(meters: number, units: "imperial" | "metric" = "imperial"): RideStatText {
+  const metric = units === "metric";
+  const distance = metric ? meters / 1000 : meters / METERS_PER_MILE;
+  return {
+    value: distance >= 9.95 ? String(Math.round(distance)) : distance.toFixed(1),
+    unit: metric ? "km" : "mi",
+  };
+}
+
+/** A speed in the rider's unit, in whole numbers: 10 m/s reads "22 mph". */
+export function speedStat(mps: number, units: "imperial" | "metric" = "imperial"): RideStatText {
+  const metric = units === "metric";
+  return {
+    value: String(Math.round(mps * (metric ? KMH_PER_MPS : MPH_PER_MPS))),
+    unit: metric ? "km/h" : "mph",
+  };
+}
+
+/** A climb in the rider's unit, rounded and grouped: 914.4 m reads "3,000 ft". */
+export function climbStat(meters: number, units: "imperial" | "metric" = "imperial"): RideStatText {
+  const metric = units === "metric";
+  const climb = metric ? meters : meters * FEET_PER_METER;
+  return { value: Math.round(climb).toLocaleString("en-US"), unit: metric ? "m" : "ft" };
 }
 
 export function rideSummaryStats(
@@ -50,27 +85,16 @@ export function rideSummaryStats(
   recordingSummary: RecordingSummary | null = null,
 ): readonly RideSummaryStat[] {
   if (telemetry === null || telemetry.movingMs < MIN_MOVING_MS) return [];
-  const metric = units === "metric";
   const stats: RideSummaryStat[] = [];
-  const distance = metric ? telemetry.acceptedDistanceMeters / 1000 : telemetry.acceptedDistanceMeters / METERS_PER_MILE;
-  stats.push({
-    id: "distance",
-    label: "Distance",
-    // Whole numbers from 10 up (9.97 reads "10", never "10.0"); tenths below.
-    value: distance >= 9.95 ? String(Math.round(distance)) : distance.toFixed(1),
-    unit: metric ? "km" : "mi",
-  });
-  const moving = durationStat(telemetry.movingMs);
-  stats.push({ id: "moving", label: "Moving time", value: moving.value, unit: moving.unit });
-  const speed = (mps: number): string => String(Math.round(mps * (metric ? KMH_PER_MPS : MPH_PER_MPS)));
+  stats.push({ id: "distance", label: "Distance", ...distanceStat(telemetry.acceptedDistanceMeters, units) });
+  stats.push({ id: "moving", label: "Moving time", ...durationStat(telemetry.movingMs) });
   const average = movingAverageSpeedMps(telemetry);
-  if (average !== null) stats.push({ id: "average", label: "Avg speed", value: speed(average), unit: metric ? "km/h" : "mph" });
+  if (average !== null) stats.push({ id: "average", label: "Avg speed", ...speedStat(average, units) });
   if (telemetry.maxSpeedMps !== null) {
-    stats.push({ id: "max", label: "Top speed", value: speed(telemetry.maxSpeedMps), unit: metric ? "km/h" : "mph" });
+    stats.push({ id: "max", label: "Top speed", ...speedStat(telemetry.maxSpeedMps, units) });
   }
   if (telemetry.elevation.sampleCount > 0) {
-    const climb = metric ? telemetry.elevation.gainMeters : telemetry.elevation.gainMeters * FEET_PER_METER;
-    stats.push({ id: "climb", label: "Climb", value: Math.round(climb).toLocaleString("en-US"), unit: metric ? "m" : "ft" });
+    stats.push({ id: "climb", label: "Climb", ...climbStat(telemetry.elevation.gainMeters, units) });
   }
   // Only a recording has both clocks, and elapsed − moving is then a real
   // duration rather than a guess at one.
