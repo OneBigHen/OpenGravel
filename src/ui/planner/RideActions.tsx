@@ -57,6 +57,11 @@ export interface RideActionsProps {
     readonly error: string | null;
     readonly onStart: () => void;
   } | null;
+  /**
+   * Shown only while the answer is a saved ride's own line (R3-1): plan the
+   * saved request again instead of riding the line that was saved.
+   */
+  readonly onPlanAgain?: (() => void) | null;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "failed";
@@ -77,6 +82,7 @@ export function RideActions({
   route,
   rideActions,
   start,
+  onPlanAgain = null,
 }: RideActionsProps) {
   // The §12 share source: a named derivation from the document and the selected
   // route, never a document spread. The sheet owns the shared title.
@@ -126,7 +132,14 @@ export function RideActions({
           : {
               offlinePack: route.pack,
               bundleSummary: bundleSummaryOf(route),
-              plannedRoute: { geometry: route.geometry },
+              // The chosen card exactly: its line, numbers and measured facts,
+              // so the ride reopens as this line with the same truth lines (R3-1).
+              plannedRoute: {
+                geometry: route.geometry,
+                ...bundleSummaryOf(route),
+                ...(route.evidence === undefined ? {} : { evidence: route.evidence }),
+                ...(route.instructions === undefined ? {} : { instructions: route.instructions }),
+              },
             }),
       });
       setSaveState("saved");
@@ -216,6 +229,20 @@ export function RideActions({
               {start.error}
             </p>
           )}
+        </div>
+      )}
+
+      {onPlanAgain === null ? null : (
+        <div className="og-plan-actions__row">
+          <button
+            type="button"
+            className="og-secondary"
+            data-testid="plan-it-again"
+            title="This is the line you saved. Plan the same ride again with today's roads."
+            onClick={onPlanAgain}
+          >
+            Plan it again
+          </button>
         </div>
       )}
 

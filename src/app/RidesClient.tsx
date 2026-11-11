@@ -45,6 +45,7 @@ export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } =
     service={service}
     importService={importService}
     roadProgressReader={roadProgressReader}
+    geometryStore={geometryStore}
     {...(mapboxToken === undefined ? {} : { mapboxToken })}
   />;
 }
