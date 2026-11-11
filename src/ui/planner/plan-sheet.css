@@ -23,13 +23,9 @@
   gap: var(--og-space-2);
 }
 
-.og-plan-actions__glyph {
-  flex: none;
-}
+.og-plan-actions__glyph { flex: none; }
 
-.og-plan-actions__record-dot {
-  fill: var(--og-record);
-}
+.og-plan-actions__record-dot { fill: var(--og-record); }
 
 .og-plan-actions__icon,
 .og-composer__loop-quick {
@@ -69,9 +65,7 @@
   background: var(--og-surface-2);
 }
 
-.og-plan-actions__unfinished p {
-  margin: 0;
-}
+.og-plan-actions__unfinished p { margin: 0; }
 
 .og-planner__error {
   margin: 0;

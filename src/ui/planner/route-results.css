@@ -22,9 +22,7 @@
 }
 
 /* A card: role, time · distance, what it costs against the quickest, traits. */
-.og-route-card {
-  --og-route-tint: var(--og-route-alt);
-}
+.og-route-card { --og-route-tint: var(--og-route-alt); }
 
 .og-route-card[data-selected="true"] {
   --og-route-tint: var(--og-route);
@@ -110,9 +108,7 @@
   font-size: var(--og-text-meta);
 }
 
-.og-route-delta {
-  font-weight: 600;
-}
+.og-route-delta { font-weight: 600; }
 
 .og-route-card__badges {
   display: flex;
@@ -261,9 +257,7 @@
 /* --------------------------------------------------------------------------
    The elevation profile: a well with the line in the chosen ride's plum.
    -------------------------------------------------------------------------- */
-.og-elevation-slot {
-  --og-route-tint: var(--og-route);
-}
+.og-elevation-slot { --og-route-tint: var(--og-route); }
 
 .og-elevation {
   --og-elevation-gutter: 0px;
@@ -349,10 +343,7 @@
   height: 168px;
 }
 
-.og-elevation__frame {
-  position: relative;
-  height: 100%;
-}
+.og-elevation__frame { position: relative; height: 100%; }
 
 .og-elevation__svg {
   display: block;
@@ -404,9 +395,7 @@
   pointer-events: none;
 }
 
-.og-elevation__axis {
-  left: var(--og-space-1);
-}
+.og-elevation__axis { left: var(--og-space-1); }
 
 .og-elevation__axis--max { top: 0; }
 .og-elevation__axis--min { bottom: 2px; }
@@ -598,10 +587,7 @@
   transform: translateX(-50%);
 }
 
-.og-glance--map,
-.og-glance--dock {
-  display: none;
-}
+.og-glance--map, .og-glance--dock { display: none; }
 
 .og-glance__button,
 .og-glance--failed {
@@ -694,9 +680,7 @@
   animation: og-glance-shimmer 1.4s ease-in-out infinite;
 }
 
-.og-glance__shimmer--short {
-  width: 30px;
-}
+.og-glance__shimmer--short { width: 30px; }
 
 .og-glance__planning-word {
   display: none;
@@ -742,24 +726,15 @@
 }
 
 @media (max-width: 760px) {
-  .og-glance__surface {
-    display: none;
-  }
+  .og-glance__surface { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .og-elevation__skeleton {
-    animation: none;
-  }
+  .og-elevation__skeleton { animation: none; }
 
-  .og-glance__shimmer {
-    display: none;
-    animation: none;
-  }
+  .og-glance__shimmer { display: none; animation: none; }
 
-  .og-glance__planning-word {
-    display: inline;
-  }
+  .og-glance__planning-word { display: inline; }
 }
 
 /* Hike mode: charts and route tints follow the trail-brown hike line. */
@@ -784,7 +759,7 @@
 .og-truth__line { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 0; border: 0; background: none; color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); line-height: 1.35; text-align: start; }
 .og-truth__line--jump { cursor: pointer; }
 .og-truth__line--jump .og-truth__text { text-decoration: underline; text-decoration-color: var(--og-ink-2); text-underline-offset: 3px; }
-.og-truth__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--og-ink-2); transform: translateY(-1px); }
+.og-truth__dot { flex: none; width: 8px; height: 8px; border-radius: var(--og-radius-pill); background: var(--og-ink-2); transform: translateY(-1px); }
 .og-truth__dot[data-tone="good"] { background: var(--og-primary-text); }
 .og-truth__dot[data-tone="warn"] { background: var(--og-warn); }
 .og-truth__dot[data-tone="bad"] { background: var(--og-danger); }

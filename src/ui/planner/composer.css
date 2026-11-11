@@ -324,9 +324,7 @@
   box-shadow: var(--og-shadow-float);
 }
 
-.og-place-search__list[hidden] {
-  display: none;
-}
+.og-place-search__list[hidden] { display: none; }
 
 .og-place-search__option {
   display: flex;
@@ -390,9 +388,7 @@
   font-size: 0;
 }
 
-.og-history__button:disabled {
-  opacity: 0.35;
-}
+.og-history__button:disabled { opacity: 0.35; }
 
 .og-history__button:not(:disabled):active {
   background: var(--og-primary-soft);
@@ -434,13 +430,9 @@
   cursor: pointer;
 }
 
-.og-refine__toggle:disabled {
-  cursor: default;
-}
+.og-refine__toggle:disabled { cursor: default; }
 
-.og-refine__title {
-  font-weight: 600;
-}
+.og-refine__title { font-weight: 600; }
 
 .og-refine__summary {
   overflow: hidden;
@@ -450,9 +442,7 @@
   white-space: nowrap;
 }
 
-.og-refine__chevron {
-  color: var(--og-ink-2);
-}
+.og-refine__chevron { color: var(--og-ink-2); }
 
 .og-refine__body {
   display: flex;
@@ -468,13 +458,9 @@
 }
 
 @media (max-width: 760px) and (min-height: 501px) {
-  .og-planner .og-refine {
-    order: 2;
-  }
+  .og-planner .og-refine { order: 2; }
 
-  .og-planner .og-composer {
-    order: 3;
-  }
+  .og-planner .og-composer { order: 3; }
 
   .og-composer__row--loop,
   .og-composer__row--direction {

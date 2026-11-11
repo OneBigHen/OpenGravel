@@ -11,10 +11,7 @@
   border-top: 1px solid var(--og-line);
 }
 
-.og-style__heading {
-  display: none;
-  margin: 0;
-}
+.og-style__heading { display: none; margin: 0; }
 
 /* The folded row: "Ride style · Balanced · Mixed ›". */
 .og-style__toggle {
@@ -32,10 +29,7 @@
   cursor: pointer;
 }
 
-.og-style__toggle .og-style__toggle-label {
-  grid-area: auto;
-  font-family: var(--og-face-body);
-}
+.og-style__toggle .og-style__toggle-label { grid-area: auto; font-family: var(--og-face-body); }
 
 .og-style__toggle-label {
   color: var(--og-ink);
@@ -54,20 +48,11 @@
   white-space: nowrap;
 }
 
-.og-style__chevron {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-body);
-  line-height: 1;
-}
+.og-style__chevron { color: var(--og-ink-2); font-size: var(--og-text-body); line-height: 1; }
 
-.og-style__panel {
-  display: grid;
-  gap: var(--og-space-4);
-}
+.og-style__panel { display: grid; gap: var(--og-space-4); }
 
-.og-style__panel[data-open="false"] {
-  display: none;
-}
+.og-style__panel[data-open="false"] { display: none; }
 
 /* One group: a caption, then a segmented track. */
 .og-style__group {
@@ -97,15 +82,9 @@
   background: var(--og-surface-2);
 }
 
-.og-style__chip {
-  position: relative;
-  display: inline-flex;
-}
+.og-style__chip { position: relative; display: inline-flex; }
 
-.og-style__chips > .og-style__chip {
-  flex: 1 1 auto;
-  min-width: 0;
-}
+.og-style__chips > .og-style__chip { flex: 1 1 auto; min-width: 0; }
 
 .og-style__chip input {
   position: absolute;
@@ -136,10 +115,7 @@
   transition: background-color var(--og-dur-fast) var(--og-ease), color var(--og-dur-fast) var(--og-ease);
 }
 
-.og-style__chip input:hover:not(:checked) + span {
-  background: var(--og-press);
-}
-
+.og-style__chip input:hover:not(:checked) + span { background: var(--og-press); }
 
 .og-style__chip input:focus-visible + span,
 .og-style__switch input:focus-visible,
@@ -149,12 +125,7 @@
 }
 
 /* Loop length and "which way" are chip rows of their own (composer). */
-.og-style__loop,
-.og-style__way {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--og-space-2);
-}
+.og-style__loop, .og-style__way { display: flex; flex-wrap: wrap; gap: var(--og-space-2); }
 
 .og-style__loop .og-style__chip span,
 .og-style__way .og-style__chip span {
@@ -165,10 +136,7 @@
   background: var(--og-surface-2);
 }
 
-.og-style__way .og-style__chip {
-  flex: 1 1 auto;
-  min-width: var(--og-touch);
-}
+.og-style__way .og-style__chip { flex: 1 1 auto; min-width: var(--og-touch); }
 
 .og-composer__row--loop > .og-style__loop,
 .og-composer__row--direction > .og-style__way {
@@ -190,10 +158,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.og-composer__shape-row > .og-style__group {
-  flex: 1;
-  min-width: 0;
-}
+.og-composer__shape-row > .og-style__group { flex: 1; min-width: 0; }
 
 .og-prepare__departure .og-style__chips {
   display: grid;
@@ -201,11 +166,7 @@
 }
 
 /* Avoid highways / Avoid tolls: a 40×24 track with a knob that travels. */
-.og-style__switches {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--og-space-2) var(--og-space-5);
-}
+.og-style__switches { display: flex; flex-wrap: wrap; gap: var(--og-space-2) var(--og-space-5); }
 
 .og-style__switch {
   display: inline-flex;
@@ -246,27 +207,17 @@
   transition: transform var(--og-dur-fast) var(--og-ease);
 }
 
-.og-style__switch input:checked {
-  background: var(--og-primary);
-}
+.og-style__switch input:checked { background: var(--og-primary); }
 
-.og-style__switch input:checked::after {
-  transform: translateX(16px);
-}
+.og-style__switch input:checked::after { transform: translateX(16px); }
 
 /* Desktop and landscape: the panel is always open under a heading. */
 @media (min-width: 1181px), (orientation: landscape) and (max-height: 500px) {
-  .og-style__toggle {
-    display: none;
-  }
+  .og-style__toggle { display: none; }
 
-  .og-style__heading {
-    display: block;
-  }
+  .og-style__heading { display: block; }
 
-  .og-style__panel[data-open="false"] {
-    display: grid;
-  }
+  .og-style__panel[data-open="false"] { display: grid; }
 }
 
 @media (max-width: 760px) and (min-height: 501px) {
@@ -301,9 +252,7 @@
 /* "More options": familiarity, traffic and the two switches fold behind one
    line that names their current state (next round N4). Roads and Surface stay
    open because they change the ride most. */
-.og-style__more {
-  border-top: 1px solid var(--og-line);
-}
+.og-style__more { border-top: 1px solid var(--og-line); }
 
 .og-style__more-summary {
   display: flex;
@@ -317,9 +266,7 @@
   list-style: none;
 }
 
-.og-style__more-summary::-webkit-details-marker {
-  display: none;
-}
+.og-style__more-summary::-webkit-details-marker { display: none; }
 
 .og-style__more-summary::after {
   content: "›";
@@ -331,9 +278,7 @@
   transform: translateY(-50%);
 }
 
-.og-style__more[open] > .og-style__more-summary::after {
-  content: "⌄";
-}
+.og-style__more[open] > .og-style__more-summary::after { content: "⌄"; }
 
 .og-style__more-summary:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
@@ -341,10 +286,7 @@
   border-radius: var(--og-radius-control);
 }
 
-.og-style__more-value {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
+.og-style__more-value { color: var(--og-ink-2); font-size: var(--og-text-meta); }
 
 .og-style__more-body {
   display: grid;
