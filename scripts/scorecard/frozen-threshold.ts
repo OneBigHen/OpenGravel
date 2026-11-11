@@ -1,4 +1,24 @@
 import type { FrozenCurvyThreshold } from './threshold';
 
-/** Placeholder until `npm run scorecard -- --freeze-threshold` writes the real values. */
-export const FROZEN_CURVY_THRESHOLD: FrozenCurvyThreshold = { manifestSha256: '', riderShares: {}, median: 0, threshold: 0 };
+/**
+ * The Curvy loop share bar for scorecard v2, frozen once. It is 75% of the median
+ * share of the riders' own tuning lines (snapped to our roads, measured with the
+ * planner's own bend metres). It comes from what riders rode, not from what our
+ * router returns, so it cannot be tuned to our output.
+ *
+ * Do not edit by hand. `npm run scorecard -- --freeze-threshold` rewrites this file;
+ * tests/unit/scorecard/threshold.test.ts recomputes it and checks the manifest hash.
+ */
+export const FROZEN_CURVY_THRESHOLD: FrozenCurvyThreshold = {
+  manifestSha256: "faaf1c8deb0e55c6d10c7c084cc862301a62e7673f2f545ae14059d90827aa86",
+  riderShares: {
+    "fb-1ad35a0d02336f3ae0b6": 0.410785,
+    "project-gpx-a0fba4f34f6879ca4e8d2f48": 0.272628,
+    "project-gpx-922121653abb944c51e9eddc": 0.296865,
+    "project-gpx-53058a94b50fe9f4c9465a46": 0.673602,
+    "fb-12e4d7d31d95f6b03e7a": 0.410509,
+    "project-gpx-94222a4f87560d604bf973b3": 0.541311,
+  },
+  median: 0.410647,
+  threshold: 0.307985,
+};
