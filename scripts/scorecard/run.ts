@@ -184,8 +184,9 @@ async function main(): Promise<void> {
     // The rider's own line: third contestant. Runs after the plan has drained, so its router requests are never counted against OpenGravel.
     if (ride.riderTrack) {
       try {
+        // A rider line that is too little matched stays unmeasured (its note is shown on the row); that is the
+        // yardstick's problem (exit 2), not a planning error. Only a router failure lands in `errors`.
         ({ measurement: riderLine, snap: riderSnap } = await riderLineFor(ride, request, fastest, authority, riderLineCache, baseline?.minutes ?? 0));
-        if (!riderLine) errors.push(`Rider line: ${riderSnap.note}`);
       } catch (error) { errors.push(`Rider line: ${String(error)}`); }
     }
     const failed = { verdict: 'Loss' as const, reasons: ['Planning failed; comparison unavailable'] };

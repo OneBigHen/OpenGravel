@@ -103,20 +103,24 @@ Uses what is on main from #203: `AGENTS.md`, and `paseo.json`, which sets up eve
 - **OpenGravel:** the same code path as the live planner (`planRide`).
 - **Fastest baseline:** our own router's fastest profile. This is the honest stand-in for Google, and is labelled that way. No Google API calls and no scraping: Google's terms restrict storing and reusing their results, and it is not worth the risk for a public project.
 - **Google, by hand:** the report prints an official Google Maps directions link for each ride. Once a quarter someone opens the 20 links and types in Google's time and miles (20 minutes). Those numbers sit beside ours.
+- **The rider's own line (scorecard v2):** for the 12 rides that came from a real rider's track, the track is put onto our roads with the app's road matcher and measured with the same code. It is a ruler, not a contestant: it never plans anything and is never scored as "match the rider". It only proves the measure can tell a rider's favourite road from the fastest one.
 - **Gaia, by hand, once:** a capability checklist with screenshots, because Gaia has no routing service to call: does it propose a gravel loop, show surface, speak turns, work offline for free, know my bike, know closures, and what does it cost.
 
 **Measured per ride, same code for every contestant** (reuse the yardsticks in the benchmark script):
-1. Good miles: dirt miles in gravel modes, curvy miles in curvy mode.
+1. Good miles: dirt miles in gravel modes. In curvy mode, the planner's own bend miles (the same measure that ranks routes in the app: long sweepers count; junction corners, town streets, ramps and roundabouts do not). v1 counted raw tight corners, which a zig-zag through a street grid could farm.
 2. Busy-road share.
 3. Extra time against the fastest route (loops: distance from the requested time).
 4. Rider match: how much of the real rider's track our route found (shown, not scored).
 5. Trust failures: private or no-access road, gate without permission, closed on the ride date, beyond the bike's limit, sand, dead-end spur over 300 m, U-turn.
 6. Unknown-surface share (shown; unknown is never counted as gravel) and planning seconds.
+7. Router calls per plan and first-route seconds (how long until the first route came back), with the 75th percentile. The plan's cap is 6 calls.
 
 **Scoring:**
-- **Win:** zero trust failures, inside the time budget (A-to-B: at most 35% over fastest; loops: within 15% of the asked time), good miles at least 1.5 times the baseline and at least 3 miles more, busy share no more than 10 points worse. For loops, good-mile share of 35% (gravel) or 25% (curvy).
+- **Win:** zero trust failures, inside the time budget (A-to-B: at most 35% over fastest; loops: within 15% of the asked time), good miles at least 1.5 times the baseline and at least 3 miles more, busy share no more than 10 points worse. For loops, good-mile share of 35% (gravel) or, for curvy, 30.80%: 75% of the median share of the riders' own tuning lines (set once from what riders rode, not from what our router returns, and frozen with the `rides.json` hash in `scripts/scorecard/frozen-threshold.ts`; a test fails if the file changes without a deliberate `npm run scorecard -- --freeze-threshold`).
 - **Loss:** any trust failure, over budget, or fewer good miles than the baseline. Anything else is a tie.
 - **Headline:** "16/20 wins, 0 trust failures, +N good miles for +M minutes".
+- **Yardstick check:** the rider's own line must beat the fastest route on good miles on at least 10 of the 12 tracked rides, or the run exits with code 2 and says the measure is not measuring fun.
+- **v1 beside v2:** the report prints the old v1 headline next to the v2 one, so nobody can say the goalposts moved quietly.
 - **Rule:** a routing PR may not lower wins or raise trust failures.
 
 Cost: about 60 router calls and 10 minutes, run one at a time against the existing router through an SSH tunnel. Fixed request IDs keep loops repeatable.
