@@ -1,5 +1,6 @@
 import { analyzeFrancoCurvature } from '../../src/domain/geometry/franco-curvature';
 import { decodeCatalogPolyline } from '../../src/application/explore/catalog-build';
+import { candidateGeometryFun } from '../../src/application/planner/geometry-fun';
 import { riderRoadEligibility } from '../../src/application/planner/rider-road-eligibility';
 import type { ProviderCandidate, ProviderRouteOptions } from '../../src/application/planner/route-provider';
 import type { RoadAuthorityVerdict } from '../../src/application/route-intelligence/coordinator';
@@ -39,11 +40,19 @@ export function measure(candidate: ProviderCandidate, ride: Ride, bikeOptions: P
   if (!candidate.instructions) unknownTrust.push('U-turn instructions unavailable');
   if (authority.evidence.closures.status === 'unknown') unknownTrust.push('Road-authority closure coverage incomplete');
   if (authority.evidence.access.status === 'unknown') unknownTrust.push('Road-authority motorcycle access unknown');
-  const goodMeters = ride.mode === 'curvy' ? Math.min(total, franco.bendMeters) : dirt;
+  // Scorecard v2: Curvy good miles are the planner's own bend metres (heading-fun-v1),
+  // which skips junction corners, town streets, ramps and roundabouts. v1 counted raw
+  // Franco bends, so both are kept: v2 decides the verdict, v1 only feeds the old headline.
+  const fun = ride.mode === 'curvy' ? candidateGeometryFun(candidate) : null;
+  if (ride.mode === 'curvy' && fun === null) unknownTrust.push('Bend measure unavailable: ordered road details missing or inconsistent, so no curvy miles are credited');
+  const goodMeters = ride.mode === 'curvy' ? Math.min(total, fun?.bendMeters ?? 0) : dirt;
+  const v1GoodMeters = ride.mode === 'curvy' ? Math.min(total, franco.bendMeters) : dirt;
   const minutes = candidate.durationSeconds / 60;
   return {
     miles: candidate.distanceMeters / 1609.344, minutes, goodMiles: goodMeters / 1609.344,
     goodShare: total > 0 ? goodMeters / total : 0,
+    v1GoodMiles: v1GoodMeters / 1609.344,
+    v1GoodShare: total > 0 ? v1GoodMeters / total : 0,
     dirtShare: described > 0 && total > 0 ? dirt / total : null,
     francoPerKm: franco.curvaturePerKm,
     busyShare: described >= total * 0.99 && total > 0 ? Math.min(1, busy / total) : null,

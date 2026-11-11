@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { winTieLoss } from '../../../scripts/scorecard/scoring';
+import { asV1, winTieLoss } from '../../../scripts/scorecard/scoring';
 import { deadEndSpurs, uTurns, riderMatch } from '../../../scripts/scorecard/geometry';
 
 const baseline = { minutes: 100, goodMiles: 6, busyShare: 0.1 };
@@ -24,6 +24,16 @@ describe('master plan section 5', () => {
     expect(winTieLoss({ mode: 'gravel', loopMinutes: 100 }, { ...good, minutes: 85, goodShare: 0.349 }, baseline).verdict).toBe('Tie');
     expect(winTieLoss({ mode: 'curvy', loopMinutes: 100 }, { ...good, minutes: 84.99 }, baseline).verdict).toBe('Loss');
   });
+});
+it('lets scorecard v2 raise or lower the Curvy loop share without touching Gravel loops', () => {
+  const loop = { ...good, minutes: 100, goodShare: 0.12 };
+  expect(winTieLoss({ mode: 'curvy', loopMinutes: 100 }, loop, baseline).verdict).toBe('Tie');
+  expect(winTieLoss({ mode: 'curvy', loopMinutes: 100 }, loop, baseline, 0.12).verdict).toBe('Win');
+  expect(winTieLoss({ mode: 'curvy', loopMinutes: 100 }, { ...loop, goodShare: 0.119 }, baseline, 0.12).verdict).toBe('Tie');
+  expect(winTieLoss({ mode: 'gravel', loopMinutes: 100 }, loop, baseline, 0.01).verdict).toBe('Tie');
+});
+it('shows a measurement the way v1 saw it', () => {
+  expect(asV1({ goodMiles: 9, goodShare: 0.4, v1GoodMiles: 2, v1GoodShare: 0.1 })).toEqual({ goodMiles: 2, goodShare: 0.1, v1GoodMiles: 2, v1GoodShare: 0.1 });
 });
 const p = (meters: number, north = 0) => ({ lat: 40 + north / 111195, lon: -77 + meters / (111195 * Math.cos(40 * Math.PI / 180)) });
 describe('geometric retraced spurs', () => {

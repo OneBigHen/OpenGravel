@@ -16,8 +16,12 @@ export interface Ride {
 export interface Measurement {
   miles: number;
   minutes: number;
+  /** Good miles the verdict uses: mapped dirt, or the planner's own bend metres for Curvy (scorecard v2). */
   goodMiles: number;
   goodShare: number;
+  /** The same two numbers as scorecard v1 measured them (Franco v1 bend metres for Curvy), kept so v1 can still be printed. */
+  v1GoodMiles: number;
+  v1GoodShare: number;
   dirtShare: number | null;
   francoPerKm: number;
   busyShare: number | null;
@@ -30,11 +34,39 @@ export interface Measurement {
   authorityWarnings: string[];
   geometry: readonly Coordinate[];
 }
+/** What one plan cost the router. Counted outside src/, by the scorecard's own wrapper. */
+export interface RouterUse {
+  /** Router requests made while the planner was working, before it handed back an answer. */
+  calls: number;
+  /** Requests made afterwards by detached shadow work (drained before the next ride). */
+  shadowCalls: number;
+  /** Seconds until the first router answer that carried a route came back; null if none did. */
+  firstRouteSeconds: number | null;
+}
+/** How the rider's own track was put onto our roads. */
+export interface RiderLineSnap {
+  /** Share of the rider's line (by length) that the router matched onto roads. */
+  coverage: number;
+  /** Router requests the snap needed (not counted against OpenGravel). */
+  routerCalls: number;
+  profile: string;
+  fromCache: boolean;
+  note: string;
+}
+export type Verdict = 'Win' | 'Tie' | 'Loss';
 export interface Row {
   ride: Ride;
   openGravel: Measurement | null;
   fastest: Measurement | null;
-  verdict: 'Win' | 'Tie' | 'Loss';
+  /** Third contestant: the rider's own line, snapped to our roads. Shown, never scored, never used to plan. */
+  riderLine: Measurement | null;
+  riderSnap: RiderLineSnap | null;
+  /** Scorecard v2 verdict (planner's own bend measure, frozen curvy share). */
+  verdict: Verdict;
   reasons: string[];
+  /** The verdict scorecard v1 would have given, so both headlines can be printed. */
+  verdictV1: Verdict;
+  reasonsV1: string[];
+  routerUse: RouterUse | null;
   errors: string[];
 }
