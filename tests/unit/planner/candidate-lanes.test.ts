@@ -130,14 +130,16 @@ function stubProvider(options: StubOptions = {}): StubProvider {
   return provider;
 }
 
+const GRAPHHOPPER_PROFILES = [
+  "motorcycle_fastest",
+  "motorcycle_twisty",
+  "motorcycle_scenic",
+  "motorcycle_adventure",
+] as const;
+
 describe("resolveLanes", () => {
   const graphHopper: ProviderCapabilities = {
-    profiles: [
-      "motorcycle_fastest",
-      "motorcycle_twisty",
-      "motorcycle_scenic",
-      "motorcycle_adventure",
-    ],
+    profiles: [...GRAPHHOPPER_PROFILES],
     supportsAlternatives: true,
     supportsAvoidPolygons: true,
   };
@@ -166,6 +168,99 @@ describe("resolveLanes", () => {
 
     expect(resolved.map((lane) => lane.id)).toEqual(["baseline-efficient"]);
     expect(resolved[0]?.profile).toBe("motorcycle_fastest");
+  });
+
+  describe("the first answer (no alternatives requested)", () => {
+    const firstAnswer = (
+      input: Omit<Parameters<typeof resolveLanes>[0], "capabilities" | "includeAlternatives">,
+      capabilities: ProviderCapabilities = graphHopper,
+    ) => resolveLanes({ capabilities, includeAlternatives: false, ...input });
+
+    it("runs a Mixed loop on the adventure profile, not the fastest one", () => {
+      // Balanced + Mixed resolves to motorcycle_fastest for the request; the
+      // rider still asked for some dirt, so the first loop must go looking for it.
+      const lanes = firstAnswer({
+        intent: { shape: "loop", roadCharacter: "balanced", surface: { preference: "mixed" } },
+        requestedProfile: "motorcycle_fastest",
+      });
+
+      expect(lanes).toHaveLength(1);
+      expect(lanes[0]?.profile).toBe("motorcycle_adventure");
+      expect(lanes[0]?.maxCalls).toBe(1);
+    });
+
+    it("runs a Dirt OK loop on the rider's own adventure profile", () => {
+      const lanes = firstAnswer({
+        intent: { shape: "loop", roadCharacter: "efficient", surface: { preference: "dirt-preferred" } },
+        requestedProfile: "motorcycle_adventure",
+      });
+
+      expect(lanes.map((lane) => lane.profile)).toEqual(["motorcycle_adventure"]);
+    });
+
+    it("runs a Curvy A-to-B first answer on the twisty profile, even with the default Mixed surface", () => {
+      const lanes = firstAnswer({
+        intent: { shape: "destination", roadCharacter: "curvy", surface: { preference: "mixed" } },
+        requestedProfile: "motorcycle_twisty",
+      });
+
+      expect(lanes.map((lane) => lane.profile)).toEqual(["motorcycle_twisty"]);
+      expect(lanes[0]?.id).toBe("curvy");
+    });
+
+    it("runs a Backroads first answer on the scenic profile", () => {
+      const lanes = firstAnswer({
+        intent: { roadCharacter: "backroads", surface: { preference: "mixed" } },
+        requestedProfile: "motorcycle_scenic",
+      });
+
+      expect(lanes.map((lane) => lane.profile)).toEqual(["motorcycle_scenic"]);
+    });
+
+    it("keeps the fastest profile for a rider who wants pavement", () => {
+      const lanes = firstAnswer({
+        intent: { roadCharacter: "efficient", surface: { preference: "mostly-pavement" } },
+        requestedProfile: "motorcycle_fastest",
+      });
+
+      expect(lanes.map((lane) => lane.id)).toEqual(["baseline-efficient"]);
+      expect(lanes[0]?.profile).toBe("motorcycle_fastest");
+    });
+
+    it("asks for the rider's own profile when the deployment does not serve adventure", () => {
+      const lanes = firstAnswer(
+        {
+          intent: { shape: "loop", surface: { preference: "mixed" } },
+          requestedProfile: "motorcycle_fastest",
+        },
+        { ...graphHopper, profiles: ["motorcycle_fastest", "motorcycle_twisty"] },
+      );
+
+      expect(lanes.map((lane) => lane.profile)).toEqual(["motorcycle_fastest"]);
+    });
+
+    it("falls back to the baseline only when neither the rider's profile nor adventure is served", () => {
+      const lanes = firstAnswer(
+        {
+          intent: { surface: { preference: "mixed" } },
+          requestedProfile: "motorcycle_twisty",
+        },
+        { ...graphHopper, profiles: ["motorcycle_fastest"] },
+      );
+
+      expect(lanes.map((lane) => lane.id)).toEqual(["baseline-efficient"]);
+      expect(lanes[0]?.profile).toBe("motorcycle_fastest");
+    });
+
+    it("never runs more than one lane", () => {
+      for (const preference of ["pavement", "mostly-pavement", "mixed", "dirt-preferred"] as const) {
+        for (const requestedProfile of GRAPHHOPPER_PROFILES) {
+          expect(
+            firstAnswer({ intent: { surface: { preference } }, requestedProfile }),
+          ).toHaveLength(1);
+        }
+      }
+    });
   });
 
   it("resolves balanced onto the served base profile, else scenic, and drops a duplicate lane", () => {

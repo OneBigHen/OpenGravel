@@ -10,10 +10,11 @@
  *
  * Four rules shape this module:
  *
- * 1. **A lane failure is a diagnostic, not a plan failure** (`06 §29`). The
- *    baseline lane is the progressive first answer (`06 §5`), and an optional
- *    lane that times out or is rejected removes only its own candidates. The
- *    run still answers with whatever the other lanes produced.
+ * 1. **A lane failure is a diagnostic, not a plan failure** (`06 §29`). One
+ *    lane is the progressive first answer (`06 §5`; the rider's own profile,
+ *    see {@link firstAnswerLane}), and an optional lane that times out or is
+ *    rejected removes only its own candidates. The run still answers with
+ *    whatever the other lanes produced.
  * 2. **Cancellation is not a lane outcome** (`06 §28`). A caller abort
  *    propagates out of `runLanes` unchanged — with the caller's own reason —
  *    so a rider who stops a plan is never told a lane failed, and a cancelled
@@ -166,6 +167,63 @@ function balancedProfile(declared: readonly string[]): string {
   return BASELINE_LANE_PROFILE;
 }
 
+/** The lane that draws the road character the rider asked for, on that profile. */
+function riderCharacterLane(profile: string): CandidateLane {
+  return {
+    id: RIDER_CHARACTER_LANE_ID,
+    profile,
+    purpose: "the road character the rider asked for",
+    maxCalls: 1,
+    deadlineMs: 20_000,
+  };
+}
+
+/**
+ * The one lane a progressive first answer runs on (`06 §5`).
+ *
+ * The first route a rider sees must already be the kind of ride they asked
+ * for, because a rider who watches a different ride replace it a few seconds
+ * later has been shown a wrong answer first. So the first answer follows the
+ * rider's own profile, in this order:
+ *
+ * 1. A character the rider chose by name (`motorcycle_twisty`,
+ *    `motorcycle_scenic`, or `motorcycle_adventure` for a dirt rider) is the
+ *    request's own profile, and it is used when the deployment serves it.
+ * 2. A rider who accepts non-paved riding (`mixed` or `dirt-preferred`) and
+ *    asked for no other character gets the adventure profile, which is the
+ *    profile that goes looking for dirt; the fastest profile stays on pavement
+ *    almost everywhere. Serving `motorcycle_adventure` is checked here, never
+ *    assumed.
+ * 3. Otherwise the request's own profile, which is the fastest profile for an
+ *    efficient or balanced paved ride.
+ * 4. The baseline lane only when none of those is served. It is the one lane
+ *    that has always been asked for, so the first answer never ends up with no
+ *    lane at all.
+ *
+ * Every hard gate (bike limits, access, closures, dead-end spurs) is applied
+ * to the answer afterwards exactly as for any other lane; this only chooses
+ * which road model draws the line.
+ */
+function firstAnswerLane(
+  input: ResolveLanesInput,
+  serves: (profile: string) => boolean,
+): CandidateLane {
+  const requested = input.requestedProfile;
+  const requestedServed = requested !== undefined && serves(requested);
+  const profile =
+    requestedServed && requested !== BASELINE_LANE_PROFILE
+      ? requested
+      : prefersNonPaved(input.intent) && serves(SURFACE_LANE_PROFILE)
+        ? SURFACE_LANE_PROFILE
+        : requestedServed
+          ? requested
+          : BASELINE_LANE_PROFILE;
+  return (
+    DEFAULT_LANES.find((lane) => lane.profile === profile) ??
+    riderCharacterLane(profile)
+  );
+}
+
 /**
  * The lanes to run for one attempt.
  *
@@ -177,14 +235,11 @@ function balancedProfile(declared: readonly string[]): string {
  * have is the one thing that would waste a lane.
  */
 export function resolveLanes(input: ResolveLanesInput): readonly CandidateLane[] {
-  if (!input.includeAlternatives) {
-    const baseline = DEFAULT_LANES.find((lane) => lane.id === BASELINE_LANE_ID);
-    return baseline === undefined ? [] : [baseline];
-  }
-
   const declared = input.capabilities.profiles;
   const serves = (profile: string): boolean =>
     declared.length === 0 || declared.includes(profile);
+
+  if (!input.includeAlternatives) return [firstAnswerLane(input, serves)];
 
   const resolved: CandidateLane[] = [];
   const usedProfiles = new Set<string>();
@@ -201,13 +256,7 @@ export function resolveLanes(input: ResolveLanesInput): readonly CandidateLane[]
   }
   const requested = input.requestedProfile;
   if (requested !== undefined && !usedProfiles.has(requested) && serves(requested)) {
-    resolved.push({
-      id: RIDER_CHARACTER_LANE_ID,
-      profile: requested,
-      purpose: "the road character the rider asked for",
-      maxCalls: 1,
-      deadlineMs: 20_000,
-    });
+    resolved.push(riderCharacterLane(requested));
   }
   return resolved;
 }
