@@ -88,7 +88,8 @@ async function main(): Promise<void> {
     return next;
   };
   const production = createGraphHopperProvider({ baseUrl, riderModesEnabled: true, rideFormulaEnabled: false, fetcher });
-  const fastest = createGraphHopperProvider({ baseUrl, riderModesEnabled: false, rideFormulaEnabled: false, fetcher });
+  // The baseline is the engine's plain fastest loop; only OpenGravel re-seeds loops that retrace a dead-end road.
+  const fastest = createGraphHopperProvider({ baseUrl, riderModesEnabled: false, rideFormulaEnabled: false, reseedDeadEndLoops: false, fetcher });
   const rows: Row[] = [];
   for (const ride of rides) {
     const request = requestFor(ride);
