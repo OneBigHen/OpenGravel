@@ -152,13 +152,16 @@ describe("place flow", () => {
   it("a layer chip switches the road overlay instead of searching places", async () => {
     const view = flow();
     render(<>{view.result.current.top}</>);
+    // Twisty roads are on at a cold open (first-minute wow, W1): the chip starts
+    // on, so its first tap turns them off and the next brings them back.
+    expect(screen.getByTestId("layer-chip-twisty")).toHaveAttribute("aria-pressed", "true");
     await act(async () => fireEvent.click(screen.getByTestId("layer-chip-twisty")));
     expect(port.search).not.toHaveBeenCalled();
-    expect(JSON.parse(window.localStorage.getItem("ogv.map-layers.v1") ?? "[]")).toContain("great-roads");
-    render(<>{view.result.current.toast}</>);
-    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Twisty roads layer on");
-    await act(async () => fireEvent.click(screen.getByTestId("layer-chip-twisty")));
     expect(JSON.parse(window.localStorage.getItem("ogv.map-layers.v1") ?? "[]")).not.toContain("great-roads");
+    render(<>{view.result.current.toast}</>);
+    expect(screen.getByTestId("rider-toast")).toHaveTextContent("Twisty roads layer off");
+    await act(async () => fireEvent.click(screen.getByTestId("layer-chip-twisty")));
+    expect(JSON.parse(window.localStorage.getItem("ogv.map-layers.v1") ?? "[]")).toContain("great-roads");
   });
   it("shares its own coordinate and the app, never a Google Maps link, and says so", async () => {
     const share = vi.fn(async (data: ShareData) => { void data; });

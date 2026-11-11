@@ -27,6 +27,7 @@ export type MapLayerId =
   | "active-fire"
   | "great-roads"
   | "gravel"
+  | "rider-picked"
   | "road-history"
   | "fuel"
   | "food"
@@ -224,6 +225,19 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     minZoom: 8,
     color: "#776353",
     glyph: "⋯",
+  },
+  {
+    id: "rider-picked",
+    name: "Rider-picked rides",
+    category: "roads",
+    kind: "features",
+    legend: "Thin plum lines: real rides picked by people who ride here. Tap one.",
+    source: "From PA Adventure Bike Rides",
+    caveat: "The group's own published rides, drawn as a simplified outline when zoomed out. Surface and distance are the group's own summary, copied and not verified, and the source files state no licence. Tap a line to read it; nothing opens it until you tap \"Ride this\".",
+    minZoom: 7,
+    maxZoom: 10,
+    color: "#8f6fa6",
+    glyph: "≋",
   },
   {
     id: "road-history",

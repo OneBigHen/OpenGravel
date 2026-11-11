@@ -21,8 +21,11 @@
   z-index: var(--og-z-map-ui);
 }
 
-/* The button: a disc on phones and tablets, a labelled pill on desktop. */
-.og-layers__button {
+/* The button: a disc on phones and tablets, a labelled pill on desktop. The
+   map legend chip (W1) wears the same glass recipe, because it also sits on the
+   map; it only overrides its compact size. */
+.og-layers__button,
+.og-map-legend {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -41,6 +44,40 @@
   -webkit-backdrop-filter: var(--og-glass-blur);
   backdrop-filter: var(--og-glass-blur);
   cursor: pointer;
+}
+
+/* The cold-open legend: one quiet chip, bottom-left, beside the scale rule. */
+.og-map-legend {
+  gap: var(--og-space-3);
+  min-height: 32px;
+  padding: 0 var(--og-space-3);
+  border: 1px solid var(--og-glass-edge);
+  font-size: var(--og-text-caption);
+}
+
+.og-map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--og-space-1);
+  white-space: nowrap;
+}
+
+.og-map-legend__gravel {
+  stroke: var(--og-map-brown);
+  stroke-width: 2.5;
+  stroke-dasharray: 5 3;
+}
+
+.og-map-legend__twisty {
+  stroke: var(--og-map-record);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* A card or the radar timeline takes the bottom-left corner while it is open:
+   the legend steps aside rather than sitting under it. */
+.og-planner__map-slot:has(.og-info-card, .og-places-card, .og-radar) .og-map-legend {
+  visibility: hidden;
 }
 
 .og-layers[data-open="true"] .og-layers__button {
@@ -63,7 +100,8 @@
   box-shadow: 0 0 0 2px var(--og-surface);
 }
 
-.og-layers :is(button, summary):focus-visible {
+.og-layers :is(button, summary):focus-visible,
+.og-map-legend:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
@@ -451,11 +489,6 @@
   cursor: pointer;
 }
 
-.og-layers__option[aria-pressed="true"] {
-  border-color: var(--og-primary);
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-layers__option:disabled,
 .og-layers__subswitch:disabled {

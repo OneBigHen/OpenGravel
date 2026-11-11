@@ -174,31 +174,18 @@
     inset: -4px 0;
   }
 
-  .og-search-chips button[aria-pressed="true"] {
-    background: var(--og-primary);
-    color: var(--og-on-primary);
-  }
 
   .og-search-chips__glyph {
     flex: none;
     width: 18px;
     height: 18px;
+    color: var(--og-ink-2);
   }
 
-  /* Each category wears its own colour, like the layers sheet. */
-  .og-search-chips button[data-chip="gas"] .og-search-chips__glyph { color: #0f766e; }
-  .og-search-chips button[data-chip="food"] .og-search-chips__glyph { color: #c2410c; }
-  .og-search-chips button[data-chip="coffee"] .og-search-chips__glyph { color: #92603a; }
-  .og-search-chips button[data-chip="lodging"] .og-search-chips__glyph { color: #9d174d; }
-  .og-search-chips button[data-chip="moto"] .og-search-chips__glyph { color: #475569; }
-
-  :root[data-theme="night"] .og-search-chips button[data-chip] .og-search-chips__glyph {
-    filter: brightness(1.7) saturate(0.9);
-  }
-
+  /* A category icon names the category; it is not a colour code. One neutral
+     ink for every chip, green only when the chip is the action. */
   .og-search-chips button[aria-pressed="true"] .og-search-chips__glyph {
     color: currentColor;
-    filter: none;
   }
 
   .og-search-chips__divider {

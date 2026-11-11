@@ -307,12 +307,27 @@
   line-height: 1.3;
 }
 
-/* Scale bar (not on phones). */
-.og-map__scale {
+/* The map's bottom-left stack: the optional legend (W1) above the scale rule.
+   One container means the two can never be placed on top of each other. */
+.og-map__bottom-left {
   position: absolute;
   left: calc(var(--og-map-inset-left, 0px) + var(--og-space-3));
   bottom: calc(var(--og-map-inset-bottom, 0px) + var(--og-space-3));
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--og-space-2);
+  pointer-events: none;
+}
+
+.og-map__bottom-left > * {
+  pointer-events: auto;
+}
+
+/* Scale bar (not on phones). */
+.og-map__scale {
+  position: relative;
   display: grid;
   gap: var(--og-space-1);
   padding: var(--og-space-1) var(--og-space-2);

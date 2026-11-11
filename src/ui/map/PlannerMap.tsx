@@ -56,7 +56,7 @@
 
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Coordinate } from "@/domain/ride/types";
 
 import { DEFAULT_MAP_EXTENT, sceneExtent, type MapExtent } from "@/application/map/build-map-scene";
@@ -249,6 +249,13 @@ export interface PlannerMapProps {
    */
   readonly clusterControls?: ReactNode;
   /**
+   * A small legend that sits in the map's bottom-left stack, above the scale
+   * rule (first-minute wow, W1). The map owns the stack, so the legend can never
+   * cover the scale bar or the round controls on any screen. A surface without
+   * one renders exactly as before.
+   */
+  readonly legend?: ReactNode;
+  /**
    * The basemap look the layers sheet owns, when the sheet is the control on
    * this screen. Supplying it (with `onLookChange`) makes this surface's look
    * controlled; omitting both leaves the map's own button in charge.
@@ -359,6 +366,7 @@ export function PlannerMap({
   onLayerStatus,
   retryToken = 0,
   clusterControls,
+  legend,
 }: PlannerMapProps) {
   const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
   const menuOpenedAtRef = useRef(Number.NEGATIVE_INFINITY);
@@ -967,14 +975,28 @@ export function PlannerMap({
       {/*
         The scale rule: bottom-left of the map the rider can actually see, which
         is why it is offset by the measured camera insets rather than by a tier.
+        The optional legend rides above it in the same stack (W1), so the two can
+        never overlap whatever the screen.
       */}
-      {cameraView?.scale === null || cameraView === null ? null : (
-        <MapScaleBar
-          scale={cameraView.scale}
-          insetLeft={insets.left}
-          insetBottom={insets.bottom}
-        />
-      )}
+      <div
+        className="og-map__bottom-left"
+        data-testid="map-bottom-left"
+        style={
+          {
+            "--og-map-inset-left": `${Math.round(insets.left)}px`,
+            "--og-map-inset-bottom": `${Math.round(insets.bottom)}px`,
+          } as CSSProperties
+        }
+      >
+        {legend ?? null}
+        {cameraView?.scale === null || cameraView === null ? null : (
+          <MapScaleBar
+            scale={cameraView.scale}
+            insetLeft={insets.left}
+            insetBottom={insets.bottom}
+          />
+        )}
+      </div>
 
       {/*
         A visible "Loading map…" until the renderer has drawn tiles (AQ-01,

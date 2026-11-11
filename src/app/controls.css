@@ -55,9 +55,9 @@
   background: color-mix(in srgb, var(--og-primary) 88%, var(--og-ink));
 }
 
+/* Never a grey slab: still the action, just faded. */
 .og-primary:disabled {
-  background: var(--og-surface-2);
-  color: var(--og-ink-2);
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -94,6 +94,25 @@
 .og-chip:focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
+}
+
+/* A chosen option: neutral with a ring; green is only the action (DESIGN.md 2026-11-10). */
+.og-ride-interest__filter[aria-pressed="true"],
+.og-ride .og-places-control__option[aria-pressed="true"],
+.og-rides__segment[aria-pressed="true"],
+.og-layers__option[aria-pressed="true"],
+.og-style__chip input:checked + span,
+.og-phone-style__chip input:checked + span,
+.og-settings__segment[aria-checked="true"],
+.og-explore__lens > [role="tab"][aria-selected="true"],
+.og-explore__quick-chip:is([aria-pressed="true"], [data-filter="on"]),
+.og-places-overlay--planner .og-places-control__option[aria-pressed="true"],
+.og-search-chips button[aria-pressed="true"] {
+  border-color: transparent;
+  background: var(--og-selected);
+  color: var(--og-ink);
+  font-weight: 700;
+  box-shadow: 0 0 0 1.5px var(--og-selected-ring);
 }
 
 /* A native select with a drawn chevron. */

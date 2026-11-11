@@ -792,6 +792,18 @@ describe("the cartography table", () => {
     expect(Number(alternative?.paint?.["line-opacity"] ?? 1)).toBeLessThan(1);
   });
 
+  it("draws the whole Explore list as thin uncased overview lines", () => {
+    const byId = new Map(routeLayers(DEFAULT_MAP_PALETTE).map((layer) => [layer.id, layer]));
+    const overview = byId.get(MAP_LAYER_IDS.routeOverview);
+    const alternative = byId.get(MAP_LAYER_IDS.routeAlternative);
+    expect(overview?.filter).toEqual(["==", ["get", "state"], "overview"]);
+    expect(overview?.paint?.["line-color"]).toBe(DEFAULT_MAP_PALETTE.routeAlt);
+    expect(lineWidthAtLeast(overview?.paint?.["line-width"])).toBeLessThan(lineWidthAtLeast(alternative?.paint?.["line-width"]));
+    expect(Number(overview?.paint?.["line-opacity"] ?? 1)).toBeLessThan(1);
+    // There is no overview casing: only the thin line is drawn.
+    expect([...byId.values()].filter((layer) => layer.filter !== undefined && JSON.stringify(layer.filter).includes("overview"))).toHaveLength(1);
+  });
+
   it("keeps preview, previous and proposed routes distinguishable (05 §11)", () => {
     const layers = routeLayers(DEFAULT_MAP_PALETTE);
     const byId = new Map(layers.map((layer) => [layer.id, layer]));
@@ -817,6 +829,7 @@ describe("the cartography table", () => {
       deepSpruce: "#00000b",
       routePlum: "#00000c",
       routePlumStrong: "#00000d",
+      routeAlt: "#00000e",
       routeCasing: "auto",
       emphasis: "1",
     };

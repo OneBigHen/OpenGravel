@@ -93,6 +93,13 @@ describe("PhoneRideSummary", () => {
     expect(screen.queryByTestId("compare-rides")).toBeNull();
   });
 
+  it("says how much is gravel and how much is unknown, with a bar, when the surface was measured", () => {
+    const measured = { ...cards[0]!, distanceMeters: 62 * 1609.344, surfaceStrip: { paved: 0.54, gravel: 0.41, dirt: 0, unknown: 0.05 } };
+    render(<PhoneRideSummary {...base} card={measured} comparing={false} onCompare={vi.fn()} />);
+    expect(screen.getByTestId("phone-surface-line")).toHaveTextContent("41% gravel · 3 mi unknown");
+    expect(screen.getByTestId("phone-surface-strip").getAttribute("aria-label")).toBe("Surface: 54% paved, 41% gravel, 0% dirt, 5% unknown");
+  });
+
   it("says nothing about a surface the evidence did not measure", () => {
     render(<PhoneRideSummary {...base} comparing={false} onCompare={vi.fn()} />);
     expect(screen.getByTestId("phone-ride-summary")).not.toHaveTextContent(/surface unknown/i);
@@ -280,3 +287,4 @@ describe("phone ride options", () => {
     expect((within(surface).getByLabelText("Mostly paved") as HTMLInputElement).checked).toBe(true);
   });
 });
+

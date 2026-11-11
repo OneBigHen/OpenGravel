@@ -52,6 +52,24 @@ describe("fixture position source", () => {
     expect(cleared).toBe(12);
   });
 
+  it("holds the rider still after maxFixes, so a screenshot can settle", async () => {
+    let tick: (() => void) | undefined;
+    const source = createFixturePositionSource({
+      browserSource: { permission: async () => "prompt", watch: () => ({ stop: vi.fn() }) },
+      routeLine: () => LINE,
+      maxFixes: 2,
+      setInterval: (handler) => { tick = handler; return 1; },
+      clearInterval: () => {},
+    });
+    const seen: unknown[] = [];
+    await source.permission();
+    source.watch({ position: (fix) => seen.push(fix.coordinate), error: vi.fn() });
+    for (let i = 0; i < 5; i++) tick?.();
+    expect(seen[1]).not.toEqual(seen[0]);
+    expect(seen[2]).toEqual(seen[1]);
+    expect(seen[4]).toEqual(seen[1]);
+  });
+
   it("uses real browser GPS when permission is granted", async () => {
     const browserWatch: PositionWatch = { stop: vi.fn() };
     const browserSource: PositionSource = {

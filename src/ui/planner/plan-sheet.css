@@ -91,12 +91,12 @@
     max-height: 45dvh;
   }
 
-  /* Building a loop (nothing routed yet): the sheet is as tall
-     as its questions, up to full, so the chips are never hidden behind the
-     button that commits them. */
+  /* Building a loop (nothing routed yet): the sheet is as tall as its questions,
+     up to about 46% of the screen, so the map keeps the rest. The one row that
+     does not fit folds behind its summary (RideStyleControls). */
   .og-planner .og-planner__sheet[data-has-ride="false"]:has(.og-composer__row--loop) {
     height: auto;
-    max-height: var(--og-sheet-full);
+    max-height: 46dvh;
   }
 
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body {
@@ -189,6 +189,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  .og-phone-summary__surface { display: grid; gap: 6px; margin-top: var(--og-space-2); }
+  .og-phone-summary__surface-line { margin: 0; font-size: var(--og-text-meta); font-weight: 600; }
+  .og-phone-summary__strip { max-width: none; height: 8px; }
 
   .og-phone-summary__start {
     margin-top: var(--og-space-2);
@@ -298,10 +302,6 @@
     white-space: nowrap;
   }
 
-  .og-phone-style__chip input:checked + span {
-    background: var(--og-primary);
-    color: var(--og-on-primary);
-  }
 
   .og-phone-style__chip input:focus-visible + span {
     outline: var(--og-focus-width) solid var(--og-focus-ring);

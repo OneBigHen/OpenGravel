@@ -23,6 +23,7 @@ const PATHS: Readonly<Record<IconKey, ReactNode>> = {
   "great-roads": <path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6" />,
   "gravel": <><path d="M4 20 10 4M20 20 14 4" /><path d="M12 7v2M12 12v2M12 17v2" /></>,
   "road-history": <><path d="M4 18a8 8 0 1 1 3 2" /><path d="M4 13v5h5" /><path d="M12 8v4l3 2" /></>,
+  "rider-picked": <><path d="M3 17c3 0 3-10 6-10s3 10 6 10 3-6 6-6" /><circle cx="9" cy="7" r="1.6" /><circle cx="18" cy="11" r="1.6" /></>,
   "weather": <><path d="M7 17a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 10 3.5 3.5 0 1 1 17.5 17Z" /></>,
   "weather-radar": <><path d="M7 14a4 4 0 1 1 1-7.9A5 5 0 0 1 17.6 7 3.5 3.5 0 1 1 17.5 14Z" /><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3" /></>,
   "wind": <><path d="M3 9h11a3 3 0 1 0-3-3" /><path d="M3 15h14a3 3 0 1 1-3 3" /><path d="M3 12h7" /></>,

@@ -127,3 +127,70 @@ it("offers the selected road geometry for avoidance", () => {
   fireEvent.click(screen.getByRole("button", { name: "Avoid this road" }));
   expect(onAvoidRoad).toHaveBeenCalledWith([{ lon: 0, lat: 0 }, { lon: 0.05, lat: 0 }, { lon: 0.1, lat: 0 }], "Pine Creek Road");
 });
+
+const CURATED_RIDE: InfoFeature = {
+  id: "catalog:fb-loop",
+  layerId: "rider-picked",
+  name: "Loyalsock State Forest Loop",
+  detail: "96 mi · 25% unpaved · 24 mi",
+  weight: null,
+  catalogRide: {
+    routeId: "fb-loop",
+    miles: 96,
+    surface: { unpavedMiles: 24, unpavedKind: "unpaved" },
+  },
+  geometry: {
+    type: "LineString",
+    coordinates: [
+      [-76.8, 41.4],
+      [-76.6, 41.5],
+    ],
+  },
+};
+
+describe("InfoFeatureCard curated ride", () => {
+  it("shows the route's own miles and surface, and the source credit", () => {
+    render(<InfoFeatureCard feature={CURATED_RIDE} onClose={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: "Loyalsock State Forest Loop" })).toBeInTheDocument();
+    expect(screen.getByText("96 mi")).toBeInTheDocument();
+    expect(screen.getByTestId("curated-ride-surface")).toHaveTextContent("25% unpaved · 24 mi");
+    expect(screen.getByText(/From PA Adventure Bike Rides/)).toBeInTheDocument();
+  });
+
+  it("never calls an unknown surface paved", () => {
+    render(
+      <InfoFeatureCard
+        feature={{ ...CURATED_RIDE, catalogRide: { routeId: "x", miles: 96, surface: null } }}
+        onClose={vi.fn()}
+      />,
+    );
+    const surface = screen.getByTestId("curated-ride-surface");
+    expect(surface).toHaveTextContent("Surface unknown");
+    expect(surface.textContent ?? "").not.toMatch(/paved/i);
+  });
+
+  it("opens the tapped route only when 'Ride this' is pressed", () => {
+    const onRideThisRoute = vi.fn().mockResolvedValue(undefined);
+    render(
+      <InfoFeatureCard feature={CURATED_RIDE} onClose={vi.fn()} onRideThisRoute={onRideThisRoute} />,
+    );
+    expect(onRideThisRoute).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("info-feature-ride-this"));
+    expect(onRideThisRoute).toHaveBeenCalledWith("fb-loop");
+  });
+
+  it("says so when the ride cannot be opened, instead of failing silently", async () => {
+    const onRideThisRoute = vi.fn().mockRejectedValue(new Error("offline"));
+    render(
+      <InfoFeatureCard feature={CURATED_RIDE} onClose={vi.fn()} onRideThisRoute={onRideThisRoute} />,
+    );
+    fireEvent.click(screen.getByTestId("info-feature-ride-this"));
+    expect(await screen.findByText(/could not be opened/)).toBeInTheDocument();
+    expect(screen.getByTestId("info-feature-ride-this")).toBeEnabled();
+  });
+
+  it("offers no ride action when the map cannot open rides", () => {
+    render(<InfoFeatureCard feature={CURATED_RIDE} onClose={vi.fn()} />);
+    expect(screen.queryByTestId("info-feature-ride-this")).not.toBeInTheDocument();
+  });
+});

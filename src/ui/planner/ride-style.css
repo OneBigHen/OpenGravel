@@ -140,10 +140,6 @@
   background: var(--og-press);
 }
 
-.og-style__chip input:checked + span {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-style__chip input:focus-visible + span,
 .og-style__switch input:focus-visible,
@@ -176,6 +172,16 @@
 .og-composer__row--loop > .og-style__loop,
 .og-composer__row--direction > .og-style__way {
   grid-area: value;
+}
+
+/* In a sheet the "Which way?" chips fold behind their current choice; on the
+   rail and other wide surfaces the plain label and all five chips stay open. */
+.og-composer__row--direction > .og-composer__direction-toggle { display: none; }
+
+@media (max-width: 1180px) {
+  .og-composer__row--direction > .og-composer__label,
+  .og-composer__row--direction > .og-style__way[data-open="false"] { display: none; }
+  .og-composer__row--direction > .og-composer__direction-toggle { display: grid; }
 }
 
 [data-testid="ride-shape"] .og-style__chips {

@@ -179,6 +179,8 @@ export interface RouteCardVm {
   readonly durationLabel: string;
   /** The same duration in seconds, so the sheet can say when the ride gets back. */
   readonly durationSeconds?: number;
+  /** The ride's length, so the sheet can turn surface shares into miles. */
+  readonly distanceMeters?: number;
   readonly distanceLabel: string;
   readonly addedTimeLabel: string | null;
   /**
@@ -745,6 +747,7 @@ function routeCards(
       roleLabel: roleLabelFor(role, placeholderSelection),
       durationLabel: formatDuration(candidate.durationSeconds),
       durationSeconds: candidate.durationSeconds,
+      distanceMeters: candidate.distanceMeters,
       distanceLabel: formatDistance(candidate.distanceMeters),
       addedTimeLabel:
         reference === null
@@ -846,8 +849,14 @@ export function nextPlacementTarget(
  * are on screen at once, and "Set your start on the map." above "Set a start
  * point on the map." was the duplication the first preview review flagged.
  */
+/**
+ * The idle line, named once so the surface can leave pure filler off the screen
+ * without inventing a second copy of the words (Fable §4.2).
+ */
+export const IDLE_PLAN_STATUS = "No plan yet.";
+
 function idleStatus(document: RideDocument, endpoints: SketchEndpoints | null): string {
-  return nextPlacementTarget(document, endpoints) === null ? "Ready to plan." : "No plan yet.";
+  return nextPlacementTarget(document, endpoints) === null ? "Ready to plan." : IDLE_PLAN_STATUS;
 }
 
 /** True when a route is currently on screen, from this attempt or the last one. */

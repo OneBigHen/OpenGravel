@@ -84,12 +84,21 @@ export default defineConfig({
   projects: [
     {
       name: "critical-chromium",
+      testIgnore: "**/visual/baselines.spec.ts",
+      use: { ...devices["Desktop Chrome"], viewport: DESKTOP_VIEWPORT },
+    },
+    {
+      // Screenshot baselines (world-class round, package 1). Run only by the
+      // "Visual baselines" job on the GitHub runner, where they were recorded.
+      name: "visual-chromium",
+      testMatch: "**/visual/baselines.spec.ts",
       use: { ...devices["Desktop Chrome"], viewport: DESKTOP_VIEWPORT },
     },
     ...(webkitEnabled
       ? [
           {
             name: "critical-webkit",
+            testIgnore: "**/visual/baselines.spec.ts",
             use: { ...devices["Desktop Safari"], viewport: DESKTOP_VIEWPORT },
           },
         ]

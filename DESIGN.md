@@ -21,15 +21,21 @@ iPad and on a 1440 px desktop.
 Premium technical-outdoors. Quiet, warm, exact — a good GPS unit and a paper map, not a
 glossy app. The map is the hero; chrome is calm and solid.
 
-- **Glass everywhere (v4, owner 2026-10-27).** Every surface that sits on the map or on a page
-  is frosted glass: `--og-glass` for chrome (tab bar, top search, chips, map buttons),
-  `--og-glass-dense` for sheets, cards and panels that hold sentences or ride numbers. One
-  recipe: 1px `--og-glass-edge` border, the fill, `box-shadow: var(--og-glass-highlight),
-  var(--og-glass-shadow)`, `backdrop-filter: var(--og-glass-blur)`. Nested blocks inside a glass
-  card use `--og-glass-well` or hairlines, never a second blur. Non-map pages sit on the
-  fixed topographic backdrop (`body::before/::after`, `public/textures/topo.svg`) so the glass
-  has terrain to frost. Solid only when the browser has no backdrop blur or the rider asks for
-  reduced transparency (tokens.css handles both). No glow, no gradients on controls.
+- **Glass only over a live map (2026-11-10).** Chrome and sheets that sit directly on the map
+  (top search, chips, map buttons, home pills, plan sheet, desktop rail, From / To card, ride
+  cards) are frosted glass: `--og-glass` for chrome, `--og-glass-dense` for panels that hold
+  sentences or ride numbers. One recipe: 1px `--og-glass-edge` border, the fill,
+  `box-shadow: var(--og-glass-highlight), var(--og-glass-shadow)`,
+  `backdrop-filter: var(--og-glass-blur)`. Nested blocks use `--og-glass-well` or hairlines,
+  never a second blur. Pages with no map behind them (Explore, My rides, Settings) are solid
+  `--og-surface` cards with a `--og-line` border on the fixed topographic backdrop
+  (`public/textures/topo.svg`); tokens.css turns the glass tokens solid on those pages. Solid
+  also when the browser has no backdrop blur or the rider asks for reduced transparency.
+- **Selected is neutral; green is the action (2026-11-10).** Green fill only on the one
+  primary action of a screen, a switch that is on, the maneuver card and the home Loop pill.
+  A chosen option among several uses `--og-selected` fill, `--og-ink` text at 700 and a 1.5px
+  `--og-selected-ring`. A disabled primary action is green at 45% opacity, never a grey slab.
+No glow, no gradients on controls.
 - **No dead space.** The tab bar is docked (Google Maps layout, 2026-10-27) and the Plan
   sheet sits flush on it; lists are compact rows (Explore: 96px thumbnail rows); wide screens use their
   width (Settings in two columns, route page = 420px pane + full-height map); an empty or idle
@@ -46,8 +52,9 @@ built in `src/ui/appearance`). No third palette: the old base `:root`, the
 `prefers-color-scheme: dark` block and the "glass" layer collapse into these two.
 
 **Night means the whole screen is dark, map included.** Never a light basemap under Night
-chrome. Night basemap: Mapbox `navigation-night-v1` (night-contrast) when a Mapbox token
-is configured, otherwise OpenFreeMap `dark` (`https://tiles.openfreemap.org/styles/dark`).
+chrome. Night basemap: OpenGravel's own "Night terrain" (Mapbox Outdoors repainted at load
+time: hillshade, forest, contours, gravel in tan, unknown surface never tan, no pure white;
+spec in `.fable/DESIGN-PICKS.md` §2) when a Mapbox token is configured, otherwise OpenFreeMap `dark` (`https://tiles.openfreemap.org/styles/dark`).
 The translucent night scrim is only a last-resort fallback for a basemap with no dark style.
 
 ## 4. Tokens — one file, one name per job
@@ -67,7 +74,9 @@ Colour (semantic names; values per theme):
 | `--og-ink-2` | secondary text (≥4.5:1 on surface) | `#46524c` | `#a2aea8` |
 | `--og-line` | hairlines | `rgb(15 26 21 / 12%)` | `rgb(255 255 255 / 9%)` |
 | `--og-line-strong` | input borders, dividers that must show | `rgb(15 26 21 / 24%)` | `rgb(255 255 255 / 16%)` |
-| `--og-primary` | primary buttons, active tab, selected control | `#13703f` | `#1c7f49` |
+| `--og-primary` | the primary action, switches on, maneuver card | `#13703f` | `#1c7f49` |
+| `--og-selected` | fill of a chosen option among several | `#fdfcf9` | `#2b3833` |
+| `--og-selected-ring` | 1.5px ring on a chosen option (≥3:1 on the track) | `#0f1a15` | `#9aa19d` |
 | `--og-on-primary` | text on primary | `#ffffff` | `#ffffff` |
 | `--og-primary-text` | green used as text/icon | `#0a5c31` | `#6fe3a3` |
 | `--og-route` | the chosen route line + its row tint | `#7b4fa0` | `#b48ae0` |
@@ -160,6 +169,26 @@ the primary button.
   Settings (Ride stays the default); music already lives in Settings; traffic cameras and the AI Ask
   button are now Settings switches, off by default, and put themselves back where they were when
   turned on. No change to tokens or the glass recipe.
+
+- 2026-11-10 Owner ("they all look good, provide me a world class app"; three picks decided by the
+  design lead, `.fable/DESIGN-PICKS.md`): selected controls are neutral. Green fill is only the one
+  primary action of a screen, a switch that is on, the maneuver card and the home Loop pill; every
+  one-of-several choice uses `--og-selected` fill, `--og-ink` text at 700 and a 1.5px
+  `--og-selected-ring` (Day `#fdfcf9` / `#0f1a15`, Night `#2b3833` / `#9aa19d`).
+  A disabled primary action is never a grey slab. Supersedes the `--og-primary` job "selected control".
+- 2026-11-10 Owner (same hand-off): Night basemap is OpenGravel's own "Night terrain" style on
+  Mapbox Outdoors sources: green-black land, forest tint, hillshade, contours, gravel in tan,
+  unknown surface dotted, no pure white. OpenFreeMap `dark` stays the no-token fallback.
+  Supersedes §3's `navigation-night-v1`. Spec: `.fable/DESIGN-PICKS.md` section 2.
+- 2026-11-10 Owner (same hand-off): glass only on chrome and sheets that sit on a live map. Pages
+  with no map behind them (Explore, My rides, Settings, dialogs) and the docked tab bar use solid
+  `--og-surface` cards with a `--og-line` border on the topo backdrop. Supersedes v4's
+  "glass everywhere" (§2).
+- 2026-11-10 Owner (same hand-off, `.fable/MAPWOW-BRIEF.md` W1 + W5): the first map opens with
+  gravel, twisty roads and "Rider-picked rides" on — tan dashed, orange and thin plum — and one
+  glass legend chip at the bottom-left that opens Layers. A saved layer choice always wins, and
+  turning a layer off sticks. The chip is a legend, not a control: the home screen still keeps only
+  search, Loop and Ride. Layer data loads after the map's first paint.
 
 ## Open proposals
 

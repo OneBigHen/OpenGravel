@@ -26,6 +26,8 @@
 
   /* Derived, never new hues: a wash of a token for a tint or a press. */
   --og-primary-soft: color-mix(in srgb, var(--og-primary) 12%, var(--og-surface));
+  --og-selected: #fdfcf9;
+  --og-selected-ring: #0f1a15;
   --og-route-soft: color-mix(in srgb, var(--og-route) 10%, var(--og-surface));
   --og-press: color-mix(in srgb, var(--og-ink) 6%, transparent);
   --og-scrim: rgb(15 26 21 / 36%);
@@ -92,6 +94,8 @@
   --og-warn: #e5c07a;
 
   --og-primary-soft: color-mix(in srgb, var(--og-primary) 22%, var(--og-surface));
+  --og-selected: #2b3833;
+  --og-selected-ring: #9aa19d;
   --og-route-soft: color-mix(in srgb, var(--og-route) 16%, var(--og-surface));
   --og-press: color-mix(in srgb, var(--og-ink) 8%, transparent);
   --og-scrim: rgb(0 0 0 / 55%);
@@ -235,5 +239,16 @@ body {
   --og-glass: var(--og-surface);
   --og-glass-dense: var(--og-surface);
   --og-glass-blur: none;
+  --og-glass-well: var(--og-surface-2);
+}
+
+/* 2026-11-10: no map behind these pages, so no glass. */
+.og-explore,
+.og-library,
+.og-settings {
+  --og-glass: var(--og-surface);
+  --og-glass-dense: var(--og-surface);
+  --og-glass-blur: none;
+  --og-glass-highlight: none;
   --og-glass-well: var(--og-surface-2);
 }

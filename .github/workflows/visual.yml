@@ -1,0 +1,71 @@
+name: Visual baselines
+
+# Pixel baselines for 11 screens x phone/desktop x day/night (package 1).
+# On a pull request: compare twice (repeat 2) against the checked-in baselines.
+# To re-record them on this runner, push a commit whose message contains
+# [update-baselines]; the job commits the new pictures to the branch. A design
+# change needs a DESIGN.md decision-log line in the same PR.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  visual:
+    name: screenshot baselines (Chromium)
+    # Push runs only record; pull requests only compare.
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, '[update-baselines]')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: visual-${{ github.ref }}-${{ github.event_name }}
+      cancel-in-progress: true
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: Re-record baselines
+        if: github.event_name == 'push'
+        run: npx playwright test --project=visual-chromium --update-snapshots=all
+
+      - name: Commit baselines
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e/visual/baselines.spec.ts-snapshots
+          git diff --cached --quiet || git commit -m "Record screenshot baselines on the CI runner"
+          git push
+
+      - name: Compare against baselines (twice)
+        if: github.event_name == 'pull_request'
+        run: npx playwright test --project=visual-chromium --repeat-each=2
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
+          path: |
+            playwright-report/
+            test-results/
+            tests/e2e/visual/baselines.spec.ts-snapshots/
+          retention-days: 14
