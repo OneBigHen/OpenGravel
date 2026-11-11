@@ -49,9 +49,13 @@ describe("Explore UI", () => {
     const props = { entries, onOpen: vi.fn(), hostFactory: hosts.factory, basemap: "empty" as const };
     const view = render(<ExploreMap {...props} highlightedId={null} />);
     await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(100));
+    // The list's map is an overview: every route is one thin quiet line, so a
+    // hundred of them do not merge into a block.
+    expect(hosts.hosts[0]?.lastScene()?.routes.every((route) => route.state === "overview")).toBe(true);
     const fits = hosts.hosts[0]!.fits.length;
     view.rerender(<ExploreMap {...props} highlightedId="route-99" />);
     await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes.find((route) => route.id === "route-99")?.state).toBe("selected"));
+    expect(hosts.hosts[0]?.lastScene()?.routes.filter((route) => route.state === "overview")).toHaveLength(99);
     expect(hosts.hosts[0]!.fits).toHaveLength(fits);
     fireEvent.click(screen.getByRole("button", { name: "Fit routes" }));
     await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));

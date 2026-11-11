@@ -65,9 +65,11 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
   const [cameraOwned, setCameraOwned] = useState(false);
   const available = useMemo(() => entries.filter((entry) => lineOf(entry).length >= 2), [entries]);
   const scene = useMemo<MapScene>(() => {
-    // EX-10: one quiet colour for the catalog (colours with no legend read as a
-    // key that isn't there), and the route under the rider's pointer or focus
-    // stands out with its name on the map.
+    // EX-10: one quiet colour for the catalog, and the route under the rider's
+    // pointer or focus stands out with its name on the map. The list's own map
+    // draws the catalog as `overview`: thin, uncased lines that show where the
+    // good riding is without merging into one grey block. A single route's page
+    // (tools "recentre") keeps the ordinary alternative treatment.
     const routes: RouteScene[] = available.map((entry) => {
       const line = lineOf(entry);
       const highlighted = entry.id === highlightedId;
@@ -76,7 +78,7 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
         id: entry.id as RouteCandidateId,
         role: null,
         geometry: line,
-        state: highlighted ? "selected" : "alternative",
+        state: highlighted ? "selected" : tools === "count" ? "overview" : "alternative",
         tint: highlighted ? 0 : 2,
         ...(highlighted && at !== undefined ? { label: { text: entry.name, at } } : {}),
       };
@@ -94,7 +96,7 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
       previewArea: null,
       selectedObject: null,
     };
-  }, [available, highlightedId]);
+  }, [available, highlightedId, tools]);
   const fitExtent = useMemo(() => extentOf(available), [available]);
   const fitKey = useMemo(() => `${available.map((entry) => entry.id).join("|")}:${fitRevision}`, [available, fitRevision]);
 

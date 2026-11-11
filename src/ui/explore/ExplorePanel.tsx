@@ -7,6 +7,7 @@ import { staticRouteMapUrl } from "@/application/map/static-map";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
+import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import { ExploreMap, type ExploreMapConfig } from "@/ui/explore/ExploreMap";
 import { RouteLinePreview } from "@/ui/explore/RouteLinePreview";
 import { routeFacts } from "@/ui/explore/route-facts";
@@ -77,10 +78,12 @@ function queryWith(query: ExploreQuery, patch: Partial<ExploreQuery>): ExploreQu
 
 function RoutePreview({ entry, mapboxToken }: { readonly entry: CatalogEntry; readonly mapboxToken?: string | undefined }) {
   // The route on a real map, so a rider sees where it is: towns, roads, terrain.
+  // A night list gets the dark image, never a daylight one under dark chrome.
+  const night = useResolvedTheme() === "night";
   const mapUrl = mapboxToken === undefined
     ? null
     // Square maps keep the full route framed inside the compact thumbnail.
-    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 256, height: 256 });
+    : staticRouteMapUrl(entry.previewGeometry ?? entry.geometry, { token: mapboxToken, width: 256, height: 256, night });
   if (mapUrl !== null) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a remote static map, sized by CSS; next/image would proxy it.

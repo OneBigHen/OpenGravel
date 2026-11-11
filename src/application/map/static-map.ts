@@ -11,6 +11,12 @@
 import type { Coordinate } from "@/domain/ride/types";
 
 const STYLE = "mapbox/outdoors-v12";
+/**
+ * The dark style a static image can name. The live map's own Night terrain
+ * repaint is built in the browser and cannot be requested from the Static
+ * Images API, so the image keeps the hosted night style the repaint starts
+ * from: still dark, never a daylight picture under Night chrome.
+ */
 const NIGHT_STYLE = "mapbox/navigation-night-v1";
 const MAX_POINTS = 80;
 const ROUTE_COLOR = "d65a36";
@@ -85,6 +91,6 @@ export function staticPointsMapUrl(points: readonly Coordinate[], options: Stati
   const padding = Math.round(Math.min(width, height) * 0.2);
   // One point has no extent to fit: frame it at a town-level zoom instead.
   const view = points.length === 1 ? `${points[0]!.lon.toFixed(5)},${points[0]!.lat.toFixed(5)},11` : "auto";
-  return `https://api.mapbox.com/styles/v1/${STYLE}/static/${pins.join(",")}/${view}/${width}x${height}@2x`
+  return `https://api.mapbox.com/styles/v1/${options.night === true ? NIGHT_STYLE : STYLE}/static/${pins.join(",")}/${view}/${width}x${height}@2x`
     + `?${view === "auto" ? `padding=${padding}&` : ""}logo=false&attribution=false&access_token=${encodeURIComponent(options.token)}`;
 }

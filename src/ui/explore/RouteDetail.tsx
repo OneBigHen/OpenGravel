@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactN
 import Link from "next/link";
 
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
+import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 
 import type { CatalogEntry, CatalogVariantSummary } from "@/application/explore/catalog";
 import { formatDistance as formatMiles } from "@/application/planner/measurements";
@@ -317,6 +318,7 @@ export function RouteDetail({
   // A rider who already let OpenGravel see their location does not get asked
   // again; without it the start distance is simply absent.
   const { origin: riderOrigin } = useRiderOrigin();
+  const night = useResolvedTheme() === "night";
   const riderTimeZone = useSyncExternalStore(
     subscribeToDeviceTimeZone,
     deviceTimeZone,
@@ -324,7 +326,7 @@ export function RouteDetail({
   );
   const staticMapUrl = mapboxToken === undefined
     ? null
-    : staticRouteMapUrl(entry.geometry.length >= 2 ? entry.geometry : entry.previewGeometry ?? [], { token: mapboxToken, width: 640, height: 400 });
+    : staticRouteMapUrl(entry.geometry.length >= 2 ? entry.geometry : entry.previewGeometry ?? [], { token: mapboxToken, width: 640, height: 400, night });
   // A list entry carries only the card's preview line. Plan, export and share
   // must wait for the route page's full geometry (ExploreClient shows the
   // load state when the full line cannot be fetched).
