@@ -109,6 +109,7 @@ function view(input: {
   readonly routeWarnings?: Parameters<typeof buildRideFocusViewModel>[0]["routeWarnings"];
   readonly suggestions?: "on" | "off";
   readonly heldRouteTelemetry?: Parameters<typeof buildRideFocusViewModel>[0]["heldRouteTelemetry"];
+  readonly surfaceRuns?: Parameters<typeof buildRideFocusViewModel>[0]["surfaceRuns"];
 } = {}) {
   return buildRideFocusViewModel({
     ...(input.heldRouteTelemetry === undefined ? {} : { heldRouteTelemetry: input.heldRouteTelemetry }),
@@ -124,6 +125,7 @@ function view(input: {
     now: input.now ?? NOW,
     mapReady: input.mapReady,
     routeWarnings: input.routeWarnings,
+    ...(input.surfaceRuns === undefined ? {} : { surfaceRuns: input.surfaceRuns }),
   });
 }
 
@@ -1229,5 +1231,63 @@ describe("the posted speed limit (NV-04)", () => {
       position: { ...HEALTHY_POSITION, ageMs: 42_000, speedMps: null, headingDegrees: null, quality: "stale" },
     });
     expect(view({ navigation: stale, telemetry: { ...TELEMETRY, speedLimitKmh: 56 } }).speedLimit).toBeNull();
+  });
+});
+
+describe("the surface coming up (N2)", () => {
+  const RUNS = [
+    { from: 0, to: 2_000, kind: "paved" as const },
+    { from: 2_000, to: 4_000, kind: "gravel" as const },
+  ];
+  const TELEMETRY = {
+    // 34 % of 4 km is 1360 m: 640 m before the gravel starts.
+    routeProgress: 0.34,
+    remainingDistanceMeters: 2_640,
+    remainingDurationSeconds: 300,
+    etaIso: "2026-09-21T14:15:00.000Z",
+  };
+
+  it("prints the next change with its distance and its kind", () => {
+    expect(view({ telemetry: TELEMETRY, surfaceRuns: RUNS }).surfaceAhead).toEqual({
+      kind: "gravel",
+      text: "Gravel in 0.4 mi",
+    });
+  });
+
+  it("names pavement for a paved run", () => {
+    const runs = [
+      { from: 0, to: 4_380, kind: "gravel" as const },
+      { from: 4_380, to: 6_000, kind: "paved" as const },
+    ];
+    const result = view({
+      surfaceRuns: runs,
+      telemetry: { ...TELEMETRY, routeProgress: 1_000 / 6_000 },
+    });
+    expect(result.surfaceAhead?.text).toBe("Pavement in 2.1 mi");
+  });
+
+  it("states how long an unmeasured stretch lasts, never as paved", () => {
+    const runs = [
+      { from: 0, to: 1_000, kind: "paved" as const },
+      { from: 1_000, to: 3_000, kind: "unknown" as const },
+    ];
+    expect(view({ telemetry: { ...TELEMETRY, routeProgress: 0 }, surfaceRuns: runs }).surfaceAhead).toEqual({
+      kind: "unknown",
+      text: "Surface not known for 1.2 mi",
+    });
+  });
+
+  it("shows nothing without runs, without progress, on a stale fix, or past the last change", () => {
+    expect(view({ telemetry: TELEMETRY }).surfaceAhead).toBeNull();
+    expect(view({ telemetry: TELEMETRY, surfaceRuns: [] }).surfaceAhead).toBeNull();
+    expect(view({ telemetry: null, surfaceRuns: RUNS }).surfaceAhead).toBeNull();
+    const stale = navigation({
+      position: { ...HEALTHY_POSITION, ageMs: 42_000, speedMps: null, headingDegrees: null, quality: "stale" },
+    });
+    expect(view({ navigation: stale, telemetry: TELEMETRY, surfaceRuns: RUNS }).surfaceAhead).toBeNull();
+    // 90 % along is inside the last run: there is no change left to announce.
+    expect(
+      view({ telemetry: { ...TELEMETRY, routeProgress: 0.9 }, surfaceRuns: RUNS }).surfaceAhead,
+    ).toBeNull();
   });
 });

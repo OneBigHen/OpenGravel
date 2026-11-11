@@ -319,6 +319,7 @@ export function RideFocus({
   const freeRideStatusMessage = useStore(store, (state) => state.freeRideStatusMessage);
   const freeRideError = useStore(store, (state) => state.freeRideError);
   const routeLine = useStore(store, (state) => state.routeLine);
+  const surfaceRuns = useStore(store, (state) => state.surfaceRuns);
   const routeLineAvailable = useStore(store, (state) => state.routeLineAvailable);
   const suggestionPreviewLine = useStore(store, (state) => state.suggestionPreviewLine);
   const mapReady = useStore(store, (state) => state.mapReady);
@@ -603,6 +604,7 @@ export function RideFocus({
       const projected = buildRideScene({
         routeId: navigation?.plan.route?.routeId ?? (breadcrumbWaypoints !== null && (navigation?.activity === "track" || navigation?.resumeActivity === "track") ? asRouteCandidateId("route_breadcrumb") : null),
         routeLine: availableRouteLine,
+        surfaceRuns,
         progressFraction,
         onRoute,
         suggestionPreview: rideOffer !== null ? {
@@ -627,7 +629,7 @@ export function RideFocus({
       // along it stays exactly the scene it was before OGV#13.
       ...(rideInterest.scenePlaces.length === 0 ? {} : { places: rideInterest.scenePlaces }),
     }; },
-    [availableRouteLine, breadcrumbWaypoints, liveSuggestion, navigation, onRoute, progressFraction, recordedLine, rideBearing, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, viewModel],
+    [availableRouteLine, breadcrumbWaypoints, liveSuggestion, navigation, onRoute, progressFraction, recordedLine, rideBearing, rideInterest.scenePlaces, rideOffer, suggestionPreviewLine, surfaceRuns, viewModel],
   );
 
   const selectRideInterest = rideInterest.select;

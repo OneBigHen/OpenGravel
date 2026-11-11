@@ -102,6 +102,8 @@ describe("ride focus pointer storage", () => {
       { version: 1, ...POINTER, routeGeometryRef: 7 },
       { version: 1, ...POINTER, instructions: [{ text: "turn", distanceMeters: 1, durationSeconds: 2, type: "turn", geometryIndex: -1 }] },
       { version: 1, ...POINTER, instructions: Array.from({ length: 513 }, () => ({ text: "", distanceMeters: 1, durationSeconds: 1, type: "turn" })) },
+      { version: 1, ...POINTER, surfaceRuns: [{ from: 100, to: 100, kind: "paved" }] },
+      { version: 1, ...POINTER, surfaceRuns: [{ from: 0, to: 100, kind: "asphalt" }] },
     ];
 
     for (const value of unusable) {
@@ -109,6 +111,7 @@ describe("ride focus pointer storage", () => {
     }
     expect(isRideFocusPointer({ version: 1, ...POINTER })).toBe(true);
     expect(isRideFocusPointer({ version: 1, ...POINTER, routeGeometryRef: null })).toBe(true);
+    expect(isRideFocusPointer({ version: 1, ...POINTER, surfaceRuns: [{ from: 0, to: 100, kind: "gravel" }] })).toBe(true);
   });
 
   it("reports an unparseable value as corrupt", () => {

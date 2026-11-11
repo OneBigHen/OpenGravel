@@ -40,6 +40,8 @@ import type { RideRepositoryPort } from "@/application/persistence/ride-reposito
 import { SKETCH_PREVIEW_RIDE_REFUSAL } from "@/application/planner/sketch-preview";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import { breadcrumbLine, breadcrumbMeasurements } from "@/application/breadcrumb/measurements";
+import { surfaceRunSpans } from "@/application/roads/engine-road-evidence";
+import type { SurfaceRunSpan } from "./surface-ahead";
 
 /**
  * Why a `Start ride` was refused. Every code is a state the rider can act on,
@@ -67,6 +69,12 @@ export interface RideHandoffRequest {
   readonly instructions?: readonly RouteInstruction[];
   /** Posted speed limits along the route line (NV-04). */
   readonly speedLimits?: readonly SpeedLimitSpan[];
+  /**
+   * The selected answer's measured surface runs, in metres along its line.
+   * Absent when the engine measured no runs — a reroute, a GPX track or an
+   * older answer — and the ride then shows no surface line at all.
+   */
+  readonly surfaceRuns?: readonly SurfaceRunSpan[];
 }
 
 export type RideHandoffOutcome =
@@ -144,6 +152,7 @@ export function buildRideHandoff(input: RideHandoffInput): RideHandoffOutcome {
       message: "The chosen route's line isn't loaded yet. Try again in a moment.",
     };
   }
+  const surfaceRuns = surfaceRunsOf(selectedCandidate);
   return {
     outcome: "ready",
     request: {
@@ -162,8 +171,19 @@ export function buildRideHandoff(input: RideHandoffInput): RideHandoffOutcome {
       ...(selectedCandidate.speedLimits === undefined
         ? {}
         : { speedLimits: selectedCandidate.speedLimits }),
+      ...(surfaceRuns === null ? {} : { surfaceRuns }),
     },
   };
+}
+
+/**
+ * The surface runs the engine measured along the selected answer, in metres,
+ * or `null` when it measured none. Read from the same `surfaceMix` evidence the
+ * planner map and the elevation strip use, so the ride cannot paint a different
+ * surface from the one the rider chose.
+ */
+function surfaceRunsOf(candidate: RouteCandidate): readonly SurfaceRunSpan[] | null {
+  return surfaceRunSpans(candidate.evidence["surfaceMix"]);
 }
 
 /** What the planner's `Start ride` (or the retry of it) ended as. */
@@ -218,6 +238,9 @@ export async function startRideFromHandoff(
       ...(input.request.speedLimits === undefined
         ? {}
         : { speedLimits: input.request.speedLimits }),
+      ...(input.request.surfaceRuns === undefined
+        ? {}
+        : { surfaceRuns: input.request.surfaceRuns }),
       updatedAt: input.now,
     });
     return { outcome: "resumed", sessionId: existing, message: null };
@@ -251,6 +274,9 @@ export async function startRideFromHandoff(
     ...(input.request.speedLimits === undefined
       ? {}
       : { speedLimits: input.request.speedLimits }),
+    ...(input.request.surfaceRuns === undefined
+      ? {}
+      : { surfaceRuns: input.request.surfaceRuns }),
     updatedAt: input.now,
   });
   return { outcome: "started", sessionId: started.state.sessionId, message: null };
