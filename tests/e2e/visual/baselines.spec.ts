@@ -84,6 +84,9 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
   // The ride fixture feed puts the rider on the fixture ride, so this is the
   // real riding view (maneuver, strip, buttons), not "head to the start".
   "active-ride": async (page) => {
+    // No browser GPS here: the ride fixture feed is the position, and a granted
+    // fix would move the camera off the fixture ride before it is placed.
+    await page.context().clearPermissions();
     await startRide(page);
     await rideMapReady(page);
     await expect(page.getByText(/No GPS fix|Finding you/)).toHaveCount(0, { timeout: 20_000 }).catch(() => {});
