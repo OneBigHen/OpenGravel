@@ -37,6 +37,7 @@ import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhon
 import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { destinationLineFor } from "@/ui/planner/destination-line";
+import type { MapExtent } from "@/application/map/build-map-scene";
 import { IntentComposer, PlanCommitment } from "@/ui/planner/IntentComposer";
 import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
@@ -48,6 +49,8 @@ export interface PlannerWorkspaceDockProps {
   readonly onDismissPlace?: (() => void) | undefined;
   readonly showOptions?: boolean;
   readonly onFullSheet?: () => void;
+  /** Flies the map to a stretch of the route (a tap on a truth line or the surface bar). */
+  readonly onShowExtent?: (extent: MapExtent) => void;
   readonly dockRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadRef: RefObject<HTMLDivElement | null>;
   readonly sheetHeadHeight: number;
@@ -132,6 +135,7 @@ export function PlannerWorkspaceDock({
   onDismissPlace,
   showOptions = false,
   onFullSheet,
+  onShowExtent,
   dockRef,
   sheetHeadRef,
   sheetHeadHeight,
@@ -265,7 +269,8 @@ export function PlannerWorkspaceDock({
     onSave: () => reveal('[data-testid="named-ride-title"]', (element) => element.focus({ preventScroll: true })),
     onShare: () => reveal('[data-testid="open-share"]', (element) => element.click()),
     onStyle: () => reveal(".og-phone-style", () => undefined),
-  } : undefined, [phone, onAddStopQuick, reveal]);
+    onShowExtent,
+  } : undefined, [phone, onAddStopQuick, reveal, onShowExtent]);
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");

@@ -21,7 +21,7 @@ function factsOf(card: RouteCardVm): FirstLookFacts {
  * improved (next round N1).
  */
 export function usePlannerViewModel(input: PlannerProjectionInput) {
-  const { document, session, sketchDerivedEndpoints, placeNameFor, routeLine } = input;
+  const { document, session, sketchDerivedEndpoints, placeNameFor, routeLine, bikeName } = input;
   const [routeTraffic, setRouteTraffic] = useState<RouteTrafficLabel | null>(null);
   const [firstLook, setFirstLook] = useState<{ readonly generation: number; readonly facts: FirstLookFacts } | null>(null);
   const viewModel = useMemo(
@@ -33,8 +33,9 @@ export function usePlannerViewModel(input: PlannerProjectionInput) {
         placeNameFor,
         routeLine,
         routeTraffic,
+        ...(bikeName === undefined ? {} : { bikeName }),
       }),
-    [document, session, sketchDerivedEndpoints, placeNameFor, routeLine, routeTraffic],
+    [document, session, sketchDerivedEndpoints, placeNameFor, routeLine, routeTraffic, bikeName],
   );
   const generation = session.identity.planningGeneration;
   const lead = viewModel.routeCards[0];

@@ -303,12 +303,14 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
+  const truthBikeName = bikes.find((bike) => bike.id === document.intent.bike.bikeId)?.name;
   const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({
     document,
     session,
     sketchDerivedEndpoints,
     placeNameFor,
     routeLine: activeRoute,
+    ...(truthBikeName === undefined ? {} : { bikeName: truthBikeName }),
   });
 
   /**
@@ -787,6 +789,7 @@ export function PlannerWorkspace({
         <PlannerWorkspaceDock
           placeSheet={placeFlow.sheet} onDismissPlace={placeFlow.dismissSheet}
           showOptions={placeFlow.optionsOpen} onFullSheet={() => plannerUiStore.getState().setSheetDetent("expanded")}
+          onShowExtent={(extent) => { plannerUiStore.getState().setSheetDetent("peek"); plannerUiStore.getState().requestFit(extent); }}
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}

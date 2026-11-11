@@ -50,6 +50,7 @@ import type {
   StopArrivalIntent,
 } from "@/domain/ride/types";
 import type { SketchEndpoints } from "@/domain/sketch/types";
+import { rideTruth, type RideTruth, type RideTruthBike } from "./ride-truth";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type {
   RouteBundle,
@@ -205,6 +206,11 @@ export interface RouteCardVm {
   readonly surfaceStrip?: { readonly paved: number; readonly gravel: number; readonly dirt: number; readonly unknown: number };
   /** Where each surface is along the line, for the strip under the elevation profile. */
   readonly surfaceRuns?: readonly SurfaceRun[];
+  /**
+   * The three honest lines under the route (next round N3): surface, bike,
+   * checked, always in that order. Unknown never reads as good.
+   */
+  readonly truth?: RideTruth;
 
   /**
    * Miles of this route whose surface no usable evidence covers, from the
@@ -330,6 +336,11 @@ export interface PlannerViewModelInput {
    * number for a line no one drew.
    */
   readonly routeLine?: SelectedRouteLine | null;
+  /**
+   * The name of the bike the ride is planned for, from the garage, so the bike
+   * line can say "Fine for <bike>". Absent reads "your bike".
+   */
+  readonly bikeName?: string;
 }
 
 /**
@@ -735,6 +746,7 @@ function routeCards(
   selectedRouteId: RouteCandidateId | null,
   routeTraffic?: { readonly routeId: string; readonly label: string } | null,
   provisional = false,
+  bike?: RideTruthBike,
 ): readonly RouteCardVm[] {
   if (bundle === null) return [];
   const reference = fastestReference(bundle.candidates);
@@ -811,6 +823,12 @@ function routeCards(
           ? routeTraffic.label
           : ownTraffic,
       isSelected: candidate.id === selectedRouteId,
+      truth: rideTruth({
+        evidence: candidate.evidence,
+        distanceMeters: candidate.distanceMeters,
+        ...(bike === undefined ? {} : { bike }),
+        warnings: candidate.warnings,
+      }),
     };
   });
 }
@@ -1157,6 +1175,7 @@ export function buildPlannerViewModel(
     selectedRouteId,
     input.routeTraffic,
     session.phase === "primary-ready" || session.phase === "alternatives-loading",
+    truthBike(document, input.bikeName),
   );
   const reading = session.diagnostics.find((diagnostic) => diagnostic.outcome === "ok" && diagnostic.funCharacter !== undefined)?.funCharacter;
   const disabledReason = disabledReasonFor(document, session.phase, derived);
@@ -1243,4 +1262,11 @@ export function planningErrorCopy(code: PlanningErrorCode, document: RideDocumen
     return NO_ROUTE_LOOP_COPY;
   }
   return ERROR_COPY[code];
+}
+
+/** The bike the truth line reads: the ride's own bike limits, named from the garage. */
+function truthBike(document: RideDocument, name: string | undefined): RideTruthBike | undefined {
+  const bike = document.intent.bike as RideDocument["intent"]["bike"] | undefined;
+  if (bike === undefined) return undefined;
+  return { name: name ?? "your bike", maintainedGravel: bike.maintainedGravel, roughTracks: bike.roughTracks };
 }

@@ -27,6 +27,7 @@
  * duplicate DOM ids are invalid.
  */
 
+import { RideTruthLines } from "./RideTruthLines";
 import { useState, type ReactNode } from "react";
 
 import type { RouteExplanation } from "@/application/planner/route-explanation";
@@ -256,6 +257,7 @@ export function RouteDecisionCard({
           </span>
         )}
       </button>
+      {card.isSelected && card.truth !== undefined ? <RideTruthLines truth={card.truth} testId="selected-route-truth" /> : null}
       {explanation === null ? null : (
         <>
           <button

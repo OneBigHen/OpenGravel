@@ -778,3 +778,14 @@
   font-size: var(--og-text-meta);
   font-weight: 600;
 }
+
+/* The three honest lines (N3): an 8 px dot carries the tone, the text stays ink. */
+.og-truth { display: grid; gap: 4px; min-width: 0; }
+.og-truth__line { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 0; border: 0; background: none; color: var(--og-ink); font: inherit; font-size: var(--og-text-meta); line-height: 1.35; text-align: start; }
+.og-truth__line--jump { cursor: pointer; }
+.og-truth__line--jump .og-truth__text { text-decoration: underline; text-decoration-color: var(--og-ink-2); text-underline-offset: 3px; }
+.og-truth__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--og-ink-2); transform: translateY(-1px); }
+.og-truth__dot[data-tone="good"] { background: var(--og-primary-text); }
+.og-truth__dot[data-tone="warn"] { background: var(--og-warn); }
+.og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
+.og-route-card .og-truth { padding: 0 var(--og-space-3, 12px) var(--og-space-3, 12px); }

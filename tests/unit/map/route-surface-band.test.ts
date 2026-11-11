@@ -103,12 +103,14 @@ describe("the surface band", () => {
       "interpolate",
       ["linear"],
       ["zoom"],
-      12,
+      8,
       3,
-      15,
+      12,
       3.5,
-      17,
+      15,
       4.5,
+      17,
+      6.5,
     ]);
     expect(surface.paint?.["line-opacity"]).toBe(0.95);
   });
