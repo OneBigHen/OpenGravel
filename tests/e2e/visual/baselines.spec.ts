@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { expectDrawnScene, plannerMap, pressPlan, settledExtent } from "../critical/map-helpers";
+import { rideMapReady, startRide } from "../critical/ride-focus-helpers";
 import { directionsTo } from "../critical/search-helpers";
 
 /**
@@ -80,12 +81,12 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
     await expect(page.locator('[data-testid^="route-card-"]').first()).toBeAttached({ timeout: 30_000 });
     await expect(page.getByTestId("status-line")).toHaveText("Ride ready.", { timeout: 30_000 });
   },
+  // The ride fixture feed puts the rider on the fixture ride, so this is the
+  // real riding view (maneuver, strip, buttons), not "head to the start".
   "active-ride": async (page) => {
-    await plannedRoute(page);
-    await page.getByTestId("start-ride").click();
-    await expect(page).toHaveURL(/\/ride$/);
-    await expect(page.getByTestId("ride-focus")).toHaveAttribute("data-status", "ready", { timeout: 30_000 });
-    await expect(plannerMap(page)).toHaveAttribute("data-map-load", "ready", { timeout: 30_000 });
+    await startRide(page);
+    await rideMapReady(page);
+    await expect(page.getByText(/No GPS fix|Finding you/)).toHaveCount(0, { timeout: 20_000 }).catch(() => {});
   },
   explore: async (page) => {
     await page.goto("/explore");
