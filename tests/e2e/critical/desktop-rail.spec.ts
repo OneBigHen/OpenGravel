@@ -184,8 +184,8 @@ for (const size of [
 /**
  * Next round N4: the laptop loop panel is one tidy column. The ride-time chips
  * wrap in at most two rows under their own label (they used to stack into a
- * staircase beside it), the plan button stays live and green in Loop mode
- * before and after a loop exists, the Best Ride card leads the list, and Start
+ * staircase beside it), choosing Loop plans at once and the button then
+ * stays live and green as "Try another loop", the Best Ride card leads the list, and Start
  * ride is fully inside the result panel.
  */
 test("the loop panel is one tidy column with a live green button at 1440x900", async ({ page }) => {
@@ -221,11 +221,7 @@ test("the loop panel is one tidy column with a live green button at 1440x900", a
     probe.remove();
     return getComputedStyle(element).backgroundColor === want;
   });
-  await expect(plan).toHaveText("Make my loop");
-  await expect(plan).toBeEnabled();
-  expect(await primaryFill(), "Make my loop is filled with the primary colour").toBe(true);
-
-  await pressPlan(page);
+  // One tap: choosing Loop with a start already plans it (next round N1).
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await expect(plan).toHaveText("Try another loop");

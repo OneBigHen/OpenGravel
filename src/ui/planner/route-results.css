@@ -767,3 +767,14 @@
 .og-planner[data-activity="hike"] :is(.og-elevation-slot, .og-elevation) {
   --og-route-tint: var(--og-map-brown);
 }
+
+/* The one announced swap: what the settled pick improved over the first look. */
+.og-first-look-note {
+  margin: 0;
+  padding: var(--og-space-2) var(--og-space-3);
+  border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}

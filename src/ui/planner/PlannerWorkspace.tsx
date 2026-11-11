@@ -303,7 +303,7 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
-  const { viewModel, setRouteTraffic } = usePlannerViewModel({
+  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({
     document,
     session,
     sketchDerivedEndpoints,
@@ -848,6 +848,7 @@ export function PlannerWorkspace({
               explanation: routeExplanation,
               onSelect: handleSelectRoute,
               comparisons: viewModel.routingComparisons,
+              note: firstLookNote,
             },
             actions: {
               document,

@@ -72,6 +72,8 @@ export interface PlannerResultPanelProps {
     readonly explanation: RouteExplanation | null;
     readonly onSelect: (routeId: RouteCandidateId) => void;
     readonly comparisons?: RoutingComparisonVm;
+    /** One line naming what the settled pick improved over the first look. */
+    readonly note?: string | null;
   };
   readonly actions: RideActionsProps;
   readonly briefing: PlannerRouteBriefingProps;
@@ -124,6 +126,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
     </RouteOptions>;
   const result = (
     <>
+      {hikeView !== null || !choices.note ? null : (
+        <p className="og-first-look-note" role="status" data-testid="first-look-note">{choices.note}</p>
+      )}
       {hikeView !== null ? <HikeSummary hike={hikeView} start={actions.start} /> : null}
       {hikeView === null && phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
       {hikeView !== null || choices.cards.length === 0 ? null : (

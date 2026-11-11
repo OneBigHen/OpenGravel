@@ -175,6 +175,8 @@ export interface RouteCardVm {
    * silently change them.
    */
   readonly roleKey: RouteRole | "alternative";
+  /** True while this is the first answer and the full search is still running. */
+  readonly provisional?: boolean;
   readonly roleLabel: string;
   readonly durationLabel: string;
   /** The same duration in seconds, so the sheet can say when the ride gets back. */
@@ -725,10 +727,14 @@ function roleKeyFor(
   return isPlaceholderSelection ? "best-ride" : "alternative";
 }
 
+/** What the leading card is called while the full search is still running. */
+export const FIRST_LOOK_LABEL = "First look";
+
 function routeCards(
   bundle: RouteBundle | null,
   selectedRouteId: RouteCandidateId | null,
   routeTraffic?: { readonly routeId: string; readonly label: string } | null,
+  provisional = false,
 ): readonly RouteCardVm[] {
   if (bundle === null) return [];
   const reference = fastestReference(bundle.candidates);
@@ -766,7 +772,13 @@ function routeCards(
       ...(strip === null ? {} : { surfaceStrip: strip }),
       ...(runs === null ? {} : { surfaceRuns: runs }),
       roleKey: roleKeyFor(role, placeholderSelection),
-      roleLabel: roleLabelFor(role, placeholderSelection),
+      // Next round N1: the first answer is honest about being first. "Best ride"
+      // is only ever the settled pick; until then the lead card is a first look.
+      roleLabel:
+        provisional && roleKeyFor(role, placeholderSelection) === "best-ride"
+          ? FIRST_LOOK_LABEL
+          : roleLabelFor(role, placeholderSelection),
+      ...(provisional ? { provisional: true } : {}),
       durationLabel: formatDuration(candidate.durationSeconds),
       durationSeconds: candidate.durationSeconds,
       distanceMeters: candidate.distanceMeters,
@@ -1140,7 +1152,12 @@ export function buildPlannerViewModel(
   const derived = input.sketchDerivedEndpoints ?? null;
   const bundle = drawableBundle(session);
   const selectedRouteId = bundle?.selectedRouteId ?? null;
-  const cards = routeCards(bundle, selectedRouteId, input.routeTraffic);
+  const cards = routeCards(
+    bundle,
+    selectedRouteId,
+    input.routeTraffic,
+    session.phase === "primary-ready" || session.phase === "alternatives-loading",
+  );
   const reading = session.diagnostics.find((diagnostic) => diagnostic.outcome === "ok" && diagnostic.funCharacter !== undefined)?.funCharacter;
   const disabledReason = disabledReasonFor(document, session.phase, derived);
   const rows = pointRows(document, input.placeNameFor);
