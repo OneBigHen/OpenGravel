@@ -1,11 +1,11 @@
 {
-  "totalLines": 20021,
-  "maxFileLines": 3071,
+  "totalLines": 20020,
+  "maxFileLines": 3063,
   "backdropFilter": 99,
   "mediaQueries": 23,
   "literalRadius": 18,
   "literalShadow": 3,
-  "hexLiterals": 10,
+  "hexLiterals": 5,
   "files": {
     "src/app/app.css": 843,
     "src/app/controls.css": 150,
@@ -18,7 +18,7 @@
     "src/ui/layers/layers.css": 712,
     "src/ui/map/map.css": 601,
     "src/ui/nav/nav.css": 607,
-    "src/ui/place/top-search.css": 523,
+    "src/ui/place/top-search.css": 514,
     "src/ui/places/places.css": 872,
     "src/ui/planner/advisor-ask-sheet.css": 242,
     "src/ui/planner/advisor-conversation.css": 518,
@@ -28,7 +28,7 @@
     "src/ui/planner/plan-sheet.css": 403,
     "src/ui/planner/planner-shell.css": 201,
     "src/ui/planner/ride-prep.css": 1175,
-    "src/ui/planner/ride-style.css": 288,
+    "src/ui/planner/ride-style.css": 298,
     "src/ui/planner/route-context.css": 57,
     "src/ui/planner/route-results.css": 769,
     "src/ui/ride/ride-fuel.css": 86,
@@ -40,7 +40,7 @@
     "src/ui/safety/emergency.css": 348,
     "src/ui/settings/offline-maps.css": 202,
     "src/ui/settings/settings.css": 544,
-    "src/ui/sheet/sheet.css": 839,
+    "src/ui/sheet/sheet.css": 846,
     "src/ui/weather/route-weather.css": 137
   }
 }

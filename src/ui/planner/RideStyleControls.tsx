@@ -347,16 +347,41 @@ export function LoopTimeRow({ model, now }: LoopTimeRowProps) {
  * and screen-reader behaviour are the platform's own and each choice is one
  * typed command. The row is full width: five chips on one line is the only
  * shape that reads as one decision, and it is what fits a 320 px phone.
+ *
+ * In a sheet the row folds behind its current choice ("Which way? · Any ›"):
+ * the loop sheet is capped so the map keeps most of the screen, and the heading
+ * is the least-used of its questions. The rail and every other wide surface show
+ * the five chips open, under the plain label.
  */
 export function LoopDirectionRow({ model }: { readonly model: RideStyleControlsModel }) {
   const name = useId();
+  const [open, setOpen] = useState(false);
+  const waysId = `${name}-ways`;
   return (
     <div className="og-composer__row og-composer__row--direction">
       <span className="og-composer__label" id={`${name}-label`}>
         Which way?
       </span>
+      <button
+        type="button"
+        className="og-style__toggle og-composer__direction-toggle"
+        aria-expanded={open}
+        aria-controls={waysId}
+        data-testid="loop-heading-toggle"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="og-style__toggle-label">Which way?</span>
+        <span className="og-style__summary" data-testid="loop-heading-summary">
+          {LOOP_HEADING_LABELS[model.view.loopHeading]}
+        </span>
+        <span aria-hidden="true" className="og-style__chevron">
+          {open ? "⌄" : "›"}
+        </span>
+      </button>
       <div
+        id={waysId}
         className="og-style__way"
+        data-open={open ? "true" : "false"}
         role="radiogroup"
         aria-labelledby={`${name}-label`}
         data-testid="loop-heading"

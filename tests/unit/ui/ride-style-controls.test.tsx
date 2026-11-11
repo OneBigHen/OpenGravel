@@ -138,6 +138,21 @@ describe("ride style controls", () => {
     expect(spy.setLoopHeading).toHaveBeenCalledWith("north");
   });
 
+  it("folds the direction chips behind a summary of the current choice", () => {
+    const spy = actions();
+    render(<LoopDirectionRow model={{ view: { ...VIEW, shape: "loop" }, actions: spy }} />);
+    const toggle = screen.getByTestId("loop-heading-toggle");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("Which way?Any");
+    expect(screen.getByTestId("loop-heading")).toHaveAttribute("data-open", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("loop-heading")).toHaveAttribute("data-open", "true");
+    // The chevron points at what the press does.
+    expect(toggle.querySelector(".og-style__chevron")).toHaveTextContent("⌄");
+  });
+
   it("shows the authored heading as the chosen chip and applies it as one command", () => {
     let document = createRideDocument();
     document = applied(document, loopHeadingCommand(document, "south"));
