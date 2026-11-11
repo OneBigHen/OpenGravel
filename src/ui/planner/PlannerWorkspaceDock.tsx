@@ -37,7 +37,7 @@ import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhon
 import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { destinationLineFor } from "@/ui/planner/destination-line";
-import { IntentComposer } from "@/ui/planner/IntentComposer";
+import { IntentComposer, PlanCommitment } from "@/ui/planner/IntentComposer";
 import { PlannerMapEditBar, type PlannerMapEditBarProps } from "@/ui/planner/MapEditBar";
 import { PlannerRefineWorkspace } from "@/ui/planner/PlannerRefineWorkspace";
 import { PlannerResultPanel } from "@/ui/planner/PlannerResultPanel";
@@ -226,6 +226,9 @@ export function PlannerWorkspaceDock({
   // query, so they can never both render the bar).
   const desktop = useDesktopPlanner();
   const compact = useCompactPlanner();
+  // The desktop rail ends in a fixed foot, so the action and its one-line reason
+  // are never sliced by the panel edge however tall the options grow above them.
+  const commitment = desktop ? <PlanCommitment {...composer} loop={loopRide} /> : undefined;
   const [selectedOption, setSelectedOption] = useState<PlannerOption | null>(null);
   const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");
   const optionsMode = showOptions && compact && hasChoices && !placeSheet;
@@ -297,6 +300,7 @@ export function PlannerWorkspaceDock({
         bodyRef={bodyRef}
         onDismiss={placeSheet ? onDismissPlace : undefined}
         focusKey={optionsMode ? `options:${activeSheetView}` : undefined}
+        foot={commitment}
         handleLabel={compact ? undefined : sheetDetent === "mini" ? "Show planner" : `${sheetDetent === "expanded" ? "Hide" : "Show"} ${hasChoices ? "ride choices" : "ride style"}${hasChoices ? ` (${viewModel.routeCards.length})` : ""}`}
         head={<>
           <PlannerWorkspaceStatus {...status} />
@@ -488,7 +492,7 @@ export function PlannerWorkspaceDock({
               {history}
             </div>
           ) : null}
-          {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop && (detent === "peek" || Boolean(placeSheet))} {...(planning ? { onCancelPlanning } : {})} />}
+          {(!optionsMode || activeSheetView === "edit") && <IntentComposer {...composer} hideIdleSearch={idle && !desktop && (detent === "peek" || Boolean(placeSheet))} hideCommitment={desktop} {...(planning ? { onCancelPlanning } : {})} />}
           {hasChoices ? null : <PlannerResultPanel {...results} />}
           {optionsMode && activeSheetView === "options" && composer.rideStyle !== undefined ? (selectedOption === null ? <PlannerOptionRows
             values={{ bike: results.briefing.bikes.find((bike) => bike.id === results.briefing.ride.intent.bike.bikeId)?.name ?? "Saved bike", style: ROAD_CHARACTER_LABELS[composer.rideStyle.view.roadCharacter], surface: SURFACE_LABELS[composer.rideStyle.view.surface], time: composer.rideStyle.view.shape === "loop" ? formatRideTime(composer.rideStyle.view.loopMinutes) : "Destination", traffic: TRAFFIC_LABELS[composer.rideStyle.view.traffic], stops: String(refine.summaryCounts.stops), areas: String(refine.summaryCounts.avoidAreas), roads: String(refine.summaryCounts.roadSpans), sketch: refine.summaryCounts.sketch ? "Drawn" : "None" }}

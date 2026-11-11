@@ -74,6 +74,132 @@ const MAP_UNAVAILABLE_FALLBACK =
 const MAP_UNAVAILABLE_WITH_SEARCH =
   "The map didn't load, so points can't be placed on it until it comes back. Search for a place, or retry the map.";
 
+/** One reading of why the commitment is blocked, shared by the button and its chips. */
+function commitmentState(
+  viewModel: PlannerViewModel,
+  mapUnavailable: boolean,
+  mapUnavailableReason: string | null | undefined,
+  hasPlaceSearch: boolean,
+): {
+  readonly mapReason: string | null;
+  readonly placementBlocked: boolean;
+  readonly standIn: boolean;
+  readonly disabledReason: string | null;
+  readonly mapReasonId: string;
+  readonly mapReasonLine: boolean;
+} {
+  const mapReason = mapUnavailable
+    ? (mapUnavailableReason ??
+      (hasPlaceSearch ? MAP_UNAVAILABLE_WITH_SEARCH : MAP_UNAVAILABLE_FALLBACK))
+    : null;
+  const placementBlocked = PLACEMENT_REASONS.includes(viewModel.disabledReason ?? "");
+  // The map's absence speaks for the placement reasons it invalidates. A plan
+  // already in flight keeps its own sentence: that is the more specific truth
+  // about the button, and it is not something a retry can change.
+  const standIn = mapReason !== null && placementBlocked;
+  return {
+    mapReason,
+    placementBlocked,
+    standIn,
+    disabledReason: standIn ? mapReason : viewModel.disabledReason,
+    mapReasonId: standIn ? DISABLED_REASON_ID : MAP_REASON_ID,
+    mapReasonLine: mapReason !== null && !standIn,
+  };
+}
+
+/** The commitment and its line of reason; the rail draws it in the fixed foot. */
+export type PlanCommitmentProps = Pick<
+  IntentComposerProps,
+  | "viewModel"
+  | "onPlan"
+  | "onCancelPlanning"
+  | "planLabel"
+  | "onChangeDestination"
+  | "mapUnavailable"
+  | "mapUnavailableReason"
+  | "placeSearch"
+> & { readonly loop?: boolean };
+
+export function PlanCommitment({
+  viewModel,
+  onPlan,
+  onCancelPlanning,
+  planLabel = viewModel.planLabel,
+  onChangeDestination,
+  mapUnavailable = false,
+  mapUnavailableReason = null,
+  placeSearch,
+  loop = false,
+}: PlanCommitmentProps) {
+  const { disabledReason, mapReason, mapReasonLine, placementBlocked } = commitmentState(
+    viewModel,
+    mapUnavailable,
+    mapUnavailableReason,
+    placeSearch !== undefined,
+  );
+  return (
+    <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
+      <div className="og-composer__commitment-actions">
+        {viewModel.showPlanAction ? (
+          <button
+            type="button"
+            className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
+            data-testid="compose-create"
+            disabled={!viewModel.canPlan}
+            {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
+            onClick={onPlan}
+          >
+            {planLabel}
+          </button>
+        ) : null}
+        {onCancelPlanning === undefined ? null : (
+          <button type="button" className="og-secondary" data-testid="cancel-planning" onClick={onCancelPlanning}>
+            Cancel
+          </button>
+        )}
+      </div>
+
+      {viewModel.failed && onChangeDestination !== undefined && !loop ? (
+        <button
+          type="button"
+          className="og-secondary"
+          data-testid="plan-recovery"
+          onClick={onChangeDestination}
+        >
+          Try a different destination
+        </button>
+      ) : null}
+
+      {/*
+        The reason is an explanation of a control, so it goes with the control —
+        except for the two placement reasons, which are the surface's single
+        instruction while a point is missing and therefore outlive the button.
+        A ride that is being planned already says so in the status line.
+      */}
+      {disabledReason === null || !(viewModel.showPlanAction || placementBlocked) ? null : (
+        <p
+          className="og-composer__reason"
+          id={DISABLED_REASON_ID}
+          data-testid="plan-disabled-reason"
+        >
+          {disabledReason}
+        </p>
+      )}
+
+      {/*
+        The chips need the same reason even when the commitment button is not
+        disabled — a complete ride can still be planned on a dead map, and the
+        placement it cannot offer has to say why (4.0s).
+      */}
+      {mapReasonLine ? (
+        <p className="og-composer__reason" id={MAP_REASON_ID} data-testid="map-required-reason">
+          {mapReason}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Which placement tool the workspace currently owns the next map click with. */
 export type ArmedPlacementTool = "start" | "finish" | "stop" | null;
 
@@ -132,6 +258,11 @@ export interface IntentComposerProps {
    * the older surface tests render.
    */
   readonly rideStyle?: RideStyleControlsModel;
+  /**
+   * The commitment is drawn in the sheet's fixed foot instead (the desktop
+   * rail), so the composer does not repeat it in the scrolling body.
+   */
+  readonly hideCommitment?: boolean;
 }
 
 /** Map-pin glyph for the icon chip; decorative, the words are its name. */
@@ -274,27 +405,19 @@ export function IntentComposer({
   mapUnavailableReason = null,
   placeSearch,
   rideStyle,
+  hideCommitment = false,
 }: IntentComposerProps) {
   const loop = rideStyle?.view.shape === "loop";
   const hiking = useActivityMode() === "hike";
   const reverseRide = onReverse ?? rideStyle?.actions.reverse;
   const hasStart = viewModel.startLabel !== NO_START_LABEL;
   const hasFinish = viewModel.finishLabel !== NO_FINISH_LABEL;
-  const mapReason = mapUnavailable
-    ? (mapUnavailableReason ??
-      (placeSearch === undefined ? MAP_UNAVAILABLE_FALLBACK : MAP_UNAVAILABLE_WITH_SEARCH))
-    : null;
-  const placementBlocked = PLACEMENT_REASONS.includes(viewModel.disabledReason ?? "");
-  // The map's absence speaks for the placement reasons it invalidates. A plan
-  // already in flight keeps its own sentence: that is the more specific truth
-  // about the button, and it is not something a retry can change.
-  const standIn = mapReason !== null && placementBlocked;
-  const disabledReason = standIn ? mapReason : viewModel.disabledReason;
-  // The map reason needs a line of its own only when the commitment button is not
-  // already showing it — but it always needs an id, because it describes the two
-  // placement chips as well.
-  const mapReasonId = standIn ? DISABLED_REASON_ID : MAP_REASON_ID;
-  const mapReasonLine = mapReason !== null && !standIn;
+  const { mapReason, mapReasonId } = commitmentState(
+    viewModel,
+    mapUnavailable,
+    mapUnavailableReason,
+    placeSearch !== undefined,
+  );
   // With search on the row, the map chip is a pin icon beside the field: the
   // row stays two lines tall, so the phone's peek detent still fits the whole
   // composer (04 §2). Its words stay in the accessible name.
@@ -508,65 +631,20 @@ export function IntentComposer({
         </button>
       )}
 
-      <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
-        <div className="og-composer__commitment-actions">
-          {viewModel.showPlanAction ? (
-            <button
-              type="button"
-              className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
-              data-testid="compose-create"
-              disabled={!viewModel.canPlan}
-              {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}
-              onClick={onPlan}
-            >
-              {planLabel}
-            </button>
-          ) : null}
-          {onCancelPlanning === undefined ? null : (
-            <button type="button" className="og-secondary" data-testid="cancel-planning" onClick={onCancelPlanning}>
-              Cancel
-            </button>
-          )}
-        </div>
-
-        {viewModel.failed && onChangeDestination !== undefined && !loop ? (
-          <button
-            type="button"
-            className="og-secondary"
-            data-testid="plan-recovery"
-            onClick={onChangeDestination}
-          >
-            Try a different destination
-          </button>
-        ) : null}
-
-        {/*
-          The reason is an explanation of a control, so it goes with the control —
-          except for the two placement reasons, which are the surface's single
-          instruction while a point is missing and therefore outlive the button.
-          A ride that is being planned already says so in the status line.
-        */}
-        {disabledReason === null || !(viewModel.showPlanAction || placementBlocked) ? null : (
-          <p
-            className="og-composer__reason"
-            id={DISABLED_REASON_ID}
-            data-testid="plan-disabled-reason"
-          >
-            {disabledReason}
-          </p>
-        )}
-      </div>
-
-      {/*
-        The chips need the same reason even when the commitment button is not
-        disabled — a complete ride can still be planned on a dead map, and the
-        placement it cannot offer has to say why (4.0s).
-      */}
-      {mapReasonLine ? (
-        <p className="og-composer__reason" id={MAP_REASON_ID} data-testid="map-required-reason">
-          {mapReason}
-        </p>
-      ) : null}
+      {/* The desktop rail draws this in the sheet's fixed foot instead. */}
+      {hideCommitment ? null : (
+        <PlanCommitment
+          viewModel={viewModel}
+          onPlan={onPlan}
+          {...(onCancelPlanning === undefined ? {} : { onCancelPlanning })}
+          planLabel={planLabel}
+          {...(onChangeDestination === undefined ? {} : { onChangeDestination })}
+          mapUnavailable={mapUnavailable}
+          mapUnavailableReason={mapUnavailableReason}
+          {...(placeSearch === undefined ? {} : { placeSearch })}
+          loop={loop}
+        />
+      )}
     </section>
   );
 }

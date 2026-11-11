@@ -160,7 +160,7 @@
     width: calc(var(--og-float-rail) + var(--og-float-gap) * 2);
     min-height: 0;
     padding: var(--og-float-gap) var(--og-float-gap) 40px;
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     scrollbar-width: thin;
     pointer-events: none;
@@ -169,6 +169,13 @@
   .og-planner__dock > * {
     pointer-events: auto;
   }
+
+  /* The rail is one fixed column: its head and foot stay, the options between
+     them scroll. The commitment is never sliced by the panel's bottom edge. */
+  .og-planner__sheet { flex: 1 1 auto; min-height: 0; }
+  .og-planner__sheet > :is(.og-sheet__head, .og-sheet__foot) { flex: none; }
+  .og-planner__sheet > .og-sheet__body { flex: 1 1 auto; min-height: 0; }
+  .og-planner__sheet > .og-sheet__foot { display: flex; flex-direction: column; gap: var(--og-space-2); padding-top: var(--og-space-2); border-top: 1px solid var(--og-line); }
 
   .og-sheet__head > .og-planner__save-indicator[data-state="saved"] {
     display: none;

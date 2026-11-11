@@ -21,6 +21,7 @@ import { RIDE_EXPORT_AVAILABLE, SaveIndicator } from "@/ui/planner/SaveIndicator
 import { UpdateFailureBanner } from "@/ui/planner/UpdateFailureBanner";
 import type { PlannerUpdateHighlight } from "@/ui/planner/usePlannerAnswerLifecycle";
 import { MAP_ERROR_NOTICE } from "@/ui/map/PlannerMap";
+import { IDLE_PLAN_STATUS } from "@/application/planner/planner-view-model";
 import { useActivityMode } from "@/ui/stores/activity-mode";
 
 /** The planner's status in a hiker's words ("Hike ready.", "Finding your hike…"). */
@@ -76,6 +77,10 @@ export function PlannerWorkspaceStatus({
   onRetryMap,
 }: PlannerWorkspaceStatusProps) {
   const hiking = useActivityMode() === "hike";
+  // "No plan yet." is pure filler in the rail's head: the composer already says
+  // what to do next. The live region stays mounted (empty) so the next real
+  // status is still announced.
+  const message = statusMessage === IDLE_PLAN_STATUS ? "" : statusMessage;
   return (
     <>
       <p
@@ -84,7 +89,7 @@ export function PlannerWorkspaceStatus({
         role="status"
         aria-live="polite"
       >
-        {hiking ? hikeStatus(statusMessage) : statusMessage}
+        {hiking ? hikeStatus(message) : message}
       </p>
 
       <SaveIndicator state={saveStatus.state} />

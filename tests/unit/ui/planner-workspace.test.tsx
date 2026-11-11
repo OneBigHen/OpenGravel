@@ -1443,9 +1443,10 @@ describe("PlannerWorkspace — a restored draft", () => {
       vi.advanceTimersByTime(RESTORE_ANNOUNCEMENT_MS);
     });
 
-    // The ride has a start and no destination, so the plan's own status is the
-    // honest line once the confirmation has been made.
-    expect(screen.getByTestId("status-line")).toHaveTextContent("No plan yet.");
+    // The ride has a start and no destination. Once the confirmation has been
+    // made, "No plan yet." is pure filler: the composer says what to do next, so
+    // the rail's head is quiet (the live region stays mounted and empty).
+    expect(screen.getByTestId("status-line")).toHaveTextContent("");
   });
 });
 
@@ -1900,6 +1901,20 @@ describe("PlannerWorkspace — the desktop plan", () => {
     // In the sheet's head, beside undo/redo, which is where the ride is edited.
     expect(bar.closest(".og-planner__sheet")).not.toBeNull();
     expect(screen.getByTestId("sheet-edit-tools")).toContainElement(bar);
+  });
+
+  it("ends the rail in a fixed foot with the action and its reason", async () => {
+    stubTier(true);
+    await renderWorkspace(unfetched());
+
+    // The commitment lives outside the scrolling body, so no height of options
+    // can push it or its helper line past the panel's bottom edge.
+    const foot = screen.getByTestId("sheet-foot");
+    expect(foot).toContainElement(screen.getByTestId("compose-create"));
+    expect(foot).toContainElement(screen.getByTestId("plan-disabled-reason"));
+    expect(screen.getByTestId("sheet-scroll")).not.toContainElement(foot);
+    // "No plan yet." is not put above the composer that already says it.
+    expect(screen.getByTestId("status-line")).toHaveTextContent("");
   });
 
   it("keeps them on the map below the desktop tier", async () => {
