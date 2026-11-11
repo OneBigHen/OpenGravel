@@ -70,6 +70,12 @@ import type {
 } from "@/domain/ride-session/navigation";
 import { buildRideMetricStrip, type RideMetricStripModel } from "@/application/ride-metrics/strip";
 import { createRiderSettings, type RiderSettings } from "@/application/ride-metrics/rider-settings";
+import {
+  surfaceAhead,
+  surfaceRunLengthMeters,
+  type SurfaceKind,
+  type SurfaceRunSpan,
+} from "./surface-ahead";
 import type {
   LocationPermissionState,
   RideFocusEnvironmentSnapshot,
@@ -167,6 +173,17 @@ export interface RideFocusSpeedLimit {
   readonly over: boolean;
 }
 
+/**
+ * The next change of surface, as one line the card's second row can print
+ * (N2). The kind travels beside the words so a surface can pick its swatch
+ * without parsing the sentence.
+ */
+export interface RideFocusSurfaceAhead {
+  readonly kind: SurfaceKind;
+  /** "Gravel in 0.4 mi" | "Pavement in 2.1 mi" | "Surface not known for 1.3 mi". */
+  readonly text: string;
+}
+
 /** Slack before the speed bubble warns: GPS speed and speedometers disagree. */
 export const OVER_LIMIT_MPH = 5;
 
@@ -180,6 +197,49 @@ function speedLimitOf(
   const speed = position.quality === "fresh-good" || position.quality === "fresh-poor" ? position.speedMps : null;
   const over = speed !== null && isKnownMeasurement(speed) && speed * MPH_PER_MPS > mph + OVER_LIMIT_MPH;
   return { mph, over };
+}
+
+/** Rider-facing names for the three measured surfaces; `unknown` has its own sentence. */
+const SURFACE_WORD: Readonly<Record<Exclude<SurfaceKind, "unknown">, string>> = {
+  paved: "Pavement",
+  gravel: "Gravel",
+  dirt: "Dirt",
+};
+
+/**
+ * Below this the printed distance would round to "0.0 mi", which reads as a
+ * measurement the line cannot stand behind. The change is happening now.
+ */
+const SURFACE_NOW_METERS = 80;
+
+/**
+ * The next surface change as one line. The distance comes from the matcher's
+ * progress over the runs' own measured length, so it is the same place on the
+ * route the progress bar names; with no progress there is no distance, and with
+ * no distance there is no line (08 §4: stale or unknown is never current).
+ *
+ * An unknown stretch is stated as a length — "Surface not known for 1.3 mi" —
+ * because telling a rider "unknown in 0.4 mi" hides the fact they need: how
+ * long the unmeasured part lasts.
+ */
+function surfaceAheadOf(
+  runs: readonly SurfaceRunSpan[] | null | undefined,
+  telemetry: RideFocusTelemetryInput | null,
+): RideFocusSurfaceAhead | null {
+  if (runs === undefined || runs === null || runs.length === 0) return null;
+  const total = surfaceRunLengthMeters(runs);
+  const progress = telemetry?.routeProgress ?? null;
+  if (!(total > 0) || progress === null || !Number.isFinite(progress)) return null;
+  const change = surfaceAhead(runs, Math.min(1, Math.max(0, progress)) * total);
+  if (change === null) return null;
+  if (change.kind === "unknown") {
+    return { kind: change.kind, text: `Surface not known for ${formatDistance(change.forMeters)}` };
+  }
+  const word = SURFACE_WORD[change.kind];
+  return {
+    kind: change.kind,
+    text: change.inMeters < SURFACE_NOW_METERS ? `${word} now` : `${word} in ${formatDistance(change.inMeters)}`,
+  };
 }
 
 /** The four §4 freshness labels, as rider copy plus a tone for the chrome. */
@@ -284,6 +344,8 @@ export interface RideFocusViewModel {
   readonly terminal: RideFocusTerminal | null;
   /** The posted limit here, only where OpenStreetMap maps one (NV-04). */
   readonly speedLimit: RideFocusSpeedLimit | null;
+  /** The next change of surface, or `null` when it is not measured or not ahead. */
+  readonly surfaceAhead: RideFocusSurfaceAhead | null;
   /** The coordinate the map should mark, or `null` when there is none. */
   readonly mapPosition: { readonly coordinate: Coordinate; readonly quality: PositionQuality } | null;
   /** The three-slot instrument strip (RIDE-INSTRUMENT-STRIP §12). */
@@ -390,6 +452,11 @@ export interface RideFocusViewModelInput {
   readonly mapReady?: boolean;
   /** The rider's stored strip choices; absent means the defaults. */
   readonly riderSettings?: Pick<RiderSettings, "units" | "uiPreferences">;
+  /**
+   * The followed route's measured surface runs, in metres from its start. Absent
+   * or empty means nobody measured the surface: no line is shown, never "paved".
+   */
+  readonly surfaceRuns?: readonly SurfaceRunSpan[] | null;
 }
 
 /** `1234 → "0.8 mi"`; under a fifth of a mile the at-speed unit is feet. */
@@ -1225,6 +1292,7 @@ export function buildRideFocusViewModel(
       input.recordingSummary ?? null,
     ),
     speedLimit,
+    surfaceAhead: surfaceAheadOf(input.surfaceRuns, routeAnswer),
     mapPosition:
       navigation.position.coordinate === null
         ? null

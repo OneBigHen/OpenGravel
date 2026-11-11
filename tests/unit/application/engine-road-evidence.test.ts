@@ -21,6 +21,7 @@ import {
   engineSurfaceMix,
   surfaceFit,
   surfaceMixLabel,
+  surfaceRunSpans,
   surfaceRuns,
 } from "@/application/roads/engine-road-evidence";
 import { aggregateRouteSurface } from "@/application/roads/surface-evidence";
@@ -236,6 +237,24 @@ describe("surface runs", () => {
     const mix = engineSurfaceMix(summary(), "mixed");
     expect(mix.runs).toBeUndefined();
     expect(surfaceRuns({ value: mix, status: "estimated", confidence: 0.8, provenance: [] })).toBeNull();
+  });
+
+  it("also reads them in metres along the route, for the ride surface line", () => {
+    const mix = engineSurfaceMix(
+      summary({
+        surfaceRuns: [
+          [8 * MILE, "asphalt|secondary"],
+          [4 * MILE, "gravel|unclassified"],
+        ],
+      }),
+      "mixed",
+    );
+    expect(surfaceRunSpans({ value: mix, status: "estimated", confidence: 0.8, provenance: [] })).toEqual([
+      { from: 0, to: mix.runs?.[0]?.[0], kind: "paved" },
+      { from: mix.runs?.[0]?.[0], to: (mix.runs?.[0]?.[0] ?? 0) + (mix.runs?.[1]?.[0] ?? 0), kind: "gravel" },
+    ]);
+    expect(mix.runs).toHaveLength(2);
+    expect(surfaceRunSpans({ value: engineSurfaceMix(summary(), "mixed"), status: "estimated", confidence: 0.8, provenance: [] })).toBeNull();
   });
 });
 

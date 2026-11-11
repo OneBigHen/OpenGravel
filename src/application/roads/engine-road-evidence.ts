@@ -525,3 +525,34 @@ export function surfaceRuns(evidence: EvidenceValue<unknown> | undefined): reado
   }
   return out;
 }
+
+/**
+ * The same runs in metres along the route, for the ride's "surface ahead" line
+ * and the ride map's band.
+ *
+ * This is the one reader that keeps the engine's own unit: `surfaceRuns` above
+ * divides by the total for the elevation strip, which is the right shape for a
+ * chart and the wrong one for a rider, whose distance to the gravel is measured
+ * in metres from where they are. A malformed entry is skipped rather than
+ * guessed at; `null` means the answer carried no usable runs at all, which is
+ * never the same fact as "the whole ride is paved".
+ */
+export function surfaceRunSpans(
+  evidence: EvidenceValue<unknown> | undefined,
+): readonly { readonly from: number; readonly to: number; readonly kind: SurfaceRunKind }[] | null {
+  if (evidence === undefined || !isEngineSurfaceMix(evidence.value)) return null;
+  const runs = evidence.value.runs;
+  if (!Array.isArray(runs) || runs.length === 0) return null;
+  const out: { from: number; to: number; kind: SurfaceRunKind }[] = [];
+  let walked = 0;
+  for (const run of runs) {
+    if (!Array.isArray(run) || run.length !== 2) continue;
+    const meters: unknown = run[0];
+    const kind: unknown = run[1];
+    if (typeof meters !== "number" || !Number.isFinite(meters) || !(meters > 0)) continue;
+    if (kind !== "paved" && kind !== "gravel" && kind !== "dirt" && kind !== "unknown") continue;
+    out.push({ from: walked, to: walked + meters, kind });
+    walked += meters;
+  }
+  return out.length === 0 ? null : out;
+}

@@ -665,6 +665,71 @@ describe("planRide — the labeled route-plan fixture (Task 2.4b)", () => {
   });
 });
 
+describe("planRide — the first answer is the rider's own kind of ride", () => {
+  const SERVES_ALL: ProviderCapabilities = {
+    profiles: ["motorcycle_fastest", "motorcycle_twisty", "motorcycle_scenic", "motorcycle_adventure"],
+    supportsAlternatives: true,
+    supportsAvoidPolygons: false,
+  };
+  const loop: ProviderRouteRequest = {
+    ...REQUEST,
+    requestId: "req_first_loop",
+    destination: ORIGIN,
+    discovery: { targetMinutes: 120, toleranceMinutes: 20 },
+    options: { ...REQUEST.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "balanced" },
+  };
+  const loopLine = [ORIGIN, MIDPOINT, DESTINATION, ORIGIN];
+
+  function recorder(): RouteCandidateProvider & { requests: ProviderRouteRequest[] } {
+    const requests: ProviderRouteRequest[] = [];
+    return {
+      id: "stub-router",
+      requests,
+      capabilities: () => SERVES_ALL,
+      async candidates(request) {
+        requests.push(request);
+        return { candidates: [candidate({ profile: request.profile, geometry: loopLine })] };
+      },
+    };
+  }
+
+  it("asks one router call, on the adventure profile and one seed, for a Mixed loop", async () => {
+    const provider = recorder();
+
+    const result = await planRide(input({ request: loop }), { provider });
+
+    expect(result.ok).toBe(true);
+    expect(provider.requests).toHaveLength(1);
+    expect(provider.requests[0]?.profile).toBe("motorcycle_adventure");
+    expect(provider.requests[0]?.discovery?.seedCount).toBe(1);
+  });
+
+  it("keeps the rider's twisty profile for a Curvy A-to-B first answer", async () => {
+    const provider = recorder();
+    const request: ProviderRouteRequest = {
+      ...REQUEST,
+      profile: "motorcycle_twisty",
+      options: { ...REQUEST.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "curvy" },
+    };
+
+    const result = await planRide(input({ request }), { provider });
+
+    expect(result.ok).toBe(true);
+    expect(provider.requests.map((sent) => sent.profile)).toEqual(["motorcycle_twisty"]);
+    expect(provider.requests[0]?.discovery).toBeUndefined();
+  });
+
+  it("leaves the full plan's loop on the full seed set", async () => {
+    const provider = recorder();
+    const request: ProviderRouteRequest = { ...loop, options: { ...loop.options, includeAlternatives: true } };
+
+    await planRide(input({ request }), { provider });
+
+    expect(provider.requests.length).toBeGreaterThan(1);
+    expect(provider.requests.every((sent) => sent.discovery?.seedCount === undefined)).toBe(true);
+  });
+});
+
 describe("planRide — fast first (UX rework)", () => {
   const THREE_PROFILES: ProviderCapabilities = {
     profiles: ["motorcycle_fastest", "motorcycle_scenic", "motorcycle_twisty"],

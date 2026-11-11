@@ -185,6 +185,57 @@ describe("buildRideHandoff", () => {
     expect(buildRideHandoff({ ...input, sketchPreview: true })).toMatchObject({ code: "sketch-preview" });
   });
 
+  it("carries the engine's surface runs, in metres, for the ride's surface line (N2)", () => {
+    const withSurface: RouteCandidate = {
+      ...candidate(),
+      evidence: {
+        surfaceMix: {
+          value: {
+            surface: "paved",
+            pavedMeters: 1_000,
+            inferredPavedMeters: 0,
+            gravelMeters: 2_000,
+            dirtMeters: 0,
+            unknownMeters: 0,
+            unit: 0.5,
+            unpavedShare: 2_000 / 3_000,
+            runs: [
+              [1_000, "paved"],
+              [2_000, "gravel"],
+            ],
+          },
+          status: "estimated",
+          confidence: 0.8,
+          provenance: [],
+        },
+      },
+    };
+
+    const ready = buildRideHandoff({
+      document: document(),
+      bundle: bundle(),
+      selectedCandidate: withSurface,
+      hasRouteLine: true,
+    });
+    expect(ready.outcome).toBe("ready");
+    if (ready.outcome !== "ready") return;
+    expect(ready.request.surfaceRuns).toEqual([
+      { from: 0, to: 1_000, kind: "paved" },
+      { from: 1_000, to: 3_000, kind: "gravel" },
+    ]);
+
+    // No measured runs (a reroute, a GPX track, an older answer) is no line.
+    const without = buildRideHandoff({
+      document: document(),
+      bundle: bundle(),
+      selectedCandidate: candidate(),
+      hasRouteLine: true,
+    });
+    expect(without.outcome).toBe("ready");
+    if (without.outcome !== "ready") return;
+    expect(without.request.surfaceRuns).toBeUndefined();
+  });
+
   it("refuses without a plan, a start, a destination, a selection or a line", () => {
     const base = {
       document: document(),
@@ -491,6 +542,34 @@ describe("startRideFromHandoff", () => {
       rideId: RIDE_ID,
       routeGeometryRef: GEOMETRY_REF,
     });
+  });
+
+  it("writes the surface runs to the pointer, on start and on resume (N2)", async () => {
+    const surfaceRuns = [
+      { from: 0, to: 1_000, kind: "paved" as const },
+      { from: 1_000, to: 3_000, kind: "gravel" as const },
+    ];
+    const controller = createRideSessionController({ now: () => NOW });
+
+    const started = pointer();
+    await startRideFromHandoff({
+      controller,
+      pointer: started,
+      request: { ...request, surfaceRuns },
+      now: NOW,
+    });
+    expect(started.writes[0]).toMatchObject({ surfaceRuns });
+
+    const resumed = pointer();
+    const resumedId = newRideSessionId();
+    await startRideFromHandoff({
+      controller,
+      pointer: resumed,
+      request: { ...request, surfaceRuns },
+      now: NOW,
+      existingSessionId: resumedId,
+    });
+    expect(resumed.writes[0]).toMatchObject({ sessionId: resumedId, surfaceRuns });
   });
 
   it("resumes an existing session for the same ride instead of starting a second one", async () => {

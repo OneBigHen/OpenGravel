@@ -132,6 +132,33 @@ describe("GraphHopper provider", () => {
     expect(answer.candidates).toHaveLength(3);
   });
 
+  it("asks one engine seed for a loop's first answer, the same seed the full set starts with", async () => {
+    const fixtures = [() => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE), () => jsonResponse(RESPONSE_FIXTURE)];
+    const discovery = { targetMinutes: 75, toleranceMinutes: 15 };
+    const full = stubFetch(fixtures);
+    const first = stubFetch(fixtures);
+    const request: ProviderRouteRequest = { ...REQUEST, destination: HARRISBURG, discovery };
+
+    await createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: full.fetcher })
+      .candidates(request, new AbortController().signal);
+    const answer = await createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: first.fetcher })
+      .candidates({ ...request, discovery: { ...discovery, seedCount: 1 } }, new AbortController().signal);
+
+    expect(first.calls).toHaveLength(1);
+    expect(answer.candidates).toHaveLength(1);
+    expect(first.calls[0]?.body["round_trip.seed"]).toBe(full.calls[0]?.body["round_trip.seed"]);
+  });
+
+  it("never asks for fewer than one or more than three loop seeds", async () => {
+    const discovery = { targetMinutes: 75, toleranceMinutes: 15 };
+    for (const [seedCount, expected] of [[0, 1], [-4, 1], [9, 3], [Number.NaN, 3]] as const) {
+      const { calls, fetcher } = stubFetch([() => jsonResponse(RESPONSE_FIXTURE)]);
+      await createGraphHopperProvider({ baseUrl: "http://router.test", fetcher })
+        .candidates({ ...REQUEST, destination: HARRISBURG, discovery: { ...discovery, seedCount } }, new AbortController().signal);
+      expect(calls).toHaveLength(expected);
+    }
+  });
+
   it("asks every round-trip seed for the rider's heading", async () => {
     const { calls, fetcher } = stubFetch([
       () => jsonResponse(RESPONSE_FIXTURE),

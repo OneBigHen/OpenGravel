@@ -61,6 +61,7 @@ import type { RideSessionController } from "@/application/ride-session/ride-sess
 import type { RideNavigationEngine } from "@/application/ride-session/navigation-engine";
 import type { RideRecordingWorkflow } from "@/application/ride-session/recording-workflow";
 import type { FreeRideTelemetry } from "@/application/ride-session/free-ride-telemetry";
+import type { SurfaceRunSpan } from "@/application/ride-session/surface-ahead";
 import type { RideSessionState, SessionSuggestions } from "@/domain/ride-session/types";
 import type { RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { LiveSuggestionCandidate, LiveSuggestionResult } from "@/application/free-ride/live-suggestions";
@@ -214,6 +215,12 @@ export interface RideFocusStoreState {
   readonly viewModel: RideFocusViewModel | null;
   /** The route line the session is following; empty when it did not resolve. */
   readonly routeLine: readonly Coordinate[];
+  /**
+   * The followed route's measured surface runs, in metres (N2). Empty when the
+   * engine measured none — a reroute, a GPX track, an older ride — so the map
+   * paints no band instead of inventing one.
+   */
+  readonly surfaceRuns: readonly SurfaceRunSpan[];
   /** The offered Free Ride route preview; it does not bind the RideSession. */
   readonly suggestionPreviewLine: readonly Coordinate[];
   /** Whether the route line is available (the surface states when it is not). */
@@ -473,6 +480,7 @@ const EMPTY_ENVIRONMENT: RideFocusEnvironmentSnapshot = {
 };
 
 const NO_COORDINATES: readonly Coordinate[] = [];
+const NO_SURFACE_RUNS: readonly SurfaceRunSpan[] = [];
 
 function movingActivity(state: SessionNavigationState): boolean {
   return state.activity === "guided" || state.activity === "free" || state.activity === "track";
@@ -856,6 +864,14 @@ export function createRideFocusStore(
       const current = get();
       const recordingSnapshot = recording?.snapshot() ?? null;
       const liveTelemetry = liveTelemetryFor(state);
+      // The pointer is cheap and the one place the ride's presentation facts
+      // live after a reload. It must name this session: a pointer left by
+      // another ride says nothing about this one.
+      const pointed = pointer.read();
+      const surfaceRuns =
+        state !== null && pointed.status === "found" && pointed.pointer.sessionId === state.sessionId
+          ? pointed.pointer.surfaceRuns ?? NO_SURFACE_RUNS
+          : NO_SURFACE_RUNS;
       const routeTelemetry =
         navigation === null
           ? null
@@ -880,8 +896,7 @@ export function createRideFocusStore(
       // Before the rider is first matched on the line (a ride that starts off the
       // route), the whole route's distance and time are the honest numbers left.
       if (heldRouteId !== null && heldRoute === null && current.routeLine.length >= 2) {
-        const read = pointer.read();
-        const duration = read.status === "found" ? read.pointer.routeDurationSeconds ?? null : null;
+        const duration = pointed.status === "found" ? pointed.pointer.routeDurationSeconds ?? null : null;
         heldRoute = {
           routeId: heldRouteId,
           telemetry: {
@@ -914,6 +929,7 @@ export function createRideFocusStore(
               mapReady: current.mapReady,
               riderSettings: current.riderSettings,
               suggestions: state?.suggestions ?? "off",
+              surfaceRuns,
             });
       const fix = navigation?.position.coordinate ?? null;
       set({
@@ -927,6 +943,7 @@ export function createRideFocusStore(
           : {}),
         environment: snapshot,
         viewModel,
+        surfaceRuns,
       });
       followRider(viewModel);
       if (navigation !== null) {
@@ -1876,6 +1893,7 @@ export function createRideFocusStore(
       environment: EMPTY_ENVIRONMENT,
       viewModel: null,
       routeLine: NO_COORDINATES,
+      surfaceRuns: NO_SURFACE_RUNS,
       routeLineAvailable: false,
       mapReady: false,
       follow: false,
