@@ -20,8 +20,8 @@
  * Status is always `estimated`: OSM is a good source, not a survey.
  */
 
-import type { ProviderRoadSummary } from "@/application/planner/route-provider";
-import type { EvidenceSource, EvidenceValue } from "@/domain/evidence/types";
+import type { ProviderRoadRun, ProviderRoadSummary } from "@/application/planner/route-provider";
+import { isUsableEvidence, type EvidenceSource, type EvidenceValue } from "@/domain/evidence/types";
 import type { SurfaceIntent } from "@/domain/ride/types";
 import type { RouteEvidence } from "@/domain/route/types";
 
@@ -67,6 +67,11 @@ const OSM_ROAD_SOURCE: EvidenceSource = {
 const OSM_CURVATURE_SOURCE: EvidenceSource = {
   id: "osm-curvature",
   label: "Road geometry from OpenStreetMap",
+  category: "osm",
+};
+const OSM_TRACK_SOURCE: EvidenceSource = {
+  id: "osm-track",
+  label: "OpenStreetMap track grade and smoothness",
   category: "osm",
 };
 
@@ -286,6 +291,97 @@ export function engineBusyRoads(
   };
 }
 
+/** One stretch of the line, in metres from the start, for a map tap. */
+export interface EngineBikeFitStretch {
+  readonly fromMeters: number;
+  readonly toMeters: number;
+}
+
+/**
+ * The compact bike-fit fact a route card reads (N3).
+ *
+ * Deliberately not the raw road runs: the browser gets two totals and, when
+ * rough ground exists, where the longest continuous stretch of it is. The
+ * `unmeasuredMeters` field is the part of the line no road run described, so a
+ * truncated or partly described answer can say "not checked" instead of
+ * "fine" — the difference the whole fact exists for.
+ */
+export interface EngineBikeFit {
+  /** Metres of track grade 3–5, or smoothness bad or worse. */
+  readonly roughTrackMeters: number;
+  /** Metres of the line no road run described, never negative. */
+  readonly unmeasuredMeters: number;
+  /** The longest continuous rough stretch, in travel order; absent when none. */
+  readonly worst?: EngineBikeFitStretch;
+}
+
+const ROUGH_TRACK_TYPES = new Set(["grade3", "grade4", "grade5"]);
+const ROUGH_SMOOTHNESS = new Set(["bad", "very_bad", "horrible", "very_horrible", "impassable"]);
+
+/** The rough-road rule the rider's bike allowance already gates on. */
+function isRoughRun(run: ProviderRoadRun): boolean {
+  const trackType = run.trackType?.toLowerCase();
+  const smoothness = run.smoothness?.toLowerCase();
+  return (trackType !== undefined && ROUGH_TRACK_TYPES.has(trackType)) ||
+    (smoothness !== undefined && ROUGH_SMOOTHNESS.has(smoothness));
+}
+
+/**
+ * Rough-track metres and the worst stretch, from the engine's ordered road
+ * runs. Adjacent rough runs merge, so a track that changes grade is one stretch
+ * to the rider. `null` when the answer carried no road runs: that is "not
+ * checked", never "no rough track".
+ */
+export function engineBikeFit(summary: ProviderRoadSummary): EngineBikeFit | null {
+  const runs = summary.roadRuns;
+  if (runs === undefined || runs.length === 0) return null;
+  let walked = 0;
+  let measured = 0;
+  let rough = 0;
+  let worstFrom = 0;
+  let worstMeters = 0;
+  let openFrom: number | null = null;
+  let openMeters = 0;
+  const commit = (): void => {
+    if (openFrom !== null && openMeters > worstMeters) {
+      worstFrom = openFrom;
+      worstMeters = openMeters;
+    }
+    openFrom = null;
+    openMeters = 0;
+  };
+  for (const run of runs) {
+    if (!Number.isFinite(run.meters) || run.meters <= 0) {
+      // A malformed step breaks the stretch rather than stretching it over
+      // ground nobody described.
+      commit();
+      continue;
+    }
+    measured += run.meters;
+    if (isRoughRun(run)) {
+      rough += run.meters;
+      if (openFrom === null) openFrom = walked;
+      openMeters += run.meters;
+    } else {
+      commit();
+    }
+    walked += run.meters;
+  }
+  commit();
+  return {
+    roughTrackMeters: Math.round(rough),
+    unmeasuredMeters: Math.round(Math.max(0, summary.totalMeters - measured)),
+    ...(worstMeters > 0
+      ? {
+          worst: {
+            fromMeters: Math.round(worstFrom),
+            toMeters: Math.round(worstFrom + worstMeters),
+          },
+        }
+      : {}),
+  };
+}
+
 /** Metre-weighted road character over recognized classes, with route coverage. */
 export function engineRoadCharacter(summary: ProviderRoadSummary): { readonly unit: number; readonly coverage: number } | null {
   let character = 0;
@@ -342,6 +438,18 @@ export function engineRoadEvidence(
       confidence: Number((TAGGED_CONFIDENCE - (TAGGED_CONFIDENCE - INFERRED_CONFIDENCE) * inferredShare).toFixed(3)),
       coverage: clamp01(known / summary.totalMeters),
       provenance: [OSM_SURFACE_SOURCE],
+    };
+  }
+
+  const bikeFit = engineBikeFit(summary);
+  if (bikeFit !== null) {
+    const described = Math.max(0, summary.totalMeters - bikeFit.unmeasuredMeters);
+    evidence["bikeFit"] = {
+      value: bikeFit,
+      status: "estimated",
+      confidence: 0.7,
+      coverage: summary.totalMeters > 0 ? clamp01(described / summary.totalMeters) : 0,
+      provenance: [OSM_TRACK_SOURCE],
     };
   }
 
@@ -464,6 +572,40 @@ export function busyRoadShare(evidence: EvidenceValue<unknown> | undefined): num
 
 /** The rider-facing curviness steps, 1 (straight) to 5 (twisty). */
 export const CURVINESS_LABELS = ["Straight", "A few bends", "Curvy", "Very curvy", "Twisty"] as const;
+
+/**
+ * The bike-fit fact a card reads, or `null` when the answer carried none.
+ *
+ * `null` is "not checked", never "no rough track": an answer without road runs,
+ * or one whose fact is unknown or malformed, cannot support a claim about the
+ * rider's bike. A malformed stretch is dropped while the totals still stand.
+ */
+export function bikeFitFacts(evidence: EvidenceValue<unknown> | undefined): EngineBikeFit | null {
+  if (evidence === undefined || !isUsableEvidence(evidence)) return null;
+  if (typeof evidence.value !== "object" || evidence.value === null) return null;
+  const record = evidence.value as Record<string, unknown>;
+  const rough = record["roughTrackMeters"];
+  const unmeasured = record["unmeasuredMeters"];
+  if (typeof rough !== "number" || !Number.isFinite(rough) || rough < 0) return null;
+  if (typeof unmeasured !== "number" || !Number.isFinite(unmeasured) || unmeasured < 0) return null;
+  const worst = record["worst"];
+  const stretch = worst !== undefined && typeof worst === "object" && worst !== null
+    ? stretchOf(worst as Record<string, unknown>)
+    : null;
+  return {
+    roughTrackMeters: rough,
+    unmeasuredMeters: unmeasured,
+    ...(stretch === null ? {} : { worst: stretch }),
+  };
+}
+
+function stretchOf(record: Record<string, unknown>): EngineBikeFitStretch | null {
+  const from = record["fromMeters"];
+  const to = record["toMeters"];
+  if (typeof from !== "number" || !Number.isFinite(from) || from < 0) return null;
+  if (typeof to !== "number" || !Number.isFinite(to) || to <= from) return null;
+  return { fromMeters: from, toMeters: to };
+}
 
 /**
  * Curviness as a 1–5 step from the share of the line ridden through bends
