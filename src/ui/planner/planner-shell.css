@@ -199,3 +199,23 @@
     display: none;
   }
 }
+
+/* Desktop result panel: Start ride is the panel's fixed foot (next round N4).
+   The actions block dissolves into the panel's own column so the start row's
+   sticky box is bounded by the whole scrolling panel, not by its small parent;
+   it then rests at the bottom edge while the cards and profile scroll under it. */
+@media (min-width: 1181px) {
+  .og-planner__inspector-body > .og-plan-actions {
+    display: contents;
+  }
+
+  .og-planner__inspector-body > .og-plan-actions > .og-ride-start {
+    position: sticky;
+    bottom: calc(var(--og-space-4) * -1);
+    z-index: 1;
+    margin: 0 calc(var(--og-space-4) * -1);
+    padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+    border-top: 1px solid var(--og-line);
+    background: var(--og-surface);
+  }
+}

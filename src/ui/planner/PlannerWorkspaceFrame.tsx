@@ -175,7 +175,6 @@ export function PlannerWorkspaceFrame({
       <header className="og-planner__header" ref={headerRef}>
         <div className="og-planner__identity">
           <h1>OpenGravel</h1>
-          <p className="og-tagline">{hiking ? "Find the trail worth walking." : "Find the ride worth taking."}</p>
           {document.title !== null ? (
             <p className="og-planner__ride-context og-planner__ride-title" data-testid="active-ride-title" title={document.title}>
               {document.title}

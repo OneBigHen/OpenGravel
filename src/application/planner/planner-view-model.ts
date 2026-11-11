@@ -512,6 +512,7 @@ const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point."
 export const PLAN_LABEL_CREATE = "Create ride";
 export const PLAN_LABEL_UPDATE = "Update ride";
 export const PLAN_LABEL_LOOP = "Make my loop";
+export const PLAN_LABEL_LOOP_AGAIN = "Try another loop";
 export const PLAN_LABEL_RETRY = "Plan again";
 
 /** Phases in which an attempt is still running (04 §8, §9). */
@@ -682,6 +683,27 @@ function chooseCards(
   return [...head.slice(0, MAX_ROUTE_CARDS - 1), selected];
 }
 
+/**
+ * The recommendation always leads the list (DESIGN.md decision log, next round
+ * N4): the card the bundle names `best-ride` — or, before roles arrive, the
+ * automatic pick that is presented as it — goes first; the rest keep the
+ * bundle's order so their tints and the map labels still agree.
+ */
+function bestRideFirst(
+  cards: readonly RouteCandidate[],
+  bundle: RouteBundle,
+  selectedRouteId: RouteCandidateId | null,
+): readonly RouteCandidate[] {
+  const named = cards.find((candidate) => roleFor(bundle.roles, candidate.id) === "best-ride");
+  const placeholder =
+    named === undefined && bundle.selectionSource === "automatic"
+      ? cards.find((candidate) => candidate.id === selectedRouteId && roleFor(bundle.roles, candidate.id) === null)
+      : undefined;
+  const lead = named ?? placeholder;
+  if (lead === undefined || cards[0] === lead) return cards;
+  return [lead, ...cards.filter((candidate) => candidate !== lead)];
+}
+
 function roleLabelFor(
   role: RouteRole | null,
   isPlaceholderSelection: boolean,
@@ -710,7 +732,7 @@ function routeCards(
 ): readonly RouteCardVm[] {
   if (bundle === null) return [];
   const reference = fastestReference(bundle.candidates);
-  return chooseCards(bundle.candidates, selectedRouteId).map((candidate) => {
+  return bestRideFirst(chooseCards(bundle.candidates, selectedRouteId), bundle, selectedRouteId).map((candidate) => {
     const role = roleFor(bundle.roles, candidate.id);
     // OGV-D-183 — placeholder role mirror. The client bundle's `roles` stay
     // empty until Task 3.3 (OGV-D-168), while the product's recommendation today
@@ -1172,7 +1194,9 @@ export function buildPlannerViewModel(
     planLabel: failed
       ? PLAN_LABEL_RETRY
       : document.intent.shape === "loop"
-        ? PLAN_LABEL_LOOP
+        ? (bundle?.candidates.length ?? 0) > 0 && bundle?.rideRevision === document.revision
+          ? PLAN_LABEL_LOOP_AGAIN
+          : PLAN_LABEL_LOOP
         : (bundle?.candidates.length ?? 0) > 0
           ? PLAN_LABEL_UPDATE
           : PLAN_LABEL_CREATE,

@@ -180,3 +180,69 @@ for (const size of [
     await expectRailReachable(page);
   });
 }
+
+/**
+ * Next round N4: the laptop loop panel is one tidy column. The ride-time chips
+ * wrap in at most two rows under their own label (they used to stack into a
+ * staircase beside it), the plan button stays live and green in Loop mode
+ * before and after a loop exists, the Best Ride card leads the list, and Start
+ * ride is fully inside the result panel.
+ */
+test("the loop panel is one tidy column with a live green button at 1440x900", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(plannerMap(page)).toBeVisible();
+  await settledExtent(page);
+
+  await placeEndpointAtFraction(page, "start", { x: 0.5, y: 0.55 });
+  await page.getByTestId("ride-shape-loop").check();
+  const chips = page.getByTestId("loop-time").locator(".og-style__chip");
+  await expect(chips.first()).toBeVisible();
+
+  const label = await page.locator(".og-composer__row--loop > .og-composer__label").boundingBox();
+  if (label === null) throw new Error("the ride-time label has no box");
+  const tops = new Set<number>();
+  for (const box of await chips.evaluateAll((elements) => elements.map((element) => {
+    const rect = element.getBoundingClientRect();
+    return { top: Math.round(rect.top), bottom: rect.bottom };
+  }))) {
+    tops.add(box.top);
+    // No chip sits on the label's own line.
+    expect(box.top).toBeGreaterThanOrEqual(label.y + label.height - 1);
+  }
+  expect(tops.size, "loop-time chips wrap in at most two rows").toBeLessThanOrEqual(2);
+
+  const plan = page.getByTestId("compose-create");
+  const primaryFill = async (): Promise<boolean> => plan.evaluate((element) => {
+    const probe = document.createElement("span");
+    probe.style.background = "var(--og-primary)";
+    document.body.append(probe);
+    const want = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return getComputedStyle(element).backgroundColor === want;
+  });
+  await expect(plan).toHaveText("Make my loop");
+  await expect(plan).toBeEnabled();
+  expect(await primaryFill(), "Make my loop is filled with the primary colour").toBe(true);
+
+  await pressPlan(page);
+  await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
+  await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
+  await expect(plan).toHaveText("Try another loop");
+  await expect(plan).toBeEnabled();
+  expect(await primaryFill(), "Try another loop stays primary after a loop exists").toBe(true);
+
+  const inspector = page.getByTestId("planner-inspector");
+  await expect(inspector.locator('[data-testid^="route-card-"]').first()).toContainText(/Best Ride/i);
+
+  const startRide = inspector.getByRole("button", { name: "Start ride" });
+  const panelBox = await inspector.evaluate((element) => {
+    const scroller = element.closest(".og-planner__inspector") ?? element;
+    const rect = scroller.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom };
+  });
+  const startBox = await startRide.boundingBox();
+  if (startBox === null) throw new Error("Start ride has no box");
+  expect(startBox.y).toBeGreaterThanOrEqual(panelBox.top - 1);
+  expect(startBox.y + startBox.height).toBeLessThanOrEqual(panelBox.bottom + 1);
+});

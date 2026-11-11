@@ -159,6 +159,7 @@
 .og-style__loop .og-style__chip span,
 .og-style__way .og-style__chip span {
   min-height: var(--og-touch);
+  white-space: nowrap;
   padding: 0 var(--og-space-3);
   border-radius: var(--og-radius-pill);
   background: var(--og-surface-2);
@@ -295,4 +296,58 @@
   .og-style__switch input::after {
     transition: none;
   }
+}
+
+/* "More options": familiarity, traffic and the two switches fold behind one
+   line that names their current state (next round N4). Roads and Surface stay
+   open because they change the ride most. */
+.og-style__more {
+  border-top: 1px solid var(--og-line);
+}
+
+.og-style__more-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: var(--og-touch);
+  justify-content: center;
+  padding: var(--og-space-2) var(--og-space-6) var(--og-space-2) 0;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+}
+
+.og-style__more-summary::-webkit-details-marker {
+  display: none;
+}
+
+.og-style__more-summary::after {
+  content: "›";
+  position: absolute;
+  top: 50%;
+  right: var(--og-space-2);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-body);
+  transform: translateY(-50%);
+}
+
+.og-style__more[open] > .og-style__more-summary::after {
+  content: "⌄";
+}
+
+.og-style__more-summary:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
+  border-radius: var(--og-radius-control);
+}
+
+.og-style__more-value {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+}
+
+.og-style__more-body {
+  display: grid;
+  gap: var(--og-space-3);
+  padding-bottom: var(--og-space-2);
 }

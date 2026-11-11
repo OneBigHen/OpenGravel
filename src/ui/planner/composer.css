@@ -55,8 +55,20 @@
   white-space: normal;
 }
 
+/* Ride time is one tidy column on every width: the label on its own line, the
+   chips in one wrapping row under it, and the ride-style summary left-aligned
+   beneath (next round N4: the side-by-side grid stacked the chips into a
+   staircase beside a centred label on the laptop rail). */
 .og-composer__row--loop {
-  grid-template-areas: "label value value";
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
+
+.og-composer__row--loop > .og-style__loop {
+  align-self: stretch;
 }
 
 .og-composer__row--direction {
