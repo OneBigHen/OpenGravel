@@ -230,7 +230,9 @@ test("the loop panel is one tidy column with a live green button at 1440x900", a
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await expect(plan).toHaveText("Try another loop");
   await expect(plan).toBeEnabled();
-  expect(await primaryFill(), "Try another loop stays primary after a loop exists").toBe(true);
+  // Off the button, so the resting fill is read rather than the hover one.
+  await page.mouse.move(700, 120);
+  await expect.poll(primaryFill, { message: "Try another loop stays primary after a loop exists" }).toBe(true);
 
   const inspector = page.getByTestId("planner-inspector");
   await expect(inspector.locator('[data-testid^="route-card-"]').first()).toContainText(/Best Ride/i);
