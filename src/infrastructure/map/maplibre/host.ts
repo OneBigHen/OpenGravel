@@ -973,14 +973,15 @@ export async function createMapLibreHost(
   /** The configured basemap, kept so Night contrast can switch back to it. */
   let configuredStyle = style;
   /**
-   * A whole dark style exists for Night: Mapbox night contrast with the public
-   * token, otherwise OpenFreeMap's own dark style (DESIGN.md §3).
+   * A whole dark style exists for Night: Night terrain repainted from Outdoors
+   * with the public token, otherwise OpenFreeMap's own dark style
+   * (DESIGN.md §3).
    */
   const nightAvailable = (): boolean => mapboxToken !== null || activeBasemap === "openfreemap";
   let basemapLook: "map" | "night" = options.basemapLook === "night" ? "night" : "map";
-  /** The repainted Night contrast style, fetched once per host. */
+  /** The repainted Night terrain style, fetched once per host. */
   let nightStyle: Promise<MapStyleSpec | null> | null = null;
-  /** The style document Night contrast resolved to, so "is it drawn?" is a fact. */
+  /** The style document Night terrain resolved to, so "is it drawn?" is a fact. */
   let nightStyleSpec: MapStyleSpec | null = null;
   function loadNightStyle(): Promise<MapStyleSpec | null> {
     if (!nightAvailable()) return Promise.resolve(null);
