@@ -1,8 +1,9 @@
 import { haversine } from "./analysis";
 import { analyzeFrancoCurvature } from "./franco-curvature";
+import { earnsRoadCredit, isBusyRoad, isResidentialRoad, measureRoadBends } from "./road-bends";
 import type { Coordinate } from "@/domain/ride/types";
 
-export const GEOMETRY_FUN_VERSION = "heading-fun-v1";
+export const GEOMETRY_FUN_VERSION = "heading-fun-v2";
 
 export interface FunRoadRun {
   readonly meters: number;
@@ -20,16 +21,18 @@ export interface GeometryFun {
   readonly residentialShare: number;
   readonly dullMeters: number;
 }
-const EXCLUDED = new Set(["residential", "service", "living_street", "missing", "other"]);
-const BUSY = new Set(["motorway", "trunk", "primary"]);
-const residential = (run: FunRoadRun): boolean => ["residential", "service", "living_street"].includes(run.roadClass.toLowerCase()) || ["residential", "city"].includes(run.urbanDensity.toLowerCase());
-const earns = (run: FunRoadRun): boolean => !EXCLUDED.has(run.roadClass.toLowerCase()) && !run.roadClass.toLowerCase().endsWith("_link") && !residential(run) && !run.roadClassLink && !run.roundabout;
+// Road rules are shared with road-bends-v1 so one road earns in exactly one way.
+const residential = isResidentialRoad;
+const earns = earnsRoadCredit;
 
 /**
- * heading-fun-v1: private 20 m resampling, centred 1 km heading windows,
+ * heading-fun-v2: private 20 m resampling, centred 1 km heading windows,
  * 200 m signed/absolute coherence guard, 30 m junction suppression. Road runs
  * are travelled chainage, not provider distance/ETA (which remain untouched).
  * Scores are equivalent bend kilometres, never evidence of access or safety.
+ * `bendMeters` is road-bends-v1: sustained tight bends along one road, the
+ * number the scorecard spends as good miles (heading-fun-v1 counted any
+ * 25 deg/km sweep, so a highway read the same as a favourite road).
  */
 export function analyzeGeometryFun(line: readonly Coordinate[], runs: readonly FunRoadRun[], junctionIndices: readonly number[] = []): GeometryFun | null {
   if (line.length < 2 || runs.length === 0 || line.some(p => !Number.isFinite(p.lat) || !Number.isFinite(p.lon))) return null;
@@ -106,7 +109,7 @@ export function analyzeGeometryFun(line: readonly Coordinate[], runs: readonly F
     const lo = Math.max(0, i * step - 500), hi = Math.min(total, i * step + 500);
     return 1000 * (areaAt(hi) - areaAt(lo)) / (hi - lo);
   });
-  let headingArea = 0, headingCredit = 0, bends = 0, dull = 0, busy = 0, streets = 0, francoCredit = 0, eligibleMeters = 0;
+  let headingArea = 0, headingCredit = 0, dull = 0, busy = 0, streets = 0, francoCredit = 0, eligibleMeters = 0;
   // Franco still uses original geometry and its existing radius/noise filters;
   // only overlap with coherent, eligible sample cells earns its tight credit.
   const franco = analyzeFrancoCurvature(line, { suppressedVertexIndices: junctionIndices });
@@ -120,14 +123,13 @@ export function analyzeGeometryFun(line: readonly Coordinate[], runs: readonly F
       const stop = Math.min(right, ends[at]!);
       const meters = Math.max(0, stop - cursor);
       const run = runs[at]!;
-      if (BUSY.has(run.roadClass.toLowerCase()) || run.urbanDensity.toLowerCase() === "city") busy += meters;
+      if (isBusyRoad(run) || run.urbanDensity.toLowerCase() === "city") busy += meters;
       if (residential(run)) streets += meters;
       if (earns(run)) eligibleMeters += meters;
       if (earns(run) && !suppressed[i]) {
         const rate = rates[i]!;
         headingArea += rate * meters;
         headingCredit += Math.min(1, rate / 90) * meters;
-        if (rate >= 25) bends += meters;
         if (rate < 15) dull += meters;
         if (coherent[i]) {
           while (sectionIndex < franco.sections.length && positions[franco.sections[sectionIndex]!.endIndex]! <= cursor) sectionIndex++;
@@ -146,7 +148,7 @@ export function analyzeGeometryFun(line: readonly Coordinate[], runs: readonly F
   return {
     funScore: (headingCredit + 0.35 * francoCredit - 0.35 * busy - 0.3 * streets - 0.08 * dull) / 1000,
     headingDegreesPerKm: eligibleMeters > 0 ? headingArea / eligibleMeters : 0,
-    bendMeters: bends,
+    bendMeters: measureRoadBends(line, runs, junctionIndices)?.bendMeters ?? 0,
     francoPerKm: eligibleMeters > 0 ? francoCredit / eligibleMeters * 1000 : 0,
     busyShare: busy / total,
     residentialShare: streets / total,

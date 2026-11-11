@@ -40,9 +40,10 @@ export function measure(candidate: ProviderCandidate, ride: Ride, bikeOptions: P
   if (!candidate.instructions) unknownTrust.push('U-turn instructions unavailable');
   if (authority.evidence.closures.status === 'unknown') unknownTrust.push('Road-authority closure coverage incomplete');
   if (authority.evidence.access.status === 'unknown') unknownTrust.push('Road-authority motorcycle access unknown');
-  // Scorecard v2: Curvy good miles are the planner's own bend metres (heading-fun-v1),
-  // which skips junction corners, town streets, ramps and roundabouts. v1 counted raw
-  // Franco bends, so both are kept: v2 decides the verdict, v1 only feeds the old headline.
+  // Scorecard v2: Curvy good miles are the planner's own bend metres, now road-bends-v1:
+  // sustained, same-direction arcs under 175 m radius on roads that earn, so a highway
+  // sweeper or a junction corner is worth nothing. v1 counted raw Franco bends, so both
+  // are kept: v2 decides the verdict, v1 only feeds the old headline.
   const fun = ride.mode === 'curvy' ? candidateGeometryFun(candidate) : null;
   if (ride.mode === 'curvy' && fun === null) unknownTrust.push('Bend measure unavailable: ordered road details missing or inconsistent, so no curvy miles are credited');
   const goodMeters = ride.mode === 'curvy' ? Math.min(total, fun?.bendMeters ?? 0) : dirt;

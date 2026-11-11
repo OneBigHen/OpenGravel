@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { chunkAnchors, MIN_SNAP_COVERAGE, pickAnchors, snapProfileFor, snapRiderLine, stitchPieces } from '../../../scripts/scorecard/rider-line';
 import { measure } from '../../../scripts/scorecard/measure';
+import { candidateGeometryFun } from '../../../src/application/planner/geometry-fun';
 import { riderMatch } from '../../../scripts/scorecard/geometry';
 import { GraphHopperProviderError } from '../../../src/infrastructure/routing/graphhopper/response-parser';
 import { haversine } from '../../../src/domain/geometry/analysis';
@@ -125,10 +126,12 @@ describe('measuring the snapped line like any other contestant', () => {
   const ride: Ride = { id: 'r', label: 'R', source: 'catalog', mode: 'curvy', requestId: 'x', start: track[0]!, loopMinutes: 60 };
   const options = { vehicle: 'motorcycle' as const, includeAlternatives: false, avoidHighways: false, tollPolicy: 'allow-with-warning' as const, bike: { category: 'street' as const, maintainedGravel: 'allow' as const, roughTracks: 'avoid' as const } };
   const authority = { failures: [], warnings: [], evidence: { closures: unknownEvidence<number>('No feed'), access: unknownEvidence<number>('No feed') } };
-  it('gets good miles from the planner bend measure, and unknown stretches earn nothing', async () => {
+  it('gets good miles from the same planner bend measure as any contestant, and unknown stretches earn nothing', async () => {
     const snap = await snapRiderLine(track, { provider: fakeRouter(), profile: 'motorcycle_twisty' });
     const m = measure(snap.candidate!, ride, options, 1, 0, authority);
-    expect(m.goodMiles).toBeGreaterThan(0);
+    // This test track is one gentle 1.6 km sine sweep, so it earns no tight bend
+    // miles; the point is that it is measured by exactly the same code.
+    expect(m.goodMiles).toBeCloseTo((candidateGeometryFun(snap.candidate!)!.bendMeters) / 1609.344, 6);
     const missingOnly = stitchPieces([{ kind: 'gap', to: track.at(-1)! }], track[0]!, 'p');
     expect(measure(missingOnly.candidate, ride, options, 1, 0, authority).goodMiles).toBe(0);
   });

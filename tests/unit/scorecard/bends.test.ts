@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { measure } from '../../../scripts/scorecard/measure';
 import { candidateGeometryFun } from '../../../src/application/planner/geometry-fun';
-import { analyzeFrancoCurvature } from '../../../src/domain/geometry/franco-curvature';
 import { haversine } from '../../../src/domain/geometry/analysis';
 import { unknownEvidence } from '../../../src/domain/evidence/types';
 import type { Coordinate } from '../../../src/domain/ride/types';
@@ -9,9 +8,24 @@ import type { ProviderCandidate, ProviderRouteOptions } from '../../../src/appli
 import type { Ride } from '../../../scripts/scorecard/types';
 
 const xy = (x: number, y: number): Coordinate => ({ lon: -75 + x / (111_320 * Math.cos(40 * Math.PI / 180)), lat: 40 + y / 111_195 });
-// A flowing 1 km radius ridge (no tight Franco bends) and a 10 m zig-zag, the two shapes the old and new measures disagree on.
+// A flowing 1 km radius ridge (a highway sweeper) and a 10 m zig-zag, the two shapes the old and new measures disagree on.
 const ridge = Array.from({ length: 301 }, (_, i) => xy(1000 * Math.sin(i / 100), 1000 * (1 - Math.cos(i / 100))));
 const saw = Array.from({ length: 301 }, (_, i) => xy(i * 10, i % 2 * 10));
+// A real twisty road: six 120 degree arcs, 30 m radius, alternating direction.
+const switchbacks = (() => {
+  const points: { x: number; y: number }[] = [{ x: 0, y: 0 }];
+  let x = 0, y = 0, heading = 0;
+  for (let leg = 0; leg < 6; leg++) {
+    const direction = leg % 2 === 0 ? 1 : -1;
+    for (let i = 0; i < Math.round(30 * (120 * Math.PI / 180) / 2); i++) {
+      heading += direction * 2 / 30;
+      x += Math.cos(heading) * 2; y += Math.sin(heading) * 2;
+      points.push({ x, y });
+    }
+    for (let i = 0; i < 5; i++) { x += Math.cos(heading) * 2; y += Math.sin(heading) * 2; points.push({ x, y }); }
+  }
+  return points.map(p => xy(p.x, p.y));
+})();
 const length = (line: readonly Coordinate[]) => line.slice(1).reduce((sum, p, i) => sum + haversine(line[i]!, p), 0);
 const ride: Ride = { id: 'fixture', label: 'Fixture', source: 'corpus', mode: 'curvy', requestId: 'fixed', start: ridge[0]!, end: ridge.at(-1)! };
 const options: ProviderRouteOptions = { vehicle: 'motorcycle', includeAlternatives: false, avoidHighways: false, tollPolicy: 'allow-with-warning', bike: { category: 'street', maintainedGravel: 'allow', roughTracks: 'avoid' } };
@@ -27,16 +41,15 @@ function candidate(line: readonly Coordinate[], roadClass: string, urbanDensity 
 const measured = (c: ProviderCandidate, r: Ride = ride) => measure(c, r, options, 1, 0, authority);
 
 describe('scorecard v2 curvy measure is the planner\'s own', () => {
-  it('credits Curvy good miles with candidateGeometryFun bend metres, not raw Franco bends', () => {
-    const c = candidate(ridge, 'secondary');
-    const bend = candidateGeometryFun(c)!.bendMeters;
-    expect(bend).toBeGreaterThan(2500);
-    const m = measured(c);
+  it('credits Curvy good miles with the planner bend measure, and a highway sweeper earns nothing', () => {
+    const tight = candidate(switchbacks, 'secondary');
+    const bend = candidateGeometryFun(tight)!.bendMeters;
+    expect(bend).toBeGreaterThan(0);
+    const m = measured(tight);
     expect(m.goodMiles).toBeCloseTo(bend / 1609.344, 6);
-    expect(m.goodShare).toBeCloseTo(bend / length(ridge), 6);
-    // v1 only saw tight (<175 m) bends, so a sweeping ridge read as nothing.
-    expect(m.v1GoodMiles).toBeCloseTo(analyzeFrancoCurvature(ridge).bendMeters / 1609.344, 6);
-    expect(m.v1GoodMiles).toBeLessThan(m.goodMiles);
+    expect(m.goodShare).toBeCloseTo(bend / length(switchbacks), 6);
+    // A 1 km radius ridge is a sweeper: fun, but not one good mile.
+    expect(measured(candidate(ridge, 'secondary')).goodMiles).toBe(0);
   });
   it('does not pay for zig-zags through town streets, which v1 counted', () => {
     const m = measured(candidate(saw, 'residential', 'residential'));

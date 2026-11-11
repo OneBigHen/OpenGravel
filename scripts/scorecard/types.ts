@@ -16,7 +16,7 @@ export interface Ride {
 export interface Measurement {
   miles: number;
   minutes: number;
-  /** Good miles the verdict uses: mapped dirt, or the planner's own bend metres for Curvy (scorecard v2). */
+  /** Good miles the verdict uses: mapped dirt, or the planner's own bend metres for Curvy (road-bends-v1, scorecard v2). */
   goodMiles: number;
   goodShare: number;
   /** The same two numbers as scorecard v1 measured them (Franco v1 bend metres for Curvy), kept so v1 can still be printed. */
