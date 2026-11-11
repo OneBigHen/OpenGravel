@@ -30,3 +30,8 @@ Next steps:
   6. One detour dial plus first route in 5 s (replaces package 8).
 - Fable's estimate: 4/20 → 14–16/20 wins after all 6 steps.
 - Screen/CSS packages 1, 3, 4, 6, 7 from ROUND-PLAN are unchanged. Suggested start: package 1 (Opus) beside routing step 1 (Codex Sol, or Sonnet if quota is out).
+
+## Status 2026-11-10 ~22:40
+- Owner picks page published: https://claude.ai/artifact/8WoW4NNJN2VYkV9pPkYhmQ (P1 buttons, P2 night map, P3 glass). Waiting on owner's letters; then record in DESIGN.md decision log.
+- `.fable/picks.mjs` takes `PICKS=1,2,3` to re-shoot one pick; P2 now zooms out to a regional view first.
+- Routing step 1 (scorecard v2) worker finished but its honesty check FAILED: the "fun" measure can't tell a rider's favourite road from the fastest road. Needs a fix before step 2.
