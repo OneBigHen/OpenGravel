@@ -54,7 +54,7 @@ jobs:
           OGV_E2E_WEBKIT: "1"
       - name: upload lane output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-results
           path: qa-out/playwright-*.json
@@ -112,7 +112,7 @@ jobs:
             --test-output-dir qa-out/maestro
       - name: upload lane output
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maestro-results
           path: qa-out/
@@ -141,7 +141,7 @@ jobs:
           --sha "${{ github.sha }}"
           --out qa-out
       - name: upload campaign
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: QA_CAMPAIGN
           path: |
