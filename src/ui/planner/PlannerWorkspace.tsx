@@ -303,15 +303,7 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
-  const truthBikeName = bikes.find((bike) => bike.id === document.intent.bike.bikeId)?.name;
-  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({
-    document,
-    session,
-    sketchDerivedEndpoints,
-    placeNameFor,
-    routeLine: activeRoute,
-    ...(truthBikeName === undefined ? {} : { bikeName: truthBikeName }),
-  });
+  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor, routeLine: activeRoute, bikes });
 
   /**
    * The deterministic explanation of the route on screen (04 §13, Wave-3 task

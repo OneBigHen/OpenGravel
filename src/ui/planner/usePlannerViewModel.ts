@@ -4,7 +4,10 @@ import { firstLookSwapNote, type FirstLookFacts } from "@/application/planner/fi
 import { buildPlannerViewModel, type RouteCardVm } from "@/application/planner/planner-view-model";
 import type { RouteTrafficLabel } from "@/ui/planner/PlannerPreparation";
 
-type PlannerProjectionInput = Omit<Parameters<typeof buildPlannerViewModel>[0], "routeTraffic">;
+type PlannerProjectionInput = Omit<Parameters<typeof buildPlannerViewModel>[0], "routeTraffic" | "bikeName"> & {
+  /** The rider's garage; the chosen bike's name goes on the route's bike line. */
+  readonly bikes?: readonly { readonly id: string; readonly name: string }[];
+};
 
 function factsOf(card: RouteCardVm): FirstLookFacts {
   return {
@@ -21,7 +24,8 @@ function factsOf(card: RouteCardVm): FirstLookFacts {
  * improved (next round N1).
  */
 export function usePlannerViewModel(input: PlannerProjectionInput) {
-  const { document, session, sketchDerivedEndpoints, placeNameFor, routeLine, bikeName } = input;
+  const { document, session, sketchDerivedEndpoints, placeNameFor, routeLine, bikes } = input;
+  const bikeName = bikes?.find((bike) => bike.id === document.intent.bike.bikeId)?.name;
   const [routeTraffic, setRouteTraffic] = useState<RouteTrafficLabel | null>(null);
   const [firstLook, setFirstLook] = useState<{ readonly generation: number; readonly facts: FirstLookFacts } | null>(null);
   const viewModel = useMemo(
