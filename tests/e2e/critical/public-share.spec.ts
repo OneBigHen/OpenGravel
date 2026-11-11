@@ -17,10 +17,10 @@ test("another browser reads exact snapshot bytes and the owner reclaims revoke a
   await sharedPage.goto(link);
   await expect(sharedPage.getByRole("heading",{name:"Synthetic public ride"})).toBeVisible();
   await expect(sharedPage.getByRole("button",{name:"Revoke this link"})).toHaveCount(0);
-  await sharedPage.getByText("Shared data",{exact:true}).click();
+  // The raw payload is for tests and debugging, not the page a rider reads.
   await expect(sharedPage.getByTestId("public-share-payload")).toHaveText(serializeShareSnapshot(snapshot));
   expect(await (await reader.request.get(`${baseURL}/api/shares/resolve/${token}`)).text()).toBe(serializeShareSnapshot(snapshot));
-  await expect(sharedPage.getByText(/Ride time: 30 minutes/)).toBeVisible();
+  await expect(sharedPage.getByTestId("shared-time")).toHaveText("30 min");
   await page.route("https://outside.test/message",route=>route.fulfill({contentType:"text/html",body:`<a href="${link}">Open copied ride</a>`}));
   await page.goto("https://outside.test/message");
   await page.getByRole("link",{name:"Open copied ride"}).click();
