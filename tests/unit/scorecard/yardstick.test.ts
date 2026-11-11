@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { yardstickCheck } from '../../../scripts/scorecard/yardstick';
-import type { Measurement, Ride } from '../../../scripts/scorecard/types';
+import type { Measurement, Ride, Row } from '../../../scripts/scorecard/types';
 
 const m = (goodMiles: number): Measurement => ({ goodMiles } as Measurement);
 const tracked = (i: number): Ride => ({ id: `t${i}`, label: `Tracked ${i}`, source: 'catalog', mode: 'curvy', requestId: `r${i}`, start: { lat: 40, lon: -77 }, riderTrack: { catalogId: `t${i}`, geometryPolyline: '' } });
 const untracked: Ride = { id: 'u', label: 'Untracked', source: 'corpus', mode: 'curvy', requestId: 'u', start: { lat: 40, lon: -77 } };
-const rowsWith = (riderBeats: number, total = 12) => [
+type Input = Pick<Row, 'ride' | 'riderLine' | 'fastest'>;
+const rowsWith = (riderBeats: number, total = 12): Input[] => [
   ...Array.from({ length: total }, (_, i) => ({ ride: tracked(i), riderLine: m(i < riderBeats ? 10 : 2), fastest: m(5) })),
   { ride: untracked, riderLine: null, fastest: m(1) },
 ];
