@@ -78,12 +78,13 @@ test("a ride typed into Where to? becomes a proposal, planned in one tap and one
   await page.getByRole("button", { name: "Plan it" }).click();
 
   await expect(page.getByTestId("ride-shape-loop")).toBeChecked();
-  await expect(page.getByRole("group", { name: "Road familiarity" }).getByRole("radio", { name: "New to me", exact: true })).toBeChecked();
+  // Familiarity folds under "More options", whose summary names the choice.
+  await expect(page.getByTestId("ride-style-more").locator(".og-style__more-value")).toContainText("Familiarity: New to me");
   await expect(page.getByTestId("start-value")).toContainText("Jim Thorpe, PA");
   await expect(page.getByTestId("undo")).toHaveText("Undo · Apply ride description");
   await page.getByTestId("undo").click();
   await expect(page.getByTestId("ride-shape-destination")).toBeChecked();
-  await expect(page.getByRole("group", { name: "Road familiarity" }).getByRole("radio", { name: "Balanced", exact: true })).toBeChecked();
+  await expect(page.getByTestId("ride-style-more").locator(".og-style__more-value")).toContainText("Familiarity: Balanced");
   await expect(page.getByTestId("redo")).toHaveText("Redo · Apply ride description");
   expect(pageErrors).toEqual([]);
 });
