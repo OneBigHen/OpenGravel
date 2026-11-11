@@ -123,7 +123,9 @@ Uses what is on main from #203: `AGENTS.md`, and `paseo.json`, which sets up eve
 - **v1 beside v2:** the report prints the old v1 headline next to the v2 one, so nobody can say the goalposts moved quietly.
 - **Rule:** a routing PR may not lower wins or raise trust failures.
 
-Cost: about 60 router calls and 10 minutes, run one at a time against the existing router through an SSH tunnel. Fixed request IDs keep loops repeatable.
+Cost: about 630 router requests (the planner alone makes up to 53 per plan today) and 9 minutes, run one at a time against the existing router through an SSH tunnel. Fixed request IDs keep loops repeatable.
+
+**First v2 run (2026-11-10, tuning set):** v2 says 10/20 wins, the old v1 yardstick said 4/20, trust failures 0. The yardstick check **failed**: the rider's own line beat fastest on good miles on 8 of 12 tracked rides (needs 10). On four of five Curvy loops the plain fastest loop reaches 31 to 55% bend share, about the same as the riders' own lines (27 to 67%), so the planner's bend measure cannot yet tell a rider's favourite road from the fastest one. Until that passes, read the Curvy wins as unproven. Router calls per plan: 75th percentile 37 (cap 6); first-route seconds, 75th percentile 5.5.
 
 ## 6. Top risks, and what not to build
 

@@ -18,7 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { createGraphHopperProvider } from '../../src/infrastructure/routing/graphhopper/provider';
 import { planRide } from '../../src/server/planning/plan-service';
 import { createGravelAtlas } from '../../src/server/roads/gravel-atlas';
-import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from '../../src/application/planner/route-provider';
+import type { ProviderCandidate, ProviderRouteRequest } from '../../src/application/planner/route-provider';
 import type { BoundingBox } from '../../src/application/route-intelligence/types';
 import { frozenAuthority } from './authority';
 import { measure } from './measure';
