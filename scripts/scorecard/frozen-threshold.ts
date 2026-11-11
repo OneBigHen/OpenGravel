@@ -12,13 +12,13 @@ import type { FrozenCurvyThreshold } from './threshold';
 export const FROZEN_CURVY_THRESHOLD: FrozenCurvyThreshold = {
   manifestSha256: "faaf1c8deb0e55c6d10c7c084cc862301a62e7673f2f545ae14059d90827aa86",
   riderShares: {
-    "fb-1ad35a0d02336f3ae0b6": 0.410785,
-    "project-gpx-a0fba4f34f6879ca4e8d2f48": 0.272628,
-    "project-gpx-922121653abb944c51e9eddc": 0.296865,
-    "project-gpx-53058a94b50fe9f4c9465a46": 0.673602,
-    "fb-12e4d7d31d95f6b03e7a": 0.410509,
-    "project-gpx-94222a4f87560d604bf973b3": 0.541311,
+    "fb-1ad35a0d02336f3ae0b6": 0.033928,
+    "project-gpx-a0fba4f34f6879ca4e8d2f48": 0.027675,
+    "project-gpx-922121653abb944c51e9eddc": 0.02987,
+    "project-gpx-53058a94b50fe9f4c9465a46": 0.048315,
+    "fb-12e4d7d31d95f6b03e7a": 0.029346,
+    "project-gpx-94222a4f87560d604bf973b3": 0.03532,
   },
-  median: 0.410647,
-  threshold: 0.307985,
+  median: 0.031899,
+  threshold: 0.023924,
 };
