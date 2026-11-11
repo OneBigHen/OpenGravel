@@ -31,7 +31,7 @@ import type {
 import { createRideDocument } from "@/domain/ride/create";
 import type { RideCommand, RideCommandResult } from "@/domain/ride/commands";
 import { newCommandId, newPointId, newStopId } from "@/domain/ride/ids";
-import type { ShapingId, StopId } from "@/domain/ride/ids";
+import type { ShapingId, StopId, RideId } from "@/domain/ride/ids";
 import { undoRide, redoRide, type HistoryMoveResult } from "@/domain/ride/history";
 import { applyRideCommand } from "@/domain/ride/reducer";
 import type {
@@ -103,6 +103,13 @@ export interface RideDocumentStoreOptions {
   readonly now?: () => string;
   readonly repository?: RideRepositoryPort;
   readonly bootstrapPointer?: BootstrapPointerPort;
+  /**
+   * The ride this page was opened to show, when the rider asked for it from the
+   * map (first-minute wow, W5). It is preferred over the last active draft for
+   * exactly one boot: the page being left may still flush its own draft on the
+   * way out, and the ride the rider just tapped must win.
+   */
+  readonly restoreRideId?: RideId | null;
 }
 
 const CHECKPOINT_DEBOUNCE_MS = 250;
@@ -568,6 +575,18 @@ export function createRideDocumentStore(
     };
     setState({ restoreStatus: { state: "loading", message: null } });
     try {
+      // A ride the rider just asked for from the map wins this one boot.
+      if (options.restoreRideId !== undefined && options.restoreRideId !== null) {
+        const asked = await repository.loadRide(options.restoreRideId);
+        if (asked !== null && asked.ok && untouched()) {
+          adoptRestoredDocument(asked.document, {
+            id: "active",
+            rideId: asked.document.rideId,
+            updatedAt: asked.document.updatedAt,
+          });
+          return;
+        }
+      }
       const pointer = await repository.loadDraftPointer();
       if (pointer !== null) {
         reconcileBootstrapPointer(pointer);

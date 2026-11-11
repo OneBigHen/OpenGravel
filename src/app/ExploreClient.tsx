@@ -26,7 +26,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/ride-focus-pointer";
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLocalStorageGarageStorage } from "@/infrastructure/storage/garage-storage";
-import { prepareExploreRoute } from "@/application/explore/ride-this";
+import { openCatalogRide } from "@/application/explore/ride-this";
 import { ExplorePanel } from "@/ui/explore/ExplorePanel";
 import { RouteDetailSkeleton } from "@/ui/explore/RouteDetailSkeleton";
 import { rememberListPosition } from "@/ui/explore/list-position";
@@ -215,19 +215,9 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
    */
   async function useRide(entry: CatalogEntry): Promise<void> {
     const garage = garageStorage.read();
-    const sourceDocument = createExploreDerivative(entry, new Date().toISOString(), snapshotOf(activeGarageBike(garage)));
-    const opened = await library.createDerivative(
-      sourceKindForEntry(entry),
-      entry.id,
-      sourceDocument,
-      { title: entry.name },
-    );
-    try {
-      await prepareExploreRoute(entry, opened, geometryStore);
-    } catch {
-      // A route that could not be handed over is still opened: the planner
-      // plans it, which is what it does for every other ride.
-    }
+    await openCatalogRide(entry, library, geometryStore, {
+      bike: snapshotOf(activeGarageBike(garage)),
+    });
     router.push("/");
   }
 

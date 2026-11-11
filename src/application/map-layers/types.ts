@@ -6,6 +6,7 @@
 
 import type { AlongStopsResult } from "./along";
 import type { MapLayerId } from "./catalog";
+import type { CuratedRideFacts } from "./curated-rides";
 import type { RadarFrameList } from "./radar";
 import type { WindReading } from "./wind";
 
@@ -50,11 +51,16 @@ export interface InfoFeature {
    * `null` means unknown — the arrow is not drawn and the card claims nothing.
    */
   readonly wind?: WindReading | null;
+  /**
+   * The published facts behind a `rider-picked` line (first-minute wow, W5):
+   * the catalog route's own distance and surface. Absent on every other layer.
+   */
+  readonly catalogRide?: CuratedRideFacts;
   readonly geometry: InfoGeometry;
 }
 
 /** Which providers could not answer; an empty list with no features is a real "nothing here". */
-export type InfoProvider = "osm" | "osm-hiking-routes" | "pa-game-lands" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority" | "wind";
+export type InfoProvider = "osm" | "osm-hiking-routes" | "pa-game-lands" | "tomtom" | "nws" | "roads" | "road-history" | "traffic-cameras" | "terrain" | "hillshade" | "radar" | "firms" | "padus" | "authority" | "wind" | "catalog";
 
 export interface LayerFreshness {
   readonly layerId: MapLayerId;

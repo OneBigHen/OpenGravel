@@ -29,9 +29,9 @@ import {
   clampLayerBounds,
   featureLayerIds,
   initialRadarTimeline,
-  isMapLayerId,
   latestFrameIndex,
   mapLayer,
+  parseStoredLayers,
   projectAlong,
   radarFrameLabel,
   radarFreshness,
@@ -108,6 +108,7 @@ const LAYER_PROVIDER: Partial<Record<MapLayerId, InfoProvider>> = {
   "active-fire": "firms",
   "great-roads": "roads",
   gravel: "roads",
+  "rider-picked": "catalog",
   "road-history": "road-history",
   fuel: "tomtom",
   food: "tomtom",
@@ -156,11 +157,11 @@ export function enableMapLayer(id: MapLayerId): void {
 function readEnabled(): readonly MapLayerId[] {
   try {
     const raw = window.localStorage.getItem(getActivityMode() === "hike" ? `${MAP_LAYERS_STORAGE_KEY}.hike` : MAP_LAYERS_STORAGE_KEY);
-    if (raw === null) return getActivityMode() === "hike" ? ["trails", "hillshade", "contours"] : [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((id): id is MapLayerId => typeof id === "string" && isMapLayerId(id)) : [];
+    // A missing key is "no choice yet", so the cold-open set opens; any saved
+    // array is the rider's choice, including one with every layer turned off.
+    return parseStoredLayers(raw, getActivityMode());
   } catch {
-    return [];
+    return parseStoredLayers(null, getActivityMode());
   }
 }
 
@@ -230,6 +231,12 @@ function emptyRecord<T>(value: T): Record<MapLayerId, T> {
 export function useMapLayers(
   source: MapLayersSource | undefined,
   cameraRoute: readonly LngLat[] | null = null,
+  /**
+   * Whether the renderer has drawn its first frame. Layer data waits for it
+   * (first-minute wow, W1): the map paints before the browser asks for layer
+   * features, so a cold open is never held back by provider responses.
+   */
+  mapReady = true,
 ): MapLayersView {
   const [drawStatus, setDrawStatus] = useState<Partial<Record<MapLayerId, MapLayerDrawStatus["state"]>>>({});
   const onLayerStatus = useCallback(({ layerId, state }: MapLayerDrawStatus): void => {
@@ -441,11 +448,11 @@ export function useMapLayers(
 
   const zoom = extent === null || typeof window === "undefined" ? 0 : zoomOf(extent, window.innerWidth);
   const loadable = useMemo(
-    () => (source === undefined ? [] : featureLayerIds(enabled).filter((id) => {
+    () => (source === undefined || !mapReady ? [] : featureLayerIds(enabled).filter((id) => {
       const definition = mapLayer(id);
       return zoom >= definition.minZoom && zoom <= (definition.maxZoom ?? Number.POSITIVE_INFINITY);
     })),
-    [enabled, source, zoom],
+    [enabled, mapReady, source, zoom],
   );
   const loadKey = extent === null ? "" : `${refresh}|${loadable.join(",")}|${[extent.minLon, extent.minLat, extent.maxLon, extent.maxLat].map((value) => value.toFixed(3)).join(",")}`;
 

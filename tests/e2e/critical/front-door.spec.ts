@@ -140,6 +140,10 @@ for (const device of DEVICES) {
       await expectSearchLoopAndRide(page, device);
       await expectNoSideFeatures(page);
 
+      // The map already says where the good riding is: one legend chip, no panel
+      // and no tutorial (first-minute wow, W1).
+      await expect(page.getByTestId("map-legend")).toBeVisible();
+
       // The Menu on a phone holds Settings and Day / Night only: no Ride / Hike switch.
       if (device.compact) {
         await page.getByTestId("app-menu").click();
@@ -151,8 +155,37 @@ for (const device of DEVICES) {
       // Traffic cameras are not in Layers either until Settings offers them.
       await openLayers(page);
       await expect(page.getByTestId("map-layer-great-roads")).toBeVisible();
+      // Gravel, twisty roads and the curated rides are on before the rider taps
+      // anything; the legend chip is the second way into this sheet.
+      await expect(page.getByTestId("map-layer-gravel")).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByTestId("map-layer-great-roads")).toHaveAttribute("aria-checked", "true");
+      await expect(page.getByTestId("map-layer-rider-picked")).toHaveAttribute("aria-checked", "true");
       await expect(page.getByTestId("map-layer-traffic-cameras")).toHaveCount(0);
       await expect(page.getByText(/traffic camera/i)).toHaveCount(0);
+      await closeLayers(page);
+    });
+
+    test("the legend chip opens Layers, and turning the cold-open layers off sticks", async ({ page }) => {
+      await coldLoad(page);
+      await page.getByTestId("map-legend").click();
+      await expect(page.getByRole("heading", { name: "Layers", exact: true })).toBeVisible();
+      await page.getByTestId("map-layer-gravel").click();
+      await page.getByTestId("map-layer-great-roads").click();
+      await page.getByTestId("map-layer-rider-picked").click();
+      await expect(page.getByTestId("map-layer-gravel")).toHaveAttribute("aria-checked", "false");
+      await closeLayers(page);
+      // Nothing left to explain: the legend goes with the layers.
+      await expect(page.getByTestId("map-legend")).toHaveCount(0);
+
+      // A rider's own choice wins over the cold-open set, across a reload.
+      await page.reload();
+      await expect(plannerMap(page)).toBeVisible();
+      await settledExtent(page);
+      await expect(page.getByTestId("map-legend")).toHaveCount(0);
+      await openLayers(page);
+      await expect(page.getByTestId("map-layer-gravel")).toHaveAttribute("aria-checked", "false");
+      await expect(page.getByTestId("map-layer-great-roads")).toHaveAttribute("aria-checked", "false");
+      await expect(page.getByTestId("map-layer-rider-picked")).toHaveAttribute("aria-checked", "false");
       await closeLayers(page);
     });
 

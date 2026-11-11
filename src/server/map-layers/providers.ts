@@ -24,6 +24,12 @@ import type {
   MapLayerBounds,
   MapLayerId,
 } from "@/application/map-layers";
+import {
+  curatedRideIntersects,
+  curatedRideItems,
+  type CuratedRideItem,
+  type CuratedRideSeed,
+} from "@/application/map-layers";
 import type { GravelAtlasCorridor, GravelAtlasPort } from "@/application/roads/gravel-atlas";
 import { MIN_GREAT_ROAD_RATING, type KnownRoadsPort } from "@/application/roads/known-roads";
 import { nwsUserAgentFromEnv } from "@/infrastructure/weather/config";
@@ -434,6 +440,47 @@ export function knownRoadsProvider(roads: KnownRoadsPort, atlas?: GravelAtlasPor
         }
       }
       return features;
+    },
+  };
+}
+
+// --- Curated catalog rides --------------------------------------------------
+
+/**
+ * The curated rides behind the `rider-picked` layer (first-minute wow, W5).
+ *
+ * The catalog is read and simplified once per process: the rides do not change
+ * between requests, and a 112-route file decompressed on every pan would be
+ * wasted work. Views are cached too, because panning a whole-state map asks for
+ * the same snapped box repeatedly. A catalog that cannot be read throws, so the
+ * handler names the provider unavailable instead of drawing an empty map.
+ */
+const CURATED_VIEW_CACHE_ENTRIES = 32;
+
+export function curatedRidesProvider(entries: () => Promise<readonly CuratedRideSeed[]>): LayerProvider {
+  let items: Promise<readonly CuratedRideItem[]> | null = null;
+  const views = new Map<string, readonly InfoFeature[]>();
+  const readItems = (): Promise<readonly CuratedRideItem[]> => {
+    items ??= entries().then(curatedRideItems);
+    return items;
+  };
+  return {
+    id: "catalog",
+    layers: ["rider-picked"],
+    // The catalog changes with a deploy, not with the weather.
+    ttlMs: 24 * 60 * 60_000,
+    async load(bounds) {
+      const all = await readItems();
+      const key = `${bounds.west.toFixed(3)},${bounds.south.toFixed(3)},${bounds.east.toFixed(3)},${bounds.north.toFixed(3)}`;
+      const cached = views.get(key);
+      if (cached !== undefined) return cached;
+      const inView = all.filter((item) => curatedRideIntersects(bounds, item.bounds)).map((item) => item.feature);
+      if (views.size >= CURATED_VIEW_CACHE_ENTRIES) {
+        const oldest = views.keys().next().value;
+        if (oldest !== undefined) views.delete(oldest);
+      }
+      views.set(key, inView);
+      return inView;
     },
   };
 }

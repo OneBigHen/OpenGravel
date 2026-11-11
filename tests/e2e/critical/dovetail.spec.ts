@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { useConnectedRouteFixture } from "./connected-route-fixture";
-import { expectDrawnScene, fractionOf, plannerMap, settledExtent } from "./map-helpers";
+import { expectDrawnScene, clickMapAtCoordinate, plannerMap, settledExtent } from "./map-helpers";
 
 // Synthetic layer geometry verifies the card-to-command connection, not live road data.
 test.use({ viewport: { width: 393, height: 852 }, deviceScaleFactor: 2, hasTouch: true, geolocation: { latitude: 40.8757, longitude: -75.7324 }, permissions: ["geolocation"] });
@@ -19,20 +19,24 @@ async function openRoad(page: Page): Promise<void> {
     }], unavailable: [] } });
   });
   await page.goto("/");
-  await settledExtent(page);
+  await expect(plannerMap(page)).toHaveAttribute("data-map-load", "ready", { timeout: 30_000 });
   await page.getByRole("button", { name: "Layers", exact: true }).click();
-  await page.getByTestId("map-layer-great-roads").click();
-  await expect(page.getByTestId("map-layer-great-roads")).toHaveAttribute("aria-checked", "true");
+  // Twisty roads are on at a cold open now (first-minute wow, W1): the switch is
+  // already on, so only a rider's saved choice could have turned it off.
+  const twisty = page.getByTestId("map-layer-great-roads");
+  if (await twisty.getAttribute("aria-checked") !== "true") await twisty.click();
+  await expect(twisty).toHaveAttribute("aria-checked", "true");
   await page.getByRole("button", { name: "Close map layers" }).click();
-  await expect.poll(() => target).not.toBeNull();
-  const extent = await settledExtent(page);
-  const fraction = fractionOf(extent, target!);
-  const box = await plannerMap(page).boundingBox();
-  if (box === null) throw new Error("Map has no rendered bounds");
+  await expect.poll(() => target, { timeout: 20_000 }).not.toBeNull();
+  // The line's coordinate comes from the view the stub answered, and the camera
+  // refits when the sheet opens and closes: the click is measured against the
+  // camera that is on screen at the moment of the tap, never a stale one.
   await expect(async () => {
-    await page.mouse.click(box.x + fraction.x * box.width, box.y + fraction.y * box.height);
-    await expect(page.getByTestId("info-feature-card")).toBeVisible();
-  }).toPass({ timeout: 10_000 });
+    const point = target;
+    if (point === null) throw new Error("the layer stub has not answered a view yet");
+    await clickMapAtCoordinate(page, point);
+    await expect(page.getByTestId("info-feature-card")).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 test("a road card offers both actions and its avoid span can be undone", async ({ page }) => {

@@ -29,12 +29,14 @@
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { CatalogEntry } from "@/application/explore/catalog";
+import { createExploreDerivative, parseCatalogEntry, sourceKindForEntry } from "@/application/explore/catalog";
+import type { LibraryServicePort } from "@/application/library/library-service";
 import type { ClientPlanningService } from "@/application/planner/client-planning-service";
 import { UNSCORED_POLICY_VERSION } from "@/application/planner/planning-controller";
 import { emptyRouteRoles, type PlanningSessionSnapshot } from "@/application/planner/planning-session";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
-import type { Coordinate, RideDocument } from "@/domain/ride/types";
+import type { BikeConstraintSnapshot, Coordinate, RideDocument } from "@/domain/ride/types";
 import type { RouteBundle, RouteCandidate, RouteScore, RouteScoreComponents } from "@/domain/route/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
 
@@ -176,6 +178,162 @@ export async function prepareExploreRoute(
     return null;
   }
   return prepared;
+}
+
+/**
+ * The ride the planner should restore on its next boot, when the rider opened
+ * it from the map (first-minute wow, W5).
+ *
+ * The map is already inside the planner, and the page it navigates to restores
+ * its last draft — which is the ride the rider was on, not the one they just
+ * asked for. This marker names the ride to restore once, so the boot prefers it
+ * even if the page being left flushes its own draft on the way out. It expires
+ * like the prepared handoff: an old marker is a leftover, never an instruction.
+ */
+export const OPEN_RIDE_STORAGE_KEY = "opengravel.explore.open-ride";
+export const OPEN_RIDE_TTL_MS = 90_000;
+
+interface OpenRideMarker {
+  readonly version: 1;
+  readonly rideId: RideId;
+  readonly requestedAt: string;
+}
+
+/** What a rider gets back when they tap "Ride this" on a curated map ride. */
+export interface OpenedCatalogRide {
+  readonly rideId: RideId;
+  /** False when the route had no own line to hand over and will be planned. */
+  readonly prepared: boolean;
+}
+
+/**
+ * Open a catalog route exactly the way Explore's "Ride this" does: a derivative
+ * ride document becomes the next active draft, and the route's own line is
+ * handed to the planner as the answer for it.
+ */
+export async function openCatalogRide(
+  entry: CatalogEntry,
+  library: Pick<LibraryServicePort, "createDerivative">,
+  geometryStore: Pick<GeometryStore, "put"> | null,
+  options: {
+    readonly now?: () => string;
+    readonly bike?: BikeConstraintSnapshot;
+  } = {},
+): Promise<OpenedCatalogRide> {
+  const now = options.now ?? ((): string => new Date().toISOString());
+  const sourceDocument = createExploreDerivative(
+    entry,
+    now(),
+    options.bike,
+  );
+  const opened = await library.createDerivative(
+    sourceKindForEntry(entry),
+    entry.id,
+    sourceDocument,
+    { title: entry.name },
+  );
+  let prepared = false;
+  if (geometryStore !== null) {
+    try {
+      prepared = (await prepareExploreRoute(entry, opened, geometryStore, { now })) !== null;
+    } catch {
+      // A route that could not be handed over is still opened: the planner
+      // plans it, which is what it does for every other ride.
+      prepared = false;
+    }
+  }
+  return { rideId: opened.rideId, prepared };
+}
+
+/** The catalog route a map card names, read from our own catalog route. */
+export async function fetchCatalogRide(
+  routeId: string,
+  options: { readonly fetch?: typeof fetch } = {},
+): Promise<CatalogEntry | null> {
+  const fetcher = options.fetch ?? fetch;
+  let response: Response;
+  try {
+    response = await fetcher(`/api/catalog/${encodeURIComponent(routeId)}`, { cache: "no-cache" });
+  } catch {
+    return null;
+  }
+  if (!response.ok) return null;
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return null;
+  }
+  const route = typeof payload === "object" && payload !== null && !Array.isArray(payload)
+    ? (payload as Record<string, unknown>)["route"]
+    : undefined;
+  return parseCatalogEntry(route);
+}
+
+/** Write the one ride a map card's "Ride this" just asked the planner to open. */
+export function markRideToRestore(
+  rideId: RideId,
+  options: { readonly now?: () => string; readonly storage?: PreparedRouteStorage | null } = {},
+): void {
+  const storage = options.storage === undefined ? browserStorage() : options.storage;
+  if (storage === null) return;
+  const marker: OpenRideMarker = {
+    version: 1,
+    rideId,
+    requestedAt: (options.now ?? ((): string => new Date().toISOString()))(),
+  };
+  try {
+    storage.setItem(OPEN_RIDE_STORAGE_KEY, JSON.stringify(marker));
+  } catch {
+    // Without the marker the boot still restores the last draft; the ride the
+    // rider asked for is durable and reachable from My rides.
+  }
+}
+
+/** Read and drop the marker; an expired or malformed one is ignored. */
+export function takeRideToRestore(options: {
+  readonly now?: () => string;
+  readonly storage?: PreparedRouteStorage | null;
+  readonly maxAgeMs?: number;
+} = {}): RideId | null {
+  const storage = options.storage === undefined ? browserStorage() : options.storage;
+  if (storage === null) return null;
+  let raw: string | null = null;
+  try {
+    raw = storage.getItem(OPEN_RIDE_STORAGE_KEY);
+    if (raw !== null) storage.removeItem(OPEN_RIDE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+  const record = parsed as Record<string, unknown>;
+  if (record["version"] !== 1) return null;
+  if (typeof record["rideId"] !== "string" || record["rideId"].length === 0) return null;
+  if (typeof record["requestedAt"] !== "string" || !Number.isFinite(Date.parse(record["requestedAt"]))) return null;
+  const now = Date.parse((options.now ?? ((): string => new Date().toISOString()))());
+  if (!Number.isFinite(now) || now - Date.parse(record["requestedAt"]) > (options.maxAgeMs ?? OPEN_RIDE_TTL_MS)) return null;
+  return record["rideId"] as RideId;
+}
+
+/**
+ * The ride this page load was opened to show, read at most once.
+ *
+ * Memoized for the same reason the prepared route is: React may render the
+ * composition root twice, and the first render must not consume the marker and
+ * lose the ride for the second.
+ */
+let pendingRideRestore: RideId | null | undefined;
+
+export function takeRideToRestoreOnce(): RideId | null {
+  if (pendingRideRestore === undefined) pendingRideRestore = takeRideToRestore();
+  return pendingRideRestore;
 }
 
 function parsePreparedRoute(value: unknown): PreparedRoute | null {
