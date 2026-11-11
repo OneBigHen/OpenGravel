@@ -184,6 +184,11 @@ the primary button.
   with no map behind them (Explore, My rides, Settings, dialogs) and the docked tab bar use solid
   `--og-surface` cards with a `--og-line` border on the topo backdrop. Supersedes v4's
   "glass everywhere" (§2).
+- 2026-11-10 Owner (same hand-off, `.fable/MAPWOW-BRIEF.md` W1 + W5): the first map opens with
+  gravel, twisty roads and "Rider-picked rides" on — tan dashed, orange and thin plum — and one
+  glass legend chip at the bottom-left that opens Layers. A saved layer choice always wins, and
+  turning a layer off sticks. The chip is a legend, not a control: the home screen still keeps only
+  search, Loop and Ride. Layer data loads after the map's first paint.
 
 ## Open proposals
 

@@ -9,7 +9,11 @@
  * its two via points are handed to the host, which adds them as stops.
  */
 
+import { useState } from "react";
+
 import {
+  curatedRideDistanceLine,
+  curatedRideSurfaceLine,
   isRideRoadLayer,
   mapLayer,
   rideRoadViaPoints,
@@ -32,6 +36,11 @@ export interface InfoFeatureCardProps {
   readonly onRideRoad?:
     | ((entry: Coordinate, exit: Coordinate, name: string) => void)
     | undefined;
+  /**
+   * Present when the host can open a curated catalog ride in the planner
+   * (first-minute wow, W5): the same handoff Explore's "Ride this" uses.
+   */
+  readonly onRideThisRoute?: ((routeId: string) => Promise<void> | void) | undefined;
 }
 
 export function InfoFeatureCard({
@@ -41,8 +50,12 @@ export function InfoFeatureCard({
   onAvoidRoad,
   rideRoadReference = null,
   onRideRoad,
+  onRideThisRoute,
 }: InfoFeatureCardProps) {
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
   const layer = mapLayer(feature.layerId);
+  const ride = feature.catalogRide ?? null;
   const point = feature.geometry.type === "Point" ? feature.geometry.coordinates : null;
   const viaPoints =
     onRideRoad === undefined || !isRideRoadLayer(feature.layerId) || feature.geometry.type !== "LineString"
@@ -70,13 +83,52 @@ export function InfoFeatureCard({
         </button>
       </div>
       <h2 className="og-info-card__title">{feature.name}</h2>
-      {feature.detail === null ? null : <p className="og-info-card__detail">{feature.detail}</p>}
+      {ride === null ? (
+        feature.detail === null ? null : <p className="og-info-card__detail">{feature.detail}</p>
+      ) : (
+        // A curated ride's own facts: the distance it publishes, and its
+        // surface only as far as the source states it.
+        <dl className="og-info-card__facts">
+          <div>
+            <dt>Distance</dt>
+            <dd>{curatedRideDistanceLine(ride)}</dd>
+          </div>
+          <div>
+            <dt>Surface</dt>
+            <dd data-testid="curated-ride-surface">{curatedRideSurfaceLine(ride)}</dd>
+          </div>
+        </dl>
+      )}
       {feature.media === undefined || feature.media === null ? null : (
         <InfoFeatureMedia media={feature.media} name={feature.name} />
       )}
       <p className="og-info-card__source">
         {layer.source}. {layer.caveat}
       </p>
+      {ride === null || onRideThisRoute === undefined ? null : (
+        <div className="og-info-card__actions">
+          <button
+            type="button"
+            className="og-info-card__add"
+            data-testid="info-feature-ride-this"
+            aria-busy={opening}
+            disabled={opening}
+            onClick={() => {
+              setOpening(true);
+              setOpenError(null);
+              void Promise.resolve(onRideThisRoute(ride.routeId)).catch(() => {
+                setOpening(false);
+                setOpenError("That ride could not be opened. Check your connection and try again.");
+              });
+            }}
+          >
+            {opening ? "Opening this ride…" : "Ride this"}
+          </button>
+        </div>
+      )}
+      {openError === null ? null : (
+        <p className="og-info-card__error" role="status">{openError}</p>
+      )}
       {viaPoints === null && point === null && (roadLine === null || onAvoidRoad === undefined) ? null : (
         <div className="og-info-card__actions">
           {viaPoints === null || onRideRoad === undefined ? null : (

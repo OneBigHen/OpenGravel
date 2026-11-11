@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from "react";
 
 import type { MapExtent } from "@/application/map/build-map-scene";
+import type { MapLoadStatus } from "@/application/map/map-host";
 import type { MapIntent } from "@/application/map/types";
 import type { MapLayersSource } from "@/application/map-layers";
 import type { Coordinate } from "@/domain/ride/types";
@@ -24,6 +25,7 @@ import {
 import { PlannerMap } from "@/ui/map/PlannerMap";
 
 import { MapLayersPanel, type MapStyleChoice } from "./MapLayersPanel";
+import { MapLegendChip } from "./MapLegendChip";
 import { RadarTimeline } from "./RadarTimeline";
 import { useMapLayers } from "./useMapLayers";
 
@@ -39,6 +41,11 @@ export interface MapLayersProps {
   readonly rideRoadReference?: Coordinate | null;
   /** Present when the host can add a road's two via points as stops. */
   readonly onRideRoad?: (entry: Coordinate, exit: Coordinate, name: string) => void;
+  /**
+   * Present when the host can open a curated catalog ride in the planner
+   * (first-minute wow, W5): the same handoff Explore's "Ride this" uses.
+   */
+  readonly onRideThisRoute?: (routeId: string) => Promise<void> | void;
 }
 
 export function LayeredMap({
@@ -92,7 +99,23 @@ function LayeredMapWith({
     if (route === undefined || route.geometry.length < 2) return null;
     return route.geometry.map((coordinate) => [coordinate.lon, coordinate.lat] as const);
   }, [map.scene.routes, map.scene.selectedRouteId]);
-  const view = useMapLayers(layers.source, cameraRoute);
+  /*
+    Layer data waits for the renderer's first frame (W1): the map paints before
+    this page asks for gravel, twisty roads or curated rides, so a cold open is
+    never held back by a provider. The host's own status is forwarded unchanged.
+  */
+  const [mapReady, setMapReady] = useState(false);
+  const { onLoadStatus } = map;
+  const handleLoadStatus = useCallback((status: MapLoadStatus): void => {
+    setMapReady(status.state === "ready");
+    onLoadStatus?.(status);
+  }, [onLoadStatus]);
+  // The legend chip and the Layers button open one sheet (W1).
+  const [panelOpen, setPanelOpen] = useState(false);
+  const view = useMapLayers(layers.source, cameraRoute, mapReady);
+  const { enabled, selected } = view;
+  const legendVisible = map.scene.mode !== "ride" && selected === null && (enabled.includes("gravel") || enabled.includes("great-roads"));
+  const legend = legendVisible ? <MapLegendChip onOpen={() => setPanelOpen(true)} /> : undefined;
   const scene = useMemo(
     () => (view.scene === undefined ? map.scene : { ...map.scene, infoLayers: view.scene }),
     [map.scene, view.scene],
@@ -115,7 +138,7 @@ function LayeredMapWith({
     [layerViewport, onViewport],
   );
   const { select } = view;
-  const { onAddStop, onRideRoad, onAvoidRoad, rideRoadReference } = layers;
+  const { onAddStop, onRideRoad, onAvoidRoad, rideRoadReference, onRideThisRoute } = layers;
   const addStop = useMemo(
     () =>
       onAddStop === undefined
@@ -145,6 +168,8 @@ function LayeredMapWith({
         scene={scene}
         onIntent={intercept}
         onViewport={viewport}
+        onLoadStatus={handleLoadStatus}
+        legend={legend}
         terrain3d={view.enabled.includes("terrain-3d")}
         onToggleTerrain3d={() => view.toggle("terrain-3d")}
         onLayerStatus={view.onLayerStatus}
@@ -161,6 +186,8 @@ function LayeredMapWith({
           onToggle={view.toggle}
           onToggleLens={view.toggleSet}
           onClearAll={view.clearAll}
+          open={panelOpen}
+          onOpenChange={setPanelOpen}
           {...(mapStyleInSheet ? { mapStyle } : {})}
           {...(panelSettings === undefined ? {} : { settings: panelSettings })}
         />
@@ -172,6 +199,7 @@ function LayeredMapWith({
             onAddStop={addStop}
             rideRoadReference={rideRoadReference}
             onRideRoad={rideRoad}
+            onRideThisRoute={onRideThisRoute}
             onAvoidRoad={onAvoidRoad === undefined ? undefined : (geometry, name) => { onAvoidRoad(geometry, name); select(null); }}
           />
         )}

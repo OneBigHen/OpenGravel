@@ -102,6 +102,7 @@ import {
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
+  useOpenCuratedRide,
   usePlannerViewModel, usePlannerVisibleSession,
   type PlannerPlaceServices,
 } from "@/ui/planner/controllers";
@@ -721,13 +722,14 @@ export function PlannerWorkspace({
   const planning = isPlanningInFlight(session.phase);
 
   /**
-   * Where the rider is coming from, so a tapped road is entered at the near end:
-   * the last stop before the destination, or the start when there are no stops
-   * yet. `null` when the ride has neither, and the road is then taken in the
-   * order it is drawn.
+   * Where the rider is coming from, so a tapped road is entered at the near
+   * end. `null` when the ride has no stop or start; the road is then taken in
+   * the order it is drawn.
    */
   const rideRoadReference =
     document.intent.stops.at(-1)?.coordinate ?? document.intent.start?.coordinate ?? null;
+  /** "Ride this" on a curated map ride (W5): Explore's own handoff, on demand. */
+  const openCuratedRide = useOpenCuratedRide({ libraryService, geometryStore });
 
   /** The ride summary over the map: built once, mounted in the map slot and above the sheet (CSS shows one). */
   const glance = useRideGlance({
@@ -753,10 +755,8 @@ export function PlannerWorkspace({
       retryingMap={mapLoadStatus.state === "retrying"}
       places={preparationProviders?.places && { source: preparationProviders.places, onAddStop: (place) => stopAuthoring.addStopAt(place.coordinate, place.name), onOpenPlace: placeFlow.overlayPlace }}
       layers={preparationProviders?.mapLayers && {
-        source: preparationProviders.mapLayers,
-        onAddStop: stopAuthoring.addStopAt,
-        rideRoadReference,
-        onRideRoad: stopAuthoring.addRideRoad, onAvoidRoad: roadSpanAuthoring.avoidRoad,
+        source: preparationProviders.mapLayers, onAddStop: stopAuthoring.addStopAt, rideRoadReference,
+        onRideRoad: stopAuthoring.addRideRoad, onAvoidRoad: roadSpanAuthoring.avoidRoad, onRideThisRoute: openCuratedRide,
       }}
       onShowWholeRide={handleShowWholeRide}
       locateMe={locateMe}

@@ -48,7 +48,7 @@ import { createLocalStorageRideFocusPointer } from "@/infrastructure/storage/rid
 import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-pointer";
 import { createLibraryService } from "@/application/library/library-service";
 import type { BootstrapPointerPort } from "@/application/persistence/ride-repository";
-import { forgetKeptRoute, preparedRouteGeometryRefs, takePreparedRouteOnce, withPreparedRoute } from "@/application/explore/ride-this";
+import { forgetKeptRoute, preparedRouteGeometryRefs, takePreparedRouteOnce, takeRideToRestoreOnce, withPreparedRoute } from "@/application/explore/ride-this";
 import { createShareService } from "@/application/sharing/share-commands";
 import { createShareRepository } from "@/infrastructure/storage/share-repository";
 import { createPublishedShareRepository } from "@/infrastructure/storage/published-share-repository";
@@ -248,14 +248,18 @@ export function PlannerClient({
     [geometryStore, libraryService, bootstrapPointer],
   );
   usePlanningTelemetry(planningSessionStore);
+  // A curated ride opened from the map asks for exactly one boot on that ride
+  // (first-minute wow, W5); the marker is consumed here, once.
+  const restoreRideId = useMemo(() => takeRideToRestoreOnce(), []);
   const rideDocumentStore = useMemo(
     () =>
       createRideDocumentStore({
         repository,
         bootstrapPointer,
+        restoreRideId,
         newRideBike: () => snapshotOf(activeBike(garageStorage.read())),
       }),
-    [repository, bootstrapPointer, garageStorage],
+    [repository, bootstrapPointer, restoreRideId, garageStorage],
   );
 
   /**

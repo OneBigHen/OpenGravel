@@ -29,6 +29,10 @@ const NOT_RIDER_DATA: ReadonlyMap<string, string> = new Map([
     "a sessionStorage handoff of the Explore route this tab is opening; it is consumed once and expires in 90 s",
   ],
   [
+    "opengravel.explore.open-ride",
+    "a sessionStorage note of the one ride this tab's map card asked the planner to open; it is consumed at the next boot and expires in 90 s",
+  ],
+  [
     "opengravel.explore.list-position",
     "a sessionStorage note of how far down this tab's Explore list was; it holds no rider data and expires in minutes",
   ],

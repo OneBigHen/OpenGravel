@@ -94,7 +94,8 @@ describe("rain radar in the map layers view", () => {
 
     act(() => result.current.toggle("weather-radar"));
     expect(result.current.radar).toBeNull();
-    expect(result.current.scene).toBeUndefined();
+    // The cold-open road layers are still on (W1); the radar's own frame is gone.
+    expect(result.current.scene?.radarTiles ?? null).toBeNull();
     expect(result.current.status["weather-radar"]).toBe("off");
   });
 });

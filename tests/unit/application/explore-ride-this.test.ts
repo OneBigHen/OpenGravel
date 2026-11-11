@@ -14,6 +14,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   canOpenAsItsOwnRoute,
+  fetchCatalogRide,
+  markRideToRestore,
+  openCatalogRide,
   prepareExploreRoute,
   preparedRouteAnswer,
   preparedRouteSession,
@@ -25,6 +28,7 @@ import {
   preparedRouteGeometryRefs,
   takePreparedRoute,
   takePreparedRouteOnce,
+  takeRideToRestore,
   withPreparedRoute,
   type PreparedRoute,
   type PreparedRouteStorage,
@@ -339,5 +343,70 @@ describe("Explore ride-this session", () => {
     expect(session.phase).toBe("ready");
     expect(session.settledAt).toBe(NOW);
     expect(session.diagnostics).toEqual([]);
+  });
+});
+
+/**
+ * The map card's "Ride this" (first-minute wow, W5) takes the same path: a
+ * derivative ride document, the catalog line as its answer, and a one-boot
+ * marker so the planner restores the ride the rider just tapped.
+ */
+describe("the map card's Ride this", () => {
+  it("opens the route as its own line and asks the next boot to restore it", async () => {
+    const geometryStore = createMemoryGeometryStore();
+    const created: { readonly title: string | undefined }[] = [];
+    const library = {
+      createDerivative: async (
+        _kind: "catalog" | "import" | "ride",
+        _sourceId: string,
+        document: ReturnType<typeof createExploreDerivative>,
+        options?: { readonly title?: string },
+      ) => {
+        created.push({ title: options?.title });
+        return document;
+      },
+    };
+    const opened = await openCatalogRide(entry(), library, geometryStore, { now: () => NOW });
+    expect(created).toEqual([{ title: "Sample Ridge Loop" }]);
+    expect(opened.prepared).toBe(true);
+
+    const storage = memoryStorage();
+    markRideToRestore(opened.rideId, { now: () => NOW, storage });
+    expect(takeRideToRestore({ now: () => NOW, storage })).toBe(opened.rideId);
+    // Read once: a later page load must not keep opening this ride.
+    expect(takeRideToRestore({ now: () => NOW, storage })).toBeNull();
+  });
+
+  it("still opens a route it cannot hand over as a line", async () => {
+    const library = { createDerivative: async (_kind: string, _sourceId: string, document: ReturnType<typeof createExploreDerivative>) => document };
+    const opened = await openCatalogRide(entry({ distanceKm: null }), library as never, null, { now: () => NOW });
+    expect(opened.prepared).toBe(false);
+  });
+
+  it("ignores an expired marker", () => {
+    const storage = memoryStorage();
+    markRideToRestore("ride_old" as never, { now: () => NOW, storage });
+    const later = new Date(Date.parse(NOW) + PREPARED_ROUTE_TTL_MS + 1_000).toISOString();
+    expect(takeRideToRestore({ now: () => later, storage })).toBeNull();
+  });
+
+  it("reads a catalog route through our own endpoint, and nothing when it cannot", async () => {
+    const route = {
+      id: "sample-ridge-loop",
+      name: "Sample Ridge Loop",
+      region: "Demo area",
+      summary: "A synthetic route.",
+      distanceKm: 27.5,
+      geometry: LINE,
+      provenance: "synthetic catalog",
+    };
+    const found = await fetchCatalogRide("sample-ridge-loop", {
+      fetch: (async () => Response.json({ route })) as typeof fetch,
+    });
+    expect(found?.name).toBe("Sample Ridge Loop");
+    const missing = await fetchCatalogRide("nope", {
+      fetch: (async () => new Response("{}", { status: 404 })) as typeof fetch,
+    });
+    expect(missing).toBeNull();
   });
 });

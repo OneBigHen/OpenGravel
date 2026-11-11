@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearMapLayersCache,
+  defaultProviders,
   handleMapLayersRequest,
   parseBounds,
   parseLayers,
@@ -180,6 +181,16 @@ describe("handleMapLayersRequest", () => {
   it("answers from the fixture when asked", async () => {
     const result = await handleMapLayersRequest(url("bbox=-75.6,39.9,-75.0,40.3&layers=fuel,gravel"), { env: { OGV_MAP_LAYERS_FIXTURE: "1" } });
     expect("features" in result.body && result.body.features.map((feature) => feature.layerId)).toEqual(["fuel", "gravel"]);
+  });
+
+  it("serves rider-picked rides from one process-wide provider", () => {
+    const first = defaultProviders({}).find((provider) => provider.layers.includes("rider-picked"));
+    const second = defaultProviders({}).find((provider) => provider.layers.includes("rider-picked"));
+    expect(first).toBeDefined();
+    expect(first?.id).toBe("catalog");
+    // Its simplified catalog must survive between requests, so the provider is
+    // the same object every time, not a fresh cache per request.
+    expect(second).toBe(first);
   });
 
   it("builds a keyed traffic tile URL only for a valid tile and a configured key", () => {

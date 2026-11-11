@@ -38,6 +38,7 @@ import { trafficCamerasProvider } from "./traffic-cameras";
 import { windProvider } from "./wind";
 import {
   overpassProvider,
+  curatedRidesProvider,
   knownRoadsProvider,
   nwsAlertsProvider,
   tomtomIncidentsProvider,
@@ -152,6 +153,20 @@ function fixtureFeatures(bounds: MapLayerBounds, layers: readonly MapLayerId[]):
   });
 }
 
+/**
+ * The curated-rides provider, one per process: its simplified catalog and its
+ * per-view answers must survive between requests, and `defaultProviders` is
+ * built per request. The catalog file is read on first use only.
+ */
+let curatedProvider: LayerProvider | null = null;
+function catalogRidesProvider(): LayerProvider {
+  curatedProvider ??= curatedRidesProvider(async () => {
+    const { serverCatalogEntries } = await import("@/server/explore/catalog-data");
+    return serverCatalogEntries;
+  });
+  return curatedProvider;
+}
+
 export function defaultProviders(env: Readonly<Record<string, string | undefined>>): readonly LayerProvider[] {
   return [
     terrainProvider,
@@ -167,6 +182,7 @@ export function defaultProviders(env: Readonly<Record<string, string | undefined
     nwsAlertsProvider,
     windProvider,
     knownRoadsProvider(knownRoadsFromEnv(env), gravelAtlasFromEnv(env)),
+    catalogRidesProvider(),
   ];
 }
 

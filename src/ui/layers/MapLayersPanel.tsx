@@ -12,7 +12,7 @@
  * control on the right.
  */
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   MAP_LAYER_CATEGORIES,
@@ -48,6 +48,13 @@ export interface MapLayersPanelProps {
   /** Turns a lens's whole set of layers on or off together. */
   readonly onToggleLens?: (ids: readonly MapLayerId[]) => void;
   readonly onClearAll: () => void;
+  /**
+   * The open state, when the host also opens the sheet from somewhere else —
+   * the map legend chip (first-minute wow, W1). Omit it and the button owns the
+   * state itself, which is what every embedding that has no legend does.
+   */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
   /** Present when the sheet, not the map's globe button, chooses the basemap. */
   readonly mapStyle?: MapStyleChoice;
   /** Rows owned by another surface (the Places overlay), rendered in the sheet. */
@@ -258,10 +265,19 @@ export function MapLayersPanel({
   onToggle,
   onToggleLens,
   onClearAll,
+  open: openProp,
+  onOpenChange,
   mapStyle,
   settings,
 }: MapLayersPanelProps) {
-  const [open, setOpen] = useState(false);
+  const [selfOpen, setOpenState] = useState(false);
+  // Either the two-way button owns the state, or the host does and can also
+  // open the sheet from the map legend.
+  const open = openProp ?? selfOpen;
+  const setOpen = useCallback((next: boolean): void => {
+    if (openProp === undefined) setOpenState(next);
+    onOpenChange?.(next);
+  }, [openProp, onOpenChange]);
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   // Traffic cameras are not offered here until Settings turns them on (front door).
@@ -277,7 +293,7 @@ export function MapLayersPanel({
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, setOpen]);
   const active = enabled.length;
   return (
     <div className="og-layers" data-open={open ? "true" : "false"} data-testid="map-layers">
@@ -289,7 +305,7 @@ export function MapLayersPanel({
         ref={buttonRef}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpen(!open)}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">
           <path d="m12 3 9 5-9 5-9-5z" />

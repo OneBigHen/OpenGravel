@@ -410,6 +410,32 @@
   line-height: 1.4;
 }
 
+.og-info-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--og-space-2) var(--og-space-4);
+  margin: 0;
+}
+
+.og-info-card__facts dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.og-info-card__facts dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-info-card__error {
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+}
+
 .og-info-card__actions {
   display: flex;
   flex-wrap: wrap;
