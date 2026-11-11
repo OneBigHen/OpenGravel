@@ -139,7 +139,7 @@ Cost: about 630 router requests (the planner alone makes up to 53 per plan today
 2. **The production box is full.** 8 GB, swap 96% used, app plus two routers. Milestone 13 cannot land there as is. Stopping the hiking router would free about 1 GB.
 3. **Apple.** No TestFlight without the paid programme. Public release of a web-wrapper app can be rejected as too thin, so stay on internal TestFlight for these 90 days. The Mac has about 14 GB free and is on a small charger.
 4. **Maps bill and terms.** The best-looking maps today come from Mapbox's free tier through a non-Mapbox renderer. A public launch can exhaust the quota, and the terms should be read. Milestone 10 removes the dependency.
-5. **Rider route licence.** The 112 catalog routes say "licence not specified by the source". Fine for scoring; get the group admin's OK before making a public splash with them.
+5. **Rider route licence.** Closed 2026-11-11: the owner confirmed full permission to show the 112 catalog routes (Explore and the map), with the source credit kept on each.
 6. **Tuning to the test.** 20 rides is small. The hold-out set and the owner's ride days are the guard.
 7. **Cheap workers in huge files** (`host.ts` 3,408 lines, `ride.css` 3,071, `ride-focus-store.ts` 2,733). Name the files in every issue, and give routing core to Codex Sol.
 8. **Flaky gates.** If CI's browser job is unreliable, agents will learn to ignore red. Quarantine flakes in week 1.
