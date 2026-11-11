@@ -2,6 +2,7 @@ import type { PlanningSessionSnapshot } from "@/application/planner/planning-ses
 import type { GeometryPayload } from "@/domain/geometry/types";
 import { buildCorridorPackManifest } from "@/domain/offline/capabilities";
 import type { RideDocument } from "@/domain/ride/types";
+import type { RouteEvidence, RouteInstruction } from "@/domain/route/types";
 import type { ShareSummary } from "@/domain/sharing/types";
 
 export interface SelectedOfflineRoute {
@@ -13,6 +14,9 @@ export interface SelectedOfflineRoute {
   readonly summary: ShareSummary;
   readonly pack: ReturnType<typeof buildCorridorPackManifest>;
   readonly instructionsAvailable: boolean;
+  /** The chosen card's measured facts, so Save keeps what the truth lines read (R3-1). */
+  readonly evidence?: RouteEvidence;
+  readonly instructions?: readonly RouteInstruction[];
 }
 
 /**
@@ -69,5 +73,7 @@ export function selectedOfflineRoute(
     } satisfies ShareSummary,
     pack,
     instructionsAvailable: candidate.instructionsRef !== undefined,
+    evidence: candidate.evidence,
+    ...(candidate.instructions === undefined ? {} : { instructions: candidate.instructions }),
   };
 }

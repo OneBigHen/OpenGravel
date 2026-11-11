@@ -6,6 +6,7 @@
 
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { RideDocument } from "@/domain/ride/types";
+import type { RouteEvidence, RouteInstruction } from "@/domain/route/types";
 import type { ImportRideData } from "@/application/import/types";
 import type { CorridorPackManifest } from "@/domain/offline/capabilities";
 import type { RecordingId } from "@/domain/recording/ids";
@@ -85,6 +86,17 @@ export interface RecordedTrackEnvelope {
  */
 export interface PlannedRouteEnvelope {
   readonly geometryRef: GeometryRef;
+  /**
+   * The chosen card's own numbers and measured facts at save time, so the ride
+   * reopens as exactly the line that was saved (R3-1). Optional: rides saved
+   * before these were kept have only the line.
+   */
+  readonly distanceMeters?: number;
+  readonly durationSeconds?: number;
+  /** Measured, time-independent evidence (surface runs, bike fit, curvature…). */
+  readonly evidence?: RouteEvidence;
+  /** Turn-by-turn instructions the router gave for this line, when it gave any. */
+  readonly instructions?: readonly RouteInstruction[];
 }
 
 /** The optional library envelope lives beside the authored document. */

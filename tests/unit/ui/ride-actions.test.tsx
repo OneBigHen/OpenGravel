@@ -169,7 +169,10 @@ describe("saving a planned ride keeps its route line", () => {
       createdAt: "2026-10-07T12:00:00.000Z",
     }),
     instructionsAvailable: false,
-  };
+    evidence: {
+      surfaceMix: { value: { pavedMeters: 8_000, gravelMeters: 4_000, dirtMeters: 0, unknownMeters: 0 }, status: "known", confidence: 1, provenance: [] },
+    },
+  } as const;
 
   it("hands the selected geometry to saveNamed", async () => {
     const saveNamed = vi.fn<(document: unknown, options: unknown) => Promise<{ document: ReturnType<typeof createRideDocument>; savedAt: string }>>();
@@ -212,8 +215,24 @@ describe("saving a planned ride keeps its route line", () => {
     await waitFor(() => expect(saveNamed).toHaveBeenCalledOnce());
     expect(saveNamed.mock.calls[0]?.[1]).toMatchObject({
       title: "Sunday loop",
-      plannedRoute: { geometry },
+      // The chosen card exactly (R3-1): line, numbers and measured surface.
+      plannedRoute: {
+        geometry,
+        distanceMeters: 12_000,
+        durationSeconds: 1_800,
+        evidence: { surfaceMix: { status: "known" } },
+      },
       bundleSummary: { distanceMeters: 12_000, durationSeconds: 1_800 },
     });
+  });
+
+  it("offers \"Plan it again\" only while the answer is a saved line", () => {
+    const onPlanAgain = vi.fn();
+    const document = createRideDocument({ now: "2026-10-07T12:00:00.000Z" });
+    const view = render(<RideActions document={document} libraryService={undefined} shareService={undefined} route={route} start={null} onPlanAgain={onPlanAgain} />);
+    fireEvent.click(screen.getByTestId("plan-it-again"));
+    expect(onPlanAgain).toHaveBeenCalledOnce();
+    view.rerender(<RideActions document={document} libraryService={undefined} shareService={undefined} route={route} start={null} onPlanAgain={null} />);
+    expect(screen.queryByTestId("plan-it-again")).toBeNull();
   });
 });

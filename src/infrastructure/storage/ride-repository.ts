@@ -242,7 +242,11 @@ function isRecordedTrackEnvelope(value: unknown): value is RecordedTrackEnvelope
 
 function isPlannedRouteEnvelope(value: unknown): value is PlannedRouteEnvelope {
   if (!isRecord(value)) return false;
-  return isString(value.geometryRef) && value.geometryRef.startsWith("geo_");
+  return isString(value.geometryRef) && value.geometryRef.startsWith("geo_") &&
+    (value.distanceMeters === undefined || isNonNegativeFinite(value.distanceMeters)) &&
+    (value.durationSeconds === undefined || isNonNegativeFinite(value.durationSeconds)) &&
+    (value.evidence === undefined || isRecord(value.evidence)) &&
+    (value.instructions === undefined || Array.isArray(value.instructions));
 }
 
 function isQuotaError(error: unknown): boolean {
