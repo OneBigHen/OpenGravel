@@ -25,6 +25,7 @@
     "verify": "npm run audit:env && npm run lint && npm run typecheck && npm test && npm run build",
     "audit:env": "node scripts/qa/audit-env-example.mjs",
     "audit:production-env": "node scripts/qa/audit-production-env.mjs",
+    "css:budget": "node scripts/qa/css-budget.mjs",
     "experiment:jev-frontier": "node --conditions=react-server --import tsx scripts/jev-frontier-replay.ts",
     "shots": "node scripts/og-shots/index.mjs",
     "catalog:trails": "node --import tsx infra/trails/build-trails.ts",

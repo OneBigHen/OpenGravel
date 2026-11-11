@@ -53,6 +53,9 @@ blob-report/
 
 # generated local QA output
 qa/
+# ...but the CSS budget gate and its test are code, not output.
+!scripts/qa/
+!tests/unit/qa/
 .live-*.mjs
 .qa-*.mjs
 
