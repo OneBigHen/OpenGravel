@@ -8,9 +8,9 @@
   "hexLiterals": 5,
   "files": {
     "src/app/app.css": 843,
-    "src/app/controls.css": 150,
+    "src/app/controls.css": 149,
     "src/app/share/[token]/share.module.css": 6,
-    "src/app/tokens.css": 256,
+    "src/app/tokens.css": 254,
     "src/ui/explore/explore.css": 1019,
     "src/ui/explore/hike-explore.css": 84,
     "src/ui/explore/route-detail.css": 1457,

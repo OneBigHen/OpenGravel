@@ -96,8 +96,7 @@
   outline-offset: var(--og-focus-offset);
 }
 
-/* A chosen option among several: neutral with a ring. Green is only the action
-   (DESIGN.md 2026-11-10). One rule for every segmented control and chip. */
+/* A chosen option: neutral with a ring; green is only the action (DESIGN.md 2026-11-10). */
 .og-ride-interest__filter[aria-pressed="true"],
 .og-ride .og-places-control__option[aria-pressed="true"],
 .og-rides__segment[aria-pressed="true"],
