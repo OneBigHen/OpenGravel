@@ -35,6 +35,7 @@ const entry: CatalogEntry = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  delete document.documentElement.dataset["theme"];
   window.localStorage.clear();
   window.sessionStorage.clear();
   // A stubbed scroll offset belongs to its own test.
@@ -350,6 +351,14 @@ describe("Explore UI", () => {
     expect(screen.getByRole("heading", { name: "Explore", level: 1 })).toBeInTheDocument();
     expect(document.querySelector(".og-explore__heading .og-eyebrow")).toBeNull();
     expect(screen.queryByText(/Find your next ride/i)).toBeNull();
+  });
+
+  it("shows a ride card on the night style when the theme is Night", () => {
+    // A Night list must not be a wall of daylight thumbnails under dark chrome.
+    document.documentElement.dataset["theme"] = "night";
+    render(<ExplorePanel entries={[entry]} mapboxToken="pk.test-token-123" />);
+    const image = document.querySelector<HTMLImageElement>(".og-explore-card__preview--map");
+    expect(image?.src).toContain("/styles/v1/mapbox/navigation-night-v1/static/");
   });
 
   it("draws a ride card as its map, the name and one line of plain facts", () => {
