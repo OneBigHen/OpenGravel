@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import type { RoutePlanSuccessBody } from "../../../src/application/planner/ports/route-plan-contract";
-import { openRideSheet, rideMapReady, startRide } from "./ride-focus-helpers";
+import { clickInRideSheet, openRideSheet, rideMapReady, startRide } from "./ride-focus-helpers";
 
 /**
  * The handlebar ride screen (next round, N2): "On the bars I see the next turn,
@@ -32,6 +32,9 @@ const CHROME_SHARE = 0.2;
 const CARD_HEIGHT = 96;
 
 test.use({ viewport: VIEWPORT });
+// Starting a ride, waiting for the fixture rider's first fix and reading the
+// card is one long story; the default 30 s is shorter than its own 30 s wait.
+test.describe.configure({ timeout: 90_000 });
 
 /** Adds a paved, a gravel and a paved stretch to every planned candidate. */
 async function planWithSurface(page: Page): Promise<void> {
@@ -121,6 +124,18 @@ async function backgroundOf(page: Page, testId: string): Promise<string> {
   return page.getByTestId(testId).evaluate((element) => getComputedStyle(element).backgroundColor);
 }
 
+/** Opens a fold-out row of the Menu ("Screen", "More"), however often the Menu closed meanwhile. */
+async function unfold(page: Page, testId: string): Promise<void> {
+  const details = page.getByTestId(testId);
+  await expect(async () => {
+    await openRideSheet(page);
+    if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) {
+      await details.locator("summary").first().click({ timeout: 2_000 });
+    }
+    expect(await details.evaluate((element) => (element as HTMLDetailsElement).open)).toBe(true);
+  }).toPass({ timeout: 20_000 });
+}
+
 for (const theme of ["day", "night"] as const) {
   test.describe(`handlebar screen, ${theme}`, () => {
     test("shows at most three rail buttons, 56 px targets, and little chrome", async ({ page }) => {
@@ -193,19 +208,35 @@ for (const theme of ["day", "night"] as const) {
       await expect(panel.locator("input, textarea, select, [contenteditable]")).toHaveCount(0);
 
       // One list, in order: Emergency first, then Pause and End ride, then
-      // Sound, Screen and More, all on 56 px rows. Read in one step because the
-      // Menu closes itself when it is idle.
-      const rows = await page.evaluate(() => {
-        const visible = (element: Element): boolean =>
-          element.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true });
-        const rowsOf = [...document.querySelectorAll('[data-testid="ride-panel"] :is(button, summary, a)')]
-          .filter(visible)
-          .map((element) => {
-            const rect = element.getBoundingClientRect();
-            return { id: element.getAttribute("data-testid") ?? element.tagName, y: rect.y, width: rect.width, height: rect.height };
+      // Sound, Screen and More, all on 56 px rows. The Menu closes itself when it
+      // is idle, which on a slow machine can happen between the checks above and
+      // this read, so each attempt opens it again and reads in the same step.
+      type MenuRow = { id: string; y: number; width: number; height: number };
+      const readRows = async (): Promise<MenuRow[]> => {
+        let found: MenuRow[] = [];
+        await expect(async () => {
+          await openRideSheet(page);
+          found = await page.evaluate(() => {
+            const visible = (element: Element): boolean =>
+              element.checkVisibility({ contentVisibilityAuto: true, visibilityProperty: true });
+            return [...document.querySelectorAll('[data-testid="ride-panel"] :is(button, summary, a)')]
+              .filter(visible)
+              .map((element) => {
+                const rect = element.getBoundingClientRect();
+                // A fold-out row ("Screen", "More") is a <summary> whose name is
+                // carried by the <details> around it.
+                const id =
+                  element.getAttribute("data-testid") ??
+                  (element.tagName === "SUMMARY" ? element.parentElement?.getAttribute("data-testid") : null) ??
+                  element.tagName;
+                return { id, y: rect.y, width: rect.width, height: rect.height };
+              });
           });
-        return rowsOf;
-      });
+          expect(found.length).toBeGreaterThan(0);
+        }).toPass({ timeout: 20_000 });
+        return found;
+      };
+      const rows = await readRows();
       expect(rows[0]?.id).toBe("ride-emergency");
       const order = ["ride-emergency", "ride-pause", "ride-stop", "ride-sound", "ride-style", "ride-menu-more", "ride-exit"];
       const positions = order.map((id) => rows.find((row) => row.id === id)?.y);
@@ -215,19 +246,27 @@ for (const theme of ["day", "night"] as const) {
         expect(row.height, row.id).toBeGreaterThanOrEqual(TARGET - 0.5);
         expect(row.width, row.id).toBeGreaterThanOrEqual(TARGET - 0.5);
       }
+      // The fold-outs hold 56 px targets too: Screen's Day / Night / Auto, North
+      // up and the ride-along filter.
+      await unfold(page, "ride-style");
+      const unfolded = await readRows();
+      expect(unfolded.length).toBeGreaterThan(rows.length);
+      for (const row of unfolded) {
+        expect(row.height, row.id).toBeGreaterThanOrEqual(TARGET - 0.5);
+        expect(row.width, row.id).toBeGreaterThanOrEqual(TARGET - 0.5);
+      }
       expect(await backgroundOf(page, "ride-panel")).toMatch(/^rgb/);
       if (theme === "night") expect(luminance(await backgroundOf(page, "ride-panel"))).toBeLessThan(0.15);
 
       // Behaviour is unchanged: Emergency still opens the emergency card.
-      await page.getByTestId("ride-emergency").click();
+      await clickInRideSheet(page, "ride-emergency", "emergency-card");
       await expect(page.getByTestId("emergency-card")).toBeVisible();
       await page.getByTestId("emergency-close").click();
       await expect(page.getByTestId("emergency-card")).toHaveCount(0);
 
       // Live sharing only moved: one row under More, and its form opens on request.
-      await openRideSheet(page);
-      await page.getByTestId("ride-menu-more").locator("summary").first().click();
-      await page.getByTestId("ride-share-live").click();
+      await unfold(page, "ride-menu-more");
+      await clickInRideSheet(page, "ride-share-live", "ride-live-share");
       await expect(page.getByTestId("ride-live-share")).toBeVisible();
       await expect(panel.locator("input")).toHaveCount(2);
     });

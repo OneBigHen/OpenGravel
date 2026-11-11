@@ -60,8 +60,8 @@
 
 .og-ride-fuel__fill {
   flex: 0 0 auto;
-  min-width: 48px;
-  min-height: 48px;
+  min-width: var(--og-touch-ride);
+  min-height: var(--og-touch-ride);
   padding: 0 16px;
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-pill);

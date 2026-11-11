@@ -1153,6 +1153,18 @@ describe("the post-ride summary (08 §13)", () => {
 });
 
 describe("device failures are visible and non-blocking (08 §3, §7, §8)", () => {
+  it("offers Retry location while a fix still reads as good but location is blocked", async () => {
+    // The browser can say "blocked" before the last fix has aged out; the rider
+    // is told location is blocked, so the way to try again is on the Menu too.
+    await harness({
+      position: "fresh",
+      environment: { locationPermission: "denied" },
+    });
+
+    expect(screen.getByTestId("ride-warning-location-denied")).toHaveTextContent("Location is blocked");
+    expect(screen.getByTestId("ride-retry-location")).toBeEnabled();
+  });
+
   it("keeps the session controllable when location is blocked", async () => {
     const { environment, store } = await harness({
       position: "none",

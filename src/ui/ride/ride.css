@@ -1571,8 +1571,8 @@
 
 .og-ride-interest__filter {
   flex: 1 1 auto;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--og-touch-ride);
+  min-height: var(--og-touch-ride);
   padding: 0 10px;
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-control);
@@ -1589,7 +1589,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: var(--og-touch-ride);
   padding: 8px 14px;
   border: 1px solid var(--og-line-strong);
   border-radius: var(--og-radius-pill);

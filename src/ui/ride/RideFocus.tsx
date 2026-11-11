@@ -819,6 +819,10 @@ export function RideFocus({
   const nextBreadcrumb = breadcrumbWaypoints === null ? null : breadcrumbWaypoints.find((point, index) => index > 0 && point.distanceAlongMeters > breadcrumbAlong + 15) ?? breadcrumbWaypoints.at(-1) ?? null;
   const critical = warnings.filter((warning) => warning.severity === "critical");
   const gpsUnavailable = critical.some((warning) => warning.id === "gps-unavailable");
+  // A blocked location keeps its Retry row even while an older fix still reads
+  // as good: the rider has been told location is blocked, so "try again" is
+  // always one press away rather than waiting for the fix to age out.
+  const locationBlocked = critical.some((warning) => warning.id === "location-denied");
   const sheetCritical = critical.filter((warning) => warning.id !== "gps-unavailable");
   // Free Ride has no route: no maneuver to wait for and no ETA or distance to
   // go, so those boxes stay off the screen instead of saying so (UX rework 2).
@@ -1613,7 +1617,7 @@ export function RideFocus({
               8 §3: a blocked location keeps the session controllable. Retries
               also happen by themselves; this is the rider's "now".
             */}
-            {position.tone === "good" ? null : (
+            {position.tone === "good" && !locationBlocked ? null : (
               <button
                 type="button"
                 className="og-ride__sheet-row"
