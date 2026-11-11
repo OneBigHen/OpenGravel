@@ -35,6 +35,7 @@ const entry: CatalogEntry = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  delete document.documentElement.dataset["theme"];
   window.localStorage.clear();
   window.sessionStorage.clear();
   // A stubbed scroll offset belongs to its own test.
@@ -49,9 +50,13 @@ describe("Explore UI", () => {
     const props = { entries, onOpen: vi.fn(), hostFactory: hosts.factory, basemap: "empty" as const };
     const view = render(<ExploreMap {...props} highlightedId={null} />);
     await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes).toHaveLength(100));
+    // The list's map is an overview: every route is one thin quiet line, so a
+    // hundred of them do not merge into a block.
+    expect(hosts.hosts[0]?.lastScene()?.routes.every((route) => route.state === "overview")).toBe(true);
     const fits = hosts.hosts[0]!.fits.length;
     view.rerender(<ExploreMap {...props} highlightedId="route-99" />);
     await waitFor(() => expect(hosts.hosts[0]?.lastScene()?.routes.find((route) => route.id === "route-99")?.state).toBe("selected"));
+    expect(hosts.hosts[0]?.lastScene()?.routes.filter((route) => route.state === "overview")).toHaveLength(99);
     expect(hosts.hosts[0]!.fits).toHaveLength(fits);
     fireEvent.click(screen.getByRole("button", { name: "Fit routes" }));
     await waitFor(() => expect(hosts.hosts[0]!.fits.length).toBeGreaterThan(fits));
@@ -346,6 +351,14 @@ describe("Explore UI", () => {
     expect(screen.getByRole("heading", { name: "Explore", level: 1 })).toBeInTheDocument();
     expect(document.querySelector(".og-explore__heading .og-eyebrow")).toBeNull();
     expect(screen.queryByText(/Find your next ride/i)).toBeNull();
+  });
+
+  it("shows a ride card on the night style when the theme is Night", () => {
+    // A Night list must not be a wall of daylight thumbnails under dark chrome.
+    document.documentElement.dataset["theme"] = "night";
+    render(<ExplorePanel entries={[entry]} mapboxToken="pk.test-token-123" />);
+    const image = document.querySelector<HTMLImageElement>(".og-explore-card__preview--map");
+    expect(image?.src).toContain("/styles/v1/mapbox/navigation-night-v1/static/");
   });
 
   it("draws a ride card as its map, the name and one line of plain facts", () => {

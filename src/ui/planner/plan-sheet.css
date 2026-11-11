@@ -91,12 +91,12 @@
     max-height: 45dvh;
   }
 
-  /* Building a loop (nothing routed yet): the sheet is as tall
-     as its questions, up to full, so the chips are never hidden behind the
-     button that commits them. */
+  /* Building a loop (nothing routed yet): the sheet is as tall as its questions,
+     up to about 46% of the screen, so the map keeps the rest. The one row that
+     does not fit folds behind its summary (RideStyleControls). */
   .og-planner .og-planner__sheet[data-has-ride="false"]:has(.og-composer__row--loop) {
     height: auto;
-    max-height: var(--og-sheet-full);
+    max-height: 46dvh;
   }
 
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] .og-sheet__body {

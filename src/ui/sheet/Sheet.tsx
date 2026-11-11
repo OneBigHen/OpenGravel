@@ -19,13 +19,20 @@ export interface SheetProps extends Omit<ComponentPropsWithoutRef<"section">, "o
   readonly headRef?: RefObject<HTMLDivElement | null>;
   readonly bodyRef?: RefObject<HTMLDivElement | null>;
   readonly bodyId?: string;
+  /**
+   * The action that ends the rail, outside the scrolling body: the commitment
+   * and its one-line reason stay in view however tall the options above grow
+   * (desktop rail). The phone sheet keeps the action inside its body, where the
+   * detents and the sticky footer already hold it.
+   */
+  readonly foot?: ReactNode;
   /** Desktop rail keeps its established labels/layout while sharing controls. */
   readonly rail?: boolean;
   readonly children: ReactNode;
 }
 
 export function Sheet({ label, detent, onToggle, onStep, onSnap, onDismiss, focusKey, head, handleContent,
-  handleLabel, headRef, bodyRef, bodyId = "og-sheet-body", rail = false, children, className = "", ...attributes }: SheetProps) {
+  handleLabel, headRef, bodyRef, bodyId = "og-sheet-body", foot, rail = false, children, className = "", ...attributes }: SheetProps) {
   const root = useRef<HTMLElement>(null);
   const handle = useRef<HTMLButtonElement>(null);
   const drag = useRef<{ x: number; y: number; t: number; id: number; height: number; head: boolean; active: boolean; lastY: number; lastT: number; velocity: number } | null>(null);
@@ -127,5 +134,6 @@ export function Sheet({ label, detent, onToggle, onStep, onSnap, onDismiss, focu
       {head}
     </div>
     <div className="og-sheet__body" id={bodyId} data-testid="sheet-scroll" ref={bodyRef}>{children}</div>
+    {foot === undefined ? null : <div className="og-sheet__foot" data-testid="sheet-foot">{foot}</div>}
   </section>;
 }

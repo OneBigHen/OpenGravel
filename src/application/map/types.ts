@@ -65,10 +65,16 @@ export type MapMode = "plan" | "ride" | "explore";
  * The projection emits `selected`/`alternative`/`travelled` today; the renderer
  * styles the others so the waves that author them do not need a cartography
  * change.
+ *
+ * `overview` is Explore's whole-list map: a hundred routes are there to show
+ * where the good riding is, not to be chosen one by one. It draws as one thin
+ * quiet line with no casing, so a state zoom reads the road network instead of
+ * one merged grey blob. A route the rider points at is still `selected`.
  */
 export type RouteSceneState =
   | "selected"
   | "alternative"
+  | "overview"
   | "preview"
   | "previous"
   | "proposed"

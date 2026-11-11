@@ -433,6 +433,7 @@ const ROUTE_LINE_LAYER_IDS: ReadonlySet<string> = new Set([
   MAP_LAYER_IDS.routePrevious,
   MAP_LAYER_IDS.routeAlternativeCasing,
   MAP_LAYER_IDS.routeAlternative,
+  MAP_LAYER_IDS.routeOverview,
   MAP_LAYER_IDS.routePreview,
   MAP_LAYER_IDS.routeProposed,
   MAP_LAYER_IDS.routeCasing,

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
+import { useResolvedTheme } from "@/ui/appearance/use-appearance";
 import {
   type LibraryServicePort,
   type RideSummary,
@@ -97,17 +98,17 @@ function originalExtension(filename: string | null, mime: string | null): string
 }
 
 /** The ride on a real map: its line when stored, else its pinned points. */
-function rideMapUrl(ride: RideSummary, token: string | undefined): string | null {
+function rideMapUrl(ride: RideSummary, token: string | undefined, night: boolean): string | null {
   if (token === undefined || ride.mapPreview === undefined) return null;
-  const size = { token, width: 400, height: 225 };
+  const size = { token, width: 400, height: 225, night };
   return ride.mapPreview.line.length >= 2
     ? staticRouteMapUrl(ride.mapPreview.line, size)
     : staticPointsMapUrl(ride.mapPreview.pins, size);
 }
 
 /** A map image when a token exists, else the ride's own line drawn in the browser. */
-function RideThumbnail({ ride, token }: { readonly ride: RideSummary; readonly token: string | undefined }) {
-  const mapUrl = rideMapUrl(ride, token);
+function RideThumbnail({ ride, token, night }: { readonly ride: RideSummary; readonly token: string | undefined; readonly night: boolean }) {
+  const mapUrl = rideMapUrl(ride, token, night);
   if (mapUrl !== null) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- a remote static map; next/image would proxy it.
@@ -171,6 +172,7 @@ interface RoadProgressCache {
 
 export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader }: RidesLibraryProps) {
   const router = useRouter();
+  const night = useResolvedTheme() === "night";
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
   const [segment, setSegment] = useState<RideSegment>("planned");
   const [search, setSearch] = useState("");
@@ -642,7 +644,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                       onClick={() => void openRide(ride)}
                     >
                       <span className="og-rides__thumb">
-                        <RideThumbnail ride={ride} token={mapboxToken} />
+                        <RideThumbnail ride={ride} token={mapboxToken} night={night} />
                       </span>
                       <span className="og-rides__row-text">
                         <span className="og-rides__row-title">{title.trim().length === 0 ? "Untitled ride" : title}</span>

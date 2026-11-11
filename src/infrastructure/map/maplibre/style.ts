@@ -46,6 +46,8 @@ export interface MapPalette {
   readonly deepSpruce: string;
   readonly routePlum: string;
   readonly routePlumStrong: string;
+  /** Explore's overview lines: the quiet grey of `--og-route-alt`. */
+  readonly routeAlt: string;
   /**
    * The selected route's casing: `auto` draws it in the route's own strong
    * tint; a colour (Ride Focus in Day) gives the line a dark edge that holds
@@ -71,6 +73,7 @@ export const DEFAULT_MAP_PALETTE: MapPalette = {
   deepSpruce: "#243a35",
   routePlum: "#7b4fa0",
   routePlumStrong: "#5e3a7c",
+  routeAlt: "#7d8a84",
   routeCasing: "auto",
   emphasis: "1",
 };
@@ -90,6 +93,7 @@ const TOKEN_NAMES: Readonly<Record<keyof MapPalette, string>> = {
   deepSpruce: "--og-map-spruce",
   routePlum: "--og-map-route",
   routePlumStrong: "--og-map-route-strong",
+  routeAlt: "--og-route-alt",
   routeCasing: "--og-map-route-casing",
   emphasis: "--og-map-emphasis",
 };
@@ -150,6 +154,7 @@ export const MAP_LAYER_IDS = {
   routeTravelled: "ogv-route-travelled",
   routeAlternativeCasing: "ogv-route-alternative-casing",
   routeAlternative: "ogv-route-alternative",
+  routeOverview: "ogv-route-overview",
   routePreview: "ogv-route-preview",
   routeProposed: "ogv-route-proposed",
   routeCasing: "ogv-route-casing",
@@ -383,6 +388,21 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "line-color": palette.slate,
         "line-width": 5,
         "line-opacity": 0.8,
+      },
+    },
+    {
+      // Explore's whole list (`.fable/DESIGN-PICKS.md` §4.1): one thin grey line
+      // per route, no casing. A hundred casings merge into a solid blob at state
+      // zoom; the thin lines show the network and leave the land readable.
+      id: MAP_LAYER_IDS.routeOverview,
+      type: "line",
+      source: MAP_SOURCE_IDS.routes,
+      filter: equals("state", "overview"),
+      layout: LINE_LAYOUT,
+      paint: {
+        "line-color": palette.routeAlt,
+        "line-width": 3,
+        "line-opacity": 0.6,
       },
     },
     {
@@ -1184,6 +1204,7 @@ export const HIT_LAYER_IDS: readonly string[] = [
   MAP_LAYER_IDS.routeSelected,
   MAP_LAYER_IDS.routeAlternative,
   MAP_LAYER_IDS.routeAlternativeCasing,
+  MAP_LAYER_IDS.routeOverview,
   MAP_LAYER_IDS.routePreview,
   MAP_LAYER_IDS.routeProposed,
   MAP_LAYER_IDS.routePrevious,

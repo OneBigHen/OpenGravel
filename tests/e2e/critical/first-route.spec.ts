@@ -135,10 +135,10 @@ test("idle: the planner asks for a start and refuses to plan without one", async
   await expect(page.getByTestId("start-value")).toHaveText(START_LABEL);
   await expect(page.getByTestId("finish-value")).toHaveText(FINISH_LABEL);
 
-  // One instruction at a time (OGV-D-214): the status line reports the plan's
-  // state and the composer's disabled reason is the single instruction, so the
-  // map overlay stays quiet even though the first tap will place a start.
-  await expect(page.getByTestId("status-line")).toHaveText("No plan yet.");
+  // One instruction at a time (OGV-D-214): the composer's disabled reason is the
+  // single instruction, and the rail's head says nothing rather than printing
+  // "No plan yet." above it. The map overlay stays quiet too.
+  await expect(page.getByTestId("status-line")).toHaveText("");
   await expect(page.getByTestId("map-hint")).toHaveCount(0);
   await expect(page.getByTestId("start-chip")).toHaveText("Set start on map");
 
