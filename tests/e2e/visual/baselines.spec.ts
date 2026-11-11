@@ -87,6 +87,9 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
     // No browser GPS here: the ride fixture feed is the position, and a granted
     // fix would move the camera off the fixture ride before it is placed.
     await page.context().clearPermissions();
+    // The fixture rider walks the line once a second; hold it still after a few
+    // fixes so two screenshots of the riding view can match.
+    await page.addInitScript(() => window.localStorage.setItem("og.rideFixture.maxFixes", "4"));
     await startRide(page);
     await rideMapReady(page);
     await expect(page.getByText(/No GPS fix|Finding you/)).toHaveCount(0, { timeout: 20_000 }).catch(() => {});

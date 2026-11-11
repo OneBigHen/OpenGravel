@@ -40,6 +40,9 @@ export interface FixturePositionSourceOptions {
   /** ISO-8601 instant of the observation; defaults to the wall clock. */
   readonly now?: () => string;
   readonly intervalMs?: number;
+  /** Stop advancing after this many fixes (the rider then holds still), so a
+   * screenshot of the ride screen can settle. Unset walks the whole line. */
+  readonly maxFixes?: number;
   readonly accuracyMeters?: number;
   readonly setInterval?: (handler: () => void, ms: number) => number;
   readonly clearInterval?: (handle: number) => void;
@@ -106,6 +109,7 @@ export function createFixturePositionSource(
     routeLine,
     now = (): string => new Date().toISOString(),
     intervalMs = 1000,
+    maxFixes,
     accuracyMeters = 8,
     setInterval: schedule = (handler, ms): number =>
       globalThis.setInterval(handler, ms) as unknown as number,
@@ -116,6 +120,7 @@ export function createFixturePositionSource(
 
   let selectedSource: "browser" | "fixture" | null = null;
   let travelled = 0;
+  let fixes = 0;
 
   return {
     async permission(): Promise<Exclude<PositionPermission, "unknown">> {
@@ -137,7 +142,8 @@ export function createFixturePositionSource(
         const line = routeLine();
         const at = along(line, travelled);
         if (at === null) return;
-        travelled += (FIXTURE_SPEED_MPS * intervalMs) / 1000;
+        fixes += 1;
+        if (maxFixes === undefined || fixes < maxFixes) travelled += (FIXTURE_SPEED_MPS * intervalMs) / 1000;
         const position: RawPosition = {
           coordinate: at.coordinate,
           observedAt: now(),

@@ -111,6 +111,16 @@ export interface RideClientProps {
   readonly fixturePosition?: boolean;
 }
 
+/** Screenshot tests ask the fixture rider to hold still after a few fixes. */
+function fixtureHold(): { readonly maxFixes?: number } {
+  try {
+    const value = Number(window.localStorage.getItem("og.rideFixture.maxFixes"));
+    return Number.isInteger(value) && value > 0 ? { maxFixes: value } : {};
+  } catch {
+    return {};
+  }
+}
+
 function clearRecordingStartIntentFromUrl(): void {
   const url = new URL(window.location.href);
   url.searchParams.delete("record");
@@ -341,6 +351,7 @@ export function RideClient({
             ? createFixturePositionSource({
                 browserSource: createBrowserPositionSource(),
                 routeLine: () => routeLine,
+                ...fixtureHold(),
               })
             : nativeShellPositionSource() ?? createBrowserPositionSource()),
           onSessionFix: (fix, appliedState) => {
