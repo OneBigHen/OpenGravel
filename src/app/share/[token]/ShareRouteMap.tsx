@@ -1,5 +1,7 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
+
 import { staticRouteMapUrl } from "@/application/map/static-map";
 import type { Coordinate } from "@/domain/ride/types";
 import { useResolvedTheme } from "@/ui/appearance/use-appearance";
@@ -24,8 +26,16 @@ export function ShareRouteMap({
   readonly token?: string;
 }) {
   const night = useResolvedTheme() === "night";
+  // The server does not know the rider's theme, and a Day static map must never
+  // flash under Night chrome. Draw the route's own line first, then the map in
+  // the theme the browser actually resolved.
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
   const image =
-    token === undefined
+    token === undefined || !mounted
       ? null
       : staticRouteMapUrl(line, {
           token,
