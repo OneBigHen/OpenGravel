@@ -17,6 +17,9 @@ const TITLE = "Saved exact loop";
 const LOOP_GPX = "tests/fixtures/import/loop.gpx";
 
 test.use({ viewport: PHONE, hasTouch: true, geolocation: RIDER, permissions: ["geolocation"] });
+// Plan, save, reload, reopen, then plan again: several fixture plans with their
+// 2 s latency window, so this one story gets more than the 30 s default.
+test.setTimeout(120_000);
 
 /** Every `/api/route-plan` request from now on: each one is the router being asked. */
 function countPlanRequests(page: Page): { readonly count: () => number } {
@@ -57,6 +60,9 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
   expect(planned.time).not.toBe("");
   expect(planned.miles).not.toBe("");
 
+  // On a phone, the summary's Save opens the sheet on the name box.
+  await page.getByTestId("summary-save").click();
+  await expect(page.getByTestId("named-ride-title")).toBeVisible();
   await page.getByTestId("named-ride-title").fill(TITLE);
   await page.getByTestId("save-named-ride").click();
   await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
