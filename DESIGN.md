@@ -189,6 +189,12 @@ the primary button.
   glass legend chip at the bottom-left that opens Layers. A saved layer choice always wins, and
   turning a layer off sticks. The chip is a legend, not a control: the home screen still keeps only
   search, Loop and Ride. Layer data loads after the map's first paint.
+- 2026-11-11 Owner (round 3 plan, restructure call 1, R3-1 "saved means exact"): opening a saved,
+  imported or curated ride shows its stored line with its saved miles, time and surface, and never asks
+  the router. One secondary "Plan it again" button under the ride replans the saved request and says
+  once what changed. A ride saved before lines were kept replans once and says "Planned again: the saved
+  line was not stored." An imported track whose ends meet within 150 m opens as "Loop from <place>".
+  A saved line's closure check reads "out of date", never a clear result from another day.
 
 ## Open proposals
 
