@@ -140,10 +140,6 @@
   background: var(--og-press);
 }
 
-.og-style__chip input:checked + span {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-style__chip input:focus-visible + span,
 .og-style__switch input:focus-visible,

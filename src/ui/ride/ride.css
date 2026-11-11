@@ -1716,10 +1716,6 @@
   cursor: pointer;
 }
 
-.og-ride-interest__filter[aria-pressed="true"] {
-  border-color: var(--og-line-strong);
-  background: var(--og-primary);
-}
 
 .og-ride-interest__chip {
   display: flex;
@@ -1929,10 +1925,6 @@
   cursor: pointer;
 }
 
-.og-ride .og-places-control__option[aria-pressed="true"] {
-  border-color: var(--og-line-strong);
-  background: var(--og-primary);
-}
 
 .og-ride .og-places-control__option:disabled {
   cursor: default;

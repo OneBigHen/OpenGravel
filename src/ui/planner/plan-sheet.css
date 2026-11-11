@@ -298,10 +298,6 @@
     white-space: nowrap;
   }
 
-  .og-phone-style__chip input:checked + span {
-    background: var(--og-primary);
-    color: var(--og-on-primary);
-  }
 
   .og-phone-style__chip input:focus-visible + span {
     outline: var(--og-focus-width) solid var(--og-focus-ring);

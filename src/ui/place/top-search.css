@@ -174,10 +174,6 @@
     inset: -4px 0;
   }
 
-  .og-search-chips button[aria-pressed="true"] {
-    background: var(--og-primary);
-    color: var(--og-on-primary);
-  }
 
   .og-search-chips__glyph {
     flex: none;

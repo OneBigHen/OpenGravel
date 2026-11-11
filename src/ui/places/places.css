@@ -145,10 +145,6 @@
   cursor: pointer;
 }
 
-.og-places-overlay--planner .og-places-control__option[aria-pressed="true"] {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-places-overlay--planner .og-places-control__option:disabled {
   color: var(--og-ink-2);

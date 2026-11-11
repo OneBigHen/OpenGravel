@@ -312,10 +312,6 @@
   cursor: pointer;
 }
 
-.og-settings__segment[aria-checked="true"] {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 /* Disclosures. */
 .og-settings__disclosure > summary {

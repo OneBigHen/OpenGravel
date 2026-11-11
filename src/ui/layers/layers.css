@@ -451,11 +451,6 @@
   cursor: pointer;
 }
 
-.og-layers__option[aria-pressed="true"] {
-  border-color: var(--og-primary);
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-layers__option:disabled,
 .og-layers__subswitch:disabled {

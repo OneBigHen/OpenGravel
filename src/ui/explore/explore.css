@@ -103,10 +103,6 @@
   cursor: pointer;
 }
 
-.og-explore__lens > [role="tab"][aria-selected="true"] {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 /* Toolbar: search, then the quick chips (Filters is the last chip). */
 .og-explore__toolbar {
@@ -196,11 +192,6 @@
   inset: -4px 0;
 }
 
-.og-explore__quick-chip:is([aria-pressed="true"], [data-filter="on"]) {
-  border-color: var(--og-primary);
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-explore__quick-chip:disabled {
   border-color: var(--og-line);

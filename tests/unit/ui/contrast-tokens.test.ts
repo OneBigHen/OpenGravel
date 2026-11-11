@@ -51,6 +51,12 @@ describe.each(["day", "night"] as const)("contrast — %s", (name) => {
     }
   });
 
+  it("a selected option's ring reads as a graphic (3:1) on the control track", () => {
+    for (const track of ["--og-surface", "--og-surface-2"]) {
+      expect(contrastRatio(get("--og-selected-ring"), get(track)), `ring on ${track}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("never uses pure black or pure white for a surface", () => {
     for (const surface of surfaces) expect(["#000000", "#ffffff"]).not.toContain(get(surface));
   });

@@ -74,10 +74,6 @@
   cursor: pointer;
 }
 
-.og-rides__segment[aria-pressed="true"] {
-  background: var(--og-primary);
-  color: var(--og-on-primary);
-}
 
 .og-rides__search {
   margin-top: var(--og-space-3);
