@@ -18,9 +18,10 @@
  * - the answer claims no score and no evidence (`unscored`, evidence empty), so
  *   the planner keeps saying "surface unknown" rather than inventing a verdict.
  *
- * Only a published catalog route qualifies. A saved or imported ride's line is
- * the rider's own record or track, not a routing answer, so those rides open the
- * ordinary way and are planned by the planner itself.
+ * The same handoff opens a ride from My rides (R3-1, "saved means exact"): a
+ * ride saved from the planner opens on the line it was saved with, its card's
+ * numbers and its measured surface; an imported track opens on its own track.
+ * Neither is planned again unless the rider asks ("Plan it again").
  *
  * The handoff is one short-lived session-storage record, so it survives the
  * client-side navigation and nothing else: it is dropped as soon as the planner
@@ -30,14 +31,21 @@
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { CatalogEntry } from "@/application/explore/catalog";
 import { createExploreDerivative, parseCatalogEntry, sourceKindForEntry } from "@/application/explore/catalog";
-import type { LibraryServicePort } from "@/application/library/library-service";
+import type { LibraryServicePort, SavedRideLine } from "@/application/library/library-service";
 import type { ClientPlanningService } from "@/application/planner/client-planning-service";
 import { UNSCORED_POLICY_VERSION } from "@/application/planner/planning-controller";
 import { emptyRouteRoles, type PlanningSessionSnapshot } from "@/application/planner/planning-session";
 import type { GeometryPayload } from "@/domain/geometry/types";
 import type { GeometryRef, RideId } from "@/domain/ride/ids";
 import type { BikeConstraintSnapshot, Coordinate, RideDocument } from "@/domain/ride/types";
-import type { RouteBundle, RouteCandidate, RouteScore, RouteScoreComponents } from "@/domain/route/types";
+import type {
+  RouteBundle,
+  RouteCandidate,
+  RouteEvidence,
+  RouteInstruction,
+  RouteScore,
+  RouteScoreComponents,
+} from "@/domain/route/types";
 import { asRouteCandidateId } from "@/domain/route/ids";
 
 /** The one key the handoff uses; it holds one ride at a time. */
@@ -76,7 +84,10 @@ export interface PreparedRouteStorage {
   removeItem(key: string): void;
 }
 
-/** One route handed from Explore to the planner, ready to be the answer. */
+/** Where a handed-over line came from. Absent means a catalog route. */
+export type PreparedRouteOrigin = "catalog" | "saved" | "import";
+
+/** One route handed from Explore or My rides to the planner, ready to be the answer. */
 export interface PreparedRoute {
   readonly version: 1;
   readonly rideId: RideId;
@@ -85,6 +96,12 @@ export interface PreparedRoute {
   readonly distanceMeters: number;
   readonly durationSeconds: number;
   readonly preparedAt: string;
+  readonly origin?: PreparedRouteOrigin;
+  /** The saved ride this line came from, for "Plan it again". */
+  readonly sourceRideId?: RideId;
+  /** Measured facts kept with a saved line; a catalog line carries none. */
+  readonly evidence?: RouteEvidence;
+  readonly instructions?: readonly RouteInstruction[];
 }
 
 function browserStorage(): PreparedRouteStorage | null {
@@ -130,11 +147,31 @@ function routeNumbers(entry: CatalogEntry): { readonly distanceMeters: number; r
   }
   // The catalog carries no ride time: borrow the route page's estimate, rounded
   // the same way, so the planner's card does not state a second number.
+  return { distanceMeters, durationSeconds: estimatedRideSeconds(distanceMeters) };
+}
+
+/**
+ * The route page's ride-time estimate for a line nobody timed (a catalog route
+ * with no published time, an imported track with no timestamps), rounded to a
+ * quarter hour so it never reads as a measurement.
+ */
+export function estimatedRideSeconds(distanceMeters: number): number {
   const minutes = Math.max(
     ESTIMATE_STEP_MINUTES,
     Math.round((distanceMeters / 1609.344 / ESTIMATE_MPH) * 60 / ESTIMATE_STEP_MINUTES) * ESTIMATE_STEP_MINUTES,
   );
-  return { distanceMeters, durationSeconds: minutes * 60 };
+  return minutes * 60;
+}
+
+/** Write the one handoff record; `false` when this storage refuses it. */
+function handOver(prepared: PreparedRoute, storage: PreparedRouteStorage): boolean {
+  try {
+    storage.setItem(PREPARED_ROUTE_STORAGE_KEY, JSON.stringify(prepared));
+    return true;
+  } catch {
+    // A storage that refuses the write only costs the rider the replan.
+    return false;
+  }
 }
 
 /**
@@ -171,13 +208,7 @@ export async function prepareExploreRoute(
     ...numbers,
     preparedAt,
   };
-  try {
-    storage.setItem(PREPARED_ROUTE_STORAGE_KEY, JSON.stringify(prepared));
-  } catch {
-    // A storage that refuses the write only costs the rider the replan.
-    return null;
-  }
-  return prepared;
+  return handOver(prepared, storage) ? prepared : null;
 }
 
 /**
@@ -197,6 +228,14 @@ interface OpenRideMarker {
   readonly version: 1;
   readonly rideId: RideId;
   readonly requestedAt: string;
+  /** What the planner says once when it opens the ride, e.g. why it replanned. */
+  readonly message?: string;
+}
+
+/** The ride the next boot opens, and what it says about it once. */
+export interface RideToRestore {
+  readonly rideId: RideId;
+  readonly message: string | null;
 }
 
 /** What a rider gets back when they tap "Ride this" on a curated map ride. */
@@ -270,10 +309,97 @@ export async function fetchCatalogRide(
   return parseCatalogEntry(route);
 }
 
+/** What the planner says once when a saved ride had no line to open on. */
+export const SAVED_LINE_MISSING_MESSAGE = "Planned again: the saved line was not stored.";
+
+/**
+ * A closure check belongs to the day it was asked. A saved line keeps none, so
+ * its "checked" line says the check is out of date instead of "did not answer"
+ * or, worse, a clear result from another day.
+ */
+function staleClosureCheck(): RouteEvidence[string] {
+  return { value: null, status: "stale", confidence: null, provenance: [], reason: "Checked when the ride was saved, not today." };
+}
+
+/** What opening a ride from My rides did, for the caller's navigation. */
+export interface OpenedLibraryRideHandoff {
+  readonly rideId: RideId;
+  /** True when the planner opens on the ride's own line, with no plan. */
+  readonly prepared: boolean;
+  /** Said once by the planner when it opens the ride; `null` for nothing. */
+  readonly message: string | null;
+}
+
+/**
+ * Open a ride from My rides the way "Ride this" opens a catalog route (R3-1):
+ * a working copy becomes the next draft, and the ride's own line, kept when it
+ * was saved or imported, is handed to the planner as its answer. A ride with no
+ * line is planned, and says so when it should have had one.
+ */
+export async function openLibraryRide(
+  rideId: RideId,
+  library: Pick<LibraryServicePort, "openRide" | "openSavedRide">,
+  geometryStore: Pick<GeometryStore, "put"> | null,
+  options: {
+    readonly now?: () => string;
+    readonly storage?: PreparedRouteStorage | null;
+  } = {},
+): Promise<OpenedLibraryRideHandoff> {
+  if (library.openSavedRide === undefined) {
+    const document = await library.openRide(rideId);
+    return { rideId: document.rideId, prepared: false, message: null };
+  }
+  const opened = await library.openSavedRide(rideId);
+  const message = opened.lineMissing ? SAVED_LINE_MISSING_MESSAGE : null;
+  if (opened.line === null || geometryStore === null) {
+    return { rideId: opened.document.rideId, prepared: false, message };
+  }
+  const storage = options.storage === undefined ? browserStorage() : options.storage;
+  if (storage === null) return { rideId: opened.document.rideId, prepared: false, message };
+  const now = options.now ?? ((): string => new Date().toISOString());
+  const prepared = await prepareSavedLine(opened.line, opened.document, rideId, geometryStore, now());
+  return { rideId: opened.document.rideId, prepared: handOver(prepared, storage), message };
+}
+
+async function prepareSavedLine(
+  line: SavedRideLine,
+  document: RideDocument,
+  sourceRideId: RideId,
+  geometryStore: Pick<GeometryStore, "put">,
+  preparedAt: string,
+): Promise<PreparedRoute> {
+  // A copy, like a catalog line: the working ride must not lose its line when
+  // the saved ride it came from is deleted.
+  const record = await geometryStore.put(
+    { kind: "line", coordinates: line.geometry.map(copyCoordinate) },
+    { kind: "route", now: preparedAt },
+  );
+  const evidence: RouteEvidence = line.origin === "saved"
+    ? { ...line.evidence, closures: staleClosureCheck() }
+    : line.evidence;
+  return {
+    version: 1,
+    rideId: document.rideId,
+    rideRevision: document.revision,
+    geometryRef: record.geometryRef,
+    distanceMeters: line.distanceMeters,
+    durationSeconds: line.durationSeconds ?? estimatedRideSeconds(line.distanceMeters),
+    preparedAt,
+    origin: line.origin,
+    sourceRideId,
+    evidence,
+    ...(line.instructions === undefined ? {} : { instructions: line.instructions }),
+  };
+}
+
 /** Write the one ride a map card's "Ride this" just asked the planner to open. */
 export function markRideToRestore(
   rideId: RideId,
-  options: { readonly now?: () => string; readonly storage?: PreparedRouteStorage | null } = {},
+  options: {
+    readonly now?: () => string;
+    readonly storage?: PreparedRouteStorage | null;
+    readonly message?: string | null;
+  } = {},
 ): void {
   const storage = options.storage === undefined ? browserStorage() : options.storage;
   if (storage === null) return;
@@ -281,6 +407,7 @@ export function markRideToRestore(
     version: 1,
     rideId,
     requestedAt: (options.now ?? ((): string => new Date().toISOString()))(),
+    ...(options.message == null || options.message === "" ? {} : { message: options.message }),
   };
   try {
     storage.setItem(OPEN_RIDE_STORAGE_KEY, JSON.stringify(marker));
@@ -296,6 +423,15 @@ export function takeRideToRestore(options: {
   readonly storage?: PreparedRouteStorage | null;
   readonly maxAgeMs?: number;
 } = {}): RideId | null {
+  return takeRideToRestoreRequest(options)?.rideId ?? null;
+}
+
+/** The marker with its one-time message; read and dropped like `takeRideToRestore`. */
+export function takeRideToRestoreRequest(options: {
+  readonly now?: () => string;
+  readonly storage?: PreparedRouteStorage | null;
+  readonly maxAgeMs?: number;
+} = {}): RideToRestore | null {
   const storage = options.storage === undefined ? browserStorage() : options.storage;
   if (storage === null) return null;
   let raw: string | null = null;
@@ -319,7 +455,8 @@ export function takeRideToRestore(options: {
   if (typeof record["requestedAt"] !== "string" || !Number.isFinite(Date.parse(record["requestedAt"]))) return null;
   const now = Date.parse((options.now ?? ((): string => new Date().toISOString()))());
   if (!Number.isFinite(now) || now - Date.parse(record["requestedAt"]) > (options.maxAgeMs ?? OPEN_RIDE_TTL_MS)) return null;
-  return record["rideId"] as RideId;
+  const message = typeof record["message"] === "string" && record["message"].trim() !== "" ? record["message"] : null;
+  return { rideId: record["rideId"] as RideId, message };
 }
 
 /**
@@ -329,10 +466,14 @@ export function takeRideToRestore(options: {
  * composition root twice, and the first render must not consume the marker and
  * lose the ride for the second.
  */
-let pendingRideRestore: RideId | null | undefined;
+let pendingRideRestore: RideToRestore | null | undefined;
 
 export function takeRideToRestoreOnce(): RideId | null {
-  if (pendingRideRestore === undefined) pendingRideRestore = takeRideToRestore();
+  return takeRideToRestoreRequestOnce()?.rideId ?? null;
+}
+
+export function takeRideToRestoreRequestOnce(): RideToRestore | null {
+  if (pendingRideRestore === undefined) pendingRideRestore = takeRideToRestoreRequest();
   return pendingRideRestore;
 }
 
@@ -346,6 +487,14 @@ function parsePreparedRoute(value: unknown): PreparedRoute | null {
   if (typeof record["preparedAt"] !== "string" || !Number.isFinite(Date.parse(record["preparedAt"]))) return null;
   if (typeof record["distanceMeters"] !== "number" || !Number.isFinite(record["distanceMeters"]) || record["distanceMeters"] <= 0) return null;
   if (typeof record["durationSeconds"] !== "number" || !Number.isFinite(record["durationSeconds"]) || record["durationSeconds"] <= 0) return null;
+  const origin = record["origin"];
+  if (origin !== undefined && origin !== "catalog" && origin !== "saved" && origin !== "import") return null;
+  const sourceRideId = record["sourceRideId"];
+  if (sourceRideId !== undefined && (typeof sourceRideId !== "string" || sourceRideId.length === 0)) return null;
+  const evidence = record["evidence"];
+  if (evidence !== undefined && (typeof evidence !== "object" || evidence === null || Array.isArray(evidence))) return null;
+  const instructions = record["instructions"];
+  if (instructions !== undefined && !Array.isArray(instructions)) return null;
   return {
     version: 1,
     rideId: record["rideId"] as RideId,
@@ -354,6 +503,10 @@ function parsePreparedRoute(value: unknown): PreparedRoute | null {
     distanceMeters: record["distanceMeters"],
     durationSeconds: record["durationSeconds"],
     preparedAt: record["preparedAt"],
+    ...(origin === undefined ? {} : { origin }),
+    ...(sourceRideId === undefined ? {} : { sourceRideId: sourceRideId as RideId }),
+    ...(evidence === undefined ? {} : { evidence: evidence as RouteEvidence }),
+    ...(instructions === undefined ? {} : { instructions: instructions as readonly RouteInstruction[] }),
   };
 }
 
@@ -469,23 +622,41 @@ function unscoredScore(): RouteScore {
   };
 }
 
+/** Diagnostics names for a handed-over line; never rider copy. */
+const PREPARED_PROVIDER: Readonly<Record<PreparedRouteOrigin, string>> = {
+  catalog: "explore-catalog",
+  saved: "saved-line",
+  import: "imported-track",
+};
+
+/** True when the answer on screen is a saved ride's own line (shows "Plan it again"). */
+export function isSavedLineCandidate(candidate: Pick<RouteCandidate, "provider"> | undefined): boolean {
+  return candidate?.provider.providerId === PREPARED_PROVIDER.saved;
+}
+
 /** The answer the planner shows for the prepared ride, before any attempt. */
 export function preparedRouteAnswer(prepared: PreparedRoute): RouteBundle {
   // A ride session only binds `route_…` identities (validateSessionRouteBinding),
   // so the handed-over line wears that prefix or Start ride is refused.
-  const candidateId = asRouteCandidateId(`route_explore-${prepared.rideId}`);
+  const origin = prepared.origin ?? "catalog";
+  const candidateId = asRouteCandidateId(
+    origin === "catalog" ? `route_explore-${prepared.rideId}` : `route_${origin}-${prepared.rideId}`,
+  );
+  const providerId = PREPARED_PROVIDER[origin];
   const candidate: RouteCandidate = {
     id: candidateId,
-    // Provenance for diagnostics only: the line came from the published route.
-    provider: { providerId: "explore-catalog", profile: "catalog-route" },
+    // Provenance for diagnostics only: where the line came from.
+    provider: { providerId, profile: `${origin}-route` },
     geometryRef: prepared.geometryRef,
     distanceMeters: prepared.distanceMeters,
     durationSeconds: prepared.durationSeconds,
     eligibility: { eligible: true, failures: [] },
-    evidence: {},
+    // Only what was measured and kept with the line; a catalog line has none.
+    evidence: prepared.evidence ?? {},
+    ...(prepared.instructions === undefined ? {} : { instructions: prepared.instructions }),
     score: unscoredScore(),
     warnings: [],
-    fingerprint: `explore-catalog:${prepared.geometryRef}`,
+    fingerprint: `${providerId}:${prepared.geometryRef}`,
   };
   return {
     rideId: prepared.rideId,
@@ -571,11 +742,11 @@ export function withPreparedRoute(
       // The same ride at the same revision is the catalog ride, unchanged: a
       // restore after a reload asks for it again, and re-planning it would
       // replace the published line with a different one. Keep the line.
-      if (!live && input.rideId === prepared.rideId && input.rideRevision === prepared.rideRevision) {
+      if (!live && input.fresh !== true && input.rideId === prepared.rideId && input.rideRevision === prepared.rideRevision) {
         return Promise.resolve();
       }
-      // An edit (or another ride) owns the answer from now on.
-      if (input.rideId !== prepared.rideId || input.rideRevision !== prepared.rideRevision) {
+      // An edit, another ride, or the rider's own "Plan it again" owns the answer from now on.
+      if (input.fresh === true || input.rideId !== prepared.rideId || input.rideRevision !== prepared.rideRevision) {
         options.onDiverged?.();
       }
       live = true;

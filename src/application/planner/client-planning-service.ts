@@ -78,6 +78,11 @@ export interface ClientPlanningBeginInput {
   readonly rideId: RideId;
   readonly rideRevision: number;
   readonly intent: RideIntent;
+  /**
+   * The rider asked for a new plan of this same revision ("Plan it again" on a
+   * saved line, R3-1): a held line must not answer it.
+   */
+  readonly fresh?: boolean;
 }
 
 /** The surface a store container consumes. */

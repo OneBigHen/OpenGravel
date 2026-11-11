@@ -19,8 +19,14 @@
 import { useCallback } from "react";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
-import { fetchCatalogRide, markRideToRestore, openCatalogRide } from "@/application/explore/ride-this";
+import {
+  fetchCatalogRide,
+  markRideToRestore,
+  openCatalogRide,
+  openLibraryRide,
+} from "@/application/explore/ride-this";
 import type { LibraryServicePort } from "@/application/library/library-service";
+import type { RideId } from "@/domain/ride/ids";
 
 export function useOpenCuratedRide(options: {
   readonly libraryService: LibraryServicePort | undefined;
@@ -33,8 +39,33 @@ export function useOpenCuratedRide(options: {
     if (entry === null) throw new Error("That ride could not be read.");
     const opened = await openCatalogRide(entry, libraryService, geometryStore ?? null);
     markRideToRestore(opened.rideId);
-    // A full load, deliberately: the planner restores its ride once, at boot.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the planner restores a ride only at boot
-    window.location.assign("/");
+    loadPlanner();
+  }, [geometryStore, libraryService]);
+}
+
+/** A full load, deliberately: the planner restores its ride once, at boot. */
+function loadPlanner(): void {
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- the planner restores a ride only at boot
+  window.location.assign("/");
+}
+
+/**
+ * Open a ride from My rides (R3-1, "saved means exact").
+ *
+ * The same path as the curated "Ride this" above: a working copy of the saved
+ * ride, its own kept line handed to the planner as the answer, and a one-boot
+ * marker naming the ride. A saved ride opens as exactly the line that was saved
+ * and an imported track as its own track; neither asks the router.
+ */
+export function useOpenSavedRide(options: {
+  readonly libraryService: LibraryServicePort | undefined;
+  readonly geometryStore: GeometryStore | undefined;
+}): (rideId: RideId) => Promise<void> {
+  const { libraryService, geometryStore } = options;
+  return useCallback(async (rideId: RideId): Promise<void> => {
+    if (libraryService === undefined) throw new Error("This page cannot open rides.");
+    const opened = await openLibraryRide(rideId, libraryService, geometryStore ?? null);
+    markRideToRestore(opened.rideId, { message: opened.message });
+    loadPlanner();
   }, [geometryStore, libraryService]);
 }

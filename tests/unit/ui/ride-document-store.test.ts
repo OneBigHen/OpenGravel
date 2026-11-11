@@ -114,6 +114,30 @@ describe("createRideDocumentStore", () => {
     expect(newRideBike).toHaveBeenCalledOnce();
   });
 
+  it("names a ride opened from My rides instead of calling it a restored draft (R3-1)", async () => {
+    const opened = createRideDocument({ now: now(), title: "Rothrock loop" });
+    const repository = {
+      saveRide: vi.fn().mockResolvedValue({ ok: true }),
+      loadDraftPointer: vi.fn().mockResolvedValue(null),
+      loadRide: vi.fn().mockResolvedValue({ ok: true, document: opened }),
+      deleteRide: vi.fn(),
+    };
+
+    const named = createRideDocumentStore({ document: createRideDocument({ now: now() }), repository, now, restoreRideId: opened.rideId });
+    await vi.waitFor(() => expect(named.getState().document.rideId).toBe(opened.rideId));
+    expect(named.getState().restoreStatus.message).toBe("Opened “Rothrock loop”");
+
+    const replanned = createRideDocumentStore({
+      document: createRideDocument({ now: now() }),
+      repository,
+      now,
+      restoreRideId: opened.rideId,
+      restoreMessage: "Planned again: the saved line was not stored.",
+    });
+    await vi.waitFor(() => expect(replanned.getState().document.rideId).toBe(opened.rideId));
+    expect(replanned.getState().restoreStatus.message).toBe("Planned again: the saved line was not stored.");
+  });
+
   it("restores the persisted draft with its own bike snapshot", async () => {
     const savedBike = { ...defaultRideIntent().bike, bikeId: "bike_saved", fuelRangeMiles: 230, reserveMiles: 20 };
     const saved = createRideDocument({ now: now(), bike: savedBike });

@@ -110,6 +110,12 @@ export interface RideDocumentStoreOptions {
    * way out, and the ride the rider just tapped must win.
    */
   readonly restoreRideId?: RideId | null;
+  /**
+   * What the planner says once when it opens `restoreRideId` (R3-1): why a saved
+   * ride was planned again. Without it an opened ride is named ("Opened …"),
+   * never called a restored draft.
+   */
+  readonly restoreMessage?: string | null;
 }
 
 const CHECKPOINT_DEBOUNCE_MS = 250;
@@ -535,12 +541,13 @@ export function createRideDocumentStore(
   const adoptRestoredDocument = (
     restored: RideDocument,
     pointer: RideDraftPointer,
+    message = "Restored your draft",
   ): void => {
     baseRevision = restored.revision;
     reconcileBootstrapPointer(pointer);
     setState({
       document: restored,
-      restoreStatus: { state: "restored", message: "Restored your draft" },
+      restoreStatus: { state: "restored", message },
       planningRestored: false,
     });
     scheduleCheckpoint(restored);
@@ -579,11 +586,12 @@ export function createRideDocumentStore(
       if (options.restoreRideId !== undefined && options.restoreRideId !== null) {
         const asked = await repository.loadRide(options.restoreRideId);
         if (asked !== null && asked.ok && untouched()) {
+          const title = asked.document.title?.trim() ?? "";
           adoptRestoredDocument(asked.document, {
             id: "active",
             rideId: asked.document.rideId,
             updatedAt: asked.document.updatedAt,
-          });
+          }, options.restoreMessage ?? (title === "" ? "Opened your ride" : `Opened “${title}”`));
           return;
         }
       }

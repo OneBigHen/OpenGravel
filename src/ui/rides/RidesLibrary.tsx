@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
@@ -33,6 +32,8 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
 import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
+import { useOpenSavedRide } from "@/ui/planner/hooks/useOpenCuratedRide";
+import type { GeometryStore } from "@/application/geometry/geometry-store";
 
 const NO_EXPORT_CAPABILITIES = {
   plannedRoute: false,
@@ -163,6 +164,8 @@ export interface RidesLibraryProps {
   readonly mapboxToken?: string;
   /** Local-only reader, invoked when a recorded ride's details are expanded. */
   readonly roadProgressReader?: RoadProgressReader;
+  /** Where a ride's own line is handed to the planner from (R3-1). */
+  readonly geometryStore?: GeometryStore;
 }
 
 interface RoadProgressCache {
@@ -170,8 +173,9 @@ interface RoadProgressCache {
   readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
 }
 
-export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader }: RidesLibraryProps) {
-  const router = useRouter();
+export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore }: RidesLibraryProps) {
+  // Saved means exact (R3-1): a ride opens on its own kept line, not a new plan.
+  const openSavedRide = useOpenSavedRide({ libraryService: library, geometryStore });
   const night = useResolvedTheme() === "night";
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
   const [segment, setSegment] = useState<RideSegment>("planned");
@@ -450,8 +454,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
       if (onOpen !== undefined) {
         await onOpen(ride);
       } else {
-        await library.openRide(ride.rideId);
-        router.push("/");
+        await openSavedRide(ride.rideId);
       }
       setPendingOpen(null);
     } catch {
@@ -765,8 +768,8 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
             {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
             onImported={() => load()}
             onOpenInPlanner={async (outcome: ImportOutcome | ImportBreadcrumbOutcome) => {
-              await library.openRide(outcome.namedRide.document.rideId);
-              router.push("/");
+              // An imported track opens as its own line, never as a new plan.
+              await openSavedRide(outcome.namedRide.document.rideId);
             }}
           />
         </div>

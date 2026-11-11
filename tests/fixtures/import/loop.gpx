@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="OpenGravel test fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Hilltop loop</name></metadata>
+  <trk>
+    <name>Hilltop loop</name>
+    <trkseg>
+      <trkpt lat="40.1385" lon="-75.4385"/>
+      <trkpt lat="40.1370" lon="-75.4360"/>
+      <trkpt lat="40.1350" lon="-75.4345"/>
+      <trkpt lat="40.1325" lon="-75.4335"/>
+      <trkpt lat="40.1320" lon="-75.4370"/>
+      <trkpt lat="40.1340" lon="-75.4400"/>
+      <trkpt lat="40.1365" lon="-75.4405"/>
+      <trkpt lat="40.1383" lon="-75.4388"/>
+    </trkseg>
+  </trk>
+</gpx>
