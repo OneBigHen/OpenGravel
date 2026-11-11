@@ -139,6 +139,9 @@ for (const device of DEVICES) {
             animations: "disabled",
             caret: "hide",
             maxDiffPixels: 0,
+            // Clock readouts follow the wall clock on the ride screen (its
+            // position feed needs real time), so they are masked, not frozen.
+            mask: [page.locator('[data-metric="route.eta"], [data-metric="time.recorded"], [data-metric="time.moving"]')],
             timeout: 20_000,
           });
         });
