@@ -18,6 +18,7 @@ export { usePlannerSketch } from "./hooks/usePlannerSketch";
 export { usePlannerVisibleSession } from "./hooks/usePlannerVisibleSession";
 export { usePlannerStops } from "./hooks/usePlannerStops";
 export { useOpenCuratedRide } from "./hooks/useOpenCuratedRide";
+export { usePlanSavedAgain } from "./hooks/usePlanSavedAgain";
 export { usePlannerViewModel } from "./usePlannerViewModel";
 export { useRideGlance } from "./hooks/useRideGlance";
 export { usePlaceFlow } from "@/ui/place/usePlaceFlow";
