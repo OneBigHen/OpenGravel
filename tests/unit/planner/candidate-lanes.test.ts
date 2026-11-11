@@ -189,6 +189,15 @@ describe("resolveLanes", () => {
       expect(lanes[0]?.maxCalls).toBe(1);
     });
 
+    it("keeps a Mixed A-to-B ride on its own profile (no dirt-first swap)", () => {
+      const lanes = firstAnswer({
+        intent: { shape: "destination", roadCharacter: "balanced", surface: { preference: "mixed" } },
+        requestedProfile: "motorcycle_fastest",
+      });
+
+      expect(lanes.map((lane) => lane.profile)).toEqual(["motorcycle_fastest"]);
+    });
+
     it("runs a Dirt OK loop on the rider's own adventure profile", () => {
       const lanes = firstAnswer({
         intent: { shape: "loop", roadCharacter: "efficient", surface: { preference: "dirt-preferred" } },

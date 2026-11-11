@@ -167,6 +167,18 @@ function balancedProfile(declared: readonly string[]): string {
   return BASELINE_LANE_PROFILE;
 }
 
+/**
+ * Whether the first answer should go looking for dirt: a Dirt OK rider always,
+ * and a Mixed rider on a loop. A Mixed A-to-B ride keeps its own profile,
+ * because Mixed is the default surface and an ordinary trip's settled pick is
+ * rarely the adventure line, so starting there would only add a swap.
+ */
+function seeksDirtFirst(intent: PipelineIntent): boolean {
+  const preference = intent.surface?.preference;
+  if (preference === "dirt-preferred") return true;
+  return preference === "mixed" && intent.shape === "loop";
+}
+
 /** The lane that draws the road character the rider asked for, on that profile. */
 function riderCharacterLane(profile: string): CandidateLane {
   return {
@@ -189,8 +201,8 @@ function riderCharacterLane(profile: string): CandidateLane {
  * 1. A character the rider chose by name (`motorcycle_twisty`,
  *    `motorcycle_scenic`, or `motorcycle_adventure` for a dirt rider) is the
  *    request's own profile, and it is used when the deployment serves it.
- * 2. A rider who accepts non-paved riding (`mixed` or `dirt-preferred`) and
- *    asked for no other character gets the adventure profile, which is the
+ * 2. A Dirt OK rider, or a Mixed rider on a loop, who asked for no other
+ *    character gets the adventure profile, which is the
  *    profile that goes looking for dirt; the fastest profile stays on pavement
  *    almost everywhere. Serving `motorcycle_adventure` is checked here, never
  *    assumed.
@@ -213,7 +225,7 @@ function firstAnswerLane(
   const profile =
     requestedServed && requested !== BASELINE_LANE_PROFILE
       ? requested
-      : prefersNonPaved(input.intent) && serves(SURFACE_LANE_PROFILE)
+      : seeksDirtFirst(input.intent) && serves(SURFACE_LANE_PROFILE)
         ? SURFACE_LANE_PROFILE
         : requestedServed
           ? requested
