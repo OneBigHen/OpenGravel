@@ -12,3 +12,10 @@ Next steps:
 1. Show the owner Fable's owner-picks as side-by-side shots; record answers in DESIGN.md decision log.
 2. Execute work packages in Fable's order; one heavy worker at a time on docker-dev.
 3. Every PR: before/after shots gallery; routing PRs attach a scorecard run. No deploy without owner's go.
+
+## Status at handoff (2026-11-10 evening)
+- Fable's plan is DONE: `.fable/ROUND-PLAN.md` (8 work packages, 3 owner picks). Committed on `design/world-class` (not pushed).
+- Package 2 brief ready: `.fable/pkg2-brief.md`. Codex Sol quota was out (exit 75) → run it with a Sonnet subagent (`model: "sonnet"`, background) or retry `delegate sol --wt og-twisty -f .fable/pkg2-brief.md` once quota resets.
+- `npm ci` done in this worktree.
+- Do package 1 (screenshot baselines + `css:budget` gate, with planned-route and ride-screen states) yourself first; then 3 (Layers sheet) beside package 2.
+- Owner picks need side-by-side shots (green vs neutral selected buttons; Mapbox grey night vs own dark terrain; glass everywhere vs glass only over map). Build them after package 1.
