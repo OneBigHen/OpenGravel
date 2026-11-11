@@ -114,7 +114,9 @@ async function fuzz(page: Page, cdp: CDPSession, count: number, seed: number): P
       await touch(cdp, "touchMove", [away]);
       await touch(cdp, "touchMove", [{ x: from.x + 3, y: from.y + 2 }]);
       await touch(cdp, "touchEnd", []);
-    } else await press(page, cdp, from, 60 + 300 * random());
+    // A tap, never a hold: stay well under the 450 ms long press (and the
+    // 300 ms pin hold) even when the browser adds 100 ms of lag to the wait.
+    } else await press(page, cdp, from, 60 + 140 * random());
     await page.waitForTimeout(30);
   }
   await page.waitForTimeout(400);
