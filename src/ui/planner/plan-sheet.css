@@ -190,6 +190,10 @@
     white-space: nowrap;
   }
 
+  .og-phone-summary__surface { display: grid; gap: 6px; margin-top: var(--og-space-2); }
+  .og-phone-summary__surface-line { margin: 0; font-size: var(--og-text-meta); font-weight: 600; }
+  .og-phone-summary__strip { max-width: none; height: 8px; }
+
   .og-phone-summary__start {
     margin-top: var(--og-space-2);
   }

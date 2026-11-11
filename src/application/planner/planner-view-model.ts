@@ -179,6 +179,8 @@ export interface RouteCardVm {
   readonly durationLabel: string;
   /** The same duration in seconds, so the sheet can say when the ride gets back. */
   readonly durationSeconds?: number;
+  /** The ride's length, so the sheet can turn surface shares into miles. */
+  readonly distanceMeters?: number;
   readonly distanceLabel: string;
   readonly addedTimeLabel: string | null;
   /**
@@ -745,6 +747,7 @@ function routeCards(
       roleLabel: roleLabelFor(role, placeholderSelection),
       durationLabel: formatDuration(candidate.durationSeconds),
       durationSeconds: candidate.durationSeconds,
+      distanceMeters: candidate.distanceMeters,
       distanceLabel: formatDistance(candidate.distanceMeters),
       addedTimeLabel:
         reference === null
