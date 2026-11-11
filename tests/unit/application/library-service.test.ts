@@ -8,6 +8,7 @@ import { createRideRepository } from "@/infrastructure/storage/ride-repository";
 import { VNextDatabase } from "@/infrastructure/storage/db";
 import { buildCorridorPackManifest } from "@/domain/offline/capabilities";
 import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
+import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
 import { createRecordingTelemetry } from "@/domain/recording/telemetry";
 import { asRecordingId } from "@/domain/recording/ids";
 
@@ -436,5 +437,99 @@ describe("LibraryService planned-route geometry", () => {
     expect(record?.plannedRoute).toBeUndefined();
     expect(listed?.exportCapabilities?.plannedRoute).toBe(false);
     expect(listed?.title).toBe("Old row");
+  });
+
+  describe("opening a saved ride (R3-1, saved means exact)", () => {
+    const LINE = [
+      { lon: -77.9, lat: 40.7 },
+      { lon: -77.85, lat: 40.75 },
+      { lon: -77.8, lat: 40.7 },
+      { lon: -77.9, lat: 40.701 },
+    ];
+    const surfaceMix = {
+      value: { pavedMeters: 30_000, gravelMeters: 20_000, dirtMeters: 3_000, unknownMeters: 0, runs: [[30_000, "paved"], [23_000, "gravel"]] },
+      status: "known",
+      confidence: 0.9,
+      provenance: [{ id: "graphhopper", label: "Road data", category: "routing" }],
+    } as const;
+    const closures = {
+      value: 0,
+      status: "known",
+      confidence: 1,
+      provenance: [{ id: "511pa", label: "511PA", category: "other", observedAt: NOW }],
+    } as const;
+
+    it("opens on the stored line with the saved card's numbers and lasting facts", async () => {
+      const repository = createRideRepository({ database: database() });
+      const geometryStore = createMemoryGeometryStore();
+      const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+      const named = await service.saveNamed(createRideDocument({ now: NOW, title: "Rothrock loop" }), {
+        title: "Rothrock loop",
+        bundleSummary: { distanceMeters: 85_295, durationSeconds: 7_920 },
+        plannedRoute: {
+          geometry: LINE,
+          distanceMeters: 85_295,
+          durationSeconds: 7_920,
+          evidence: { surfaceMix, closures } as never,
+          instructions: [{ text: "Turn left", distanceMeters: 100, durationSeconds: 10, type: "turn", maneuver: "left" }],
+        },
+      });
+
+      const opened = await service.openSavedRide(named.document.rideId);
+
+      expect(opened.lineMissing).toBe(false);
+      expect(opened.document.rideId).not.toBe(named.document.rideId);
+      expect(opened.document.title).toBe("Rothrock loop");
+      expect(opened.line).toMatchObject({
+        origin: "saved",
+        geometry: LINE,
+        distanceMeters: 85_295,
+        durationSeconds: 7_920,
+        instructions: [{ text: "Turn left" }],
+      });
+      expect(opened.line?.evidence["surfaceMix"]).toEqual(surfaceMix);
+      // A closure check belongs to the day it was asked: never kept as if current.
+      expect(opened.line?.evidence["closures"]).toBeUndefined();
+    });
+
+    it("says the line was not stored for a planned ride saved without one", async () => {
+      const repository = createRideRepository({ database: database() });
+      const geometryStore = createMemoryGeometryStore();
+      const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+      const named = await service.saveNamed(createRideDocument({ now: NOW }), { title: "Old row" });
+
+      const opened = await service.openSavedRide(named.document.rideId);
+
+      expect(opened.line).toBeNull();
+      expect(opened.lineMissing).toBe(true);
+    });
+
+    it("opens an imported loop track as its own line, as a loop from its start", async () => {
+      const repository = createRideRepository({ database: database() });
+      const geometryStore = createMemoryGeometryStore();
+      const service = createLibraryService(repository, { now: () => LATER, geometryStore });
+      const stored = await geometryStore.put({ kind: "line", coordinates: LINE }, { kind: "import-track", now: NOW });
+      const base = createRideDocument({ now: NOW, title: "Imported loop", provenance: { type: "import", sourceId: "import_loop" } });
+      const start = { id: "pt_start" as never, kind: "start" as const, coordinate: LINE[0]!, provenance: { type: "import" as const, sourceId: "import_loop" } };
+      const finish = { ...start, id: "pt_finish" as never, kind: "finish" as const, coordinate: LINE.at(-1)! };
+      const document = { ...base, intent: { ...base.intent, start, finish } };
+      const named = await service.saveNamed(document, {
+        title: "Imported loop",
+        importData: {
+          originalRef: "geo_original_loop" as never,
+          tracks: [{ name: "Loop", segments: [{ geometryRef: stored.geometryRef, timestamps: [null, null, null, null], elevation: [null, null, null, null] }] }],
+          waypoints: [],
+        },
+        bundleSummary: { distanceMeters: 12_000 },
+      });
+
+      const opened = await service.openSavedRide(named.document.rideId);
+
+      expect(opened.line).toMatchObject({ origin: "import", geometry: LINE, distanceMeters: 12_000, durationSeconds: null });
+      expect(opened.document.intent.shape).toBe("loop");
+      expect(opened.document.intent.finish).toBeNull();
+      expect(opened.document.intent.start?.coordinate).toEqual(LINE[0]);
+      expect(opened.lineMissing).toBe(false);
+    });
   });
 });

@@ -22,6 +22,8 @@ import type { RecordingId } from "@/domain/recording/ids";
 import type { RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { RecordingSummary } from "@/domain/recording/types";
 import { createRideDocument } from "@/domain/ride/create";
+import { lineDistance } from "@/domain/breadcrumb/route";
+import type { RouteEvidence, RouteInstruction } from "@/domain/route/types";
 
 export interface NamedRide {
   readonly document: RideDocument;
@@ -147,6 +149,67 @@ export interface SaveNamedOptions {
 /** A route line the rider selected in the planner, at the moment of saving. */
 export interface SavePlannedRouteInput {
   readonly geometry: readonly Coordinate[];
+  /** The chosen card's distance and time, so a reopen shows the same numbers. */
+  readonly distanceMeters?: number;
+  readonly durationSeconds?: number;
+  /** The chosen card's evidence; only facts that do not go stale are kept. */
+  readonly evidence?: RouteEvidence;
+  readonly instructions?: readonly RouteInstruction[];
+}
+
+/**
+ * Evidence that describes a day, not a road: a closure check, traffic, weather,
+ * daylight and seasonal access are true when they were asked, so a saved ride
+ * never carries them into a later day as if they were still checked.
+ */
+const TIME_SENSITIVE_EVIDENCE: ReadonlySet<string> = new Set([
+  "closures",
+  "traffic",
+  "weatherExposure",
+  "daylight",
+  "access",
+]);
+
+function lastingEvidence(evidence: RouteEvidence | undefined): RouteEvidence | undefined {
+  if (evidence === undefined) return undefined;
+  const kept = Object.fromEntries(
+    Object.entries(evidence).filter(([key]) => !TIME_SENSITIVE_EVIDENCE.has(key)),
+  );
+  return Object.keys(kept).length === 0 ? undefined : JSON.parse(JSON.stringify(kept)) as RouteEvidence;
+}
+
+function finitePositive(value: number | undefined | null): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+/** Two ends this close are one place: the track is a loop (R3-1). */
+export const LOOP_ENDS_METERS = 150;
+
+/**
+ * The line a saved or imported ride is opened on, exactly as it was kept.
+ * `durationSeconds` is `null` when nothing stated a time for it (an import with
+ * no timestamps); the caller decides how to say that, never this service.
+ */
+export interface SavedRideLine {
+  readonly origin: "saved" | "import";
+  readonly geometry: readonly Coordinate[];
+  readonly distanceMeters: number;
+  readonly durationSeconds: number | null;
+  readonly evidence: RouteEvidence;
+  readonly instructions?: readonly RouteInstruction[];
+}
+
+/** What opening a ride from My rides gives the planner. */
+export interface OpenedLibraryRide {
+  /** The working copy the planner restores; it keeps the saved ride's name. */
+  readonly document: RideDocument;
+  /** The ride's own line, or `null` when the planner has to plan it. */
+  readonly line: SavedRideLine | null;
+  /**
+   * True for a planned ride saved before its line was kept: it is planned
+   * again, and the rider is told why the numbers may differ.
+   */
+  readonly lineMissing: boolean;
 }
 
 export interface LibraryExploreRide {
@@ -179,7 +242,10 @@ export interface LibraryServicePort {
     document: RideDocument,
     options?: CreateDerivativeOptions,
   ): Promise<RideDocument>;
+  /** A working copy planned again from the saved request ("Plan it again"). */
   openRide(rideId: RideId): Promise<RideDocument>;
+  /** A working copy that follows the saved or imported line exactly (R3-1). */
+  readonly openSavedRide?: (rideId: RideId) => Promise<OpenedLibraryRide>;
   readonly loadExportSource?: (rideId: RideId) => Promise<RideExportSource>;
 }
 
@@ -349,7 +415,16 @@ export class LibraryService implements LibraryServicePort {
       { kind: "line", coordinates: input.geometry.map((coordinate) => ({ ...coordinate })) },
       { kind: "route", now: savedAt },
     );
-    return { geometryRef: geometry.geometryRef };
+    const evidence = lastingEvidence(input.evidence);
+    return {
+      geometryRef: geometry.geometryRef,
+      ...(finitePositive(input.distanceMeters) ? { distanceMeters: input.distanceMeters } : {}),
+      ...(finitePositive(input.durationSeconds) ? { durationSeconds: input.durationSeconds } : {}),
+      ...(evidence === undefined ? {} : { evidence }),
+      ...(input.instructions === undefined || input.instructions.length === 0
+        ? {}
+        : { instructions: JSON.parse(JSON.stringify(input.instructions)) as readonly RouteInstruction[] }),
+    };
   }
 
   async saveNamed(document: RideDocument, options: SaveNamedOptions): Promise<NamedRide> {
@@ -625,6 +700,91 @@ export class LibraryService implements LibraryServicePort {
     return this.createDerivative("ride", rideId, record.document, { title: record.document.title });
   }
 
+  /**
+   * Open a saved ride as the line it was saved with (R3-1, "saved means exact").
+   *
+   * A ride saved from the planner reopens on its stored line with the card's own
+   * numbers and measured facts; an imported track reopens on its own track.
+   * Nothing here asks a router. What still has to be planned:
+   *
+   * - a breadcrumb, which the planner draws from its own points;
+   * - an import the rider asked to be routed along roads (it has shaping);
+   * - a planned ride saved before lines were kept (`lineMissing`).
+   */
+  async openSavedRide(rideId: RideId): Promise<OpenedLibraryRide> {
+    const record = await this.repository.loadRideRecord(rideId);
+    if (record === null || record.savedAt === undefined) throw new Error("Ride not found");
+    const intent = record.document.intent;
+    const breadcrumb = intent.breadcrumb != null;
+    const line = breadcrumb ? null : await this.savedLine(record);
+    const source = line?.origin === "import" && loopEnds(line.geometry)
+      ? asImportedLoop(record.document)
+      : record.document;
+    const document = await this.createDerivative("ride", rideId, source, { title: record.document.title });
+    const lineMissing = line === null && !breadcrumb && record.importData === undefined &&
+      record.recordedTrack === undefined && record.freeRideSummary === undefined;
+    return { document, line, lineMissing };
+  }
+
+  private async readLine(ref: GeometryRef): Promise<readonly Coordinate[] | null> {
+    if (this.geometryStore === undefined) return null;
+    const stored = await this.geometryStore.get(ref).catch(() => null);
+    if (stored === null || stored.payload.kind !== "line" || stored.payload.coordinates.length < 2) return null;
+    return stored.payload.coordinates;
+  }
+
+  private async savedLine(record: RideRecord): Promise<SavedRideLine | null> {
+    const importData = record.importData;
+    if (importData !== undefined) {
+      // "Route along roads" asked the planner for a new road route; that ask stands.
+      if (record.document.intent.shaping.length > 0) return null;
+      const coordinates: Coordinate[] = [];
+      for (const track of importData.tracks) {
+        for (const segment of track.segments) {
+          const part = await this.readLine(segment.geometryRef);
+          if (part === null) return null;
+          coordinates.push(...part);
+        }
+      }
+      if (coordinates.length < 2) return null;
+      const distanceMeters = finitePositive(record.bundleSummary?.distanceMeters)
+        ? record.bundleSummary.distanceMeters
+        : lineDistance(coordinates);
+      if (!finitePositive(distanceMeters)) return null;
+      return {
+        origin: "import",
+        geometry: coordinates,
+        distanceMeters,
+        durationSeconds: finitePositive(record.bundleSummary?.durationSeconds) ? record.bundleSummary.durationSeconds : null,
+        evidence: {},
+      };
+    }
+    const planned = record.plannedRoute;
+    if (planned === undefined) return null;
+    const geometry = await this.readLine(planned.geometryRef);
+    if (geometry === null) return null;
+    // The card's own numbers, else the library card's, else the line itself.
+    const distanceMeters = finitePositive(planned.distanceMeters)
+      ? planned.distanceMeters
+      : finitePositive(record.bundleSummary?.distanceMeters)
+      ? record.bundleSummary.distanceMeters
+      : lineDistance(geometry);
+    if (!finitePositive(distanceMeters)) return null;
+    const durationSeconds = finitePositive(planned.durationSeconds)
+      ? planned.durationSeconds
+      : finitePositive(record.bundleSummary?.durationSeconds)
+      ? record.bundleSummary.durationSeconds
+      : null;
+    return {
+      origin: "saved",
+      geometry,
+      distanceMeters,
+      durationSeconds,
+      evidence: planned.evidence ?? {},
+      ...(planned.instructions === undefined ? {} : { instructions: planned.instructions }),
+    };
+  }
+
   async loadExportSource(rideId: RideId): Promise<RideExportSource> {
     const record = await this.repository.loadRideRecord(rideId);
     if (record === null || record.savedAt === undefined) throw new Error("Ride not found");
@@ -697,6 +857,24 @@ export class LibraryService implements LibraryServicePort {
       recordedTrack,
     };
   }
+}
+
+function loopEnds(geometry: readonly Coordinate[]): boolean {
+  const first = geometry[0];
+  const last = geometry.at(-1);
+  if (first === undefined || last === undefined || geometry.length < 3) return false;
+  return lineDistance([first, last]) <= LOOP_ENDS_METERS;
+}
+
+/**
+ * An imported track whose ends meet is a loop from its start, not a ride "to"
+ * the place it began (R3-1): the working copy says so, so the planner names it
+ * "Loop from <place>".
+ */
+function asImportedLoop(document: RideDocument): RideDocument {
+  if (document.intent.start === null) return document;
+  const intent = deepFreeze<RideIntent>({ ...document.intent, shape: "loop", finish: null });
+  return deepFreeze<RideDocument>({ ...document, intent, history: { ...document.history, baseIntent: intent } });
 }
 
 export function createLibraryService(
