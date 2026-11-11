@@ -12,12 +12,13 @@ const length = (line: readonly Coordinate[]) => line.slice(1).reduce((sum, p, i)
 const runs = (line: readonly Coordinate[], roadClass = "secondary") => [{ meters: length(line), roadClass, urbanDensity: "rural" }];
 
 describe("selection geometry fun", () => {
-  it("credits sweeping ridge roads even without tight Franco curves", () => {
+  it("credits sweeping ridge roads as fun without calling them tight bends", () => {
     const fun = analyzeGeometryFun(ridge, runs(ridge))!;
     expect(fun.headingDegreesPerKm).toBeGreaterThan(45);
     expect(fun.headingDegreesPerKm).toBeLessThan(65);
     expect(fun.francoPerKm).toBe(0);
-    expect(fun.bendMeters).toBeGreaterThan(2500);
+    // A 1 km radius is a highway sweeper: it scores fun, but not good miles.
+    expect(fun.bendMeters).toBe(0);
     expect(fun.funScore).toBeGreaterThan(1);
   });
   it("penalizes a dull straight highway", () => {
@@ -43,12 +44,13 @@ describe("selection geometry fun", () => {
     const line = [...Array.from({ length: 101 }, (_, i) => xy(i * 10, 0)), ...Array.from({ length: 100 }, (_, i) => xy(1000, (i + 1) * 10))];
     expect(analyzeGeometryFun(line, runs(line), [100])!.headingDegreesPerKm).toBeLessThan(0.001);
     expect(analyzeGeometryFun(line, runs(line), [100])!.francoPerKm).toBe(0);
+    expect(analyzeGeometryFun(line, runs(line), [100])!.bendMeters).toBe(0);
   });
   it("weights only the known non-residential length and is direction invariant", () => {
     const half = [{ meters: length(ridge) / 2, roadClass: "secondary", urbanDensity: "rural" }, { meters: length(ridge) / 2, roadClass: "residential", urbanDensity: "residential" }];
     const fun = analyzeGeometryFun(ridge, half)!;
     const reverse = analyzeGeometryFun([...ridge].reverse(), [...half].reverse())!;
-    expect(fun.bendMeters).toBeCloseTo(length(ridge) / 2, -1);
+    expect(fun.bendMeters).toBeCloseTo(reverse.bendMeters, 3);
     expect(fun.funScore).toBeCloseTo(reverse.funScore, 3);
     expect(fun.headingDegreesPerKm).toBeCloseTo(reverse.headingDegreesPerKm, 3);
   });
