@@ -12,8 +12,10 @@ import { describe, expect, it } from "vitest";
 import type { ProviderRoadRun, ProviderRoadSummary } from "@/application/planner/route-provider";
 import {
   backroadShare,
+  bikeFitFacts,
   busyRoadShare,
   curvatureLabel,
+  engineBikeFit,
   engineBusyRoads,
   engineCurvature,
   engineRoadEvidence,
@@ -25,6 +27,7 @@ import {
   surfaceRuns,
 } from "@/application/roads/engine-road-evidence";
 import { aggregateRouteSurface } from "@/application/roads/surface-evidence";
+import type { EvidenceValue } from "@/domain/evidence/types";
 import { summarizeRoadDetails } from "@/infrastructure/routing/graphhopper/road-details";
 
 const MILE = 1609.344;
@@ -311,6 +314,85 @@ describe("engine busy roads", () => {
     expect(engineBusyRoads(summary())).toBeNull();
     expect(engineRoadEvidence(summary(), "mixed")).not.toHaveProperty("busyRoads");
     expect(busyRoadShare(undefined)).toBeNull();
+  });
+});
+
+describe("engine bike fit", () => {
+  it("measures rough track from the ordered runs and names the longest stretch", () => {
+    const routes = runSummary([
+      roadRun(2 * MILE, "tertiary"),
+      roadRun(0.5 * MILE, "track", "rural", { surface: "gravel", trackType: "grade3" }),
+      roadRun(MILE, "track", "rural", { surface: "gravel", trackType: "grade4" }),
+      roadRun(0.3 * MILE, "track", "rural", { surface: "ground", smoothness: "very_bad" }),
+      roadRun(3 * MILE, "secondary", "rural"),
+      roadRun(0.4 * MILE, "track", "rural", { surface: "ground", trackType: "grade5" }),
+    ]);
+    const fit = engineBikeFit(routes);
+    expect(fit?.roughTrackMeters).toBe(Math.round(2.2 * MILE));
+    expect(fit?.unmeasuredMeters).toBe(0);
+    // Grade changes on the same track are one stretch to the rider.
+    expect(fit?.worst?.fromMeters).toBe(Math.round(2 * MILE));
+    expect(fit?.worst?.toMeters).toBe(Math.round(3.8 * MILE));
+  });
+
+  it("treats smooth bad-or-worse roads as rough, and clean paving as not rough", () => {
+    const routes = runSummary([
+      roadRun(4 * MILE, "secondary", "rural", { smoothness: "bad" }),
+      roadRun(6 * MILE, "secondary", "rural", { smoothness: "good" }),
+    ]);
+    expect(engineBikeFit(routes)?.roughTrackMeters).toBe(Math.round(4 * MILE));
+    expect(engineBikeFit(routes)?.worst).toEqual({
+      fromMeters: 0,
+      toMeters: Math.round(4 * MILE),
+    });
+  });
+
+  it("sends a compact fact to the card and keeps raw runs out of it", () => {
+    const routes = runSummary([
+      roadRun(5 * MILE, "tertiary"),
+      roadRun(0.8 * MILE, "track", "rural", { surface: "gravel", trackType: "grade3" }),
+    ]);
+    const evidence = engineRoadEvidence(routes, "mixed");
+    expect(evidence["bikeFit"]?.status).toBe("estimated");
+    expect(evidence["bikeFit"]?.coverage).toBeCloseTo(1, 5);
+    const read = bikeFitFacts(evidence["bikeFit"]);
+    expect(read).toEqual({
+      roughTrackMeters: Math.round(0.8 * MILE),
+      unmeasuredMeters: 0,
+      worst: { fromMeters: Math.round(5 * MILE), toMeters: Math.round(5.8 * MILE) },
+    });
+    // The same fact after a JSON trip to the browser reads back unchanged…
+    const onWire = JSON.parse(JSON.stringify(evidence["bikeFit"])) as EvidenceValue<unknown>;
+    expect(bikeFitFacts(onWire)).toEqual(read);
+    // …and is numbers, not the run list the provider sent.
+    expect(JSON.stringify(evidence["bikeFit"]?.value)).not.toContain("trackType");
+  });
+
+  it("counts the line the runs did not describe, so a truncated answer cannot read fine", () => {
+    const truncated = summary({
+      totalMeters: 10 * MILE,
+      roadRuns: [roadRun(8 * MILE, "tertiary")],
+    });
+    expect(bikeFitFacts(engineRoadEvidence(truncated, "mixed")["bikeFit"])?.unmeasuredMeters)
+      .toBe(Math.round(2 * MILE));
+  });
+
+  it("writes nothing without road runs, and reads nothing from an unknown fact", () => {
+    expect(engineBikeFit(summary())).toBeNull();
+    expect(engineRoadEvidence(summary(), "mixed")).not.toHaveProperty("bikeFit");
+    expect(bikeFitFacts(undefined)).toBeNull();
+    expect(bikeFitFacts({
+      value: { roughTrackMeters: 0, unmeasuredMeters: 0 },
+      status: "unknown",
+      confidence: null,
+      provenance: [],
+    })).toBeNull();
+    expect(bikeFitFacts({
+      value: { roughTrackMeters: -1, unmeasuredMeters: 0 },
+      status: "estimated",
+      confidence: null,
+      provenance: [],
+    })).toBeNull();
   });
 });
 
