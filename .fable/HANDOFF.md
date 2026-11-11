@@ -19,3 +19,14 @@ Next steps:
 - `npm ci` done in this worktree.
 - Do package 1 (screenshot baselines + `css:budget` gate, with planned-route and ride-screen states) yourself first; then 3 (Layers sheet) beside package 2.
 - Owner picks need side-by-side shots (green vs neutral selected buttons; Mapbox grey night vs own dark terrain; glass everywhere vs glass only over map). Build them after package 1.
+
+## Routing review added (2026-11-10 late) — supersedes ROUND-PLAN packages 2, 5, 8
+- **Read `.fable/ROUTING-PLAN.md`.** It is the single routing roadmap: 6 scorecard-gated steps.
+  1. Make the scorecard honest (a curvy loop needs 25% "bend miles" to win, but riders' own tracks top out at 9.8%, so five rides can never win).
+  2. Twisty rules on as ONE extra candidate (not everywhere; that lost 7/16 on 2026-10-04). This replaces the old package 2; `.fable/pkg2-brief.md` is outdated, write a new brief from ROUTING-PLAN step 2 after step 1 lands.
+  3. Delete dead weight (Jev judge, frontier harness, ~6k lines).
+  4. Rebuild the graph with a curvature value on each road (Kurviger-style), on the Windows PC.
+  5. Anchor loops through ride-through good roads (replaces package 5).
+  6. One detour dial plus first route in 5 s (replaces package 8).
+- Fable's estimate: 4/20 → 14–16/20 wins after all 6 steps.
+- Screen/CSS packages 1, 3, 4, 6, 7 from ROUND-PLAN are unchanged. Suggested start: package 1 (Opus) beside routing step 1 (Codex Sol, or Sonnet if quota is out).
