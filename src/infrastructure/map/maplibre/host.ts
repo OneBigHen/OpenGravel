@@ -127,6 +127,7 @@ import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
 import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
 import { SATELLITE_ROAD_OPACITY, isBasemapRoadLayer, rideFocusChanges } from "@/infrastructure/map/maplibre/ride-focus-dim";
+import { routeLineAnchorId, routeLineBelowRoads } from "@/infrastructure/map/maplibre/route-anchor";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { createWindArrowImages } from "@/infrastructure/map/maplibre/wind-arrow-image";
@@ -470,6 +471,11 @@ export function routeDetailVisible(tool: PointerTool): boolean {
 /** The basemap's first label layer (never one of ours), or `undefined`. */
 function firstBasemapLabelId(map: MapLibreMap): string | undefined {
   return map.getStyle?.()?.layers?.find((layer) => layer.type === "symbol" && !layer.id.startsWith("ogv-"))?.id;
+}
+
+/** Where the ride's lines go: above the basemap's roads, under its labels (PF-1). */
+function routeLineAnchor(map: MapLibreMap): string | undefined {
+  return routeLineAnchorId(map.getStyle?.()?.layers ?? []);
 }
 
 /**
@@ -1493,13 +1499,26 @@ export async function createMapLibreHost(
         }
         if (layer.id === MAP_LAYER_IDS.riderPosition && !puckReady) delete added["filter"];
         if (ROUTE_LINE_LAYER_IDS.has(layer.id)) {
-          map.addLayer(added as unknown as MapLibreLayerSpec, firstBasemapLabelId(map));
+          map.addLayer(added as unknown as MapLibreLayerSpec, routeLineAnchor(map));
         } else {
           map.addLayer(added as unknown as MapLibreLayerSpec);
         }
       } catch {
         failed.push(layer.id);
       }
+    }
+    // A kept style can hold route lines added under the old rule, below some of
+    // the basemap's roads: lift them to the anchor in their current order, so a
+    // casing stays under its core.
+    try {
+      const styleLayers = map.getStyle?.()?.layers ?? [];
+      const low = styleLayers.filter((layer) => ROUTE_LINE_LAYER_IDS.has(layer.id) && routeLineBelowRoads(styleLayers, layer.id));
+      if (low.length > 0) {
+        const anchor = routeLineAnchorId(styleLayers);
+        for (const layer of low) map.moveLayer(layer.id, anchor);
+      }
+    } catch {
+      // Cosmetic: the line still draws, a little lower in the stack.
     }
     // On Night contrast a light casing makes an alternative read as a highway.
     if (basemapLook === "night" && map.getLayer(MAP_LAYER_IDS.routeAlternativeCasing) !== undefined) {
