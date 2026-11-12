@@ -40,13 +40,12 @@ export function useNoSignalRide(
   const noSignal = useStore(store, (state) => state.noSignal);
   const [kept, setKept] = useState<RidePackRecord | null>(null);
   useEffect(() => {
-    if (!noSignal || ridePacks === undefined || line.length < 2) {
-      setKept(null);
-      return;
-    }
+    if (!noSignal || ridePacks === undefined || line.length < 2) return;
     let live = true;
     void ridePacks.keptPackForLine(line).then((pack) => { if (live) setKept(pack); }, () => { if (live) setKept(null); });
     return () => { live = false; };
   }, [noSignal, ridePacks, line]);
-  return { noSignal, kept };
+  // A lookup from before signal came back, or for another line, is never shown.
+  const active = noSignal && ridePacks !== undefined && line.length >= 2;
+  return { noSignal, kept: active && kept !== null && kept.line.length === line.length ? kept : null };
 }

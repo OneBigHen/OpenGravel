@@ -2884,7 +2884,7 @@ describe("no signal (R3-7)", () => {
     const restore = goOffline();
     try {
       const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
-      const keptPackForLine = vi.fn(async () => ({ rideId: "ride_kept" } as unknown as Awaited<ReturnType<RidePackLookup["keptPackForLine"]>>));
+      const keptPackForLine = vi.fn(async () => ({ rideId: "ride_kept", line: LINE } as unknown as Awaited<ReturnType<RidePackLookup["keptPackForLine"]>>));
       const { store, tick } = await offRouteHarness({ reroutePlanner: { plan }, ridePacks: { keptPackForLine } });
       await act(async () => { tick(); });
 
