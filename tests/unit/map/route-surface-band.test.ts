@@ -115,8 +115,9 @@ describe("the surface band", () => {
     expect(surface.paint?.["line-opacity"]).toBe(0.95);
   });
 
-  it("paints the three measured surfaces in the card strip's own hues", () => {
-    expect(bandColour(DEFAULT_MAP_PALETTE, "paved")).toBe(DEFAULT_MAP_PALETTE.topoSage);
+  it("paints gravel and dirt in the card strip's own hues, and leaves paved as the line's own colour", () => {
+    // Paved draws nothing (owner 2026-11-12): a sage band made every paved ride a pale line.
+    expect(bandColour(DEFAULT_MAP_PALETTE, "paved")).toBe("rgba(0,0,0,0)");
     expect(bandColour(DEFAULT_MAP_PALETTE, "gravel")).toBe(DEFAULT_MAP_PALETTE.goldenHour);
     expect(bandColour(DEFAULT_MAP_PALETTE, "dirt")).toBe(DEFAULT_MAP_PALETTE.trailBrown);
   });

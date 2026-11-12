@@ -43,6 +43,7 @@ import {
   riderPositionLayers,
   routeLayers,
   type MapPalette,
+  ALTERNATIVE_COLORS,
 } from "@/infrastructure/map/maplibre/style";
 
 const SELECTED = asRouteCandidateId("route_selected");
@@ -769,7 +770,7 @@ describe("the cartography table", () => {
     expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.3);
   });
 
-  it("draws the chosen ride plum and every alternative one quiet grey (DESIGN.md §2)", () => {
+  it("draws the chosen ride plum and each alternative in its own colour, never plum or blue (owner 2026-11-12)", () => {
     const layers = routeLayers(DEFAULT_MAP_PALETTE);
     const byId = new Map(layers.map((layer) => [layer.id, layer]));
 
@@ -781,8 +782,11 @@ describe("the cartography table", () => {
     const colour = (layer: { paint?: Record<string, unknown> } | undefined): unknown => layer?.paint?.["line-color"];
     expect(colour(selected)).toBe(DEFAULT_MAP_PALETTE.routePlum);
     expect(colour(casing)).toBe(DEFAULT_MAP_PALETTE.routePlumStrong);
-    expect(colour(alternative)).toBe(DEFAULT_MAP_PALETTE.slate);
-    expect([colour(selected), colour(alternative)]).not.toContain(DEFAULT_MAP_PALETTE.signalBlue);
+    // Each choice has its own colour so two rides can be told apart on satellite.
+    const altColours = JSON.stringify(colour(alternative));
+    for (const hue of ALTERNATIVE_COLORS) expect(altColours).toContain(hue);
+    for (const reserved of [DEFAULT_MAP_PALETTE.routePlum, DEFAULT_MAP_PALETTE.signalBlue]) expect(altColours).not.toContain(reserved);
+    expect(colour(selected)).not.toBe(DEFAULT_MAP_PALETTE.signalBlue);
 
     // The selected line must carry the most visual weight, and the alternatives
     // must be visibly secondary rather than a second highlight.

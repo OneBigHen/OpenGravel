@@ -126,6 +126,7 @@ import {
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
 import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
+import { SATELLITE_ROAD_OPACITY, isBasemapRoadLayer, rideFocusChanges } from "@/infrastructure/map/maplibre/ride-focus-dim";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
 import { createWindArrowImages } from "@/infrastructure/map/maplibre/wind-arrow-image";
@@ -1523,6 +1524,31 @@ export async function createMapLibreHost(
    * below the basemap's first label layer, so road names stay readable over
    * it, and hidden until the rider asks. Only on a Mapbox host with a token.
    */
+  /**
+   * On satellite, the basemap's street lines step back (owner, 2026-11-12:
+   * "everything is a white line"): the imagery already shows the roads, and the
+   * ride and its choices must be the brightest lines on screen. Same road-layer
+   * test as Hike's quiet roads; originals come back when satellite is off.
+   */
+  const satelliteRoadOriginals = new Map<string, unknown>();
+  function applySatelliteRoads(map: MapLibreMap): void {
+    if (map.setPaintProperty === undefined) return;
+    try {
+      for (const [id, value] of satelliteRoadOriginals) if (map.getLayer(id) !== undefined) map.setPaintProperty(id, "line-opacity", value ?? null);
+      satelliteRoadOriginals.clear();
+      if (!satelliteVisible) return;
+      const layers = map.getStyle?.()?.layers ?? [];
+      for (const layer of layers) {
+        if (!isBasemapRoadLayer(layer)) continue;
+        const original = layer.paint?.["line-opacity"];
+        satelliteRoadOriginals.set(layer.id, original);
+        map.setPaintProperty(layer.id, "line-opacity", scaleOpacity(original, SATELLITE_ROAD_OPACITY));
+      }
+    } catch {
+      // Cosmetic only: the streets stay at full strength.
+    }
+  }
+
   function addSatellite(map: MapLibreMap): void {
     if (mapboxToken === null) return;
     try {
@@ -1546,6 +1572,9 @@ export async function createMapLibreHost(
           },
           belowOverlay(map, firstLabel),
         );
+        // A fresh style: its streets are at full strength again.
+        satelliteRoadOriginals.clear();
+        applySatelliteRoads(map);
       }
     } catch {
       recordError({ kind: "source", detail: SATELLITE_ID });
@@ -1914,6 +1943,28 @@ export async function createMapLibreHost(
     }
   }
 
+  /**
+   * Map first (owner, 2026-11-12): while a ride is on the map, the discovery
+   * layers (twisty roads, gravel, curated rides, road history) step back to a
+   * third of their strength so the ride and its choices are what the eye finds.
+   * They come back in full as soon as the ride is cleared. A reloaded style
+   * re-adds the layers at full strength, so the dim is re-checked per sync
+   * against what the style actually holds.
+   */
+  const rideFocusOriginals = new Map<string, unknown>();
+  function syncRideFocusDim(current: HostAttempt, scene: MapScene): void {
+    const { map } = current;
+    if (map.setPaintProperty === undefined) return;
+    const focused = scene.mode !== "ride" && scene.routes.some((route) => route.state === "selected" && isDrawableRoute(route));
+    try {
+      for (const change of rideFocusChanges(map.getStyle?.()?.layers ?? [], focused, rideFocusOriginals)) {
+        map.setPaintProperty(change.id, change.property, change.value);
+      }
+    } catch {
+      // Cosmetic only: the layers stay at full strength.
+    }
+  }
+
   function syncScene(current: HostAttempt, scene: MapScene): void {
     syncRideDeclutter(current, scene.mode === "ride");
     const plan = planSceneSync(current.fingerprints, scene);
@@ -1926,6 +1977,7 @@ export async function createMapLibreHost(
       recordError({ kind: "source", detail: "sources" });
     }
     addOverlayLayers(current.map);
+    syncRideFocusDim(current, scene);
     const parts: readonly [string, boolean][] = [
       [MAP_SOURCE_IDS.routes, plan.routes],
       [MAP_SOURCE_IDS.points, plan.points],
@@ -3309,6 +3361,7 @@ export async function createMapLibreHost(
       if (map === undefined || map.getLayer(SATELLITE_ID) === undefined) return;
       try {
         map.setLayoutProperty?.(SATELLITE_ID, "visibility", visible ? "visible" : "none");
+        applySatelliteRoads(map);
       } catch {
         recordError({ kind: "source", detail: SATELLITE_ID });
       }
