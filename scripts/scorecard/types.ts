@@ -40,8 +40,11 @@ export interface RouterUse {
   calls: number;
   /** Requests made afterwards by detached shadow work (drained before the next ride). */
   shadowCalls: number;
-  /** Seconds until the first router answer that carried a route came back; null if none did. */
-  firstRouteSeconds: number | null;
+  /** Seconds until the first router answer of the full plan that carried a route came back; null if none did.
+   * Old name: firstRouteSeconds. Requests run in single file here, so this is NOT what a rider waits for. */
+  firstCallSeconds: number | null;
+  /** Seconds one real first-answer request takes (planRide, includeAlternatives false, as the app sends it); null if it failed. */
+  firstAnswerSeconds: number | null;
 }
 /** How the rider's own track was put onto our roads. */
 export interface RiderLineSnap {
@@ -61,9 +64,12 @@ export interface Row {
   /** Third contestant: the rider's own line, snapped to our roads. Shown, never scored, never used to plan. */
   riderLine: Measurement | null;
   riderSnap: RiderLineSnap | null;
-  /** Scorecard v2 verdict (planner's own bend measure, frozen curvy share). */
+  /** Scorecard v3 verdict: the headline (see scoring.ts winTieLossV3). */
   verdict: Verdict;
   reasons: string[];
+  /** The verdict rule v2 gives for the same routes (planner's own bend measure, frozen curvy share). */
+  verdictV2: Verdict;
+  reasonsV2: string[];
   /** The verdict scorecard v1 would have given, so both headlines can be printed. */
   verdictV1: Verdict;
   reasonsV1: string[];
