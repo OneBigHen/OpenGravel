@@ -238,7 +238,10 @@ describe("splice", () => {
   });
 
   it("refuses when an instruction has no geometry index", () => {
-    const stripped = { ...ROUTE, instructions: ROUTE.instructions.map(({ geometryIndex: _drop, ...rest }) => rest) };
+    const stripped = {
+      ...ROUTE,
+      instructions: ROUTE.instructions.map((instruction) => ({ text: instruction.text, type: instruction.type, distanceMeters: instruction.distanceMeters, durationSeconds: instruction.durationSeconds })),
+    };
     expect(splice(connector, stripped, target)).toBeNull();
   });
 });
