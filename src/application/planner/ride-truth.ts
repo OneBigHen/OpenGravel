@@ -300,3 +300,24 @@ function checkedLine(input: RideTruthInput): RideTruthLine {
 export function rideTruth(input: RideTruthInput): RideTruth {
   return [surfaceLine(input), bikeLine(input), checkedLine(input)];
 }
+
+/**
+ * Adds the rider's own reported spots to the checked line, apart from the
+ * official checks. Never changes the tone, never says "closed": a report is the
+ * rider's private note, not a fact about the road.
+ */
+export function withRiderReportSentence(
+  line: RideTruthLine,
+  status: { readonly avoided: number; readonly couldNotAvoid: boolean },
+): RideTruthLine {
+  const sentence = status.couldNotAvoid
+    ? "Could not avoid the spot you reported."
+    : status.avoided === 1
+      ? "Avoiding 1 spot you reported."
+      : status.avoided > 1
+        ? `Avoiding ${status.avoided} spots you reported.`
+        : null;
+  if (sentence === null) return line;
+  const base = line.text.replace(/[.\s]+$/, "");
+  return { ...line, text: `${base}. ${sentence}` };
+}

@@ -77,6 +77,7 @@ import {
   type PlanningSessionSnapshot,
   type ProviderDiagnostic,
 } from "./planning-session";
+import { setRiderReportPlanStatus } from "./rider-report-plan-status";
 import type {
   ProviderCandidate,
   ProviderCandidateSet,
@@ -98,6 +99,12 @@ export interface PlanningRequestContext {
    * (`true` by default: progressive choice must not need a second round trip).
    */
   readonly includeAlternatives?: boolean;
+  /**
+   * The rider's own reported spots, read fresh at each launch. They are
+   * avoided like drawn areas; when avoiding them leaves no route the plan is
+   * made again without them (`rider-report-plan-status.ts` says so).
+   */
+  readonly riderReportRings?: () => readonly (readonly Coordinate[])[];
 }
 
 /**
@@ -445,6 +452,10 @@ interface Run {
   readonly roleHints: Map<string, { readonly bestRide: boolean; readonly lowerWorkload: boolean }>;
   cancelled: boolean;
   finished: boolean;
+  /** Rider-report boxes in this attempt's request; 0 when none or after the retry. */
+  reportRingCount: number;
+  reportRetried: boolean;
+  input: BeginPlanningInput;
   /** Resolves `begin`; called exactly once per run. */
   readonly closed: () => void;
 }
@@ -603,6 +614,9 @@ class PlanningSessionController implements PlanningController {
       roleHints: new Map(),
       cancelled: false,
       finished: false,
+      reportRingCount: 0,
+      reportRetried: false,
+      input,
       closed: closed.close,
     };
     this.run = run;
@@ -759,11 +773,22 @@ class PlanningSessionController implements PlanningController {
    * Launching
    * ------------------------------------------------------------------ */
 
-  private async launch(run: Run, input: BeginPlanningInput): Promise<void> {
+  private async launch(run: Run, input: BeginPlanningInput, skipReports = false): Promise<void> {
     let built: PlanRequestResult;
+    let reportRings: readonly (readonly Coordinate[])[] = [];
+    if (!skipReports) {
+      try {
+        reportRings = this.requestContext.riderReportRings?.() ?? [];
+      } catch {
+        reportRings = [];
+      }
+    }
+    run.reportRingCount = reportRings.length;
+    if (!skipReports) setRiderReportPlanStatus({ avoided: reportRings.length, couldNotAvoid: false });
     try {
       built = await buildProviderRequest(input.intent, {
         resolveGeometry: this.requestContext.resolveGeometry,
+        ...(reportRings.length === 0 ? {} : { extraAvoidRings: reportRings }),
         ...(this.requestContext.profileFor === undefined
           ? {}
           : { profileFor: this.requestContext.profileFor }),
@@ -969,6 +994,20 @@ class PlanningSessionController implements PlanningController {
     if (run.pending.size === 0) {
       if (this.state.committed !== null) {
         this.settle(run, "ready");
+      } else if (
+        run.reportRingCount > 0 &&
+        !run.reportRetried &&
+        run.answered.size > 0 &&
+        run.candidates.length === 0
+      ) {
+        // The engine answered but found nothing with the rider's spots avoided:
+        // plan again without them and say so, instead of failing the plan.
+        run.reportRetried = true;
+        run.answered.clear();
+        run.answeredCodes.clear();
+        run.answeredMessages.clear();
+        setRiderReportPlanStatus({ avoided: 0, couldNotAvoid: true });
+        void this.launch(run, run.input, true);
       } else {
         this.fail(run, this.normalizeFailure(run));
       }

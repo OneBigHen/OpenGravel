@@ -8,9 +8,14 @@
  * there.
  */
 
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
-import type { RideTruth, RideTruthLine, RideTruthStretch } from "@/application/planner/ride-truth";
+import {
+  getRiderReportPlanStatus,
+  subscribeRiderReportPlanStatus,
+} from "@/application/planner/rider-report-plan-status";
+
+import { withRiderReportSentence, type RideTruth, type RideTruthLine, type RideTruthStretch } from "@/application/planner/ride-truth";
 
 const KEYS = ["surface", "bike", "checked"] as const;
 
@@ -38,10 +43,11 @@ export function RideTruthLines({ truth, surfaceBar = null, onShowStretch, testId
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
   readonly testId?: string;
 }) {
+  const reported = useSyncExternalStore(subscribeRiderReportPlanStatus, getRiderReportPlanStatus, getRiderReportPlanStatus);
   return <div className="og-truth" data-testid={testId}>
     <Line line={truth[0]} kind="surface" onShowStretch={onShowStretch} />
     {surfaceBar}
     <Line line={truth[1]} kind="bike" onShowStretch={onShowStretch} />
-    <Line line={truth[2]} kind="checked" onShowStretch={onShowStretch} />
+    <Line line={withRiderReportSentence(truth[2], reported)} kind="checked" onShowStretch={onShowStretch} />
   </div>;
 }
