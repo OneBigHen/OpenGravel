@@ -383,6 +383,7 @@
   .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary__compare { min-height: 40px; }
 
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"] {
-    max-height: min(var(--og-sheet-half), 40dvh);
+    /* Small phones (568px tall): 40% would clip Compare rides, so never below 252px. */
+    max-height: min(var(--og-sheet-half), max(40dvh, 252px));
   }
 }
