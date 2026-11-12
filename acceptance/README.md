@@ -94,8 +94,8 @@ executors:
   chromium:
     kind: playwright
     spec:
-      - tests/e2e/critical/ride-style.spec.ts
-      - tests/e2e/critical/routing-method-comparison.spec.ts
+      - tests/e2e/critical/place-search.spec.ts
+      - tests/e2e/critical/places.spec.ts
 ```
 
 The mission passes only when **every** claimed spec passes; one failure fails the
@@ -112,7 +112,7 @@ claimed by any manifest, so new specs cannot silently slip out of the campaign.
 | M04 | avoid-area | P1 | avoid-area.spec.ts | planned |
 | M05 | draw | P2 | draw.spec.ts | planned |
 | M06 | road-span | P2 | road-span.spec.ts | planned |
-| M07 | ride-style | P1 | ride-style.spec.ts, routing-method-comparison.spec.ts | planned |
+| M07 | ride-style | P1 | ride-style.spec.ts | planned |
 | M08 | long-trip | P1 | long-trip.spec.ts | planned |
 | M09 | advisor | P2 | advisor.spec.ts | planned |
 | M10 | prepare | P1 | prepare.spec.ts, weather.spec.ts, traffic.spec.ts | ✅ M10 |
