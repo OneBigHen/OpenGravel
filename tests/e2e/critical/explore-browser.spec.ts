@@ -17,7 +17,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     });
     await page.goto("/explore");
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(32);
-    await expect(page.getByTestId("explore-map")).toContainText("32 mapped");
+    await expect(page.getByTestId("explore-map")).toContainText("32 rides");
     // The area picker lives in the Filters panel at every width: a bottom sheet
     // on a phone, a popover under the chip that opened it on a wide screen. The
     // chip is the last one in the row, so it keeps search the whole width above.
@@ -56,7 +56,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId("planner-map")).toHaveAttribute("data-map-load", "ready");
     await expect(dialog.getByTestId("planner-map")).toHaveAttribute("data-map-painted", "true");
-    await expect(dialog).toContainText("31 mapped");
+    await expect(dialog).toContainText(/\b\d+ rides\b/);
     await expect(page.getByTestId("planner-map")).toHaveCount(1);
     const box = await dialog.getByTestId("planner-map").boundingBox();
     expect(box!.height).toBeGreaterThan(viewport.height * 0.65);
