@@ -18,6 +18,8 @@ import { clickInRideSheet, openRideSheet, startRide } from "./ride-focus-helpers
 test("a planned ride ends with one ride card, and the ride is kept under Ridden", async ({ page }) => {
   // A minute of riding plus a started build and a library load.
   test.setTimeout(240_000);
+  // The owner's phone: 440 × 956, the shape the card is drawn for.
+  await page.setViewportSize({ width: 440, height: 956 });
 
   await startRide(page);
   // Recording begins with the ride: the activity is the guided ride, and the

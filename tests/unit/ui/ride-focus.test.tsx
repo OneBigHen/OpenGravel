@@ -2619,6 +2619,18 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
 
 
 describe("Free Ride recording controls", () => {
+  it("keeps a Recording switch in a guided ride's Menu, saying whether it is on", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store);
+    act(() => store.setState({ navigation: projected.navigation, viewModel: projected.viewModel }));
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    const toggle = screen.getByTestId("ride-recording-toggle");
+    expect(toggle).toHaveTextContent("Recording");
+    expect(toggle).toHaveTextContent("On");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps the Free Ride sheet controls available during a recording without opening the sheet", async () => {
     const { store } = await harness({ position: "fresh" });
     const projected = recordingViewModel(store, { activity: "free", plan: { ...store.getState().navigation!.plan, route: null } });
