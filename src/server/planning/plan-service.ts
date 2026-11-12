@@ -2,16 +2,13 @@ import { planHike } from "./hike-plan";
 import { geometryFunRecommendation } from "@/application/planner/geometry-fun";
 import { loopDirtTarget } from "@/application/planner/atlas-dirt-loops";
 import { createAtlasGenerators } from "@/application/planner/atlas-generators";
-import { corridorsInReachableEllipse, type GravelAtlasCorridor, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
-import type { RouteEvidence } from "@/domain/route/types";
-import { RIDE_FORMULA_VARIABLES, RIDE_FORMULA_VERSION } from "@/domain/route/ride-formula";
-import { dirtAtlasEvidenceFor, parseRideFormulaMode, scoreCandidateWithRideFormula } from "@/application/planner/ride-formula";
+import { corridorsInReachableEllipse, type GravelAtlasPort } from "@/application/roads/gravel-atlas";
 import { gravelAtlasFromEnv } from "@/server/roads/gravel-atlas";
 import type { LoopHeadingPreference } from "@/application/planner/loop-heading";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { deadEndSpurEligibility } from "@/application/planner/dead-end-spur-eligibility";
 import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
-import { DIRT_DETOUR_CAP, DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
+import { DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
 import { BALANCED_DETOUR_CAP, searchBalancedEnvelope } from "@/application/planner/balanced-search";
 import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
@@ -104,8 +101,6 @@ const FAST_FIRST_MIN_LANES = 3;
 const FIRST_ANSWER_LOOP_SEEDS = 1;
 
 /** The alternatives pass after fast-first converged on one ride. */
-/** A formula reading with less evidence than this never ranks a candidate. */
-const RIDE_FORMULA_MIN_CONFIDENCE = 0.3;
 
 const ALTERNATIVES_LANE = (profile: string): CandidateLane => ({
   id: "alternatives",
@@ -740,12 +735,6 @@ function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
   return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
 }
 
-/** The provider answer behind a kept candidate: the same line at the same engine time (profiles price one line differently). */
-function sourceOf(candidates: readonly ProviderCandidate[], kept: { readonly geometry: readonly Coordinate[]; readonly durationSeconds: number }): ProviderCandidate | undefined {
-  return candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry) && Math.abs(candidate.durationSeconds - kept.durationSeconds) < 1)
-    ?? candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry));
-}
-
 /** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
 let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
 function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
@@ -846,7 +835,6 @@ async function planRideAttempt(
   const atlas = deps.gravelAtlas ?? gravelAtlasFromEnv(riderEnv);
   let atlasReport: FunGeneratorReport | null = null;
   let atlasConsidered = 0;
-  let atlasCorridors: readonly GravelAtlasCorridor[] = [];
   // A loop-only opt-in can deliver dirt while the general atlas experiments
   // stay off. Paved/Mostly paved and point-to-point retain the general switch.
   const atlasEnabled = riderEnv["OGV_ATLAS_GENERATORS"] !== "off" ||
@@ -854,7 +842,6 @@ async function planRideAttempt(
   // Atlas probes have their own router-call budget (default 2, at most 4) so
   // they never starve the phase 1 knee search.
   const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
-  const formulaMode = riderEnabled ? parseRideFormulaMode(riderEnv["OGV_RIDE_FORMULA"]) : "off";
   const balancedFun = riderEnabled && parsed.value.request.options.roadCharacter === "balanced" && !seeksDirt(parsed.value.request.options);
   const requestOptions = parsed.value.request.options;
   // Geometry fun selection is Curvy-only. In the 2026-10-25 benchmark it
@@ -904,17 +891,6 @@ async function planRideAttempt(
       ? undefined
       : { origin: parsed.value.request.origin, headingDegrees: loopDiscovery.headingDegrees };
 
-  const formulaFor = (evidence: RouteEvidence, source: ProviderCandidate, fastestSeconds: number) => {
-    const request = parsed.value.request;
-    const atlasEvidence = dirtAtlasEvidenceFor(source.geometry, atlasCorridors);
-    return scoreCandidateWithRideFormula(source, request.options, {
-      evidence,
-      canonicalEligible: true,
-      fastestSeconds,
-      ...(request.discovery === undefined ? {} : { discovery: request.discovery }),
-      ...(atlasEvidence === null ? {} : { dirtAtlas: atlasEvidence }),
-    });
-  };
   let spurMode: "reject" | "warn" = "reject";
   const rank = (
     from: readonly ProviderCandidate[],
@@ -924,21 +900,6 @@ async function planRideAttempt(
     intent,
     policy: ROUTE_POLICY,
     ...(balancedFun ? { recommendationDetourCap: BALANCED_DETOUR_CAP } : {}),
-    // OGV_RIDE_FORMULA=on: the versioned Ride Formula picks Best Ride among the
-    // eligible, in-budget candidates; evidence and RouteScore stay canonical.
-    ...(formulaMode !== "on"
-      ? {}
-      : {
-          candidateValueFor: (candidate, source, fastestSeconds) => {
-            const result = formulaFor(candidate.evidence, source, fastestSeconds);
-            return result.eligible && result.confidence >= RIDE_FORMULA_MIN_CONFIDENCE ? result.value : null;
-          },
-          // Same allowance the rider-mode search gives a dirt detour; the
-          // fastest eligible ETA here is often motorcycle_fastest's, which
-          // runs ~20% quicker than the adventure profile on the same road.
-          ...(seeksDirt(parsed.value.request.options) ? { recommendationDetourCap: DIRT_DETOUR_CAP } : {}),
-          ...(balancedFun ? {} : { recommendationProfile: parsed.value.request.profile }),
-        }),
     ...(geometryFun ? {
       candidateValueFor: (_candidate, source, fastestSeconds, reference) => geometryFunRecommendation(source, fastestSeconds, reference, requestOptions.traffic === "protect-ride"),
       recommendationDetourCap: 1.35,
@@ -1041,7 +1002,6 @@ async function planRideAttempt(
       const radius = request.discovery === undefined ? Math.max(5_000, fastest * 0.35 * 15) : (request.discovery.targetMinutes + request.discovery.toleranceMinutes) * 60 * 8 / 2;
       const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, wantsDirt ? "dirt" : "backroad");
       atlasConsidered = corridors.length;
-      atlasCorridors = corridors;
       atlasReport = await runFunGenerators({
         context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })), sources: [] },
         generators: createAtlasGenerators(corridors, atlasCallBudget), provider,
@@ -1080,14 +1040,14 @@ async function planRideAttempt(
     ) as typeof merged.roles;
     return { ...merged, roles: { ...roles, "best-ride": index }, selectedIndex: index };
   };
-  // With the formula ranking, a rider-mode route simply joins the pool and the
-  // formula decides; otherwise it leads as Best Ride (phase 1 behaviour).
+  // With the Curvy bend ranking, a rider-mode route simply joins the pool and
+  // the bend pick decides; otherwise it leads as Best Ride (phase 1 behaviour).
   const adoptRiderRoute = (
     preferred: ProviderCandidate,
     others: readonly ProviderCandidate[],
     verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
   ): typeof pipeline | null => {
-    if (formulaMode !== "on" && !geometryFun) return preferBestRide(preferred, others, verdictFor);
+    if (!geometryFun) return preferBestRide(preferred, others, verdictFor);
     const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
     return merged.candidates.length > 0 ? merged : null;
   };
@@ -1321,39 +1281,6 @@ async function planRideAttempt(
       }],
     };
   });
-  let rideFormulaDiagnostic: NonNullable<RoutePlanDiagnosticsWire["rideFormula"]> | null = null;
-  if (formulaMode !== "off") {
-    const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
-    const rows = pipeline.candidates.flatMap((kept, index) => {
-      const source = sourceOf(candidates, kept);
-      if (source === undefined) return [];
-      const result = formulaFor(kept.evidence, source, fastestSeconds);
-      const raw = (name: keyof typeof result.variables): number | null => result.variables[name].value;
-      return [{
-        index,
-        value: result.value,
-        confidence: result.confidence,
-        eligible: result.eligible,
-        variables: {
-          unpavedShare: raw("unpavedShare"),
-          continuousDirtMeters: raw("continuousDirtMeters"),
-          busyRoadShare: raw("busyRoadShare"),
-          bendShare: raw("bendShare"),
-          francoCurvaturePerKm: raw("francoCurvaturePerKm"),
-          routeCoherence: raw("routeCoherence"),
-          timeCost: raw("timeCost"),
-        },
-      }];
-    });
-    // Mirror the pipeline's recommendation cap: measured from the rider's own
-    // profile ETA, with the dirt allowance for dirt-seeking riders.
-    const ownSeconds = Math.min(...pipeline.candidates.filter((kept) => sourceOf(candidates, kept)?.profile === parsed.value.request.profile).map((kept) => kept.durationSeconds));
-    const capSeconds = (balancedFun ? fastestSeconds : Number.isFinite(ownSeconds) ? Math.max(fastestSeconds, ownSeconds) : fastestSeconds) * (seeksDirt(parsed.value.request.options) ? DIRT_DETOUR_CAP : balancedFun ? BALANCED_DETOUR_CAP : 1.35);
-    const inBudget = rows.filter((row) => row.eligible && row.confidence >= RIDE_FORMULA_MIN_CONFIDENCE
-      && (parsed.value.request.discovery !== undefined || (pipeline.candidates[row.index]?.durationSeconds ?? Infinity) <= capSeconds));
-    const pick = [...inBudget].sort((left, right) => right.value - left.value)[0];
-    rideFormulaDiagnostic = { mode: formulaMode, version: RIDE_FORMULA_VERSION, pickIndex: pick?.index ?? null, rows };
-  }
   // FUN JUDGE (default off). In `on` mode a confident Jev preference among the
   // eligible, in-budget candidates becomes Best Ride; every other outcome —
   // including any failure here — keeps the deterministic roles.
@@ -1375,24 +1302,7 @@ async function planRideAttempt(
         ? {}
         : { discoveryTimebox: parsed.value.request.discovery }),
       judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
-      // Jev judges on the same evidence as the formula: its normalized variable
-      // values ride along with every candidate when the formula is reporting.
-      extensions: ((candidate) => {
-        const base = geometryFunJudgeExtensions(candidate);
-        if (formulaMode === "off") return base;
-        const source = sourceOf(candidates, candidate);
-        if (source === undefined) return base;
-        const fastestSeconds = Math.min(...pipeline.candidates.map((kept) => kept.durationSeconds));
-        const reading = formulaFor(candidate.evidence, source, fastestSeconds);
-        return {
-          ...base,
-          formulaEvidence: {
-            formulaValue: reading.value,
-            formulaConfidence: reading.confidence,
-            ...Object.fromEntries(RIDE_FORMULA_VARIABLES.map((name) => [name, reading.variables[name].normalized])),
-          },
-        };
-      }) satisfies FunJudgeEvidenceExtensions,
+      extensions: geometryFunJudgeExtensions satisfies FunJudgeEvidenceExtensions,
     };
     if (funJudgeMode === "shadow") {
       // Shadow never waits for Jev: the call starts after the answer is built,
@@ -1475,7 +1385,6 @@ async function planRideAttempt(
     diagnostics: {
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
-      ...(rideFormulaDiagnostic === null ? {} : { rideFormula: rideFormulaDiagnostic }),
       ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, note: probe.note, adherence: probe.adherence === null ? null : Number(probe.adherence.toFixed(2)), minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60, unpavedShare: (() => { const share = atlasReport?.pool.find((entry) => entry.probeId === probe.probeId)?.candidate.providerMetadata?.["observedUnpavedShare"]; return typeof share === "number" ? Number(share.toFixed(3)) : null; })() })) ?? [] } }),
       ...(funCharacter === undefined ? {} : { funCharacter }),
       ...(funJudge === undefined ? {} : { funJudge }),
