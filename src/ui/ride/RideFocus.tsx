@@ -87,6 +87,7 @@ import {
 import { MapZoomControls } from "@/ui/map/MapControls";
 import { RideOfferCard } from "@/ui/ride/RideOfferCard";
 import { RideRouteSketch } from "@/ui/ride/RideRouteSketch";
+import { RideCard } from "@/ui/ride/RideCard";
 import { opportunityDirection, opportunityReasons } from "@/application/free-ride/opportunity";
 import { headBackDirection } from "@/application/ride-session/head-back";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
@@ -348,6 +349,7 @@ export function RideFocus({
   const recordingCleanupPending = useStore(store, (state) => state.recordingCleanupPending);
   const canSaveFreeRideSummary = useStore(store, (state) => state.canSaveFreeRideSummary);
   const savedSummaryRideId = useStore(store, (state) => state.savedSummaryRideId);
+  const rideCard = useStore(store, (state) => state.rideCard);
   const rerouteAvailable = useStore(store, (state) => state.rerouteAvailable);
   const rerouteBusy = useStore(store, (state) => state.rerouteBusy);
   const rerouteMessage = useStore(store, (state) => state.rerouteMessage);
@@ -884,13 +886,16 @@ export function RideFocus({
    * cannot be made rather than leaving a dead button.
    */
   const exportRideGpx = (): void => {
-    if (availableRouteLine.length < 2) return;
+    // The line ridden when the ride recorded one (the card's own line), else the
+    // plan's. A card cannot export a line it is not showing.
+    const line = recordedLine.length >= 2 ? recordedLine : availableRouteLine;
+    if (line.length < 2) return;
     try {
       const title = rideExportTitle(null);
       downloadExport(
         new TextEncoder().encode(buildPlannedTrackGpx({
           title,
-          geometry: availableRouteLine,
+          geometry: line,
           createdTime: navigation?.endedAt ?? null,
         })),
         exportFilename(title, "planned-track"),
@@ -1414,12 +1419,32 @@ export function RideFocus({
         aria-label="Ride controls"
         hidden={!sheetVisible}
       >
-        {terminal === null ? null : (
+        {terminal === null ? null : rideCard !== null && terminal.reason === "completed" ? (
+          /*
+            The ride card (R3-2): the line, the ride's name and day, and the four
+            numbers. One headline, once: the card is the end of the ride, and
+            "Ride finished" is said here and nowhere else.
+          */
+          <div className="og-ride__terminal" data-testid="ride-terminal">
+            <RideCard
+              card={rideCard}
+              headline="Ride finished"
+              doneHref="/rides?tab=ridden"
+              onGpx={exportRideGpx}
+              exitHref={exitHref}
+            />
+            {exportError === null ? null : (
+              <p className="og-ride__error" role="alert" data-testid="ride-summary-export-error">
+                {exportError}
+              </p>
+            )}
+          </div>
+        ) : terminal === null ? null : (
           <div className="og-ride__terminal" data-testid="ride-terminal">
             {/* The headline is the live region; the numbers and the two ways
                 onward stay outside it, so the card never re-reads itself to a
-                rider. No sentence: the title says what happened and the
-                numbers say what the ride was. */}
+                rider. This is the card for a ride whose numbers were never
+                recorded (storage failed) and for a discarded ride. */}
             <h2 className="og-ride__terminal-title" role="status">
               {savedSummaryRideId !== null ? "Free Ride summary saved" : terminal.title}
             </h2>
@@ -1646,6 +1671,35 @@ export function RideFocus({
                 <span className="og-ride__sheet-row-hint">Keep recording</span>
               </button>
             )}
+            {/*
+              Recording is on from Start (R3-2). The switch stays for the rider
+              who wants it off: one row, the state in the hint, and the same
+              promise as before — turning it off discards the track.
+            */}
+            {navigation === null || navigation.activity === "free" || navigation.activity === "completed" ? null : (
+              <button
+                type="button"
+                className="og-ride__sheet-row"
+                data-testid="ride-recording-toggle"
+                aria-pressed={navigation.recordingId !== null}
+                disabled={recordingToggleBusy || recordingCleanupPending}
+                onClick={(): void => {
+                  if (recordingCleanupPending || navigation.recordingId !== null) void store.getState().stopRecording();
+                  else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
+                }}
+              >
+                <span className="og-ride__sheet-row-label">Recording</span>
+                <span className="og-ride__sheet-row-hint">
+                  {recordingToggleBusy
+                    ? "Working…"
+                    : recordingCleanupPending
+                      ? "Retry turning it off"
+                      : navigation.recordingId === null
+                        ? "Off"
+                        : "On"}
+                </span>
+              </button>
+            )}
             <button
               type="button"
               className="og-ride__sheet-row og-ride__sheet-row--danger"
@@ -1829,12 +1883,13 @@ export function RideFocus({
                   else void store.getState().startRecording(navigation.plan.rideId, navigation.plan.rideRevision);
                 }}
               >
-                <span className="og-ride__switch-row-label">
+                <span className="og-ride__switch-row-label">Recording</span>
+                <span className="og-ride__sheet-row-hint">
                   {recordingCleanupPending
-                    ? "Retry turning recording off"
+                    ? "Retry turning it off"
                     : navigation.recordingId === null
-                      ? "Record this ride"
-                      : "Stop recording"}
+                      ? "Off"
+                      : "On"}
                 </span>
                 <span
                   className="og-ride__switch"
@@ -2252,7 +2307,7 @@ export function RideFocus({
             aria-controls="og-ride-sheet"
             onClick={toggleSheet}
           >
-            <span className="og-ride__strip-main">{terminal.title}</span>
+            <span className="og-ride__strip-main">Ride summary</span>
             <span className="og-visually-hidden">{sheetVisible ? "Hide ride controls" : "Show ride controls"}</span>
           </button>
         ) : (

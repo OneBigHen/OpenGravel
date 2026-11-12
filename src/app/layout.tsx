@@ -22,6 +22,7 @@ import "@/ui/explore/hike-explore.css";
 import "@/ui/explore/route-detail.css";
 import "@/ui/rides/rides.css";
 import "@/ui/ride/ride.css";
+import "@/ui/ride/ride-card.css";
 import "@/ui/layers/layers.css";
 import "@/ui/safety/emergency.css";
 import "@/ui/places/places.css";

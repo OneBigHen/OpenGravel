@@ -95,22 +95,42 @@ export interface RideCard {
   readonly average: RideStatText | null;
   readonly surface: RideCardSurface;
   readonly numbers: RideCardNumbers;
+  /** The units the card's numbers are printed in. */
+  readonly units: UnitSystem;
   /** At most {@link RIDE_CARD_MAX_POINTS} points, in order. */
   readonly line: readonly Coordinate[];
 }
 
 export type UnitSystem = "imperial" | "metric";
 
-export interface BuildRideCardInput {
-  /** The finished recording's points, in order. */
-  readonly points: readonly RideCardPoint[];
+export interface RideCardInput {
   /** The guided plan's measured surface runs, in metres along its line. */
   readonly surfaceRuns?: readonly SurfaceRunSpan[] | null;
   readonly units?: UnitSystem;
   /** The ride's own name; absent means "Ride, <date>". */
   readonly title?: string | null;
-  /** The day to print when the recording has no usable first fix (a saved ride's day). */
+  /** The ride's start, when the surface knows the session's own clock. */
+  readonly startedAt?: string | null;
+  /** The ride's end, when the surface knows the session's own clock. */
+  readonly endedAt?: string | null;
+  /** The day to print when no instant is known (a saved ride's day). */
   readonly date?: string | null;
+}
+
+export interface BuildRideCardInput extends RideCardInput {
+  /** The finished recording's points, in order. */
+  readonly points: readonly RideCardPoint[];
+}
+
+/**
+ * What the ride surface already holds when a ride ends: the filtered telemetry
+ * the strip read over the very same points, plus the line ridden. The screen
+ * supplies these so the card can never disagree with what the rider watched.
+ */
+export interface BuildRideCardFromTelemetryInput extends RideCardInput {
+  readonly telemetry: RecordingTelemetry;
+  /** The line ridden, in order. */
+  readonly line: readonly Coordinate[];
 }
 
 /** One month name per index, so the card's date does not follow the machine's locale. */
@@ -320,15 +340,17 @@ function numbersOf(
   };
 }
 
-/** The card of a finished recording. */
-export function buildRideCard(input: BuildRideCardInput): RideCard {
+/**
+ * The card from the numbers the surface already read: the same telemetry the
+ * strip showed, the line ridden, and the ride's own clock.
+ */
+export function rideCardFromTelemetry(input: BuildRideCardFromTelemetryInput): RideCard {
   const units = input.units ?? "imperial";
-  const points = input.points;
-  const telemetry = telemetryOf(points);
+  const telemetry = input.telemetry;
   const surface = rideCardSurface(telemetry.acceptedDistanceMeters, input.surfaceRuns);
-  const startedAt = firstInstant(points);
-  const endedAt = lastInstant(points);
-  const date = rideCardDate(startedAt) ?? rideCardDate(input.date);
+  const startedAt = input.startedAt ?? null;
+  const endedAt = input.endedAt ?? null;
+  const date = rideCardDate(startedAt) ?? rideCardDate(input.date) ?? rideCardDate(endedAt);
   const average = movingAverageSpeedMps(telemetry);
   return {
     title: titleOf(input.title, date),
@@ -342,8 +364,22 @@ export function buildRideCard(input: BuildRideCardInput): RideCard {
     average: average === null ? null : speedStat(average, units),
     surface,
     numbers: numbersOf(telemetry, units, surface),
-    line: simplifyLine(points.map((point) => point.coordinate)),
+    units,
+    line: simplifyLine(input.line),
   };
+}
+
+/** The card of a finished recording, from its own points. */
+export function buildRideCard(input: BuildRideCardInput): RideCard {
+  const points = input.points;
+  return rideCardFromTelemetry({
+    ...input,
+    telemetry: telemetryOf(points),
+    line: points.map((point) => point.coordinate),
+    startedAt: input.startedAt ?? firstInstant(points),
+    endedAt: input.endedAt ?? lastInstant(points),
+    ...(input.date === undefined ? { date: firstInstant(points) } : {}),
+  });
 }
 
 export interface BuildStoredRideCardInput {
@@ -387,6 +423,7 @@ export function buildStoredRideCard(input: BuildStoredRideCardInput): RideCard {
       dirt: null,
       climb: null,
     },
+    units,
     line: simplifyLine(input.line),
   };
 }

@@ -211,6 +211,29 @@ export interface StartRideFromHandoffInput {
    * second one being started on the same route.
    */
   readonly existingSessionId?: RideSessionId | null;
+  /**
+   * Recording is on from Start for every ride, so the trace begins with the
+   * ride rather than behind a switch in the Menu. Absent in tests and in any
+   * composition root that has no recording storage.
+   */
+  readonly recording?: RideRecordingWorkflow;
+}
+
+/**
+ * Starts the ride's recording if it has none yet. `true` when the ride is
+ * recording afterwards (or there is no recording workflow to ask).
+ */
+async function ensureRecording(
+  input: StartRideFromHandoffInput,
+  rideId: RideId,
+  rideRevision: number,
+): Promise<boolean> {
+  if (input.recording === undefined) return true;
+  const state = input.controller.snapshot();
+  if (state === null) return false;
+  if (state.activity === "completed" || state.recordingId !== null) return true;
+  const started = await input.recording.start(rideId, rideRevision, input.now);
+  return started.outcome === "started";
 }
 
 /**
@@ -243,6 +266,13 @@ export async function startRideFromHandoff(
         : { surfaceRuns: input.request.surfaceRuns }),
       updatedAt: input.now,
     });
+    if (!(await ensureRecording(input, input.request.rideId, input.request.rideRevision))) {
+      return {
+        outcome: "rejected",
+        sessionId: existing,
+        message: "The ride is open, but recording could not start. Check device storage and try again.",
+      };
+    }
     return { outcome: "resumed", sessionId: existing, message: null };
   }
 
@@ -279,6 +309,13 @@ export async function startRideFromHandoff(
       : { surfaceRuns: input.request.surfaceRuns }),
     updatedAt: input.now,
   });
+  if (!(await ensureRecording(input, input.request.rideId, input.request.rideRevision))) {
+    return {
+      outcome: "rejected",
+      sessionId: started.state.sessionId,
+      message: "The ride is open, but recording could not start. Check device storage and try again.",
+    };
+  }
   return { outcome: "started", sessionId: started.state.sessionId, message: null };
 }
 
@@ -294,7 +331,7 @@ export interface PlannerRideActions {
   readonly startBreadcrumb?: (document: RideDocument) => Promise<RideStartOutcome>;
 }
 
-export async function startBreadcrumbFromPlanner(input: { readonly document: RideDocument; readonly rides: RideRepositoryPort; readonly geometry: GeometryStore; readonly controller: RideSessionController; readonly pointer: RideFocusPointerPort; readonly now: string }): Promise<RideStartOutcome> {
+export async function startBreadcrumbFromPlanner(input: { readonly document: RideDocument; readonly rides: RideRepositoryPort; readonly geometry: GeometryStore; readonly controller: RideSessionController; readonly pointer: RideFocusPointerPort; readonly now: string; readonly recording?: RideRecordingWorkflow }): Promise<RideStartOutcome> {
   const route = input.document.intent.breadcrumb;
   if (route == null || route.waypoints.length < 2 || route.waypoints.length > 2048) return { outcome: "rejected", sessionId: null, message: "Add at least two waypoints before following this route." };
   const existing = input.pointer.read();
@@ -314,6 +351,16 @@ export async function startBreadcrumbFromPlanner(input: { readonly document: Rid
       return { coordinate: point.coordinate, name: point.name?.trim() || null, distanceAlongMeters: along };
     });
     input.pointer.write({ sessionId: started.state.sessionId, rideId: input.document.rideId, routeGeometryRef: stored.geometryRef, breadcrumbWaypoints, updatedAt: input.now });
+    if (input.recording !== undefined && started.state.recordingId === null) {
+      const recorded = await input.recording.start(input.document.rideId, input.document.revision, input.now);
+      if (recorded.outcome !== "started") {
+        return {
+          outcome: "rejected",
+          sessionId: started.state.sessionId,
+          message: "The ride is open, but recording could not start. Check device storage and try again.",
+        };
+      }
+    }
     return { outcome: "started", sessionId: started.state.sessionId, message: null };
   } catch {
     return { outcome: "rejected", sessionId: null, message: "The route could not be saved for Ride. Try again." };
