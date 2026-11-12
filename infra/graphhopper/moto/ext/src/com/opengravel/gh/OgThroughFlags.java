@@ -176,8 +176,11 @@ public final class OgThroughFlags {
         out.bigOther = new int[edges];
         for (int e = 0; e < edges; e++) {
             if (!usable[e]) continue;
-            out.partMetersOfEdge[e] = partMeters[find(part, from[e])];
-            if (!bridge[e]) { through[e] = partThrough[find(part, from[e])]; continue; }
+            if (!bridge[e]) {
+                out.partMetersOfEdge[e] = partMeters[find(part, from[e])];
+                through[e] = partThrough[find(part, from[e])];
+                continue;
+            }
             int a = find(part, from[e]), b = find(part, to[e]);
             int child = tParentEdge[a] == e ? a : b;
             int total = sub[treeRoot[child]];

@@ -167,20 +167,44 @@ def along(coords, fraction):
     return (coords[-1][1], coords[-1][0])
 
 
-def through_at_midpoint(url, coords):
-    """og_through on the corridor's middle: route 45% -> 55% of it and read the value at the middle of that path."""
-    a, b = along(coords, 0.45), along(coords, 0.55)
+def haversine(a, b):
+    """Metres between two (lat, lon) points."""
+    la1, la2 = math.radians(a[0]), math.radians(b[0])
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin(math.radians(b[1] - a[1]) / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(h))
+
+
+ON_CORRIDOR_METERS = 30
+
+
+def through_at(url, coords, fraction=0.5):
+    """og_through on the corridor itself at `fraction` of its length: route from 5% before to 5% after that
+    point and read the value on the path segment nearest to it. The reading only counts when the path passes
+    within ON_CORRIDOR_METERS of the point; otherwise the router took another road and nothing was read."""
+    target = along(coords, fraction)
+    a, b = along(coords, max(0.0, fraction - 0.05)), along(coords, min(1.0, fraction + 0.05))
     body = route_body("motorcycle_adventure", a, b, calc_points=True, points_encoded=False, details=["og_through", "og_through_street"])
     payload, _ = post_route(url, body)
     if "paths" not in payload:
         return None, payload.get("message")
     path = payload["paths"][0]
-    n = len(path["points"]["coordinates"])
-    mid = max(0, n // 2 - 1)
+    points = [(c[1], c[0]) for c in path["points"]["coordinates"]]
+    if len(points) < 2:
+        return None, "path has no segment"
+    best, best_d = 0, float("inf")
+    for i in range(len(points) - 1):
+        # distance to the segment, sampled: good enough at corridor scale
+        for t in (0.0, 0.25, 0.5, 0.75, 1.0):
+            q = (points[i][0] + (points[i + 1][0] - points[i][0]) * t, points[i][1] + (points[i + 1][1] - points[i][1]) * t)
+            d = haversine(q, target)
+            if d < best_d:
+                best, best_d = i, d
+    if best_d > ON_CORRIDOR_METERS:
+        return None, f"route passes {best_d:.0f} m from the corridor point (another road was read)"
     for start, end, value in path["details"]["og_through"]:
-        if start <= mid < end or (start == mid == end):
+        if start <= best < end:
             return bool(value), None
-    return None, "no detail at the middle"
+    return None, "no detail on the nearest segment"
 
 
 def check_through(url, atlas):
@@ -199,12 +223,20 @@ def check_through(url, atlas):
         rows = db.execute(sql).fetchall()
         results = []
         for cid, geometry in rows:
-            value, problem = through_at_midpoint(url, json.loads(geometry))
-            results.append({"id": cid, "through": value, "problem": problem})
+            coords = json.loads(geometry)
+            value, problem = through_at(url, coords, 0.5)
+            row = {"id": cid, "through": value, "problem": problem}
+            if not expected:
+                # Information only, never scored: the dead end itself, near the corridor's last node.
+                row["tipThrough"], row["tipProblem"] = through_at(url, coords, 0.97)
+            results.append(row)
         right = sum(1 for r in results if r["through"] is expected)
         unread = [r["id"] for r in results if r["through"] is None]
         check(len(rows) == 20 and right >= THROUGH_SHARE * 20,
               f"through: {right} of {len(rows)} corridors with {name} read {str(expected).lower()} (need 19)" + (f"; unread {unread}" if unread else ""))
+        if not expected:
+            tips = [r for r in results if r.get("tipThrough") is not None]
+            print(f"     (information only: at the dead-end tip, {sum(1 for r in tips if r['tipThrough'] is False)} of {len(tips)} readable no-way-out corridors read false)")
         report["through"][name] = results
 
 
