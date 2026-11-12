@@ -59,7 +59,7 @@ test("native Spotify: Settings connects and cancels, and the ride controls the p
   // Connecting is a Settings task: one row, one control, and a pending sign-in
   // can be called off.
   await page.goto("/settings#settings-music-title");
-  const setup = page.getByRole("region", { name: "Music" });
+  const setup = page.getByTestId("settings-more");
   await setup.getByRole("button", { name: "Connect Spotify" }).click();
   await expect(setup).toContainText("Connecting…");
   await setup.getByRole("button", { name: "Cancel Spotify sign-in" }).click();

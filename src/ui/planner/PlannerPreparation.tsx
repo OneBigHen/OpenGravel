@@ -3,9 +3,9 @@
 /**
  * The planner's route briefing (MVP parity M4, OGV-D-266): when to leave, and
  * what that means for the selected route — weather over the ride's window,
- * heavy traffic when leaving now, fuel against the distance, daylight — plus
- * the offline readiness disclosure the workspace used to own. What could not
- * be checked is left out rather than listed.
+ * heavy traffic when leaving now, fuel against the distance, daylight. What
+ * could not be checked is left out rather than listed. Offline downloads are
+ * not promised here: the offline package (R3-7) brings one honest control.
  *
  * It owns no ride state: the departure is authored through `onDepartureChange`
  * (one `departure.set` command), and the checks are read-only projections of
@@ -15,13 +15,9 @@
  */
 
 import { useEffect, useId, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
 
-import type { OfflineRuntimeSnapshot } from "@/application/offline/offline-runtime";
-import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
-import { useInstalledOfflineAreas } from "@/ui/planner/installed-offline-areas";
-import { readBrowserOfflineRuntime } from "@/application/offline/offline-runtime";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
+import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import {
   plannerPreparationContext,
   type PlannerPreparationRoute,
@@ -330,8 +326,6 @@ export function PlannerPreparation({
   bike,
   bikes = [],
   providers,
-  offlineRoute,
-  offlineRegions: offlineRegionsProp,
   onDepartureChange,
   arrival = null,
   onArrivalChange,
@@ -375,13 +369,6 @@ export function PlannerPreparation({
     readonly late: boolean;
     readonly now: string;
   } | null>(null);
-  const [offline, setOffline] = useState<{
-    readonly routeKey: string;
-    readonly snapshot: OfflineRuntimeSnapshot;
-  } | null>(null);
-  const offlineRouteKey = offlineRoute?.routeKey ?? "none";
-  const providedOfflineRegions = useInstalledOfflineAreas();
-  const offlineRegions = offlineRegionsProp ?? providedOfflineRegions;
 
   // One refresh per (route, departure): weather for the ride's window, and
   // live traffic when the ride leaves now. The context is computed here, not
@@ -429,28 +416,6 @@ export function PlannerPreparation({
     // `route` is identified by its key; its geometry never changes under one id.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [briefingKey, providers, bike, timeZone]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const installedAreas = offlineRegions === undefined
-      ? Promise.resolve<number | null>(null)
-      : offlineRegions.installed().then(
-          (areas) => areas.length,
-          () => null,
-        );
-    void installedAreas
-      .then((count) => readBrowserOfflineRuntime({ route: offlineRoute, installedAreas: count }))
-      .then((snapshot) => {
-        if (!cancelled) setOffline({ routeKey: offlineRouteKey, snapshot });
-      })
-      .catch(() => {
-        // A failed observation is not a reason to manufacture readiness.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [offlineRoute, offlineRouteKey, offlineRegions]);
-  const offlineSnapshot = offline?.routeKey === offlineRouteKey ? offline.snapshot : null;
 
   const current = briefing !== null && briefing.key === briefingKey ? briefing : null;
   const preparation = current === null ? null : enrichPlannerPreparationForLongTrip(prepareRoute({ ...current.context, providers: providers ?? {} }), current.context, bike);
@@ -550,17 +515,6 @@ export function PlannerPreparation({
       )}
 
       <PlannerAlongOpportunities route={route} departure={effectiveDeparture} source={providers?.mapLayers} onAddStop={onAddStopAt} onRouteThrough={onRouteThrough} map={opportunityMap} />
-
-      {/* Downloading an area is a real action in Settings, so the sheet offers
-          it as one plain row — and only while this phone really holds no area.
-          With an area already saved the ride simply works offline, and with
-          the download state unknown there is nothing honest to say. */}
-      {route === null || offlineSnapshot === null || offlineSnapshot.installedAreas !== 0 ? null : (
-        <Link className="og-prepare__row" data-testid="offline-save-area" href="/settings#settings-offline-title">
-          <span className="og-prepare__row-label">Save this area for offline</span>
-          <span className="og-prepare__chevron" aria-hidden="true">›</span>
-        </Link>
-      )}
     </>
   );
 }

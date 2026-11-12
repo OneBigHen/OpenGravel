@@ -23,6 +23,11 @@ async function openRideMenu(page: Page, title: string) {
   await page.getByRole("button", { name: `More actions for ${title}` }).click();
 }
 
+// Opening a saved ride is a full page load (R3-1: the planner restores the
+// ride and its kept line at boot, like a curated "Ride this"), so this one
+// story of save, reload, open, rename and delete gets more than 30 s.
+test.setTimeout(60_000);
+
 test("keeps named rides separate from the active draft and protects sources", async ({ page }) => {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();

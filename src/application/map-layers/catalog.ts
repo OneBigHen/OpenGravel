@@ -362,11 +362,14 @@ export interface MapLayerLens {
 }
 
 export const MAP_LAYER_LENSES: readonly MapLayerLens[] = [
-  { id: "hiking", name: "Hiking", hint: "Trails, terrain and trail stops", glyph: "▲", layers: ["trails", "trailheads", "water-sources", "shelters", "summits", "viewpoints", "hillshade", "contours"] },
+  // Riding first: the four sets a rider asks for are always in this order.
   { id: "fun", name: "Fun roads", hint: "Twisty, dirt and views", glyph: "∿", layers: ["great-roads", "gravel", "viewpoints", "hillshade"] },
   { id: "weather", name: "Weather", hint: "Rain, wind and alerts", glyph: "☂", layers: ["weather-radar", "wind", "weather"] },
-  { id: "traffic", name: "Traffic", hint: "Slowdowns and road work", glyph: "≋", layers: ["traffic-flow", "live-traffic", "work-zones"] },
   { id: "stops", name: "Gas and food", hint: "Fuel, food, coffee", glyph: "⛽", layers: ["fuel", "food", "coffee"] },
+  { id: "traffic", name: "Traffic", hint: "Slowdowns and road work", glyph: "≋", layers: ["traffic-flow", "live-traffic", "work-zones"] },
+  // The hiking surface (frozen) keeps its whole set, listed only when the
+  // rider's planning activity is Hike.
+  { id: "hiking", name: "Hiking", hint: "Trails, terrain and trail stops", glyph: "▲", layers: ["trails", "trailheads", "water-sources", "shelters", "summits", "viewpoints", "hillshade", "contours"] },
 ];
 
 const LAYER_IDS = new Set<string>(MAP_LAYERS.map((layer) => layer.id));

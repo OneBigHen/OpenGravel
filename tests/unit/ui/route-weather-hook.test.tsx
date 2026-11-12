@@ -2,7 +2,12 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RouteWeatherReport } from "@/application/weather/route-weather";
-import { useRouteWeather, type RouteWeatherSubject } from "@/ui/weather/useRouteWeather";
+import {
+  ROUTE_WEATHER_MAX_POINTS,
+  thinRouteLine,
+  useRouteWeather,
+  type RouteWeatherSubject,
+} from "@/ui/weather/useRouteWeather";
 import type { Coordinate } from "@/domain/ride/types";
 
 const LINE: readonly Coordinate[] = [
@@ -78,6 +83,32 @@ describe("useRouteWeather", () => {
     expect(body["departureTime"]).toBe("2026-10-27T13:30:00.000Z");
     expect(body["durationSeconds"]).toBe(3600);
     expect(typeof body["timeZone"]).toBe("string");
+  });
+
+  it("never sends more than 512 points, so a long loop still gets its weather", async () => {
+    // A 60-mile loop as the router draws it: thousands of points, ends meeting.
+    const longLine: Coordinate[] = Array.from({ length: 6_000 }, (_, index) => ({
+      lon: -77.89 + 0.3 * Math.sin((index / 6_000) * 2 * Math.PI),
+      lat: 40.72 + 0.3 * (1 - Math.cos((index / 6_000) * 2 * Math.PI)),
+    }));
+    const fetchMock = stubFetch(() => Response.json({ report: REPORT }));
+    const { result } = renderHook(() => useRouteWeather(subject({ line: longLine })));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body)) as { line: Coordinate[] };
+    expect(body.line.length).toBeLessThanOrEqual(ROUTE_WEATHER_MAX_POINTS);
+    expect(ROUTE_WEATHER_MAX_POINTS).toBe(512);
+    expect(body.line[0]).toEqual(longLine[0]);
+    expect(body.line[body.line.length - 1]).toEqual(longLine[longLine.length - 1]);
+  });
+
+  it("thins only lines that are too long, keeping both ends", () => {
+    expect(thinRouteLine(LINE)).toBe(LINE);
+    const line = Array.from({ length: 2_049 }, (_, index) => ({ lon: index, lat: 0 }));
+    const thinned = thinRouteLine(line);
+    expect(thinned).toHaveLength(512);
+    expect(thinned[0]).toEqual({ lon: 0, lat: 0 });
+    expect(thinned[511]).toEqual({ lon: 2_048, lat: 0 });
   });
 
   it("stays idle until the rider has a departure and a duration", async () => {

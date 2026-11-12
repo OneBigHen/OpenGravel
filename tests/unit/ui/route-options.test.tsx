@@ -28,7 +28,7 @@ it("shows the trip, reverses through the existing ride.reverse command and expos
   expect(screen.getAllByTestId("start-ride")).toHaveLength(1);
   expect(screen.getByTestId("route-option-fastest")).toHaveAttribute("aria-pressed", "true");
 });
-it("offers offline maps from the route preview", () => {
+it("has no offline-maps dead end", () => {
   render(<RouteOptions cards={[card]} onSelect={vi.fn()} startLabel="Start" finishLabel="Finish" start={null}/>);
-  expect(screen.getByRole("link", { name: "Offline maps" })).toHaveAttribute("href", "/settings#settings-offline-title");
+  expect(screen.queryByRole("link", { name: "Offline maps" })).toBeNull();
 });

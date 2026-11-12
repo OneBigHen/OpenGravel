@@ -15,18 +15,12 @@ test("empty caches never claim offline-ready network capabilities", async ({ pag
   await directionsTo(page);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]').first()).toBeVisible();
-  // No downloaded area on this device: the sheet offers one plain row to save
-  // one, and never claims a capability is ready or calls the phone online-only
-  // in a status line.
-  const saveArea = page.getByTestId("offline-save-area");
-  await expect(saveArea).toBeVisible();
-  await expect(saveArea).toContainText("Save this area for offline");
+  // No downloaded area on this device and no area offered by the server: the
+  // sheet promises nothing and has no row leading to an empty Settings section.
+  await expect(page.getByTestId("offline-save-area")).toHaveCount(0);
+  await expect(page.getByText("Save this area for offline")).toHaveCount(0);
   await expect(page.getByText(/online only/)).toHaveCount(0);
   await expect(page.getByText("Offline ready", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Offline readiness", { exact: true })).toHaveCount(0);
-  // The row leads to the download itself, which lives in Settings.
-  await saveArea.click();
-  await expect(page).toHaveURL(/\/settings/);
-  await expect(page.getByRole("heading", { name: "Offline areas" })).toBeVisible();
   expect(consoleErrors).toEqual([]);
 });

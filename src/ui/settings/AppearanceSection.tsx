@@ -3,7 +3,7 @@
 /**
  * Settings → Display: Auto, Day or Night as a three-way segmented control in
  * its own row. Day is the high-visibility bright theme for riding in sunlight;
- * Night is Trail Glass dark; Auto follows the phone. One tap applies it
+ * Night is Trail Glass dark; Auto follows the sun where the rider is. One tap applies it
  * everywhere (src/ui/appearance/appearance.ts).
  */
 

@@ -288,6 +288,12 @@ export function OfflineMapsSection({ regions }: { readonly regions: OfflineRegio
     ? ""
     : downloadProgressLabel(active.progress ?? { completedBytes: 0, totalBytes: 0 }, active.expectedBytes);
 
+  // Nothing to offer and nothing on the device: the section is not shown at
+  // all, rather than promising a download the server does not have. A device
+  // that cannot be read, or a list that needs signal, still says so.
+  const hasAreas = saved.length > 0 || active !== null || (offers !== null && offers.length > 0);
+  if (!hasAreas && !offersFailed && device.status !== "failed") return null;
+
   return (
     <SettingsGroup
       id="settings-offline-title"

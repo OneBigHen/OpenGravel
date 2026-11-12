@@ -1,7 +1,7 @@
 "use client";
 
 import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { AppBar } from "@/ui/nav/AppBar";
 import {
   addBike,
@@ -18,7 +18,7 @@ import { HomeSearch } from "./HomeSearch";
 import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
 import { AppearanceRow } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
-import { FrontDoorSection } from "@/ui/settings/FrontDoorSection";
+import { FrontDoorRows } from "@/ui/settings/FrontDoorSection";
 import { InstallSection } from "@/ui/settings/InstallSection";
 import { LiveActivityRow } from "@/ui/settings/LiveActivityRow";
 import { NavScreenRow } from "@/ui/settings/NavScreenSection";
@@ -72,6 +72,13 @@ export interface DeleteResult {
   readonly ok: boolean;
   readonly message: string;
 }
+
+/** Deep-link targets that live inside the closed "More" group. */
+const MORE_HASH_IDS: ReadonlySet<string> = new Set([
+  "settings-activity-title",
+  "settings-music-title",
+  "settings-usage-title",
+]);
 
 /**
  * The destructive control keeps its own confirmation state so a successful wipe
@@ -142,6 +149,24 @@ export function SettingsSurface({
   const [form, setForm] = useState<BikeForm>(NEW_BIKE);
   const [formError, setFormError] = useState<string | null>(null);
   const [bikeToDelete, setBikeToDelete] = useState<string | null>(null);
+  // "More" is one closed group: the side settings stay out of the rider's way
+  // until asked for. A deep link into one of them opens it.
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    // The URL hash is read once at arrival, an external input the server cannot know.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (MORE_HASH_IDS.has(id)) setMoreOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const id = window.location.hash.slice(1);
+    if (!MORE_HASH_IDS.has(id)) return;
+    const frame = window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [moreOpen]);
 
   function closeEditor(): void {
     setEditingId(null);
@@ -256,34 +281,6 @@ export function SettingsSurface({
       </header>
 
       <div className="og-settings__layout" key={`local-data-${localDataEpoch}`}>
-        <SettingsGroup id="settings-display-title" label="Display">
-          <AppearanceRow />
-          {showNavScreen ? <NavScreenRow /> : null}
-          {showLiveActivity ? <LiveActivityRow /> : null}
-        </SettingsGroup>
-
-        <SettingsGroup id="settings-activity-title" label="Activity"><div className="og-settings__row"><span className="og-settings__row-text"><span className="og-settings__row-label">Planning activity</span></span><ActivitySwitch /></div></SettingsGroup>
-        <FrontDoorSection />
-        <SettingsGroup id="settings-map-title" label="Map">
-          <div className="og-settings__row">
-            <span className="og-settings__row-text">
-              <span className="og-settings__row-label" id="settings-map-style-label">Style</span>
-            </span>
-            <div className="og-settings__row-control">
-              <select
-                aria-labelledby="settings-map-style-label"
-                value={satellitePreferred ? "satellite" : "map"}
-                onChange={(event) => onSatellitePreferredChange?.(event.target.value === "satellite")}
-              >
-                <option value="map">Map</option>
-                <option value="satellite">Satellite</option>
-              </select>
-            </div>
-          </div>
-        </SettingsGroup>
-
-        {spotifySetup}
-
         <SettingsGroup id="settings-bikes-title" label="Your bikes">
           {garage.bikes.map((bike) => {
             const isActive = garage.bikes.length > 1 && garage.activeBikeId === bike.id;
@@ -352,44 +349,31 @@ export function SettingsSurface({
           )}
         </SettingsGroup>
 
-        {offlineRegions !== null ? <OfflineMapsSection regions={offlineRegions} /> : <SettingsGroup id="settings-offline-title" label="Offline areas"><p className="og-settings__card-block og-settings__note">Offline downloads are unavailable on this device.</p></SettingsGroup>}
-
-        <SettingsGroup id="settings-usage-title" label="Usage data">
-          {/* The whole disclosure stays one tap away rather than six lines of
-              page before the row the rider came to change. */}
-          <details className="og-settings__disclosure">
-            <summary className="og-settings__row og-settings__row--button">
-              <span className="og-settings__row-text">
-                <span className="og-settings__row-label">What is collected</span>
-              </span>
-              <Chevron />
-            </summary>
-            <div className="og-settings__disclosure-body">
-              <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.collectedSummary}</p>
-              <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.neverCollectedSummary}</p>
-              <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.mapContextDisclosure}</p>
-              <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.offUntilAcknowledgedNote}</p>
-            </div>
-          </details>
-          <label className="og-settings__row og-settings__row--check">
-            <span className="og-settings__row-text">
-              <span className="og-settings__row-label">I understand and acknowledge this collection</span>
-              <span className="og-settings__row-meta">Off until you acknowledge. You can turn it off again any time.</span>
-            </span>
-            <input
-              type="checkbox"
-              aria-label="I understand and acknowledge this collection"
-              checked={telemetryGateOpen("hosted-beta", telemetryConsent)}
-              onChange={(event) => onTelemetryConsentChange?.(event.target.checked ? acknowledgedConsentState(new Date().toISOString()) : { status: "unacknowledged" })}
-            />
-          </label>
+        <SettingsGroup id="settings-display-title" label="Display">
+          <AppearanceRow />
+          {showNavScreen ? <NavScreenRow /> : null}
+          {showLiveActivity ? <LiveActivityRow /> : null}
         </SettingsGroup>
 
-        <InstallSection />
+        <SettingsGroup id="settings-map-title" label="Map style">
+          <div className="og-settings__row">
+            <span className="og-settings__row-text">
+              <span className="og-settings__row-label" id="settings-map-style-label">Style</span>
+            </span>
+            <div className="og-settings__row-control">
+              <select
+                aria-labelledby="settings-map-style-label"
+                value={satellitePreferred ? "satellite" : "map"}
+                onChange={(event) => onSatellitePreferredChange?.(event.target.value === "satellite")}
+              >
+                <option value="map">Map</option>
+                <option value="satellite">Satellite</option>
+              </select>
+            </div>
+          </div>
+        </SettingsGroup>
 
-        <FeedbackSection />
-
-        <SettingsGroup id="settings-data-title" label="Data" hint="Rides stay on this device.">
+        <SettingsGroup id="settings-data-title" label="Units and data" hint="Rides stay on this device.">
           <div className="og-settings__row" data-testid="settings-units">
             <span className="og-settings__row-text">
               <span className="og-settings__row-label">Distance</span>
@@ -399,6 +383,66 @@ export function SettingsSurface({
           <SettingsRowButton label="Export all data" onClick={() => onExport?.()} disabled={onExport === undefined} chevron={false} />
           {statusMessage ? <p className="og-settings__card-block og-settings__note" role="status">{statusMessage}</p> : null}
           <DangerZone onDeleteAll={onDeleteAll} deleteResult={deleteResult} />
+        </SettingsGroup>
+
+        <FeedbackSection />
+
+        <InstallSection />
+
+        {offlineRegions !== null ? <OfflineMapsSection regions={offlineRegions} /> : null}
+
+        <SettingsGroup
+          id="settings-more-title"
+          label="More"
+          hint="Planning activity, Ask, traffic cameras, Spotify and usage data."
+          testId="settings-more"
+        >
+          {/* The rider asked for a ride. This group stays shut until they ask
+              for the rest, so the page leads with bikes, Home and the map. */}
+          <SettingsRowButton
+            label={moreOpen ? "Hide more settings" : "Show more settings"}
+            expanded={moreOpen}
+            ariaLabel={moreOpen ? "Hide more settings" : "Show more settings"}
+            onClick={() => setMoreOpen((open) => !open)}
+          />
+          {moreOpen ? (
+            <>
+              <div className="og-settings__row" id="settings-activity-title">
+                <span className="og-settings__row-text"><span className="og-settings__row-label">Planning activity</span></span>
+                <ActivitySwitch />
+              </div>
+              <FrontDoorRows />
+              {spotifySetup}
+              {/* The whole disclosure stays one tap away rather than six lines of
+                  page before the row the rider came to change. */}
+              <details className="og-settings__disclosure" id="settings-usage-title">
+                <summary className="og-settings__row og-settings__row--button">
+                  <span className="og-settings__row-text">
+                    <span className="og-settings__row-label">What is collected</span>
+                  </span>
+                  <Chevron />
+                </summary>
+                <div className="og-settings__disclosure-body">
+                  <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.collectedSummary}</p>
+                  <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.neverCollectedSummary}</p>
+                  <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.mapContextDisclosure}</p>
+                  <p className="og-settings__note">{TELEMETRY_ACKNOWLEDGEMENT.offUntilAcknowledgedNote}</p>
+                </div>
+              </details>
+              <label className="og-settings__row og-settings__row--check">
+                <span className="og-settings__row-text">
+                  <span className="og-settings__row-label">Share anonymous usage data</span>
+                  <span className="og-settings__row-meta">Off until you acknowledge. You can turn it off again any time.</span>
+                </span>
+                <input
+                  type="checkbox"
+                  aria-label="Share anonymous usage data"
+                  checked={telemetryGateOpen("hosted-beta", telemetryConsent)}
+                  onChange={(event) => onTelemetryConsentChange?.(event.target.checked ? acknowledgedConsentState(new Date().toISOString()) : { status: "unacknowledged" })}
+                />
+              </label>
+            </>
+          ) : null}
         </SettingsGroup>
       </div>
     </main>

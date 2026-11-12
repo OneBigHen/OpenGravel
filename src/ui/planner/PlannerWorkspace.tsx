@@ -102,7 +102,7 @@ import {
   useRestoreAnnouncement,
   usePlannerSketch,
   usePlannerStops,
-  useOpenCuratedRide,
+  useOpenCuratedRide, usePlanSavedAgain,
   usePlannerViewModel, usePlannerVisibleSession,
   type PlannerPlaceServices,
 } from "@/ui/planner/controllers";
@@ -225,6 +225,7 @@ export function PlannerWorkspace({
   const saveStatus = useStore(rideDocumentStore, (state) => state.saveStatus);
   const restoreStatus = useStore(rideDocumentStore, (state) => state.restoreStatus);
   const restoreAnnouncement = useRestoreAnnouncement({ restoreStatus });
+  const planSavedAgain = usePlanSavedAgain({ document, session: planningSnapshot, planningSessionStore });
   const conflict = useStore(rideDocumentStore, (state) => state.conflict);
   const reloadLatest = useStore(rideDocumentStore, (state) => state.reloadLatest);
   const keepMyCopy = useStore(rideDocumentStore, (state) => state.keepMyCopy);
@@ -790,7 +791,7 @@ export function PlannerWorkspace({
           sheetDetent={sheetDetent}
           viewModel={viewModel}
           status={{
-            statusMessage: restoreAnnouncement ?? viewModel.statusMessage,
+            statusMessage: planSavedAgain.message ?? restoreAnnouncement ?? viewModel.statusMessage,
             saveStatus,
             updateHighlight,
             updateRecovery,
@@ -851,6 +852,7 @@ export function PlannerWorkspace({
               shareService,
               route: offlineRoute,
               rideActions,
+              onPlanAgain: planSavedAgain.onPlanAgain,
               start:
                 viewModel.routeCards.length === 0 || rideActions === undefined
                   ? null

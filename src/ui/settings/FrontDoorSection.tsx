@@ -4,10 +4,9 @@
  * Settings → More on the map: the side features that stay off the first screen
  * (milestone 3, "one clean front door"). The map opens with search, Loop and
  * Ride; each of these is one switch away, and turning it on puts it back
- * exactly where it was. Hiking and music have their own groups on this page.
+ * exactly where it was. Hiking and music have their own rows here.
  */
 
-import { SettingsGroup } from "@/ui/settings/SettingsGroup";
 import { setFrontDoorOption, useFrontDoorOption, type FrontDoorOption } from "@/ui/stores/front-door-options";
 
 const ROWS: readonly {
@@ -53,15 +52,10 @@ function FrontDoorRow({ option, label, meta, testId }: (typeof ROWS)[number]) {
   );
 }
 
-export function FrontDoorSection() {
-  return (
-    <SettingsGroup
-      id="settings-front-door-title"
-      label="More on the map"
-      hint="The map opens with search, Loop and Ride. Turn these on to bring them back."
-      testId="settings-front-door"
-    >
-      {ROWS.map((row) => <FrontDoorRow key={row.option} {...row} />)}
-    </SettingsGroup>
-  );
+/**
+ * The Ask and traffic-camera rows, rendered as plain siblings inside the
+ * closed "More" group so they share its card's hairlines.
+ */
+export function FrontDoorRows() {
+  return <>{ROWS.map((row) => <FrontDoorRow key={row.option} {...row} />)}</>;
 }

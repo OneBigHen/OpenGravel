@@ -100,6 +100,7 @@ import {
   applyAppearance,
   applyResolvedTheme,
   readAppearanceMode,
+  rememberRiderPlace,
   setAppearanceMode,
   type AppearanceMode,
 } from "@/ui/appearance/appearance";
@@ -462,10 +463,13 @@ export function RideFocus({
   const sunlight = useStore(store, (state) => state.sunlight);
   const mapTheme = appearanceMode === "auto" ? sunlight ?? theme : theme;
   useEffect(() => {
+    // The ride's fix is the rider's place for the rest of the app's Auto too.
+    const fix = store.getState().navigation?.position.coordinate ?? null;
+    if (fix !== null) rememberRiderPlace(fix);
     if (appearanceMode !== "auto" || sunlight === null) return;
     applyResolvedTheme(sunlight);
-  }, [appearanceMode, sunlight]);
-  // Leaving the ride puts Auto back on the phone, whatever the sun was doing.
+  }, [appearanceMode, store, sunlight]);
+  // Leaving the ride hands Auto back to the sun at the rider's place.
   useEffect(() => () => {
     if (readAppearanceMode() === "auto") applyAppearance("auto");
   }, []);

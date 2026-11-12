@@ -107,7 +107,7 @@ export function SettingsClient() {
   useEffect(() => {
     if (!settingsReady) return;
     const id = window.location.hash.slice(1);
-    if (id !== "settings-offline-title" && id !== "settings-bikes-title") return;
+    if (id !== "settings-bikes-title") return;
     const frame = window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
     return () => window.cancelAnimationFrame(frame);
   }, [settingsReady]);

@@ -1275,6 +1275,19 @@ export async function createMapLibreHost(
   }
 
   /**
+   * A compact attribution starts expanded and only collapses on the first
+   * drag. Collapse it to its (i) button whenever a style arrives, so the credit
+   * never hangs open over the map on a phone — including after Night's style
+   * swap, which builds a new attribution control.
+   */
+  function collapseAttribution(map: MapLibreMap): void {
+    map
+      .getContainer()
+      .querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show")
+      ?.classList.remove("maplibregl-compact-show");
+  }
+
+  /**
    * Adds the overlay sources, tolerating one that is already present and
    * reporting one that cannot be added.
    *
@@ -2698,6 +2711,7 @@ export async function createMapLibreHost(
       current.viewportSettled = true;
     }
     placeAttribution();
+    collapseAttribution(current.map);
     publishCamera(current.map);
     if (current.viewportSettled) publishViewport(current.map);
   }
@@ -2780,6 +2794,7 @@ export async function createMapLibreHost(
     if (terrainOn || getActivityMode() === "hike") applyTerrain(current.map);
     if (latestScene !== null) syncScene(current, latestScene);
     placeAttribution();
+    collapseAttribution(current.map);
     publishCamera(current.map);
   }
 
@@ -2799,10 +2814,7 @@ export async function createMapLibreHost(
     prepare(current);
     // A compact attribution starts expanded and only collapses on the first
     // drag; start it collapsed to its (i) button so it never covers the map.
-    current.map
-      .getContainer()
-      .querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show")
-      ?.classList.remove("maplibregl-compact-show");
+    collapseAttribution(current.map);
     // `load` is the strongest evidence there is: MapLibre fires it only once its
     // style and sources are loaded, tiles included.
     markReady(current);

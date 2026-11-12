@@ -36,6 +36,7 @@ import { OfflineShell } from "./OfflineShell";
 import { assetBasePathFromEnv } from "./asset-base-path";
 import { OfflineNavGuard } from "@/ui/nav/OfflineNavGuard";
 import { SkipLink } from "@/ui/nav/SkipLink";
+import { AppearanceSun } from "@/ui/appearance/AppearanceSun";
 import { APPEARANCE_BOOT_SCRIPT, THEME_COLOR } from "@/ui/appearance/appearance";
 
 /** Interface text uses Plus Jakarta Sans; headings use Outfit. */
@@ -154,6 +155,7 @@ export default function RootLayout({
           build={{ appVersion, buildId: process.env.OGV_BUILD_ID ?? "dev", routePolicyVersion: PA_NJ_ROUTE_POLICY_VNEXT_1.version, graphVersionBand: process.env.OGV_GRAPH_VERSION ?? "unknown" }}
         /></Suspense>
         <SkipLink />
+        <AppearanceSun />
         <NativeShell />
         <OfflineShell assetBasePath={assetBasePath} />
         {children}
