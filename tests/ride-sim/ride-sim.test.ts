@@ -13,7 +13,7 @@
  * replays in a few hundred milliseconds.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { haversine } from "@/domain/geometry/analysis";
 
@@ -26,7 +26,12 @@ import {
   missedTurnViolations,
   offRouteAlertViolations,
   progressViolations,
+  rejoinMeasure,
+  reportRerouteViolations,
 } from "./assertions";
+import { saveRiderReport } from "@/application/persistence/rider-report-repository";
+import { newRiderReport, reportsToAvoidAreas } from "@/application/roads/rider-reports";
+import { chainage, pointAlong } from "@/application/ride-session/rejoin-splice";
 import { loadRoute, loadTracks } from "./fixtures";
 import { runScenario } from "./run-scenario";
 
@@ -83,6 +88,10 @@ function maxInputOffset(run: Awaited<ReturnType<typeof runScenario>>): number {
   });
   return maximum;
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("ride-sim fixture corpus", () => {
   it("holds ten tracks, each with a route, turn instructions and usable anchors", () => {
@@ -193,6 +202,53 @@ for (const track of TRACKS) {
         ...issueIdentityViolations(run),
         ...(await missedTurnViolations(run)),
       ]);
+    });
+
+    // RM-6: the missed-turn reroute, measured once per track and checked three ways.
+    let rejoin: Promise<Awaited<ReturnType<typeof rejoinMeasure>>> | null = null;
+    const measureRejoin = () => {
+      rejoin ??= runScenario({ track, route, scenario: "missed-turn", startMs: START_MS }).then(async (run) => {
+        const measure = await rejoinMeasure(run);
+        console.log(
+          `REJOIN ${track.id} bind=${measure.bindMs?.toFixed(1)}ms calls=${measure.routerCalls} ` +
+          `ahead=${measure.aheadMeters.toFixed(0)}m rejoinable=${measure.rejoinableMeters.toFixed(0)}m kept=${measure.keptMeters.toFixed(0)}m`,
+        );
+        return measure;
+      });
+      return rejoin;
+    };
+
+    it("missed turn: a new route is bound within 5 s of off-route", async () => {
+      expectNoViolations((await measureRejoin()).bindViolations);
+    });
+
+    it("missed turn: the new route's tail is the planned line from the rejoin point, exactly", async () => {
+      expectNoViolations((await measureRejoin()).tailViolations);
+    });
+
+    it("missed turn: at least 90% of the planned ride still ahead is kept", async () => {
+      expectNoViolations((await measureRejoin()).keptViolations);
+    });
+
+    it("rider report 2 km ahead on the line: the new route goes round it and rejoins beyond it", async () => {
+      const run = await runScenario({ track, route, scenario: "missed-turn", startMs: START_MS });
+      const memory = new Map<string, string>();
+      vi.stubGlobal("window", {
+        localStorage: {
+          getItem: (key: string) => memory.get(key) ?? null,
+          setItem: (key: string, value: string) => void memory.set(key, value),
+          removeItem: (key: string) => void memory.delete(key),
+        },
+      });
+      const riderAlong = 400;
+      const spot = pointAlong(route.geometry, chainage(route.geometry), riderAlong + 2_000).coordinate;
+      const now = Date.now();
+      const report = newRiderReport({ id: `rr_sim_${track.id}`, point: spot, headingDegrees: null, kind: "gate-closed", nowMs: now });
+      expect(saveRiderReport(report, now)).toBe(true);
+      const ring = reportsToAvoidAreas([report], now)[0]!.ring;
+      const result = await reportRerouteViolations(run, ring, riderAlong);
+      console.log(`REPORT ${track.id} ringEnds=${result.ringLast?.toFixed(0)}m rejoinAt=${result.joinAlong?.toFixed(0)}m`);
+      expectNoViolations(result.violations);
     });
 
     it("30 s without GPS: no off-route, announcements and progress resume", async () => {
