@@ -3,9 +3,9 @@
 /**
  * The planner's route briefing (MVP parity M4, OGV-D-266): when to leave, and
  * what that means for the selected route — weather over the ride's window,
- * heavy traffic when leaving now, fuel against the distance, daylight — plus
- * the offline readiness disclosure the workspace used to own. What could not
- * be checked is left out rather than listed.
+ * heavy traffic when leaving now, fuel against the distance, daylight. What
+ * could not be checked is left out rather than listed. Offline downloads are
+ * not promised here: the offline package (R3-7) brings one honest control.
  *
  * It owns no ride state: the departure is authored through `onDepartureChange`
  * (one `departure.set` command), and the checks are read-only projections of
