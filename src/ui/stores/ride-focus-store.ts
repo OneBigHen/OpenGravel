@@ -69,6 +69,7 @@ import type { ExplicitReturnTarget, ReturnMode } from "@/application/free-ride/r
 import type { ReturnPlanResult } from "@/application/free-ride/return-plan";
 import type { GuidedReroutePlanner, RerouteDetour } from "@/application/ride-session/guided-reroute";
 import { lineAhead, loopRejoinAnchors } from "@/application/ride-session/loop-rejoin";
+import { currentRiderReportRings, subscribeRiderReports } from "@/application/persistence/rider-report-repository";
 import { resolveHeadHomeTarget } from "@/application/free-ride/head-home-target";
 import {
   EMPTY_RIDE_OFFER_ATTENTION,
@@ -98,6 +99,7 @@ import type {
 } from "@/application/ride-session/ports/ride-focus-environment";
 import {
   buildRideFocusViewModel,
+  reportBlocksLineAhead,
   type RideFocusTelemetryInput,
   type RideFocusTelemetryProvider,
   type RideFocusViewModel,
@@ -352,7 +354,7 @@ export interface RideFocusStoreActions {
    * Plans a new route from the rider's position to the stops still ahead and
    * the finish, through `detour` first when given, and binds it.
    */
-  reroute(detour?: RerouteDetour, options?: { readonly wholeRoute?: boolean }): Promise<void>;
+  reroute(detour?: RerouteDetour, options?: { readonly wholeRoute?: boolean; readonly reason?: "off-route" | "report" }): Promise<void>;
   /** The phone lost or found its network; with none, no reroute is asked for. */
   setNoSignal(noSignal: boolean): void;
   /** Completes a guided segment in a Free Ride without ending the session. */
@@ -599,6 +601,7 @@ export function createRideFocusStore(
   /** That session's final numbers, for the finish summary. */
   let endedLiveTelemetry: RecordingTelemetry | null = null;
   let detachPageListeners: (() => void) | null = null;
+  let unwatchRiderReports: (() => void) | null = null;
 
   // ---- Lean-angle beta (issue #12 follow-up) -------------------------------
   // Mutable across `start()`/`stop()`, like `environment`; the functions that
@@ -1010,6 +1013,27 @@ export function createRideFocusStore(
       if (state !== null && navigation !== null) scheduleRideOffer(state, navigation, instant);
       syncRideActivity(navigation);
       syncTimer(navigation);
+    }
+
+    /**
+     * RM-6: a spot the rider reports on the line ahead reroutes the ride in
+     * progress around it, through the same reroute (same card, same voice).
+     * Reports already stored when the ride screen opened change only new plans.
+     */
+    function watchRiderReports(): void {
+      const key = (ring: readonly Coordinate[]): string => ring.map((point) => `${point.lon.toFixed(6)},${point.lat.toFixed(6)}`).join(";");
+      const seen = new Set(currentRiderReportRings().map(key));
+      unwatchRiderReports = subscribeRiderReports(() => {
+        const rings = currentRiderReportRings();
+        const fresh = rings.filter((ring) => !seen.has(key(ring)));
+        for (const ring of rings) seen.add(key(ring));
+        if (!running || fresh.length === 0 || reroutePlanner === undefined) return;
+        const state = controller.snapshot();
+        if (state === null || state.activity !== "guided" || state.plan.route === null) return;
+        const along = navigationEngine?.snapshot().frame?.distanceAlongMeters;
+        if (along === undefined || !reportBlocksLineAhead(fresh, get().routeLine, along)) return;
+        void get().reroute(undefined, { reason: "report" });
+      });
     }
 
     /**
@@ -2005,6 +2029,7 @@ export function createRideFocusStore(
         unsubscribeEnvironment = environment.subscribe(() => refresh());
         motion = createMotion?.() ?? null;
         attachPageListeners();
+        watchRiderReports();
         await recover();
       },
 
@@ -2404,7 +2429,7 @@ export function createRideFocusStore(
         });
       },
 
-      async reroute(detour?: RerouteDetour, rerouteOptions?: { readonly wholeRoute?: boolean }): Promise<void> {
+      async reroute(detour?: RerouteDetour, rerouteOptions?: { readonly wholeRoute?: boolean; readonly reason?: "off-route" | "report" }): Promise<void> {
         const wholeRoute = rerouteOptions?.wholeRoute === true;
         if (!running || reroutePlanner === undefined || get().noSignal) return;
         const state = controller.snapshot();
@@ -2430,6 +2455,7 @@ export function createRideFocusStore(
           rerouteError: null,
           rerouteMessage: wholeRoute
             ? "Finding the way to the start…"
+            : rerouteOptions?.reason === "report" ? "Finding a way around the spot you reported…"
             : detour === undefined ? "Finding a new route from here…" : `Finding a route via ${detour.label}…`,
         });
         let plan: Awaited<ReturnType<GuidedReroutePlanner["plan"]>>;
@@ -2438,11 +2464,26 @@ export function createRideFocusStore(
           // itself from there instead of heading straight back to the start.
           const along = wholeRoute ? 0 : navigationEngine?.snapshot().frame?.distanceAlongMeters;
           const aheadLine = along === undefined ? undefined : lineAhead(get().routeLine, along);
+          // RM-6: the bound line and its facts, so a missed turn routes only the way back.
+          const pointed = pointer.read();
+          const facts = pointed.status === "found" && pointed.pointer.sessionId === state.sessionId ? pointed.pointer : null;
+          const boundRoute = along === undefined || wholeRoute || facts === null || facts.instructions === undefined
+            ? undefined
+            : {
+                line: get().routeLine,
+                alongMeters: along,
+                instructions: facts.instructions,
+                ...(facts.routeDurationSeconds === undefined ? {} : { durationSeconds: facts.routeDurationSeconds }),
+                ...(facts.speedLimits === undefined ? {} : { speedLimits: facts.speedLimits }),
+                ...(facts.surfaceRuns === undefined ? {} : { surfaceRuns: facts.surfaceRuns }),
+              };
           plan = await reroutePlanner.plan({
             navigation,
             ...(detour === undefined ? {} : { detour }),
             ...(aheadLine === undefined || aheadLine.length < 2 ? {} : { aheadLine }),
             ...(wholeRoute ? { followLine: true } : {}),
+            ...(boundRoute === undefined || boundRoute.line.length < 2 ? {} : { route: boundRoute }),
+            ...(rerouteOptions?.reason === undefined ? {} : { reason: rerouteOptions.reason }),
             signal: abort.signal,
           });
         } catch {
@@ -2491,6 +2532,8 @@ export function createRideFocusStore(
           routeGeometryRef: plan.routeGeometryRef,
           routeDurationSeconds: plan.durationSeconds,
           ...(plan.instructions === undefined ? {} : { instructions: plan.instructions }),
+          ...(plan.speedLimits === undefined ? {} : { speedLimits: plan.speedLimits }),
+          ...(plan.surfaceRuns === undefined ? {} : { surfaceRuns: plan.surfaceRuns }),
           updatedAt: at,
         });
         const routeLine = await loadRouteLine(plan.routeGeometryRef);
@@ -2500,7 +2543,9 @@ export function createRideFocusStore(
         set({
           rerouteBusy: false,
           rerouteError: null,
-          rerouteMessage: `${wholeRoute ? "Heading to the start" : detour === undefined ? "New route" : `Via ${detour.label}`} · ${formatDistance(plan.distanceMeters)} to go`,
+          rerouteMessage: plan.rejoin !== undefined
+            ? `Back on your ride in ${formatDistance(plan.rejoin.connectorMeters)}${plan.rejoin.closureChecked ? "" : " · closure check did not answer"}`
+            : `${wholeRoute ? "Heading to the start" : detour === undefined ? "New route" : `Via ${detour.label}`} · ${formatDistance(plan.distanceMeters)} to go`,
         });
         refresh();
         // Show the rider the new line, then keep following them along it.
@@ -2558,6 +2603,8 @@ export function createRideFocusStore(
         flushLiveTelemetry();
         detachPageListeners?.();
         detachPageListeners = null;
+        unwatchRiderReports?.();
+        unwatchRiderReports = null;
         if (timer !== null) {
           unschedule(timer);
           timer = null;
