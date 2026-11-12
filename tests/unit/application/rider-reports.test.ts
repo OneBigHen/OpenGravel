@@ -47,3 +47,22 @@ describe("rider reports", () => {
     expect(reportMarkerText(make("a"), "en-US")).toBe("You marked this gate closed on Nov 11");
   });
 });
+
+import { withRiderReportSentence } from "@/application/planner/ride-truth";
+
+describe("truth line with rider reports", () => {
+  const base = { tone: "good" as const, text: "Checked 9:14 AM: 4 sources, no closures on this route" };
+  it("adds the spot sentence without changing the tone or saying closed", () => {
+    const line = withRiderReportSentence(base, { avoided: 1, couldNotAvoid: false });
+    expect(line.text).toBe("Checked 9:14 AM: 4 sources, no closures on this route. Avoiding 1 spot you reported.");
+    expect(line.tone).toBe("good");
+  });
+  it("keeps an unknown check unknown", () => {
+    const line = withRiderReportSentence({ tone: "unknown", text: "Closure check did not answer" }, { avoided: 2, couldNotAvoid: false });
+    expect(line.tone).toBe("unknown");
+  });
+  it("says when it could not avoid, and leaves the line alone with no reports", () => {
+    expect(withRiderReportSentence(base, { avoided: 0, couldNotAvoid: true }).text).toMatch(/Could not avoid the spot you reported\.$/);
+    expect(withRiderReportSentence(base, { avoided: 0, couldNotAvoid: false })).toBe(base);
+  });
+});
