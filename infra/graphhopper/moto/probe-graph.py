@@ -6,18 +6,27 @@ Exits non-zero on any miss. Standard library only.
   probe-graph.py --url http://127.0.0.1:8988 --prod http://127.0.0.1:8989 \
       --atlas data/scorecard/gravel-atlas-v3.sqlite \
       --field-json scorecard-out/field-check.json \
-      --turn-costs-bytes 1048676 \
+      --turn-costs-bytes 1048676 --through-km 318828/448432 --street-km 288862/405167 \
       --memory-cmd 'command that prints the v2 router process RSS in bytes' \
       [--out probe-graph.json]
 
 Checks:
   1. /info: version 11.0, the same four profiles, every production value plus og_curve, og_through,
      og_through_street and osm_way_id, the same bounding box.
-  2. No route changed: 20 fixed pairs on each of the four profiles, distance and time within 1% of
-     production. turn_costs is the same size as production's (1,048,676 bytes): no restriction lost.
+  2. Baseline unchanged (RM-2): 20 fixed pairs on motorcycle_fastest, distance and time within 1% of
+     production. The other three profiles changed on purpose in RM-2; their differences are printed
+     and stored, never scored. turn_costs is the same size as production's (1,048,676 bytes).
   3. Field: the field-check.ts result (rider line curvier on at least 5 of 6; Spearman 0.8 or better).
-  4. Through: 20 atlas corridors with a way in and a way out read og_through true at their midpoint
-     (95%), and 20 with no way out read false (95%). Chosen by a fixed rule: highest quality first.
+  4. Through (RM1-VERDICT.md): one reading method for both sets. Route motorcycle_adventure from the
+     point to the corridor's first point with details og_through; the reading is the value on the first
+     piece of the path, and counts only when the snapped start is within 30 m of the point. Unreadable
+     corridors are skipped in the fixed order (quality desc, id) until 20 are read, at most 40 looked at.
+       T1 dead ends: entry_links > 0 and exit_links = 0, read 60 m before the last point (midpoint when
+          shorter than 120 m); at least 19 of 20 read false.
+       T2 through roads: entry_links > 0 and exit_links > 0 and routable = 1, read at the midpoint; at
+          least 17 of 20 read true; every id reading false is printed.
+       T3 tripwire: through km over usable km between 65% and 80% for both flags, from the build's own
+          import.log line (--through-km and --street-km, "through/usable").
   5. Speed and memory: 40 single routes per profile, p95 0.6 s or less; serving memory after at least
      200 requests 3.3 GiB or less.
 """
@@ -36,7 +45,9 @@ TURN_COSTS_BYTES = 1_048_676
 P95_LIMIT_S = 0.6
 MEMORY_LIMIT_BYTES = 3.3 * 1024 ** 3
 PARITY_TOLERANCE = 0.01
-THROUGH_SHARE = 0.95
+PARITY_PROFILES = ["motorcycle_fastest"]
+T1_NEED, T2_NEED, SET_SIZE, LOOK_AT_MOST = 19, 17, 20, 40
+T3_RANGE = (0.65, 0.80)
 
 # 20 fixed A-to-B pairs across PA and NJ, (lat, lon). Chosen before any run; never tuned.
 PAIRS = [
@@ -116,18 +127,25 @@ def check_parity(url, prod, timings):
             timings.setdefault(profile, []).append(seconds)
             if "paths" not in got or "paths" not in want:
                 rows.append({"profile": profile, "pair": f"{a_name} to {b_name}", "error": got.get("message") or want.get("message")})
-                check(False, f"parity {profile} {a_name} to {b_name}: no route ({got.get('message') or want.get('message')})")
+                check(profile not in PARITY_PROFILES, f"parity {profile} {a_name} to {b_name}: no route ({got.get('message') or want.get('message')})")
                 continue
             g, w = got["paths"][0], want["paths"][0]
             dd = abs(g["distance"] - w["distance"]) / max(1, w["distance"])
             dt = abs(g["time"] - w["time"]) / max(1, w["time"])
             worst = max(worst, dd, dt)
             rows.append({"profile": profile, "pair": f"{a_name} to {b_name}", "km": round(w["distance"] / 1000, 2), "distanceDiff": dd, "timeDiff": dt})
-            if dd > PARITY_TOLERANCE or dt > PARITY_TOLERANCE:
+            if profile in PARITY_PROFILES and (dd > PARITY_TOLERANCE or dt > PARITY_TOLERANCE):
                 check(False, f"parity {profile} {a_name} to {b_name}: distance {g['distance']:.0f} vs {w['distance']:.0f} m, time {g['time'] / 1000:.0f} vs {w['time'] / 1000:.0f} s")
-    misses = [r for r in rows if "error" in r or r["distanceDiff"] > PARITY_TOLERANCE or r["timeDiff"] > PARITY_TOLERANCE]
-    identical = sum(1 for r in rows if "error" not in r and r["distanceDiff"] == 0 and r["timeDiff"] == 0)
-    check(not misses, f"no route changed: {len(rows) - len(misses)} of {len(rows)} routes within 1% of production ({identical} identical, worst difference {worst * 100:.3f}%)")
+    for profile in PROFILES:
+        mine = [r for r in rows if r["profile"] == profile]
+        misses = [r for r in mine if "error" in r or r["distanceDiff"] > PARITY_TOLERANCE or r["timeDiff"] > PARITY_TOLERANCE]
+        identical = sum(1 for r in mine if "error" not in r and r["distanceDiff"] == 0 and r["timeDiff"] == 0)
+        worst_p = max([max(r["distanceDiff"], r["timeDiff"]) for r in mine if "error" not in r] or [0])
+        line = f"{profile}: {len(mine) - len(misses)} of {len(mine)} routes within 1% of production ({identical} identical, worst difference {worst_p * 100:.3f}%)"
+        if profile in PARITY_PROFILES:
+            check(not misses, "baseline unchanged, " + line)
+        else:
+            print("     (information only, changed on purpose: " + line + ")")
     report["parity"] = rows
 
 
@@ -177,34 +195,30 @@ def haversine(a, b):
 ON_CORRIDOR_METERS = 30
 
 
-def through_at(url, coords, fraction=0.5):
-    """og_through on the corridor itself at `fraction` of its length: route from 5% before to 5% after that
-    point and read the value on the path segment nearest to it. The reading only counts when the path passes
-    within ON_CORRIDOR_METERS of the point; otherwise the router took another road and nothing was read."""
-    target = along(coords, fraction)
-    a, b = along(coords, max(0.0, fraction - 0.05)), along(coords, min(1.0, fraction + 0.05))
-    body = route_body("motorcycle_adventure", a, b, calc_points=True, points_encoded=False, details=["og_through", "og_through_street"])
+def line_length(coords):
+    return sum(haversine((coords[i - 1][1], coords[i - 1][0]), (coords[i][1], coords[i][0])) for i in range(1, len(coords)))
+
+
+def read_through(url, point, first):
+    """RM1-VERDICT reading: route motorcycle_adventure from `point` to the corridor's first point; the value
+    on the first piece of the path. None (with a reason) when the snapped start is over 30 m away."""
+    body = route_body("motorcycle_adventure", point, first, calc_points=True, points_encoded=False,
+                      details=["og_through", "og_through_street"])
     payload, _ = post_route(url, body)
     if "paths" not in payload:
-        return None, payload.get("message")
+        return None, None, payload.get("message")
     path = payload["paths"][0]
-    points = [(c[1], c[0]) for c in path["points"]["coordinates"]]
-    if len(points) < 2:
-        return None, "path has no segment"
-    best, best_d = 0, float("inf")
-    for i in range(len(points) - 1):
-        # distance to the segment, sampled: good enough at corridor scale
-        for t in (0.0, 0.25, 0.5, 0.75, 1.0):
-            q = (points[i][0] + (points[i + 1][0] - points[i][0]) * t, points[i][1] + (points[i + 1][1] - points[i][1]) * t)
-            d = haversine(q, target)
-            if d < best_d:
-                best, best_d = i, d
-    if best_d > ON_CORRIDOR_METERS:
-        return None, f"route passes {best_d:.0f} m from the corridor point (another road was read)"
-    for start, end, value in path["details"]["og_through"]:
-        if start <= best < end:
-            return bool(value), None
-    return None, "no detail on the nearest segment"
+    snapped = path.get("snapped_waypoints", {}).get("coordinates") or path["points"]["coordinates"][:1]
+    gap = haversine(point, (snapped[0][1], snapped[0][0]))
+    if gap > ON_CORRIDOR_METERS:
+        return None, None, f"snapped start {gap:.0f} m from the point"
+    values = {}
+    for key in ("og_through", "og_through_street"):
+        detail = path.get("details", {}).get(key) or []
+        values[key] = bool(detail[0][2]) if detail else None
+    if values["og_through"] is None:
+        return None, None, "no og_through detail"
+    return values["og_through"], values["og_through_street"], None
 
 
 def check_through(url, atlas):
@@ -212,32 +226,45 @@ def check_through(url, atlas):
         check(False, "atlas not given (--atlas)")
         return
     db = sqlite3.connect(f"file:{atlas}?mode=ro", uri=True)
-    sets = {
-        "way in and way out": ("select id, geometry_json from corridors where entry_links > 0 and exit_links > 0 and routable = 1 "
-                               "order by quality desc, id limit 20", True),
-        "no way out": ("select id, geometry_json from corridors where entry_links > 0 and exit_links = 0 "
-                       "order by quality desc, id limit 20", False),
-    }
+    sets = [
+        ("T1 dead ends (no way out, 60 m before the end)",
+         "select id, geometry_json from corridors where entry_links > 0 and exit_links = 0 order by quality desc, id", False, T1_NEED, "tip"),
+        ("T2 through roads (way in and out, midpoint)",
+         "select id, geometry_json from corridors where entry_links > 0 and exit_links > 0 and routable = 1 order by quality desc, id", True, T2_NEED, "mid"),
+    ]
     report["through"] = {}
-    for name, (sql, expected) in sets.items():
-        rows = db.execute(sql).fetchall()
-        results = []
-        for cid, geometry in rows:
+    for name, sql, expected, need, where in sets:
+        results, looked = [], 0
+        for cid, geometry in db.execute(sql + f" limit {LOOK_AT_MOST}").fetchall():
+            if len(results) == SET_SIZE:
+                break
+            looked += 1
             coords = json.loads(geometry)
-            value, problem = through_at(url, coords, 0.5)
-            row = {"id": cid, "through": value, "problem": problem}
-            if not expected:
-                # Information only, never scored: the dead end itself, near the corridor's last node.
-                row["tipThrough"], row["tipProblem"] = through_at(url, coords, 0.97)
-            results.append(row)
+            length = line_length(coords)
+            fraction = 0.5 if where == "mid" or length < 120 else (length - 60) / length
+            value, street, problem = read_through(url, along(coords, fraction), (coords[0][1], coords[0][0]))
+            if value is None:
+                print(f"     skipped {cid}: {problem}")
+                continue
+            results.append({"id": cid, "through": value, "throughStreet": street, "fraction": round(fraction, 4)})
         right = sum(1 for r in results if r["through"] is expected)
-        unread = [r["id"] for r in results if r["through"] is None]
-        check(len(rows) == 20 and right >= THROUGH_SHARE * 20,
-              f"through: {right} of {len(rows)} corridors with {name} read {str(expected).lower()} (need 19)" + (f"; unread {unread}" if unread else ""))
-        if not expected:
-            tips = [r for r in results if r.get("tipThrough") is not None]
-            print(f"     (information only: at the dead-end tip, {sum(1 for r in tips if r['tipThrough'] is False)} of {len(tips)} readable no-way-out corridors read false)")
-        report["through"][name] = results
+        wrong = [r["id"] for r in results if r["through"] is not expected]
+        check(len(results) == SET_SIZE and right >= need,
+              f"{name}: {right} of {len(results)} read {str(expected).lower()} (need {need}; looked at {looked})"
+              + (f"; read {str(not expected).lower()}: {wrong}" if wrong else ""))
+        report["through"][name] = {"looked": looked, "right": right, "results": results}
+
+
+def check_tripwire(through_km, street_km):
+    report["tripwire"] = {}
+    for name, value in (("og_through", through_km), ("og_through_street", street_km)):
+        if not value:
+            check(False, f"T3 {name}: km not given (--through-km / --street-km as through/usable)")
+            continue
+        through, usable = (float(x) for x in value.split("/"))
+        share = through / usable
+        report["tripwire"][name] = {"throughKm": through, "usableKm": usable, "share": share}
+        check(T3_RANGE[0] <= share <= T3_RANGE[1], f"T3 {name}: {share * 100:.1f}% of usable km read through (need 65% to 80%)")
 
 
 def check_speed_and_memory(url, memory_cmd, timings):
@@ -268,6 +295,8 @@ def main():
     ap.add_argument("--field-json")
     ap.add_argument("--turn-costs-bytes", type=int)
     ap.add_argument("--memory-cmd")
+    ap.add_argument("--through-km", help="og_through through/usable km from import.log, e.g. 318828/448432")
+    ap.add_argument("--street-km", help="og_through_street through/usable km from import.log")
     ap.add_argument("--out")
     args = ap.parse_args()
     timings = {}
@@ -276,6 +305,7 @@ def main():
     check_turn_costs(args.turn_costs_bytes)
     check_field(args.field_json)
     check_through(args.url, args.atlas)
+    check_tripwire(args.through_km, args.street_km)
     check_speed_and_memory(args.url, args.memory_cmd, timings)
     report["failures"] = failures
     if args.out:
