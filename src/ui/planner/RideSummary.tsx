@@ -33,7 +33,7 @@ import { surfaceFacts } from "@/application/planner/surface-facts";
 import { longestUnpaved, stretchExtent } from "@/application/planner/stretch-extent";
 import type { MapExtent } from "@/application/map/build-map-scene";
 import type { ElevationSource } from "@/application/elevation/profile";
-import type { LibraryServicePort } from "@/application/library/library-service";
+import { waypointsFromIntent, type LibraryServicePort } from "@/application/library/library-service";
 import type { SelectedOfflineRoute } from "@/application/offline/selected-offline-route";
 import type { ShareServicePort } from "@/application/sharing/share-commands";
 import { shareSourceFromRide } from "@/domain/sharing/from-ride";
@@ -245,6 +245,7 @@ export function RideSummary({
     {shareOpen && shareSource !== null && shareService !== undefined ? <ShareSheet
       service={shareService}
       source={shareSource.title.trim() === "" ? { ...shareSource, title: shownTitle } : shareSource}
+      waypoints={waypointsFromIntent(document.intent)}
       onClose={() => setShareOpen(false)}
     /> : null}
   </section>;

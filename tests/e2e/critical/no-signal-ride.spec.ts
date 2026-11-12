@@ -30,13 +30,14 @@ test.use({ geolocation: { latitude: LINE[0]!.lat, longitude: LINE[0]!.lon, accur
 test.setTimeout(180_000);
 
 async function saveRide(page: Page): Promise<void> {
-  const summarySave = page.getByTestId("summary-save");
-  if (await summarySave.isVisible()) await summarySave.click();
-  const title = page.getByTestId("named-ride-title");
-  await expect(title).toBeVisible();
-  await title.fill(TITLE);
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText(/saved/i).first()).toBeVisible();
+  // Save is one tap (R3-4): an automatic name, then the name is edited in place.
+  const summary = page.getByTestId("route-summary");
+  await summary.getByTestId("summary-save").click();
+  await expect(summary.getByTestId("summary-save")).toHaveText("Saved");
+  await summary.getByTestId("ride-title-edit").click();
+  await summary.getByTestId("ride-title-input").fill(TITLE);
+  await summary.getByTestId("ride-title-input").press("Enter");
+  await expect(summary.getByTestId("phone-destination")).toHaveText(TITLE);
 }
 
 test("a ride kept for no signal rides in airplane mode: map, line and turns, and the way back off route", async ({ page, context }, testInfo) => {

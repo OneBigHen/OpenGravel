@@ -164,9 +164,9 @@ test("320px library segments remain usable with 200 percent text", async ({ page
   await expect(page.getByRole("button", { name: "Saved" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Ridden" })).toHaveCount(0);
   await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "short.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from('<gpx version="1.0"><name>Short ride</name><rte><rtept lon="-75" lat="40"/><rtept lon="-74.9" lat="40.1"/></rte></gpx>') });
-  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-  await page.getByRole("button", { name: "Import separately" }).click();
-  await page.getByRole("button", { name: "Import selected tracks" }).click();
+  // One line in the file: it is saved and opened on the map in one tap.
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await page.goto("/rides");
   await expect(page.getByRole("button", { name: "Open Short ride" })).toBeVisible();
   await doubleTextSize(page);
   const planned = page.getByRole("button", { name: "Saved" });

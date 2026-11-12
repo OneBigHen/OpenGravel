@@ -60,12 +60,17 @@ function loadPlanner(): void {
 export function useOpenSavedRide(options: {
   readonly libraryService: LibraryServicePort | undefined;
   readonly geometryStore: GeometryStore | undefined;
-}): (rideId: RideId) => Promise<void> {
+}): (rideId: RideId, options?: { readonly announcement?: string | null }) => Promise<void> {
   const { libraryService, geometryStore } = options;
-  return useCallback(async (rideId: RideId): Promise<void> => {
+  return useCallback(async (
+    rideId: RideId,
+    openOptions: { readonly announcement?: string | null } = {},
+  ): Promise<void> => {
     if (libraryService === undefined) throw new Error("This page cannot open rides.");
     const opened = await openLibraryRide(rideId, libraryService, geometryStore ?? null);
-    markRideToRestore(opened.rideId, { message: opened.message });
+    const announcement = openOptions.announcement ?? null;
+    const message = [opened.message, announcement].filter((part): part is string => part !== null && part !== "").join(" ");
+    markRideToRestore(opened.rideId, { message: message === "" ? null : message });
     loadPlanner();
   }, [geometryStore, libraryService]);
 }

@@ -53,6 +53,7 @@ function ride(overrides: Partial<RideSummary>): RideSummary {
 const PARSED_IMPORT = {
   tracks: [
     { name: "Weekend GPX", segments: [[{ lon: -75, lat: 40 }, { lon: -75.001, lat: 40.001 }]], timestamps: [[null, null]], elevation: [[null, null]] },
+    { name: "Weekend GPX south", segments: [[{ lon: -75.01, lat: 40.01 }, { lon: -75.011, lat: 40.011 }]], timestamps: [[null, null]], elevation: [[null, null]] },
   ],
   warnings: [],
 } as const satisfies ParsedImport;
@@ -445,7 +446,7 @@ describe("RidesLibrary", () => {
     expect(screen.queryByRole("heading", { name: "Upload your GPX ride" })).not.toBeInTheDocument();
   });
 
-  it("opens the file picker from the header and keeps the older import quiet", async () => {
+  it("opens the file picker from the header and keeps the older import behind More import options", async () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click");
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={importService()} />);
 
@@ -453,9 +454,11 @@ describe("RidesLibrary", () => {
     expect(click).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Import GPX, KML, or KMZ")).toBeInTheDocument();
 
-    // The SwitchBack import is a link at the foot of the page, not a third card.
-    const legacy = screen.getByText("Import from an older version");
-    expect(legacy.closest("details")).not.toBeNull();
+    // The older import is not a third card or a link at the foot of the page.
+    expect(screen.queryByText("Import from an older version")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Import older saved rides" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More import options" }));
+    expect(screen.getByRole("heading", { name: "Import older saved rides" })).toBeInTheDocument();
     click.mockRestore();
   });
 

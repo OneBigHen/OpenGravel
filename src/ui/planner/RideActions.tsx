@@ -1,17 +1,17 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 
 /**
  * What a rider does with a planned ride beyond riding, keeping and sharing it:
- * record it, export it, or send it to the phone.
+ * record it, or ride freely.
  *
  * Start, Save and Share live in the one ride summary (`RideSummary`), so this
  * block never repeats them: there is no name box, no second save and no "draft"
  * sentence to read (round 3, restructure call 4). What is left is the quieter
  * shelf under the ride: the recording entry points, Plan it again for an opened
- * saved line, the GPX export, and — on a laptop — a link to the bars.
+ * saved line, and a hike's own Save and GPX export. Share (link, GPX, Send to phone) is the
+ * one Share button in `RideSummary`, opening the ShareSheet.
  */
 
 import { useMemo, useState } from "react";
@@ -36,12 +36,9 @@ import {
   RIDE_FOCUS_PATH,
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
-import { shareSourceFromRide } from "@/domain/sharing/from-ride";
-import { useDesktopPlanner } from "@/ui/planner/usePhonePlanner";
 import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useOneTapSave } from "@/ui/planner/useOneTapSave";
 
-const SendToPhone = dynamic(() => import("@/ui/sharing/SendToPhone").then((mod) => mod.SendToPhone), { loading: () => <p className="og-composer__reason" role="status">Opening Send to phone…</p> });
 
 export interface RideActionsProps {
   readonly document: RideDocument;
@@ -68,24 +65,11 @@ export interface RideActionsProps {
 export function RideActions({
   document,
   libraryService,
-  shareService,
   route,
   rideActions,
   start,
   onPlanAgain = null,
 }: RideActionsProps) {
-  // The §12 share source: a named derivation from the document and the selected
-  // route, never a document spread. The sheet owns the shared title.
-  const shareSource = useMemo(
-    () =>
-      route === null
-        ? null
-        : shareSourceFromRide(document, { segments: [route.geometry] }, route.summary, null),
-    [document, route],
-  );
-  const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
-  // Send to phone is the laptop's bridge to the bars; the sheet keeps it off phones.
-  const desktop = useDesktopPlanner();
   // Free Ride is a riding mode; a hiker records instead.
   const hiking = useActivityMode() === "hike";
   const [recordingState, setRecordingState] = useState<"idle" | "starting">("idle");
@@ -103,7 +87,7 @@ export function RideActions({
 
   // Nothing to keep or send until there is a route: before that the row is
   // chrome on top of the map (map first, DV-10's judgment applied to the planner).
-  const hasRide = (document.intent.start !== null || document.intent.finish !== null) && shareSource !== null;
+  const hasRide = (document.intent.start !== null || document.intent.finish !== null) && route !== null;
   /**
    * The route on screen is enough to export: the rider does not have to save
    * first, and nothing is written to the library by downloading a file.
@@ -261,35 +245,18 @@ export function RideActions({
           {hikeSave.error === null ? null : <p className="og-planner__error" role="alert">{hikeSave.error}</p>}
         </div>
       ) : null}
-      {route === null ? null : (
+      {/* A rider's GPX download lives in the Share sheet. A hike has no ride
+          summary and so no Share, so it keeps its own export here. */}
+      {hiking && route !== null ? (
         <div className="og-plan-actions__row">
           <ExportMenu
             title={exportTitle}
             capabilities={{ plannedRoute: true, track: false, original: false }}
             onExport={exportRoute}
           />
-          {desktop && hasRide && shareService !== undefined ? (
-            <button
-              type="button"
-              className="og-secondary"
-              data-testid="send-to-phone"
-              title="Send this route to your phone with a QR code."
-              onClick={() => setSendToPhoneOpen(true)}
-            >
-              <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></svg>
-              <span className="og-plan-actions__label">Send to phone</span>
-            </button>
-          ) : null}
         </div>
-      )}
-
-      {sendToPhoneOpen && shareSource !== null && shareService !== undefined ? (
-        <SendToPhone
-          service={shareService}
-          source={shareSource.title.trim() === "" ? { ...shareSource, title: document.title?.trim() || "My ride" } : shareSource}
-          onClose={() => setSendToPhoneOpen(false)}
-        />
       ) : null}
+
     </section>
   );
 }

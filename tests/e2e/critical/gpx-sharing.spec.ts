@@ -15,12 +15,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(page.getByRole("heading", { name: "No saved rides yet" })).toBeVisible();
     await expect(page.getByText("Import from SwitchBack")).toHaveCount(0);
     await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "weekend.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from(gpx) });
-    await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-    await page.getByRole("button", { name: "Import separately" }).click();
-    await page.getByRole("button", { name: "Import selected tracks" }).click();
-    await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
+    // One line in the file: one tap saves it and opens it on the map.
+    await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
     expect(shares).toHaveLength(0);
-    await page.reload();
+    await page.goto("/rides");
     const card = page.locator(".og-library__row").filter({ has: page.getByRole("button", { name: "Open Weekend GPX" }) });
     await expect(card).toBeVisible();
     await card.getByRole("button", { name: "More actions for Weekend GPX" }).click();
@@ -70,9 +68,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
 test("ordinary GPX 1.0 route uploads work without migration-specific restrictions", async ({ page }) => {
   await page.goto("/rides");
   await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "other-app.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from('<gpx version="1.0"><name>Other app ride</name><rte><rtept lon="-75" lat="40"/><rtept lon="-74.9" lat="40.1"/></rte></gpx>') });
-  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-  await page.getByRole("button", { name: "Import separately" }).click();
-  await page.getByRole("button", { name: "Import selected tracks" }).click();
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await page.goto("/rides");
   await expect(page.getByRole("button", { name: "Open Other app ride" })).toBeVisible();
 });
 
@@ -83,17 +80,19 @@ test("rejects external entities without saving a ride, then accepts a corrected 
   await expect(page.locator(".og-import__error")).toContainText(/DOCTYPE|entities/i);
   await expect(page.locator(".og-library__row")).toHaveCount(0);
   await input.setInputFiles({ name: "good.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from(gpx) });
-  await expect(page.getByRole("heading", { name: "Choose tracks" })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await page.goto("/rides");
+  await expect(page.getByRole("button", { name: "Open Weekend GPX" })).toBeVisible();
 });
 
 test("renders hostile GPX names as text and rejects them as public names", async ({ page }) => {
   await page.goto("/rides");
   await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles({ name: "literal.gpx", mimeType: "application/gpx+xml", buffer: Buffer.from(gpx.replaceAll("Weekend GPX", "&lt;img src=x onerror=alert(1)&gt;")) });
-  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-  expect(await page.locator(".og-import__tracks img").count()).toBe(0);
-  await page.getByRole("button", { name: "Import separately" }).click();
-  await page.getByRole("button", { name: "Import selected tracks" }).click();
+  await expect(page).toHaveURL(/\/$/, { timeout: 30_000 });
+  await page.goto("/rides");
   const card = page.locator(".og-library__row");
+  // The name is text, never markup: the whole string is the row's title.
+  await expect(card.locator(".og-rides__row-title")).toHaveText("<img src=x onerror=alert(1)>");
   await card.getByRole("button", { name: /^More actions for / }).click();
   await page.getByRole("menuitem", { name: "Share" }).click();
   await card.getByRole("button", { name: "Share it" }).click();
