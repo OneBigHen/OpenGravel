@@ -65,6 +65,8 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
   "route-sheet-expanded": async (page, device) => {
     await plannedRoute(page);
     if (device.compact) {
+      // Options waits in the full sheet (at half it would be cut by the edge).
+      await page.getByTestId("sheet-handle").press("ArrowUp");
       await page.getByTestId("route-options-settings").click();
       await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
     }

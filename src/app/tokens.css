@@ -135,6 +135,13 @@
 }
 
 :root {
+  /* The ride choices' line colours, both themes: teal, amber, sky. They must
+     equal ALTERNATIVE_COLORS in src/infrastructure/map/maplibre/place-images.ts,
+     so a Compare row wears its line's colour (choice n = tint % 3). */
+  --og-map-choice-1: #0e9488;
+  --og-map-choice-2: #d97706;
+  --og-map-choice-0: #0284c7;
+
   /* Type: Plus Jakarta Sans for the interface, Outfit for titles and ride
      numbers. Five sizes. */
   --og-face-mono: ui-monospace, SFMono-Regular, Menlo, monospace;

@@ -380,10 +380,43 @@
 
   .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary .og-truth { margin-top: var(--og-space-1); }
 
-  .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary__compare { min-height: 40px; }
-
-  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"] {
-    /* Small phones (568px tall): 40% would clip Compare rides, so never below 252px. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
+    /* Small phones (568px tall): 40% would clip Compare rides, so never below 252px.
+       Peek has the same cap and less in it, so it is never taller than half. */
     max-height: min(var(--og-sheet-half), max(40dvh, 252px));
+  }
+
+  /* Half never cuts a row in half: Options and Edit route (also behind the
+     sliders button and the From / To card) and the weather line wait in the
+     full sheet, where they read whole. */
+  .og-planner .og-planner__sheet[data-directions="true"]:is([data-detent="peek"], [data-detent="half"]) :is(.og-route-options__settings, .og-phone-summary__weather) {
+    display: none;
+  }
+
+  /* Peek: the answer and Start. Everything else is one flick up. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-detent="peek"] .og-phone-summary[data-comparing="false"] :is(.og-truth, .og-route-card__why-toggle, .og-route-card__why, .og-phone-summary__compare, .og-phone-summary__meta) {
+    display: none;
+  }
+
+  /* Compare at half: the rides and Start. Roads / Surface stay in the full
+     sheet and in Options; the list scrolls under a pinned Start / Save / Share. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]):has(.og-phone-summary[data-comparing="true"]) {
+    max-height: min(var(--og-sheet-full), max(40dvh, 300px));
+  }
+
+  .og-planner .og-planner__sheet:is([data-detent="peek"], [data-detent="half"]) .og-phone-summary[data-comparing="true"] .og-phone-style {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet .og-phone-summary[data-comparing="true"] .og-phone-summary__actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    padding-block: var(--og-space-2) 0;
+    background: var(--og-surface);
+  }
+
+  .og-planner .og-planner__sheet .og-phone-summary[data-comparing="true"] .og-phone-choice {
+    min-height: 56px;
   }
 }
