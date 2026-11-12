@@ -12,6 +12,7 @@ import { PlannerMap } from "@/ui/map/PlannerMap";
 import { LayeredMap, type MapLayersProps } from "@/ui/layers/LayeredMap";
 
 import { PlaceCard } from "./PlaceCard";
+import { RiderReportCard, useRiderReportMarkers } from "./RiderReportMarkers";
 import { PlacesControl } from "./PlacesControl";
 import { PlacesSheetRows } from "./PlacesSheetRows";
 import { usePlacesOverlay } from "./usePlacesOverlay";
@@ -40,7 +41,33 @@ export interface PlannerPlacesProps {
  * state — the only way one reaches the document is the rider's "Add as stop".
  * Without a source this is the plain planner map.
  */
-export function PlannerPlacesMap({
+export function PlannerPlacesMap(props: PlannerMapProps & {
+  readonly places?: PlannerPlacesProps | undefined;
+  readonly layers?: MapLayersProps | undefined;
+}) {
+  const reports = useRiderReportMarkers();
+  const { scene: baseScene, onIntent: baseIntent } = props;
+  const scene = useMemo(
+    () => reports.scenePlaces.length === 0 ? baseScene : { ...baseScene, places: [...reports.scenePlaces, ...(baseScene.places ?? [])] },
+    [reports.scenePlaces, baseScene],
+  );
+  const { select, clear } = reports;
+  const onIntent = useCallback((intent: MapIntent): void => {
+    if (intent.type === "place-click" && select(intent.placeId)) return;
+    if (intent.type === "map-click") clear();
+    baseIntent(intent);
+  }, [baseIntent, select, clear]);
+  return (
+    <>
+      <PlannerPlacesMapInner {...props} scene={scene} onIntent={onIntent} />
+      {reports.selected === null ? null : (
+        <RiderReportCard report={reports.selected} onClose={clear} onRemove={(): void => reports.remove(reports.selected!.id)} />
+      )}
+    </>
+  );
+}
+
+function PlannerPlacesMapInner({
   places,
   layers,
   ...map
@@ -84,7 +111,7 @@ function PlannerMapWithPlaces({
   const intercept = useCallback(
     (intent: MapIntent): void => {
       if (intent.type === "place-click" && inert) { onIntent({ type: "map-click", coordinate: intent.coordinate }); return; }
-      if (intent.type === "place-click" && intent.placeId.startsWith("search:")) { onIntent(intent); return; }
+      if (intent.type === "place-click" && (intent.placeId.startsWith("search:") || intent.placeId.startsWith("rr:"))) { onIntent(intent); return; }
       if (intent.type === "place-click" && onOpenPlace !== undefined) {
         const place = places.scenePlaces?.some((p) => p.id === intent.placeId);
         if (place) { places.select(intent.placeId); return; }

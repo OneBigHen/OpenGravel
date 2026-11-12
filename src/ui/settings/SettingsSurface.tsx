@@ -1,5 +1,6 @@
 "use client";
 
+import { RiderReportsSection } from "@/ui/settings/RiderReportsSection";
 import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { AppBar } from "@/ui/nav/AppBar";
@@ -380,6 +381,7 @@ export function SettingsSurface({
             </span>
             <span className="og-settings__row-value">miles</span>
           </div>
+          <RiderReportsSection refreshKey={deleteResult} />
           <SettingsRowButton label="Export all data" onClick={() => onExport?.()} disabled={onExport === undefined} chevron={false} />
           {statusMessage ? <p className="og-settings__card-block og-settings__note" role="status">{statusMessage}</p> : null}
           <DangerZone onDeleteAll={onDeleteAll} deleteResult={deleteResult} />
