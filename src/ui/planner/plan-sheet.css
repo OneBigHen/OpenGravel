@@ -389,8 +389,18 @@
   /* Half never cuts a row in half: Options and Edit route (also behind the
      sliders button and the From / To card) and the weather line wait in the
      full sheet, where they read whole. */
-  .og-planner .og-planner__sheet[data-directions="true"]:is([data-detent="peek"], [data-detent="half"]) :is(.og-route-options__settings, .og-phone-summary__weather) {
+  .og-planner .og-planner__sheet[data-directions="true"]:is([data-detent="peek"], [data-detent="half"]) .og-route-options__settings {
     display: none;
+  }
+
+  /* The weather line only exists for a warning (alert, rain, storm, wind), so
+     it stays at half; two lines at most so it never slices, whole in full. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-detent="peek"] .og-phone-summary__weather { display: none; }
+  .og-planner .og-planner__sheet[data-directions="true"][data-detent="half"] .og-phone-summary__weather {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   /* Peek: the answer and Start. Everything else is one flick up. */
