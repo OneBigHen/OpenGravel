@@ -1,0 +1,14 @@
+{
+  "distance_influence": 130,
+  "priority": [
+    { "if": "!car_access", "multiply_by": "0" },
+    { "if": "road_access == PRIVATE", "multiply_by": "0" },
+    { "if": "road_access == DESTINATION", "multiply_by": "0.15" },
+    { "if": "toll == ALL", "multiply_by": "0.2" }
+  ],
+  "speed": [
+    { "if": "true", "limit_to": "car_average_speed" },
+    { "if": "true", "limit_to": "max_speed" },
+    { "if": "true", "limit_to": "130" }
+  ]
+}
