@@ -15,6 +15,7 @@ import {
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import type { RouteInstruction } from "@/domain/route/types";
+import { reportBlocksLineAhead } from "@/application/ride-session/ride-focus-view-model";
 
 const LAT = 40.5;
 const LON_PER_METER = 1 / (111_320 * Math.cos((LAT * Math.PI) / 180));
@@ -234,7 +235,17 @@ describe("splice", () => {
   });
 
   it("refuses rather than guesses when the connector joins on a different road", () => {
-    expect(splice(connectorTo(target, rider, { roadName: "Some Other Road" }), ROUTE, target)).toBeNull();
+    // Named differently and its joining stretch runs 40 m beside the planned line: a parallel road.
+    const named = connectorTo(target, rider, { roadName: "Some Other Road" });
+    const beside = { ...named.geometry[1]!, lat: named.geometry[1]!.lat - 40 * LAT_PER_METER };
+    expect(splice({ ...named, geometry: [named.geometry[0]!, beside, named.geometry[2]!] }, ROUTE, target)).toBeNull();
+  });
+
+  it("accepts a renamed road when the joining stretch lies on the planned line itself", () => {
+    // The road changes name with no planned instruction: the connector reads the new name, on the same road.
+    const renamed = splice(connectorTo(target, rider, { roadName: "River Road" }), ROUTE, target);
+    expect(renamed).not.toBeNull();
+    expect(renamed!.geometry.slice(renamed!.joinIndex + 1)).toEqual(ROUTE.geometry.slice(target.segmentIndex + 1));
   });
 
   it("refuses when an instruction has no geometry index", () => {
@@ -243,5 +254,29 @@ describe("splice", () => {
       instructions: ROUTE.instructions.map((instruction) => ({ text: instruction.text, type: instruction.type, distanceMeters: instruction.distanceMeters, durationSeconds: instruction.durationSeconds })),
     };
     expect(splice(connector, stripped, target)).toBeNull();
+  });
+});
+
+describe("reportBlocksLineAhead (a new report reroutes the ride in progress)", () => {
+  const ringAt = (along: number, offsetMeters = 0): Coordinate[] => {
+    const spot = pointAlong(ROUTE.geometry, CHAIN, along).coordinate;
+    const half = 60;
+    const lat = spot.lat + offsetMeters * LAT_PER_METER;
+    return [
+      { lon: spot.lon - half * LON_PER_METER, lat: lat - half * LAT_PER_METER },
+      { lon: spot.lon + half * LON_PER_METER, lat: lat - half * LAT_PER_METER },
+      { lon: spot.lon + half * LON_PER_METER, lat: lat + half * LAT_PER_METER },
+      { lon: spot.lon - half * LON_PER_METER, lat: lat + half * LAT_PER_METER },
+    ];
+  };
+
+  it("asks for a reroute when a new spot sits on the line ahead", () => {
+    expect(reportBlocksLineAhead([ringAt(11_000)], ROUTE.geometry, 9_000)).toBe(true);
+  });
+
+  it("leaves the ride alone for a spot behind the rider, off the line, or no new spot", () => {
+    expect(reportBlocksLineAhead([ringAt(5_000)], ROUTE.geometry, 9_000)).toBe(false);
+    expect(reportBlocksLineAhead([ringAt(11_000, -1_500)], ROUTE.geometry, 9_000)).toBe(false);
+    expect(reportBlocksLineAhead([], ROUTE.geometry, 9_000)).toBe(false);
   });
 });
