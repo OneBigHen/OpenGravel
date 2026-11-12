@@ -513,6 +513,11 @@ describe("the fuel line", () => {
     })?.text).toContain("Gas at mile 110 (Far)");
   });
 
+  it("says to fill up when every station is past what the tank reaches", () => {
+    expect(rideFuelLine({ distanceMeters: OVER_RANGE, usableRangeMiles: 120, stops: [{ mile: 130, name: "Far" }] })?.text)
+      .toContain("No gas within range: fill up first");
+  });
+
   it("says to fill up when there is no gas on the ride at all", () => {
     expect(rideFuelLine({ distanceMeters: OVER_RANGE, usableRangeMiles: 120, stops: [] })).toEqual({
       tone: "warn",

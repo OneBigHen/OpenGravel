@@ -24,6 +24,8 @@
   list-style: none;
 }
 
+.og-weekend__read { margin: 0; color: var(--og-ink-2); font-size: var(--og-text-caption); }
+
 .og-weekend__row::-webkit-scrollbar { display: none; }
 
 .og-weekend__card { min-width: 0; scroll-snap-align: start; }

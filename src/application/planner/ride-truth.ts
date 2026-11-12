@@ -421,7 +421,14 @@ export function rideFuelLine(input: RideFuelInput): RideTruthLine | null {
   // The last station the tank still reaches is the one to plan for; with none in
   // range, the first station is still the first place to fill up.
   const reachable = stops.filter((stop) => stop.mile <= usableMiles);
-  const stop = reachable.at(-1) ?? stops[0]!;
+  const stop = reachable.at(-1);
+  if (stop === undefined) {
+    // Every station is past what the tank reaches: say so, never "gas at mile 130".
+    return {
+      tone: "warn",
+      text: `Fuel: ${Math.round(distanceMiles)} mi ride, ${Math.round(usableMiles)} mi usable range. No gas within range: fill up first`,
+    };
+  }
   const name = stop.name.trim();
   const gas = name === "" ? `Gas at mile ${Math.round(stop.mile)}` : `Gas at mile ${Math.round(stop.mile)} (${name})`;
   return {

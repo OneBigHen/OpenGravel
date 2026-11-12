@@ -185,7 +185,7 @@ describe("weekend picks", () => {
   it("says a day was not forecast instead of calling it dry", () => {
     const picks = weekendPicks(INPUT) ?? [];
     const unpaved = picks.find((pick) => pick.entry.id === "unpaved");
-    expect(unpaved?.weather).toEqual(["Forecast not available", "Forecast not available"]);
+    expect(unpaved?.weather).toEqual(["Forecast not available"]);
     const near = picks.find((pick) => pick.entry.id === "near");
     expect(near?.weather).toEqual(["Sat: dry, 54°", "Sun: rain after 2 PM"]);
   });
@@ -233,6 +233,10 @@ describe("weekend weather phrases", () => {
 
   it("never says dry without a forecast", () => {
     expect(weekendWeatherPhrase("Sat", [])).toBe("Forecast not available");
+    // Only a 3 AM hour answered: no riding hour, so no "dry".
+    expect(weekendWeatherPhrase("Sat", [periods({ startTime: localIso(2026, 11, 14, 3), precipChance: 0 })])).toBe("Forecast not available");
+    // Night rain does not make a dry riding day wet.
+    expect(weekendWeatherPhrase("Sat", [periods({ startTime: localIso(2026, 11, 14, 3), precipChance: 90, shortForecast: "Rain" }), ...SAT_DRY])).toBe("Sat: dry, 54°");
   });
 });
 

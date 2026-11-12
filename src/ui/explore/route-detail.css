@@ -1407,6 +1407,9 @@
 
   .og-route-detail__alternates > .og-secondary { flex: none; min-height: 52px; }
 
+  /* Under "Take it with you" the buttons may wrap on a narrow phone. */
+  .og-route-detail__take-away .og-route-detail__alternates { flex-wrap: wrap; }
+
   .og-route-community__stars {
     grid-template-columns: repeat(5, minmax(48px, 1fr));
     margin-inline: calc(-1 * var(--og-card-pad, 16px));

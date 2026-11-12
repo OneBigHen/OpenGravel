@@ -44,6 +44,9 @@ export interface WeekendPicksProps {
   readonly mapboxToken?: string | undefined;
 }
 
+/** At most this many forecast requests per Explore visit, whatever the rider does. */
+const MAX_REQUESTS = 3;
+
 /** Rounded like the conditions chip, so panning a street does not refetch. */
 function startKey(entry: CatalogEntry): string | null {
   const start = entry.geometry[0];
@@ -133,6 +136,9 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
     () => new Map<string, readonly WeekendPickForecastDay[]>(),
   );
 
+  /** When the Weather Service answer was read, so the rider can judge its age. */
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
+
   const basePicks = useMemo(
     () => weekendPicks({
       entries,
@@ -144,9 +150,16 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
     [bike, dayLabels, entries, hiddenIds, origin],
   );
 
+  const controllers = useRef<AbortController[]>([]);
+  // Leaving Explore stops the requests and ends the visit; a new visit asks again.
+  useEffect(() => () => {
+    for (const controller of controllers.current) controller.abort();
+    controllers.current = [];
+    requested.current.clear();
+  }, []);
+
   useEffect(() => {
     if (basePicks === null) return;
-    const controllers: AbortController[] = [];
     // One request per distinct start; the answer serves every card that starts there.
     const idsByKey = new Map<string, string[]>();
     for (const pick of basePicks) {
@@ -155,21 +168,22 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
       idsByKey.set(key, [...(idsByKey.get(key) ?? []), pick.entry.id]);
     }
     for (const [key, ids] of idsByKey) {
-      if (requested.current.has(key)) continue;
+      if (requested.current.has(key) || requested.current.size >= MAX_REQUESTS) continue;
       requested.current.add(key);
       const controller = new AbortController();
-      controllers.push(controller);
+      controllers.current.push(controller);
       const [lat, lon] = key.split(",");
       void fetch(`/api/weather?lat=${lat}&lon=${lon}`, { signal: controller.signal })
         .then((response) => (response.ok ? response.json() : null))
         .then((body: { readonly snapshot?: WeatherSnapshot } | null) => {
           if (controller.signal.aborted) return;
           const snapshot = body?.snapshot;
-          if (snapshot === undefined) return;
+          if (snapshot === undefined || !Array.isArray(snapshot.forecast)) return;
           const days = plan.map((day) => ({
             label: day.label,
             periods: snapshot.forecast.filter((period) => localDayKey(new Date(period.startTime)) === day.dayKey),
           }));
+          setFetchedAt((previous) => previous ?? snapshot.fetchedAt);
           setForecasts((previous) => {
             const next = new Map(previous);
             for (const id of ids) next.set(id, days);
@@ -178,9 +192,6 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
         })
         .catch(() => undefined);
     }
-    return () => {
-      for (const controller of controllers) controller.abort();
-    };
   }, [basePicks, plan]);
 
   const picks = useMemo(
@@ -194,6 +205,10 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
     }),
     [bike, dayLabels, entries, forecasts, hiddenIds, origin],
   );
+
+  const readAt = fetchedAt === null || !Number.isFinite(Date.parse(fetchedAt))
+    ? ""
+    : new Date(fetchedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
   // No position, no strip. Nothing else on the page depends on this.
   if (picks === null || picks.length === 0) return null;
@@ -209,6 +224,7 @@ export function WeekendPicks({ entries, origin, bike, hiddenIds, mapboxToken }: 
           <PickCard key={pick.entry.id} pick={pick} mapboxToken={mapboxToken} night={night} />
         ))}
       </ul>
+      {readAt === "" ? null : <p className="og-weekend__read" data-testid="weekend-forecast-read">Forecast read at {readAt}</p>}
     </section>
   );
 }

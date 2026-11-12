@@ -712,16 +712,14 @@ export function RouteDetail({
 
       {/* Taking the ride elsewhere is a quieter job than riding it: the file for
           a device, and the public listing for a shared ride. */}
-      {canExport || (fullGeometry && (entry.source === "personal" || entry.source === "import")) ? (
-        <section className="og-route-detail__take-away" aria-label="Take this ride with you">
-          <h2>Take it with you</h2>
-          <div className="og-route-detail__alternates">
-            {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
-            <ShareRouteButton name={entry.name} />
-            {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
-          </div>
-        </section>
-      ) : null}
+      <section className="og-route-detail__take-away" aria-label="Take this ride with you">
+        <h2>Take it with you</h2>
+        <div className="og-route-detail__alternates">
+          {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
+          <ShareRouteButton name={entry.name} />
+          {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+        </div>
+      </section>
 
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
         </div>

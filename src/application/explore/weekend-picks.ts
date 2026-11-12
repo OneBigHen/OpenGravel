@@ -40,6 +40,10 @@ export const WEEKEND_MAX_RIDE_MINUTES = 360;
 /** Most picks the strip holds. */
 export const WEEKEND_PICK_COUNT = 3;
 
+/** The hours of the day a weekend ride happens in (local, inclusive). */
+const RIDING_FIRST_HOUR = 8;
+const RIDING_LAST_HOUR = 19;
+
 /** Rain this likely is worth naming on the card. */
 const WET_PRECIP_CHANCE = 50;
 
@@ -227,7 +231,15 @@ function isWet(period: WeatherForecastPeriod): boolean {
  * worth changing plans for: "Sun: rain after 2 PM". No answer is said plainly
  * rather than filled in with a pleasant guess.
  */
-export function weekendWeatherPhrase(label: string, periods: readonly WeatherForecastPeriod[]): string {
+export function weekendWeatherPhrase(label: string, allPeriods: readonly WeatherForecastPeriod[]): string {
+  // Judge the hours a rider is out, not 3 AM rain. No riding hour answered
+  // means no answer, never "dry".
+  const periods = allPeriods.filter((period) => {
+    const at = Date.parse(period.startTime);
+    if (!Number.isFinite(at)) return false;
+    const hour = new Date(at).getHours();
+    return hour >= RIDING_FIRST_HOUR && hour <= RIDING_LAST_HOUR;
+  });
   if (periods.length === 0) return "Forecast not available";
   const ordered = [...periods].sort((a, b) => Date.parse(a.startTime) - Date.parse(b.startTime));
   const wet = ordered.find(isWet);
@@ -301,6 +313,16 @@ function nearestMostlyUnpaved(pool: readonly Candidate[], bike: WeekendPickBike 
   return [...unpaved].sort((a, b) => a.unpavedMiles - b.unpavedMiles || byNearnessThenDryness(a, b))[0];
 }
 
+const NOT_AVAILABLE = "Forecast not available";
+
+/** One line per day; when no day answered, one plain line instead of two. */
+function weatherLines(dayLabels: readonly string[], days: readonly WeekendPickForecastDay[] | undefined): readonly string[] {
+  const phrases = dayLabels.map((label, index) => weekendWeatherPhrase(label, days?.[index]?.periods ?? []));
+  if (phrases.every((phrase) => phrase === NOT_AVAILABLE)) return [NOT_AVAILABLE];
+  return phrases.map((phrase, index) =>
+    phrase === NOT_AVAILABLE ? `${dayLabels[index]}: forecast not available` : phrase);
+}
+
 function toPick(candidate: Candidate, dayLabels: readonly string[], forecasts: WeekendPicksInput["forecasts"]): WeekendPick {
   const days = forecasts?.get(candidate.entry.id);
   return {
@@ -310,8 +332,7 @@ function toPick(candidate: Candidate, dayLabels: readonly string[], forecasts: W
     timeIsEstimate: candidate.timeIsEstimate,
     unpavedMiles: candidate.unpavedMiles,
     character: characterOf(candidate),
-    weather: dayLabels.map((label, index) =>
-      weekendWeatherPhrase(label, days?.[index]?.periods ?? [])),
+    weather: weatherLines(dayLabels, days),
   };
 }
 
