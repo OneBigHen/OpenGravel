@@ -101,7 +101,9 @@ function originalExtension(filename: string | null, mime: string | null): string
 /** The ride on a real map: its line when stored, else its pinned points. */
 function rideMapUrl(ride: RideSummary, token: string | undefined, night: boolean): string | null {
   if (token === undefined || ride.mapPreview === undefined) return null;
-  const size = { token, width: 400, height: 225, night };
+  // The saved ride is the chosen route, so its line wears the route colour
+  // token (plum Day, light plum Night), never the catalog's ember.
+  const size = { token, width: 400, height: 225, night, color: night ? "b48ae0" : "7b4fa0" };
   return ride.mapPreview.line.length >= 2
     ? staticRouteMapUrl(ride.mapPreview.line, size)
     : staticPointsMapUrl(ride.mapPreview.pins, size);

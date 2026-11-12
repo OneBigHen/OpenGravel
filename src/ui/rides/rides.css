@@ -1056,16 +1056,10 @@
   }
 }
 
-/* Phones: with nothing saved, the invitation sits at thumb height above the
-   tab bar, like Ride's — not stranded at the top of an empty screen. */
+/* Phones: with nothing saved, the invitation sits under the header at thumb
+   height. It is in the same place on first load and after an import. */
 @media (max-width: 760px) {
   .og-library:has(> .og-library__empty) {
-    display: flex;
-    flex-direction: column;
     min-height: 100dvh;
-  }
-
-  .og-library:has(> .og-library__empty) > .og-library__empty {
-    margin-top: auto;
   }
 }
