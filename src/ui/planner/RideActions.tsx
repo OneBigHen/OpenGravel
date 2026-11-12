@@ -36,11 +36,9 @@ import {
   type PlannerRideActions,
 } from "@/application/ride-session/ride-focus-handoff";
 import { shareSourceFromRide } from "@/domain/sharing/from-ride";
-import { useDesktopPlanner } from "@/ui/planner/usePhonePlanner";
 import { useActivityMode } from "@/ui/stores/activity-mode";
 
 const ShareSheet = dynamic(() => import("@/ui/sharing/ShareSheet").then((mod) => mod.ShareSheet), { loading: () => <p className="og-composer__reason" role="status">Opening sharing…</p> });
-const SendToPhone = dynamic(() => import("@/ui/sharing/SendToPhone").then((mod) => mod.SendToPhone), { loading: () => <p className="og-composer__reason" role="status">Opening Send to phone…</p> });
 
 export interface RideActionsProps {
   readonly document: RideDocument;
@@ -96,9 +94,6 @@ export function RideActions({
   const [title, setTitle] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [shareOpen, setShareOpen] = useState(false);
-  const [sendToPhoneOpen, setSendToPhoneOpen] = useState(false);
-  // Send to phone is the laptop's bridge to the bars; the sheet keeps it off phones.
-  const desktop = useDesktopPlanner();
   // The name the rider just saved under, so Share does not ask for it again (PQ-05).
   const [savedTitle, setSavedTitle] = useState<string | null>(null);
   // Free Ride is a riding mode; a hiker records instead.
@@ -340,25 +335,12 @@ export function RideActions({
             <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 3h10l4 4v14H6z" /><path d="M9 3v6h6M9 21v-7h8v7" /></svg>
             <span className="og-plan-actions__label">{saveState === "saving" ? "Saving…" : "Save"}</span>
           </button>
-          {desktop ? (
-            <button
-              type="button"
-              className="og-secondary"
-              data-testid="send-to-phone"
-              disabled={!canShare}
-              title={canShare ? "Send this route to your phone with a QR code." : "Plan a route to send it to your phone."}
-              onClick={() => setSendToPhoneOpen(true)}
-            >
-              <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M11 18h2" /></svg>
-              <span className="og-plan-actions__label">Send to phone</span>
-            </button>
-          ) : null}
           <button
             type="button"
             className="og-secondary"
             data-testid="open-share"
             disabled={!canShare}
-            title={canShare ? "Preview what a share link exposes." : "Plan a route to share it."}
+            title={canShare ? "Share this ride, download its GPX, or send it to your phone." : "Plan a route to share it."}
             onClick={() => setShareOpen(true)}
           >
             <svg className="og-plan-actions__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 15V3M8 7l4-4 4 4" /><path d="M5 12v8h14v-8" /></svg>
@@ -372,9 +354,6 @@ export function RideActions({
             title={exportTitle}
             capabilities={{ plannedRoute: true, track: false, original: false }}
             onExport={exportRoute}
-            {...(shareService === undefined || shareSource === null
-              ? {}
-              : { onShare: () => setShareOpen(true) })}
           />
         </div>
       )}
@@ -397,18 +376,8 @@ export function RideActions({
               ? { ...shareSource, title: savedTitle ?? trimmed }
               : shareSource
           }
+          waypoints={waypoints}
           onClose={() => setShareOpen(false)}
-        />
-      ) : null}
-      {sendToPhoneOpen && shareSource !== null && shareService !== undefined ? (
-        <SendToPhone
-          service={shareService}
-          source={
-            shareSource.title.trim() === "" && (savedTitle ?? trimmed) !== ""
-              ? { ...shareSource, title: savedTitle ?? trimmed }
-              : shareSource
-          }
-          onClose={() => setSendToPhoneOpen(false)}
         />
       ) : null}
     </section>

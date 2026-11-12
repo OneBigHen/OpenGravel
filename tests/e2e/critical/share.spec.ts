@@ -9,16 +9,14 @@ import {
 } from "./map-helpers";
 
 /**
- * Critical browser workflow (Task 11.1): the share flow, end to end.
+ * Critical browser workflow (R3-3): sharing is one tap.
  *
- * The three promises this spec holds at the browser boundary:
+ * The promises this spec holds at the browser boundary:
  *
- * 1. **Preview exact before publish.** The privacy preview renders the exact
- *    serialized bytes a link exposes (versioned canonical JSON), and the link
- *    is minted over that very snapshot.
- * 2. **Privacy trims the shared route** (11 §1): the hide controls change what
- *    the preview exposes, and the shared geometry is never the full geometry
- *    while zones are hidden.
+ * 1. **Nothing to fill in.** Share opens on the ride's own name and one green
+ *    Create link, with no error and no JSON before the rider asks for anything.
+ * 2. **Privacy trims the shared route** (11 §1). The options sit behind one
+ *    closed line, the trim reads in miles, and the link's bytes show the trim.
  * 3. **Revocation makes the link unusable** (10 §10): revoking reports it
  *    honestly and only a new link (re-issue) works again — a different one.
  *
@@ -48,18 +46,14 @@ async function selectFixtureRoute(page: Page): Promise<void> {
 
 async function openShareSheet(page: Page): Promise<void> {
   await page.getByTestId("open-share").click();
-  await expect(page.getByTestId("share-sheet")).toBeVisible();
-  // §12 requires the shared ride to carry a title, and the sheet owns that
-  // field (the active draft is usually untitled — named saves are copies), so
-  // the preview refuses to render until one is given. Naming it is the flow.
-  await page.getByTestId("share-title").fill("Pine Loop");
-  await expect
-    .poll(async () => (await payload(page)).length)
-    .toBeGreaterThan('{"version":1,'.length);
-}
-
-async function payload(page: Page): Promise<string> {
-  return (await page.getByTestId("share-preview-payload").textContent()) ?? "";
+  const sheet = page.getByTestId("share-sheet");
+  await expect(sheet).toBeVisible();
+  // The name comes from the ride; the button is ready without typing anything.
+  await expect(page.getByTestId("share-title")).not.toHaveValue("");
+  await expect(page.getByTestId("share-publish")).toBeEnabled();
+  // No error until the rider presses the button with an empty title.
+  await expect(sheet.getByRole("alert")).toHaveCount(0);
+  await expect(sheet.getByText(/needs a title/i)).toHaveCount(0);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -68,46 +62,53 @@ test.beforeEach(async ({ page }) => {
   await settledExtent(page);
 });
 
-test("share exposes only a privacy-trimmed snapshot and the link dies on revoke", async ({
+test("share opens on one button, hides its options, and the link dies on revoke", async ({
   page, request,
 }) => {
   await selectFixtureRoute(page);
   await openShareSheet(page);
 
-  // 1. The preview is real data: canonical versioned JSON (§12 allowlist —
-  //    the sheet is the whole payload surface and it carries no location
-  //    provenance fields), and privacy-first by default.
-  const initialBytes = await payload(page);
-  expect(initialBytes.startsWith('{"version":1,')).toBe(true);
-  expect(initialBytes).not.toMatch(/"sourceId"|"observedAt"|"savedPlaceId"|"query"/);
-  const initial = JSON.parse(initialBytes) as {
-    distanceMeters: number;
-    author: unknown;
-  };
-  expect(initial.author).toBeNull();
-  const privacyFirstDistance = initial.distanceMeters;
-  expect(privacyFirstDistance).toBeGreaterThan(0);
+  // 1. One closed privacy line, in the rider's words and unit.
+  const sheet = page.getByTestId("share-sheet");
+  await expect(sheet.getByText("Privacy: start and finish hidden")).toBeVisible();
+  await expect(sheet.getByText(/meters/i)).toHaveCount(0);
+  await sheet.getByText("Privacy: start and finish hidden").click();
+  await expect(sheet.getByRole("checkbox", { name: "Hide the start" })).toBeChecked();
+  await expect(sheet.getByRole("checkbox", { name: "Hide the finish" })).toBeChecked();
+  await expect(sheet.getByText("Trim from both ends (miles)")).toBeVisible();
 
-  // 2. The §11 trims respond to their controls: showing the start again and
-  //    trimming 250 m from both ends changes exactly what the link would expose.
-  await page.getByRole("checkbox", { name: "Hide the start" }).click();
-  await page.getByTestId("share-trim-meters").fill("250");
-  await expect
-    .poll(async () => {
-      const parsed = JSON.parse(await payload(page)) as { distanceMeters: number };
-      return parsed.distanceMeters;
-    })
-    .not.toBe(privacyFirstDistance);
+  // 2. The controls reach the link: show both ends, trim a tenth of a mile.
+  await sheet.getByRole("checkbox", { name: "Hide the start" }).click();
+  await sheet.getByRole("checkbox", { name: "Hide the finish" }).click();
+  await sheet.getByTestId("share-trim-miles").fill("0.1");
+  await expect(sheet.getByText(/0.1 mi trimmed from each end/)).toBeVisible();
 
-  // 3. Publishing mints one opaque, unguessable link over the previewed bytes.
-  const previewedBytes = await payload(page);
-  await page.getByTestId("share-publish").click();
+  // 3. Publishing mints one opaque link; the page shows no payload.
+  await sheet.getByTestId("share-publish").click();
   const linkInput = page.getByTestId("share-link");
   await expect(linkInput).toBeVisible();
+  await expect(sheet.getByText('{"version"')).toHaveCount(0);
+  await expect(page.getByText('{"version"')).toHaveCount(0);
+  await expect(sheet.getByText(/meters/i)).toHaveCount(0);
+
   const firstLink = await linkInput.inputValue();
   expect(firstLink).toMatch(/\/share\/[0-9a-f]{64}$/);
   const token = firstLink.split("/").pop()!;
-  expect(await (await request.get(new URL(`/api/shares/resolve/${token}`, firstLink).href)).text()).toBe(previewedBytes);
+  const output = await (await request.get(new URL(`/api/shares/resolve/${token}`, firstLink).href)).text();
+  expect(output.startsWith('{"version":1,')).toBe(true);
+  // The privacy allowlist only: no location provenance, no name by default.
+  expect(output).not.toMatch(/"sourceId"|"observedAt"|"savedPlaceId"|"query"/);
+  const snapshot = JSON.parse(output) as {
+    author: unknown;
+    distanceMeters: number;
+    rideDistanceMeters: number | null;
+  };
+  expect(snapshot.author).toBeNull();
+  expect(snapshot.distanceMeters).toBeGreaterThan(0);
+  // The trimmed shared line is shorter than the ride the planner showed.
+  if (snapshot.rideDistanceMeters !== null) {
+    expect(snapshot.distanceMeters).toBeLessThan(snapshot.rideDistanceMeters);
+  }
 
   // 4. Revocation is an honest state — and the revoked sheet carries no link.
   await page.getByTestId("share-revoke").click();
@@ -122,7 +123,5 @@ test("share exposes only a privacy-trimmed snapshot and the link dies on revoke"
   const secondLink = await linkInput.inputValue();
   expect(secondLink).not.toBe(firstLink);
   expect(secondLink).toMatch(/\/share\/[0-9a-f]{64}$/);
-  expect(await (await request.get(new URL(`/api/shares/resolve/${secondLink.split("/").pop()!}`, secondLink).href)).text()).toBe(previewedBytes);
-  // The bytes behind the new link are still the previewed bytes.
-  expect(previewedBytes.startsWith('{"version":1,')).toBe(true);
+  expect(await (await request.get(new URL(`/api/shares/resolve/${secondLink.split("/").pop()!}`, secondLink).href)).text()).toBe(output);
 });
