@@ -5,13 +5,11 @@ import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
-import type { RoutingComparisonVm } from "@/application/planner/routing-method-comparison";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type { PlannerRouteBriefingProps } from "@/ui/planner/PlannerRouteBriefing";
 import { RideActions, type RideActionsProps } from "@/ui/planner/RideActions";
 import { RouteChoices, RouteDecisionCard } from "@/ui/planner/RouteDecisionCard";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
-import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
 import { RouteOptions } from "./RouteOptions";
 import { rideStyleSummary } from "./RideStyleControls";
 import { useCompactPlanner, usePhonePlanner } from "./usePhonePlanner";
@@ -73,7 +71,6 @@ export interface PlannerResultPanelProps {
     readonly cards: readonly RouteCardVm[];
     readonly explanation: RouteExplanation | null;
     readonly onSelect: (routeId: RouteCandidateId) => void;
-    readonly comparisons?: RoutingComparisonVm;
     /** One line naming what the settled pick improved over the first look. */
     readonly note?: string | null;
   };
@@ -191,7 +188,6 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
           ))}
         </RouteChoices></div>
       )}
-      {hikeView !== null || choices.comparisons === undefined ? null : <RoutingMethodComparison model={choices.comparisons} onSelect={choices.onSelect} />}
       {briefing.route === null || briefing.providers?.elevationProfile === undefined || choices.cards.length === 0 ? null : (
         <PlannerElevationProfile
           route={briefing.route}

@@ -843,7 +843,6 @@ export function PlannerWorkspace({
               cards: viewModel.routeCards,
               explanation: routeExplanation,
               onSelect: handleSelectRoute,
-              comparisons: viewModel.routingComparisons,
               note: firstLookNote,
             },
             actions: {

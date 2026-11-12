@@ -27,7 +27,7 @@ function request(style: "balanced" | "curvy" | "efficient"): ProviderRouteReques
   };
 }
 const provider = (candidates: readonly ProviderCandidate[]) => ({ id: "test", capabilities: () => ({ profiles: [], supportsAlternatives: true, supportsAvoidPolygons: true }), candidates: vi.fn(async () => ({ candidates })) });
-const deps = { env: { OGV_JEV_FUN_JUDGE: "on", OGV_ATLAS_GENERATORS: "off" }, roadAuthority: null, funCharacterClassifier: null };
+const deps = { env: {}, roadAuthority: null };
 
 describe("geometry owns Best Ride before diversity and role assignment", () => {
   it("Balanced retains its material tight-curve selection instead of buying broad sweeps", async () => {
@@ -36,7 +36,7 @@ describe("geometry owns Best Ride before diversity and role assignment", () => {
     // Geometry fun likes this line, but the established Balanced evaluator
     // sees no additional tight-bend mileage and therefore keeps its incumbent.
     const result = await planRide({ identity, request: request("balanced") }, {
-      ...deps, env: { ...deps.env, OGV_JEV_FUN_JUDGE: "off" }, provider: { ...provider([]), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates:
+      ...deps, provider: { ...provider([]), candidates: vi.fn(async (r: ProviderRouteRequest) => ({ candidates:
         r.options.riderModeFactor === undefined ? [fast] : [{ ...ridge, roadSummary: ridgeRoads }],
       })) },
     });
@@ -45,15 +45,13 @@ describe("geometry owns Best Ride before diversity and role assignment", () => {
   });
   it.each(["curvy"] as const)("%s selects a legal sweeping line inside the real ETA budget", async style => {
     expect(candidateGeometryFun(sweep)!.headingDegreesPerKm).toBeGreaterThan(candidateGeometryFun(fast)!.headingDegreesPerKm);
-    const judge = { judge: vi.fn(async () => { throw new Error("Jev must not choose geometry fun routes"); }) };
-    const result = await planRide({ identity, request: request(style) }, { ...deps, provider: provider([fast, overBudget, farm, sweep]), funJudge: judge });
+    const result = await planRide({ identity, request: request(style) }, { ...deps, provider: provider([fast, overBudget, farm, sweep]) });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const best = result.bundle.candidates.find(c => c.id === result.bundle.roles["best-ride"])!;
     expect(best.durationSeconds).toBe(sweep.durationSeconds);
     expect(result.bundle.selectedRouteId).toBe(best.id);
     expect(best.geometry).toEqual(sweep.geometry);
-    expect(judge.judge).not.toHaveBeenCalled();
   });
   it.each(["no", "private"])("never promotes a %s sweeping line", async access => {
     const result = await planRide({ identity, request: request("curvy") }, { ...deps, provider: provider([fast, route(66, true, "secondary", access)]) });
@@ -63,7 +61,7 @@ describe("geometry owns Best Ride before diversity and role assignment", () => {
   it("keeps Fast selection identical with rider modes enabled or disabled", async () => {
     const selected: unknown[] = [];
     for (const off of [false, true]) {
-      const result = await planRide({ identity, request: request("efficient") }, { ...deps, env: { ...deps.env, OGV_JEV_FUN_JUDGE: "off", ...(off ? { OGV_RIDER_MODES: "off" } : {}) }, provider: provider([fast, sweep]) });
+      const result = await planRide({ identity, request: request("efficient") }, { ...deps, env: { ...(off ? { OGV_RIDER_MODES: "off" } : {}) }, provider: provider([fast, sweep]) });
       expect(result.ok).toBe(true);
       if (result.ok) selected.push(result.bundle.candidates.find(c => c.id === result.bundle.selectedRouteId)?.geometry);
     }

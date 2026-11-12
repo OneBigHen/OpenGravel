@@ -73,7 +73,6 @@ const FAILURE_BEHAVIOR: Readonly<Record<string, string>> = {
   "mapbox-token": "Existing basemap resolution chooses its documented fallback or unavailable mode; no token is exposed here.",
   "offline-regions": "Invalid active manifests are omitted from region listings; missing tiles fail download explicitly.",
   advisor: "Optional advice is disabled/unavailable; core planning and riding stay independent.",
-  jev: "Optional classification fails closed to existing deterministic evaluation; no geometry or access authority.",
 };
 
 const CAMERA_ORIGIN_KEYS: readonly string[] = ["PA", "NJ", "NY", "DE", "MD", "VA", "WV"].flatMap((state) => [
@@ -113,7 +112,6 @@ export const PROVIDER_REGISTRY: readonly ProviderDescriptor[] = [
   descriptor("mapbox-token", "Mapbox public token", "enrichment", ["Mapbox basemap"], ["NEXT_PUBLIC_MAPBOX_TOKEN", "NEXT_PUBLIC_OGV_BASEMAP"], "Token permissions and selected basemap", { visibleOnMap: true }),
   descriptor("offline-regions", "Offline road regions", "derived", ["offline region downloads", "offline routing"], ["OGV_OFFLINE_REGION_ROOT"], "Published region manifests", { artifact: "offline-manifests", offlineCapable: true }),
   descriptor("advisor", "Optional advisor", "enrichment", ["ride advice"], ["ADVISOR_API_KEY", "ADVISOR_OPENROUTER_API_KEY", "OPENROUTER_API_KEY", "ADVISOR_ENDPOINT", "ADVISOR_MODEL", "OPENROUTER_MODEL", "ADVISOR_FALLBACK_API_KEY", "ADVISOR_FALLBACK_ENDPOINT", "ADVISOR_FALLBACK_MODEL"], "Measured ride facts only; never geometry or access authority"),
-  descriptor("jev", "Jev ride character", "derived", ["optional ride-character classification"], ["JEV_API_KEY"], "Bounded candidate classification; never access authority"),
 ];
 
 function present(env: ProviderEnv, key: string): boolean { return (env[key]?.trim() ?? "") !== ""; }

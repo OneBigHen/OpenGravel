@@ -105,15 +105,15 @@ for (const [name, lat, lon] of starts) {
       },
     };
     const env = {
-      OGV_ATLAS_GENERATORS: "off", OGV_DIRT_LOOP_GENERATORS: arm === "after" ? "on" : "off", OGV_ATLAS_CALLS: "4",
-      OGV_FUN_GENERATORS: "shadow", OGV_GRAVEL_ATLAS_PATH: "/var/lib/opengravel/gravel-atlas-v3.sqlite",
-      OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ROAD_AUTHORITY: "off", OGV_JEV_FUN_JUDGE: "off",
+      OGV_DIRT_LOOP_GENERATORS: arm === "after" ? "on" : "off", OGV_ATLAS_CALLS: "4",
+      OGV_GRAVEL_ATLAS_PATH: "/var/lib/opengravel/gravel-atlas-v3.sqlite",
+      OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ROAD_AUTHORITY: "off",
     };
     let result: PlanServiceResult | undefined;
     const before = liveCalls;
     const response = await handleRoutePlanRequest({ identity: { rideId: "ride_dirt_bench", rideRevision: 1, planningGeneration: 1 }, request }, {
       plan: async input => {
-        result = await planRide(input, { provider, env, funCharacterClassifier: null, funJudge: null, roadAuthority: null, funGeneratorStrategies: [] });
+        result = await planRide(input, { provider, env, roadAuthority: null });
         return result;
       },
     });

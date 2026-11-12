@@ -12,7 +12,7 @@ const request: ProviderRouteRequest = {
   options: { includeAlternatives: true, avoidHighways: false, tollPolicy: "avoid", vehicle: "motorcycle" },
 };
 const identity = { rideId: "perf", rideRevision: 1, planningGeneration: 1 };
-const env = { OGV_ATLAS_GENERATORS: "off", OGV_TRAFFIC_LIVE_AVOID: "off" };
+const env = { OGV_TRAFFIC_LIVE_AVOID: "off" };
 function candidate(index = 0): ProviderCandidate {
   return {
     providerId: "counting", profile: "motorcycle_fastest",
@@ -44,7 +44,7 @@ describe("planning latency regressions", () => {
     const provider = providerWith(request => { calls += 1; requests.push(request); return [candidate()]; });
     const dirt = { ...request, options: { ...request.options, surfacePreference: "dirt-preferred" as const, includeAlternatives: override } };
     const result = await planRide({ identity, request: dirt, ...(override ? { options: { includeAlternatives: false } } : {}) }, {
-      provider, env: { ...env, OGV_ATLAS_GENERATORS: "on", OGV_FUN_GENERATORS: "on" },
+      provider, env,
     });
     expect(result.ok).toBe(true);
     expect(calls).toBe(1);

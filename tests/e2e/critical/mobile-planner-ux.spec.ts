@@ -86,13 +86,11 @@ test("small-phone ride style has a named entry and the plan stays visible while 
   await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
 });
 
-test("320px comparison fits its sheet and keeps the header controls on one row", async ({ page }) => {
+test("320px result fits its sheet and keeps the header controls on one row", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
-  // The comparison only renders on the explicit debug page.
-  await page.goto("/?debug=routing");
+  await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
-  // Explicit map authoring keeps the debug comparison in the composer.
   await placeEndpoint(page, "start", { lat: 40.1385, lon: -75.4385 });
   await placeEndpoint(page, "finish", { lat: 40.1325, lon: -75.4335 });
   await pressPlan(page);
@@ -119,9 +117,6 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
     expect.soft(box.height, `${id} touch height`).toBeGreaterThanOrEqual(44);
     expect.soft(box.width, `${id} touch width`).toBeGreaterThanOrEqual(44);
   }
-  const comparison = page.getByTestId("routing-method-comparison");
-  await comparison.locator("summary").first().click();
-  await page.getByTestId("routing-method-frontier").getByRole("radio").check();
   const sizes = await page.getByTestId("sheet-scroll").evaluate((element) => ({
     viewport: element.clientWidth, content: element.scrollWidth,
   }));

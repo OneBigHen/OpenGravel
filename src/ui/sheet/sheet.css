@@ -464,7 +464,7 @@
     background: var(--og-surface);
   }
 
-  .og-planner__sheet[data-detent="peek"] :is(.og-route-list, .og-points, .og-spans, .og-sketch, .og-offline, .og-refine, .og-prepare, .og-style, .og-routing-methods, .og-phone-tools) {
+  .og-planner__sheet[data-detent="peek"] :is(.og-route-list, .og-points, .og-spans, .og-sketch, .og-offline, .og-refine, .og-prepare, .og-style, .og-phone-tools) {
     display: none;
   }
 

@@ -33,9 +33,8 @@ import { decodeCatalogPolyline } from '../../src/application/explore/catalog-bui
 import type { Measurement, Ride, RiderLineSnap, Row, RouterUse } from './types';
 
 const SWITCHES = {
-  OGV_RIDER_MODES: 'on', OGV_DIRT_LOOP_GENERATORS: 'on', OGV_ATLAS_GENERATORS: 'off',
-  OGV_FUN_GENERATORS: 'shadow', OGV_ROAD_AUTHORITY: 'on',
-  OGV_TRAFFIC_LIVE_AVOID: 'off', OGV_JEV_FUN_JUDGE: 'off',
+  OGV_RIDER_MODES: 'on', OGV_DIRT_LOOP_GENERATORS: 'on', OGV_ROAD_AUTHORITY: 'on',
+  OGV_TRAFFIC_LIVE_AVOID: 'off',
 };
 function requestFor(ride: Ride): ProviderRouteRequest {
   const dirt = ride.mode !== 'curvy';
@@ -157,11 +156,9 @@ async function main(): Promise<void> {
       const callsBefore = meter.count();
       watched.start();
       const started = performance.now();
-      let shadowDone = false;
       const result = await planRide({ identity: { rideId: `scorecard_${ride.id}`, rideRevision: 1, planningGeneration: 1 }, request }, {
         provider: watched.provider, env: SWITCHES, gravelAtlas: atlas, roadAuthority: authority,
-        now: () => manifest.rideDate, funJudge: null, funCharacterClassifier: null,
-        onFunGeneratorReport: () => { shadowDone = true; },
+        now: () => manifest.rideDate,
       });
       const seconds = (performance.now() - started) / 1000;
       const callsAtReturn = meter.count();
@@ -173,13 +170,10 @@ async function main(): Promise<void> {
       if (!candidate) throw new Error('Selected geometry not matched to raw provider answer');
       const roads = await authority.assess(bounds(candidate), AbortSignal.timeout(10_000));
       selected = measure(candidate, ride, request.options, baseline?.minutes ?? 0, seconds, roads.evaluate(candidate.geometry));
-      // Shadow work is excluded from user-facing planning latency but drained
-      // before the next ride. No background router searches can stack up.
-      const deadline = Date.now() + 90_000;
-      while ((!shadowDone || watched.pending() > 0) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));
+      // Nothing is left running after the answer; the meter is drained so the
+      // next ride's count starts clean.
       await meter.idle();
       routerUse = { ...routerUse, shadowCalls: meter.count() - callsAtReturn };
-      if (!shadowDone || watched.pending() > 0) throw new Error('Shadow generator did not finish within 90 seconds');
     } catch (error) { errors.push(`OpenGravel: ${String(error)}`); }
     // The rider's own line: third contestant. Runs after the plan has drained, so its router requests are never counted against OpenGravel.
     if (ride.riderTrack) {

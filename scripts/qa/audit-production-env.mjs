@@ -96,7 +96,6 @@ capability("OSM Discover index", present("OGV_DISCOVER_OSM_PLACES"));
 capability("Curvature catalogue", present("CURVATURE_DB_PATH"));
 capability("Gravel Atlas", present("GRAVEL_ATLAS_DB_PATH"));
 capability("Advisor", present("ADVISOR_API_KEY") || present("ADVISOR_OPENROUTER_API_KEY") || present("OPENROUTER_API_KEY"));
-capability("Jev classifier", present("JEV_API_KEY"));
 
 const requiredPersistent = [
   ["OGV_SHARE_DB_PATH", "public-share database"],

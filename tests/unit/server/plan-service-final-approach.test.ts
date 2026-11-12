@@ -45,7 +45,7 @@ function router(answer: (req: ProviderRouteRequest, call: number) => readonly Pr
   };
   return { provider, requests };
 }
-const deps = { env: {}, funCharacterClassifier: null, funJudge: null };
+const deps = { env: {} };
 
 describe("plan handler blocked final approach", () => {
   it("recovers a destination snapped to an explicitly prohibited engine road without authority coverage", async () => {

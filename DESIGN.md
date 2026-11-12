@@ -215,6 +215,10 @@ the primary button.
   dash. Share draws the same card as a 1080×1350 PNG in the browser (Web Share, else Save picture).
   My rides tabs are **Saved** and **Ridden**, and `/rides?tab=ridden` opens Ridden.
 
+- 2026-11-12 Owner (routing round, RM-3 "planning stops waiting on things no rider sees"): the
+  "Routing methods" block, its curve comparison and its Jev reading leave the result screen. They
+  changed no route and reported experiments; the ride summary, choices and truth lines are unchanged.
+
 - 2026-11-11 Owner (round 3 plan, restructure call 12, R3-7 "Keep for no signal"): the one offline control
   is a **Keep for no signal** switch on a saved ride (My rides, ride details), showing progress and then
   "Kept, 3 MB"; a full phone or a failed tile says so in one red line and the switch goes back off. It

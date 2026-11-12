@@ -1,6 +1,6 @@
 /* Preparing a ride: the briefing (weather, considerations), offline
    readiness, the sheet's prepare rows (bike, departure), gas along the way,
-   things along the ride and their cards, and the routing-method comparison.
+   and things along the ride and their cards.
    Inside a sheet, groups are hairline rows and wells, never bordered cards. */
 
 /* --------------------------------------------------------------------------
@@ -898,221 +898,6 @@
 }
 
 /* --------------------------------------------------------------------------
-   Compare routing methods (an advanced disclosure under the ride).
-   -------------------------------------------------------------------------- */
-.og-routing-methods {
-  margin-top: var(--og-space-3);
-  border-radius: var(--og-radius-card);
-  background: var(--og-surface-2);
-  color: var(--og-ink);
-}
-
-.og-routing-methods__summary-toggle,
-.og-routing-methods__how > summary,
-.og-routing-methods__why > summary {
-  display: flex;
-  align-items: center;
-  gap: var(--og-space-2);
-  min-height: var(--og-touch);
-  padding: var(--og-space-2) var(--og-space-4);
-  color: var(--og-ink);
-  font-weight: 700;
-  list-style: none;
-  cursor: pointer;
-}
-
-:is(.og-routing-methods__summary-toggle, .og-routing-methods__how > summary, .og-routing-methods__why > summary)::-webkit-details-marker {
-  display: none;
-}
-
-:is(.og-routing-methods__summary-toggle, .og-routing-methods__how > summary, .og-routing-methods__why > summary)::before {
-  content: "▸";
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-}
-
-.og-routing-methods[open] > .og-routing-methods__summary-toggle::before,
-:is(.og-routing-methods__how, .og-routing-methods__why)[open] > summary::before {
-  content: "▾";
-}
-
-.og-routing-methods__experimental {
-  margin-left: auto;
-  padding: 2px var(--og-space-2);
-  border-radius: var(--og-radius-pill);
-  background: var(--og-surface);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.og-routing-methods__body {
-  display: grid;
-  gap: var(--og-space-3);
-  min-width: 0;
-  padding: 0 var(--og-space-4) var(--og-space-4);
-  line-height: 1.5;
-}
-
-.og-routing-methods__guidance,
-.og-routing-methods__stale,
-.og-routing-methods__boundary,
-.og-routing-methods__how-copy,
-.og-routing-methods__jev {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-routing-methods__stale,
-.og-routing-methods__caveat,
-.og-routing-methods__advisory {
-  color: var(--og-warn);
-}
-
-.og-routing-methods__advisory {
-  font-weight: 700;
-}
-
-.og-routing-methods__boundary {
-  font-style: italic;
-}
-
-.og-routing-methods__list {
-  display: grid;
-  gap: var(--og-space-2);
-  min-inline-size: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.og-routing-methods__option {
-  overflow: hidden;
-  border-radius: var(--og-radius-control);
-  background: var(--og-surface);
-}
-
-.og-routing-methods__option[data-active="true"] {
-  background: var(--og-primary-soft);
-}
-
-.og-routing-methods__choice {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--og-space-3);
-  min-height: 52px;
-  padding: var(--og-space-3);
-  cursor: pointer;
-}
-
-.og-routing-methods__choice input {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
-  accent-color: var(--og-primary);
-}
-
-.og-routing-methods__choice-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.og-routing-methods__label {
-  font-weight: 700;
-}
-
-.og-routing-methods__summary {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-routing-methods__detail {
-  display: grid;
-  gap: var(--og-space-2);
-  min-width: 0;
-  padding: 0 var(--og-space-3) var(--og-space-3) 40px;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  overflow-wrap: anywhere;
-}
-
-.og-routing-methods__delta,
-.og-routing-methods__route-label {
-  color: var(--og-ink);
-  font-weight: 600;
-}
-
-.og-routing-methods__action {
-  justify-self: start;
-  min-height: var(--og-touch);
-  padding: 0 var(--og-space-3);
-  border: 1px solid var(--og-line-strong);
-  border-radius: var(--og-radius-control);
-  background: var(--og-surface);
-  color: var(--og-primary-text);
-  font: inherit;
-  font-size: var(--og-text-meta);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.og-routing-methods__action:hover:not(:disabled) {
-  background: var(--og-primary-soft);
-}
-
-.og-routing-methods__action:disabled {
-  color: var(--og-ink-2);
-  cursor: not-allowed;
-}
-
-.og-routing-methods__jev {
-  display: grid;
-  gap: var(--og-space-2);
-  padding: var(--og-space-3);
-  border-block: 1px solid var(--og-line);
-}
-
-.og-routing-methods__jev h3 {
-  color: var(--og-ink);
-  font-size: var(--og-text-body);
-}
-
-.og-routing-methods__confidence,
-.og-routing-methods__model {
-  font-size: var(--og-text-caption);
-}
-
-.og-routing-methods__how {
-  border-top: 1px solid var(--og-line);
-}
-
-.og-routing-methods__how-copy {
-  display: grid;
-  gap: var(--og-space-2);
-  padding: 0 var(--og-space-3) var(--og-space-1) 34px;
-}
-
-.og-routing-methods__why > summary {
-  min-height: 44px;
-  padding: var(--og-space-1) 0;
-  font-size: var(--og-text-meta);
-}
-
-.og-routing-methods__why > p {
-  max-width: 65ch;
-  padding-bottom: var(--og-space-3);
-  text-wrap: pretty;
-}
-
-.og-routing-methods :is(summary, .og-routing-methods__choice input, .og-routing-methods__action):focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
-}
-
-/* --------------------------------------------------------------------------
    Sizes.
    -------------------------------------------------------------------------- */
 @media (max-width: 760px) {
@@ -1120,8 +905,7 @@
     flex-direction: column;
   }
 
-  .og-preparation__toggle,
-  .og-routing-methods__action {
+  .og-preparation__toggle {
     justify-self: stretch;
     width: 100%;
   }
@@ -1136,25 +920,6 @@
   .og-offline__row dd > * {
     min-width: 0;
     overflow-wrap: anywhere;
-  }
-
-  .og-routing-methods__body {
-    padding-inline: var(--og-space-3);
-  }
-
-  .og-routing-methods__detail {
-    padding-left: var(--og-space-3);
-  }
-
-  .og-routing-methods__summary-toggle {
-    flex-wrap: wrap;
-    gap: var(--og-space-1) var(--og-space-2);
-    padding-inline: var(--og-space-3);
-  }
-
-  .og-routing-methods__summary-toggle > span:first-of-type {
-    flex: 1 1 140px;
-    min-width: 0;
   }
 }
 

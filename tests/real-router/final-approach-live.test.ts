@@ -42,7 +42,7 @@ describe.skipIf(process.env["OGV_FINAL_APPROACH_LIVE"] !== "on")("park destinati
         stops: [], shaping: [], profile: "motorcycle_fastest", avoidPolygons: [],
         options: { vehicle: "motorcycle", includeAlternatives, avoidHighways: false, tollPolicy: "avoid" },
       },
-    }, { plan: (input, { signal }) => planRide(input, { provider, roadAuthority: authority, env: {}, signal, funCharacterClassifier: null, funJudge: null }) });
+    }, { plan: (input, { signal }) => planRide(input, { provider, roadAuthority: authority, env: {}, signal }) });
     const routes = "bundle" in result.body ? result.body.bundle.candidates : [];
     const report = {
       park, includeAlternatives, status: result.status, calls, error: "error" in result.body ? result.body.error : null,

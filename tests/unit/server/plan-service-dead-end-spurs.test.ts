@@ -22,14 +22,14 @@ const providerOf = (...routes: ProviderCandidate[]): RouteCandidateProvider => (
   candidates: async () => ({ candidates: routes }),
 });
 const noAtlas: GravelAtlasPort = { availability: () => ({ available: false, path: null, schemaVersion: null, corridorCount: 0 }), corridorsNear: () => [] };
-const env = { OGV_FUN_GENERATORS: "off", OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ATLAS_GENERATORS: "off" };
+const env = { OGV_TRAFFIC_LIVE_AVOID: "off" };
 const loop: ProviderRouteRequest = {
   requestId: "spurs_loop", origin: O, destination: O, stops: [], shaping: [], avoidPolygons: [], profile: "motorcycle_twisty",
   discovery: { targetMinutes: 30, toleranceMinutes: 4.5 },
   options: { vehicle: "motorcycle", includeAlternatives: true, avoidHighways: false, tollPolicy: "avoid", traffic: "minimize-delay" },
 };
 const plan = (request: ProviderRouteRequest, provider: RouteCandidateProvider) =>
-  planRide({ identity: { rideId: "ride_spurs", rideRevision: 1, planningGeneration: 1 }, request }, { provider, gravelAtlas: noAtlas, env, roadAuthority: null, funCharacterClassifier: null });
+  planRide({ identity: { rideId: "ride_spurs", rideRevision: 1, planningGeneration: 1 }, request }, { provider, gravelAtlas: noAtlas, env, roadAuthority: null });
 
 describe("planning a ride that must not ride down a dead-end road and back", () => {
   it("offers the loop without the spur and never shows the one with it", async () => {
