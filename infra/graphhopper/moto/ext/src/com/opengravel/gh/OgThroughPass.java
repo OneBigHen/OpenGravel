@@ -29,8 +29,46 @@ public final class OgThroughPass {
         return new SimpleBooleanEncodedValue(key, false);
     }
 
+    /** The through-flag inputs read from a graph. */
+    public static final class Inputs {
+        public int[] from, to, alias;
+        public double[] meters;
+        public long[] wayId;
+        /** Per edge; the *Once arrays leave artificial copies out (they take their original's verdict). */
+        public boolean[] usable, street, usableOnce, streetOnce;
+        public int copies;
+    }
+
     public static void compute(BaseGraph graph, EncodedValueLookup lookup) {
         long started = System.nanoTime();
+        Inputs in = inputs(graph, lookup);
+        int n = in.from.length;
+        boolean[] through = OgThroughFlags.compute(graph.getNodes(), in.from, in.to, in.meters, in.usableOnce);
+        boolean[] throughStreet = OgThroughFlags.compute(graph.getNodes(), in.from, in.to, in.meters, in.streetOnce);
+
+        BooleanEncodedValue throughEnc = lookup.hasEncodedValue(KEY) ? lookup.getBooleanEncodedValue(KEY) : null;
+        BooleanEncodedValue streetEnc = lookup.hasEncodedValue(STREET_KEY) ? lookup.getBooleanEncodedValue(STREET_KEY) : null;
+        double usableM = 0, throughM = 0, streetM = 0, throughStreetM = 0;
+        for (int e = 0; e < n; e++) {
+            int o = in.alias[e];
+            boolean t = in.usable[e] && through[o];
+            boolean ts = in.street[e] && throughStreet[o];
+            EdgeIteratorState s = graph.getEdgeIteratorState(e, Integer.MIN_VALUE);
+            if (throughEnc != null) s.set(throughEnc, t);
+            if (streetEnc != null) s.set(streetEnc, ts);
+            if (o == e) {
+                if (in.usable[e]) usableM += in.meters[e];
+                if (t) throughM += in.meters[e];
+                if (in.street[e]) streetM += in.meters[e];
+                if (ts) throughStreetM += in.meters[e];
+            }
+        }
+        logger.info("og_through: {} edges ({} artificial copies folded); through {} of {} km usable; street through {} of {} km; {} s",
+                n, in.copies, Math.round(throughM / 1000), Math.round(usableM / 1000), Math.round(throughStreetM / 1000), Math.round(streetM / 1000),
+                String.format("%.1f", (System.nanoTime() - started) / 1e9));
+    }
+
+    public static Inputs inputs(BaseGraph graph, EncodedValueLookup lookup) {
         BooleanEncodedValue accessEnc = lookup.getBooleanEncodedValue(VehicleAccess.key("car"));
         EnumEncodedValue<RoadAccess> roadAccessEnc = lookup.hasEncodedValue(RoadAccess.KEY) ? lookup.getEnumEncodedValue(RoadAccess.KEY, RoadAccess.class) : null;
         EnumEncodedValue<Surface> surfaceEnc = lookup.hasEncodedValue(Surface.KEY) ? lookup.getEnumEncodedValue(Surface.KEY, Surface.class) : null;
@@ -59,39 +97,18 @@ public final class OgThroughPass {
                     || s.get(rcEnc) == RoadClass.TRACK && track != TrackType.GRADE1;
             street[e] = usable[e] && !unpaved && !rough;
         });
-
         // Fold artificial copies (same two nodes, same OSM way, same length) into their original.
-        int[] alias = foldCopies(from, to, meters, wayId);
-        boolean[] usableOnce = new boolean[n], streetOnce = new boolean[n];
-        int copies = 0;
+        Inputs in = new Inputs();
+        in.from = from; in.to = to; in.meters = meters; in.wayId = wayId; in.usable = usable; in.street = street;
+        in.alias = foldCopies(from, to, meters, wayId);
+        in.usableOnce = new boolean[n];
+        in.streetOnce = new boolean[n];
         for (int e = 0; e < n; e++) {
-            if (alias[e] != e) { copies++; continue; }
-            usableOnce[e] = usable[e];
-            streetOnce[e] = street[e];
+            if (in.alias[e] != e) { in.copies++; continue; }
+            in.usableOnce[e] = usable[e];
+            in.streetOnce[e] = street[e];
         }
-        boolean[] through = OgThroughFlags.compute(graph.getNodes(), from, to, meters, usableOnce);
-        boolean[] throughStreet = OgThroughFlags.compute(graph.getNodes(), from, to, meters, streetOnce);
-
-        BooleanEncodedValue throughEnc = lookup.hasEncodedValue(KEY) ? lookup.getBooleanEncodedValue(KEY) : null;
-        BooleanEncodedValue streetEnc = lookup.hasEncodedValue(STREET_KEY) ? lookup.getBooleanEncodedValue(STREET_KEY) : null;
-        double usableM = 0, throughM = 0, streetM = 0, throughStreetM = 0;
-        for (int e = 0; e < n; e++) {
-            int o = alias[e];
-            boolean t = usable[e] && through[o];
-            boolean ts = street[e] && throughStreet[o];
-            EdgeIteratorState s = graph.getEdgeIteratorState(e, Integer.MIN_VALUE);
-            if (throughEnc != null) s.set(throughEnc, t);
-            if (streetEnc != null) s.set(streetEnc, ts);
-            if (o == e) {
-                if (usable[e]) usableM += meters[e];
-                if (t) throughM += meters[e];
-                if (street[e]) streetM += meters[e];
-                if (ts) throughStreetM += meters[e];
-            }
-        }
-        logger.info("og_through: {} edges ({} artificial copies folded); through {} of {} km usable; street through {} of {} km; {} s",
-                n, copies, Math.round(throughM / 1000), Math.round(usableM / 1000), Math.round(throughStreetM / 1000), Math.round(streetM / 1000),
-                String.format("%.1f", (System.nanoTime() - started) / 1e9));
+        return in;
     }
 
     /** alias[e] = the first edge with the same two nodes, OSM way and length (itself when unique). */

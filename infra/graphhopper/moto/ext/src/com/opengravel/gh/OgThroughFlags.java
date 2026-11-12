@@ -30,6 +30,18 @@ public final class OgThroughFlags {
      * @return through flag per edge
      */
     public static boolean[] compute(int nodes, int[] from, int[] to, double[] meters, boolean[] usable) {
+        return analyze(nodes, from, to, meters, usable).through;
+    }
+
+    /** The verdict and why: which edges are bridges, how long each edge's part is, big parts on each side of a bridge. */
+    public static final class Analysis {
+        public boolean[] through, bridge;
+        public double[] partMetersOfEdge;
+        /** For a bridge: big parts on its child side and on the other side of the same tree. */
+        public int[] bigBelow, bigOther;
+    }
+
+    public static Analysis analyze(int nodes, int[] from, int[] to, double[] meters, boolean[] usable) {
         int edges = from.length;
         // Compressed adjacency over usable, non-loop edges.
         int[] degree = new int[nodes + 1];
@@ -157,15 +169,24 @@ public final class OgThroughFlags {
         }
 
         boolean[] through = new boolean[edges];
+        Analysis out = new Analysis();
+        out.bridge = bridge;
+        out.partMetersOfEdge = new double[edges];
+        out.bigBelow = new int[edges];
+        out.bigOther = new int[edges];
         for (int e = 0; e < edges; e++) {
             if (!usable[e]) continue;
+            out.partMetersOfEdge[e] = partMeters[find(part, from[e])];
             if (!bridge[e]) { through[e] = partThrough[find(part, from[e])]; continue; }
             int a = find(part, from[e]), b = find(part, to[e]);
             int child = tParentEdge[a] == e ? a : b;
             int total = sub[treeRoot[child]];
+            out.bigBelow[e] = sub[child];
+            out.bigOther[e] = total - sub[child];
             through[e] = sub[child] > 0 && total - sub[child] > 0;
         }
-        return through;
+        out.through = through;
+        return out;
     }
 
     static int find(int[] parent, int v) {

@@ -16,7 +16,7 @@ curl --fail --silent --show-error --location \
 echo "a1d9152f2c78374fb8d5984e04e21cb73decdec618753ac1e69e740b778fad3f  $out_dir/GraphHopperManaged.java" | sha256sum --check --status
 (cd "$out_dir" && patch --forward --fuzz=0 -p1 < "$script_dir/ext/GraphHopperManaged.patch")
 mapfile -t sources < <(find "$script_dir/ext/src" -name '*.java' | sort)
-javac --release 17 -cp "$jar_path" -d "$classes" "$out_dir/GraphHopperManaged.java" "${sources[@]}" "$script_dir/ext/OgChecks.java"
+javac --release 17 -cp "$jar_path" -d "$classes" "$out_dir/GraphHopperManaged.java" "${sources[@]}" "$script_dir/ext/OgChecks.java" "$script_dir/ext/OgInspect.java"
 jar --create --file "$out_dir/og-ext.jar.tmp" -C "$classes" .
 mv "$out_dir/og-ext.jar.tmp" "$out_dir/og-ext.jar"
 sha256sum "$out_dir/og-ext.jar"
