@@ -86,13 +86,19 @@ test("directions keep saved work, briefing, current bike and departure controls 
   await page.getByTestId("category-result").first().click();
   await page.getByTestId("place-directions").click();
   await expect(page.getByTestId("route-options")).toBeVisible();
-  await expect(page.getByTestId("named-ride-title")).toBeAttached();
+  // A destination shows the same summary as a loop (R3-4): Start, Save, Share.
+  await expect(page.getByTestId("route-options").getByTestId("route-summary")).toBeVisible();
+  await expect(page.getByTestId("summary-save")).toBeAttached();
   await expect(page.getByTestId("open-share")).toBeAttached();
   await expect(page.getByTestId("prepare-toggle")).toBeAttached();
   // Saved work lives in the full sheet; half height keeps the route on screen.
   await page.getByTestId("sheet-handle").press("ArrowUp");
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
-  await page.getByTestId("named-ride-title").fill("Weekend route");
+  await page.getByTestId("summary-save").click();
+  await expect(page.getByTestId("summary-save")).toHaveText("Saved");
+  await page.getByTestId("ride-title-edit").click();
+  await page.getByTestId("ride-title-input").fill("Weekend route");
+  await page.getByTestId("ride-title-input").press("Enter");
   await page.getByTestId("route-options-settings").click();
   await page.getByRole("button", { name: /^Bike/ }).click();
   await expect(page.getByRole("link", { name: /Manage bikes in Garage/ })).toBeVisible();
@@ -101,7 +107,9 @@ test("directions keep saved work, briefing, current bike and departure controls 
   await expect(page.getByRole("radio", { name: "In 3 h", exact: true })).toBeVisible();
   await page.getByTestId("back-to-options").click();
   await page.getByTestId("back-to-options").click();
-  await expect(page.getByTestId("named-ride-title")).toHaveValue("Weekend route");
+  // The saved ride and its name survive a trip through Options.
+  await expect(page.getByTestId("phone-destination")).toHaveText("Weekend route");
+  await expect(page.getByTestId("summary-save")).toHaveText("Saved");
   await page.unrouteAll({ behavior: "wait" });
 });
 

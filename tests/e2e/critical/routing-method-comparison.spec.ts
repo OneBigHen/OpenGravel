@@ -80,7 +80,8 @@ test("phone Frontier explains the authored Curvy choice and waits for manual app
   await planComparison(page, "curvy");
   // Curvy's canonical Best Ride differs from Fastest in this fixture. Choose
   // that card before inspecting Frontier so the manual action switches routes.
-  await page.locator('[data-testid^="route-card-"], [data-testid^="route-option-"]').filter({ visible: true }).filter({ hasText: "Best Ride" }).click();
+  // Compare rows are named by what they are (R3-4), so the recommendation is found by its role.
+  await page.locator('[data-testid="route-card-best-ride"], [data-testid="route-option-best-ride"]').filter({ visible: true }).click();
   const selected = page.locator('[data-testid^="route-card-"][aria-pressed="true"], [data-testid^="route-option-"][aria-pressed="true"]').filter({ visible: true });
   const before = await selected.getAttribute("data-testid");
   const frontier = page.getByTestId("routing-method-frontier");

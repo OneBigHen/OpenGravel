@@ -14,15 +14,14 @@
   color: var(--og-ink);
 }
 
-.og-ride[data-recording="true"] {
-  --og-ride-strip-live-h: calc(var(--og-ride-strip-h) + 20px);
-}
+.og-ride[data-recording="true"] { --og-ride-strip-live-h: calc(var(--og-ride-strip-h) + 20px); }
 
-.og-ride__map {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
+.og-ride__map { position: absolute; inset: 0; z-index: 0; }
+
+/* The route outline paints over the map's loading veil; the veil keeps no words on the ride. */
+.og-ride__outline { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+.og-ride__map .og-map__veil-label { visibility: hidden; }
+.og-ride__outline path { fill: none; stroke: var(--og-route); stroke-width: 6px; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 
 .og-ride__top {
   position: absolute;

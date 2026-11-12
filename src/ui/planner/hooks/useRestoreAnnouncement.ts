@@ -6,7 +6,7 @@
  * A boot that adopts a durable draft sets `restoreStatus` to `restored` and only
  * a ride command clears it again (undo/redo and the automatic replan write
  * elsewhere), so a surface that shows the message indefinitely replaces every
- * later plan status with "Restored your draft" for the whole session. This hook
+ * later plan status with "Restored your ride" for the whole session. This hook
  * hands the message out only while it is news: each restore status is announced
  * for a short window, and after that the plan owns the status line again.
  */

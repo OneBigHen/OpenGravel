@@ -122,6 +122,7 @@ import { RideInterestCard } from "@/ui/ride/RideInterestCard";
 import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
 import { useRideInterest } from "@/ui/ride/useRideInterest";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
+import { RouteOutline } from "./RouteOutline";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
 import { RideMusicEntry } from "@/ui/ride/RideMusicEntry";
 import { RideSafetyOverlay, RideSafetyPanel } from "@/ui/ride/RideSafetyPanel";
@@ -171,7 +172,7 @@ export interface RideFocusProps {
 
 /** The recovery screen's copy, per state: what happened, and what to do. */
 const RECOVERY_COPY: Readonly<Record<Exclude<RideFocusStoreStatus, "ready" | "absent">, string>> = {
-  loading: "Opening your ride…",
+  loading: "Starting your ride…",
   unrecoverable: "This ride's journal could not be replayed, so it can't be resumed.",
   unavailable: "This ride's saved data couldn't be opened.",
 };
@@ -724,6 +725,7 @@ export function RideFocus({
           layers={mapLayersSource === undefined ? undefined : { source: mapLayersSource }}
         />
       )}
+      {mapReady ? null : <RouteOutline line={availableRouteLine} />}
     </div>
   );
 
@@ -771,6 +773,39 @@ export function RideFocus({
     );
   }
 
+  /*
+    Start never shows a title page (round 3, restructure call 8). While the
+    ride opens, the screen is already the ride: the maneuver card and the
+    metric strip in their places, the map filling in behind. The way back to
+    the planner appears only if opening fails.
+  */
+  if (status === "loading" || (status === "ready" && viewModel === null)) {
+    return (
+      <main id="main" className="og-ride" data-testid="ride-focus" data-status="loading">
+        <div className="og-ride__map" data-testid="ride-map-slot" />
+        <header className="og-ride__top">
+          <div className="og-ride__maneuver" data-testid="ride-maneuver" role="status" aria-live="polite">
+            <p className="og-ride__maneuver-action" data-testid="ride-recovery">
+              {statusMessage ?? "Starting your ride…"}
+            </p>
+          </div>
+        </header>
+        <footer className="og-ride__strip" data-testid="ride-strip-bar">
+          <div className="og-ride-metrics" role="group" aria-label="Ride readouts">
+            {["Speed", "Dist left", "Arrive"].map((caption) => (
+              <span key={caption} className="og-ride-metrics__slot">
+                <span className="og-ride-metrics__reading" aria-hidden="true">
+                  <span className="og-ride-metrics__value">—</span>
+                </span>
+                <span className="og-ride-metrics__caption">{caption}</span>
+              </span>
+            ))}
+          </div>
+        </footer>
+      </main>
+    );
+  }
+
   // A ride that could not be opened: retrying is meaningful here, and the exit
   // stays reachable while the tab bar does.
   if (status !== "ready" || viewModel === null) {
@@ -779,24 +814,22 @@ export function RideFocus({
         <AppBar current="" />
         <section className="og-ride__recovery" aria-labelledby="og-ride-recovery-title">
           <h1 id="og-ride-recovery-title" className="og-ride__title">
-            Ride Focus
+            Your ride didn&apos;t open
           </h1>
           <p className="og-ride__recovery-text" data-testid="ride-recovery" role="status">
             {statusMessage ?? recoveryCopy(status)}
           </p>
           <div className="og-ride__actions">
-            {status === "loading" ? null : (
-              <button
-                type="button"
-                className="og-ride__action"
-                data-testid="ride-retry-recovery"
-                onClick={(): void => {
-                  void store.getState().retryRecovery();
-                }}
-              >
-                Try again
-              </button>
-            )}
+            <button
+              type="button"
+              className="og-ride__action"
+              data-testid="ride-retry-recovery"
+              onClick={(): void => {
+                void store.getState().retryRecovery();
+              }}
+            >
+              Try again
+            </button>
             <a className="og-ride__action og-ride__action--link" data-testid="ride-exit" href={exitHref}>
               Back to the planner
             </a>

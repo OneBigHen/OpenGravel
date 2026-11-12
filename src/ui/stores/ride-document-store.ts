@@ -200,24 +200,24 @@ export function createRideDocumentStore(
         loaded = await repository.loadRide(current.rideId);
       } catch (error: unknown) {
         set({
-          restoreStatus: { state: "failed", message: "Could not reload your draft" },
+          restoreStatus: { state: "failed", message: "Could not reload your ride" },
         });
         void error;
         return;
       }
       if (loaded === null) {
-        set({ restoreStatus: { state: "failed", message: "The latest draft is unavailable" } });
+        set({ restoreStatus: { state: "failed", message: "Your last ride is unavailable" } });
         return;
       }
       if (!loaded.ok) {
-        set({ restoreStatus: { state: "corrupt", message: "Could not restore your draft" } });
+        set({ restoreStatus: { state: "corrupt", message: "Could not restore your ride" } });
         return;
       }
       baseRevision = loaded.document.revision;
       set({
         document: loaded.document,
         conflict: null,
-        restoreStatus: { state: "restored", message: "Restored your draft" },
+        restoreStatus: { state: "restored", message: "Restored your ride" },
         saveStatus: { state: "unsaved", result: get().saveStatus.result },
       });
     },
@@ -541,7 +541,7 @@ export function createRideDocumentStore(
   const adoptRestoredDocument = (
     restored: RideDocument,
     pointer: RideDraftPointer,
-    message = "Restored your draft",
+    message = "Restored your ride",
   ): void => {
     baseRevision = restored.revision;
     reconcileBootstrapPointer(pointer);
@@ -606,7 +606,7 @@ export function createRideDocumentStore(
         }
         if (!loaded.ok) {
           setState({
-            restoreStatus: { state: "corrupt", message: "Could not restore your draft" },
+            restoreStatus: { state: "corrupt", message: "Could not restore your ride" },
           });
           return;
         }
@@ -643,7 +643,7 @@ export function createRideDocumentStore(
           restoreStatus:
             recovered === null
               ? { state: "idle", message: null }
-              : { state: "corrupt", message: "Could not restore your draft" },
+              : { state: "corrupt", message: "Could not restore your ride" },
         });
         return;
       }
@@ -657,7 +657,7 @@ export function createRideDocumentStore(
         updatedAt: recovered.document.updatedAt,
       });
     } catch (error: unknown) {
-      setState({ restoreStatus: { state: "failed", message: "Could not restore your draft" } });
+      setState({ restoreStatus: { state: "failed", message: "Could not restore your ride" } });
       // A failed read is not a reason to claim the default ride was saved.
       void error;
     }

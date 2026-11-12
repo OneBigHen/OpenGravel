@@ -34,7 +34,7 @@ import { useActivityMode } from "@/ui/stores/activity-mode";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
-import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
+import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { destinationLineFor } from "@/ui/planner/destination-line";
 import type { MapExtent } from "@/application/map/build-map-scene";
@@ -232,8 +232,17 @@ export function PlannerWorkspaceDock({
   const compact = useCompactPlanner();
   // The desktop rail ends in a fixed foot, so the action and its one-line reason
   // are never sliced by the panel edge however tall the options grow above them.
+  // Desktop opens on Loop (R3-4): with nothing authored, "Make my loop" is live
+  // and starts a loop from the rider's position, like the phone's Loop pill. A
+  // destination typed above still plans itself.
+  const currentLocation = composer.placeSearch?.currentLocation;
+  const shapeActions = composer.rideStyle?.actions;
+  const loopFirst = desktop && idle && !hiking && currentLocation !== undefined && shapeActions !== undefined &&
+    composer.viewModel.startLabel === NO_START_LABEL && viewModel.undoLabel === null && viewModel.redoLabel === null
+    ? (): void => { shapeActions.setShape("loop"); currentLocation.onUse(); }
+    : undefined;
   const commitment = desktop
-    ? <PlanCommitment {...composer} loop={loopRide} {...(planning ? { onCancelPlanning } : {})} />
+    ? <PlanCommitment {...composer} loop={loopRide} loopFirst={loopFirst} {...(planning ? { onCancelPlanning } : {})} />
     : undefined;
   const [selectedOption, setSelectedOption] = useState<PlannerOption | null>(null);
   const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");
@@ -263,14 +272,10 @@ export function PlannerWorkspaceDock({
       act(element);
     }, 280);
   }, [onFullSheet]);
-  const onAddStopQuick = editBar?.onAddStop;
   const quick = useMemo(() => phone ? {
-    onAddStop: onAddStopQuick,
-    onSave: () => reveal('[data-testid="named-ride-title"]', (element) => element.focus({ preventScroll: true })),
-    onShare: () => reveal('[data-testid="open-share"]', (element) => element.click()),
     onStyle: () => reveal(".og-phone-style", () => undefined),
     onShowExtent,
-  } : undefined, [phone, onAddStopQuick, reveal, onShowExtent]);
+  } : undefined, [phone, reveal, onShowExtent]);
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");
@@ -486,6 +491,7 @@ export function PlannerWorkspaceDock({
               onEditOptions={() => openEditor("edit")}
               onOpenOptions={() => openEditor("options")}
               destinationLine={destinationLine}
+              placeLabel={placeLabel}
               {...(quick === undefined ? {} : { quick })}
               {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
             />

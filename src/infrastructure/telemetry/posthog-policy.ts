@@ -2,7 +2,7 @@ import type { CaptureResult, PostHogConfig } from "posthog-js";
 import { TELEMETRY_EVENT_NAMES, sanitizeTelemetryProperties, type TelemetryBuildCorrelation, type TelemetryEventName } from "@/application/telemetry/events";
 
 const AUTOMATIC_EVENTS = ["$autocapture", "$pageview", "$pageleave", "$rageclick", "$dead_click", "$exception", "$snapshot"];
-const SAFE_CONTROL = /^(compose-create|prepare-toggle|save-named-ride|start-search|finish-search|settings-[a-z-]+)$/;
+const SAFE_CONTROL = /^(compose-create|prepare-toggle|summary-save|start-search|finish-search|settings-[a-z-]+)$/;
 /** Reconstruct properties; never forward SDK URL, text or attribute enrichment. */
 export function sanitizePostHogEvent(event: CaptureResult | null, build: TelemetryBuildCorrelation): CaptureResult | null {
   if (event === null) return null;

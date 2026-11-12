@@ -1390,7 +1390,7 @@ describe("PlannerWorkspace — Why this ride? (04 §13)", () => {
 /**
  * A restored draft's confirmation (04 §20).
  *
- * The boot restore says "Restored your draft", and only a ride command clears
+ * The boot restore says "Restored your ride", and only a ride command clears
  * that store status. The status line must therefore treat it as a one-shot
  * announcement: once the plan has something to say, that is what the line
  * reports, instead of repeating the restore for the rest of the session.
@@ -1437,7 +1437,7 @@ describe("PlannerWorkspace — a restored draft", () => {
     );
 
     // The first frame after the restore still confirms it.
-    expect(screen.getByTestId("status-line")).toHaveTextContent("Restored your draft");
+    expect(screen.getByTestId("status-line")).toHaveTextContent("Restored your ride");
 
     act(() => {
       vi.advanceTimersByTime(RESTORE_ANNOUNCEMENT_MS);

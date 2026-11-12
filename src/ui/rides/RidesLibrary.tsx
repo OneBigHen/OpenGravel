@@ -703,7 +703,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
                 {isPendingOpen ? (
                   <div className="og-rides__confirm" role="status">
-                    <p>Your unsaved draft will remain separate.</p>
+                    <p>The ride on your map stays as it is.</p>
                     <div className="og-rides__confirm-actions">
                       <button type="button" className="og-primary" onClick={() => void openRide(ride)}>
                         Confirm open

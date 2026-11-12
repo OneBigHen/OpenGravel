@@ -195,6 +195,17 @@ the primary button.
   once what changed. A ride saved before lines were kept replans once and says "Planned again: the saved
   line was not stored." An imported track whose ends meet within 150 m opens as "Loop from <place>".
   A saved line's closure check reads "out of date", never a clear result from another day.
+- 2026-11-11 Owner (round 3 plan, R3-4 "one instrument", calls 3, 4, 7, 8, 9): every route — loop,
+  destination, curated, saved, imported — shows one summary on every tier: its name (a ride's own name
+  wins, never "To <place>"), the time large in green with miles beside it, the three truth lines (an
+  unmeasured surface says "Surface unknown"), then Start (primary), Save and Share in one row. Save is
+  one tap under an automatic name ("Rothrock loop, 53 mi"); the button reads "Saved" and a pencil
+  renames in place; no name box and no "draft" wording anywhere. Compare rows are named by what they
+  measurably are ("Most dirt", "Twistiest", "Fastest") else "Option 2"; "Back to ride" leads the list.
+  Auto theme follows the sun at the rider's place on every page. Start shows the ride screen at once
+  with the route outline over the loading map; the "couldn't open" page appears only on failure. The
+  laptop's first screen offers a live green "Make my loop" (from the rider's position); the shape
+  switch itself still opens on "To a destination" so the destination box stays one tap away.
 
 - 2026-11-11 Owner (round 3, R3-2): every ride records from Start, guided or free, and a
   finished ride ends with one **ride card**: solid `--og-surface` on a `--og-line` hairline (never

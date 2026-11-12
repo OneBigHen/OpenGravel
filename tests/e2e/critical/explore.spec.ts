@@ -38,9 +38,13 @@ test("browses Explore, uses a route, returns to Explore, and lists a saved perso
   await placeEndpoint(page, "finish", FINISH);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
-  await page.getByTestId("named-ride-title").fill("My sample ride");
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
+  // One tap saves under an automatic name; the name is then edited in place (R3-4).
+  await page.getByTestId("summary-save").click();
+  await expect(page.getByTestId("summary-save")).toHaveText("Saved");
+  await page.getByTestId("ride-title-edit").click();
+  await page.getByTestId("ride-title-input").fill("My sample ride");
+  await page.getByTestId("ride-title-input").press("Enter");
+  await expect(page.getByTestId("phone-destination")).toHaveText("My sample ride");
 
   await page.goto("/explore");
   await expect(page.getByRole("heading", { name: "Explore" })).toBeVisible();
