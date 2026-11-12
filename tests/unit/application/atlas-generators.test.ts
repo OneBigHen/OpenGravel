@@ -3,12 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   createAtlasGenerators,
   type AtlasGeneratorId,
+  type FunGeneratorContext,
+  type FunRouteMeasurement,
+  type ProductionRoute,
 } from "@/application/planner/atlas-generators";
-import type {
-  FunGeneratorContext,
-  FunRouteMeasurement,
-  ProductionRoute,
-} from "@/application/planner/fun-generators";
 import type {
   ProviderCandidate,
   ProviderRouteRequest,
@@ -94,7 +92,7 @@ function context(
   request: ProviderRouteRequest = REQUEST,
   production: readonly ProductionRoute[] = [PRODUCTION],
 ): FunGeneratorContext {
-  return { request, production, sources: [] };
+  return { request, production };
 }
 
 function candidate(

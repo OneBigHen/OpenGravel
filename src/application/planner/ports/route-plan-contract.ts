@@ -130,10 +130,9 @@ export function parseRoutePlanFunCharacter(value: unknown): RoutePlanFunCharacte
 }
 
 /**
- * What the FUN JUDGE did for this plan (`OGV_JEV_FUN_JUDGE=shadow|on`).
- * Diagnostics only: the bundle's roles/selection are already final. `applied`
- * is true only when Jev's preference became Best Ride; `why` lists measured
- * evidence deltas (Jev's pick minus the deterministic winner), not model text.
+ * What the retired FUN JUDGE reported for a plan, kept in the wire shape so an
+ * older server's diagnostics still parse. Diagnostics only: the bundle's
+ * roles and selection are already final.
  */
 export interface RoutePlanFunJudgeWire {
   readonly mode: "shadow" | "on";

@@ -6,8 +6,11 @@
  */
 
 import { atlasDirtLoopSequences, loopDirtTarget } from "./atlas-dirt-loops";
+import { isUsableEvidence } from "@/domain/evidence/types";
 import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
+import { routeSimilarity } from "@/domain/route/diversity";
+import type { RouteEvidence } from "@/domain/route/types";
 import { indexRoute, lineOverlap, type RouteIndex } from "@/application/roads/route-overlap";
 import type { GravelAtlasCorridor } from "@/application/roads/gravel-atlas";
 import {
@@ -15,16 +18,185 @@ import {
   type CorridorPrize,
 } from "./corridor-prize-loop";
 import type {
-  FunCandidateGenerator,
-  FunGeneratorContext,
-  FunProbe,
-  FunProbeExecution,
-} from "./fun-generators";
-import type {
   ProviderCandidate,
   ProviderRoadSpan,
   ProviderRouteRequest,
+  RouteCandidateProvider,
 } from "./route-provider";
+
+/**
+ * The probe contract the atlas generators are built on. It was shared with the
+ * deleted fun-route generator family; only the atlas family remains, so the few
+ * declarations it needs live here.
+ */
+export type FunGeneratorId = string;
+export type FunGeneratorAllocation = "fixed";
+
+/** Hard caps for one family run. */
+export interface FunGeneratorBudget {
+  readonly maxProviderCalls: number;
+  readonly deadlineMs: number;
+}
+
+export const MAX_FUN_GENERATOR_CALLS = 8;
+export const MAX_FUN_GENERATOR_DEADLINE_MS = 30_000;
+export const MAX_PROPOSALS_PER_GENERATOR = 4;
+
+/** The measured facts a generated route is reported with. */
+export interface FunRouteMeasurement {
+  readonly fingerprint: string;
+  readonly durationSeconds: number;
+  readonly distanceMeters: number;
+  readonly bendShare: number | null;
+  readonly curvatureUnit: number | null;
+  readonly backroadShare: number | null;
+  readonly longestBendRunMeters: number | null;
+}
+
+/** An eligible production route the generators are measured against. */
+export interface ProductionRoute {
+  readonly id: string;
+  readonly geometry: readonly Coordinate[];
+  readonly measurement: FunRouteMeasurement;
+}
+
+/** Everything a generator may read when it proposes probes. Pure data. */
+export interface FunGeneratorContext {
+  readonly request: ProviderRouteRequest;
+  readonly production: readonly ProductionRoute[];
+  readonly atlasCorridors?: readonly GravelAtlasCorridor[];
+}
+
+export interface FunProbeForecast {
+  readonly curvatureUnit: number | null;
+  readonly addedSeconds: number | null;
+}
+
+export type FunProviderCall = (request: ProviderRouteRequest) => Promise<ProviderCandidate | null>;
+
+export interface FunProbeExecution {
+  readonly sourceIds?: readonly string[];
+  readonly candidate: ProviderCandidate | null;
+  readonly adherence: number | null;
+  readonly note: string;
+}
+
+export interface FunProbe {
+  readonly id: string;
+  readonly generator: FunGeneratorId;
+  readonly maxProviderCalls: number;
+  readonly sourceIds: readonly string[];
+  readonly forecast: FunProbeForecast;
+  readonly execute: (call: FunProviderCall) => Promise<FunProbeExecution>;
+}
+
+export interface FunCandidateGenerator {
+  readonly id: FunGeneratorId;
+  propose(context: FunGeneratorContext): readonly FunProbe[];
+}
+
+export type FunCandidateVerdict =
+  | { readonly eligible: true; readonly measurement: FunRouteMeasurement }
+  | { readonly eligible: false; readonly codes: readonly string[] };
+export type FunCandidateVerifier = (candidate: ProviderCandidate) => Promise<FunCandidateVerdict>;
+
+export type FunProbeStatus =
+  | "new"
+  | "duplicate"
+  | "ineligible"
+  | "no-route"
+  | "failed"
+  | "skipped-budget"
+  | "skipped-deadline";
+
+export interface FunProbeReport {
+  readonly probeId: string;
+  readonly generator: FunGeneratorId;
+  readonly sourceIds: readonly string[];
+  readonly status: FunProbeStatus;
+  readonly providerCalls: number;
+  readonly elapsedMs: number;
+  readonly note: string;
+  readonly adherence: number | null;
+  readonly ineligibleCodes?: readonly string[];
+  readonly duplicateOf?: string;
+  readonly overlap?: number;
+  readonly measurement?: FunRouteMeasurement;
+}
+
+/** An eligible, non-duplicate generated route, with provenance. */
+export interface GeneratedFunCandidate {
+  readonly probeId: string;
+  readonly generator: FunGeneratorId;
+  readonly sourceIds: readonly string[];
+  readonly adherence: number | null;
+  readonly candidate: ProviderCandidate;
+  readonly measurement: FunRouteMeasurement;
+}
+
+export interface FunGeneratorReport {
+  readonly allocation: FunGeneratorAllocation;
+  readonly budget: FunGeneratorBudget;
+  readonly providerCallsUsed: number;
+  readonly elapsedMs: number;
+  readonly proposals: Readonly<Partial<Record<FunGeneratorId, number>>>;
+  readonly probes: readonly FunProbeReport[];
+  readonly pool: readonly GeneratedFunCandidate[];
+}
+
+export interface RunFunGeneratorsInput {
+  readonly context: FunGeneratorContext;
+  readonly generators: readonly FunCandidateGenerator[];
+  readonly provider: RouteCandidateProvider;
+  readonly budget: FunGeneratorBudget;
+  readonly allocation: FunGeneratorAllocation;
+  readonly verify: FunCandidateVerifier;
+  readonly signal: AbortSignal;
+  readonly duplicateSimilarityThreshold: number;
+  readonly now?: () => number;
+}
+
+/**
+ * Reads the measured facts a generated route is compared with. Unknown stays
+ * `null`; the keys are the ones engine road evidence writes.
+ */
+export function funRouteMeasurement(route: {
+  readonly fingerprint: string;
+  readonly durationSeconds: number;
+  readonly distanceMeters: number;
+  readonly evidence: RouteEvidence;
+}): FunRouteMeasurement {
+  let bendShare: number | null = null;
+  let curvatureUnit: number | null = null;
+  let longestBendRunMeters: number | null = null;
+  const curvature = route.evidence["curvature"];
+  if (curvature !== undefined && isUsableEvidence(curvature) && typeof curvature.value === "object" && curvature.value !== null) {
+    const value = curvature.value as Record<string, unknown>;
+    const curvy = value["curvyMeters"];
+    const total = value["totalMeters"];
+    const unit = value["unit"];
+    const longest = value["longestRunMeters"];
+    if (typeof curvy === "number" && typeof total === "number" && Number.isFinite(curvy) && total > 0) {
+      bendShare = clamp01(curvy / total);
+    }
+    if (typeof unit === "number" && Number.isFinite(unit)) curvatureUnit = clamp01(unit);
+    if (typeof longest === "number" && Number.isFinite(longest) && longest >= 0) longestBendRunMeters = longest;
+  }
+  let backroadShare: number | null = null;
+  const roadClass = route.evidence["roadClassMix"];
+  if (roadClass !== undefined && isUsableEvidence(roadClass) && typeof roadClass.value === "number" && Number.isFinite(roadClass.value)) {
+    backroadShare = clamp01(roadClass.value);
+  }
+  return {
+    fingerprint: route.fingerprint,
+    durationSeconds: route.durationSeconds,
+    distanceMeters: route.distanceMeters,
+    bendShare,
+    curvatureUnit,
+    backroadShare,
+    longestBendRunMeters,
+  };
+}
 
 export const ATLAS_GENERATOR_IDS = ["gravel-prize", "backroad-stitch"] as const;
 export type AtlasGeneratorId = (typeof ATLAS_GENERATOR_IDS)[number];
@@ -778,6 +950,212 @@ function generatorFor(
         .slice(0, MAX_ATLAS_PROPOSALS)
         .map((plan) => makeProbe(id, plan, fastest, context.request));
     },
+  };
+}
+
+class BudgetExhausted extends Error {
+  constructor() {
+    super("fun-generator-budget-exhausted");
+  }
+}
+
+function clampBudget(budget: FunGeneratorBudget): FunGeneratorBudget {
+  const calls = Number.isSafeInteger(budget.maxProviderCalls) ? budget.maxProviderCalls : 0;
+  const deadline = Number.isFinite(budget.deadlineMs) ? budget.deadlineMs : 0;
+  return {
+    maxProviderCalls: Math.max(0, Math.min(MAX_FUN_GENERATOR_CALLS, calls)),
+    deadlineMs: Math.max(0, Math.min(MAX_FUN_GENERATOR_DEADLINE_MS, deadline)),
+  };
+}
+
+/** Round-robin across generators, each in its own best-first order. */
+function fixedOrder(proposals: readonly FunProbe[]): FunProbe[] {
+  const queues = new Map<FunGeneratorId, FunProbe[]>();
+  for (const probe of proposals) {
+    const queue = queues.get(probe.generator) ?? [];
+    queue.push(probe);
+    queues.set(probe.generator, queue);
+  }
+  const ordered: FunProbe[] = [];
+  for (let round = 0; ordered.length < proposals.length; round += 1) {
+    for (const queue of queues.values()) {
+      const probe = queue[round];
+      if (probe !== undefined) ordered.push(probe);
+    }
+  }
+  return ordered;
+}
+
+function deadlineSignal(parent: AbortSignal, ms: number): { readonly signal: AbortSignal; readonly dispose: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("fun-generator-deadline")), Math.max(0, ms));
+  const onAbort = (): void => controller.abort(parent.reason);
+  if (parent.aborted) controller.abort(parent.reason);
+  else parent.addEventListener("abort", onAbort, { once: true });
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      clearTimeout(timer);
+      parent.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
+/**
+ * Runs one atlas family once. Never throws for a provider or generator failure;
+ * only a caller abort rejects. Every proposed probe is reported, including the
+ * ones the budget or deadline never let run.
+ */
+export async function runFunGenerators(input: RunFunGeneratorsInput): Promise<FunGeneratorReport> {
+  if (input.signal.aborted) throw input.signal.reason;
+  const now = input.now ?? (() => Date.now());
+  const budget = clampBudget(input.budget);
+  const started = now();
+  const run = deadlineSignal(input.signal, budget.deadlineMs);
+
+  const proposals: FunProbe[] = [];
+  const proposalCounts: Partial<Record<FunGeneratorId, number>> = {};
+  const seenIds = new Set<string>();
+  for (const generator of input.generators) {
+    let proposed: readonly FunProbe[] = [];
+    try {
+      proposed = generator.propose(input.context);
+    } catch {
+      proposed = [];
+    }
+    const accepted = proposed
+      .filter((probe) => probe.generator === generator.id && !seenIds.has(probe.id))
+      .slice(0, MAX_PROPOSALS_PER_GENERATOR);
+    for (const probe of accepted) seenIds.add(probe.id);
+    proposalCounts[generator.id] = accepted.length;
+    proposals.push(...accepted);
+  }
+
+  let callsUsed = 0;
+  const reports: FunProbeReport[] = [];
+  const pool: GeneratedFunCandidate[] = [];
+  const compareAgainst: { id: string; geometry: readonly Coordinate[] }[] = input.context.production.map((route) => ({
+    id: route.id,
+    geometry: route.geometry,
+  }));
+
+  let remaining = fixedOrder(proposals);
+
+  try {
+    while (remaining.length > 0) {
+      if (input.signal.aborted) throw input.signal.reason;
+      const left = budget.maxProviderCalls - callsUsed;
+      const affordable = remaining.filter((probe) => probe.maxProviderCalls <= left);
+      if (affordable.length === 0 || run.signal.aborted) break;
+      const pick = affordable[0]!;
+      remaining = remaining.filter((probe) => probe !== pick);
+
+      let probeCalls = 0;
+      let reserved = pick.maxProviderCalls;
+      const call: FunProviderCall = async (request) => {
+        if (reserved <= 0 || callsUsed >= budget.maxProviderCalls) throw new BudgetExhausted();
+        reserved -= 1;
+        callsUsed += 1;
+        probeCalls += 1;
+        const answer = await input.provider.candidates(
+          { ...request, options: { ...request.options, includeAlternatives: false } },
+          run.signal,
+        );
+        return answer.candidates[0] ?? null;
+      };
+
+      const probeStart = now();
+      let execution: FunProbeExecution;
+      try {
+        execution = await pick.execute(call);
+      } catch (error) {
+        if (input.signal.aborted) throw input.signal.reason;
+        execution = {
+          candidate: null,
+          adherence: null,
+          note: run.signal.aborted ? "deadline" : error instanceof BudgetExhausted ? "budget" : "provider-failed",
+        };
+      }
+      const base = {
+        probeId: pick.id,
+        generator: pick.generator,
+        sourceIds: execution.sourceIds ?? pick.sourceIds,
+        providerCalls: probeCalls,
+        adherence: execution.adherence,
+        note: execution.note,
+      };
+      if (execution.candidate === null) {
+        reports.push({
+          ...base,
+          status: execution.note === "provider-failed" || execution.note === "deadline" ? "failed" : "no-route",
+          elapsedMs: now() - probeStart,
+        });
+        continue;
+      }
+      const verdict = await input.verify(execution.candidate);
+      if (!verdict.eligible) {
+        reports.push({ ...base, status: "ineligible", ineligibleCodes: verdict.codes, elapsedMs: now() - probeStart });
+        continue;
+      }
+      let duplicate: { id: string; overlap: number } | null = null;
+      for (const other of compareAgainst) {
+        const similarity = routeSimilarity(
+          { id: 0, geometry: execution.candidate.geometry, score: { total: 0 } },
+          { id: 1, geometry: other.geometry, score: { total: 0 } },
+        );
+        if (similarity.mode !== "unknown" && similarity.overlap >= input.duplicateSimilarityThreshold) {
+          duplicate = { id: other.id, overlap: similarity.overlap };
+          break;
+        }
+      }
+      if (duplicate !== null) {
+        reports.push({
+          ...base,
+          status: "duplicate",
+          duplicateOf: duplicate.id,
+          overlap: duplicate.overlap,
+          measurement: verdict.measurement,
+          elapsedMs: now() - probeStart,
+        });
+        continue;
+      }
+      reports.push({ ...base, status: "new", measurement: verdict.measurement, elapsedMs: now() - probeStart });
+      pool.push({
+        probeId: pick.id,
+        generator: pick.generator,
+        sourceIds: base.sourceIds,
+        adherence: execution.adherence,
+        candidate: execution.candidate,
+        measurement: verdict.measurement,
+      });
+      compareAgainst.push({ id: pick.id, geometry: execution.candidate.geometry });
+    }
+  } finally {
+    run.dispose();
+  }
+
+  const deadlineHit = run.signal.aborted && !input.signal.aborted;
+  for (const probe of remaining) {
+    reports.push({
+      probeId: probe.id,
+      generator: probe.generator,
+      sourceIds: probe.sourceIds,
+      status: deadlineHit ? "skipped-deadline" : "skipped-budget",
+      providerCalls: 0,
+      elapsedMs: 0,
+      note: deadlineHit ? "deadline" : "budget",
+      adherence: null,
+    });
+  }
+
+  return {
+    allocation: input.allocation,
+    budget,
+    providerCallsUsed: callsUsed,
+    elapsedMs: now() - started,
+    proposals: proposalCounts,
+    probes: reports,
+    pool,
   };
 }
 

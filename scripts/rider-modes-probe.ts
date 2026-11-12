@@ -1,5 +1,4 @@
 import { writeFile } from "node:fs/promises";
-import { funGeneratorSettingsFromEnv } from "../src/server/planning/fun-generators";
 import { ROUTING_QUALITY_CORPUS, type RoutingQualityCase } from "../tests/real-router/routing-quality-corpus";
 import { createGraphHopperRequest, REQUESTED_DETAILS } from "../src/infrastructure/routing/graphhopper/request-builder";
 import { parseGraphHopperPath, type GraphHopperResponse } from "../src/infrastructure/routing/graphhopper/response-parser";
@@ -31,7 +30,7 @@ async function main(): Promise<void> {
   };
   const diagnostics: string[] = [];
   const measurements: { id: string; mode: string; seconds: number; unpaved: number; busy: number }[] = [];
-  const callBudget = Math.min(3, funGeneratorSettingsFromEnv(process.env).budget.maxProviderCalls);
+  const callBudget = 2;
   const lines = ["# Rider modes live PA/NJ probe", "", `Date: ${new Date().toISOString()}. GraphHopper 11; request builder and bounded envelope search (${callBudget} extra calls). Percentages are distance weighted; busy = primary/trunk/motorway OR CITY. Hard access and sand details checked for every returned path.`, "", "| Route | Mode | Minutes | km | Unpaved % | Busy % | Bends % | Factor | Extra calls |", "|---|---|---:|---:|---:|---:|---:|---:|---:|"];
   for (const route of corpus) {
     for (const mode of ["baseline", "gravel", "dual-sport", "avoid-traffic"] as const) {

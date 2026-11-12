@@ -60,22 +60,6 @@ import { createGraphHopperProvider } from "@/infrastructure/routing/graphhopper/
 import { DEFAULT_GRAPHHOPPER_URL, graphHopperUrlFromEnv } from "@/infrastructure/routing/graphhopper/config";
 import { profileImpliesNonPavedSurface } from "@/infrastructure/routing/graphhopper/profiles";
 import { GraphHopperProviderError } from "@/infrastructure/routing/graphhopper/response-parser";
-import {
-  budgetedCharacterClassifier,
-  jevCharacterClassifierFromEnv,
-  type JevCharacterClassifier,
-} from "@/infrastructure/routing/jev-fun-character";
-import { jevFunJudgeFromEnv } from "@/infrastructure/routing/jev-fun-judge";
-import { createFunJudge, type FunJudge } from "@/application/planner/fun-judge";
-import {
-  parseFunJudgeMode,
-  selectBestRideWithFunJudge,
-  scheduleFunJudgeShadow,
-  geometryFunJudgeExtensions,
-  type FunJudgeEvidenceExtensions,
-  type FunJudgeSelection,
-} from "@/application/planner/fun-judge-selection";
-import type { RoutePlanFunJudgeWire } from "@/application/planner/ports/route-plan-contract";
 import type {
   ProviderCandidate,
   ProviderRouteRequest,
@@ -88,7 +72,6 @@ import type {
   RoutePlanIdentityWire,
   RoutePlanOptionsWire,
 } from "@/application/planner/ports/route-plan-contract";
-import { parseRoutePlanFunCharacter } from "@/application/planner/ports/route-plan-contract";
 import {
   isLaneUnavailable,
   resolveLanes,
@@ -101,6 +84,12 @@ import {
 const FAST_FIRST_MIN_LANES = 3;
 /** Engine seeds a loop's first answer tries (NEXT-PLAN section 6). */
 const FIRST_ANSWER_LOOP_SEEDS = 1;
+/**
+ * The rider envelope search's own budget. It no longer borrows an experiment's
+ * settings: two router calls and twelve seconds, the values the planner used.
+ */
+const RIDER_SEARCH_CALLS = 2;
+const RIDER_SEARCH_DEADLINE_MS = 12_000;
 
 /** The alternatives pass after fast-first converged on one ride. */
 
@@ -136,21 +125,10 @@ import {
 } from "./fixture-candidates";
 import { parseRoutePlanRequestBody, type ValidationIssue } from "./validation";
 import {
+  funRouteMeasurement,
   runFunGenerators,
-  type FunCandidateGenerator,
-  type FunCandidateVerdict,
   type FunGeneratorReport,
-  type ProductionRoute,
-} from "@/application/planner/fun-generators";
-import { FUN_GENERATORS, funRouteMeasurement } from "@/application/planner/fun-generator-strategies";
-import { libraryCorridorSources, type LibraryRide } from "@/application/planner/fun-generator-sources";
-import {
-  deploymentLibraryRides,
-  funGeneratorLogLine,
-  funGeneratorSettingsFromEnv,
-  type FunGeneratorMode,
-  type FunGeneratorSettings,
-} from "./fun-generators";
+} from "@/application/planner/atlas-generators";
 
 /** The deployment's scoring policy; its version is the default bundle version. */
 export const ROUTE_POLICY = PA_NJ_ROUTE_POLICY_VNEXT_1;
@@ -213,31 +191,11 @@ export interface PlanServiceDeps {
    */
   readonly knownRoads?: KnownRoadsPort;
   readonly gravelAtlas?: GravelAtlasPort;
-  /** Optional semantic classifier. `null` explicitly disables it in tests/fixtures. */
-  readonly funCharacterClassifier?: JevCharacterClassifier | null;
-  /**
-   * FUN JUDGE for Best Ride (`OGV_JEV_FUN_JUDGE`). Defaults to the budgeted,
-   * cached TypeSafe Jev judge when a key exists; `null` disables it.
-   */
-  readonly funJudge?: FunJudge | null;
   /**
    * Road authority (route intelligence RI-1): closures and legal access. The
    * deployment's coordinator by default, `null` when `OGV_ROAD_AUTHORITY` is off.
    */
   readonly roadAuthority?: RoadAuthorityCoordinator | null;
-  /**
-   * The fun-route generator family (`OGV_FUN_GENERATORS`). Defaults to the
-   * environment's settings; tests and the research harness inject their own.
-   */
-  readonly funGenerators?: FunGeneratorSettings;
-  /** The strategies to run; every strategy by default. The research harness runs one at a time. */
-  readonly funGeneratorStrategies?: readonly FunCandidateGenerator[];
-  /** The corridor library; the curated route library by default. */
-  readonly funGeneratorLibrary?: () => Promise<readonly LibraryRide[]>;
-  /** Receives every family report; the default writes one server log line. */
-  readonly onFunGeneratorReport?: (report: FunGeneratorReport, mode: FunGeneratorMode) => void;
-  /** Receives the off-path shadow FUN JUDGE outcome; the default writes one log line. */
-  readonly onFunJudgeShadow?: (selection: FunJudgeSelection) => void;
 }
 
 /**
@@ -719,67 +677,9 @@ async function candidateSource(input: {
  * then asks the provider, then maps what came back. Never throws: every failure
  * is a `PlanServiceResult`.
  */
-/** One budgeted, cached classifier per server process, so readings are reused across plans. */
-let environmentClassifier: { readonly key: string; readonly classifier: JevCharacterClassifier | null } | null = null;
-function environmentCharacterClassifier(
-  env: Readonly<Record<string, string | undefined>>,
-): JevCharacterClassifier | null {
-  const key = env["JEV_API_KEY"]?.trim() ?? "";
-  if (environmentClassifier?.key !== key) {
-    const inner = jevCharacterClassifierFromEnv(env);
-    environmentClassifier = { key, classifier: inner === null ? null : budgetedCharacterClassifier(inner) };
-  }
-  return environmentClassifier.classifier;
-}
-
 /** Two lines are the same route when every coordinate matches (the pipeline copies geometry). */
 function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
   return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
-}
-
-/** One budgeted, cached FUN JUDGE per server process (shared call budget and cache). */
-let environmentJudge: { readonly key: string; readonly judge: FunJudge | null } | null = null;
-function environmentFunJudge(env: Readonly<Record<string, string | undefined>>): FunJudge | null {
-  const key = env["JEV_API_KEY"]?.trim() ?? "";
-  if (environmentJudge?.key !== key) {
-    const port = jevFunJudgeFromEnv(env);
-    environmentJudge = { key, judge: port === null ? null : createFunJudge(port) };
-  }
-  return environmentJudge.judge;
-}
-
-function funJudgeWire(
-  selection: FunJudgeSelection,
-  routeIds: readonly string[],
-): RoutePlanFunJudgeWire | undefined {
-  const diagnostic = selection.diagnostic;
-  if (diagnostic === null) return undefined;
-  const id = (index: number): string | undefined => routeIds[index];
-  const deterministicRouteId = id(diagnostic.deterministicIndex);
-  const selectedRouteId = id(diagnostic.selectedIndex);
-  if (deterministicRouteId === undefined || selectedRouteId === undefined) return undefined;
-  return {
-    mode: diagnostic.mode,
-    outcome: diagnostic.outcome,
-    applied: diagnostic.applied,
-    deterministicRouteId,
-    jevRouteId: diagnostic.jevIndex === null ? null : id(diagnostic.jevIndex) ?? null,
-    selectedRouteId,
-    shortlistSize: diagnostic.shortlist.length,
-    excluded: diagnostic.excluded.flatMap((entry) => {
-      const routeId = id(entry.index);
-      return routeId === undefined ? [] : [{ routeId, reason: entry.reason }];
-    }),
-    confidence: diagnostic.confidence,
-    margin: diagnostic.margin,
-    orderAgreement: diagnostic.orderAgreement,
-    model: diagnostic.model,
-    calls: diagnostic.calls,
-    cached: diagnostic.cached,
-    latencyMs: diagnostic.latencyMs,
-    why: diagnostic.why,
-    addedTimePct: diagnostic.addedTimePct,
-  };
 }
 
 function seeksDirt(options: ProviderRouteRequest["options"]): boolean {
@@ -832,15 +732,11 @@ async function planRideAttempt(
   let laneDiagnostics = source.lanes;
   const riderEnv = deps.env ?? process.env;
   const riderEnabled = riderEnv["OGV_RIDER_MODES"] !== "off" && fixture === null;
-  const configuredFunSettings = deps.funGenerators ?? funGeneratorSettingsFromEnv(riderEnv);
-  const riderBudget = configuredFunSettings.budget;
   const atlas = deps.gravelAtlas ?? gravelAtlasFromEnv(riderEnv);
   let atlasReport: FunGeneratorReport | null = null;
   let atlasConsidered = 0;
-  // A loop-only opt-in can deliver dirt while the general atlas experiments
-  // stay off. Paved/Mostly paved and point-to-point retain the general switch.
-  const atlasEnabled = riderEnv["OGV_ATLAS_GENERATORS"] !== "off" ||
-    (riderEnv["OGV_DIRT_LOOP_GENERATORS"] === "on" && loopDirtTarget(parsed.value.request) > 0);
+  // Atlas tours run for dirt loops only, which is how production has run them.
+  const atlasEnabled = riderEnv["OGV_DIRT_LOOP_GENERATORS"] === "on" && loopDirtTarget(parsed.value.request) > 0;
   // Atlas probes have their own router-call budget (default 2, at most 4) so
   // they never starve the phase 1 knee search.
   const atlasCallBudget = Math.max(0, Math.min(4, Number.isSafeInteger(Number(riderEnv["OGV_ATLAS_CALLS"])) && (riderEnv["OGV_ATLAS_CALLS"] ?? "").trim() !== "" ? Number(riderEnv["OGV_ATLAS_CALLS"]) : 2));
@@ -850,7 +746,6 @@ async function planRideAttempt(
   // regressed Balanced (Jim Thorpe loop 9.48 -> 5.89 curvy mi, Bethlehem
   // 5.09 -> 4.11, Reading 10.19 -> 8.92), so Balanced and Fast keep the
   // previous Best Ride selection. Authored/dirt modes keep their objectives.
-  // Jev supplies labels, never this choice.
   const geometryFun = riderEnabled && requestOptions.roadCharacter === "curvy" &&
     !seeksDirt(requestOptions) && requestOptions.bike?.category !== "dual-sport" &&
     parsed.value.request.sketch === undefined && parsed.value.request.shaping.length === 0 &&
@@ -976,38 +871,15 @@ async function planRideAttempt(
   if (fullPlan && riderEnabled && atlasEnabled && pipeline.candidates.length > 0 && atlasCallBudget > 0) {
     const request = parsed.value.request;
     const wantsDirt = loopDirtTarget(request) > 0 || request.options.surfacePreference === "dirt-preferred" || (request.options.targetUnpavedShare ?? 0) > 0 || request.options.bike?.category === "dual-sport";
-    const wantsBackroads = request.options.roadCharacter === "curvy" || request.options.roadCharacter === "backroads";
-    if (wantsDirt || wantsBackroads) {
-      // Point-to-point detours need a fastest reference. Dirt loops use the
-      // rider's time budget; another seeded fastest loop adds no useful bound.
-      // Keep the existing baseline behavior for paved/backroad probes.
-      try {
-        if (loopDirtTarget(request) === 0) {
-          const plain = await provider.candidates({
-            ...request,
-            requestId: `${request.requestId}:fastest`,
-            profile: "motorcycle_fastest",
-            options: { ...request.options, includeAlternatives: false, surfacePreference: "mixed", roadCharacter: "efficient", targetUnpavedShare: 0, traffic: "minimize-delay" },
-          }, signal);
-          const first = plain.candidates[0];
-          if (first !== undefined) {
-            riderCalls += 1;
-            candidates = [...candidates, first];
-            roads = await assessRoads(candidates);
-            pipeline = rankPool(candidates);
-          }
-        }
-      } catch {
-        // No baseline: the probes fall back on the fastest route the lanes found.
-      }
+    if (wantsDirt) {
       const fastest = Math.min(...pipeline.candidates.map(candidate => candidate.durationSeconds));
       const radius = request.discovery === undefined ? Math.max(5_000, fastest * 0.35 * 15) : (request.discovery.targetMinutes + request.discovery.toleranceMinutes) * 60 * 8 / 2;
-      const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, wantsDirt ? "dirt" : "backroad");
+      const corridors = corridorsInReachableEllipse(atlas, request.origin, request.destination, radius, "dirt");
       atlasConsidered = corridors.length;
       atlasReport = await runFunGenerators({
-        context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })), sources: [] },
+        context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })) },
         generators: createAtlasGenerators(corridors, atlasCallBudget), provider,
-        budget: { ...riderBudget, maxProviderCalls: atlasCallBudget },
+        budget: { maxProviderCalls: atlasCallBudget, deadlineMs: RIDER_SEARCH_DEADLINE_MS },
         allocation: "fixed", signal, duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
         verify: async candidate => {
           const own = await assessRoads([candidate]);
@@ -1060,12 +932,12 @@ async function planRideAttempt(
     const eligible = eligibleFrom(candidates, pipeline);
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
     const options = parsed.value.request.options;
-    const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred" && riderEnv["OGV_CURVY_SEARCH"] !== "off";
+    const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred";
     const result = balancedFun ? await searchBalancedEnvelope({
       request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, maxCalls: riderBudget.maxProviderCalls, deadlineMs: riderBudget.deadlineMs, signal,
+      provider, maxCalls: RIDER_SEARCH_CALLS, deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -1076,7 +948,7 @@ async function planRideAttempt(
       request: parsed.value.request,
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, sweepCalls: Math.min(CURVY_SWEEP.length, riderBudget.maxProviderCalls), deadlineMs: riderBudget.deadlineMs, signal,
+      provider, sweepCalls: Math.min(CURVY_SWEEP.length, RIDER_SEARCH_CALLS), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -1088,7 +960,7 @@ async function planRideAttempt(
       baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, maxCalls: Math.min(3, riderBudget.maxProviderCalls), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: riderBudget.deadlineMs, signal,
+      provider, maxCalls: Math.min(3, RIDER_SEARCH_CALLS), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
       screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
       verify: async (proposed, searchSignal) => {
         const own = await assessRoads([...candidates, ...proposed], searchSignal);
@@ -1128,74 +1000,6 @@ async function planRideAttempt(
       pipeline = rankPool(candidates);
     }
   }
-  // The fun-route generator family (routing research Phase 7). Off by default;
-  // in shadow it runs after the answer and cannot touch the bundle.
-  const funSettings = { ...configuredFunSettings, budget: { ...configuredFunSettings.budget, maxProviderCalls: Math.max(0, configuredFunSettings.budget.maxProviderCalls - riderCalls) } };
-  if (fullPlan && funSettings.mode !== "off" && fixture === null && pipeline.candidates.length > 0) {
-    const report = (mode: FunGeneratorMode) => (result: FunGeneratorReport): void => {
-      if (deps.onFunGeneratorReport !== undefined) deps.onFunGeneratorReport(result, mode);
-      else console.info(funGeneratorLogLine(mode, parsed.value.request.requestId, result));
-    };
-    const bestIndex = pipeline.roles["best-ride"] ?? 0;
-    const ordered = [
-      ...pipeline.candidates.slice(bestIndex, bestIndex + 1),
-      ...pipeline.candidates.filter((_, index) => index !== bestIndex),
-    ];
-    const production: ProductionRoute[] = ordered.map((candidate, index) => ({
-      id: `production:${index}`,
-      geometry: candidate.geometry,
-      measurement: funRouteMeasurement(candidate),
-    }));
-    // The same canonical gate the plan used: closures and access for the new
-    // line's own corridor, avoid areas, spans and every hard eligibility rule.
-    const verify = async (candidate: ProviderCandidate): Promise<FunCandidateVerdict> => {
-      const own = await assessRoads([candidate]);
-      const single = rank([candidate], () => own?.evaluate(candidate.geometry) ?? null);
-      const kept = single.candidates[0];
-      if (kept === undefined) {
-        return {
-          eligible: false,
-          codes: single.diagnostics.flatMap((entry) => (entry.eligibilityCode === undefined ? [] : [entry.eligibilityCode])),
-        };
-      }
-      return { eligible: true, measurement: funRouteMeasurement(kept) };
-    };
-    const run = async (runSignal: AbortSignal): Promise<FunGeneratorReport> => {
-      const rides = await (deps.funGeneratorLibrary ?? deploymentLibraryRides)();
-      return runFunGenerators({
-        context: {
-          request: parsed.value.request,
-          production,
-          sources: libraryCorridorSources(parsed.value.request, rides),
-        },
-        generators: deps.funGeneratorStrategies ?? FUN_GENERATORS,
-        provider,
-        budget: funSettings.budget,
-        allocation: funSettings.allocation,
-        verify,
-        signal: runSignal,
-        duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
-      });
-    };
-    if (funSettings.mode === "shadow") {
-      // Detached: the rider's answer never waits for, or depends on, the family.
-      void run(new AbortController().signal).then(report("shadow"), () => undefined);
-    } else if (!signal.aborted) {
-      try {
-        const result = await run(signal);
-        report("on")(result);
-        if (result.pool.length > 0) {
-          candidates = [...candidates, ...result.pool.map((entry) => entry.candidate)];
-          roads = await assessRoads(candidates);
-          pipeline = rankPool(candidates);
-          preferredRoute = null;
-        }
-      } catch {
-        // A cancelled or failed family leaves the production answer untouched.
-      }
-    }
-  }
-
   if (fullPlan && riderEnabled && riderEnv["OGV_TRAFFIC_LIVE_AVOID"] !== "off" && pipeline.candidates.length > 0) {
     const index = pipeline.roles["best-ride"] ?? 0;
     const chosen = pipeline.candidates[index]!;
@@ -1304,48 +1108,9 @@ async function planRideAttempt(
       }],
     };
   });
-  // FUN JUDGE (default off). In `on` mode a confident Jev preference among the
-  // eligible, in-budget candidates becomes Best Ride; every other outcome —
-  // including any failure here — keeps the deterministic roles.
-  const env = deps.env ?? process.env;
-  const funJudgeMode = geometryFun ? "off" : parseFunJudgeMode(env["OGV_JEV_FUN_JUDGE"]);
-  let judged: FunJudgeSelection = {
-    roles: pipeline.roles,
-    selectedIndex: pipeline.selectedIndex,
-    diagnostic: null,
-    request: null,
-  };
-  if (funJudgeMode !== "off" && !signal.aborted) {
-    const judgeInput = {
-      pipeline,
-      intent,
-      avoidHighways: parsed.value.request.options.avoidHighways,
-      policy: ROUTE_POLICY,
-      ...(parsed.value.request.discovery === undefined
-        ? {}
-        : { discoveryTimebox: parsed.value.request.discovery }),
-      judge: deps.funJudge === undefined ? environmentFunJudge(env) : deps.funJudge,
-      extensions: geometryFunJudgeExtensions satisfies FunJudgeEvidenceExtensions,
-    };
-    if (funJudgeMode === "shadow") {
-      // Shadow never waits for Jev: the call starts after the answer is built,
-      // with a longer budget, and its outcome goes to the shadow log.
-      scheduleFunJudgeShadow(judgeInput, (selection) => {
-        if (deps.onFunJudgeShadow !== undefined) deps.onFunJudgeShadow(selection);
-        else console.info(JSON.stringify({ event: "fun-judge-shadow", requestId: parsed.value.request.requestId, diagnostic: selection.diagnostic }));
-      });
-    } else {
-      try {
-        judged = await selectBestRideWithFunJudge({ ...judgeInput, mode: funJudgeMode, signal });
-      } catch {
-        // Advisory failure never changes the deterministic answer.
-      }
-    }
-  }
-  const funJudge = funJudgeWire(judged, mapped.map((candidate) => candidate.id));
   // The pipeline assigns roles by kept index because it mints no ids; binding
   // them here is the step that turns them into wire identities.
-  const roles = bindRoles(judged.roles, mapped);
+  const roles = bindRoles(pipeline.roles, mapped);
   const selectedRouteId = roles["best-ride"] ?? roles.fastest;
   if (selectedRouteId === null) {
     // Unreachable by construction: `assignRoles` fills `fastest` and `best-ride`
@@ -1375,31 +1140,6 @@ async function planRideAttempt(
     selectionSource: "automatic",
   });
 
-  // The model only sees the aggregate assessment of the deterministic shadow
-  // winner. A missing key, sparse evidence, timeout or malformed answer cannot
-  // change the bundle, its roles, or the success of the planning request.
-  let funCharacter: RoutePlanDiagnosticsWire["funCharacter"];
-  const shadow = pipeline.funShadowSelection;
-  if (shadow !== null && !signal.aborted) {
-    try {
-      const classifier = deps.funCharacterClassifier === undefined
-        ? environmentCharacterClassifier(deps.env ?? process.env)
-        : deps.funCharacterClassifier;
-      const reading = await classifier?.classify(shadow.assessment, signal);
-      if (reading !== undefined && reading !== null) {
-        funCharacter = parseRoutePlanFunCharacter({
-          fingerprint: shadow.fingerprint,
-          label: reading.label,
-          confidence: reading.confidence,
-          model: reading.model,
-          policyVersion: shadow.assessment.policyVersion,
-        }) ?? undefined;
-      }
-    } catch {
-      // Advisory failure is deliberately absent from the answer.
-    }
-  }
-
   if (signal.aborted) throw signal.reason;
   return {
     ok: true,
@@ -1409,13 +1149,11 @@ async function planRideAttempt(
       ...diagnosticsFor({ fixtureActive: fixture !== null, lanes: laneDiagnostics }),
       ...(riderTrials.length === 0 ? {} : { riderModes: { calls: riderCalls, trials: riderTrials } }),
       ...(atlasReport === null && atlasConsidered === 0 ? {} : { atlas: { available: atlas.availability().available, considered: atlasConsidered, calls: atlasReport?.providerCallsUsed ?? 0, probes: atlasReport?.probes.map(probe => ({ corridors: probe.sourceIds, status: probe.status, note: probe.note, adherence: probe.adherence === null ? null : Number(probe.adherence.toFixed(2)), minutes: probe.measurement === undefined ? null : probe.measurement.durationSeconds / 60, unpavedShare: (() => { const share = atlasReport?.pool.find((entry) => entry.probeId === probe.probeId)?.candidate.providerMetadata?.["observedUnpavedShare"]; return typeof share === "number" ? Number(share.toFixed(3)) : null; })() })) ?? [] } }),
-      ...(funCharacter === undefined ? {} : { funCharacter }),
-      ...(funJudge === undefined ? {} : { funJudge }),
     },
   };
 }
 
-/** The dirt sweep's own router budget (OGV_DIRT_SWEEP_CALLS), apart from the fun generators'. */
+/** The dirt sweep's own router budget (OGV_DIRT_SWEEP_CALLS), apart from the envelope search. */
 function dirtSweepCalls(env: Readonly<Record<string, string | undefined>>): number {
   const raw = Number.parseInt(env["OGV_DIRT_SWEEP_CALLS"] ?? "", 10);
   return Number.isFinite(raw) ? Math.max(0, Math.min(MAX_DIRT_SWEEP_CALLS, raw)) : DIRT_SWEEP_CALLS;

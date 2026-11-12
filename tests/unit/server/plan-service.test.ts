@@ -24,7 +24,6 @@ import type {
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
 import type { Coordinate } from "@/domain/ride/types";
-import type { FunGeneratorReport } from "@/application/planner/fun-generators";
 
 const IDENTITY: RoutePlanIdentityWire = {
   rideId: "ride_test",
@@ -112,93 +111,6 @@ function input(overrides: Partial<PlanRideInput> = {}): PlanRideInput {
 }
 
 describe("planRide — success path", () => {
-  it("returns an advisory Jev character for the shadow fun winner without changing route selection", async () => {
-    const roadSummary = {
-      totalMeters: 120_000,
-      surfaceByRoadClassMeters: { "asphalt|secondary": 120_000 },
-      curvatureMeters: { "0.72": 120_000 },
-      tollMeters: 0,
-    };
-    const provider = stubProvider({ candidates: [candidate({ roadSummary })] });
-    const baseline = await planRide(input(), { provider, env: {} });
-    let observedFeatures: unknown = null;
-    const enriched = await planRide(input(), {
-      provider,
-      env: {},
-      funCharacterClassifier: {
-        classify: async (assessment) => {
-          observedFeatures = assessment.features;
-          return { label: "TWISTY", confidence: 0.91, model: "jev-1.13.0" };
-        },
-      },
-    });
-
-    expect(baseline.ok).toBe(true);
-    expect(enriched.ok).toBe(true);
-    if (!baseline.ok || !enriched.ok) return;
-    expect(enriched.bundle.candidates[0]?.score).toEqual(baseline.bundle.candidates[0]?.score);
-    expect(enriched.bundle.candidates[0]?.fingerprint).toBe(baseline.bundle.candidates[0]?.fingerprint);
-    expect(enriched.bundle.selectedRouteId).toBe(enriched.bundle.candidates[0]?.id);
-    expect(baseline.bundle.selectedRouteId).toBe(baseline.bundle.candidates[0]?.id);
-    expect(observedFeatures).toMatchObject({ curvature: expect.any(Number) });
-    expect(enriched.diagnostics.funCharacter).toMatchObject({
-      fingerprint: enriched.bundle.candidates[0]?.fingerprint,
-      label: "TWISTY",
-      confidence: 0.91,
-      model: "jev-1.13.0",
-    });
-  });
-
-  it.each([
-    { model: "jev-latest", confidence: 0.91 },
-    { model: "unexpected-model", confidence: 0.91 },
-    { model: "jev-1.13.0", confidence: Number.NaN },
-    { model: "jev-1.13.0", confidence: 2 },
-  ])("drops malformed classifier diagnostics without changing a valid plan: %j", async (reading) => {
-    const provider = stubProvider({ candidates: [candidate({ roadSummary: {
-      totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|secondary": 120_000 },
-      curvatureMeters: { "0.72": 120_000 }, tollMeters: 0,
-    } })] });
-    const baseline = await planRide(input(), { provider, env: {}, funCharacterClassifier: null });
-    const result = await planRide(input(), {
-      provider, env: {}, funCharacterClassifier: { classify: async () => ({ label: "TWISTY", ...reading }) },
-    });
-    expect(baseline.ok).toBe(true);
-    expect(result.ok).toBe(true);
-    if (!baseline.ok || !result.ok) throw new Error("Expected valid routes with optional diagnostics");
-    expect(result.diagnostics.funCharacter).toBeUndefined();
-    expect(result.bundle.candidates.map(({ fingerprint, score }) => ({ fingerprint, score }))).toEqual(
-      baseline.bundle.candidates.map(({ fingerprint, score }) => ({ fingerprint, score })),
-    );
-    expect(result.bundle.candidates.find(({ id }) => id === result.bundle.selectedRouteId)?.fingerprint).toBe(
-      baseline.bundle.candidates.find(({ id }) => id === baseline.bundle.selectedRouteId)?.fingerprint,
-    );
-  });
-
-  it("keeps a valid plan when the optional character model fails", async () => {
-    const provider = stubProvider({ candidates: [candidate({
-      roadSummary: {
-        totalMeters: 120_000,
-        surfaceByRoadClassMeters: { "asphalt|secondary": 120_000 },
-        curvatureMeters: { "0.72": 120_000 },
-        tollMeters: 0,
-      },
-    })] });
-    const result = await planRide(input(), {
-      provider,
-      env: {},
-      funCharacterClassifier: {
-        classify: async () => { throw new Error("private provider detail"); },
-      },
-    });
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.bundle.candidates).toHaveLength(1);
-    expect(result.bundle.selectedRouteId).toBe(result.bundle.candidates[0]?.id);
-    expect(result.diagnostics.funCharacter).toBeUndefined();
-  });
-
   it("maps provider candidates into a bundle with real eligibility, score and earned roles", async () => {
     const provider = stubProvider({
       candidates: [
@@ -839,7 +751,7 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
       status: "fresh", fetchedAt: "2026-09-27T12:00:00.000Z", reason: null, records: [closedRoad], covered: feedInfo.coverage,
     });
     const result = await planRide(input(), {
-      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority, funCharacterClassifier: null,
+      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority,
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -868,7 +780,7 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
   it("a feed outage keeps the route, with closures unknown and a stated caveat", async () => {
     const roadAuthority = await coordinatorWith({ status: "unavailable", fetchedAt: null, reason: "down", records: [], covered: [] });
     const result = await planRide(input(), {
-      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority, funCharacterClassifier: null,
+      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -879,102 +791,15 @@ describe("planRide — road authority (route intelligence RI-1)", () => {
 
   it("with road authority off, planning is exactly what it was (GraphHopper only)", async () => {
     const off = await planRide(input(), {
-      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority: null, funCharacterClassifier: null,
+      provider: stubProvider({ candidates: [candidate()] }), env: {}, roadAuthority: null,
     });
     const defaulted = await planRide(input(), {
-      provider: stubProvider({ candidates: [candidate()] }), env: {}, funCharacterClassifier: null,
+      provider: stubProvider({ candidates: [candidate()] }), env: {},
     });
     expect(off.ok && defaulted.ok).toBe(true);
     if (!off.ok || !defaulted.ok) return;
     expect(required(off.bundle.candidates[0]).warnings).toEqual(required(defaulted.bundle.candidates[0]).warnings);
     expect(required(off.bundle.candidates[0]).evidence["closures"]).toBeUndefined();
-  });
-});
-
-describe("planRide — fun-route generator family (OGV_FUN_GENERATORS)", () => {
-  const roadSummary = {
-    totalMeters: 50_000,
-    surfaceByRoadClassMeters: { "asphalt|tertiary": 50_000 },
-    curvatureMeters: { "0.95": 50_000 },
-    tollMeters: 0,
-  };
-  // A rider-curated corridor that bulges north of the straight trip.
-  const library = async () => [{
-    id: "ride",
-    geometry: Array.from({ length: 161 }, (_, index) => ({
-      lon: -75.12 + (0.25 * index) / 160,
-      lat: 40.12 + Math.sin(index * 0.6) * 0.0005,
-    })),
-  }];
-  const routedThrough = (request: ProviderRouteRequest): ProviderCandidate =>
-    candidate({
-      profile: request.profile,
-      geometry: request.shaping.length === 0 ? [ORIGIN, MIDPOINT, DESTINATION] : [ORIGIN, ...request.shaping, DESTINATION],
-      roadSummary,
-      providerMetadata: { fingerprint: `fp_${request.shaping.length}` },
-    });
-  const settings = (mode: "shadow" | "on") => ({
-    mode,
-    allocation: "fixed" as const,
-    budget: { maxProviderCalls: 2, deadlineMs: 5_000 },
-  });
-
-  it("is off by default and never calls the provider beyond the lanes", async () => {
-    const provider = stubProvider({ candidates: [candidate({ roadSummary })] });
-    let reports = 0;
-    const result = await planRide(input(), {
-      provider,
-      env: {},
-      funGeneratorLibrary: library,
-      onFunGeneratorReport: () => { reports += 1; },
-    });
-    expect(result.ok).toBe(true);
-    expect(provider.calls).toBe(1);
-    expect(reports).toBe(0);
-  });
-
-  it("shadow runs after the answer, records a report and never changes the bundle", async () => {
-    const answer = (request: ProviderRouteRequest) => ({ candidates: [routedThrough(request)] });
-    const offCalls: ProviderRouteRequest[] = [];
-    const off = await planRide(input(), {
-      provider: { ...stubProvider(), candidates: async (request) => { offCalls.push(request); return answer(request); } },
-      env: {},
-      funGeneratorLibrary: library,
-    });
-    let resolveReport: (report: FunGeneratorReport) => void = () => undefined;
-    const reported = new Promise<FunGeneratorReport>((resolve) => { resolveReport = resolve; });
-    const shadow = await planRide(input(), {
-      provider: { ...stubProvider(), candidates: async (request) => answer(request) },
-      env: {},
-      funGenerators: settings("shadow"),
-      funGeneratorLibrary: library,
-      onFunGeneratorReport: (report, mode) => { expect(mode).toBe("shadow"); resolveReport(report); },
-    });
-    expect(off.ok && shadow.ok).toBe(true);
-    if (!off.ok || !shadow.ok) return;
-    expect(shadow.bundle.candidates.map((entry) => entry.fingerprint)).toEqual(off.bundle.candidates.map((entry) => entry.fingerprint));
-    const report = await reported;
-    expect(report.providerCallsUsed).toBeGreaterThan(0);
-    expect(report.providerCallsUsed).toBeLessThanOrEqual(2);
-    expect(report.pool.length).toBeGreaterThan(0);
-    expect(report.pool[0]?.generator).toBe("corridor-probe");
-  });
-
-  it("on merges eligible generated routes into the canonical ranking", async () => {
-    let report: FunGeneratorReport | null = null;
-    const result = await planRide(input(), {
-      provider: { ...stubProvider(), candidates: async (request) => ({ candidates: [routedThrough(request)] }) },
-      env: {},
-      funGenerators: settings("on"),
-      funGeneratorLibrary: library,
-      onFunGeneratorReport: (value) => { report = value; },
-    });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(report).not.toBeNull();
-    const pooled = (report as FunGeneratorReport | null)?.pool.map((entry) => entry.candidate.geometry.length) ?? [];
-    expect(pooled.length).toBeGreaterThan(0);
-    expect(result.bundle.candidates.some((entry) => entry.geometry.length > 3)).toBe(true);
   });
 });
 
@@ -991,7 +816,7 @@ describe("rider mode plan integration", () => {
     });
     const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => ({ candidates: [request.options.riderModeFactor === undefined ? busy : { ...quiet, providerMetadata: { ...quiet.providerMetadata, riderModeFactor: request.options.riderModeFactor } }] }) };
     const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
-      provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_FUN_GENERATORS_CALLS: "2" },
+      provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on" },
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -1007,7 +832,7 @@ describe("rider mode plan integration", () => {
     const roadSummary = { totalMeters: 120_000, surfaceByRoadClassMeters: { "asphalt|primary": 120_000 }, curvatureMeters: {}, tollMeters: 0, roadRuns: [{ meters: 120_000, durationSeconds: null, surface: "asphalt", roadClass: "primary", roadEnvironment: "road", urbanDensity: "city", curvatureRatio: null, toll: false }] };
     const provider: RouteCandidateProvider = { ...stubProvider(), candidates: async request => { requests.push(request); return { candidates: [candidate({ roadSummary })] }; } };
     const result = await planRide(input({ request: { ...REQUEST, options: { ...REQUEST.options, traffic: "protect-ride", roadCharacter: "balanced", departureNow: false } } }), {
-      provider, roadAuthority: null, env: { OGV_RIDER_MODES: off ? "off" : "on", OGV_FUN_GENERATORS_CALLS: "2" },
+      provider, roadAuthority: null, env: { OGV_RIDER_MODES: off ? "off" : "on" },
     });
     expect(result.ok).toBe(true);
     expect(requests.filter(request => request.options.riderModeFactor !== undefined)).toHaveLength(off ? 0 : 2);

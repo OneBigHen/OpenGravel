@@ -37,7 +37,7 @@ describe.skipIf(!live)("road authority, live", () => {
         avoidPolygons: [],
         options: { includeAlternatives: true, avoidHighways: false, tollPolicy: "avoid", vehicle: "motorcycle" },
       },
-    }, { funCharacterClassifier: null });
+    }, {});
     if (!result.ok) console.log(result.error);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -62,7 +62,7 @@ describe.skipIf(!live)("road authority, live", () => {
         avoidPolygons: [],
         options: { includeAlternatives: false, avoidHighways: false, tollPolicy: "avoid", vehicle: "motorcycle" },
       },
-    }, { funCharacterClassifier: null });
+    }, {});
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const closures = result.bundle.candidates[0]?.evidence["closures"];

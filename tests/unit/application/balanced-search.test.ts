@@ -106,7 +106,7 @@ it.each(["yes", "private", "no"])("the complete plan gates a generated %s road b
   } };
   const p = provider(asked => asked.options.riderModeFactor === undefined ? [fast] : [generated]);
   const result = await planRide({ identity: { rideId: "balanced-gates", rideRevision: 1, planningGeneration: 1 }, request }, {
-    provider: p, env: {}, roadAuthority: null,  funCharacterClassifier: null,
+    provider: p, env: {}, roadAuthority: null,
   });
   expect(result.ok).toBe(true);
   if (!result.ok) return;
