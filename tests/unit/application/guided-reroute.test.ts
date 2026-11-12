@@ -169,6 +169,20 @@ describe("createGuidedReroutePlanner: rejoin the planned line (RM-6)", () => {
     expect(port.requests.at(-1)?.destination).toEqual(line[80]);
   });
 
+  it("near the finish, a way back that only replaces planned riding still rejoins (the gate counts added time)", async () => {
+    // 2 km left: the way back to 0.8 km ahead is ~40% of the time left, but adds almost none of it.
+    const port = createFakeConnectorProvider({ line, instructions, speedMps: 15 });
+    const result = await plannerWith(port).plan({
+      navigation: rider(18_000),
+      route: { line, alongMeters: 17_900, instructions },
+      signal: new AbortController().signal,
+    });
+    expect(result.status).toBe("planned");
+    if (result.status !== "planned") return;
+    expect(result.rejoin).toBeDefined();
+    expect(port.requests).toHaveLength(1);
+  });
+
   it("starts the targets at 3 km after the rider rode away from two reroutes in a row", async () => {
     const port = createFakeConnectorProvider({ line, instructions });
     const planner = plannerWith(port);

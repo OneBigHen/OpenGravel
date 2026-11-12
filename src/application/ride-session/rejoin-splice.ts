@@ -14,7 +14,7 @@
  *
  * Everything here is pure geometry and arithmetic. When a splice cannot be made
  * exact (a connector arriving at a turn, a missing instruction index, a road
- * name that does not match), `splice` returns null and the caller falls back to
+ * name that does not match on a stretch off the planned line), `splice` returns null and the caller falls back to
  * a full replan. It never approximates.
  */
 
@@ -390,6 +390,31 @@ function isFinishInstruction(instruction: RouteInstruction): boolean {
   return instruction.type === "finish" || instruction.type === "arrive";
 }
 
+/** A connector vertex this close to the planned line is on it (both come from the same road graph). */
+export const REJOIN_ON_LINE_METERS = 3;
+
+/**
+ * True when every connector vertex from `fromIndex` to its end lies on the
+ * planned line just behind the target: the connector's joining stretch rides
+ * the planned road itself.
+ */
+function joinsOnPlannedLine(
+  connector: readonly Coordinate[],
+  fromIndex: number,
+  line: readonly Coordinate[],
+  target: LinePoint,
+): boolean {
+  const stretch = connector.slice(Math.max(0, fromIndex));
+  if (stretch.length < 2) return false;
+  const chain = chainage(line);
+  const stretchMeters = chainage(stretch).at(-1) as number;
+  const from = Math.max(0, target.alongMeters - stretchMeters - 50);
+  return stretch.every((point) => {
+    const along = nearestAlong(line, chain, point, from, target.alongMeters);
+    return haversine(point, pointAlong(line, chain, along).coordinate) <= REJOIN_ON_LINE_METERS;
+  });
+}
+
 /**
  * The connector, then the planned line from the rejoin point, exactly.
  *
@@ -397,7 +422,7 @@ function isFinishInstruction(instruction: RouteInstruction): boolean {
  * the planned line's next instruction; every later planned instruction is kept
  * as it was, re-indexed. Null when that cannot be done exactly: an instruction
  * without a geometry index, a join on a planned turn, or a connector that
- * arrives on a differently named road.
+ * arrives on a differently named road it cannot be shown to share with the line.
  */
 export function splice(connector: ConnectorRoute, planned: PlannedRoute, target: LinePoint): SplicedRoute | null {
   const line = planned.geometry;
@@ -449,10 +474,14 @@ export function splice(connector: ConnectorRoute, planned: PlannedRoute, target:
   const kept = connectorInstructions.filter((instruction) => !isFinishInstruction(instruction));
   const joining = kept.at(-1);
   if (joining === undefined) return null;
-  if (joining.roadName !== undefined && cover.roadName !== undefined &&
-    joining.roadName.trim().toLowerCase() !== cover.roadName.trim().toLowerCase()) {
-    return null;
-  }
+  // The connector must join the planned road, not a road beside it. Same name
+  // as the planned instruction there proves it; so does a joining stretch that
+  // lies on the planned line itself, vertex for vertex: a road can change name
+  // without the router giving a new instruction ("Ann Street" runs on as
+  // "River Road"), and the name the connector reads is then the right one.
+  const sameName = joining.roadName === undefined || cover.roadName === undefined ||
+    joining.roadName.trim().toLowerCase() === cover.roadName.trim().toLowerCase();
+  if (!sameName && !joinsOnPlannedLine(connector.geometry, joining.geometryIndex as number, line, target)) return null;
   const instructions: RouteInstruction[] = [
     ...kept.slice(0, -1),
     {

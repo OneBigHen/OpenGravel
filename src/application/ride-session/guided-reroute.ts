@@ -23,6 +23,7 @@ import type { SessionRouteBinding } from "@/domain/ride-session/types";
 import { asRouteCandidateId, newRouteCandidateId } from "@/domain/route/ids";
 import type { RouteInstruction, SpeedLimitSpan } from "@/domain/route/types";
 import { deepFreeze } from "@/domain/util/freeze";
+import { profileFor as graphHopperProfileFor } from "@/infrastructure/routing/graphhopper/profiles";
 
 import {
   bendMetersBetween,
@@ -108,7 +109,7 @@ export interface RerouteBoundRoute {
 
 /** How far ahead of the last match the rider's nearest point on the line is looked for. */
 const NEAREST_AHEAD_WINDOW_METERS = 2_000;
-/** A way back that costs more than this share of the time left is not worth it: replan instead. */
+/** A way back that adds more than this share of the time left is not worth it: replan instead. */
 const MAX_CONNECTOR_SHARE_OF_TIME_LEFT = 0.25;
 /** Off route again this close to the last way back's start: the rider rode away from it. */
 const IGNORED_REROUTE_METERS = 1_000;
@@ -143,8 +144,15 @@ export function createGuidedReroutePlanner(deps: {
     candidates(request: ProviderRouteRequest, signal: AbortSignal): Promise<{ readonly candidates: readonly ProviderCandidate[] }>;
   };
   readonly now?: () => string;
+  /**
+   * The ride's routing profile, as the planner picked it (curvy → twisty, dirt
+   * → adventure). Without it a reroute asked for a placeholder profile the
+   * router does not serve, so the way back never kept the ride's character.
+   */
+  readonly profileFor?: (intent: RideIntent) => string;
 }): GuidedReroutePlanner {
   const now = deps.now ?? (() => new Date().toISOString());
+  const profileFor = deps.profileFor ?? graphHopperProfileFor;
   let generation = 0;
   let ignoredInARow = 0;
   let lastRejoin: { readonly planningGeneration: number; readonly connectorStart: Coordinate } | null = null;
@@ -191,6 +199,7 @@ export function createGuidedReroutePlanner(deps: {
       {
         requestId: `reroute-${planningGeneration}`,
         includeAlternatives: false,
+        profileFor,
         extraAvoidRings: currentRiderReportRings(),
         resolveGeometry: async (ref) => (await deps.geometry.get(ref))?.payload ?? null,
       },
@@ -267,8 +276,11 @@ export function createGuidedReroutePlanner(deps: {
     });
     const picked = chosen === null ? undefined : options.find((entry) => entry.option === chosen);
     if (picked === undefined) return null;
+    // What the way back costs is the time it adds: the planned line from the
+    // rider's nearest point to the rejoin would have taken some of it anyway.
     const timeLeft = plannedSeconds(fromAlong, total);
-    if (picked.option.connector.durationSeconds > timeLeft * MAX_CONNECTOR_SHARE_OF_TIME_LEFT) return null;
+    const addedSeconds = picked.option.connector.durationSeconds - plannedSeconds(fromAlong, picked.option.target.alongMeters);
+    if (addedSeconds > timeLeft * MAX_CONNECTOR_SHARE_OF_TIME_LEFT) return null;
 
     const stored = await deps.geometry.put(
       { kind: "line", coordinates: picked.spliced.geometry },
@@ -351,6 +363,7 @@ export function createGuidedReroutePlanner(deps: {
           requestId: `reroute-${planningGeneration}`,
           // One answer, fast: a rider waiting at a junction wants the route, not choices.
           includeAlternatives: false,
+          profileFor,
           // The rider's own reported spots stay avoided on the way home too.
           extraAvoidRings: currentRiderReportRings(),
           resolveGeometry: async (ref) => (await deps.geometry.get(ref))?.payload ?? null,
