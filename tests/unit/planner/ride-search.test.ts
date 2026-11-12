@@ -92,10 +92,30 @@ describe("A-to-B in one wave", () => {
 
   it("adds the scenic line as curvy's gentle candidate when the router has scenic", () => {
     const members = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles: ["motorcycle_fastest", "motorcycle_twisty", "motorcycle_scenic"] });
-    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle"]);
+    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle", "alternatives"]);
     expect(members[3]!.request).toEqual({ ...members[1]!.request, profile: "motorcycle_scenic" });
     const noScenic = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles: ["motorcycle_fastest", "motorcycle_twisty"] });
     expect(noScenic.map(m => m.role)).not.toContain("gentle");
+  });
+
+  it("adds one engine alternatives call to curvy A-to-B only, in the fifth slot, never past five calls", () => {
+    const profiles = ["motorcycle_fastest", "motorcycle_twisty", "motorcycle_scenic"];
+    const anchors = [{ lat: 41.2, lon: -77.5 }];
+    const members = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles, anchors, supportsAlternatives: true });
+    expect(members).toHaveLength(MAX_WAVE_CALLS);
+    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle", "alternatives"]);
+    // The rider's own request, asking the engine for its alternative routes.
+    expect(members[4]!.request).toEqual({ ...members[1]!.request, options: { ...members[1]!.request.options, includeAlternatives: true } });
+    expect(members.filter(m => m.request.options.includeAlternatives)).toHaveLength(1);
+    // Balanced keeps its four calls: curvy only.
+    const balanced = waveMembers({ request: { ...curvy, options: { ...curvy.options, roadCharacter: "balanced" } }, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles, supportsAlternatives: true });
+    expect(balanced.map(m => m.role)).not.toContain("alternatives");
+    // A router without alternatives is not asked.
+    const none = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles, supportsAlternatives: false });
+    expect(none.map(m => m.role)).not.toContain("alternatives");
+    // Dirt keeps its detour slot and no alternatives call.
+    const dirt = waveMembers({ request, ownProfile: "motorcycle_adventure", fastestProfile: "motorcycle_fastest", graph: null, anchors, supportsAlternatives: true });
+    expect(dirt.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle", "detour"]);
   });
 
   it("asks curvy 'strong' through og_curve only when the graph lists it", () => {

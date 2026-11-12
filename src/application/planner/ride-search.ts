@@ -22,13 +22,13 @@ export const GENTLE_DIRT_FACTOR = 2;
 export const GENTLE_CURVY_PROFILE = "motorcycle_scenic";
 /** At most this many detours through a known good road join the wave (RM-5 fills the one slot left). */
 export const MAX_WAVE_DETOURS = 1;
-/** Wave calls: fastest, the rider's profile, strong, gentle, one detour. */
+/** Wave calls: fastest, the rider's profile, strong, gentle, and one more (curvy: the engine's alternatives; others: a detour). */
 export const MAX_WAVE_CALLS = 5;
 
 /** What a pick optimises: dirt metres, bend metres, or (for Efficient) time alone. */
 export type RidePickMode = GoodMilesMode | "time";
 
-export type WaveRole = "fastest" | "own" | "strong" | "gentle" | "detour";
+export type WaveRole = "fastest" | "own" | "strong" | "gentle" | "alternatives" | "detour";
 
 export interface WaveMember {
   readonly role: WaveRole;
@@ -76,6 +76,8 @@ export function waveMembers(input: {
   readonly anchors?: readonly Coordinate[];
   /** The profiles the provider offers; the gentle curvy line needs scenic. */
   readonly profiles?: readonly string[];
+  /** Whether the provider can return engine alternatives (curvy's fifth call). */
+  readonly supportsAlternatives?: boolean;
 }): WaveMember[] {
   const { request } = input;
   const options = request.options;
@@ -108,6 +110,14 @@ export function waveMembers(input: {
     members.push({ role: "gentle", factor: GENTLE_DIRT_FACTOR, request: { ...own, options: { ...own.options, riderModeFactor: GENTLE_DIRT_FACTOR } } });
   } else if (mode === "curvy" && own.profile !== GENTLE_CURVY_PROFILE && (input.profiles === undefined || input.profiles.length === 0 || input.profiles.includes(GENTLE_CURVY_PROFILE))) {
     members.push({ role: "gentle", factor: options.riderModeFactor ?? 1, request: { ...own, profile: GENTLE_CURVY_PROFILE } });
+  }
+  // Curvy only (not Balanced): one engine "alternative routes" call on the rider's own
+  // request, as main's plan asked it. It finds bendy lines the single-path
+  // calls miss (Doylestown to New Hope: 0.59 bendy miles against 0.38). One
+  // more candidate under the same pick rule. It takes the wave's fifth slot,
+  // so a curvy ride has no room for a detour.
+  if (mode === "curvy" && options.roadCharacter === "curvy" && input.supportsAlternatives !== false) {
+    members.push({ role: "alternatives", factor: options.riderModeFactor ?? 1, request: { ...own, options: { ...own.options, includeAlternatives: true } } });
   }
   for (const anchor of (input.anchors ?? []).slice(0, MAX_WAVE_DETOURS)) {
     members.push({ role: "detour", factor: options.riderModeFactor ?? 1, request: { ...own, shaping: [anchor] } });

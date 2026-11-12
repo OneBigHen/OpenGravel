@@ -750,7 +750,7 @@ async function planRideAttempt(
         // An optional source never blocks the ride: the wave goes without detours.
       }
     }
-    const members = waveMembers({ request, ownProfile, fastestProfile, graph, anchors, profiles: capabilities.profiles });
+    const members = waveMembers({ request, ownProfile, fastestProfile, graph, anchors, profiles: capabilities.profiles, supportsAlternatives: capabilities.supportsAlternatives });
     const answers = await runWave(members, provider, signal);
     const all = waveCandidates(answers);
     wave = { all, calls: members.length };
