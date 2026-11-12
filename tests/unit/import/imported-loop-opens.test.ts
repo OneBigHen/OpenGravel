@@ -66,7 +66,12 @@ describe("an imported loop track", () => {
       now: () => NOW,
     });
 
-    const outcome = await imports.importFile(file(LOOP_GPX, "hilltop-loop.gpx"));
+    // The exact options the one-tap import uses: one line, followed as it is.
+    const outcome = await imports.importFile(file(LOOP_GPX, "hilltop-loop.gpx"), {
+      trackRoute: "follow",
+      trackIndices: [0],
+      importSeparately: true,
+    });
     const storage = memoryStorage();
     const opened = await openLibraryRide(outcome.namedRide.document.rideId, library, geometryStore, { now: () => NOW, storage });
 

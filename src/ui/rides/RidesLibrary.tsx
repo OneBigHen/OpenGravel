@@ -21,9 +21,8 @@ import {
   type ExportMode,
   type ExportTrack,
 } from "@/application/export/gpx-export";
-import type { ImportBreadcrumbOutcome, ImportOutcome, ImportServicePort } from "@/application/import/import-service";
+import type { ImportServicePort } from "@/application/import/import-service";
 import { ImportPanel } from "./../import/ImportPanel";
-import { SwitchBackImportPanel } from "./../import/SwitchBackImportPanel";
 import { SavedRideGroupShare } from "./SavedRideGroupShare";
 import { formatDistance, formatDuration } from "@/application/planner/measurements";
 import { RecordedTrackThumbnail } from "./RecordedTrackThumbnail";
@@ -769,22 +768,16 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
             chrome="quiet"
             {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
             onImported={() => load()}
-            onOpenInPlanner={async (outcome: ImportOutcome | ImportBreadcrumbOutcome) => {
+            onOpenInPlanner={async (outcome, announcement) => {
               // An imported track opens as its own line, never as a new plan.
-              await openSavedRide(outcome.namedRide.document.rideId);
+              await openSavedRide(
+                outcome.namedRide.document.rideId,
+                announcement === undefined ? {} : { announcement },
+              );
             }}
           />
         </div>
       ) : null}
-
-      {/* The older SwitchBack import is a quiet way out of the page, not a
-          third card beside the two real ways in. */}
-      {importService === undefined ? null : (
-        <details className="og-library__legacy">
-          <summary>Import from an older version</summary>
-          <SwitchBackImportPanel service={importService} onImported={() => load()} />
-        </details>
-      )}
     </main>
   );
 }

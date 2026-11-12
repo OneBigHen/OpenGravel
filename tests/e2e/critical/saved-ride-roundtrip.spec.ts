@@ -111,15 +111,10 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
 });
 
 test("an imported loop opens as its own line, never as a failed plan", async ({ page }, testInfo) => {
+  // Choosing the file is the whole flow: it is added and opened on the map.
   await page.goto("/rides");
-  await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles(LOOP_GPX);
-  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-  await page.getByRole("button", { name: "Import separately" }).click();
-  await page.getByRole("button", { name: "Import selected tracks" }).click();
-  await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
-
   const plans = countPlanRequests(page);
-  await page.getByRole("button", { name: "Open in planner" }).click();
+  await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles(LOOP_GPX);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId("phone-ride-summary")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("start-ride")).toBeEnabled();
