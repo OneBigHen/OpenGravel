@@ -61,6 +61,8 @@ export interface Row {
   ride: Ride;
   openGravel: Measurement | null;
   fastest: Measurement | null;
+  /** A-to-B: which plain profile gave the quickest line (the reference) and every profile's minutes. */
+  reference?: { profile: string; minutes: number; byProfile: Record<string, number> };
   /** Third contestant: the rider's own line, snapped to our roads. Shown, never scored, never used to plan. */
   riderLine: Measurement | null;
   riderSnap: RiderLineSnap | null;

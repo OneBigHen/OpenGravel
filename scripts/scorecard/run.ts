@@ -10,6 +10,7 @@
  * Scorecard v2: Curvy good miles are the planner's own bend metres; a third contestant, the rider's own
  * line snapped to our roads, is measured with the same code but never used to plan or scored.
  * Exit 0 means all 20 comparisons ran, not that OpenGravel won or was safe. Exit 1: a planning error.
+ * Exit 3: a reference fault (an A-to-B line more than 2% quicker than its "fastest").
  * Exit 2: the yardstick failed (the rider's line did not beat fastest on good miles on 10 of 12 tracked rides).
  */
 import { mkdir, readFile, writeFile, open } from 'node:fs/promises';
@@ -50,6 +51,15 @@ function requestFor(ride: Ride): ProviderRouteRequest {
     },
     ...(ride.loopMinutes === undefined ? {} : { discovery: { targetMinutes: ride.loopMinutes, toleranceMinutes: ride.loopMinutes * 0.15 } }),
   };
+}
+/** Plain profiles an A-to-B reference is the quickest of. */
+const REFERENCE_PROFILES = ['motorcycle_fastest', 'motorcycle_twisty', 'motorcycle_scenic'];
+/** An own line this much quicker than "fastest" fails the row's reference. */
+const REFERENCE_FAULT_SHARE = 0.02;
+/** Which map answered: its import date and a hash of its profiles and encoded values. Two runs compare only on the same map. */
+async function graphFingerprint(baseUrl: string): Promise<{ importDate: string | null; fingerprint: string }> {
+  const info = await (await fetch(`${baseUrl.replace(/\/+$/, '')}/info`, { signal: AbortSignal.timeout(15_000) })).json() as { import_date?: string; profiles?: unknown; encoded_values?: unknown };
+  return { importDate: info.import_date ?? null, fingerprint: createHash('sha256').update(JSON.stringify({ profiles: info.profiles, encodedValues: info.encoded_values })).digest('hex') };
 }
 function bounds(candidate: ProviderCandidate): BoundingBox {
   const points = candidate.geometry;
@@ -110,6 +120,7 @@ async function main(): Promise<void> {
   ownsLock = true;
   await lock.writeFile(String(process.pid));
   await lock.close();
+  const graph = await graphFingerprint(baseUrl);
   const authority = await frozenAuthority(manifest.rideDate, args.includes('--refresh-authority'), SWITCHES);
   // Serialize at HTTP level, including detached production shadow generators, and count every request.
   // Counting lives here, not in src/, so the planner is measured exactly as it ships.
@@ -145,12 +156,22 @@ async function main(): Promise<void> {
     let routerUse: RouterUse | null = null;
     let wave: readonly unknown[] | undefined;
     const errors: string[] = [];
+    let reference: Row['reference'];
     try {
       const started = performance.now();
-      const answer = await fastest.candidates({ ...request, profile: 'motorcycle_fastest', options: { vehicle: 'motorcycle', includeAlternatives: false, avoidHighways: request.options.avoidHighways, tollPolicy: 'allow-with-warning', roadCharacter: 'efficient', surfacePreference: 'mixed' } }, AbortSignal.timeout(120_000));
+      const plain = { ...request, options: { vehicle: 'motorcycle' as const, includeAlternatives: false, avoidHighways: request.options.avoidHighways, tollPolicy: 'allow-with-warning' as const, roadCharacter: 'efficient' as const, surfacePreference: 'mixed' as const } };
+      // A loop's baseline is the engine's fastest round trip. An A-to-B ride's is the quickest
+      // line any plain profile finds under the ride's own hard rules: the fastest profile weighs
+      // distance heavily (130 s/km), so with highways avoided it is not the quickest (Hawk
+      // Mountain 59.0 min, its twisty line 53.0 min).
+      const profiles = ride.loopMinutes === undefined ? REFERENCE_PROFILES : ['motorcycle_fastest'];
+      const lines = await Promise.all(profiles.map(async profile => ({ profile, candidate: (await fastest.candidates({ ...plain, profile }, AbortSignal.timeout(120_000))).candidates[0] })));
       const seconds = (performance.now() - started) / 1000;
-      const candidate = answer.candidates[0];
+      const found = lines.filter((line): line is { profile: string; candidate: ProviderCandidate } => line.candidate !== undefined);
+      const quickest = [...found].sort((a, b) => a.candidate.durationSeconds - b.candidate.durationSeconds)[0];
+      const candidate = quickest?.candidate;
       if (!candidate) throw new Error('Fastest returned no route');
+      if (ride.loopMinutes === undefined) reference = { profile: quickest.profile, minutes: candidate.durationSeconds / 60, byProfile: Object.fromEntries(found.map(line => [line.profile, line.candidate.durationSeconds / 60])) };
       const roads = await authority.assess(bounds(candidate), AbortSignal.timeout(10_000));
       baseline = measure(candidate, ride, request.options, candidate.durationSeconds / 60, seconds, roads.evaluate(candidate.geometry));
     } catch (error) { errors.push(`Fastest: ${String(error)}`); }
@@ -205,12 +226,18 @@ async function main(): Promise<void> {
     const outcome = selected && baseline ? winTieLossV3(ride, selected, baseline, curvyThreshold, ride.loopMinutes !== undefined ? riderLine : null) : failed;
     const outcomeV2 = selected && baseline ? winTieLoss(ride, selected, baseline, curvyThreshold) : failed;
     const outcomeV1 = selected && baseline ? winTieLoss(ride, asV1(selected), asV1(baseline)) : failed;
-    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...(wave === undefined ? {} : { wave }), ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
+    // A ride whose own line is clearly quicker than its "fastest" has a broken reference: the
+    // 1.35x budget and every minute comparison on that row would be measured from the wrong line.
+    const referenceFault = ride.loopMinutes === undefined && selected !== null && baseline !== null && selected.minutes < baseline.minutes * (1 - REFERENCE_FAULT_SHARE)
+      ? `Reference fault: OpenGravel's line ${selected.minutes.toFixed(1)} min is more than ${REFERENCE_FAULT_SHARE * 100}% quicker than the "fastest" ${baseline.minutes.toFixed(1)} min` : null;
+    if (referenceFault) errors.push(referenceFault);
+    const row: Row = { ride, openGravel: selected, fastest: baseline, ...(reference === undefined ? {} : { reference }), riderLine, riderSnap, ...(wave === undefined ? {} : { wave }), ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
     rows.push(row);
     const sec = (n: number | null | undefined) => n === null || n === undefined ? '?' : n.toFixed(1);
     const mine = routerUse ? `${routerUse.calls} router calls, first answer ${sec(routerUse.firstAnswerSeconds)}s, first call ${sec(routerUse.firstCallSeconds)}s` : 'router use unknown';
     const rider = riderLine && baseline ? `; rider line ${riderLine.goodMiles.toFixed(1)} vs fastest ${baseline.goodMiles.toFixed(1)} good mi` : '';
-    console.log(`${rows.length}/${rides.length} ${ride.label}: ${row.verdict} (v2 ${row.verdictV2}, v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}; ${[...row.reasons, ...errors].join('; ')}`);
+    const ref = reference ? `; reference ${reference.profile.replace('motorcycle_', '')} ${reference.minutes.toFixed(1)} min (${Object.entries(reference.byProfile).map(([p, m]) => `${p.replace('motorcycle_', '')} ${m.toFixed(1)}`).join(', ')})` : '';
+    console.log(`${rows.length}/${rides.length} ${ride.label}: ${row.verdict} (v2 ${row.verdictV2}, v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}${ref}; ${[...row.reasons, ...errors].join('; ')}`);
     await writeFile('scorecard-out/progress.json', JSON.stringify(rows, null, 2));
   }
   await meter.idle();
@@ -222,7 +249,8 @@ async function main(): Promise<void> {
     winsV1: rows.filter(r => r.verdictV1 === 'Win').length,
     trustFailures: rows.reduce((n, r) => n + (r.openGravel?.trustFailures.length ?? 0), 0),
     baselineTrustFailures: rows.reduce((n, r) => n + (r.fastest?.trustFailures.length ?? 0), 0),
-    planningErrors: rows.filter(r => r.errors.length).length,
+    planningErrors: rows.filter(r => r.errors.some(e => !e.startsWith('Reference fault'))).length,
+    referenceFaults: rows.filter(r => r.errors.some(e => e.startsWith('Reference fault'))).length,
     ridesWithUnknownTrust: rows.filter(r => r.openGravel && r.openGravel.unknownTrust.length > 0).length,
   };
   const yardstick = yardstickCheck(rows);
@@ -236,7 +264,7 @@ async function main(): Promise<void> {
   const gitHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const sourceWarnings = (await readFile('src/server/planning/plan-service.ts', 'utf8')).includes('OGV_DIRT_LOOP_GENERATORS') ? [] : ['This checkout does not read OGV_DIRT_LOOP_GENERATORS; results describe this revision, not the newer production planner.'];
   const result = { headline: headline(rows), headlineV2: headlineV2(rows), headlineV1: headlineV1(rows), yardstick, routerLoad: load, curvyLoopThreshold: curvyThreshold, summary, set, generatedAt: new Date().toISOString(), rideDate: manifest.rideDate,
-    gitHead, sourceWarnings,
+    gitHead, sourceWarnings, graph,
     manifestSha256, atlasSha256: createHash('sha256').update(await readFile(atlasPath)).digest('hex'),
     authoritySha256: createHash('sha256').update(await readFile('scorecard-out/authority-snapshots.json')).digest('hex'),
     switches: SWITCHES, router: baseUrl, routerCalls: meter.count(), assumptions: manifest.notes, rows };
@@ -249,7 +277,9 @@ async function main(): Promise<void> {
   console.log(yardstick.message);
   console.log(loadLine(load));
   for (const warning of warnings.slice(yardstick.passed ? 0 : 1)) console.log(`Note: ${warning}`);
+  console.log(`Map: imported ${graph.importDate ?? 'unknown'}, fingerprint ${graph.fingerprint.slice(0, 12)}. Reference faults: ${summary.referenceFaults}.`);
   if (summary.planningErrors > 0) process.exitCode = 1;
+  else if (summary.referenceFaults > 0) process.exitCode = 3;
   else if (!yardstick.passed && set !== 'nj') process.exitCode = 2; // the NJ set has only 2 tracked rides: the yardstick is shown, not enforced
 }
 main().finally(releaseLock).then(() => process.exit(process.exitCode ?? 0), error => { console.error(error); process.exit(1); });
