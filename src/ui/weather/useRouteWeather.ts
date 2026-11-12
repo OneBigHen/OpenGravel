@@ -22,6 +22,12 @@ import {
 import type { Coordinate } from "@/domain/ride/types";
 
 const ROUTE_WEATHER_PATH = "/api/weather/route";
+/**
+ * The most points a request carries. The server samples at most eight places
+ * and refuses a line over 2,048 points, so a long loop is thinned here first;
+ * 512 evenly spaced points keep the shape and both ends.
+ */
+export const ROUTE_WEATHER_MAX_POINTS = 512;
 /** Recently read routes: switching between alternates never refetches. */
 const CACHE_MAX = 16;
 
@@ -59,6 +65,24 @@ function remember(key: string, report: RouteWeatherReport): void {
     if (oldest === undefined) break;
     cache.delete(oldest);
   }
+}
+
+/**
+ * The line thinned to at most `max` points: evenly spaced by index, the first
+ * and last point always kept, so the samples still fall along the real road.
+ */
+export function thinRouteLine(
+  line: readonly Coordinate[],
+  max: number = ROUTE_WEATHER_MAX_POINTS,
+): readonly Coordinate[] {
+  if (line.length <= max || max < 2) return line;
+  const thinned: Coordinate[] = [];
+  const step = (line.length - 1) / (max - 1);
+  for (let index = 0; index < max; index += 1) {
+    const point = line[Math.round(index * step)];
+    if (point !== undefined) thinned.push(point);
+  }
+  return thinned;
 }
 
 function cell(value: number): string {
@@ -99,7 +123,7 @@ async function load(key: string, subject: RouteWeatherSubject): Promise<RouteWea
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        line: subject.line.map((point) => ({ lon: point.lon, lat: point.lat })),
+        line: thinRouteLine(subject.line).map((point) => ({ lon: point.lon, lat: point.lat })),
         departureTime: subject.departureTime,
         durationSeconds: subject.durationSeconds,
         // NWS forecasts in ~2.5 km cells: closer samples repeat one reading, so a
