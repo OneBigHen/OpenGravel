@@ -272,14 +272,10 @@ export function PlannerWorkspaceDock({
       act(element);
     }, 280);
   }, [onFullSheet]);
-  const onAddStopQuick = editBar?.onAddStop;
   const quick = useMemo(() => phone ? {
-    onAddStop: onAddStopQuick,
-    onSave: () => reveal('[data-testid="named-ride-title"]', (element) => element.focus({ preventScroll: true })),
-    onShare: () => reveal('[data-testid="open-share"]', (element) => element.click()),
     onStyle: () => reveal(".og-phone-style", () => undefined),
     onShowExtent,
-  } : undefined, [phone, onAddStopQuick, reveal, onShowExtent]);
+  } : undefined, [phone, reveal, onShowExtent]);
   // A new answer leads the rail (results first), so the rail returns to the top
   // when it lands, wherever the rider had scrolled to edit the ride.
   const answerKey = viewModel.routeCards.map((card) => card.routeId).join("|");
@@ -495,6 +491,7 @@ export function PlannerWorkspaceDock({
               onEditOptions={() => openEditor("edit")}
               onOpenOptions={() => openEditor("options")}
               destinationLine={destinationLine}
+              placeLabel={placeLabel}
               {...(quick === undefined ? {} : { quick })}
               {...(detent === "peek" ? { onExpandSheet: (): void => onStepSheet("up") } : {})}
             />

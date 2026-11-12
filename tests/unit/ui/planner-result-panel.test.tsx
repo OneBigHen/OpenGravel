@@ -226,10 +226,13 @@ it("keeps saved work and route context available in the compact directions previ
   try {
     render(<PlannerResultPanel showOptions inspector={null}
       choices={{ cards: [card("directions-context")], explanation: null, onSelect: vi.fn() }}
-      actions={{ document: ride, libraryService: undefined, shareService: undefined, start: null, route: { routeKey: "directions-context", rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, summary: { distanceMeters: 48000, durationSeconds: 5400 }, instructionsAvailable: false, pack: buildCorridorPackManifest({ rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, createdAt: NOW, dataRefs: [] }) } }}
+      actions={{ document: ride, libraryService: undefined, shareService: {} as never, start: null, route: { routeKey: "directions-context", rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, summary: { distanceMeters: 48000, durationSeconds: 5400 }, instructionsAvailable: false, pack: buildCorridorPackManifest({ rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, createdAt: NOW, dataRefs: [] }) } }}
       briefing={{ route: { routeId: "directions-context", geometry: LINE, distanceMeters: 48000, durationSeconds: 5400 }, ride, bikes: [], providers: { elevationProfile: ELEVATION_SOURCE }, offlineRoute: null, actions: { setBike: vi.fn(), setDeparture: vi.fn(), setArriveBy: vi.fn() }, onRouteTraffic: vi.fn() }} />);
-    expect(screen.getByTestId("named-ride-title")).toBeInTheDocument();
+    // A destination shows the same summary as a loop (R3-4): Start, Save and Share in it.
+    expect(screen.getByTestId("route-options")).toContainElement(screen.getByTestId("route-summary"));
+    expect(screen.getByTestId("summary-save")).toBeInTheDocument();
     expect(screen.getByTestId("open-share")).toBeInTheDocument();
+    expect(screen.queryByTestId("named-ride-title")).toBeNull();
     await screen.findByTestId("prepare-toggle");
     await screen.findByTestId("elevation-profile");
   } finally { vi.unstubAllGlobals(); }

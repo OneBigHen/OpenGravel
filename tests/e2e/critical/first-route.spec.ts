@@ -268,7 +268,9 @@ test("planning shows a route the rider can see and select", async ({ page }) => 
   const selectedCard = page.locator('[data-testid^="route-card-"][aria-pressed="true"]');
   await expect(selectedCard).toHaveCount(1);
   await expect(selectedCard).toContainText("Best Ride");
-  await expect(page.getByTestId("route-card-alternative")).toContainText("Alternative");
+  // An unroled choice is named by what it is, else "Option 2" (R3-4), never "Alternative".
+  await expect(page.getByTestId("route-card-alternative")).toContainText(/Option \d|Twistiest|Most dirt|Fastest|Fewest busy roads/);
+  await expect(page.getByTestId("route-card-alternative")).not.toContainText("Alternative");
   await expect(page.getByTestId("route-card-alternative")).toContainText(
     "+2 min vs Fastest",
   );

@@ -192,11 +192,6 @@ h3 {
   font-size: var(--og-text-meta);
 }
 
-.og-named-save__status {
-  color: var(--og-primary-text);
-  font-size: var(--og-text-meta);
-}
-
 .og-share__backdrop {
   position: fixed;
   inset: 0;

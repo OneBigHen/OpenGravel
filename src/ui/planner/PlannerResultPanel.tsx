@@ -15,7 +15,9 @@ import { RoutingMethodComparison } from "@/ui/planner/RoutingMethodComparison";
 import { RouteOptions } from "./RouteOptions";
 import { rideStyleSummary } from "./RideStyleControls";
 import { useCompactPlanner, usePhonePlanner } from "./usePhonePlanner";
-import { PhoneRideSummary, type PhoneRideQuickActions } from "./PhoneRideSummary";
+import { RideSummary, type RideSummaryQuickActions } from "./RideSummary";
+import { automaticRideName } from "./destination-line";
+import { compareChoiceNames } from "@/application/planner/route-choice-words";
 import { AdvisorRideAsk } from "@/ui/planner/RideAdvisor";
 import { useActivityMode } from "@/ui/stores/activity-mode";
 import { HikeSummary, type HikeSummaryModel } from "./HikeSummary";
@@ -94,12 +96,14 @@ export interface PlannerResultPanelProps {
    */
   readonly onExpandSheet?: () => void;
   /** The phone summary's quick actions: ride options, share, add stops, save. */
-  readonly quick?: PhoneRideQuickActions;
+  readonly quick?: RideSummaryQuickActions;
   /** The planned hike, shown instead of the ride summary while Hike mode is on. */
   readonly hike?: HikeSummaryModel | null;
+  /** The place a one-tap save is named after: the loop's start or the destination. */
+  readonly placeLabel?: string;
 }
 
-export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null }: PlannerResultPanelProps) {
+export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenOptions, startLabel = "My location", finishLabel = "Destination", inspector, choices, actions, briefing, sheetExpanded = false, destinationLine = null, rideStyle, onExpandSheet, quick, hike = null, placeLabel }: PlannerResultPanelProps) {
   const activity = useActivityMode();
   const hikeView = activity === "hike" ? hike : null;
   const wide = useInspectorTier();
@@ -115,13 +119,50 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
   }, [route, onRouteTraffic]);
   const selectedCard = choices.cards.find((card) => card.isSelected);
   const tint = selectedCard?.tint ?? 0;
+  /**
+   * The one summary (round 3, restructure call 3): every tier and every kind of
+   * ride — a loop, a destination, a curated "Ride this", a saved or imported
+   * line — reads the same component, so they cannot drift apart.
+   */
+  const summaryShown = hikeView === null && selectedCard !== undefined;
+  const loopRide = briefing.ride.intent.shape === "loop";
+  const automaticName = automaticRideName({
+    rideTitle: actions.document.title,
+    placeLabel: placeLabel ?? (loopRide ? startLabel : finishLabel),
+    loopRide,
+    distanceMeters: actions.route?.summary.distanceMeters ?? selectedCard?.distanceMeters ?? null,
+  });
+  const names = compareChoiceNames(choices.cards);
+  const summary = selectedCard === undefined ? null : <RideSummary
+    // A different line is a different ride to save: Saved and its name start over.
+    key={selectedCard.routeId}
+    card={selectedCard}
+    cards={choices.cards}
+    start={actions.start}
+    title={destinationLine ?? "Your ride"}
+    automaticName={automaticName}
+    document={actions.document}
+    libraryService={actions.libraryService}
+    shareService={actions.shareService}
+    route={actions.route}
+    routeLine={briefing.route}
+    elevationSource={briefing.providers?.elevationProfile}
+    comparing={comparing}
+    onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }}
+    onSelect={choices.onSelect}
+    {...(rideStyle === undefined ? {} : { rideStyle })}
+    showQuickStyle={phone}
+    weatherLine={weatherLine}
+    {...(quick === undefined ? {} : { quick })}
+    // On a phone the sheet is short; "Why this ride?" stays on the wide tier.
+    explanation={phone ? null : choices.explanation}
+  />;
   if (hikeView === null && showOptions && compact && selectedCard !== undefined) return <RouteOptions
-    cards={choices.cards} onSelect={choices.onSelect} start={actions.start}
-    startLabel={startLabel} finishLabel={finishLabel} onReverse={rideStyle?.actions.reverse}
+    summary={summary}
     onEdit={onEditOptions} onOptions={onOpenOptions} optionsLabel={rideStyle === undefined ? undefined : rideStyleSummary(rideStyle.view)}>
       <AdvisorRideAsk />
       <RideActions {...actions} start={null} rideActions={undefined} />
-      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} />}
+      {briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}
       {briefing.route === null || briefing.providers?.elevationProfile === undefined ? null : <PlannerElevationProfile route={briefing.route} source={briefing.providers.elevationProfile} intent={briefing.ride.intent} tint={tint} surface={selectedCard.surfaceRuns} expandedBySheet={false} />}
     </RouteOptions>;
   const result = (
@@ -130,7 +171,10 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
         <p className="og-first-look-note" role="status" data-testid="first-look-note">{choices.note}</p>
       )}
       {hikeView !== null ? <HikeSummary hike={hikeView} start={actions.start} /> : null}
-      {hikeView === null && phone && selectedCard !== undefined ? <PhoneRideSummary directionsOptions={showOptions} card={selectedCard} cards={choices.cards} start={actions.start} route={briefing.route} elevationSource={briefing.providers?.elevationProfile} comparing={comparing || showOptions} onCompare={() => { if (!comparing) onExpandSheet?.(); setComparing(!comparing); }} onSelect={choices.onSelect} {...(rideStyle === undefined ? {} : { rideStyle })} weatherLine={weatherLine} destinationLine={destinationLine} {...(quick === undefined ? {} : { quick })} /> : null}
+      {summaryShown ? summary : null}
+      {/* The choices stay a list to pick from under the summary (on a phone
+          further down the full sheet). The summary already carries the chosen
+          ride's truth lines and "Why this ride?", so the cards stay quiet. */}
       {hikeView !== null || choices.cards.length === 0 ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
@@ -138,7 +182,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
               key={card.routeId}
               card={card}
               onSelect={choices.onSelect}
-              explanation={card.isSelected ? choices.explanation : null}
+              name={card.roleKey === "alternative" ? names[card.routeId] : undefined}
+              {...(summaryShown ? {} : { explanation: card.isSelected ? choices.explanation : null })}
+              quiet={summaryShown}
             />
           ))}
         </RouteChoices></div>
@@ -165,8 +211,8 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
       )}
       <RideActions
         {...actions}
-        start={hikeView !== null || (phone && selectedCard !== undefined) ? null : actions.start}
-        {...(hikeView !== null || (phone && selectedCard !== undefined) ? { rideActions: undefined } : {})}
+        start={hikeView !== null || summaryShown ? null : actions.start}
+        {...(hikeView !== null || (summaryShown && phone) ? { rideActions: undefined } : {})}
       />
       {hikeView !== null || choices.cards.length === 0 ? null : <AdvisorRideAsk />}
       {hikeView !== null || briefing.route === null ? null : <PlannerRouteBriefing {...briefing} onWeatherLine={setWeatherLine} />}

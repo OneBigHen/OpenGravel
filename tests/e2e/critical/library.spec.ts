@@ -28,7 +28,7 @@ async function openRideMenu(page: Page, title: string) {
 // story of save, reload, open, rename and delete gets more than 30 s.
 test.setTimeout(60_000);
 
-test("keeps named rides separate from the active draft and protects sources", async ({ page }) => {
+test("saves a ride in one tap, renames it in place and protects sources", async ({ page }) => {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
@@ -38,14 +38,23 @@ test("keeps named rides separate from the active draft and protects sources", as
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);
 
-  await page.getByTestId("named-ride-title").fill(TITLE);
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
+  // Save is one tap (R3-4): an automatic name, the button turns into Saved,
+  // and the name is then edited in place. No name box, no "draft" sentence.
+  const summary = page.getByTestId("route-summary");
+  await summary.getByTestId("summary-save").click();
+  await expect(summary.getByTestId("summary-save")).toHaveText("Saved");
+  await expect(summary.getByTestId("phone-destination")).toHaveText(/, \d+ mi$/);
+  await summary.getByTestId("ride-title-edit").click();
+  await summary.getByTestId("ride-title-input").fill(TITLE);
+  await summary.getByTestId("ride-title-input").press("Enter");
+  await expect(summary.getByTestId("phone-destination")).toHaveText(TITLE);
+  await expect(page.getByTestId("named-ride-title")).toHaveCount(0);
+  await expect(page.getByText(/\bdraft\b/i)).toHaveCount(0);
 
   await page.reload();
-  await expect(page.getByText("Restored your draft")).toBeVisible();
-  await expect(page.getByTestId("named-ride-title")).toHaveValue("");
-  await expect(page.getByTestId("save-named-ride")).toBeDisabled();
+  await expect(page.getByText("Restored your ride")).toBeVisible();
+  // The ride on the map is a new answer to save, not the saved copy.
+  await expect(page.getByTestId("summary-save")).toHaveText("Save");
   await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
   await expect(page.getByTestId("finish-value")).not.toHaveText("No destination yet");
 
