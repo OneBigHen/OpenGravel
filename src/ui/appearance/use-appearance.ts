@@ -28,7 +28,14 @@ function subscribeModes(onChange: () => void): () => void {
 
 function subscribeTheme(onChange: () => void): () => void {
   window.addEventListener(THEME_CHANGE_EVENT, onChange);
-  return () => window.removeEventListener(THEME_CHANGE_EVENT, onChange);
+  // Auto follows the phone. The boot script applies that live, and a surface
+  // that draws with the theme (a night map image) has to hear about it too.
+  const query = typeof window.matchMedia === "function" ? window.matchMedia("(prefers-color-scheme: light)") : null;
+  query?.addEventListener?.("change", onChange);
+  return () => {
+    window.removeEventListener(THEME_CHANGE_EVENT, onChange);
+    query?.removeEventListener?.("change", onChange);
+  };
 }
 
 export function useAppearanceMode(): AppearanceMode {

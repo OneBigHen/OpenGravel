@@ -27,7 +27,7 @@ export interface ExploreMapProps extends ExploreMapConfig {
   readonly highlightedId: string | null;
   readonly onOpen: (entryId: string) => void;
   /**
-   * A list needs to say how many rides it drew and to fit them all again after
+   * A list needs to say how many rides it found and to fit them all again after
    * a pan. One route's own page needs neither count nor plural: just the way
    * back to its line.
    */
@@ -116,7 +116,7 @@ function ExploreMapCanvas({ entries, highlightedId, onOpen, hostFactory, basemap
     <div className="og-explore-map" data-testid="explore-map">
       <div className="og-explore-map__tools">
         {tools === "count" ? (
-          <span>{available.length} mapped{entries.length > available.length ? ` · ${entries.length - available.length} without geometry` : ""}</span>
+          <span>{entries.length} {entries.length === 1 ? "ride" : "rides"}</span>
         ) : null}
         <button type="button" className="og-secondary" onClick={() => { setCameraOwned(false); setFitRevision((value) => value + 1); }}>
           {tools === "count" ? "Fit routes" : "Recenter"}
