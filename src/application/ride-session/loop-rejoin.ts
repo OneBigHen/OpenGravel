@@ -8,6 +8,11 @@
  *
  * Everything here is pure geometry over the bound route line and the rider's
  * last matched distance along it.
+ *
+ * Since RM-6 a missed turn no longer reaches these anchors: it routes only the
+ * way back onto the line and keeps the rest exactly (`rejoin-splice.ts`). The
+ * anchors remain for that reroute's fallback (no way back passed, or it cost
+ * too much) and for "Head to the start" (DV-07).
  */
 
 import { haversine } from "@/domain/geometry/analysis";

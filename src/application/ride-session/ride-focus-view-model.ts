@@ -64,6 +64,7 @@ import type { RecordingSummary } from "@/domain/recording/types";
 import type { RecordingTelemetry } from "@/domain/recording/telemetry";
 import type { LeanMetricSnapshot } from "@/domain/motion/lean";
 import type { RecordingControllerSnapshot } from "./recording-controller";
+import { chainage, ringSpanAlong } from "./rejoin-splice";
 import type {
   NavigationPosition,
   SessionNavigationState,
@@ -1332,4 +1333,19 @@ export function permissionLabel(state: LocationPermissionState): string {
     case "unknown":
       return "Location state unknown";
   }
+}
+
+/**
+ * RM-6: should a new rider report reroute the ride in progress? Yes when one
+ * of the newly reported spots touches the planned line still ahead of the
+ * rider. Spots behind the rider, or off the line, change only the next plan.
+ */
+export function reportBlocksLineAhead(
+  newRings: readonly (readonly Coordinate[])[],
+  line: readonly Coordinate[],
+  alongMeters: number,
+): boolean {
+  if (newRings.length === 0 || line.length < 2 || !Number.isFinite(alongMeters)) return false;
+  const chain = chainage(line);
+  return newRings.some((ring) => ringSpanAlong(line, chain, ring, Math.max(0, alongMeters)) !== null);
 }
