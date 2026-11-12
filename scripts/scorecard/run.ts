@@ -6,6 +6,7 @@
  * --refresh-rider-lines re-snaps the riders' own lines instead of reusing scorecard-out/rider-lines.json.
  * --freeze-threshold snaps the tuning riders' lines only and rewrites scripts/scorecard/frozen-threshold.ts
  * (the Curvy loop bar: 75% of the median rider-line share). Plans nothing.
+ * Scorecard v3 is the headline; v2 and v1 are printed on the next two lines, always. --set nj runs the fixed 10-ride New Jersey set.
  * Scorecard v2: Curvy good miles are the planner's own bend metres; a third contestant, the rider's own
  * line snapped to our roads, is measured with the same code but never used to plan or scored.
  * Exit 0 means all 20 comparisons ran, not that OpenGravel won or was safe. Exit 1: a planning error.
@@ -22,8 +23,8 @@ import type { ProviderCandidate, ProviderRouteRequest } from '../../src/applicat
 import type { BoundingBox } from '../../src/application/route-intelligence/types';
 import { frozenAuthority } from './authority';
 import { measure } from './measure';
-import { asV1, winTieLoss } from './scoring';
-import { headline, headlineV1, report } from './report';
+import { asV1, winTieLoss, winTieLossV3 } from './scoring';
+import { headline, headlineV1, headlineV2, report } from './report';
 import { createRouterMeter, instrumentProvider, loadLine, routerLoad } from './load';
 import { MIN_SNAP_COVERAGE, pickAnchors, snapProfileFor, snapRiderLine, type SnapResult } from './rider-line';
 import { freezeCurvyThreshold, renderFrozenThreshold, riderCurvyShares } from './threshold';
@@ -84,7 +85,7 @@ async function riderLineFor(ride: Ride, request: ProviderRouteRequest, router: R
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const set = args.includes('--set') ? args[args.indexOf('--set') + 1] : 'tuning';
-  if (set !== 'tuning' && set !== 'holdout') throw new Error('--set must be tuning or holdout');
+  if (set !== 'tuning' && set !== 'holdout' && set !== 'nj') throw new Error('--set must be tuning, nj or holdout');
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--set') i++;
     else if (!['--refresh-authority', '--refresh-rider-lines', '--freeze-threshold'].includes(args[i]!)) throw new Error(`Unknown argument: ${args[i]}`);
@@ -93,9 +94,10 @@ async function main(): Promise<void> {
   if (freeze && set !== 'tuning') throw new Error('--freeze-threshold uses the tuning set only');
   const raw = await readFile('tests/scorecard/rides.json', 'utf8');
   const manifestSha256 = createHash('sha256').update(raw).digest('hex');
-  const manifest = JSON.parse(raw) as { rideDate: string; notes: string[]; tuning: Ride[]; holdout: Ride[] };
+  const manifest = JSON.parse(raw) as { rideDate: string; notes: string[]; tuning: Ride[]; nj: Ride[]; holdout: Ride[] };
   const rides = manifest[set];
-  if (rides.length !== 20 || new Set(rides.map(r => r.requestId)).size !== 20) throw new Error('Expected 20 rides with unique request IDs');
+  const expected = set === 'nj' ? 10 : 20;
+  if (rides.length !== expected || new Set(rides.map(r => r.requestId)).size !== expected) throw new Error(`Expected ${expected} rides with unique request IDs`);
   if (!freeze && FROZEN_CURVY_THRESHOLD.manifestSha256 !== manifestSha256) throw new Error('The frozen Curvy threshold was set for a different rides.json. Re-freeze it deliberately with: npm run scorecard -- --freeze-threshold');
   const baseUrl = process.env.GRAPHHOPPER_URL ?? 'http://127.0.0.1:8989';
   const url = new URL(baseUrl);
@@ -151,6 +153,20 @@ async function main(): Promise<void> {
       const roads = await authority.assess(bounds(candidate), AbortSignal.timeout(10_000));
       baseline = measure(candidate, ride, request.options, candidate.durationSeconds / 60, seconds, roads.evaluate(candidate.geometry));
     } catch (error) { errors.push(`Fastest: ${String(error)}`); }
+    // The wait a rider feels: one real first-answer request, sent the way the app sends it (no alternatives).
+    // Drained before the counted full plan so its router calls never count against the full plan.
+    let firstAnswerSeconds: number | null = null;
+    try {
+      const first = instrumentProvider(production);
+      first.start();
+      const firstStarted = performance.now();
+      const firstResult = await planRide({ identity: { rideId: `scorecard_first_${ride.id}`, rideRevision: 1, planningGeneration: 1 }, request: { ...request, options: { ...request.options, includeAlternatives: false } } }, {
+        provider: first.provider, env: SWITCHES, gravelAtlas: atlas, roadAuthority: authority,
+        now: () => manifest.rideDate,
+      });
+      if (firstResult.ok) firstAnswerSeconds = (performance.now() - firstStarted) / 1000;
+      await meter.idle();
+    } catch (error) { errors.push(`First answer: ${String(error)}`); }
     try {
       const watched = instrumentProvider(production);
       const callsBefore = meter.count();
@@ -162,7 +178,7 @@ async function main(): Promise<void> {
       });
       const seconds = (performance.now() - started) / 1000;
       const callsAtReturn = meter.count();
-      routerUse = { calls: callsAtReturn - callsBefore, shadowCalls: 0, firstRouteSeconds: watched.firstRouteSeconds() };
+      routerUse = { calls: callsAtReturn - callsBefore, shadowCalls: 0, firstCallSeconds: watched.firstRouteSeconds(), firstAnswerSeconds };
       if (!result.ok) throw new Error(`planRide: ${result.error.code}`);
       const best = result.bundle.candidates.find(c => c.id === (result.bundle.roles['best-ride'] ?? result.bundle.selectedRouteId));
       if (!best) throw new Error('No selected Best Ride');
@@ -184,19 +200,23 @@ async function main(): Promise<void> {
       } catch (error) { errors.push(`Rider line: ${String(error)}`); }
     }
     const failed = { verdict: 'Loss' as const, reasons: ['Planning failed; comparison unavailable'] };
-    const outcome = selected && baseline ? winTieLoss(ride, selected, baseline, curvyThreshold) : failed;
+    const outcome = selected && baseline ? winTieLossV3(ride, selected, baseline, curvyThreshold, ride.loopMinutes !== undefined ? riderLine : null) : failed;
+    const outcomeV2 = selected && baseline ? winTieLoss(ride, selected, baseline, curvyThreshold) : failed;
     const outcomeV1 = selected && baseline ? winTieLoss(ride, asV1(selected), asV1(baseline)) : failed;
-    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...outcome, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
+    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
     rows.push(row);
-    const mine = routerUse ? `${routerUse.calls} router calls, first route ${routerUse.firstRouteSeconds === null ? '?' : routerUse.firstRouteSeconds.toFixed(1)}s` : 'router use unknown';
+    const sec = (n: number | null | undefined) => n === null || n === undefined ? '?' : n.toFixed(1);
+    const mine = routerUse ? `${routerUse.calls} router calls, first answer ${sec(routerUse.firstAnswerSeconds)}s, first call ${sec(routerUse.firstCallSeconds)}s` : 'router use unknown';
     const rider = riderLine && baseline ? `; rider line ${riderLine.goodMiles.toFixed(1)} vs fastest ${baseline.goodMiles.toFixed(1)} good mi` : '';
-    console.log(`${rows.length}/20 ${ride.label}: ${row.verdict} (v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}; ${[...row.reasons, ...errors].join('; ')}`);
+    console.log(`${rows.length}/${rides.length} ${ride.label}: ${row.verdict} (v2 ${row.verdictV2}, v1 ${row.verdictV1}); trust ${selected?.trustFailures.length ?? 'unknown'}; ${mine}${rider}; ${[...row.reasons, ...errors].join('; ')}`);
     await writeFile('scorecard-out/progress.json', JSON.stringify(rows, null, 2));
   }
   await meter.idle();
   const summary = {
     wins: rows.filter(r => r.verdict === 'Win').length, ties: rows.filter(r => r.verdict === 'Tie').length,
     losses: rows.filter(r => r.verdict === 'Loss').length,
+    winsV3: rows.filter(r => r.verdict === 'Win').length,
+    winsV2: rows.filter(r => r.verdictV2 === 'Win').length,
     winsV1: rows.filter(r => r.verdictV1 === 'Win').length,
     trustFailures: rows.reduce((n, r) => n + (r.openGravel?.trustFailures.length ?? 0), 0),
     baselineTrustFailures: rows.reduce((n, r) => n + (r.fastest?.trustFailures.length ?? 0), 0),
@@ -213,19 +233,21 @@ async function main(): Promise<void> {
   if (!yardstick.passed) warnings.unshift(yardstick.message);
   const gitHead = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   const sourceWarnings = (await readFile('src/server/planning/plan-service.ts', 'utf8')).includes('OGV_DIRT_LOOP_GENERATORS') ? [] : ['This checkout does not read OGV_DIRT_LOOP_GENERATORS; results describe this revision, not the newer production planner.'];
-  const result = { headline: headline(rows), headlineV1: headlineV1(rows), yardstick, routerLoad: load, curvyLoopThreshold: curvyThreshold, summary, set, generatedAt: new Date().toISOString(), rideDate: manifest.rideDate,
+  const result = { headline: headline(rows), headlineV2: headlineV2(rows), headlineV1: headlineV1(rows), yardstick, routerLoad: load, curvyLoopThreshold: curvyThreshold, summary, set, generatedAt: new Date().toISOString(), rideDate: manifest.rideDate,
     gitHead, sourceWarnings,
     manifestSha256, atlasSha256: createHash('sha256').update(await readFile(atlasPath)).digest('hex'),
     authoritySha256: createHash('sha256').update(await readFile('scorecard-out/authority-snapshots.json')).digest('hex'),
     switches: SWITCHES, router: baseUrl, routerCalls: meter.count(), assumptions: manifest.notes, rows };
   await writeFile('scorecard-out/latest.json', JSON.stringify(result, null, 2));
   await writeFile('scorecard-out/index.html', report(rows, set, manifest.rideDate, [`Measured source revision: ${gitHead}`, ...manifest.notes], [...warnings, ...sourceWarnings], { yardstick, load, curvyLoopThreshold: curvyThreshold }));
-  console.log(`v2 (this scorecard): ${result.headline}`);
+  const label = set === 'nj' ? `NJ ${summary.winsV3}/${rows.length}` : `${set} ${summary.winsV3}/${rows.length}`;
+  console.log(`v3 (this scorecard, ${label}): ${result.headline}`);
+  console.log(`v2 (previous rule):  ${result.headlineV2}`);
   console.log(`v1 (old yardstick):  ${result.headlineV1}`);
   console.log(yardstick.message);
   console.log(loadLine(load));
   for (const warning of warnings.slice(yardstick.passed ? 0 : 1)) console.log(`Note: ${warning}`);
   if (summary.planningErrors > 0) process.exitCode = 1;
-  else if (!yardstick.passed) process.exitCode = 2;
+  else if (!yardstick.passed && set !== 'nj') process.exitCode = 2; // the NJ set has only 2 tracked rides: the yardstick is shown, not enforced
 }
 main().finally(releaseLock).then(() => process.exit(process.exitCode ?? 0), error => { console.error(error); process.exit(1); });
