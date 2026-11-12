@@ -602,3 +602,41 @@ describe("GraphHopper provider", () => {
     expect((caught as Error).message).not.toContain(internalUrl);
   });
 });
+
+describe("GraphHopper provider — knows the graph it routes on (RM-4)", () => {
+  const strongCurvy: ProviderRouteRequest = { ...REQUEST, options: { ...REQUEST.options, roadCharacter: "curvy", traffic: "protect-ride", curvePressure: "strong" } };
+  function graphFetcher(info: () => Response) {
+    const routes: unknown[] = [];
+    let infoCalls = 0;
+    const fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith("/info")) { infoCalls += 1; return info(); }
+      routes.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify(RESPONSE_FIXTURE), { status: 200 });
+    }) as typeof fetch;
+    return { fetcher, routes, infoCalls: () => infoCalls };
+  }
+  const v2Info = () => new Response(JSON.stringify({ encoded_values: { surface: [], og_curve: [], og_through: [] } }), { status: 200 });
+
+  it("reads /info once and keeps it; a failed read is asked again", async () => {
+    let fail = true;
+    const recorded = graphFetcher(() => (fail ? new Response("down", { status: 503 }) : v2Info()));
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: recorded.fetcher });
+    await expect(provider.graph!(new AbortController().signal)).resolves.toBeNull();
+    fail = false;
+    await expect(provider.graph!(new AbortController().signal)).resolves.toEqual({ encodedValues: ["surface", "og_curve", "og_through"] });
+    await provider.graph!(new AbortController().signal);
+    expect(recorded.infoCalls()).toBe(2);
+  });
+
+  it("sends og_curve only once the graph lists it, and never the busy-road block a v2 profile bakes", async () => {
+    const recorded = graphFetcher(v2Info);
+    const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: recorded.fetcher, riderModesEnabled: true });
+    await provider.candidates(strongCurvy, new AbortController().signal);
+    expect(JSON.stringify(recorded.routes[0])).not.toContain("og_curve");
+    expect(JSON.stringify(recorded.routes[0])).toContain("road_class == PRIMARY");
+    await provider.graph!(new AbortController().signal);
+    await provider.candidates(strongCurvy, new AbortController().signal);
+    expect(JSON.stringify(recorded.routes[1])).toContain("og_curve < 0.25");
+    expect(JSON.stringify(recorded.routes[1])).not.toContain("road_class == PRIMARY");
+  });
+});

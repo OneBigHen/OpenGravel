@@ -1,25 +1,24 @@
 import { analyzeFrancoCurvature } from '../../src/domain/geometry/franco-curvature';
 import { decodeCatalogPolyline } from '../../src/application/explore/catalog-build';
-import { candidateGeometryFun } from '../../src/application/planner/geometry-fun';
+import { candidateGeometryFun, candidateGoodMeters } from '../../src/application/planner/geometry-fun';
+import { DIRT_SURFACES } from '../../src/domain/route/good-miles';
 import { riderRoadEligibility } from '../../src/application/planner/rider-road-eligibility';
 import type { ProviderCandidate, ProviderRouteOptions } from '../../src/application/planner/route-provider';
 import type { RoadAuthorityVerdict } from '../../src/application/route-intelligence/coordinator';
 import { deadEndSpurs, riderMatch, uTurns } from './geometry';
 import type { Measurement, Ride } from './types';
 
-const DIRT = new Set(['gravel', 'fine_gravel', 'compacted', 'dirt', 'ground', 'unpaved', 'earth']);
 const PAVED = new Set(['asphalt', 'paved', 'concrete', 'concrete:plates', 'concrete:lanes', 'paving_stones', 'cobblestone', 'sett', 'metal', 'wood']);
 const BUSY = new Set(['motorway', 'trunk', 'primary']);
 export function measure(candidate: ProviderCandidate, ride: Ride, bikeOptions: ProviderRouteOptions, baselineMinutes: number, planningSeconds: number, authority: RoadAuthorityVerdict): Measurement {
   const runs = candidate.roadSummary?.roadRuns ?? [];
   const total = Math.max(candidate.distanceMeters, candidate.roadSummary?.totalMeters ?? 0);
-  let known = 0; let described = 0; let dirt = 0; let busy = 0;
+  let known = 0; let described = 0; let busy = 0;
   for (const run of runs) {
     if (!(run.meters > 0)) continue;
     described += run.meters;
     const surface = run.surface.toLowerCase();
-    if (DIRT.has(surface)) dirt += run.meters;
-    if (DIRT.has(surface) || PAVED.has(surface) || surface === 'sand' || surface === 'mud' || surface === 'grass') known += run.meters;
+    if (DIRT_SURFACES.has(surface) || PAVED.has(surface) || surface === 'sand' || surface === 'mud' || surface === 'grass') known += run.meters;
     if (BUSY.has(run.roadClass.toLowerCase()) || run.roadClassLink === true || run.urbanDensity.toLowerCase() === 'city') busy += run.meters;
   }
   const franco = analyzeFrancoCurvature(candidate.geometry);
@@ -40,13 +39,15 @@ export function measure(candidate: ProviderCandidate, ride: Ride, bikeOptions: P
   if (!candidate.instructions) unknownTrust.push('U-turn instructions unavailable');
   if (authority.evidence.closures.status === 'unknown') unknownTrust.push('Road-authority closure coverage incomplete');
   if (authority.evidence.access.status === 'unknown') unknownTrust.push('Road-authority motorcycle access unknown');
+  // Good miles come from the planner's own scorer (src/domain/route/good-miles.ts).
+  const dirt = candidateGoodMeters(candidate, 'dirt');
   // Scorecard v2: Curvy good miles are the planner's own bend metres, now road-bends-v1:
   // sustained, same-direction arcs under 175 m radius on roads that earn, so a highway
   // sweeper or a junction corner is worth nothing. v1 counted raw Franco bends, so both
   // are kept: v2 decides the verdict, v1 only feeds the old headline.
   const fun = ride.mode === 'curvy' ? candidateGeometryFun(candidate) : null;
   if (ride.mode === 'curvy' && fun === null) unknownTrust.push('Bend measure unavailable: ordered road details missing or inconsistent, so no curvy miles are credited');
-  const goodMeters = ride.mode === 'curvy' ? Math.min(total, fun?.bendMeters ?? 0) : dirt;
+  const goodMeters = ride.mode === 'curvy' ? candidateGoodMeters(candidate, 'curvy') : dirt;
   const v1GoodMeters = ride.mode === 'curvy' ? Math.min(total, franco.bendMeters) : dirt;
   const minutes = candidate.durationSeconds / 60;
   return {

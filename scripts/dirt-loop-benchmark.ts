@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { createGraphHopperProvider } from "@/infrastructure/routing/graphhopper/provider";
 import { handleRoutePlanRequest } from "@/server/planning/route-handler";
 import { planRide, type PlanServiceResult } from "@/server/planning/plan-service";
-import { riderEnvelopeMetrics } from "@/application/planner/rider-mode-search";
+import { goodMeters } from "@/domain/route/good-miles";
 import type { ProviderCandidate, ProviderCandidateSet, ProviderRouteRequest, RouteCandidateProvider } from "@/application/planner/route-provider";
 
 const args = process.argv.slice(2);
@@ -59,12 +59,12 @@ const starts = [
   ["kempton", 40.6268, -75.853], ["wellsboro", 41.7487, -77.3005],
 ] as const;
 function measurement(candidate: ProviderCandidate) {
-  const metric = riderEnvelopeMetrics(candidate);
+  const total = candidate.roadSummary?.totalMeters ?? 0;
+  const dirt = candidate.roadSummary === undefined ? null : goodMeters(candidate, "dirt");
   return {
     profile: candidate.profile, minutes: candidate.durationSeconds / 60, km: candidate.distanceMeters / 1000,
-    dirtPct: metric === null ? null : metric.unpavedShare * 100,
-    dirtKm: metric === null ? null : candidate.roadSummary!.totalMeters * metric.unpavedShare / 1000,
-    dirtValueKm: metric?.dirtValueKm ?? null,
+    dirtPct: dirt === null || total <= 0 ? null : dirt / total * 100,
+    dirtKm: dirt === null ? null : dirt / 1000,
   };
 }
 const sha = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();

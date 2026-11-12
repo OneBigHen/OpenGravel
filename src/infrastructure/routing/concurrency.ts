@@ -1,7 +1,10 @@
 import type { RouteCandidateProvider } from "@/application/planner/route-provider";
 
-/** Shared by every server plan, including first-route and full-route requests. */
-export const MAX_ROUTING_SEARCHES = 3;
+/**
+ * Shared by every server plan, including first-route and full-route requests.
+ * An A-to-B plan sends its whole wave (up to five single-route calls) at once.
+ */
+export const MAX_ROUTING_SEARCHES = 8;
 let active = 0;
 const waiting: Array<() => void> = [];
 
@@ -34,6 +37,8 @@ export function boundedRouteProvider(provider: RouteCandidateProvider): RouteCan
   return {
     id: provider.id,
     capabilities: () => provider.capabilities(),
+    // Reading the graph's description is not a route search; it is not queued.
+    ...(provider.graph === undefined ? {} : { graph: (signal: AbortSignal) => provider.graph!(signal) }),
     async candidates(request, signal) {
       const release = await acquire(signal);
       try {

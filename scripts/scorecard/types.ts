@@ -74,5 +74,7 @@ export interface Row {
   verdictV1: Verdict;
   reasonsV1: string[];
   routerUse: RouterUse | null;
+  /** A-to-B: every line the one wave returned (role, minutes, good miles, fits, chosen), for the row table. */
+  wave?: readonly unknown[];
   errors: string[];
 }

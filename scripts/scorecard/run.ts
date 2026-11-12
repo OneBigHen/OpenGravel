@@ -143,6 +143,7 @@ async function main(): Promise<void> {
     let baseline: Measurement | null = null; let selected: Measurement | null = null; let riderLine: Measurement | null = null;
     let riderSnap: RiderLineSnap | null = null;
     let routerUse: RouterUse | null = null;
+    let wave: readonly unknown[] | undefined;
     const errors: string[] = [];
     try {
       const started = performance.now();
@@ -180,6 +181,7 @@ async function main(): Promise<void> {
       const callsAtReturn = meter.count();
       routerUse = { calls: callsAtReturn - callsBefore, shadowCalls: 0, firstCallSeconds: watched.firstRouteSeconds(), firstAnswerSeconds };
       if (!result.ok) throw new Error(`planRide: ${result.error.code}`);
+      if (ride.loopMinutes === undefined) wave = result.diagnostics.riderModes?.trials;
       const best = result.bundle.candidates.find(c => c.id === (result.bundle.roles['best-ride'] ?? result.bundle.selectedRouteId));
       if (!best) throw new Error('No selected Best Ride');
       const candidate = watched.seen.find(c => Math.abs(c.durationSeconds - best.durationSeconds) < 1 && c.geometry.length === best.geometry.length && c.geometry.every((p, i) => p.lat === best.geometry[i]!.lat && p.lon === best.geometry[i]!.lon));
@@ -203,7 +205,7 @@ async function main(): Promise<void> {
     const outcome = selected && baseline ? winTieLossV3(ride, selected, baseline, curvyThreshold, ride.loopMinutes !== undefined ? riderLine : null) : failed;
     const outcomeV2 = selected && baseline ? winTieLoss(ride, selected, baseline, curvyThreshold) : failed;
     const outcomeV1 = selected && baseline ? winTieLoss(ride, asV1(selected), asV1(baseline)) : failed;
-    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
+    const row: Row = { ride, openGravel: selected, fastest: baseline, riderLine, riderSnap, ...(wave === undefined ? {} : { wave }), ...outcome, verdictV2: outcomeV2.verdict, reasonsV2: outcomeV2.reasons, verdictV1: outcomeV1.verdict, reasonsV1: outcomeV1.reasons, routerUse, errors };
     rows.push(row);
     const sec = (n: number | null | undefined) => n === null || n === undefined ? '?' : n.toFixed(1);
     const mine = routerUse ? `${routerUse.calls} router calls, first answer ${sec(routerUse.firstAnswerSeconds)}s, first call ${sec(routerUse.firstCallSeconds)}s` : 'router use unknown';

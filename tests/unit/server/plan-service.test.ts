@@ -125,7 +125,8 @@ describe("planRide — success path", () => {
       ],
     });
 
-    const result = await planRide(input(), { provider });
+    // The canonical ranking alone (rider modes off): an A-to-B wave would pick by good miles.
+    const result = await planRide(input(), { provider, env: { OGV_RIDER_MODES: "off" } });
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -196,11 +197,13 @@ describe("planRide — success path", () => {
 
     await planRide(input(), { provider, signal: controller.signal });
 
-    expect(provider.calls).toBe(1);
+    // One wave: the fastest reference and the rider's own request (no strong
+    // call without a road character to push).
+    expect(provider.calls).toBe(2);
     // The service hands the provider its own parsed copy, never the caller's
     // object: validated narrowing drops unknown keys and cannot be mutated by a
     // caller after the fact.
-    expect(provider.lastRequest).toEqual(REQUEST);
+    expect(provider.lastRequest).toEqual({ ...REQUEST, options: { ...REQUEST.options, includeAlternatives: false } });
     expect(provider.lastRequest).not.toBe(REQUEST);
     // A lane derives its own budget signal from the caller's, so the provider
     // sees a combined signal rather than the caller's object — and the caller's
@@ -552,11 +555,13 @@ describe("planRide — the labeled route-plan fixture (Task 2.4b)", () => {
 
     const result = await planRide(input(), { provider, env: FIXTURE_ENV });
 
-    expect(provider.calls).toBe(1);
+    // The live A-to-B wave ran: fastest and the rider's own request, one line.
+    expect(provider.calls).toBe(2);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.bundle.candidates).toHaveLength(1);
-    expect(result.diagnostics).toEqual({ optionalProvidersUnavailable: [] });
+    expect(result.diagnostics.optionalProvidersUnavailable).toEqual([]);
+    expect(result.diagnostics.providers).toBeUndefined();
   });
 
   it("cancels inside the fixture latency instead of answering late", async () => {
@@ -681,7 +686,8 @@ describe("planRide — fast first (UX rework)", () => {
       }),
     ]);
 
-    const result = await planRide(input(), { provider });
+    // The lanes still serve plans outside the A-to-B wave (rider modes off here).
+    const result = await planRide(input(), { provider, env: { OGV_RIDER_MODES: "off" } });
 
     expect(result.ok).toBe(true);
     expect(provider.requests).toHaveLength(3);
@@ -699,7 +705,7 @@ describe("planRide — fast first (UX rework)", () => {
         : [candidate({ profile: request.profile, geometry: corridor(-75.0) })],
     );
 
-    const result = await planRide(input(), { provider });
+    const result = await planRide(input(), { provider, env: { OGV_RIDER_MODES: "off" } });
 
     expect(result.ok).toBe(true);
     expect(provider.requests).toHaveLength(4);
@@ -838,7 +844,65 @@ describe("rider mode plan integration", () => {
     expect(requests.filter(request => request.options.riderModeFactor !== undefined)).toHaveLength(off ? 0 : 2);
     if (result.ok) {
       if (off) expect(result.diagnostics.riderModes).toBeUndefined();
-      else expect(result.diagnostics.riderModes).toMatchObject({ calls: 2, trials: expect.arrayContaining([expect.objectContaining({ busyShare: 1, minutes: 100 })]) });
+      else expect(result.diagnostics.riderModes).toMatchObject({ calls: 3, trials: expect.arrayContaining([expect.objectContaining({ busyShare: 1, minutes: 100 })]) });
     }
+  });
+});
+
+describe("planRide — A-to-B in one wave (RM-4)", () => {
+  const runs = (meters: number, dirt: number) => ({
+    totalMeters: meters, surfaceByRoadClassMeters: { "gravel|track": dirt, "asphalt|secondary": meters - dirt }, curvatureMeters: {}, tollMeters: 0,
+    roadRuns: [
+      { meters: dirt, durationSeconds: null, surface: "gravel", roadClass: "track", roadEnvironment: "road", urbanDensity: "rural", curvatureRatio: null, toll: false, carAccess: true, roadAccess: "yes" },
+      { meters: meters - dirt, durationSeconds: null, surface: "asphalt", roadClass: "secondary", roadEnvironment: "road", urbanDensity: "rural", curvatureRatio: null, toll: false, carAccess: true, roadAccess: "yes" },
+    ],
+  });
+  const dirtRequest: ProviderRouteRequest = { ...REQUEST, profile: "motorcycle_adventure", options: { ...REQUEST.options, roadCharacter: "balanced", surfacePreference: "dirt-preferred", targetUnpavedShare: 0.5, traffic: "protect-ride", bike: { category: "adventure", maintainedGravel: "allow", roughTracks: "avoid" } } };
+  const line = (lon: number, seconds: number, dirt: number): ProviderCandidate => candidate({
+    geometry: [ORIGIN, { lon, lat: 40.05 }, DESTINATION], durationSeconds: seconds, roadSummary: runs(120_000, dirt), providerMetadata: { fingerprint: `fp_${lon}` },
+  });
+
+  it("sends one wave of single-route calls, picks the most dirt inside the budget and never one over it", async () => {
+    const requests: ProviderRouteRequest[] = [];
+    let active = 0; let peak = 0;
+    const provider: RouteCandidateProvider = {
+      id: "wave", capabilities: () => ({ profiles: ["motorcycle_fastest", "motorcycle_adventure"], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      graph: async () => ({ encodedValues: ["surface"] }),
+      candidates: async request => {
+        requests.push(request); active += 1; peak = Math.max(peak, active);
+        await new Promise(resolve => setTimeout(resolve, 1));
+        active -= 1;
+        const factor = request.options.riderModeFactor;
+        // Fastest 100 min; own 120 min with some dirt; strong 140 min (over 1.35x) with the most dirt.
+        return { candidates: [factor === 0 ? line(-75.0, 6_000, 0) : factor === undefined ? line(-74.9, 7_200, 20_000) : line(-75.1, 8_400, 60_000)] };
+      },
+    };
+    const result = await planRide(input({ request: dirtRequest }), { provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_TRAFFIC_LIVE_AVOID: "off" } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(requests.length).toBeLessThanOrEqual(5);
+    expect(requests).toHaveLength(3);
+    expect(peak).toBe(3);
+    expect(requests.every(request => request.options.includeAlternatives === false)).toBe(true);
+    const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
+    expect(best?.durationSeconds).toBe(7_200);
+    expect(result.bundle.selectedRouteId).toBe(best?.id);
+    expect(best?.warnings.some(warning => warning.code === "ride-over-budget")).toBe(false);
+  });
+
+  it("says so when nothing fits the budget, offering the closest", async () => {
+    const provider: RouteCandidateProvider = {
+      id: "wave", capabilities: () => ({ profiles: ["motorcycle_fastest", "motorcycle_adventure"], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      candidates: async request => ({ candidates: [request.options.riderModeFactor === 0
+        // The fastest line rides a sand track: it fails a hard gate, but still sets the budget.
+        ? { ...line(-75.0, 6_000, 0), roadSummary: { ...runs(120_000, 0), roadRuns: runs(120_000, 0).roadRuns.map(run => ({ ...run, surface: "sand" })) } }
+        : request.options.riderModeFactor === undefined ? line(-74.9, 8_400, 20_000) : line(-75.1, 9_000, 60_000)] }),
+    };
+    const result = await planRide(input({ request: dirtRequest }), { provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_TRAFFIC_LIVE_AVOID: "off" } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
+    expect(best?.durationSeconds).toBe(8_400);
+    expect(best?.warnings.some(warning => warning.code === "ride-over-budget")).toBe(true);
   });
 });

@@ -8,6 +8,9 @@ const request: ProviderRouteRequest = {
   options: { includeAlternatives: false, avoidHighways: false, tollPolicy: "avoid", vehicle: "motorcycle" },
 };
 describe("boundedRouteProvider", () => {
+  it("lets a whole A-to-B wave (five calls) run at once, eight searches server-wide", () => {
+    expect(MAX_ROUTING_SEARCHES).toBe(8);
+  });
   it("removes cancelled queued work, releases rejected searches and drains in order", async () => {
     const started: string[] = [];
     const release: Array<() => void> = [];
@@ -33,7 +36,7 @@ describe("boundedRouteProvider", () => {
     const next = boundedRouteProvider(provider).candidates({ ...request, requestId: "next" }, controller.signal);
     release[0]!();
     await new Promise(resolve => setTimeout(resolve, 0));
-    expect(started).toEqual(["0", "1", "2", "next"]);
+    expect(started).toEqual([...Array.from({ length: MAX_ROUTING_SEARCHES }, (_, index) => String(index)), "next"]);
     release.slice(1).forEach(done => done());
     await expect(next).resolves.toEqual({ candidates: [] });
     await Promise.all(running);
