@@ -57,6 +57,10 @@ export default async function SharedRidePage({ params }: { params: Promise<{ tok
   const line = snapshot.route.segments.flatMap((segment) => segment);
   const surface = `${SURFACE_PREFERENCE[snapshot.surface.preference]} · ${UNKNOWN_SURFACE[snapshot.surface.unknownSurfacePolicy]}`;
   const rideTime = snapshot.rideDurationSeconds === null ? "Not shared" : formatDuration(snapshot.rideDurationSeconds);
+  // The planner's own distance for the ride. The shared line may be trimmed at
+  // its ends, so its length is not the number the rider planned; unknown stays
+  // unknown rather than being filled with that trimmed length.
+  const rideDistance = snapshot.rideDistanceMeters ?? snapshot.distanceMeters;
 
   return (
     <>
@@ -73,7 +77,7 @@ export default async function SharedRidePage({ params }: { params: Promise<{ tok
           <dl className="og-route-detail__facts" data-testid="shared-facts">
             <div className="og-route-detail__stat" data-stat="distance">
               <dt>Distance</dt>
-              <dd data-testid="shared-distance">{formatDistance(snapshot.distanceMeters)}</dd>
+              <dd data-testid="shared-distance">{formatDistance(rideDistance)}</dd>
             </div>
             <div className="og-route-detail__stat" data-stat="time">
               <dt>Time</dt>
