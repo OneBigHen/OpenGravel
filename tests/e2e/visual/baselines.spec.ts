@@ -145,7 +145,10 @@ for (const device of DEVICES) {
           await expect(page).toHaveScreenshot(`${state}-${device.name}-${theme}.png`, {
             animations: "disabled",
             caret: "hide",
-            maxDiffPixels: 0,
+            // The ride screen runs on the real clock, so its direction arrows land
+            // a sub-pixel apart between runs (1 to 76 pixels seen in CI). Every
+            // other state is frozen and must match exactly.
+            maxDiffPixels: state === "active-ride" ? 200 : 0,
             // Clock readouts follow the wall clock on the ride screen (its
             // position feed needs real time), so they are masked, not frozen.
             mask: [page.locator('[data-metric="route.eta"], [data-metric="time.recorded"], [data-metric="time.moving"]')],
