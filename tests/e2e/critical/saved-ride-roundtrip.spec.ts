@@ -98,7 +98,14 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
   await page.emulateMedia({ colorScheme: "light" });
 
   // "Plan it again" is the one way to ask the router, and it says what changed.
-  await page.getByTestId("plan-it-again").click();
+  // It is a secondary action, under the ride in the sheet: open the sheet to reach it.
+  const planAgain = page.getByTestId("plan-it-again");
+  const sheet = page.getByTestId("planner-sheet");
+  for (let step = 0; step < 2 && (await sheet.getAttribute("data-detent")) !== "full"; step += 1) {
+    await page.getByTestId("sheet-handle").click();
+  }
+  await planAgain.scrollIntoViewIfNeeded();
+  await planAgain.click();
   await expect(page.getByTestId("status-line")).toContainText("Planned again", { timeout: 30_000 });
   expect(plans.count()).toBeGreaterThan(0);
 });
