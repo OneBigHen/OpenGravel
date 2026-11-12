@@ -34,7 +34,7 @@ import { useActivityMode } from "@/ui/stores/activity-mode";
 import type { SheetDetent } from "@/ui/stores/planner-ui-store";
 import type { RoadTapOffer } from "@/ui/planner/hooks/usePlannerRoadSpans";
 import { useCompactPlanner, useDesktopPlanner, usePhonePlanner } from "./usePhonePlanner";
-import { NO_FINISH_LABEL } from "@/application/planner/planner-view-model";
+import { NO_FINISH_LABEL, NO_START_LABEL } from "@/application/planner/planner-view-model";
 import { CLEAR_RIDE_LABEL } from "@/ui/stores/ride-document-store";
 import { destinationLineFor } from "@/ui/planner/destination-line";
 import type { MapExtent } from "@/application/map/build-map-scene";
@@ -232,8 +232,17 @@ export function PlannerWorkspaceDock({
   const compact = useCompactPlanner();
   // The desktop rail ends in a fixed foot, so the action and its one-line reason
   // are never sliced by the panel edge however tall the options grow above them.
+  // Desktop opens on Loop (R3-4): with nothing authored, "Make my loop" is live
+  // and starts a loop from the rider's position, like the phone's Loop pill. A
+  // destination typed above still plans itself.
+  const currentLocation = composer.placeSearch?.currentLocation;
+  const shapeActions = composer.rideStyle?.actions;
+  const loopFirst = desktop && idle && !hiking && currentLocation !== undefined && shapeActions !== undefined &&
+    composer.viewModel.startLabel === NO_START_LABEL && viewModel.undoLabel === null && viewModel.redoLabel === null
+    ? (): void => { shapeActions.setShape("loop"); currentLocation.onUse(); }
+    : undefined;
   const commitment = desktop
-    ? <PlanCommitment {...composer} loop={loopRide} {...(planning ? { onCancelPlanning } : {})} />
+    ? <PlanCommitment {...composer} loop={loopRide} loopFirst={loopFirst} {...(planning ? { onCancelPlanning } : {})} />
     : undefined;
   const [selectedOption, setSelectedOption] = useState<PlannerOption | null>(null);
   const [sheetView, setSheetView] = useState<"choices" | "edit" | "options">("choices");

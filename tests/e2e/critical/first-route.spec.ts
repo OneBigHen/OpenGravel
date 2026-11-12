@@ -129,7 +129,7 @@ test.beforeEach(async ({ page }) => {
   await settledExtent(page);
 });
 
-test("idle: the planner asks for a start and refuses to plan without one", async ({
+test("idle: the planner asks for a start and offers a loop from here", async ({
   page,
 }) => {
   await expect(page.getByTestId("start-value")).toHaveText(START_LABEL);
@@ -163,9 +163,11 @@ test("idle: the planner asks for a start and refuses to plan without one", async
   // make this run red, and the assertion is the proof.
   await expect(plannerMap(page)).toHaveAttribute("data-basemap", "empty");
 
+  // The laptop opens on Loop (R3-4): with nothing authored, the one live action
+  // is "Make my loop" from here; a destination still plans itself.
   const plan = page.getByTestId("compose-create");
-  await expect(plan).toHaveText("Create ride");
-  await expect(plan).toBeDisabled();
+  await expect(plan).toHaveText("Make my loop");
+  await expect(plan).toBeEnabled();
   await expect(page.getByTestId("plan-disabled-reason")).toHaveText(
     "Search for a start, or press and hold the map.",
   );

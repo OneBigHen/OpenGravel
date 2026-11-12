@@ -118,7 +118,14 @@ export type PlanCommitmentProps = Pick<
   | "mapUnavailable"
   | "mapUnavailableReason"
   | "placeSearch"
-> & { readonly loop?: boolean };
+> & {
+  readonly loop?: boolean;
+  /**
+   * The laptop's first screen (R3-4): nothing is authored yet, so the one live
+   * action is a loop from here, the same as the phone's Loop pill.
+   */
+  readonly loopFirst?: (() => void) | undefined;
+};
 
 export function PlanCommitment({
   viewModel,
@@ -130,6 +137,7 @@ export function PlanCommitment({
   mapUnavailableReason = null,
   placeSearch,
   loop = false,
+  loopFirst,
 }: PlanCommitmentProps) {
   const { disabledReason, mapReason, mapReasonLine, placementBlocked } = commitmentState(
     viewModel,
@@ -140,7 +148,11 @@ export function PlanCommitment({
   return (
     <div className="og-composer__commitment" data-current={viewModel.planIsCurrent ? "true" : "false"}>
       <div className="og-composer__commitment-actions">
-        {viewModel.showPlanAction ? (
+        {loopFirst !== undefined ? (
+          <button type="button" className="og-primary" data-testid="compose-create" data-loop-first="true" onClick={loopFirst}>
+            Make my loop
+          </button>
+        ) : viewModel.showPlanAction ? (
           <button
             type="button"
             className={viewModel.planIsCurrent && !loop ? "og-secondary" : "og-primary"}
