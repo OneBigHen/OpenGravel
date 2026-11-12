@@ -23,6 +23,12 @@ import type { BoundingBox, RoadAuthorityGeometry, RoadAuthorityRecord, RoadAutho
 
 /** Lane A's budget: a plan waits at most this long for road authority. */
 export const ROAD_AUTHORITY_DEADLINE_MS = 2_500;
+/**
+ * The extra wait, once per plan and only when the routes about to be shown
+ * cross an area whose closure/access check was still loading: a route is not
+ * declared ready while its own check is unanswered and might still say closed.
+ */
+export const ROAD_AUTHORITY_SETTLE_MS = 4_000;
 
 export type RoadAuthorityFailureCode = "road-closed" | "access-prohibited";
 export type RoadAuthorityWarningCode =
@@ -67,8 +73,8 @@ export interface RoadAuthorityCoordinator {
   assess(corridor: BoundingBox, signal: AbortSignal, options?: { readonly deadlineMs?: number }): Promise<RoadAuthorityAssessment>;
 }
 
-function unavailable(reason: string): RoadAuthoritySnapshot {
-  return { status: "unavailable", fetchedAt: null, reason, records: [], covered: [] };
+function unavailable(reason: string, timedOut = false): RoadAuthoritySnapshot {
+  return { status: "unavailable", fetchedAt: null, reason, records: [], covered: [], ...(timedOut ? { timedOut } : {}) };
 }
 
 function withDeadline(
@@ -79,7 +85,7 @@ function withDeadline(
 ): Promise<RoadAuthoritySnapshot> {
   return new Promise((resolve) => {
     const timer = setTimeout(
-      () => resolve(unavailable(`${source.info.label} did not answer within ${Math.round(deadlineMs / 100) / 10} s.`)),
+      () => resolve(unavailable(`${source.info.label} did not answer within ${Math.round(deadlineMs / 100) / 10} s.`, true)),
       deadlineMs,
     );
     // The load keeps running past the deadline so its cache is warm for the

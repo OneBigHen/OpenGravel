@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { knownEvidence, unknownEvidence } from "@/domain/evidence/types";
-import { createRoadAuthorityCoordinator, ROAD_AUTHORITY_DEADLINE_MS, type RoadAuthorityAssessment, type RoadAuthorityCoordinator } from "@/application/route-intelligence/coordinator";
+import { createRoadAuthorityCoordinator, ROAD_AUTHORITY_DEADLINE_MS, ROAD_AUTHORITY_SETTLE_MS, type RoadAuthorityAssessment, type RoadAuthorityCoordinator } from "@/application/route-intelligence/coordinator";
 import { requestRoadAssessments } from "@/server/planning/road-assessments";
 
 const line = [{ lon: -75, lat: 40 }, { lon: -74.9, lat: 40.1 }];
@@ -98,5 +98,68 @@ describe("requestRoadAssessments", () => {
     const reason = new Error("superseded");
     controller.abort(reason);
     await expect(pending).rejects.toBe(reason);
+  });
+
+  it("marks a line pending only when its check missed the deadline, and settle joins the same corridor", async () => {
+    vi.useFakeTimers();
+    try {
+      const authority = coordinator();
+      const assess = vi.spyOn(authority, "assess").mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(assessment(true)), ROAD_AUTHORITY_DEADLINE_MS + 500)));
+      const once = requestRoadAssessments(authority, new AbortController().signal);
+      const first = once([{ geometry: line }]);
+      await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_DEADLINE_MS + 1);
+      const late = (await first)!;
+      expect(late.evaluate(line).failures).toEqual([]);
+      expect(late.evaluate(line).evidence.closures.status).toBe("unknown");
+      expect(once.pending([{ geometry: line }])).toBe(true);
+      const settling = once.settle([{ geometry: line }]);
+      await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_SETTLE_MS);
+      const settled = (await settling)!;
+      expect(settled.evaluate(line).failures.map(failure => failure.code)).toEqual(["road-closed"]);
+      expect(assess.mock.calls[1]![0]).toEqual(assess.mock.calls[0]![0]);
+      expect(assess.mock.calls[1]![2]).toEqual({ deadlineMs: ROAD_AUTHORITY_SETTLE_MS });
+      expect(once.pending([{ geometry: line }])).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("is not pending for an answered line or a feed that is down rather than slow", async () => {
+    const answered = requestRoadAssessments(coordinator(), new AbortController().signal);
+    const authority = coordinator();
+    vi.spyOn(authority, "assess").mockResolvedValue(assessment());
+    const clear = requestRoadAssessments(authority, new AbortController().signal);
+    await clear([{ geometry: line }]);
+    expect(clear.pending([{ geometry: line }])).toBe(false);
+    // The real coordinator over a feed that fails fast: unavailable, not timed out.
+    const down = (await answered([{ geometry: line }]))!;
+    expect(down.sources[0]!.snapshot.timedOut).toBeUndefined();
+    expect(answered.pending([{ geometry: line }])).toBe(false);
+  });
+
+  it("settle gives up after its bound on a feed that never answers", async () => {
+    vi.useFakeTimers();
+    try {
+      const authority = coordinator();
+      vi.spyOn(authority, "assess").mockImplementation(() => new Promise(() => undefined));
+      const once = requestRoadAssessments(authority, new AbortController().signal);
+      const first = once([{ geometry: line }]);
+      await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_DEADLINE_MS + 1);
+      await first;
+      const settling = once.settle([{ geometry: line }], 1_000);
+      await vi.advanceTimersByTimeAsync(1_001);
+      expect(await settling).toBeNull();
+      expect(once.pending([{ geometry: line }])).toBe(true);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("the coordinator marks a source still loading at the deadline as timed out", async () => {
+    vi.useFakeTimers();
+    try {
+      const authority = coordinator();
+      vi.spyOn(authority.sources[0]!, "snapshot").mockImplementation(() => new Promise(() => undefined));
+      const pending = authority.assess({ west: -75, south: 40, east: -74, north: 41 }, new AbortController().signal);
+      await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_DEADLINE_MS + 1);
+      expect((await pending).sources[0]!.snapshot).toMatchObject({ status: "unavailable", timedOut: true });
+    } finally { vi.useRealTimers(); }
   });
 });
