@@ -116,6 +116,7 @@ import { LayeredMap } from "@/ui/layers/LayeredMap";
 import type { CameraView } from "@/ui/map/PlannerMap";
 import { RidePlacesMap } from "@/ui/places/RidePlacesMap";
 import { RideDetour } from "@/ui/ride/RideDetour";
+import { RoadBlockedMenuRow, RoadBlockedOverlay, RoadBlockedRailButton, roadBlockedRailShown, useRoadBlocked } from "@/ui/ride/RoadBlocked";
 import { RideStopSearch } from "@/ui/ride/RideStopSearch";
 import { RideFuelLine } from "@/ui/ride/RideFuelLine";
 import { RideInterestCard } from "@/ui/ride/RideInterestCard";
@@ -379,6 +380,7 @@ export function RideFocus({
   const [exportError, setExportError] = useState<string | null>(null);
   /** The emergency card is open over the ride (HIKE-MODE-PLAN H4 §19). */
   const [emergencyOpen, setEmergencyOpen] = useState(false);
+  const roadBlocked = useRoadBlocked(navigation?.position ?? null);
   /** The "your screen may sleep" line is one the rider can put away for the ride. */
   const [screenNoteDismissed, setScreenNoteDismissed] = useState(false);
 
@@ -1382,6 +1384,7 @@ export function RideFocus({
                   </svg>
                 </button>
               )}
+              {roadBlockedRailShown(navigation?.position ?? null) ? <RoadBlockedRailButton state={roadBlocked} /> : null}
               <button
                 type="button"
                 className="og-ride__rail-button"
@@ -1573,6 +1576,7 @@ export function RideFocus({
             </button>
           </div>
         )}
+        {terminal !== null ? null : <RoadBlockedMenuRow state={roadBlocked} onOpened={(): void => setSheetOpen(false)} />}
 
         {/*
           This ride: Pause (or Resume), then the two ways out in plain words and
@@ -2320,6 +2324,13 @@ export function RideFocus({
         )}
       </footer>
       {safety === undefined ? null : <RideSafetyOverlay safety={safety} />}
+      {terminal !== null ? null : (
+        <RoadBlockedOverlay
+          state={roadBlocked}
+          onReroute={rerouteAvailable && navigation?.activity === "guided" ? (): void => { void store.getState().reroute(); } : undefined}
+          rerouteBusy={rerouteBusy || !rerouteFixGood}
+        />
+      )}
       {emergencyOpen ? (
         <EmergencyCard
           coordinate={navigation?.position.coordinate ?? null}

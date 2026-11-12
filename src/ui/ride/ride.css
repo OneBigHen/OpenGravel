@@ -2832,3 +2832,6 @@
   border-radius: var(--og-radius-card);
   background: var(--og-glass-well);
 }
+
+.og-ride__toast--report { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-radius: var(--og-radius-card); }
+.og-ride__toast-action { min-height: 56px; padding: 0 16px; border: 1px solid var(--og-line-strong); border-radius: var(--og-radius-control); background: var(--og-surface-2); color: var(--og-ink); font: inherit; font-weight: 700; cursor: pointer; }
