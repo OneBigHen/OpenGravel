@@ -6,12 +6,10 @@ executors:
     kind: playwright
     spec:
       - tests/e2e/critical/ride-style.spec.ts
-      - tests/e2e/critical/routing-method-comparison.spec.ts
   webkit:
     kind: playwright
     spec:
       - tests/e2e/critical/ride-style.spec.ts
-      - tests/e2e/critical/routing-method-comparison.spec.ts
   iphone:
     kind: maestro
     flow: planned

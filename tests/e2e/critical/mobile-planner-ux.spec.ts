@@ -119,9 +119,6 @@ test("320px comparison fits its sheet and keeps the header controls on one row",
     expect.soft(box.height, `${id} touch height`).toBeGreaterThanOrEqual(44);
     expect.soft(box.width, `${id} touch width`).toBeGreaterThanOrEqual(44);
   }
-  const comparison = page.getByTestId("routing-method-comparison");
-  await comparison.locator("summary").first().click();
-  await page.getByTestId("routing-method-frontier").getByRole("radio").check();
   const sizes = await page.getByTestId("sheet-scroll").evaluate((element) => ({
     viewport: element.clientWidth, content: element.scrollWidth,
   }));

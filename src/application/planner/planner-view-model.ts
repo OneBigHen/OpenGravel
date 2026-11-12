@@ -18,7 +18,6 @@
  */
 
 import { isSketchPreviewBundle } from "./sketch-preview";
-import { buildRoutingMethodComparison, type RoutingComparisonVm } from "./routing-method-comparison";
 import type {
   PlanningErrorCode,
   PlanningSessionSnapshot,
@@ -258,7 +257,6 @@ export interface PlannerViewModel {
   readonly canPlan: boolean;
   readonly disabledReason: string | null;
   readonly routeCards: readonly RouteCardVm[];
-  readonly routingComparisons: RoutingComparisonVm;
   readonly selectedRouteId: RouteCandidateId | null;
   readonly errorMessage: string | null;
   /**
@@ -1177,7 +1175,6 @@ export function buildPlannerViewModel(
     session.phase === "primary-ready" || session.phase === "alternatives-loading",
     truthBike(document, input.bikeName),
   );
-  const reading = session.diagnostics.find((diagnostic) => diagnostic.outcome === "ok" && diagnostic.funCharacter !== undefined)?.funCharacter;
   const disabledReason = disabledReasonFor(document, session.phase, derived);
   const rows = pointRows(document, input.placeNameFor);
   const itinerary = itineraryLegs(rows.itinerary, input.routeLine ?? null, document);
@@ -1215,14 +1212,6 @@ export function buildPlannerViewModel(
     canPlan: disabledReason === null,
     disabledReason,
     routeCards: cards,
-    routingComparisons: buildRoutingMethodComparison({
-      bundle: bundle === null ? null : { ...bundle, candidates: bundle.candidates.filter((candidate) => cards.some((card) => card.routeId === candidate.id)) },
-      selectedRouteId,
-      intent: document.intent,
-      stale: bundle !== null && (bundle.rideId !== session.identity.rideId || bundle.rideRevision !== document.revision || bundle.rideRevision !== session.identity.rideRevision || bundle.planningGeneration !== session.identity.planningGeneration),
-      ...(reading === undefined ? {} : { reading }),
-      labelFor: (id) => cards.find((card) => card.routeId === id)?.roleLabel ?? null,
-    }),
     selectedRouteId,
     errorMessage:
       session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage),

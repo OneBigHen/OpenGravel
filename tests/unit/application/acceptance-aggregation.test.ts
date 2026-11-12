@@ -23,6 +23,7 @@ function aggregate(report: unknown, attestation = true, maestro?: string, physic
       ...JSON.parse(readFileSync(join(scratch, "M01.result.json"), "utf8")),
       mobile: JSON.parse(readFileSync(join(scratch, "M11.result.json"), "utf8")),
       rideStyle: JSON.parse(readFileSync(join(scratch, "M07.result.json"), "utf8")),
+      places: JSON.parse(readFileSync(join(scratch, "M02.result.json"), "utf8")),
     };
   } finally { rmSync(scratch, { recursive: true, force: true }); }
 }
@@ -84,17 +85,17 @@ describe("acceptance campaign evidence", () => {
   });
   it("passes a multi-spec mission only when every claimed spec passes", () => {
     const input = multiReport([
-      { file: "tests/e2e/critical/ride-style.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
-      { file: "tests/e2e/critical/routing-method-comparison.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+      { file: "tests/e2e/critical/place-search.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+      { file: "tests/e2e/critical/places.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
     ]);
-    expect(aggregate(input).rideStyle.executors.chromium.status).toBe("pass");
+    expect(aggregate(input).places.executors.chromium.status).toBe("pass");
   });
   it("fails a multi-spec mission when any claimed spec fails", () => {
     const input = multiReport([
-      { file: "tests/e2e/critical/ride-style.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
-      { file: "tests/e2e/critical/routing-method-comparison.spec.ts", results: [{ projectName: "critical-chromium", status: "failed" }] },
+      { file: "tests/e2e/critical/place-search.spec.ts", results: [{ projectName: "critical-chromium", status: "passed" }] },
+      { file: "tests/e2e/critical/places.spec.ts", results: [{ projectName: "critical-chromium", status: "failed" }] },
     ]);
-    expect(aggregate(input).rideStyle.executors.chromium.status).toBe("fail");
+    expect(aggregate(input).places.executors.chromium.status).toBe("fail");
   });
   it("leaves a multi-spec mission not_run when none of its specs appear in the report", () => {
     const input = multiReport([
