@@ -95,10 +95,16 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
 
   // Proof pictures for the PR (both themes); not compared against anything.
   await page.screenshot({ path: testInfo.outputPath("reopened-saved-phone-light.png") });
-  await page.emulateMedia({ colorScheme: "dark" });
+  // Auto follows the sun (R3-4), so the night picture asks for Night outright
+  // rather than relying on the phone's dark switch at whatever hour CI runs.
+  await page.evaluate(() => window.localStorage.setItem("og-appearance", "night"));
+  await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
   await page.screenshot({ path: testInfo.outputPath("reopened-saved-phone-dark.png") });
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.evaluate(() => window.localStorage.removeItem("og-appearance"));
+  await page.reload();
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
 
   // "Plan it again" is the one way to ask the router, and it says what changed.
   // It is a secondary action, under the ride in the sheet: open the sheet to reach it.
