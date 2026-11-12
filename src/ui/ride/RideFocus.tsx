@@ -184,7 +184,6 @@ const NO_RIDE_HEADLINE = "Ready to ride?";
 
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
-/** The four numbers the finish card leads with; the rest become its one meta line. */
 
 /** The three display choices, in the rider's words. */
 const DISPLAY_CHOICES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [

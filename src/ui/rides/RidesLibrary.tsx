@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
@@ -183,7 +183,6 @@ interface RoadProgressCache {
 export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore, units = "imperial" }: RidesLibraryProps) {
   // Saved means exact (R3-1): a ride opens on its own kept line, not a new plan.
   const openSavedRide = useOpenSavedRide({ libraryService: library, geometryStore });
-  const router = useRouter();
   const searchParams = useSearchParams();
   // `/rides?tab=ridden` is where a finished ride lands (R3-2): the tab the
   // rider asked for wins over the usual "whichever segment has rides" guess.
@@ -760,7 +759,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   <div className="og-rides__card" data-testid="ride-card-panel">
                     <RideCard
                       card={buildStoredRideCard({
-                        title: title.trim().length === 0 ? "Untitled ride" : title,
+                        title,
                         savedAt: ride.savedAt,
                         summary: ride.recordedTrack.summary,
                         line: ride.recordedTrack.previewGeometry,

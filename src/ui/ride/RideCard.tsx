@@ -150,7 +150,7 @@ async function renderCardPng(card: RideCardModel, night: boolean): Promise<Blob 
   );
 
   const stats = [
-    { label: "Miles", value: card.numbers.distance },
+    { label: card.units === "metric" ? "Km" : "Miles", value: card.numbers.distance },
     { label: "Moving", value: card.numbers.moving },
     { label: "Dirt", value: card.numbers.dirt },
     { label: "Climb", value: card.numbers.climb },
@@ -178,10 +178,6 @@ async function renderCardPng(card: RideCardModel, night: boolean): Promise<Blob 
     context.fillText(`${unknown.value} ${unknown.unit} of surface unknown`, margin, 1090);
   }
 
-  context.fillStyle = ink2;
-  context.font = `600 26px ${body}`;
-  context.fillText("opengravel.app", margin, PNG_HEIGHT - 80);
-
   return await new Promise<Blob | null>((resolve) => {
     canvas.toBlob((blob) => resolve(blob), "image/png");
   });
@@ -194,7 +190,7 @@ function Stat({ id, label, value }: { readonly id: string; readonly label: strin
       <dd>
         <span className="og-ride-card__number">{value?.value ?? "—"}</span>
         {value === null ? null : <span className="og-ride-card__unit">{value.unit}</span>}
-        {value === null ? <span className="og-visually-hidden">not recorded</span> : null}
+        {value === null ? <span className="og-visually-hidden">not measured</span> : null}
       </dd>
     </div>
   );
@@ -307,7 +303,7 @@ export function RideCard({
           <p className="og-ride-card__date" data-testid="ride-card-date">{when}</p>
         </div>
         <dl className="og-ride-card__numbers">
-          <Stat id="miles" label="Miles" value={card.numbers.distance} />
+          <Stat id="miles" label={card.units === "metric" ? "Km" : "Miles"} value={card.numbers.distance} />
           <Stat id="moving" label="Moving" value={card.numbers.moving} />
           <Stat id="dirt" label="Dirt" value={card.numbers.dirt} />
           <Stat id="climb" label="Climb" value={card.numbers.climb} />
