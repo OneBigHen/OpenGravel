@@ -10,7 +10,7 @@ import type { FrozenCurvyThreshold } from './threshold';
  * tests/unit/scorecard/threshold.test.ts recomputes it and checks the manifest hash.
  */
 export const FROZEN_CURVY_THRESHOLD: FrozenCurvyThreshold = {
-  manifestSha256: "faaf1c8deb0e55c6d10c7c084cc862301a62e7673f2f545ae14059d90827aa86",
+  manifestSha256: "5bfe4948cb8ebd1be0381eaa8627540ae0308dd0010f2fbbeee191432d23f6b5",
   riderShares: {
     "fb-1ad35a0d02336f3ae0b6": 0.033928,
     "project-gpx-a0fba4f34f6879ca4e8d2f48": 0.027675,

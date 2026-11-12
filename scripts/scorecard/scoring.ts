@@ -26,3 +26,31 @@ export function winTieLoss(ride: Pick<Ride, 'loopMinutes' | 'mode'>, route: Pick
 export function asV1<T extends Pick<Measurement, 'goodMiles' | 'goodShare' | 'v1GoodMiles' | 'v1GoodShare'>>(m: T): T {
   return { ...m, goodMiles: m.v1GoodMiles, goodShare: m.v1GoodShare };
 }
+
+type RiderBar = Pick<Measurement, 'goodMiles' | 'goodShare'>;
+
+/**
+ * Scorecard rule v3 (routing master plan section 2). Same as `winTieLoss` (v2) except two gain tests:
+ * - A curvy A-to-B ride is judged like a curvy loop: good share at or above the frozen rider bar and
+ *   at least 1.5 times the fastest route's good miles. Dirt A-to-B keeps "1.5 times and +3 miles".
+ * - A loop that has a measured rider line also wins at par with it: at least the rider's good miles AND
+ *   at least the rider's good share, and at least 1.5 times the fastest loop's good miles.
+ * Trust, time budget, "not fewer than fastest" and the busy test are unchanged. v2 stays printed beside it.
+ */
+export function winTieLossV3(ride: Pick<Ride, 'loopMinutes' | 'mode'>, route: Pick<Measurement, 'minutes' | 'goodMiles' | 'goodShare' | 'busyShare' | 'trustFailures'>, baseline: Pick<Measurement, 'minutes' | 'goodMiles' | 'busyShare'>, curvyLoopShare: number, riderLine: RiderBar | null = null): { verdict: 'Win' | 'Tie' | 'Loss'; reasons: string[] } {
+  const v2 = winTieLoss(ride, route, baseline, curvyLoopShare);
+  if (v2.verdict === 'Loss') return v2;
+  if (route.busyShare === null || baseline.busyShare === null) return v2;
+  const busyOK = route.busyShare <= baseline.busyShare + 0.1 + 1e-9;
+  const isLoop = ride.loopMinutes !== undefined;
+  const oneAndHalf = route.goodMiles + 1e-9 >= baseline.goodMiles * 1.5;
+  let gainOK: boolean;
+  if (!isLoop && ride.mode === 'curvy') gainOK = route.goodShare + 1e-9 >= curvyLoopShare && oneAndHalf;
+  else if (!isLoop) gainOK = oneAndHalf && route.goodMiles - baseline.goodMiles + 1e-9 >= 3;
+  else {
+    const share = route.goodShare + 1e-9 >= (ride.mode === 'curvy' ? curvyLoopShare : 0.35);
+    const par = riderLine !== null && route.goodMiles + 1e-9 >= riderLine.goodMiles && route.goodShare + 1e-9 >= riderLine.goodShare && oneAndHalf;
+    gainOK = share || par;
+  }
+  return busyOK && gainOK ? { verdict: 'Win', reasons: [] } : { verdict: 'Tie', reasons: [!busyOK ? 'Busy share more than 10 points worse' : 'Good miles below win threshold'] };
+}
