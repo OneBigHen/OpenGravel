@@ -39,7 +39,7 @@ describe("offline areas: what works without signal", () => {
     vi.stubGlobal("navigator", { serviceWorker: worker });
     render(<OfflineMapsSection regions={port()} />);
 
-    expect(screen.getByText("Map and riding work without signal in the areas you save here.")).toBeInTheDocument();
+    expect(await screen.findByText("Map and riding work without signal in the areas you save here.")).toBeInTheDocument();
     expect(await screen.findByTestId("offline-shell-disclosure")).toHaveTextContent("Keep OpenGravel open");
     expect(screen.getByTestId("offline-shell-disclosure")).toHaveTextContent("Reopening the app still needs signal");
     act(() => {

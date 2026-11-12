@@ -16,6 +16,9 @@ afterEach(() => {
 describe("settings surface", () => {
   it("holds the side features the map's first screen no longer shows: hike switch, music, Ask and cameras", () => {
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} spotifySetup={<section aria-label="Music"><button type="button">Connect Spotify</button></section>} />);
+    // The page leads with riding things; the side settings are behind More.
+    expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent("Your bikes");
+    fireEvent.click(screen.getByRole("button", { name: "Show more settings" }));
     // Ride is the default; Hike is one tap away.
     expect(getActivityMode()).toBe("ride");
     expect(screen.getByTestId("activity-ride")).toHaveAttribute("aria-checked", "true");
@@ -27,11 +30,11 @@ describe("settings surface", () => {
     expect(screen.getByRole("radiogroup", { name: "Day / Night" })).toHaveClass("og-settings__segmented");
     fireEvent.click(screen.getByTestId("activity-hike"));
     expect(getActivityMode()).toBe("hike");
-    // Music is the page's own Music group (supplied by the host page).
+    // Music is inside the same group, supplied by the host page.
     expect(screen.getByRole("button", { name: "Connect Spotify" })).toBeInTheDocument();
     // Ask and cameras are switches that start off and bring the feature back.
-    const front = screen.getByTestId("settings-front-door");
-    expect(front).toHaveTextContent("More on the map");
+    const front = screen.getByTestId("settings-more");
+    expect(front).toHaveTextContent("Planning activity");
     const ask = within(front).getByTestId("settings-ask-toggle");
     const cameras = within(front).getByTestId("settings-cameras-toggle");
     expect(ask).not.toBeChecked();
@@ -51,7 +54,8 @@ describe("settings surface", () => {
   });
   it("leaves an obsolete telemetry acknowledgement unchecked", () => {
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} telemetryConsent={{ status: "acknowledged", policyVersion: 0, acknowledgedAt: "2026-10-01T00:00:00Z" }} />);
-    expect(screen.getByLabelText("I understand and acknowledge this collection")).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Show more settings" }));
+    expect(screen.getByLabelText("Share anonymous usage data")).not.toBeChecked();
   });
   it("keeps location-denial recovery beside the Home action", () => {
     render(<SettingsSurface
@@ -168,7 +172,8 @@ describe("settings surface", () => {
     render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} onExport={vi.fn()} onDeleteAll={vi.fn()} />);
     // Small uppercase group labels (design system v2 §6), not a card per setting.
     const labels = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
-    expect(labels).toEqual(expect.arrayContaining(["Display", "Map", "Your bikes", "Home", "Usage data", "Feedback", "Data"]));
+    expect(labels[0]).toBe("Your bikes");
+    expect(labels).toEqual(expect.arrayContaining(["Your bikes", "Home", "Display", "Map style", "Units and data", "Feedback", "More"]));
     for (const heading of screen.getAllByRole("heading", { level: 2 })) {
       expect(heading).toHaveClass("og-settings__group-label");
       expect(heading.closest("section")?.querySelectorAll(".og-settings__card")).toHaveLength(1);
@@ -221,8 +226,8 @@ describe("settings surface", () => {
   });
 });
 
-it("explains when offline downloads are unavailable", () => {
+it("leaves out an Offline areas section that has nothing to offer", () => {
   render(<SettingsSurface garage={createGarage()} onGarageChange={vi.fn()} />);
-  expect(screen.getByText("Offline downloads are unavailable on this device.")).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Offline areas" })).toHaveAttribute("id", "settings-offline-title");
+  expect(screen.queryByText("Offline downloads are unavailable on this device.")).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Offline areas" })).not.toBeInTheDocument();
 });

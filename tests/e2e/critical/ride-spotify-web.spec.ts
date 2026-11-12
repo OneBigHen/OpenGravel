@@ -64,7 +64,7 @@ test("Spotify setup lives in Settings and takes only a public client ID", async 
   // The ride and Settings share one address for setting music up; the ride's own
   // doc comment names it, so the anchor has to resolve to the Music group.
   await page.goto("/settings#settings-music-title");
-  const setup = page.getByRole("region", { name: "Music" });
+  const setup = page.getByTestId("settings-more");
   await expect(setup).toBeVisible();
   await expect(setup).toContainText(`${new URL(page.url()).origin}/api/spotify/callback`);
   // The developer setup sits behind a disclosure row.
@@ -131,7 +131,9 @@ test("a full-page Spotify sign-in from Settings restores the same recording paus
   await page.goto("/settings#settings-music-title");
   await page.getByRole("button", { name: "Connect Spotify" }).click();
   await expect(page).toHaveURL(/\/settings\?spotify=connected$/);
-  await expect(page.getByRole("region", { name: "Music" })).toContainText("Spotify is connected for this browser.");
+  // The redirect carries no hash, so More is closed: one tap shows the result.
+  await page.getByRole("button", { name: "Show more settings" }).click();
+  await expect(page.getByTestId("settings-more")).toContainText("Spotify is connected for this browser.");
 
   // Back on the ride: the same recording, paused where the rider left it, and
   // the music row is now there because Spotify really is connected.

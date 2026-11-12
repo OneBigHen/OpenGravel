@@ -17,6 +17,7 @@ test("a hike drawing remains on the map after reload without a road plan", async
   await expect(page.getByTestId("activity-hike")).toHaveCount(0);
   await page.getByTestId("app-menu-settings").click();
   await expect(page).toHaveURL(/\/settings$/);
+  await page.getByRole("button", { name: "Show more settings" }).click();
   await page.getByTestId("activity-hike").click();
   await expect(page.getByTestId("activity-hike")).toHaveAttribute("aria-checked", "true");
   await page.getByTestId("primary-nav").getByRole("link", { name: "Map" }).click();

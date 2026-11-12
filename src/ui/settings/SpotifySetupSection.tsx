@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { validSpotifyClientId } from "@/application/spotify/client-id";
 import type { SpotifyPlayerPort, SpotifyPlayerSnapshot } from "@/application/ride-session/ports/spotify-player";
-import { Chevron, SettingsGroup } from "./SettingsGroup";
+import { Chevron } from "./SettingsGroup";
 
 export interface SpotifySetupSectionProps {
   readonly readClientId: () => string | null;
@@ -93,8 +93,8 @@ export function SpotifySetupSection({ readClientId, saveClientId, clearClientId,
     : nativeSnapshot.errorMessage ?? (connected ? "Connected on this iPhone." : connecting ? "Connecting…" : unavailable ? "Spotify is unavailable in this iPhone build." : "Not connected on this iPhone.");
 
   return (
-    <SettingsGroup id="settings-music-title" label="Music">
-      <div className="og-settings__row">
+    <>
+      <div className="og-settings__row" id="settings-music-title" data-testid="settings-music-row">
         <span className="og-settings__row-text">
           <span className="og-settings__row-label">Spotify</span>
           {/* The Premium requirement is the rider's business before they connect,
@@ -154,6 +154,6 @@ export function SpotifySetupSection({ readClientId, saveClientId, clearClientId,
           disclosure the rider may have just closed. */}
       {saved ? <p className="og-settings__card-block og-settings__note" role="status">Saved.</p> : null}
       {message === null ? null : <p className="og-settings__card-block og-settings__note" role="status">{message}</p>}
-    </SettingsGroup>
+    </>
   );
 }

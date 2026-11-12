@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import { riderRouteOptions } from "@/application/planner/rider-route-options";
@@ -37,7 +36,6 @@ export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onRever
       {/* Save, share, briefing and elevation are full-sheet detail: at half height
           the route stays the subject and the map keeps its share of the screen. */}
       <div className="og-route-options__more">
-        <Link className="og-option-rows__row" href="/settings#settings-offline-title">Offline maps</Link>
         {children}
       </div>
     </div>

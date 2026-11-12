@@ -568,7 +568,6 @@ export function RouteDetail({
             </button>
           ) : null}
           <ShareRouteButton name={entry.name} />
-          <Link className="og-secondary" href="/settings#settings-offline-title">Offline maps</Link>
         </div>
       </section>
 

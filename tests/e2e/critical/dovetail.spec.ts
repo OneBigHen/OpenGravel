@@ -64,19 +64,15 @@ test("a map hold creates an avoid area with a reachable Undo action", async ({ p
   await expectDrawnScene(page, { areas: "0" });
 });
 
-test("route detail keeps its primary action readable beside the offline shortcut", async ({ page }) => {
+test("route detail keeps its primary action readable and offers no offline dead end", async ({ page }) => {
   await page.goto("/explore/sample-ridge-loop");
   const ride = page.getByTestId("ride-this");
-  const offline = page.getByRole("link", { name: "Offline maps", exact: true });
   await expect(ride).toBeInViewport({ ratio: 1 });
-  await expect(offline).toBeInViewport({ ratio: 1 });
   const primaryBox = await ride.boundingBox();
-  const offlineBox = await offline.boundingBox();
-  expect(primaryBox!.y + primaryBox!.height).toBeLessThanOrEqual(offlineBox!.y);
   expect(primaryBox!.width).toBeGreaterThan(320);
-  await offline.click();
-  await expect(page).toHaveURL(/\/settings#settings-offline-title$/);
-  await expect(page.getByRole("heading", { name: "Offline areas" })).toBeInViewport();
+  // Offline downloads return in R3-7 with a real control; until then the page
+  // does not link to an empty Settings section.
+  await expect(page.getByRole("link", { name: "Offline maps", exact: true })).toHaveCount(0);
 });
 
 

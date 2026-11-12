@@ -12,6 +12,17 @@ test("planner content is server-rendered before browser hydration", async ({ req
   expect(html).not.toContain("Loading planner…");
 });
 
+test("Settings leads with the rider's bikes and keeps side settings behind More", async ({ page }) => {
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText("Your bikes");
+  // The side settings are one closed group, so the page leads with riding things.
+  await expect(page.getByTestId("activity-ride")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Show more settings" })).toBeVisible();
+  await page.getByRole("button", { name: "Show more settings" }).click();
+  await expect(page.getByTestId("activity-ride")).toBeVisible();
+  await expect(page.getByLabel("Share anonymous usage data")).toBeVisible();
+});
+
 test("unavailable device storage has a clean recovery path", async ({ page }) => {
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

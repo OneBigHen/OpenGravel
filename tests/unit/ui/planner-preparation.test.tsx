@@ -25,7 +25,6 @@ import { DEFAULT_BIKE } from "@/domain/ride/create";
 import { createGarage } from "@/application/garage/garage-model";
 import type { Coordinate, TimeIntent } from "@/domain/ride/types";
 import { departureFor, departureValue, PlannerPreparation } from "@/ui/planner/PlannerPreparation";
-import { InstalledOfflineAreasProvider } from "@/ui/planner/installed-offline-areas";
 
 afterEach(() => cleanup());
 
@@ -476,60 +475,7 @@ describe("PlannerPreparation", () => {
     expect(screen.queryByTestId("departure-arrive")).toBeNull();
   });
 
-  it("shows no offline status row when the phone already holds downloaded areas", async () => {
-    const offlineRegions = {
-      installed: vi.fn(async () => [{ regionId: "pennsylvania" }, { regionId: "maryland" }]),
-    };
-    render(
-      <PlannerPreparation
-        route={{ routeId: "route_a", ...ROUTE }}
-        departure={{ kind: "now" }}
-        bike={DEFAULT_BIKE}
-        offlineRoute={null}
-        offlineRegions={offlineRegions as never}
-        onDepartureChange={vi.fn()}
-        onBikeChange={vi.fn()}
-      />,
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    // A ride that already works offline needs no row about it, and the old
-    // dotted status line never comes back.
-    expect(screen.queryByTestId("offline-save-area")).toBeNull();
-    expect(screen.queryByTestId("offline-summary-note")).toBeNull();
-    expect(screen.queryByText(/online only/)).toBeNull();
-  });
-
-  it("reads the installed areas the composition root provided", async () => {
-    render(
-      <InstalledOfflineAreasProvider regions={{ installed: async () => [] as never }}>
-        <PlannerPreparation
-          route={{ routeId: "route_a", ...ROUTE }}
-          departure={{ kind: "now" }}
-          bike={DEFAULT_BIKE}
-          offlineRoute={null}
-          onDepartureChange={vi.fn()}
-          onBikeChange={vi.fn()}
-        />
-      </InstalledOfflineAreasProvider>,
-    );
-
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    // The provider's answer (no area) is what makes the action row appear.
-    expect(screen.getByTestId("offline-save-area")).toHaveTextContent("Save this area for offline");
-  });
-
-  it("offers one plain row to save the area instead of an offline status line", async () => {
+  it("leaves offline downloads out of the planner: no row and no promise", async () => {
     const offlineRegions = { installed: vi.fn(async () => []) };
     render(
       <PlannerPreparation
@@ -549,10 +495,10 @@ describe("PlannerPreparation", () => {
       await Promise.resolve();
     });
 
-    const row = screen.getByTestId("offline-save-area");
-    expect(row).toHaveTextContent("Save this area for offline");
-    // It is the real download path in Settings, not a dead end.
-    expect(row).toHaveAttribute("href", "/settings#settings-offline-title");
+    // Offline downloads live in Settings (and the section is absent while the
+    // server offers no areas), so the planner never sends the rider to a dead end.
+    expect(screen.queryByTestId("offline-save-area")).toBeNull();
+    expect(screen.queryByText(/Save this area for offline/)).toBeNull();
     expect(screen.queryByText(/online only/)).toBeNull();
     expect(screen.queryByTestId("offline-summary-note")).toBeNull();
   });

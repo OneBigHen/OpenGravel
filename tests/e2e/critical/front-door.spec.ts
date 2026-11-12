@@ -200,6 +200,7 @@ for (const device of DEVICES) {
       await coldLoad(page);
       const taps = await openSettings(page, device);
       expect(taps).toBeLessThanOrEqual(2);
+      await page.getByRole("button", { name: "Show more settings" }).click();
 
       // Ride is the default and Hike is one tap away. Hiking itself is untouched:
       // this only proves the switch is here and goes both ways.
@@ -213,8 +214,8 @@ for (const device of DEVICES) {
       await ride.click();
       await expect(ride).toHaveAttribute("aria-checked", "true");
 
-      // Music keeps its own group here.
-      await expect(page.getByRole("heading", { name: "Music", exact: true })).toBeVisible();
+      // Music sits in the same closed group.
+      await expect(page.getByTestId("settings-music-row")).toBeVisible();
       await expect(page.getByRole("button", { name: "Connect Spotify" })).toBeVisible();
 
       // Ask and traffic cameras start off, and each has a switch.
@@ -257,6 +258,7 @@ for (const device of DEVICES) {
         localStorage.setItem("og-front-door-cameras", "on");
       });
       await page.goto("/settings");
+      await page.getByRole("button", { name: "Show more settings" }).click();
       const ask = page.getByTestId("settings-ask-toggle");
       const cameras = page.getByTestId("settings-cameras-toggle");
       await expect(ask).toBeChecked();
