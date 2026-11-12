@@ -9,7 +9,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import { rideTruth, type RideTruthBike, type RideTruthLine } from "@/application/planner/ride-truth";
+import {
+  rideFuelLine,
+  rideTruth,
+  storedRideTruth,
+  type RideTruthBike,
+  type RideTruthLine,
+} from "@/application/planner/ride-truth";
 import type { EngineSurfaceMix } from "@/application/roads/engine-road-evidence";
 import { unavailableEvidence, type EvidenceSource, type EvidenceStatus, type EvidenceValue } from "@/domain/evidence/types";
 import type { RouteEvidence } from "@/domain/route/types";
@@ -425,6 +431,104 @@ describe("copy and edge cases", () => {
       expect(surface).toEqual({ tone: "unknown", text: "Surface unknown" });
       expect(bike.tone).toBe("unknown");
     }
+  });
+});
+
+describe("a curated ride's truth", () => {
+  it("reads the stored surface in known miles only", () => {
+    const [surface, bike, checked] = storedRideTruth({
+      surfaceSummary: "Mostly paved · 2.1 mi gravel",
+      distanceMeters: TWENTY_MI,
+      bike: TOURING,
+    });
+    // The "Mostly paved" prefix is the catalog's prose; the line prints the
+    // mileage the record actually measured.
+    expect(surface).toEqual({ tone: "good", text: "2.1 mi gravel" });
+    expect(bike.tone).toBe("unknown");
+    expect(checked).toEqual({ tone: "unknown", text: "Closures not checked for this ride" });
+  });
+
+  it("says all paved when the record says all paved", () => {
+    const [surface, bike] = storedRideTruth({
+      surfaceSummary: "Paved",
+      distanceMeters: TWENTY_MI,
+      bike: TOURING,
+    });
+    expect(surface).toEqual({ tone: "good", text: "all paved" });
+    // The stored line has no rough-track measurement, so the bike is unchecked
+    // rather than declared fine.
+    expect(bike).toEqual({ tone: "unknown", text: "Not checked for your bike: rough-track check did not run" });
+  });
+
+  it("is over the bike's limit when the rider avoids the gravel it measured", () => {
+    const [, bike] = storedRideTruth({
+      surfaceSummary: "Mostly paved · 3.2 mi gravel",
+      distanceMeters: TWENTY_MI,
+      bike: STREET,
+    });
+    expect(bike).toEqual({ tone: "bad", text: "Over the limit for Street: 3.2 mi gravel" });
+  });
+
+  it("says surface unknown when the record carries no surface", () => {
+    const [surface, bike] = storedRideTruth({ distanceMeters: TWENTY_MI, bike: TOURING });
+    expect(surface).toEqual({ tone: "unknown", text: "Surface unknown" });
+    expect(bike).toEqual({ tone: "unknown", text: "Not checked for your bike: surface not measured" });
+  });
+
+  it("claims checked today only when a closure check actually ran", () => {
+    const [, , checked] = storedRideTruth({
+      surfaceSummary: "Paved",
+      distanceMeters: TWENTY_MI,
+      bike: TOURING,
+      closuresCheckedToday: true,
+    });
+    expect(checked).toEqual({ tone: "good", text: "Checked today" });
+  });
+});
+
+describe("the fuel line", () => {
+  /** Longer than the 120 mi the tank can use after its reserve. */
+  const OVER_RANGE = 130 * MI;
+
+  it("shows nothing for a ride the tank can take", () => {
+    expect(rideFuelLine({ distanceMeters: 100 * MI, usableRangeMiles: 120, stops: [] })).toBeNull();
+  });
+
+  it("names the ride, the usable range and the station to plan for", () => {
+    expect(rideFuelLine({
+      distanceMeters: OVER_RANGE,
+      usableRangeMiles: 120,
+      stops: [{ mile: 61, name: "Sunoco" }],
+    })).toEqual({
+      tone: "warn",
+      text: "Fuel: 130 mi ride, 120 mi usable range. Gas at mile 61 (Sunoco)",
+    });
+  });
+
+  it("uses the last station the tank still reaches", () => {
+    expect(rideFuelLine({
+      distanceMeters: OVER_RANGE,
+      usableRangeMiles: 120,
+      stops: [{ mile: 40, name: "Early" }, { mile: 110, name: "Far" }, { mile: 150, name: "Too Far" }],
+    })?.text).toContain("Gas at mile 110 (Far)");
+  });
+
+  it("says to fill up when there is no gas on the ride at all", () => {
+    expect(rideFuelLine({ distanceMeters: OVER_RANGE, usableRangeMiles: 120, stops: [] })).toEqual({
+      tone: "warn",
+      text: "No gas found on this ride: fill up first",
+    });
+  });
+
+  it("says the stops were not checked when the gas data did not load", () => {
+    expect(rideFuelLine({ distanceMeters: OVER_RANGE, usableRangeMiles: 120, stops: null })).toEqual({
+      tone: "unknown",
+      text: "Fuel stops not checked",
+    });
+  });
+
+  it("shows nothing when the bike's usable range is unknown", () => {
+    expect(rideFuelLine({ distanceMeters: OVER_RANGE, usableRangeMiles: null, stops: [] })).toBeNull();
   });
 });
 

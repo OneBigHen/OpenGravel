@@ -12,11 +12,11 @@ import type { ReactNode } from "react";
 
 import type { RideTruth, RideTruthLine, RideTruthStretch } from "@/application/planner/ride-truth";
 
-const KEYS = ["surface", "bike", "checked"] as const;
+type LineKind = "surface" | "bike" | "checked" | "fuel";
 
 function Line({ line, kind, onShowStretch }: {
   readonly line: RideTruthLine;
-  readonly kind: (typeof KEYS)[number];
+  readonly kind: LineKind;
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
 }) {
   const body = <>
@@ -31,10 +31,12 @@ function Line({ line, kind, onShowStretch }: {
   return <p className="og-truth__line" data-truth={kind} data-tone={line.tone}>{body}</p>;
 }
 
-export function RideTruthLines({ truth, surfaceBar = null, onShowStretch, testId = "ride-truth" }: {
+export function RideTruthLines({ truth, fuel = null, surfaceBar = null, onShowStretch, testId = "ride-truth" }: {
   readonly truth: RideTruth;
   /** The surface bar, drawn right under the surface line. */
   readonly surfaceBar?: ReactNode;
+  /** The fuel line, shown last and only when the ride is longer than the tank. */
+  readonly fuel?: RideTruthLine | null;
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
   readonly testId?: string;
 }) {
@@ -43,5 +45,6 @@ export function RideTruthLines({ truth, surfaceBar = null, onShowStretch, testId
     {surfaceBar}
     <Line line={truth[1]} kind="bike" onShowStretch={onShowStretch} />
     <Line line={truth[2]} kind="checked" onShowStretch={onShowStretch} />
+    {fuel === null ? null : <Line line={fuel} kind="fuel" onShowStretch={onShowStretch} />}
   </div>;
 }
