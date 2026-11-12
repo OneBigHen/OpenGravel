@@ -157,18 +157,14 @@ async function main(): Promise<void> {
     // Drained before the counted full plan so its router calls never count against the full plan.
     let firstAnswerSeconds: number | null = null;
     try {
-      let firstShadowDone = false;
       const first = instrumentProvider(production);
       first.start();
       const firstStarted = performance.now();
       const firstResult = await planRide({ identity: { rideId: `scorecard_first_${ride.id}`, rideRevision: 1, planningGeneration: 1 }, request: { ...request, options: { ...request.options, includeAlternatives: false } } }, {
         provider: first.provider, env: SWITCHES, gravelAtlas: atlas, roadAuthority: authority,
-        now: () => manifest.rideDate, funJudge: null, funCharacterClassifier: null,
-        onFunGeneratorReport: () => { firstShadowDone = true; },
+        now: () => manifest.rideDate,
       });
       if (firstResult.ok) firstAnswerSeconds = (performance.now() - firstStarted) / 1000;
-      const firstDeadline = Date.now() + 90_000;
-      while ((!firstShadowDone || first.pending() > 0) && Date.now() < firstDeadline) await new Promise(resolve => setTimeout(resolve, 50));
       await meter.idle();
     } catch (error) { errors.push(`First answer: ${String(error)}`); }
     try {
