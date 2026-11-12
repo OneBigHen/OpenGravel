@@ -82,7 +82,7 @@ for (const [name, lat, lon] of starts) {
       options: { vehicle: "motorcycle", includeAlternatives: true, avoidHighways: false, tollPolicy: "avoid", surfacePreference: surface, roadCharacter: "balanced", traffic: "protect-ride", bike: { category: "adventure", maintainedGravel: "allow", roughTracks: "avoid" } },
       discovery: { targetMinutes: minutes, toleranceMinutes: minutes * 0.15 },
     };
-    const inner = createGraphHopperProvider({ baseUrl: process.env["GRAPHHOPPER_URL"] ?? "http://127.0.0.1:18989", fetcher, riderModesEnabled: true, rideFormulaEnabled: false });
+    const inner = createGraphHopperProvider({ baseUrl: process.env["GRAPHHOPPER_URL"] ?? "http://127.0.0.1:18989", fetcher, riderModesEnabled: true });
     const pending = new Map<string, Promise<ProviderCandidateSet>>();
     const raw: ProviderCandidate[] = [];
     const seen: unknown[] = [];
@@ -106,7 +106,7 @@ for (const [name, lat, lon] of starts) {
     };
     const env = {
       OGV_ATLAS_GENERATORS: "off", OGV_DIRT_LOOP_GENERATORS: arm === "after" ? "on" : "off", OGV_ATLAS_CALLS: "4",
-      OGV_FUN_GENERATORS: "shadow", OGV_RIDE_FORMULA: "shadow", OGV_GRAVEL_ATLAS_PATH: "/var/lib/opengravel/gravel-atlas-v3.sqlite",
+      OGV_FUN_GENERATORS: "shadow", OGV_GRAVEL_ATLAS_PATH: "/var/lib/opengravel/gravel-atlas-v3.sqlite",
       OGV_TRAFFIC_LIVE_AVOID: "off", OGV_ROAD_AUTHORITY: "off", OGV_JEV_FUN_JUDGE: "off",
     };
     let result: PlanServiceResult | undefined;

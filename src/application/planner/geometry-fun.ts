@@ -14,9 +14,14 @@ export function candidateGeometryFun(candidate: ProviderCandidate): GeometryFun 
   return fun;
 }
 
-/** Modest real ETA cost: about one bend kilometre per 17 additional minutes. */
+/**
+ * The Curvy pick spends the same number the scorecard counts as good miles:
+ * road-bends-v1 `bendMeters` (sustained tight bends along one road), in
+ * kilometres, less a modest real ETA cost of about one bend kilometre per 17
+ * additional minutes.
+ */
 export function geometryFunUtility(fun: GeometryFun, seconds: number, fastestSeconds: number): number {
-  return fun.funScore - Math.max(0, seconds - fastestSeconds) / 60 * 0.06;
+  return fun.bendMeters / 1000 - Math.max(0, seconds - fastestSeconds) / 60 * 0.06;
 }
 
 /** Monotone 0..100 adapter for canonical MMR's recommendation-value contract. */

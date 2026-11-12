@@ -96,6 +96,11 @@ export interface PlanRequestContext {
   ) => Promise<GeometryPayload | null> | GeometryPayload | null;
   /** Which internal provider profile this intent maps to (see §6). */
   readonly profileFor?: (intent: RideIntent) => string;
+  /**
+   * Extra rings to avoid that are not part of the ride: the rider's own private
+   * spot reports on this device. Merged after the drawn avoid areas.
+   */
+  readonly extraAvoidRings?: readonly (readonly Coordinate[])[];
   /** Correlation id for one provider call; minted when omitted. */
   readonly requestId?: string;
   /** Whether the caller wants alternative candidates in this call (06 §5). */
@@ -394,6 +399,10 @@ export async function buildProviderRequest(
     for (const ring of payload.rings) {
       avoidPolygons.push(ring.map(copyCoordinate));
     }
+  }
+
+  for (const ring of context.extraAvoidRings ?? []) {
+    avoidPolygons.push(ring.map(copyCoordinate));
   }
 
   // Road spans are resolved here for the same reason avoid areas are: the

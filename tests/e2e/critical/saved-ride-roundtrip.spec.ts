@@ -39,7 +39,7 @@ async function coldLoad(page: Page): Promise<void> {
 
 /** The planner's phone summary numbers: the big time, and the miles beside it. */
 async function plannerNumbers(page: Page): Promise<{ readonly time: string; readonly miles: string }> {
-  const summary = page.getByTestId("phone-ride-summary");
+  const summary = page.getByTestId("route-summary");
   await expect(summary).toBeVisible({ timeout: 30_000 });
   const time = (await summary.locator(".og-phone-summary__time").textContent())?.trim() ?? "";
   const facts = (await summary.locator(".og-phone-summary__arrive").textContent()) ?? "";
@@ -60,12 +60,13 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
   expect(planned.time).not.toBe("");
   expect(planned.miles).not.toBe("");
 
-  // On a phone, the summary's Save opens the sheet on the name box.
+  // One tap saves under an automatic name; the rider renames it in place (R3-4).
   await page.getByTestId("summary-save").click();
-  await expect(page.getByTestId("named-ride-title")).toBeVisible();
-  await page.getByTestId("named-ride-title").fill(TITLE);
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
+  await expect(page.getByTestId("summary-save")).toHaveText("Saved");
+  await page.getByTestId("ride-title-edit").click();
+  await page.getByTestId("ride-title-input").fill(TITLE);
+  await page.getByTestId("ride-title-input").press("Enter");
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
   await page.reload();
   await expect(plannerMap(page)).toBeVisible();
 
@@ -84,7 +85,9 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
   const reopened = await plannerNumbers(page);
   expect(reopened).toEqual(planned);
   await expect(page.getByTestId("start-ride")).toBeEnabled();
-  await expect(page.getByText(/Restored your draft|Planning failed/)).toHaveCount(0);
+  // A saved ride is titled by its own name, in the same summary a fresh loop uses.
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
+  await expect(page.getByText(/Restored your ride|Planning failed/)).toHaveCount(0);
   // Long enough for the restore rule and the settle window to have asked, if they would.
   await page.waitForTimeout(3_000);
   expect(plans.count()).toBe(0);
@@ -92,10 +95,16 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
 
   // Proof pictures for the PR (both themes); not compared against anything.
   await page.screenshot({ path: testInfo.outputPath("reopened-saved-phone-light.png") });
-  await page.emulateMedia({ colorScheme: "dark" });
+  // Auto follows the sun (R3-4), so the night picture asks for Night outright
+  // rather than relying on the phone's dark switch at whatever hour CI runs.
+  await page.evaluate(() => window.localStorage.setItem("og-appearance", "night"));
+  await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
   await page.screenshot({ path: testInfo.outputPath("reopened-saved-phone-dark.png") });
-  await page.emulateMedia({ colorScheme: "light" });
+  await page.evaluate(() => window.localStorage.removeItem("og-appearance"));
+  await page.reload();
+  await expect(page.getByTestId("phone-destination")).toHaveText(TITLE);
 
   // "Plan it again" is the one way to ask the router, and it says what changed.
   // It is a secondary action, under the ride in the sheet: open the sheet to reach it.
@@ -111,17 +120,12 @@ test("a saved loop reopens from My rides as the same ride, with no new plan", as
 });
 
 test("an imported loop opens as its own line, never as a failed plan", async ({ page }, testInfo) => {
+  // Choosing the file is the whole flow: it is added and opened on the map.
   await page.goto("/rides");
-  await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles(LOOP_GPX);
-  await page.getByRole("heading", { name: "Choose tracks" }).waitFor();
-  await page.getByRole("button", { name: "Import separately" }).click();
-  await page.getByRole("button", { name: "Import selected tracks" }).click();
-  await expect(page.getByRole("heading", { name: "Import complete" })).toBeVisible();
-
   const plans = countPlanRequests(page);
-  await page.getByRole("button", { name: "Open in planner" }).click();
+  await page.getByLabel("Import GPX, KML, or KMZ").setInputFiles(LOOP_GPX);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByTestId("phone-ride-summary")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("route-summary")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("start-ride")).toBeEnabled();
   await expect(page.getByText(/Planning failed/)).toHaveCount(0);
   // A loop is a loop from its start, never "To" the place it began.

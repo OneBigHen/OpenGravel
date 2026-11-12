@@ -14,8 +14,8 @@ import {
  *
  * The promises this spec holds at the browser boundary:
  *
- * 1. "Send to phone" is a desktop affordance beside Save, and it publishes the
- *    rider's own line with no privacy trim.
+ * 1. "Send to phone" is a desktop affordance inside Share, and it publishes
+ *    the rider's own line with no privacy trim.
  * 2. The QR is drawn in the browser as inline SVG: opening the dialog makes no
  *    request to any third-party host, so the link never leaves the app to be
  *    turned into a picture.
@@ -56,11 +56,12 @@ test("the laptop sends the exact route to a phone, which rides it", async ({
   const distance = ((await routeCards(page).first().getByTestId("route-distance").textContent()) ?? "").trim();
   expect(distance.length).toBeGreaterThan(0);
 
-  // The QR dialog is a desktop secondary action; opening it must not ask an
-  // outside service to draw the code.
+  // The QR dialog is a desktop secondary action inside Share; opening it must
+  // not ask an outside service to draw the code.
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
-  await page.getByTestId("send-to-phone").click();
+  await page.getByTestId("open-share").click();
+  await page.getByTestId("share-sheet").getByRole("button", { name: "Send to phone" }).click();
   const linkText = page.getByTestId("send-to-phone-link");
   await expect(linkText).toBeVisible();
   const link = ((await linkText.textContent()) ?? "").trim();

@@ -1,0 +1,28 @@
+/* No signal on the ride (R3-7): a neutral chip and the rows that need a server. */
+.og-ride__no-signal {
+  align-self: flex-start;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: var(--og-radius-pill);
+  background: var(--og-surface);
+  box-shadow: var(--og-shadow-float);
+  color: var(--og-ink);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+}
+.og-ride__no-signal-rows { margin: 0; padding: 0; list-style: none; }
+.og-ride__no-signal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--og-line);
+  background: transparent;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-body);
+}
+.og-ride__no-signal-why { font-size: var(--og-text-meta); }

@@ -185,133 +185,149 @@
   }
 }
 
-/* The ride summary, Google style (phones and tablets). */
-@media (max-width: 1180px) and (min-height: 501px) {
-  .og-phone-summary {
-    gap: var(--og-space-2);
-  }
+/* The one ride summary (round 3): phones, tablets and the laptop's result panel. */
+.og-phone-summary { display: flex; flex-direction: column; gap: var(--og-space-2); min-width: 0; }
+.og-phone-summary h2 { margin: 0; font-family: var(--og-face-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+.og-phone-summary__meta, .og-phone-summary__weather { margin: 0; color: var(--og-ink-2); font-size: var(--og-text-meta); }
+.og-phone-summary .og-phone-summary__strip { display: flex; width: 100%; max-width: none; height: 10px; margin: 2px 0 4px; padding: 0; border: 0; background: none; }
+.og-phone-summary__rename { display: flex; flex: 1 1 auto; gap: var(--og-space-2); min-width: 0; margin: 0; }
+.og-phone-summary__rename input { flex: 1 1 auto; min-width: 0; min-height: var(--og-touch); padding: 0 var(--og-space-3); border: 1px solid var(--og-line-strong); border-radius: var(--og-radius-control); background: var(--og-surface); color: var(--og-ink); font: inherit; }
+.og-phone-summary__rename-open { flex: none; width: var(--og-touch); height: var(--og-touch); margin-block: -12px; padding: 0; border: 0; background: none; color: var(--og-ink-2); vertical-align: middle; cursor: pointer; }
 
-  .og-phone-summary__head {
-    display: flex;
-    align-items: center;
-    gap: var(--og-space-2);
-    min-width: 0;
-  }
+.og-phone-summary__head {
+  display: flex;
+  align-items: center;
+  gap: var(--og-space-2);
+  min-width: 0;
+}
 
-  .og-phone-summary .og-phone-summary__where {
-    flex: 1 1 auto;
-    min-width: 0;
-    color: var(--og-ink);
-    font-family: var(--og-face-display);
-    font-size: var(--og-text-title);
-    font-weight: 700;
-    line-height: 1.2;
-  }
+.og-phone-summary .og-phone-summary__where {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-title);
+  font-weight: 700;
+  line-height: 1.2;
+}
 
-  .og-phone-summary__icon {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: var(--og-touch);
-    height: var(--og-touch);
-    border: 0;
-    border-radius: 50%;
-    background: var(--og-glass-well);
-    color: var(--og-ink);
-    cursor: pointer;
-  }
+.og-phone-summary__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--og-touch);
+  height: var(--og-touch);
+  border: 0;
+  border-radius: 50%;
+  background: var(--og-glass-well);
+  color: var(--og-ink);
+  cursor: pointer;
+}
 
-  .og-phone-summary__eta {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--og-space-4);
-    min-width: 0;
-    margin-top: var(--og-space-1);
-  }
+.og-phone-summary__eta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--og-space-4);
+  min-width: 0;
+  margin-top: var(--og-space-1);
+}
 
-  .og-phone-summary .og-phone-summary__time {
-    flex: none;
-    max-width: 38%;
-    color: var(--og-primary-text);
-    font-size: var(--og-text-title);
-    line-height: 1.1;
-  }
+.og-phone-summary .og-phone-summary__time {
+  flex: none;
+  max-width: 38%;
+  color: var(--og-primary-text);
+  font-size: var(--og-text-title);
+  line-height: 1.1;
+}
 
-  .og-phone-summary__facts {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
+.og-phone-summary__facts {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 
-  .og-phone-summary__arrive {
-    margin: 0;
-    color: var(--og-ink);
-    font-size: var(--og-text-body);
-    font-weight: 600;
-    line-height: 1.3;
-  }
+.og-phone-summary__arrive {
+  margin: 0;
+  color: var(--og-ink);
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
 
-  .og-phone-summary__facts .og-phone-summary__meta {
-    margin-top: 2px;
-  }
+.og-phone-summary__facts .og-phone-summary__meta {
+  margin-top: 2px;
+}
 
-  .og-phone-summary__start {
-    margin-top: var(--og-space-1);
-  }
+.og-phone-summary__start {
+  margin-top: var(--og-space-1);
+}
 
-  .og-phone-summary__actions {
-    display: flex;
-    gap: var(--og-space-2);
-    padding-bottom: 2px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
-  }
+.og-phone-summary__actions {
+  display: flex;
+  gap: var(--og-space-2);
+  padding-bottom: 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
 
-  .og-phone-summary__actions::-webkit-scrollbar {
-    display: none;
-  }
+.og-phone-summary__actions::-webkit-scrollbar {
+  display: none;
+}
 
-  .og-phone-summary__actions > button,
-  .og-phone-summary .og-phone-summary__actions > .og-primary {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    gap: var(--og-space-2);
-    width: auto;
-    min-height: var(--og-touch);
-    padding: 0 var(--og-space-4);
-    border-radius: var(--og-radius-pill);
-    font-size: var(--og-text-meta);
-    font-weight: 700;
+.og-phone-summary__actions > button,
+.og-phone-summary .og-phone-summary__actions > .og-primary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: var(--og-space-2);
+  width: auto;
+  min-height: var(--og-touch);
+  padding: 0 var(--og-space-4);
+  border-radius: var(--og-radius-pill);
+  font-size: var(--og-text-meta);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Start leads; Save and Share sit beside it, one tap each. */
+.og-phone-summary .og-phone-summary__actions > .og-primary {
+  flex: 1 1 auto;
+  padding-inline: var(--og-space-5);
+}
+
+.og-phone-summary__pill {
+  border: 0;
+  background: var(--og-primary-soft);
+  color: var(--og-primary-text);
+  cursor: pointer;
+}
+
+/* Narrowest phones: Save and Share keep icons (names stay for screen readers). */
+@media (max-width: 360px) {
+  .og-phone-summary__pill .og-phone-summary__pill-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
     white-space: nowrap;
   }
 
-  .og-phone-summary .og-phone-summary__actions > .og-primary {
-    padding-inline: var(--og-space-5);
+  .og-phone-summary__actions > .og-phone-summary__pill {
+    padding: 0 var(--og-space-3);
   }
+}
 
-  .og-phone-summary[data-comparing="true"] .og-phone-summary__actions > .og-primary {
-    flex: 1 1 auto;
-  }
+.og-phone-summary__pill:active,
+.og-phone-summary__icon:active {
+  background: var(--og-press);
+}
 
-  .og-phone-summary__pill {
-    border: 0;
-    background: var(--og-primary-soft);
-    color: var(--og-primary-text);
-    cursor: pointer;
-  }
-
-  .og-phone-summary__pill:active,
-  .og-phone-summary__icon:active {
-    background: var(--og-press);
-  }
-
-  .og-phone-summary__pill:focus-visible,
-  .og-phone-summary__icon:focus-visible {
-    outline: var(--og-focus-width) solid var(--og-focus-ring);
-    outline-offset: var(--og-focus-offset);
-  }
+.og-phone-summary__pill:focus-visible,
+.og-phone-summary__icon:focus-visible {
+  outline: var(--og-focus-width) solid var(--og-focus-ring);
+  outline-offset: var(--og-focus-offset);
 }
 
 /* Under the From / To card the map's own buttons keep the search's column. */
@@ -359,11 +375,6 @@
   }
 
   .og-planner[data-trip="true"] .og-planner__sheet[data-detent="half"][data-has-ride="true"]:not([data-directions="true"]) .og-sheet__body > :not(.og-phone-summary) {
-    display: none;
-  }
-
-  /* The From / To card already says where the options run, with ⇅ and edit. */
-  .og-planner[data-trip="true"] .og-route-options__header {
     display: none;
   }
 
@@ -662,93 +673,12 @@
   }
 }
 
-/* Route preview (mobile UX handoff, 2026-10-27): the chosen ride reads as a
-   hero, like Google's directions sheet: its name as a plum eyebrow, the time
-   large in green, distance beside it, the measured reason under. The other
-   candidates stay compact rows under it, one tap to switch. */
-.og-route-options .og-phone-choice[data-selected="true"] {
-  align-items: flex-start;
-  padding: var(--og-space-3) var(--og-space-3) var(--og-space-3) var(--og-space-2);
-  background: transparent;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__swatch {
-  width: 5px;
-  height: auto;
-  align-self: stretch;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__role {
-  color: var(--og-route);
-  font-size: var(--og-text-caption);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: var(--og-space-3);
-  row-gap: 2px;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dot {
-  display: none;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__time {
-  color: var(--og-primary-text);
-  font-family: var(--og-face-display);
-  font-size: var(--og-text-title);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__dist {
-  color: var(--og-ink);
-  font-family: var(--og-face-display);
-  font-size: var(--og-text-headline);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__reason {
-  flex-basis: 100%;
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-route-options .og-phone-choice[data-selected="true"] .og-phone-choice__check {
-  display: none;
-}
-
-/* The alternatives under the hero: a hairline apart, quiet until tapped. */
-.og-route-options .og-phone-alternatives > li:not(:has(.og-phone-choice[data-selected="true"])) {
-  border-top: 1px solid var(--og-line);
-}
-
-.og-route-options .og-phone-choice:not([data-selected="true"]) .og-phone-choice__role::after {
-  content: " ›";
-  color: var(--og-ink-2);
-  font-weight: 500;
-}
-
-/* The selected ride leads the list wherever the planner ranked it. */
-.og-route-options .og-phone-alternatives > li:has(.og-phone-choice[data-selected="true"]) {
-  order: -1;
-}
-
-.og-route-options__start .og-primary {
-  border-radius: var(--og-radius-pill);
-  font-size: var(--og-text-body);
-  font-weight: 700;
-}
-
 /* Small phones: the three home pills keep their words on one line. */
 @media (max-width: 360px) and (min-height: 501px) {
+  /* A 320 px phone at half: the truth lines wait in the full sheet, so the map
+     keeps the route in view and Start, Save, Share and Compare all fit. */
+  .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary .og-truth { display: none; }
+
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
     gap: 4px;
     font-size: var(--og-text-caption);

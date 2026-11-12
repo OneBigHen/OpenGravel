@@ -31,7 +31,7 @@ import {
   type RoutePreparationContext,
 } from "@/application/preparation/prepare-route";
 import { thinLine, TRAFFIC_CORRIDOR_POINTS } from "@/application/preparation/planner-context";
-import { enrichRoutePreparationForLongTrip } from "@/application/explore/long-trip";
+import { METERS_PER_MILE } from "@/application/map-layers";
 import type { LongTripBike } from "@/application/long-trip";
 import type { PreparationProviderRegistry, RegisteredPreparationProviders } from "@/application/preparation/providers";
 import { RoutePreparationSection } from "@/ui/preparation/RoutePreparationSection";
@@ -43,6 +43,14 @@ import { RemoveRoute, ShareWithEveryone } from "@/ui/explore/RouteCommunityActio
 import { RouteStory } from "@/ui/explore/RouteStory";
 import { routeFacts, type RideFact } from "@/ui/explore/route-facts";
 import { surfaceReportAge } from "@/ui/explore/surface-report-copy";
+import { usableRangeMiles } from "@/application/ride-session/fuel-ahead";
+import {
+  rideFuelLine,
+  storedRideTruth,
+  type RideFuelStop,
+  type RideTruthBike,
+} from "@/application/planner/ride-truth";
+import { RideTruthLines } from "@/ui/planner/RideTruthLines";
 
 
 export interface RouteDetailProps {
@@ -53,8 +61,8 @@ export interface RouteDetailProps {
   readonly onSave?: (entry: CatalogEntry) => Promise<void> | void;
   /** Injected for later provider waves; absent means the honest zero-provider state. */
   readonly preparation?: RoutePreparation;
-  /** The rider's active garage bike; fuel advice uses it (EX-02, RS-01). */
-  readonly activeBike?: LongTripBike | null;
+  /** The rider's active garage bike; the truth and fuel lines use it (EX-02, RS-01). */
+  readonly activeBike?: (LongTripBike & RideTruthBike) | null;
   readonly preparationProviders?: RegisteredPreparationProviders;
   /** The live map the route is drawn on (towns, roads, terrain); absent falls back to an image. */
   readonly map?: ExploreMapConfig;
@@ -313,6 +321,11 @@ export function RouteDetail({
   // restores that offset itself, so the router must not scroll it to the top.
   const [listKnowsPosition] = useState(() => peekListPosition() !== null);
   const [selectedRoad, setSelectedRoad] = useState<CatalogRoadDetail | null>(null);
+  /** Gas stations along this ride; `null` stops means the answer did not load. */
+  const [fuelStops, setFuelStops] = useState<{
+    readonly id: string;
+    readonly stops: readonly RideFuelStop[] | null;
+  } | null>(null);
   const [, setWeatherRefresh] = useState(0);
   const [, setTrafficRefresh] = useState(0);
   // A rider who already let OpenGravel see their location does not get asked
@@ -343,6 +356,9 @@ export function RouteDetail({
     ? registeredProviders.find((provider) => provider.kind === "traffic")
     : (registeredProviders as PreparationProviderRegistry).traffic;
   const trafficProvider = trafficCandidate?.kind === "traffic" ? trafficCandidate : undefined;
+  const mapLayersSource = Array.isArray(registeredProviders)
+    ? undefined
+    : (registeredProviders as PreparationProviderRegistry).mapLayers;
   const plannedDeparture = entry.sourceDocument?.intent.departure.kind === "future"
     ? entry.sourceDocument.intent.departure.at
     : null;
@@ -399,6 +415,34 @@ export function RouteDetail({
     return () => { active = false; };
   }, [preparationContext, providedPreparation, trafficProvider]);
 
+  // Fuel is only worth checking when the ride is longer than the tank can take
+  // after its reserve. The line itself is decided in the pure module; this keeps
+  // the one network answer the page needs, once per ride.
+  const fuelSource = mapLayersSource;
+  const fuelUsableMiles = usableRangeMiles(activeBike?.fuelRangeMiles, activeBike?.reserveMiles);
+  const rideDistanceMiles = entry.distanceKm === null ? null : entry.distanceKm / 1.609344;
+  const rideNeedsFuel = fuelUsableMiles !== null && rideDistanceMiles !== null && rideDistanceMiles > fuelUsableMiles;
+  useEffect(() => {
+    if (!rideNeedsFuel || fuelSource?.along === undefined || entry.geometry.length < 2) return;
+    const controller = new AbortController();
+    const line = entry.geometry.map((point) => [point.lon, point.lat] as const);
+    void fuelSource.along(line, "fuel", controller.signal).then(
+      (result) => {
+        if (controller.signal.aborted) return;
+        setFuelStops({
+          id: entry.id,
+          stops: result.available
+            ? result.stops.map((stop) => ({ mile: stop.alongMeters / METERS_PER_MILE, name: stop.feature.name }))
+            : null,
+        });
+      },
+      () => {
+        if (!controller.signal.aborted) setFuelStops({ id: entry.id, stops: null });
+      },
+    );
+    return () => controller.abort();
+  }, [entry.geometry, entry.id, fuelSource, rideNeedsFuel]);
+
   const startDistance = riderOrigin === undefined ? null : startDistanceLabel(distanceToStartKm(riderOrigin, entry));
   // The header says the two things a rider decides with: how far the start is,
   // and where the route came from. Everything else waits below (§7 copy).
@@ -439,7 +483,20 @@ export function RouteDetail({
           },
         }),
   });
-  const preparation = enrichRoutePreparationForLongTrip(entry, basePreparation, activeBike);
+  // The planner's long-trip checklist is not this page's job: the ride page
+  // tells the rider the surface, the bike fit, the closure check and the fuel
+  // line, in that order, and stops there (R3-8).
+  const preparation = { ...basePreparation, considerations: [] };
+  const truth = storedRideTruth({
+    surfaceSummary: entry.surfaceSummary,
+    distanceMeters: entry.distanceKm === null ? null : entry.distanceKm * 1000,
+    bike: activeBike ?? undefined,
+  });
+  const fuel = rideFuelLine({
+    distanceMeters: entry.distanceKm === null ? null : entry.distanceKm * 1000,
+    usableRangeMiles: fuelUsableMiles,
+    stops: fuelStops !== null && fuelStops.id === entry.id ? fuelStops.stops : null,
+  });
   async function runAction(action: string, callback: () => Promise<void> | void): Promise<void> {
     setBusy(action);
     setStatus(null);
@@ -492,6 +549,10 @@ export function RouteDetail({
             })}
           </dl>
         )}
+        {/* The truth under the four numbers: known surface miles, the bike's
+            fit, whether anyone checked closures, and fuel only when the ride is
+            longer than the tank. Unknown reads as unknown. */}
+        <RideTruthLines truth={truth} fuel={fuel} riderReports={false} />
         {showHeaderMeta ? (
           <p className="og-route-detail__meta" data-testid="route-meta">
             {startDistance === null ? null : (
@@ -567,7 +628,6 @@ export function RouteDetail({
               {saved ? "Saved" : "Save"}
             </button>
           ) : null}
-          <ShareRouteButton name={entry.name} />
         </div>
       </section>
 
@@ -652,15 +712,14 @@ export function RouteDetail({
 
       {/* Taking the ride elsewhere is a quieter job than riding it: the file for
           a device, and the public listing for a shared ride. */}
-      {canExport || (fullGeometry && (entry.source === "personal" || entry.source === "import")) ? (
-        <section className="og-route-detail__take-away" aria-label="Take this ride with you">
-          <h2>Take it with you</h2>
-          <div className="og-route-detail__alternates">
-            {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
-            {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
-          </div>
-        </section>
-      ) : null}
+      <section className="og-route-detail__take-away" aria-label="Take this ride with you">
+        <h2>Take it with you</h2>
+        <div className="og-route-detail__alternates">
+          {canExport ? <button type="button" className="og-secondary" disabled={busy !== null} onClick={exportGpx}>Export GPX</button> : null}
+          <ShareRouteButton name={entry.name} />
+          {fullGeometry && (entry.source === "personal" || entry.source === "import") ? <ShareWithEveryone name={entry.name} geometry={entry.geometry} /> : null}
+        </div>
+      </section>
 
       {entry.source === "catalog" ? <RemoveRoute routeId={entry.id} name={entry.name} /> : null}
         </div>

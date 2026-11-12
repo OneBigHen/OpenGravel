@@ -1,0 +1,152 @@
+/* The ride card (R3-2): solid, never glass — it sits on a sheet and on a page,
+   and a picture of the ride must not depend on what is behind it. Shared
+   `.og-ride__action*` rules live in ride.css. */
+.og-ride-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-3);
+}
+
+.og-ride-card__plate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--og-space-2);
+  padding: var(--og-space-4);
+  background: var(--og-surface);
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-card);
+}
+
+.og-ride-card__headline {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.og-ride-card__picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  background: var(--og-surface-2);
+  border-radius: var(--og-radius-control);
+}
+
+.og-ride-card__line {
+  fill: none;
+  stroke: var(--og-route);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.og-ride-card__no-line {
+  margin: 0;
+  padding: var(--og-space-4);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  background: var(--og-surface-2);
+  border-radius: var(--og-radius-control);
+}
+
+.og-ride-card__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--og-space-1);
+}
+
+.og-ride-card__title {
+  margin: 0;
+  font-family: var(--og-face-display);
+  font-size: var(--og-text-headline);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.og-ride-card__date {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-card__numbers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--og-space-3);
+  margin: var(--og-space-1) 0 0;
+}
+@media (min-width: 761px) {
+  .og-ride-card__numbers {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.og-ride-card__stat {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.og-ride-card__stat dt {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.og-ride-card__stat dd {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+}
+
+.og-ride-card__number {
+  color: var(--og-ink);
+  font-family: var(--og-face-display);
+  font-size: var(--og-ride-text-readout);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.og-ride-card__stat[data-unknown="true"] .og-ride-card__number {
+  color: var(--og-ink-2);
+}
+
+.og-ride-card__unit {
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 700;
+}
+
+.og-ride-card__surface {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.og-ride-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.og-ride-card__actions .og-ride__action {
+  flex: 1 1 132px;
+}
+
+.og-ride-card__message {
+  margin: 0;
+  color: var(--og-danger);
+  font-size: var(--og-text-meta);
+}

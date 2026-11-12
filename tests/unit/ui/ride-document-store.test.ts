@@ -160,7 +160,7 @@ describe("createRideDocumentStore", () => {
 
     await vi.waitFor(() => expect(store.getState().document.rideId).toBe(saved.rideId));
     expect(store.getState().document.intent.bike).toEqual(savedBike);
-    expect(store.getState().restoreStatus.message).toBe("Restored your draft");
+    expect(store.getState().restoreStatus.message).toBe("Restored your ride");
   });
 
   it("bumps the document revision for an applied command", () => {

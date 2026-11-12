@@ -7,7 +7,8 @@ import type { ProviderCandidate, ProviderRouteRequest } from "@/application/plan
 
 const origin = { lat: 40, lon: -75 }, destination = { lat: 40, lon: -74.8 };
 function route(minutes: number, winding: boolean, roadClass = "secondary", roadAccess = "yes"): ProviderCandidate {
-  const geometry = Array.from({ length: 801 }, (_, i) => ({ lon: origin.lon + (destination.lon - origin.lon) * i / 800, lat: 40 + (winding ? Math.sin(i / 800 * Math.PI * 16) * 0.002 : 0) }));
+  // Winding: tight bends (about 8 km of road-bends-v1 bend metres), which is what the Curvy pick spends.
+  const geometry = Array.from({ length: 1601 }, (_, i) => ({ lon: origin.lon + (destination.lon - origin.lon) * i / 1600, lat: 40 + (winding ? Math.sin(i / 1600 * Math.PI * 60) * 0.0008 : 0) }));
   const meters = geometry.slice(1).reduce((sum, p, i) => sum + haversine(geometry[i]!, p), 0);
   return { providerId: "test", profile: "motorcycle_twisty", geometry, durationSeconds: minutes * 60, distanceMeters: meters,
     roadSummary: { totalMeters: meters, surfaceByRoadClassMeters: { [`asphalt|${roadClass}`]: meters }, curvatureMeters: {}, tollMeters: 0,

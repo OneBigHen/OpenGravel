@@ -60,6 +60,10 @@ export interface RouteDecisionCardProps {
    * card ever carries one (04 §13).
    */
   readonly explanation?: RouteExplanation | null;
+  /** What this card is called when its role says nothing ("Twistiest", "Option 2"). */
+  readonly name?: string | undefined;
+  /** Under the ride summary: the summary says the truth lines, so the card does not repeat them. */
+  readonly quiet?: boolean;
 }
 
 /** A traffic status that only says "we don't know" — not drawn as a card status. */
@@ -188,9 +192,9 @@ export function RouteDecisionCard({
   card,
   onSelect,
   explanation = null,
+  name,
+  quiet = false,
 }: RouteDecisionCardProps) {
-  const [whyExpanded, setWhyExpanded] = useState(false);
-
   if (compact) return <li>
     <button type="button" className="og-phone-choice" data-testid={`route-option-${card.roleKey}`}
       data-role={card.roleKey} data-tint={card.tint ?? 0} data-selected={card.isSelected ? "true" : "false"}
@@ -223,7 +227,7 @@ export function RouteDecisionCard({
       >
         <span className="og-route-card__role">
           <span className="og-route-card__swatch" aria-hidden="true" />
-          {card.roleLabel}
+          {name ?? card.roleLabel}
         </span>
         <span className="og-route-card__metrics">
           <span className="og-route-card__metric" data-testid="route-duration">
@@ -257,46 +261,63 @@ export function RouteDecisionCard({
           </span>
         )}
       </button>
-      {card.isSelected && card.truth !== undefined ? <RideTruthLines truth={card.truth} testId="selected-route-truth" /> : null}
-      {explanation === null ? null : (
-        <>
-          <button
-            type="button"
-            className="og-route-card__why-toggle"
-            data-testid="route-why-toggle"
-            aria-expanded={whyExpanded}
-            aria-controls={card.whyKey}
-            onClick={(): void => setWhyExpanded((expanded) => !expanded)}
-          >
-            Why this ride?
-          </button>
-          {whyExpanded ? (
-            <div className="og-route-card__why" id={card.whyKey} data-testid="route-why-panel">
-              <p className="og-route-card__why-headline" data-testid="route-why-headline">
-                {explanation.headline}
-              </p>
-              <ul className="og-route-card__why-bullets">
-                {explanation.bullets.map((bullet) => (
-                  <li
-                    className="og-route-card__why-bullet"
-                    data-testid="route-why-bullet"
-                    key={bullet.key}
-                  >
-                    {bullet.text}{" "}
-                    <span
-                      className="og-route-card__why-status"
-                      data-testid="route-why-status"
-                      data-status={bullet.evidenceStatus}
-                    >
-                      {EVIDENCE_STATUS_LABELS[bullet.evidenceStatus]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </>
-      )}
+      {!quiet && card.isSelected && card.truth !== undefined ? <RideTruthLines truth={card.truth} testId="selected-route-truth" /> : null}
+      {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </li>
+  );
+}
+
+/**
+ * The deterministic explanation of the route on screen (04 §13): a real button
+ * with `aria-expanded` that expands a region carrying the explanation's own
+ * bullets, each labelled with the status of the evidence behind it. Its own
+ * component because the summary and the card both offer it.
+ */
+export function WhyThisRide({
+  explanation,
+  whyKey,
+}: {
+  readonly explanation: RouteExplanation;
+  readonly whyKey: string;
+}) {
+  const [whyExpanded, setWhyExpanded] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="og-route-card__why-toggle"
+        data-testid="route-why-toggle"
+        aria-expanded={whyExpanded}
+        aria-controls={whyKey}
+        onClick={(): void => setWhyExpanded((expanded) => !expanded)}
+      >
+        Why this ride?
+      </button>
+      {whyExpanded ? (
+        <div className="og-route-card__why" id={whyKey} data-testid="route-why-panel">
+          <p className="og-route-card__why-headline" data-testid="route-why-headline">
+            {explanation.headline}
+          </p>
+          <ul className="og-route-card__why-bullets">
+            {explanation.bullets.map((bullet) => (
+              <li
+                className="og-route-card__why-bullet"
+                data-testid="route-why-bullet"
+                key={bullet.key}
+              >
+                {bullet.text}{" "}
+                <span
+                  className="og-route-card__why-status"
+                  data-testid="route-why-status"
+                  data-status={bullet.evidenceStatus}
+                >
+                  {EVIDENCE_STATUS_LABELS[bullet.evidenceStatus]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </>
   );
 }

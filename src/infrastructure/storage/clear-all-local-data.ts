@@ -1,4 +1,4 @@
-import { DRAFT_DIRTY_STORAGE_KEY, APPEARANCE_STORAGE_KEY, APPEARANCE_SUN_STORAGE_KEY, FRONT_DOOR_ASK_STORAGE_KEY, FRONT_DOOR_CAMERAS_STORAGE_KEY, HIDDEN_ROUTES_STORAGE_KEY, NAV_SCREEN_STORAGE_KEY, LIVE_ACTIVITY_STORAGE_KEY, SPOTIFY_CLIENT_ID_STORAGE_KEY, VOICE_MUTED_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+import { DRAFT_DIRTY_STORAGE_KEY, APPEARANCE_STORAGE_KEY, APPEARANCE_SUN_STORAGE_KEY, FRONT_DOOR_ASK_STORAGE_KEY, FRONT_DOOR_CAMERAS_STORAGE_KEY, HIDDEN_ROUTES_STORAGE_KEY, NAV_SCREEN_STORAGE_KEY, LIVE_ACTIVITY_STORAGE_KEY, SPOTIFY_CLIENT_ID_STORAGE_KEY, VOICE_MUTED_STORAGE_KEY, RIDER_REPORTS_STORAGE_KEY } from "@/application/persistence/local-data-keys";
 import { PLANNER_PLACES_PREFERENCE_KEY, RIDE_PLACES_PREFERENCE_KEY } from "@/application/places/preferences";
 import { COMMUNITY_DEVICE_ID_STORAGE_KEY } from "@/application/contributions/device-id";
 import { BASEMAP_LOOK_PREFERENCE_KEY, CAMERA_ROUTE_ONLY_STORAGE_KEY, MAP_LAYERS_STORAGE_KEY, SATELLITE_PREFERENCE_KEY } from "@/application/map/preferences";
@@ -8,6 +8,7 @@ import { GARAGE_STORAGE_KEY } from "@/infrastructure/storage/garage-storage";
 import { deleteVNextDatabase } from "@/infrastructure/storage/db";
 import { BasemapArchiveStore } from "@/infrastructure/offline/basemap-archive-store";
 import { deleteOfflineRegionDatabase } from "@/infrastructure/offline/region-download-store";
+import { deleteRidePackDatabase } from "@/infrastructure/offline/ride-pack-stores";
 import { PLACE_NAME_STORAGE_KEY } from "@/infrastructure/storage/place-name-storage";
 import { RIDE_FOCUS_POINTER_KEY } from "@/infrastructure/storage/ride-focus-pointer";
 import { HOME_LOCATION_STORAGE_KEY } from "@/infrastructure/storage/home-location-storage";
@@ -53,6 +54,7 @@ export const LOCAL_DATA_STORAGE_KEYS = [
   SPOTIFY_CLIENT_ID_STORAGE_KEY,
   VOICE_MUTED_STORAGE_KEY,
   HIDDEN_ROUTES_STORAGE_KEY,
+  RIDER_REPORTS_STORAGE_KEY,
   // A live link being shared, with its write secret, and the name on it.
   LIVE_SESSION_STORAGE_KEY,
   LIVE_RIDER_NAME_STORAGE_KEY,
@@ -72,6 +74,7 @@ async function deleteDeviceDatabases(): Promise<void> {
   await deleteVNextDatabase();
   await deleteOfflineRegionDatabase();
   await BasemapArchiveStore.clear();
+  await deleteRidePackDatabase();
 }
 
 /** Clears every app-owned device key, the VNext IndexedDB database and downloaded offline areas. */

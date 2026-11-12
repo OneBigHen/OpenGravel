@@ -19,6 +19,7 @@ import { rideFocusGeometryRefs } from "@/application/persistence/ride-focus-poin
 import { clearAllLocalData } from "@/infrastructure/storage/clear-all-local-data";
 import type { OfflineRegionsPort } from "@/application/offline/offline-regions";
 import { OfflineAreaStore } from "@/infrastructure/offline/offline-area-store";
+import { createBrowserRidePackService } from "@/app/ride-pack-client";
 import { SettingsSurface, type DeleteResult } from "@/ui/settings/SettingsSurface";
 import { setAppearanceMode } from "@/ui/appearance/appearance";
 import { nativeNavigationBridge } from "@/infrastructure/native/ferrostar-bridge";
@@ -55,6 +56,8 @@ export function SettingsClient() {
   const currentLocation = useMemo(() => createBrowserCurrentLocationSource(), []);
   const consentStore = useMemo(() => createLocalStorageTelemetryConsentStore(), []);
   const rideFocusPointer = useMemo(() => createLocalStorageRideFocusPointer(), []);
+  // Rides kept for no signal (R3-7), listed with a Remove each.
+  const ridePacks = useMemo(() => createBrowserRidePackService(), []);
   const repository = useMemo(
     () => createRideRepository({
       bootstrapPointer: createLocalStorageBootstrapPointer(),
@@ -283,5 +286,6 @@ export function SettingsClient() {
     deleteResult={deleteResult}
     localDataEpoch={localDataEpoch}
     offlineRegions={offlineRegions}
+    ridePacks={ridePacks}
   />;
 }

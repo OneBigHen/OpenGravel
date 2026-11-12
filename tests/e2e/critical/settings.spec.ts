@@ -107,9 +107,13 @@ test("active bike carries into a new ride and local data can be exported or dele
   await expect(page.locator(".og-prepare__bike > span")).toContainText("Trail bike · 30 mi range");
   await expect(page.getByTestId("fuel-line")).toBeVisible();
 
-  await page.getByTestId("named-ride-title").fill("Trail bike test ride");
-  await page.getByTestId("save-named-ride").click();
-  await expect(page.getByText("Named ride saved. Your active draft remains available.")).toBeVisible();
+  // One tap saves under an automatic name; the name is then edited in place (R3-4).
+  await page.getByTestId("summary-save").click();
+  await expect(page.getByTestId("summary-save")).toHaveText("Saved");
+  await page.getByTestId("ride-title-edit").click();
+  await page.getByTestId("ride-title-input").fill("Trail bike test ride");
+  await page.getByTestId("ride-title-input").press("Enter");
+  await expect(page.getByTestId("phone-destination")).toHaveText("Trail bike test ride");
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "Export all data" }).click();

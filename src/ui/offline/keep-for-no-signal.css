@@ -1,0 +1,23 @@
+/* "Keep for no signal" (R3-7): one switch row and one status line. */
+.og-keep__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--og-space-3);
+  width: 100%;
+  min-height: var(--og-touch);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--og-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.og-keep__detail {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-variant-numeric: tabular-nums;
+}
+.og-keep__detail[data-tone="error"] { color: var(--og-danger); }

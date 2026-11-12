@@ -107,7 +107,7 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
     renderPanel({ routeId: "route_firstload_expanded", sheetExpanded: true });
 
     // The chart is behind the lazy boundary: it arrives after the first paint.
-    await screen.findByTestId("elevation-profile");
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
     // The loading skeleton carries the same test id, so read the drawn chart
     // only once the measured climb is on screen.
     expect(await screen.findByTestId("elevation-climb")).toHaveTextContent("ft");
@@ -128,7 +128,7 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
   it("keeps the compact density while the sheet rests, with no notches to draw", async () => {
     renderPanel({ routeId: "route_firstload_compact", sheetExpanded: false });
 
-    await screen.findByTestId("elevation-profile");
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
     await screen.findByTestId("elevation-climb");
     expect(screen.getByTestId("elevation-profile")).toHaveAttribute("data-density", "compact");
     expect(screen.queryByTestId("elevation-waypoints")).not.toBeInTheDocument();
@@ -226,11 +226,15 @@ it("keeps saved work and route context available in the compact directions previ
   try {
     render(<PlannerResultPanel showOptions inspector={null}
       choices={{ cards: [card("directions-context")], explanation: null, onSelect: vi.fn() }}
-      actions={{ document: ride, libraryService: undefined, shareService: undefined, start: null, route: { routeKey: "directions-context", rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, summary: { distanceMeters: 48000, durationSeconds: 5400 }, instructionsAvailable: false, pack: buildCorridorPackManifest({ rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, createdAt: NOW, dataRefs: [] }) } }}
+      actions={{ document: ride, libraryService: undefined, shareService: {} as never, start: null, route: { routeKey: "directions-context", rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, summary: { distanceMeters: 48000, durationSeconds: 5400 }, instructionsAvailable: false, pack: buildCorridorPackManifest({ rideId: ride.rideId, routeRevision: ride.revision, geometry: LINE, createdAt: NOW, dataRefs: [] }) } }}
       briefing={{ route: { routeId: "directions-context", geometry: LINE, distanceMeters: 48000, durationSeconds: 5400 }, ride, bikes: [], providers: { elevationProfile: ELEVATION_SOURCE }, offlineRoute: null, actions: { setBike: vi.fn(), setDeparture: vi.fn(), setArriveBy: vi.fn() }, onRouteTraffic: vi.fn() }} />);
-    expect(screen.getByTestId("named-ride-title")).toBeInTheDocument();
+    // A destination shows the same summary as a loop (R3-4): Start, Save and Share in it.
+    expect(screen.getByTestId("route-options")).toContainElement(screen.getByTestId("route-summary"));
+    expect(screen.getByTestId("summary-save")).toBeInTheDocument();
     expect(screen.getByTestId("open-share")).toBeInTheDocument();
-    await screen.findByTestId("prepare-toggle");
-    await screen.findByTestId("elevation-profile");
+    expect(screen.queryByTestId("named-ride-title")).toBeNull();
+    // Both load as split chunks; a busy test runner can take over a second.
+    await screen.findByTestId("prepare-toggle", {}, { timeout: 5_000 });
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
   } finally { vi.unstubAllGlobals(); }
 });

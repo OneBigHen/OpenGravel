@@ -195,6 +195,34 @@ the primary button.
   once what changed. A ride saved before lines were kept replans once and says "Planned again: the saved
   line was not stored." An imported track whose ends meet within 150 m opens as "Loop from <place>".
   A saved line's closure check reads "out of date", never a clear result from another day.
+- 2026-11-11 Owner (round 3 plan, R3-4 "one instrument", calls 3, 4, 7, 8, 9): every route — loop,
+  destination, curated, saved, imported — shows one summary on every tier: its name (a ride's own name
+  wins, never "To <place>"), the time large in green with miles beside it, the three truth lines (an
+  unmeasured surface says "Surface unknown"), then Start (primary), Save and Share in one row. Save is
+  one tap under an automatic name ("Rothrock loop, 53 mi"); the button reads "Saved" and a pencil
+  renames in place; no name box and no "draft" wording anywhere. Compare rows are named by what they
+  measurably are ("Most dirt", "Twistiest", "Fastest") else "Option 2"; "Back to ride" leads the list.
+  Auto theme follows the sun at the rider's place on every page. Start shows the ride screen at once
+  with the route outline over the loading map; the "couldn't open" page appears only on failure. The
+  laptop's first screen offers a live green "Make my loop" (from the rider's position); the shape
+  switch itself still opens on "To a destination" so the destination box stays one tap away.
+
+- 2026-11-11 Owner (round 3, R3-2): every ride records from Start, guided or free, and a
+  finished ride ends with one **ride card**: solid `--og-surface` on a `--og-line` hairline (never
+  glass), the ridden line in plum at full contrast, the ride's name or "Ride, Nov 11", four numbers
+  in Outfit (miles, moving time, dirt miles, climb) and Done / Share / GPX. Unknown surface is
+  reported as unknown miles, never counted as paved or gravel; a number with no source is an em
+  dash. Share draws the same card as a 1080×1350 PNG in the browser (Web Share, else Save picture).
+  My rides tabs are **Saved** and **Ridden**, and `/rides?tab=ridden` opens Ridden.
+
+- 2026-11-11 Owner (round 3 plan, restructure call 12, R3-7 "Keep for no signal"): the one offline control
+  is a **Keep for no signal** switch on a saved ride (My rides, ride details), showing progress and then
+  "Kept, 3 MB"; a full phone or a failed tile says so in one red line and the switch goes back off. It
+  keeps OpenGravel's own Protomaps tiles half a mile either side of the line (zooms 8 to 14), never the
+  Mapbox style, so with no signal the map redraws in the Protomaps day flavour. On the ride with no signal:
+  one neutral chip "No signal, kept ride" (just "No signal" when the line is not kept), no reroute, and the
+  server rows (weather, gas or food, new route) shown disabled with "No signal". Settings lists kept rides
+  with their size and Remove, and is silent when none are kept.
 
 ## Open proposals
 

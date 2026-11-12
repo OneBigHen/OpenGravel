@@ -1,48 +1,38 @@
 "use client";
 
+/**
+ * Directions from a place card, on a phone or tablet (maps-for-riders §4).
+ *
+ * The ride itself reads exactly like every other route: the one summary
+ * (`RideSummary`, round 3 restructure call 3) with its name, time and miles,
+ * the three honest lines, Start, Save and Share, and Compare rides. Under it
+ * sit the two ways into the ride's settings this view adds — Edit (the From /
+ * To card's own edit target) and Options — then the full-sheet detail.
+ */
+
 import type { ReactNode } from "react";
-import type { RouteCardVm } from "@/application/planner/planner-view-model";
-import { riderRouteOptions } from "@/application/planner/rider-route-options";
-import type { RouteCandidateId } from "@/domain/route/ids";
-import type { RideActionsProps } from "./RideActions";
-import { RouteDecisionCard } from "./RouteDecisionCard";
 
 export interface RouteOptionsProps {
+  /** The one ride summary. */
+  readonly summary: ReactNode;
+  /** Save-adjacent detail, briefing and elevation: shown at the full detent. */
   readonly children?: ReactNode;
-  readonly cards: readonly RouteCardVm[];
-  readonly startLabel: string;
-  readonly finishLabel: string;
-  readonly onSelect: (id: RouteCandidateId) => void;
-  readonly onReverse?: (() => void) | undefined;
   readonly onEdit?: (() => void) | undefined;
   readonly onOptions?: (() => void) | undefined;
   readonly optionsLabel?: string | undefined;
-  readonly start: RideActionsProps["start"];
 }
-const shortName = (label: string) => label.split(",")[0]?.trim() || label;
 
-export function RouteOptions({ cards, startLabel, finishLabel, onSelect, onReverse, onEdit, onOptions, optionsLabel, start, children }: RouteOptionsProps) {
+export function RouteOptions({ summary, onEdit, onOptions, optionsLabel, children }: RouteOptionsProps) {
   return <section className="og-route-options" data-testid="route-options" aria-label="Route options">
-    <div className="og-route-options__header">
-      <h2 data-testid="route-options-header" tabIndex={-1} data-sheet-focus>{shortName(startLabel)} → {shortName(finishLabel)}</h2>
-      {onReverse === undefined ? null : <button type="button" data-testid="route-options-swap" aria-label="Swap start and destination" onClick={onReverse}>⇅</button>}
-      {onEdit === undefined ? null : <button type="button" data-testid="route-options-edit" onClick={onEdit}>Edit</button>}
-    </div>
     <div className="og-route-options__scroll">
-      <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
-        {riderRouteOptions(cards).map(({ card, label, reason }) => <RouteDecisionCard key={card.routeId} compact card={card} compactLabel={label} compactReason={reason} onSelect={onSelect}/>)}
-      </ul>
+      {summary}
       {onOptions === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-settings" onClick={onOptions}><span>Options</span><span>{optionsLabel} ›</span></button>}
-      {/* Save, share, briefing and elevation are full-sheet detail: at half height
-          the route stays the subject and the map keeps its share of the screen. */}
+      {onEdit === undefined ? null : <button type="button" className="og-route-options__settings" data-testid="route-options-edit" onClick={onEdit}><span>Edit route</span><span>Start, destination and stops ›</span></button>}
+      {/* Briefing and elevation are full-sheet detail: at half height the
+          route stays the subject and the map keeps its share of the screen. */}
       <div className="og-route-options__more">
         {children}
       </div>
     </div>
-    {start === null ? null : <div className="og-route-options__start">
-      <button type="button" className="og-primary" data-testid="start-ride" disabled={start.starting || start.refusal !== null} onClick={start.onStart}>{start.starting ? "Starting…" : "Start ride"}</button>
-      {start.refusal === null ? null : <p data-testid="start-ride-reason">{start.refusal}</p>}
-      {start.error === null ? null : <p role="alert">{start.error}</p>}
-    </div>}
   </section>;
 }

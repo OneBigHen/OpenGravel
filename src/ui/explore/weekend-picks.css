@@ -1,0 +1,107 @@
+/* "Near you this weekend" (R3-8): a sideways strip of reachable rides above
+   the Explore list. Solid cards on the topographic backdrop, like every other
+   Explore surface; one row that scrolls on a phone, three quiet columns wide. */
+
+.og-weekend { display: grid; gap: var(--og-space-3); margin: var(--og-space-4) 0 var(--og-space-5); }
+
+.og-weekend__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--og-space-3); }
+
+.og-weekend__head h2 { margin: 0; font-family: var(--og-face-display); font-size: var(--og-text-headline); font-weight: 700; letter-spacing: -0.01em; }
+
+.og-weekend__count { flex: none; color: var(--og-ink-2); font-size: var(--og-text-caption); font-weight: 600; }
+
+.og-weekend__row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(224px, 78%);
+  gap: var(--og-space-3);
+  margin: 0 calc(-1 * var(--og-space-4));
+  padding: var(--og-space-1) var(--og-space-4) var(--og-space-2);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  list-style: none;
+}
+
+.og-weekend__read { margin: 0; color: var(--og-ink-2); font-size: var(--og-text-caption); }
+
+.og-weekend__row::-webkit-scrollbar { display: none; }
+
+.og-weekend__card { min-width: 0; scroll-snap-align: start; }
+
+.og-weekend-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--og-line);
+  border-radius: var(--og-radius-card);
+  background: var(--og-surface);
+  color: var(--og-ink);
+  text-decoration: none;
+}
+
+.og-weekend-card:hover { background: var(--og-surface-2); }
+
+.og-weekend-card:focus-visible { outline: var(--og-focus-width) solid var(--og-focus-ring); outline-offset: var(--og-focus-offset); }
+
+.og-weekend-card__map { display: block; width: 100%; height: 104px; object-fit: cover; background: var(--og-surface-2); }
+
+.og-weekend-card__map--line { height: auto; aspect-ratio: 16 / 9; border-radius: 0; color: var(--og-route); }
+
+.og-weekend-card__map--missing { display: grid; place-items: center; color: var(--og-ink-2); font-size: var(--og-text-headline); }
+
+.og-weekend-card__body {
+  display: grid;
+  align-content: start;
+  gap: var(--og-space-1);
+  min-width: 0;
+  padding: var(--og-space-3);
+}
+
+.og-weekend-card__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--og-text-body);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.og-weekend-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--og-space-2);
+  color: var(--og-ink-2);
+  font-size: var(--og-text-meta);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-weekend-card__facts > :not(:first-child)::before { content: "· "; }
+
+.og-weekend-card__character {
+  color: var(--og-primary-text);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-weekend-card__weather {
+  display: grid;
+  gap: 2px;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.og-weekend-card__away { color: var(--og-ink-2); font-size: var(--og-text-caption); font-weight: 600; }
+
+@media (min-width: 761px) {
+  .og-weekend__row { grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; overflow: visible; }
+}

@@ -300,3 +300,161 @@ function checkedLine(input: RideTruthInput): RideTruthLine {
 export function rideTruth(input: RideTruthInput): RideTruth {
   return [surfaceLine(input), bikeLine(input), checkedLine(input)];
 }
+
+/**
+ * Adds the rider's own reported spots to the checked line, apart from the
+ * official checks. Never changes the tone, never says "closed": a report is the
+ * rider's private note, not a fact about the road.
+ */
+export function withRiderReportSentence(
+  line: RideTruthLine,
+  status: { readonly avoided: number; readonly couldNotAvoid: boolean },
+): RideTruthLine {
+  const sentence = status.couldNotAvoid
+    ? "Could not avoid the spot you reported."
+    : status.avoided === 1
+      ? "Avoiding 1 spot you reported."
+      : status.avoided > 1
+        ? `Avoiding ${status.avoided} spots you reported.`
+        : null;
+  if (sentence === null) return line;
+  const base = line.text.replace(/[.\s]+$/, "");
+  return { ...line, text: `${base}. ${sentence}` };
+}
+
+/**
+ * A ride read from the catalog, not planned a moment ago: the same three lines,
+ * built from the ride's stored surface record and the rider's bike.
+ *
+ * The catalog states unpaved mileage as prose ("Mostly paved · 2.1 mi gravel")
+ * rather than as an evidence bundle. Only the mileage it measured is printed;
+ * the "Mostly" prefix is the catalog's own summary, not a number. A closure is
+ * a check somebody has to run, so the third line claims "Checked today" only
+ * when the caller says one did, and otherwise says it was not checked here.
+ */
+export interface StoredRideTruthInput {
+  readonly surfaceSummary?: string | undefined;
+  readonly distanceMeters?: number | null | undefined;
+  readonly bike?: RideTruthBike | undefined;
+  /** True only when a closure check actually ran for this ride today. */
+  readonly closuresCheckedToday?: boolean | undefined;
+}
+
+interface StoredSurface {
+  readonly unpavedMiles: number;
+  readonly word: string;
+}
+
+/**
+ * The measured unpaved mileage in a catalog surface summary, or `null` when the
+ * summary is missing or in words this module cannot trust.
+ */
+function storedSurface(summary: string | undefined): StoredSurface | null {
+  if (summary === undefined || summary.trim() === "") return null;
+  if (/^paved$/i.test(summary.trim())) return { unpavedMiles: 0, word: "unpaved" };
+  const detailed = /·\s*([\d.]+)\s*mi\s+(gravel|dirt|unpaved)/i.exec(summary);
+  if (detailed === null) return null;
+  const miles = Number(detailed[1]);
+  if (!Number.isFinite(miles) || miles < 0) return null;
+  return { unpavedMiles: miles, word: (detailed[2] ?? "unpaved").toLowerCase() };
+}
+
+function storedSurfaceLine(summary: string | undefined): RideTruthLine {
+  const surface = storedSurface(summary);
+  if (surface === null) return { tone: "unknown", text: "Surface unknown" };
+  if (!(surface.unpavedMiles > 0)) return { tone: "good", text: "all paved" };
+  return { tone: "good", text: `${milesText(surface.unpavedMiles * METERS_PER_MILE)} ${surface.word}` };
+}
+
+function storedBikeLine(summary: string | undefined, bike: RideTruthBike | undefined): RideTruthLine {
+  if (bike === undefined) {
+    return { tone: "unknown", text: "Not checked for your bike: no bike selected" };
+  }
+  const surface = storedSurface(summary);
+  if (surface === null) {
+    return { tone: "unknown", text: "Not checked for your bike: surface not measured" };
+  }
+  if (bike.maintainedGravel === "avoid" && surface.unpavedMiles > 0) {
+    return {
+      tone: "bad",
+      text: `Over the limit for ${bike.name}: ${milesText(surface.unpavedMiles * METERS_PER_MILE)} ${surface.word}`,
+    };
+  }
+  // The stored catalog line carries no rough-track measurement, so the rest of
+  // the bike's fit is unchecked. A ride the bike is set up for is not "fine".
+  return { tone: "unknown", text: "Not checked for your bike: rough-track check did not run" };
+}
+
+/** The three lines a curated ride page shows, in the same order as a plan. */
+export function storedRideTruth(input: StoredRideTruthInput): RideTruth {
+  const checked: RideTruthLine = input.closuresCheckedToday === true
+    ? { tone: "good", text: "Checked today" }
+    : { tone: "unknown", text: "Closures not checked for this ride" };
+  return [
+    storedSurfaceLine(input.surfaceSummary),
+    storedBikeLine(input.surfaceSummary, input.bike),
+    checked,
+  ];
+}
+
+/** One gas station on the ride, at its mile from the start. */
+export interface RideFuelStop {
+  readonly mile: number;
+  readonly name: string;
+}
+
+export interface RideFuelInput {
+  /** The ride's length; absent means the fuel line cannot be judged. */
+  readonly distanceMeters?: number | null | undefined;
+  /** The bike's range after its reserve, in miles. Absent means no judgement. */
+  readonly usableRangeMiles?: number | null | undefined;
+  /**
+   * Stations in route order. `null` or absent means the gas data did not load,
+   * which is said plainly rather than drawn as a dry route.
+   */
+  readonly stops?: readonly RideFuelStop[] | null | undefined;
+}
+
+/**
+ * The one fuel line a ride earns: only a ride longer than the tank's usable
+ * range has anything to say. A shorter ride returns `null` and shows no line.
+ *
+ * Unknown is never a reassurance: without gas data the line says it was not
+ * checked, and a load with no stations says to fill up before leaving.
+ */
+export function rideFuelLine(input: RideFuelInput): RideTruthLine | null {
+  const distance = input.distanceMeters;
+  const distanceMiles = typeof distance === "number" && Number.isFinite(distance) && distance > 0
+    ? distance / METERS_PER_MILE
+    : null;
+  const usable = input.usableRangeMiles;
+  const usableMiles = typeof usable === "number" && Number.isFinite(usable) && usable > 0 ? usable : null;
+  if (distanceMiles === null || usableMiles === null || distanceMiles <= usableMiles) return null;
+  if (input.stops === null || input.stops === undefined) {
+    return { tone: "unknown", text: "Fuel stops not checked" };
+  }
+  const stops = input.stops
+    .filter((stop) => Number.isFinite(stop.mile) && stop.mile >= 0)
+    .sort((a, b) => a.mile - b.mile || a.name.localeCompare(b.name));
+  if (stops.length === 0) {
+    return { tone: "warn", text: "No gas found on this ride: fill up first" };
+  }
+  // The last station the tank still reaches is the one to plan for; with none in
+  // range, the first station is still the first place to fill up.
+  const reachable = stops.filter((stop) => stop.mile <= usableMiles);
+  const stop = reachable.at(-1);
+  if (stop === undefined) {
+    // Every station is past what the tank reaches: say so, never "gas at mile 130".
+    return {
+      tone: "warn",
+      text: `Fuel: ${Math.round(distanceMiles)} mi ride, ${Math.round(usableMiles)} mi usable range. No gas within range: fill up first`,
+    };
+  }
+  const name = stop.name.trim();
+  const gas = name === "" ? `Gas at mile ${Math.round(stop.mile)}` : `Gas at mile ${Math.round(stop.mile)} (${name})`;
+  return {
+    tone: "warn",
+    text: `Fuel: ${Math.round(distanceMiles)} mi ride, ${Math.round(usableMiles)} mi usable range. ${gas}`,
+  };
+}
+

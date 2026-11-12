@@ -19,7 +19,7 @@ import {
 } from "@/application/explore/catalog";
 import { discoverRoads, type RoadCandidate } from "@/application/roads/discovery";
 import { createLibraryService } from "@/application/library/library-service";
-import { activeBike as activeGarageBike, snapshotOf } from "@/application/garage/garage-model";
+import { activeBike as activeGarageBike, snapshotOf, type BikeProfile } from "@/application/garage/garage-model";
 import { createIndexedDbGeometryStore } from "@/infrastructure/storage/indexeddb-geometry-store";
 import { createIndexedDbImportBlobStore } from "@/infrastructure/storage/indexeddb-import-blob-store";
 import { createRideRepository } from "@/infrastructure/storage/ride-repository";
@@ -98,11 +98,10 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
   const [hiddenIds] = useState<ReadonlySet<string>>(() => hiddenRouteIds());
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   /** The active garage bike, read on the client (EX-02, RS-01). */
-  const [bike, setBike] = useState<{ readonly fuelRangeMiles: number; readonly reserveMiles: number } | null>(null);
+  const [bike, setBike] = useState<BikeProfile | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const active = activeGarageBike(garageStorage.read());
-      setBike({ fuelRangeMiles: active.fuelRangeMiles, reserveMiles: active.reserveMiles });
+      setBike(activeGarageBike(garageStorage.read()));
     });
     return () => window.cancelAnimationFrame(frame);
   }, [garageStorage]);
@@ -269,6 +268,8 @@ function RideExploreClient({ detailId, basemap, mapboxToken, assetBasePath }: Ex
     <ExplorePanel
       entries={entries}
       roadCandidates={roadCandidates}
+      hiddenIds={hiddenIds}
+      {...(bike === null ? {} : { weekendBike: bike })}
       {...(mapboxToken === undefined ? {} : { mapboxToken })}
       {...(basemap === undefined
         ? {}

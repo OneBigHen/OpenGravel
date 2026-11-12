@@ -783,7 +783,7 @@ function recordingOf(
     ? null
     : libraryCommitted
     ? sourceDeleted
-      ? "Saved to My rides. Ride Focus is finishing session recovery; use Finish ride to retry."
+      ? "Saved to My rides. The ride is still finishing its recovery; use Finish ride to retry."
       : "Saved to My rides. The source trace still needs cleanup; use Finish ride to retry."
     : recordingStatus === "storage-full"
     ? `Device storage is full. ${bufferedPointCount} GPS ${bufferedPointCount === 1 ? "point is" : "points are"} waiting to be saved. Free space, then retry.`

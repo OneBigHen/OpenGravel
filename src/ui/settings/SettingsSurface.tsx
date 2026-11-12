@@ -1,5 +1,6 @@
 "use client";
 
+import { RiderReportsSection } from "@/ui/settings/RiderReportsSection";
 import { ActivitySwitch } from "@/ui/planner/ActivitySwitch";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { AppBar } from "@/ui/nav/AppBar";
@@ -16,6 +17,8 @@ import { TELEMETRY_ACKNOWLEDGEMENT, telemetryGateOpen, acknowledgedConsentState,
 import type { PlaceMatch } from "@/application/geocoding/place-search";
 import { HomeSearch } from "./HomeSearch";
 import { OfflineMapsSection } from "@/ui/settings/OfflineMapsSection";
+import { KeptRidesSection } from "@/ui/settings/KeptRidesSection";
+import type { RidePackService } from "@/application/offline/ride-pack";
 import { AppearanceRow } from "@/ui/settings/AppearanceSection";
 import { FeedbackSection } from "@/ui/settings/FeedbackSection";
 import { FrontDoorRows } from "@/ui/settings/FrontDoorSection";
@@ -66,6 +69,8 @@ export interface SettingsSurfaceProps {
   readonly localDataEpoch?: number;
   /** Offline areas; the section is hidden where the device cannot store them. */
   readonly offlineRegions?: OfflineRegionsPort | null;
+  /** Rides kept for no signal (R3-7); listed only when there are some. */
+  readonly ridePacks?: Pick<RidePackService, "keptRides" | "dropRide">;
 }
 
 export interface DeleteResult {
@@ -143,6 +148,7 @@ export function SettingsSurface({
   deleteResult = null,
   localDataEpoch = 0,
   offlineRegions = null,
+  ridePacks,
 }: SettingsSurfaceProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -380,6 +386,7 @@ export function SettingsSurface({
             </span>
             <span className="og-settings__row-value">miles</span>
           </div>
+          <RiderReportsSection refreshKey={deleteResult} />
           <SettingsRowButton label="Export all data" onClick={() => onExport?.()} disabled={onExport === undefined} chevron={false} />
           {statusMessage ? <p className="og-settings__card-block og-settings__note" role="status">{statusMessage}</p> : null}
           <DangerZone onDeleteAll={onDeleteAll} deleteResult={deleteResult} />
@@ -388,6 +395,8 @@ export function SettingsSurface({
         <FeedbackSection />
 
         <InstallSection />
+
+        {ridePacks === undefined ? null : <KeptRidesSection service={ridePacks} />}
 
         {offlineRegions !== null ? <OfflineMapsSection regions={offlineRegions} /> : null}
 
