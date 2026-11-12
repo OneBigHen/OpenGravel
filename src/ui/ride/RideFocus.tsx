@@ -937,16 +937,17 @@ export function RideFocus({
         : `Head back to ${headBackRoad}`;
 
   /*
-    Is it recording? A mounted phone can answer that without the sheet: the
-    strip carries one small red dot and the word "Recording" above its readings
-    for as long as a recording is bound and the ride is live. Nothing pulses and
-    nothing counts up beside it: the moving time is already one of the readings,
-    and a rider glancing at a phone at 50 mph needs one word, not a badge.
+    Is it recording? Every ride records from Start now (R3-2), so a guided
+    ride's strip says nothing about it: the Menu row does, and the line would
+    cost 20 px of map on every ride. In Record mode — where recording is the
+    ride's own mode, and a rider asked for it — the strip keeps its one small
+    red dot and the word "Recording". Nothing pulses and nothing counts up
+    beside it: the moving time is already one of the readings.
   */
   const recordingIndicator =
     terminal === null &&
-    (navigation?.recordingId ?? null) !== null &&
-    navigation?.activity !== "paused"
+    navigation?.activity === "free" &&
+    (navigation.recordingId ?? null) !== null
       ? recording
       : null;
 

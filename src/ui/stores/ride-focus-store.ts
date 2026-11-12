@@ -866,6 +866,8 @@ export function createRideFocusStore(
      * the entry: another ride never inherits them.
      */
     let cardSurfaceRuns: { readonly sessionId: string; readonly runs: readonly SurfaceRunSpan[] } | null = null;
+    /** The finished ride's card, built once per finished line, not once a second. */
+    let cardCache: { readonly key: string; readonly card: RideCard } | null = null;
 
     function refresh(): void {
       if (!running) return;
@@ -921,14 +923,21 @@ export function createRideFocusStore(
           },
         };
       }
-      const rideCard =
+      let rideCard: RideCard | null = null;
+      if (
         state !== null &&
         navigation?.activity === "completed" &&
         navigation.endReason === "completed" &&
         recordingSnapshot !== null
-          ? rideCardFromTelemetry({
+      ) {
+        const line = current.recordedLine.length >= 2 ? current.recordedLine : current.routeLine;
+        const key = `${state.sessionId}:${line.length}:${recordingSnapshot.status}:${current.riderSettings.units}`;
+        if (cardCache?.key !== key) {
+          cardCache = {
+            key,
+            card: rideCardFromTelemetry({
               telemetry: recordingSnapshot.telemetry,
-              line: current.recordedLine.length >= 2 ? current.recordedLine : current.routeLine,
+              line,
               surfaceRuns:
                 cardSurfaceRuns !== null && cardSurfaceRuns.sessionId === state.sessionId
                   ? cardSurfaceRuns.runs
@@ -936,8 +945,11 @@ export function createRideFocusStore(
               units: current.riderSettings.units,
               startedAt: navigation.startedAt,
               endedAt: navigation.endedAt,
-            })
-          : null;
+            }),
+          };
+        }
+        rideCard = cardCache.card;
+      }
       const viewModel =
         navigation === null
           ? null
@@ -1808,7 +1820,8 @@ export function createRideFocusStore(
           // Recording is on for every ride now, so a guided ride comes back with
           // its trace too. The line still leads with what happened to the ride
           // ("Ride restored"), because that is the thing the rider asked about.
-          const guidedRestore = report.state.activity === "guided" || report.state.activity === "track";
+          const restoredActivity = report.state.activity === "paused" ? report.state.resumeActivity : report.state.activity;
+          const guidedRestore = restoredActivity === "guided" || restoredActivity === "track";
           const pendingDiscardId = read.pointer.pendingRecordingDiscardId;
           const recoveryRecordingId = pendingDiscardId ?? report.state.recordingId;
           if (recoveryRecordingId !== null && recording !== undefined) {

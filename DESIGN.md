@@ -196,6 +196,14 @@ the primary button.
   line was not stored." An imported track whose ends meet within 150 m opens as "Loop from <place>".
   A saved line's closure check reads "out of date", never a clear result from another day.
 
+- 2026-11-11 Owner (round 3, R3-2): every ride records from Start, guided or free, and a
+  finished ride ends with one **ride card**: solid `--og-surface` on a `--og-line` hairline (never
+  glass), the ridden line in plum at full contrast, the ride's name or "Ride, Nov 11", four numbers
+  in Outfit (miles, moving time, dirt miles, climb) and Done / Share / GPX. Unknown surface is
+  reported as unknown miles, never counted as paved or gravel; a number with no source is an em
+  dash. Share draws the same card as a 1080×1350 PNG in the browser (Web Share, else Save picture).
+  My rides tabs are **Saved** and **Ridden**, and `/rides?tab=ridden` opens Ridden.
+
 ## Open proposals
 
 (none)

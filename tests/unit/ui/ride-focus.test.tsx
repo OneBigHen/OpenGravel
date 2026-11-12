@@ -930,7 +930,9 @@ function recordingViewModel(
 describe("recording from the map screen", () => {
   it("names the recording on one line above the readouts, and speaks the elapsed time", async () => {
     const { store } = await harness({ position: "fresh" });
-    const { navigation, viewModel } = recordingViewModel(store);
+    // Record mode: a Free Ride whose mode is recording, where the strip says so
+    // (a guided ride records too now, and its Menu row carries the state).
+    const { navigation, viewModel } = recordingViewModel(store, { activity: "free" });
     act(() => store.setState({ navigation, viewModel }));
 
     // The screen itself carries the state, so the strip's size follows it.
@@ -1228,6 +1230,49 @@ describe("the ride card (R3-2)", () => {
 
     expect(screen.getByTestId("ride-card-no-line")).toBeVisible();
     expect(screen.queryByTestId("ride-card-line")).toBeNull();
+  });
+
+  it("draws the card as a PNG when the browser cannot share a file", async () => {
+    // jsdom has no canvas: a proxy that swallows painting calls and returns a
+    // real PNG blob is enough to prove the button's own path.
+    const context = new Proxy({}, {
+      get: (_target, key) => (key === "canvas" ? undefined : () => undefined),
+      set: () => true,
+    });
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback): void {
+      callback(new Blob(["png"], { type: "image/png" }));
+    };
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:ride-card");
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const anchors: HTMLAnchorElement[] = [];
+    const createElement = document.createElement.bind(document);
+    const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const element = createElement(tag);
+      if (tag === "a") anchors.push(element as HTMLAnchorElement);
+      return element;
+    });
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    try {
+      const { store } = await harness({ position: "fresh" });
+      finishedCard(store);
+      // No Web Share here, so the button says what it will really do.
+      expect(screen.getByTestId("ride-card-share")).toHaveTextContent("Save picture");
+      fireEvent.click(screen.getByTestId("ride-card-share"));
+
+      await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
+      const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(blob.type).toBe("image/png");
+      const download = anchors.find((anchor) => anchor.download !== "");
+      expect(download?.download).toMatch(/^opengravel-morning-loop\.png$/);
+    } finally {
+      getContext.mockRestore();
+      createElementSpy.mockRestore();
+      anchorClick.mockRestore();
+      delete (URL as unknown as Record<string, unknown>).createObjectURL;
+      delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+    }
   });
 
   it("draws the card solid, in plum, with ride numbers at the display face", () => {

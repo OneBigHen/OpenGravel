@@ -24,12 +24,12 @@
  * card.
  */
 
-import { METERS_PER_MILE } from "@/application/planner/measurements";
 import type { SurfaceRunSpan } from "@/application/ride-session/surface-ahead";
 import type { Coordinate } from "@/domain/ride/types";
 import {
   createRecordingTelemetry,
   movingAverageSpeedMps,
+  TELEMETRY_LIMITS,
   type RecordingTelemetry,
 } from "@/domain/recording/telemetry";
 import type { RecordingSummary } from "@/domain/recording/types";
@@ -325,6 +325,16 @@ function telemetryOf(points: readonly RideCardPoint[]): RecordingTelemetry {
   return accumulator.snapshot();
 }
 
+/**
+ * A ride's moving time as the card says it: whole minutes from a minute up, and
+ * seconds below that, so a short ride reads "40 s" and never "0 min".
+ */
+function movingStat(ms: number): RideStatText {
+  return ms > 0 && ms < 60_000
+    ? { value: String(Math.round(ms / 1_000)), unit: "s" }
+    : durationStat(ms);
+}
+
 function numbersOf(
   telemetry: RecordingTelemetry,
   units: UnitSystem,
@@ -334,7 +344,7 @@ function numbersOf(
   const dirtKnown = surface.dirtMeters + surface.pavedMeters > 0;
   return {
     distance: distanceStat(telemetry.acceptedDistanceMeters, units),
-    moving: durationStat(telemetry.movingMs),
+    moving: movingStat(telemetry.movingMs),
     dirt: dirtKnown ? distanceStat(surface.dirtMeters, units) : null,
     climb: measured ? climbStat(telemetry.elevation.gainMeters, units) : null,
   };
@@ -404,7 +414,8 @@ export function buildStoredRideCard(input: BuildStoredRideCardInput): RideCard {
   const units = input.units ?? "imperial";
   const meters = Math.max(0, input.summary.distanceMeters);
   const movingMs = Math.max(0, input.summary.movingSeconds) * 1_000;
-  const average = movingMs >= 10_000 ? meters / (movingMs / 1_000) : null;
+  const average =
+    movingMs >= TELEMETRY_LIMITS.averageMinMovingMs ? meters / (movingMs / 1_000) : null;
   const date = rideCardDate(input.savedAt);
   return {
     title: titleOf(input.title, date),
@@ -419,16 +430,11 @@ export function buildStoredRideCard(input: BuildStoredRideCardInput): RideCard {
     surface: { dirtMeters: 0, pavedMeters: 0, unknownMeters: meters, dirtShare: null },
     numbers: {
       distance: distanceStat(meters, units),
-      moving: durationStat(movingMs),
+      moving: movingStat(movingMs),
       dirt: null,
       climb: null,
     },
     units,
     line: simplifyLine(input.line),
   };
-}
-
-/** Miles to metres, for a caller that counts the other way. */
-export function milesToMeters(miles: number): number {
-  return miles * METERS_PER_MILE;
 }

@@ -68,7 +68,7 @@ test("keeps named rides separate from the active draft and protects sources", as
   await page.getByRole("menuitem", { name: "Rename" }).click();
   const renamedTitle = page.getByRole("textbox", { name: `Rename ${TITLE}` });
   await renamedTitle.fill(RENAMED);
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByRole("button", { name: `Open ${RENAMED}` })).toBeVisible();
 
   await openRideMenu(page, RENAMED);

@@ -146,7 +146,8 @@ describe("the ride card", () => {
     expect(card.movingMs).toBe(37_000);
     expect(card.distanceMeters).toBeCloseTo(74, 6);
     expect(card.numbers.distance).toEqual({ value: "0.0", unit: "mi" });
-    expect(card.numbers.moving).toEqual({ value: "1", unit: "min" });
+    // Under a minute the card reads seconds, never "0 min".
+    expect(card.numbers.moving).toEqual({ value: "37", unit: "s" });
     expect(card.average).toEqual({ value: "4", unit: "mph" });
     expect(card.numbers.climb).toBeNull();
     expect(card.numbers.dirt).toBeNull();
