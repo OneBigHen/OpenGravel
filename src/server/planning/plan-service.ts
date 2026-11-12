@@ -8,9 +8,21 @@ import type { LoopHeadingPreference } from "@/application/planner/loop-heading";
 import { riderRoadEligibility } from "@/application/planner/rider-road-eligibility";
 import { deadEndSpurEligibility } from "@/application/planner/dead-end-spur-eligibility";
 import { approachBlocksFor, blockedRoadOverlap, finalApproachMessage, finalApproachTargets } from "@/application/planner/final-approach";
-import { DIRT_SWEEP_CALLS, MAX_DIRT_SWEEP_CALLS, searchRiderEnvelope } from "@/application/planner/rider-mode-search";
-import { BALANCED_DETOUR_CAP, searchBalancedEnvelope } from "@/application/planner/balanced-search";
-import { CURVY_SWEEP, searchCurvyEnvelope } from "@/application/planner/curvy-search";
+import { rideBudgetFactor } from "@/application/planner/ride-budget";
+import {
+  pickLoop,
+  pickRide,
+  ridePickMode,
+  runWave,
+  seeksDirt,
+  waveApplies,
+  waveCandidates,
+  waveMembers,
+  waveTrials,
+  type DetourAnchorsPort,
+  type WaveCandidate,
+  type WaveTrial,
+} from "@/application/planner/ride-search";
 import { refineRiderTraffic } from "@/application/planner/rider-live-traffic";
 import { riderTrafficSampler } from "./rider-traffic";
 /**
@@ -84,12 +96,8 @@ import {
 const FAST_FIRST_MIN_LANES = 3;
 /** Engine seeds a loop's first answer tries (NEXT-PLAN section 6). */
 const FIRST_ANSWER_LOOP_SEEDS = 1;
-/**
- * The rider envelope search's own budget. It no longer borrows an experiment's
- * settings: two router calls and twelve seconds, the values the planner used.
- */
-const RIDER_SEARCH_CALLS = 2;
-const RIDER_SEARCH_DEADLINE_MS = 12_000;
+/** The dirt-loop atlas probes' own deadline. */
+const ATLAS_DEADLINE_MS = 12_000;
 
 /** The alternatives pass after fast-first converged on one ride. */
 
@@ -196,6 +204,11 @@ export interface PlanServiceDeps {
    * deployment's coordinator by default, `null` when `OGV_ROAD_AUTHORITY` is off.
    */
   readonly roadAuthority?: RoadAuthorityCoordinator | null;
+  /**
+   * Known good roads an A-to-B wave may detour through (RM-5 provides the
+   * source). Absent: the wave is fastest, the rider's profile and strong.
+   */
+  readonly detourAnchors?: DetourAnchorsPort;
 }
 
 /**
@@ -682,10 +695,6 @@ function sameLine(a: readonly Coordinate[], b: readonly Coordinate[]): boolean {
   return a.length === b.length && a.every((point, at) => point.lat === b[at]!.lat && point.lon === b[at]!.lon);
 }
 
-function seeksDirt(options: ProviderRouteRequest["options"]): boolean {
-  return options.surfacePreference === "dirt-preferred" || (options.targetUnpavedShare ?? 0) > 0 || options.bike?.category === "dual-sport";
-}
-
 export async function planRide(input: PlanRideInput, deps: PlanServiceDeps = {}): Promise<PlanServiceResult> {
   const signal = deps.signal ?? new AbortController().signal;
   try {
@@ -717,21 +726,62 @@ async function planRideAttempt(
   // No alternatives is the progressive first answer: one lane and canonical gates.
   const fullPlan = includeAlternatives;
   const intent = pipelineIntentFromRequest(parsed.value.request);
-  const source = await candidateSource({
-    fixture,
-    provider,
-    request: { ...parsed.value.request, options: { ...parsed.value.request.options, includeAlternatives } },
-    intent,
-    // An explicit request-level option wins; the provider-level flag is the
-    // fallback because that is the one the browser sets today (`OGV-D-211`).
-    includeAlternatives,
-    signal,
-  });
+  const riderEnv = deps.env ?? process.env;
+  const riderEnabled = riderEnv["OGV_RIDER_MODES"] !== "off" && fixture === null;
+  // A-to-B in one wave (RM-4): the full plan of a plain A-to-B ride sends its
+  // whole search at once, at most five single-route calls, and picks once.
+  const oneWave = fullPlan && riderEnabled && waveApplies(parsed.value.request);
+  const pickMode = ridePickMode(parsed.value.request.options);
+  let wave: { readonly all: readonly WaveCandidate[]; readonly calls: number } | null = null;
+  let source: Awaited<ReturnType<typeof candidateSource>>;
+  if (oneWave) {
+    const request = parsed.value.request;
+    const graph = provider.graph === undefined ? null : await provider.graph(signal);
+    if (signal.aborted) throw signal.reason;
+    const capabilities = provider.capabilities();
+    const ownProfile = resolveLanes({ capabilities, intent, requestedProfile: request.profile, includeAlternatives: false })[0]?.profile ?? request.profile;
+    const fastestProfile = capabilities.profiles.length === 0 || capabilities.profiles.includes("motorcycle_fastest") ? "motorcycle_fastest" : request.profile;
+    let anchors: readonly Coordinate[] = [];
+    if (deps.detourAnchors !== undefined) {
+      try {
+        anchors = await deps.detourAnchors.anchorsFor({ origin: request.origin, destination: request.destination, mode: pickMode, budgetFactor: rideBudgetFactor(request.options.rideBudget) }, signal);
+      } catch {
+        if (signal.aborted) throw signal.reason;
+        // An optional source never blocks the ride: the wave goes without detours.
+      }
+    }
+    const members = waveMembers({ request, ownProfile, fastestProfile, graph, anchors, profiles: capabilities.profiles, supportsAlternatives: capabilities.supportsAlternatives });
+    const answers = await runWave(members, provider, signal);
+    const all = waveCandidates(answers);
+    wave = { all, calls: members.length };
+    const lanes: LaneDiagnostic<PlanServiceError>[] = answers.map(answer => {
+      const failure = answer.error === null ? null : normalizePlanFailure(answer.error, signal.aborted);
+      return {
+        // The reference keeps the baseline lane's name: its refusal explains a plan with no route.
+        laneId: answer.member.role === "fastest" ? "baseline-efficient" : `wave-${answer.member.role}`,
+        profile: answer.member.request.profile,
+        outcome: answer.error === null ? "ok" : "failed",
+        candidateCount: answer.candidates.length,
+        note: failure === null ? "ok" : `rejection:${failure.code}`,
+        failure,
+      };
+    });
+    source = { ok: true, candidates: all.map(entry => entry.candidate), lanes };
+  } else {
+    source = await candidateSource({
+      fixture,
+      provider,
+      request: { ...parsed.value.request, options: { ...parsed.value.request.options, includeAlternatives } },
+      intent,
+      // An explicit request-level option wins; the provider-level flag is the
+      // fallback because that is the one the browser sets today (`OGV-D-211`).
+      includeAlternatives,
+      signal,
+    });
+  }
   if (!source.ok) return { ok: false, error: source.error };
   let candidates = source.candidates;
   let laneDiagnostics = source.lanes;
-  const riderEnv = deps.env ?? process.env;
-  const riderEnabled = riderEnv["OGV_RIDER_MODES"] !== "off" && fixture === null;
   const atlas = deps.gravelAtlas ?? gravelAtlasFromEnv(riderEnv);
   let atlasReport: FunGeneratorReport | null = null;
   let atlasConsidered = 0;
@@ -752,7 +802,9 @@ async function planRideAttempt(
     parsed.value.request.stops.length === 0 && (parsed.value.request.roadSpans?.length ?? 0) === 0;
   let riderCalls = 0;
   let riderFactor: number | undefined;
-  let riderTrials: readonly import("@/application/planner/rider-mode-search").RiderModeTrial[] = [];
+  let riderTrials: readonly WaveTrial[] = [];
+  let overBudgetLine: readonly Coordinate[] | null = null;
+  let fallbackLine: readonly Coordinate[] | null = null;
 
 
   // Lane A (ROUTE-INTELLIGENCE-PROVIDER-MESH §6): closures and legal access,
@@ -796,10 +848,10 @@ async function planRideAttempt(
     candidates: from,
     intent,
     policy: ROUTE_POLICY,
-    ...(balancedFun ? { recommendationDetourCap: BALANCED_DETOUR_CAP } : {}),
+    ...(balancedFun ? { recommendationDetourCap: rideBudgetFactor(requestOptions.rideBudget) } : {}),
     ...(geometryFun ? {
       candidateValueFor: (_candidate, source, fastestSeconds, reference) => geometryFunRecommendation(source, fastestSeconds, reference, requestOptions.traffic === "protect-ride"),
-      recommendationDetourCap: 1.35,
+      recommendationDetourCap: rideBudgetFactor(requestOptions.rideBudget),
       // Curvy uses the actual fastest eligible ETA, across lanes.
       recommendationProfile: undefined,
     } : {}),
@@ -879,7 +931,7 @@ async function planRideAttempt(
       atlasReport = await runFunGenerators({
         context: { request, production: pipeline.candidates.map((candidate, index) => ({ id: `production:${index}`, geometry: candidate.geometry, measurement: funRouteMeasurement(candidate) })) },
         generators: createAtlasGenerators(corridors, atlasCallBudget), provider,
-        budget: { maxProviderCalls: atlasCallBudget, deadlineMs: RIDER_SEARCH_DEADLINE_MS },
+        budget: { maxProviderCalls: atlasCallBudget, deadlineMs: ATLAS_DEADLINE_MS },
         allocation: "fixed", signal, duplicateSimilarityThreshold: ROUTE_POLICY.duplicateSimilarityThreshold,
         verify: async candidate => {
           const own = await assessRoads([candidate]);
@@ -924,59 +976,62 @@ async function planRideAttempt(
     others: readonly ProviderCandidate[],
     verdictFor?: (candidate: ProviderCandidate) => RoadAuthorityVerdict | null,
   ): typeof pipeline | null => {
-    if (!geometryFun) return preferBestRide(preferred, others, verdictFor);
+    if (!geometryFun || oneWave) return preferBestRide(preferred, others, verdictFor);
     const merged = rank([preferred, ...others.filter((candidate) => candidate !== preferred)], verdictFor);
     return merged.candidates.length > 0 ? merged : null;
   };
-  if (fullPlan && riderEnabled && pipeline.candidates.length > 0) {
+  if (wave !== null && pipeline.candidates.length > 0) {
+    // Pick once, after the one rank: the wave's lines that passed every hard
+    // gate, inside the ride budget, the most good miles.
+    const kept = new Set(eligibleFrom(candidates, pipeline));
+    const pick = pickRide({
+      eligible: wave.all.filter(entry => kept.has(entry.candidate)),
+      reference: wave.all.find(entry => entry.member.role === "fastest")?.candidate,
+      all: wave.all.map(entry => entry.candidate),
+      mode: pickMode,
+      budget: requestOptions.rideBudget,
+      protectBusy: requestOptions.traffic === "protect-ride",
+    });
+    riderCalls += wave.calls;
+    riderTrials = waveTrials(wave.all, pick, pickMode);
+    // Efficient keeps the canonical ranking's choice, as it always has.
+    const chosen = pickMode === "time" ? null : pick.chosen;
+    if (chosen !== null) {
+      const index = pipeline.candidates.findIndex(candidate => sameLine(candidate.geometry, chosen.candidate.geometry));
+      // The rank already holds the pick: name it Best Ride without ranking again.
+      // Only a pick the diversity step folded into a near-duplicate is ranked
+      // once more, leading.
+      const selected = index >= 0 ? (() => {
+        const roles = Object.fromEntries(
+          Object.entries(pipeline.roles).map(([role, at]) => [role, role !== "fastest" && at === index ? null : at]),
+        ) as typeof pipeline.roles;
+        return { ...pipeline, roles: { ...roles, "best-ride": index }, selectedIndex: index };
+      })() : preferBestRide(chosen.candidate, candidates);
+      if (selected !== null) {
+        preferredRoute = { candidate: chosen.candidate, others: candidates };
+        pipeline = selected; riderKneeSelected = true;
+        riderFactor = chosen.member.factor;
+        if (pick.overBudget) overBudgetLine = chosen.candidate.geometry;
+        if (pick.fellBackToFastest) fallbackLine = chosen.candidate.geometry;
+      }
+    }
+  } else if (fullPlan && riderEnabled && loopDiscovery !== undefined && parsed.value.request.sketch === undefined && pipeline.candidates.length > 0) {
+    // Loops keep their own time window (RM-5 rebuilds them) and share the
+    // scorer and the pick rule. No router calls.
     const eligible = eligibleFrom(candidates, pipeline);
     const picked = pipeline.candidates[pipeline.roles["best-ride"] ?? pipeline.selectedIndex ?? 0];
-    const options = parsed.value.request.options;
-    const curvy = options.roadCharacter === "curvy" && (options.targetUnpavedShare ?? 0) === 0 && options.surfacePreference !== "dirt-preferred";
-    const result = balancedFun ? await searchBalancedEnvelope({
-      request: parsed.value.request,
+    const chosen = pickLoop({
       candidates: eligible,
       incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, maxCalls: RIDER_SEARCH_CALLS, deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
-      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
-      verify: async (proposed, searchSignal) => {
-        const own = await assessRoads([...candidates, ...proposed], searchSignal);
-        roads = own;
-        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
-      },
-    }) : curvy ? await searchCurvyEnvelope({
-      request: parsed.value.request,
-      candidates: eligible,
-      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, sweepCalls: Math.min(CURVY_SWEEP.length, RIDER_SEARCH_CALLS), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
-      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
-      verify: async (proposed, searchSignal) => {
-        const own = await assessRoads([...candidates, ...proposed], searchSignal);
-        roads = own;
-        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
-      },
-    }) : await searchRiderEnvelope({
-      request: parsed.value.request,
-      baselineRequest: { ...parsed.value.request, profile: "motorcycle_fastest" },
-      candidates: eligible,
-      incumbent: picked === undefined ? undefined : eligible.find(candidate => sameLine(candidate.geometry, picked.geometry)),
-      provider, maxCalls: Math.min(3, RIDER_SEARCH_CALLS), sweepCalls: dirtSweepCalls(riderEnv), deadlineMs: RIDER_SEARCH_DEADLINE_MS, signal,
-      screen: candidate => rank([candidate], value => roads?.evaluate(value.geometry) ?? null).candidates.length > 0,
-      verify: async (proposed, searchSignal) => {
-        const own = await assessRoads([...candidates, ...proposed], searchSignal);
-        roads = own;
-        return eligibleFrom(proposed, rank(proposed, value => own?.evaluate(value.geometry) ?? null));
-      },
+      discovery: loopDiscovery,
+      mode: pickMode,
+      protectBusy: requestOptions.traffic === "protect-ride",
     });
-    riderCalls += result.calls;
-    riderTrials = result.trials;
-    if (result.candidate !== null) {
-      const selected = adoptRiderRoute(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
+    if (chosen !== null) {
+      const selected = adoptRiderRoute(chosen, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
       if (selected !== null) {
-        preferredRoute = { candidate: result.candidate, others: candidates };
-        candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
-        const factor = result.candidate.providerMetadata?.["riderModeFactor"];
-        riderFactor = typeof factor === "number" ? factor : undefined;
+        preferredRoute = { candidate: chosen, others: candidates };
+        pipeline = selected; riderKneeSelected = true;
       }
     }
   }
@@ -1099,7 +1154,21 @@ async function planRideAttempt(
   }
 
   const mapped = pipeline.candidates.map(candidate => {
-    const wire = toRoutePlanCandidate(candidate);
+    const base = toRoutePlanCandidate(candidate);
+    // Nothing fitted the ride budget: the closest is offered, and says so.
+    const wire = overBudgetLine !== null && sameLine(candidate.geometry, overBudgetLine) ? {
+      ...base,
+      warnings: [...base.warnings, {
+        id: "ride:over-budget", code: "ride-over-budget", severity: "warning" as const,
+        message: "No route with good roads fits inside the detour you allowed; this is the closest one.",
+      }],
+    } : fallbackLine !== null && sameLine(candidate.geometry, fallbackLine) ? {
+      ...base,
+      warnings: [...base.warnings, {
+        id: "ride:over-budget", code: "ride-over-budget", severity: "warning" as const,
+        message: "The roads you asked for run past the detour you allowed, so this is the quickest way.",
+      }],
+    } : base;
     return approachNotice === null ? wire : {
       ...wire,
       warnings: [...wire.warnings, {
@@ -1153,8 +1222,3 @@ async function planRideAttempt(
   };
 }
 
-/** The dirt sweep's own router budget (OGV_DIRT_SWEEP_CALLS), apart from the envelope search. */
-function dirtSweepCalls(env: Readonly<Record<string, string | undefined>>): number {
-  const raw = Number.parseInt(env["OGV_DIRT_SWEEP_CALLS"] ?? "", 10);
-  return Number.isFinite(raw) ? Math.max(0, Math.min(MAX_DIRT_SWEEP_CALLS, raw)) : DIRT_SWEEP_CALLS;
-}

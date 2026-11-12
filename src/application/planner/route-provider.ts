@@ -77,6 +77,14 @@ export interface ProviderRouteOptions {
   readonly departureNow?: boolean;
   /** Internal search strength; never accepted from the public request. */
   readonly riderModeFactor?: number;
+  /**
+   * Internal: the "strong" curvy request of the A-to-B wave. A graph that
+   * carries the curve field (`og_curve`) is asked to hold to bending roads; a
+   * graph without it never receives a rule naming it.
+   */
+  readonly curvePressure?: "strong";
+  /** How far out of the way an A-to-B ride may go (`ride-budget.ts`); Balanced when absent. */
+  readonly rideBudget?: "direct" | "balanced" | "scenic";
   /** Internal, soft flow penalties; never accepted from the public request. */
   readonly trafficPenaltyPolygons?: readonly (readonly Coordinate[])[];
   readonly vehicle: "motorcycle";
@@ -379,10 +387,23 @@ export interface ProviderCandidateSet {
  * `src/infrastructure/routing/**` and may import this port — and only this
  * port — from the application layer (Rule E).
  */
+/** What the running graph carries, read once from the engine (`/info`). */
+export interface ProviderGraphFacts {
+  /** Encoded values the graph lists, e.g. `og_curve`, `og_through`. */
+  readonly encodedValues: readonly string[];
+}
+
 export interface RouteCandidateProvider {
   readonly id: string;
 
   capabilities(): ProviderCapabilities;
+
+  /**
+   * The running graph's facts, cached by the provider and refreshed after an
+   * error. Null when the engine did not say; callers then assume the old graph.
+   * Optional: a provider without a graph to describe omits it.
+   */
+  graph?(signal: AbortSignal): Promise<ProviderGraphFacts | null>;
 
   /**
    * Proposes candidate paths for one request. Resolves with what the provider

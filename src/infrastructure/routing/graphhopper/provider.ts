@@ -40,6 +40,7 @@
 import type {
   ProviderCandidateSet,
   ProviderCapabilities,
+  ProviderGraphFacts,
   ProviderRouteRequest,
   RouteCandidateProvider,
 } from "@/application/planner/route-provider";
@@ -74,6 +75,8 @@ export const GRAPHHOPPER_PROVIDER_ID = "graphhopper";
 
 /** Default engine call budget (06 §29). */
 export const DEFAULT_TIMEOUT_MS = 30_000;
+/** The graph's own description answers at once; a slow one is treated as unknown. */
+const GRAPH_INFO_TIMEOUT_MS = 3_000;
 
 const ROUTE_PATH = "/route";
 
@@ -272,8 +275,39 @@ export function createGraphHopperProvider(
     hosted === undefined ? "" : `?key=${encodeURIComponent(hosted.apiKey)}`
   }`;
 
+  // What the running graph carries, read from /info once and kept. A failed
+  // read is not kept, so the next plan asks again; a route rejection that names
+  // an encoded value the cache claimed drops the cache too.
+  let graphFacts: ProviderGraphFacts | null = null;
+  let graphRead: Promise<ProviderGraphFacts | null> | null = null;
+  const infoUrl = `${options.baseUrl.replace(/\/+$/, "")}/info`;
+  const readGraph = (signal: AbortSignal): Promise<ProviderGraphFacts | null> => {
+    if (graphFacts !== null) return Promise.resolve(graphFacts);
+    if (hosted !== undefined) return Promise.resolve(null);
+    graphRead ??= (async () => {
+      try {
+        const response = await fetcher(infoUrl, { method: "GET", signal: AbortSignal.any([signal, AbortSignal.timeout(GRAPH_INFO_TIMEOUT_MS)]) });
+        if (!response.ok) return null;
+        const payload = (await response.json()) as { readonly encoded_values?: unknown };
+        const values = payload.encoded_values;
+        const names = Array.isArray(values) ? values.filter((value): value is string => typeof value === "string")
+          : typeof values === "object" && values !== null ? Object.keys(values) : null;
+        if (names === null) return null;
+        graphFacts = { encodedValues: names };
+        return graphFacts;
+      } catch {
+        return null;
+      } finally {
+        graphRead = null;
+      }
+    })();
+    return graphRead;
+  };
+
   return {
     id: GRAPHHOPPER_PROVIDER_ID,
+
+    graph: readGraph,
 
     capabilities(): ProviderCapabilities {
       return {
@@ -300,6 +334,7 @@ export function createGraphHopperProvider(
             ? details
             : details.filter((detail) => !HOSTED_UNSUPPORTED_DETAILS.has(detail)),
           riderModesEnabled: options.riderModesEnabled ?? process.env["OGV_RIDER_MODES"] !== "off",
+          ...(graphFacts === null ? {} : { encodedValues: new Set(graphFacts.encodedValues) }),
           omitSmoothness,
           spans: spanConstraints(request),
           ...(request.discovery === undefined
@@ -422,6 +457,7 @@ export function createGraphHopperProvider(
         }
 
         if (!attempt.response.ok) {
+          if (/og_[a-z_]+/.test(attempt.payload.message ?? "")) graphFacts = null;
           throw normalizeGraphHopperProviderError(
             attempt.response.status,
             attempt.payload.message ?? attempt.response.statusText,

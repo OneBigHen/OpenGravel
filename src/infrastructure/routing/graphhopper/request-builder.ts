@@ -283,6 +283,8 @@ export interface GraphHopperRequestOptions {
    */
   readonly riderModesEnabled?: boolean;
   readonly omitSmoothness?: boolean;
+  /** Encoded values the running graph lists (`/info`); absent means unknown, treated as the old graph. */
+  readonly encodedValues?: ReadonlySet<string>;
   /** Surface/roughness rules; absent when no bike policy was supplied. */
   readonly surfacePolicy?: GraphHopperSurfacePolicy;
   /** Road spans to route through or toward. */
@@ -713,7 +715,7 @@ export function createGraphHopperRequest(
   const trafficFeatures = options.riderModesEnabled === false ? [] :
     (request.options.trafficPenaltyPolygons ?? []).map((ring, index) => areaFeature(`opengravel_traffic_${index}`, closeRing(ring)));
   const priorityRules: GraphHopperCustomModelRule[] = [
-    ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile),
+    ...riderModeRules(request.options, options.riderModesEnabled !== false, options.omitSmoothness === true, request.profile, options.encodedValues),
     ...trafficFeatures.map(feature => ({ if: `in_${feature.id}`, multiply_by: "0.35" })),
     ...(request.options.avoidHighways
       ? [{ if: "road_class == MOTORWAY || road_class == TRUNK", multiply_by: "0" }]
