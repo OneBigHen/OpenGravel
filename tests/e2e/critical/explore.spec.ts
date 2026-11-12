@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import catalogFixture from "../../../data/catalog/e2e-fixture-routes.json";
+
 import {
   placeEndpoint,
   plannerMap,
@@ -10,6 +12,74 @@ import {
 
 const START: Coordinate = { lon: -75.4385, lat: 40.1385 };
 const FINISH: Coordinate = { lon: -75.4335, lat: 40.1325 };
+
+/** Three rides near the test position, long enough and varied enough for the strip. */
+const WEEKEND_ROUTES = [
+  { id: "weekend-quarry", name: "Weekend Quarry Loop", lon: -75.49, surface: "Mostly unpaved · 42 mi gravel", curvature: "Few curves", distanceKm: 120, minutes: 200 },
+  { id: "weekend-ridge", name: "Weekend Ridge Run", lon: -75.47, surface: "Mostly paved · 3 mi gravel", curvature: "17 mi of curves", distanceKm: 95, minutes: 170 },
+  { id: "weekend-creek", name: "Weekend Creek Road", lon: -75.45, surface: "Paved", curvature: "Few curves", distanceKm: 80, minutes: 150 },
+] as const;
+
+const WEEKEND_POSITION = { latitude: 40.6, longitude: -75.5 };
+
+/** The catalog list and detail shapes the Explore client reads. */
+async function serveWeekendCatalog(page: import("@playwright/test").Page): Promise<void> {
+  const sample = catalogFixture[0]!;
+  const routes = WEEKEND_ROUTES.map((route) => ({
+    ...sample,
+    id: route.id,
+    name: route.name,
+    region: "Demo area",
+    distanceKm: route.distanceKm,
+    estimatedTimeMinutes: route.minutes,
+    surfaceSummary: route.surface,
+    curvatureSummary: route.curvature,
+    preview: [
+      { lon: route.lon, lat: 40.6 },
+      { lon: route.lon + 0.04, lat: 40.63 },
+    ],
+  }));
+  await page.route("**/api/catalog", (route) => route.fulfill({ json: { count: routes.length, routes } }));
+  await page.route("**/api/catalog/*", (route) => {
+    const id = route.request().url().split("/").at(-1) ?? "";
+    const match = routes.find((candidate) => candidate.id === id) ?? routes[0]!;
+    const { preview, ...rest } = match;
+    return route.fulfill({
+      json: {
+        route: {
+          ...rest,
+          geometry: preview,
+          previewGeometry: preview,
+        },
+        variants: [],
+      },
+    });
+  });
+}
+
+/** A Saturday and Sunday worth naming, from the phone's own local days. */
+async function serveWeekendWeather(page: import("@playwright/test").Page): Promise<void> {
+  await page.clock.setFixedTime(new Date(2026, 10, 14, 12));
+  const saturday = {
+    name: "Saturday",
+    startTime: new Date(2026, 10, 14, 15).toISOString(),
+    endTime: new Date(2026, 10, 14, 18).toISOString(),
+    temperatureF: 54,
+    precipChance: 10,
+    shortForecast: "Sunny",
+  };
+  const sunday = {
+    name: "Sunday",
+    startTime: new Date(2026, 10, 15, 14).toISOString(),
+    endTime: new Date(2026, 10, 15, 17).toISOString(),
+    temperatureF: 49,
+    precipChance: 70,
+    shortForecast: "Rain",
+  };
+  await page.route("**/api/weather?*", (route) => route.fulfill({
+    json: { snapshot: { fetchedAt: new Date().toISOString(), source: "nws", alerts: [], forecast: [saturday, sunday] } },
+  }));
+}
 
 test("browses Explore, uses a route, returns to Explore, and lists a saved personal ride", async ({ page }) => {
   await page.addInitScript(() => {
@@ -164,4 +234,76 @@ test("shows the honest Roads empty state when road data is unavailable", async (
   await page.getByRole("tab", { name: "Ride", exact: true }).click();
   await expect(page.getByRole("searchbox", { name: "Search routes" })).toBeVisible();
   await expect(page.getByRole("button", { name: /road details/i })).toHaveCount(0);
+});
+
+test("shows rides near the rider this weekend, opens one, and tells the truth about it", async ({ page, context }) => {
+  await page.setViewportSize({ width: 440, height: 956 });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation(WEEKEND_POSITION);
+  await serveWeekendCatalog(page);
+  await serveWeekendWeather(page);
+  let weatherRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/weather?")) weatherRequests += 1;
+  });
+
+  await page.goto("/explore");
+  const strip = page.getByTestId("weekend-picks");
+  await expect(strip).toBeVisible();
+  const cards = strip.getByTestId("weekend-pick");
+  const count = await cards.count();
+  expect(count).toBeGreaterThanOrEqual(1);
+  expect(count).toBeLessThanOrEqual(3);
+  for (let index = 0; index < count; index += 1) {
+    const weather = cards.nth(index).getByTestId("weekend-pick-weather");
+    await expect(weather).not.toBeEmpty();
+    // A phrase names its day; no day was ever called dry without a forecast.
+    await expect(weather).toContainText(/^(?:Sat|Sun):|Forecast not available/);
+  }
+  // One forecast per card start, never one per render.
+  expect(weatherRequests).toBeGreaterThan(0);
+  expect(weatherRequests).toBeLessThanOrEqual(3);
+
+  const opened = cards.first();
+  const openedName = (await opened.textContent()) ?? "";
+  await opened.click();
+  await expect(page).toHaveURL(/\/explore\/weekend-/);
+
+  // The ride page tells the truth: surface, bike, closure check, in that order.
+  const truth = page.getByTestId("ride-truth");
+  await expect(truth).toBeVisible();
+  await expect(truth.locator(".og-truth__line")).toHaveCount(3);
+  await expect(truth).toContainText(/Surface unknown|\d+(?:\.\d+)? mi (?:gravel|dirt|unpaved)|all paved/);
+  await expect(truth).toContainText("Closures not checked for this ride");
+  // The planner's long-trip checklist is no longer this page's box.
+  await expect(page.getByText("Long-trip considerations")).toHaveCount(0);
+  // Share and GPX live under "Take it with you"; the bar is the two commitments.
+  const actions = page.getByRole("region", { name: "Route actions" });
+  await expect(actions.getByRole("button")).toHaveCount(2);
+  await expect(actions.getByRole("button", { name: "Ride this" })).toBeVisible();
+  await expect(actions.getByRole("button", { name: "Save" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Take this ride with you" }).getByTestId("route-share")).toBeVisible();
+
+  // The fixed bar never covers the first truth line.
+  const firstLine = truth.locator(".og-truth__line").first();
+  await firstLine.scrollIntoViewIfNeeded();
+  const barBox = await actions.boundingBox();
+  const lineBox = await firstLine.boundingBox();
+  expect(barBox).not.toBeNull();
+  expect(lineBox).not.toBeNull();
+  const overlaps = barBox!.y < lineBox!.y + lineBox!.height
+    && lineBox!.y < barBox!.y + barBox!.height
+    && barBox!.x < lineBox!.x + lineBox!.width
+    && lineBox!.x < barBox!.x + barBox!.width;
+  expect(overlaps).toBe(false);
+  expect(openedName.length).toBeGreaterThan(0);
+});
+
+test("shows no weekend strip without a position", async ({ page }) => {
+  await page.setViewportSize({ width: 440, height: 956 });
+  await serveWeekendCatalog(page);
+
+  await page.goto("/explore");
+  await expect(page.getByRole("list", { name: "Explore routes" })).toBeVisible();
+  await expect(page.getByTestId("weekend-picks")).toHaveCount(0);
 });

@@ -56,7 +56,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId("planner-map")).toHaveAttribute("data-map-load", "ready");
     await expect(dialog.getByTestId("planner-map")).toHaveAttribute("data-map-painted", "true");
-    await expect(dialog).toContainText(/\b\d+ rides\b/);
+    await expect(dialog).toContainText("31 rides");
     await expect(page.getByTestId("planner-map")).toHaveCount(1);
     const box = await dialog.getByTestId("planner-map").boundingBox();
     expect(box!.height).toBeGreaterThan(viewport.height * 0.65);

@@ -10,6 +10,7 @@ import type { CatalogEntry } from "@/application/explore/catalog";
 import { TRAFFIC_CORRIDOR_POINTS } from "@/application/preparation/planner-context";
 import type { RoutePreparationContext } from "@/application/preparation/prepare-route";
 import type { PreparationProviderRegistry, ProviderResult, TrafficData, WeatherData } from "@/application/preparation/providers";
+import { METERS_PER_MILE, type MapLayersSource } from "@/application/map-layers";
 import { discoverRoads } from "@/application/roads/discovery";
 import { createRoadEntity } from "@/domain/roads/road-entity";
 import { asRoadEntityId } from "@/domain/ride/ids";
@@ -463,6 +464,66 @@ describe("Explore UI", () => {
     vi.unstubAllGlobals();
   });
 
+  it("shows no weekend strip until the rider has a position", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "prompt" })) },
+      geolocation: { getCurrentPosition },
+    });
+    render(<ExplorePanel entries={[{ ...entry, estimatedTimeMinutes: 180 }]} />);
+    await waitFor(() => expect(navigator.permissions.query).toHaveBeenCalled());
+    expect(screen.queryByTestId("weekend-picks")).toBeNull();
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows up to three rides near the rider, asking for one forecast per card start", async () => {
+    const getCurrentPosition = vi.fn((ok: PositionCallback) => ok({ coords: { longitude: 0, latitude: 0 } } as GeolocationPosition));
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      permissions: { query: vi.fn(async () => ({ state: "granted" })) },
+      geolocation: { getCurrentPosition },
+    });
+    const snapshot = {
+      fetchedAt: new Date().toISOString(),
+      source: "nws" as const,
+      alerts: [],
+      forecast: [{
+        name: "Saturday",
+        startTime: new Date(2026, 10, 14, 12).toISOString(),
+        endTime: new Date(2026, 10, 14, 15).toISOString(),
+        temperatureF: 54,
+        precipChance: 0,
+        shortForecast: "Sunny",
+      }],
+    };
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+      void _input;
+      void _init;
+      return Response.json({ snapshot });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const entries = [
+      { ...entry, id: "near", name: "Near Loop", distanceKm: 96, estimatedTimeMinutes: 180, geometry: [{ lon: 0, lat: 0.01 }, { lon: 0.05, lat: 0.02 }], surfaceSummary: "Paved", curvatureSummary: "Few curves" },
+      { ...entry, id: "unpaved", name: "Unpaved Loop", distanceKm: 120, estimatedTimeMinutes: 180, geometry: [{ lon: 0, lat: 0.03 }, { lon: 0.05, lat: 0.04 }], surfaceSummary: "Mostly unpaved · 42 mi gravel", curvatureSummary: "Few curves" },
+      { ...entry, id: "twisty", name: "Twisty Loop", distanceKm: 110, estimatedTimeMinutes: 180, geometry: [{ lon: 0, lat: 0.05 }, { lon: 0.05, lat: 0.06 }], surfaceSummary: "Mostly paved · 3 mi gravel", curvatureSummary: "17 mi of curves" },
+    ];
+
+    render(<ExplorePanel entries={entries} />);
+    const strip = await screen.findByTestId("weekend-picks");
+    const cards = within(strip).getAllByTestId("weekend-pick");
+    expect(cards).toHaveLength(3);
+    for (const card of cards) expect(within(card).getByTestId("weekend-pick-weather").textContent).not.toBe("");
+    expect(within(strip).getByText(/^Near you/)).toBeInTheDocument();
+    await waitFor(() => {
+      const weatherCalls = fetcher.mock.calls.filter((call) => String(call[0]).startsWith("/api/weather"));
+      expect(weatherCalls.length).toBeGreaterThan(0);
+      expect(weatherCalls.length).toBeLessThanOrEqual(3);
+    });
+    vi.unstubAllGlobals();
+  });
+
   it("names the source in rider words, and keeps the long provenance off the card", () => {
     // A badge reading `Curated` once sat next to copy saying the route was not
     // curated, and then the badge named the store the rides are kept in. It now
@@ -550,6 +611,44 @@ describe("Explore UI", () => {
     fireEvent.click(screen.getByTestId("route-share"));
     await waitFor(() => expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: window.location.href })));
     vi.unstubAllGlobals();
+  });
+
+  it("shows the fuel line on a ride longer than the tank, then never shortens it", async () => {
+    const along = vi.fn(async () => ({
+      available: true,
+      stops: [{
+        feature: { id: "gas-1", layerId: "fuel" as const, name: "Sunoco", detail: null, weight: null, geometry: { type: "Point" as const, coordinates: [-75.4, 40.5] as const } },
+        alongMeters: 61 * METERS_PER_MILE,
+        offMeters: 40,
+      }],
+    }));
+    const mapLayers: MapLayersSource = { load: vi.fn(), trafficTileUrl: null, along };
+    const longEntry: CatalogEntry = {
+      ...entry,
+      distanceKm: 200,
+      geometry: [{ lon: -75.5, lat: 40.5 }, { lon: -75.2, lat: 40.7 }],
+    };
+    const bike = {
+      name: "Trail bike",
+      fuelRangeMiles: 120,
+      reserveMiles: 20,
+      maintainedGravel: "allow" as const,
+      roughTracks: "avoid" as const,
+    };
+
+    render(<RouteDetail entry={longEntry} activeBike={bike} onUse={vi.fn()} preparationProviders={{ mapLayers }} />);
+
+    expect(await screen.findByText("Fuel: 124 mi ride, 100 mi usable range. Gas at mile 61 (Sunoco)")).toBeInTheDocument();
+    expect(along).toHaveBeenCalledOnce();
+  });
+
+  it("shows no fuel line for a ride the tank can take", async () => {
+    const along = vi.fn(async () => ({ available: true, stops: [] }));
+    const mapLayers: MapLayersSource = { load: vi.fn(), trafficTileUrl: null, along };
+    render(<RouteDetail entry={entry} activeBike={{ name: "Trail bike", fuelRangeMiles: 150, reserveMiles: 30, maintainedGravel: "allow", roughTracks: "avoid" }} onUse={vi.fn()} preparationProviders={{ mapLayers }} />);
+    await act(async () => {});
+    expect(along).not.toHaveBeenCalled();
+    expect(screen.queryByText(/^Fuel/)).toBeNull();
   });
 
   it("keeps a donor file path and attribution inside the provenance disclosure", () => {
@@ -712,10 +811,11 @@ describe("Explore UI", () => {
   it("leaves a fact off the line rather than printing an unknown one", () => {
     // This route has no surface, curvature or ride-time evidence. Unknown is
     // never shown as a value, and saying "unknown" three times under the name
-    // is not a fact a rider can use.
+    // is not a fact a rider can use. The truth line is where unknown belongs.
     render(<RouteDetail entry={{ ...entry, distanceKm: null }} onUse={vi.fn()} />);
     expect(screen.queryByTestId("route-facts")).toBeNull();
-    expect(screen.queryByText(/Surface unknown|Curvature unknown/)).toBeNull();
+    expect(screen.queryByText("Curvature unknown")).toBeNull();
+    expect(screen.getByTestId("ride-truth")).toHaveTextContent("Surface unknown");
   });
 
   it("says how much the ride climbs, drops and tops out, in feet", () => {
@@ -784,7 +884,7 @@ describe("Explore UI", () => {
     expect(context?.trafficCorridor?.at(-1)).toEqual(geometry.at(-1));
   });
 
-  it("shows long-trip considerations for a long fixture and none for a short fixture", () => {
+  it("shows the truth about a curated ride, and no long-trip checklist", () => {
     const longEntry: CatalogEntry = {
       ...entry,
       id: "long-fixture",
@@ -816,14 +916,18 @@ describe("Explore UI", () => {
     };
 
     render(<RouteDetail entry={longEntry} onUse={vi.fn()} />);
-    expect(screen.getByRole("group", { name: "Long-trip considerations" })).toBeInTheDocument();
-    expect(screen.getByTestId("long-trip-consideration-fuel")).toHaveTextContent("conservative default assumption");
-    expect(screen.getByTestId("long-trip-consideration-weather")).toHaveTextContent("70% precipitation chance");
-    expect(screen.getByTestId("long-trip-consideration-service")).toHaveTextContent("53 mi gap reported");
-
-    cleanup();
-    render(<RouteDetail entry={{ ...longEntry, id: "short-fixture", distanceKm: 27.5, estimatedTimeMinutes: 32.1 }} onUse={vi.fn()} />);
-    expect(screen.queryByRole("group", { name: "Long-trip considerations" })).not.toBeInTheDocument();
+    // The planner's long-trip box is replaced on this page by the honest truth
+    // lines and the fuel line (R3-8): no heading, no checklist.
+    expect(screen.queryByRole("group", { name: "Long-trip considerations" })).toBeNull();
+    expect(screen.queryByText("Long-trip considerations")).toBeNull();
+    const truth = screen.getByTestId("ride-truth");
+    expect(truth).toHaveTextContent("Surface unknown");
+    expect(truth).toHaveTextContent("Closures not checked for this ride");
+    // No bike was supplied, so the bike line says so rather than guessing one.
+    expect(truth).toHaveTextContent("Not checked for your bike: no bike selected");
+    // Nothing knows this ride's tank and no gas answer loaded, so no fuel line
+    // is invented either.
+    expect(truth).not.toHaveTextContent("Fuel");
   });
 
   it("saves a rating from one star tap, then a comment and a road condition through their server paths", async () => {
@@ -1481,17 +1585,20 @@ describe("Explore UI", () => {
     expect(follows(action, description)).toBe(true);
   });
 
-  it("gives the route page one primary action, with Save and Share as the quiet ones", () => {
+  it("gives the route page one primary action, with Save as the quiet one", () => {
     render(<RouteDetail entry={entry} onUse={vi.fn()} onSave={vi.fn()} />);
     const actions = screen.getByRole("region", { name: "Route actions" });
     const buttons = within(actions).getAllByRole("button");
 
-    expect(buttons.map((button) => button.textContent?.trim())).toEqual(["Ride this", "Save", "Share"]);
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual(["Ride this", "Save"]);
     expect(actions.querySelectorAll(".og-primary")).toHaveLength(1);
     expect(within(actions).getByRole("button", { name: "Ride this" })).toHaveClass("og-primary");
-    // The file for another device is a quieter job, below the ride itself.
+    // Taking the ride elsewhere is a quieter job, below the ride itself.
     expect(within(actions).queryByRole("button", { name: "Export GPX" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Export GPX" })).toBeInTheDocument();
+    expect(within(actions).queryByTestId("route-share")).toBeNull();
+    const takeAway = screen.getByRole("region", { name: "Take this ride with you" });
+    expect(within(takeAway).getByRole("button", { name: "Export GPX" })).toBeInTheDocument();
+    expect(within(takeAway).getByTestId("route-share")).toBeInTheDocument();
   });
 
   it("says it is getting the ride ready while the ride is being prepared", async () => {
