@@ -106,7 +106,9 @@ function PickCard({ pick, mapboxToken, night }: {
           <strong className="og-weekend-card__title">{pick.entry.name}</strong>
           <span className="og-weekend-card__facts">
             {distance === null ? null : <span>{distance}</span>}
-            <span>{formatRideMinutes(pick.timeMinutes)}</span>
+            <span {...(pick.timeIsEstimate ? { title: "Estimated at 28 mph" } : {})}>
+              {pick.timeIsEstimate ? "~" : ""}{formatRideMinutes(pick.timeMinutes)}
+            </span>
           </span>
           {pick.character === null ? null : <span className="og-weekend-card__character">{pick.character}</span>}
           <span className="og-weekend-card__weather" data-testid="weekend-pick-weather">

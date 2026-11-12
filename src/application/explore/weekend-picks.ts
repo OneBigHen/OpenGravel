@@ -79,6 +79,8 @@ export interface WeekendPick {
   readonly distanceKm: number;
   /** The ride's own time, stored or estimated at the card's pace. */
   readonly timeMinutes: number;
+  /** True when the record stated no time and the card's pace estimated it. */
+  readonly timeIsEstimate: boolean;
   /** How unpaved the ride is, in miles; `0` for a paved ride. */
   readonly unpavedMiles: number;
   /** "42 mi gravel", "24 mi unpaved" or "17 mi of curves"; `null` when neither is known. */
@@ -91,6 +93,7 @@ interface Candidate {
   readonly entry: CatalogEntry;
   readonly distanceKm: number;
   readonly timeMinutes: number;
+  readonly timeIsEstimate: boolean;
   readonly unpavedMiles: number;
   readonly unpavedWord: string | null;
   /** A day's dampest hour across the supplied forecasts; missing is `Infinity`. */
@@ -190,10 +193,11 @@ function estimatedMinutes(distanceKm: number | null): number | null {
   return Math.max(RIDE_TIME_STEP_MINUTES, Math.round(minutes / RIDE_TIME_STEP_MINUTES) * RIDE_TIME_STEP_MINUTES);
 }
 
-function rideMinutes(entry: CatalogEntry): number | null {
+function rideMinutes(entry: CatalogEntry): { readonly minutes: number; readonly estimated: boolean } | null {
   const stated = entry.estimatedTimeMinutes;
-  if (typeof stated === "number" && Number.isFinite(stated) && stated > 0) return stated;
-  return estimatedMinutes(entry.distanceKm);
+  if (typeof stated === "number" && Number.isFinite(stated) && stated > 0) return { minutes: stated, estimated: false };
+  const estimate = estimatedMinutes(entry.distanceKm);
+  return estimate === null ? null : { minutes: estimate, estimated: true };
 }
 
 /** The word the sky uses, in the NWS text's own terms. */
@@ -250,27 +254,28 @@ function wetness(forecasts: WeekendPicksInput["forecasts"], entryId: string): nu
   return chances.length === 0 ? Number.POSITIVE_INFINITY : Math.max(...chances);
 }
 
-/** The card's one characterising fact: gravel first, then curves. */
+/** The card's one characterising fact: gravel first, then a measured curve count. */
 function characterOf(candidate: Candidate): string | null {
   if (candidate.unpavedMiles > 0) {
     const word = candidate.unpavedWord ?? "unpaved";
     return `${milesNumber(candidate.unpavedMiles)} mi ${word}`;
   }
-  return candidate.entry.curvatureSummary === undefined || candidate.entry.curvatureSummary === ""
-    ? null
-    : candidate.entry.curvatureSummary;
+  const curvature = candidate.entry.curvatureSummary;
+  if (curvature === undefined || curvature === "" || /few curves|unknown|not measured/i.test(curvature)) return null;
+  return curvature;
 }
 
 function candidateOf(entry: CatalogEntry, position: readonly [number, number], forecasts: WeekendPicksInput["forecasts"]): Candidate | null {
   const distanceKm = distanceToStartKm(position, entry);
   if (!Number.isFinite(distanceKm) || distanceKm > WEEKEND_START_KM) return null;
-  const timeMinutes = rideMinutes(entry);
-  if (timeMinutes === null || timeMinutes < WEEKEND_MIN_RIDE_MINUTES || timeMinutes > WEEKEND_MAX_RIDE_MINUTES) return null;
+  const time = rideMinutes(entry);
+  if (time === null || time.minutes < WEEKEND_MIN_RIDE_MINUTES || time.minutes > WEEKEND_MAX_RIDE_MINUTES) return null;
   const surface = readSurfaceSummary(entry.surfaceSummary);
   return {
     entry,
     distanceKm,
-    timeMinutes,
+    timeMinutes: time.minutes,
+    timeIsEstimate: time.estimated,
     unpavedMiles: surface?.unpavedMiles ?? 0,
     unpavedWord: surface?.unpavedWord ?? null,
     wetness: wetness(forecasts, entry.id),
@@ -302,6 +307,7 @@ function toPick(candidate: Candidate, dayLabels: readonly string[], forecasts: W
     entry: candidate.entry,
     distanceKm: candidate.distanceKm,
     timeMinutes: candidate.timeMinutes,
+    timeIsEstimate: candidate.timeIsEstimate,
     unpavedMiles: candidate.unpavedMiles,
     character: characterOf(candidate),
     weather: dayLabels.map((label, index) =>

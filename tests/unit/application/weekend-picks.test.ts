@@ -161,7 +161,7 @@ describe("weekend picks", () => {
     // the same afternoon.
     expect(picks.some((pick) => pick.entry.id === "plain-closer")).toBe(false);
     expect(picks.some((pick) => pick.unpavedMiles > 0)).toBe(true);
-    expect(picks.some((pick) => pick.character?.includes("curves"))).toBe(true);
+    expect(picks.some((pick) => pick.entry.id === "twisty")).toBe(true);
   });
 
   it("never picks a start over 60 mi away, or a ride outside 1.5 to 6 hours", () => {
@@ -205,6 +205,12 @@ describe("weekend picks", () => {
     }) ?? [];
     // The ids sort wet first; the forecast is what puts the dry ride first.
     expect(picks.map((pick) => pick.entry.id)).toEqual(["z-dry", "a-wet"]);
+  });
+
+  it("marks a time the catalog never stated as an estimate", () => {
+    const noTime = entry({ id: "no-time", name: "No Stated Time", geometry: at(0.01), estimatedTimeMinutes: undefined });
+    const picks = weekendPicks({ entries: [noTime], position: AT, dayLabels: ["Sat"] }) ?? [];
+    expect(picks[0]).toMatchObject({ timeIsEstimate: true, timeMinutes: 165 });
   });
 
   it("leaves personal and imported rides out of the catalog strip", () => {
