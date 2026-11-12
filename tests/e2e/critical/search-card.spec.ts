@@ -18,7 +18,7 @@ test("chip → result → card → Directions → visible route → swap → Sta
   await expect(page.getByTestId("clear-ride")).toBeHidden();
   await expectAboveSheet(page, [{ lat: 40.864, lon: -75.728 }]);
   await page.getByTestId("place-directions").click();
-  await expect(page.getByTestId("phone-alternatives")).toBeVisible();
+  await expect(page.getByTestId("route-summary")).toBeVisible();
   await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "half");
   const sheet = await page.getByTestId("planner-sheet").boundingBox();
@@ -40,8 +40,11 @@ test("chip → result → card → Directions → visible route → swap → Sta
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
   await expectAboveSheet(page, connectedCoordinates(WAWA, RIDER_FIX));
   await expectHealthyMap(page);
+  await expect(page.getByText(/\bdraft\b/i)).toHaveCount(0);
   await page.getByTestId("start-ride").click();
   await expect(page).toHaveURL(/\/ride/);
+  // Start goes straight to the ride (R3-4): no title page, no "Ride Focus".
+  await expect(page.getByText(/Ride Focus/)).toHaveCount(0);
 });
 
 test("a category pin opens the same place card", async ({ page }) => {
@@ -146,8 +149,11 @@ for (const width of [320, 1024]) {
     await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "half");
     await page.getByTestId("place-directions").click();
     await expect(page.getByTestId("route-options")).toBeVisible();
+    // The destination reads like a loop (R3-4): the one summary, Start in view,
+    // and the other choices one tap away behind Compare rides.
+    await expect(page.getByTestId("route-summary")).toBeVisible();
     await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
-    await expect(page.getByTestId("phone-alternatives").getByRole("button").first()).toBeInViewport({ ratio: 1 });
+    await expect(page.getByTestId("compare-rides")).toBeInViewport({ ratio: 1 });
     await expectDrawnScene(page, { routes: "2" });
     await expectAboveSheet(page, connectedCoordinates());
     await page.getByTestId("route-options-settings").click();

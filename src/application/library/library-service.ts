@@ -726,6 +726,17 @@ export class LibraryService implements LibraryServicePort {
     return { document, line, lineMissing };
   }
 
+  /**
+   * A saved ride's own line and facts, read only (R3-7 "Keep for no signal").
+   * `null` for a ride with no stored line: there is nothing exact to keep.
+   */
+  async savedRideLine(rideId: RideId): Promise<{ readonly title: string; readonly line: SavedRideLine } | null> {
+    const record = await this.repository.loadRideRecord(rideId);
+    if (record === null || record.savedAt === undefined || record.document.intent.breadcrumb != null) return null;
+    const line = await this.savedLine(record);
+    return line === null ? null : { title: record.document.title ?? "Saved ride", line };
+  }
+
   private async readLine(ref: GeometryRef): Promise<readonly Coordinate[] | null> {
     if (this.geometryStore === undefined) return null;
     const stored = await this.geometryStore.get(ref).catch(() => null);

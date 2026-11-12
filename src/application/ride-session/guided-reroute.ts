@@ -11,6 +11,7 @@
  */
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
+import { currentRiderReportRings } from "@/application/persistence/rider-report-repository";
 import type { RideRepositoryPort } from "@/application/persistence/ride-repository";
 import type { ProviderCandidate, ProviderRouteRequest } from "@/application/planner/route-provider";
 import type { GeometryRef } from "@/domain/ride/ids";
@@ -116,6 +117,8 @@ export function createGuidedReroutePlanner(deps: {
           requestId: `reroute-${planningGeneration}`,
           // One answer, fast: a rider waiting at a junction wants the route, not choices.
           includeAlternatives: false,
+          // The rider's own reported spots stay avoided on the way home too.
+          extraAvoidRings: currentRiderReportRings(),
           resolveGeometry: async (ref) => (await deps.geometry.get(ref))?.payload ?? null,
         },
       );

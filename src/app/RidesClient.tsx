@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { createLibraryService } from "@/application/library/library-service";
 import { createImportService } from "@/application/import/import-service";
@@ -14,6 +14,8 @@ import { createIndexedDbImportBlobStore } from "@/infrastructure/storage/indexed
 import { RidesLibrary } from "@/ui/rides/RidesLibrary";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
 import { createRoadProgressReader } from "@/application/roads/explorable-roads";
+import { createLocalStorageRiderSettings } from "@/infrastructure/storage/rider-settings-storage";
+import { createBrowserRidePackService } from "@/app/ride-pack-client";
 
 /** Browser composition root for the rides library and its IndexedDB adapter. */
 export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } = {}) {
@@ -34,6 +36,14 @@ export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } =
     libraryService: service,
     parse: createWorkerImportParser(),
   }), [blobStore, geometryStore, service]);
+  // The rider's own unit system, read after mount: the first render cannot see
+  // device storage, and a card must not print miles to a rider who chose km.
+  const riderSettings = useMemo(() => createLocalStorageRiderSettings(), []);
+  const [units, setUnits] = useState<"imperial" | "metric">("imperial");
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setUnits(riderSettings.read().units));
+    return () => window.cancelAnimationFrame(frame);
+  }, [riderSettings]);
   const roadProgressReader = useMemo(
     () => createRoadProgressReader({
       listExploreRides: () => service.listExploreRides?.() ?? Promise.resolve([]),
@@ -41,11 +51,14 @@ export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } =
     }),
     [service],
   );
+  const ridePacks = useMemo(() => createBrowserRidePackService(service), [service]);
   return <RidesLibrary
     service={service}
+    ridePacks={ridePacks}
     importService={importService}
     roadProgressReader={roadProgressReader}
     geometryStore={geometryStore}
+    units={units}
     {...(mapboxToken === undefined ? {} : { mapboxToken })}
   />;
 }

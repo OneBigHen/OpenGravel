@@ -1,7 +1,10 @@
 "use client";
 
+import type { RidePackService } from "@/application/offline/ride-pack";
+import { KeepForNoSignal } from "@/ui/offline/KeepForNoSignal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { AppBar } from "@/ui/nav/AppBar";
 import { AppMenu } from "@/ui/nav/AppMenu";
@@ -21,9 +24,8 @@ import {
   type ExportMode,
   type ExportTrack,
 } from "@/application/export/gpx-export";
-import type { ImportBreadcrumbOutcome, ImportOutcome, ImportServicePort } from "@/application/import/import-service";
+import type { ImportServicePort } from "@/application/import/import-service";
 import { ImportPanel } from "./../import/ImportPanel";
-import { SwitchBackImportPanel } from "./../import/SwitchBackImportPanel";
 import { SavedRideGroupShare } from "./SavedRideGroupShare";
 import { formatDistance, formatDuration } from "@/application/planner/measurements";
 import { RecordedTrackThumbnail } from "./RecordedTrackThumbnail";
@@ -34,6 +36,8 @@ import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
 import { useOpenSavedRide } from "@/ui/planner/hooks/useOpenCuratedRide";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
+import { RideCard } from "@/ui/ride/RideCard";
+import { buildStoredRideCard } from "@/application/ride-metrics/ride-card";
 
 const NO_EXPORT_CAPABILITIES = {
   plannedRoute: false,
@@ -168,6 +172,10 @@ export interface RidesLibraryProps {
   readonly roadProgressReader?: RoadProgressReader;
   /** Where a ride's own line is handed to the planner from (R3-1). */
   readonly geometryStore?: GeometryStore;
+  /** The rider's unit system, so every distance on a card reads in it. */
+  readonly units?: "imperial" | "metric";
+  /** Keeps a saved ride for no signal (R3-7); absent, no switch is shown. */
+  readonly ridePacks?: RidePackService;
 }
 
 interface RoadProgressCache {
@@ -175,12 +183,16 @@ interface RoadProgressCache {
   readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
 }
 
-export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore }: RidesLibraryProps) {
+export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore, units = "imperial", ridePacks }: RidesLibraryProps) {
   // Saved means exact (R3-1): a ride opens on its own kept line, not a new plan.
   const openSavedRide = useOpenSavedRide({ libraryService: library, geometryStore });
+  const searchParams = useSearchParams();
+  // `/rides?tab=ridden` is where a finished ride lands (R3-2): the tab the
+  // rider asked for wins over the usual "whichever segment has rides" guess.
+  const askedTab: RideSegment | null = searchParams?.get("tab") === "ridden" ? "recorded" : null;
   const night = useResolvedTheme() === "night";
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
-  const [segment, setSegment] = useState<RideSegment>("planned");
+  const [segment, setSegment] = useState<RideSegment>(askedTab ?? "planned");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
@@ -204,7 +216,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   const roadProgressRequests = useRef(new Map<string, { readonly controller: AbortController }>());
   // Until the rider picks a segment, the first non-empty load picks the one
   // that actually has rides, so a recorded-only library never opens empty.
-  const segmentChosen = useRef(false);
+  const segmentChosen = useRef(askedTab !== null);
+  // The one ridden ride whose card is open under its row.
+  const [cardRide, setCardRide] = useState<RideSummary["rideId"] | null>(null);
   // A file picked from the page's one import control, handed to the import flow.
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   const importFileInput = useRef<HTMLInputElement | null>(null);
@@ -447,6 +461,12 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   }, [library]);
 
   async function openRide(ride: RideSummary): Promise<void> {
+    // A ridden ride opens as the same card the ride ended with, right here:
+    // opening it in the planner would turn proof of a ride into a new draft.
+    if (ride.recordedTrack !== undefined) {
+      setCardRide((current) => (current === ride.rideId ? null : ride.rideId));
+      return;
+    }
     if (isDraftDirty() && pendingOpen !== ride.rideId) {
       setPendingOpen(ride.rideId);
       return;
@@ -527,17 +547,17 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
             type="button"
             className="og-rides__segment"
             aria-pressed={segment === "planned"}
-            onClick={() => { segmentChosen.current = true; setSegment("planned"); setSearch(""); }}
+            onClick={() => { segmentChosen.current = true; setSegment("planned"); setCardRide(null); setSearch(""); }}
           >
-            Planned
+            Saved
           </button>
           <button
             type="button"
             className="og-rides__segment"
             aria-pressed={segment === "recorded"}
-            onClick={() => { segmentChosen.current = true; setSegment("recorded"); setSearch(""); }}
+            onClick={() => { segmentChosen.current = true; setSegment("recorded"); setCardRide(null); setSearch(""); }}
           >
-            Recorded
+            Ridden
           </button>
         </div>
       ) : null}
@@ -580,7 +600,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
       {status === "ready" && !libraryIsEmpty && visibleRides.length === 0 ? (
         <section className="og-library__state og-rides__state" role="status">
-          <h2>{segmentIsEmpty ? (segment === "recorded" ? "No recorded rides yet." : "No planned rides yet.") : "No rides match this search."}</h2>
+          <h2>{segmentIsEmpty ? (segment === "recorded" ? "No ridden rides yet." : "No saved rides yet.") : "No rides match this search."}</h2>
           {segmentIsEmpty ? null : (
             <button type="button" className="og-primary og-library__cta" onClick={() => setSearch("")}>
               Clear search
@@ -686,7 +706,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
 
                 {isPendingOpen ? (
                   <div className="og-rides__confirm" role="status">
-                    <p>Your unsaved draft will remain separate.</p>
+                    <p>The ride on your map stays as it is.</p>
                     <div className="og-rides__confirm-actions">
                       <button type="button" className="og-primary" onClick={() => void openRide(ride)}>
                         Confirm open
@@ -722,10 +742,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   <div className="og-library__details og-rides__details">
                     <p>{sourceText(ride)}</p>
                     <p>Saved {formatRideDate(ride.savedAt)}</p>
-                    {ride.offlinePack === undefined ? null : (
-                      <p data-testid={`offline-pack-${ride.rideId}`}>
-                        {ride.offlinePack === "present" ? "Saved for offline" : "Not saved for offline"}
-                      </p>
+                    {/* R3-7: "offline" is said only by the switch, and only when every tile is kept. */}
+                    {ridePacks === undefined || ride.recordedTrack !== undefined || ride.exportCapabilities?.plannedRoute !== true ? null : (
+                      <KeepForNoSignal rideId={ride.rideId} service={ridePacks} />
                     )}
                     {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
                       ? null
@@ -737,6 +756,24 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                     )}
                   </div>
                 ) : null}
+
+                {cardRide !== ride.rideId || ride.recordedTrack === undefined ? null : (
+                  <div className="og-rides__card" data-testid="ride-card-panel">
+                    <RideCard
+                      card={buildStoredRideCard({
+                        title,
+                        savedAt: ride.savedAt,
+                        summary: ride.recordedTrack.summary,
+                        line: ride.recordedTrack.previewGeometry,
+                        units,
+                      })}
+                      onDone={() => setCardRide(null)}
+                      onGpx={() => {
+                        void exportRide(ride, "recorded-ride").catch(() => setError("Could not make the GPX file."));
+                      }}
+                    />
+                  </div>
+                )}
 
                 {isSharing && loadExportSource !== undefined ? (
                   <div className="og-rides__share">
@@ -769,22 +806,16 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
             chrome="quiet"
             {...(droppedFile === null ? {} : { initialFile: droppedFile, onInitialFileHandled: () => setDroppedFile(null) })}
             onImported={() => load()}
-            onOpenInPlanner={async (outcome: ImportOutcome | ImportBreadcrumbOutcome) => {
+            onOpenInPlanner={async (outcome, announcement) => {
               // An imported track opens as its own line, never as a new plan.
-              await openSavedRide(outcome.namedRide.document.rideId);
+              await openSavedRide(
+                outcome.namedRide.document.rideId,
+                announcement === undefined ? {} : { announcement },
+              );
             }}
           />
         </div>
       ) : null}
-
-      {/* The older SwitchBack import is a quiet way out of the page, not a
-          third card beside the two real ways in. */}
-      {importService === undefined ? null : (
-        <details className="og-library__legacy">
-          <summary>Import from an older version</summary>
-          <SwitchBackImportPanel service={importService} onImported={() => load()} />
-        </details>
-      )}
     </main>
   );
 }

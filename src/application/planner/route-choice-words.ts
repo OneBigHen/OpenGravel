@@ -126,3 +126,25 @@ export function routeChoiceWords(
   }
   return words;
 }
+
+/**
+ * What each comparison row is called (round 3, restructure call 9): "Most dirt",
+ * "Twistiest", "Fastest" when the card measurably is, else "Option 2", "Option
+ * 3". "Quickest" reads as "Fastest" here because that is the word a rider uses
+ * for the shortest ride time. Two rows are never given the same name.
+ */
+export function compareChoiceNames(
+  cards: readonly RouteCardVm[],
+): Readonly<Record<string, string>> {
+  const words = routeChoiceWords(cards);
+  const names: Record<string, string> = {};
+  cards.forEach((card, index) => {
+    const word = words[card.routeId];
+    names[card.routeId] = word === undefined
+      ? `Option ${index + 1}`
+      : word === "Quickest"
+        ? "Fastest"
+        : word;
+  });
+  return names;
+}

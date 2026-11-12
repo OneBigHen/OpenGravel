@@ -39,3 +39,6 @@ export const HIDDEN_ROUTES_STORAGE_KEY = "opengravel.explore.hidden-routes";
  */
 export const FRONT_DOOR_ASK_STORAGE_KEY = "og-front-door-ask";
 export const FRONT_DOOR_CAMERAS_STORAGE_KEY = "og-front-door-cameras";
+
+/** Spots the rider reported while riding: private to this device (`rider-reports.ts`). */
+export const RIDER_REPORTS_STORAGE_KEY = "og-rider-reports";

@@ -91,5 +91,10 @@ test("a curated ride opens only when the rider taps Ride this", async ({ page })
   const ride = page.locator('[data-testid^="route-card-"]');
   await expect(ride).toHaveCount(1);
   await expect(ride).toContainText("17 mi");
+  // The same summary every route shows (R3-4), titled by the ride's own name.
+  const summary = page.getByTestId("route-summary");
+  await expect(summary.getByTestId("phone-destination")).toHaveText(ROUTE_NAME);
+  await expect(summary).toContainText("17 mi");
+  await expect(summary.getByTestId("phone-surface-line")).toBeVisible();
   await expect(page.getByTestId("start-ride")).toBeEnabled({ timeout: 5_000 });
 });

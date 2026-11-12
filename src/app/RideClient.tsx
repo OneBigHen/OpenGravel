@@ -74,6 +74,7 @@ import type { RideId } from "@/domain/ride/ids";
 import { RideFocus } from "@/ui/ride/RideFocus";
 import { nativeSpotifyPlayer } from "@/infrastructure/native/spotify-bridge";
 import { RideInstallHint } from "@/ui/ride/RideInstallHint";
+import { createBrowserRidePackService } from "@/app/ride-pack-client";
 import { createWebSpotifyPlayer } from "@/infrastructure/spotify/web-spotify-player";
 
 /**
@@ -454,6 +455,8 @@ export function RideClient({
     between the server and the phone.
   */
   const garageStorage = useMemo(() => createLocalStorageGarageStorage(), []);
+  // Kept rides (R3-7): read only here, to say "No signal, kept ride" truthfully.
+  const ridePacks = useMemo(() => createBrowserRidePackService(), []);
   const [usableFuelRange, setUsableFuelRange] = useState<number | null>(null);
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -549,6 +552,7 @@ export function RideClient({
       mapLayersSource={mapLayersSource}
       placeSearch={placeSearch}
       usableRangeMiles={usableFuelRange}
+      ridePacks={ridePacks}
       discoverSource={discoverSource}
       spotifyPlayer={spotifyPlayer}
       safety={safety}

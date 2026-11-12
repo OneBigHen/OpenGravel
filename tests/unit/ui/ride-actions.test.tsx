@@ -1,8 +1,10 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRideDocument } from "@/domain/ride/create";
 import { buildCorridorPackManifest } from "@/domain/offline/capabilities";
 import { RideActions } from "@/ui/planner/RideActions";
+import { setActivityMode } from "@/ui/stores/activity-mode";
+import { useOneTapSave } from "@/ui/planner/useOneTapSave";
 
 afterEach(() => cleanup());
 
@@ -42,7 +44,7 @@ describe("a ride that was never ended", () => {
     const freeRide = vi.fn(async () => ({
       outcome: "rejected" as const,
       sessionId: "session_old" as never,
-      message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
+      message: "A ride is already in progress. Resume it before starting another.",
     }));
     render(
       <RideActions
@@ -66,7 +68,11 @@ describe("a ride that was never ended", () => {
   });
 });
 
-describe("exporting a planned ride from Ride actions", () => {
+describe("exporting a planned hike from Ride actions", () => {
+  // A ride exports from the Share sheet; only a hike (no ride summary) keeps its own export here.
+  beforeEach(() => setActivityMode("hike"));
+  afterEach(() => setActivityMode("ride"));
+
   const geometry = [
     { lon: -75, lat: 40 },
     { lon: -75.1, lat: 40.1 },
@@ -174,7 +180,7 @@ describe("saving a planned ride keeps its route line", () => {
     },
   } as const;
 
-  it("hands the selected geometry to saveNamed", async () => {
+  it("hands the selected geometry to saveNamed under the automatic name", async () => {
     const saveNamed = vi.fn<(document: unknown, options: unknown) => Promise<{ document: ReturnType<typeof createRideDocument>; savedAt: string }>>();
     saveNamed.mockResolvedValue({
       document: createRideDocument({ now: "2026-10-07T12:00:00.000Z" }),
@@ -199,22 +205,15 @@ describe("saving a planned ride keeps its route line", () => {
         },
       },
     };
-    render(
-      <RideActions
-        document={document}
-        libraryService={{ saveNamed } as never}
-        shareService={undefined}
-        route={route}
-        start={null}
-      />,
-    );
-
-    fireEvent.change(screen.getByTestId("named-ride-title"), { target: { value: "Sunday loop" } });
-    fireEvent.click(screen.getByTestId("save-named-ride"));
+    // One tap (R3-4): the shared save hook writes the automatic name and the exact line.
+    const { result } = renderHook(() => useOneTapSave({ document, libraryService: { saveNamed } as never, route, automaticName: "Sunday loop, 7 mi" }));
+    await act(async () => { await result.current.save(); });
 
     await waitFor(() => expect(saveNamed).toHaveBeenCalledOnce());
+    expect(result.current.state).toBe("saved");
+    expect(result.current.savedTitle).toBe("Sunday loop, 7 mi");
     expect(saveNamed.mock.calls[0]?.[1]).toMatchObject({
-      title: "Sunday loop",
+      title: "Sunday loop, 7 mi",
       // The chosen card exactly (R3-1): line, numbers and measured surface.
       plannedRoute: {
         geometry,
@@ -234,5 +233,25 @@ describe("saving a planned ride keeps its route line", () => {
     expect(onPlanAgain).toHaveBeenCalledOnce();
     view.rerender(<RideActions document={document} libraryService={undefined} shareService={undefined} route={route} start={null} onPlanAgain={null} />);
     expect(screen.queryByTestId("plan-it-again")).toBeNull();
+  });
+});
+
+describe("one Share entry point (R3-3 + R3-4)", () => {
+  it("a ride has no Share, GPX or Send to phone buttons here; they live in the Share sheet", () => {
+    const document = createRideDocument({ now: "2026-10-07T12:00:00.000Z" });
+    render(<RideActions document={document} libraryService={undefined} shareService={undefined} route={null} start={null} />);
+    expect(screen.queryByTestId("open-share")).toBeNull();
+    expect(screen.queryByTestId("send-to-phone")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Download GPX" })).toBeNull();
+  });
+});
+
+describe("the old two-step save is gone (R3-4)", () => {
+  it("has no name box, no second Save and no draft sentence", () => {
+    const document = createRideDocument({ now: "2026-10-07T12:00:00.000Z" });
+    render(<RideActions document={document} libraryService={undefined} shareService={undefined} route={null} start={null} />);
+    expect(screen.queryByTestId("named-ride-title")).toBeNull();
+    expect(screen.queryByTestId("save-named-ride")).toBeNull();
+    expect(screen.queryByText(/draft/i)).toBeNull();
   });
 });

@@ -28,7 +28,7 @@ import {
   type RideIntent,
   type RidePoint,
 } from "@/domain/ride/types";
-import { IntentComposer } from "@/ui/planner/IntentComposer";
+import { IntentComposer, PlanCommitment } from "@/ui/planner/IntentComposer";
 
 const FIXED = "2026-09-17T00:00:00.000Z";
 const RIDE_ID: RideId = newRideId();
@@ -77,6 +77,20 @@ function renderComposer(
   );
   return { onPlan, onSetStart, onSetFinish };
 }
+
+describe("the laptop's first screen (R3-4)", () => {
+  it("offers a live Make my loop instead of a disabled Create ride", () => {
+    const loopFirst = vi.fn();
+    const onPlan = vi.fn();
+    render(<PlanCommitment viewModel={viewModelFor(documentWith(), "idle")} onPlan={onPlan} loopFirst={loopFirst} />);
+    const button = screen.getByRole("button", { name: "Make my loop" });
+    expect(button).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Create ride" })).toBeNull();
+    fireEvent.click(button);
+    expect(loopFirst).toHaveBeenCalledOnce();
+    expect(onPlan).not.toHaveBeenCalled();
+  });
+});
 
 describe("IntentComposer", () => {
   it("disables the commit and explains the missing start", () => {

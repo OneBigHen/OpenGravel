@@ -471,25 +471,6 @@
 }
 
 /* Legacy library pieces still rendered by the import flow. */
-.og-library__legacy {
-  margin-top: var(--og-space-4);
-}
-
-.og-library__legacy > summary {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--og-touch);
-  color: var(--og-primary-text);
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-
-.og-library__legacy > summary::-webkit-details-marker {
-  display: none;
-}
-
 .og-library__imports {
   display: grid;
   gap: var(--og-space-4);
@@ -591,8 +572,7 @@
 }
 
 .og-import__header p:not(.og-eyebrow),
-.og-import__chooser-head p,
-.og-import__semantic-note {
+.og-import__chooser-head p {
   max-width: 720px;
   color: var(--og-ink-2);
 }
@@ -668,8 +648,7 @@
   accent-color: var(--og-primary);
 }
 
-.og-import__chooser,
-.og-import__options {
+.og-import__chooser {
   display: grid;
   gap: var(--og-space-3);
   padding-top: var(--og-space-3);
@@ -717,7 +696,7 @@
   gap: 2px;
 }
 
-.og-import :is(.og-import__track-select, .og-import__options label) input {
+.og-import :is(.og-import__track-select, .og-import__save-how) input {
   flex: none;
   width: 20px;
   height: 20px;
@@ -746,33 +725,55 @@
   color: var(--og-ink-2);
 }
 
-.og-import__options fieldset {
+/* The one closed line that hides the choices most riders never need. */
+.og-import__more-toggle {
+  justify-self: start;
+  min-height: var(--og-touch);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--og-primary-text);
+  font-size: var(--og-text-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.og-import__more {
   display: grid;
-  gap: var(--og-space-2);
+  gap: var(--og-space-3);
   padding: var(--og-space-3);
   border: 1px solid var(--og-line);
   border-radius: var(--og-radius-control);
+  background: var(--og-surface-2);
 }
 
-.og-import__options legend {
-  padding: 0 var(--og-space-1);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.og-import__save-how {
+  display: grid;
+  gap: var(--og-space-2);
 }
 
-.og-import__options label {
+.og-import__save-how label {
   display: flex;
   align-items: flex-start;
   gap: var(--og-space-2);
   min-height: 32px;
 }
 
-.og-import__disabled-option {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
+.og-import__more .og-import__breadcrumb {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+.og-import__combine {
+  display: grid;
+  gap: var(--og-space-2);
+  justify-items: start;
+}
+
+.og-import__added {
+  margin: 0;
+  font-weight: 600;
 }
 
 .og-switchback-import__selected {

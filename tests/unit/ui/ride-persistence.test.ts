@@ -87,7 +87,7 @@ describe("ride document persistence wiring", () => {
     });
     expect(store.getState().restoreStatus).toEqual({
       state: "restored",
-      message: "Restored your draft",
+      message: "Restored your ride",
     });
     expect(store.getState().planningRestored).toBe(false);
     expect(loadRide).toHaveBeenCalledWith(document.rideId);

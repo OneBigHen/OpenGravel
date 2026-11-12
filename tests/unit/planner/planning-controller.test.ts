@@ -37,6 +37,7 @@ import type {
   PlanningController,
 } from "@/application/planner/planning-controller";
 import { createPlanningController } from "@/application/planner/planning-controller";
+import { getRiderReportPlanStatus } from "@/application/planner/rider-report-plan-status";
 import type {
   ProviderCandidate,
   ProviderCandidateSet,
@@ -296,6 +297,7 @@ interface ControllerOptions {
   readonly resolveGeometry?: PlanRequestContext["resolveGeometry"];
   readonly profileFor?: (intent: RideIntent) => string;
   readonly includeAlternatives?: boolean;
+  readonly riderReportRings?: () => readonly (readonly Coordinate[])[];
   readonly now?: () => string;
   readonly onUpdate?: (snapshot: PlanningSessionSnapshot) => void;
   readonly rideId?: RideId;
@@ -308,6 +310,7 @@ function buildController(options: ControllerOptions): PlanningController {
     ...(options.includeAlternatives === undefined
       ? {}
       : { includeAlternatives: options.includeAlternatives }),
+    ...(options.riderReportRings === undefined ? {} : { riderReportRings: options.riderReportRings }),
   };
   const shared = {
     providers: options.providers,
@@ -1116,6 +1119,31 @@ describe("failure semantics", () => {
       message: expect.any(String),
       recoverable: true,
     });
+  });
+
+  it("adds the rider's reported spots to the request, and plans again without them when none leaves a route", async () => {
+    const ring = [
+      { lon: -75.44, lat: 40.13 }, { lon: -75.439, lat: 40.13 }, { lon: -75.439, lat: 40.131 },
+      { lon: -75.44, lat: 40.131 }, { lon: -75.44, lat: 40.13 },
+    ];
+    const alpha = fakeProvider("alpha");
+    const controller = buildController({
+      providers: [alpha.provider],
+      pipeline: identityPipeline().pipeline,
+      riderReportRings: () => [ring],
+      now: FIXED_CLOCK,
+    });
+
+    void begin(controller, 1);
+    await flush();
+    expect(callAt(alpha, 0).request.avoidPolygons).toHaveLength(1);
+    alpha.fail(0, Object.assign(new Error("no route"), { code: "no-route" }));
+    await flush();
+
+    // Planned again, this time without the rider's spot.
+    expect(alpha.calls).toHaveLength(2);
+    expect(callAt(alpha, 1).request.avoidPolygons).toHaveLength(0);
+    expect(getRiderReportPlanStatus()).toEqual({ avoided: 0, couldNotAvoid: true });
   });
 
   it("treats an answered no-route rejection as an answer, not an outage", async () => {

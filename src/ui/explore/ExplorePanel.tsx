@@ -17,8 +17,10 @@ import { RideRoadOpenings } from "@/ui/explore/RideRoadOpenings";
 import { RideTimeLens } from "@/ui/explore/RideTimeLens";
 import { ThingsFeed } from "@/ui/explore/ThingsFeed";
 import { RoadLocationMap } from "@/ui/explore/RoadLocationMap";
+import { WeekendPicks } from "@/ui/explore/WeekendPicks";
 import { localDateValue, type RideTimeLens as TimeLens } from "@/application/explore/time-lens";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
+import type { WeekendPickBike } from "@/application/explore/weekend-picks";
 
 
 import type { CatalogEntry, CatalogSource } from "@/application/explore/catalog";
@@ -51,6 +53,10 @@ export interface ExplorePanelProps {
   readonly map?: ExploreMapConfig & { readonly onOpen: (entryId: string) => void };
   /** A public Mapbox token: cards then show the route on a real map image. */
   readonly mapboxToken?: string;
+  /** The active garage bike, for the weekend strip's mix rule. */
+  readonly weekendBike?: WeekendPickBike | null;
+  /** Routes the rider asked Explore not to show. */
+  readonly hiddenIds?: ReadonlySet<string>;
 }
 
 /**
@@ -384,7 +390,7 @@ function anyFilterOn(query: ExploreQuery): boolean {
     || query.area !== undefined;
 }
 
-export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken }: ExplorePanelProps) {
+export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, mapboxToken, weekendBike, hiddenIds }: ExplorePanelProps) {
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   // Search, the distance chips and one Filters button; every other filter is
   // one press away in the sheet (phone) or popover (desktop).
@@ -853,6 +859,16 @@ export function ExplorePanel({ entries, roadCandidates = [], initialQuery, map, 
 
       <div role="tabpanel" id="og-explore-panel" aria-labelledby={`og-explore-tab-${lens}`}>
       {lens === "ride" ? <>
+        {/* Where to ride this weekend, above the list: three rides within reach,
+            each with the day's forecast and the truth about its surface. No
+            position, no strip. */}
+        <WeekendPicks
+          entries={entries}
+          {...(origin === undefined ? {} : { origin })}
+          {...(weekendBike === undefined ? {} : { bike: weekendBike })}
+          {...(hiddenIds === undefined ? {} : { hiddenIds })}
+          {...(mapboxToken === undefined ? {} : { mapboxToken })}
+        />
         {locationNote !== null ? <p className="og-explore__note" role="status">{locationNote}</p> : null}
         {noRidesAtAll ? (
           // Nothing to browse yet: say what is missing and offer the one action.

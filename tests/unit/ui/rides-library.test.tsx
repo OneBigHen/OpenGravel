@@ -9,6 +9,7 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const RIDE: RideSummary = {
@@ -52,6 +53,7 @@ function ride(overrides: Partial<RideSummary>): RideSummary {
 const PARSED_IMPORT = {
   tracks: [
     { name: "Weekend GPX", segments: [[{ lon: -75, lat: 40 }, { lon: -75.001, lat: 40.001 }]], timestamps: [[null, null]], elevation: [[null, null]] },
+    { name: "Weekend GPX south", segments: [[{ lon: -75.01, lat: 40.01 }, { lon: -75.011, lat: 40.011 }]], timestamps: [[null, null]], elevation: [[null, null]] },
   ],
   warnings: [],
 } as const satisfies ParsedImport;
@@ -107,6 +109,43 @@ describe("RidesLibrary", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions for Recorded ride" }));
     expect(screen.getByRole("menuitem", { name: "Download GPX" })).toBeEnabled();
     expect(screen.queryByRole("menuitem", { name: "Other formats" })).not.toBeInTheDocument();
+  });
+
+  it("opens a ridden ride as the same ride card, here, without making it a draft", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_card" as RideSummary["rideId"],
+      title: "Sunday gravel",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 24_140, elapsedSeconds: 5_400, movingSeconds: 4_800, pointCount: 900 },
+        previewGeometry: [
+          { lon: -75.5, lat: 40 },
+          { lon: -75.45, lat: 40.05 },
+          { lon: -75.4, lat: 40.1 },
+        ],
+      },
+      exportCapabilities: { plannedRoute: false, track: false, original: false, recordedRide: true },
+    };
+    const open = vi.fn();
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} onOpen={open} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open Sunday gravel" }));
+    // Opening a ridden ride is looking at it, not editing it: no planner open.
+    expect(open).not.toHaveBeenCalled();
+    const card = await screen.findByTestId("ride-card");
+    expect(within(card).getByTestId("ride-card-title")).toHaveTextContent("Sunday gravel");
+    expect(within(card).getByTestId("ride-card-miles")).toHaveTextContent("15");
+    expect(within(card).getByTestId("ride-card-moving")).toHaveTextContent("1:20");
+    // The library kept no elevation or surface runs, so those two stay unknown.
+    expect(within(card).getByTestId("ride-card-dirt")).toHaveTextContent("—");
+    expect(within(card).getByTestId("ride-card-climb")).toHaveTextContent("—");
+    expect(card.querySelector(".og-ride-card__line")?.getAttribute("points")?.length).toBeGreaterThan(0);
+
+    // Done closes the card again.
+    fireEvent.click(within(card).getByTestId("ride-summary-rides"));
+    expect(screen.queryByTestId("ride-card")).not.toBeInTheDocument();
   });
 
   it("reads road progress only when recorded details are expanded", async () => {
@@ -345,7 +384,7 @@ describe("RidesLibrary", () => {
     expect(labels()).toEqual(["Open New plan", "Open Old plan"]);
     expect(screen.queryByRole("button", { name: "Open New recording" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Recorded" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ridden" }));
     expect(await screen.findByRole("button", { name: "Open New recording" })).toBeInTheDocument();
     expect(labels()).toEqual(["Open New recording", "Open Old recording"]);
   });
@@ -407,7 +446,7 @@ describe("RidesLibrary", () => {
     expect(screen.queryByRole("heading", { name: "Upload your GPX ride" })).not.toBeInTheDocument();
   });
 
-  it("opens the file picker from the header and keeps the older import quiet", async () => {
+  it("opens the file picker from the header and keeps the older import behind More import options", async () => {
     const click = vi.spyOn(HTMLInputElement.prototype, "click");
     render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([]) })} importService={importService()} />);
 
@@ -415,9 +454,11 @@ describe("RidesLibrary", () => {
     expect(click).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText("Import GPX, KML, or KMZ")).toBeInTheDocument();
 
-    // The SwitchBack import is a link at the foot of the page, not a third card.
-    const legacy = screen.getByText("Import from an older version");
-    expect(legacy.closest("details")).not.toBeNull();
+    // The older import is not a third card or a link at the foot of the page.
+    expect(screen.queryByText("Import from an older version")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Import older saved rides" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "More import options" }));
+    expect(screen.getByRole("heading", { name: "Import older saved rides" })).toBeInTheDocument();
     click.mockRestore();
   });
 
@@ -533,26 +574,31 @@ describe("RidesLibrary", () => {
     expect(screen.queryByTestId(`offline-pack-${planned.rideId}`)).toBeNull();
   });
 
-  it("shows known offline state in plain words and says nothing when it is unknown", async () => {
+  it("never says offline from a stored manifest; only the Keep switch speaks, from what is on the device", async () => {
     const saved = ride({
       rideId: "ride_offline_saved" as RideSummary["rideId"],
       title: "Saved offline ride",
       offlinePack: "present",
       updatedAt: "2026-09-18T12:00:00.000Z",
+      exportCapabilities: { plannedRoute: true, track: false, original: false, recordedRide: false },
     });
-    const unsaved = ride({
-      rideId: "ride_offline_unsaved" as RideSummary["rideId"],
-      title: "Online only ride",
-      offlinePack: "not-present",
-      updatedAt: "2026-09-17T12:00:00.000Z",
-    });
-    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved, unsaved]) })} />);
-
+    const ridePacks = {
+      keepRide: vi.fn(),
+      dropRide: vi.fn(),
+      rideIsKept: vi.fn().mockResolvedValue(true),
+      keptRides: vi.fn().mockResolvedValue([{ rideId: saved.rideId, title: saved.title, keptAt: "2026-09-18T12:00:00.000Z", bytes: 2_700_000 }]),
+      keptPackForLine: vi.fn(),
+    };
+    const { unmount } = render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved]) })} />);
     await expandDetails("Saved offline ride");
-    expect(screen.getByTestId(`offline-pack-${saved.rideId}`)).toHaveTextContent("Saved for offline");
-    await expandDetails("Online only ride");
-    expect(screen.getByTestId(`offline-pack-${unsaved.rideId}`)).toHaveTextContent("Not saved for offline");
-    expect(document.body.textContent).not.toContain("Offline pack");
+    expect(document.body.textContent).not.toMatch(/saved for offline|not saved for offline|keep for no signal/i);
+    unmount();
+
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved]) })} ridePacks={ridePacks} />);
+    await expandDetails("Saved offline ride");
+    expect(await screen.findByTestId(`keep-no-signal-status-${saved.rideId}`)).toHaveTextContent("Kept, 3 MB");
+    expect(screen.getByTestId(`keep-no-signal-toggle-${saved.rideId}`)).toHaveAttribute("aria-checked", "true");
+    expect(ridePacks.rideIsKept).toHaveBeenCalledWith(saved.rideId);
   });
 
   it("reads provenance in the same plain words everywhere in My rides", async () => {

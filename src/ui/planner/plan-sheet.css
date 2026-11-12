@@ -32,30 +32,6 @@
   display: none;
 }
 
-.og-plan-actions__row input {
-  flex: 1 1 160px;
-  min-width: 0;
-  min-height: var(--og-touch);
-  padding: 0 var(--og-space-3);
-  border: 1px solid var(--og-line-strong);
-  border-radius: var(--og-radius-control);
-  background: var(--og-surface);
-  color: var(--og-ink);
-  font: inherit;
-  font-size: var(--og-text-body);
-}
-
-.og-plan-actions__row input:focus-visible {
-  outline: var(--og-focus-width) solid var(--og-focus-ring);
-  outline-offset: var(--og-focus-offset);
-}
-
-.og-plan-actions__ride-name {
-  margin: 0 0 var(--og-space-1);
-  color: var(--og-ink);
-  font-weight: 600;
-}
-
 .og-plan-actions__unfinished {
   display: flex;
   flex-direction: column;
@@ -369,18 +345,6 @@
     clip-path: inset(50%);
   }
 
-  .og-planner .og-plan-actions__row :is(button[data-testid="save-named-ride"], button[data-testid="open-share"]) {
-    position: relative;
-    flex: 0 0 var(--og-touch);
-    justify-content: center;
-    min-width: var(--og-touch);
-    padding: 0;
-  }
-
-  .og-planner .og-plan-actions__row input {
-    flex: 1 1 0;
-    min-width: 0;
-  }
 }
 
 .og-option-rows { display: grid; }

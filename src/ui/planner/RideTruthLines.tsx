@@ -8,15 +8,20 @@
  * there.
  */
 
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
-import type { RideTruth, RideTruthLine, RideTruthStretch } from "@/application/planner/ride-truth";
+import {
+  getRiderReportPlanStatus,
+  subscribeRiderReportPlanStatus,
+} from "@/application/planner/rider-report-plan-status";
 
-const KEYS = ["surface", "bike", "checked"] as const;
+import { withRiderReportSentence, type RideTruth, type RideTruthLine, type RideTruthStretch } from "@/application/planner/ride-truth";
+
+type LineKind = "surface" | "bike" | "checked" | "fuel";
 
 function Line({ line, kind, onShowStretch }: {
   readonly line: RideTruthLine;
-  readonly kind: (typeof KEYS)[number];
+  readonly kind: LineKind;
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
 }) {
   const body = <>
@@ -31,17 +36,26 @@ function Line({ line, kind, onShowStretch }: {
   return <p className="og-truth__line" data-truth={kind} data-tone={line.tone}>{body}</p>;
 }
 
-export function RideTruthLines({ truth, surfaceBar = null, onShowStretch, testId = "ride-truth" }: {
+export function RideTruthLines({ truth, fuel = null, surfaceBar = null, riderReports = true, onShowStretch, testId = "ride-truth" }: {
   readonly truth: RideTruth;
   /** The surface bar, drawn right under the surface line. */
   readonly surfaceBar?: ReactNode;
+  /** The fuel line, shown last and only when the ride is longer than the tank. */
+  readonly fuel?: RideTruthLine | null;
+  /**
+   * Whether the "spots you reported" note belongs here. It describes the plan
+   * just made, so a catalog ride page (not planned by this rider) turns it off.
+   */
+  readonly riderReports?: boolean;
   readonly onShowStretch?: ((stretch: RideTruthStretch) => void) | undefined;
   readonly testId?: string;
 }) {
+  const reported = useSyncExternalStore(subscribeRiderReportPlanStatus, getRiderReportPlanStatus, getRiderReportPlanStatus);
   return <div className="og-truth" data-testid={testId}>
     <Line line={truth[0]} kind="surface" onShowStretch={onShowStretch} />
     {surfaceBar}
     <Line line={truth[1]} kind="bike" onShowStretch={onShowStretch} />
-    <Line line={truth[2]} kind="checked" onShowStretch={onShowStretch} />
+    <Line line={riderReports ? withRiderReportSentence(truth[2], reported) : truth[2]} kind="checked" onShowStretch={onShowStretch} />
+    {fuel === null ? null : <Line line={fuel} kind="fuel" onShowStretch={onShowStretch} />}
   </div>;
 }
