@@ -28,6 +28,7 @@ import { haversine } from "@/domain/geometry/analysis";
 import type { Coordinate } from "@/domain/ride/types";
 import type { PositionQuality } from "@/domain/ride-session/types";
 import type { RouteCandidateId } from "@/domain/route/ids";
+import type { SurfaceRunSpan } from "@/application/ride-session/surface-ahead";
 
 import { MIN_EXTENT_SPAN, type MapExtent } from "./build-map-scene";
 import { isDrawableLine, isDrawableRoute } from "./drawable";
@@ -36,6 +37,7 @@ import type {
   RiderPositionConfidence,
   RiderPositionScene,
   RouteScene,
+  RouteSurfaceRunScene,
 } from "./types";
 
 export interface RideSceneInput {
@@ -70,6 +72,12 @@ export interface RideSceneInput {
    * measured.
    */
   readonly onRoute?: boolean;
+  /**
+   * The measured surface along the followed line, in metres from its start,
+   * from the same engine evidence the planner map paints. Absent or empty means
+   * nothing was measured, and the ride draws no band — never a paved one.
+   */
+  readonly surfaceRuns?: readonly SurfaceRunSpan[] | null;
 }
 
 /**
@@ -216,24 +224,93 @@ function followedRoutes(
   routeLine: readonly Coordinate[],
   input: RideSceneInput,
 ): readonly RouteScene[] {
+  const surface = surfaceRunShares(input.surfaceRuns);
   const split =
     input.onRoute === true && isFreshFix(input.position.quality)
       ? splitRouteAtProgress(routeLine, input.progressFraction ?? null)
       : null;
   if (split === null) {
-    const whole = { id: routeId, role: null, tint: RIDE_ROUTE_TINT, geometry: routeLine, state: "selected" as const };
+    const whole = {
+      id: routeId,
+      role: null,
+      tint: RIDE_ROUTE_TINT,
+      geometry: routeLine,
+      state: "selected" as const,
+      ...(surface === undefined ? {} : { surface }),
+    };
     return isDrawableRoute(whole) ? [whole] : [];
   }
   // The rider has ridden the part behind them; what is left is the answer still
   // being followed, in the same Ember-over-casing treatment. `selected` is
   // emitted first so a lookup by route id finds the line ahead rather than the
-  // one just ridden. Neither half carries a surface band: a ride scene does not
-  // carry measured runs today, and runs measured against the whole line would
-  // not line up on a truncated one without being re-cut.
+  // one just ridden.
+  //
+  // The band belongs to the line ahead: its runs are shares of the whole route,
+  // so they are re-cut to the stretch still being followed. A run that is
+  // already behind the rider has nothing left to paint.
+  const aheadSurface = surface === undefined ? undefined : cutSurfaceRuns(surface, input.progressFraction ?? 0);
   return [
-    { id: routeId, role: null, tint: RIDE_ROUTE_TINT, geometry: split.ahead, state: "selected" as const },
+    {
+      id: routeId,
+      role: null,
+      tint: RIDE_ROUTE_TINT,
+      geometry: split.ahead,
+      state: "selected" as const,
+      ...(aheadSurface === undefined ? {} : { surface: aheadSurface }),
+    },
     { id: routeId, role: null, geometry: split.travelled, state: "travelled" as const },
   ];
+}
+
+/**
+ * The engine's metre runs as shares of the line, the shape the map band paints
+ * (05 §11). A run that cannot describe a stretch is dropped rather than clamped
+ * to one; `undefined` means there is no measured band at all, which is not the
+ * same fact as "the whole ride is paved".
+ */
+function surfaceRunShares(
+  runs: readonly SurfaceRunSpan[] | null | undefined,
+): readonly RouteSurfaceRunScene[] | undefined {
+  if (runs === undefined || runs === null || runs.length === 0) return undefined;
+  const usable = runs.filter(
+    (run) =>
+      Number.isFinite(run.from) &&
+      Number.isFinite(run.to) &&
+      run.from >= 0 &&
+      run.to > run.from,
+  );
+  const total = usable.reduce((longest, run) => Math.max(longest, run.to), 0);
+  if (!(total > 0)) return undefined;
+  const shares = usable
+    .map((run) => ({
+      kind: run.kind,
+      from: Math.max(0, Math.min(1, run.from / total)),
+      to: Math.max(0, Math.min(1, run.to / total)),
+    }))
+    .filter((run) => run.to > run.from);
+  return shares.length === 0 ? undefined : shares;
+}
+
+/**
+ * The part of the band still ahead: shares of the whole route re-cut to the
+ * stretch between the rider's split point and the end.
+ */
+function cutSurfaceRuns(
+  runs: readonly RouteSurfaceRunScene[],
+  fromShare: number,
+): readonly RouteSurfaceRunScene[] | undefined {
+  if (!Number.isFinite(fromShare) || fromShare <= 0 || fromShare >= 1) return undefined;
+  const remaining = 1 - fromShare;
+  const cut: RouteSurfaceRunScene[] = [];
+  for (const run of runs) {
+    const from = Math.max(run.from, fromShare);
+    if (!(run.to > from)) continue;
+    const sceneFrom = Math.max(0, (from - fromShare) / remaining);
+    const sceneTo = Math.min(1, (run.to - fromShare) / remaining);
+    if (!(sceneTo > sceneFrom)) continue;
+    cut.push({ kind: run.kind, from: sceneFrom, to: sceneTo });
+  }
+  return cut.length === 0 ? undefined : cut;
 }
 
 /**

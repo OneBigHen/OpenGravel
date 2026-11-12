@@ -242,6 +242,14 @@ export interface ProviderRouteRequest {
      * answer went that way.
      */
     readonly headingDegrees?: number;
+    /**
+     * How many engine seeds the provider may try for this loop, counted from
+     * the first. Absent means the provider's full set. The progressive first
+     * answer sets 1: one seed is one engine call per loop, so the first loop
+     * reaches the rider sooner, and the full plan that follows still tries the
+     * rest.
+     */
+    readonly seedCount?: number;
   };
 }
 

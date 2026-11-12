@@ -1,6 +1,6 @@
 {
-  "totalLines": 20099,
-  "maxFileLines": 3063,
+  "totalLines": 20013,
+  "maxFileLines": 2890,
   "backdropFilter": 99,
   "mediaQueries": 23,
   "literalRadius": 18,
@@ -34,7 +34,7 @@
     "src/ui/ride/ride-fuel.css": 86,
     "src/ui/ride/ride-music.css": 117,
     "src/ui/ride/ride-stop-search.css": 153,
-    "src/ui/ride/ride.css": 3063,
+    "src/ui/ride/ride.css": 2890,
     "src/ui/rides/export-menu.css": 106,
     "src/ui/rides/rides.css": 1071,
     "src/ui/safety/emergency.css": 348,

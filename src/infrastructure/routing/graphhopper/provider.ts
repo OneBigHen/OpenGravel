@@ -209,7 +209,10 @@ function detailFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function discoverySeeds(requestId: string): readonly number[] {
+/** The seeds a loop tries when the caller does not narrow them. */
+const DISCOVERY_SEED_COUNT = 3;
+
+function discoverySeeds(requestId: string, count: number = DISCOVERY_SEED_COUNT): readonly number[] {
   // FNV-1a gives retries of one discovery the same three bounded engine seeds,
   // while a later rider request can explore another set of loops.
   let hash = 0x811c9dc5;
@@ -217,7 +220,10 @@ function discoverySeeds(requestId: string): readonly number[] {
     hash = Math.imul(hash ^ character.charCodeAt(0), 0x01000193);
   }
   const base = hash >>> 0;
-  return [0, 1, 2].map((index) => (base + index) % 2_147_483_647);
+  const wanted = Number.isFinite(count)
+    ? Math.max(1, Math.min(DISCOVERY_SEED_COUNT, Math.trunc(count)))
+    : DISCOVERY_SEED_COUNT;
+  return Array.from({ length: wanted }, (_, index) => (base + index) % 2_147_483_647);
 }
 
 /** An engine answer being fetched or just fetched, shared by identical requests. */
@@ -391,7 +397,7 @@ export function createGraphHopperProvider(
       };
 
       const details = [...REQUESTED_DETAILS];
-      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(request.requestId);
+      const seeds = request.discovery === undefined ? [undefined] : discoverySeeds(request.requestId, request.discovery.seedCount);
       const answerFor = async (
         seed: number | undefined,
         distanceScale?: number,

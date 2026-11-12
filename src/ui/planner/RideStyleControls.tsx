@@ -142,6 +142,20 @@ export function rideStyleSummary(view: RideStyleView): string {
   return `Roads: ${ROAD_CHARACTER_LABELS[view.roadCharacter]} · Surface: ${SURFACE_LABELS[view.surface]}`;
 }
 
+/**
+ * The closed "More options" line names what is inside it, so a rider who
+ * changed a setting can still see it at a glance (next round N4): familiarity
+ * and traffic by their chosen words, and the two switches only when on.
+ */
+export function moreOptionsSummary(view: RideStyleView): string {
+  return [
+    `Familiarity: ${NOVELTY_LABELS[view.noveltyPreference]}`,
+    TRAFFIC_LABELS[view.traffic],
+    ...(view.avoidHighways ? ["No highways"] : []),
+    ...(view.avoidTolls ? ["No tolls"] : []),
+  ].join(" · ");
+}
+
 /** The authored shape as a composer choice: an open ride plans like a destination. */
 export function shapeChoice(shape: RideIntent["shape"]): RideShapeChoice {
   return shape === "loop" ? "loop" : "destination";
@@ -413,6 +427,52 @@ export function RideStylePanel({ model, expanded = false, group = "all" }: { rea
   const surfaceName = useId();
   const trafficName = useId();
   const { view, actions } = model;
+  const familiarity = (
+    <ChipGroup<NoveltyPreference>
+      name={noveltyName}
+      legend="Road familiarity"
+      options={NOVELTY_PREFERENCES}
+      value={view.noveltyPreference}
+      labelFor={(preference) => NOVELTY_LABELS[preference]}
+      onChange={actions.setNoveltyPreference}
+      testId="novelty-preference"
+    />
+  );
+  const traffic = (
+    <>
+    <ChipGroup<TrafficPreference>
+      name={trafficName}
+      legend="Traffic"
+      options={["protect-ride", "minimize-delay"]}
+      value={view.traffic}
+      labelFor={(choice) => TRAFFIC_LABELS[choice]}
+      onChange={actions.setTraffic}
+      testId="traffic-preference"
+    />
+    <div className="og-style__switches">
+      <label className="og-style__switch">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={view.avoidHighways}
+          onChange={(event) => actions.setAvoidHighways(event.target.checked)}
+          data-testid="avoid-highways"
+        />
+        <span>Avoid highways</span>
+      </label>
+      <label className="og-style__switch">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={view.avoidTolls}
+          onChange={(event) => actions.setAvoidTolls(event.target.checked)}
+          data-testid="avoid-tolls"
+        />
+        <span>Avoid tolls</span>
+      </label>
+    </div>
+    </>
+  );
   return (
     <section className="og-style" aria-label="Ride style" data-testid="ride-style">
       {/* Wide layouts show the panel open under a plain heading; only the
@@ -448,15 +508,7 @@ export function RideStylePanel({ model, expanded = false, group = "all" }: { rea
           onChange={actions.setRoadCharacter}
           testId="road-character"
         />
-        <ChipGroup<NoveltyPreference>
-          name={noveltyName}
-          legend="Road familiarity"
-          options={NOVELTY_PREFERENCES}
-          value={view.noveltyPreference}
-          labelFor={(preference) => NOVELTY_LABELS[preference]}
-          onChange={actions.setNoveltyPreference}
-          testId="novelty-preference"
-        />
+        {group === "style" ? familiarity : null}
         </> : null}
         {group === "all" || group === "surface" ? <ChipGroup<SurfaceChoice>
           name={surfaceName}
@@ -468,37 +520,19 @@ export function RideStylePanel({ model, expanded = false, group = "all" }: { rea
           testId="surface-preference"
         />
         : null}
-        {group === "all" || group === "traffic" ? <><ChipGroup<TrafficPreference>
-          name={trafficName}
-          legend="Traffic"
-          options={["protect-ride", "minimize-delay"]}
-          value={view.traffic}
-          labelFor={(traffic) => TRAFFIC_LABELS[traffic]}
-          onChange={actions.setTraffic}
-          testId="traffic-preference"
-        />
-        <div className="og-style__switches">
-          <label className="og-style__switch">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={view.avoidHighways}
-              onChange={(event) => actions.setAvoidHighways(event.target.checked)}
-              data-testid="avoid-highways"
-            />
-            <span>Avoid highways</span>
-          </label>
-          <label className="og-style__switch">
-            <input
-              type="checkbox"
-              role="switch"
-              checked={view.avoidTolls}
-              onChange={(event) => actions.setAvoidTolls(event.target.checked)}
-              data-testid="avoid-tolls"
-            />
-            <span>Avoid tolls</span>
-          </label>
-        </div></> : null}
+        {group === "traffic" ? <>{traffic}</> : null}
+        {group === "all" ? (
+          <details className="og-style__more" data-testid="ride-style-more">
+            <summary className="og-style__more-summary">
+              <span className="og-composer__label">More options</span>
+              <span className="og-style__more-value">{moreOptionsSummary(view)}</span>
+            </summary>
+            <div className="og-style__more-body">
+              {familiarity}
+              {traffic}
+            </div>
+          </details>
+        ) : null}
       </div>
     </section>
   );

@@ -40,7 +40,7 @@ describe("application shell", () => {
     expect(
       screen.getByRole("heading", { name: "OpenGravel" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Find the ride worth taking.")).toBeInTheDocument();
+    expect(screen.queryByText("Find the ride worth taking.")).not.toBeInTheDocument();
     expect(screen.getByTestId("planner-map")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create ride" })).toBeInTheDocument();
   });

@@ -143,7 +143,7 @@ export function PlanCommitment({
         {viewModel.showPlanAction ? (
           <button
             type="button"
-            className={viewModel.planIsCurrent ? "og-secondary" : "og-primary"}
+            className={viewModel.planIsCurrent && !loop ? "og-secondary" : "og-primary"}
             data-testid="compose-create"
             disabled={!viewModel.canPlan}
             {...(disabledReason === null ? {} : { "aria-describedby": DISABLED_REASON_ID })}

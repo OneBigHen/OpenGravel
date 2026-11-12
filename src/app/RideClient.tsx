@@ -111,11 +111,20 @@ export interface RideClientProps {
   readonly fixturePosition?: boolean;
 }
 
-/** Screenshot tests ask the fixture rider to hold still after a few fixes. */
-function fixtureHold(): { readonly maxFixes?: number } {
+/**
+ * Screenshot tests ask the fixture rider to hold still after a few fixes, and
+ * wait for `data-ride-fixture="held"` on the page before they take the picture.
+ */
+function fixtureHold(): { readonly maxFixes?: number; readonly onHold?: () => void } {
   try {
     const value = Number(window.localStorage.getItem("og.rideFixture.maxFixes"));
-    return Number.isInteger(value) && value > 0 ? { maxFixes: value } : {};
+    if (!Number.isInteger(value) || value <= 0) return {};
+    return {
+      maxFixes: value,
+      onHold: () => {
+        document.documentElement.dataset.rideFixture = "held";
+      },
+    };
   } catch {
     return {};
   }

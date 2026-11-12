@@ -3,8 +3,8 @@
  *
  * The rule is "a pick that completes a ride asks the router immediately". These
  * tests pin the triggers *and* the silences, because each silence is a case where
- * planning by itself would be wrong: a reload is not an authoring act, a loop is
- * the rider's tap, a half-authored ride has nothing to ask for, and a swap is an
+ * planning by itself would be wrong: a reload is not an authoring act, a loop
+ * with no start has nothing to go round, a half-authored ride has nothing to ask for, and a swap is an
  * edit the settle window already answers.
  */
 
@@ -87,13 +87,31 @@ describe("autoPlanTrigger — the silences", () => {
     expect(autoPlanTrigger(before, moved)).toBeNull();
   });
 
-  it("never plans a loop: its shape and ride time are the rider's tap", () => {
+  it("plans a loop the moment Loop is chosen with a start (one tap)", () => {
+    const before = snapshot({ shape: "destination", start: START, plannable: false });
+    const after = snapshot({ shape: "loop", start: START, plannable: true });
+    expect(autoPlanTrigger(before, after)).toBe("loop-chosen");
+  });
+
+  it("plans a loop when its start is placed or moved", () => {
     const before = snapshot({ shape: "loop", start: START, plannable: true });
     const after = snapshot({
       shape: "loop",
       start: point("pt_start", { lon: -75.1, lat: 40 }),
       plannable: true,
     });
+    expect(autoPlanTrigger(before, after)).toBe("loop-chosen");
+  });
+
+  it("does not replan a loop for a revision that leaves shape and start alone", () => {
+    const before = snapshot({ shape: "loop", start: START, plannable: true });
+    const after = snapshot({ shape: "loop", start: START, plannable: true });
+    expect(autoPlanTrigger(before, after)).toBeNull();
+  });
+
+  it("does not plan a loop with no start yet", () => {
+    const before = snapshot({ shape: "destination", plannable: false });
+    const after = snapshot({ shape: "loop", plannable: false });
     expect(autoPlanTrigger(before, after)).toBeNull();
   });
 

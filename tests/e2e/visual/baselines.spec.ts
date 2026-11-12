@@ -93,6 +93,10 @@ const STATES: Record<string, (page: Page, device: Device) => Promise<void>> = {
     await startRide(page);
     await rideMapReady(page);
     await expect(page.getByText(/No GPS fix|Finding you/)).toHaveCount(0, { timeout: 20_000 }).catch(() => {});
+    // The last moving fix has landed; give the camera and readouts two more
+    // (still) fixes to settle, so both shots show the same 0.x mi left.
+    await expect(page.locator('html[data-ride-fixture="held"]')).toBeAttached({ timeout: 30_000 });
+    await page.waitForTimeout(2_200);
   },
   explore: async (page) => {
     await page.goto("/explore");

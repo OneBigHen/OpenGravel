@@ -303,13 +303,7 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
-  const { viewModel, setRouteTraffic } = usePlannerViewModel({
-    document,
-    session,
-    sketchDerivedEndpoints,
-    placeNameFor,
-    routeLine: activeRoute,
-  });
+  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor, routeLine: activeRoute, bikes });
 
   /**
    * The deterministic explanation of the route on screen (04 §13, Wave-3 task
@@ -787,6 +781,7 @@ export function PlannerWorkspace({
         <PlannerWorkspaceDock
           placeSheet={placeFlow.sheet} onDismissPlace={placeFlow.dismissSheet}
           showOptions={placeFlow.optionsOpen} onFullSheet={() => plannerUiStore.getState().setSheetDetent("expanded")}
+          onShowExtent={(extent) => { plannerUiStore.getState().setSheetDetent("peek"); plannerUiStore.getState().requestFit(extent); }}
           dockRef={dockRef}
           sheetHeadRef={sheetHeadRef}
           sheetHeadHeight={sheetHeadHeight}
@@ -848,6 +843,7 @@ export function PlannerWorkspace({
               explanation: routeExplanation,
               onSelect: handleSelectRoute,
               comparisons: viewModel.routingComparisons,
+              note: firstLookNote,
             },
             actions: {
               document,

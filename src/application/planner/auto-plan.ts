@@ -18,8 +18,13 @@
  *
  * ## What never triggers
  *
- * - **A loop.** Its shape and ride time are the rider's to accept, so it keeps a
- *   single `Make my loop` tap.
+ * ## A loop is one tap (next round N1, DESIGN.md decision log)
+ *
+ * Choosing Loop when a start exists, or placing the start while Loop is chosen,
+ * plans at once with the ride time already on the chips (2 h the first time).
+ * Changing a chip afterwards is a style revision the answer lifecycle replans.
+ * `Make my loop` / `Try another loop` stay for a fresh roll.
+ *
  * - **A restore.** The hook has no baseline until the draft store has finished
  *   loading, so a reload is not an authoring act: nothing here plans on page load.
  * - **Typing.** A query in a search field is not a ride revision; only a chosen
@@ -50,7 +55,7 @@ export interface AutoPlanSnapshot {
 }
 
 /** Why the planner is planning without a press. */
-export type AutoPlanTrigger = "endpoint-picked";
+export type AutoPlanTrigger = "endpoint-picked" | "loop-chosen";
 
 /** The key of an endpoint, or `null` when that end is empty. */
 export function autoPlanEndpointKey(
@@ -89,9 +94,11 @@ export function autoPlanTrigger(
   current: AutoPlanSnapshot,
 ): AutoPlanTrigger | null {
   if (previous === null) return null;
-  if (current.shape === "loop") return null;
   if (!current.plannable) return null;
   const startChanged = current.start !== previous.start;
+  if (current.shape === "loop") {
+    return previous.shape !== "loop" || startChanged ? "loop-chosen" : null;
+  }
   const finishChanged = current.finish !== previous.finish;
   // Both ends changed (a swap, or an undo restoring both) is not a pick.
   if (startChanged === finishChanged) return null;

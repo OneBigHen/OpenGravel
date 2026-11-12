@@ -1700,7 +1700,7 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     expect(begins(posts)).toBe(before + 1);
   });
 
-  it("needs the rider's tap for a loop: the control says Make my loop", async () => {
+  it("plans a loop with one tap on Loop, then offers another roll", async () => {
     const { posts } = await renderWorkspace(answerWithRoute());
     await placeEndpointAt("start", coordinateAt(100, 100));
     await waitFor(() => {
@@ -1708,20 +1708,13 @@ describe("PlannerWorkspace — planning as soon as there is somewhere to go", ()
     });
     fireEvent.click(screen.getByTestId("loop-near-me"));
 
-    // A loop is complete with its origin alone, and nothing else about it is a
-    // pick: its shape and ride time are accepted by the press.
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, REPLAN_SETTLE_MS + 100));
-    });
-    expect(posts).toHaveLength(0);
-
-    const plan = screen.getByTestId("compose-create");
-    expect(plan).toHaveTextContent("Make my loop");
-    fireEvent.click(plan);
+    // Next round N1: a loop is complete with its origin alone, so choosing Loop
+    // is the whole gesture and the ride time already on the chips is used.
     await waitFor(() => {
       expect(screen.getAllByTestId(/^route-card-/)).toHaveLength(2);
     });
     expect(begins(posts)).toBe(1);
+    expect(screen.getByTestId("compose-create")).toHaveTextContent("Try another loop");
   });
 
   it("never plans a restored draft by itself, only the restore rule's own ask", async () => {

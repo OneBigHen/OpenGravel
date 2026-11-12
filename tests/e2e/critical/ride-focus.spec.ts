@@ -84,6 +84,10 @@ async function resumeAndFix(page: import("@playwright/test").Page): Promise<void
 }
 
 test.describe("ride focus", () => {
+  // Each test plans a ride, starts it and waits for the fixture rider's fix: on a
+  // busy machine that alone takes most of the default 30 s. A wait bound, not a retry.
+  test.describe.configure({ timeout: 90_000 });
+
   test.beforeEach(async ({ page }) => {
     await startRide(page);
     await rideMapReady(page);
@@ -93,7 +97,7 @@ test.describe("ride focus", () => {
     page,
   }) => {
     // A reload plus letting a restored fix age past "good" is a long story.
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     // The rider's own Start ride starts the ride (UX rework phase 6): no
     // "restored, paused" detour between tapping Start and being guided.
     await expect(page.getByTestId("ride-activity")).toHaveText("Guided ride");
@@ -201,7 +205,7 @@ test.describe("ride focus", () => {
     // The staleness assertion below waits up to 30 s for the 20 s fresh window
     // to lapse, so the test needs a budget larger than that one wait plus setup;
     // the default 30 s made the outcome depend on how fast setup ran.
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     await resumeAndFix(page);
 
     await page.reload();

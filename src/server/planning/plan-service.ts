@@ -100,6 +100,8 @@ import {
 
 /** Character lanes at or above which a plan asks each lane for one path first. */
 const FAST_FIRST_MIN_LANES = 3;
+/** Engine seeds a loop's first answer tries (NEXT-PLAN section 6). */
+const FIRST_ANSWER_LOOP_SEEDS = 1;
 
 /** The alternatives pass after fast-first converged on one ride. */
 /** A formula reading with less evidence than this never ranks a candidate. */
@@ -681,6 +683,14 @@ async function candidateSource(input: {
       requestedProfile: input.request.profile,
       includeAlternatives: input.includeAlternatives,
     });
+  // The progressive first answer of a loop tries one engine seed. It already
+  // runs on the rider's own profile, which can be slower than the fastest one;
+  // the three-seed set belongs to the full plan that follows.
+  const firstAnswerOnly = input.lanesOverride === undefined && !input.includeAlternatives;
+  const request: ProviderRouteRequest =
+    firstAnswerOnly && input.request.discovery !== undefined
+      ? { ...input.request, discovery: { ...input.request.discovery, seedCount: FIRST_ANSWER_LOOP_SEEDS } }
+      : input.request;
   // Fast first (UX rework, live measure 2026-09-25): an engine alternatives
   // search costs 4–7 s on a long ride, a single path ~1.3 s. With three or more
   // character lanes the profiles already give the rider different rides, so
@@ -692,8 +702,8 @@ async function candidateSource(input: {
       lanes,
       requestFor: (profile) =>
         fastFirst
-          ? { ...input.request, profile, options: { ...input.request.options, includeAlternatives: false } }
-          : { ...input.request, profile },
+          ? { ...request, profile, options: { ...request.options, includeAlternatives: false } }
+          : { ...request, profile },
       provider: input.provider,
       signal: input.signal,
       ...(fastFirst ? { concurrency: lanes.length } : {}),

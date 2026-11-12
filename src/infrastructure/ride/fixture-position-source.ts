@@ -43,6 +43,8 @@ export interface FixturePositionSourceOptions {
   /** Stop advancing after this many fixes (the rider then holds still), so a
    * screenshot of the ride screen can settle. Unset walks the whole line. */
   readonly maxFixes?: number;
+  /** Called once, when the rider stops at `maxFixes`: tests wait on it. */
+  readonly onHold?: () => void;
   readonly accuracyMeters?: number;
   readonly setInterval?: (handler: () => void, ms: number) => number;
   readonly clearInterval?: (handle: number) => void;
@@ -110,6 +112,7 @@ export function createFixturePositionSource(
     now = (): string => new Date().toISOString(),
     intervalMs = 1000,
     maxFixes,
+    onHold,
     accuracyMeters = 8,
     setInterval: schedule = (handler, ms): number =>
       globalThis.setInterval(handler, ms) as unknown as number,
@@ -152,6 +155,7 @@ export function createFixturePositionSource(
           speedMps: FIXTURE_SPEED_MPS,
         };
         observer.position(position);
+        if (maxFixes !== undefined && fixes === maxFixes) onHold?.();
       };
       const handle = schedule(tick, intervalMs);
       return { stop: (): void => unschedule(handle) };

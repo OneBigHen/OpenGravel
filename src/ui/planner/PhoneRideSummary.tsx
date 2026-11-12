@@ -33,6 +33,9 @@ import type { RideActionsProps } from "./RideActions";
 import { RouteDecisionCard } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { surfaceFacts } from "@/application/planner/surface-facts";
+import { longestUnpaved, stretchExtent } from "@/application/planner/stretch-extent";
+import type { MapExtent } from "@/application/map/build-map-scene";
+import { RideTruthLines } from "./RideTruthLines";
 import { useElevationProfile } from "./useElevationProfile";
 
 const NO_LINE: readonly Coordinate[] = [];
@@ -50,6 +53,8 @@ export interface PhoneRideQuickActions {
   readonly onSave?: (() => void) | undefined;
   readonly onShare?: (() => void) | undefined;
   readonly onStyle?: (() => void) | undefined;
+  /** Flies the map to a stretch of the ride; absent where there is no map to move. */
+  readonly onShowExtent?: ((extent: MapExtent) => void) | undefined;
 }
 
 const Glyph = ({ d }: { readonly d: string }) => <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>;
@@ -81,6 +86,18 @@ export function PhoneRideSummary({ directionsOptions = false, card, cards, start
   const strip = card.surfaceStrip;
   const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label];
   if (elevation?.status === "ready") meta.push(`↗ ${Math.round(elevation.profile.climbMeters * 3.28084).toLocaleString("en-US")} ft`);
+  const geometry = route?.geometry ?? NO_LINE;
+  const showStretch = quick.onShowExtent === undefined ? undefined : (stretch: { readonly fromMeters: number; readonly toMeters: number }) => {
+    const extent = stretchExtent(geometry, stretch.fromMeters, stretch.toMeters);
+    if (extent !== null) quick.onShowExtent?.(extent);
+  };
+  const unpavedStretch = longestUnpaved(card.surfaceRuns, card.distanceMeters);
+  const stripLabel = strip === undefined ? "" : `Surface: ${(["paved", "gravel", "dirt", "unknown"] as const).map((kind) => `${Math.round(strip[kind] * 100)}% ${kind}`).join(", ")}`;
+  const stripKinds = strip === undefined ? null : (["paved", "gravel", "dirt", "unknown"] as const).map((kind) => strip[kind] <= 0 ? null : <span key={kind} data-surface={kind} style={{ flexGrow: strip[kind] }} />);
+  const bar = strip === undefined ? null : showStretch !== undefined && unpavedStretch !== null
+    ? <button type="button" className="og-route-card__strip og-phone-summary__strip" data-testid="phone-surface-strip"
+        aria-label={`${stripLabel}. Show the longest unpaved stretch on the map`} onClick={() => showStretch(unpavedStretch)}>{stripKinds}</button>
+    : <span className="og-route-card__strip og-phone-summary__strip" data-testid="phone-surface-strip" role="img" aria-label={stripLabel}>{stripKinds}</span>;
   const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop");
   return <section className="og-phone-summary" data-testid="phone-ride-summary" data-directions={directionsOptions ? "true" : undefined} data-comparing={comparing ? "true" : "false"} aria-label="Your ride">
     {comparing ? <ul className="og-phone-alternatives" data-testid="phone-alternatives" aria-label="Compare rides">
@@ -100,14 +117,13 @@ export function PhoneRideSummary({ directionsOptions = false, card, cards, start
           <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
         </div>
       </div>
-      {/* The honest surface line: how much is dirt, and how much nobody knows. */}
-      {strip === undefined ? null : <div className="og-phone-summary__surface">
-        <p className="og-phone-summary__surface-line" data-testid="phone-surface-line">{surface.line}</p>
-        <span className="og-route-card__strip og-phone-summary__strip" data-testid="phone-surface-strip" role="img"
-          aria-label={`Surface: ${(["paved", "gravel", "dirt", "unknown"] as const).map((kind) => `${Math.round(strip[kind] * 100)}% ${kind}`).join(", ")}`}>
-          {(["paved", "gravel", "dirt", "unknown"] as const).map((kind) => strip[kind] <= 0 ? null : <span key={kind} data-surface={kind} style={{ flexGrow: strip[kind] }} />)}
-        </span>
-      </div>}
+      {/* The three honest lines (N3): surface with its bar, bike, checked. */}
+      {card.truth === undefined
+        ? (strip === undefined ? null : <div className="og-phone-summary__surface">
+            <p className="og-phone-summary__surface-line" data-testid="phone-surface-line">{surface.line}</p>
+            {bar}
+          </div>)
+        : <RideTruthLines truth={card.truth} surfaceBar={bar} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />}
     </div>}
     {/* Start sits right under the ride, like Google Maps: on a 320x640 phone the
         style pickers below it may scroll, the one action never does. */}

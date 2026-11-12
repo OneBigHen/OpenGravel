@@ -93,6 +93,18 @@ async function mapBox(page: Page): Promise<{ readonly x: number; readonly y: num
   return { x: box.x + 16, y: top, width: box.width - 96, height: Math.max(80, sheet.y - top - 40) };
 }
 
+/** Waits until the planner sheet stops moving, so the gesture area is measured once. */
+async function sheetAtRest(page: Page): Promise<void> {
+  let last = "";
+  await expect.poll(async () => {
+    const box = await page.getByTestId("planner-sheet").boundingBox();
+    const now = box === null ? "none" : `${Math.round(box.y)}:${Math.round(box.height)}`;
+    const still = now === last;
+    last = now;
+    return still;
+  }, { intervals: [250], timeout: 15_000 }).toBe(true);
+}
+
 /** A mix of everything a hand does to a map, except a deliberate long press. */
 async function fuzz(page: Page, cdp: CDPSession, count: number, seed: number): Promise<void> {
   const random = seeded(seed);
@@ -114,7 +126,9 @@ async function fuzz(page: Page, cdp: CDPSession, count: number, seed: number): P
       await touch(cdp, "touchMove", [away]);
       await touch(cdp, "touchMove", [{ x: from.x + 3, y: from.y + 2 }]);
       await touch(cdp, "touchEnd", []);
-    } else await press(page, cdp, from, 60 + 300 * random());
+    // A tap, never a hold: stay well under the 450 ms long press (and the
+    // 300 ms pin hold) even when the browser adds 100 ms of lag to the wait.
+    } else await press(page, cdp, from, 60 + 140 * random());
     await page.waitForTimeout(30);
   }
   await page.waitForTimeout(400);
@@ -136,6 +150,11 @@ test("pans, pinches, flings and taps on an empty map author nothing", async ({ p
 test("a touch pan that begins on a pin moves the map, never the pin", async ({ page }) => {
   await placeEndpoint(page, "start", START_COORDINATE);
   await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
+  // Both ends set plans a ride, and the sheet rises to show it. Let that finish
+  // first: on a slow runner the sheet otherwise rises after the gesture area is
+  // measured, and a "map" tap lands on Start and begins a ride.
+  await expect(page.locator('[data-testid^="route-card-"]').first()).toBeAttached({ timeout: 30_000 });
+  await sheetAtRest(page);
   const start = await readCoordinate(page, "start-value");
   const finish = await readCoordinate(page, "finish-value");
 

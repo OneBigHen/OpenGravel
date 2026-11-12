@@ -64,6 +64,8 @@ test("road character, surface and tolls are one tap each and replan", async ({ p
   await openStyle(page);
   await page.getByTestId("road-character-curvy").check();
   await expect(page.getByTestId("road-character-curvy")).toBeChecked();
+  // Familiarity, traffic and the switches fold behind "More options".
+  await page.getByTestId("ride-style-more").locator("summary").click();
   await page.getByTestId("novelty-preference-prefer-new-to-me").check();
   await expect(page.getByTestId("novelty-preference-prefer-new-to-me")).toBeChecked();
   await page.getByTestId("surface-preference-pavement").check();
@@ -73,6 +75,7 @@ test("road character, surface and tolls are one tap each and replan", async ({ p
   await page.getByTestId("avoid-tolls").uncheck();
   await expect(page.getByTestId("avoid-tolls")).not.toBeChecked();
   await expect(page.getByTestId("ride-style-summary")).toHaveText("Roads: Curvy · Surface: Paved");
+  await expect(page.getByTestId("ride-style-more").locator(".og-style__more-value")).toHaveText("Familiarity: New to me · Avoid busy roads");
 
   // The replan the style change started still answers.
   await expect(routeCards(page).first()).toBeVisible();

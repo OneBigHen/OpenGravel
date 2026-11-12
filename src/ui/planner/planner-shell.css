@@ -1,8 +1,6 @@
-/* The Plan screen's frame. The map is the hero on every size:
-   phones and tablets — the map fills the screen, the sheet docks over it;
-   desktop — a top bar, the planning rail floating at the left over the map,
-   and an inspector at the right when a road or place is open;
-   landscape phones — map left, rail right. */
+/* The Plan screen's frame. The map is the hero on every size: phones and
+   tablets fill the screen with it, desktop floats the rail and an inspector
+   over it, landscape phones put the map left and the rail right. */
 
 .og-planner {
   display: flex;
@@ -34,11 +32,6 @@
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
-}
-
-.og-tagline {
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
 }
 
 .og-planner__ride-context {
@@ -80,16 +73,11 @@
   color: var(--og-danger);
 }
 
-.og-planner__inspector {
-  display: none;
-}
+.og-planner__inspector { display: none; }
 
 /* Desktop. */
 @media (min-width: 1181px) {
-  .og-planner {
-    height: 100dvh;
-    overflow: hidden;
-  }
+  .og-planner { height: 100dvh; overflow: hidden; }
 
   .og-planner:has(.og-planner__inspector:not(:empty)) {
     --og-float-right: calc(var(--og-float-gap) * 2 + var(--og-float-inspector));
@@ -144,10 +132,6 @@
     pointer-events: none;
   }
 
-  .og-tagline {
-    display: none;
-  }
-
   .og-planner__map-slot {
     position: fixed;
     inset: 0 0 auto;
@@ -176,9 +160,7 @@
     overflow: hidden;
   }
 
-  .og-planner__body {
-    display: contents;
-  }
+  .og-planner__body { display: contents; }
 
   .og-planner__map-slot {
     grid-column: 1;
@@ -194,8 +176,25 @@
     background: var(--og-surface);
   }
 
-  .og-planner__header h1,
-  .og-tagline {
-    display: none;
+  .og-planner__header h1 { display: none; }
+}
+
+/* Desktop result panel: Start ride is the panel's fixed foot (next round N4).
+   The actions block dissolves into the panel's own column so the start row's
+   sticky box is bounded by the whole scrolling panel, not by its small parent;
+   it then rests at the bottom edge while the cards and profile scroll under it. */
+@media (min-width: 1181px) {
+  .og-planner__inspector-body > .og-plan-actions {
+    display: contents;
+  }
+
+  .og-planner__inspector-body > .og-plan-actions > .og-ride-start {
+    position: sticky;
+    bottom: calc(var(--og-space-4) * -1);
+    z-index: 1;
+    margin: 0 calc(var(--og-space-4) * -1);
+    padding: var(--og-space-3) var(--og-space-4) var(--og-space-4);
+    border-top: 1px solid var(--og-line);
+    background: var(--og-surface);
   }
 }

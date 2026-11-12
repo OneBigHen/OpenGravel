@@ -50,6 +50,7 @@ import type {
   StopArrivalIntent,
 } from "@/domain/ride/types";
 import type { SketchEndpoints } from "@/domain/sketch/types";
+import { rideTruth, type RideTruth, type RideTruthBike } from "./ride-truth";
 import type { RouteCandidateId } from "@/domain/route/ids";
 import type {
   RouteBundle,
@@ -175,6 +176,8 @@ export interface RouteCardVm {
    * silently change them.
    */
   readonly roleKey: RouteRole | "alternative";
+  /** True while this is the first answer and the full search is still running. */
+  readonly provisional?: boolean;
   readonly roleLabel: string;
   readonly durationLabel: string;
   /** The same duration in seconds, so the sheet can say when the ride gets back. */
@@ -203,6 +206,11 @@ export interface RouteCardVm {
   readonly surfaceStrip?: { readonly paved: number; readonly gravel: number; readonly dirt: number; readonly unknown: number };
   /** Where each surface is along the line, for the strip under the elevation profile. */
   readonly surfaceRuns?: readonly SurfaceRun[];
+  /**
+   * The three honest lines under the route (next round N3): surface, bike,
+   * checked, always in that order. Unknown never reads as good.
+   */
+  readonly truth?: RideTruth;
 
   /**
    * Miles of this route whose surface no usable evidence covers, from the
@@ -328,6 +336,11 @@ export interface PlannerViewModelInput {
    * number for a line no one drew.
    */
   readonly routeLine?: SelectedRouteLine | null;
+  /**
+   * The name of the bike the ride is planned for, from the garage, so the bike
+   * line can say "Fine for <bike>". Absent reads "your bike".
+   */
+  readonly bikeName?: string;
 }
 
 /**
@@ -512,6 +525,7 @@ const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point."
 export const PLAN_LABEL_CREATE = "Create ride";
 export const PLAN_LABEL_UPDATE = "Update ride";
 export const PLAN_LABEL_LOOP = "Make my loop";
+export const PLAN_LABEL_LOOP_AGAIN = "Try another loop";
 export const PLAN_LABEL_RETRY = "Plan again";
 
 /** Phases in which an attempt is still running (04 §8, §9). */
@@ -682,6 +696,27 @@ function chooseCards(
   return [...head.slice(0, MAX_ROUTE_CARDS - 1), selected];
 }
 
+/**
+ * The recommendation always leads the list (DESIGN.md decision log, next round
+ * N4): the card the bundle names `best-ride` — or, before roles arrive, the
+ * automatic pick that is presented as it — goes first; the rest keep the
+ * bundle's order so their tints and the map labels still agree.
+ */
+function bestRideFirst(
+  cards: readonly RouteCandidate[],
+  bundle: RouteBundle,
+  selectedRouteId: RouteCandidateId | null,
+): readonly RouteCandidate[] {
+  const named = cards.find((candidate) => roleFor(bundle.roles, candidate.id) === "best-ride");
+  const placeholder =
+    named === undefined && bundle.selectionSource === "automatic"
+      ? cards.find((candidate) => candidate.id === selectedRouteId && roleFor(bundle.roles, candidate.id) === null)
+      : undefined;
+  const lead = named ?? placeholder;
+  if (lead === undefined || cards[0] === lead) return cards;
+  return [lead, ...cards.filter((candidate) => candidate !== lead)];
+}
+
 function roleLabelFor(
   role: RouteRole | null,
   isPlaceholderSelection: boolean,
@@ -703,14 +738,19 @@ function roleKeyFor(
   return isPlaceholderSelection ? "best-ride" : "alternative";
 }
 
+/** What the leading card is called while the full search is still running. */
+export const FIRST_LOOK_LABEL = "First look";
+
 function routeCards(
   bundle: RouteBundle | null,
   selectedRouteId: RouteCandidateId | null,
   routeTraffic?: { readonly routeId: string; readonly label: string } | null,
+  provisional = false,
+  bike?: RideTruthBike,
 ): readonly RouteCardVm[] {
   if (bundle === null) return [];
   const reference = fastestReference(bundle.candidates);
-  return chooseCards(bundle.candidates, selectedRouteId).map((candidate) => {
+  return bestRideFirst(chooseCards(bundle.candidates, selectedRouteId), bundle, selectedRouteId).map((candidate) => {
     const role = roleFor(bundle.roles, candidate.id);
     // OGV-D-183 — placeholder role mirror. The client bundle's `roles` stay
     // empty until Task 3.3 (OGV-D-168), while the product's recommendation today
@@ -744,7 +784,13 @@ function routeCards(
       ...(strip === null ? {} : { surfaceStrip: strip }),
       ...(runs === null ? {} : { surfaceRuns: runs }),
       roleKey: roleKeyFor(role, placeholderSelection),
-      roleLabel: roleLabelFor(role, placeholderSelection),
+      // Next round N1: the first answer is honest about being first. "Best ride"
+      // is only ever the settled pick; until then the lead card is a first look.
+      roleLabel:
+        provisional && roleKeyFor(role, placeholderSelection) === "best-ride"
+          ? FIRST_LOOK_LABEL
+          : roleLabelFor(role, placeholderSelection),
+      ...(provisional ? { provisional: true } : {}),
       durationLabel: formatDuration(candidate.durationSeconds),
       durationSeconds: candidate.durationSeconds,
       distanceMeters: candidate.distanceMeters,
@@ -777,6 +823,12 @@ function routeCards(
           ? routeTraffic.label
           : ownTraffic,
       isSelected: candidate.id === selectedRouteId,
+      truth: rideTruth({
+        evidence: candidate.evidence,
+        distanceMeters: candidate.distanceMeters,
+        ...(bike === undefined ? {} : { bike }),
+        warnings: candidate.warnings,
+      }),
     };
   });
 }
@@ -1118,7 +1170,13 @@ export function buildPlannerViewModel(
   const derived = input.sketchDerivedEndpoints ?? null;
   const bundle = drawableBundle(session);
   const selectedRouteId = bundle?.selectedRouteId ?? null;
-  const cards = routeCards(bundle, selectedRouteId, input.routeTraffic);
+  const cards = routeCards(
+    bundle,
+    selectedRouteId,
+    input.routeTraffic,
+    session.phase === "primary-ready" || session.phase === "alternatives-loading",
+    truthBike(document, input.bikeName),
+  );
   const reading = session.diagnostics.find((diagnostic) => diagnostic.outcome === "ok" && diagnostic.funCharacter !== undefined)?.funCharacter;
   const disabledReason = disabledReasonFor(document, session.phase, derived);
   const rows = pointRows(document, input.placeNameFor);
@@ -1172,7 +1230,9 @@ export function buildPlannerViewModel(
     planLabel: failed
       ? PLAN_LABEL_RETRY
       : document.intent.shape === "loop"
-        ? PLAN_LABEL_LOOP
+        ? (bundle?.candidates.length ?? 0) > 0 && bundle?.rideRevision === document.revision
+          ? PLAN_LABEL_LOOP_AGAIN
+          : PLAN_LABEL_LOOP
         : (bundle?.candidates.length ?? 0) > 0
           ? PLAN_LABEL_UPDATE
           : PLAN_LABEL_CREATE,
@@ -1202,4 +1262,11 @@ export function planningErrorCopy(code: PlanningErrorCode, document: RideDocumen
     return NO_ROUTE_LOOP_COPY;
   }
   return ERROR_COPY[code];
+}
+
+/** The bike the truth line reads: the ride's own bike limits, named from the garage. */
+function truthBike(document: RideDocument, name: string | undefined): RideTruthBike | undefined {
+  const bike = document.intent.bike as RideDocument["intent"]["bike"] | undefined;
+  if (bike === undefined) return undefined;
+  return { name: name ?? "your bike", maintainedGravel: bike.maintainedGravel, roughTracks: bike.roughTracks };
 }

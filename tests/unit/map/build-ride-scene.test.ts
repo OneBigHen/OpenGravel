@@ -148,6 +148,44 @@ describe("buildRideScene splits the followed line at the matcher's progress poin
   });
 });
 
+describe("buildRideScene carries the measured surface band", () => {
+  const RUNS = [
+    { from: 0, to: 3_000, kind: "paved" as const },
+    { from: 3_000, to: 4_000, kind: "gravel" as const },
+  ];
+
+  function scene(progressFraction: number | null = null, runs = RUNS) {
+    return buildRideScene({
+      routeId: ROUTE_ID,
+      routeLine: EQUATOR,
+      progressFraction,
+      onRoute: true,
+      position: { coordinate: { lon: 0.3, lat: 0 }, quality: "fresh-good" },
+      surfaceRuns: runs,
+    });
+  }
+
+  it("paints the whole followed line with the runs the planner map uses", () => {
+    expect(scene().routes[0]?.surface).toEqual([
+      { kind: "paved", from: 0, to: 0.75 },
+      { kind: "gravel", from: 0.75, to: 1 },
+    ]);
+  });
+
+  it("re-cuts the runs onto the stretched still ahead of the rider", () => {
+    // Halfway: the first 2000 m are behind, so the paved run left is the
+    // 2000–3000 m tail and the gravel is still 3000–4000 m.
+    expect(scene(0.5).routes[0]?.surface).toEqual([
+      { kind: "paved", from: 0, to: 0.5 },
+      { kind: "gravel", from: 0.5, to: 1 },
+    ]);
+  });
+
+  it("draws no band when the answer carried no runs", () => {
+    expect(scene(null, []).routes[0]?.surface).toBeUndefined();
+  });
+});
+
 describe("splitRouteAtProgress", () => {
   it("refuses anything that is not a fraction strictly inside the line", () => {
     for (const fraction of [null, 0, 1, -0.2, 1.4, Number.NaN, Number.POSITIVE_INFINITY]) {

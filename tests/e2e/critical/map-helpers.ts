@@ -485,6 +485,9 @@ export async function placeEndpointAtFraction(
 export async function pressPlan(page: Page): Promise<void> {
   const plan = page.getByTestId("compose-create");
   if (await plan.count() === 0) return;
+  // One tap on Loop already plans the loop (NEXT-PLAN taste call 1): the
+  // button stays, disabled, while that plan is current. Nothing to press.
+  if (await plan.isDisabled()) return;
   await plan.click();
 }
 

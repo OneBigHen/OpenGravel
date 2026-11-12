@@ -510,7 +510,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       layout: LINE_LAYOUT,
       paint: {
         "line-color": surfaceBandColor(palette),
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 3, 15, 3.5, 17, 4.5],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 3, 12, 3.5, 15, 4.5, 17, 6.5],
         "line-opacity": 0.95,
       },
     },
