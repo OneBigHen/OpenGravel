@@ -3,7 +3,10 @@
 #   - paths are relative to the build folder (build-graph.sh lays it out);
 #   - graph.location is graph-cache-v2;
 #   - graph.encoded_values adds osm_way_id, og_curve, og_through, og_through_street.
-# Profiles and custom models are byte-identical to production. Needs og-ext.jar on the classpath.
+# RM-2 (profiles v2): motorcycle_fastest is byte-identical to production (the baseline). Twisty and scenic
+# read og_curve and drop prefer-curvature.json and motorcycle-base.json (their access lines are copied in);
+# twisty, scenic and adventure merge og-clock.json last, so paved roads take the same time in every
+# profile (speed limits obeyed). Needs og-ext.jar on the classpath.
 graphhopper:
   datareader.file: pa-nj-motorcycle.osm.pbf
   graph.location: graph-cache-v2
@@ -16,17 +19,17 @@ graphhopper:
         vehicle_types: [motorcycle, motor_vehicle]
         u_turn_costs: 60
     - name: motorcycle_twisty
-      custom_model_files: [motorcycle-base.json, prefer-curvature.json, motorcycle-twisty.json]
+      custom_model_files: [motorcycle-twisty.json, og-clock.json]
       turn_costs:
         vehicle_types: [motorcycle, motor_vehicle]
         u_turn_costs: 60
     - name: motorcycle_scenic
-      custom_model_files: [motorcycle-base.json, prefer-curvature.json, motorcycle-scenic.json]
+      custom_model_files: [motorcycle-scenic.json, og-clock.json]
       turn_costs:
         vehicle_types: [motorcycle, motor_vehicle]
         u_turn_costs: 60
     - name: motorcycle_adventure
-      custom_model_files: [motorcycle-adventure.json]
+      custom_model_files: [motorcycle-adventure.json, og-clock.json]
       turn_costs:
         vehicle_types: [motorcycle, motor_vehicle]
         u_turn_costs: 60
