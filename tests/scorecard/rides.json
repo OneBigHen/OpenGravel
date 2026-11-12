@@ -3,7 +3,7 @@
   "rideDate": "2026-11-10T17:00:00.000Z",
   "notes": [
     "Catalog intent selected from names and existing catalog surface estimates, not ground-truth surface labels.",
-    "Catalog loops close within 1 km; requested duration assumes 45 km/h, rounded to a minute (20–480 minute planner limits).",
+    "Catalog loops: ends within 1 km, or within 5 km on a track over 20 times that gap long (scorecard v3 repair rule); requested duration assumes 45 km/h, rounded to a minute (20–480 minute planner limits).",
     "Rider tracks are original catalog polylines, decoded with decodeCatalogPolyline; they never shape the requested plan.",
     "Preflight excluded Canton Endless Mountains (fastest loop disconnected) and Leaser Lake (planner unavailable); replaced with Old Buck Loop and Out and Back Loop before freezing the scorecard. No selection by win score.",
     "Hold-out catalog tracks and corpus pairs are disjoint; the four mandated benchmark locations repeat with the other bike mode.",
@@ -196,10 +196,7 @@
         "lat": 40.131302,
         "lon": -75.536217
       },
-      "end": {
-        "lat": 40.145399,
-        "lon": -75.530981
-      },
+      "loopMinutes": 151,
       "riderTrack": {
         "catalogId": "project-gpx-94222a4f87560d604bf973b3",
         "geometryPolyline": "kmlpkAptjaoCve@p{Axp@`iDfQ`lA`IrxAEziAom@xwTdApqBtFvz@|Jj{@pRvbArpBraHx}@~|Drz@hgFdzBl|OnL`k@|Uhm@be@zn@fqNxoMp{@`aAbu@jdArzC|yEjg@~cAdf@v}Av{@nvE|Xvw@zSl`@p`@bk@~aKpuL|`GrjGha@vs@`[l|@`eA|uElXxbArd@hbAn\\rd@faGp{Gjf@n_@r_@pS~h@vQzxA|Urm@pOzcAfe@fm@xc@v}Cl_Dnd@l\\vx@jXvwBlXlk@~Tbg@~^tbDxcDpj@vs@lxCpvEjbGlyKf\\xe@xbFn}DdfHzyG{x@jqHgJnc@wVvv@{e@v~@adHvkJs}GdxIcgAtbBswCteFox@xjAqb@da@sXvOkLnZyL`Qu`ExnEi{@dw@eeA`b@wnAn^vxAddBbpCbsCtWn`@hhBpiFd]peBfLrhAj{D`hAfbA`St}@`Kpf@eIlLZdOdIjR|[vMtFfSJlIwC|nAys@`{BbTh_@yBt`EtGn~@lFns@lcB|t@te@jkCv_DbmFpqFtW~KdCdk@iChjBlBpPrBlEfvAf{@t[`[fL~\\tPjy@hn@tKoKpl@yMx[wfDn~EkG|XmBzb@eH`_@unA|fCyFnWB~`@|Pbc@|h@`o@jkAv`AzUxZ~q@hdBfMzu@w@fg@qVrzAqlAjkDoR`q@eFt[iBn[r@zpA}LnwANt~AqGpm@gUrb@sXv\\uKlEsx@`Kgu@zh@ka@|FuX_H_i@qa@sZ_NeOv@oe@~U_yA~Emf@iAax@mOs[nBkX`HoRqAsa@_OgkA{o@gQmVqMin@{EsJmYuOoRm@gPpI}q@`o@uqBhuAwgCjeAocAts@an@`K_i@lVuk@th@_oArr@kq@dx@ac@x[mKtQamAvhHwCnXt@brBiUpjAwD|v@dHzo@dPjc@`f@fv@lhAnpAbfApuBrJ~Xd\\x~A|Fpx@sBf~@mDdU}Lh\\oO~PuSpIo}AzQyy@zDiObEuZhUmPdp@kGtH{FjAkNaBuPyRoVej@uTmt@gFiGkM{Dwd@wCotBoAejCbm@oi@iHek@kQyP^}iArm@w`Ahq@saBlaBydAptAknApv@{`CnsB}{@bc@adC|n@wb@zOek@|Z_h@`a@}r@zy@gc@py@o^b_AssFphOiStp@mv@flDyeA~wC}TxqAkNhmBaNrhAgdBpbJyWrlEcp@w@ecAbJ}kG`jAqjBtp@owChoAgd@pC{}ApXgMaEkWqb@iPcFib@`CsoAh\\uSfAe~Dme@ct@eTobJ_tDemBo`C}gCcaB{qCmkCkd@sp@{i@_aB{X{wAeG}~@uBqsDqEmb@qRsg@_`@u`@mu@wc@eo@kOkbE__@oqKmh@cuDyjAetCihAo}Aub@o`@_TmHmJwq@s~CynAciD}wC~BupAtMg|Ay`@}uA]ugBiWgqCiK}nCkq@yUqByS~Fuy@bb@ufFb|CiQ~EsH_GcFu\\}DiE}aAlIkb@uFqeBymAqc@kg@ybAoCa`Cs\\k~@i~@{eAayB_Nca@_Cgz@eHqi@_j@obBuRqeAkIoQwn@ez@cRyJsf@oIsuBxCwm@sMkChAsaCwn@yWoPa\\i[wy@}cBchAcsAg~@{q@ka@kNg`@kFizByEm^nBqj@|O}z@ri@uh@pl@yj@p`Ac]l|@gaA|dDu\\br@qL`P}\\rTwyB`gA}q@`oAwIbIuO~Fo}B|Sk`@o@gq@{Km`@~AmWtGc|CjmBgjDdfBylArv@{[de@{eArhCoQjQamAjt@grApiA}s@l{@k~@|zAyjA`yBaFnQwE~i@x@t_B{Btf@{M|o@wWff@zHxD{HyD{aBrdCag@`a@{j@xO_o@jH{a@vByc@uFsV}K}RgPsaBa`D{JsKm`@wIcoAdMmwB}a@y_@tF}[vUciCzlFwXnVg^fKuX?gdFmp@qoEiw@whImt@~qCazIpgDmlJ|dAqfErNgv@vAed@iG_}@aWimAaEa_@[c^~HkmCfQsbAh~B_yGlJ{g@hLegA~@qm@}FwiAQeg@rN_|Bq@uvA{NypCu}@ajFqFq~B~E_mHkTysFQuqAvI}kAja@{lDzHmd@nK_\\zcAgrBhkBmuB`GwPt@iTkPi|DdFmr@fOco@zTsc@f\\}b@|cCodCbf@gp@tf@{jAtc@gvAnRcjAbm@{bHlu@}kGnSmi@ts@a|@duCdfA~iFjSnkAdAbJoBnuHmbDnk@gQv~Ayv@|zA_iAd|E_wBtj@{QxeAcaAbsB}aAb{AqlAtoAkz@bfBcaAf|@q\\h~@jnQ}r@dtGok@`oCyC|b@xRnp@lf@|jCjJp~@tOdl@|W`hB~DpvC|Elc@ld@heAbz@|kAtm@ll@p]|d@vmBbp@tRnN~d@|m@vI|Fl}@F~a@jGdHxD|a@ti@fjBv{@hSfQrPp[xR?f`@gQt[i@rKpAf[xUzj@xUbIj@jfAwFjcB[jHqBnnAstA|iA{_AjxJop@}Eg{A`@i^f]_aA|ZifBp`@mdAzJacAdBkhB{NedFpDmp@`Pu|@bPqtAwL__F{GwKag@oMkKyK_Zk{@qs@}~A{}FuwNi`BwjEaCglB~@sl@~_@yrA~Ru`AlDwTl@ud@_I{oAgWcpBkf@esBaRmsA{r@}{BwDcViEkeA|BoH|VoOfB{Gg@}N{^ilC_HkW{zBw~Cge@aYkJyYktAksFoPckE~D~@mn@eUqx@af@yu@iiA{d@_ZcsDiiA{aDcs@a{@_JcK{Dc^cj@m\\kz@oo@ghA_W_VumA_w@qTm[}p@mrAyvCydAihBwDslCiQ_|A{l@{jDsk@Mw|AtUabHlFcQ~jAuyAjh@osA`aAuuB||@ukA~fCoaFzNwJjbAsPdOaOheHqcNhBqScFii@dCyQlfDi_Hdm@zi@bdBywEhv@iyD`D{\\Mek@y]iwDm@_YrDi[tKyWtbBc~Bt}B{tFwqBk|BcrIs_JduSy_Zv`AgjAhrAwmAvsBj_CjXrTxiAvo@frAt]pO~H~y@`{@v_C|rC`sJrkJlNhWv`A~tC|Tzg@`o@zz@jw@~u@l]xb@~y@buAzJbYfaA~fE`Xh|@x~@mhAh\\kZ`d@gSh~Aac@dw@_a@znIiq@tNx@r^~PzqAbiAz|@tVlQxKnrAznDzUvZbgDlfDxa@laAdn@`pBfa@|d@zYtKdvEL~OlBjm@ne@tdA~l@|bCrzBfqDmvJjtGsiI_jA_hBoCkV|E}S|g@go@pkBqgBveCuiB~j@s|@|[yZxL}Xhs@i~Cdf@_iAn_@as@pUk[d`BeuA`Xs`@x\\_bAra@gzBdw@wsCbr@uxB|r@ytCxQicDxEy_@tVsaAhf@c~@xA}QbMca@tS}bBq^kCkr@tCk\\aA}fBaj@wL}PsKqu@}L}W_fAia@ooBml@abB_r@ih@m]qhBe_B}DiR`Ha_A{i@c~@eEwQtDa~@XepB{Gu\\kbUshTme@ue@cFoWkjCxp@inEn`AwuQh|EgrEbr@ifBnl@sAih@pL_fJbtEuxJ|{BesEvPwRhmAoj@vg@mOji@eD~gBv@x_@cBrTgGvRkRnq@auAfw@m`Abi@u[foAq`@fx@ktAxT}Sd]cLdeFsh@tb@gM|mAmq@tKgK|r@u`BfK{NddAig@vXiEji@nC~[uA`y@mUzLm@z`@v@jj@~F`DxC"
@@ -319,6 +316,154 @@
       "end": {
         "lon": -76.3055,
         "lat": 40.0379
+      }
+    }
+  ],
+  "nj": [
+    {
+      "id": "fb-902850f532a356f57e1c",
+      "label": "Kitchen Sink Loop (South Jersey)",
+      "source": "catalog",
+      "mode": "curvy",
+      "requestId": "scorecard:v1:fb-902850f532a356f57e1c:curvy",
+      "start": {
+        "lat": 39.514747,
+        "lon": -74.925575
+      },
+      "end": {
+        "lat": 39.369803,
+        "lon": -75.093357
+      },
+      "riderTrack": {
+        "catalogId": "fb-902850f532a356f57e1c",
+        "geometryPolyline": "ufxjjAl_b|mC}Om[~Mem@rhAhj@`j@oiAbYs~@n`BdM~sA_~@ba@k]|}oAsgkAlbJkrIn{BaiCrcIotHjtHuaHfoO}`NruBc~@npCj|GyrGffFitCvbCwNy_FcFeu@gJeQ{z@kx@~}FueFruBc~@fsAiv@pc_@egZj`A`Oz_@rAlmCgLnjVmcIfzHdfR`tFbhNfNbjA~MvmEve@jgGtVf`Ctx@tdFxjApwE|hAf{Dj_@vfAziCzyFnd@~rAlfAnyDlaC|dHvaEltIpaBdxDr[pgAreAjkClP|q@|Gnf@zvYvmD``\\ttDfjp@cwqAx`@g}Ara@qjElK}q@xR}o@|_C}sEjb@o`AxMse@pnCcuMjVw|AtUmcEdpAm~LtLa{@faGmsUcMMkkFraBuqFkQygHc_@k}Bj@o[qDgZcKox@gq@ivOy|Oyg@ad@m~@_j@gU{GswFsp@axBi\\o_AuGiZZe\\bFohF~gBcuAajFqjDiyR{Ki\\}MeOseD}~BwhIomFbbFo{DzeAkf@fvAi_@vk@}[v|DyrEde@ya@d_F{_EtnI_pG`gTwwPgvJgoE{rVgmLiaAg]{m@oIwr@]wcPn[uyChaTmuFlmMolGddOhcEfvEnlDbfDj~DnrCjw@fe@bbFo{DzeAkf@fvAi_@vk@}[v|DyrEde@ya@d_F{_EtnI_pG`gTwwPgvJgoEsaV_cLa_D{lNwtCiu`@ge@eyGs@_`@dFaJ|eLybL`QcLvTkDpmCojA~vCiTfqDzq@vyE~j@noFrQhoCxPxSxCn~@pZr~Ajq@fx@vd@f_@pYhQjOrTt\\xFr`@gGj~@hl@`yAzu@tyBxfAnuAlSdq@ve@pgCtNli@fNj[rlCpeEdz@zk@ftAfj@|WtQlM|Vxs@vwBvYv|AsAp]gVxfBlGnwA~cB|}CvIbWxAnQeCpToTvx@uQnXmKpYL~a@xT`fAgSrjAuSdj@c@l_@joFN`qCvNtnDjwBje@xm@h|Bc`DfoBmwC~c@g_@bxBilAji@wIlj@zB~_Gr~@toE|oAhRfDxP[vtZeqLbnPasKbAuf@z~AioIilDct@m\\qpKsnAmlCqEuSfUgpDp]ysChAub@mAos@ucAydB{n@e|AsY_GgVfDygBx}BsrArkBe[`\\wJd`@uJfJ}CqMaViVmXkJ}pB~H}~AkEcPdGoiExyCwvCdeDga@pn@mn@`}Aob@vwCoEfEb{@zKlObI`_@~Vbp@hp@p}@dn@ho@rWxMzDxNcDtQeRvEcS~cDjlK`hJgiFbj@q_@xTeHhbA|Ad{@aSdPr@lrIvgBq}AxjI{Qji@{JtP}sFrpDteClbDkQl\\ZfJhiEnsFncBrf@vLrIlr@|aDpKvaAv_@hyA~Rxd@`Kxa@~LzT~KvKzJfD|FlJhsi@z_FxV~_Avd@bx@xvDrbEze@v[ngHjfDvyChfBpoIz{I|n@dv@nVxPtDlNuHj[mo@h_Bu_DxnGmlIxfQamF_aFg_BfeDw]{ZpMiVzNqMeGgHkUiEjUhEdGfH{NpMyPrZr^xZraBoiD`mF~`FeaVj`g@kdP_iOaw@uj@e\\sL_i@}HmcJqSs}@wGsqMs|Fn\\sx@vaA{`A^c_@oDm`@bi@{hArb@}iDE}{DzZu}BxeCm}Eh{@skAvPmc@zLeh@tx@wdElm@}nAmm@|nAux@vdE{Ldh@wPlc@i{@rkAyeCl}E{Zt}BD|{Dsb@|iDci@zhAnDl`@_@b_@waAz`A_o@zxAiXt_@m]~\\gFfRKhNbZvdEi@vHgFnIscBzx@sv@~RocA|^eWnV_GnOoDrXpArzDiFxa@iOjW_u@|p@u{@~~BmfBn~A{FdOmD|WSjzBiDvZgQv\\ww@zc@djGx|NbUqL`fJuaJn|@tkA|MjWfg@xyAtDdTRz\\oHlg@y@lY|N|}Ax@hd@aBn[}L|s@aI`gBuKniA~[oa@n_Aks@nOmHpl@aCri@fZ`wArhA`kBzd@bRzIflAvmAj}@`Jle@cGtP`Hvh@|l@|K|Rk@tOqW|v@}Bf\\t@~PpQdfAbMf{C`Zry@l_@pw@j\\x`@k`JtiRou@rtAawM~bLihBubB`g@su@nt@uwAfRepDrYuzCtCs~C|g@vWhj@dKns@`e@zRlWbGzPchBrzDtxBlnBx`AtaAwuGjsF}sA`~A_}@gmB_lBofBofHxcOav@|tCuZ|q@sOpNab@tBsFbIq\\`dAcb@`q@_}@ho@_a@dh@yJxEqL^yx@iSm\\m@gl@bPai@vUzv@jOlz@pf@rtCx]x_@U`b@`TQtSorFtoLijG~jMirBrlE}`@~cAmdBdcDanGhtM`nGitMldBecD|`@_dAhrBslEhjG_kMnrFuoLPuSab@aTy_@TstCy]mz@qf@{v@kO`i@wUfl@cPl\\l@xx@hSpL_@xJyE~`@eh@~|@io@bb@aq@p\\adArFcI`b@uBrOqNtZ}q@`v@}tCnfHycOpqBxmBdqGz~NxpK~qfAB~ZiIr^gpCt`E_K`[sAbWbDxr@`{BpuVlXzoEeuHv}Fase@fl_@_f@za@gV`b@_tAvaH{Yhu@enBhbE_tChwIfPvLpDpHxKvs@rUbaAlzDxu]lEdu@sB~iAiQzhA{Zzy@}wAbjCiSxr@iHjj@cBbm@vCjt@rKro@idm@dgZ}}U~jL|nDflY{jBjEksAne@cPznIiZHhS_oLj~C~Kr]@zOyErjBj~NxCpIfFfD`NZ`nEa\\sbFdunAyBr~@`Ars@jfItufAdcBhxS`rCtk[raBrlSzKbm@boDnxI}aIwxCeMeAor@hyAyt@xmBwj@jcDumh@y{_@yz^ocYgP{TsT_l@gba@osfA"
+      }
+    },
+    {
+      "id": "project-gpx-bf5b7ac152d746902354896a--t2",
+      "label": "South Jersey Pine Barrens",
+      "source": "catalog",
+      "mode": "gravel",
+      "requestId": "scorecard:v1:project-gpx-bf5b7ac152d746902354896a--t2:gravel",
+      "start": {
+        "lat": 39.947855,
+        "lon": -74.39226
+      },
+      "end": {
+        "lat": 39.637444,
+        "lon": -74.77662
+      },
+      "riderTrack": {
+        "catalogId": "project-gpx-bf5b7ac152d746902354896a--t2",
+        "geometryPolyline": "}cfekAfkp{lCqsWkh@jl@kXngA{x@tn@x_@t_KtuBlr@pCr`Eq_@pVvm@pMp`A~sB~iHx]pc@bmFlcAfnAl|Df`@b]zePlPhfAzW}i@roA_VzlFjgIdje@xh@gHbuAiq@lhAdE`VdP|d@vjAtb@`wBmUlgCcpBzyHzj@jsFllByP`vDluEnj@p`Cb`AlpAb{@hEpSqdD`Lk_@n_CeoD|VuWnvCcr@xb@__AzQiyBrnAi`Cbx@kt@pwE{wCzl@_OpnC_Kll@wt@vfBejDhr@|kCzg@l`AnqSf~T`|EtuG_`F`lOuhAnzAgmB`dA_YlXuQ~d@_e@z~Dik@nsCiYv{Ce|AhsCye@tjBhx@ts@fkBrkAleBrdA`v@pT`nCl`BjdA~ZnoA}iBnpEcfDxT~{@bw@`vAhw@hu@`cHlqC~~@bQpgDjKzfBv`@pmC`HdtFcc@liCoj@xrBoD`jCzyDjfCb}CvsDxgFluB|lDziC}wG|zEwcOvkOsxc@zkK{c\\h}@w{B|w@|_@|f@~tAhiB`mA~Bvd@aHtt@fQd_@f^dFhlAmHnPwh@`rGhq@`a@qBn_BtdCddA|v@bnBjk@`hCub@nuAqz@niApqBjj@vo@ty@~eChRvIljAsOdmAck@zn@{Jzb@rBls@`XzuEtZbgAxVjmBl~AzrBt[rq@iAtp@{Pdk@`Xre@bk@ht@xh@tdGzqAtbUd{DbiEpHbmJjqAv~MjhCqaBbzEeS`mBabAz~DnZd@xsA_[|`G}|BzoKc~C|mBqsAfi@iQr_@kFlk@`Zc@jkDq[z|Dyh@~xCgWfvD}c@voNqEsCzDwnErd@k{G}c@voNtfCvk@~gJn@xtBnzAzs@~xC`s@|bBte@|{@vhBrdBjiCn|KhXfp@nh@vw@puC`eBpqBzK|~B_Nh_@nF|cBvuAp|@dbA~t@~`@hcD~LtvCztA|g@rf@dvAd{B~gAxz@hZff@l~A~pDvc@hwEvvChjGn[ll@plAkXduDsOhv@xCp_H`mB~X`{@oDfoCjKp`Dro@tmCvOrmA|XhcAvyBvyCxq@rhC~@~dAyHrfAy^lw@h]`iCeCtiAmk@hvEs\\r|@qO`fAq_AxaKbIpaA~jAxsBdaDzzHfk@tj@j_@ny@jbAt|Efg@fj@fcAdVl_Bg~CpsAisDdfCcmA`OgMjf@{~@|xZeyVpGrByJ?zBlMn|@zvCxm@b~AptAdxBbOncAj_@ly@xyA`tBz_Alv@qfGzOgsDoM~TlAod@hs@uoBppGza@~u@fbBlkAtsBhw@nwAffBn`@~y@lHlgAwInoAqd@r|@is@bOo`@~}@_z@`G_v@yY_mBxYsx@uI}i@fo@aGnrCis@z]st@lPu|@aGgg@orCo\\k{@_z@uI}q@jPqd@baCiw@jH_r@cWyxAgfBe[ik@_Qpq@kdA|~BoSsKo~F_jNcYjvJgAlcDmzAree@nU~d@l\\i_@~vBjUrcCp_Dxy@x|Br`@jn@b_Bn|Ajr@~c@vrBhn@pnAuThhGoeCno@`bB{Hvu@{Tfc@awIfaD{cEfGkqD`^okDhx@cwE|iBmy@psBel@p`@{eB`m@ox@hBx\\hKy\\qWaaAnEogAfn@_h@zn@ylAreCsl@~vBeyApiCo^lvCa~@|sDqPf~AsU|g@qCj}AkTltAq^nuAoe@nw@mi@|_Bs_B~_Ggr@rdA}cA|fEmBtxA}\\|wBcStpCeq@lzAcg@dp@{^fiAos@d}@ce@j_@kJb\\~CxOvJlAdwAajAbl@sbBde@}q@|UcSxqTmcCxd@_HrlAyq@fuAgQzT_PffAiuAzkAabA`fE_gA`r@u~A^oVp`@e_AjMq|@r^yr@`H|NtlDjMps@vSfwBoG~sBsXneCwjB`p@iRvn@uh@ruBq|CbmBpA`mDtj@fy@na@x}@~lAjc@oSn^w}@ns@{b@joBu^rt@h@fw@f`@`qI|oChpKfp@xq@g@_gDmhHoRyr@`mH|rAhcAsK~zA~V`aAnt@rSf^Nl^kk@lg@qe@lmBuTbdElD~nDiK~q@jhNzbh@_mFvie@}|Bbnt@wdBvoFmz@jfOttIxyPpmG|sh@ut@fcBnd@jdHijG|_G"
+      }
+    },
+    {
+      "id": "nj-newton-loop-2h",
+      "label": "Newton loop, 2 h",
+      "source": "benchmark",
+      "mode": "curvy",
+      "requestId": "scorecard:v1:nj-newton-loop-2h:curvy",
+      "start": {
+        "lat": 41.058,
+        "lon": -74.753
+      },
+      "loopMinutes": 120
+    },
+    {
+      "id": "nj-frenchtown-loop-3h",
+      "label": "Frenchtown loop, 3 h",
+      "source": "benchmark",
+      "mode": "curvy",
+      "requestId": "scorecard:v1:nj-frenchtown-loop-3h:curvy",
+      "start": {
+        "lat": 40.526,
+        "lon": -75.062
+      },
+      "loopMinutes": 180
+    },
+    {
+      "id": "nj-milford-high-point",
+      "label": "Milford → High Point State Park",
+      "source": "benchmark",
+      "mode": "curvy",
+      "requestId": "scorecard:v1:nj-milford-high-point:curvy",
+      "start": {
+        "lat": 40.5687,
+        "lon": -75.0946
+      },
+      "end": {
+        "lat": 41.3207,
+        "lon": -74.6618
+      }
+    },
+    {
+      "id": "nj-lambertville-clinton",
+      "label": "Lambertville → Clinton",
+      "source": "benchmark",
+      "mode": "curvy",
+      "requestId": "scorecard:v1:nj-lambertville-clinton:curvy",
+      "start": {
+        "lat": 40.3659,
+        "lon": -74.9429
+      },
+      "end": {
+        "lat": 40.6368,
+        "lon": -74.9099
+      }
+    },
+    {
+      "id": "nj-branchville-loop-2h",
+      "label": "Branchville (Stokes State Forest) loop, 2 h",
+      "source": "benchmark",
+      "mode": "gravel",
+      "requestId": "scorecard:v1:nj-branchville-loop-2h:gravel",
+      "start": {
+        "lat": 41.146,
+        "lon": -74.752
+      },
+      "loopMinutes": 120
+    },
+    {
+      "id": "nj-chatsworth-loop-2h",
+      "label": "Chatsworth loop, 2 h",
+      "source": "benchmark",
+      "mode": "gravel",
+      "requestId": "scorecard:v1:nj-chatsworth-loop-2h:gravel",
+      "start": {
+        "lat": 39.8176,
+        "lon": -74.5354
+      },
+      "loopMinutes": 120
+    },
+    {
+      "id": "nj-batsto-chatsworth",
+      "label": "Batsto Village → Chatsworth",
+      "source": "benchmark",
+      "mode": "dual-sport",
+      "requestId": "scorecard:v1:nj-batsto-chatsworth:dual-sport",
+      "start": {
+        "lat": 39.6418,
+        "lon": -74.6477
+      },
+      "end": {
+        "lat": 39.8176,
+        "lon": -74.5354
+      }
+    },
+    {
+      "id": "nj-blairstown-walpack",
+      "label": "Blairstown → Walpack Center",
+      "source": "benchmark",
+      "mode": "gravel",
+      "requestId": "scorecard:v1:nj-blairstown-walpack:gravel",
+      "start": {
+        "lat": 40.9829,
+        "lon": -74.9596
+      },
+      "end": {
+        "lat": 41.1587,
+        "lon": -74.8793
       }
     }
   ],

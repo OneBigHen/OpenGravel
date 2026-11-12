@@ -10,9 +10,10 @@ describe('router calls and first-route seconds', () => {
     expect(percentile([], 0.75)).toBeNull();
   });
   it('summarises calls, first-route seconds and plans over the cap of six', () => {
-    const use = (calls: number, firstRouteSeconds: number | null) => ({ routerUse: { calls, shadowCalls: 0, firstRouteSeconds } });
+    const use = (calls: number, firstCallSeconds: number | null, firstAnswerSeconds: number | null = firstCallSeconds === null ? null : firstCallSeconds / 2) => ({ routerUse: { calls, shadowCalls: 0, firstCallSeconds, firstAnswerSeconds } });
     const load = routerLoad([use(3, 2), use(4, 3), use(7, 9), use(12, null), { routerUse: null }]);
-    expect(load).toMatchObject({ rides: 4, callsP75: 7, callsMax: 12, ridesOverCallCap: 2, firstRouteSecondsP75: 9, firstRouteSecondsMax: 9 });
+    expect(load).toMatchObject({ rides: 4, callsP75: 7, callsMax: 12, ridesOverCallCap: 2, firstCallSecondsP75: 9, firstCallSecondsMax: 9, callsP95: 12, firstAnswerSecondsP50: 1.5, firstAnswerSecondsP75: 4.5, firstAnswerSecondsP95: 4.5 });
+    expect(loadLine(load)).toContain('p50 1.5, p75 4.5, p95 4.5');
     expect(loadLine(load)).toContain('75th percentile 7');
     expect(loadLine(load)).toContain('2 of 4 over the cap of 6');
     expect(loadLine(routerLoad([]))).toContain('unknown');

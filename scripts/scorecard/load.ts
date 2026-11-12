@@ -11,30 +11,41 @@ export function percentile(values: readonly number[], p: number): number | null 
 export interface RouterLoadSummary {
   rides: number;
   callsP75: number | null;
+  callsP95: number | null;
   callsMax: number | null;
   /** The plan's cap: no plan should make more than this many router calls. */
   ridesOverCallCap: number;
-  firstRouteSecondsP75: number | null;
-  firstRouteSecondsMax: number | null;
+  /** First provider call of the full plan, in single file (the old "first route" number). */
+  firstCallSecondsP75: number | null;
+  firstCallSecondsMax: number | null;
+  /** One real first-answer request, the way the app sends it: what a rider waits for. */
+  firstAnswerSecondsP50: number | null;
+  firstAnswerSecondsP75: number | null;
+  firstAnswerSecondsP95: number | null;
+  firstAnswerSecondsMax: number | null;
 }
 export const ROUTER_CALL_CAP = 6;
 
 export function routerLoad(rows: readonly Pick<Row, 'routerUse'>[]): RouterLoadSummary {
   const used = rows.flatMap(row => row.routerUse ? [row.routerUse] : []);
   const calls = used.map(u => u.calls);
-  const first = used.flatMap(u => u.firstRouteSeconds === null ? [] : [u.firstRouteSeconds]);
+  const first = used.flatMap(u => u.firstCallSeconds === null ? [] : [u.firstCallSeconds]);
+  const answer = used.flatMap(u => u.firstAnswerSeconds === null ? [] : [u.firstAnswerSeconds]);
   return {
     rides: used.length,
-    callsP75: percentile(calls, 0.75), callsMax: calls.length ? Math.max(...calls) : null,
+    callsP75: percentile(calls, 0.75), callsP95: percentile(calls, 0.95), callsMax: calls.length ? Math.max(...calls) : null,
     ridesOverCallCap: calls.filter(c => c > ROUTER_CALL_CAP).length,
-    firstRouteSecondsP75: percentile(first, 0.75), firstRouteSecondsMax: first.length ? Math.max(...first) : null,
+    firstCallSecondsP75: percentile(first, 0.75), firstCallSecondsMax: first.length ? Math.max(...first) : null,
+    firstAnswerSecondsP50: percentile(answer, 0.5), firstAnswerSecondsP75: percentile(answer, 0.75), firstAnswerSecondsP95: percentile(answer, 0.95),
+    firstAnswerSecondsMax: answer.length ? Math.max(...answer) : null,
   };
 }
 
 export function loadLine(load: RouterLoadSummary): string {
   const fmt = (n: number | null, digits = 1) => n === null ? 'unknown' : n.toFixed(digits);
-  return `Router calls per plan: 75th percentile ${fmt(load.callsP75, 0)}, most ${fmt(load.callsMax, 0)}, ${load.ridesOverCallCap} of ${load.rides} over the cap of ${ROUTER_CALL_CAP}. `
-    + `First-route seconds: 75th percentile ${fmt(load.firstRouteSecondsP75)}, slowest ${fmt(load.firstRouteSecondsMax)}.`;
+  return `Router calls per plan: 75th percentile ${fmt(load.callsP75, 0)}, 95th ${fmt(load.callsP95, 0)}, most ${fmt(load.callsMax, 0)}, ${load.ridesOverCallCap} of ${load.rides} over the cap of ${ROUTER_CALL_CAP}. `
+    + `First-answer seconds (one real first-answer request): p50 ${fmt(load.firstAnswerSecondsP50)}, p75 ${fmt(load.firstAnswerSecondsP75)}, p95 ${fmt(load.firstAnswerSecondsP95)}, slowest ${fmt(load.firstAnswerSecondsMax)}. `
+    + `First-call seconds (first call of the full plan, single file): 75th percentile ${fmt(load.firstCallSecondsP75)}, slowest ${fmt(load.firstCallSecondsMax)}.`;
 }
 
 /**
@@ -77,6 +88,7 @@ export interface InstrumentedProvider {
   pending(): number;
   /** Starts the clock; call just before planning. */
   start(): void;
+  /** Seconds until the first answer that carried a route (the old "first route" number, now firstCallSeconds in the report). */
   firstRouteSeconds(): number | null;
 }
 export function instrumentProvider(inner: RouteCandidateProvider, now: () => number = () => performance.now()): InstrumentedProvider {
