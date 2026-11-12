@@ -27,6 +27,7 @@ import type { MapLayerStatus } from "./useMapLayers";
 import { LayerIcon } from "./LayerIcon";
 import { LayerSwitch } from "./LayerSwitch";
 import { LOOK_LABEL, LOOK_NOTE, type BasemapLook } from "@/ui/map/basemap-look";
+import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useFrontDoorOption } from "@/ui/stores/front-door-options";
 
 /** The basemap style rows the sheet owns on a phone. */
@@ -128,6 +129,20 @@ const LENS_TINT: Readonly<Record<string, string>> = {
   traffic: "#d65a36",
   stops: "#b45309",
 };
+
+/**
+ * Layers that belong to the hiking surface (frozen) and are listed only when
+ * Planning activity is Hike: the trail stop layers, Trails and Wind. Nothing
+ * is deleted or loses its data; Ride simply does not show it.
+ */
+const HIKE_ONLY_LAYER_IDS: ReadonlySet<MapLayerId> = new Set([
+  "trails",
+  "trailheads",
+  "water-sources",
+  "shelters",
+  "summits",
+  "wind",
+]);
 
 /** The catalog's own hex: several of its colour tokens did not survive the v3 token rename. */
 function layerTint(layer: MapLayerDefinition): string {
@@ -282,6 +297,12 @@ export function MapLayersPanel({
   const buttonRef = useRef<HTMLButtonElement>(null);
   // Traffic cameras are not offered here until Settings turns them on (front door).
   const camerasOffered = useFrontDoorOption("cameras");
+  // Riding first: Layers lists what the rider's Planning activity can use. The
+  // hiking rows and set (frozen) appear only while planning a hike, and Wind
+  // is a hiking row here; every definition and its data stay in the catalog.
+  const mode = useActivityMode();
+  const lenses = mode === "hike" ? MAP_LAYER_LENSES : MAP_LAYER_LENSES.filter((lens) => lens.id !== "hiking");
+  const layers = mode === "hike" ? MAP_LAYERS : MAP_LAYERS.filter((layer) => !HIKE_ONLY_LAYER_IDS.has(layer.id));
   const offered = (layer: MapLayerDefinition): boolean => layer.id !== "traffic-cameras" || camerasOffered;
   // Escape closes the panel and hands focus back to Layers (PD-03).
   useEffect(() => {
@@ -335,7 +356,7 @@ export function MapLayersPanel({
               <section className="og-layers__group" aria-label="Quick sets">
               <h3>Quick sets</h3>
               <ul className="og-layers__lenses" aria-label="Quick layer sets">
-                {MAP_LAYER_LENSES.map((lens) => {
+                {lenses.map((lens) => {
                   const count = lens.layers.filter((id) => enabled.includes(id)).length;
                   const on = count === lens.layers.length;
                   const state = on ? "On" : count === 0 ? "Off" : "Partial";
@@ -364,7 +385,7 @@ export function MapLayersPanel({
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>
                 <ul className="og-layers__tiles">
-                  {MAP_LAYERS.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
+                  {layers.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
                     <LayerTile key={layer.id} layer={layer} on={enabled.includes(layer.id)} status={status[layer.id]} onToggle={() => onToggle(layer.id)} />
                   ))}
                 </ul>
@@ -373,7 +394,7 @@ export function MapLayersPanel({
               <section key={category.id} className="og-layers__group" aria-label={category.name}>
                 <h3>{category.name}</h3>
                 <ul>
-                  {MAP_LAYERS.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
+                  {layers.filter((layer) => layer.category === category.id && offered(layer)).map((layer) => (
                     <LayerRow
                       key={layer.id}
                       layer={layer}

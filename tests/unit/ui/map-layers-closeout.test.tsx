@@ -1,13 +1,15 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAP_LAYERS, type MapLayerId } from "@/application/map-layers";
 import { MapLayersPanel } from "@/ui/layers/MapLayersPanel";
 import type { MapLayerStatus } from "@/ui/layers/useMapLayers";
+import { setActivityMode } from "@/ui/stores/activity-mode";
 import { setFrontDoorOption } from "@/ui/stores/front-door-options";
 
 afterEach(() => {
   cleanup();
   setFrontDoorOption("cameras", false);
+  setActivityMode("ride");
 });
 
 function panel(statusOverrides: Partial<Record<MapLayerId, MapLayerStatus>> = {}) {
@@ -82,6 +84,23 @@ describe("closeout layers sheet", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(control).toHaveFocus();
     expect(screen.queryByRole("region", { name: "Map layers" })).not.toBeInTheDocument();
+  });
+  it("lists riding layers first and leaves the hiking rows for Hike", () => {
+    const hikeOnly: readonly MapLayerId[] = ["trails", "trailheads", "water-sources", "shelters", "summits", "wind"];
+    const status = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, "off"])) as Record<MapLayerId, MapLayerStatus>;
+    const counts = Object.fromEntries(MAP_LAYERS.map((layer) => [layer.id, 0])) as Record<MapLayerId, number>;
+    setActivityMode("ride");
+    const view = render(<MapLayersPanel enabled={[]} status={status} counts={counts} cameraRouteOnly={false} cameraRouteAvailable={false} onToggleCameraRouteOnly={vi.fn()} onToggle={vi.fn()} onToggleLens={vi.fn()} onClearAll={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Layers" }));
+    for (const id of hikeOnly) expect(screen.queryByTestId(`map-layer-${id}`)).toBeNull();
+    expect(screen.queryByTestId("map-lens-hiking")).toBeNull();
+    expect(screen.getAllByTestId(/^map-lens-/)[0]).toHaveAttribute("data-testid", "map-lens-fun");
+
+    act(() => setActivityMode("hike"));
+    for (const id of hikeOnly) expect(screen.getByTestId(`map-layer-${id}`)).toBeInTheDocument();
+    expect(screen.getByTestId("map-lens-hiking")).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^map-lens-/)[0]).toHaveAttribute("data-testid", "map-lens-fun");
+    view.unmount();
   });
 });
 
