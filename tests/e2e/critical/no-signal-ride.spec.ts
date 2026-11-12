@@ -102,7 +102,11 @@ test("a ride kept for no signal rides in airplane mode: map, line and turns, and
 
     // 300 m off the line: the way back, and nothing asks for a new route.
     const last = LINE.at(-1)!;
-    await context.setGeolocation({ latitude: last.lat - 300 / 111_320, longitude: last.lon, accuracy: 5 });
+    // Ride away from the line over a few seconds: off route needs three fixes in a row.
+    for (let step = 1; step <= 5; step += 1) {
+      await context.setGeolocation({ latitude: last.lat - (60 * step) / 111_320, longitude: last.lon, accuracy: 5 });
+      await page.waitForTimeout(1_200);
+    }
     await expect(page.getByTestId("ride-maneuver")).toHaveAttribute("data-reason", "off-route", { timeout: 20_000 });
     await expect(page.getByTestId("ride-guidance-state")).toHaveText(/Head back|Turn around/);
     await expect(page.getByTestId("ride-reroute-now")).toHaveCount(0);

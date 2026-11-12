@@ -22,7 +22,10 @@ test("chip → result → card → Directions → visible route → swap → Sta
   await expect(page.getByTestId("start-ride")).toBeInViewport({ ratio: 1 });
   await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "half");
   const sheet = await page.getByTestId("planner-sheet").boundingBox();
-  expect(sheet!.y).toBeGreaterThanOrEqual(422);
+  // The ride card (round 3) carries the three truth lines and Start, Save and
+  // Share, so half is a little over half the screen; the route and both pins
+  // still have to fit above it (expectAboveSheet below is the real check).
+  expect(sheet!.y).toBeGreaterThanOrEqual(400);
   await expectDrawnScene(page, { routes: "2", points: "2" });
   const coordinates = connectedCoordinates();
   await expectAboveSheet(page, coordinates);

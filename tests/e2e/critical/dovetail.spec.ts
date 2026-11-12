@@ -68,8 +68,12 @@ test("route detail keeps its primary action readable and offers no offline dead 
   await page.goto("/explore/sample-ridge-loop");
   const ride = page.getByTestId("ride-this");
   await expect(ride).toBeInViewport({ ratio: 1 });
+  // Ride this leads and one-tap Save sits beside it (round 3): the primary
+  // stays the wide, readable control in the row.
   const primaryBox = await ride.boundingBox();
-  expect(primaryBox!.width).toBeGreaterThan(320);
+  const saveBox = await page.getByRole("region", { name: "Route actions" }).getByRole("button", { name: "Save" }).boundingBox();
+  expect(primaryBox!.width).toBeGreaterThan(240);
+  expect(primaryBox!.width).toBeGreaterThan(saveBox!.width * 2);
   // Offline downloads return in R3-7 with a real control; until then the page
   // does not link to an empty Settings section.
   await expect(page.getByRole("link", { name: "Offline maps", exact: true })).toHaveCount(0);

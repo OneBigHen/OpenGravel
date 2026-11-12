@@ -52,11 +52,12 @@ export function PlannerPlacesMap(props: PlannerMapProps & {
     [reports.scenePlaces, baseScene],
   );
   const { select, clear } = reports;
+  const inert = props.places?.inert === true;
   const onIntent = useCallback((intent: MapIntent): void => {
-    if (intent.type === "place-click" && select(intent.placeId)) return;
+    if (intent.type === "place-click" && !inert && select(intent.placeId)) return;
     if (intent.type === "map-click") clear();
     baseIntent(intent);
-  }, [baseIntent, select, clear]);
+  }, [baseIntent, select, clear, inert]);
   return (
     <>
       <PlannerPlacesMapInner {...props} scene={scene} onIntent={onIntent} />

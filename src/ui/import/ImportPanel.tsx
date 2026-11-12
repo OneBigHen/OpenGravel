@@ -381,6 +381,9 @@ export function ImportPanel({
       };
       setOutcome(nextOutcome);
       setAdded(summary);
+      // The confirmation starts plain: the notes live behind a closed line even
+      // when the rider opened More import options while choosing tracks.
+      setMoreOpen(false);
       setPhase("success");
       emitTelemetry("import_completed", { source: "import" });
       try {

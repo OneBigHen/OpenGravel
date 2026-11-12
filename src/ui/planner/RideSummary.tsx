@@ -231,9 +231,9 @@ export function RideSummary({
     <div className="og-phone-summary__actions">
       {start === null ? null : <button className="og-primary" type="button" data-testid="start-ride" aria-label={start.starting ? undefined : "Start ride"} disabled={start.starting || start.refusal !== null} onClick={start.onStart}><Glyph d={NAV}/>{start.starting ? "Starting…" : "Start"}</button>}
       <button type="button" className="og-phone-summary__pill" data-testid="summary-save" data-state={saveState} disabled={!saving.canSave} onClick={() => void save()}>
-        <Glyph d={BOOKMARK}/>{saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Save"}
+        <Glyph d={BOOKMARK}/><span className="og-phone-summary__pill-label">{saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Save"}</span>
       </button>
-      {shareService === undefined || shareSource === null ? null : <button type="button" className="og-phone-summary__pill" data-testid="open-share" onClick={() => setShareOpen(true)}><Glyph d={SHARE}/>Share</button>}
+      {shareService === undefined || shareSource === null ? null : <button type="button" className="og-phone-summary__pill" data-testid="open-share" onClick={() => setShareOpen(true)}><Glyph d={SHARE}/><span className="og-phone-summary__pill-label">Share</span></button>}
     </div>
     {start === null || start.refusal === null ? null : <p className="og-composer__reason" data-testid="start-ride-reason">{start.refusal}</p>}
     {start === null || start.error === null ? null : <p className="og-planner__error" role="alert">{start.error}</p>}

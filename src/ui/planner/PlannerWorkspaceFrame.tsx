@@ -202,7 +202,9 @@ export function PlannerWorkspaceFrame({
             {...map}
             scene={scene}
             hint={hint}
-            places={places === undefined || editBar?.breadcrumb?.editing !== true ? places : { ...places, inert: true }}
+            // Editing a breadcrumb, or after "set your start / destination", a tap
+            // on a pin places the point: the rider already said what the tap is for.
+            places={places === undefined || (editBar?.breadcrumb?.editing !== true && armedTool !== "start" && armedTool !== "finish") ? places : { ...places, inert: true }}
             layers={layers}
             clusterControls={clusterControls}
           />

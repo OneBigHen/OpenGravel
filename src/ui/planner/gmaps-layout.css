@@ -303,6 +303,22 @@
   cursor: pointer;
 }
 
+/* Narrowest phones: Save and Share keep icons (names stay for screen readers). */
+@media (max-width: 360px) {
+  .og-phone-summary__pill .og-phone-summary__pill-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .og-phone-summary__actions > .og-phone-summary__pill {
+    padding: 0 var(--og-space-3);
+  }
+}
+
 .og-phone-summary__pill:active,
 .og-phone-summary__icon:active {
   background: var(--og-press);
@@ -659,6 +675,10 @@
 
 /* Small phones: the three home pills keep their words on one line. */
 @media (max-width: 360px) and (min-height: 501px) {
+  /* A 320 px phone at half: the truth lines wait in the full sheet, so the map
+     keeps the route in view and Start, Save, Share and Compare all fit. */
+  .og-planner .og-planner__sheet[data-detent="half"] .og-phone-summary .og-truth { display: none; }
+
   .og-planner .og-planner__sheet[data-idle="true"][data-detent="peek"] :is(.og-composer__loop-quick, .og-plan-actions__record, .og-plan-actions__free-ride) {
     gap: 4px;
     font-size: var(--og-text-caption);

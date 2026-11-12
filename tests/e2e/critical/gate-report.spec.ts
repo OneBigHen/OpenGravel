@@ -30,7 +30,20 @@ async function planSameRide(page: Page): Promise<void> {
   await page.goto("/");
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
+  // The planner reopens the ride just finished; close it and plan from the
+  // fixture's own start. Close route keeps the destination, so the new start
+  // may plan at once; otherwise the destination is placed and planned.
+  const close = page.getByTestId("trip-close");
+  if (await close.waitFor({ state: "visible", timeout: 10_000 }).then(() => true, () => false)) {
+    await close.click();
+    await expect(page.getByTestId("route-summary")).toHaveCount(0);
+  }
   await placeEndpoint(page, "start", RIDE_FIXTURE_START);
+  const summary = page.getByTestId("route-summary");
+  await expect(summary.or(page.getByTestId("finish-chip")).or(page.getByTestId("compose-create")).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 });
+  // The kept destination is where the last plan snapped it; put it back on the
+  // fixture's own destination (from the ride's edit view when it planned already).
+  if (await summary.isVisible()) await page.getByTestId("trip-edit").click();
   await placeEndpoint(page, "finish", RIDE_FIXTURE_DESTINATION);
   await pressPlan(page);
   await expect(page.locator('[data-testid^="route-card-"]')).toHaveCount(2);

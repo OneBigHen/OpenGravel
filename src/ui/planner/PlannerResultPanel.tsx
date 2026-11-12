@@ -175,7 +175,9 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
       {/* The choices stay a list to pick from under the summary (on a phone
           further down the full sheet). The summary already carries the chosen
           ride's truth lines and "Why this ride?", so the cards stay quiet. */}
-      {hikeView !== null || choices.cards.length === 0 ? null : (
+      {/* While the summary shows its own Compare list, a second list of the
+          same choices below it would be two answers to one question. */}
+      {hikeView !== null || choices.cards.length === 0 || (summaryShown && comparing) ? null : (
         <div className="og-result-choices"><RouteChoices cards={choices.cards}>
           {choices.cards.map((card) => (
             <RouteDecisionCard
