@@ -105,7 +105,6 @@ public final class OgCurveField {
                 }
             }
         });
-        incident = null;
         long continued = Arrays.stream(cont).filter(c -> c >= 0).count();
 
         // Raw pass: weighted bend metres inside each earning edge.
