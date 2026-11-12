@@ -394,7 +394,7 @@ export async function startFreeRideFromPlanner(input: {
       return {
         outcome: "rejected",
         sessionId: current.pointer.sessionId,
-        message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
+        message: "A ride is already in progress. Resume it before starting another.",
       };
     }
     input.pointer.clear();
@@ -402,7 +402,7 @@ export async function startFreeRideFromPlanner(input: {
     return {
       outcome: "rejected",
       sessionId: null,
-      message: "The current ride could not be checked. Try opening Ride Focus first.",
+      message: "The current ride could not be checked. Try opening the ride first.",
     };
   }
 

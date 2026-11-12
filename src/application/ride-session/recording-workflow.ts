@@ -297,7 +297,7 @@ export function createRideRecordingWorkflow(
           outcome: "saved-pending-session",
           ride: savedRide,
           summary: savedSummary,
-          message: "Saved to My rides. Reopen Ride Focus to finish session recovery.",
+          message: "Saved to My rides. Open the ride again to finish recovering it.",
         };
       }
       if (!libraryCommitted && recording.snapshot().summary.pointCount < 2) {
@@ -353,7 +353,7 @@ export function createRideRecordingWorkflow(
           outcome: "saved-pending-session",
           ride,
           summary: sealed.summary,
-          message: "Saved to My rides. Ride Focus will finish recovery when you reopen it.",
+          message: "Saved to My rides. The ride finishes recovering when you open it again.",
         };
       }
       return { outcome: "finished", ride, summary: sealed.summary };
@@ -383,7 +383,7 @@ export function createRideRecordingWorkflow(
 function finishFailure(result: RecordingFinishResult): string {
   if (result.outcome === "finished") return "";
   return result.reason === "not-open"
-    ? "The recording is not open. Reopen Ride Focus to recover it."
+    ? "The recording is not open. Open the ride again to recover it."
     : result.reason === "corrupt"
       ? "The trace is incomplete or corrupt, so it remains available for recovery."
       : "The trace could not be sealed. Check device storage and retry.";

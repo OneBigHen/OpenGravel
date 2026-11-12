@@ -42,7 +42,7 @@ describe("a ride that was never ended", () => {
     const freeRide = vi.fn(async () => ({
       outcome: "rejected" as const,
       sessionId: "session_old" as never,
-      message: "A ride is already in progress. Resume it in Ride Focus before starting another.",
+      message: "A ride is already in progress. Resume it before starting another.",
     }));
     render(
       <RideActions
