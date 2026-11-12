@@ -114,3 +114,60 @@ it does not establish legal access or authorize changes to OSM geometry.
 
 The v3 before/after measurements and browser evidence are recorded in
 [the app integration report](../../docs/vnext/research/hike-planning-2026-10-28.md).
+
+# Motorcycle router v2
+
+Everything for the motorcycle router lives in [`moto/`](moto/); production's own
+config and models were only in the frozen `switchback` repo until RM-1. Version 2 is
+production's router (same GraphHopper 11.0 jar, same `pa-nj-motorcycle.osm.pbf`, same
+four profiles, byte-identical custom models) plus three values the graph computes
+for itself during the import:
+
+| Value | What it means |
+|---|---|
+| `og_curve` (0 to 1) | How bendy the road is around this edge: weighted bend metres (the same road-bends-v1 maths as `src/domain/geometry/road-bends.ts`) within 500 m either way along the same road, over the metres covered, with 20% reading as 1. Town streets, service roads, links and roundabouts read 0. |
+| `og_through` | Not dead-end territory: the edge sits in a part of the road network with at least 20 km of roads once every only-way-in road is removed, or on the road between two such parts. Roads a motorcycle may legally use only. |
+| `og_through_street` | The same without unpaved roads and without tracks rougher than grade 1. |
+
+`osm_way_id` is added too, so our own facts can be joined to roads later. The custom
+models do not read the new values yet (RM-2 does), so v2 routes exactly like production.
+
+How it works: `moto/build-og-ext.sh` builds `og-ext.jar`, a classpath overlay (pinned
+upstream `GraphHopperManaged.java`, sha256-checked, one-line patch to use
+`com.opengravel.gh.OgGraphHopper`). `OgGraphHopper` registers the three values and
+computes them in `postImportOSM()`, after the engine's own town density and speed limits
+and before landmarks. The upstream jar is never modified.
+
+```sh
+# Windows PC, WSL. A new folder each time; the script refuses an existing graph.
+infra/graphhopper/moto/build-graph.sh /mnt/wsl/ogv-data/ghbuild-moto-v2/build-N
+infra/graphhopper/moto/serve-v2.sh    /mnt/wsl/ogv-data/ghbuild-moto-v2/build-N   # 127.0.0.1:8989, -Xmx4g
+
+# Checks
+java -cp BUILD/og-ext/og-ext.jar:BUILD/graphhopper-web-11.0.jar com.opengravel.gh.OgChecks tests/fixtures/road-bends
+npx vitest run tests/unit/geometry/road-bend-fixtures.test.ts
+# docker-dev, with the v2 router tunnelled to 8988 and production on 8989:
+ssh -N -L 8988:127.0.0.1:8989 windows-zac
+GRAPHHOPPER_URL=http://127.0.0.1:8988 node --conditions=react-server --import tsx scripts/scorecard/field-check.ts
+python3 infra/graphhopper/moto/probe-graph.py --url http://127.0.0.1:8988 --prod http://127.0.0.1:8989 \
+  --atlas data/scorecard/gravel-atlas-v3.sqlite --field-json scorecard-out/field-check.json \
+  --turn-costs-bytes <size of graph-cache-v2/turn_costs> --memory-cmd '<prints the v2 java RSS in bytes>'
+```
+
+`build-graph.sh` writes `import.log`, `gc.log`, `SHA256SUMS` of the graph folder and
+`build-summary.txt` (input hashes, time, peak memory, the passes' own summary lines,
+graph size). On the Windows PC a process started from an ssh session dies with it, and
+`systemd --user` units stop too (no linger): start long runs from a Windows scheduled
+task that keeps its own `wsl.exe` open, and keep the PC awake with the bar's
+"Stay awake" holder.
+
+The road-bend fixtures in `tests/fixtures/road-bends/` are written by
+`scripts/geometry/write-road-bend-fixtures.ts` and read by both the vitest pin and
+`OgChecks`, so the app and the graph count the same bends. If `road-bends.ts` changes,
+rewrite them and re-run both.
+
+`moto/prepare-motorcycle-osm.mjs` and `moto/lib/motorcycle-osm.mjs` are byte-for-byte
+copies of the switchback scripts that made the map file (sha256 `3bbe1c95…a515` and
+`c50f9173…2108`), kept so the whole recipe lives here. They were not re-run for v2: it
+uses the same map file as production. Note that `prepare-motorcycle-osm.mjs` resolves its
+project root as the folder above its own, so run from a copy laid out as in switchback.
