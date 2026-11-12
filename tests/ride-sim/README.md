@@ -36,7 +36,7 @@ speech port (a recorder that captures every cue).
 - `run-scenario.ts` — composes the real stack and records frames, events and
   cues.
 - `assertions.ts` — the rider-facing promises, shared by every track.
-- `ride-sim.test.ts` — ten tracks × five scenarios, plus a corpus check.
+- `ride-sim.test.ts` — ten tracks × five scenarios and the RM-6 reroute checks, plus a corpus check.
 - `pass-fail-reporter.ts` — the table printed by `npm run ride-sim`.
 
 ## Scenarios
@@ -48,6 +48,8 @@ speech port (a recorder that captures every cue).
 | missed turn | Rides on along the incoming bearing instead of turning. |
 | 30 s without GPS | Omits every fix for 30 s of the ride; the clock keeps running. |
 | 2 minute stop | Emits 1 Hz stationary fixes for 120 s. |
+| missed turn → rejoin (RM-6) | At the first off-route instant, runs the real guided reroute planner against a fake router (`fake-connector-provider.ts`) and binds its answer: bound within 5 s, the tail is the planned line exactly from the rejoin point, and at least 90% of the planned ride still rejoinable (beyond the first 0.8 km target) is kept. |
+| rider report 2 km ahead (RM-6) | Saves a report on the line 2 km ahead of the rider and reroutes: the new route stays out of the reported ring and rejoins the planned line beyond it. |
 
 The no-GPS and stop anchors are placed on a straight leg by the fixture
 generator, so those scenarios test loss and rest handling rather than a turn

@@ -41,22 +41,63 @@ function insideRing(point: Coordinate, ring: readonly Coordinate[]): boolean {
   return inside;
 }
 
-/** A way round a ring: two points well outside it, on the side away from the line. */
+function segmentsCross(p: Coordinate, q: Coordinate, a: Coordinate, b: Coordinate): boolean {
+  const rx = q.lon - p.lon, ry = q.lat - p.lat, sx = b.lon - a.lon, sy = b.lat - a.lat;
+  const denominator = rx * sy - ry * sx;
+  if (denominator === 0) return false;
+  const t = ((a.lon - p.lon) * sy - (a.lat - p.lat) * sx) / denominator;
+  const u = ((a.lon - p.lon) * ry - (a.lat - p.lat) * rx) / denominator;
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+}
+
+/** True when any leg of `path` enters or touches the ring (exact, not sampled). */
+function crossesRing(path: readonly Coordinate[], ring: readonly Coordinate[]): boolean {
+  if (path.some((point) => insideRing(point, ring))) return true;
+  for (let leg = 1; leg < path.length; leg += 1) {
+    for (let edge = 0; edge < ring.length; edge += 1) {
+      if (segmentsCross(path[leg - 1] as Coordinate, path[leg] as Coordinate, ring[edge] as Coordinate, ring[(edge + 1) % ring.length] as Coordinate)) return true;
+    }
+  }
+  return false;
+}
+
+function pathMeters(path: readonly Coordinate[]): number {
+  return path.slice(1).reduce((sum, point, index) => sum + haversine(path[index] as Coordinate, point), 0);
+}
+
+/**
+ * A way round a ring, as a road network would offer one: the shortest walk
+ * along the corners of a box well outside it (either way round) that keeps
+ * every leg out of the ring. Empty when the straight way already misses it.
+ */
 function roundRing(from: Coordinate, to: Coordinate, ring: readonly Coordinate[]): Coordinate[] {
-  const samples = 50;
-  const touches = Array.from({ length: samples + 1 }, (_, index) => {
-    const t = index / samples;
-    return insideRing({ lon: from.lon + (to.lon - from.lon) * t, lat: from.lat + (to.lat - from.lat) * t }, ring);
-  }).some(Boolean);
-  if (!touches) return [];
+  if (!crossesRing([from, to], ring)) return [];
   const lons = ring.map((point) => point.lon);
   const lats = ring.map((point) => point.lat);
   const pad = 0.004; // ~350 m
-  const south = Math.min(...lats) - pad;
-  return [
-    { lon: Math.min(...lons) - pad, lat: south },
-    { lon: Math.max(...lons) + pad, lat: south },
+  const west = Math.min(...lons) - pad, east = Math.max(...lons) + pad;
+  const south = Math.min(...lats) - pad, north = Math.max(...lats) + pad;
+  // Clockwise from the south-west corner.
+  const corners: Coordinate[] = [
+    { lon: west, lat: south }, { lon: west, lat: north }, { lon: east, lat: north }, { lon: east, lat: south },
   ];
+  let best: Coordinate[] = [];
+  let bestMeters = Number.POSITIVE_INFINITY;
+  for (let first = 0; first < 4; first += 1) {
+    for (const step of [1, 3]) {
+      for (let count = 1; count <= 4; count += 1) {
+        const walk = Array.from({ length: count }, (_, index) => corners[(first + step * index) % 4] as Coordinate);
+        const path = [from, ...walk, to];
+        if (crossesRing(path, ring)) continue;
+        const meters = pathMeters(path);
+        if (meters < bestMeters) {
+          best = walk;
+          bestMeters = meters;
+        }
+      }
+    }
+  }
+  return best;
 }
 
 export function createFakeConnectorProvider(options: FakeConnectorOptions): FakeConnectorProvider {
