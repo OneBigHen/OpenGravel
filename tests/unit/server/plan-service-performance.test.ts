@@ -70,7 +70,7 @@ describe("planning latency regressions", () => {
     }
   });
 
-  it("shares an engine concurrency bound across simultaneous dirt plans, each one wave of three", async () => {
+  it("shares an engine concurrency bound across simultaneous dirt plans, each one wave of four", async () => {
     let active = 0;
     let peak = 0;
     let calls = 0;
@@ -86,8 +86,8 @@ describe("planning latency regressions", () => {
     const results = await Promise.all(Array.from({ length: 2 }, () => planRide({ identity, request: { ...request, options: { ...request.options, surfacePreference: "dirt-preferred" } } }, { provider, env })));
     console.info(JSON.stringify({ benchmark: "engine", plans: 2, calls, peak }));
     expect(results.every(result => result.ok)).toBe(true);
-    expect(calls).toBe(6); // Fastest, the rider's profile and strong dirt per full plan.
-    expect(peak).toBe(6); // Both waves are in flight together, under the server-wide bound of eight.
+    expect(calls).toBe(8); // Fastest, the rider's profile, strong and gentle dirt per full plan.
+    expect(peak).toBe(8); // Both waves are in flight together, under the server-wide bound of eight.
     expect(peak).toBeLessThanOrEqual(MAX_ROUTING_SEARCHES);
   });
 

@@ -11,15 +11,6 @@ export const MAX_DIRT_STRENGTH = 5;
 export const STRONG_CURVE_RULE: GraphHopperCustomModelRule = { if: "og_curve < 0.25", multiply_by: "0.6" };
 
 /**
- * A graph that carries `og_curve` is the v2 graph (RM-2): its profiles already
- * bake the default "protect the ride" penalties, so the request adds only what
- * a stronger search asks beyond strength 1.
- */
-export function graphBakesProtectRide(encodedValues: ReadonlySet<string> | undefined): boolean {
-  return encodedValues?.has("og_curve") === true;
-}
-
-/**
  * Request multipliers preserve hard zeroes. No access or speed is unlocked.
  * `encodedValues` is what the running graph lists; a rule naming a value the
  * graph does not list is never sent (unknown means the old graph).
@@ -52,10 +43,13 @@ export function riderModeRules(
     dirtPenalty("road_class == MOTORWAY || road_class == TRUNK || road_class == PRIMARY", 0.45);
     dirtPenalty("road_class == SECONDARY && max_speed >= 80", 0.7);
   }
-  const busyExponent = graphBakesProtectRide(encodedValues) ? Math.max(0, busyStrength - 1) : busyStrength;
-  if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient" && busyExponent > 0) {
+  // The busy-road penalties go with every request, on every graph. The v2
+  // graph was tuned and measured with them on top of its own profiles; leaving
+  // them out once the graph is known made a long-lived server plan different
+  // routes from the first plan it ever made (Old Buck 32.7 -> 17.9 dirt mi).
+  if (options.traffic === "protect-ride" && options.roadCharacter !== "efficient" && busyStrength > 0) {
     const penalty = (condition: string, factor: number): void => {
-      rules.push({ if: condition, multiply_by: String(Number((factor ** busyExponent).toFixed(4))) });
+      rules.push({ if: condition, multiply_by: String(Number((factor ** busyStrength).toFixed(4))) });
     };
     penalty("road_class == MOTORWAY || road_class == TRUNK", 0.65);
     penalty("road_class == PRIMARY", 0.8);

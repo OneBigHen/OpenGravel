@@ -16,15 +16,19 @@ import type { ProviderCandidate, ProviderGraphFacts, ProviderRouteRequest, Route
 export const STRONG_DIRT_FACTOR = 3;
 /** On a graph without the curve field, "strong" curvy asks busy roads at this strength instead. */
 export const STRONG_BUSY_FACTOR = 3;
-/** At most this many detours through a known good road join the wave. */
-export const MAX_WAVE_DETOURS = 2;
-/** Wave calls: fastest, the rider's profile, strong, two detours. */
+/** The "gentle" dirt strength: between the rider's own 1 and strong 3. */
+export const GENTLE_DIRT_FACTOR = 2;
+/** The "gentle" curvy line: the scenic profile, milder than twisty. */
+export const GENTLE_CURVY_PROFILE = "motorcycle_scenic";
+/** At most this many detours through a known good road join the wave (RM-5 fills the one slot left). */
+export const MAX_WAVE_DETOURS = 1;
+/** Wave calls: fastest, the rider's profile, strong, gentle, one detour. */
 export const MAX_WAVE_CALLS = 5;
 
 /** What a pick optimises: dirt metres, bend metres, or (for Efficient) time alone. */
 export type RidePickMode = GoodMilesMode | "time";
 
-export type WaveRole = "fastest" | "own" | "strong" | "detour";
+export type WaveRole = "fastest" | "own" | "strong" | "gentle" | "detour";
 
 export interface WaveMember {
   readonly role: WaveRole;
@@ -70,6 +74,8 @@ export function waveMembers(input: {
   readonly fastestProfile: string;
   readonly graph: ProviderGraphFacts | null;
   readonly anchors?: readonly Coordinate[];
+  /** The profiles the provider offers; the gentle curvy line needs scenic. */
+  readonly profiles?: readonly string[];
 }): WaveMember[] {
   const { request } = input;
   const options = request.options;
@@ -93,6 +99,15 @@ export function waveMembers(input: {
     } else if (options.traffic === "protect-ride") {
       members.push({ role: "strong", factor: STRONG_BUSY_FACTOR, request: { ...own, options: { ...own.options, riderModeFactor: STRONG_BUSY_FACTOR } } });
     }
+  }
+  // The gentle line: a milder take on the rider's wish, so a ride whose own
+  // line runs past the budget still has a middle option before the highway.
+  // An extra candidate, never a replacement: the pick still takes the most
+  // good miles that fit.
+  if (mode === "dirt" && (options.riderModeFactor ?? 1) < GENTLE_DIRT_FACTOR) {
+    members.push({ role: "gentle", factor: GENTLE_DIRT_FACTOR, request: { ...own, options: { ...own.options, riderModeFactor: GENTLE_DIRT_FACTOR } } });
+  } else if (mode === "curvy" && own.profile !== GENTLE_CURVY_PROFILE && (input.profiles === undefined || input.profiles.length === 0 || input.profiles.includes(GENTLE_CURVY_PROFILE))) {
+    members.push({ role: "gentle", factor: options.riderModeFactor ?? 1, request: { ...own, profile: GENTLE_CURVY_PROFILE } });
   }
   for (const anchor of (input.anchors ?? []).slice(0, MAX_WAVE_DETOURS)) {
     members.push({ role: "detour", factor: options.riderModeFactor ?? 1, request: { ...own, shaping: [anchor] } });
@@ -150,6 +165,11 @@ export interface RidePick {
   readonly chosen: WaveCandidate | null;
   /** True when nothing fitted the budget and the closest was taken. */
   readonly overBudget: boolean;
+  /**
+   * True when the rider gets the plain fastest line because every line with
+   * more good miles ran past the budget: the rider is told, not left guessing.
+   */
+  readonly fellBackToFastest: boolean;
   readonly referenceSeconds: number | null;
   readonly budgetSeconds: number | null;
   readonly entries: readonly RidePickEntry[];
@@ -166,18 +186,25 @@ export function pickRide(input: {
   /** Candidates that passed every hard gate. */
   readonly eligible: readonly WaveCandidate[];
   /**
-   * The fastest call's line, whether or not it passed the gates: the budget is
-   * measured from the fastest route. Absent, the quickest eligible line.
+   * The fastest call's line, whether or not it passed the gates. Absent, the
+   * quickest eligible line.
    */
   readonly reference?: ProviderCandidate;
+  /**
+   * Every line the wave returned, gated or not. The budget is measured from
+   * the quickest of these and the reference: the fastest profile weighs
+   * distance heavily, so with highways avoided another line can be quicker
+   * than it (Hawk Mountain 59.0 min "fastest", 53.0 min twisty).
+   */
+  readonly all?: readonly ProviderCandidate[];
   readonly mode: RidePickMode;
   readonly budget?: ProviderRouteRequest["options"]["rideBudget"];
   readonly protectBusy: boolean;
 }): RidePick {
   const { eligible, mode } = input;
-  if (eligible.length === 0) return { chosen: null, overBudget: false, referenceSeconds: null, budgetSeconds: null, entries: [] };
+  if (eligible.length === 0) return { chosen: null, overBudget: false, fellBackToFastest: false, referenceSeconds: null, budgetSeconds: null, entries: [] };
   const reference = input.reference ?? [...eligible].sort((a, b) => a.candidate.durationSeconds - b.candidate.durationSeconds)[0]!.candidate;
-  const referenceSeconds = reference.durationSeconds;
+  const referenceSeconds = Math.min(reference.durationSeconds, ...(input.all ?? []).map(candidate => candidate.durationSeconds), ...eligible.map(entry => entry.candidate.durationSeconds));
   const budgetSeconds = referenceSeconds * rideBudgetFactor(input.budget);
   const referenceFun = candidateGeometryFun(reference);
   const entries: RidePickEntry[] = eligible.map(entry => {
@@ -193,13 +220,22 @@ export function pickRide(input: {
   const better = (a: RidePickEntry, b: RidePickEntry): number =>
     (Math.abs(b.goodMeters - a.goodMeters) >= 1 ? b.goodMeters - a.goodMeters : 0) || a.entry.candidate.durationSeconds - b.entry.candidate.durationSeconds;
   const fitting = entries.filter(entry => entry.fits && entry.exposureOk);
+  // The fastest line was taken while a line with more good miles was left
+  // out only for running past the budget.
+  const fellBack = (chosen: WaveCandidate): boolean => mode !== "time" && chosen.member.role === "fastest" &&
+    entries.some(entry => !entry.fits && entry.exposureOk && entry.entry.member.role !== "fastest" &&
+      entry.goodMeters >= (entries.find(item => item.entry === chosen)?.goodMeters ?? 0) + 1);
   if (fitting.length > 0) {
-    return { chosen: [...fitting].sort(better)[0]!.entry, overBudget: false, referenceSeconds, budgetSeconds, entries };
+    const chosen = [...fitting].sort(better)[0]!.entry;
+    return { chosen, overBudget: false, fellBackToFastest: fellBack(chosen), referenceSeconds, budgetSeconds, entries };
   }
   const shortest = (pool: readonly RidePickEntry[]): WaveCandidate => [...pool].sort((a, b) => a.entry.candidate.durationSeconds - b.entry.candidate.durationSeconds)[0]!.entry;
   const inBudget = entries.filter(entry => entry.fits);
-  if (inBudget.length > 0) return { chosen: shortest(inBudget), overBudget: false, referenceSeconds, budgetSeconds, entries };
-  return { chosen: shortest(entries), overBudget: true, referenceSeconds, budgetSeconds, entries };
+  if (inBudget.length > 0) {
+    const chosen = shortest(inBudget);
+    return { chosen, overBudget: false, fellBackToFastest: fellBack(chosen), referenceSeconds, budgetSeconds, entries };
+  }
+  return { chosen: shortest(entries), overBudget: true, fellBackToFastest: false, referenceSeconds, budgetSeconds, entries };
 }
 
 /** Loops keep their own time window; they share the scorer and the pick rule. */

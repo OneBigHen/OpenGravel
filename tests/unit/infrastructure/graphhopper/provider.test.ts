@@ -628,7 +628,7 @@ describe("GraphHopper provider — knows the graph it routes on (RM-4)", () => {
     expect(recorded.infoCalls()).toBe(2);
   });
 
-  it("sends og_curve only once the graph lists it, and never the busy-road block a v2 profile bakes", async () => {
+  it("sends og_curve only once the graph lists it, and the same busy-road block either way", async () => {
     const recorded = graphFetcher(v2Info);
     const provider = createGraphHopperProvider({ baseUrl: "http://router.test", fetcher: recorded.fetcher, riderModesEnabled: true });
     await provider.candidates(strongCurvy, new AbortController().signal);
@@ -637,6 +637,6 @@ describe("GraphHopper provider — knows the graph it routes on (RM-4)", () => {
     await provider.graph!(new AbortController().signal);
     await provider.candidates(strongCurvy, new AbortController().signal);
     expect(JSON.stringify(recorded.routes[1])).toContain("og_curve < 0.25");
-    expect(JSON.stringify(recorded.routes[1])).not.toContain("road_class == PRIMARY");
+    expect(JSON.stringify(recorded.routes[1])).toContain("road_class == PRIMARY");
   });
 });

@@ -76,16 +76,26 @@ describe("A-to-B in one wave", () => {
     const answers = await running;
     expect(answers.every(answer => answer.candidates.length === 1)).toBe(true);
     expect(started.every(sent => sent.options.includeAlternatives === false)).toBe(true);
-    expect(started.map(sent => sent.shaping.length)).toEqual([0, 0, 0, 1, 1]);
+    expect(started.map(sent => sent.shaping.length)).toEqual([0, 0, 0, 0, 1]);
   });
 
-  it("is three calls without a detour source: fastest, the first answer's own request, strong", () => {
+  it("is four calls without a detour source: fastest, the first answer's own request, strong, gentle", () => {
     const members = waveMembers({ request, ownProfile: "motorcycle_adventure", fastestProfile: "motorcycle_fastest", graph: null });
-    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong"]);
+    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle"]);
+    // Gentle dirt sits between the rider's own strength 1 and strong 3.
+    expect(members[3]!.request).toEqual({ ...members[1]!.request, options: { ...members[1]!.request.options, riderModeFactor: 2 } });
     expect(members[0]!.request).toMatchObject({ profile: "motorcycle_fastest", options: { riderModeFactor: 0, roadCharacter: "efficient", bike: request.options.bike } });
     // Byte for byte the first answer's request, so a shared provider reuses it.
     expect(members[1]!.request).toEqual({ ...request, options: { ...request.options, includeAlternatives: false } });
     expect(members[2]!.request.options.riderModeFactor).toBe(3);
+  });
+
+  it("adds the scenic line as curvy's gentle candidate when the router has scenic", () => {
+    const members = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles: ["motorcycle_fastest", "motorcycle_twisty", "motorcycle_scenic"] });
+    expect(members.map(m => m.role)).toEqual(["fastest", "own", "strong", "gentle"]);
+    expect(members[3]!.request).toEqual({ ...members[1]!.request, profile: "motorcycle_scenic" });
+    const noScenic = waveMembers({ request: curvy, ownProfile: "motorcycle_twisty", fastestProfile: "motorcycle_fastest", graph: null, profiles: ["motorcycle_fastest", "motorcycle_twisty"] });
+    expect(noScenic.map(m => m.role)).not.toContain("gentle");
   });
 
   it("asks curvy 'strong' through og_curve only when the graph lists it", () => {
@@ -103,12 +113,9 @@ describe("A-to-B in one wave", () => {
     expect(text(new Set(["og_curve"]))).toContain(STRONG_CURVE_RULE.if);
   });
 
-  it("does not repeat the busy-road penalties a v2 profile already bakes", () => {
-    const busy = (rules: readonly { if?: string }[]) => rules.filter(rule => rule.if === "road_class == PRIMARY");
-    expect(busy(riderModeRules(curvy.options, true, false, "motorcycle_twisty"))).toHaveLength(1);
-    expect(busy(riderModeRules(curvy.options, true, false, "motorcycle_twisty", new Set(["og_curve"])))).toHaveLength(0);
-    // A stronger search still asks for what lies beyond strength 1.
-    expect(busy(riderModeRules({ ...curvy.options, riderModeFactor: 3 }, true, false, "motorcycle_twisty", new Set(["og_curve"])))[0]).toMatchObject({ multiply_by: String(Number((0.8 ** 2).toFixed(4))) });
+  it("sends the same busy-road penalties whether or not the graph is known, so a long-lived server plans like its first plan", () => {
+    expect(riderModeRules(curvy.options, true, false, "motorcycle_twisty", new Set(["og_curve"]))).toEqual(riderModeRules(curvy.options, true, false, "motorcycle_twisty"));
+    expect(riderModeRules(request.options, true, false, "motorcycle_adventure", new Set(["og_curve"]))).toEqual(riderModeRules(request.options, true, false, "motorcycle_adventure"));
   });
 
   it("keeps one copy of a line two calls both found", () => {
@@ -158,6 +165,27 @@ describe("pick once", () => {
     expect(pickRide({ eligible: [a, b], mode: "dirt", budget: "direct", protectBusy: true }).overBudget).toBe(false);
     const none = pickRide({ eligible: [], mode: "dirt", protectBusy: true });
     expect(none.chosen).toBeNull();
+  });
+
+  it("measures the budget from the quickest line any call found, not only the fastest call's", () => {
+    // With highways avoided the fastest profile (heavy on distance) can be slower than a twisty line.
+    const slowFastest = entry(route(59, 0), "fastest");
+    const quickOwn = entry(route(53, 0.05));
+    const long = entry(route(76, 0.4), "strong");
+    const pick = pickRide({ eligible: [slowFastest, quickOwn, long], reference: slowFastest.candidate, all: [slowFastest.candidate, quickOwn.candidate, long.candidate], mode: "dirt", protectBusy: true });
+    expect(pick.referenceSeconds).toBe(53 * 60);
+    // 76 min fits 1.35 x 59 but not 1.35 x 53.
+    expect(pick.chosen).toBe(quickOwn);
+  });
+
+  it("flags the plain fastest line when every line with more good miles runs past the budget", () => {
+    const over = entry(route(90, 0.5), "own");
+    const pick = pickRide({ eligible: [fastest, over], reference: fastest.candidate, mode: "dirt", protectBusy: true });
+    expect(pick.chosen).toBe(fastest);
+    expect(pick.fellBackToFastest).toBe(true);
+    expect(pick.overBudget).toBe(false);
+    // A rider line that fits is no fallback.
+    expect(pickRide({ eligible: [fastest, over, entry(route(70, 0.2), "gentle")], reference: fastest.candidate, mode: "dirt", protectBusy: true }).fellBackToFastest).toBe(false);
   });
 
   it("Efficient takes the quickest line", () => {

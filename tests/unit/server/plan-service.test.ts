@@ -873,19 +873,20 @@ describe("planRide — A-to-B in one wave (RM-4)", () => {
         await new Promise(resolve => setTimeout(resolve, 1));
         active -= 1;
         const factor = request.options.riderModeFactor;
-        // Fastest 100 min; own 120 min with some dirt; strong 140 min (over 1.35x) with the most dirt.
-        return { candidates: [factor === 0 ? line(-75.0, 6_000, 0) : factor === undefined ? line(-74.9, 7_200, 20_000) : line(-75.1, 8_400, 60_000)] };
+        // Fastest 100 min; own 120 min with some dirt; gentle (strength 2) 130 min with a little more;
+        // strong 140 min (over 1.35x) with the most dirt.
+        return { candidates: [factor === 0 ? line(-75.0, 6_000, 0) : factor === undefined ? line(-74.9, 7_200, 20_000) : factor === 2 ? line(-74.95, 7_800, 21_000) : line(-75.1, 8_400, 60_000)] };
       },
     };
     const result = await planRide(input({ request: dirtRequest }), { provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_TRAFFIC_LIVE_AVOID: "off" } });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(requests.length).toBeLessThanOrEqual(5);
-    expect(requests).toHaveLength(3);
-    expect(peak).toBe(3);
+    expect(requests).toHaveLength(4);
+    expect(peak).toBe(4);
     expect(requests.every(request => request.options.includeAlternatives === false)).toBe(true);
     const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
-    expect(best?.durationSeconds).toBe(7_200);
+    expect(best?.durationSeconds).toBe(7_800);
     expect(result.bundle.selectedRouteId).toBe(best?.id);
     expect(best?.warnings.some(warning => warning.code === "ride-over-budget")).toBe(false);
   });
@@ -904,5 +905,20 @@ describe("planRide — A-to-B in one wave (RM-4)", () => {
     const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
     expect(best?.durationSeconds).toBe(8_400);
     expect(best?.warnings.some(warning => warning.code === "ride-over-budget")).toBe(true);
+  });
+
+  it("tells the rider when every dirt line runs past the budget and the plain fastest is what fits", async () => {
+    const provider: RouteCandidateProvider = {
+      id: "wave", capabilities: () => ({ profiles: ["motorcycle_fastest", "motorcycle_adventure"], supportsAlternatives: true, supportsAvoidPolygons: true }),
+      candidates: async request => ({ candidates: [request.options.riderModeFactor === 0 ? line(-75.0, 6_000, 0)
+        : request.options.riderModeFactor === undefined ? line(-74.9, 8_400, 20_000) : line(-75.1, 9_000, 60_000)] }),
+    };
+    const result = await planRide(input({ request: dirtRequest }), { provider, roadAuthority: null, env: { OGV_RIDER_MODES: "on", OGV_TRAFFIC_LIVE_AVOID: "off" } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const best = result.bundle.candidates.find(entry => entry.id === result.bundle.roles["best-ride"]);
+    expect(best?.durationSeconds).toBe(6_000);
+    const note = best?.warnings.find(warning => warning.code === "ride-over-budget");
+    expect(note?.message).toContain("quickest way");
   });
 });

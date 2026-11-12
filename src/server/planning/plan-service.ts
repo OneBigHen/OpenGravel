@@ -750,7 +750,7 @@ async function planRideAttempt(
         // An optional source never blocks the ride: the wave goes without detours.
       }
     }
-    const members = waveMembers({ request, ownProfile, fastestProfile, graph, anchors });
+    const members = waveMembers({ request, ownProfile, fastestProfile, graph, anchors, profiles: capabilities.profiles });
     const answers = await runWave(members, provider, signal);
     const all = waveCandidates(answers);
     wave = { all, calls: members.length };
@@ -804,6 +804,7 @@ async function planRideAttempt(
   let riderFactor: number | undefined;
   let riderTrials: readonly WaveTrial[] = [];
   let overBudgetLine: readonly Coordinate[] | null = null;
+  let fallbackLine: readonly Coordinate[] | null = null;
 
 
   // Lane A (ROUTE-INTELLIGENCE-PROVIDER-MESH §6): closures and legal access,
@@ -986,6 +987,7 @@ async function planRideAttempt(
     const pick = pickRide({
       eligible: wave.all.filter(entry => kept.has(entry.candidate)),
       reference: wave.all.find(entry => entry.member.role === "fastest")?.candidate,
+      all: wave.all.map(entry => entry.candidate),
       mode: pickMode,
       budget: requestOptions.rideBudget,
       protectBusy: requestOptions.traffic === "protect-ride",
@@ -1010,6 +1012,7 @@ async function planRideAttempt(
         pipeline = selected; riderKneeSelected = true;
         riderFactor = chosen.member.factor;
         if (pick.overBudget) overBudgetLine = chosen.candidate.geometry;
+        if (pick.fellBackToFastest) fallbackLine = chosen.candidate.geometry;
       }
     }
   } else if (fullPlan && riderEnabled && loopDiscovery !== undefined && parsed.value.request.sketch === undefined && pipeline.candidates.length > 0) {
@@ -1158,6 +1161,12 @@ async function planRideAttempt(
       warnings: [...base.warnings, {
         id: "ride:over-budget", code: "ride-over-budget", severity: "warning" as const,
         message: "No route with good roads fits inside the detour you allowed; this is the closest one.",
+      }],
+    } : fallbackLine !== null && sameLine(candidate.geometry, fallbackLine) ? {
+      ...base,
+      warnings: [...base.warnings, {
+        id: "ride:over-budget", code: "ride-over-budget", severity: "warning" as const,
+        message: "The roads you asked for run past the detour you allowed, so this is the quickest way.",
       }],
     } : base;
     return approachNotice === null ? wire : {
