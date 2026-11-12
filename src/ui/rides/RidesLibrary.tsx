@@ -1,5 +1,7 @@
 "use client";
 
+import type { RidePackService } from "@/application/offline/ride-pack";
+import { KeepForNoSignal } from "@/ui/offline/KeepForNoSignal";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
@@ -168,6 +170,8 @@ export interface RidesLibraryProps {
   readonly roadProgressReader?: RoadProgressReader;
   /** Where a ride's own line is handed to the planner from (R3-1). */
   readonly geometryStore?: GeometryStore;
+  /** Keeps a saved ride for no signal (R3-7); absent, no switch is shown. */
+  readonly ridePacks?: RidePackService;
 }
 
 interface RoadProgressCache {
@@ -175,7 +179,7 @@ interface RoadProgressCache {
   readonly entries: Readonly<Record<string, RecordedRoadProgressState>>;
 }
 
-export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore }: RidesLibraryProps) {
+export function RidesLibrary({ service: library, onOpen, importService, mapboxToken, roadProgressReader, geometryStore, ridePacks }: RidesLibraryProps) {
   // Saved means exact (R3-1): a ride opens on its own kept line, not a new plan.
   const openSavedRide = useOpenSavedRide({ libraryService: library, geometryStore });
   const night = useResolvedTheme() === "night";
@@ -722,10 +726,9 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                   <div className="og-library__details og-rides__details">
                     <p>{sourceText(ride)}</p>
                     <p>Saved {formatRideDate(ride.savedAt)}</p>
-                    {ride.offlinePack === undefined ? null : (
-                      <p data-testid={`offline-pack-${ride.rideId}`}>
-                        {ride.offlinePack === "present" ? "Saved for offline" : "Not saved for offline"}
-                      </p>
+                    {/* R3-7: "offline" is said only by the switch, and only when every tile is kept. */}
+                    {ridePacks === undefined || ride.recordedTrack !== undefined || ride.exportCapabilities?.plannedRoute !== true ? null : (
+                      <KeepForNoSignal rideId={ride.rideId} service={ridePacks} />
                     )}
                     {ride.recordedTrack === undefined || roadProgressReader === undefined || roadProgress[ride.rideId] === undefined
                       ? null
