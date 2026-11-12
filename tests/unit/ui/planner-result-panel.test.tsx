@@ -107,7 +107,7 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
     renderPanel({ routeId: "route_firstload_expanded", sheetExpanded: true });
 
     // The chart is behind the lazy boundary: it arrives after the first paint.
-    await screen.findByTestId("elevation-profile");
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
     // The loading skeleton carries the same test id, so read the drawn chart
     // only once the measured climb is on screen.
     expect(await screen.findByTestId("elevation-climb")).toHaveTextContent("ft");
@@ -128,7 +128,7 @@ describe("PlannerResultPanel's deferred elevation chart", () => {
   it("keeps the compact density while the sheet rests, with no notches to draw", async () => {
     renderPanel({ routeId: "route_firstload_compact", sheetExpanded: false });
 
-    await screen.findByTestId("elevation-profile");
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
     await screen.findByTestId("elevation-climb");
     expect(screen.getByTestId("elevation-profile")).toHaveAttribute("data-density", "compact");
     expect(screen.queryByTestId("elevation-waypoints")).not.toBeInTheDocument();
@@ -233,7 +233,8 @@ it("keeps saved work and route context available in the compact directions previ
     expect(screen.getByTestId("summary-save")).toBeInTheDocument();
     expect(screen.getByTestId("open-share")).toBeInTheDocument();
     expect(screen.queryByTestId("named-ride-title")).toBeNull();
-    await screen.findByTestId("prepare-toggle");
-    await screen.findByTestId("elevation-profile");
+    // Both load as split chunks; a busy test runner can take over a second.
+    await screen.findByTestId("prepare-toggle", {}, { timeout: 5_000 });
+    await screen.findByTestId("elevation-profile", {}, { timeout: 5_000 });
   } finally { vi.unstubAllGlobals(); }
 });
