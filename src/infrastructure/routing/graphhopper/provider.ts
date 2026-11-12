@@ -130,7 +130,6 @@ export interface GraphHopperProviderOptions {
   /** Origin of the routing engine, e.g. `http://127.0.0.1:8989`. */
   readonly baseUrl: string;
   readonly riderModesEnabled?: boolean;
-  readonly rideFormulaEnabled?: boolean;
   /**
    * Re-ask a loop with another seed when the engine's answer rides down a
    * dead-end road and back. On by default (never on the hosted plan, which
@@ -301,7 +300,6 @@ export function createGraphHopperProvider(
             ? details
             : details.filter((detail) => !HOSTED_UNSUPPORTED_DETAILS.has(detail)),
           riderModesEnabled: options.riderModesEnabled ?? process.env["OGV_RIDER_MODES"] !== "off",
-          rideFormulaEnabled: options.rideFormulaEnabled ?? process.env["OGV_RIDE_FORMULA"] === "on",
           omitSmoothness,
           spans: spanConstraints(request),
           ...(request.discovery === undefined

@@ -34,7 +34,7 @@ import type { Measurement, Ride, RiderLineSnap, Row, RouterUse } from './types';
 
 const SWITCHES = {
   OGV_RIDER_MODES: 'on', OGV_DIRT_LOOP_GENERATORS: 'on', OGV_ATLAS_GENERATORS: 'off',
-  OGV_RIDE_FORMULA: 'shadow', OGV_FUN_GENERATORS: 'shadow', OGV_ROAD_AUTHORITY: 'on',
+  OGV_FUN_GENERATORS: 'shadow', OGV_ROAD_AUTHORITY: 'on',
   OGV_TRAFFIC_LIVE_AVOID: 'off', OGV_JEV_FUN_JUDGE: 'off',
 };
 function requestFor(ride: Ride): ProviderRouteRequest {
@@ -114,9 +114,9 @@ async function main(): Promise<void> {
   // Counting lives here, not in src/, so the planner is measured exactly as it ships.
   const meter = createRouterMeter(fetch, (call, body) => writeFile(`scorecard-out/router-error-${call}.json`, Buffer.from(body)));
   const fetcher = meter.fetcher;
-  const production = createGraphHopperProvider({ baseUrl, riderModesEnabled: true, rideFormulaEnabled: false, fetcher });
+  const production = createGraphHopperProvider({ baseUrl, riderModesEnabled: true, fetcher });
   // The baseline is the engine's plain fastest loop; only OpenGravel re-seeds loops that retrace a dead-end road.
-  const fastest = createGraphHopperProvider({ baseUrl, riderModesEnabled: false, rideFormulaEnabled: false, reseedDeadEndLoops: false, fetcher });
+  const fastest = createGraphHopperProvider({ baseUrl, riderModesEnabled: false, reseedDeadEndLoops: false, fetcher });
   const riderLineCache = await readRiderLineCache(args.includes('--refresh-rider-lines'));
 
   if (freeze) {
