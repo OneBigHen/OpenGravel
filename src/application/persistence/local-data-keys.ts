@@ -10,6 +10,13 @@ export const DRAFT_DIRTY_STORAGE_KEY = "opengravel-vnext-draft-dirty";
 /** Day / Night / Auto display choice (`appearance.ts`). */
 export const APPEARANCE_STORAGE_KEY = "og-appearance";
 
+/**
+ * Where Auto last saw the rider, rounded to about 10 km, with the theme the sun
+ * gave there and when that changes (`appearance.ts`). Lets the pre-paint script
+ * open in the sun's theme without a position.
+ */
+export const APPEARANCE_SUN_STORAGE_KEY = "og-appearance-sun";
+
 /** Ride-screen choice in the iPhone app (`nav-screen.ts`). */
 export const NAV_SCREEN_STORAGE_KEY = "og-nav-screen";
 
