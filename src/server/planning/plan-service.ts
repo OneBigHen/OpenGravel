@@ -39,9 +39,11 @@ import { riderTrafficSampler } from "./rider-traffic";
 import { requestRoadAssessments } from "./road-assessments";
 import { memoizedKnownRoadEvidence } from "./known-road-evidence";
 import { boundedRouteProvider } from "@/infrastructure/routing/concurrency";
-import type {
-  RoadAuthorityCoordinator,
-  RoadAuthorityVerdict,
+import {
+  ROAD_AUTHORITY_DEADLINE_MS,
+  ROAD_AUTHORITY_SETTLE_MS,
+  type RoadAuthorityCoordinator,
+  type RoadAuthorityVerdict,
 } from "@/application/route-intelligence/coordinator";
 import { roadAuthorityFromEnv } from "./road-authority";
 import {
@@ -1021,6 +1023,9 @@ async function planRideAttempt(
     }
   }
   let riderKneeSelected = false;
+  // The rider-mode route the current pipeline leads with, so a late closure
+  // answer can rebuild the same choice (see "settle" below).
+  let preferredRoute: { readonly candidate: ProviderCandidate; readonly others: readonly ProviderCandidate[] } | null = null;
   // A rider-mode route leads the plan as Best Ride, but the rider keeps the
   // other choices (Fastest, alternatives) to compare it against.
   const preferBestRide = (
@@ -1096,6 +1101,7 @@ async function planRideAttempt(
     if (result.candidate !== null) {
       const selected = adoptRiderRoute(result.candidate, candidates, candidate => roads?.evaluate(candidate.geometry) ?? null);
       if (selected !== null) {
+        preferredRoute = { candidate: result.candidate, others: candidates };
         candidates = [result.candidate, ...candidates]; pipeline = selected; riderKneeSelected = true;
         const factor = result.candidate.providerMetadata?.["riderModeFactor"];
         riderFactor = typeof factor === "number" ? factor : undefined;
@@ -1182,6 +1188,7 @@ async function planRideAttempt(
           candidates = [...candidates, ...result.pool.map((entry) => entry.candidate)];
           roads = await assessRoads(candidates);
           pipeline = rankPool(candidates);
+          preferredRoute = null;
         }
       } catch {
         // A cancelled or failed family leaves the production answer untouched.
@@ -1197,7 +1204,23 @@ async function planRideAttempt(
       const ownRoads = await assessRoads([refined]);
       const others = pipeline.candidates.filter((_, at) => at !== index).map((kept) => candidates.find((candidate) => sameLine(candidate.geometry, kept.geometry))).filter((candidate): candidate is ProviderCandidate => candidate !== undefined);
       const refinedPipeline = adoptRiderRoute(refined, others, candidate => candidate === refined ? ownRoads?.evaluate(candidate.geometry) ?? null : roadVerdict(candidate));
-      if (refinedPipeline !== null) pipeline = refinedPipeline;
+      if (refinedPipeline !== null) { pipeline = refinedPipeline; preferredRoute = { candidate: refined, others }; }
+    }
+  }
+
+  // Settle: a route is not ready while its own closure/access check is still
+  // loading. When a shown route crosses an area whose answer missed the
+  // plan's deadline (an uncached corridor), wait for that answer once, inside
+  // a bound, and rebuild the same choice with it so a closed or illegal road
+  // is dropped. Routes whose check already answered (cached areas) never
+  // wait. A check that still does not answer stays "Closure check did not
+  // answer" on the route; it never reads as clear.
+  if (pipeline.candidates.length > 0 && assessRoads.pending(pipeline.candidates)) {
+    const settled = await assessRoads.settle(pipeline.candidates, fullPlan ? ROAD_AUTHORITY_SETTLE_MS : ROAD_AUTHORITY_DEADLINE_MS);
+    if (signal.aborted) throw signal.reason;
+    if (settled !== null) {
+      roads = settled;
+      pipeline = (preferredRoute === null ? null : adoptRiderRoute(preferredRoute.candidate, preferredRoute.others)) ?? rankPool(candidates);
     }
   }
 

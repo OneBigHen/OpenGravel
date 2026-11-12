@@ -156,6 +156,11 @@ export interface RoadAuthoritySnapshot {
   readonly fetchedAt: string | null;
   /** Why it is stale or unavailable, for diagnostics and honest copy. */
   readonly reason: string | null;
+  /**
+   * True when the source was still loading at the caller's deadline (it may
+   * answer moments later), as opposed to a source that failed or is down.
+   */
+  readonly timedOut?: boolean;
   readonly records: readonly RoadAuthorityRecord[];
   /**
    * The part of the asked corridor this answer actually covers. An MVUM ingest

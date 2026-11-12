@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ProviderCandidate, ProviderRouteRequest, RouteCandidateProvider } from "@/application/planner/route-provider";
 import type { KnownRoadsPort } from "@/application/roads/known-roads";
 import { planRide } from "@/server/planning/plan-service";
-import { createRoadAuthorityCoordinator, ROAD_AUTHORITY_DEADLINE_MS } from "@/application/route-intelligence/coordinator";
+import { createRoadAuthorityCoordinator, ROAD_AUTHORITY_DEADLINE_MS, ROAD_AUTHORITY_SETTLE_MS } from "@/application/route-intelligence/coordinator";
 import type { BoundingBox } from "@/application/route-intelligence/types";
 
 const origin = { lon: -75.16, lat: 39.95 };
@@ -108,7 +108,7 @@ describe("planning latency regressions", () => {
     await expect(pending).resolves.toMatchObject({ ok: false, error: { code: "cancelled", recoverable: false } });
   });
 
-  it("spends one optional authority budget even when a coordinator never settles", async () => {
+  it("spends one optional authority budget plus one bounded settle when a coordinator never answers", async () => {
     vi.useFakeTimers();
     try {
       const roadAuthority = authority(() => new Promise<never>(() => undefined));
@@ -116,12 +116,15 @@ describe("planning latency regressions", () => {
       let result: Awaited<ReturnType<typeof planRide>> | undefined;
       void planRide({ identity, request: { ...request, options: { ...request.options, surfacePreference: "dirt-preferred" } } }, { provider: providerWith(() => [candidate()]), roadAuthority, env }).then(value => { result = value; });
       await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_DEADLINE_MS + 1);
+      // The route crosses an area whose check is still loading: not ready yet.
+      expect(result).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(ROAD_AUTHORITY_SETTLE_MS);
       expect(result?.ok).toBe(true);
       if (result?.ok) {
         expect(result.bundle.candidates[0]?.evidence["closures"]?.status).toBe("unknown");
         expect(result.bundle.candidates[0]?.warnings.map(warning => warning.code)).toContain("road-authority-unavailable");
       }
-      expect(assess).toHaveBeenCalledTimes(1);
+      expect(assess).toHaveBeenCalledTimes(2);
     } finally { vi.useRealTimers(); }
   });
 });

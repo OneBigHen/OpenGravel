@@ -16,10 +16,13 @@ export async function frozenAuthority(at: string, refresh: boolean, env: Record<
   const live = createRoadAuthorityCoordinator({ sources: roadAuthoritySourcesFromEnv(env), now: () => at });
   return {
     sources: live.sources,
-    async assess(box, signal) {
+    async assess(box, signal, options) {
       const key = createHash('sha256').update(JSON.stringify({ at, box })).digest('hex');
       if (!cache[key]) {
-        const answer = await live.assess(box, signal);
+        const answer = await live.assess(box, signal, options);
+        // A source still loading at the deadline is a race, not evidence: never
+        // freeze it, so the planner's own bounded re-check can see the answer.
+        if (answer.sources.some(outcome => outcome.snapshot.timedOut === true)) return answer;
         cache[key] = [...answer.sources];
         writes = writes.then(async () => {
           await writeFile(`${file}.tmp`, JSON.stringify(cache));
