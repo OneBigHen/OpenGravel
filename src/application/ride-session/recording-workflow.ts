@@ -164,10 +164,14 @@ export function createRideRecordingWorkflow(
     async start(rideId, rideRevision, at, suggestions = "off"): Promise<RecordingStartResult> {
       const pointed = options.pointer.read();
       const current = options.session.snapshot();
+      // A recording attaches to the ride already open: guided, Free Ride or
+      // re-anchored onto a free track. Recording is on from Start for every
+      // ride, so the usual case is a session that has been journaled a moment
+      // ago by the planner and has no trace of its own yet.
       const attaching = pointed.status === "found" && current !== null &&
         pointed.pointer.sessionId === current.sessionId && current.plan.rideId === rideId &&
         current.plan.rideRevision === rideRevision && current.recordingId === null &&
-        (current.activity === "free" || (current.activity === "paused" && current.resumeActivity === "free"));
+        current.activity !== "completed";
       if ((pointed.status !== "absent" && !attaching) ||
         (pointed.status === "found" && pointed.pointer.pendingRecordingDiscardId !== undefined)) {
         return { outcome: "failed", reason: "write-failed" };

@@ -91,6 +91,7 @@ import {
   type ShownOpportunity,
 } from "@/application/free-ride/opportunity";
 import { formatDistance } from "@/application/planner/measurements";
+import { rideCardFromTelemetry, type RideCard } from "@/application/ride-metrics/ride-card";
 import type {
   RideFocusEnvironmentPort,
   RideFocusEnvironmentSnapshot,
@@ -244,6 +245,12 @@ export interface RideFocusStoreState {
   readonly recordingCleanupPending: boolean;
   readonly recordingToggleBusy: boolean;
   readonly savedSummaryRideId: RideId | null;
+  /**
+   * The finished ride's card (R3-2): its line, date and four numbers, from the
+   * same telemetry the strip read. `null` while the ride is open, and for a
+   * ride whose numbers were never recorded, so nothing is invented.
+   */
+  readonly rideCard: RideCard | null;
   /**
    * The heading-up follow camera (DV-10), re-issued with a new token as the
    * rider moves; `null` while nothing follows (a pan, a route fit).
@@ -853,6 +860,14 @@ export function createRideFocusStore(
 
     /** The last on-route distance and time left of the current route. */
     let heldRoute: { readonly routeId: unknown; readonly telemetry: RideFocusTelemetryInput } | null = null;
+    /**
+     * The plan's surface runs, kept past the pointer's clear so the finished
+     * ride's card can still say which miles were dirt. The session id is part of
+     * the entry: another ride never inherits them.
+     */
+    let cardSurfaceRuns: { readonly sessionId: string; readonly runs: readonly SurfaceRunSpan[] } | null = null;
+    /** The finished ride's card, built once per finished line, not once a second. */
+    let cardCache: { readonly key: string; readonly card: RideCard } | null = null;
 
     function refresh(): void {
       if (!running) return;
@@ -872,6 +887,7 @@ export function createRideFocusStore(
         state !== null && pointed.status === "found" && pointed.pointer.sessionId === state.sessionId
           ? pointed.pointer.surfaceRuns ?? NO_SURFACE_RUNS
           : NO_SURFACE_RUNS;
+      if (state !== null && surfaceRuns.length > 0) cardSurfaceRuns = { sessionId: state.sessionId, runs: surfaceRuns };
       const routeTelemetry =
         navigation === null
           ? null
@@ -906,6 +922,33 @@ export function createRideFocusStore(
             etaIso: null,
           },
         };
+      }
+      let rideCard: RideCard | null = null;
+      if (
+        state !== null &&
+        navigation?.activity === "completed" &&
+        navigation.endReason === "completed" &&
+        recordingSnapshot !== null
+      ) {
+        const line = current.recordedLine.length >= 2 ? current.recordedLine : current.routeLine;
+        const key = `${state.sessionId}:${line.length}:${recordingSnapshot.status}:${current.riderSettings.units}`;
+        if (cardCache?.key !== key) {
+          cardCache = {
+            key,
+            card: rideCardFromTelemetry({
+              telemetry: recordingSnapshot.telemetry,
+              line,
+              surfaceRuns:
+                cardSurfaceRuns !== null && cardSurfaceRuns.sessionId === state.sessionId
+                  ? cardSurfaceRuns.runs
+                  : null,
+              units: current.riderSettings.units,
+              startedAt: navigation.startedAt,
+              endedAt: navigation.endedAt,
+            }),
+          };
+        }
+        rideCard = cardCache.card;
       }
       const viewModel =
         navigation === null
@@ -943,6 +986,7 @@ export function createRideFocusStore(
           : {}),
         environment: snapshot,
         viewModel,
+        rideCard,
         surfaceRuns,
       });
       followRider(viewModel);
@@ -1773,6 +1817,11 @@ export function createRideFocusStore(
       switch (report.status) {
         case "restored": {
           let recordingMessage: string | null = null;
+          // Recording is on for every ride now, so a guided ride comes back with
+          // its trace too. The line still leads with what happened to the ride
+          // ("Ride restored"), because that is the thing the rider asked about.
+          const restoredActivity = report.state.activity === "paused" ? report.state.resumeActivity : report.state.activity;
+          const guidedRestore = restoredActivity === "guided" || restoredActivity === "track";
           const pendingDiscardId = read.pointer.pendingRecordingDiscardId;
           const recoveryRecordingId = pendingDiscardId ?? report.state.recordingId;
           if (recoveryRecordingId !== null && recording !== undefined) {
@@ -1799,7 +1848,9 @@ export function createRideFocusStore(
               recoveredRecording.report.status !== "corrupt" &&
               recoveredRecording.report.status !== "partial"
             ) {
-              recordingMessage = `Recovered recording, ${formatDistance(recoveredRecording.report.summary.distanceMeters)}. It is paused — resume when you're ready.`;
+              recordingMessage = guidedRestore
+                ? `Ride restored. Recording kept, ${formatDistance(recoveredRecording.report.summary.distanceMeters)}. It is paused — resume when you're ready.`
+                : `Recovered recording, ${formatDistance(recoveredRecording.report.summary.distanceMeters)}. It is paused — resume when you're ready.`;
             } else if (
               recoveredRecording.status === "recording" &&
               recoveredRecording.report.status === "partial"
@@ -1808,7 +1859,7 @@ export function createRideFocusStore(
               const lostPointText = dropped === null || dropped === undefined
                 ? "The last GPS batch is incomplete."
                 : `The last GPS batch is missing ${dropped} ${dropped === 1 ? "point" : "points"}.`;
-              recordingMessage = `Recovered recording, ${formatDistance(recoveredRecording.report.summary.distanceMeters)}. ${lostPointText} It is paused and cannot be saved as a complete ride; discard is available.`;
+              recordingMessage = `${guidedRestore ? "Ride restored. Recording kept" : "Recovered recording"}, ${formatDistance(recoveredRecording.report.summary.distanceMeters)}. ${lostPointText} It is paused and cannot be saved as a complete ride; discard is available.`;
             } else if (
               recoveredRecording.status === "recording" &&
               recoveredRecording.report.status === "corrupt"
@@ -1905,6 +1956,7 @@ export function createRideFocusStore(
       recordingCleanupPending: false,
       recordingToggleBusy: false,
       savedSummaryRideId: null,
+      rideCard: null,
       rideCamera: null,
       rideBearing: null,
       zoomHold: null,
@@ -2678,7 +2730,10 @@ export function createRideFocusStore(
             set({ lastError: null, statusMessage: finished.message });
           } else {
             emitTelemetry("ride_completed");
-            set({ lastError: null, statusMessage: `Saved ${finished.summary.distanceMeters} m to My rides.` });
+            // The ride card is the message now (R3-2): the numbers, the line
+            // and the way to My rides. No second sentence, and no metres in a
+            // miles app.
+            set({ lastError: null, statusMessage: null });
           }
           await syncNavigationEngine();
           refresh();

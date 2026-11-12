@@ -58,6 +58,7 @@ import {
 import type { GuidedReroutePlanner, GuidedRerouteResult } from "@/application/ride-session/guided-reroute";
 import type { SpotifyPlayerPort, SpotifyPlayerSnapshot } from "@/application/ride-session/ports/spotify-player";
 import { buildRideFocusViewModel } from "@/application/ride-session/ride-focus-view-model";
+import { rideCardFromTelemetry } from "@/application/ride-metrics/ride-card";
 import type { RideSafety, RideSafetySnapshot } from "@/application/safety/ride-safety";
 import {
   createRideSessionController,
@@ -929,7 +930,9 @@ function recordingViewModel(
 describe("recording from the map screen", () => {
   it("names the recording on one line above the readouts, and speaks the elapsed time", async () => {
     const { store } = await harness({ position: "fresh" });
-    const { navigation, viewModel } = recordingViewModel(store);
+    // Record mode: a Free Ride whose mode is recording, where the strip says so
+    // (a guided ride records too now, and its Menu row carries the state).
+    const { navigation, viewModel } = recordingViewModel(store, { activity: "free" });
     act(() => store.setState({ navigation, viewModel }));
 
     // The screen itself carries the state, so the strip's size follows it.
@@ -979,9 +982,11 @@ describe("recording from the map screen", () => {
     act(() => store.setState({ navigation, viewModel }));
 
     expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Recorded ride saved");
+    // The strip names the surface, not the ride's outcome: "Ride finished" is
+    // said once, by the card (R3-2).
     const strip = screen.getByTestId("ride-strip");
     expect(strip).toHaveClass("og-ride__strip-summary");
-    expect(strip).toHaveTextContent("Recorded ride saved");
+    expect(strip).toHaveTextContent("Ride summary");
     // The recording is over: the state line goes with the readouts.
     expect(screen.queryByTestId("ride-recording-state")).toBeNull();
   });
@@ -1012,7 +1017,7 @@ describe("the post-ride summary (08 §13)", () => {
     );
   }
 
-  it("shows the ride's shape above its numbers, and one obvious next action", async () => {
+  it("keeps the route's shape and the ways on for a ride with no recorded numbers", async () => {
     const { store } = await harness({ position: "fresh" });
     const { navigation, viewModel } = finishedRecording(store, 0.5);
     act(() => store.setState({ navigation, viewModel }));
@@ -1027,23 +1032,10 @@ describe("the post-ride summary (08 §13)", () => {
     // surface, so it is not invented for the sentence.
     expect(sketch).toHaveAccessibleName("Route sketch: 8.0 mi ridden, 50% along the route.");
 
-    // The sketch is above the stats, and the stats keep their own grid.
-    const summary = screen.getByTestId("ride-summary");
-    expect(sketch.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Four headline numbers, in the order a rider says them: distance, time,
-    // top speed, climb. They are the card; nothing else competes with them.
-    expect(summary.querySelectorAll(".og-ride__summary-stat")).toHaveLength(4);
-    expect(
-      Array.from(summary.querySelectorAll(".og-ride__summary dt")).map((label) => label.textContent),
-    ).toEqual(["Distance", "Moving time", "Top speed", "Climb"]);
-    expect(screen.getByTestId("ride-summary-max")).toHaveTextContent("50");
-    expect(screen.getByTestId("ride-summary-climb")).toHaveTextContent("984");
-    // 432 s of standing still, and the average, are one quiet line under them —
-    // both still from the summary's own clocks, never invented.
-    const meta = screen.getByTestId("ride-summary-meta");
-    expect(meta).toHaveTextContent("Avg speed 20 mph");
-    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("Stopped");
-    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("7");
+    // This is the fallback card: a ride whose numbers were never recorded
+    // (R3-2 puts the numbers on the ride card itself), so it claims none.
+    expect(screen.queryByTestId("ride-summary")).toBeNull();
+    expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Recorded ride saved");
 
     // My rides leads, and the way back to the planner is the surface's own link.
     const rides = screen.getByTestId("ride-summary-rides");
@@ -1073,7 +1065,7 @@ describe("the post-ride summary (08 §13)", () => {
     act(() => store.setState({ navigation, viewModel, routeLine: [], routeLineAvailable: false }));
 
     expect(screen.queryByTestId("ride-route-sketch")).not.toBeInTheDocument();
-    expect(screen.getByTestId("ride-summary")).toBeInTheDocument();
+    expect(screen.getByTestId("ride-terminal")).toBeInTheDocument();
     expect(screen.queryByTestId("ride-line-unavailable")).not.toBeInTheDocument();
   });
 
@@ -1149,6 +1141,134 @@ describe("the post-ride summary (08 §13)", () => {
     );
     // The sketch appears with the card and never animates (12 §15).
     expect(css).not.toMatch(/\.og-ride__sketch[^{]*\{[^}]*(animation|transition)/);
+  });
+});
+
+describe("the ride card (R3-2)", () => {
+  const CARD_TELEMETRY: RecordingTelemetry = {
+    ...EMPTY_RECORDING_TELEMETRY,
+    acceptedDistanceMeters: 12_874,
+    movingMs: 24 * 60_000,
+    elevation: { currentMeters: 120, sampledAtMs: 0, gainMeters: 300, lossMeters: 280, sampleCount: 200 },
+  };
+
+  function finishedCard(store: ReturnType<typeof createRideFocusStore>) {
+    const { navigation, viewModel } = recordingViewModel(store, {
+      activity: "completed",
+      endedAt: NOW,
+      endReason: "completed",
+    });
+    const rideCard = rideCardFromTelemetry({
+      telemetry: CARD_TELEMETRY,
+      line: LINE,
+      units: "imperial",
+      title: "Morning loop",
+      startedAt: "2026-09-21T13:30:00.000Z",
+      endedAt: NOW,
+    });
+    act(() => store.setState({ navigation, viewModel, rideCard, recordedLine: LINE }));
+    return rideCard;
+  }
+
+  it("ends the ride once, with the line, the name, the day and four numbers", async () => {
+    const { store } = await harness({ position: "fresh" });
+    finishedCard(store);
+
+    // "Ride finished" is said once, on the card, never again under it.
+    expect(screen.getAllByText("Ride finished")).toHaveLength(1);
+    const card = screen.getByTestId("ride-card");
+    expect(within(card).getByTestId("ride-card-headline")).toHaveTextContent("Ride finished");
+    expect(within(card).getByTestId("ride-card-title")).toHaveTextContent("Morning loop");
+    expect(within(card).getByTestId("ride-card-date")).toHaveTextContent(/·/);
+
+    // The line ridden is drawn, in plum, and it is a picture (role img).
+    const picture = within(card).getByTestId("ride-card-line");
+    expect(picture).toHaveAttribute("role", "img");
+    expect(picture.querySelector(".og-ride-card__line")?.getAttribute("points")?.length).toBeGreaterThan(0);
+
+    // Four numbers, in Outfit: 8.0 miles, 24 minutes, dirt unknown, 984 ft.
+    expect(within(card).getByTestId("ride-card-miles")).toHaveTextContent("8.0");
+    expect(within(card).getByTestId("ride-card-miles")).toHaveTextContent("mi");
+    expect(within(card).getByTestId("ride-card-moving")).toHaveTextContent("24");
+    expect(within(card).getByTestId("ride-card-moving")).toHaveTextContent("min");
+    expect(within(card).getByTestId("ride-card-dirt")).toHaveTextContent("—");
+    expect(within(card).getByTestId("ride-card-dirt")).toHaveAttribute("data-unknown", "true");
+    expect(within(card).getByTestId("ride-card-climb")).toHaveTextContent("984");
+    expect(within(card).getByTestId("ride-card-climb")).toHaveTextContent("ft");
+
+    // Done is the one primary action, and it keeps the ride: My rides, Ridden.
+    const done = within(card).getByTestId("ride-summary-rides");
+    expect(done).toHaveAttribute("href", "/rides?tab=ridden");
+    expect(done).toHaveClass("og-ride__action--primary");
+    expect(card).toContainElement(within(card).getByTestId("ride-exit"));
+    // The line ridden is the one the card exports.
+    expect(within(card).getByTestId("ride-summary-export")).toBeEnabled();
+  });
+
+  it("says no line was recorded rather than drawing an empty picture", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const { navigation, viewModel } = recordingViewModel(store, {
+      activity: "completed",
+      endedAt: NOW,
+      endReason: "completed",
+    });
+    const rideCard = rideCardFromTelemetry({ telemetry: CARD_TELEMETRY, line: [], startedAt: NOW, endedAt: NOW });
+    act(() => store.setState({ navigation, viewModel, rideCard, recordedLine: [], routeLine: [], routeLineAvailable: false }));
+
+    expect(screen.getByTestId("ride-card-no-line")).toBeVisible();
+    expect(screen.queryByTestId("ride-card-line")).toBeNull();
+  });
+
+  it("draws the card as a PNG when the browser cannot share a file", async () => {
+    // jsdom has no canvas: a proxy that swallows painting calls and returns a
+    // real PNG blob is enough to prove the button's own path.
+    const context = new Proxy({}, {
+      get: (_target, key) => (key === "canvas" ? undefined : () => undefined),
+      set: () => true,
+    });
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(context as unknown as CanvasRenderingContext2D);
+    HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback): void {
+      callback(new Blob(["png"], { type: "image/png" }));
+    };
+    const createObjectURL = vi.fn<(blob: Blob) => string>(() => "blob:ride-card");
+    const revokeObjectURL = vi.fn();
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const anchors: HTMLAnchorElement[] = [];
+    const createElement = document.createElement.bind(document);
+    const createElementSpy = vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const element = createElement(tag);
+      if (tag === "a") anchors.push(element as HTMLAnchorElement);
+      return element;
+    });
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    try {
+      const { store } = await harness({ position: "fresh" });
+      finishedCard(store);
+      // No Web Share here, so the button says what it will really do.
+      expect(screen.getByTestId("ride-card-share")).toHaveTextContent("Save picture");
+      fireEvent.click(screen.getByTestId("ride-card-share"));
+
+      await waitFor(() => expect(anchorClick).toHaveBeenCalledTimes(1));
+      const blob = createObjectURL.mock.calls[0]?.[0] as Blob;
+      expect(blob.type).toBe("image/png");
+      const download = anchors.find((anchor) => anchor.download !== "");
+      expect(download?.download).toMatch(/^opengravel-morning-loop\.png$/);
+    } finally {
+      getContext.mockRestore();
+      createElementSpy.mockRestore();
+      anchorClick.mockRestore();
+      delete (URL as unknown as Record<string, unknown>).createObjectURL;
+      delete (URL as unknown as Record<string, unknown>).revokeObjectURL;
+    }
+  });
+
+  it("draws the card solid, in plum, with ride numbers at the display face", () => {
+    expect(cssRule(".og-ride-card__plate")).toMatch(/background:\s*var\(--og-surface\)/);
+    expect(cssRule(".og-ride-card__plate")).toMatch(/border:\s*1px solid var\(--og-line\)/);
+    expect(cssRule(".og-ride-card__line")).toMatch(/stroke:\s*var\(--og-route\)/);
+    expect(cssRule(".og-ride-card__number")).toMatch(/font-family:\s*var\(--og-face-display\)/);
+    // Solid, never glass: the card does not blur what is behind it.
+    expect(cssRule(".og-ride-card__plate")).not.toMatch(/backdrop-filter/);
   });
 });
 
@@ -2486,6 +2606,18 @@ describe("the instrument strip (RIDE-INSTRUMENT-STRIP §2, §15, §17.8)", () =>
 
 
 describe("Free Ride recording controls", () => {
+  it("keeps a Recording switch in a guided ride's Menu, saying whether it is on", async () => {
+    const { store } = await harness({ position: "fresh" });
+    const projected = recordingViewModel(store);
+    act(() => store.setState({ navigation: projected.navigation, viewModel: projected.viewModel }));
+    fireEvent.click(screen.getByTestId("ride-menu"));
+
+    const toggle = screen.getByTestId("ride-recording-toggle");
+    expect(toggle).toHaveTextContent("Recording");
+    expect(toggle).toHaveTextContent("On");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("keeps the Free Ride sheet controls available during a recording without opening the sheet", async () => {
     const { store } = await harness({ position: "fresh" });
     const projected = recordingViewModel(store, { activity: "free", plan: { ...store.getState().navigation!.plan, route: null } });
@@ -2499,7 +2631,8 @@ describe("Free Ride recording controls", () => {
     expect(screen.getByRole("button", { name: "Loop from here" })).toBeVisible();
     // The recording row says what the press does; its switch says it is on.
     const recordingToggle = screen.getByTestId("free-ride-recording-toggle");
-    expect(recordingToggle).toHaveTextContent("Stop recording");
+    expect(recordingToggle).toHaveTextContent("Recording");
+    expect(recordingToggle).toHaveTextContent("On");
     expect(recordingToggle.querySelector(".og-ride__switch")).toHaveAttribute("data-on", "true");
     // No sentence explains the controls; the one line left is the consequence
     // of turning the track off.
@@ -2520,7 +2653,8 @@ describe("Free Ride recording controls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show ride controls" }));
 
     const recordingToggle = screen.getByTestId("free-ride-recording-toggle");
-    expect(recordingToggle).toHaveTextContent("Record this ride");
+    expect(recordingToggle).toHaveTextContent("Recording");
+    expect(recordingToggle).toHaveTextContent("Off");
     expect(recordingToggle.querySelector(".og-ride__switch")).toHaveAttribute("data-on", "false");
     // The suggestions switch still reports its own state to assistive tech.
     expect(screen.getByTestId("free-ride-suggestions-toggle")).toHaveAttribute("aria-pressed", "true");

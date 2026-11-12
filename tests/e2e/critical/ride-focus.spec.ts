@@ -184,6 +184,10 @@ test.describe("ride focus", () => {
     await openRideSheet(page);
     await expect(page.getByTestId("ride-pause")).toBeVisible();
 
+    // Recording is on from Start (R3-2), so a saved ride needs a trace: wait for
+    // the second fix (the first is the anchor) before ending it.
+    await openRideSheet(page);
+    await expect(page.getByTestId("recording-elapsed")).not.toContainText("0:00", { timeout: 15_000 });
     await clickInRideSheet(page, "ride-stop", "ride-stop-confirm");
     await page.getByTestId("ride-finish").click();
 

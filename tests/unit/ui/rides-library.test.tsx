@@ -9,6 +9,7 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const RIDE: RideSummary = {
@@ -107,6 +108,43 @@ describe("RidesLibrary", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions for Recorded ride" }));
     expect(screen.getByRole("menuitem", { name: "Download GPX" })).toBeEnabled();
     expect(screen.queryByRole("menuitem", { name: "Other formats" })).not.toBeInTheDocument();
+  });
+
+  it("opens a ridden ride as the same ride card, here, without making it a draft", async () => {
+    const recorded: RideSummary = {
+      ...RIDE,
+      rideId: "ride_recorded_rec_card" as RideSummary["rideId"],
+      title: "Sunday gravel",
+      type: "recorded",
+      provenanceType: "recorded",
+      recordedTrack: {
+        summary: { distanceMeters: 24_140, elapsedSeconds: 5_400, movingSeconds: 4_800, pointCount: 900 },
+        previewGeometry: [
+          { lon: -75.5, lat: 40 },
+          { lon: -75.45, lat: 40.05 },
+          { lon: -75.4, lat: 40.1 },
+        ],
+      },
+      exportCapabilities: { plannedRoute: false, track: false, original: false, recordedRide: true },
+    };
+    const open = vi.fn();
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([recorded]) })} onOpen={open} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Open Sunday gravel" }));
+    // Opening a ridden ride is looking at it, not editing it: no planner open.
+    expect(open).not.toHaveBeenCalled();
+    const card = await screen.findByTestId("ride-card");
+    expect(within(card).getByTestId("ride-card-title")).toHaveTextContent("Sunday gravel");
+    expect(within(card).getByTestId("ride-card-miles")).toHaveTextContent("15");
+    expect(within(card).getByTestId("ride-card-moving")).toHaveTextContent("1:20");
+    // The library kept no elevation or surface runs, so those two stay unknown.
+    expect(within(card).getByTestId("ride-card-dirt")).toHaveTextContent("—");
+    expect(within(card).getByTestId("ride-card-climb")).toHaveTextContent("—");
+    expect(card.querySelector(".og-ride-card__line")?.getAttribute("points")?.length).toBeGreaterThan(0);
+
+    // Done closes the card again.
+    fireEvent.click(within(card).getByTestId("ride-summary-rides"));
+    expect(screen.queryByTestId("ride-card")).not.toBeInTheDocument();
   });
 
   it("reads road progress only when recorded details are expanded", async () => {
@@ -345,7 +383,7 @@ describe("RidesLibrary", () => {
     expect(labels()).toEqual(["Open New plan", "Open Old plan"]);
     expect(screen.queryByRole("button", { name: "Open New recording" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Recorded" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ridden" }));
     expect(await screen.findByRole("button", { name: "Open New recording" })).toBeInTheDocument();
     expect(labels()).toEqual(["Open New recording", "Open Old recording"]);
   });

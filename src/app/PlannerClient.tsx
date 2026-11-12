@@ -280,6 +280,20 @@ export function PlannerClient({
     [rideFocusPointer],
   );
   /**
+   * Recording is on from Start for every ride (R3-2), so the trace begins with
+   * the ride itself: the Start handoff opens it here, before Ride Focus loads,
+   * and the surface finds it already attached when it recovers the session.
+   */
+  const recordingWorkflow = useMemo(
+    () => createRideRecordingWorkflow({
+      session: rideSessions.controller,
+      pointer: rideFocusPointer,
+      recordings: createRecordingRepository(),
+      library: libraryService,
+    }),
+    [rideSessions, rideFocusPointer, libraryService],
+  );
+  /**
    * An applied advisor proposal plans the ride. Once a route is drawn, the
    * answer lifecycle replans every revision itself, so this only asks for the
    * first answer, and only when the ride has the points it needs.
@@ -312,6 +326,7 @@ export function PlannerClient({
         request,
         now: new Date().toISOString(),
         existingSessionId,
+        recording: recordingWorkflow,
       });
       if (outcome.outcome !== "rejected") {
         // The rider's own Start: the ride page resumes it instead of opening
@@ -323,7 +338,7 @@ export function PlannerClient({
       }
       return outcome;
     },
-    [rideSessions, router],
+    [recordingWorkflow, rideSessions, router],
   );
   const recordRide = useCallback(
     async (document: RideDocument) => {
@@ -375,10 +390,10 @@ export function PlannerClient({
     [repository, rideSessions, router, libraryService],
   );
   const startBreadcrumb = useCallback(async (document: RideDocument): Promise<RideStartOutcome> => {
-    const outcome = await startBreadcrumbFromPlanner({ document, rides: repository, geometry: geometryStore, controller: rideSessions.controller, pointer: rideSessions.pointer, now: new Date().toISOString() });
+    const outcome = await startBreadcrumbFromPlanner({ document, rides: repository, geometry: geometryStore, controller: rideSessions.controller, pointer: rideSessions.pointer, now: new Date().toISOString(), recording: recordingWorkflow });
     if (outcome.outcome !== "rejected") { blurFocusedField(); markRideHandoff(); router.push(RIDE_FOCUS_PATH); }
     return outcome;
-  }, [repository, geometryStore, rideSessions, router]);
+  }, [repository, geometryStore, rideSessions, router, recordingWorkflow]);
 
   return (
     <RideAdvisorProvider

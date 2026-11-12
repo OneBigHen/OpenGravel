@@ -66,7 +66,10 @@ test.describe("recorded rides", () => {
     await page.getByTestId("ride-resume").click();
     await clickInRideSheet(page, "ride-stop", "ride-stop-confirm");
     await page.getByTestId("ride-finish").click();
-    await expect(page.getByTestId("ride-terminal")).toContainText("Recorded ride saved");
+    // The ride card is the end of a recorded ride now (R3-2): one headline and
+    // the four numbers, never a second "saved" sentence.
+    await expect(page.getByTestId("ride-card")).toBeVisible();
+    await expect(page.getByTestId("ride-card-headline")).toHaveText("Ride finished");
 
     const catalogueRequests: URL[] = [];
     await page.route("**/api/map-layers?**", async (route) => {
@@ -90,10 +93,10 @@ test.describe("recorded rides", () => {
     await page.goto("/rides");
     const row = page.locator(".og-library__row").filter({ has: page.getByTestId("recorded-ride-summary") });
     await expect(row).toHaveCount(1);
-    // The segment reads "Recorded"; the recorded ride's own row also answers to
+    // The segment reads "Ridden"; the recorded ride's own row also answers to
     // names that start with that word ("Open Recorded ride", "More actions for
     // Recorded ride"), so the segment is matched exactly.
-    await expect(page.getByRole("button", { name: "Recorded", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Ridden", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(row.getByTestId("recorded-track-thumbnail")).toBeVisible();
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("moving");
     await expect(row.getByTestId("recorded-ride-summary")).toContainText("total");
