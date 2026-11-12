@@ -1017,7 +1017,7 @@ describe("the post-ride summary (08 §13)", () => {
     );
   }
 
-  it("shows the ride's shape above its numbers, and one obvious next action", async () => {
+  it("keeps the route's shape and the ways on for a ride with no recorded numbers", async () => {
     const { store } = await harness({ position: "fresh" });
     const { navigation, viewModel } = finishedRecording(store, 0.5);
     act(() => store.setState({ navigation, viewModel }));
@@ -1032,23 +1032,10 @@ describe("the post-ride summary (08 §13)", () => {
     // surface, so it is not invented for the sentence.
     expect(sketch).toHaveAccessibleName("Route sketch: 8.0 mi ridden, 50% along the route.");
 
-    // The sketch is above the stats, and the stats keep their own grid.
-    const summary = screen.getByTestId("ride-summary");
-    expect(sketch.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Four headline numbers, in the order a rider says them: distance, time,
-    // top speed, climb. They are the card; nothing else competes with them.
-    expect(summary.querySelectorAll(".og-ride__summary-stat")).toHaveLength(4);
-    expect(
-      Array.from(summary.querySelectorAll(".og-ride__summary dt")).map((label) => label.textContent),
-    ).toEqual(["Distance", "Moving time", "Top speed", "Climb"]);
-    expect(screen.getByTestId("ride-summary-max")).toHaveTextContent("50");
-    expect(screen.getByTestId("ride-summary-climb")).toHaveTextContent("984");
-    // 432 s of standing still, and the average, are one quiet line under them —
-    // both still from the summary's own clocks, never invented.
-    const meta = screen.getByTestId("ride-summary-meta");
-    expect(meta).toHaveTextContent("Avg speed 20 mph");
-    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("Stopped");
-    expect(screen.getByTestId("ride-summary-stopped")).toHaveTextContent("7");
+    // This is the fallback card: a ride whose numbers were never recorded
+    // (R3-2 puts the numbers on the ride card itself), so it claims none.
+    expect(screen.queryByTestId("ride-summary")).toBeNull();
+    expect(screen.getByTestId("ride-terminal")).toHaveTextContent("Recorded ride saved");
 
     // My rides leads, and the way back to the planner is the surface's own link.
     const rides = screen.getByTestId("ride-summary-rides");
@@ -1078,7 +1065,7 @@ describe("the post-ride summary (08 §13)", () => {
     act(() => store.setState({ navigation, viewModel, routeLine: [], routeLineAvailable: false }));
 
     expect(screen.queryByTestId("ride-route-sketch")).not.toBeInTheDocument();
-    expect(screen.getByTestId("ride-summary")).toBeInTheDocument();
+    expect(screen.getByTestId("ride-terminal")).toBeInTheDocument();
     expect(screen.queryByTestId("ride-line-unavailable")).not.toBeInTheDocument();
   });
 

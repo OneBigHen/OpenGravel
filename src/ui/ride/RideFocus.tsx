@@ -92,7 +92,6 @@ import { opportunityDirection, opportunityReasons } from "@/application/free-rid
 import { headBackDirection } from "@/application/ride-session/head-back";
 import { isVoiceMuted, setVoiceMuted, subscribeVoiceMuted } from "@/application/ride-session/voice-mute";
 import type { RideFocusManeuver } from "@/application/ride-session/ride-focus-view-model";
-import type { RideSummaryStat } from "@/application/ride-metrics/ride-summary";
 import type { PlacesSource } from "@/application/places";
 import type { Coordinate } from "@/domain/ride/types";
 import type { BasemapMode, MapHost, MapHostFactory, MapLoadStatus } from "@/application/map/map-host";
@@ -186,7 +185,6 @@ const NO_RIDE_HEADLINE = "Ready to ride?";
 const NO_INSETS: MapInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 /** The four numbers the finish card leads with; the rest become its one meta line. */
-const SUMMARY_HEADLINE_IDS: readonly RideSummaryStat["id"][] = ["distance", "moving", "max", "climb"];
 
 /** The three display choices, in the rider's words. */
 const DISPLAY_CHOICES: readonly { readonly mode: AppearanceMode; readonly label: string }[] = [
@@ -491,15 +489,6 @@ export function RideFocus({
       : summaryDistance.unit === null
         ? summaryDistance.value
         : `${summaryDistance.value} ${summaryDistance.unit}`;
-  /*
-    The summary leads with the four numbers a rider says out loud after a ride —
-    distance, time, top speed, climb — and the rest (average, stopped) is one
-    quiet line under them, so the card is read at a glance instead of scanned
-    across six tiles.
-  */
-  const summaryStats = terminal?.reason === "completed" ? terminal.stats ?? [] : [];
-  const summaryHeadline = summaryStats.filter((stat) => SUMMARY_HEADLINE_IDS.includes(stat.id));
-  const summaryExtra = summaryStats.filter((stat) => !SUMMARY_HEADLINE_IDS.includes(stat.id));
   /**
    * States that keep the sheet open whatever the rider did: a ride that ended,
    * the stop question, a pause (the rider is stopped and wants Resume), a
@@ -1456,34 +1445,12 @@ export function RideFocus({
                 distanceText={summaryDistanceText}
               />
             )}
-            {summaryHeadline.length === 0 ? null : (
-              <dl className="og-ride__summary" data-testid="ride-summary" aria-label="This ride">
-                {summaryHeadline.map((stat) => (
-                  <div key={stat.id} className="og-ride__summary-stat" data-testid={`ride-summary-${stat.id}`}>
-                    <dt>{stat.label}</dt>
-                    <dd>
-                      {stat.value}
-                      {stat.unit === null ? null : <span className="og-ride__summary-unit"> {stat.unit}</span>}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {summaryExtra.length === 0 ? null : (
-              <p className="og-ride__summary-meta" data-testid="ride-summary-meta">
-                {summaryExtra.map((stat, index) => (
-                  <span key={stat.id} data-testid={`ride-summary-${stat.id}`}>
-                    {index === 0 ? "" : " · "}
-                    {stat.label} {stat.value}
-                    {stat.unit === null ? null : ` ${stat.unit}`}
-                  </span>
-                ))}
-              </p>
-            )}
             {/* One obvious next action, and the two ways on: My rides always,
                 because the library is where a finished ride lives; Export GPX
-                only when this surface holds a line worth exporting. */}
-            <div className="og-ride__actions og-ride__terminal-actions">
+                only when this surface holds a line worth exporting. This is
+                the card for a ride with no numbers of its own (a discarded
+                recording, or a storage failure), so it shows no stats. */}
+            <div className="og-ride__actions">
               <Link
                 className="og-ride__action og-ride__action--primary"
                 data-testid="ride-summary-rides"
