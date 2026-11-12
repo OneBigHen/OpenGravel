@@ -31,6 +31,7 @@ import { getActivityMode } from "@/application/map/activity-mode";
  * the controller rather than counted twice, so the two can never disagree.
  */
 
+import { currentRiderReportRings } from "@/application/persistence/rider-report-repository";
 import { createMemoryGeometryStore } from "@/application/geometry/memory-geometry-store";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { PlanRequestVersions } from "@/application/planner/build-plan-request";
@@ -340,6 +341,7 @@ export function createClientPlanningService(
       },
       profileFor: options.profileFor ?? ((intent) => getActivityMode() === "hike" ? "hike" : graphHopperProfileFor(intent)),
       includeAlternatives: options.includeAlternatives ?? true,
+      riderReportRings: () => (getActivityMode() === "hike" ? [] : currentRiderReportRings()),
     },
     geometryStore,
     pipeline: createStubCandidatePipeline({

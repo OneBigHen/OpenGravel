@@ -1,11 +1,13 @@
 /** Device-only storage for rider reports (`rider-reports.ts`). Nothing here leaves the phone. */
 
 import { RIDER_REPORTS_STORAGE_KEY } from "@/application/persistence/local-data-keys";
+import type { Coordinate } from "@/domain/ride/types";
 import {
   addReport,
   liveReports,
   parseReports,
   removeReport,
+  reportsToAvoidAreas,
   type RiderReport,
 } from "@/application/roads/rider-reports";
 
@@ -68,4 +70,9 @@ export function deleteRiderReport(id: string, nowMs: number, storage: ReportStor
 
 export function clearRiderReports(storage: ReportStorage | null = defaultStorage()): boolean {
   return save([], storage);
+}
+
+/** The boxes the planner avoids for this rider right now. */
+export function currentRiderReportRings(nowMs: number = Date.now()): readonly (readonly Coordinate[])[] {
+  return reportsToAvoidAreas(loadRiderReports(nowMs), nowMs).map((area) => area.ring);
 }
