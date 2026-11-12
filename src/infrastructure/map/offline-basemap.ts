@@ -15,7 +15,9 @@
 import { LIGHT, layers, type Flavor } from "@protomaps/basemaps";
 import { PMTiles, Protocol, type Source } from "pmtiles";
 
+import { RIDE_PACK_MAX_ZOOM, RIDE_PACK_MIN_ZOOM, rideTilePath } from "@/application/offline/ride-pack";
 import { BASEMAP_ASSET_CACHE, BasemapArchiveStore } from "@/infrastructure/offline/basemap-archive-store";
+import { hasKeptTiles, readKeptTile } from "@/infrastructure/offline/ride-pack-stores";
 
 export const OFFLINE_BASEMAP_ATTRIBUTION =
   '<a href="https://protomaps.com">Protomaps</a> © <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>';
@@ -91,7 +93,39 @@ function ensureProtocols(maplibre: MapLibreProtocolHost): Protocol {
     const data = path.endsWith(".json") ? await response.json() : await response.arrayBuffer();
     return { data };
   });
+  // A kept ride's tiles (R3-7). A tile that was never kept draws as blank
+  // ground: the map shows nothing there rather than something it guessed.
+  maplibre.addProtocol("ogvride", async (params) => {
+    const [z, x, y] = params.url.replace(/^ogvride:\/\//, "").split("/").map(Number);
+    if (![z, x, y].every((value) => Number.isInteger(value))) return { data: new ArrayBuffer(0) };
+    const data = await readKeptTile(rideTilePath({ z: z!, x: x!, y: y! })).catch(() => null);
+    return { data: data ?? new ArrayBuffer(0) };
+  });
   return protocol;
+}
+
+/** The offline style drawn from kept rides' tiles alone. */
+export function keptRideBasemapStyle(): Record<string, unknown> {
+  const id = "ogv-kept";
+  const prefix = (layer: { id: string }) => ({ ...layer, id: `${id}-${layer.id}` });
+  return {
+    version: 8,
+    glyphs: "ogvasset://basemap-assets/fonts/{fontstack}/{range}.pbf",
+    sprite: "ogvasset://basemap-assets/sprites/light",
+    sources: {
+      [id]: {
+        type: "vector",
+        tiles: ["ogvride://{z}/{x}/{y}"],
+        minzoom: RIDE_PACK_MIN_ZOOM,
+        maxzoom: RIDE_PACK_MAX_ZOOM,
+        attribution: OFFLINE_BASEMAP_ATTRIBUTION,
+      },
+    },
+    layers: [
+      ...layers(id, OPENGRAVEL_FLAVOR, { lang: "en" }).filter((layer) => layer.type !== "symbol").map(prefix),
+      ...layers(id, OPENGRAVEL_FLAVOR, { lang: "en", labelsOnly: true }).map(prefix),
+    ],
+  };
 }
 
 /** The style for these archives, one vector source per region. */
@@ -129,7 +163,12 @@ export async function prepareOfflineBasemap(maplibre: MapLibreProtocolHost): Pro
   } catch {
     return null;
   }
-  if (archives.length === 0) return null;
+  if (archives.length === 0) {
+    // No downloaded area: a ride kept for no signal still draws its corridor.
+    if (!(await hasKeptTiles())) return null;
+    ensureProtocols(maplibre);
+    return keptRideBasemapStyle();
+  }
   const registered = ensureProtocols(maplibre);
   const keys = archives.map((archive) => {
     const source = archiveSource(archive.file);
