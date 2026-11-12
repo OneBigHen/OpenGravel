@@ -58,8 +58,8 @@ export default async function SharedRidePage({ params }: { params: Promise<{ tok
   const surface = `${SURFACE_PREFERENCE[snapshot.surface.preference]} · ${UNKNOWN_SURFACE[snapshot.surface.unknownSurfacePolicy]}`;
   const rideTime = snapshot.rideDurationSeconds === null ? "Not shared" : formatDuration(snapshot.rideDurationSeconds);
   // The planner's own distance for the ride. The shared line may be trimmed at
-  // its ends, so its length is not the number the rider planned; unknown stays
-  // unknown rather than being filled with that trimmed length.
+  // its ends, so its length is not the number the rider planned. Only when the
+  // planner's number was never shared does the line's own length stand in.
   const rideDistance = snapshot.rideDistanceMeters ?? snapshot.distanceMeters;
 
   return (

@@ -51,16 +51,16 @@ type ImportPanelPhase =
   | "breadcrumb-saved";
 
 const ERROR_LABELS: Readonly<Record<ImportFlowError["code"], string>> = {
-  "invalid-file": "Unsupported route file",
+  "invalid-file": "This file is not a route file",
   "too-large": "File is too large",
-  "archive-guard": "Archive safety limit reached",
-  "malformed-xml": "Malformed route XML",
+  "archive-guard": "This archive is too big to open safely",
+  "malformed-xml": "This file could not be read",
   "no-usable-geometry": "No ride line in this file",
-  "selection-required": "Track selection required",
-  "unsupported-source-shape": "Unsupported SwitchBack export",
-  "option-unavailable": "Import option unavailable",
-  "read-failed": "File could not be read",
-  "persist-failed": "Import could not be saved",
+  "selection-required": "Pick at least one ride",
+  "unsupported-source-shape": "This older export is not supported",
+  "option-unavailable": "That option is not available for this file",
+  "read-failed": "This file could not be opened",
+  "persist-failed": "The ride could not be saved",
 };
 
 function asImportFile(file: File): ImportFile {
