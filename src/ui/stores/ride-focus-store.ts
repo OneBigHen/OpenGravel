@@ -199,8 +199,10 @@ export interface RideFocusStoreState {
   readonly returnBusy: boolean;
   readonly freeRideStatusMessage: string | null;
   readonly freeRideError: string | null;
-  /** Whether this surface can replan a guided ride at all. */
+  /** Whether this surface can replan a guided ride at all (never with no signal). */
   readonly rerouteAvailable: boolean;
+  /** The phone has no network (R3-7): nothing that needs a server is offered. */
+  readonly noSignal: boolean;
   /** `true` while a new route from here (off-route or a detour) is being planned. */
   readonly rerouteBusy: boolean;
   /** What the last reroute did or is doing, in rider copy; clears itself. */
@@ -351,6 +353,8 @@ export interface RideFocusStoreActions {
    * the finish, through `detour` first when given, and binds it.
    */
   reroute(detour?: RerouteDetour, options?: { readonly wholeRoute?: boolean }): Promise<void>;
+  /** The phone lost or found its network; with none, no reroute is asked for. */
+  setNoSignal(noSignal: boolean): void;
   /** Completes a guided segment in a Free Ride without ending the session. */
   continueFreeRide(): Promise<void>;
   /** Retries the bounded unsaved recording batch after a storage failure. */
@@ -1014,7 +1018,7 @@ export function createRideFocusStore(
      * replanned on every fix.
      */
     function maybeAutoReroute(navigation: SessionNavigationState, instant: string): void {
-      if (!autoReroute || reroutePlanner === undefined || get().rerouteBusy) return;
+      if (!autoReroute || reroutePlanner === undefined || get().rerouteBusy || get().noSignal) return;
       // DV-07: far from the start, the rider decides; nothing re-plans silently.
       if (!farFromStartSettled || get().farFromStart !== null) return;
       if (navigation.activity !== "guided" || navigation.offRouteState !== "off-route") return;
@@ -1936,6 +1940,7 @@ export function createRideFocusStore(
       freeRideStatusMessage: null,
       freeRideError: null,
       rerouteAvailable: reroutePlanner !== undefined,
+      noSignal: false,
       rideOffersAvailable: rideOffers && returnPlanner !== undefined,
       rerouteBusy: false,
       rerouteMessage: null,
@@ -2401,7 +2406,7 @@ export function createRideFocusStore(
 
       async reroute(detour?: RerouteDetour, rerouteOptions?: { readonly wholeRoute?: boolean }): Promise<void> {
         const wholeRoute = rerouteOptions?.wholeRoute === true;
-        if (!running || reroutePlanner === undefined) return;
+        if (!running || reroutePlanner === undefined || get().noSignal) return;
         const state = controller.snapshot();
         if (state === null || state.activity !== "guided" || state.plan.route === null) return;
         if (activeReturn !== null && activeReturn.sessionId === state.sessionId) {
@@ -2785,6 +2790,11 @@ export function createRideFocusStore(
         farFromStartSettled = true;
         set({ farFromStart: null });
         await get().reroute(undefined, { wholeRoute: true });
+      },
+
+      setNoSignal(noSignal: boolean): void {
+        if (get().noSignal === noSignal) return;
+        set({ noSignal, rerouteAvailable: !noSignal && reroutePlanner !== undefined });
       },
 
       dismissFarFromStart(): void {

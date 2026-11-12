@@ -571,26 +571,31 @@ describe("RidesLibrary", () => {
     expect(screen.queryByTestId(`offline-pack-${planned.rideId}`)).toBeNull();
   });
 
-  it("shows known offline state in plain words and says nothing when it is unknown", async () => {
+  it("never says offline from a stored manifest; only the Keep switch speaks, from what is on the device", async () => {
     const saved = ride({
       rideId: "ride_offline_saved" as RideSummary["rideId"],
       title: "Saved offline ride",
       offlinePack: "present",
       updatedAt: "2026-09-18T12:00:00.000Z",
+      exportCapabilities: { plannedRoute: true, track: false, original: false, recordedRide: false },
     });
-    const unsaved = ride({
-      rideId: "ride_offline_unsaved" as RideSummary["rideId"],
-      title: "Online only ride",
-      offlinePack: "not-present",
-      updatedAt: "2026-09-17T12:00:00.000Z",
-    });
-    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved, unsaved]) })} />);
-
+    const ridePacks = {
+      keepRide: vi.fn(),
+      dropRide: vi.fn(),
+      rideIsKept: vi.fn().mockResolvedValue(true),
+      keptRides: vi.fn().mockResolvedValue([{ rideId: saved.rideId, title: saved.title, keptAt: "2026-09-18T12:00:00.000Z", bytes: 2_700_000 }]),
+      keptPackForLine: vi.fn(),
+    };
+    const { unmount } = render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved]) })} />);
     await expandDetails("Saved offline ride");
-    expect(screen.getByTestId(`offline-pack-${saved.rideId}`)).toHaveTextContent("Saved for offline");
-    await expandDetails("Online only ride");
-    expect(screen.getByTestId(`offline-pack-${unsaved.rideId}`)).toHaveTextContent("Not saved for offline");
-    expect(document.body.textContent).not.toContain("Offline pack");
+    expect(document.body.textContent).not.toMatch(/saved for offline|not saved for offline|keep for no signal/i);
+    unmount();
+
+    render(<RidesLibrary service={service({ listRides: vi.fn().mockResolvedValue([saved]) })} ridePacks={ridePacks} />);
+    await expandDetails("Saved offline ride");
+    expect(await screen.findByTestId(`keep-no-signal-status-${saved.rideId}`)).toHaveTextContent("Kept, 3 MB");
+    expect(screen.getByTestId(`keep-no-signal-toggle-${saved.rideId}`)).toHaveAttribute("aria-checked", "true");
+    expect(ridePacks.rideIsKept).toHaveBeenCalledWith(saved.rideId);
   });
 
   it("reads provenance in the same plain words everywhere in My rides", async () => {

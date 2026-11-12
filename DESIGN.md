@@ -215,6 +215,15 @@ the primary button.
   dash. Share draws the same card as a 1080×1350 PNG in the browser (Web Share, else Save picture).
   My rides tabs are **Saved** and **Ridden**, and `/rides?tab=ridden` opens Ridden.
 
+- 2026-11-11 Owner (round 3 plan, restructure call 12, R3-7 "Keep for no signal"): the one offline control
+  is a **Keep for no signal** switch on a saved ride (My rides, ride details), showing progress and then
+  "Kept, 3 MB"; a full phone or a failed tile says so in one red line and the switch goes back off. It
+  keeps OpenGravel's own Protomaps tiles half a mile either side of the line (zooms 8 to 14), never the
+  Mapbox style, so with no signal the map redraws in the Protomaps day flavour. On the ride with no signal:
+  one neutral chip "No signal, kept ride" (just "No signal" when the line is not kept), no reroute, and the
+  server rows (weather, gas or food, new route) shown disabled with "No signal". Settings lists kept rides
+  with their size and Remove, and is silent when none are kept.
+
 ## Open proposals
 
 (none)

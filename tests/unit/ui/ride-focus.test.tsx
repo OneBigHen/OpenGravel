@@ -77,6 +77,7 @@ import type {
   RideFocusTelemetryProvider,
 } from "@/application/ride-session/ride-focus-view-model";
 import { RideFocus } from "@/ui/ride/RideFocus";
+import type { RidePackLookup } from "@/ui/ride/useNoSignalRide";
 
 import { createStubMapHostFactory } from "../support/stub-map-host";
 
@@ -281,6 +282,8 @@ async function harness(options: {
   readonly spotifyPlayer?: SpotifyPlayerPort;
   /** Live location sharing and crash detection, composed in on a real ride. */
   readonly safety?: RideSafety;
+  /** Kept rides (R3-7). */
+  readonly ridePacks?: RidePackLookup;
 } = {}): Promise<Harness> {
   const instant = options.at ?? NOW;
   const databaseName = options.databaseName ?? freshDatabaseName();
@@ -430,6 +433,7 @@ async function harness(options: {
       {...(options.usableRangeMiles === undefined ? {} : { usableRangeMiles: options.usableRangeMiles })}
       {...(options.spotifyPlayer === undefined ? {} : { spotifyPlayer: options.spotifyPlayer })}
       {...(options.safety === undefined ? {} : { safety: options.safety })}
+      {...(options.ridePacks === undefined ? {} : { ridePacks: options.ridePacks })}
     />,
   );
   await act(async () => {
@@ -765,6 +769,7 @@ describe("dark chrome and honest states", () => {
 async function offRouteHarness(options: {
   readonly position?: "fresh" | "poor";
   readonly reroutePlanner?: GuidedReroutePlanner;
+  readonly ridePacks?: RidePackLookup;
 } = {}): Promise<Harness> {
   const harnessed = await harness({
     position: options.position ?? "fresh",
@@ -777,6 +782,7 @@ async function offRouteHarness(options: {
       distanceFromRouteMeters: 67,
     }),
     ...(options.reroutePlanner === undefined ? {} : { reroutePlanner: options.reroutePlanner }),
+    ...(options.ridePacks === undefined ? {} : { ridePacks: options.ridePacks }),
   });
   await act(async () => {
     await harnessed.controller.dispatch(offRouteChangedEvent("off-route", NOW));
@@ -2999,5 +3005,47 @@ describe("search along this ride", () => {
     expect(plan).toHaveBeenCalledWith(
       expect.objectContaining({ detour: { coordinate: { lon: -75.42, lat: 40.11 }, label: "Riverside Diner" } }),
     );
+  });
+});
+
+describe("no signal (R3-7)", () => {
+  function goOffline(): () => void {
+    const spy = vi.spyOn(window.navigator, "onLine", "get").mockReturnValue(false);
+    return () => spy.mockRestore();
+  }
+
+  it("off the line with no signal: the head-back card only, no reroute asked for, a neutral kept-ride chip", async () => {
+    const restore = goOffline();
+    try {
+      const plan = vi.fn(async () => ({ status: "unavailable" as const, reason: "no-route" as const }));
+      const keptPackForLine = vi.fn(async () => ({ rideId: "ride_kept", line: LINE } as unknown as Awaited<ReturnType<RidePackLookup["keptPackForLine"]>>));
+      const { store, tick } = await offRouteHarness({ reroutePlanner: { plan }, ridePacks: { keptPackForLine } });
+      await act(async () => { tick(); });
+
+      expect(store.getState()).toMatchObject({ noSignal: true, rerouteAvailable: false });
+      expect(screen.getByTestId("ride-guidance-state")).toHaveTextContent(/^Head back to /);
+      expect(screen.queryByTestId("ride-reroute-now")).toBeNull();
+      expect(await screen.findByText("No signal, kept ride")).toBeInTheDocument();
+
+      await act(async () => { await store.getState().reroute(); tick(); });
+      expect(plan).not.toHaveBeenCalled();
+      expect(store.getState().rerouteError).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  it("says only No signal when the line is not a kept ride, and comes back when signal does", async () => {
+    const restore = goOffline();
+    try {
+      const { store } = await offRouteHarness({ ridePacks: { keptPackForLine: vi.fn(async () => null) } });
+      expect(await screen.findByTestId("ride-no-signal")).toHaveTextContent(/^No signal$/);
+      restore();
+      await act(async () => { window.dispatchEvent(new Event("online")); });
+      expect(store.getState().noSignal).toBe(false);
+      expect(screen.queryByTestId("ride-no-signal")).toBeNull();
+    } finally {
+      restore();
+    }
   });
 });

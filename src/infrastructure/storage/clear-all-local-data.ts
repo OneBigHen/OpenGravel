@@ -8,6 +8,7 @@ import { GARAGE_STORAGE_KEY } from "@/infrastructure/storage/garage-storage";
 import { deleteVNextDatabase } from "@/infrastructure/storage/db";
 import { BasemapArchiveStore } from "@/infrastructure/offline/basemap-archive-store";
 import { deleteOfflineRegionDatabase } from "@/infrastructure/offline/region-download-store";
+import { deleteRidePackDatabase } from "@/infrastructure/offline/ride-pack-stores";
 import { PLACE_NAME_STORAGE_KEY } from "@/infrastructure/storage/place-name-storage";
 import { RIDE_FOCUS_POINTER_KEY } from "@/infrastructure/storage/ride-focus-pointer";
 import { HOME_LOCATION_STORAGE_KEY } from "@/infrastructure/storage/home-location-storage";
@@ -72,6 +73,7 @@ async function deleteDeviceDatabases(): Promise<void> {
   await deleteVNextDatabase();
   await deleteOfflineRegionDatabase();
   await BasemapArchiveStore.clear();
+  await deleteRidePackDatabase();
 }
 
 /** Clears every app-owned device key, the VNext IndexedDB database and downloaded offline areas. */

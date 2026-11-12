@@ -15,6 +15,7 @@ import { RidesLibrary } from "@/ui/rides/RidesLibrary";
 import { createHttpMapLayersSource } from "@/infrastructure/map-layers/http-map-layers-source";
 import { createRoadProgressReader } from "@/application/roads/explorable-roads";
 import { createLocalStorageRiderSettings } from "@/infrastructure/storage/rider-settings-storage";
+import { createBrowserRidePackService } from "@/app/ride-pack-client";
 
 /** Browser composition root for the rides library and its IndexedDB adapter. */
 export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } = {}) {
@@ -50,8 +51,10 @@ export function RidesClient({ mapboxToken }: { readonly mapboxToken?: string } =
     }),
     [service],
   );
+  const ridePacks = useMemo(() => createBrowserRidePackService(service), [service]);
   return <RidesLibrary
     service={service}
+    ridePacks={ridePacks}
     importService={importService}
     roadProgressReader={roadProgressReader}
     geometryStore={geometryStore}

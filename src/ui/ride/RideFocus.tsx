@@ -121,6 +121,8 @@ import { RideFuelLine } from "@/ui/ride/RideFuelLine";
 import { RideInterestCard } from "@/ui/ride/RideInterestCard";
 import { RideInterestPanel } from "@/ui/ride/RideInterestPanel";
 import { useRideInterest } from "@/ui/ride/useRideInterest";
+import { useNoSignalRide, type RidePackLookup } from "@/ui/ride/useNoSignalRide";
+import { RideNoSignalChip, RideNoSignalRows } from "@/ui/ride/RideNoSignal";
 import { RideMetricPicker } from "@/ui/ride/RideMetricPicker";
 import { RouteOutline } from "./RouteOutline";
 import { RideMetricStrip } from "@/ui/ride/RideMetricStrip";
@@ -138,6 +140,8 @@ import { haversine } from "@/domain/geometry/analysis";
 
 export interface RideFocusProps {
   readonly store: StoreApi<RideFocusStore>;
+  /** Kept rides (R3-7): with no signal, says whether this line is one. */
+  readonly ridePacks?: RidePackLookup;
   /** The renderer factory, supplied by the composition root (05 §2). */
   readonly mapHostFactory: MapHostFactory;
   readonly basemap?: BasemapMode;
@@ -304,6 +308,7 @@ export function RideFocus({
   requestMotion,
   exitHref = "/",
   usableRangeMiles = null,
+  ridePacks,
 }: RideFocusProps) {
   const status = useStore(store, (state) => state.status);
   const statusMessage = useStore(store, (state) => state.statusMessage);
@@ -548,6 +553,7 @@ export function RideFocus({
   if (pickerSlot !== null && (!metricsCustomizable || terminal !== null)) setPickerSlot(null);
 
   const availableRouteLine = routeLineAvailability(routeLineAvailable, routeLine);
+  const noSignalRide = useNoSignalRide(store, availableRouteLine, ridePacks);
   // OGV#13: only a guided ride's own route is worth prefetching landmarks,
   // fuel and events along — Free Ride has no fixed line to search a corridor
   // against, and re-keying on the route id (not the line) is what keeps a
@@ -1183,6 +1189,8 @@ export function RideFocus({
           </div>
         )}
 
+        {!noSignalRide.noSignal || terminal !== null ? null : <RideNoSignalChip kept={noSignalRide.kept !== null} />}
+
         {farFromStart === null || terminal !== null ? null : (
           <div className="og-ride__card" data-testid="ride-far-from-start" role="alert">
             <p className="og-ride__card-text">
@@ -1193,7 +1201,7 @@ export function RideFocus({
                 type="button"
                 className="og-ride__action og-ride__action--primary"
                 data-testid="ride-head-to-start"
-                disabled={rerouteBusy}
+                disabled={rerouteBusy || noSignalRide.noSignal}
                 onClick={(): void => { void store.getState().headToStart(); }}
               >
                 Head to the start
@@ -1818,6 +1826,7 @@ export function RideFocus({
           a rider asks for most while riding. A Free Ride has its own rows here
           instead (recording, suggestions, ways home).
         */}
+        {terminal !== null || !noSignalRide.noSignal || navigation?.activity !== "guided" ? null : <RideNoSignalRows />}
         {terminal !== null || !rerouteAvailable || navigation?.activity !== "guided" ? null : (
           <RideDetour
             offRoute={navigation.offRouteState === "off-route"}
@@ -1847,7 +1856,7 @@ export function RideFocus({
 
         {/* "Next gas": one line, and one button when the tank will not reach
             the station ahead (maps-for-riders §5). */}
-        {terminal !== null ? null : (
+        {terminal !== null || noSignalRide.noSignal ? null : (
           <RideFuelLine
             stations={rideInterest.fuelAhead}
             stationsFound={rideInterest.fuelFound}
