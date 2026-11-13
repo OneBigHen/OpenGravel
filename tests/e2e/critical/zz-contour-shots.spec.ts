@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { clickMapAtFraction, plannerMap, settledExtent } from "./map-helpers";
+import { plannerMap } from "./map-helpers";
 
 // Screenshot capture for the contour fix. Writes into SHOT_DIR (default test-results/contour-shots).
 const DIR = process.env.SHOT_DIR ?? "test-results/contour-shots";
-const zoomOf = (e: { minLon: number; maxLon: number }): number => Math.log2((390 * 360) / (256 * (e.maxLon - e.minLon)));
+let zoomPage: import("@playwright/test").Page;
+const zoomOf = (_e: unknown): number => 0;
+const realZoom = async (): Promise<number> => Number(await zoomPage.getByTestId("planner-map").getAttribute("data-map-zoom"));
 
 test("contour shots", async ({ page, context }) => {
   test.setTimeout(240_000);
+  zoomPage = page;
   await page.setViewportSize({ width: 390, height: 844 });
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ longitude: -75.62, latitude: 40.57, accuracy: 10 });
@@ -20,20 +23,21 @@ test("contour shots", async ({ page, context }) => {
   await page.screenshot({ path: `${DIR}-1-layers-panel.png` });
   await page.getByRole("button", { name: "Close map layers" }).click();
   // zoomed out
-  for (let i = 0; i < 12 && zoomOf(await settledExtent(page)) > 8.5; i++) { await page.mouse.move(195, 420); await page.mouse.wheel(0, 300); await page.waitForTimeout(700); }
+  for (let i = 0; i < 12 && await realZoom() > 8.2; i++) { await page.mouse.move(195, 420); await page.mouse.wheel(0, 300); await page.waitForTimeout(700); }
   await page.waitForTimeout(4000);
-  console.log("zoomed-out zoom", zoomOf(await settledExtent(page)));
+  console.log("zoomed-out zoom", await realZoom());
   await page.screenshot({ path: `${DIR}-2-zoomed-out.png` });
   // zoomed in
-  for (let i = 0; i < 14 && zoomOf(await settledExtent(page)) < 13.2; i++) { await page.mouse.move(195, 420); await page.mouse.wheel(0, -300); await page.waitForTimeout(700); }
+  for (let i = 0; i < 14 && await realZoom() < 13.3; i++) { await page.mouse.move(195, 420); await page.mouse.wheel(0, -300); await page.waitForTimeout(700); }
   await page.waitForTimeout(8000);
-  console.log("zoomed-in zoom", zoomOf(await settledExtent(page)));
+  console.log("zoomed-in zoom", await realZoom());
   await page.screenshot({ path: `${DIR}-3-zoomed-in.png` });
   // tap around for a contour
   const card = page.getByTestId("info-feature-card");
-  outer: for (let y = 0.2; y <= 0.7; y += 0.025) {
-    for (let x = 0.1; x <= 0.9; x += 0.05) {
-      await clickMapAtFraction(page, { x, y });
+  outer: for (let y = 380; y <= 640; y += 12) {
+    for (let x = 25; x <= 310; x += 14) {
+      await page.mouse.click(x, y);
+      await page.waitForTimeout(120);
       if (await card.isVisible()) break outer;
     }
   }
