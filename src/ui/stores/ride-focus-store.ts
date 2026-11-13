@@ -126,6 +126,7 @@ import {
 } from "@/domain/motion/lean";
 import { routeLengthMeters } from "@/domain/offline/capabilities";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
+import { RECORDING_OFF_NOTICE } from "@/ui/ride/recording-row";
 
 /**
  * What the surface is doing right now.
@@ -2091,7 +2092,7 @@ export function createRideFocusStore(
             set({ recordingCleanupPending: true, statusMessage: "The recording could not be turned off. Retry before starting another recording or finishing.", lastError: "The recording could not be turned off." });
           } else {
             if (stopped.telemetryState !== undefined) freeRideTelemetry?.adoptRecording(state.sessionId, stopped.telemetryState);
-            set({ recordingCleanupPending: false, recordedLine: NO_COORDINATES, statusMessage: "Not recording. The track was discarded; ride statistics are kept.", lastError: null });
+            set({ recordingCleanupPending: false, recordedLine: NO_COORDINATES, statusMessage: RECORDING_OFF_NOTICE, lastError: null });
           }
           refresh();
         } finally {

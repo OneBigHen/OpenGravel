@@ -380,6 +380,15 @@ function unsupported(base: ReadingBase, why: string): RideMetricReading {
   };
 }
 
+/**
+ * A missing value that still names its unit (OG-20): the slot reads "— mph",
+ * so a dash is never mistaken for a broken readout. The value stays a dash,
+ * never a fake zero.
+ */
+function keepUnit(reading: RideMetricReading, unit: string): RideMetricReading {
+  return reading.displayValue === NO_VALUE && reading.unit === null ? { ...reading, unit } : reading;
+}
+
 function waiting(base: ReadingBase, why: string): RideMetricReading {
   return { ...unsupported(base, why), state: "waiting" };
 }
@@ -646,8 +655,12 @@ const DEFINITIONS: readonly RideMetricDefinition[] = [
     modes: ALL_MODES,
     category: "ride",
     source: "navigation",
+    // OG-20: no speed yet still says what it will be in ("— mph"), never a bare dash.
     resolve: (base, context) =>
-      gpsReading(base, context, context.position.speedMps, (mps) => speedParts(mps, context.units)),
+      keepUnit(
+        gpsReading(base, context, context.position.speedMps, (mps) => speedParts(mps, context.units)),
+        speedParts(0, context.units).unit,
+      ),
   }),
   live({
     id: "heading",
