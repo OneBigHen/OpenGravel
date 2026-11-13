@@ -20,12 +20,12 @@ test("contour shots", async ({ page, context }) => {
   await page.screenshot({ path: `${DIR}-1-layers-panel.png` });
   await page.getByRole("button", { name: "Close map layers" }).click();
   // zoomed out
-  for (let i = 0; i < 12 && zoomOf(await settledExtent(page)) > 8.5; i++) { await page.getByTestId("map-zoom-out").click(); await page.waitForTimeout(500); }
+  for (let i = 0; i < 12 && zoomOf(await settledExtent(page)) > 8.5; i++) { await page.getByTestId("map-zoom-out").click({ force: true }); await page.waitForTimeout(500); }
   await page.waitForTimeout(4000);
   console.log("zoomed-out zoom", zoomOf(await settledExtent(page)));
   await page.screenshot({ path: `${DIR}-2-zoomed-out.png` });
   // zoomed in
-  for (let i = 0; i < 14 && zoomOf(await settledExtent(page)) < 13.2; i++) { await page.getByTestId("map-zoom-in").click(); await page.waitForTimeout(500); }
+  for (let i = 0; i < 14 && zoomOf(await settledExtent(page)) < 13.2; i++) { await page.getByTestId("map-zoom-in").click({ force: true }); await page.waitForTimeout(500); }
   await page.waitForTimeout(8000);
   console.log("zoomed-in zoom", zoomOf(await settledExtent(page)));
   await page.screenshot({ path: `${DIR}-3-zoomed-in.png` });
