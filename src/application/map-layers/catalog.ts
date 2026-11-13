@@ -234,7 +234,7 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     legend: "Thin plum lines: real rides picked by people who ride here. Tap one.",
     source: "From PA Adventure Bike Rides",
     caveat: "The group's own published rides, drawn as a simplified outline when zoomed out. Surface and distance are the group's own summary, copied and not verified, and the source files state no licence. Tap a line to read it; nothing opens it until you tap \"Ride this\".",
-    minZoom: 7,
+    minZoom: 6,
     maxZoom: 10,
     color: "#8f6fa6",
     glyph: "≋",

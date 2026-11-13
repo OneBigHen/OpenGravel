@@ -500,7 +500,7 @@
      or scrolled out of sight — also on a 320 × 568 phone. */
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]) {
     height: auto;
-    max-height: max(var(--og-sheet-half), 56dvh);
+    max-height: var(--og-sheet-half);
   }
 
   /* A hike shows its own summary where a ride shows Route options. */
