@@ -736,10 +736,19 @@ export type SketchLegVerdict =
 const DETOUR_LENGTH_FACTOR = 1.6;
 const DETOUR_SLACK_METERS = 1_000;
 
-/** How far either side of a via the route is compared with itself. */
-const SPUR_PROBE_METERS = 150;
-/** A route that comes back within this of where it was is doubling back. */
-const SPUR_RETURN_METERS = 40;
+/**
+ * How far either side of a via the route is compared with itself, each with the
+ * gap under which the two sides count as the same road ridden both ways. The
+ * short probes catch the common case — a via that snapped into a driveway or a
+ * short cul-de-sac a few dozen meters deep, which the owner saw as the drawn
+ * line zigzagging onto side streets (2026-11-13). The long probe catches deep
+ * dead ends.
+ */
+const SPUR_PROBES: readonly { readonly meters: number; readonly returnMeters: number }[] = [
+  { meters: 25, returnMeters: 8 },
+  { meters: 60, returnMeters: 15 },
+  { meters: 150, returnMeters: 40 },
+];
 
 /**
  * Whether the route doubles back through `viaIndex` — the out-and-back spur a
@@ -749,10 +758,13 @@ export function isSpurAt(route: readonly Coordinate[], viaIndex: number): boolea
   const cumulative = cumulativeMeters(route);
   const at = cumulative[viaIndex];
   const total = cumulative[cumulative.length - 1] ?? 0;
-  if (at === undefined || at < SPUR_PROBE_METERS || total - at < SPUR_PROBE_METERS) return false;
-  const before = pointAlong(route, cumulative, at - SPUR_PROBE_METERS);
-  const after = pointAlong(route, cumulative, at + SPUR_PROBE_METERS);
-  return haversine(before, after) <= SPUR_RETURN_METERS;
+  if (at === undefined) return false;
+  return SPUR_PROBES.some(({ meters, returnMeters }) => {
+    if (at < meters || total - at < meters) return false;
+    const before = pointAlong(route, cumulative, at - meters);
+    const after = pointAlong(route, cumulative, at + meters);
+    return haversine(before, after) <= returnMeters;
+  });
 }
 
 /**
