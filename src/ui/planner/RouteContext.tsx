@@ -60,7 +60,7 @@ function RouteDaylightChip({ route, intent }: { readonly route: DaylightRoute; r
   const lightLabel = daylight === null ? null : daylight.arrivesBeforeDawn ? "arrive before sunrise" : daylight.difference === 0 ? "arrive around sunset" : `${duration(Math.abs(daylight.difference) * 60)} ${daylight.difference < 0 ? "before" : "after"} dark`;
   if (daylight === null || lightLabel === null) return null;
   // Short on the chip; the whole sentence, arrival included, is its name.
-  const chip = daylight.arrivesBeforeDawn ? "before sunrise" : daylight.difference === 0 ? "around sunset" : daylight.difference < 0 ? "before dark" : lightLabel;
+  const chip = daylight.arrivesBeforeDawn ? "before sunrise" : daylight.difference === 0 ? "around sunset" : daylight.difference < 0 ? "before dark" : daylight.difference < 60 ? lightLabel : "after dark";
   const warn = daylight.arrivesBeforeDawn || daylight.difference >= 0;
   const spoken = arrival === null || !Number.isFinite(arrival) ? lightLabel : `Arrive ${clock(arrival)}, ${lightLabel}. Ride conditions`;
   return <>

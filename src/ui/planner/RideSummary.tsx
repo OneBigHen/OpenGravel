@@ -220,8 +220,8 @@ export function RideSummary({
       <div className="og-phone-summary__eta">
         <h2 className="og-phone-summary__time">{card.durationLabel}</h2>
         <div className="og-phone-summary__facts">
-          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}{geometry.length > 1 && card.durationSeconds !== undefined ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds }} intent={document.intent} /></> : null}</p>
-          <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
+          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}</p>
+          <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}{geometry.length > 1 && card.durationSeconds !== undefined ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds }} intent={document.intent} /></> : null}</p>
         </div>
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
