@@ -423,7 +423,7 @@ export function PlannerWorkspace({
       // bounded interval is still running.
       changedSpan: updateHighlight?.span ?? null,
       readGeometry,
-      riderPosition,
+      riderPosition, routeCards: viewModel.routeCards,
     },
     { refineEditing, activeTool, placementTool },
   ));
@@ -734,7 +734,7 @@ export function PlannerWorkspace({
   });
 
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
-    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle} route={activeRoute}
+    <PlannerTripCard document={document} viewModel={viewModel} rideStyle={rideStyle}
       onCancelPlanning={handleCancel} onClearRide={() => { placeFlow.closeOptions(); history.onClearRide(); }}
       onEditRide={() => plannerUiStore.getState().setSheetDetent("expanded")} />
   ) : null;

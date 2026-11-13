@@ -1,5 +1,6 @@
 "use client";
 
+import { setRouteComparing } from "@/ui/stores/route-compare-store";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { createPortal } from "react-dom";
@@ -107,6 +108,12 @@ export function PlannerResultPanel({ showOptions = false, onEditOptions, onOpenO
   const phone = usePhonePlanner();
   const compact = useCompactPlanner();
   const [comparing, setComparing] = useState(false);
+  // The map lifts the other choices while the sheet compares them (PF-8).
+  const comparingShown = comparing && choices.cards.length > 1;
+  useEffect(() => {
+    setRouteComparing(comparingShown);
+    return () => setRouteComparing(false);
+  }, [comparingShown]);
   const [weatherLine, setWeatherLine] = useState<string | null>(null);
   // No route on screen means no traffic claim about one: the caller clears it,
   // and that has to survive the briefing (and its provider tree) being deferred.

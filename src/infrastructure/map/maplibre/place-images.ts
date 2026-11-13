@@ -2,9 +2,10 @@
 
 import type { MapPalette } from "./style";
 
-/** Alternative ride colours: teal, amber, sky. None is the ride plum, the
- * rider-position blue, the twisty-layer red or the gravel brown. */
-export const ALTERNATIVE_COLORS = ["#0e9488", "#d97706", "#0284c7"] as const;
+import { ALTERNATIVE_COLORS } from "@/application/map/route-colors";
+
+/** Alternative ride colours: one rule for the map and the sheet (`route-colors.ts`). */
+export { ALTERNATIVE_COLORS };
 
 export const PLACE_IMAGE_IDS = {
   live: "ogv-place-live",

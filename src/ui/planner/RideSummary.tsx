@@ -44,6 +44,7 @@ import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
 import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
+import { RouteContext } from "./RouteContext";
 import { RideTruthLines } from "./RideTruthLines";
 import { useElevationProfile } from "./useElevationProfile";
 import { useOneTapSave } from "./useOneTapSave";
@@ -219,7 +220,7 @@ export function RideSummary({
       <div className="og-phone-summary__eta">
         <h2 className="og-phone-summary__time">{card.durationLabel}</h2>
         <div className="og-phone-summary__facts">
-          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}</p>
+          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}{geometry.length > 1 ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds ?? 0 }} intent={document.intent} /></> : null}</p>
           <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
         </div>
       </div>

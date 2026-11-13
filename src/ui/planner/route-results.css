@@ -764,3 +764,20 @@
 .og-truth__dot[data-tone="warn"] { background: var(--og-warn); }
 .og-truth__dot[data-tone="bad"] { background: var(--og-danger); }
 .og-route-card .og-truth { padding: 0 var(--og-space-3, 12px) var(--og-space-3, 12px); }
+
+/* Compare speaks one language (PF-8): each row's bar is its line's colour, by
+   the one rule the map paints with (`alternativeColorIndex` in route-colors.ts).
+   The bar runs the row's full height so it reads as the line itself. */
+.og-phone-alternatives .og-phone-choice[data-line-color] .og-phone-choice__swatch {
+  align-self: stretch;
+  width: 4px;
+  height: auto;
+  border-radius: 2px;
+  background: var(--og-route-tint, var(--og-route-alt));
+}
+.og-phone-choice[data-line-color="selected"] { --og-route-tint: var(--og-map-route); }
+.og-phone-choice[data-line-color="0"] { --og-route-tint: var(--og-map-choice-1); }
+.og-phone-choice[data-line-color="1"] { --og-route-tint: var(--og-map-choice-2); }
+.og-phone-choice[data-line-color="2"] { --og-route-tint: var(--og-map-choice-0); }
+.og-option-rows__ask { padding-top: var(--og-space-2); }
+.og-option-rows__ask .og-map-ask__trigger { width: 100%; }

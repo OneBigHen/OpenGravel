@@ -418,6 +418,16 @@ const PIN_HOLD_MS = 300;
 const GESTURE_QUIET_MS = 300;
 /** How far from the selected route line a press still picks it up. */
 const ROUTE_GRAB_RADIUS_PX = 9;
+/**
+ * How far from another choice's line or tag a tap still picks that ride (PF-8):
+ * a glove misses a 5px line by more than its width.
+ */
+const CHOICE_TAP_RADII_PX = [6, 12, 20] as const;
+const CHOICE_TAP_LAYER_IDS: readonly string[] = [
+  MAP_LAYER_IDS.routeLabel,
+  MAP_LAYER_IDS.routeAlternative,
+  MAP_LAYER_IDS.routeAlternativeCasing,
+];
 const GRAB_POINT_LAYER_IDS: readonly string[] = [
   MAP_LAYER_IDS.pointStart,
   MAP_LAYER_IDS.pointFinish,
@@ -2453,7 +2463,39 @@ export async function createMapLibreHost(
     const hits = map.queryRenderedFeatures([pixel.x, pixel.y], {
       layers: hitLayers(map),
     });
-    emit(resolveIntent(hits, coordinate));
+    const intent = resolveIntent(hits, coordinate);
+    if (intent.type === "map-click") {
+      const near = choiceNear(map, pixel);
+      if (near !== null) {
+        emit({ type: "object-click", ref: near, coordinate });
+        return;
+      }
+    }
+    emit(intent);
+  }
+
+  /**
+   * The one other ride whose line or tag is near a tap that hit nothing, so
+   * picking a choice on the map does not need a pixel-perfect finger (PF-8).
+   * The nearest ring that finds a choice decides; two choices there is too
+   * close to call, and the tap stays a map tap.
+   */
+  function choiceNear(map: MapLibreMap, pixel: { readonly x: number; readonly y: number }): MapObjectRef | null {
+    const selected = latestScene?.selectedRouteId ?? null;
+    const layers = CHOICE_TAP_LAYER_IDS.filter((layerId) => map.getLayer(layerId) !== undefined);
+    if (layers.length === 0) return null;
+    for (const radius of CHOICE_TAP_RADII_PX) {
+      const box: [[number, number], [number, number]] = [[pixel.x - radius, pixel.y - radius], [pixel.x + radius, pixel.y + radius]];
+      const ids = new Set<string>();
+      for (const hit of map.queryRenderedFeatures(box, { layers })) {
+        const id = hit.properties?.["id"];
+        if (typeof id === "string" && id !== selected) ids.add(id);
+      }
+      if (ids.size > 1) return null;
+      const [id] = ids;
+      if (id !== undefined) return { kind: "route", routeId: id as never };
+    }
+    return null;
   }
 
   /** Rider zoom/rotate/pitch releases need time to settle before placement (05 §4). */
