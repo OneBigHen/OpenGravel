@@ -253,19 +253,8 @@
   line-height: 1.3;
 }
 
-/* The daylight chip rides on this line. On a 320 phone the labelled climb,
-   the curve count and the chip are wider than the column, so let the chip drop
-   to its own line instead of pushing the sheet sideways. */
 .og-phone-summary__facts .og-phone-summary__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: var(--og-space-1);
   margin-top: 2px;
-}
-
-.og-phone-summary__facts .og-phone-summary__meta-text {
-  min-width: 0;
 }
 
 .og-phone-summary__start {

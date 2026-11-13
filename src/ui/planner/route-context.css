@@ -30,5 +30,8 @@
 /* The curves line and the chip share one line: the text gives way (ellipsis)
    before the chip does, so a narrow phone never grows a taller summary. */
 .og-phone-summary__facts .og-phone-summary__meta { display: flex; align-items: center; min-width: 0; }
+/* The chip's invisible tap halo reaches 6px past its edge. Keep the line's last
+   6px clear so a labelled ride line never widens the phone's scrolling column. */
+.og-phone-summary__facts .og-phone-summary__meta { padding-right: 6px; }
 .og-phone-summary__meta-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .og-phone-summary__meta .og-route-daylight { flex: none; }
