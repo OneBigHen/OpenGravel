@@ -768,6 +768,31 @@ export function isSpurAt(route: readonly Coordinate[], viaIndex: number): boolea
 }
 
 /**
+ * How many times a route rides out and straight back the same way (a spur tip
+ * every 100 m at most), anywhere along it. Used to price spurs when choosing
+ * between two answers for the same drawing: a rider never wants one.
+ */
+export function spurCount(route: readonly Coordinate[]): number {
+  const cumulative = cumulativeMeters(route);
+  const total = cumulative[cumulative.length - 1] ?? 0;
+  const probe = SPUR_PROBES[0];
+  if (probe === undefined) return 0;
+  let count = 0;
+  let lastTip = Number.NEGATIVE_INFINITY;
+  for (let index = 1; index < route.length - 1; index += 1) {
+    const at = cumulative[index] ?? 0;
+    if (at < probe.meters || total - at < probe.meters || at - lastTip < 100) continue;
+    const before = pointAlong(route, cumulative, at - probe.meters);
+    const after = pointAlong(route, cumulative, at + probe.meters);
+    if (haversine(before, after) <= probe.returnMeters) {
+      count += 1;
+      lastTip = at;
+    }
+  }
+  return count;
+}
+
+/**
  * Reviews one leg — the routed line between two consecutive anchors — against
  * the stretch of the drawing between them.
  */

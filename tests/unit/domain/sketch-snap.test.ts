@@ -9,6 +9,7 @@ import {
   createLineIndex,
   cumulativeMeters,
   isSpurAt,
+  spurCount,
   locateInOrder,
   pointAlong,
   resampleSketchCorridor,
@@ -290,5 +291,13 @@ describe("sketchCorridorBand and sliceLineByAlong", () => {
     const cumulative = cumulativeMeters(line);
     expect(haversine(slice[0]!, pointAlong(line, cumulative, 2_000))).toBeLessThan(0.01);
     expect(haversine(slice.at(-1)!, pointAlong(line, cumulative, 3_000))).toBeLessThan(0.01);
+  });
+});
+
+describe("spurCount", () => {
+  it("counts each ride-in-and-back once and nothing on a plain line", () => {
+    const route = [...straight(2_000, 10), at(2_000, 20), at(2_000, 40), at(2_000, 20), ...straight(4_000, 10).slice(201)];
+    expect(spurCount(route)).toBe(1);
+    expect(spurCount(straight(4_000, 10))).toBe(0);
   });
 });
