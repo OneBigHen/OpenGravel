@@ -68,7 +68,7 @@
   --og-map-spruce: #243a35;
   --og-map-route: #7b4fa0;
   --og-map-route-strong: #5e3a7c;
-  --og-map-route-casing: auto;
+  --og-map-route-casing: #3a2250;
   --og-map-emphasis: 1;
   --og-map-satellite: #3e4d2e;
   --og-map-satellite-2: #5b6b3e;
@@ -128,9 +128,9 @@
   --og-map-gold: #e5c07a;
   --og-map-brown: #bfb2a4;
   --og-map-spruce: #cfe3d8;
-  --og-map-route: #b48ae0;
+  --og-map-route: #c9a2f0;
   --og-map-route-strong: #d3b8f0;
-  --og-map-route-casing: #131a17;
+  --og-map-route-casing: #1a0f24;
   --og-map-emphasis: 1.4;
 }
 
@@ -155,7 +155,7 @@
   /* The ride scale (small-screen-v2 §5): read at arm's length in sun. */
   --og-ride-text-maneuver: 44px;
   --og-ride-text-street: 20px;
-  --og-ride-text-readout: 24px;
+  --og-ride-text-readout: 28px;
   --og-ride-text-unit: 12px;
   --og-ride-text-hero: clamp(44px, 14vh, 96px);
 

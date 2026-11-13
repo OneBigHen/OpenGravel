@@ -5,7 +5,7 @@
 
 .og-ride {
   --og-ride-gap: 12px;
-  --og-ride-strip-h: 60px;
+  --og-ride-strip-h: 76px;
   --og-ride-strip-live-h: var(--og-ride-strip-h);
   position: fixed;
   inset: 0;
@@ -301,14 +301,19 @@
   right: 4px;
   display: grid;
   place-items: center;
-  width: var(--og-touch-ride);
-  height: var(--og-touch-ride);
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: var(--og-radius-pill);
   background: transparent;
   color: var(--og-warn);
   cursor: pointer;
+}
+
+.og-ride__maneuver:has(.og-ride__gps-badge) {
+  /* PF-7: the text never runs under the 44px warning button. */
+  padding-right: 52px;
 }
 
 .og-ride__gps-badge[data-tone="bad"] {
@@ -562,7 +567,7 @@
 .og-ride__float {
   position: absolute;
   right: max(var(--og-ride-gap), var(--og-safe-right));
-  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + var(--og-ride-gap));
+  bottom: calc(max(var(--og-ride-gap), var(--og-safe-bottom)) + var(--og-ride-strip-live-h) + 16px);
   left: max(var(--og-ride-gap), var(--og-safe-left));
   z-index: var(--og-z-map-ui);
   display: flex;

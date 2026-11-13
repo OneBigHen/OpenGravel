@@ -47,26 +47,15 @@
 }
 
 /* The cold-open legend: one quiet chip, bottom-left, beside the scale rule. */
-.og-map-legend {
-  gap: var(--og-space-3);
-  min-height: 32px;
-  padding: 0 var(--og-space-3);
-  border: 1px solid var(--og-glass-edge);
-  font-size: var(--og-text-caption);
-}
+.og-map-legend { gap: var(--og-space-3); min-height: 36px; padding: 0 var(--og-space-3); border: 1px solid var(--og-glass-edge); font-size: var(--og-text-caption); transition: opacity 200ms ease; }
 
-.og-map-legend__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--og-space-1);
-  white-space: nowrap;
-}
+/* 44px hit area around the 36px chip; fades out after the first moments. */
+.og-map-legend::after { content: ""; position: absolute; inset: -4px; }
+.og-map-legend[data-fading="true"] { opacity: 0; pointer-events: none; }
 
-.og-map-legend__gravel {
-  stroke: var(--og-map-brown);
-  stroke-width: 2.5;
-  stroke-dasharray: 5 3;
-}
+.og-map-legend__item { display: inline-flex; align-items: center; gap: var(--og-space-1); white-space: nowrap; }
+
+.og-map-legend__gravel { stroke: var(--og-map-brown); stroke-width: 2.5; stroke-dasharray: 5 3; }
 
 .og-map-legend__twisty {
   stroke: var(--og-map-record);
