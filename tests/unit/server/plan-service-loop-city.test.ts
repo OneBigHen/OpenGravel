@@ -31,7 +31,7 @@ const candidate = (loop: FixtureLoop): ProviderCandidate => ({
   geometry: loop.geometry.map(([lon, lat]) => ({ lon, lat })),
   roadSummary: {
     ...loop.roadSummary!,
-    roadRuns: loop.roadSummary.roadRuns.map(run => ({ durationSeconds: null, curvatureRatio: null, toll: null, ...run }) as ProviderRoadRun),
+    roadRuns: loop.roadSummary.roadRuns.map(run => ({ ...{ durationSeconds: null, curvatureRatio: null, toll: null }, ...run }) as ProviderRoadRun),
   },
 });
 const city = candidate(fixture.intoPhiladelphia);
