@@ -516,6 +516,9 @@ const ERROR_COPY: Readonly<Record<PlanningErrorCode, string>> = {
   "constraint-conflict": "Your constraints leave no eligible route.",
 };
 
+/** OG-01: nothing came back in time. Says what happened and what to do, never "stuck". */
+export const PLAN_TIMED_OUT_COPY = "Finding this ride took too long. Tap Retry to try again.";
+
 /** A loop has no destination to blame, so its no-route copy says "this ride". */
 const NO_ROUTE_LOOP_COPY = "No legal route for this ride — try another point.";
 
@@ -1214,7 +1217,7 @@ export function buildPlannerViewModel(
     routeCards: cards,
     selectedRouteId,
     errorMessage:
-      session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage),
+      session.error === null ? null : planningErrorCopy(session.error.code, document, session.error.riderMessage, session.error.timedOut),
     failed,
     planLabel: failed
       ? PLAN_LABEL_RETRY
@@ -1245,7 +1248,8 @@ export function buildPlannerViewModel(
 }
 
 /** The §29 copy for one error code, with the loop's destination-free variant. */
-export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument, riderMessage?: string): string {
+export function planningErrorCopy(code: PlanningErrorCode, document: RideDocument, riderMessage?: string, timedOut?: boolean): string {
+  if (timedOut === true) return PLAN_TIMED_OUT_COPY;
   if (code === "no-route" && riderMessage !== undefined && riderMessage.length > 0) return riderMessage;
   if (code === "no-route" && document.intent.shape === "loop") {
     return NO_ROUTE_LOOP_COPY;
