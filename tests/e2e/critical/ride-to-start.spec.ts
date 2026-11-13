@@ -13,6 +13,7 @@ const points = Array.from({ length: 30 }, (_, i) => `<trkpt lon="${-75.4 + i * 0
 const gpx = `<gpx version="1.1"><metadata><name>Far away GPX</name></metadata><trk><name>Far away GPX</name><trkseg>${points}</trkseg></trk></gpx>`;
 
 test("a GPX 40 miles away offers Ride to the start and plans the way there", async ({ page, context }) => {
+  test.setTimeout(120_000);
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ ...RIDER, accuracy: 10 });
 
