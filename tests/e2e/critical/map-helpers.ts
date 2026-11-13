@@ -372,7 +372,7 @@ export async function clickMapAtFraction(
   page: Page,
   fraction: Fraction,
 ): Promise<{ readonly coordinate: Coordinate; readonly extent: Extent }> {
-  return clickFractionOfExtent(page, await settledExtent(page), fraction);
+  return clickFractionOfExtent(page, await settledExtent(page, 8), fraction);
 }
 
 /**
@@ -439,12 +439,6 @@ async function pressMapAt(page: Page, fraction: Fraction): Promise<void> {
   await map.click({
     position: { x: Math.round(fraction.x * box.width), y: Math.round(fraction.y * box.height) },
   });
-}
-
-/** Taps a fraction of the map box, for specs that need taps well apart whatever the camera frames. */
-export async function clickMapAtFraction(page: Page, fraction: Fraction): Promise<void> {
-  await settledExtent(page, 8);
-  await pressMapAt(page, fraction);
 }
 
 export async function placeEndpoint(
