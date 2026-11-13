@@ -244,11 +244,16 @@ for (const device of DEVICES) {
       await closeLayers(page);
 
       // Ask is back where it was: in the search row on a phone, and (once a ride
-      // is planned) beside the route's facts on a phone or under the ride in the
+      // is planned) in the sheet's Options on a phone or under the ride in the
       // desktop's ride panel. The desktop's first screen has no search row for it.
       if (device.compact) await expect(page.getByTestId("map-ask-open")).toBeVisible();
       await planFirstRoute(page, device);
       await expectPlannedRouteOnScreen(page, device);
+      if (device.compact) {
+        // PF-3: with a ride shown, Ask moved from the map into the sheet's Options.
+        await page.getByTestId("sheet-handle").click();
+        await page.getByTestId("route-options-settings").click();
+      }
       await expect(page.getByTestId(device.compact ? "map-ask-open" : "advisor-ride-ask")).toBeVisible();
     });
 
