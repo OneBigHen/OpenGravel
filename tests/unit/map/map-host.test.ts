@@ -763,11 +763,11 @@ describe("the cartography table", () => {
     const plain = new Map(routeLayers(DEFAULT_MAP_PALETTE).map((layer) => [layer.id, layer]));
     expect((plain.get(MAP_LAYER_IDS.routeCasing)?.paint?.["line-width"] as unknown[]).at(-1)).toBe(24);
     const arrow = riderPositionLayers(sun).find((layer) => layer.id === MAP_LAYER_IDS.riderHeading);
-    expect(arrow?.layout?.["icon-size"]).toBeCloseTo(1.625);
+    expect(arrow?.layout?.["icon-size"]).toBeCloseTo(1.35); // PF-7: 44 px on both looks
     // An unreadable multiplier never shrinks or explodes the scene.
     const odd = riderPositionLayers({ ...DEFAULT_MAP_PALETTE, emphasis: "banana" })
       .find((layer) => layer.id === MAP_LAYER_IDS.riderHeading);
-    expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.3);
+    expect(odd?.layout?.["icon-size"]).toBeCloseTo(1.35);
   });
 
   it("draws the chosen ride plum and each alternative in its own colour, never plum or blue (owner 2026-11-12)", () => {

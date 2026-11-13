@@ -263,6 +263,8 @@ const LINE_LAYOUT = { "line-join": "round", "line-cap": "round" } as const;
 const OFF_ROUTE_LAYOUT = { "line-join": "round", "line-cap": "butt" } as const;
 
 /** The palette's width multiplier, clamped to a sane range (1 when unreadable). */
+const PUCK_ICON_SIZE = 1.35;
+
 function emphasisOf(palette: MapPalette): number {
   const value = Number.parseFloat(palette.emphasis);
   return Number.isFinite(value) ? Math.min(2, Math.max(1, value)) : 1;
@@ -1184,11 +1186,15 @@ export function riderPositionLayers(palette: MapPalette): readonly MapLayerSpec[
       filter: ["has", "heading"],
       layout: {
         "icon-image": PUCK_IMAGE_ID,
-        // About 46 px on screen: GM-sized, readable in a glance on a mount.
-        "icon-size": 1.3 * emphasisOf(palette),
+        // PF-7: the arrow and its white ring measure 44 px on screen on both
+        // looks (the image is 72 px at ratio 2, the ring is 65 of its 72).
+        "icon-size": PUCK_ICON_SIZE,
         "icon-rotate": ["get", "heading"],
         "icon-rotation-alignment": "map",
-        "icon-pitch-alignment": "map",
+        // Upright on the screen, not laid on the tilted ground: a map-aligned
+        // icon z-fights with the street names' depth and a road name painted
+        // over the puck (PF-7).
+        "icon-pitch-alignment": "viewport",
         "icon-allow-overlap": true,
         "icon-ignore-placement": true,
       },
