@@ -742,7 +742,6 @@
 .og-layers__lens-state { color: var(--og-ink-2); font-size: var(--og-text-caption); font-weight: 600; line-height: 1.2; }
 .og-layers__lens-state[data-state="on"], .og-layers__lens-state[data-state="partial"] { color: var(--og-primary-text); }
 .og-layers__tile .og-layers__status { white-space: normal; line-height: 1.2; }
-
 .og-layers__about-line { margin: 0 0 var(--og-space-1); }
 .og-layers__data summary { cursor: pointer; color: var(--og-ink-2); }
 .og-layers__data p { margin: var(--og-space-1) 0 0; }

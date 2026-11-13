@@ -28,8 +28,8 @@
 .og-route-conditions__here .og-conditions__panel { position: static; width: auto; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .og-route-conditions button:focus-visible { outline: 2px solid var(--og-primary-text); outline-offset: 2px; }
 /* The curves line and the chip share one line: the text gives way (ellipsis)
-   before the chip does, so a narrow phone never grows a taller summary. */
-.og-phone-summary__facts .og-phone-summary__meta { display: flex; align-items: center; min-width: 0; }
+   before the chip does, so a narrow phone never grows a taller summary. The trailing 6px keep the chip's invisible tap halo inside the phone's column. */
+.og-phone-summary__facts .og-phone-summary__meta { display: flex; align-items: center; min-width: 0; padding-right: 6px; }
 /* The chip's invisible tap halo reaches 6px past its edge. Keep the line's last
    6px clear so a labelled ride line never widens the phone's scrolling column. */
 .og-phone-summary__facts .og-phone-summary__meta { padding-right: 6px; }
