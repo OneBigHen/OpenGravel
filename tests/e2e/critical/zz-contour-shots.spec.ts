@@ -18,7 +18,7 @@ test("contour shots", async ({ page, context }) => {
   if ((await contours.getAttribute("aria-checked")) !== "true") await contours.click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${DIR}-1-layers-panel.png` });
-  await page.getByTestId("map-layers-toggle").click();
+  await page.getByRole("button", { name: "Close map layers" }).click();
   // zoomed out
   for (let i = 0; i < 12 && zoomOf(await settledExtent(page)) > 8.5; i++) { await page.getByTestId("map-zoom-out").click(); await page.waitForTimeout(500); }
   await page.waitForTimeout(4000);
