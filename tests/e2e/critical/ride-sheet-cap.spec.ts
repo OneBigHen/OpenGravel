@@ -72,6 +72,7 @@ for (const size of SIZES) {
     await expect(sheet).toHaveAttribute("data-detent", "half");
     await expect(page.getByTestId("start-ride")).toBeEnabled();
 
+    console.log("GEO", JSON.stringify(await page.getByTestId("route-summary").evaluate((e) => [...e.querySelectorAll("*")].filter((x) => x.getBoundingClientRect().height > 0).slice(0, 40).map((x) => `${x.tagName}.${String(x.className).slice(0, 30)} ${Math.round(x.getBoundingClientRect().top)}-${Math.round(x.getBoundingClientRect().bottom)} w${Math.round(x.getBoundingClientRect().width)}`)))); // DEBUGGEO
     // Half: the answer, Start and Compare rides, nothing cut by the edge.
     await expectReachable(page, page.getByTestId("start-ride"), "Start");
     await expectReachable(page, page.getByTestId("compare-rides"), "Compare rides");
