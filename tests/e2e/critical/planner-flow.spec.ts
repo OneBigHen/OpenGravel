@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import {
   dragMap,
+  openRefine,
   placeEndpoint,
   plannerMap,
   pressPlan,
@@ -26,6 +27,12 @@ import { directionsTo } from "./search-helpers";
 const PHONE = { width: 390, height: 844 };
 const START = { lat: 40.1385, lon: -75.4385 };
 const FINISH = { lat: 40.1325, lon: -75.4335 };
+/**
+ * Where the owner's loop stuck (2026-11-13 screenshot, Hatboro, PA). Outside the
+ * test server's offline road region on purpose: there the device's own offline
+ * router would answer a stalled request, which hides the stall being tested.
+ */
+const HATBORO = { lat: 40.179, lon: -75.1077 };
 
 test.setTimeout(120_000);
 
@@ -36,16 +43,28 @@ test.beforeEach(async ({ page }) => {
   await settledExtent(page);
 });
 
-function countPlanPosts(page: Page): { readonly count: () => number } {
-  let posts = 0;
-  page.on("request", (request) => {
-    if (request.method() === "POST" && request.url().includes("/api/route-plan")) posts += 1;
-  });
-  return { count: () => posts };
+/** Phone screenshots for the lane's before/after record, only when asked for. */
+async function shot(page: Page, name: string): Promise<void> {
+  const dir = process.env.OG_SHOTS_DIR;
+  if (dir !== undefined && dir !== "") await page.screenshot({ path: `${dir}/${name}-390x844.png` });
 }
 
-async function startLoopHere(page: Page): Promise<void> {
-  await page.context().setGeolocation({ latitude: START.lat, longitude: START.lon });
+function countPlanPosts(page: Page): { readonly count: () => number; readonly bodies: () => readonly unknown[] } {
+  const bodies: unknown[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "POST" || !request.url().includes("/api/route-plan")) return;
+    try {
+      const body = request.postDataJSON() as { identity?: unknown; request?: { shaping?: unknown; stops?: unknown; origin?: unknown; destination?: unknown } };
+      bodies.push({ identity: body.identity, shaping: body.request?.shaping, stops: body.request?.stops, origin: body.request?.origin, destination: body.request?.destination });
+    } catch {
+      bodies.push(null);
+    }
+  });
+  return { count: () => bodies.length, bodies: () => bodies };
+}
+
+async function startLoopHere(page: Page, at: { readonly lat: number; readonly lon: number } = HATBORO): Promise<void> {
+  await page.context().setGeolocation({ latitude: at.lat, longitude: at.lon });
   await page.context().grantPermissions(["geolocation"]);
   await page.getByTestId("loop-near-me").click();
   await pressPlan(page);
@@ -151,6 +170,11 @@ test("OG-03: panning and zooming a planned ride asks for no new plan and keeps t
   await settledExtent(page);
   await page.waitForTimeout(2_000);
 
+  if (posts.count() !== before) {
+    // Say what changed, so a failure names its cause.
+    console.log("OG-03 posts", JSON.stringify(posts.bodies().slice(before)));
+    console.log("OG-03 edit label", await page.getByTestId("trip-edit").first().getAttribute("aria-label"));
+  }
   expect(posts.count(), "no plan request from looking at the map").toBe(before);
   const after = await readDrawnScene(page);
   expect(after.selected).toBe(scene.selected);
@@ -209,23 +233,32 @@ test("OG-02: Start on a drawing keeps the drawing and starts the ride", async ({
   await expect(start).toBeEnabled();
   await expect(page.getByTestId("start-ride-reason")).toHaveCount(0);
   await expect(page.getByText("Tap Done to keep your drawing before you ride it.")).toHaveCount(0);
+  await shot(page, "after-og02-drawn-start-enabled");
   await start.click();
   await expect(page).toHaveURL(/\/ride$/, { timeout: 60_000 });
 });
 
-test("a drawn route on a cleared ride names its own ends and Start rides it (owner, 2026-11-13)", async ({ page }) => {
-  await startDrawing(page);
-  // The owner's screenshot: the ride's start and destination were cleared, then drawn.
-  await page.getByTestId("trip-close").first().click();
-  const draw = page.getByTestId("map-edit-draw");
-  if (await draw.count() > 0 && await draw.isVisible()) await draw.click();
-  await drawStroke(page, 0.25);
-  await expect(page.getByTestId("map-edit-bar")).toContainText("On roads", { timeout: 30_000 });
+test("a route drawn from nothing names its own ends and Start rides it (owner, 2026-11-13)", async ({ page }) => {
+  // The owner's screenshot: a drawn route on screen, the From / To card saying
+  // "No start yet", and Start greyed out. Drawing from an empty planner is the
+  // desktop refine panel's pen.
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await openRefine(page);
+  await page.getByTestId("start-drawing").click();
+  await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
+  await drawStroke(page, 0.45);
+  await expect(page.getByTestId("sketch-snap-status")).toHaveText(
+    "On the roads you drew. Keep drawing, or tap Done.",
+    { timeout: 60_000 },
+  );
 
-  await expect(page.getByTestId("trip-card")).not.toContainText("No start yet");
-  await expect(page.getByTestId("trip-card")).toContainText("From your sketch");
+  await expect(page.getByTestId("start-value")).not.toHaveText("No start yet");
+  await expect(page.getByTestId("start-value")).toContainText("From your sketch");
+  await expect(page.getByTestId("finish-value")).toContainText("From your sketch");
+  await shot(page, "after-owner1-drawn-from-nothing-1280");
   const start = page.getByTestId("start-ride");
   await expect(start).toBeEnabled();
+  await expect(page.getByText("Tap Done to keep your drawing before you ride it.")).toHaveCount(0);
   await start.click();
   await expect(page).toHaveURL(/\/ride$/, { timeout: 60_000 });
 });
