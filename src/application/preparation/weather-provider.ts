@@ -1,3 +1,4 @@
+import { formatWeatherLine } from "@/application/weather/weather-line";
 import type {
   RoutePreparationContext,
 } from "./prepare-route";
@@ -102,8 +103,14 @@ function numbers(values: readonly number[]): readonly number[] {
 export function formatForecast(periods: readonly WeatherForecastPeriod[]): string {
   const first = periods[0];
   if (first === undefined) return "Forecast is unavailable.";
-  const parts = [first.shortForecast];
   const temps = numbers(temperatures(periods));
+  const rain = numbers(periods.flatMap((period) => period.precipChance === undefined ? [] : [period.precipChance]));
+  const chance = rain.length > 0 ? Math.round(Math.max(...rain)) : null;
+  // One weather string everywhere: condition, rain chance, temperature.
+  const parts = [formatWeatherLine({
+    shortForecast: first.shortForecast,
+    rainChancePct: chance !== null && chance >= NOTEWORTHY_PRECIP_PERCENT ? chance : null,
+  })];
   if (temps.length > 0) {
     const low = Math.round(Math.min(...temps));
     const high = Math.round(Math.max(...temps));
@@ -113,11 +120,6 @@ export function formatForecast(periods: readonly WeatherForecastPeriod[]): strin
   if (winds.length > 0) {
     const strongest = Math.round(Math.max(...winds));
     if (strongest >= NOTEWORTHY_WIND_MPH) parts.push(`Gusty ${strongest} mph`);
-  }
-  const rain = numbers(periods.flatMap((period) => period.precipChance === undefined ? [] : [period.precipChance]));
-  if (rain.length > 0) {
-    const chance = Math.round(Math.max(...rain));
-    if (chance >= NOTEWORTHY_PRECIP_PERCENT) parts.push(`${chance}% rain`);
   }
   return parts.join(" · ");
 }
