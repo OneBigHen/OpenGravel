@@ -117,6 +117,14 @@ export const MAP_ERROR_NOTICE: Readonly<Record<MapErrorKind, string>> = {
   renderer: "The map reported a problem, so some detail may be missing. Your ride is safe.",
 };
 
+/**
+ * After this long still under "Loading map…" (OG-26), the card says the map is
+ * slow instead of looking frozen. The map keeps trying underneath; a load that
+ * truly fails hands over to the workspace's own error line.
+ */
+export const MAP_SLOW_MS = 15_000;
+export const MAP_SLOW_LABEL = "The map is slow to load. Check your signal — your ride is safe.";
+
 /** Instructions for the map click armed by the planner's placement tool. */
 export const TOOL_HINTS: Readonly<Record<"start" | "finish" | "stop", string>> = {
   start: "Tap the map to set your start.",
@@ -369,6 +377,12 @@ export function PlannerMap({
   legend,
 }: PlannerMapProps) {
   const [pointMenu, setPointMenu] = useState<PointMenuIntent | null>(null);
+  /** OG-26: the loading card stops pretending after a while and says so. */
+  const [mapSlow, setMapSlow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMapSlow(true), MAP_SLOW_MS);
+    return (): void => window.clearTimeout(timer);
+  }, []);
   const menuOpenedAtRef = useRef(Number.NEGATIVE_INFINITY);
   /**
    * The point whose emergency card is open. Held separately from the long-press
@@ -1005,7 +1019,9 @@ export function PlannerMap({
         workspace's own failure surface takes over then).
       */}
       <div className="og-map__veil" data-testid="map-veil" aria-hidden="true">
-        <span className="og-map__veil-label">Loading map…</span>
+        <span className="og-map__veil-label" data-slow={mapSlow ? "true" : "false"}>
+          {mapSlow ? MAP_SLOW_LABEL : "Loading map…"}
+        </span>
       </div>
 
       {hint === null ? null : (

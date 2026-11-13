@@ -426,6 +426,14 @@
   animation: og-map-veil-pulse 1.6s ease-in-out infinite;
 }
 
+/* OG-26: the slow-load sentence wraps inside the screen and stops pulsing. */
+.og-map__veil-label[data-slow="true"] {
+  max-width: min(320px, calc(100% - 32px));
+  border-radius: var(--og-radius-card);
+  text-align: center;
+  animation: none;
+}
+
 .og-map-host:has(> .og-map[data-map-painted="true"]) > .og-map__veil,
 .og-map-host:has(> .og-map:is([data-map-load="failed"], [data-map-load="retrying"])) > .og-map__veil {
   opacity: 0;
