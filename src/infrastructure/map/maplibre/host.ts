@@ -1222,6 +1222,7 @@ export async function createMapLibreHost(
     changedSpan: 0,
     position: "none",
     surface: 0,
+    line: "none",
   };
 
   function writeSceneAttribute(): void {
@@ -1241,8 +1242,18 @@ export async function createMapLibreHost(
         `changedSpan:${sceneReport.changedSpan}`,
         `position:${sceneReport.position}`,
         `surface:${sceneReport.surface}`,
+        `line:${sceneReport.line}`,
       ].join(","),
     );
+  }
+
+  function lineFingerprint(geometry: readonly { readonly lon: number; readonly lat: number }[]): string {
+    let hash = 0;
+    for (const point of geometry) {
+      hash = (hash * 31 + Math.round(point.lon * 1e5)) | 0;
+      hash = (hash * 31 + Math.round(point.lat * 1e5)) | 0;
+    }
+    return `${geometry.length}-${(hash >>> 0).toString(36)}`;
   }
 
   function publishScene(scene: MapScene): void {
@@ -1273,6 +1284,9 @@ export async function createMapLibreHost(
       // gate can assert the band without reading pixels. An `unknown` run draws
       // nothing, so it is not counted as drawn.
       surface: selected?.surface?.filter((run) => run.kind !== "unknown").length ?? 0,
+      // OG-03: a fingerprint of the selected line's own coordinates, so a gate can
+      // prove panning and zooming redraw the same route rather than a new one.
+      line: selected === undefined ? "none" : lineFingerprint(selected.geometry),
       // 08 §2/§4: whether a present position is drawn, and how much of it the
       // renderer is willing to call current. A browser gate asserts the ride
       // surface's own mark without reading pixels.
