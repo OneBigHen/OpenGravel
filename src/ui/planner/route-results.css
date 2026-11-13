@@ -772,7 +772,7 @@
   align-self: stretch;
   width: 4px;
   height: auto;
-  border-radius: 2px;
+  border-radius: var(--og-route-bar-radius, 2px);
   background: var(--og-route-tint, var(--og-route-alt));
 }
 .og-phone-choice[data-line-color="selected"] { --og-route-tint: var(--og-map-route); }
