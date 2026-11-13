@@ -4,6 +4,7 @@
  */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MAP_LAYERS, type MapLayerId } from "@/application/map-layers";
@@ -45,5 +46,36 @@ describe("map legend chip", () => {
     );
     expect(screen.getByRole("heading", { name: "Layers" })).toBeInTheDocument();
     expect(screen.getByTestId("map-layer-rider-picked")).toBeInTheDocument();
+  });
+});
+
+describe("map legend chip, first three opens only (PF-6)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.clear();
+    vi.resetModules();
+  });
+
+  async function open() {
+    vi.resetModules();
+    const module = await import("@/ui/layers/MapLegendChip");
+    return render(<module.MapLegendChip onOpen={vi.fn()} />);
+  }
+
+  it("fades 8 seconds after the map is ready and then leaves the page", async () => {
+    vi.useFakeTimers();
+    await open();
+    expect(screen.getByTestId("map-legend")).not.toHaveAttribute("data-fading");
+    act(() => { vi.advanceTimersByTime(8100); });
+    expect(screen.getByTestId("map-legend")).toHaveAttribute("data-fading", "true");
+    act(() => { vi.advanceTimersByTime(250); });
+    expect(screen.queryByTestId("map-legend")).toBeNull();
+  });
+
+  it("is not there on the fourth open", async () => {
+    window.localStorage.setItem("og-legend-seen", "3");
+    await open();
+    expect(screen.queryByTestId("map-legend")).toBeNull();
+    expect(window.localStorage.getItem("og-legend-seen")).toBe("4");
   });
 });

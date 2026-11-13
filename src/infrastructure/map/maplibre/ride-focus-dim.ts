@@ -21,6 +21,8 @@ export const SATELLITE_ROAD_OPACITY = 0.4;
 export const RIDE_FOCUS_DIM_LAYERS: readonly (readonly [string, string])[] = [
   ["ogv-info-line", "line-opacity"],
   ["ogv-info-line-casing", "line-opacity"],
+  ["ogv-info-line-minor", "line-opacity"],
+  ["ogv-info-line-casing-minor", "line-opacity"],
   ["ogv-info-surface", "line-opacity"],
   ["ogv-info-point", "circle-opacity"],
   ["ogv-info-point", "circle-stroke-opacity"],

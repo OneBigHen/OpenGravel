@@ -759,9 +759,9 @@ describe("the cartography table", () => {
     const route = new Map(routeLayers(sun).map((layer) => [layer.id, layer]));
     const casing = route.get(MAP_LAYER_IDS.routeCasing)?.paint;
     expect(casing?.["line-color"]).toBe("#1d0b05");
-    expect((casing?.["line-width"] as unknown[]).at(-1)).toBe(25);
+    expect((casing?.["line-width"] as unknown[]).at(-1)).toBe(24); // PF-7: riding zooms are fixed pixels, not scaled
     const plain = new Map(routeLayers(DEFAULT_MAP_PALETTE).map((layer) => [layer.id, layer]));
-    expect((plain.get(MAP_LAYER_IDS.routeCasing)?.paint?.["line-width"] as unknown[]).at(-1)).toBe(20);
+    expect((plain.get(MAP_LAYER_IDS.routeCasing)?.paint?.["line-width"] as unknown[]).at(-1)).toBe(24);
     const arrow = riderPositionLayers(sun).find((layer) => layer.id === MAP_LAYER_IDS.riderHeading);
     expect(arrow?.layout?.["icon-size"]).toBeCloseTo(1.625);
     // An unreadable multiplier never shrinks or explodes the scene.
@@ -840,7 +840,8 @@ describe("the cartography table", () => {
 
     for (const layer of routeLayers(palette)) {
       const colour = layer.paint?.["line-color"];
-      if (typeof colour === "string" && colour.startsWith("#")) {
+      // "#68716f" is the ridden road's fixed grey (PF-7), not a palette colour.
+      if (typeof colour === "string" && colour.startsWith("#") && colour !== "#68716f") {
         expect(Object.values(palette)).toContain(colour);
       }
     }

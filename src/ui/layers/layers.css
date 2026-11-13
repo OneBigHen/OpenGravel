@@ -49,10 +49,23 @@
 /* The cold-open legend: one quiet chip, bottom-left, beside the scale rule. */
 .og-map-legend {
   gap: var(--og-space-3);
-  min-height: 32px;
+  min-height: 36px;
   padding: 0 var(--og-space-3);
   border: 1px solid var(--og-glass-edge);
   font-size: var(--og-text-caption);
+  transition: opacity 200ms ease;
+}
+
+/* 44px hit area around the 36px chip. */
+.og-map-legend::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.og-map-legend[data-fading="true"] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .og-map-legend__item {
