@@ -195,6 +195,11 @@ export interface MapRideGlanceProps {
   /** A plan is in flight: with no route card yet the metrics read as "still measuring", not as numbers. */
   readonly planning: boolean;
   /**
+   * A new answer is being found and `summary` belongs to the previous one
+   * (OG-05): the pill measures again instead of showing numbers about to change.
+   */
+  readonly computing?: boolean;
+  /**
    * The last attempt failed. Kept for callers; the pill no longer has a failed
    * state of its own (OG-04): the sheet's error row says it, with the one Retry.
    */
@@ -214,16 +219,18 @@ export interface MapRideGlanceProps {
 export function MapRideGlance({
   summary,
   planning,
+  computing = false,
   onOpenRide,
   placement = "map",
 }: MapRideGlanceProps): ReactElement | null {
-  const statement = statementFor(summary, planning);
+  const statement = statementFor(computing ? null : summary, planning || computing);
   const announced = useGlanceAnnouncement(statement);
   // "Still measuring" is only honest while nothing has been measured. A card that
   // is already on screen has its numbers, so the pill shows them instead of a
   // skeleton that would outlive the answer (the alternatives can still be on
   // their way long after the primary route and its card are there).
-  const measuring = summary === null && planning;
+  // While a new answer is computed (OG-05) the old numbers are not shown either.
+  const measuring = (summary === null && planning) || (summary !== null && computing);
 
   const className = `og-glance og-glance--${placement}`;
   const testId = `ride-glance-${placement}`;
@@ -276,7 +283,7 @@ export function MapRideGlance({
             )}
           </span>
         )}
-        {summary === null ? null : (
+        {summary === null || measuring ? null : (
           <span
             className={summary.surface.known ? "og-glance__surface" : "og-glance__surface og-glance__surface--unknown"}
             data-testid="ride-glance-surface"

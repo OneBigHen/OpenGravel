@@ -179,6 +179,17 @@ describe("MapRideGlance", () => {
     );
   });
 
+  it("measures again instead of showing the old numbers while a new answer is found (OG-05)", () => {
+    render(glance({ planning: true, computing: true }));
+
+    expect(screen.getByTestId("ride-glance-map")).toHaveAttribute("data-state", "planning");
+    expect(screen.queryByTestId("ride-glance-duration")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ride-glance-distance")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ride-glance-surface")).not.toBeInTheDocument();
+    expect(screen.getByText(/Measuring the ride/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /planning your ride/ })).toHaveAttribute("aria-busy", "true");
+  });
+
   it("stays out of the way when a plan failed with no route to show (OG-04)", () => {
     // The sheet's error row says it, whole, with the one Retry; a pill here
     // covered that message and offered a second Retry.
