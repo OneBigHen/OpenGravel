@@ -164,6 +164,55 @@ test("the shared sheet has peek, half and full detents", async ({ page }) => {
   await expectHealthyMap(page);
 });
 
+for (const size of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 440, height: 956 }]) {
+  test(`PF-2: peek is a real peek and half never slices a row at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    const sheet = page.getByTestId("planner-sheet"), handle = page.getByTestId("sheet-handle");
+    await placeEndpoint(page, "start", START_COORDINATE);
+    await placeEndpoint(page, "finish", DESTINATION_COORDINATE);
+    await pressPlan(page);
+    await expectDrawnScene(page, { routes: "2" });
+    await expect(page.getByTestId("start-ride")).toBeVisible();
+    await expect(sheet).toHaveAttribute("data-detent", "half");
+    const half = (await sheet.boundingBox())!;
+    if (size.width >= 390) expect(half.y).toBeGreaterThanOrEqual(size.height * 0.58);
+    const startHalf = (await page.getByTestId("start-ride").boundingBox())!;
+    expect(startHalf.y + startHalf.height).toBeLessThanOrEqual(half.y + half.height + 1);
+    // No visible leaf in the body is cut by the sheet's bottom edge.
+    const sliced = await sheet.evaluate((root) => {
+      const edge = root.getBoundingClientRect().bottom;
+      return [...root.querySelectorAll(".og-sheet__body *")].filter((e) => {
+        const b = e.getBoundingClientRect();
+        return e.children.length === 0 && (e.textContent ?? "").trim() !== "" && b.height > 0 && b.top < edge - 1 && b.bottom > edge + 1;
+      }).map((e) => (e.textContent ?? "").trim().slice(0, 30));
+    });
+    expect(sliced).toEqual([]);
+
+    await handle.press("ArrowDown");
+    await expect(sheet).toHaveAttribute("data-detent", "peek");
+    await page.waitForTimeout(400);
+    const peek = (await sheet.boundingBox())!;
+    expect(peek.height).toBeLessThanOrEqual(96 + 8 + 34);
+    expect(peek.height).toBeLessThan(half.height);
+    const start = (await page.getByTestId("start-ride").boundingBox())!;
+    expect(start.height).toBeGreaterThanOrEqual(48);
+    expect(start.y).toBeGreaterThanOrEqual(peek.y);
+    expect(start.y + start.height).toBeLessThanOrEqual(peek.y + peek.height + 1);
+
+    await handle.press("ArrowUp");
+    await expect(sheet).toHaveAttribute("data-detent", "half");
+    await page.waitForTimeout(400);
+    // PF-2: dragging the map at half hands it back (the sheet drops to peek).
+    const map = (await plannerMap(page).boundingBox())!;
+    const x = map.x + map.width / 2, y = map.y + map.height * 0.3;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 80, y, { steps: 8 });
+    await page.mouse.up();
+    await expect(sheet).toHaveAttribute("data-detent", "peek", { timeout: 2000 });
+  });
+}
+
 test("safe-area, control sizes and typefaces are the intended ones", async ({
   page,
 }) => {
@@ -193,8 +242,8 @@ test("safe-area, control sizes and typefaces are the intended ones", async ({
   // 12 §10: every planning control is at least 44×44 CSS px.
   // On the idle sheet "Create ride" waits for a destination; the quick starts
   // take its place.
-  // The grab bar draws 24px and reaches 12px over the sheet's edge (::after).
-  expect((await page.getByTestId("sheet-handle").boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  // The grab bar draws 32px and reaches 12px over the sheet's edge (::after).
+  expect((await page.getByTestId("sheet-handle").boundingBox())!.height).toBeGreaterThanOrEqual(32);
   for (const testId of ["loop-near-me", "record-a-ride", "just-ride"]) {
     const box = await page.getByTestId(testId).boundingBox();
     expect(box, `${testId} must be measurable`).not.toBeNull();

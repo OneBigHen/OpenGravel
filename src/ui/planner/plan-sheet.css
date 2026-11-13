@@ -408,6 +408,12 @@
     display: none;
   }
 
+  /* A weather warning stays whole at half (owner safety rule): the sheet is
+     one warning line taller rather than slicing it, also at 320 x 568. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"]:not(:has(.og-phone-summary[data-comparing="true"])):has(.og-phone-summary__weather) {
+    max-height: min(var(--og-sheet-half), max(40dvh, 252px) + 56px);
+  }
+
   /* Compare at half: the rides and Start. Roads / Surface stay in the full
      sheet and in Options; the list scrolls under a pinned Start / Save / Share. */
   .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"]:is([data-detent="peek"], [data-detent="half"]):has(.og-phone-summary[data-comparing="true"]) {
@@ -545,4 +551,8 @@
     min-width: 112px;
     min-height: 48px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner .og-planner__sheet { transition: none; }
 }
