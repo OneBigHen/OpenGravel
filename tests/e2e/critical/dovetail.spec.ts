@@ -14,7 +14,7 @@ async function openRoad(page: Page): Promise<void> {
     const y = merc(north) - (merc(north) - merc(south)) * 0.4;
     target = { lon: (west + east) / 2, lat: (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI };
     await route.fulfill({ json: { features: [{
-      id: "dovetail:road", layerId: "great-roads", name: "Pine Creek Road", detail: "Synthetic browser fixture", weight: 900,
+      id: "dovetail:road", layerId: "great-roads", name: "Pine Creek Road", detail: "Synthetic browser fixture", weight: 1200,
       geometry: { type: "LineString", coordinates: [[target.lon - (east - west) * 0.2, target.lat], [target.lon, target.lat], [target.lon + (east - west) * 0.2, target.lat]] },
     }], unavailable: [] } });
   });

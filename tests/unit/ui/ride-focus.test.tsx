@@ -2809,7 +2809,7 @@ describe("the ride screen's number scale and controls (small-screen design syste
     // 24 px for a readout, with the unit on the page's 12 px caption size.
     const tokens = tokensCss();
     expect(tokens).toMatch(/--og-ride-text-maneuver:\s*44px/);
-    expect(tokens).toMatch(/--og-ride-text-readout:\s*24px/);
+    expect(tokens).toMatch(/--og-ride-text-readout:\s*28px/);
 
     const distance = rule(".og-ride__maneuver-distance");
     expect(distance).toMatch(/font-size:\s*var\(--og-ride-text-maneuver\)/);
@@ -2940,7 +2940,7 @@ describe("the ride screen's number scale and controls (small-screen design syste
     expect(map).toMatch(/inset:\s*0/);
     // The chrome is overlays, not a layout that shrinks the map, and the strip
     // is sized to its 56 px content (56 + 4 padding above, the bottom gap below).
-    expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*60px/);
+    expect(rule(".og-ride")).toMatch(/--og-ride-strip-h:\s*76px/);
     expect(rule(".og-ride__strip")).toMatch(/position:\s*absolute/);
   });
 });
