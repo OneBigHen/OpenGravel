@@ -1,6 +1,6 @@
 /* The daylight chip at the end of the sheet's stat line (PF-3). */
 .og-phone-summary__meta .og-route-daylight, .og-route-daylight {
-  box-sizing: border-box; min-height: 0; min-width: 0; height: 18px;
+  box-sizing: border-box; min-height: 0 !important; min-width: 0 !important; height: 18px !important;
   display: inline-flex; align-items: center; max-width: 100%; position: relative; margin: 0 0 0 var(--og-space-1); padding: 0 var(--og-space-2); line-height: 1; vertical-align: baseline;
   border: 1px solid var(--og-line); border-radius: var(--og-radius-pill); background: var(--og-glass-well);
   color: var(--og-ink-2); font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
