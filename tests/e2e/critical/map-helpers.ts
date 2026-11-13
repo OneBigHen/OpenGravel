@@ -441,6 +441,12 @@ async function pressMapAt(page: Page, fraction: Fraction): Promise<void> {
   });
 }
 
+/** Taps a fraction of the map box, for specs that need taps well apart whatever the camera frames. */
+export async function clickMapAtFraction(page: Page, fraction: Fraction): Promise<void> {
+  await settledExtent(page, 8);
+  await pressMapAt(page, fraction);
+}
+
 export async function placeEndpoint(
   page: Page,
   target: "start" | "finish",

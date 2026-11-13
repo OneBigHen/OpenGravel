@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { expect, test } from "@playwright/test";
-import { clickMapAtCoordinate, expectHealthyMap, openRefine, placeEndpoint } from "./map-helpers";
+import { clickMapAtFraction, expectHealthyMap, openRefine, placeEndpoint } from "./map-helpers";
 
 // Mock the upstream foot router, exercising the real API, validation and hike
 // adapter. The ordinary route-plan fixture must never answer a hike request.
@@ -50,7 +50,7 @@ test("hike A to B, ordered stops, there and back, and honest router failures", a
   expect(pointsSeen.at(-1)).toHaveLength(2);
   await openRefine(page);
   await page.getByTestId("add-stop").click();
-  await clickMapAtCoordinate(page, { lon: -75.436, lat: 40.136 });
+  await clickMapAtFraction(page, { x: 0.45, y: 0.6 });
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
   await page.getByTestId("hike-there-and-back").check();
   await page.getByTestId("hike-plan").click();
@@ -74,11 +74,11 @@ test("breadcrumb hands its ordered waypoints to the foot router", async ({ page 
   await expect(page.getByTestId("hike-route-summary")).toBeVisible();
   // On a phone the planned hike's sheet owns the route, so Breadcrumb starts there.
   await page.getByTestId("hike-breadcrumb").click();
-  // Well apart (the phone map now frames the hike a step wider): at the planned hike's framing a tap on (or next to) a waypoint
+  // Well apart, by screen position, so the framing never decides: at the planned hike's framing a tap on (or next to) a waypoint
   // marker selects that waypoint instead of adding one.
-  await clickMapAtCoordinate(page, { lon: -75.454, lat: 40.146 });
-  await clickMapAtCoordinate(page, { lon: -75.436, lat: 40.136 });
-  await clickMapAtCoordinate(page, { lon: -75.418, lat: 40.126 });
+  await clickMapAtFraction(page, { x: 0.2, y: 0.4 });
+  await clickMapAtFraction(page, { x: 0.45, y: 0.6 });
+  await clickMapAtFraction(page, { x: 0.75, y: 0.72 });
   await page.getByRole("toolbar", { name: "Breadcrumb", exact: true }).getByRole("button", { name: "Done", exact: true }).click();
   await page.getByTestId("breadcrumb-plan-trails").click();
   await expect.poll(() => pointsSeen.at(-1)?.length).toBe(3);
