@@ -54,13 +54,13 @@ function colourByLayer(palette: MapPalette): unknown {
 
 /**
  * Phone first PF-6: the twisty roads are calm until the rider zooms in. Below
- * zoom 11 only the best segments (weight 1000 and up) draw, 2px wide at 75%;
+ * zoom 11 only the best segments (weight 1050 and up (about 37% of the segments around Langhorne)) draw, 2px wide at 75%;
  * from zoom 11 every segment draws as before. The lesser segments live on
  * their own "-minor" layers that start at zoom 11, so they are not even
  * rendered (or queryable) on the overview.
  */
 export const TWISTY_CALM_ZOOM = 11;
-export const TWISTY_BEST_WEIGHT = 1000;
+export const TWISTY_BEST_WEIGHT = 1050;
 const isTwisty = ["==", ["get", "layerId"], "great-roads"];
 const twistyWeight = ["coalesce", ["get", "weight"], 0];
 const twistyIsBest = [">=", twistyWeight, TWISTY_BEST_WEIGHT];
