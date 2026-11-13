@@ -26,3 +26,8 @@
 .og-route-conditions__section .og-route-conditions__source { margin-top: var(--og-space-2); font-size: var(--og-text-caption); }
 .og-route-conditions__here .og-conditions__panel { position: static; width: auto; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .og-route-conditions button:focus-visible { outline: 2px solid var(--og-primary-text); outline-offset: 2px; }
+/* 320px: the chip can wrap onto its own line, so the summary tightens its gaps
+   to keep Compare rides inside the half sheet. */
+@media (max-width: 360px) {
+  .og-phone-summary { gap: var(--og-space-1); }
+}

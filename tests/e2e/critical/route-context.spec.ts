@@ -33,7 +33,7 @@ test("daylight chip in the sheet opens conditions; Ask lives in Options", async 
   await expect(context).toBeFocused();
   // Ask moved into the Options view.
   await expect(page.getByTestId("map-ask-open")).toHaveCount(0);
-  await page.getByTestId("summary-style").click();
+  await page.getByTestId("route-options-settings").click();
   const ask = page.getByTestId("map-ask-open");
   await expect(ask).toBeVisible();
   expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
