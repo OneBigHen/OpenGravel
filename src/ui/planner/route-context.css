@@ -32,3 +32,4 @@
 .og-phone-summary__facts .og-phone-summary__meta { display: flex; align-items: center; min-width: 0; }
 .og-phone-summary__meta-text { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .og-phone-summary__meta .og-route-daylight { flex: none; }
+.og-route-daylight { display: none !important; } /*EXPERIMENT*/
