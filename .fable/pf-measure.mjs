@@ -33,7 +33,9 @@ if (scenes.includes("lum")) {
   const { ctx, p } = await open(1); await startPlace(p);
   const f = p.getByTestId("top-place-search"); await f.fill("Reading Terminal Market"); await f.press("Enter");
   await p.getByTestId("place-sheet").waitFor({ timeout: 30000 }); await p.waitForTimeout(4000);
-  const buf = await p.screenshot({ path: `${out}/${tag}-place.png` });
+  if (process.env.HIDE) await p.evaluate((mode) => { const m = window.__maps.at(-1); for (const l of m.getStyle().layers) { if (l.id.startsWith("ogv-")) continue; const road = l.type === "line" && /road|bridge|tunnel/.test(l.id); const sym = l.type === "symbol"; if ((mode === "symbols" && sym) || (mode === "roads" && road) || (mode === "both" && (road || sym))) m.setLayoutProperty(l.id, "visibility", "none"); } }, process.env.HIDE);
+  await p.waitForTimeout(1500);
+  const buf = await p.screenshot({ path: `${out}/${tag}-place${process.env.HIDE ?? ""}.png` });
   const lum = await analyse(p, buf, `let s=0,n=0; for(let y=150;y<520;y++) for(let x=0;x<w;x++){ if(x>320) continue; const i=(y*w+x)*4; s+=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2]; n++; } return s/n;`);
   console.log(JSON.stringify({ tag, meanMapLuminance: +lum.toFixed(2) }));
   await ctx.close();
