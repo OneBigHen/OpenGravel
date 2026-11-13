@@ -1,3 +1,4 @@
+import "./ride-credit.css";
 import { creditText, type RideCredit } from "@/domain/ride/credit";
 
 /**
