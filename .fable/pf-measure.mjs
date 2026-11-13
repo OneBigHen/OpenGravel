@@ -64,6 +64,7 @@ if (scenes.includes("ride")) {
   // puck position, zoom
   const info = await p.evaluate(() => { const m = window.__maps.at(-1); const fs = m.queryRenderedFeatures({ layers: ["ogv-rider-heading"] }); const pos = fs[0] ? m.project(fs[0].geometry.coordinates) : null;
     return { pos: pos ? [pos.x, pos.y] : null, zoom: m.getZoom(), pitch: m.getPitch() }; });
+  console.log(JSON.stringify(await p.evaluate(() => { const m = window.__maps.at(-1); return { roadOpacity: m.getPaintProperty("road-secondary-tertiary", "line-opacity"), color: m.getPaintProperty("road-secondary-tertiary", "line-color"), maps: window.__maps.length }; })));
   // hide every basemap label and our arrows, and the UI, so only roads, the line and the puck remain
   await p.evaluate(() => { const m = window.__maps.at(-1); for (const l of m.getStyle().layers) if (l.type === "symbol" && l.id !== "ogv-rider-heading") m.setLayoutProperty(l.id, "visibility", "none"); document.querySelectorAll(".og-ride__top,.og-ride__strip,.og-ride__float").forEach((e) => (e.style.visibility = "hidden")); });
   await p.waitForTimeout(1500);
