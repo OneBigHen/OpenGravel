@@ -14,6 +14,9 @@
  * value, and a line of four absences is not a fact a rider can use.
  */
 
+import { formatWholeMinutes } from "@/domain/format/duration";
+
+
 /**
  * The mileage pace a catalog route with no stored ride time is estimated at.
  * `application/explore/ride-this.ts` rounds the planner's card with the same
@@ -36,11 +39,7 @@ export interface RideFact {
 
 /** `95` → `1 h 35 min`, `120` → `2 h`; a ride under a minute is a minute. */
 export function formatRideMinutes(minutes: number): string {
-  const rounded = Math.max(1, Math.round(minutes));
-  if (rounded < 60) return `${rounded} min`;
-  const hours = Math.floor(rounded / 60);
-  const rest = rounded % 60;
-  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+  return formatWholeMinutes(Math.max(1, minutes));
 }
 
 /**
