@@ -114,3 +114,77 @@ it does not establish legal access or authorize changes to OSM geometry.
 
 The v3 before/after measurements and browser evidence are recorded in
 [the app integration report](../../docs/vnext/research/hike-planning-2026-10-28.md).
+
+# Motorcycle router v2
+
+Everything for the motorcycle router lives in [`moto/`](moto/); production's own
+config and models were only in the frozen `switchback` repo until RM-1. Version 2 is
+production's router (same GraphHopper 11.0 jar, same `pa-nj-motorcycle.osm.pbf`, same
+four profiles, byte-identical custom models) plus three values the graph computes
+for itself during the import:
+
+| Value | What it means |
+|---|---|
+| `og_curve` (0 to 1) | How bendy the road is around this edge: weighted bend metres (the same road-bends-v1 maths as `src/domain/geometry/road-bends.ts`) within 500 m either way along the same road, over the metres covered, with 20% reading as 1. Town streets, service roads, links and roundabouts read 0. |
+| `og_through` | Not dead-end territory: the edge sits in a part of the road network with at least 20 km of roads once every only-way-in road is removed, or on the road between two such parts. Roads a motorcycle may legally use only. |
+| `og_through_street` | The same without unpaved roads and without tracks rougher than grade 1. |
+
+`osm_way_id` is added too, so our own facts can be joined to roads later.
+
+**Profiles v2 (RM-2).** `motorcycle_fastest` is byte-identical to production and routes
+exactly as it does (the probe checks 20 pairs). Twisty and scenic read `og_curve` and
+penalise straight roads, primaries, town streets and city edges; twisty, scenic and
+adventure share production's speed-limit clock (`og-clock.json`). Adventure's road logic
+is unchanged. Hashes and the clock are in `custom-models/README.md`.
+
+How it works: `moto/build-og-ext.sh` builds `og-ext.jar`, a classpath overlay (pinned
+upstream `GraphHopperManaged.java`, sha256-checked, one-line patch to use
+`com.opengravel.gh.OgGraphHopper`). `OgGraphHopper` registers the three values and
+computes them in `postImportOSM()`, after the engine's own town density and speed limits
+and before landmarks. The upstream jar is never modified.
+
+```sh
+# Windows PC, WSL. A new folder each time; the script refuses an existing graph.
+infra/graphhopper/moto/build-graph.sh /mnt/wsl/ogv-data/ghbuild-moto-v2/build-N
+infra/graphhopper/moto/serve-v2.sh    /mnt/wsl/ogv-data/ghbuild-moto-v2/build-N   # 127.0.0.1:8989, -Xmx4g
+
+# Checks
+java -cp BUILD/og-ext/og-ext.jar:BUILD/graphhopper-web-11.0.jar com.opengravel.gh.OgChecks tests/fixtures/road-bends
+npx vitest run tests/unit/geometry/road-bend-fixtures.test.ts
+# docker-dev, with the v2 router tunnelled to 8988 and production on 8989:
+# Windows no longer forwards its localhost into WSL: point the tunnel at the WSL address
+# (`hostname -I` inside WSL; it can change after a WSL restart).
+ssh -f -N -L 8988:<wsl-ip>:8989 windows-zac
+GRAPHHOPPER_URL=http://127.0.0.1:8988 node --conditions=react-server --import tsx scripts/scorecard/field-check.ts
+python3 infra/graphhopper/moto/probe-graph.py --url http://127.0.0.1:8988 --prod http://127.0.0.1:8989 \
+  --atlas data/scorecard/gravel-atlas-v3.sqlite --field-json scorecard-out/field-check.json \
+  --turn-costs-bytes <size of graph-cache-v2/turn_costs> --memory-cmd '<prints the v2 java RSS in bytes>' \
+  --through-km <through/usable km from import.log> --street-km <street through/usable km>
+```
+
+The probe scores route parity on `motorcycle_fastest` only (the other profiles changed on
+purpose in RM-2) and the through flags with RM1-VERDICT.md's tests T1 to T3.
+
+Swap rehearsal (RM-2, Windows PC, 2026-11-12): stop one router, start the other folder,
+four times (old, new, old, new). Health answered about 15 s after start with a cold page
+cache and about 2 s warm; resident memory 1.7 GB after start and 3.0 GB after the probe's
+requests. Both folders keep their own graph, jar and config, so rollback is a restart.
+
+`build-graph.sh` writes `import.log`, `gc.log`, `SHA256SUMS` of the graph folder and
+`build-summary.txt` (input hashes, time, peak memory, the passes' own summary lines,
+graph size). On the Windows PC a process started from an ssh session dies with it, and
+`systemd --user` units stop too (no linger): start long runs from a Windows scheduled
+task that keeps its own `wsl.exe` open (`~/og-rm2-run.sh serve|build NAME`, task
+`OpenGravel-RM2-Router`). Windows' AC sleep must be off, or the PC sleeps after 30 idle
+minutes and the router disappears mid-scorecard.
+
+The road-bend fixtures in `tests/fixtures/road-bends/` are written by
+`scripts/geometry/write-road-bend-fixtures.ts` and read by both the vitest pin and
+`OgChecks`, so the app and the graph count the same bends. If `road-bends.ts` changes,
+rewrite them and re-run both.
+
+`moto/prepare-motorcycle-osm.mjs` and `moto/lib/motorcycle-osm.mjs` are byte-for-byte
+copies of the switchback scripts that made the map file (sha256 `3bbe1c95…a515` and
+`c50f9173…2108`), kept so the whole recipe lives here. They were not re-run for v2: it
+uses the same map file as production. Note that `prepare-motorcycle-osm.mjs` resolves its
+project root as the folder above its own, so run from a copy laid out as in switchback.
