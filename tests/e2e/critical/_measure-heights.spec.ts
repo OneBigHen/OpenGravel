@@ -3,6 +3,7 @@ import { useConnectedRouteFixture } from "./connected-route-fixture";
 import { plannerMap, settledExtent } from "./map-helpers";
 
 // TEMPORARY measurement spec (delete before merge).
+test.use({ hasTouch: true, geolocation: { latitude: 40.8757, longitude: -75.7324 }, permissions: ["geolocation"] });
 test("measure: ride summary heights at 320", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 568 });
   await useConnectedRouteFixture(page);
