@@ -109,11 +109,11 @@
 
   /* Suggestions drop below the category chips, so the chips stay reachable
      while typing and never paint over the first result (the chips are their
-     own glass layer). 60px = the chip row: 4px margin, 4px padding, 40px chip,
+     own glass layer). 60px = the chip row: 4px margin, 4px padding, 44px chip,
      4px padding, plus an 8px gap. */
   .og-top-search .og-place-search__list {
     position: absolute;
-    top: calc(100% + 60px);
+    top: calc(100% + 64px);
     left: 0;
     right: 0;
     z-index: var(--og-z-overlay);
@@ -152,7 +152,7 @@
     flex: none;
     align-items: center;
     gap: var(--og-space-2);
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 var(--og-space-4);
     border: 1px solid var(--og-glass-edge);
     border-radius: var(--og-radius-pill);
@@ -167,12 +167,7 @@
     cursor: pointer;
   }
 
-  /* 40px to the eye, 48px to the thumb. */
-  .og-search-chips button::before {
-    content: "";
-    position: absolute;
-    inset: -4px 0;
-  }
+  /* 44px to the eye and the thumb (PF-6). */
 
 
   .og-search-chips__glyph {
@@ -359,7 +354,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 36px;
+    min-height: 44px;
     min-width: var(--og-touch);
     padding: 0 10px 0 8px;
     border: 0;

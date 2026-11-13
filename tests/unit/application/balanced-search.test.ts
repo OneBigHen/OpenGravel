@@ -63,6 +63,24 @@ describe("Balanced fun envelope", () => {
     expect(verify).toHaveBeenCalled();
     expect((await run([incumbent], { request: loop, provider: p, verify: async () => [] })).candidate).toBeNull();
   });
+  it("takes a loop out of town when it keeps the curves, and leaves an A-to-B ride alone", async () => {
+    const suburbs = (candidate: ProviderCandidate, share: number): ProviderCandidate => {
+      const summary = candidate.roadSummary!;
+      const runs = summary.roadRuns!;
+      return { ...candidate, roadSummary: { ...summary, roadRuns: [
+        ...runs.map(run => ({ ...run, meters: run.meters * (1 - share) })),
+        { ...runs[runs.length - 1]!, meters: summary.totalMeters * share, roadClass: "secondary", urbanDensity: "residential" },
+      ] } };
+    };
+    // The incumbent runs 75% through the suburbs; the other loop is 25%, same curves.
+    const city = suburbs(bendy(112, 30, 4000), 0.75);
+    const farms = suburbs(bendy(127, 30, 4000), 0.25);
+    const loop = { ...balanced, destination: balanced.origin, discovery: { targetMinutes: 120, toleranceMinutes: 18 } };
+    expect((await run([city, farms], { request: loop })).candidate?.durationSeconds).toBe(127 * 60);
+    expect((await run([city, farms])).candidate).toBeNull();
+    // A small difference in town time never trades away the incumbent's curves.
+    expect((await run([city, suburbs(bendy(127, 30, 3000), 0.6)], { request: loop })).candidate).toBeNull();
+  });
   it("leaves authored shaping, stops and sketches in charge", async () => {
     const p = provider(() => [bendy(52, 100, 9000)]);
     await run([bendy(48, 20, 4000)], { provider: p, request: { ...balanced, shaping: [balanced.origin] } });
