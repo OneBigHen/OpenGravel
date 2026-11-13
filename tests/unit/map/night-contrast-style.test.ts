@@ -144,9 +144,9 @@ describe("Night terrain palette", () => {
       waterLine: "#1d3a4a",
       builtUp: "#171c1a",
       casing: "#0b100e",
-      motorway: "#7f8984",
+      motorway: "#798380",
       primary: "#4e5853",
-      minor: "#2b3531",
+      minor: "#29332f",
       unpaved: "#d6a862",
       unpavedOpacity: 0.8,
       path: "#3b4540",
@@ -232,11 +232,11 @@ describe("toNightContrast", () => {
 
   it("draws dark roads in their order of importance (PF-5: one bright line)", () => {
     // A street with no surface value is the minor grey; the town grid is dark.
-    expect(evaluate(layer("road-street")?.paint?.["line-color"], { class: "street" })).toBe("#2b3531");
-    expect(evaluate(layer("road-street-low")?.paint?.["line-color"], { class: "street" })).toBe("#2b3531");
+    expect(evaluate(layer("road-street")?.paint?.["line-color"], { class: "street" })).toBe("#29332f");
+    expect(evaluate(layer("road-street-low")?.paint?.["line-color"], { class: "street" })).toBe("#29332f");
     expect(layer("road-primary")?.paint?.["line-color"]).toBe("#4e5853");
     expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-color"], {})).toBe("#4e5853");
-    expect(layer("road-motorway-trunk")?.paint?.["line-color"]).toBe("#7f8984");
+    expect(layer("road-motorway-trunk")?.paint?.["line-color"]).toBe("#798380");
     expect(layer("road-path")?.paint?.["line-color"]).toBe("#3b4540");
     expect(layer("road-label")?.paint?.["text-color"]).toBe("#8b9690");
   });
