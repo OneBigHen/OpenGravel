@@ -1815,13 +1815,15 @@ describe("the strip and the sheet while riding a route (ride overhaul)", () => {
     expect(store.getState().stopConfirm).toBe(false);
   });
 
-  it("stopping the route follows says so plainly, and keeps recording", async () => {
+  it("stopping the route follows says so plainly, and never promises a recording that is not running", async () => {
     const { store, controller } = await harness({ position: "fresh" });
     const sessionId = controller.snapshot()?.sessionId;
     fireEvent.click(screen.getByTestId("ride-menu"));
     const cancel = screen.getByTestId("continue-free-ride");
     expect(cancel).toHaveTextContent("Stop following this route");
-    expect(cancel).toHaveTextContent("Keep recording");
+    // OG-18: nothing is recording here, so the hint says "Keep riding" only.
+    expect(cancel).toHaveTextContent("Keep riding");
+    expect(cancel).not.toHaveTextContent("recording");
     await act(async () => {
       fireEvent.click(cancel);
     });
