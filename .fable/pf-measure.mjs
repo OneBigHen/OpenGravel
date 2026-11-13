@@ -49,6 +49,7 @@ if (scenes.includes("counts")) {
     const pts = have(["ogv-info-point"]).length ? m.queryRenderedFeatures({ layers: ["ogv-info-point"] }) : [];
     const lines = new Set(roads.map((f) => f.properties.id)); return { zoom: m.getZoom(), greatRoadsRendered: lines.size, infoPoints: pts.length }; });
   console.log(JSON.stringify({ tag, ...r }));
+  console.log(JSON.stringify(await p.evaluate(async () => { const m = window.__maps.at(-1); const src = m.querySourceFeatures("ogv-info"); const t = {}; for (const f of src) t[f.properties.layerId] = (t[f.properties.layerId] ?? 0) + 1; const b = m.getBounds(); let api = null; try { const rr = await fetch(`/api/map-layers?layers=great-roads&south=${b.getSouth()}&west=${b.getWest()}&north=${b.getNorth()}&east=${b.getEast()}`); api = rr.status + " " + (await rr.text()).slice(0, 200); } catch (e) { api = String(e); } return { sourceTally: t, api }; })));
   for (const z of [11, 12]) {
     await p.evaluate((zz) => (window.__maps.at(-1)).jumpTo({ zoom: zz }), z); await p.waitForTimeout(8000);
     const r2 = await p.evaluate(() => { const m = window.__maps.at(-1); const have = (ids) => ids.filter((i) => m.getLayer(i));

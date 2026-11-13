@@ -92,8 +92,8 @@ describe("a calmer home map (PF-6)", () => {
   it("the lesser twisty segments and the dots wait for zoom 11", () => {
     expect(byId("ogv-info-line-minor")?.minzoom).toBe(11);
     expect(byId("ogv-info-line-casing-minor")?.minzoom).toBe(11);
-    expect(JSON.stringify(byId("ogv-info-line-minor")?.filter)).toContain("1000");
-    expect(JSON.stringify(byId("ogv-info-line")?.filter)).toContain("1000");
+    expect(JSON.stringify(byId("ogv-info-line-minor")?.filter)).toContain("1050");
+    expect(JSON.stringify(byId("ogv-info-line")?.filter)).toContain("1050");
     expect(byId("ogv-info-point")?.minzoom).toBe(11);
     expect(byId("ogv-info-point")?.paint?.["circle-radius"]).toEqual(["interpolate", ["linear"], ["zoom"], 11, 3, 14, 5]);
   });
