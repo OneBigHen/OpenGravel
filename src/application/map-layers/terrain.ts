@@ -46,7 +46,7 @@ export function terrainFeatures(grid: TerrainGrid, layers: readonly MapLayerId[]
             }
           }
           if (crossings.length === 2 && (crossings[0]![0] !== crossings[1]![0] || crossings[0]![1] !== crossings[1]![1])) {
-            features.push({ id: `contour:${lon}:${lat}:${dx}:${dy}:${triangle[1]}:${elevation}`, layerId: "contours", name: `${elevation} m contour`, detail: `Derived Terrarium elevation, metres above sea level; ${interval} m interval at this view. Source survey date unknown.`, weight: elevation % (interval * 5) === 0 ? 2 : 1, geometry: { type: "LineString", coordinates: crossings } });
+            features.push({ id: `contour:${lon}:${lat}:${dx}:${dy}:${triangle[1]}:${elevation}`, layerId: "contours", name: `${Math.round(elevation * 3.28084).toLocaleString("en-US")} ft contour`, detail: `This line is ${Math.round(elevation * 3.28084).toLocaleString("en-US")} feet above sea level.`, weight: elevation % (interval * 5) === 0 ? 2 : 1, geometry: { type: "LineString", coordinates: crossings } });
           }
           if (features.length > 30_000) throw new Error("Terrain detail exceeds view budget; zoom in");
         }

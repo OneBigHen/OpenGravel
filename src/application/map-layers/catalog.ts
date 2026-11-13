@@ -132,15 +132,8 @@ export const MAP_LAYERS: readonly MapLayerDefinition[] = [
     id: "contours", name: "Contour lines", category: "view", kind: "features",
     legend: "Elevation lines; closer lines mean steeper ground", source: "AWS Terrain Tiles (Mapzen Terrarium)",
     caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
-    minZoom: 6, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
+    minZoom: 12, color: "#776353", colorToken: "--og-trail-brown", glyph: "⛰",
   },
-  {
-    id: "slope", name: "Steep ground", category: "view", kind: "features",
-    legend: "Amber is steep, red is very steep", source: "AWS Terrain Tiles (Mapzen Terrarium)",
-    caveat: "DEM resolution roughly 30–90 m, varying by source region. Derived contours and slope use a coarser visible-view grid; spacing shown when loaded. Terrain gradient is not road grade. Online only; source survey date unknown.",
-    minZoom: 6, color: "#c99a46", colorToken: "--og-golden-hour", glyph: "⛰",
-  },
-
   {
     id: "terrain-3d",
     name: "3D terrain",

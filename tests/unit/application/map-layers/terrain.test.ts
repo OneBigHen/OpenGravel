@@ -6,7 +6,7 @@ const bounds = { west: 0, south: 0, east: 0.001, north: 0.001 };
 describe("DEM derivatives", () => {
   it("interpolates 20 m contours and measures gradient on a planar grid", () => {
     const features = terrainFeatures({ bounds, size: 2, heights: [0, 40, 0, 40] }, ["contours", "slope"]);
-    const contour = features.find((feature) => feature.name === "20 m contour");
+    const contour = features.find((feature) => feature.name === "66 ft contour");
     expect(contour?.geometry).toMatchObject({ type: "LineString" });
     if (contour?.geometry.type !== "LineString") throw new Error("missing contour");
     expect(contour.geometry.coordinates.every((point) => point[0] === 0.0005)).toBe(true);

@@ -104,9 +104,11 @@ export function InfoFeatureCard({
       {feature.media === undefined || feature.media === null ? null : (
         <InfoFeatureMedia media={feature.media} name={feature.name} />
       )}
-      <p className="og-info-card__source">
-        {layer.source}. {layer.caveat}
-      </p>
+      {feature.layerId === "contours" ? null : (
+        <p className="og-info-card__source">
+          {layer.source}. {layer.caveat}
+        </p>
+      )}
       {ride === null || onRideThisRoute === undefined ? null : (
         <div className="og-info-card__actions">
           <button
