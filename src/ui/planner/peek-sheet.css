@@ -1,0 +1,125 @@
+/* PF-2 "A sheet that gives the map back" (Fable phone-first plan, 2026-11-12).
+   Peek is a real peek: one 96px row with the time, the miles and the surface,
+   and Start under the thumb. Half is the answer and the buttons; full is
+   everything. The peek line exists only for the peek. */
+.og-phone-summary__peek { display: none; }
+
+@media (max-width: 1180px) and (min-height: 501px) {
+  /* A weather warning stays whole at half (owner safety rule): the sheet is
+     one warning line taller rather than slicing it, also at 320 x 568. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"]:not(:has(.og-phone-summary[data-comparing="true"])):has(.og-phone-summary__weather) {
+    max-height: min(var(--og-sheet-half), max(40dvh, 252px) + 56px);
+  }
+
+  /* The grab strip is the whole width and 32px tall (plus the 12px lip). */
+  .og-planner .og-planner__sheet button.og-sheet__handle {
+    height: 32px;
+    min-height: 32px;
+  }
+
+  .og-planner .og-planner__sheet {
+    transition: height var(--og-dur-base) var(--og-ease), max-height var(--og-dur-base) var(--og-ease);
+  }
+
+  /* Half: a row the cap would cut can still be scrolled to, never sliced away. */
+  .og-planner .og-planner__sheet[data-directions="true"][data-sheet-view="choices"][data-detent="half"] .og-sheet__body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Peek with a ride on the map: fixed 96px, one row. A refusal or an error
+     under Start is something the rider must read, so then the peek grows to
+     hold it (up to the half cap) instead of hiding it. */
+  .og-planner .og-planner__sheet[data-detent="peek"]:not([data-place="true"]):has(.og-phone-summary):not(:has(.og-phone-summary :is(.og-composer__reason, .og-planner__error))) {
+    height: 96px;
+    max-height: 96px;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"]:not([data-place="true"]):has(.og-phone-summary) {
+    overflow: hidden;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"]:not([data-place="true"]):has(.og-phone-summary) .og-sheet__head > :not(.og-sheet__handle, .og-planner__status, .og-planner__save-indicator) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"]:not([data-place="true"]):has(.og-phone-summary) .og-sheet__body {
+    overflow: hidden;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-route-options__scroll > :not(.og-phone-summary),
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-sheet__body > :not(.og-route-options, .og-phone-summary, .og-result, :has(.og-phone-summary)) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 var(--og-space-3);
+    min-height: 48px;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary > :not(.og-phone-summary__ride, .og-phone-summary__actions, .og-composer__reason, .og-planner__error),
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__ride > :not(.og-phone-summary__eta),
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__facts > :not(.og-phone-summary__peek),
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__actions > :not([data-testid="start-ride"]) {
+    display: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary > :is(.og-composer__reason, .og-planner__error) {
+    grid-column: 1 / -1;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__ride {
+    min-width: 0;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__eta {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    gap: var(--og-space-2);
+    min-width: 0;
+    margin: 0;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary .og-phone-summary__time {
+    flex: none;
+    color: var(--og-primary-text);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__facts {
+    min-width: 0;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary p.og-phone-summary__peek {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    color: var(--og-ink-2);
+    font-size: 14px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__actions {
+    position: static;
+    padding: 0;
+    overflow: visible;
+    background: none;
+  }
+
+  .og-planner .og-planner__sheet[data-detent="peek"] .og-phone-summary__actions > [data-testid="start-ride"] {
+    min-width: 112px;
+    min-height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .og-planner .og-planner__sheet { transition: none; }
+}
