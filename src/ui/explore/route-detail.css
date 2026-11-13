@@ -1450,3 +1450,27 @@
 .og-route-detail__map-title {
   display: none;
 }
+
+/* "Route by <author> · <source>": quiet, one caption-sized line that wraps at 320px. */
+.og-ride-credit {
+  margin: 0;
+  color: var(--og-ink-2);
+  font-size: var(--og-text-caption);
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.og-ride-credit a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+.og-route-detail__header > .og-ride-credit {
+  flex: 1 0 100%;
+}
+
+/* The Explore card's credit may wrap rather than cut the author's name. */
+.og-explore-card__credit:has(.og-explore-card__byline) {
+  white-space: normal;
+}

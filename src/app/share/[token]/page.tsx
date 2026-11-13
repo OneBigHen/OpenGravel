@@ -8,6 +8,7 @@ import type { SurfaceIntent } from "@/domain/ride/types";
 import type { ShareSnapshot } from "@/domain/sharing/types";
 import { publicShareStore } from "@/server/sharing/public-share-store";
 import { shareOwnerHash } from "@/server/sharing/public-share-handler";
+import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { AppBar } from "@/ui/nav/AppBar";
 import { OwnerRevoke } from "./OwnerRevoke";
 import { RideThisButton } from "./RideThisButton";
@@ -74,6 +75,7 @@ export default async function SharedRidePage({ params }: { params: Promise<{ tok
           {snapshot.author === null ? null : (
             <p className="og-route-detail__meta">Shared by {snapshot.author.pseudonym}</p>
           )}
+          <RideCreditLine credit={snapshot.credit} />
           <dl className="og-route-detail__facts" data-testid="shared-facts">
             <div className="og-route-detail__stat" data-stat="distance">
               <dt>Distance</dt>

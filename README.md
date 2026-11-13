@@ -159,7 +159,7 @@ Riders and developers are both welcome. Bug reports from real rides are gold. St
 
 ## Credits
 
-- **Routes and photos**: members of [PA Adventure Bike Rides](https://www.facebook.com/groups/214850105910753/) and [Roost](https://roostlocker.com/). Rider names are removed; every route links back to its original post. If you shared a route and want it credited differently or removed, [open an issue](https://github.com/OneBigHen/OpenGravel/issues). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+- **Routes and photos**: members of [PA Adventure Bike Rides](https://www.facebook.com/groups/214850105910753/) and [Roost](https://roostlocker.com/). Every route credits the rider who posted it and links back to the original post; see [docs/ride-credits.md](docs/ride-credits.md). If you shared a route and want it credited differently or removed, [open an issue](https://github.com/OneBigHen/OpenGravel/issues). See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 - **Map data** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors. Tiles from [OpenFreeMap](https://openfreemap.org/) / [OpenMapTiles](https://www.openmaptiles.org/).
 - **Routing** by [GraphHopper](https://github.com/graphhopper/graphhopper), **search** by [Photon](https://github.com/komoot/photon), **weather** by the [National Weather Service](https://www.weather.gov/documentation/services-web-api), **rendering** by [MapLibre GL JS](https://maplibre.org/), **native navigation** by [Ferrostar](https://github.com/stadiamaps/ferrostar).
 

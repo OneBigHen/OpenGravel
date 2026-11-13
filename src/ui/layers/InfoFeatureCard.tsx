@@ -9,6 +9,7 @@
  * its two via points are handed to the host, which adds them as stops.
  */
 
+import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import { useState } from "react";
 
 import {
@@ -99,6 +100,7 @@ export function InfoFeatureCard({
           </div>
         </dl>
       )}
+      {ride === null ? null : <RideCreditLine credit={ride.credit} />}
       {feature.media === undefined || feature.media === null ? null : (
         <InfoFeatureMedia media={feature.media} name={feature.name} />
       )}

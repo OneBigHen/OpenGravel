@@ -1,3 +1,4 @@
+import type { RideCredit } from "@/domain/ride/credit";
 import type { Coordinate, RideProvenance, SurfaceIntent } from "@/domain/ride/types";
 
 /**
@@ -37,6 +38,8 @@ export interface ShareSource {
   readonly provenance: RideProvenance["type"];
   /** Opted-in pseudonym, or `null` (explicitly not included). */
   readonly authorPseudonym: string | null;
+  /** Whose route this is when the rider did not make it; always shared, never optional to the rider. */
+  readonly credit?: RideCredit;
 }
 
 export const SHARE_SNAPSHOT_VERSION = 1;
@@ -59,4 +62,6 @@ export interface ShareSnapshot {
   readonly surface: SurfaceSummary;
   readonly author: { readonly pseudonym: string } | null;
   readonly source: { readonly attribution: RideProvenance["type"] };
+  /** The original author and source of a route that is someone else's work. */
+  readonly credit?: RideCredit;
 }
