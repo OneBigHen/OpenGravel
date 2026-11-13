@@ -1,9 +1,10 @@
 /* The daylight chip at the end of the sheet's stat line (PF-3). */
 .og-route-daylight {
-  display: inline-flex; align-items: center; max-width: 100%; min-height: 28px; margin: 0 0 0 var(--og-space-1); padding: 0 var(--og-space-3); vertical-align: middle;
+  display: inline-flex; align-items: center; max-width: 100%; position: relative; margin: 0 0 0 var(--og-space-1); padding: 1px var(--og-space-2); line-height: 1.2; vertical-align: baseline;
   border: 1px solid var(--og-line); border-radius: var(--og-radius-pill); background: var(--og-glass-well);
   color: var(--og-ink-2); font: inherit; font-size: var(--og-text-caption); font-weight: 700; white-space: nowrap; cursor: pointer;
 }
+.og-route-daylight::after { content: ""; position: absolute; inset: -12px -6px; }
 .og-route-daylight[data-tone="warn"] { border-color: var(--og-warn); color: var(--og-warn); }
 .og-route-daylight:focus-visible { outline: 2px solid var(--og-primary-text); outline-offset: 2px; }
 .og-route-conditions-scrim { position: fixed; inset: 0; z-index: var(--og-z-overlay); display: flex; align-items: flex-end; justify-content: center; background: var(--og-scrim); }

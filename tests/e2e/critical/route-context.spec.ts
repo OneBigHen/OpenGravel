@@ -29,8 +29,6 @@ test("daylight chip in the sheet opens conditions; Ask lives in Options", async 
   await expect(sheet).toContainText("In the dark the whole way");
   await expect(sheet).toContainText("Sunrise");
   await page.keyboard.press("Escape");
-  await page.waitForTimeout(500);
-  console.log("DEBUG", await page.evaluate(() => ({ n: document.querySelectorAll('[data-testid="route-conditions"]').length, a: document.activeElement?.outerHTML.slice(0, 120) })));
   await expect(sheet).toHaveCount(0);
   await expect(context).toBeFocused();
   // Ask moved into the Options view.

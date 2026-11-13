@@ -81,7 +81,7 @@ function ConditionsSheet({ route, departureAt, daylight, lightLabel, onClose }: 
   useDialogFocus(ref, onClose);
   const weather = useRouteWeather({ line: route.geometry, departureTime: departureAt, durationSeconds: route.durationSeconds });
   const start = route.geometry[0];
-  return <div className="og-route-conditions-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div className="og-route-conditions-scrim" onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={ref} role="dialog" aria-modal="true" aria-labelledby="route-conditions-title" className="og-route-conditions" data-testid="route-conditions">
       <header className="og-route-conditions__header"><div><p>YOUR RIDE</p><h2 id="route-conditions-title">Ride conditions</h2></div><button type="button" onClick={onClose} aria-label="Close ride conditions">×</button></header>
       <div className="og-route-conditions__body">
