@@ -531,6 +531,13 @@
 .og-elevation__legend > [data-surface="gravel"]::before { background: var(--og-warn); }
 .og-elevation__legend > [data-surface="dirt"]::before { background: var(--og-ink-2); }
 
+/* The bar's words sit tight under the bar on the phone summary: the half sheet
+   is capped, and Start and Compare must stay whole on a 320 phone. */
+.og-phone-summary .og-phone-summary__legend {
+  margin: 0;
+  line-height: 1.2;
+}
+
 .og-elevation__ticks {
   display: flex;
   justify-content: space-between;
