@@ -19,9 +19,12 @@
  *   highlight, so ridge-and-valley grain survives at night;
  * - contours are faint at 35% (index lines brighter), so a climb reads without
  *   a contour map's clutter;
- * - roads get *brighter* with importance, on near-black casings; gravel is tan
- *   and tracks are dashed, and a road with an unknown surface is grey and
- *   dotted, never painted as paved and never as gravel;
+ * - roads are dark and keep their order of importance on near-black casings
+ *   (phone-first PF-5, owner 2026-11-12: "dark roads, one bright line"): the
+ *   ride line is the brightest line on the map, the city grid stays quiet and
+ *   streets fade in only from zoom 10 to 14; gravel is tan at 80% and tracks
+ *   are dashed, and a road with an unknown surface is grey and dotted, never
+ *   painted as paved and never as gravel;
  * - labels sit in a dark halo: place names are the brightest ink on the map,
  *   road names a step quieter, and no colour is pure white;
  * - patterns (wetland, pedestrian, cliff) are dropped rather than recoloured,
@@ -62,17 +65,19 @@ export const NIGHT_CONTRAST = {
   waterLine: "#1d3a4a",
   builtUp: "#171c1a",
   casing: "#0b100e",
-  motorway: "#8e9994",
-  primary: "#b9c2bd",
-  minor: "#7a857f",
+  motorway: "#98a29d",
+  primary: "#69746f",
+  minor: "#3d4843",
   unpaved: "#d6a862",
-  path: "#6d7a73",
+  /** Gravel stays tan (gravel is the product) but a step back from the ride line. */
+  unpavedOpacity: 0.8,
+  path: "#4a5650",
   rail: "#3a443f",
   boundary: "#46504b",
   muted: "#2b3833",
   label: "#dfe6e2",
   labelSoft: "#a2aea8",
-  roadLabel: "#aab4ae",
+  roadLabel: "#8b9690",
   waterLabel: "#6f9bb3",
   halo: "#0b100e",
   shieldPlate: "#1d2724",
@@ -167,6 +172,56 @@ function roadDash(base: string): unknown | undefined {
   return undefined;
 }
 
+/** Tan on the map: an `unpaved` surface, or a track (always drawn tan). */
+const GRAVEL: unknown = ["any", UNPAVED, ["==", ["get", "class"], "track"]];
+
+/**
+ * The streets of a town (PF-5): minor, street and service bodies fade in with
+ * zoom, 0 at z10, 0.6 at z12 and full at z14, so the city grid is quiet at
+ * the zooms a ride is planned at. Gravel and tracks hold their 80% at every
+ * zoom: the gravel network is what a rider opened the map for.
+ */
+function minorRoadOpacity(): unknown {
+  const gravel = NIGHT_CONTRAST.unpavedOpacity;
+  return [
+    "interpolate",
+    ["linear"],
+    ["zoom"],
+    10,
+    ["case", GRAVEL, gravel, 0],
+    12,
+    ["case", GRAVEL, gravel, 0.6],
+    14,
+    ["case", GRAVEL, gravel, 1],
+  ];
+}
+
+/**
+ * Gravel at 80% of a layer's own opacity, the rest untouched. A zoom curve
+ * keeps its stops; each non-zero output gets the gravel test, because a
+ * `["zoom"]` input may only feed a top-level `step` or `interpolate`.
+ */
+function gravelOpacity(opacity: unknown): unknown {
+  const scaled = (value: number): unknown =>
+    value === 0 ? 0 : ["case", GRAVEL, value * NIGHT_CONTRAST.unpavedOpacity, value];
+  if (opacity === undefined) return scaled(1);
+  if (typeof opacity === "number") return scaled(opacity);
+  if (!Array.isArray(opacity)) return opacity;
+  const [op] = opacity;
+  if (op === "interpolate") {
+    return opacity.map((part, index) => (index >= 4 && index % 2 === 0 && typeof part === "number" ? scaled(part) : part));
+  }
+  if (op === "step") {
+    return opacity.map((part, index) => ((index === 2 || (index > 2 && index % 2 === 0)) && typeof part === "number" ? scaled(part) : part));
+  }
+  return opacity;
+}
+
+/** The town-street classes whose bodies fade in with zoom. */
+function isMinorStreet(base: string): boolean {
+  return /^(minor|street|street-low|service)$/.test(base);
+}
+
 /** Hillshade keeps its own zoom fade; only the two ends are recoloured here. */
 function hillshadeColour(): unknown {
   const shadow = wash(NIGHT_CONTRAST.hillshadeShadow, 0.55);
@@ -246,6 +301,14 @@ function repaintLine(layer: StyleLayer, paint: Record<string, unknown>): void {
       else delete paint["line-dasharray"];
       if (/^secondary|^tertiary|^minor$/.test(base) && paint["line-width"] !== undefined) {
         paint["line-width"] = gravelWidth(paint["line-width"]);
+      }
+      // Streets fade in with zoom where the style has no curve of its own
+      // (Outdoors' `road-street` already steps in at z14); everything else
+      // keeps its opacity, with gravel at 80%.
+      if (isMinorStreet(base) && paint["line-opacity"] === undefined) {
+        paint["line-opacity"] = minorRoadOpacity();
+      } else if (!/motorway|trunk|major-link|^primary$|^minor-link$/.test(base)) {
+        paint["line-opacity"] = gravelOpacity(paint["line-opacity"]);
       }
     }
     // Tunnels recede a step, as they do on every road map.

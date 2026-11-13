@@ -126,7 +126,7 @@ import {
 import { createPlacePillImages, type PlacePillImage } from "@/infrastructure/map/maplibre/place-images";
 import { createPuckImage } from "@/infrastructure/map/maplibre/puck-image";
 import { scaleOpacity } from "@/infrastructure/map/maplibre/scale-opacity";
-import { SATELLITE_ROAD_OPACITY, isBasemapRoadLayer, rideFocusChanges } from "@/infrastructure/map/maplibre/ride-focus-dim";
+import { type RoadOpacityEntry, basemapRoadChanges, basemapRoadOpacityFactor, rideFocusChanges } from "@/infrastructure/map/maplibre/ride-focus-dim";
 import { routeLineAnchorId, routeLineBelowRoads } from "@/infrastructure/map/maplibre/route-anchor";
 import { createSearchPinImages, createSelectedPlaceLabel, searchLabelImageId } from "@/infrastructure/map/maplibre/search-pin-images";
 import { createMarkerImages, createRouteArrowImage, type RouteArrowTone } from "@/infrastructure/map/maplibre/marker-images";
@@ -1559,19 +1559,21 @@ export async function createMapLibreHost(
    * ride and its choices must be the brightest lines on screen. Same road-layer
    * test as Hike's quiet roads; originals come back when satellite is off.
    */
-  const satelliteRoadOriginals = new Map<string, unknown>();
+  /**
+   * Phone first PF-5: while a ride is shown the streets step back on every look
+   * (to 0.6 on Day and Night, 0.25 over satellite), so the ride is the one
+   * bright line. The plan re-reads what the style holds on every call, so a
+   * reloaded style is dimmed again and Close route gives every street its own
+   * opacity back.
+   */
+  const basemapRoadEntries = new Map<string, RoadOpacityEntry>();
+  let basemapRoadsRideShown = false;
   function applySatelliteRoads(map: MapLibreMap): void {
     if (map.setPaintProperty === undefined) return;
     try {
-      for (const [id, value] of satelliteRoadOriginals) if (map.getLayer(id) !== undefined) map.setPaintProperty(id, "line-opacity", value ?? null);
-      satelliteRoadOriginals.clear();
-      if (!satelliteVisible) return;
-      const layers = map.getStyle?.()?.layers ?? [];
-      for (const layer of layers) {
-        if (!isBasemapRoadLayer(layer)) continue;
-        const original = layer.paint?.["line-opacity"];
-        satelliteRoadOriginals.set(layer.id, original);
-        map.setPaintProperty(layer.id, "line-opacity", scaleOpacity(original, SATELLITE_ROAD_OPACITY));
+      const factor = basemapRoadOpacityFactor({ satellite: satelliteVisible, rideShown: basemapRoadsRideShown });
+      for (const change of basemapRoadChanges(map.getStyle?.()?.layers ?? [], factor, basemapRoadEntries)) {
+        if (map.getLayer(change.id) !== undefined) map.setPaintProperty(change.id, change.property, change.value);
       }
     } catch {
       // Cosmetic only: the streets stay at full strength.
@@ -1602,7 +1604,6 @@ export async function createMapLibreHost(
           belowOverlay(map, firstLabel),
         );
         // A fresh style: its streets are at full strength again.
-        satelliteRoadOriginals.clear();
         applySatelliteRoads(map);
       }
     } catch {
@@ -1992,6 +1993,8 @@ export async function createMapLibreHost(
     } catch {
       // Cosmetic only: the layers stay at full strength.
     }
+    basemapRoadsRideShown = focused;
+    applySatelliteRoads(map);
   }
 
   function syncScene(current: HostAttempt, scene: MapScene): void {

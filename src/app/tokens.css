@@ -128,9 +128,10 @@
   --og-map-gold: #e5c07a;
   --og-map-brown: #bfb2a4;
   --og-map-spruce: #cfe3d8;
-  --og-map-route: #b48ae0;
+  /* PF-5 (2026-11-12): the night ride glows over dark roads, on a plum-black edge. */
+  --og-map-route: #c9a2f0;
   --og-map-route-strong: #d3b8f0;
-  --og-map-route-casing: #131a17;
+  --og-map-route-casing: #1a0f24;
   --og-map-emphasis: 1.4;
 }
 
