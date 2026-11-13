@@ -58,8 +58,8 @@ describe("map legend chip, first three opens only (PF-6)", () => {
 
   async function open() {
     vi.resetModules();
-    const module = await import("@/ui/layers/MapLegendChip");
-    return render(<module.MapLegendChip onOpen={vi.fn()} />);
+    const chip = await import("@/ui/layers/MapLegendChip");
+    return render(<chip.MapLegendChip onOpen={vi.fn()} />);
   }
 
   it("fades 8 seconds after the map is ready and then leaves the page", async () => {
