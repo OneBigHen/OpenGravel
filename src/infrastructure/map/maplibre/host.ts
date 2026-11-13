@@ -1993,7 +1993,8 @@ export async function createMapLibreHost(
     } catch {
       // Cosmetic only: the layers stay at full strength.
     }
-    basemapRoadsRideShown = focused;
+    // The streets also step back on the handlebar screen: there the ride line is the one bright line.
+    basemapRoadsRideShown = focused || (scene.mode === "ride" && scene.routes.some((route) => route.state === "selected" && isDrawableRoute(route)));
     applySatelliteRoads(map);
   }
 
