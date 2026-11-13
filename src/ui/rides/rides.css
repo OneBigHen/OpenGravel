@@ -1064,3 +1064,25 @@
     min-height: 100dvh;
   }
 }
+
+/* Ride to the start: a second, quiet action under a ride that starts far away. */
+.og-rides__to-start {
+  justify-self: start;
+  margin-top: var(--og-space-2);
+}
+
+.og-rides__empty-lede {
+  display: block;
+}
+
+.og-rides__empty-more,
+.og-rides__empty-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--og-ink-2);
+  font: inherit;
+  font-size: var(--og-text-meta);
+  text-decoration: underline;
+  cursor: pointer;
+}

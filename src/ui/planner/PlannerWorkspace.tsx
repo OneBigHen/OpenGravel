@@ -46,7 +46,8 @@
  * above the half sheet; the desktop retains its planning rail.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { peekApproach } from "@/application/ride-session/approach-request";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 
 import type { GeometryStore } from "@/application/geometry/geometry-store";
@@ -713,6 +714,21 @@ export function PlannerWorkspace({
       });
     }
   }, [rideActions, rideHandoff]);
+
+  // "Ride to the start" was tapped on this ride's card: the rider has already
+  // said go, so the ride opens on the ride screen without a second Start. The
+  // ride screen then plans the way to the start (approach-request.ts).
+  const approachStarted = useRef(false);
+  useEffect(() => {
+    if (approachStarted.current || rideActions === undefined || rideHandoff.outcome !== "ready") return;
+    if (!peekApproach(String(document.rideId))) return;
+    const timer = window.setTimeout(() => {
+      if (approachStarted.current) return;
+      approachStarted.current = true;
+      void handleStartRide();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [document.rideId, handleStartRide, rideActions, rideHandoff]);
 
   const planning = isPlanningInFlight(session.phase);
 

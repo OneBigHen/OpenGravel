@@ -35,6 +35,8 @@ import type { RoadProgressReader } from "@/application/roads/explorable-roads";
 import { RecordedRoadProgress, type RecordedRoadProgressState } from "./RecordedRoadProgress";
 import { RideRowMenu } from "./RideRowMenu";
 import { emitTelemetry } from "@/ui/telemetry/emit-telemetry";
+import { approachLabel, distanceToRideStartMeters } from "@/application/ride-session/approach-request";
+import { useRiderOrigin } from "@/ui/hooks/use-rider-origin";
 import { useOpenSavedRide } from "@/ui/planner/hooks/useOpenCuratedRide";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import { RideCard } from "@/ui/ride/RideCard";
@@ -163,6 +165,14 @@ function rideMeta(ride: RideSummary): string {
   return facts.join(" · ");
 }
 
+/** "Ride to the start · 40 mi" for a saved or imported ride that starts away from the rider. */
+function rideToStartLabel(ride: RideSummary, origin: readonly [number, number] | undefined): string | null {
+  if (origin === undefined || ride.recordedTrack !== undefined) return null;
+  const start = ride.mapPreview?.line[0] ?? ride.mapPreview?.pins[0];
+  if (start === undefined) return null;
+  return approachLabel(distanceToRideStartMeters({ lon: origin[0], lat: origin[1] }, start));
+}
+
 export interface RidesLibraryProps {
   readonly service: LibraryServicePort;
   readonly onOpen?: (ride: RideSummary) => Promise<void> | void;
@@ -195,6 +205,8 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
   const [rides, setRides] = useState<readonly RideSummary[]>([]);
   const [segment, setSegment] = useState<RideSegment>(askedTab ?? "planned");
   const [search, setSearch] = useState("");
+  const [emptyMoreOpen, setEmptyMoreOpen] = useState(false);
+  const { origin: riderOrigin } = useRiderOrigin();
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [titles, setTitles] = useState<Record<string, string>>({});
@@ -468,6 +480,17 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     void library.deleteRide(current.ride.rideId).catch(() => undefined);
   }, [library]);
 
+  /** Open the ride and let the ride screen plan the way from here to its start. */
+  async function rideToStart(ride: RideSummary): Promise<void> {
+    setBusy(ride.rideId);
+    try {
+      await openSavedRide(ride.rideId, { approach: true });
+    } catch {
+      setError("Could not open this ride.");
+      setBusy(null);
+    }
+  }
+
   async function openRide(ride: RideSummary): Promise<void> {
     // A ridden ride opens as the same card the ride ended with, right here:
     // opening it in the planner would turn proof of a ride into a new draft.
@@ -507,13 +530,15 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           <h1>My rides</h1>
           <p className="og-library__intro">Saved rides stay in this browser until you share them.</p>
         </div>
-        <button
-          type="button"
-          className="og-secondary og-rides__import"
-          onClick={() => importFileInput.current?.click()}
-        >
-          Import GPX
-        </button>
+        {libraryIsEmpty ? null : (
+          <button
+            type="button"
+            className="og-secondary og-rides__import"
+            onClick={() => importFileInput.current?.click()}
+          >
+            Import GPX
+          </button>
+        )}
         <AppMenu className="og-page-menu" />
         <input
           ref={importFileInput}
@@ -542,10 +567,26 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
           }}
         >
           <h2>No saved rides yet</h2>
+          <p className="og-library__empty-hint og-rides__empty-lede">
+            Got a GPX from a friend or another app? Import it and ride it from wherever you are.
+          </p>
           <div className="og-library__empty-actions">
-            <Link className="og-primary" href="/">Plan a ride</Link>
-            <Link className="og-secondary" href="/explore">Find a ride</Link>
+            <button type="button" className="og-primary" onClick={() => importFileInput.current?.click()}>
+              Import a GPX
+            </button>
+            <Link className="og-secondary" href="/">Plan a ride</Link>
           </div>
+          <button
+            type="button"
+            className="og-rides__empty-more"
+            aria-expanded={emptyMoreOpen}
+            onClick={() => setEmptyMoreOpen((open) => !open)}
+          >
+            More ways to add a ride
+          </button>
+          {emptyMoreOpen ? (
+            <Link className="og-rides__empty-link" href="/explore">Find a ride in Explore</Link>
+          ) : null}
         </section>
       ) : null}
 
@@ -711,6 +752,21 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                     />
                   </div>
                 )}
+
+                {(() => {
+                  const label = rideToStartLabel(ride, riderOrigin);
+                  return label === null || isRenaming ? null : (
+                    <button
+                      type="button"
+                      className="og-secondary og-rides__to-start"
+                      data-testid={`ride-to-start-${ride.rideId}`}
+                      disabled={busy === ride.rideId}
+                      onClick={() => void rideToStart(ride)}
+                    >
+                      {busy === ride.rideId ? "Finding the way to the start…" : label}
+                    </button>
+                  );
+                })()}
 
                 {isPendingOpen ? (
                   <div className="og-rides__confirm" role="status">
