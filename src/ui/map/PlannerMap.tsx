@@ -1019,6 +1019,7 @@ export function PlannerMap({
         workspace's own failure surface takes over then).
       */}
       <div className="og-map__veil" data-testid="map-veil" aria-hidden="true">
+        {/* OG-26: the slow sentence wraps inside the screen and stops pulsing (map.css). */}
         <span className="og-map__veil-label" data-slow={mapSlow ? "true" : "false"}>
           {mapSlow ? MAP_SLOW_LABEL : "Loading map…"}
         </span>
