@@ -357,7 +357,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         // PF-7: ridden road is flat grey at 55%, the same width as the line ahead.
         "line-color": "#68716f",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 16, 14, 17, 18],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 15.4, 14, 16, 15, 17, 18],
         "line-opacity": 0.55,
       },
     },
@@ -455,7 +455,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         // overview zooms keep the planner's weight.
         // PF-7: at riding zooms the line is glove-sized, 10 / 14 / 18 px at zoom
         // 15 / 16 / 17, and its edge is always the core plus 6 px.
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 16, 20, 17, 24],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 15.4, 20, 16, 21, 17, 24],
         // 0.9 on both looks: Night's plum-black edge (PF-5) lets a hint of the
         // dark map through, so the bright core reads as the line, not the edge.
         "line-opacity": 0.9,
@@ -469,7 +469,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       layout: LINE_LAYOUT,
       paint: {
         "line-color": selectedRouteColor(palette, false),
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 16, 14, 17, 18],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6 * emphasisOf(palette), 14, 7 * emphasisOf(palette), 15, 10, 15.4, 14, 16, 15, 17, 18],
       },
     },
     {
@@ -550,7 +550,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         // As wide as the casing, so both the core and its edge dim together.
         // PF-7: at riding zooms the line is glove-sized, 10 / 14 / 18 px at zoom
         // 15 / 16 / 17, and its edge is always the core plus 6 px.
-        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 16, 20, 17, 24],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 14, 13 * emphasisOf(palette), 15, 16, 15.4, 20, 16, 21, 17, 24],
         "line-opacity": 0.55,
       },
     },

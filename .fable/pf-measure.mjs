@@ -47,6 +47,13 @@ if (scenes.includes("counts")) {
     const pts = have(["ogv-info-point"]).length ? m.queryRenderedFeatures({ layers: ["ogv-info-point"] }) : [];
     const lines = new Set(roads.map((f) => f.properties.id)); return { zoom: m.getZoom(), greatRoadsRendered: lines.size, infoPoints: pts.length }; });
   console.log(JSON.stringify({ tag, ...r }));
+  for (const z of [11, 12]) {
+    await p.evaluate((zz) => (window.__maps.at(-1)).jumpTo({ zoom: zz }), z); await p.waitForTimeout(8000);
+    const r2 = await p.evaluate(() => { const m = window.__maps.at(-1); const have = (ids) => ids.filter((i) => m.getLayer(i));
+      const roads = m.queryRenderedFeatures({ layers: have(["ogv-info-line", "ogv-info-line-minor"]) }).filter((f) => f.properties.layerId === "great-roads");
+      const pts = m.queryRenderedFeatures({ layers: ["ogv-info-point"] }); return { zoom: m.getZoom(), greatRoadsRendered: new Set(roads.map((f) => f.properties.id)).size, infoPoints: pts.length }; });
+    console.log(JSON.stringify({ tag, ...r2 }));
+  }
   await ctx.close();
 }
 if (scenes.includes("ride")) {
