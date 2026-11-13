@@ -9,6 +9,10 @@ const MIN_BEND_GAIN_METERS = 400;
 const MIN_CURVATURE_GAIN = 5;
 const MAX_CANDIDATES = 16;
 const SWEEP_FACTORS = [1, 4] as const;
+/** A loop this many points less built-up than the incumbent is a better ride on its own. */
+const LOOP_TOWN_GAIN = 0.2;
+/** Value one loop loses per whole share of the ride spent on town streets. */
+const LOOP_TOWN_WEIGHT = 5;
 
 interface CurveMeasurement {
   readonly perKm: number;
@@ -99,9 +103,12 @@ export async function searchBalancedEnvelope(input: {
   }
   const fastest = Math.min(...accepted.map(entry => entry.candidate.durationSeconds));
   const discovery = request.discovery;
+  // A loop has no destination to reach, so time in town is pure cost: from
+  // the edge of a city the countryside is the ride (owner 2026-11-13, Hatboro
+  // loop into Philadelphia). Point-to-point keeps its old value.
   const value = (entry: (typeof measured)[number]): number =>
     entry.bendMeters / 1000 + entry.perKm / 50 - (request.options.traffic === "protect-ride" ? (entry.busy ?? 1) * 5 : 0) - (discovery === undefined
-      ? Math.max(0, (entry.candidate.durationSeconds - leader.candidate.durationSeconds) / 60) * 0.08 : 0);
+      ? Math.max(0, (entry.candidate.durationSeconds - leader.candidate.durationSeconds) / 60) * 0.08 : (entry.residential ?? 1) * LOOP_TOWN_WEIGHT);
   const fits = (entry: (typeof measured)[number]): boolean => discovery === undefined
     ? entry.candidate.durationSeconds <= fastest * BALANCED_DETOUR_CAP
     : Math.abs(entry.candidate.durationSeconds / 60 - discovery.targetMinutes) <= discovery.toleranceMinutes;
@@ -114,7 +121,12 @@ export async function searchBalancedEnvelope(input: {
     // exposure differences must never erase the pipeline's better curves.
     (entry.bendMeters >= leader.bendMeters + MIN_BEND_GAIN_METERS && entry.perKm >= leader.perKm + MIN_CURVATURE_GAIN) ||
       (request.options.traffic === "protect-ride" && leader.busy !== null && entry.busy !== null && leader.busy - entry.busy >= 0.1 &&
-        entry.bendMeters >= leader.bendMeters * 0.95 && entry.perKm >= leader.perKm * 0.95),
+        entry.bendMeters >= leader.bendMeters * 0.95 && entry.perKm >= leader.perKm * 0.95) ||
+      // A loop that spends far less of the ride in town, with no fewer bends.
+      // Curvature per km is not asked: a street grid's corners inflate it, so
+      // the town loop would always win it.
+      (discovery !== undefined && leader.residential !== null && entry.residential !== null &&
+        leader.residential - entry.residential >= LOOP_TOWN_GAIN && entry.bendMeters >= leader.bendMeters * 0.95),
   ).sort((a, b) => value(b) - value(a) || a.candidate.durationSeconds - b.candidate.durationSeconds)[0];
   // The incumbent came from the broader canonical envelope. If it exceeds
   // Balanced's limit, return the best measured in-budget line even when it
