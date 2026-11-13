@@ -449,7 +449,9 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         // Street zoom (riding) draws the line bold, like turn-by-turn apps;
         // overview zooms keep the planner's weight.
         "line-width": ["interpolate", ["linear"], ["zoom"], 12, 11 * emphasisOf(palette), 15, 14 * emphasisOf(palette), 17, 20 * emphasisOf(palette)],
-        "line-opacity": palette.routeCasing === "auto" ? 0.9 : 1,
+        // 0.9 on both looks: Night's plum-black edge (PF-5) lets a hint of the
+        // dark map through, so the bright core reads as the line, not the edge.
+        "line-opacity": 0.9,
       },
     },
     {

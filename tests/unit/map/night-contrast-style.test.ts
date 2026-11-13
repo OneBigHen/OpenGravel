@@ -109,6 +109,8 @@ function evaluate(expression: unknown, feature: Record<string, unknown>): unknow
       return feature[args[0] as string];
     case "has":
       return Object.hasOwn(feature, args[0] as string);
+    case "any":
+      return args.some((arg) => evaluate(arg, feature) === true);
     case "==":
       return evaluate(args[0], feature) === evaluate(args[1], feature);
     case "case": {
@@ -142,13 +144,14 @@ describe("Night terrain palette", () => {
       waterLine: "#1d3a4a",
       builtUp: "#171c1a",
       casing: "#0b100e",
-      motorway: "#8e9994",
-      primary: "#b9c2bd",
-      minor: "#7a857f",
+      motorway: "#98a29d",
+      primary: "#69746f",
+      minor: "#3d4843",
       unpaved: "#d6a862",
-      path: "#6d7a73",
+      unpavedOpacity: 0.8,
+      path: "#4a5650",
       label: "#dfe6e2",
-      roadLabel: "#aab4ae",
+      roadLabel: "#8b9690",
       waterLabel: "#6f9bb3",
       halo: "#0b100e",
     });
@@ -225,6 +228,38 @@ describe("toNightContrast", () => {
       NIGHT_CONTRAST.primary,
     ]);
     expect(layer("road-path")?.paint?.["line-color"]).toBe(NIGHT_CONTRAST.path);
+  });
+
+  it("draws dark roads in their order of importance (PF-5: one bright line)", () => {
+    // A street with no surface value is the minor grey; the town grid is dark.
+    expect(evaluate(layer("road-street")?.paint?.["line-color"], { class: "street" })).toBe("#3d4843");
+    expect(evaluate(layer("road-street-low")?.paint?.["line-color"], { class: "street" })).toBe("#3d4843");
+    expect(layer("road-primary")?.paint?.["line-color"]).toBe("#69746f");
+    expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-color"], {})).toBe("#69746f");
+    expect(layer("road-motorway-trunk")?.paint?.["line-color"]).toBe("#98a29d");
+    expect(layer("road-path")?.paint?.["line-color"]).toBe("#4a5650");
+    expect(layer("road-label")?.paint?.["text-color"]).toBe("#8b9690");
+  });
+
+  it("fades town streets in with zoom, but keeps gravel at 80% at every zoom", () => {
+    const opacity = layer("road-street-low")?.paint?.["line-opacity"] as unknown[];
+    expect(opacity.slice(0, 3)).toEqual(["interpolate", ["linear"], ["zoom"]]);
+    const stops = opacity.slice(3);
+    expect(stops.filter((_, index) => index % 2 === 0)).toEqual([10, 12, 14]);
+    const outputs = stops.filter((_, index) => index % 2 === 1);
+    expect(outputs.map((out) => evaluate(out, { class: "street" }))).toEqual([0, 0.6, 1]);
+    expect(outputs.map((out) => evaluate(out, { class: "street", surface: "unpaved" }))).toEqual([0.8, 0.8, 0.8]);
+    expect(outputs.map((out) => evaluate(out, { class: "track" }))).toEqual([0.8, 0.8, 0.8]);
+    // Outdoors' own z14 step on road-street is kept (street-low draws below it).
+    const original = FIXTURE.layers.find((entry) => entry.id === "road-street")?.paint?.["line-opacity"];
+    const street = layer("road-street")?.paint?.["line-opacity"] as unknown[];
+    expect(street[0]).toBe("step");
+    expect(street[2]).toBe(0);
+    expect(evaluate(street[4], { class: "street" })).toBe((original as unknown[])[4]);
+    // Gravel on a bigger road is at 80% too; a primary road keeps its strength.
+    expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-opacity"], { surface: "unpaved" })).toBeCloseTo(0.8);
+    expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-opacity"], {})).toBe(1);
+    expect(layer("road-primary")?.paint?.["line-opacity"]).toBeUndefined();
   });
 
   it("never paints a road with an unknown surface as paved or gravel", () => {
