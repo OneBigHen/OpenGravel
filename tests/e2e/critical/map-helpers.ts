@@ -448,8 +448,20 @@ export async function placeEndpoint(
   // A destination placed after a start must keep that start, so it goes through
   // the composer's armed placement rather than the menu's "Directions to here",
   // which deliberately replaces the start with the rider's location.
-  if (!(await page.getByTestId("finish-chip").isVisible())) await page.getByTestId("sheet-handle").click();
-  await page.getByTestId("finish-chip").click();
+  // The chip lives in the half sheet, not the peek: open one detent if it is
+  // not showing yet, and wait for it rather than tapping the handle blind.
+  const chip = page.getByTestId("finish-chip");
+  await expect(async () => {
+    if (!(await chip.isVisible())) await page.getByTestId("sheet-handle").click();
+    await expect(chip).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
+  await chip.click();
+  // Armed placement needs the map in reach: a full sheet covers it, so lower it.
+  const dock = page.getByTestId("planner-dock");
+  await expect(async () => {
+    if ((await dock.getAttribute("data-detent")) === "full") await page.getByTestId("sheet-handle").click();
+    await expect(dock).not.toHaveAttribute("data-detent", "full", { timeout: 1_500 });
+  }).toPass({ timeout: 20_000 });
   await pressMapAt(page, fraction);
 }
 
