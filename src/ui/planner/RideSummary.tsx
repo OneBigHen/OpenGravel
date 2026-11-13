@@ -42,6 +42,8 @@ import type { RouteCandidateId } from "@/domain/route/ids";
 import type { RideStyleControlsModel } from "@/ui/planner/RideStyleControls";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RideActionsProps } from "./RideActions";
+import { formatFeet } from "@/application/planner/measurements";
+import { arrivalClock, arrivalLabel } from "@/application/planner/arrival";
 import { RouteDecisionCard, WhyThisRide } from "./RouteDecisionCard";
 import { PhoneQuickStyle } from "./PhoneQuickStyle";
 import { RouteContext } from "./RouteContext";
@@ -56,8 +58,7 @@ const NO_LINE: readonly Coordinate[] = [];
 /** "Back 12:04 PM" for a loop, "Arrive 12:04 PM" for a destination (Google's arrival line). */
 function arrivalLine(seconds: number | undefined, loop: boolean): string | null {
   if (seconds === undefined || !Number.isFinite(seconds)) return null;
-  const at = new Date(Date.now() + seconds * 1000).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${loop ? "Back" : "Arrive"} ${at}`;
+  return arrivalLabel(arrivalClock(Date.now() + seconds * 1000), loop);
 }
 
 /**
@@ -142,7 +143,7 @@ export function RideSummary({
   const names = useMemo(() => compareChoiceNames(cards), [cards]);
   const strip = card.surfaceStrip;
   const meta = [card.badges.find((badge) => /curv|twist/i.test(badge)) ?? card.curviness?.label];
-  if (elevation?.status === "ready") meta.push(`↗ ${Math.round(elevation.profile.climbMeters * 3.28084).toLocaleString("en-US")} ft`);
+  if (elevation?.status === "ready") meta.push(`Climb ${formatFeet(elevation.profile.climbMeters)}`);
   const showStretch = quick.onShowExtent === undefined ? undefined : (stretch: { readonly fromMeters: number; readonly toMeters: number }) => {
     const extent = stretchExtent(geometry, stretch.fromMeters, stretch.toMeters);
     if (extent !== null) quick.onShowExtent?.(extent);
@@ -154,6 +155,13 @@ export function RideSummary({
     ? <button type="button" className="og-route-card__strip og-phone-summary__strip" data-testid="phone-surface-strip"
         aria-label={`${stripLabel}. Show the longest unpaved stretch on the map`} onClick={() => showStretch(unpavedStretch)}>{stripKinds}</button>
     : <span className="og-route-card__strip og-phone-summary__strip" data-testid="phone-surface-strip" role="img" aria-label={stripLabel}>{stripKinds}</span>;
+  const SURFACE_WORDS = { paved: "Paved", gravel: "Gravel", dirt: "Dirt", unknown: "Unknown" } as const;
+  // The bar is colour only; this says what each colour is, for the kinds present.
+  const surfaceLegend = strip === undefined ? null : (
+    <p className="og-elevation__legend og-phone-summary__legend" data-testid="phone-surface-legend" aria-hidden="true">
+      {(["paved", "gravel", "dirt", "unknown"] as const).filter((kind) => strip[kind] > 0).map((kind) => <span key={kind} data-surface={kind}>{SURFACE_WORDS[kind]}</span>)}
+    </p>
+  );
   const arrival = arrivalLine(card.durationSeconds, rideStyle?.view.shape === "loop");
   // Three lines, always: a card that carries none (an injected view model) gets
   // the neutral answer to the same questions rather than no lines at all.
@@ -227,7 +235,7 @@ export function RideSummary({
         </div>
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
-      <RideTruthLines truth={truth} surfaceBar={bar} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
+      <RideTruthLines truth={truth} surfaceBar={bar === null ? null : <>{bar}{surfaceLegend}</>} {...(showStretch === undefined ? {} : { onShowStretch: showStretch })} />
       {explanation === null ? null : <WhyThisRide explanation={explanation} whyKey={card.whyKey} />}
     </div>}
     {/* Start, Save, Share: the whole answer to the ride, in one row. */}
