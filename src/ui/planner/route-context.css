@@ -3,7 +3,7 @@
   box-sizing: border-box; min-height: 0 !important; min-width: 0 !important; height: 18px !important;
   display: inline-flex; align-items: center; max-width: 100%; position: relative; margin: 0 0 0 var(--og-space-1); padding: 0 var(--og-space-2); line-height: 1; vertical-align: baseline;
   border: 1px solid var(--og-line); border-radius: var(--og-radius-pill); background: var(--og-glass-well);
-  color: var(--og-ink-2); font: inherit; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  color: var(--og-ink-2); font: inherit; font-size: var(--og-text-caption); font-weight: 700; white-space: nowrap; cursor: pointer;
 }
 .og-route-daylight::after { content: ""; position: absolute; inset: -12px -6px; }
 .og-route-daylight[data-tone="warn"] { border-color: var(--og-warn); color: var(--og-warn); }

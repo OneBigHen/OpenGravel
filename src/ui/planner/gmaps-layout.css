@@ -753,7 +753,7 @@
     height: 100%;
     padding: 0 var(--og-space-2) 0 var(--og-space-4);
     border-radius: var(--og-radius-pill);
-    font-size: 15px;
+    font-size: var(--og-text-body);
     font-weight: 600;
   }
   .og-trip[data-compact="true"] .og-trip__label { flex: 0 1 auto; min-width: 0; }
