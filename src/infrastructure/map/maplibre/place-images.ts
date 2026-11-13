@@ -2,6 +2,10 @@
 
 import type { MapPalette } from "./style";
 
+/** Alternative ride colours: teal, amber, sky. None is the ride plum, the
+ * rider-position blue, the twisty-layer red or the gravel brown. */
+export const ALTERNATIVE_COLORS = ["#0e9488", "#d97706", "#0284c7"] as const;
+
 export const PLACE_IMAGE_IDS = {
   live: "ogv-place-live",
   soon: "ogv-place-soon",
@@ -127,8 +131,9 @@ export function createPlacePillImages(palette: MapPalette): readonly PlacePillIm
     { id: PLACE_IMAGE_IDS.quiet, data: image(paper), options },
     { id: PLACE_IMAGE_IDS.selected, data: image(ink), options },
     // Route names wear their line's colour as the dot, so the pill reads as the
-    // line's own tag: plum for the chosen ride, grey for the rest (style.ts).
-    ...[palette.routePlum, palette.slate, palette.slate, palette.slate].map((color, slot) => ({
+    // line's own tag: plum for the chosen ride, then each choice's own colour
+    // in the order style.ts paints them (slot n = tint % 3).
+    ...[palette.routePlum, ALTERNATIVE_COLORS[0], ALTERNATIVE_COLORS[1], ALTERNATIVE_COLORS[2]].map((color, slot) => ({
       id: ROUTE_LABEL_IMAGE_IDS[slot]!,
       data: image(paper, parseColor(color, [22, 29, 28])),
       options,

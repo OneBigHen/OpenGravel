@@ -26,7 +26,9 @@
  */
 
 import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
-import { PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
+import { ALTERNATIVE_COLORS, PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
+
+export { ALTERNATIVE_COLORS };
 import { PUCK_IMAGE_ID } from "./puck-image";
 import { MARKER_IMAGE_IDS, ROUTE_ARROW_IMAGE_ID } from "./marker-images";
 import { ROUTE_AFTER_SUNSET_FEATURE_STATE, ROUTE_OFF_ROUTE_FEATURE_STATE, ROUTE_STEEP_FEATURE_STATE, ROUTE_SUNSET_MARKER_FEATURE_STATE, ROUTE_SURFACE_FEATURE_STATE } from "@/application/map/types";
@@ -310,8 +312,9 @@ function surfaceBandColor(palette: MapPalette): unknown {
   return [
     "match",
     ["get", "surface"],
-    "paved",
-    palette.topoSage,
+    // Paved draws nothing: the line keeps its own bold colour on asphalt, and
+    // only dirt and gravel paint over it (owner, 2026-11-12: a sage band inside
+    // the line read as "everything is a white line" on satellite).
     "gravel",
     palette.goldenHour,
     "dirt",
@@ -373,9 +376,11 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "alternative"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.paper,
-        "line-width": 8,
-        "line-opacity": 0.9,
+        // A dark edge, not a paper one: a white edge vanished into satellite
+        // roads and made every choice look like the basemap.
+        "line-color": palette.deepSpruce,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 7, 12, 9, 15, 12],
+        "line-opacity": 0.55,
       },
     },
     {
@@ -385,9 +390,11 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       filter: equals("state", "alternative"),
       layout: LINE_LAYOUT,
       paint: {
-        "line-color": palette.slate,
-        "line-width": 5,
-        "line-opacity": 0.8,
+        // Each choice gets its own colour, matched by its label and its row in
+        // Compare, so two rides can be told apart at a glance on any basemap.
+        "line-color": ["match", ["%", ["coalesce", ["get", "tint"], 1], 3], 1, ALTERNATIVE_COLORS[0], 2, ALTERNATIVE_COLORS[1], ALTERNATIVE_COLORS[2]],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 12, 5.5, 15, 8],
+        "line-opacity": 0.95,
       },
     },
     {
@@ -581,7 +588,8 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "text-allow-overlap": false,
         "text-padding": 4,
         // The chosen ride's tag carries a plum dot, the others a grey one.
-        "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0], ROUTE_LABEL_IMAGE_IDS[1]],
+        "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0],
+          ["match", ["%", ["coalesce", ["get", "tint"], 1], 3], 1, ROUTE_LABEL_IMAGE_IDS[1], 2, ROUTE_LABEL_IMAGE_IDS[2], ROUTE_LABEL_IMAGE_IDS[3]]],
         "icon-text-fit": "both",
         "icon-text-fit-padding": [3, 8, 3, 8],
         // The chosen route's name wins a collision.

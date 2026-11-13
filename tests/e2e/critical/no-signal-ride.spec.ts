@@ -41,6 +41,9 @@ async function saveRide(page: Page): Promise<void> {
 }
 
 test("a ride kept for no signal rides in airplane mode: map, line and turns, and the way back off route", async ({ page, context }, testInfo) => {
+  // Day, pinned: Auto follows the sun, and after sunset the ride draws the
+  // night flavour, whose colours are not the day ones this test counts.
+  await page.addInitScript(() => { try { window.localStorage.setItem("og-appearance", "day"); } catch { /* storage off */ } });
   // Plan and save, online.
   await page.goto("/");
   await expect(plannerMap(page)).toHaveAttribute("data-map-load", "ready", { timeout: 30_000 });

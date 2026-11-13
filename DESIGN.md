@@ -228,6 +228,18 @@ the primary button.
   server rows (weather, gas or food, new route) shown disabled with "No signal". Settings lists kept rides
   with their size and Remove, and is silent when none are kept.
 
+- 2026-11-12 Owner ("the phone is the primary experience… the map is so damn small… everything is a
+  white line"; #221 map first, with Fable's PF-1 and ship list): the ride line is the top line. It is
+  drawn above every basemap road, bridge and path line and under road names and place labels, so no
+  street stripe runs through it. Choices are teal / amber / sky with a dark edge, and the bar on each
+  Compare row is its line's colour. While a ride is shown the discovery layers drop to 35% and the
+  Gravel / Twisty legend hides. On a phone the directions sheet at half is capped at
+  `max(40dvh, 252px)` and holds the answer, Start / Save / Share and Compare rides (44px); Options,
+  Edit route and the weather line wait in the full sheet so half never cuts a row. Peek has the same
+  cap with less in it (answer and Start), so it is never taller than half. Compare at half drops the
+  Roads / Surface chips (still in full and Options), grows to `max(40dvh, 300px)`, uses 56px rows and
+  pins Start / Save / Share at the bottom.
+
 ## Open proposals
 
 (none)

@@ -159,6 +159,9 @@ for (const width of [320, 1024]) {
     await expect(page.getByTestId("compare-rides")).toBeInViewport({ ratio: 1 });
     await expectDrawnScene(page, { routes: "2" });
     await expectAboveSheet(page, connectedCoordinates());
+    // Options waits in the full sheet: at half it would be cut by the edge.
+    await expect(page.getByTestId("route-options-settings")).toBeHidden();
+    await page.getByTestId("sheet-handle").press("ArrowUp");
     await page.getByTestId("route-options-settings").click();
     await expect(page.getByTestId("planner-sheet")).toHaveAttribute("data-detent", "full");
     await expectAboveSheet(page, connectedCoordinates());

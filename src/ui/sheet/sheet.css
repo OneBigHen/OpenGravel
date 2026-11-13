@@ -728,6 +728,12 @@
   background: var(--og-route-alt);
 }
 
+/* Each choice's bar is its line's colour on the map (style.ts paints an
+   alternative by tint % 3); the chosen ride is plum like its line. */
+.og-phone-choice:is([data-tint="1"], [data-tint="4"], [data-tint="7"]) .og-phone-choice__swatch { background: var(--og-map-choice-1); }
+.og-phone-choice:is([data-tint="2"], [data-tint="5"], [data-tint="8"]) .og-phone-choice__swatch { background: var(--og-map-choice-2); }
+.og-phone-choice:is([data-tint="0"], [data-tint="3"], [data-tint="6"], [data-tint="9"]) .og-phone-choice__swatch { background: var(--og-map-choice-0); }
+
 .og-phone-choice[data-selected="true"] .og-phone-choice__swatch {
   background: var(--og-route);
 }
