@@ -70,11 +70,11 @@ if (scenes.includes("ride")) {
   const buf = await p.screenshot({ path: `${out}/${tag}-ride-clean.png` });
   const core = theme === "night" ? [201, 162, 240] : [123, 79, 160];
   const res = await analyse(p, buf, `
-    const [px,py]=arg.pos, core=arg.core; const near=(i,c,t)=>Math.abs(data[i]-c[0])+Math.abs(data[i+1]-c[1])+Math.abs(data[i+2]-c[2])<t;
+    const [px,py]=arg.pos.map(Math.round), core=arg.core; const near=(i,c,t)=>Math.abs(data[i]-c[0])+Math.abs(data[i+1]-c[1])+Math.abs(data[i+2]-c[2])<t;
     const L=(i)=>{const f=(v)=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(data[i])+0.7152*f(data[i+1])+0.0722*f(data[i+2])};
     // puck: blue fill bbox, grown through white ring pixels
-    let x0=1e9,x1=-1,y0=1e9,y1=-1; for(let y=Math.max(0,py-60);y<Math.min(h,py+60);y++)for(let x=Math.max(0,px-60);x<Math.min(w,px+60);x++){const i=(y*w+x)*4; if(data[i+2]>190&&data[i]<130&&data[i+1]>110&&data[i+2]-data[i]>90){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}}
-    const blue={w:x1-x0+1,h:y1-y0+1};
+    let x0=1e9,x1=-1,y0=1e9,y1=-1; for(let y=Math.max(0,py-60);y<Math.min(h,py+60);y++)for(let x=Math.max(0,px-60);x<Math.min(w,px+60);x++){const i=(y*w+x)*4; if(data[i+2]>140&&data[i+2]-data[i]>60){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}}
+    const blue={w:x1-x0+1,h:y1-y0+1,ringW:x1-x0+1+6,ringH:y1-y0+1+6};
     // line 60px ahead (screen up)
     const ay=Math.round(py-60); let best=null; for(let yy=ay-30;yy<=ay+30;yy+=10){ let run=0,sx=-1; const mid=Math.round(px); let l=mid,r=mid; if(!near((yy*w+mid)*4,core,60)){ let found=false; for(let d=1;d<40&&!found;d++){ if(near((yy*w+mid-d)*4,core,60)){l=r=mid-d;found=true} else if(near((yy*w+mid+d)*4,core,60)){l=r=mid+d;found=true} } if(!found) continue; } while(near((yy*w+l-1)*4,core,60))l--; while(near((yy*w+r+1)*4,core,60))r++; best={y:yy,width:r-l+1,cx:Math.round((l+r)/2)}; if(yy===ay)break; }
     let contrast=null; if(best){ const ci=(best.y*w+best.cx)*4; const lc=L(ci); let max=0,mx=0,my=0; for(let y=Math.max(0,best.y-60);y<Math.min(h,best.y+60);y++)for(let x=Math.max(0,best.cx-60);x<Math.min(w,best.cx+60);x++){ if(Math.hypot(x-best.cx,y-best.y)>60)continue; if(Math.hypot(x-px,y-py)<45)continue; const i=(y*w+x)*4; if(near(i,core,140))continue; if(data[i+2]-data[i+1]>35)continue; const v=L(i); if(v>max){max=v;mx=x;my=y;}} contrast={lineLum:+lc.toFixed(3),brightestOther:+max.toFixed(3),at:[mx,my],rgb:[data[(my*w+mx)*4],data[(my*w+mx)*4+1],data[(my*w+mx)*4+2]],ratio:+((Math.max(lc,max)+0.05)/(Math.min(lc,max)+0.05)).toFixed(2)}; }
