@@ -16,6 +16,8 @@ const OURS = /^(ogv|og)-/;
 const ROAD_ID = /^(road|bridge|tunnel)-/;
 /** Road furniture drawn as symbols: these sit with the roads, not with the labels. */
 const ROAD_FURNITURE = /oneway|arrow|crosswalk|level-crossing|gate/;
+/** Street names and shields: the ride line is drawn over these (PF-7), never under. */
+const ROAD_NAME = /^(road|highway)[-_](label|name|number|exit|shield)|shield/;
 
 function isOurs(layer: HostedStyleLayer): boolean {
   return OURS.test(layer.id);
@@ -40,8 +42,14 @@ export function routeLineAnchorId(layers: readonly HostedStyleLayer[]): string |
     if (isBasemapRoadLayer(layer) || ROAD_ID.test(layer.id)) lastRoad = index;
   });
   if (lastRoad < 0) return firstBasemapLabel(layers);
+  // Street names along the ride would paint over the line and the puck: the
+  // line goes above them, still under place names and the rest.
+  let lastName = -1;
+  layers.forEach((layer, index) => {
+    if (!isOurs(layer) && layer.type === "symbol" && ROAD_NAME.test(layer.id)) lastName = index;
+  });
   return layers
-    .slice(lastRoad + 1)
+    .slice(Math.max(lastRoad, lastName) + 1)
     .find((layer) => layer.type === "symbol" && !isOurs(layer) && !ROAD_FURNITURE.test(layer.id))?.id;
 }
 

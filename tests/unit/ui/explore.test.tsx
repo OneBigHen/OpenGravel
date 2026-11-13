@@ -699,7 +699,8 @@ describe("Explore UI", () => {
     render(<RouteDetail entry={{ ...entry, provenance: "PA Adventure Bike Rides · rides/pa-ridge.gpx" }} onUse={vi.fn()} />);
 
     const meta = await screen.findByTestId("route-meta");
-    expect(meta).toHaveTextContent(/^Starts 7 mi from you · PA Adventure Bike Rides$/);
+    // The distance arrives with the position answer, a beat after the header.
+    await waitFor(() => expect(meta).toHaveTextContent(/^Starts 7 mi from you · PA Adventure Bike Rides$/));
     expect(meta.closest("header")).not.toBeNull();
     // The header carries the two facts and nothing else: the disclosure that
     // explains them closes the page with the credits.
