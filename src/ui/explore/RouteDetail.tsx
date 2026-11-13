@@ -535,6 +535,7 @@ export function RouteDetail({
         <div className="og-route-detail__heading">
           <h1>{entry.name}</h1>
         </div>
+        <RideCreditLine credit={entry.credit} />
         {rideFacts.length === 0 ? null : (
           <dl className="og-route-detail__facts" data-testid="route-facts">
             {rideFacts.map((fact) => {
@@ -564,7 +565,6 @@ export function RouteDetail({
             {provenanceSource}
           </p>
         ) : null}
-        <RideCreditLine credit={entry.credit} />
       </header>
 
       {/* The route where it is comes next, then the one commitment: a rider
