@@ -26,6 +26,7 @@
  */
 
 import { INFO_SOURCE_ID, infoLayerSpecs } from "./info-layers";
+import { alternativeTintMatch } from "@/application/map/route-colors";
 import { ALTERNATIVE_COLORS, PLACE_IMAGE_IDS, ROUTE_LABEL_IMAGE_IDS } from "./place-images";
 
 export { ALTERNATIVE_COLORS };
@@ -380,7 +381,8 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         // roads and made every choice look like the basemap.
         "line-color": palette.deepSpruce,
         "line-width": ["interpolate", ["linear"], ["zoom"], 8, 7, 12, 9, 15, 12],
-        "line-opacity": 0.55,
+        // Comparing lifts every choice to full strength (PF-8); otherwise quiet.
+        "line-opacity": ["case", ["==", ["get", "compare"], true], 0.9, 0.55],
       },
     },
     {
@@ -392,9 +394,9 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
       paint: {
         // Each choice gets its own colour, matched by its label and its row in
         // Compare, so two rides can be told apart at a glance on any basemap.
-        "line-color": ["match", ["%", ["coalesce", ["get", "tint"], 1], 3], 1, ALTERNATIVE_COLORS[0], 2, ALTERNATIVE_COLORS[1], ALTERNATIVE_COLORS[2]],
+        "line-color": alternativeTintMatch(ALTERNATIVE_COLORS),
         "line-width": ["interpolate", ["linear"], ["zoom"], 8, 4, 12, 5.5, 15, 8],
-        "line-opacity": 0.95,
+        "line-opacity": ["case", ["==", ["get", "compare"], true], 1, 0.95],
       },
     },
     {
@@ -589,7 +591,7 @@ export function routeLayers(palette: MapPalette): readonly MapLayerSpec[] {
         "text-padding": 4,
         // The chosen ride's tag carries a plum dot, the others a grey one.
         "icon-image": ["case", equals("state", "selected"), ROUTE_LABEL_IMAGE_IDS[0],
-          ["match", ["%", ["coalesce", ["get", "tint"], 1], 3], 1, ROUTE_LABEL_IMAGE_IDS[1], 2, ROUTE_LABEL_IMAGE_IDS[2], ROUTE_LABEL_IMAGE_IDS[3]]],
+          alternativeTintMatch([ROUTE_LABEL_IMAGE_IDS[1], ROUTE_LABEL_IMAGE_IDS[2], ROUTE_LABEL_IMAGE_IDS[3]])],
         "icon-text-fit": "both",
         "icon-text-fit-padding": [3, 8, 3, 8],
         // The chosen route's name wins a collision.

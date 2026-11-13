@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { sunriseOnDepartureDay, sunsetOnDepartureDay } from "@/application/long-trip";
 import { proportionalEtaProfile, splitRouteByDaylight } from "@/application/map/route-daylight";
@@ -10,27 +10,31 @@ import { useActivityMode } from "@/ui/stores/activity-mode";
 import { useDialogFocus } from "@/ui/hooks/use-dialog-focus";
 import { ConditionsPill } from "@/ui/place/ConditionsPill";
 import { useRouteWeather } from "@/ui/weather/useRouteWeather";
-import { MapAdvisorAsk } from "./RideAdvisor";
 import { usePlannerDaylight } from "./hooks/usePlannerDaylight";
 import type { PlannerActiveRoute } from "./hooks/usePlannerActiveRoute";
 
-const miles = (meters: number): number => {
-  const value = meters / 1609.344;
-  return value < 10 ? Math.round(value * 10) / 10 : Math.round(value);
-};
 const clock = (instant: string | number): string => new Date(instant).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 function duration(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   return minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")} m`;
 }
 
-/** A hike's numbers live in its summary; the ride context bar (daylight at road pace) steps aside. */
-export function RouteContext(props: { readonly route: PlannerActiveRoute; readonly intent: RideDocument["intent"] }) {
+/** The line the daylight chip reads: its geometry in travel order and its ride time. */
+export type DaylightRoute = Pick<PlannerActiveRoute, "geometry" | "durationSeconds">;
+
+/** A hike's numbers live in its summary; the ride's daylight chip (road pace) steps aside. */
+export function RouteContext(props: { readonly route: DaylightRoute; readonly intent: RideDocument["intent"] }) {
   const activity = useActivityMode();
-  return activity === "hike" ? null : <RideRouteContext {...props} />;
+  return activity === "hike" ? null : <RouteDaylightChip {...props} />;
 }
 
-function RideRouteContext({ route, intent }: { readonly route: PlannerActiveRoute; readonly intent: RideDocument["intent"] }) {
+/**
+ * Daylight at the end of the sheet's stat line (PF-3): "before dark", or
+ * "45 min after dark" in the warning tone. The map no longer carries a stats
+ * pill; distance, time and arrival are already in the sheet, and this is the
+ * one fact the pill added. A tap opens the ride's conditions.
+ */
+function RouteDaylightChip({ route, intent }: { readonly route: DaylightRoute; readonly intent: RideDocument["intent"] }) {
   const [open, setOpen] = useState(false);
   const departure = usePlannerDaylight({ departure: intent.departure, time: intent.time, durationSeconds: route.durationSeconds });
   const arrival = departure.departureAt === null ? null : Date.parse(departure.departureAt) + route.durationSeconds * 1000;
@@ -54,52 +58,20 @@ function RideRouteContext({ route, intent }: { readonly route: PlannerActiveRout
     return { split, sunset: split.sunsetIso ?? sunset, difference, beforeDawn, arrivesBeforeDawn, sunrise: endSunrise, darkSeconds };
   }, [route, departure.departureAt, arrival]);
   const lightLabel = daylight === null ? null : daylight.arrivesBeforeDawn ? "arrive before sunrise" : daylight.difference === 0 ? "arrive around sunset" : `${duration(Math.abs(daylight.difference) * 60)} ${daylight.difference < 0 ? "before" : "after"} dark`;
+  if (daylight === null || lightLabel === null) return null;
+  // Short on the chip; the whole sentence, arrival included, is its name.
+  const chip = daylight.arrivesBeforeDawn ? "before sunrise" : daylight.difference === 0 ? "around sunset" : daylight.difference < 0 ? "before dark" : daylight.difference < 60 ? lightLabel : "after dark";
+  const warn = daylight.arrivesBeforeDawn || daylight.difference >= 0;
+  const spoken = arrival === null || !Number.isFinite(arrival) ? lightLabel : `Arrive ${clock(arrival)}, ${lightLabel}. Ride conditions`;
   return <>
-    <div className="og-route-context-row" data-testid="route-context-row">
-      <ContextLine distance={`${miles(route.distanceMeters)} mi`} durationLabel={duration(route.durationSeconds)} arrival={arrival === null || !Number.isFinite(arrival) ? null : clock(arrival)} daylight={lightLabel} onOpen={() => setOpen(true)} />
-      <MapAdvisorAsk />
-    </div>
+    <button type="button" className="og-route-daylight" data-testid="route-context" data-tone={warn ? "warn" : "calm"}
+      aria-label={spoken} aria-haspopup="dialog" onClick={() => setOpen(true)}>{chip}</button>
     {open && typeof document !== "undefined" ? createPortal(<ConditionsSheet route={route} departureAt={departure.departureAt} daylight={daylight} lightLabel={lightLabel} onClose={() => setOpen(false)} />, document.body) : null}
   </>;
 }
 
-/** Fit whole facts to the available width; never clip a word or the Ask control. */
-function ContextLine({ distance, durationLabel, arrival, daylight, onOpen }: {
-  readonly distance: string; readonly durationLabel: string; readonly arrival: string | null;
-  readonly daylight: string | null; readonly onOpen: () => void;
-}) {
-  const ref = useRef<HTMLButtonElement>(null);
-  const [text, setText] = useState(`${distance} · ${durationLabel}`);
-  const base = `${distance} · ${durationLabel}`;
-  const withArrival = arrival === null ? base : `${base} · arrive ${arrival}`;
-  const full = daylight === null ? withArrival : `${withArrival} · ${daylight}`;
-  const lightWord = daylight === null ? null : daylight.includes("before sunrise") ? "before sunrise" : daylight.includes("before dark") ? "before dark" : daylight.includes("after dark") ? "after dark" : daylight;
-  const shortLight = lightWord === null ? withArrival : `${withArrival} · ${lightWord}`;
-  // On a narrow phone the arrival time goes before the daylight: being out after
-  // dark is the fact a rider cannot afford to lose.
-  const baseLight = lightWord === null ? base : `${base} · ${lightWord}`;
-  useEffect(() => {
-    const button = ref.current;
-    if (button === null) return;
-    const measure = (): void => {
-      const context = document.createElement("canvas").getContext("2d");
-      if (context === null) return;
-      const style = getComputedStyle(button);
-      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      const available = button.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - 20;
-      setText([full, shortLight, baseLight, withArrival, base, distance].find((candidate) => context.measureText(candidate).width <= available) ?? distance);
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(button);
-    void document.fonts.ready.then(measure);
-    measure();
-    return () => observer.disconnect();
-  }, [base, baseLight, distance, full, shortLight, withArrival]);
-  return <button ref={ref} className="og-route-context" type="button" data-testid="route-context" aria-label={full} aria-haspopup="dialog" onClick={onOpen}><span>{text}</span><span aria-hidden="true">›</span></button>;
-}
-
 function ConditionsSheet({ route, departureAt, daylight, lightLabel, onClose }: {
-  readonly route: PlannerActiveRoute;
+  readonly route: DaylightRoute;
   readonly departureAt: string | null;
   readonly daylight: { readonly split: ReturnType<typeof splitRouteByDaylight>; readonly sunset: string; readonly difference: number; readonly beforeDawn: boolean; readonly arrivesBeforeDawn: boolean; readonly sunrise: string | null; readonly darkSeconds: number } | null;
   readonly lightLabel: string | null;
@@ -109,7 +81,7 @@ function ConditionsSheet({ route, departureAt, daylight, lightLabel, onClose }: 
   useDialogFocus(ref, onClose);
   const weather = useRouteWeather({ line: route.geometry, departureTime: departureAt, durationSeconds: route.durationSeconds });
   const start = route.geometry[0];
-  return <div className="og-route-conditions-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div className="og-route-conditions-scrim" onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <section ref={ref} role="dialog" aria-modal="true" aria-labelledby="route-conditions-title" className="og-route-conditions" data-testid="route-conditions">
       <header className="og-route-conditions__header"><div><p>YOUR RIDE</p><h2 id="route-conditions-title">Ride conditions</h2></div><button type="button" onClick={onClose} aria-label="Close ride conditions">×</button></header>
       <div className="og-route-conditions__body">

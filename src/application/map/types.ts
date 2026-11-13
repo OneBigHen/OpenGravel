@@ -467,6 +467,11 @@ export interface MapScene {
    * never part of the camera extent.
    */
   readonly scrubMarker?: Coordinate | null;
+  /**
+   * The rider is comparing rides in the sheet (PF-8): the other choices draw at
+   * full strength instead of their quiet look. Presentation only.
+   */
+  readonly comparing?: boolean;
   readonly selectedObject: MapObjectRef | null;
   /**
    * Nearby places (happy hours, events) drawn as pills over the basemap and

@@ -1,5 +1,7 @@
 "use client";
 
+import { MapAdvisorAsk } from "./RideAdvisor";
+
 export type PlannerOption = "style" | "surface" | "time" | "traffic" | "stops" | "areas" | "roads" | "sketch" | "bike";
 
 type Values = Readonly<Record<PlannerOption, string>>;
@@ -21,5 +23,6 @@ export function PlannerOptionRows({ values, hasRoute, onSelect, onBreadcrumb }: 
       <span>{label}</span><span>{key === "roads" && !hasRoute ? "Plan a route first" : values[key]} <span aria-hidden="true">›</span></span>
     </button>)}
     {onBreadcrumb === undefined ? null : <button className="og-option-rows__row" type="button" onClick={onBreadcrumb}><span>Breadcrumb</span><span>Place waypoints ›</span></button>}
+    <div className="og-option-rows__ask"><MapAdvisorAsk /></div>
   </div>;
 }

@@ -30,6 +30,7 @@
 import { RideTruthLines } from "./RideTruthLines";
 import { useState, type ReactNode } from "react";
 
+import { alternativeColorIndex } from "@/application/map/route-colors";
 import type { RouteExplanation } from "@/application/planner/route-explanation";
 import type { RouteCardVm } from "@/application/planner/planner-view-model";
 import type { EvidenceStatus } from "@/domain/evidence/types";
@@ -198,6 +199,7 @@ export function RouteDecisionCard({
   if (compact) return <li>
     <button type="button" className="og-phone-choice" data-testid={`route-option-${card.roleKey}`}
       data-role={card.roleKey} data-tint={card.tint ?? 0} data-selected={card.isSelected ? "true" : "false"}
+      data-line-color={card.isSelected ? "selected" : alternativeColorIndex(card.tint)}
       aria-pressed={card.isSelected} onClick={() => onSelect(card.routeId)}>
       <span className="og-phone-choice__swatch" aria-hidden="true" />
       <span className="og-phone-choice__body">
