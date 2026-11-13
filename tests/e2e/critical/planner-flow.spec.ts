@@ -182,13 +182,19 @@ test("OG-03: panning and zooming a planned ride asks for no new plan and keeps t
   await expect(page.getByTestId("status-line")).toHaveText("Ride ready.");
 });
 
-async function drawStroke(page: Page, y: number): Promise<void> {
+/**
+ * One stroke across the open map, clear of the floating ride pill under the top
+ * card and of a desktop's side panel: `x0`..`x1` are fractions of the map width.
+ */
+async function drawStroke(page: Page, y: number, x0 = 0.2, x1 = 0.8): Promise<void> {
+  await expect(page.getByTestId("map-edit-bar")).toHaveAttribute("data-mode", "drawing");
   const box = await plannerMap(page).boundingBox();
   if (box === null) throw new Error("the planner map has no measured box");
-  await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * y);
+  const mid = (x0 + x1) / 2;
+  await page.mouse.move(box.x + box.width * x0, box.y + box.height * y);
   await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * (y + 0.05), { steps: 6 });
-  await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * y, { steps: 6 });
+  await page.mouse.move(box.x + box.width * mid, box.y + box.height * (y + 0.05), { steps: 6 });
+  await page.mouse.move(box.x + box.width * x1, box.y + box.height * y, { steps: 6 });
   await page.mouse.up();
 }
 
@@ -205,7 +211,7 @@ async function startDrawing(page: Page): Promise<void> {
 
 test("OG-05: while a drawing is snapped the summary shows skeletons, not numbers", async ({ page }) => {
   await startDrawing(page);
-  await drawStroke(page, 0.2);
+  await drawStroke(page, 0.32);
   await expect(page.getByTestId("map-edit-bar")).toContainText("On roads", { timeout: 30_000 });
   await expect(page.locator(".og-phone-summary__time")).toBeVisible();
 
@@ -214,7 +220,7 @@ test("OG-05: while a drawing is snapped the summary shows skeletons, not numbers
     await new Promise((resolve) => setTimeout(resolve, 4_000));
     await route.continue();
   });
-  await drawStroke(page, 0.3);
+  await drawStroke(page, 0.42);
   await expect(page.getByTestId("map-edit-bar")).toContainText("Finding roads", { timeout: 10_000 });
   await expect(page.getByTestId("summary-computing")).toBeVisible();
   await expect(page.locator(".og-phone-summary__time")).toHaveCount(0);
@@ -226,7 +232,7 @@ test("OG-05: while a drawing is snapped the summary shows skeletons, not numbers
 
 test("OG-02: Start on a drawing keeps the drawing and starts the ride", async ({ page }) => {
   await startDrawing(page);
-  await drawStroke(page, 0.2);
+  await drawStroke(page, 0.32);
   await expect(page.getByTestId("map-edit-bar")).toContainText("On roads", { timeout: 30_000 });
 
   const start = page.getByTestId("start-ride");
@@ -246,7 +252,7 @@ test("a route drawn from nothing names its own ends and Start rides it (owner, 2
   await openRefine(page);
   await page.getByTestId("start-drawing").click();
   await expect(page.getByTestId("start-drawing")).toHaveAttribute("aria-pressed", "true");
-  await drawStroke(page, 0.45);
+  await drawStroke(page, 0.45, 0.55, 0.9);
   await expect(page.getByTestId("sketch-snap-status")).toHaveText(
     "On the roads you drew. Keep drawing, or tap Done.",
     { timeout: 60_000 },
