@@ -66,7 +66,7 @@ if (scenes.includes("ride")) {
     return { pos: pos ? [pos.x, pos.y] : null, zoom: m.getZoom(), pitch: m.getPitch() }; });
   console.log(JSON.stringify(await p.evaluate(() => { const m = window.__maps.at(-1); return { roadOpacity: m.getPaintProperty("road-secondary-tertiary", "line-opacity"), color: m.getPaintProperty("road-secondary-tertiary", "line-color"), maps: window.__maps.length }; })));
   // hide every basemap label and our arrows, and the UI, so only roads, the line and the puck remain
-  await p.evaluate(() => { const m = window.__maps.at(-1); for (const l of m.getStyle().layers) if (l.type === "symbol" && l.id !== "ogv-rider-heading") m.setLayoutProperty(l.id, "visibility", "none"); document.querySelectorAll(".og-ride__top,.og-ride__strip,.og-ride__float").forEach((e) => (e.style.visibility = "hidden")); });
+  await p.evaluate(() => { const m = window.__maps.at(-1); for (const l of m.getStyle().layers) if (l.type === "symbol" && l.id !== "ogv-rider-heading") m.setLayoutProperty(l.id, "visibility", "none"); m.setLayoutProperty("ogv-route-surface", "visibility", "none"); document.querySelectorAll(".og-ride__top,.og-ride__strip,.og-ride__float").forEach((e) => (e.style.visibility = "hidden")); });
   await p.waitForTimeout(1500);
   const buf = await p.screenshot({ path: `${out}/${tag}-ride-clean.png` });
   const core = theme === "night" ? [201, 162, 240] : [123, 79, 160];
@@ -84,5 +84,24 @@ if (scenes.includes("ride")) {
   console.log(JSON.stringify({ featsAtBrightest: feats }));
   console.log(JSON.stringify({ tag, puckPos: info.pos, puckYPct: info.pos ? +(info.pos[1] / H * 100).toFixed(1) : null, zoom: info.zoom, ...res }));
   await ctx.close();
+}
+if (scenes.includes("plan")) {
+  const { ctx, p } = await open(1); await startPlace(p);
+  const f = p.getByTestId("top-place-search"); await f.fill("Reading Terminal Market"); await f.press("Enter");
+  await p.getByTestId("place-sheet").waitFor({ timeout: 30000 });
+  await p.getByTestId("place-directions").click();
+  await p.getByTestId("start-ride").waitFor({ timeout: 60000 }); await p.waitForTimeout(15000);
+  const pos = await p.evaluate(() => { const m = window.__maps.at(-1); const fs = m.querySourceFeatures("ogv-routes").filter((f) => f.properties?.state === "selected" && f.geometry.type === "LineString"); const c = fs.sort((a, b) => b.geometry.coordinates.length - a.geometry.coordinates.length)[0].geometry.coordinates;
+    for (const q of [0.5, 0.4, 0.6, 0.3]) { const pt = m.project(c[Math.floor(c.length * q)]); if (pt.y > 200 && pt.y < 480 && pt.x > 40 && pt.x < 350) return [pt.x, pt.y]; } return null; });
+  await p.evaluate(() => { const m = window.__maps.at(-1); for (const l of m.getStyle().layers) if (l.type === "symbol") m.setLayoutProperty(l.id, "visibility", "none"); m.setLayoutProperty("ogv-route-surface", "visibility", "none"); document.querySelectorAll("*").forEach((e) => { if (e.closest(".maplibregl-map, .mapboxgl-map")) return; }); });
+  await p.waitForTimeout(1500);
+  const buf = await p.screenshot({ path: `${out}/${tag}-plan-clean.png` });
+  const core = theme === "night" ? [201, 162, 240] : [123, 79, 160];
+  const res = await analyse(p, buf, `const [px,py]=arg.pos.map(Math.round),core=arg.core; const near=(i,c,t)=>Math.abs(data[i]-c[0])+Math.abs(data[i+1]-c[1])+Math.abs(data[i+2]-c[2])<t;
+   const L=(i)=>{const f=(v)=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(data[i])+0.7152*f(data[i+1])+0.0722*f(data[i+2])};
+   let cx=px,cy=py,found=false; for(let d=0;d<14&&!found;d++)for(let dx=-d;dx<=d&&!found;dx++)for(let dy=-d;dy<=d&&!found;dy++){ if(near(((py+dy)*w+px+dx)*4,core,50)){cx=px+dx;cy=py+dy;found=true} }
+   const lc=L((cy*w+cx)*4); let max=0,mx=0,my=0; for(let y=Math.max(0,cy-60);y<Math.min(h,cy+60);y++)for(let x=Math.max(0,cx-60);x<Math.min(w,cx+60);x++){ if(Math.hypot(x-cx,y-cy)>60)continue; const i=(y*w+x)*4; if(data[i+2]-data[i+1]>25&&data[i+2]>data[i])continue; const v=L(i); if(v>max){max=v;mx=x;my=y;} }
+   return {found,lineRgb:[data[(cy*w+cx)*4],data[(cy*w+cx)*4+1],data[(cy*w+cx)*4+2]],lineLum:+lc.toFixed(3),brightestOther:+max.toFixed(3),at:[mx,my],rgb:[data[(my*w+mx)*4],data[(my*w+mx)*4+1],data[(my*w+mx)*4+2]],ratio:+((Math.max(lc,max)+0.05)/(Math.min(lc,max)+0.05)).toFixed(2)};`, { pos, core });
+  console.log(JSON.stringify({ tag, plan: res })); await ctx.close();
 }
 await b.close();
