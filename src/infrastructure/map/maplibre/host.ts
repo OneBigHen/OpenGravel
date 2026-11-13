@@ -185,7 +185,7 @@ const CONTROL_CAMERA_DURATION_MS = 220;
 /** One fix a second: the follow camera glides from one to the next. */
 const FOLLOW_DURATION_MS = 950;
 /** Where the rider sits in the open map, from its top: low, to show the road ahead. */
-const FOLLOW_RIDER_HEIGHT = 0.8;
+const FOLLOW_RIDER_HEIGHT = 0.78;
 /** How often a following camera reports its viewport to what loads for it. */
 const FOLLOW_VIEWPORT_MS = 8_000;
 /** A press that moves this far over a following map is the rider panning. */

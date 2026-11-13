@@ -412,21 +412,16 @@
   right: 0;
   display: grid;
   place-items: center;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: var(--og-glass-well);
   color: var(--og-ink);
 }
 
-/* The 36px disc keeps a 48px target. */
-.og-planner .og-place-sheet .og-place-sheet__close::after {
-  content: "";
-  position: absolute;
-  inset: -6px;
-}
+/* A 44x44 disc (PF-6): the whole disc is the target. */
 
 .og-planner .og-place-sheet .og-place-sheet__actions {
   flex-wrap: nowrap;

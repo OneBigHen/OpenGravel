@@ -37,6 +37,7 @@ export const INFO_HIT_LAYERS = [
   INFO_LAYER_IDS.point,
   INFO_LAYER_IDS.windArrow,
   INFO_LAYER_IDS.line,
+  `${INFO_LAYER_IDS.line}-minor`,
   "ogv-info-surface",
   INFO_LAYER_IDS.slope,
   INFO_LAYER_IDS.fill,
@@ -51,7 +52,71 @@ function colourByLayer(palette: MapPalette): unknown {
   return ["match", ["get", "layerId"], ...MAP_LAYERS.flatMap((layer) => [layer.id, themed[layer.id] ?? layer.color]), palette.slate];
 }
 
+/**
+ * Phone first PF-6: the twisty roads are calm until the rider zooms in. Below
+ * zoom 11 only the best segments (weight 1000 and up) draw, 2px wide at 75%;
+ * from zoom 11 every segment draws as before. The lesser segments live on
+ * their own "-minor" layers that start at zoom 11, so they are not even
+ * rendered (or queryable) on the overview.
+ */
+export const TWISTY_CALM_ZOOM = 11;
+export const TWISTY_BEST_WEIGHT = 1000;
+const isTwisty = ["==", ["get", "layerId"], "great-roads"];
+const twistyWeight = ["coalesce", ["get", "weight"], 0];
+const twistyIsBest = [">=", twistyWeight, TWISTY_BEST_WEIGHT];
+
 export function infoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
+  const out: MapLayerSpec[] = [];
+  for (const spec of baseInfoLayerSpecs(palette)) {
+    if (spec.id !== INFO_LAYER_IDS.lineCasing && spec.id !== INFO_LAYER_IDS.line) {
+      out.push(spec.id === INFO_LAYER_IDS.point ? calmPoints(spec) : spec);
+      continue;
+    }
+    const casing = spec.id === INFO_LAYER_IDS.lineCasing;
+    const paint = spec.paint as Record<string, unknown>;
+    const filter = spec.filter as unknown[];
+    const width = paint["line-width"] as unknown[];
+    const at8 = width[4];
+    const at14 = width[6];
+    const at11 = ["/", ["+", at8, at14], 2];
+    const calmWidth = casing ? 3 : 2;
+    const opacity = paint["line-opacity"];
+    const best: MapLayerSpec = {
+      ...spec,
+      filter: ["all", filter, ["any", ["!", isTwisty], twistyIsBest]],
+      paint: {
+        ...paint,
+        "line-width": [
+          "interpolate", ["linear"], ["zoom"],
+          8, ["case", isTwisty, calmWidth, at8],
+          TWISTY_CALM_ZOOM - 0.01, ["case", isTwisty, calmWidth, at11],
+          TWISTY_CALM_ZOOM, at11,
+          14, at14,
+        ],
+        "line-opacity": ["step", ["zoom"], ["case", isTwisty, 0.75, opacity], TWISTY_CALM_ZOOM, opacity],
+      },
+    };
+    const rest: MapLayerSpec = {
+      ...spec,
+      id: `${spec.id}-minor`,
+      minzoom: TWISTY_CALM_ZOOM,
+      filter: ["all", filter, isTwisty, ["!", twistyIsBest]],
+    };
+    out.push(best, rest);
+  }
+  return out;
+}
+
+/** Orange and red dots wait for zoom 11, then grow from 3px to 5px at zoom 14. */
+function calmPoints(spec: MapLayerSpec): MapLayerSpec {
+  return {
+    ...spec,
+    minzoom: TWISTY_CALM_ZOOM,
+    paint: { ...(spec.paint as Record<string, unknown>), "circle-radius": ["interpolate", ["linear"], ["zoom"], TWISTY_CALM_ZOOM, 3, 14, 5] },
+  };
+}
+
+function baseInfoLayerSpecs(palette: MapPalette): readonly MapLayerSpec[] {
   const isPolygon = ["==", ["geometry-type"], "Polygon"];
   const isLine = ["==", ["geometry-type"], "LineString"];
   const isPoint = ["==", ["geometry-type"], "Point"];
