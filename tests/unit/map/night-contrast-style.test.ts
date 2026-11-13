@@ -145,11 +145,11 @@ describe("Night terrain palette", () => {
       builtUp: "#171c1a",
       casing: "#0b100e",
       motorway: "#98a29d",
-      primary: "#69746f",
-      minor: "#3d4843",
+      primary: "#5a6560",
+      minor: "#343e3a",
       unpaved: "#d6a862",
       unpavedOpacity: 0.8,
-      path: "#4a5650",
+      path: "#414c46",
       label: "#dfe6e2",
       roadLabel: "#8b9690",
       waterLabel: "#6f9bb3",
@@ -232,12 +232,12 @@ describe("toNightContrast", () => {
 
   it("draws dark roads in their order of importance (PF-5: one bright line)", () => {
     // A street with no surface value is the minor grey; the town grid is dark.
-    expect(evaluate(layer("road-street")?.paint?.["line-color"], { class: "street" })).toBe("#3d4843");
-    expect(evaluate(layer("road-street-low")?.paint?.["line-color"], { class: "street" })).toBe("#3d4843");
-    expect(layer("road-primary")?.paint?.["line-color"]).toBe("#69746f");
-    expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-color"], {})).toBe("#69746f");
+    expect(evaluate(layer("road-street")?.paint?.["line-color"], { class: "street" })).toBe("#343e3a");
+    expect(evaluate(layer("road-street-low")?.paint?.["line-color"], { class: "street" })).toBe("#343e3a");
+    expect(layer("road-primary")?.paint?.["line-color"]).toBe("#5a6560");
+    expect(evaluate(layer("road-secondary-tertiary")?.paint?.["line-color"], {})).toBe("#5a6560");
     expect(layer("road-motorway-trunk")?.paint?.["line-color"]).toBe("#98a29d");
-    expect(layer("road-path")?.paint?.["line-color"]).toBe("#4a5650");
+    expect(layer("road-path")?.paint?.["line-color"]).toBe("#414c46");
     expect(layer("road-label")?.paint?.["text-color"]).toBe("#8b9690");
   });
 
@@ -247,7 +247,7 @@ describe("toNightContrast", () => {
     const stops = opacity.slice(3);
     expect(stops.filter((_, index) => index % 2 === 0)).toEqual([10, 12, 14]);
     const outputs = stops.filter((_, index) => index % 2 === 1);
-    expect(outputs.map((out) => evaluate(out, { class: "street" }))).toEqual([0, 0.6, 1]);
+    expect(outputs.map((out) => evaluate(out, { class: "street" }))).toEqual([0, 0.45, 1]);
     expect(outputs.map((out) => evaluate(out, { class: "street", surface: "unpaved" }))).toEqual([0.8, 0.8, 0.8]);
     expect(outputs.map((out) => evaluate(out, { class: "track" }))).toEqual([0.8, 0.8, 0.8]);
     // Outdoors' own z14 step on road-street is kept (street-low draws below it).

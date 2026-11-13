@@ -66,12 +66,12 @@ export const NIGHT_CONTRAST = {
   builtUp: "#171c1a",
   casing: "#0b100e",
   motorway: "#98a29d",
-  primary: "#69746f",
-  minor: "#3d4843",
+  primary: "#5a6560",
+  minor: "#343e3a",
   unpaved: "#d6a862",
   /** Gravel stays tan (gravel is the product) but a step back from the ride line. */
   unpavedOpacity: 0.8,
-  path: "#4a5650",
+  path: "#414c46",
   rail: "#3a443f",
   boundary: "#46504b",
   muted: "#2b3833",
@@ -177,7 +177,7 @@ const GRAVEL: unknown = ["any", UNPAVED, ["==", ["get", "class"], "track"]];
 
 /**
  * The streets of a town (PF-5): minor, street and service bodies fade in with
- * zoom, 0 at z10, 0.6 at z12 and full at z14, so the city grid is quiet at
+ * zoom, 0 at z10, 0.45 at z12 and full at z14, so the city grid is quiet at
  * the zooms a ride is planned at. Gravel and tracks hold their 80% at every
  * zoom: the gravel network is what a rider opened the map for.
  */
@@ -190,7 +190,7 @@ function minorRoadOpacity(): unknown {
     10,
     ["case", GRAVEL, gravel, 0],
     12,
-    ["case", GRAVEL, gravel, 0.6],
+    ["case", GRAVEL, gravel, 0.45],
     14,
     ["case", GRAVEL, gravel, 1],
   ];
