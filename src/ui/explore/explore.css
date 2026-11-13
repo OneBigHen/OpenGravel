@@ -495,8 +495,9 @@
   gap: var(--og-space-4);
 }
 
-.og-explore__split > .og-explore__list {
+.og-explore__split > .og-explore__listing {
   grid-area: list;
+  min-width: 0;
 }
 
 .og-explore__split > .og-explore-map-panel {
@@ -1016,4 +1017,13 @@
   .og-explore__split .og-explore-map__tools > button {
     margin-left: 0;
   }
+}
+
+.og-explore__more {
+  display: block;
+  margin: var(--og-space-3) auto var(--og-space-4);
+}
+
+.og-explore__more-count {
+  color: var(--og-ink-2);
 }
