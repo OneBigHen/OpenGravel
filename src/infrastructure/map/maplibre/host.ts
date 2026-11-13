@@ -308,6 +308,13 @@ export const MAP_ATTEMPT_CLASS = "og-map__attempt";
 export const BOOT_WATCHDOG_MS = 15_000;
 
 /**
+ * How long after the first map data the "Loading map…" veil waits for the map
+ * to settle before it lifts anyway (OG-26). The map is drawing by then; a tile
+ * still on its way must not hide the whole map behind a loading card.
+ */
+export const PAINT_FALLBACK_MS = 3_000;
+
+/**
  * How long the tiles may starve after `style.load` before the load is a failure
  * (4.0s; 05 §22).
  *
@@ -780,6 +787,8 @@ interface HostAttempt {
   readonly openedWhereItWas: boolean;
   /** The bounded boot/starvation watchdog for this attempt, or `null`. */
   watchdog: ReturnType<typeof setTimeout> | null;
+  /** Lifts the "Loading map…" veil once data has flowed for a while (OG-26). */
+  paintFallback: ReturnType<typeof setTimeout> | null;
 }
 
 /**
@@ -2647,6 +2656,16 @@ export async function createMapLibreHost(
     if (disposed || attempt !== current || status.state === "ready") return;
     clearWatchdog(current);
     publishStatus({ state: "ready", reason: null });
+    // OG-26: `load` and `idle` wait for *every* tile, so one tile that never
+    // answers (a slow phone link, a hung request) kept "Loading map…" over a
+    // map that was already drawing — forever. Once data has flowed, the veil
+    // lifts after a short grace whether or not the last tile ever lands.
+    if (current.paintFallback === null) {
+      current.paintFallback = setTimeout(() => {
+        current.paintFallback = null;
+        markPainted(current);
+      }, PAINT_FALLBACK_MS);
+    }
   }
 
   /**
@@ -2749,6 +2768,8 @@ export async function createMapLibreHost(
     // The arrows' drift loop belongs to this renderer: stop it before the map goes.
     stopWindDrift(null);
     clearWatchdog(current);
+    if (current.paintFallback !== null) clearTimeout(current.paintFallback);
+    current.paintFallback = null;
     const camera = readCameraBounds(current);
     if (camera !== null) restoredCamera = camera;
     const canvasContainer = current.map.getCanvasContainer();
@@ -3155,6 +3176,7 @@ export async function createMapLibreHost(
       fingerprints: null,
       openedWhereItWas,
       watchdog: null,
+      paintFallback: null,
     };
     attempt = current;
     // The boot backstop, replaced by the tighter data bound once the style lands.

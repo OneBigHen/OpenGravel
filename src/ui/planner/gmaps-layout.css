@@ -344,8 +344,8 @@
 /* Phones: Google's slimmer sheet head and the directions view's sizes. */
 @media (max-width: 760px) and (min-height: 501px) {
   .og-planner .og-planner__sheet button.og-sheet__handle {
-    height: 24px;
-    min-height: 24px;
+    height: 32px;
+    min-height: 32px;
   }
 
   /* 24px plus a 12px lip over the rounded edge; the map keeps the rest. */
@@ -354,7 +354,7 @@
   }
 
   .og-planner .og-planner__sheet .og-sheet__handle::before {
-    top: 10px;
+    top: 12px;
   }
 
   /* The body scrolls only in the full sheet; below that a vertical drag

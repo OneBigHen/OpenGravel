@@ -222,6 +222,8 @@ export function RideSummary({
         <div className="og-phone-summary__facts">
           <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}</p>
           <p className="og-phone-summary__meta"><span className="og-phone-summary__meta-text">{meta.filter(Boolean).join(" · ")}</span>{geometry.length > 1 && card.durationSeconds !== undefined ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds }} intent={document.intent} /></> : null}</p>
+          {/* The peek's one line (PF-2): miles and the surface, in the surface line's own words. */}
+          <p className="og-phone-summary__peek" data-testid="peek-facts">{`${card.distanceLabel} · ${surfaceFacts(strip, card.distanceMeters).line}`}</p>
         </div>
       </div>
       {/* The three honest lines (N3): surface with its bar, bike, checked. */}
