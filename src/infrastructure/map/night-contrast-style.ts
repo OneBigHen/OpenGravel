@@ -65,9 +65,9 @@ export const NIGHT_CONTRAST = {
   waterLine: "#1d3a4a",
   builtUp: "#171c1a",
   casing: "#0b100e",
-  motorway: "#7f8984",
+  motorway: "#798380",
   primary: "#4e5853",
-  minor: "#2b3531",
+  minor: "#29332f",
   unpaved: "#d6a862",
   /** Gravel stays tan (gravel is the product) but a step back from the ride line. */
   unpavedOpacity: 0.8,
