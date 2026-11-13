@@ -619,17 +619,6 @@ export function RouteDetail({
         >
           {busy === "use" ? "Getting this ride ready…" : "Ride this"}
         </button>
-        {onRideToStart !== undefined && toStartLabel !== null ? (
-          <button
-            type="button"
-            className="og-secondary og-route-detail__to-start"
-            data-testid="ride-to-start"
-            disabled={busy !== null || !fullGeometry}
-            onClick={() => void runAction("approach", () => onRideToStart(entry))}
-          >
-            {busy === "approach" ? "Finding the way to the start…" : toStartLabel}
-          </button>
-        ) : null}
         <div className="og-route-detail__alternates">
           {canSave ? (
             // Already saved is a state, not a dead end: the button keeps its
@@ -649,6 +638,18 @@ export function RouteDetail({
           ) : null}
         </div>
       </section>
+
+      {onRideToStart !== undefined && toStartLabel !== null ? (
+        <button
+          type="button"
+          className="og-secondary og-route-detail__to-start"
+          data-testid="ride-to-start"
+          disabled={busy !== null || !fullGeometry}
+          onClick={() => void runAction("approach", () => onRideToStart(entry))}
+        >
+          {busy === "approach" ? "Finding the way to the start…" : toStartLabel}
+        </button>
+      ) : null}
 
       {status !== null ? <p className="og-route-detail__status" role="status">{status}</p> : null}
 

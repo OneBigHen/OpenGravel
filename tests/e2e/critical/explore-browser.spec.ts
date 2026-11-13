@@ -16,6 +16,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await route.fulfill({ json: { count: routes.length, routes } });
     });
     await page.goto("/explore");
+    // The list draws the nearest 20 and adds the rest on request.
+    await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(20);
+    await page.getByTestId("explore-show-more").click();
     await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(32);
     await expect(page.getByTestId("explore-map")).toContainText("32 rides");
     // The area picker lives in the Filters panel at every width: a bottom sheet
@@ -23,7 +26,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     // chip is the last one in the row, so it keeps search the whole width above.
     await page.getByRole("button", { name: /^Filters/ }).click();
     await page.getByRole("combobox", { name: "PA riding area" }).selectOption("eastern-pa");
-    await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(31);
+    await expect(page.getByRole("list", { name: "Explore routes" }).getByRole("link")).toHaveCount(20);
     await expect(page).toHaveURL(/area=eastern-pa/);
     if (viewport.width <= 760) {
       // Search owns its row on a phone: the whole width, not the ~130px it had
