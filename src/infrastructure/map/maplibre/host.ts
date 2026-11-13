@@ -406,7 +406,12 @@ interface MapLibreMap {
   remove(): void;
   isStyleLoaded?(): boolean;
   loaded?(): boolean;
-  dragPan?: { enable(): void; disable(): void };
+  dragPan?: {
+    enable(): void;
+    disable(): void;
+    /** MapLibre's touch half of drag-pan; enabled alone, two-finger only, while drawing. */
+    _touchPan?: TwoFingerCapableTouchPan;
+  };
   boxZoom?: { enable(): void; disable(): void };
   doubleClickZoom?: { enable(): void; disable(): void };
 }
@@ -606,6 +611,31 @@ function rememberMapboxRefusal(): void {
 const claimedContainers = new WeakMap<HTMLElement, { dispose(): void }>();
 
 /** Which pointer tools need the map's own drag gestures switched off. */
+/** The part of MapLibre's `TouchPanHandler` the drawing tool reconfigures. */
+interface TwoFingerCapableTouchPan {
+  enable(): void;
+  disable(): void;
+  _shouldBePrevented?: (touchesCount: number) => boolean;
+}
+
+/**
+ * OG-03: with the pen armed one finger draws, so the map moved only by pinching
+ * and a rider who tried to look around drew strokes that were snapped into new
+ * routes. While drawing, two fingers pan the map: MapLibre's own touch pan is
+ * enabled on its own, told to ignore a single finger (the rule its cooperative
+ * gestures use, without their overlay). The mouse still draws.
+ */
+function setTwoFingerTouchPan(touchPan: TwoFingerCapableTouchPan | undefined, on: boolean): void {
+  if (touchPan === undefined) return;
+  if (on) {
+    touchPan._shouldBePrevented = (touchesCount: number): boolean => touchesCount < 2;
+    touchPan.enable();
+  } else {
+    // Back to the prototype's rule (one finger pans with the pan tool).
+    delete touchPan._shouldBePrevented;
+  }
+}
+
 function needsNativeGestures(tool: PointerTool): boolean {
   return tool === "pan";
 }
@@ -2100,6 +2130,7 @@ export async function createMapLibreHost(
       map.boxZoom?.disable();
       map.doubleClickZoom?.disable();
     }
+    setTwoFingerTouchPan(map.dragPan?._touchPan, tool === "sketch");
   }
 
   /**
