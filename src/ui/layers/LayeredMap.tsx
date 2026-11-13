@@ -118,7 +118,7 @@ function LayeredMapWith({
   // legend explains nothing and would sit on the ride's destination pin.
   const rideShown = map.scene.routes.some((route) => route.state === "selected");
   const legendVisible = map.scene.mode !== "ride" && !rideShown && selected === null && (enabled.includes("gravel") || enabled.includes("great-roads"));
-  const legend = legendVisible ? <MapLegendChip onOpen={() => setPanelOpen(true)} /> : undefined;
+  const legend = legendVisible ? <MapLegendChip onOpen={() => setPanelOpen(true)} mapReady={mapReady} /> : undefined;
   const scene = useMemo(
     () => (view.scene === undefined ? map.scene : { ...map.scene, infoLayers: view.scene }),
     [map.scene, view.scene],

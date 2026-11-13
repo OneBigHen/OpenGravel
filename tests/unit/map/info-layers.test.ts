@@ -84,3 +84,21 @@ it("renders slope separately without cell seams or a mask over flat ground", () 
   });
   expect(specs.find((layer) => layer.id === "ogv-info-fill")?.filter).toEqual(["all", ["==", ["geometry-type"], "Polygon"], ["!=", ["get", "layerId"], "slope"]]);
 });
+
+describe("a calmer home map (PF-6)", () => {
+  const layers = infoLayerSpecs(DEFAULT_MAP_PALETTE);
+  const byId = (id: string) => layers.find((layer) => layer.id === id);
+
+  it("the lesser twisty segments and the dots wait for zoom 11", () => {
+    expect(byId("ogv-info-line-minor")?.minzoom).toBe(11);
+    expect(byId("ogv-info-line-casing-minor")?.minzoom).toBe(11);
+    expect(JSON.stringify(byId("ogv-info-line-minor")?.filter)).toContain("1050");
+    expect(JSON.stringify(byId("ogv-info-line")?.filter)).toContain("1050");
+    expect(byId("ogv-info-point")?.minzoom).toBe(11);
+    expect(byId("ogv-info-point")?.paint?.["circle-radius"]).toEqual(["interpolate", ["linear"], ["zoom"], 11, 3, 14, 5]);
+  });
+
+  it("the minor layers are tappable and dim with a ride", () => {
+    expect(INFO_HIT_LAYERS).toContain("ogv-info-line-minor");
+  });
+});

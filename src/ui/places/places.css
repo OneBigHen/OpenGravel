@@ -333,8 +333,7 @@
 }
 
 .og-info-card :is(button, a):focus-visible,
-.og-places-overlay--planner :is(button, a):focus-visible,
-.og-places-along :is(summary, button):focus-visible {
+.og-places-overlay--planner :is(button, a):focus-visible {
   outline: var(--og-focus-width) solid var(--og-focus-ring);
   outline-offset: var(--og-focus-offset);
 }
@@ -566,135 +565,6 @@
 }
 
 /* --------------------------------------------------------------------------
-   Places along the ride (in the sheet): rows, not cards.
-   -------------------------------------------------------------------------- */
-.og-places-along {
-  padding-top: var(--og-space-1);
-  border-top: 1px solid var(--og-line);
-}
-
-.og-places-along__summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--og-space-3);
-  min-height: var(--og-touch);
-  color: var(--og-ink);
-  font-size: var(--og-text-body);
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-
-.og-places-along__summary::-webkit-details-marker {
-  display: none;
-}
-
-.og-places-along__summary::after {
-  content: "⌄";
-  color: var(--og-ink-2);
-}
-
-.og-places-along[open] > .og-places-along__summary::after {
-  content: "⌃";
-}
-
-.og-places-along__list {
-  display: grid;
-  margin: 0;
-  padding: 0 0 var(--og-space-3);
-  list-style: none;
-}
-
-.og-places-along__list > li + li {
-  border-top: 1px solid var(--og-line);
-}
-
-.og-places-along__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--og-space-3);
-  padding: var(--og-space-2) 0;
-}
-
-.og-places-along__copy {
-  min-width: 0;
-}
-
-.og-places-along__place,
-.og-places-along__when {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.og-places-along__place {
-  color: var(--og-ink);
-  font-size: var(--og-text-body);
-  line-height: 1.35;
-}
-
-.og-places-along__mile {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.og-places-along__when {
-  display: flex;
-  align-items: center;
-  gap: var(--og-space-1);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-  line-height: 1.35;
-}
-
-.og-places-along__live {
-  flex: 0 0 8px;
-  width: 8px;
-  height: 8px;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-primary);
-}
-
-.og-places-along__add {
-  flex: none;
-  min-height: 40px;
-  padding: 0 var(--og-space-3);
-  border: 0;
-  border-radius: var(--og-radius-control);
-  background: var(--og-surface-2);
-  color: var(--og-primary-text);
-  font: inherit;
-  font-size: var(--og-text-meta);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.og-places-along__add:disabled {
-  color: var(--og-ink-2);
-  cursor: default;
-}
-
-.og-places-along__status {
-  margin: var(--og-space-2) 0 var(--og-space-3);
-  color: var(--og-ink-2);
-  font-size: var(--og-text-meta);
-}
-
-.og-places-along__skeleton {
-  height: 56px;
-  padding: var(--og-space-4) 0;
-}
-
-.og-places-along__skeleton span {
-  display: block;
-  width: min(74%, 360px);
-  height: 10px;
-  border-radius: var(--og-radius-pill);
-  background: var(--og-surface-2);
-}
-
-/* --------------------------------------------------------------------------
    Press and hold on the map: the point menu. Undo: the rider toast.
    -------------------------------------------------------------------------- */
 .og-map-point-menu {
@@ -858,15 +728,6 @@
 @media (max-width: 760px) {
   [data-places-sheet="true"] .og-places-overlay--planner .og-places-control {
     display: none;
-  }
-
-  .og-places-along__row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .og-places-along__row > .og-places-along__add {
-    width: 100%;
   }
 }
 

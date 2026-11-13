@@ -39,16 +39,16 @@ const openMapTiles: HostedStyleLayer[] = [
 ];
 
 describe("the ride line is the top line (PF-1)", () => {
-  it("lands above the last bridge line and before the first road label on Mapbox Outdoors", () => {
+  it("lands above the last bridge line and above the road labels and before the place labels on Mapbox Outdoors", () => {
     const anchor = routeLineAnchorId(outdoors);
-    expect(anchor).toBe("road-label");
+    expect(anchor).toBe("settlement-major-label");
     const at = outdoors.findIndex((layer) => layer.id === anchor);
     expect(at).toBeGreaterThan(outdoors.findIndex((layer) => layer.id === "bridge-primary"));
     expect(outdoors.slice(at).some((layer) => layer.type === "line" || layer.type === "fill")).toBe(false);
   });
 
   it("lands above the last road line on an OpenMapTiles style", () => {
-    expect(routeLineAnchorId(openMapTiles)).toBe("highway-name-minor");
+    expect(routeLineAnchorId(openMapTiles)).toBe("label_city");
   });
 
   it("keeps the old rule (first label) on a style with no road lines", () => {
@@ -60,8 +60,8 @@ describe("the ride line is the top line (PF-1)", () => {
   });
 
   it("ignores our own layers when it looks for roads and labels", () => {
-    const layers = [line("road-street"), { id: "ogv-route-selected", type: "line" }, symbol("ogv-route-label"), symbol("road-label")];
-    expect(routeLineAnchorId(layers)).toBe("road-label");
+    const layers = [line("road-street"), { id: "ogv-route-selected", type: "line" }, symbol("ogv-route-label"), symbol("poi-label")];
+    expect(routeLineAnchorId(layers)).toBe("poi-label");
   });
 
   it("knows when a route line already in the style sits under a basemap road", () => {
@@ -69,5 +69,18 @@ describe("the ride line is the top line (PF-1)", () => {
     expect(routeLineBelowRoads(layers, "ogv-route-selected")).toBe(true);
     const fixed = [line("road-street"), line("bridge-street"), { id: "ogv-route-selected", type: "line" }, symbol("road-label")];
     expect(routeLineBelowRoads(fixed, "ogv-route-selected")).toBe(false);
+  });
+});
+
+describe("street names sit under the ride line (PF-7)", () => {
+  it("anchors after the road labels and shields, before the next label", () => {
+    const layers = [
+      { id: "road-primary", type: "line", "source-layer": "road" },
+      { id: "contour-label", type: "symbol" },
+      { id: "road-label", type: "symbol" },
+      { id: "road-number-shield", type: "symbol" },
+      { id: "poi-label", type: "symbol" },
+    ];
+    expect(routeLineAnchorId(layers as never)).toBe("poi-label");
   });
 });
