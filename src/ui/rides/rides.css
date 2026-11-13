@@ -1048,9 +1048,7 @@
   margin-top: var(--og-space-2);
 }
 
-.og-rides__empty-lede {
-  display: block;
-}
+.og-rides__empty-lede { display: block; }
 
 .og-import__more-toggle,
 .og-rides__empty-more,
