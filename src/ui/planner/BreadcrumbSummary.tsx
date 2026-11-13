@@ -50,7 +50,7 @@ export function BreadcrumbSummary({ route, document, libraryService, elevation, 
   };
   const exportGpx = (): void => {
     const exportTitle = rideExportTitle(document.title);
-    const xml = buildPlannedTrackGpx({ title: exportTitle, geometry: line, waypoints: waypointsFromIntent(document.intent), createdTime: document.createdAt });
+    const xml = buildPlannedTrackGpx({ title: exportTitle, geometry: line, waypoints: waypointsFromIntent(document.intent), createdTime: document.createdAt, ...(document.provenance.credit === undefined ? {} : { credit: document.provenance.credit }) });
     downloadExport(new TextEncoder().encode(xml), exportFilename(exportTitle, "planned-track"));
   };
   return (

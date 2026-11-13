@@ -11,6 +11,7 @@ import type {
   RecordedTrackEnvelope,
   RideBundleSummary,
 } from "@/application/persistence/ride-repository";
+import type { RideCredit } from "@/domain/ride/credit";
 import { libraryTypeForRecord, type LibraryRideType } from "./provenance";
 import type { GeometryStore } from "@/application/geometry/geometry-store";
 import type { ImportBlobStore } from "@/application/import/import-artifact";
@@ -52,6 +53,8 @@ export interface RideSummary {
   readonly distanceMeters: number | null;
   readonly durationSeconds: number | null;
   readonly sourceId: string | null;
+  /** Whose route this is, when it is not the rider's own; survives save, copy and fork. */
+  readonly credit?: RideCredit;
   readonly exportCapabilities?: {
     readonly plannedRoute: boolean;
     readonly track: boolean;
@@ -85,6 +88,8 @@ export interface RideExportSource {
   readonly title: string;
   /** The ride document's creation instant, for `<metadata><time>`. */
   readonly createdTime: string;
+  /** Whose route this is when it is not the rider's own; written into every GPX export. */
+  readonly credit?: RideCredit;
   readonly plannedRoute: {
     readonly geometry: readonly Coordinate[];
     readonly waypoints: readonly ExportWaypoint[];
@@ -296,7 +301,11 @@ function withIdentity(
     createdAt: values.now,
     updatedAt: values.now,
     title: values.title,
-    provenance: values.provenance,
+    // Credit travels with the ride: a save, copy or fork of someone else's
+    // route never drops the author, even when the new provenance is rebuilt.
+    provenance: values.provenance.credit !== undefined || document.provenance.credit === undefined
+      ? values.provenance
+      : { ...values.provenance, credit: document.provenance.credit },
   });
 }
 
@@ -317,6 +326,7 @@ function summary(record: RideRecord): RideSummary {
     distanceMeters: record.bundleSummary?.distanceMeters ?? null,
     durationSeconds: record.bundleSummary?.durationSeconds ?? null,
     sourceId: record.derivedFrom?.sourceId ?? record.document.provenance.sourceId ?? null,
+    ...(record.document.provenance.credit === undefined ? {} : { credit: record.document.provenance.credit }),
     offlinePack: record.offlinePack === undefined ? "not-present" : "present",
     ...(record.freeRideSummary === undefined ? {} : {
       importNotes: ["Summary only. Accepted suggestions are planned lines, not a recorded track."],
@@ -858,6 +868,7 @@ export class LibraryService implements LibraryServicePort {
     return {
       title: record.document.title ?? "Ride",
       createdTime: record.document.createdAt,
+      ...(record.document.provenance.credit === undefined ? {} : { credit: record.document.provenance.credit }),
       plannedRoute: plannedCoordinates === null ? null : { geometry: plannedCoordinates, waypoints: routeWaypoints },
       tracks: importData?.tracks ?? [],
       trackGeometry,

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { parseRideCredit } from "@/domain/ride/credit";
 import type { ShareSnapshot } from "@/domain/sharing/types";
 import { SHARE_SNAPSHOT_MAX_BYTES, serializeShareSnapshot } from "@/domain/sharing/snapshot";
 import { routeDistanceMeters } from "@/domain/sharing/privacy";
@@ -59,6 +60,8 @@ function snapshot(value: unknown): ShareSnapshot | null {
   if (!object(value.surface) || !["pavement", "mostly-pavement", "mixed", "dirt-preferred"].includes(String(value.surface.preference)) || !["allow-with-warning", "avoid-when-possible"].includes(String(value.surface.unknownSurfacePolicy))) return null;
   if (value.author !== null && (!object(value.author) || !text(value.author.pseudonym, 100))) return null;
   if (!object(value.source) || !["new", "import", "catalog", "shared", "recorded", "recreated-from-track", "derived"].includes(String(value.source.attribution))) return null;
+  const credit = parseRideCredit(value.credit);
+  if (credit === null) return null;
   return {
     version: 1, sourceRevision: value.sourceRevision as number, title: value.title,
     route: { segments }, distanceMeters,
@@ -66,6 +69,7 @@ function snapshot(value: unknown): ShareSnapshot | null {
     surface: { preference: value.surface.preference as ShareSnapshot["surface"]["preference"], unknownSurfacePolicy: value.surface.unknownSurfacePolicy as ShareSnapshot["surface"]["unknownSurfacePolicy"] },
     author: value.author === null ? null : { pseudonym: (value.author as Record<string, unknown>).pseudonym as string },
     source: { attribution: value.source.attribution as ShareSnapshot["source"]["attribution"] },
+    ...(credit === undefined ? {} : { credit }),
   };
 }
 

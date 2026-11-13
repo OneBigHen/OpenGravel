@@ -14,6 +14,7 @@ import {
   SKETCH_TOPOLOGY_HINT_KINDS,
   type SketchEndpointPolicy,
 } from "../sketch/types";
+import { isRideCredit } from "./credit";
 import type { Coordinate, RideIntent, RideProvenance, SurfaceIntent, TimeIntent } from "./types";
 
 /** Validate the small provenance envelope at persistence and import boundaries. */
@@ -29,6 +30,7 @@ export function isRideProvenance(value: unknown): value is RideProvenance {
     typeof provenance.sourceId !== "string" ||
     provenance.sourceId.length === 0
   )) return false;
+  if (provenance.credit !== undefined && !isRideCredit(provenance.credit)) return false;
   return true;
 }
 

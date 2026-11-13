@@ -1,5 +1,6 @@
 "use client";
 
+import { RideCreditLine } from "@/ui/credit/RideCreditLine";
 import type { RidePackService } from "@/application/offline/ride-pack";
 import { KeepForNoSignal } from "@/ui/offline/KeepForNoSignal";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -290,7 +291,12 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
     let bytes: Uint8Array;
     if (mode === "planned-route" || mode === "planned-track") {
       if (source.plannedRoute === null) throw new Error("This ride has no saved route line to export.");
-      const planned = { ...source.plannedRoute, title: source.title, createdTime: source.createdTime };
+      const planned = {
+        ...source.plannedRoute,
+        title: source.title,
+        createdTime: source.createdTime,
+        ...(source.credit === undefined ? {} : { credit: source.credit }),
+      };
       bytes = new TextEncoder().encode(
         mode === "planned-route" ? buildPlannedRouteGpx(planned) : buildPlannedTrackGpx(planned),
       );
@@ -308,6 +314,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
         tracks,
         waypoints: source.waypoints,
         createdTime: source.createdTime,
+        ...(source.credit === undefined ? {} : { credit: source.credit }),
       }));
     } else if (mode === "original") {
       if (source.originalBytes === null) throw new Error("The original file is not available.");
@@ -317,6 +324,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
       bytes = new TextEncoder().encode(buildTrackGpx({
         title: source.title,
         createdTime: source.createdTime,
+        ...(source.credit === undefined ? {} : { credit: source.credit }),
         tracks: [{
           name: source.title,
           segments: [{
@@ -741,6 +749,7 @@ export function RidesLibrary({ service: library, onOpen, importService, mapboxTo
                 {isExpanded ? (
                   <div className="og-library__details og-rides__details">
                     <p>{sourceText(ride)}</p>
+                    <RideCreditLine credit={ride.credit} />
                     <p>Saved {formatRideDate(ride.savedAt)}</p>
                     {/* R3-7: "offline" is said only by the switch, and only when every tile is kept. */}
                     {ridePacks === undefined || ride.recordedTrack !== undefined || ride.exportCapabilities?.plannedRoute !== true ? null : (

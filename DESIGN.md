@@ -240,6 +240,13 @@ the primary button.
   Roads / Surface chips (still in full and Options), grows to `max(40dvh, 300px)`, uses 56px rows and
   pins Start / Save / Share at the bottom.
 
+- 2026-11-12 Owner: credit for imported rides. Every ride we did not make shows one quiet caption-sized
+  line, "Route by <author> · <source>", with the source linked to the original when we have a URL
+  ("Route from Roost GPX locker · author not named" when the source names nobody). It sits on the
+  Explore card (plain text, the card is a link), the ride page header, the map card, the ride story
+  byline and the shared-ride page, and is written into GPX exports. A ride the rider made shows no
+  line. Credit rides on the ride's provenance, so save, copy, fork and share never drop it.
+
 ## Open proposals
 
 (none)
