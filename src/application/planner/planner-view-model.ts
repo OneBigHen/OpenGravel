@@ -318,6 +318,12 @@ export interface PlannerViewModelInput {
    */
   readonly sketchDerivedEndpoints?: SketchEndpoints | null;
   /**
+   * The ends of a drawing's snapped preview route that is on screen but not kept
+   * yet. Labels only: the From / To card reads "From your sketch" instead of
+   * "No start yet" under a route the rider can see. Never makes a ride plannable.
+   */
+  readonly sketchPreviewEndpoints?: SketchEndpoints | null;
+  /**
    * The name a geocoder found for an unnamed point's coordinate (M1, OGV-D-260),
    * or `undefined` while none is known. Derived evidence, never authored: it
    * stands in only where the document carries no label of its own.
@@ -1171,6 +1177,9 @@ export function buildPlannerViewModel(
 ): PlannerViewModel {
   const { document, session } = input;
   const derived = input.sketchDerivedEndpoints ?? null;
+  // What the From / To card names: a committed drawing's own ends, else the ends
+  // of the drawn route on screen.
+  const labelEnds = derived ?? input.sketchPreviewEndpoints ?? null;
   const bundle = drawableBundle(session);
   const selectedRouteId = bundle?.selectedRouteId ?? null;
   const cards = routeCards(
@@ -1193,27 +1202,27 @@ export function buildPlannerViewModel(
     startLabel:
       document.intent.start !== null
         ? formatEndpointLabel(document.intent.start, input.placeNameFor)
-        : derived === null
+        : labelEnds === null
           ? NO_START_LABEL
           : SKETCH_DERIVED_LABEL,
     startCoordinateLabel:
       document.intent.start !== null
         ? formatEndpointCoordinate(document.intent.start)
-        : derived === null
+        : labelEnds === null
           ? null
-          : sketchDerivedCoordinate(derived.start),
+          : sketchDerivedCoordinate(labelEnds.start),
     finishLabel:
       document.intent.finish !== null
         ? formatEndpointLabel(document.intent.finish, input.placeNameFor)
-        : derived === null
+        : labelEnds === null
           ? NO_FINISH_LABEL
           : SKETCH_DERIVED_LABEL,
     finishCoordinateLabel:
       document.intent.finish !== null
         ? formatEndpointCoordinate(document.intent.finish)
-        : derived === null
+        : labelEnds === null
           ? null
-          : sketchDerivedCoordinate(derived.finish),
+          : sketchDerivedCoordinate(labelEnds.finish),
     canPlan: disabledReason === null,
     disabledReason,
     routeCards: cards,

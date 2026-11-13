@@ -304,7 +304,14 @@ export function PlannerWorkspace({
    */
   const { activeRoute, selectedCandidate } = usePlannerActiveRoute({ session, geometry });
 
-  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, placeNameFor, routeLine: activeRoute, bikes });
+  // The drawn route on screen names its own ends until the drawing is kept.
+  const sketchPreviewEndpoints = useMemo(() => {
+    const line = showingSketchPreview ? activeRoute?.geometry : undefined;
+    const start = line?.[0];
+    const finish = line?.[line.length - 1];
+    return start === undefined || finish === undefined ? null : { start, finish };
+  }, [showingSketchPreview, activeRoute]);
+  const { viewModel, setRouteTraffic, firstLookNote } = usePlannerViewModel({ document, session, sketchDerivedEndpoints, sketchPreviewEndpoints, placeNameFor, routeLine: activeRoute, bikes });
 
   /**
    * The deterministic explanation of the route on screen (04 §13, Wave-3 task
@@ -714,6 +721,41 @@ export function PlannerWorkspace({
     }
   }, [rideActions, rideHandoff]);
 
+  /**
+   * OG-02: Start on a drawing that is not kept yet keeps it (the same as Done)
+   * and starts the ride as soon as the kept drawing is planned. The rider asked
+   * to ride; a footnote telling them to press another button first was a dead end.
+   */
+  const [startAfterDrawing, setStartAfterDrawing] = useState(false);
+  const handleStartPressed = useCallback((): void => {
+    if (rideHandoff.outcome === "refused" && rideHandoff.code === "sketch-preview") {
+      setRideStart({ state: "idle", message: null });
+      setStartAfterDrawing(true);
+      sketchPanelProps.onDone();
+      return;
+    }
+    setStartAfterDrawing(false);
+    void handleStartRide();
+  }, [rideHandoff, sketchPanelProps, handleStartRide]);
+  // The kept drawing could not be planned: say so beside Start instead of waiting.
+  const drawingStartFailed =
+    startAfterDrawing && (sketchError !== null || session.phase === "failed" || session.phase === "cancelled");
+  const drawingStartReady =
+    startAfterDrawing &&
+    !drawingStartFailed &&
+    !isPlanningInFlight(session.phase) &&
+    session.committedBundle !== null &&
+    session.committedBundle.rideRevision === document.revision &&
+    rideHandoff.outcome === "ready";
+  useEffect(() => {
+    if (!drawingStartReady) return;
+    // The kept drawing has its own plan now: start it, once.
+    void Promise.resolve().then(() => {
+      setStartAfterDrawing(false);
+      return handleStartRide();
+    });
+  }, [drawingStartReady, handleStartRide]);
+
   const planning = isPlanningInFlight(session.phase);
 
   /**
@@ -731,6 +773,7 @@ export function PlannerWorkspace({
     cards: viewModel.routeCards, route: activeRoute,
     elevationSource: preparationProviders?.elevationProfile, failed: viewModel.failed,
     planning, onRetry: handlePlan, plannerUiStore,
+    computing: session.phase === "validating" || session.phase === "routing-primary",
   });
 
   const tripCard = viewModel.routeCards.length > 0 || planning ? (
@@ -857,10 +900,13 @@ export function PlannerWorkspace({
                 viewModel.routeCards.length === 0 || rideActions === undefined
                   ? null
                   : {
-                      refusal: rideHandoff.outcome === "refused" ? rideHandoff.message : null,
-                      starting: rideStart.state === "starting",
-                      error: rideStart.message,
-                      onStart: (): void => void handleStartRide(),
+                      // A drawing that is not kept yet is not a refusal: Start keeps it (OG-02).
+                      refusal: rideHandoff.outcome === "refused" && rideHandoff.code !== "sketch-preview" ? rideHandoff.message : null,
+                      starting: rideStart.state === "starting" || (startAfterDrawing && !drawingStartFailed),
+                      error: drawingStartFailed
+                        ? sketchError ?? "Your drawing could not be planned, so the ride did not start."
+                        : rideStart.message,
+                      onStart: handleStartPressed,
                     },
             },
             briefing: {

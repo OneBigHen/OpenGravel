@@ -1353,3 +1353,19 @@ describe("buildPlannerViewModel — the itinerary states each leg (04 §15)", ()
     expect(viewModel.shapingPoints.map((row) => row.leg)).toEqual([null]);
   });
 });
+
+describe("the From / To card under a drawn route (owner, 2026-11-13)", () => {
+  it("names the ends of a drawn route on screen instead of 'No start yet'", () => {
+    const empty = documentWith();
+    const ends = { start: ORIGIN, finish: DESTINATION };
+    const shown = buildPlannerViewModel(input({ document: empty, sketchPreviewEndpoints: ends }));
+    expect(shown.startLabel).toBe("From your sketch");
+    expect(shown.finishLabel).toBe("From your sketch");
+    // Labels only: an unkept drawing does not make the ride plannable.
+    expect(shown.canPlan).toBe(buildPlannerViewModel(input({ document: empty })).canPlan);
+
+    const none = buildPlannerViewModel(input({ document: empty }));
+    expect(none.startLabel).toBe("No start yet");
+    expect(none.finishLabel).toBe("No destination yet");
+  });
+});
