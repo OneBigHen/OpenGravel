@@ -6,6 +6,7 @@
  * The old single-run report and `scorecard-out/latest.json` are untouched.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { combineRuns, IncompatibleRunsError, renderCombined, type ScorecardRunFile } from './combine';
 
 async function main(): Promise<void> {
@@ -19,7 +20,7 @@ async function main(): Promise<void> {
   const read = async (path: string): Promise<ScorecardRunFile> => JSON.parse(await readFile(path, 'utf8')) as ScorecardRunFile;
   try {
     const result = combineRuns(await read(files[0]!), await read(files[1]!));
-    await mkdir('scorecard-out', { recursive: true });
+    await mkdir(dirname(outPath), { recursive: true });
     await writeFile(outPath, JSON.stringify(result, null, 2));
     console.log(renderCombined(result));
     console.log(`Wrote ${outPath}`);
