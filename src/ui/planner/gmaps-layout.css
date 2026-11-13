@@ -758,7 +758,7 @@
   }
   .og-trip[data-compact="true"] .og-trip__label { flex: 0 1 auto; min-width: 0; }
   .og-trip[data-compact="true"] .og-trip__label--finish { flex: 1 1 0; }
-  .og-trip[data-compact="true"] .og-trip__label--start { color: var(--og-primary-text); max-width: 42%; }
+  .og-trip[data-compact="true"] .og-trip__label--start { color: var(--og-primary-text); max-width: 50%; }
   .og-trip[data-compact="true"] .og-trip__arrow { flex: none; color: var(--og-ink-2); }
   .og-trip[data-compact="true"] .og-trip__tools { flex-direction: row; }
   .og-trip[data-compact="true"] .og-trip__tool { width: 44px; height: 44px; }

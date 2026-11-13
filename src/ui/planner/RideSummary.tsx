@@ -220,7 +220,7 @@ export function RideSummary({
       <div className="og-phone-summary__eta">
         <h2 className="og-phone-summary__time">{card.durationLabel}</h2>
         <div className="og-phone-summary__facts">
-          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}{geometry.length > 1 ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds ?? 0 }} intent={document.intent} /></> : null}</p>
+          <p className="og-phone-summary__arrive">{arrival === null ? card.distanceLabel : `${arrival} · ${card.distanceLabel}`}{geometry.length > 1 && card.durationSeconds !== undefined ? <> <RouteContext route={{ geometry, durationSeconds: card.durationSeconds }} intent={document.intent} /></> : null}</p>
           <p className="og-phone-summary__meta">{meta.filter(Boolean).join(" · ")}</p>
         </div>
       </div>

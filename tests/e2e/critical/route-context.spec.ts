@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { directionsTo } from "./search-helpers";
 import { plannerMap, settledExtent } from "./map-helpers";
 
-test("route context opens conditions and keeps Ask reachable", async ({ page }) => {
+test("daylight chip in the sheet opens conditions; Ask lives in Options", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 852 });
   await page.clock.setFixedTime(new Date("2026-10-28T08:00:00Z"));
   // Ask is off on the front door until Settings turns it on (front-door.spec.ts
@@ -12,25 +12,15 @@ test("route context opens conditions and keeps Ask reachable", async ({ page }) 
   await expect(plannerMap(page)).toBeVisible();
   await settledExtent(page);
   await directionsTo(page);
+  // PF-3: no stats pill on the map; the daylight fact is a chip in the sheet.
+  await expect(page.getByTestId("route-context-row")).toHaveCount(0);
   const context = page.getByTestId("route-context");
-  // At 393 px the daylight fact outranks the arrival time on screen; the full
-  // line, arrival included, stays the button's accessible name.
-  await expect(context).toContainText(/mi.*before sunrise/);
-  await expect(context).toHaveAttribute("aria-label", /arrive.*before sunrise/);
-  const ask = page.getByTestId("map-ask-open");
-  await expect(ask).toBeVisible();
-  for (const width of [320, 393]) {
-    await page.setViewportSize({ width, height: 852 });
-    const dimensions = await context.evaluate((element) => {
-      const text = element.querySelector("span")!;
-      return { height: element.getBoundingClientRect().height, font: parseFloat(getComputedStyle(element).fontSize), textHeight: text.getBoundingClientRect().height, overflow: text.scrollWidth > text.clientWidth };
-    });
-    expect(dimensions.height).toBeGreaterThanOrEqual(44);
-    expect(dimensions.font).toBeGreaterThanOrEqual(14);
-    expect(dimensions.overflow).toBe(false);
-    expect(dimensions.textHeight).toBeLessThanOrEqual(24);
-    expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  }
+  await expect(context).toBeVisible();
+  await expect(context).toContainText(/before sunrise/);
+  await expect(context).toHaveAttribute("aria-label", /arrive.*before sunrise/i);
+  // The chip is inside the sheet, not over the map.
+  const sheetBox = (await page.getByTestId("start-ride").boundingBox())!;
+  expect((await context.boundingBox())!.y).toBeGreaterThan(sheetBox.y - 400);
   await context.click();
   const sheet = page.getByTestId("route-conditions");
   await expect(sheet).toBeVisible();
@@ -41,4 +31,10 @@ test("route context opens conditions and keeps Ask reachable", async ({ page }) 
   await page.keyboard.press("Escape");
   await expect(sheet).toHaveCount(0);
   await expect(context).toBeFocused();
+  // Ask moved into the Options view.
+  await expect(page.getByTestId("map-ask-open")).toHaveCount(0);
+  await page.getByTestId("summary-style").click();
+  const ask = page.getByTestId("map-ask-open");
+  await expect(ask).toBeVisible();
+  expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });

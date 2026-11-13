@@ -793,7 +793,10 @@ describe("the cartography table", () => {
     const width = (layer: { paint?: Record<string, unknown> } | undefined): number =>
       lineWidthAtLeast(layer?.paint?.["line-width"]);
     expect(width(selected)).toBeGreaterThan(width(alternative));
-    expect(Number(alternative?.paint?.["line-opacity"] ?? 1)).toBeLessThan(1);
+    // Resting opacity (the last arm of the compare-aware expression, PF-8).
+    const opacity = alternative?.paint?.["line-opacity"];
+    const resting = Array.isArray(opacity) ? opacity[opacity.length - 1] : opacity;
+    expect(Number(resting ?? 1)).toBeLessThan(1);
   });
 
   it("draws the whole Explore list as thin uncased overview lines", () => {

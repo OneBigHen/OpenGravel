@@ -512,3 +512,13 @@
     margin: var(--og-space-2) 0 0;
   }
 }
+
+/* Narrow phones (320px): the weather note must not squeeze the search field to
+   nothing. Temperature and sky stay; the note steps away unless it is an alert,
+   and then it is short. The field always keeps room to read "Search here". */
+@media (max-width: 360px) {
+  .og-top-search .og-conditions__pill:not([data-tone="alert"]) .og-conditions__note { display: none; }
+  .og-top-search .og-conditions__note { max-width: 56px; }
+  .og-top-search .og-place-search { min-width: 96px; }
+  .og-top-search .og-conditions { flex: 0 1 auto; min-width: 0; }
+}
