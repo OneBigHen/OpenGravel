@@ -47,8 +47,8 @@
     overflow: hidden;
   }
 
-  .og-planner .og-planner__sheet[data-detent="peek"] .og-route-options__scroll > :not(.og-phone-summary),
-  .og-planner .og-planner__sheet[data-detent="peek"] .og-sheet__body > :not(.og-route-options, .og-phone-summary, .og-result, :has(.og-phone-summary)) {
+  .og-planner .og-planner__sheet[data-detent="peek"]:has(.og-phone-summary) .og-route-options__scroll > :not(.og-phone-summary),
+  .og-planner .og-planner__sheet[data-detent="peek"]:has(.og-phone-summary) .og-sheet__body > :not(.og-route-options, .og-phone-summary, .og-result, :has(.og-phone-summary)) {
     display: none;
   }
 
